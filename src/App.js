@@ -3422,27 +3422,35 @@ export default function App() {
   }, [localStream]);
 
   const startCall = (type) => {
+    // Phase 1 : Sonnerie (ringing)
     setCallState({
       type,
       active: true,
+      ringing: true,
       micOn: true,
       camOn: type === 'video',
       inviteOpen: false,
       copied: false,
     });
+    playRingtone();
+    // Vibration sur mobile si disponible
+    if (navigator.vibrate) navigator.vibrate([300, 100, 300]);
 
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      setLocalStream(null);
-      return;
-    }
+    // Phase 2 : Connexion établie après 2.5s
+    window.setTimeout(() => {
+      setCallState(prev => ({ ...prev, ringing: false }));
 
-    const constraints = type === 'video'
-      ? { video: true, audio: true }
-      : { video: false, audio: true };
-
-    navigator.mediaDevices.getUserMedia(constraints)
-      .then((stream) => { setLocalStream(stream); })
-      .catch(() => { setLocalStream(null); });
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setLocalStream(null);
+        return;
+      }
+      const constraints = type === 'video'
+        ? { video: true, audio: true }
+        : { video: false, audio: true };
+      navigator.mediaDevices.getUserMedia(constraints)
+        .then((stream) => { setLocalStream(stream); })
+        .catch(() => { setLocalStream(null); });
+    }, 2500);
   };
 
   const endCall = () => {
@@ -3450,7 +3458,32 @@ export default function App() {
       localStream.getTracks().forEach(track => track.stop());
     }
     setLocalStream(null);
-    setCallState({ type: null, active: false, micOn: true, camOn: true, inviteOpen: false, copied: false });
+    setCallState({ type: null, active: false, ringing: false, micOn: true, camOn: true, inviteOpen: false, copied: false });
+  };
+
+  // Sonnerie Web Audio (deux bips à 440Hz/880Hz)
+  const playRingtone = () => {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const playBeep = (freq, start, dur) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.frequency.value = freq;
+        osc.type = 'sine';
+        gain.gain.setValueAtTime(0, ctx.currentTime + start);
+        gain.gain.linearRampToValueAtTime(0.18, ctx.currentTime + start + 0.05);
+        gain.gain.linearRampToValueAtTime(0, ctx.currentTime + start + dur);
+        osc.start(ctx.currentTime + start);
+        osc.stop(ctx.currentTime + start + dur + 0.05);
+      };
+      playBeep(440, 0, 0.35);
+      playBeep(880, 0.45, 0.35);
+      playBeep(440, 0.9, 0.35);
+      playBeep(880, 1.35, 0.35);
+    } catch (e) { /* silence si Web Audio indisponible */ }
   };
 
   const toggleMic = () => {
@@ -4149,12 +4182,10 @@ export default function App() {
     ],
   });
 
-  // ---- COMPTEUR NON-LUS GMAIL STYLE (mockChats disponible ici) ----
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const unreadCount = mockChats.filter(chat => {
-    if (readChats.has(chat.id)) return false;
-    const thread = chatThreads[chat.id];
+  // ---- COMPTEUR NON-LUS — basé sur tous les threads actifs (pas seulement mockChats) ----
+  const unreadCount = Object.entries(chatThreads).filter(([chatId, thread]) => {
     if (!thread || thread.length === 0) return false;
+    if (readChats.has(Number(chatId)) || readChats.has(String(chatId))) return false;
     const lastMsg = thread[thread.length - 1];
     return lastMsg.sender === 'them' || lastMsg.kind === 'deal';
   }).length;
@@ -5319,6 +5350,8 @@ export default function App() {
     setActiveTab('chat');
     setSelectedListing(null);
     if (callState.active) endCall();
+    // Marquer la conversation comme lue dès qu'on l'ouvre
+    setReadChats(prev => new Set([...prev, conversationId]));
 
     setChatThreads(prev => {
       if (prev[conversationId]) return prev;
@@ -7833,6 +7866,37 @@ export default function App() {
               <X size={20} />
             </button>
           </div>
+
+          {/* SONNERIE / EN TRAIN D'APPELER — overlay animé pendant la phase ringing */}
+          {callState.ringing && (
+            <div style={{
+              position: 'absolute', inset: 0,
+              display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'center',
+              gap: '20px', zIndex: 30, pointerEvents: 'none',
+            }}>
+              {/* Anneaux pulse autour de l'avatar */}
+              {[1, 2, 3].map(i => (
+                <div key={i} style={{
+                  position: 'absolute',
+                  width: `${120 + i * 48}px`,
+                  height: `${120 + i * 48}px`,
+                  borderRadius: '50%',
+                  border: '2px solid rgba(96,165,250,0.5)',
+                  animation: `notifPulse ${1 + i * 0.3}s ease-in-out infinite`,
+                  animationDelay: `${i * 0.2}s`,
+                }} />)
+              )}
+              <div style={{ width: '120px', height: '120px', borderRadius: '50%', background: 'linear-gradient(135deg, #60A5FA 0%, #04265A 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '46px', color: '#FFF', fontWeight: '800', boxShadow: '0 0 50px rgba(96,165,250,0.55)', zIndex: 1 }}>
+                {(selectedChat?.user || 'T')[0]}
+              </div>
+              <div style={{ color: '#FFFFFF', fontSize: '20px', fontWeight: '800', zIndex: 1 }}>{selectedChat?.user || ''}</div>
+              <div style={{ color: '#93C5FD', fontSize: '14px', fontWeight: '600', zIndex: 1, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ display: 'inline-block', animation: 'notifPulse 1s ease-in-out infinite' }}>📞</span>
+                {callState.type === 'video' ? 'Appel vidéo en cours...' : 'Appel audio en cours...'}
+              </div>
+            </div>
+          )}
 
           {/* FLUX VIDÉO LOCAL (PIP) AVEC ZOOM */}
           {callState.type === 'video' && localStream && (

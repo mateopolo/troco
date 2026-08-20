@@ -241,8 +241,24 @@ export default function ListingCard({
         )}
         
         {item.isDemo && (
-          <span style={{ position: 'absolute', top: item.urgent ? '40px' : '12px', left: '12px', backgroundColor: 'rgba(99,102,241,0.95)', color: '#FFF', fontSize: '10px', fontWeight: '800', padding: '5px 9px', borderRadius: '10px', boxShadow: '0 6px 16px rgba(99,102,241,0.35)', zIndex: 4 }}>
-            Annonce de Démonstration (IA)
+          <span style={{
+            position: 'absolute',
+            top: item.isBoosted ? '46px' : '12px',
+            right: '12px',
+            backgroundColor: 'rgba(30,41,59,0.82)',
+            backdropFilter: 'blur(6px)',
+            WebkitBackdropFilter: 'blur(6px)',
+            color: '#93C5FD',
+            fontSize: '9px',
+            fontWeight: '800',
+            padding: '4px 8px',
+            borderRadius: '8px',
+            border: '1px solid rgba(96,165,250,0.35)',
+            letterSpacing: '0.5px',
+            textTransform: 'uppercase',
+            zIndex: 4,
+          }}>
+            🧩 Annonce Test
           </span>
         )}
 
