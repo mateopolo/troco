@@ -4765,35 +4765,33 @@ export default function App() {
   }, [listings]);
 
   // ---- SYNC TEMPS RÉEL FIRESTORE → état listings ----
-  // Fusionne les annonces de démo (isDemo: true, issues des données en dur)
+  // Fusionne les mockListings (isDemo: true, source immuable hors composant)
   // avec les vraies annonces publiées dans la collection Firestore 'listings'.
-  // Dès qu'un document est ajouté / modifié / supprimé dans Firestore,
-  // onSnapshot le détecte et déclenche un re-rendu automatique.
+  // On lit directement mockListings au lieu de prev.filter() pour éviter
+  // que le feed soit vide si prev a été écrasé avant l'arrivée du snapshot.
   useEffect(() => {
+    const demoBase = mockListings.map(l => ({ ...l, status: 'active', isDemo: true }));
+
     const unsub = onSnapshot(
       collection(db, 'listings'),
       (snapshot) => {
-        // Annonces réelles depuis Firestore (on attache firestoreId pour les mises à jour futures)
+        // Annonces réelles depuis Firestore
         const firestoreListings = snapshot.docs.map((docSnap) => ({
-          id: docSnap.data().id || docSnap.id,          // garde l'id local si présent
-          firestoreId: docSnap.id,                       // référence Firestore pour updateDoc
+          id: docSnap.data().id || docSnap.id,
+          firestoreId: docSnap.id,
           ...docSnap.data(),
           status: docSnap.data().status || 'active',
+          isDemo: false,
         }));
-
-        setListings((prev) => {
-          // Annonces de démo : celles qui ont isDemo === true dans l'état courant
-          const demoListings = prev.filter((item) => item.isDemo === true);
-          // Fusion : demos en premier, puis les annonces Firestore
-          // Les IDs Firestore ne peuvent pas écraser une annonce demo (clés différentes)
-          return [...demoListings, ...firestoreListings];
-        });
+        // Fusion garantie : démos toujours présentes + annonces Firestore
+        setListings([...demoBase, ...firestoreListings]);
       },
       (error) => {
+        // En cas d'erreur réseau : on affiche au moins les démos
         console.warn('[Firestore] onSnapshot error:', error);
+        setListings(prev => prev.length > 0 ? prev : demoBase);
       }
     );
-    // Nettoyage : désabonnement quand le composant est démonté
     return () => unsub();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -4905,10 +4903,10 @@ export default function App() {
     const distance = getListingDistance(item);
     const matchesDistance = (() => {
       if (isInfiniteRadius || radiusKm >= 2000) return true;
-      if (distance !== null) return distance <= radiusKm;
-      const itemFormat = item.format || item.type || 'onsite';
-      if (itemFormat === 'remote') return formatFilter === 'all' || formatFilter === 'remote';
-      return false;
+      // Si on n'a pas pu calculer la distance (pas de coordonnées) :
+      // on affiche l'annonce quand même pour ne pas vider le feed.
+      if (distance === null) return true;
+      return distance <= radiusKm;
     })();
 
     return item.status !== 'paused' && matchesSearch && matchesFormat && matchesCategory && matchesLanguage && matchesPayment && matchesDistance;
@@ -5332,7 +5330,7 @@ export default function App() {
   };
 
   // ---- ENVOI DE MESSAGE (MESSAGERIE) ----
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!selectedChat) return;
     const text = messageDraft.trim();
     if (!text) return;
@@ -5351,10 +5349,23 @@ export default function App() {
     };
 
     const newMessage = { id: Date.now(), sender: 'me', text, translations: msgTranslations };
+    // ── État local (inchangé) ──
     setChatThreads(prev => ({ ...prev, [chatId]: [...(prev[chatId] || []), newMessage] }));
     setMessageDraft('');
 
-    window.setTimeout(() => {
+    // ── Firestore : persistance du message ──
+    try {
+      await addDoc(collection(db, 'chats', String(chatId), 'messages'), {
+        sender: 'me',
+        text,
+        translations: msgTranslations,
+        createdAt: serverTimestamp(),
+      });
+    } catch (e) {
+      console.warn('[Firestore] message write failed:', e);
+    }
+
+    window.setTimeout(async () => {
       const frText = `Merci pour ton message, je reviens vite vers toi concernant « ${getListingTitleTranslation(selectedChat.listing, 'FR')} ».`;
       const replyTranslations = {
         FR: frText,
@@ -5367,7 +5378,19 @@ export default function App() {
       };
 
       const reply = { id: Date.now() + 1, sender: 'them', text: frText, translations: replyTranslations };
+      // ── État local (inchangé) ──
       setChatThreads(prev => ({ ...prev, [chatId]: [...(prev[chatId] || []), reply] }));
+      // ── Firestore : persistance de la réponse auto ──
+      try {
+        await addDoc(collection(db, 'chats', String(chatId), 'messages'), {
+          sender: 'them',
+          text: frText,
+          translations: replyTranslations,
+          createdAt: serverTimestamp(),
+        });
+      } catch (e) {
+        console.warn('[Firestore] auto-reply write failed:', e);
+      }
     }, 900);
   };
 
