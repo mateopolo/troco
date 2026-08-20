@@ -4,7 +4,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Search, MapPin, Video, Star, Globe, Filter, MessageSquare, PlusCircle, User, ShieldCheck, Clock, CheckCircle, ArrowRight, X, Sparkles, Coins, Plus, Trash2, Camera, Pencil, Mic, PhoneOff, Flame, History, Check, Lock, CreditCard, Tag, Phone, UserPlus, ChevronLeft, ChevronRight, Maximize2, Minimize2, ZoomIn, ZoomOut, MicOff, VideoOff, Sun, Moon, Upload } from 'lucide-react';
 import { auth, db } from './firebase';
-import { collection, addDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, doc, updateDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
 import { RecaptchaVerifier, signInWithPhoneNumber, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import ChatView from './components/ChatView';
 
@@ -4763,6 +4763,40 @@ export default function App() {
       console.warn('Erreur sauvegarde localStorage des annonces', e);
     }
   }, [listings]);
+
+  // ---- SYNC TEMPS RÉEL FIRESTORE → état listings ----
+  // Fusionne les annonces de démo (isDemo: true, issues des données en dur)
+  // avec les vraies annonces publiées dans la collection Firestore 'listings'.
+  // Dès qu'un document est ajouté / modifié / supprimé dans Firestore,
+  // onSnapshot le détecte et déclenche un re-rendu automatique.
+  useEffect(() => {
+    const unsub = onSnapshot(
+      collection(db, 'listings'),
+      (snapshot) => {
+        // Annonces réelles depuis Firestore (on attache firestoreId pour les mises à jour futures)
+        const firestoreListings = snapshot.docs.map((docSnap) => ({
+          id: docSnap.data().id || docSnap.id,          // garde l'id local si présent
+          firestoreId: docSnap.id,                       // référence Firestore pour updateDoc
+          ...docSnap.data(),
+          status: docSnap.data().status || 'active',
+        }));
+
+        setListings((prev) => {
+          // Annonces de démo : celles qui ont isDemo === true dans l'état courant
+          const demoListings = prev.filter((item) => item.isDemo === true);
+          // Fusion : demos en premier, puis les annonces Firestore
+          // Les IDs Firestore ne peuvent pas écraser une annonce demo (clés différentes)
+          return [...demoListings, ...firestoreListings];
+        });
+      },
+      (error) => {
+        console.warn('[Firestore] onSnapshot error:', error);
+      }
+    );
+    // Nettoyage : désabonnement quand le composant est démonté
+    return () => unsub();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const getListingDistance = (item) => {
     if (typeof item.distanceKm === 'number') return item.distanceKm;
