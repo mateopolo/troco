@@ -1,5 +1,5 @@
 /**
- * useWebRTC.js — Signalisation WebRTC temps réel via Firestore
+ * useWebRTC.js — Signalisation WebRTC temps réel via Firestore avec STUN mondial et gestion des permissions
  *
  * Architecture Firestore :
  *   calls/{chatId}                          → type, from, to, status, offer, answer
@@ -14,12 +14,17 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 
+// Configuration STUN globale robuste (Google + open STUN pour traversée 4G/Wi-Fi/NAT)
 const ICE_CONFIG = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
     { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:stun3.l.google.com:19302' },
+    { urls: 'stun:stun4.l.google.com:19302' },
+    { urls: 'stun:stun.voip.blackberry.com:3478' },
   ],
+  iceCandidatePoolSize: 10,
 };
 
 export function useWebRTC({ profileName, selectedChat }) {
@@ -74,18 +79,32 @@ export function useWebRTC({ profileName, selectedChat }) {
     } catch (_) {}
   }, []);
 
+  // Gestion explicite et sécurisée des autorisations média avec messages clairs
   const _getLocalStream = useCallback(async (type) => {
-    if (!navigator.mediaDevices?.getUserMedia) return null;
+    if (!navigator.mediaDevices?.getUserMedia) {
+      alert("Votre navigateur ne prend pas en charge l'accès caméra/micro WebRTC.");
+      return null;
+    }
     const constraints = type === 'video'
       ? { video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }, audio: true }
       : { video: false, audio: true };
     try {
       return await navigator.mediaDevices.getUserMedia(constraints);
-    } catch (_) {
+    } catch (err) {
+      console.warn('getUserMedia error primary:', err);
       try {
         return await navigator.mediaDevices.getUserMedia({ video: type === 'video', audio: true });
-      } catch (err) {
-        console.warn('getUserMedia error:', err);
+      } catch (fallbackErr) {
+        console.error('getUserMedia error fallback:', fallbackErr);
+        if (fallbackErr.name === 'NotAllowedError' || fallbackErr.name === 'PermissionDeniedError') {
+          alert("Accès caméra / micro refusé :\n\nPour passer des appels sur Troco, veuillez autoriser l'accès au micro et à la caméra dans les réglages de votre navigateur (icône 🔒 à gauche de la barre d'adresse).");
+        } else if (fallbackErr.name === 'NotFoundError' || fallbackErr.name === 'DevicesNotFoundError') {
+          alert("Aucun périphérique détecté :\n\nVeuillez vérifier qu'un microphone ou une caméra est bien branché sur votre appareil.");
+        } else if (fallbackErr.name === 'NotReadableError' || fallbackErr.name === 'TrackStartError') {
+          alert("Caméra ou micro occupé :\n\nVotre caméra ou micro est actuellement utilisé par une autre application (Zoom, Teams, etc.). Fermez-la et réessayez.");
+        } else {
+          alert("Impossible d'accéder aux périphériques média. Vérifiez les autorisations de votre navigateur.");
+        }
         return null;
       }
     }
@@ -143,17 +162,20 @@ export function useWebRTC({ profileName, selectedChat }) {
     const chatId = selectedChat?.id;
     if (!chatId) return;
 
+    // Demande explicite des permissions média avant de lancer l'appel
+    const stream = await _getLocalStream(type);
+    if (!stream) {
+      setCallState({ type: null, active: false, ringing: false, micOn: true, camOn: true, inviteOpen: false, copied: false });
+      return;
+    }
+    setLocalStream(stream);
+
     setCallState({ type, active: true, ringing: true, micOn: true, camOn: type === 'video', inviteOpen: false, copied: false });
     playRingtone();
     if (navigator.vibrate) navigator.vibrate([300, 100, 300]);
 
-    const stream = await _getLocalStream(type);
-    setLocalStream(stream);
-
     const pc = _createPC(chatId, 'caller');
-    if (stream) {
-      stream.getTracks().forEach(t => pc.addTrack(t, stream));
-    }
+    stream.getTracks().forEach(t => pc.addTrack(t, stream));
 
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
@@ -170,7 +192,6 @@ export function useWebRTC({ profileName, selectedChat }) {
     // Écouter la réponse SDP
     const unsubAnswer = onSnapshot(doc(db, 'calls', String(chatId)), async (snap) => {
       if (!snap.exists()) {
-        // L'autre a raccroché / annulé
         _cleanup();
         setCallState({ type: null, active: false, ringing: false, micOn: true, camOn: true, inviteOpen: false, copied: false });
         return;
@@ -199,19 +220,22 @@ export function useWebRTC({ profileName, selectedChat }) {
     const { chatId, type, from } = incomingCall;
     setIncomingCall(null);
 
+    // Demande explicite des permissions média pour l'appelé
+    const stream = await _getLocalStream(type);
+    if (!stream) {
+      setCallState({ type: null, active: false, ringing: false, micOn: true, camOn: true, inviteOpen: false, copied: false });
+      return null;
+    }
+    setLocalStream(stream);
+
     setCallState({ type, active: true, ringing: false, micOn: true, camOn: type === 'video', inviteOpen: false, copied: false });
 
     const callSnap = await getDoc(doc(db, 'calls', String(chatId)));
     if (!callSnap.exists()) return null;
     const callData = callSnap.data();
 
-    const stream = await _getLocalStream(type);
-    setLocalStream(stream);
-
     const pc = _createPC(chatId, 'callee');
-    if (stream) {
-      stream.getTracks().forEach(t => pc.addTrack(t, stream));
-    }
+    stream.getTracks().forEach(t => pc.addTrack(t, stream));
 
     await pc.setRemoteDescription(new RTCSessionDescription(callData.offer));
     const answer = await pc.createAnswer();
@@ -256,7 +280,7 @@ export function useWebRTC({ profileName, selectedChat }) {
     setIncomingCall(null);
   }, [incomingCall]);
 
-  // Écoute des appels entrants pour cet utilisateur
+  // Écoute des appels entrants pour cet utilisateur (uniquement quand to === profileName)
   useEffect(() => {
     if (!profileName) return;
     const unsub = onSnapshot(collection(db, 'calls'), (snap) => {

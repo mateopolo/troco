@@ -4,7 +4,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Search, MapPin, Video, Star, Globe, Filter, MessageSquare, PlusCircle, User, ShieldCheck, Clock, CheckCircle, ArrowRight, X, Sparkles, Coins, Plus, Trash2, Camera, Pencil, Mic, PhoneOff, Flame, History, Check, Lock, CreditCard, Tag, Phone, UserPlus, ChevronLeft, ChevronRight, Maximize2, Minimize2, ZoomIn, ZoomOut, MicOff, VideoOff, Sun, Moon, Upload } from 'lucide-react';
 import { auth, db } from './firebase';
-import { collection, addDoc, doc, updateDoc, serverTimestamp, onSnapshot, query, orderBy, setDoc, deleteDoc, getDoc } from 'firebase/firestore';
+import { collection, addDoc, doc, updateDoc, serverTimestamp, onSnapshot, query, orderBy, setDoc, deleteDoc, getDoc, where } from 'firebase/firestore';
 import { RecaptchaVerifier, signInWithPhoneNumber, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import ChatView from './components/ChatView';
 import { useWebRTC } from './hooks/useWebRTC';
@@ -4093,17 +4093,30 @@ export default function App() {
     ],
   });
 
-  // État des discussions (fusionne mockChats et Firestore chats)
+  // État des discussions (fusionne mockChats et Firestore chats filtrés par utilisateur)
   const [chatsList, setChatsList] = useState(mockChats);
 
-  // Synchronisation temps réel des discussions depuis Firestore
+  // Synchronisation temps réel des discussions depuis Firestore (CONFIDENTIALITÉ STRICTE : filtrage par participant)
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'chats'), (snapshot) => {
-      const firestoreChats = snapshot.docs.map(docSnap => ({
-        id: docSnap.data().id || docSnap.id,
-        firestoreId: docSnap.id,
-        ...docSnap.data(),
-      }));
+    if (!profile?.name) return;
+    const q = query(
+      collection(db, 'chats'),
+      where('participants', 'array-contains', profile.name)
+    );
+    const unsub = onSnapshot(q, (snapshot) => {
+      const firestoreChats = snapshot.docs.map(docSnap => {
+        const data = docSnap.data();
+        // Identifier le nom de l'interlocuteur (l'autre participant)
+        const otherUser = Array.isArray(data.participants)
+          ? data.participants.find(p => p && p.trim().toLowerCase() !== profile.name.trim().toLowerCase()) || data.user || 'Interlocuteur'
+          : data.user || 'Interlocuteur';
+        return {
+          id: data.id || docSnap.id,
+          firestoreId: docSnap.id,
+          ...data,
+          user: otherUser,
+        };
+      });
       const merged = [...mockChats];
       firestoreChats.forEach(fChat => {
         const idx = merged.findIndex(m => String(m.id) === String(fChat.id));
@@ -4114,9 +4127,11 @@ export default function App() {
         }
       });
       setChatsList(merged);
+    }, (err) => {
+      console.warn('[Firestore] chats onSnapshot error:', err);
     });
     return () => unsub();
-  }, []);
+  }, [profile?.name]);
 
   const handleSelectChat = (chat) => {
     setSelectedChat(chat);
@@ -4780,11 +4795,15 @@ export default function App() {
       if (snapshot.empty) return;
       const msgs = snapshot.docs.map(d => {
         const data = d.data();
-        const isMe = data.senderName ? data.senderName === profile.name : data.sender === 'me';
+        // Attribution stricte de l'auteur : si senderName correspond à l'utilisateur connecté => 'me' (aligné à droite), sinon 'them' (aligné à gauche)
+        const isMe = data.senderName
+          ? data.senderName.trim().toLowerCase() === profile.name.trim().toLowerCase()
+          : data.sender === 'me';
         return {
           id: d.id,
           ...data,
           sender: isMe ? 'me' : 'them',
+          senderName: data.senderName || (isMe ? profile.name : (selectedChat.user || 'Interlocuteur')),
           text: data.text || '',
           translations: data.translations || { FR: data.text || '' },
         };
@@ -5320,6 +5339,7 @@ export default function App() {
       lastMessage: `Début de discussion pour ${listing.title}`,
       status: 'Nouvelle discussion',
       terms: listing.compensation || '',
+      participants: [profile.name, listing.author],
     };
 
     setSelectedChat(conversation);
@@ -5329,7 +5349,7 @@ export default function App() {
     // Marquer la conversation comme lue dès qu'on l'ouvre
     setReadChats(prev => new Set([...prev, conversationId, String(conversationId), Number(conversationId)]));
 
-    // Persistance de la discussion dans Firestore
+    // Persistance de la discussion dans Firestore avec les participants
     try {
       await setDoc(doc(db, 'chats', String(conversationId)), {
         id: conversationId,
@@ -5362,7 +5382,13 @@ export default function App() {
 
     const chatId = selectedChat.id;
 
-    const newMessage = { id: Date.now(), sender: 'me', text, translations: { FR: text } };
+    const newMessage = {
+      id: Date.now(),
+      sender: 'me',
+      senderName: profile.name,
+      text,
+      translations: { FR: text }
+    };
     // État local immédiat pour réactivité parfaite
     setChatThreads(prev => ({ ...prev, [chatId]: [...(prev[chatId] || []), newMessage] }));
     setMessageDraft('');
@@ -5370,7 +5396,6 @@ export default function App() {
     // Persistance Firestore — synchronisation bidirectionnelle PC ↔ Mobile
     try {
       await addDoc(collection(db, 'chats', String(chatId), 'messages'), {
-        sender: 'me',
         senderName: profile.name,
         text,
         createdAt: serverTimestamp(),
@@ -5381,6 +5406,7 @@ export default function App() {
         listing: selectedChat.listing,
         lastMessage: text,
         lastSenderName: profile.name,
+        participants: selectedChat.participants || [profile.name, selectedChat.user],
         updatedAt: serverTimestamp(),
       }, { merge: true });
     } catch (e) {
