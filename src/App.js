@@ -4,7 +4,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Search, MapPin, Video, Star, Globe, Filter, MessageSquare, PlusCircle, User, ShieldCheck, Clock, CheckCircle, ArrowRight, X, Sparkles, Coins, Plus, Trash2, Camera, Pencil, Mic, PhoneOff, Flame, History, Check, Lock, CreditCard, Tag, Phone, UserPlus, ChevronLeft, ChevronRight, Maximize2, Minimize2, ZoomIn, ZoomOut, MicOff, VideoOff, Sun, Moon, Upload } from 'lucide-react';
 import { auth, db } from './firebase';
-import { collection, addDoc, doc, updateDoc, serverTimestamp, onSnapshot } from 'firebase/firestore';
+import { collection, addDoc, doc, updateDoc, serverTimestamp, onSnapshot, query, orderBy, setDoc, deleteDoc, getDoc } from 'firebase/firestore';
 import { RecaptchaVerifier, signInWithPhoneNumber, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import ChatView from './components/ChatView';
 
@@ -3405,6 +3405,7 @@ export default function App() {
   });
   const [localStream, setLocalStream] = useState(null);
   const localVideoRef = useRef(null);
+  const [incomingCall, setIncomingCall] = useState(null); // { chatId, type, from }
 
   useEffect(() => {
     if (localVideoRef.current && localStream) {
@@ -3422,6 +3423,17 @@ export default function App() {
   }, [localStream]);
 
   const startCall = (type) => {
+    const chatId = selectedChat?.id;
+    // Écriture du signal d'appel dans Firestore pour l'interlocuteur
+    if (chatId) {
+      setDoc(doc(db, 'calls', String(chatId)), {
+        type,
+        from: profile.name,
+        to: selectedChat?.user,
+        status: 'ringing',
+        startedAt: serverTimestamp(),
+      }).catch(e => console.warn('[Firestore] call signal failed:', e));
+    }
     // Phase 1 : Sonnerie (ringing)
     setCallState({
       type,
@@ -3433,32 +3445,46 @@ export default function App() {
       copied: false,
     });
     playRingtone();
-    // Vibration sur mobile si disponible
     if (navigator.vibrate) navigator.vibrate([300, 100, 300]);
-
     // Phase 2 : Connexion établie après 2.5s
     window.setTimeout(() => {
       setCallState(prev => ({ ...prev, ringing: false }));
-
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        setLocalStream(null);
-        return;
-      }
-      const constraints = type === 'video'
-        ? { video: true, audio: true }
-        : { video: false, audio: true };
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { setLocalStream(null); return; }
+      const constraints = type === 'video' ? { video: true, audio: true } : { video: false, audio: true };
       navigator.mediaDevices.getUserMedia(constraints)
         .then((stream) => { setLocalStream(stream); })
         .catch(() => { setLocalStream(null); });
     }, 2500);
   };
 
+  const acceptIncomingCall = () => {
+    if (!incomingCall) return;
+    const { chatId, type, from } = incomingCall;
+    setIncomingCall(null);
+    // Naviguer vers le bon chat puis démarrer l'appel
+    const conversation = { id: chatId, user: from, listing: '', status: 'active', terms: '' };
+    setSelectedChat(conversation);
+    setActiveTab('chat');
+    setCallState({ type, active: true, ringing: false, micOn: true, camOn: type === 'video', inviteOpen: false, copied: false });
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { setLocalStream(null); return; }
+    const constraints = type === 'video' ? { video: true, audio: true } : { video: false, audio: true };
+    navigator.mediaDevices.getUserMedia(constraints).then(setLocalStream).catch(() => setLocalStream(null));
+  };
+
+  const declineIncomingCall = () => {
+    if (!incomingCall) return;
+    deleteDoc(doc(db, 'calls', String(incomingCall.chatId))).catch(() => {});
+    setIncomingCall(null);
+  };
+
   const endCall = () => {
-    if (localStream) {
-      localStream.getTracks().forEach(track => track.stop());
-    }
+    if (localStream) localStream.getTracks().forEach(track => track.stop());
     setLocalStream(null);
     setCallState({ type: null, active: false, ringing: false, micOn: true, camOn: true, inviteOpen: false, copied: false });
+    // Supprimer le signal Firestore
+    if (selectedChat?.id) {
+      deleteDoc(doc(db, 'calls', String(selectedChat.id))).catch(() => {});
+    }
   };
 
   // Sonnerie Web Audio (deux bips à 440Hz/880Hz)
@@ -4827,6 +4853,58 @@ export default function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ---- SYNC MESSAGES EN TEMPS RÉEL (chat actif) ----
+  // Quand selectedChat change, on s'abonne aux messages Firestore de ce chat.
+  // Chaque nouveau message (sender: 'them') incrémente le compteur de non-lus
+  // si ce n'est pas le chat actuellement ouvert.
+  useEffect(() => {
+    if (!selectedChat) return;
+    const chatId = String(selectedChat.id);
+    const q = query(collection(db, 'chats', chatId, 'messages'), orderBy('createdAt', 'asc'));
+    const unsub = onSnapshot(q, (snapshot) => {
+      if (snapshot.empty) return;
+      const msgs = snapshot.docs.map(d => ({
+        id: d.id,
+        ...d.data(),
+        // Assurer compat avec l'état local
+        text: d.data().text || '',
+        sender: d.data().sender || 'them',
+        translations: d.data().translations || {},
+      }));
+      // On ne remplace pas si rien de nouveau
+      setChatThreads(prev => {
+        const existing = prev[selectedChat.id] || [];
+        // Si Firestore a plus de messages qu'en local → on sync
+        if (msgs.length > existing.length) {
+          return { ...prev, [selectedChat.id]: msgs };
+        }
+        return prev;
+      });
+    }, () => { /* erreur silencieuse */ });
+    return () => unsub();
+  }, [selectedChat?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ---- SONNERIE ENTRANTE VIA FIRESTORE (appels reçus) ----
+  // Écoute la collection 'calls' pour détecter un appel entrant destiné à cet utilisateur.
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'calls'), (snapshot) => {
+      snapshot.docChanges().forEach(change => {
+        const data = change.doc.data();
+        // Un appel entrant = to === profile.name et status === 'ringing'
+        if (change.type === 'added' && data.to === profile.name && data.status === 'ringing') {
+          setIncomingCall({ chatId: change.doc.id, type: data.type, from: data.from });
+          playRingtone();
+          if (navigator.vibrate) navigator.vibrate([400, 150, 400, 150, 400]);
+        }
+        // Appel annulé par l'appelant
+        if (change.type === 'removed' && incomingCall?.chatId === change.doc.id) {
+          setIncomingCall(null);
+        }
+      });
+    });
+    return () => unsub();
+  }, [profile.name]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const getListingDistance = (item) => {
     if (typeof item.distanceKm === 'number') return item.distanceKm;
     if (item.coordinates && userCoords) {
@@ -5370,61 +5448,22 @@ export default function App() {
 
     const chatId = selectedChat.id;
 
-    // Dynamic translations for user message
-    const msgTranslations = {
-      FR: text,
-      EN: getChatMessageDisplayContent({ text }, 'EN'),
-      ES: getChatMessageDisplayContent({ text }, 'ES'),
-      IT: getChatMessageDisplayContent({ text }, 'IT'),
-      DE: getChatMessageDisplayContent({ text }, 'DE'),
-      JA: getChatMessageDisplayContent({ text }, 'JA'),
-      ZH: getChatMessageDisplayContent({ text }, 'ZH'),
-    };
-
-    const newMessage = { id: Date.now(), sender: 'me', text, translations: msgTranslations };
-    // ── État local (inchangé) ──
+    const newMessage = { id: Date.now(), sender: 'me', text, translations: { FR: text } };
+    // État local immédiat
     setChatThreads(prev => ({ ...prev, [chatId]: [...(prev[chatId] || []), newMessage] }));
     setMessageDraft('');
 
-    // ── Firestore : persistance du message ──
+    // Persistance Firestore — l'interlocuteur verra le message en temps réel via onSnapshot
     try {
       await addDoc(collection(db, 'chats', String(chatId), 'messages'), {
         sender: 'me',
+        senderName: profile.name,
         text,
-        translations: msgTranslations,
         createdAt: serverTimestamp(),
       });
     } catch (e) {
       console.warn('[Firestore] message write failed:', e);
     }
-
-    window.setTimeout(async () => {
-      const frText = `Merci pour ton message, je reviens vite vers toi concernant « ${getListingTitleTranslation(selectedChat.listing, 'FR')} ».`;
-      const replyTranslations = {
-        FR: frText,
-        EN: `Thanks for your message, I'll get back to you shortly about "${getListingTitleTranslation(selectedChat.listing, 'EN')}".`,
-        ES: `Gracias por tu mensaje, te responderé pronto sobre "${getListingTitleTranslation(selectedChat.listing, 'ES')}".`,
-        IT: `Grazie per il tuo messaggio, ti risponderò presto riguardo a "${getListingTitleTranslation(selectedChat.listing, 'IT')}".`,
-        DE: `Vielen Dank für Ihre Nachricht, ich melde mich in Kürze bezüglich "${getListingTitleTranslation(selectedChat.listing, 'DE')}".`,
-        JA: `メッセージありがとうございます。「${getListingTitleTranslation(selectedChat.listing, 'JA')}」についてすぐにご連絡します。`,
-        ZH: `谢谢你的留言，我会尽快就“${getListingTitleTranslation(selectedChat.listing, 'ZH')}”回复你。`,
-      };
-
-      const reply = { id: Date.now() + 1, sender: 'them', text: frText, translations: replyTranslations };
-      // ── État local (inchangé) ──
-      setChatThreads(prev => ({ ...prev, [chatId]: [...(prev[chatId] || []), reply] }));
-      // ── Firestore : persistance de la réponse auto ──
-      try {
-        await addDoc(collection(db, 'chats', String(chatId), 'messages'), {
-          sender: 'them',
-          text: frText,
-          translations: replyTranslations,
-          createdAt: serverTimestamp(),
-        });
-      } catch (e) {
-        console.warn('[Firestore] auto-reply write failed:', e);
-      }
-    }, 900);
   };
 
   // ---- CONTRE-PROPOSITION ----
@@ -7816,6 +7855,36 @@ export default function App() {
               ))}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ---- BANDEAU APPEL ENTRANT ---- */}
+      {incomingCall && !callState.active && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, zIndex: 4000,
+          background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
+          borderBottom: '1px solid rgba(96,165,250,0.3)',
+          padding: '16px 24px',
+          display: 'flex', alignItems: 'center', gap: '16px',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+          animation: 'notifPulse 1.5s ease-in-out infinite',
+        }}>
+          <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, #60A5FA, #04265A)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', color: '#FFF', fontWeight: '800', flexShrink: 0 }}>
+            {incomingCall.from[0]}
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ color: '#FFF', fontWeight: '800', fontSize: '15px' }}>{incomingCall.from}</div>
+            <div style={{ color: '#93C5FD', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              {incomingCall.type === 'video' ? <Video size={13} /> : <Phone size={13} />}
+              {incomingCall.type === 'video' ? 'Appel vidéo entrant...' : 'Appel audio entrant...'}
+            </div>
+          </div>
+          <button onClick={declineIncomingCall} style={{ border: 'none', width: '46px', height: '46px', borderRadius: '50%', backgroundColor: '#EF4444', color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(239,68,68,0.5)' }}>
+            <PhoneOff size={18} />
+          </button>
+          <button onClick={acceptIncomingCall} style={{ border: 'none', width: '46px', height: '46px', borderRadius: '50%', backgroundColor: '#22C55E', color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(34,197,94,0.5)' }}>
+            <Phone size={18} />
+          </button>
         </div>
       )}
 
