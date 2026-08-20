@@ -3,7 +3,8 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Search, MapPin, Video, Star, Globe, Filter, MessageSquare, PlusCircle, User, ShieldCheck, Clock, CheckCircle, ArrowRight, X, Sparkles, Coins, Plus, Trash2, Camera, Pencil, Mic, PhoneOff, Flame, History, Check, Lock, CreditCard, Tag, Phone, UserPlus, ChevronLeft, ChevronRight, Maximize2, Minimize2, ZoomIn, ZoomOut, MicOff, VideoOff, Sun, Moon, Upload } from 'lucide-react';
-import { auth } from './firebase';
+import { auth, db } from './firebase';
+import { collection, addDoc, doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { RecaptchaVerifier, signInWithPhoneNumber, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import ChatView from './components/ChatView';
 
@@ -5115,7 +5116,7 @@ export default function App() {
     reader.readAsDataURL(file);
   };
 
-  const handlePublishAnnouncement = () => {
+  const handlePublishAnnouncement = async () => {
     const rawTitle = (postDraft.title || '').trim();
     const rawDescription = (postDraft.description || '').trim();
 
@@ -5206,14 +5207,39 @@ export default function App() {
           playApplePaySound();
           setProfile(prev => ({ ...prev, euroBalance: Number((prev.euroBalance - 1.99).toFixed(2)) }));
         }
+        // ── Local state (inchangé) ──
         setListings(prev => prev.map(item => item.id === newListing.id ? newListing : item));
+        // ── Firestore : mise à jour du document existant ──
+        if (editingOriginalListing.firestoreId) {
+          try {
+            const { id: _localId, firestoreId: _fid, ...firestorePayload } = newListing;
+            await updateDoc(doc(db, 'listings', editingOriginalListing.firestoreId), {
+              ...firestorePayload,
+              updatedAt: serverTimestamp(),
+            });
+          } catch (e) {
+            console.warn('[Firestore] updateDoc failed:', e);
+          }
+        }
       }
     } else {
       if (wantsUrgent) {
         playApplePaySound();
         setProfile(prev => ({ ...prev, euroBalance: Number((prev.euroBalance - 1.99).toFixed(2)) }));
       }
+      // ── Local state (inchangé) ──
       setListings(prev => [newListing, ...prev]);
+      // ── Firestore : création du document ──
+      try {
+        const { id: _localId, ...firestorePayload } = newListing;
+        await addDoc(collection(db, 'listings'), {
+          ...firestorePayload,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+      } catch (e) {
+        console.warn('[Firestore] addDoc failed:', e);
+      }
     }
     const urgentMsg = wantsUrgent ? (
       currentLang === 'FR' ? ' • Option Urgent activée (1,99€ déduits de ton solde Euro)' :
