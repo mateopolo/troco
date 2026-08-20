@@ -4818,7 +4818,7 @@ export default function App() {
           sender: isMe ? 'me' : 'them',
           senderName: data.senderName || (isMe ? profile.name : (selectedChat.user || 'Interlocuteur')),
           text: data.text || '',
-          status: data.status || 'delivered',
+          status: data.status || 'sent',
           createdAt: data.createdAt || data.timestamp || Date.now(),
           translations: data.translations || { FR: data.text || '' },
         };
@@ -4827,6 +4827,21 @@ export default function App() {
         ...prev,
         [selectedChat.id]: msgs,
       }));
+
+      // Si le chat est ouvert dans l'onglet 'chat', marquer automatiquement les messages reçus comme "lu" (✓✓ bleu)
+      if (activeTab === 'chat' && String(selectedChat.id) === String(chatId)) {
+        snapshot.docs.forEach(d => {
+          const data = d.data();
+          const isFromThem = data.senderName?.trim().toLowerCase() !== profile.name?.trim().toLowerCase();
+          if (isFromThem && data.status !== 'read' && !data.read) {
+            updateDoc(doc(db, 'chats', chatId, 'messages', d.id), {
+              status: 'read',
+              read: true,
+              readAt: serverTimestamp(),
+            }).catch(() => {});
+          }
+        });
+      }
 
       // Synchronisation immédiate de l'aperçu du dernier message dans chatsList
       if (msgs.length > 0) {
@@ -5430,7 +5445,7 @@ export default function App() {
       sender: 'me',
       senderName: profile.name,
       text,
-      status: 'delivered',
+      status: 'sent',
       createdAt: new Date(),
       translations: { FR: text }
     };
@@ -5446,7 +5461,7 @@ export default function App() {
       await addDoc(collection(db, 'chats', String(chatId), 'messages'), {
         senderName: profile.name,
         text,
-        status: 'delivered',
+        status: 'sent',
         createdAt: serverTimestamp(),
       });
       await setDoc(doc(db, 'chats', String(chatId)), {
@@ -5460,6 +5475,44 @@ export default function App() {
       }, { merge: true });
     } catch (e) {
       console.warn('[Firestore] message write failed:', e);
+    }
+  };
+
+  // ---- MODIFICATION DE MESSAGE (ÉDITION) ----
+  const handleEditMessage = async (chatId, messageId, newText) => {
+    if (!newText || !newText.trim()) return;
+    const cid = String(chatId);
+    const trimmed = newText.trim();
+    setChatThreads(prev => ({
+      ...prev,
+      [chatId]: (prev[chatId] || []).map(m => String(m.id) === String(messageId) ? { ...m, text: trimmed, edited: true } : m),
+    }));
+    try {
+      await updateDoc(doc(db, 'chats', cid, 'messages', String(messageId)), {
+        text: trimmed,
+        edited: true,
+        editedAt: serverTimestamp(),
+      });
+      await updateDoc(doc(db, 'chats', cid), {
+        lastMessage: trimmed,
+        updatedAt: serverTimestamp(),
+      });
+    } catch (e) {
+      console.warn('[Firestore] edit message failed:', e);
+    }
+  };
+
+  // ---- SUPPRESSION DE MESSAGE ----
+  const handleDeleteMessage = async (chatId, messageId) => {
+    const cid = String(chatId);
+    setChatThreads(prev => ({
+      ...prev,
+      [chatId]: (prev[chatId] || []).filter(m => String(m.id) !== String(messageId)),
+    }));
+    try {
+      await deleteDoc(doc(db, 'chats', cid, 'messages', String(messageId)));
+    } catch (e) {
+      console.warn('[Firestore] delete message failed:', e);
     }
   };
 
@@ -7070,6 +7123,8 @@ export default function App() {
             chatInputText={messageDraft}
             setChatInputText={setMessageDraft}
             handleSendMessage={handleSendMessage}
+            handleEditMessage={handleEditMessage}
+            handleDeleteMessage={handleDeleteMessage}
             openCounterOffer={openCounterOffer}
             startCall={startCall}
             handleAcceptDeal={handleAcceptDeal}

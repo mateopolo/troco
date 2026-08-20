@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Phone, Video, Sparkles, Clock, CheckCircle, ChevronLeft, Globe } from 'lucide-react';
+import {
+  Send, Phone, Video, Sparkles, Clock, CheckCircle,
+  ChevronLeft, Globe, MoreVertical, Edit2, Trash2, Copy, Check, X
+} from 'lucide-react';
 
 export default function ChatView({
   activeTab,
@@ -11,6 +14,8 @@ export default function ChatView({
   chatInputText,
   setChatInputText,
   handleSendMessage,
+  handleEditMessage,
+  handleDeleteMessage,
   openCounterOffer,
   startCall,
   handleAcceptDeal,
@@ -27,6 +32,9 @@ export default function ChatView({
 }) {
   const [mobileSubView, setMobileSubView] = useState('list'); // 'list' | 'room'
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [activeMenuMsgId, setActiveMenuMsgId] = useState(null);
+  const [editingMsg, setEditingMsg] = useState(null); // { id, text }
+  const [copiedMsgId, setCopiedMsgId] = useState(null);
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
@@ -35,6 +43,17 @@ export default function ChatView({
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Fermer le menu d'actions lors d'un clic extérieur
+  useEffect(() => {
+    const handleOutsideClick = (e) => {
+      if (!e.target.closest('.msg-action-menu-container')) {
+        setActiveMenuMsgId(null);
+      }
+    };
+    window.addEventListener('click', handleOutsideClick);
+    return () => window.removeEventListener('click', handleOutsideClick);
   }, []);
 
   // Auto-scroll to bottom of messages
@@ -100,6 +119,78 @@ export default function ChatView({
     if (isMobile) {
       setMobileSubView('room');
     }
+  };
+
+  const onSubmitMessage = () => {
+    if (editingMsg) {
+      if (handleEditMessage) {
+        handleEditMessage(currentChatId, editingMsg.id, chatInputText);
+      }
+      setEditingMsg(null);
+      setChatInputText('');
+    } else {
+      handleSendMessage();
+    }
+  };
+
+  const renderMessageStatus = (msg) => {
+    const isRead = msg.status === 'read' || msg.read === true;
+    const isDelivered = msg.status === 'delivered' || msg.delivered === true;
+
+    // Statut 3 : Lu par le destinataire (✓✓ BLEU VIF / CYAN WhatsApp)
+    if (isRead) {
+      return (
+        <span
+          title="Lu"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            fontSize: '11px',
+            fontWeight: '900',
+            letterSpacing: '-1.5px',
+            color: '#38BDF8',
+            textShadow: '0 0 6px rgba(56,189,248,0.6)',
+          }}
+        >
+          ✓✓
+        </span>
+      );
+    }
+
+    // Statut 2 : Reçu / Distribué chez le destinataire (✓✓ GRIS)
+    if (isDelivered) {
+      return (
+        <span
+          title="Distribué"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            fontSize: '11px',
+            fontWeight: '900',
+            letterSpacing: '-1.5px',
+            color: darkMode ? 'rgba(15,23,42,0.65)' : 'rgba(255,255,255,0.75)',
+          }}
+        >
+          ✓✓
+        </span>
+      );
+    }
+
+    // Statut 1 : Envoyé / Validé par le serveur (✓ UNIQUE GRIS)
+    return (
+      <span
+        title="Envoyé"
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          fontSize: '11px',
+          fontWeight: '900',
+          color: darkMode ? 'rgba(15,23,42,0.65)' : 'rgba(255,255,255,0.75)',
+        }}
+      >
+        ✓
+      </span>
+    );
   };
 
   return (
@@ -242,20 +333,22 @@ export default function ChatView({
               </div>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
               <button
                 onClick={() => startCall('audio')}
-                title="Appel audio HD"
-                style={{ border: 'none', borderRadius: '12px', width: '36px', height: '36px', backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : '#F1F5F9', color: darkMode ? '#93C5FD' : '#04265A', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                className="premium-button"
+                style={{ border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #E2E8F0', borderRadius: '12px', padding: '8px 12px', backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : '#F8FAFC', color: darkMode ? '#60A5FA' : '#04265A', fontWeight: '700', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}
+                title={t('audioCall') || 'Appel audio'}
               >
-                <Phone size={16} />
+                <Phone size={14} />
               </button>
               <button
                 onClick={() => startCall('video')}
-                title="Appel vidéo HD"
-                style={{ border: 'none', borderRadius: '12px', width: '36px', height: '36px', backgroundColor: darkMode ? 'rgba(96,165,250,0.2)' : '#EFF6FF', color: darkMode ? '#60A5FA' : '#04265A', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                className="premium-button"
+                style={{ border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #E2E8F0', borderRadius: '12px', padding: '8px 12px', backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : '#F8FAFC', color: darkMode ? '#60A5FA' : '#04265A', fontWeight: '700', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}
+                title={t('videoCall') || 'Appel vidéo'}
               >
-                <Video size={16} />
+                <Video size={14} />
               </button>
               <button
                 onClick={openCounterOffer}
@@ -391,47 +484,173 @@ export default function ChatView({
               }
 
               const isMe = msg.sender === 'me';
+              const isMenuOpen = activeMenuMsgId === msg.id;
+
               return (
-                <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
+                <div
+                  key={msg.id}
+                  className="msg-action-menu-container"
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: isMe ? 'flex-end' : 'flex-start',
+                    position: 'relative',
+                  }}
+                >
                   <div style={{
-                    maxWidth: '82%', padding: '10px 14px', borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
-                    backgroundColor: isMe ? (darkMode ? '#60A5FA' : '#04265A') : (darkMode ? 'rgba(15,23,42,0.8)' : '#F1F5F9'),
-                    color: isMe ? (darkMode ? '#0F172A' : '#FFF') : (darkMode ? '#F8FAFC' : '#1E293B'),
-                    fontWeight: isMe ? '600' : '400',
-                    fontSize: '14px', lineHeight: 1.4,
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-                    wordBreak: 'break-word',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    flexDirection: isMe ? 'row' : 'row-reverse',
+                    maxWidth: '85%',
                   }}>
-                    <div>{translatedText}</div>
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'flex-end',
-                      gap: '4px',
-                      marginTop: '4px',
-                      fontSize: '10px',
-                      color: isMe ? (darkMode ? 'rgba(15,23,42,0.65)' : 'rgba(255,255,255,0.75)') : (darkMode ? '#94A3B8' : '#64748B'),
-                      fontWeight: '600',
-                      userSelect: 'none',
-                    }}>
-                      <span>{formatMsgTime(msg.createdAt || msg.timestamp || msg.id)}</span>
-                      {isMe && (
-                        <span
-                          title={msg.status === 'read' || msg.read ? 'Lu' : 'Distribué'}
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            fontSize: '11px',
-                            fontWeight: '800',
-                            letterSpacing: '-1.5px',
-                            color: msg.status === 'read' || msg.read ? '#38BDF8' : (darkMode ? 'rgba(15,23,42,0.65)' : 'rgba(255,255,255,0.75)'),
-                          }}
-                        >
-                          ✓✓
-                        </span>
+                    {/* BOUTON D'ACTIONS DISCRET (MODIFIER / SUPPRIMER / COPIER) */}
+                    <div style={{ position: 'relative' }}>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveMenuMsgId(prev => prev === msg.id ? null : msg.id);
+                        }}
+                        className="premium-button"
+                        style={{
+                          border: 'none',
+                          background: 'none',
+                          cursor: 'pointer',
+                          padding: '4px',
+                          borderRadius: '8px',
+                          color: darkMode ? '#94A3B8' : '#94A3B8',
+                          opacity: isMenuOpen ? 1 : 0.6,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}
+                        title="Options du message"
+                      >
+                        <MoreVertical size={14} />
+                      </button>
+
+                      {/* MENU FLOTTANT DES ACTIONS */}
+                      {isMenuOpen && (
+                        <div style={{
+                          position: 'absolute',
+                          top: '100%',
+                          [isMe ? 'right' : 'left']: 0,
+                          zIndex: 50,
+                          minWidth: '135px',
+                          backgroundColor: darkMode ? 'rgba(30,41,59,0.98)' : '#FFFFFF',
+                          backdropFilter: 'blur(16px)',
+                          borderRadius: '14px',
+                          border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #E2E8F0',
+                          boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
+                          padding: '6px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '2px',
+                        }}>
+                          {/* COPIER */}
+                          <button
+                            onClick={() => {
+                              navigator.clipboard?.writeText(msg.text || '');
+                              setCopiedMsgId(msg.id);
+                              setTimeout(() => setCopiedMsgId(null), 1500);
+                              setActiveMenuMsgId(null);
+                            }}
+                            className="premium-button"
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: '8px',
+                              padding: '8px 10px', borderRadius: '8px', border: 'none',
+                              backgroundColor: 'transparent', color: darkMode ? '#F8FAFC' : '#1E293B',
+                              fontSize: '12px', fontWeight: '700', cursor: 'pointer', textAlign: 'left',
+                              width: '100%',
+                            }}
+                          >
+                            {copiedMsgId === msg.id ? <Check size={14} color="#10B981" /> : <Copy size={14} />}
+                            {copiedMsgId === msg.id ? 'Copié !' : 'Copier'}
+                          </button>
+
+                          {/* MODIFIER (uniquement pour 'me') */}
+                          {isMe && (
+                            <button
+                              onClick={() => {
+                                setEditingMsg({ id: msg.id, text: msg.text || '' });
+                                setChatInputText(msg.text || '');
+                                setActiveMenuMsgId(null);
+                              }}
+                              className="premium-button"
+                              style={{
+                                display: 'flex', alignItems: 'center', gap: '8px',
+                                padding: '8px 10px', borderRadius: '8px', border: 'none',
+                                backgroundColor: 'transparent', color: darkMode ? '#60A5FA' : '#04265A',
+                                fontSize: '12px', fontWeight: '700', cursor: 'pointer', textAlign: 'left',
+                                width: '100%',
+                              }}
+                            >
+                              <Edit2 size={14} /> Modifier
+                            </button>
+                          )}
+
+                          {/* SUPPRIMER (uniquement pour 'me') */}
+                          {isMe && (
+                            <button
+                              onClick={() => {
+                                if (handleDeleteMessage) {
+                                  handleDeleteMessage(currentChatId, msg.id);
+                                }
+                                setActiveMenuMsgId(null);
+                              }}
+                              className="premium-button"
+                              style={{
+                                display: 'flex', alignItems: 'center', gap: '8px',
+                                padding: '8px 10px', borderRadius: '8px', border: 'none',
+                                backgroundColor: 'transparent', color: '#EF4444',
+                                fontSize: '12px', fontWeight: '700', cursor: 'pointer', textAlign: 'left',
+                                width: '100%',
+                              }}
+                            >
+                              <Trash2 size={14} color="#EF4444" /> Supprimer
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
+
+                    {/* BULLE DE MESSAGE */}
+                    <div style={{
+                      padding: '10px 14px',
+                      borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+                      backgroundColor: isMe ? (darkMode ? '#60A5FA' : '#04265A') : (darkMode ? 'rgba(15,23,42,0.8)' : '#F1F5F9'),
+                      color: isMe ? (darkMode ? '#0F172A' : '#FFF') : (darkMode ? '#F8FAFC' : '#1E293B'),
+                      fontWeight: isMe ? '600' : '400',
+                      fontSize: '14px',
+                      lineHeight: 1.4,
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                      wordBreak: 'break-word',
+                      position: 'relative',
+                    }}>
+                      <div>{translatedText}</div>
+                      
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'flex-end',
+                        gap: '4px',
+                        marginTop: '4px',
+                        fontSize: '10px',
+                        color: isMe ? (darkMode ? 'rgba(15,23,42,0.65)' : 'rgba(255,255,255,0.75)') : (darkMode ? '#94A3B8' : '#64748B'),
+                        fontWeight: '600',
+                        userSelect: 'none',
+                      }}>
+                        {msg.edited && (
+                          <span style={{ fontSize: '9px', fontStyle: 'italic', opacity: 0.85 }}>
+                            ({t('edited') || 'modifié'})
+                          </span>
+                        )}
+                        <span>{formatMsgTime(msg.createdAt || msg.timestamp || msg.id)}</span>
+                        {isMe && renderMessageStatus(msg)}
+                      </div>
+                    </div>
                   </div>
+
                   {currentLang !== 'FR' && (
                     <button
                       onClick={() => toggleOriginalMessage(msg.id)}
@@ -453,41 +672,67 @@ export default function ChatView({
             <div ref={messagesEndRef} />
           </div>
 
-          {/* INPUT SAISIE MESSAGE (POSITIONNÉ PROPREMENT AU-DESSUS DE LA NAV-BAR MOBILE) */}
+          {/* INPUT SAISIE MESSAGE (AVEC MODE MODIFICATION ÉVENTUEL) */}
           <div style={{
-            display: 'flex', gap: '10px', paddingTop: '14px', marginTop: 'auto',
+            display: 'flex', flexDirection: 'column', gap: '8px', paddingTop: '10px', marginTop: 'auto',
             borderTop: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E2E8F0',
             backgroundColor: darkMode ? 'rgba(30, 41, 59, 0.95)' : 'rgba(255,255,255,0.95)',
             borderRadius: '16px', padding: '10px',
             boxShadow: '0 -4px 16px rgba(0,0,0,0.04)',
             zIndex: 10
           }}>
-            <input
-              type="text"
-              value={chatInputText}
-              onChange={(e) => setChatInputText(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-              placeholder={t('typeYourMessage') || t('writeToInterlocutor') || 'Écris ton message...'}
-              style={{
-                flex: 1, padding: '12px 16px', borderRadius: '16px',
-                border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB',
-                backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFF',
-                color: darkMode ? '#FFF' : '#111827', fontSize: '14px', outline: 'none'
-              }}
-            />
-            <button
-              onClick={handleSendMessage}
-              className="premium-button"
-              style={{
-                border: 'none', borderRadius: '16px', width: '48px', height: '48px',
-                backgroundColor: darkMode ? '#60A5FA' : '#04265A',
-                color: darkMode ? '#0F172A' : '#FFF', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 4px 14px rgba(4,38,90,0.2)', flexShrink: 0
-              }}
-            >
-              <Send size={18} />
-            </button>
+            {/* BANDEAU MODE MODIFICATION DU MESSAGE */}
+            {editingMsg && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '6px 12px',
+                backgroundColor: darkMode ? 'rgba(4,38,90,0.7)' : '#EFF6FF',
+                borderRadius: '10px',
+                borderLeft: darkMode ? '3px solid #60A5FA' : '3px solid #04265A',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: darkMode ? '#93C5FD' : '#04265A', fontWeight: '700' }}>
+                  <Edit2 size={13} />
+                  <span>Modification du message</span>
+                </div>
+                <button
+                  onClick={() => { setEditingMsg(null); setChatInputText(''); }}
+                  style={{ border: 'none', background: 'none', cursor: 'pointer', color: darkMode ? '#93C5FD' : '#04265A', display: 'flex', alignItems: 'center' }}
+                >
+                  <X size={15} />
+                </button>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <input
+                type="text"
+                value={chatInputText}
+                onChange={(e) => setChatInputText(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && onSubmitMessage()}
+                placeholder={editingMsg ? 'Modifie ton message...' : (t('typeYourMessage') || t('writeToInterlocutor') || 'Écris ton message...')}
+                style={{
+                  flex: 1, padding: '12px 16px', borderRadius: '16px',
+                  border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB',
+                  backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFF',
+                  color: darkMode ? '#FFF' : '#111827', fontSize: '14px', outline: 'none'
+                }}
+              />
+              <button
+                onClick={onSubmitMessage}
+                className="premium-button"
+                style={{
+                  border: 'none', borderRadius: '16px', width: '48px', height: '48px',
+                  backgroundColor: darkMode ? '#60A5FA' : '#04265A',
+                  color: darkMode ? '#0F172A' : '#FFF', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: '0 4px 14px rgba(4,38,90,0.2)', flexShrink: 0
+                }}
+              >
+                {editingMsg ? <Check size={18} /> : <Send size={18} />}
+              </button>
+            </div>
           </div>
         </div>
       )}
