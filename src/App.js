@@ -7,6 +7,7 @@ import { auth, db } from './firebase';
 import { collection, addDoc, doc, updateDoc, serverTimestamp, onSnapshot, query, orderBy, setDoc, deleteDoc, getDoc } from 'firebase/firestore';
 import { RecaptchaVerifier, signInWithPhoneNumber, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import ChatView from './components/ChatView';
+import { useWebRTC } from './hooks/useWebRTC';
 
 
 // ---- SYNTHÉTISEURS SONORES WEB AUDIO API (100% EMBARQUÉS - ZERO FICHIER EXTERNE) ----
@@ -3394,151 +3395,35 @@ export default function App() {
   const [counterOfferDraft, setCounterOfferDraft] = useState({ euroAmount: '', trocoTokens: '', conditions: '' });
   const [chatStatusOverrides, setChatStatusOverrides] = useState({});
 
-  // ---- APPEL AUDIO / VIDÉO INTÉGRÉ (Partie 4) ----
-  const [callState, setCallState] = useState({
-    type: null,
-    active: false,
-    micOn: true,
-    camOn: true,
-    inviteOpen: false,
-    copied: false,
-  });
-  const [localStream, setLocalStream] = useState(null);
-  const localVideoRef = useRef(null);
-  const [incomingCall, setIncomingCall] = useState(null); // { chatId, type, from }
+  // ---- GESTION WEBRTC AUDIO/VIDÉO & APPELS TEMPS RÉEL (SIGNALISATION FIRESTORE) ----
+  const {
+    callState,
+    localStream,
+    remoteStream,
+    incomingCall,
+    localVideoRef,
+    remoteVideoRef,
+    startCall,
+    acceptIncomingCall,
+    declineIncomingCall,
+    endCall,
+    toggleMic,
+    toggleCam,
+    copyInviteLink,
+  } = useWebRTC({ profileName: profile.name, selectedChat });
 
-  useEffect(() => {
-    if (localVideoRef.current && localStream) {
-      localVideoRef.current.srcObject = localStream;
-      localVideoRef.current.play().catch(() => { });
-    }
-  }, [localStream]);
-
-  useEffect(() => {
-    return () => {
-      if (localStream) {
-        localStream.getTracks().forEach(track => track.stop());
-      }
-    };
-  }, [localStream]);
-
-  const startCall = (type) => {
-    const chatId = selectedChat?.id;
-    // Écriture du signal d'appel dans Firestore pour l'interlocuteur
-    if (chatId) {
-      setDoc(doc(db, 'calls', String(chatId)), {
-        type,
-        from: profile.name,
-        to: selectedChat?.user,
-        status: 'ringing',
-        startedAt: serverTimestamp(),
-      }).catch(e => console.warn('[Firestore] call signal failed:', e));
-    }
-    // Phase 1 : Sonnerie (ringing)
-    setCallState({
-      type,
-      active: true,
-      ringing: true,
-      micOn: true,
-      camOn: type === 'video',
-      inviteOpen: false,
-      copied: false,
-    });
-    playRingtone();
-    if (navigator.vibrate) navigator.vibrate([300, 100, 300]);
-    // Phase 2 : Connexion établie après 2.5s
-    window.setTimeout(() => {
-      setCallState(prev => ({ ...prev, ringing: false }));
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { setLocalStream(null); return; }
-      const constraints = type === 'video' ? { video: true, audio: true } : { video: false, audio: true };
-      navigator.mediaDevices.getUserMedia(constraints)
-        .then((stream) => { setLocalStream(stream); })
-        .catch(() => { setLocalStream(null); });
-    }, 2500);
-  };
-
-  const acceptIncomingCall = () => {
-    if (!incomingCall) return;
-    const { chatId, type, from } = incomingCall;
-    setIncomingCall(null);
-    // Naviguer vers le bon chat puis démarrer l'appel
-    const conversation = { id: chatId, user: from, listing: '', status: 'active', terms: '' };
-    setSelectedChat(conversation);
-    setActiveTab('chat');
-    setCallState({ type, active: true, ringing: false, micOn: true, camOn: type === 'video', inviteOpen: false, copied: false });
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { setLocalStream(null); return; }
-    const constraints = type === 'video' ? { video: true, audio: true } : { video: false, audio: true };
-    navigator.mediaDevices.getUserMedia(constraints).then(setLocalStream).catch(() => setLocalStream(null));
-  };
-
-  const declineIncomingCall = () => {
-    if (!incomingCall) return;
-    deleteDoc(doc(db, 'calls', String(incomingCall.chatId))).catch(() => {});
-    setIncomingCall(null);
-  };
-
-  const endCall = () => {
-    if (localStream) localStream.getTracks().forEach(track => track.stop());
-    setLocalStream(null);
-    setCallState({ type: null, active: false, ringing: false, micOn: true, camOn: true, inviteOpen: false, copied: false });
-    // Supprimer le signal Firestore
-    if (selectedChat?.id) {
-      deleteDoc(doc(db, 'calls', String(selectedChat.id))).catch(() => {});
-    }
-  };
-
-  // Sonnerie Web Audio (deux bips à 440Hz/880Hz)
-  const playRingtone = () => {
-    try {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (!AudioCtx) return;
-      const ctx = new AudioCtx();
-      const playBeep = (freq, start, dur) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain); gain.connect(ctx.destination);
-        osc.frequency.value = freq;
-        osc.type = 'sine';
-        gain.gain.setValueAtTime(0, ctx.currentTime + start);
-        gain.gain.linearRampToValueAtTime(0.18, ctx.currentTime + start + 0.05);
-        gain.gain.linearRampToValueAtTime(0, ctx.currentTime + start + dur);
-        osc.start(ctx.currentTime + start);
-        osc.stop(ctx.currentTime + start + dur + 0.05);
+  const handleAcceptIncomingCall = async () => {
+    const res = await acceptIncomingCall();
+    if (res) {
+      const conv = chatsList.find(c => String(c.id) === String(res.chatId)) || {
+        id: res.chatId,
+        user: res.from,
+        listing: 'Appel en direct',
+        status: 'active',
+        terms: '',
       };
-      playBeep(440, 0, 0.35);
-      playBeep(880, 0.45, 0.35);
-      playBeep(440, 0.9, 0.35);
-      playBeep(880, 1.35, 0.35);
-    } catch (e) { /* silence si Web Audio indisponible */ }
-  };
-
-  const toggleMic = () => {
-    if (localStream) {
-      localStream.getAudioTracks().forEach(track => { track.enabled = !callState.micOn; });
-    }
-    setCallState(prev => ({ ...prev, micOn: !prev.micOn }));
-  };
-
-  const toggleCam = () => {
-    if (localStream) {
-      localStream.getVideoTracks().forEach(track => { track.enabled = !callState.camOn; });
-    }
-    setCallState(prev => ({ ...prev, camOn: !prev.camOn }));
-  };
-
-  const copyInviteLink = () => {
-    const link = `https://troco.app/join/${selectedChat ? selectedChat.id : 'group'}`;
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(link).then(() => {
-        setCallState(prev => ({ ...prev, copied: true }));
-        window.setTimeout(() => setCallState(prev => ({ ...prev, copied: false })), 1800);
-      }).catch(() => {
-        setCallState(prev => ({ ...prev, copied: true }));
-        window.setTimeout(() => setCallState(prev => ({ ...prev, copied: false })), 1800);
-      });
-    } else {
-      setCallState(prev => ({ ...prev, copied: true }));
-      window.setTimeout(() => setCallState(prev => ({ ...prev, copied: false })), 1800);
+      setSelectedChat(conv);
+      setActiveTab('chat');
     }
   };
 
@@ -4208,12 +4093,44 @@ export default function App() {
     ],
   });
 
+  // État des discussions (fusionne mockChats et Firestore chats)
+  const [chatsList, setChatsList] = useState(mockChats);
+
+  // Synchronisation temps réel des discussions depuis Firestore
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'chats'), (snapshot) => {
+      const firestoreChats = snapshot.docs.map(docSnap => ({
+        id: docSnap.data().id || docSnap.id,
+        firestoreId: docSnap.id,
+        ...docSnap.data(),
+      }));
+      const merged = [...mockChats];
+      firestoreChats.forEach(fChat => {
+        const idx = merged.findIndex(m => String(m.id) === String(fChat.id));
+        if (idx >= 0) {
+          merged[idx] = { ...merged[idx], ...fChat };
+        } else {
+          merged.unshift(fChat);
+        }
+      });
+      setChatsList(merged);
+    });
+    return () => unsub();
+  }, []);
+
+  const handleSelectChat = (chat) => {
+    setSelectedChat(chat);
+    if (chat?.id) {
+      setReadChats(prev => new Set([...prev, chat.id, String(chat.id), Number(chat.id)]));
+    }
+  };
+
   // ---- COMPTEUR NON-LUS — basé sur tous les threads actifs (pas seulement mockChats) ----
   const unreadCount = Object.entries(chatThreads).filter(([chatId, thread]) => {
     if (!thread || thread.length === 0) return false;
     if (readChats.has(Number(chatId)) || readChats.has(String(chatId))) return false;
     const lastMsg = thread[thread.length - 1];
-    return lastMsg.sender === 'them' || lastMsg.kind === 'deal';
+    return lastMsg && (lastMsg.sender === 'them' || lastMsg.kind === 'deal');
   }).length;
 
   const createModernMapIcon = (isDarkMode = false) => {
@@ -4854,56 +4771,37 @@ export default function App() {
   }, []);
 
   // ---- SYNC MESSAGES EN TEMPS RÉEL (chat actif) ----
-  // Quand selectedChat change, on s'abonne aux messages Firestore de ce chat.
-  // Chaque nouveau message (sender: 'them') incrémente le compteur de non-lus
-  // si ce n'est pas le chat actuellement ouvert.
+  // Dès qu'un message arrive dans Firestore, il apparaît instantanément dans la vue.
   useEffect(() => {
-    if (!selectedChat) return;
+    if (!selectedChat?.id) return;
     const chatId = String(selectedChat.id);
     const q = query(collection(db, 'chats', chatId, 'messages'), orderBy('createdAt', 'asc'));
     const unsub = onSnapshot(q, (snapshot) => {
       if (snapshot.empty) return;
-      const msgs = snapshot.docs.map(d => ({
-        id: d.id,
-        ...d.data(),
-        // Assurer compat avec l'état local
-        text: d.data().text || '',
-        sender: d.data().sender || 'them',
-        translations: d.data().translations || {},
+      const msgs = snapshot.docs.map(d => {
+        const data = d.data();
+        const isMe = data.senderName ? data.senderName === profile.name : data.sender === 'me';
+        return {
+          id: d.id,
+          ...data,
+          sender: isMe ? 'me' : 'them',
+          text: data.text || '',
+          translations: data.translations || { FR: data.text || '' },
+        };
+      });
+      setChatThreads(prev => ({
+        ...prev,
+        [selectedChat.id]: msgs,
       }));
-      // On ne remplace pas si rien de nouveau
-      setChatThreads(prev => {
-        const existing = prev[selectedChat.id] || [];
-        // Si Firestore a plus de messages qu'en local → on sync
-        if (msgs.length > existing.length) {
-          return { ...prev, [selectedChat.id]: msgs };
-        }
-        return prev;
-      });
-    }, () => { /* erreur silencieuse */ });
-    return () => unsub();
-  }, [selectedChat?.id]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ---- SONNERIE ENTRANTE VIA FIRESTORE (appels reçus) ----
-  // Écoute la collection 'calls' pour détecter un appel entrant destiné à cet utilisateur.
-  useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'calls'), (snapshot) => {
-      snapshot.docChanges().forEach(change => {
-        const data = change.doc.data();
-        // Un appel entrant = to === profile.name et status === 'ringing'
-        if (change.type === 'added' && data.to === profile.name && data.status === 'ringing') {
-          setIncomingCall({ chatId: change.doc.id, type: data.type, from: data.from });
-          playRingtone();
-          if (navigator.vibrate) navigator.vibrate([400, 150, 400, 150, 400]);
-        }
-        // Appel annulé par l'appelant
-        if (change.type === 'removed' && incomingCall?.chatId === change.doc.id) {
-          setIncomingCall(null);
-        }
-      });
+      // Décrémente le compteur de notifications en marquant la conversation comme lue
+      if (activeTab === 'chat') {
+        setReadChats(prev => new Set([...prev, selectedChat.id, String(selectedChat.id), Number(selectedChat.id)]));
+      }
+    }, (err) => {
+      console.warn('[Firestore] chat messages onSnapshot:', err);
     });
     return () => unsub();
-  }, [profile.name]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedChat?.id, profile.name, activeTab]);
 
   const getListingDistance = (item) => {
     if (typeof item.distanceKm === 'number') return item.distanceKm;
@@ -5410,7 +5308,7 @@ export default function App() {
   // conversations séparées => deux historiques de messages distincts et isolés.
   const buildConversationId = (listingId) => listingId + 1000;
 
-  const handleStartDiscussion = (listing) => {
+  const handleStartDiscussion = async (listing) => {
     if (listing.author === profile.name) return;
 
     const conversationId = buildConversationId(listing.id);
@@ -5421,7 +5319,7 @@ export default function App() {
       listing: listing.title,
       lastMessage: `Début de discussion pour ${listing.title}`,
       status: 'Nouvelle discussion',
-      terms: listing.compensation,
+      terms: listing.compensation || '',
     };
 
     setSelectedChat(conversation);
@@ -5429,7 +5327,23 @@ export default function App() {
     setSelectedListing(null);
     if (callState.active) endCall();
     // Marquer la conversation comme lue dès qu'on l'ouvre
-    setReadChats(prev => new Set([...prev, conversationId]));
+    setReadChats(prev => new Set([...prev, conversationId, String(conversationId), Number(conversationId)]));
+
+    // Persistance de la discussion dans Firestore
+    try {
+      await setDoc(doc(db, 'chats', String(conversationId)), {
+        id: conversationId,
+        user: listing.author,
+        listing: listing.title,
+        lastMessage: `Début de discussion pour ${listing.title}`,
+        status: 'Nouvelle discussion',
+        terms: listing.compensation || '',
+        participants: [profile.name, listing.author],
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+    } catch (e) {
+      console.warn('[Firestore] start discussion failed:', e);
+    }
 
     setChatThreads(prev => {
       if (prev[conversationId]) return prev;
@@ -5449,11 +5363,11 @@ export default function App() {
     const chatId = selectedChat.id;
 
     const newMessage = { id: Date.now(), sender: 'me', text, translations: { FR: text } };
-    // État local immédiat
+    // État local immédiat pour réactivité parfaite
     setChatThreads(prev => ({ ...prev, [chatId]: [...(prev[chatId] || []), newMessage] }));
     setMessageDraft('');
 
-    // Persistance Firestore — l'interlocuteur verra le message en temps réel via onSnapshot
+    // Persistance Firestore — synchronisation bidirectionnelle PC ↔ Mobile
     try {
       await addDoc(collection(db, 'chats', String(chatId), 'messages'), {
         sender: 'me',
@@ -5461,6 +5375,14 @@ export default function App() {
         text,
         createdAt: serverTimestamp(),
       });
+      await setDoc(doc(db, 'chats', String(chatId)), {
+        id: chatId,
+        user: selectedChat.user,
+        listing: selectedChat.listing,
+        lastMessage: text,
+        lastSenderName: profile.name,
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
     } catch (e) {
       console.warn('[Firestore] message write failed:', e);
     }
@@ -5477,7 +5399,7 @@ export default function App() {
     setIsCounterOfferOpen(true);
   };
 
-  const submitCounterOffer = () => {
+  const submitCounterOffer = async () => {
     if (!selectedChat) return;
     const chatId = selectedChat.id;
     const euroAmount = Number(counterOfferDraft.euroAmount) || 0;
@@ -5495,14 +5417,27 @@ export default function App() {
     setChatThreads(prev => ({ ...prev, [chatId]: [...(prev[chatId] || []), dealMessage] }));
     setIsCounterOfferOpen(false);
 
-    window.setTimeout(() => {
-      const parts = [];
-      if (euroAmount > 0) parts.push(`${euroAmount}€`);
-      if (trocoTokens > 0) parts.push(`${trocoTokens} Jeton${trocoTokens > 1 ? 's' : ''}`);
-      const summary = parts.length ? ` (${parts.join(' + ')})` : '';
-      const ack = `Bonne contre-proposition${summary}. Le cadre me convient — j'attends ta confirmation pour valider le deal.`;
-      setChatThreads(prev => ({ ...prev, [chatId]: [...(prev[chatId] || []), { id: Date.now() + 2, sender: 'them', text: ack }] }));
-    }, 900);
+    try {
+      await addDoc(collection(db, 'chats', String(chatId), 'messages'), {
+        sender: 'me',
+        senderName: profile.name,
+        kind: 'deal',
+        dealId: dealMessage.dealId,
+        status: 'pending',
+        terms: { euroAmount, trocoTokens, conditions },
+        createdAt: serverTimestamp(),
+      });
+      await setDoc(doc(db, 'chats', String(chatId)), {
+        id: chatId,
+        user: selectedChat.user,
+        listing: selectedChat.listing,
+        lastMessage: `Proposition de deal : ${conditions}`,
+        lastSenderName: profile.name,
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+    } catch (e) {
+      console.warn('[Firestore] deal message write failed:', e);
+    }
   };
 
   const handleAcceptDeal = (chatId, dealId, terms) => {
@@ -7052,9 +6987,9 @@ export default function App() {
         {activeTab === 'chat' && (
           <ChatView
             activeTab={activeTab}
-            mockChats={mockChats}
+            mockChats={chatsList}
             selectedChat={selectedChat}
-            setSelectedChat={setSelectedChat}
+            setSelectedChat={handleSelectChat}
             chatThreads={chatThreads}
             chatInputText={messageDraft}
             setChatInputText={setMessageDraft}
@@ -7882,7 +7817,7 @@ export default function App() {
           <button onClick={declineIncomingCall} style={{ border: 'none', width: '46px', height: '46px', borderRadius: '50%', backgroundColor: '#EF4444', color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(239,68,68,0.5)' }}>
             <PhoneOff size={18} />
           </button>
-          <button onClick={acceptIncomingCall} style={{ border: 'none', width: '46px', height: '46px', borderRadius: '50%', backgroundColor: '#22C55E', color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(34,197,94,0.5)' }}>
+          <button onClick={handleAcceptIncomingCall} style={{ border: 'none', width: '46px', height: '46px', borderRadius: '50%', backgroundColor: '#22C55E', color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(34,197,94,0.5)' }}>
             <Phone size={18} />
           </button>
         </div>
@@ -7902,7 +7837,29 @@ export default function App() {
           overflow: 'hidden',
           animation: 'fadeSlideUp 0.3s ease both'
         }}>
-          <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(circle at 50% 40%, rgba(96,165,250,0.15) 0%, transparent 60%)' }} />
+          {/* FLUX VIDÉO DISTANT WEBRTC PLEIN ÉCRAN */}
+          {callState.type === 'video' && remoteStream && (
+            <video
+              ref={remoteVideoRef}
+              autoPlay
+              playsInline
+              style={{
+                position: 'absolute',
+                inset: 0,
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                zIndex: 2,
+              }}
+            />
+          )}
+
+          {/* FLUX AUDIO DISTANT WEBRTC (POUR APPELS AUDIO OU EN ARRIÈRE-PLAN) */}
+          {callState.type !== 'video' && (
+            <video ref={remoteVideoRef} autoPlay playsInline style={{ display: 'none' }} />
+          )}
+
+          <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(circle at 50% 40%, rgba(96,165,250,0.15) 0%, transparent 60%)', zIndex: 1 }} />
 
           {/* BANDEAU SUPÉRIEUR CLASSIQUE */}
           <div style={{
@@ -7986,33 +7943,29 @@ export default function App() {
             </div>
           )}
 
-          {/* VISUEL CENTRAL PARFAITEMENT CENTRÉ */}
-          <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', zIndex: 10, pointerEvents: 'none' }}>
-            {callState.type === 'video' && !localStream ? (
-              <>
-                <div style={{ width: '120px', height: '120px', borderRadius: '50%', background: 'linear-gradient(135deg, #60A5FA 0%, #04265A 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '46px', color: '#FFF', fontWeight: '800', boxShadow: '0 0 50px rgba(96,165,250,0.45)' }}>{(selectedChat?.user || 'Thomas G.')[0]}</div>
-                <div style={{ color: '#FFFFFF', fontSize: '18px', fontWeight: '800' }}>{selectedChat?.user || 'Thomas G.'}</div>
-                <div style={{ color: '#94A3B8', fontSize: '13px' }}>Caméra distante en attente...</div>
-              </>
-            ) : callState.type === 'video' ? (
-              <>
-                <div style={{ width: '120px', height: '120px', borderRadius: '50%', background: 'linear-gradient(135deg, #F9A8D4 0%, #7C3AED 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '46px', color: '#FFF', fontWeight: '800', boxShadow: '0 0 50px rgba(249,168,212,0.4)' }}>{(selectedChat?.user || 'Thomas G.')[0]}</div>
-                <div style={{ color: '#FFFFFF', fontSize: '18px', fontWeight: '800' }}>{selectedChat?.user || 'Thomas G.'}</div>
-                <div style={{ color: '#94A3B8', fontSize: '13px' }}>Connexion sécurisée établie</div>
-              </>
-            ) : (
-              <>
-                <div className="call-ring" style={{ width: '120px', height: '120px', borderRadius: '50%', background: 'linear-gradient(135deg, #60A5FA 0%, #04265A 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '46px', color: '#FFF', fontWeight: '800', boxShadow: '0 0 50px rgba(96,165,250,0.4)' }}>{(selectedChat?.user || 'Thomas G.')[0]}</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', height: '24px' }}>
-                  {[0, 1, 2, 3, 4].map(i => (
-                    <div key={i} className="wave-bar" style={{ height: `${10 + (i % 3) * 10}px`, animationDelay: `${i * 0.12}s` }} />
-                  ))}
-                </div>
-                <div style={{ color: '#FFFFFF', fontSize: '18px', fontWeight: '800' }}>{selectedChat?.user || 'Thomas G.'}</div>
-                <div style={{ color: '#94A3B8', fontSize: '13px' }}>Appel audio haute fidélité</div>
-              </>
-            )}
-          </div>
+          {/* VISUEL CENTRAL QUAND PAS DE FLUX VIDÉO DISTANT (OU APPEL AUDIO) */}
+          {(!remoteStream || callState.type !== 'video') && !callState.ringing && (
+            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', zIndex: 10, pointerEvents: 'none' }}>
+              {callState.type === 'video' && !remoteStream ? (
+                <>
+                  <div style={{ width: '120px', height: '120px', borderRadius: '50%', background: 'linear-gradient(135deg, #60A5FA 0%, #04265A 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '46px', color: '#FFF', fontWeight: '800', boxShadow: '0 0 50px rgba(96,165,250,0.45)' }}>{(selectedChat?.user || 'Thomas G.')[0]}</div>
+                  <div style={{ color: '#FFFFFF', fontSize: '18px', fontWeight: '800' }}>{selectedChat?.user || 'Thomas G.'}</div>
+                  <div style={{ color: '#94A3B8', fontSize: '13px' }}>Connexion établie • En attente de la caméra...</div>
+                </>
+              ) : (
+                <>
+                  <div className="call-ring" style={{ width: '120px', height: '120px', borderRadius: '50%', background: 'linear-gradient(135deg, #60A5FA 0%, #04265A 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '46px', color: '#FFF', fontWeight: '800', boxShadow: '0 0 50px rgba(96,165,250,0.4)' }}>{(selectedChat?.user || 'Thomas G.')[0]}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', height: '24px' }}>
+                    {[0, 1, 2, 3, 4].map(i => (
+                      <div key={i} className="wave-bar" style={{ height: `${10 + (i % 3) * 10}px`, animationDelay: `${i * 0.12}s` }} />
+                    ))}
+                  </div>
+                  <div style={{ color: '#FFFFFF', fontSize: '18px', fontWeight: '800' }}>{selectedChat?.user || 'Thomas G.'}</div>
+                  <div style={{ color: '#94A3B8', fontSize: '13px' }}>Appel audio en direct</div>
+                </>
+              )}
+            </div>
+          )}
 
           {/* NOTIFICATION D'INVITATION COPIÉE */}
           {callState.copied && (
