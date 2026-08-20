@@ -1,5 +1,5 @@
 /**
- * useWebRTC.js — Signalisation WebRTC temps réel via Firestore avec STUN mondial et gestion des permissions
+ * useWebRTC.js — Signalisation WebRTC temps réel via Firestore avec STUN mondial (Wi-Fi ⇄ 4G/5G) et gestion des autorisations
  *
  * Architecture Firestore :
  *   calls/{chatId}                          → type, from, to, status, offer, answer
@@ -14,15 +14,18 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 
-// Configuration STUN globale robuste (Google + open STUN pour traversée 4G/Wi-Fi/NAT)
+// Configuration STUN globale robuste (Google STUN pour traversée NAT, 4G, 5G et Wi-Fi)
 const ICE_CONFIG = {
   iceServers: [
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun1.l.google.com:19302' },
-    { urls: 'stun:stun2.l.google.com:19302' },
-    { urls: 'stun:stun3.l.google.com:19302' },
-    { urls: 'stun:stun4.l.google.com:19302' },
-    { urls: 'stun:stun.voip.blackberry.com:3478' },
+    {
+      urls: [
+        'stun:stun.l.google.com:19302',
+        'stun:stun1.l.google.com:19302',
+        'stun:stun2.l.google.com:19302',
+        'stun:stun3.l.google.com:19302',
+        'stun:stun4.l.google.com:19302',
+      ],
+    },
   ],
   iceCandidatePoolSize: 10,
 };
@@ -79,10 +82,10 @@ export function useWebRTC({ profileName, selectedChat }) {
     } catch (_) {}
   }, []);
 
-  // Gestion explicite et sécurisée des autorisations média avec messages clairs
+  // Gestion sécurisée des autorisations Caméra / Micro avec alertes claires
   const _getLocalStream = useCallback(async (type) => {
     if (!navigator.mediaDevices?.getUserMedia) {
-      alert("Votre navigateur ne prend pas en charge l'accès caméra/micro WebRTC.");
+      alert("Votre navigateur ne prend pas en charge l'accès à la caméra et au microphone (WebRTC).");
       return null;
     }
     const constraints = type === 'video'
@@ -91,25 +94,26 @@ export function useWebRTC({ profileName, selectedChat }) {
     try {
       return await navigator.mediaDevices.getUserMedia(constraints);
     } catch (err) {
-      console.warn('getUserMedia error primary:', err);
+      console.warn('getUserMedia primary failed:', err);
       try {
         return await navigator.mediaDevices.getUserMedia({ video: type === 'video', audio: true });
       } catch (fallbackErr) {
-        console.error('getUserMedia error fallback:', fallbackErr);
+        console.error('getUserMedia fallback failed:', fallbackErr);
         if (fallbackErr.name === 'NotAllowedError' || fallbackErr.name === 'PermissionDeniedError') {
-          alert("Accès caméra / micro refusé :\n\nPour passer des appels sur Troco, veuillez autoriser l'accès au micro et à la caméra dans les réglages de votre navigateur (icône 🔒 à gauche de la barre d'adresse).");
+          alert("Accès caméra / microphone refusé :\n\nPour passer des appels audio ou visio sur Troco, veuillez autoriser l'accès aux périphériques dans les paramètres de votre navigateur (cliquez sur l'icône 🔒 à gauche de la barre d'adresse).");
         } else if (fallbackErr.name === 'NotFoundError' || fallbackErr.name === 'DevicesNotFoundError') {
-          alert("Aucun périphérique détecté :\n\nVeuillez vérifier qu'un microphone ou une caméra est bien branché sur votre appareil.");
+          alert("Périphérique introuvable :\n\nAucun microphone ou caméra n'a été détecté sur votre appareil. Veuillez brancher un périphérique et réessayer.");
         } else if (fallbackErr.name === 'NotReadableError' || fallbackErr.name === 'TrackStartError') {
-          alert("Caméra ou micro occupé :\n\nVotre caméra ou micro est actuellement utilisé par une autre application (Zoom, Teams, etc.). Fermez-la et réessayez.");
+          alert("Périphérique déjà utilisé :\n\nVotre caméra ou microphone est actuellement occupé par une autre application (Zoom, Teams, etc.). Veuillez la fermer puis relancer l'appel.");
         } else {
-          alert("Impossible d'accéder aux périphériques média. Vérifiez les autorisations de votre navigateur.");
+          alert("Impossible d'initialiser les flux audio/vidéo. Veuillez vérifier les autorisations de votre navigateur.");
         }
         return null;
       }
     }
   }, []);
 
+  // Nettoyage complet des flux, des écouteurs et suppression du document de signalisation
   const _cleanup = useCallback(() => {
     unsubsRef.current.forEach(u => { try { u(); } catch (_) {} });
     unsubsRef.current = [];
@@ -122,6 +126,10 @@ export function useWebRTC({ profileName, selectedChat }) {
       return null;
     });
     setRemoteStream(null);
+    const targetChatId = activeChatIdRef.current;
+    if (targetChatId) {
+      deleteDoc(doc(db, 'calls', String(targetChatId))).catch(() => {});
+    }
     activeChatIdRef.current = null;
   }, []);
 
@@ -162,7 +170,7 @@ export function useWebRTC({ profileName, selectedChat }) {
     const chatId = selectedChat?.id;
     if (!chatId) return;
 
-    // Demande explicite des permissions média avant de lancer l'appel
+    // Enveloppe d'autorisation explicite
     const stream = await _getLocalStream(type);
     if (!stream) {
       setCallState({ type: null, active: false, ringing: false, micOn: true, camOn: true, inviteOpen: false, copied: false });
@@ -220,7 +228,7 @@ export function useWebRTC({ profileName, selectedChat }) {
     const { chatId, type, from } = incomingCall;
     setIncomingCall(null);
 
-    // Demande explicite des permissions média pour l'appelé
+    // Enveloppe d'autorisation explicite
     const stream = await _getLocalStream(type);
     if (!stream) {
       setCallState({ type: null, active: false, ringing: false, micOn: true, camOn: true, inviteOpen: false, copied: false });
@@ -265,22 +273,24 @@ export function useWebRTC({ profileName, selectedChat }) {
     return { chatId, type, from };
   }, [incomingCall, _getLocalStream, _createPC, _cleanup]);
 
+  // Raccrochage avec suppression immédiate du signal Firestore
   const endCall = useCallback(() => {
     const targetChatId = activeChatIdRef.current || selectedChat?.id;
-    _cleanup();
-    setCallState({ type: null, active: false, ringing: false, micOn: true, camOn: true, inviteOpen: false, copied: false });
     if (targetChatId) {
       deleteDoc(doc(db, 'calls', String(targetChatId))).catch(() => {});
     }
+    _cleanup();
+    setCallState({ type: null, active: false, ringing: false, micOn: true, camOn: true, inviteOpen: false, copied: false });
   }, [selectedChat, _cleanup]);
 
+  // Refus d'appel avec suppression du signal
   const declineIncomingCall = useCallback(() => {
     if (!incomingCall) return;
     deleteDoc(doc(db, 'calls', String(incomingCall.chatId))).catch(() => {});
     setIncomingCall(null);
   }, [incomingCall]);
 
-  // Écoute des appels entrants pour cet utilisateur (uniquement quand to === profileName)
+  // Écoute des appels entrants pour cet utilisateur (to === profileName)
   useEffect(() => {
     if (!profileName) return;
     const unsub = onSnapshot(collection(db, 'calls'), (snap) => {

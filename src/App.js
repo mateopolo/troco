@@ -4796,9 +4796,7 @@ export default function App() {
       const msgs = snapshot.docs.map(d => {
         const data = d.data();
         // Attribution stricte de l'auteur : si senderName correspond à l'utilisateur connecté => 'me' (aligné à droite), sinon 'them' (aligné à gauche)
-        const isMe = data.senderName
-          ? data.senderName.trim().toLowerCase() === profile.name.trim().toLowerCase()
-          : data.sender === 'me';
+        const isMe = data.senderName?.trim().toLowerCase() === profile.name?.trim().toLowerCase();
         return {
           id: d.id,
           ...data,
