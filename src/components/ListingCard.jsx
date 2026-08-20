@@ -239,6 +239,12 @@ export default function ListingCard({
             URGENT
           </span>
         )}
+        
+        {item.isDemo && (
+          <span style={{ position: 'absolute', top: item.urgent ? '40px' : '12px', left: '12px', backgroundColor: 'rgba(99,102,241,0.95)', color: '#FFF', fontSize: '10px', fontWeight: '800', padding: '5px 9px', borderRadius: '10px', boxShadow: '0 6px 16px rgba(99,102,241,0.35)', zIndex: 4 }}>
+            Annonce de Démonstration (IA)
+          </span>
+        )}
 
         {media.video && (
           <span style={{ position: 'absolute', bottom: '12px', left: '12px', backgroundColor: isHovered ? '#04265A' : 'rgba(15,23,42,0.75)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', color: '#60A5FA', fontSize: '10px', fontWeight: '800', padding: '5px 9px', borderRadius: '10px', zIndex: 4, display: 'flex', alignItems: 'center', gap: '4px', transition: 'all 0.3s ease' }}>

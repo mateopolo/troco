@@ -1,4 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { collection, onSnapshot } from 'firebase/firestore';
+import { db } from '../firebase';
 import { Search, MapPin, Filter, Grid, Map, Globe, Tag } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
@@ -64,6 +66,24 @@ export default function FeedView({
   toggleOriginalListing = () => {},
   profile = { name: 'MATEO POLO', avatar: '' }
 }) {
+  const [realtimeListings, setRealtimeListings] = useState([]);
+
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'listings'), (snapshot) => {
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setRealtimeListings(data);
+    });
+    return () => unsub();
+  }, []);
+
+  const displayListings = realtimeListings.length > 0 ? realtimeListings.filter(item => {
+    const matchesSearch = item.title?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          item.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesFormat = formatFilter === 'all' || item.type === 'both' || item.type === formatFilter;
+    const matchesCategory = selectedCategory === 'all' || selectedCategory === 'Tous' || item.category === selectedCategory;
+    return matchesSearch && matchesFormat && matchesCategory;
+  }) : filteredListings;
+
   if (activeTab !== 'feed') return null;
 
   return (
@@ -226,14 +246,14 @@ export default function FeedView({
       {/* CONTENU COMPTEUR ET LISTE / CARTE */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 4px' }}>
         <span style={{ fontSize: '14px', fontWeight: '800', color: darkMode ? '#94A3B8' : '#64748B' }}>
-          {filteredListings.length} {t('announcementsFound') || 'annonces trouvées'}
+          {displayListings.length} {t('announcementsFound') || 'annonces trouvées'}
         </span>
       </div>
 
       {viewMode === 'list' ? (
         /* GRILLE DE CARTES ANNONCES (4 COLONNES HARMONIEUSES ET UNIFIÉES SUR ÉCRANS PC) */
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(285px, 1fr))', gap: '22px' }}>
-          {filteredListings.map(item => (
+          {displayListings.map(item => (
             <ListingCard
               key={item.id}
               item={item}
@@ -258,7 +278,7 @@ export default function FeedView({
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
               url={darkMode ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"}
             />
-            {filteredListings.map(item => {
+            {displayListings.map(item => {
               const coords = item.coordinates || (userCoords ? [userCoords[0] + (Math.random() - 0.5) * 0.05, userCoords[1] + (Math.random() - 0.5) * 0.05] : [48.8566, 2.3522]);
               const modernIcon = createModernMapIcon(darkMode);
               return (

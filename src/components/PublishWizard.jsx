@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { PlusCircle, CheckCircle, ChevronRight } from 'lucide-react';
+import { collection, addDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 
 export default function PublishWizard({
   activeTab,
@@ -221,7 +223,25 @@ export default function PublishWizard({
             {postStep < 4 ? (
               <button onClick={() => setPostStep(prev => prev + 1)} className="premium-button" style={{ border: 'none', borderRadius: '999px', padding: '10px 16px', backgroundColor: '#04265A', color: '#FFF', fontWeight: '700', cursor: 'pointer', boxShadow: '0 8px 18px rgba(4,38,90,0.2)' }}>{t('continueButton')}</button>
             ) : (
-              <button onClick={handlePublishAnnouncement} className="premium-button" style={{ border: 'none', borderRadius: '999px', padding: '10px 16px', backgroundColor: '#04265A', color: '#FFF', fontWeight: '700', cursor: 'pointer', boxShadow: '0 8px 18px rgba(4,38,90,0.2)' }}>{t('publishAdButton')}</button>
+              <button 
+                onClick={async () => {
+                  try {
+                    await addDoc(collection(db, 'listings'), {
+                      ...postDraft,
+                      author: profile.name || 'User',
+                      createdAt: new Date().toISOString()
+                    });
+                    handlePublishAnnouncement();
+                  } catch (e) {
+                    console.error("Error adding document: ", e);
+                    handlePublishAnnouncement();
+                  }
+                }} 
+                className="premium-button" 
+                style={{ border: 'none', borderRadius: '999px', padding: '10px 16px', backgroundColor: '#04265A', color: '#FFF', fontWeight: '700', cursor: 'pointer', boxShadow: '0 8px 18px rgba(4,38,90,0.2)' }}
+              >
+                {t('publishAdButton')}
+              </button>
             )}
           </div>
         </div>

@@ -62,7 +62,7 @@ export const defaultCategories = [
 
 export const mockListings = [
   {
-    id: 1,
+    id: 1, isDemo: true,
     title: "Prêt Perceuse à percussion + coffret forets",
     description: "Perceuse à percussion professionnelle 800W avec coffret complet de forets béton, bois et métal.",
     author: "Marc L.",
@@ -86,7 +86,7 @@ export const mockListings = [
     },
   },
   {
-    id: 2,
+    id: 2, isDemo: true,
     title: "Coaching Musculation à domicile sur mesure",
     description: "Séances personnalisées de renforcement musculaire et conseils en nutrition sportive à Paris et en visio.",
     author: "Nico D.",
@@ -110,7 +110,7 @@ export const mockListings = [
     },
   },
   {
-    id: 3,
+    id: 3, isDemo: true,
     title: "Réparation écran iPhone & Dépannage Express",
     description: "Remplacement écran et batterie iPhone en moins de 30 minutes avec pièces de haute qualité.",
     author: "Jules T.",
@@ -133,7 +133,7 @@ export const mockListings = [
     },
   },
   {
-    id: 4,
+    id: 4, isDemo: true,
     title: "Prêt Vélo VTC & Casque de ville",
     description: "Vélo VTC hollandais très confortable en parfait état pour balades urbaines ou trajets quotidiens.",
     author: "Camille V.",
@@ -156,7 +156,7 @@ export const mockListings = [
     },
   },
   {
-    id: 5,
+    id: 5, isDemo: true,
     title: "Dépannage Plomberie & Réparation rapide",
     description: "Intervention rapide pour fuite d'eau, débouchage d'évier et changement de joints.",
     author: "Karim B.",
@@ -179,7 +179,7 @@ export const mockListings = [
     },
   },
   {
-    id: 6,
+    id: 6, isDemo: true,
     title: "日本語会話 & スキル交換レッスン",
     description: "日常会話、ビジネス日本語、文化交流を楽しく学びましょう。経験豊富な講師が担当します。",
     author: "Kenji S.",
@@ -202,7 +202,7 @@ export const mockListings = [
     },
   },
   {
-    id: 7,
+    id: 7, isDemo: true,
     title: "ドローン空撮 & 4K映像編集",
     description: "東京の美しい景観やイベントの4K空撮撮影とCinematic編集を提供します。",
     author: "Ren T.",
@@ -225,7 +225,7 @@ export const mockListings = [
     },
   },
   {
-    id: 8,
+    id: 8, isDemo: true,
     title: "Professional Portrait Photography Session",
     description: "High-end portrait photo session in Manhattan or remote Lightroom color grading masterclass.",
     author: "Aria T.",
@@ -248,7 +248,7 @@ export const mockListings = [
     },
   },
   {
-    id: 9,
+    id: 9, isDemo: true,
     title: "Manhattan Loft Short Stay Swap",
     description: "Bright designer loft in SoHo New York available for residential stay swap with Europe.",
     author: "Ethan R.",
@@ -271,7 +271,7 @@ export const mockListings = [
     },
   },
   {
-    id: 10,
+    id: 10, isDemo: true,
     title: "UI/UX Design Workshop & Figma Advanced",
     description: "Lernen Sie professionelles Design System, Auto Layout und interaktive Prototypen in Figma.",
     author: "Lukas K.",
@@ -294,7 +294,7 @@ export const mockListings = [
     },
   },
   {
-    id: 11,
+    id: 11, isDemo: true,
     title: "Techno Music Production & Ableton Live Coaching",
     description: "Produzieren Sie Ihre eigenen Techno-Tracks mit Ableton Live. Sounddesign, Abmischung und Mastering.",
     author: "Max V.",
@@ -317,7 +317,7 @@ export const mockListings = [
     },
   },
   {
-    id: 12,
+    id: 12, isDemo: true,
     title: "Clases de Guitarra Flamenca y Ritmo",
     description: "Aprende los rasgueados, falsetas y compás del flamenco tradicional español a tu ritmo.",
     author: "Carlos N.",
@@ -340,7 +340,7 @@ export const mockListings = [
     },
   },
   {
-    id: 13,
+    id: 13, isDemo: true,
     title: "Alquiler Cámara 4K y Kit de Iluminación",
     description: "Kit completo de grabación 4K con iluminación LED de estudio y micrófonos inalámbricos.",
     author: "Elena V.",
@@ -363,7 +363,7 @@ export const mockListings = [
     },
   },
   {
-    id: 14,
+    id: 14, isDemo: true,
     title: "Scambio Appartamento centro Firenze ↔ Parigi",
     description: "Splendido appartamento storico con vista sul Duomo nel cuore di Firenze, disponibile per scambio casa.",
     author: "Matteo R.",
@@ -386,7 +386,7 @@ export const mockListings = [
     },
   },
   {
-    id: 17,
+    id: 17, isDemo: true,
     title: "Lezioni di Cucina Romana Tradizionale",
     description: "Scopri i segreti della cucina romana autentica: cacio e pepe, carbonara, supplì e molto altro.",
     author: "Giulia M.",
@@ -409,7 +409,7 @@ export const mockListings = [
     },
   },
   {
-    id: 15,
+    id: 15, isDemo: true,
     title: "中文与书法艺术线上交流",
     description: "地道中文普通话交流与传统软笔书法体验，含视频课件与汉字艺术辅导。",
     author: "Wei L.",
@@ -432,7 +432,7 @@ export const mockListings = [
     },
   },
   {
-    id: 18,
+    id: 18, isDemo: true,
     title: "上海国际商务中文培训",
     description: "针对外籍商务人士的专业普通话培训，涵盖商务谈判、邮件写作及跨文化沟通。",
     author: "Lin X.",
@@ -455,7 +455,7 @@ export const mockListings = [
     },
   },
   {
-    id: 19,
+    id: 19, isDemo: true,
     title: "Aulas de Capoeira & Cultura Afro-Brasileira",
     description: "Aprenda capoeira Angola e Regional com mestre experiente, incluindo música (berimbau, atabaque) e história.",
     author: "Mestre Bimba Jr.",
@@ -479,7 +479,7 @@ export const mockListings = [
     },
   },
   {
-    id: 20,
+    id: 20, isDemo: true,
     title: "London Rooftop Yoga & Mindfulness Sessions",
     description: "Weekly rooftop yoga sessions with breathtaking views of the London skyline. All levels welcome.",
     author: "Sophie H.",
@@ -502,7 +502,7 @@ export const mockListings = [
     },
   },
   {
-    id: 21,
+    id: 21, isDemo: true,
     title: "K-Pop 댄스 레슨 & 한국어 회화 교환",
     description: "K-Pop 안무, 한국어 기초 회화 및 한국 문화 교류 레슨. 초급부터 중급까지 환영합니다.",
     author: "Ji-Yeon P.",
@@ -526,7 +526,7 @@ export const mockListings = [
     },
   },
   {
-    id: 16,
+    id: 16, isDemo: true,
     title: "Surfing Lessons & Board Rental",
     description: "Guided surf lessons at Bondi Beach Sydney with surfboard and wetsuit included.",
     author: "Oliver W.",
@@ -552,7 +552,7 @@ export const mockListings = [
 
 export const mockChats = [
   {
-    id: 101,
+    id: 101, isDemo: true,
     user: "Sofia M.",
     listing: "Cours de Piano",
     lastMessage: "D'accord pour 1 crédit l'heure ! Tu es libre samedi ?",
@@ -567,7 +567,7 @@ export const mockChats = [
     },
   },
   {
-    id: 102,
+    id: 102, isDemo: true,
     user: "Marc L.",
     listing: "Prêt Perceuse",
     lastMessage: "Oui j'ai aussi les chevilles si besoin.",
@@ -582,7 +582,7 @@ export const mockChats = [
     },
   },
   {
-    id: 103,
+    id: 103, isDemo: true,
     user: "Karim B.",
     listing: "Réparation iPhone 13",
     lastMessage: "Envoie-moi le modèle exact et la panne à traiter.",
@@ -600,14 +600,14 @@ export const mockChats = [
 
 export const initialChatThreads = {
   101: [
-    { id: 1, sender: 'them', text: 'Bonjour ! Je peux te proposer un cours de piano flexible avec un échange en jetons Troco.' },
-    { id: 2, sender: 'me', text: 'Parfait, je préfère un format visio et un échange simple.' },
-    { id: 3, sender: 'them', kind: 'deal', dealId: 'deal-101-1', status: 'pending', terms: { euroAmount: 0, trocoTokens: 2, conditions: '2 séances de 45 min en visio contre 2 Crédits temps (remboursables si indisponibilité).' } },
+    { id: 1, isDemo: true, sender: 'them', text: 'Bonjour ! Je peux te proposer un cours de piano flexible avec un échange en jetons Troco.' },
+    { id: 2, isDemo: true, sender: 'me', text: 'Parfait, je préfère un format visio et un échange simple.' },
+    { id: 3, isDemo: true, sender: 'them', kind: 'deal', dealId: 'deal-101-1', status: 'pending', terms: { euroAmount: 0, trocoTokens: 2, conditions: '2 séances de 45 min en visio contre 2 Crédits temps (remboursables si indisponibilité).' } },
   ],
   102: [
-    { id: 1, sender: 'them', text: 'Je peux te mettre la perceuse à disposition avec une petite caution de 30€.' },
+    { id: 1, isDemo: true, sender: 'them', text: 'Je peux te mettre la perceuse à disposition avec une petite caution de 30€.' },
   ],
   103: [
-    { id: 1, sender: 'them', text: 'Je peux intervenir rapidement, mais j’ai besoin du modèle exact du téléphone et du type de panne.' },
+    { id: 1, isDemo: true, sender: 'them', text: 'Je peux intervenir rapidement, mais j’ai besoin du modèle exact du téléphone et du type de panne.' },
   ],
 };
