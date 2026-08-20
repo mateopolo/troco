@@ -4155,13 +4155,13 @@ export default function App() {
     }
   };
 
-  // ---- COMPTEUR NON-LUS — basé sur tous les threads actifs (pas seulement mockChats) ----
-  const unreadCount = Object.entries(chatThreads).filter(([chatId, thread]) => {
-    if (!thread || thread.length === 0) return false;
-    if (readChats.has(Number(chatId)) || readChats.has(String(chatId))) return false;
-    const lastMsg = thread[thread.length - 1];
-    return lastMsg && (lastMsg.sender === 'them' || lastMsg.kind === 'deal');
-  }).length;
+  // ---- COMPTEUR NON-LUS GLOBAL (Total exact des messages non lus) ----
+  const unreadCount = Object.entries(chatThreads).reduce((count, [chatId, thread]) => {
+    if (!thread || thread.length === 0) return count;
+    if (readChats.has(Number(chatId)) || readChats.has(String(chatId)) || readChats.has(chatId)) return count;
+    const unreadInThread = thread.filter(m => m.sender === 'them' || m.kind === 'deal').length;
+    return count + (unreadInThread > 0 ? unreadInThread : 1);
+  }, 0);
 
   const createModernMapIcon = (isDarkMode = false) => {
     const primaryBg = isDarkMode ? 'rgba(96, 165, 250, 0.85)' : 'rgba(4, 38, 90, 0.85)';
@@ -4818,6 +4818,8 @@ export default function App() {
           sender: isMe ? 'me' : 'them',
           senderName: data.senderName || (isMe ? profile.name : (selectedChat.user || 'Interlocuteur')),
           text: data.text || '',
+          status: data.status || 'delivered',
+          createdAt: data.createdAt || data.timestamp || Date.now(),
           translations: data.translations || { FR: data.text || '' },
         };
       });
@@ -4825,6 +4827,19 @@ export default function App() {
         ...prev,
         [selectedChat.id]: msgs,
       }));
+
+      // Synchronisation immédiate de l'aperçu du dernier message dans chatsList
+      if (msgs.length > 0) {
+        const lastMsg = msgs[msgs.length - 1];
+        const previewTxt = lastMsg.kind === 'deal' || lastMsg.type === 'deal'
+          ? (lastMsg.terms?.conditions || 'Proposition de deal')
+          : (lastMsg.text || '');
+        setChatsList(prev => prev.map(c => String(c.id) === String(selectedChat.id) ? {
+          ...c,
+          lastMessage: previewTxt,
+          lastSenderName: lastMsg.senderName,
+        } : c));
+      }
 
       const lastMsg = msgs[msgs.length - 1];
       if (lastMsg && lastMsg.sender === 'them') {
@@ -5415,17 +5430,23 @@ export default function App() {
       sender: 'me',
       senderName: profile.name,
       text,
+      status: 'delivered',
+      createdAt: new Date(),
       translations: { FR: text }
     };
     // État local immédiat pour réactivité parfaite
     setChatThreads(prev => ({ ...prev, [chatId]: [...(prev[chatId] || []), newMessage] }));
     setMessageDraft('');
 
+    // Mise à jour immédiate de l'aperçu dans la liste des conversations
+    setChatsList(prev => prev.map(c => String(c.id) === String(chatId) ? { ...c, lastMessage: text, lastSenderName: profile.name } : c));
+
     // Persistance Firestore — synchronisation bidirectionnelle PC ↔ Mobile
     try {
       await addDoc(collection(db, 'chats', String(chatId), 'messages'), {
         senderName: profile.name,
         text,
+        status: 'delivered',
         createdAt: serverTimestamp(),
       });
       await setDoc(doc(db, 'chats', String(chatId)), {

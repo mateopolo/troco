@@ -50,16 +50,49 @@ export default function ChatView({
   const activeChatObj = selectedChat || mockChats[0];
   const messages = chatThreads[currentChatId] || [];
 
-  const isChatUnread = (chat) => {
-    if (!readChats) return false;
-    const isRead = readChats.has(chat.id) || readChats.has(String(chat.id)) || readChats.has(Number(chat.id));
-    if (isRead) return false;
-    const thread = chatThreads && chatThreads[chat.id];
-    if (!thread || thread.length === 0) {
-      return !!(chat.lastSenderName && chat.lastSenderName.trim().toLowerCase() !== profile?.name?.trim().toLowerCase());
+  const formatMsgTime = (val) => {
+    if (!val) return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    try {
+      let d;
+      if (typeof val?.toDate === 'function') d = val.toDate();
+      else if (val?.seconds) d = new Date(val.seconds * 1000);
+      else if (typeof val === 'number' || typeof val === 'string') d = new Date(val);
+      else if (val instanceof Date) d = val;
+      else d = new Date();
+      if (isNaN(d.getTime())) return '';
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch (_) {
+      return '';
     }
-    const lastMsg = thread[thread.length - 1];
-    return lastMsg && (lastMsg.sender === 'them' || lastMsg.kind === 'deal');
+  };
+
+  const getChatUnreadCount = (chat) => {
+    if (!readChats) return 0;
+    const isRead = readChats.has(chat.id) || readChats.has(String(chat.id)) || readChats.has(Number(chat.id));
+    if (isRead) return 0;
+    const thread = chatThreads && chatThreads[chat.id];
+    if (thread && thread.length > 0) {
+      const unread = thread.filter(m => m.sender === 'them' || m.kind === 'deal');
+      return unread.length > 0 ? unread.length : 1;
+    }
+    if (chat.lastSenderName && chat.lastSenderName.trim().toLowerCase() !== profile?.name?.trim().toLowerCase()) {
+      return chat.unreadCount || 1;
+    }
+    return 0;
+  };
+
+  const getChatPreviewText = (chat) => {
+    // 1. Si chatThreads contient des messages pour cette discussion, le dernier message du fil est le plus frais
+    const thread = chatThreads && chatThreads[chat.id];
+    if (thread && thread.length > 0) {
+      const last = thread[thread.length - 1];
+      if (last.kind === 'deal' || last.type === 'deal') {
+        return last.terms?.conditions || 'Proposition de deal';
+      }
+      if (last.text) return last.text;
+    }
+    // 2. Sinon, le lastMessage provenant de Firestore
+    return chat.lastMessage || '';
   };
 
   const handleSelectChatMobile = (chat) => {
@@ -104,21 +137,17 @@ export default function ChatView({
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto', flex: 1, paddingRight: '4px' }}>
             {mockChats.map(chat => {
               const isSelected = activeChatObj?.id === chat.id;
-              const isUnread = isChatUnread(chat);
+              const unreadCount = getChatUnreadCount(chat);
+              const isUnread = unreadCount > 0;
               const statusText = formatStatus ? formatStatus(chat.status) : chat.status;
               const listingTitleText = getListingTitleTranslation ? getListingTitleTranslation(chat.listing, currentLang) : chat.listing;
 
               const thread = chatThreads && chatThreads[chat.id];
               const lastMsgObjInThread = (thread && thread.length > 0) ? thread[thread.length - 1] : null;
-              
-              const rawLastMsg = lastMsgObjInThread
-                ? (lastMsgObjInThread.kind === 'deal' || lastMsgObjInThread.type === 'deal'
-                    ? (lastMsgObjInThread.terms?.conditions || chat.lastMessage)
-                    : (lastMsgObjInThread.text || chat.lastMessage))
-                : chat.lastMessage;
+              const rawLastMsg = getChatPreviewText(chat);
 
               const lastMsgText = getChatMessageDisplayContent
-                ? getChatMessageDisplayContent(lastMsgObjInThread || { text: chat.lastMessage }, currentLang, false)
+                ? getChatMessageDisplayContent(lastMsgObjInThread || { text: rawLastMsg }, currentLang, false)
                 : rawLastMsg;
 
               return (
@@ -136,8 +165,18 @@ export default function ChatView({
                 >
                   <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'linear-gradient(135deg, #04265A 0%, #14B8A6 100%)', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '16px', flexShrink: 0, boxShadow: '0 4px 10px rgba(4,38,90,0.15)', position: 'relative' }}>
                     {chat.user[0]}
-                    {isUnread && (
-                      <span style={{ position: 'absolute', top: '-2px', right: '-2px', width: '10px', height: '10px', backgroundColor: '#EF4444', borderRadius: '50%', border: '2px solid #FFF' }} />
+                    {unreadCount > 0 && (
+                      <span style={{
+                        position: 'absolute', top: '-4px', right: '-4px',
+                        minWidth: '18px', height: '18px', padding: '0 4px',
+                        backgroundColor: '#EF4444', color: '#FFF',
+                        borderRadius: '999px', border: '2px solid #FFF',
+                        fontSize: '10px', fontWeight: '800',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        boxShadow: '0 2px 6px rgba(239,68,68,0.5)'
+                      }}>
+                        {unreadCount > 9 ? '+9' : `+${unreadCount}`}
+                      </span>
                     )}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
@@ -355,14 +394,43 @@ export default function ChatView({
               return (
                 <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', alignItems: isMe ? 'flex-end' : 'flex-start' }}>
                   <div style={{
-                    maxWidth: '82%', padding: '12px 16px', borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+                    maxWidth: '82%', padding: '10px 14px', borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
                     backgroundColor: isMe ? (darkMode ? '#60A5FA' : '#04265A') : (darkMode ? 'rgba(15,23,42,0.8)' : '#F1F5F9'),
                     color: isMe ? (darkMode ? '#0F172A' : '#FFF') : (darkMode ? '#F8FAFC' : '#1E293B'),
-                    fontWeight: isMe ? '700' : '400',
-                    fontSize: '14px', lineHeight: 1.5,
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+                    fontWeight: isMe ? '600' : '400',
+                    fontSize: '14px', lineHeight: 1.4,
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                    wordBreak: 'break-word',
                   }}>
-                    {translatedText}
+                    <div>{translatedText}</div>
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'flex-end',
+                      gap: '4px',
+                      marginTop: '4px',
+                      fontSize: '10px',
+                      color: isMe ? (darkMode ? 'rgba(15,23,42,0.65)' : 'rgba(255,255,255,0.75)') : (darkMode ? '#94A3B8' : '#64748B'),
+                      fontWeight: '600',
+                      userSelect: 'none',
+                    }}>
+                      <span>{formatMsgTime(msg.createdAt || msg.timestamp || msg.id)}</span>
+                      {isMe && (
+                        <span
+                          title={msg.status === 'read' || msg.read ? 'Lu' : 'Distribué'}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            fontSize: '11px',
+                            fontWeight: '800',
+                            letterSpacing: '-1.5px',
+                            color: msg.status === 'read' || msg.read ? '#38BDF8' : (darkMode ? 'rgba(15,23,42,0.65)' : 'rgba(255,255,255,0.75)'),
+                          }}
+                        >
+                          ✓✓
+                        </span>
+                      )}
+                    </div>
                   </div>
                   {currentLang !== 'FR' && (
                     <button
