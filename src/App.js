@@ -3141,7 +3141,22 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('feed');
   const [formatFilter, setFormatFilter] = useState('all');
   const [selectedChat, setSelectedChat] = useState(null);
-  const [readChats, setReadChats] = useState(new Set()); // IDs des convos déjà lues
+  const [readChats, setReadChats] = useState(() => {
+    try {
+      const saved = window.localStorage.getItem('troco_read_chats');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return new Set(parsed);
+      }
+    } catch (_) {}
+    return new Set(['201', '202', '101', '102', '103', '104', 201, 202, 101, 102, 103, 104]);
+  }); // IDs des convos déjà lues
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem('troco_read_chats', JSON.stringify([...readChats]));
+    } catch (_) {}
+  }, [readChats]);
   const [selectedListing, setSelectedListing] = useState(null);
   const [messageDraft, setMessageDraft] = useState('');
   const [isCreditModalOpen, setIsCreditModalOpen] = useState(false);
@@ -3239,6 +3254,10 @@ export default function App() {
         @keyframes notifPulse {
           0%, 100% { transform: scale(1); box-shadow: 0 2px 8px rgba(239,68,68,0.5); }
           50% { transform: scale(1.18); box-shadow: 0 4px 14px rgba(239,68,68,0.75); }
+        }
+        @keyframes slideDownIn {
+          0% { opacity: 0; transform: translate(-50%, -24px); }
+          100% { opacity: 1; transform: translate(-50%, 0); }
         }
         @keyframes popupIn {
           0% { opacity: 0; transform: scale(0.85) translateY(20px); }
@@ -4104,6 +4123,26 @@ export default function App() {
       where('participants', 'array-contains', profile.name)
     );
     const unsub = onSnapshot(q, (snapshot) => {
+      // Détection des nouveaux messages entrants en temps réel pour incrémenter le badge (+1)
+      snapshot.docChanges().forEach(change => {
+        if (change.type === 'modified' || change.type === 'added') {
+          const d = change.doc.data();
+          const fChatId = d.id || change.doc.id;
+          const isFromThem = d.lastSenderName && d.lastSenderName.trim().toLowerCase() !== profile.name.trim().toLowerCase();
+
+          // Seulement si c'est un nouveau message entrant et qu'on n'a pas cette conversation activement ouverte
+          if (isFromThem && change.type === 'modified') {
+            setReadChats(prev => {
+              const next = new Set(prev);
+              next.delete(fChatId);
+              next.delete(String(fChatId));
+              next.delete(Number(fChatId));
+              return next;
+            });
+          }
+        }
+      });
+
       const firestoreChats = snapshot.docs.map(docSnap => {
         const data = docSnap.data();
         // Identifier le nom de l'interlocuteur (l'autre participant)
@@ -4112,18 +4151,6 @@ export default function App() {
           : data.user || 'Interlocuteur';
         
         const fChatId = data.id || docSnap.id;
-        const isFromThem = data.lastSenderName && data.lastSenderName.trim().toLowerCase() !== profile.name.trim().toLowerCase();
-
-        // Incrémente le badge si un nouveau message de 'them' arrive sur une conversation fermée
-        if (isFromThem && (!selectedChat || String(selectedChat.id) !== String(fChatId) || activeTab !== 'chat')) {
-          setReadChats(prev => {
-            const next = new Set(prev);
-            next.delete(fChatId);
-            next.delete(String(fChatId));
-            next.delete(Number(fChatId));
-            return next;
-          });
-        }
 
         return {
           id: fChatId,
@@ -4146,7 +4173,7 @@ export default function App() {
       console.warn('[Firestore] chats onSnapshot error:', err);
     });
     return () => unsub();
-  }, [profile?.name, selectedChat?.id, activeTab]);
+  }, [profile?.name]);
 
   const handleSelectChat = (chat) => {
     setSelectedChat(chat);
@@ -4856,27 +4883,13 @@ export default function App() {
         } : c));
       }
 
-      const lastMsg = msgs[msgs.length - 1];
-      if (lastMsg && lastMsg.sender === 'them') {
-        if (activeTab === 'chat' && String(selectedChat.id) === String(chatId)) {
-          setReadChats(prev => new Set([...prev, selectedChat.id, String(selectedChat.id), Number(selectedChat.id)]));
-        } else {
-          setReadChats(prev => {
-            const next = new Set(prev);
-            next.delete(chatId);
-            next.delete(String(chatId));
-            next.delete(Number(chatId));
-            return next;
-          });
-        }
-      } else if (activeTab === 'chat') {
-        setReadChats(prev => new Set([...prev, selectedChat.id, String(selectedChat.id), Number(selectedChat.id)]));
-      }
+      // Si la conversation est activement consultée, marquer comme lue
+      setReadChats(prev => new Set([...prev, selectedChat.id, String(selectedChat.id), Number(selectedChat.id)]));
     }, (err) => {
       console.warn('[Firestore] chat messages onSnapshot:', err);
     });
     return () => unsub();
-  }, [selectedChat?.id, profile.name, activeTab]);
+  }, [selectedChat?.id, profile.name]);
 
   const getListingDistance = (item) => {
     if (typeof item.distanceKm === 'number') return item.distanceKm;
@@ -7924,33 +7937,58 @@ export default function App() {
         </div>
       )}
 
-      {/* ---- BANDEAU APPEL ENTRANT ---- */}
+      {/* ---- BANDEAU APPEL ENTRANT (STATIQUE & ERGONOMIQUE SANS DÉCALAGE DE BOUTONS) ---- */}
       {incomingCall && !callState.active && (
         <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, zIndex: 4000,
-          background: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
-          borderBottom: '1px solid rgba(96,165,250,0.3)',
-          padding: '16px 24px',
-          display: 'flex', alignItems: 'center', gap: '16px',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
-          animation: 'notifPulse 1.5s ease-in-out infinite',
+          position: 'fixed', top: '16px', left: '50%', transform: 'translateX(-50%)',
+          width: 'calc(100% - 32px)', maxWidth: '500px', zIndex: 4000,
+          background: 'linear-gradient(135deg, rgba(15,23,42,0.98) 0%, rgba(30,41,59,0.98) 100%)',
+          backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+          border: '1px solid rgba(96,165,250,0.35)',
+          borderRadius: '20px',
+          padding: '14px 18px',
+          display: 'flex', alignItems: 'center', gap: '14px',
+          boxShadow: '0 12px 40px rgba(0,0,0,0.6), 0 0 20px rgba(96,165,250,0.15)',
+          animation: 'slideDownIn 0.3s ease-out forwards',
         }}>
-          <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, #60A5FA, #04265A)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', color: '#FFF', fontWeight: '800', flexShrink: 0 }}>
-            {incomingCall.from[0]}
+          <div style={{ width: '46px', height: '46px', borderRadius: '50%', background: 'linear-gradient(135deg, #60A5FA, #04265A)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', color: '#FFF', fontWeight: '800', flexShrink: 0, boxShadow: '0 4px 12px rgba(4,38,90,0.3)' }}>
+            {incomingCall.from ? incomingCall.from[0].toUpperCase() : 'T'}
           </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ color: '#FFF', fontWeight: '800', fontSize: '15px' }}>{incomingCall.from}</div>
-            <div style={{ color: '#93C5FD', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              {incomingCall.type === 'video' ? <Video size={13} /> : <Phone size={13} />}
-              {incomingCall.type === 'video' ? 'Appel vidéo entrant...' : 'Appel audio entrant...'}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ color: '#FFF', fontWeight: '800', fontSize: '15px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {incomingCall.from}
+            </div>
+            <div style={{ color: '#93C5FD', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: '600' }}>
+              {incomingCall.type === 'video' ? <Video size={13} color="#60A5FA" /> : <Phone size={13} color="#60A5FA" />}
+              <span>{incomingCall.type === 'video' ? 'Appel vidéo entrant...' : 'Appel audio entrant...'}</span>
             </div>
           </div>
-          <button onClick={declineIncomingCall} style={{ border: 'none', width: '46px', height: '46px', borderRadius: '50%', backgroundColor: '#EF4444', color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(239,68,68,0.5)' }}>
-            <PhoneOff size={18} />
-          </button>
-          <button onClick={handleAcceptIncomingCall} style={{ border: 'none', width: '46px', height: '46px', borderRadius: '50%', backgroundColor: '#22C55E', color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(34,197,94,0.5)' }}>
-            <Phone size={18} />
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+            <button
+              onClick={declineIncomingCall}
+              style={{
+                border: 'none', width: '44px', height: '44px', borderRadius: '50%',
+                backgroundColor: '#EF4444', color: '#FFF', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 4px 14px rgba(239,68,68,0.4)',
+              }}
+              title="Refuser l'appel"
+            >
+              <PhoneOff size={18} />
+            </button>
+            <button
+              onClick={handleAcceptIncomingCall}
+              style={{
+                border: 'none', width: '44px', height: '44px', borderRadius: '50%',
+                backgroundColor: '#22C55E', color: '#FFF', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                boxShadow: '0 4px 14px rgba(34,197,94,0.4)',
+              }}
+              title="Accepter l'appel"
+            >
+              <Phone size={18} />
+            </button>
+          </div>
         </div>
       )}
 
