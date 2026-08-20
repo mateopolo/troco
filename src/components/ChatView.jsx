@@ -7,6 +7,7 @@ export default function ChatView({
   selectedChat,
   setSelectedChat,
   chatThreads,
+  readChats,
   chatInputText,
   setChatInputText,
   handleSendMessage,
@@ -48,6 +49,18 @@ export default function ChatView({
   const currentChatId = selectedChat ? selectedChat.id : (mockChats[0]?.id || 201);
   const activeChatObj = selectedChat || mockChats[0];
   const messages = chatThreads[currentChatId] || [];
+
+  const isChatUnread = (chat) => {
+    if (!readChats) return false;
+    const isRead = readChats.has(chat.id) || readChats.has(String(chat.id)) || readChats.has(Number(chat.id));
+    if (isRead) return false;
+    const thread = chatThreads && chatThreads[chat.id];
+    if (!thread || thread.length === 0) {
+      return !!(chat.lastSenderName && chat.lastSenderName.trim().toLowerCase() !== profile?.name?.trim().toLowerCase());
+    }
+    const lastMsg = thread[thread.length - 1];
+    return lastMsg && (lastMsg.sender === 'them' || lastMsg.kind === 'deal');
+  };
 
   const handleSelectChatMobile = (chat) => {
     setSelectedChat(chat);
@@ -91,6 +104,7 @@ export default function ChatView({
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto', flex: 1, paddingRight: '4px' }}>
             {mockChats.map(chat => {
               const isSelected = activeChatObj?.id === chat.id;
+              const isUnread = isChatUnread(chat);
               const statusText = formatStatus ? formatStatus(chat.status) : chat.status;
               const listingTitleText = getListingTitleTranslation ? getListingTitleTranslation(chat.listing, currentLang) : chat.listing;
 
@@ -115,23 +129,26 @@ export default function ChatView({
                     display: 'flex', alignItems: 'center', gap: '12px', padding: '14px',
                     borderRadius: '18px', border: 'none', cursor: 'pointer', textAlign: 'left',
                     backgroundColor: isSelected ? (darkMode ? 'rgba(4,38,90,0.65)' : '#EFF6FF') : (darkMode ? 'rgba(15,23,42,0.45)' : 'rgba(248,250,252,0.8)'),
-                    borderLeft: isSelected ? (darkMode ? '4px solid #60A5FA' : '4px solid #04265A') : '4px solid transparent',
+                    borderLeft: isSelected ? (darkMode ? '4px solid #60A5FA' : '4px solid #04265A') : (isUnread ? (darkMode ? '4px solid #38BDF8' : '4px solid #0284C7') : '4px solid transparent'),
                     boxShadow: isSelected ? '0 4px 14px rgba(4,38,90,0.1)' : 'none',
                     transition: 'all 0.2s ease'
                   }}
                 >
-                  <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'linear-gradient(135deg, #04265A 0%, #14B8A6 100%)', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '16px', flexShrink: 0, boxShadow: '0 4px 10px rgba(4,38,90,0.15)' }}>
+                  <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'linear-gradient(135deg, #04265A 0%, #14B8A6 100%)', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '16px', flexShrink: 0, boxShadow: '0 4px 10px rgba(4,38,90,0.15)', position: 'relative' }}>
                     {chat.user[0]}
+                    {isUnread && (
+                      <span style={{ position: 'absolute', top: '-2px', right: '-2px', width: '10px', height: '10px', backgroundColor: '#EF4444', borderRadius: '50%', border: '2px solid #FFF' }} />
+                    )}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px' }}>
-                      <span style={{ fontWeight: '800', fontSize: '14px', color: darkMode ? '#FFFFFF' : '#111827' }}>{chat.user}</span>
-                      <span style={{ fontSize: '10px', color: darkMode ? '#94A3B8' : '#64748B', fontWeight: '700' }}>{statusText}</span>
+                      <span style={{ fontWeight: isUnread ? '800' : '600', fontSize: '14px', color: darkMode ? '#FFFFFF' : '#111827' }}>{chat.user}</span>
+                      <span style={{ fontSize: '10px', color: isUnread ? (darkMode ? '#60A5FA' : '#04265A') : (darkMode ? '#94A3B8' : '#64748B'), fontWeight: isUnread ? '800' : '600' }}>{statusText}</span>
                     </div>
-                    <div style={{ fontSize: '12px', fontWeight: '800', color: darkMode ? '#60A5FA' : '#04265A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: '2px' }}>
+                    <div style={{ fontSize: '12px', fontWeight: isUnread ? '800' : '500', color: darkMode ? '#60A5FA' : '#04265A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: '2px' }}>
                       {listingTitleText}
                     </div>
-                    <div style={{ fontSize: '11px', color: darkMode ? '#CBD5E1' : '#64748B', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <div style={{ fontSize: '11px', fontWeight: isUnread ? '700' : '400', color: isUnread ? (darkMode ? '#F8FAFC' : '#111827') : (darkMode ? '#CBD5E1' : '#64748B'), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {lastMsgText}
                     </div>
                   </div>

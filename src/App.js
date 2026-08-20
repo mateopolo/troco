@@ -4110,8 +4110,23 @@ export default function App() {
         const otherUser = Array.isArray(data.participants)
           ? data.participants.find(p => p && p.trim().toLowerCase() !== profile.name.trim().toLowerCase()) || data.user || 'Interlocuteur'
           : data.user || 'Interlocuteur';
+        
+        const fChatId = data.id || docSnap.id;
+        const isFromThem = data.lastSenderName && data.lastSenderName.trim().toLowerCase() !== profile.name.trim().toLowerCase();
+
+        // Incrémente le badge si un nouveau message de 'them' arrive sur une conversation fermée
+        if (isFromThem && (!selectedChat || String(selectedChat.id) !== String(fChatId) || activeTab !== 'chat')) {
+          setReadChats(prev => {
+            const next = new Set(prev);
+            next.delete(fChatId);
+            next.delete(String(fChatId));
+            next.delete(Number(fChatId));
+            return next;
+          });
+        }
+
         return {
-          id: data.id || docSnap.id,
+          id: fChatId,
           firestoreId: docSnap.id,
           ...data,
           user: otherUser,
@@ -4131,7 +4146,7 @@ export default function App() {
       console.warn('[Firestore] chats onSnapshot error:', err);
     });
     return () => unsub();
-  }, [profile?.name]);
+  }, [profile?.name, selectedChat?.id, activeTab]);
 
   const handleSelectChat = (chat) => {
     setSelectedChat(chat);
@@ -4810,8 +4825,21 @@ export default function App() {
         ...prev,
         [selectedChat.id]: msgs,
       }));
-      // Décrémente le compteur de notifications en marquant la conversation comme lue
-      if (activeTab === 'chat') {
+
+      const lastMsg = msgs[msgs.length - 1];
+      if (lastMsg && lastMsg.sender === 'them') {
+        if (activeTab === 'chat' && String(selectedChat.id) === String(chatId)) {
+          setReadChats(prev => new Set([...prev, selectedChat.id, String(selectedChat.id), Number(selectedChat.id)]));
+        } else {
+          setReadChats(prev => {
+            const next = new Set(prev);
+            next.delete(chatId);
+            next.delete(String(chatId));
+            next.delete(Number(chatId));
+            return next;
+          });
+        }
+      } else if (activeTab === 'chat') {
         setReadChats(prev => new Set([...prev, selectedChat.id, String(selectedChat.id), Number(selectedChat.id)]));
       }
     }, (err) => {
@@ -5319,16 +5347,18 @@ export default function App() {
     setPostDraft(defaultPostDraft);
   };
 
-  // ---- ISOLATION DES DISCUSSIONS PAR ANNONCE (Partie 2) ----
-  // Chaque conversation possède un identifiant unique dérivé de l'annonce :
-  // conversationId = listing.id + 1000. Deux annonces différentes => deux
-  // conversations séparées => deux historiques de messages distincts et isolés.
-  const buildConversationId = (listingId) => listingId + 1000;
+  // ---- ISOLATION STRICTE DES DISCUSSIONS PAR PAIRE D'UTILISATEURS ET ANNONCE ----
+  const buildConversationId = (listingId, userA, userB) => {
+    const uA = String(userA || '').trim().toLowerCase();
+    const uB = String(userB || '').trim().toLowerCase();
+    const pair = [uA, uB].sort().join('_');
+    return `chat_${listingId}_${pair}`.replace(/[^a-zA-Z0-9_-]/g, '_');
+  };
 
   const handleStartDiscussion = async (listing) => {
     if (listing.author === profile.name) return;
 
-    const conversationId = buildConversationId(listing.id);
+    const conversationId = buildConversationId(listing.id, profile.name, listing.author);
 
     const conversation = {
       id: conversationId,
@@ -7015,6 +7045,7 @@ export default function App() {
             selectedChat={selectedChat}
             setSelectedChat={handleSelectChat}
             chatThreads={chatThreads}
+            readChats={readChats}
             chatInputText={messageDraft}
             setChatInputText={setMessageDraft}
             handleSendMessage={handleSendMessage}
