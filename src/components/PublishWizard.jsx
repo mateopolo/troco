@@ -155,6 +155,57 @@ export default function PublishWizard({
 
           {postStep === 3 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {/* PRESETS RAPIDES */}
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '700', color: darkMode ? '#CBD5E1' : '#374151', display: 'block', marginBottom: '6px' }}>
+                  ⚡ Formules rapides :
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '6px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setPostDraft(prev => ({ ...prev, compensation: 'credits', durationType: 'hourly', durationValue: '1' }))}
+                    style={{ padding: '8px', borderRadius: '10px', border: '1px solid #F59E0B', backgroundColor: '#FEF3C7', color: '#92400E', fontSize: '11px', fontWeight: '800', cursor: 'pointer' }}
+                  >
+                    🪙 1h / 1 Jeton
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPostDraft(prev => ({ ...prev, compensation: 'swap', durationType: 'daily', durationValue: '1' }))}
+                    style={{ padding: '8px', borderRadius: '10px', border: '1px solid #10B981', backgroundColor: '#D1FAE5', color: '#065F46', fontSize: '11px', fontWeight: '800', cursor: 'pointer' }}
+                  >
+                    🔄 1 jour / Troc
+                  </button>
+                </div>
+              </div>
+
+              {/* SÉLECTEUR DE DURÉE */}
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '700', color: darkMode ? '#CBD5E1' : '#374151', display: 'block', marginBottom: '6px' }}>
+                  ⏱️ Format & Unité de durée :
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '8px' }}>
+                  <select
+                    value={postDraft.durationType || 'hourly'}
+                    onChange={(e) => setPostDraft(prev => ({ ...prev, durationType: e.target.value }))}
+                    style={{ width: '100%', padding: '10px 12px', border: '1px solid #D1D5DB', borderRadius: '12px', fontSize: '13px', backgroundColor: darkMode ? '#0F172A' : '#FFF', color: darkMode ? '#FFF' : '#111827' }}
+                  >
+                    <option value="hourly">À l'heure</option>
+                    <option value="daily">À la journée</option>
+                    <option value="monthly">Au mois</option>
+                    <option value="fixed">Au forfait global</option>
+                    <option value="indefinite">Indéfini / Libre</option>
+                  </select>
+                  <input
+                    type="number"
+                    min="1"
+                    value={postDraft.durationValue || '1'}
+                    onChange={(e) => setPostDraft(prev => ({ ...prev, durationValue: e.target.value }))}
+                    placeholder="Qté"
+                    style={{ width: '100%', padding: '10px 12px', border: '1px solid #D1D5DB', borderRadius: '12px', fontSize: '13px', backgroundColor: darkMode ? '#0F172A' : '#FFF', color: darkMode ? '#FFF' : '#111827' }}
+                  />
+                </div>
+              </div>
+
               <div>
                 <label style={{ fontSize: '12px', fontWeight: '700', color: darkMode ? '#CBD5E1' : '#374151' }}>{t('compensationTypeLabel')}</label>
                 <div style={{ display: 'flex', gap: '8px', marginTop: '6px', flexWrap: 'wrap' }}>

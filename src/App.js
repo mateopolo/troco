@@ -3744,13 +3744,15 @@ export default function App() {
     format: 'onsite',
     description: '',
     compensation: 'credits',
+    durationType: 'hourly',
+    durationValue: '1',
     price: '20',
     location: '',
     availability: '',
     caution: '',
     requiresCaution: false,
     cautionAmount: '',
-    trocoTokens: '',
+    trocoTokens: '1',
     euroAmount: '',
     isUrgent: false,
     image: 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=800&q=80',
@@ -6210,6 +6212,8 @@ export default function App() {
     const chatId = selectedChat.id;
     const euroAmount = Number(counterOfferDraft.euroAmount) || 0;
     const trocoTokens = Number(counterOfferDraft.trocoTokens) || 0;
+    const durationType = counterOfferDraft.durationType || 'hourly';
+    const durationValue = counterOfferDraft.durationValue || '1';
     const conditions = counterOfferDraft.conditions.trim() || 'Échange à définir ensemble.';
     const dealMessage = {
       id: Date.now(),
@@ -6217,7 +6221,7 @@ export default function App() {
       kind: 'deal',
       dealId: `deal-${Date.now()}`,
       status: 'pending',
-      terms: { euroAmount, trocoTokens, conditions },
+      terms: { euroAmount, trocoTokens, durationType, durationValue, conditions },
     };
 
     setChatThreads(prev => ({ ...prev, [chatId]: [...(prev[chatId] || []), dealMessage] }));
@@ -6230,7 +6234,7 @@ export default function App() {
         kind: 'deal',
         dealId: dealMessage.dealId,
         status: 'pending',
-        terms: { euroAmount, trocoTokens, conditions },
+        terms: { euroAmount, trocoTokens, durationType, durationValue, conditions },
         createdAt: serverTimestamp(),
       });
       await setDoc(doc(db, 'chats', String(chatId)), {
@@ -6308,6 +6312,11 @@ export default function App() {
         </div>
         <div style={{ fontSize: '13px', color: '#334155', lineHeight: 1.5, marginBottom: '10px' }}>{terms.conditions}</div>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '10px' }}>
+          {terms.durationType && (
+            <span style={{ backgroundColor: '#FFFFFF', border: '1px solid #93C5FD', color: '#1E40AF', borderRadius: '999px', padding: '5px 11px', fontSize: '12px', fontWeight: '800' }}>
+              ⏱️ {terms.durationType === 'hourly' ? `${terms.durationValue || 1} heure(s)` : terms.durationType === 'daily' ? `${terms.durationValue || 1} jour(s)` : terms.durationType === 'monthly' ? `${terms.durationValue || 1} mois` : terms.durationType === 'fixed' ? 'Forfait global' : 'Durée libre'}
+            </span>
+          )}
           {terms.euroAmount > 0 && <span style={{ backgroundColor: '#FFFFFF', border: '1px solid #A7F3D0', color: '#1D4ED8', borderRadius: '999px', padding: '5px 11px', fontSize: '12px', fontWeight: '800' }}>💶 {terms.euroAmount}€</span>}
           {terms.trocoTokens > 0 && <span style={{ backgroundColor: '#FFFFFF', border: '1px solid #A7F3D0', color: '#1D4ED8', borderRadius: '999px', padding: '5px 11px', fontSize: '12px', fontWeight: '800' }}>🪙 {terms.trocoTokens} Jeton{terms.trocoTokens > 1 ? 's' : ''}</span>}
           {terms.euroAmount === 0 && terms.trocoTokens === 0 && <span style={{ backgroundColor: '#FFFFFF', border: '1px solid #A7F3D0', color: '#1D4ED8', borderRadius: '999px', padding: '5px 11px', fontSize: '12px', fontWeight: '800' }}>🤝 Troc direct</span>}
@@ -7581,20 +7590,76 @@ export default function App() {
               <Sparkles size={17} color="#04265A" />
               <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: '#111827' }}>{t('counterOfferTitle')}</h3>
             </div>
-            <p style={{ fontSize: '12px', color: '#64748B', margin: '0 0 16px', lineHeight: 1.6 }}>Ajuste les termes du deal avec {selectedChat.user} — Montant en euros, Jetons Troco et conditions d'échange. {selectedChat.user} sera seul habilité à accepter ou refuser.</p>
+            <p style={{ fontSize: '12px', color: '#64748B', margin: '0 0 14px', lineHeight: 1.5 }}>Ajuste les termes de la proposition avec {selectedChat.user} — Durée, Jetons Troco, montant en euros et conditions d'échange.</p>
+
+            {/* PRESETS RAPIDES DE NÉGOCIATION */}
+            <div style={{ marginBottom: '14px' }}>
+              <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
+                ⚡ Presets de négociation rapide :
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
+                <button
+                  type="button"
+                  onClick={() => setCounterOfferDraft(prev => ({ ...prev, trocoTokens: '1', euroAmount: '', durationType: 'hourly', durationValue: '1', conditions: '1 heure de session = 1 Jeton Troco' }))}
+                  style={{ border: '1px solid #F59E0B', borderRadius: '10px', padding: '7px 4px', backgroundColor: '#FEF3C7', color: '#92400E', fontSize: '11px', fontWeight: '800', cursor: 'pointer', textAlign: 'center' }}
+                >
+                  🪙 1h / 1 Jeton
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCounterOfferDraft(prev => ({ ...prev, trocoTokens: '0', euroAmount: '', durationType: 'fixed', durationValue: '1', conditions: 'Troc direct solidaire sans compensation financière' }))}
+                  style={{ border: '1px solid #10B981', borderRadius: '10px', padding: '7px 4px', backgroundColor: '#D1FAE5', color: '#065F46', fontSize: '11px', fontWeight: '800', cursor: 'pointer', textAlign: 'center' }}
+                >
+                  🔄 Troc pur
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCounterOfferDraft(prev => ({ ...prev, trocoTokens: '1', euroAmount: '15', durationType: 'hourly', durationValue: '1', conditions: 'Formule Hybride : 1 Jeton Troco + 15€' }))}
+                  style={{ border: '1px solid #3B82F6', borderRadius: '10px', padding: '7px 4px', backgroundColor: '#DBEAFE', color: '#1E40AF', fontSize: '11px', fontWeight: '800', cursor: 'pointer', textAlign: 'center' }}
+                >
+                  ⚡ Hybride
+                </button>
+              </div>
+            </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '18px' }}>
+              {/* SÉLECTION DU FORMAT DE DURÉE NÉGOCIÉ */}
               <div>
-                <label style={{ fontSize: '12px', fontWeight: '800', color: '#374151' }}>Montant en euros (€)</label>
+                <label style={{ fontSize: '12px', fontWeight: '800', color: '#374151' }}>⏱️ Format de durée convenu</label>
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '8px', marginTop: '6px' }}>
+                  <select
+                    value={counterOfferDraft.durationType || 'hourly'}
+                    onChange={(e) => setCounterOfferDraft(prev => ({ ...prev, durationType: e.target.value }))}
+                    style={{ width: '100%', padding: '9px 12px', border: '1px solid #D1D5DB', borderRadius: '12px', fontSize: '13px' }}
+                  >
+                    <option value="hourly">À l'heure (session visio/cours)</option>
+                    <option value="daily">À la journée (prêt/chantier)</option>
+                    <option value="monthly">Au mois (séjour/location)</option>
+                    <option value="fixed">Au forfait global</option>
+                    <option value="indefinite">Durée libre</option>
+                  </select>
+                  <input
+                    type="number"
+                    min="1"
+                    value={counterOfferDraft.durationValue || '1'}
+                    onChange={(e) => setCounterOfferDraft(prev => ({ ...prev, durationValue: e.target.value }))}
+                    placeholder="Qté"
+                    style={{ width: '100%', padding: '9px 12px', border: '1px solid #D1D5DB', borderRadius: '12px', fontSize: '13px' }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '800', color: '#374151' }}>🪙 Jetons Troco</label>
+                <input type="number" min="0" value={counterOfferDraft.trocoTokens} onChange={(e) => setCounterOfferDraft(prev => ({ ...prev, trocoTokens: e.target.value }))} placeholder="Ex : 1" style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: '1px solid #D1D5DB', borderRadius: '12px', fontSize: '14px' }} />
+              </div>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '800', color: '#374151' }}>💶 Montant en euros (€)</label>
                 <input type="number" min="0" value={counterOfferDraft.euroAmount} onChange={(e) => setCounterOfferDraft(prev => ({ ...prev, euroAmount: e.target.value }))} placeholder="Ex : 15" style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: '1px solid #D1D5DB', borderRadius: '12px', fontSize: '14px' }} />
               </div>
               <div>
-                <label style={{ fontSize: '12px', fontWeight: '800', color: '#374151' }}>Jetons Troco</label>
-                <input type="number" min="0" value={counterOfferDraft.trocoTokens} onChange={(e) => setCounterOfferDraft(prev => ({ ...prev, trocoTokens: e.target.value }))} placeholder="Ex : 2" style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: '1px solid #D1D5DB', borderRadius: '12px', fontSize: '14px' }} />
-              </div>
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: '800', color: '#374151' }}>Conditions d'échange</label>
-                <textarea rows={3} value={counterOfferDraft.conditions} onChange={(e) => setCounterOfferDraft(prev => ({ ...prev, conditions: e.target.value }))} placeholder="Ex : 1 séance d'essai de 30 min, puis tarif horaire..." style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: '1px solid #D1D5DB', borderRadius: '12px', fontSize: '13px', resize: 'vertical' }} />
+                <label style={{ fontSize: '12px', fontWeight: '800', color: '#374151' }}>📝 Conditions d'échange & Remarques</label>
+                <textarea rows={2} value={counterOfferDraft.conditions} onChange={(e) => setCounterOfferDraft(prev => ({ ...prev, conditions: e.target.value }))} placeholder="Ex : 1 séance d'essai de 30 min, puis tarif horaire..." style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: '1px solid #D1D5DB', borderRadius: '12px', fontSize: '13px', resize: 'vertical' }} />
               </div>
             </div>
 
@@ -8786,6 +8851,98 @@ export default function App() {
             )}
             {postStep === 3 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                {/* PRESETS RAPIDES DE RÉTRIBUTION & DURÉE */}
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: '800', color: darkMode ? '#CBD5E1' : '#374151', display: 'block', marginBottom: '8px' }}>
+                    ⚡ Formules et Presets rapides :
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px' }}>
+                    <button
+                      type="button"
+                      onClick={() => setPostDraft(prev => ({ ...prev, compensation: 'credits', durationType: 'hourly', durationValue: '1', trocoTokens: '1' }))}
+                      style={{
+                        padding: '9px 10px', borderRadius: '12px',
+                        border: (postDraft.compensation === 'credits' && postDraft.durationType === 'hourly') ? '2px solid #F59E0B' : (darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #D1D5DB'),
+                        backgroundColor: (postDraft.compensation === 'credits' && postDraft.durationType === 'hourly') ? (darkMode ? 'rgba(245,158,11,0.2)' : '#FEF3C7') : (darkMode ? 'rgba(30,41,59,0.5)' : '#FFF'),
+                        color: darkMode ? '#FDE68A' : '#92400E', fontWeight: '800', fontSize: '11px', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s ease'
+                      }}
+                    >
+                      🪙 1h / 1 Jeton
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setPostDraft(prev => ({ ...prev, compensation: 'troc', durationType: 'daily', durationValue: '1' }))}
+                      style={{
+                        padding: '9px 10px', borderRadius: '12px',
+                        border: (postDraft.compensation === 'troc' && postDraft.durationType === 'daily') ? '2px solid #10B981' : (darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #D1D5DB'),
+                        backgroundColor: (postDraft.compensation === 'troc' && postDraft.durationType === 'daily') ? (darkMode ? 'rgba(16,185,129,0.2)' : '#D1FAE5') : (darkMode ? 'rgba(30,41,59,0.5)' : '#FFF'),
+                        color: darkMode ? '#6EE7B7' : '#065F46', fontWeight: '800', fontSize: '11px', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s ease'
+                      }}
+                    >
+                      🔄 1 jour / Troc
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setPostDraft(prev => ({ ...prev, compensation: 'troc', durationType: 'fixed', durationValue: '1' }))}
+                      style={{
+                        padding: '9px 10px', borderRadius: '12px',
+                        border: (postDraft.compensation === 'troc' && postDraft.durationType === 'fixed') ? '2px solid #3B82F6' : (darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #D1D5DB'),
+                        backgroundColor: (postDraft.compensation === 'troc' && postDraft.durationType === 'fixed') ? (darkMode ? 'rgba(59,130,246,0.2)' : '#DBEAFE') : (darkMode ? 'rgba(30,41,59,0.5)' : '#FFF'),
+                        color: darkMode ? '#93C5FD' : '#1E40AF', fontWeight: '800', fontSize: '11px', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s ease'
+                      }}
+                    >
+                      💎 Forfait libre
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setPostDraft(prev => ({ ...prev, compensation: 'cash', durationType: 'hourly', price: '25' }))}
+                      style={{
+                        padding: '9px 10px', borderRadius: '12px',
+                        border: (postDraft.compensation === 'cash') ? '2px solid #8B5CF6' : (darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #D1D5DB'),
+                        backgroundColor: (postDraft.compensation === 'cash') ? (darkMode ? 'rgba(139,92,246,0.2)' : '#EDE9FE') : (darkMode ? 'rgba(30,41,59,0.5)' : '#FFF'),
+                        color: darkMode ? '#C4B5FD' : '#5B21B6', fontWeight: '800', fontSize: '11px', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s ease'
+                      }}
+                    >
+                      💶 Rémunéré (€)
+                    </button>
+                  </div>
+                </div>
+
+                {/* SÉLECTEUR DE FORMAT DE DURÉE */}
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#CBD5E1' : '#374151', display: 'block', marginBottom: '6px' }}>
+                    ⏱️ Format & Unité de durée :
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '8px' }}>
+                    <select
+                      value={postDraft.durationType || 'hourly'}
+                      onChange={(e) => setPostDraft(prev => ({ ...prev, durationType: e.target.value }))}
+                      style={{ width: '100%', padding: '10px 12px', border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFF', color: darkMode ? '#FFF' : '#111827', borderRadius: '12px', fontSize: '13px' }}
+                    >
+                      <option value="hourly" style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>À l'heure (cours, visio, prestation)</option>
+                      <option value="daily" style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>À la journée (prêt, véhicule, chantier)</option>
+                      <option value="monthly" style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>Au mois (coworking, hébergement)</option>
+                      <option value="fixed" style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>Au forfait global (clé en main)</option>
+                      <option value="indefinite" style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>Indéfini / Libre négociation</option>
+                    </select>
+
+                    {postDraft.durationType !== 'indefinite' && postDraft.durationType !== 'fixed' && (
+                      <input
+                        type="number"
+                        min="1"
+                        value={postDraft.durationValue || '1'}
+                        onChange={(e) => setPostDraft(prev => ({ ...prev, durationValue: e.target.value }))}
+                        placeholder="Qté (ex: 1)"
+                        style={{ width: '100%', padding: '10px 12px', border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFF', color: darkMode ? '#FFF' : '#111827', borderRadius: '12px', fontSize: '13px' }}
+                      />
+                    )}
+                  </div>
+                </div>
+
+                {/* SÉLECTEUR DU MODE DE RÉTRIBUTION */}
                 <div>
                   <label style={{ fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#CBD5E1' : '#374151' }}>{t('retributionModeLabel')}</label>
                   <select value={postDraft.compensation} onChange={(e) => setPostDraft(prev => ({ ...prev, compensation: e.target.value }))} style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFF', color: darkMode ? '#FFF' : '#111827', borderRadius: '12px' }}>
@@ -8795,17 +8952,26 @@ export default function App() {
                     <option value="hybrid" style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>{t('hybridOption')}</option>
                   </select>
                 </div>
+
+                {postDraft.compensation === 'credits' && (
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#FCD34D' : '#374151' }}>{t('trocoTokensAmountLabel')}</label>
+                    <input value={postDraft.trocoTokens || '1'} onChange={(e) => setPostDraft(prev => ({ ...prev, trocoTokens: e.target.value }))} type="number" min="1" placeholder="Ex : 1" style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFF', color: darkMode ? '#FFF' : '#111827', borderRadius: '12px' }} />
+                  </div>
+                )}
+
                 {(postDraft.compensation === 'cash' || postDraft.compensation === 'hybrid') && (
                   <div>
                     <label style={{ fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#CBD5E1' : '#374151' }}>{t('expectedAmountLabel')}</label>
                     <input value={postDraft.compensation === 'hybrid' ? postDraft.euroAmount : postDraft.price} onChange={(e) => setPostDraft(prev => ({ ...prev, ...(prev.compensation === 'hybrid' ? { euroAmount: e.target.value } : { price: e.target.value }) }))} type="number" min="0" placeholder="Ex : 20" style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFF', color: darkMode ? '#FFF' : '#111827', borderRadius: '12px' }} />
                   </div>
                 )}
+
                 {postDraft.compensation === 'hybrid' && (
                   <div style={{ padding: '12px', borderRadius: '14px', backgroundColor: darkMode ? 'rgba(120,53,15,0.25)' : '#FFF7ED', border: darkMode ? '1px solid rgba(245,158,11,0.4)' : '1px solid #FDE68A', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     <div>
                       <label style={{ fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#FCD34D' : '#374151' }}>{t('trocoTokensAmountLabel')}</label>
-                      <input value={postDraft.trocoTokens} onChange={(e) => setPostDraft(prev => ({ ...prev, trocoTokens: e.target.value }))} type="number" min="0" placeholder="Ex : 2" style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFF', color: darkMode ? '#FFF' : '#111827', borderRadius: '12px' }} />
+                      <input value={postDraft.trocoTokens} onChange={(e) => setPostDraft(prev => ({ ...prev, trocoTokens: e.target.value }))} type="number" min="1" placeholder="Ex : 2" style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFF', color: darkMode ? '#FFF' : '#111827', borderRadius: '12px' }} />
                     </div>
                     <div>
                       <label style={{ fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#FCD34D' : '#374151' }}>{t('expectedAmountLabel')}</label>

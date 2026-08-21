@@ -461,8 +461,19 @@ export default function ChatView({
                       </button>
                     )}
 
-                    {/* BADGES DE CONTREPARTIE À HAUT CONTRASTE */}
+                    {/* BADGES DE CONTREPARTIE & DURÉE À HAUT CONTRASTE */}
                     <div style={{ display: 'flex', gap: '8px', marginBottom: '14px', flexWrap: 'wrap' }}>
+                      {terms.durationType && (
+                        <span style={{
+                          backgroundColor: darkMode ? '#0F172A' : '#FFF',
+                          border: darkMode ? '1.5px solid #818CF8' : '1.5px solid #4F46E5',
+                          color: darkMode ? '#A5B4FC' : '#4338CA',
+                          borderRadius: '999px', padding: '5px 14px', fontSize: '12px', fontWeight: '800',
+                          boxShadow: '0 2px 8px rgba(79,70,229,0.15)'
+                        }}>
+                          ⏱️ {terms.durationType === 'hourly' ? `${terms.durationValue || 1}h` : terms.durationType === 'daily' ? `${terms.durationValue || 1}j` : terms.durationType === 'monthly' ? `${terms.durationValue || 1} mois` : terms.durationType === 'fixed' ? 'Forfait global' : 'Durée libre'}
+                        </span>
+                      )}
                       {terms.euroAmount > 0 && <span style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', border: darkMode ? '1.5px solid #38BDF8' : '1.5px solid #0284C7', color: darkMode ? '#38BDF8' : '#0369A1', borderRadius: '999px', padding: '5px 14px', fontSize: '12px', fontWeight: '800', boxShadow: '0 2px 8px rgba(2,132,199,0.15)' }}>💶 {terms.euroAmount}€</span>}
                       {terms.trocoTokens > 0 && <span style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', border: darkMode ? '1.5px solid #FBBF24' : '1.5px solid #D97706', color: darkMode ? '#FBBF24' : '#B45309', borderRadius: '999px', padding: '5px 14px', fontSize: '12px', fontWeight: '800', boxShadow: '0 2px 8px rgba(245,158,11,0.15)' }}>🪙 {terms.trocoTokens} {t('tokens') || 'Jeton(s)'}</span>}
                       {terms.euroAmount === 0 && terms.trocoTokens === 0 && <span style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', border: darkMode ? '1.5px solid #34D399' : '1.5px solid #059669', color: darkMode ? '#34D399' : '#047857', borderRadius: '999px', padding: '5px 14px', fontSize: '12px', fontWeight: '800', boxShadow: '0 2px 8px rgba(16,185,129,0.15)' }}>🤝 {t('directSwap') || 'Troc direct'}</span>}
