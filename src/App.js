@@ -20,7 +20,7 @@ import WelcomeGiftCelebrationModal from './components/WelcomeGiftCelebrationModa
 import VisioSettlementModal from './components/VisioSettlementModal';
 import { analyzeContent } from './utils/contentModeration';
 import { validateListingContent, validateChatMessage } from './utils/moderationBlacklist';
-import { DIVERSE_AVATARS } from './data/categoriesData';
+import { DIVERSE_AVATARS, TROCO_CATEGORIES } from './data/categoriesData';
 import { getInstantOrQueueTranslation, subscribeTranslations } from './utils/translator';
 
 
@@ -3741,6 +3741,7 @@ export default function App() {
     status: 'active',
     title: '',
     category: 'Cours & Compétences',
+    customCategoryName: '',
     format: 'onsite',
     description: '',
     compensation: 'credits',
@@ -5236,7 +5237,7 @@ export default function App() {
     : (profile?.rating ? Number(profile.rating).toFixed(1) : '—');
   const userSwapHistory = isDemoProfile ? swapHistory : (profile?.swapHistory || []);
 
-  const baseCategories = ['Tous', 'Cours/Compétences', 'Outillage', 'Services/Dépannage', 'Logement/Swap'];
+  const baseCategories = ['Tous', ...TROCO_CATEGORIES.filter(c => c.id !== 'all').map(c => c.label)];
   const allCategories = [...baseCategories, ...customCategories];
 
   // ---- GESTION COMPÉTENCES & MATÉRIEL AVEC PERSISTANCE FIRESTORE IMMÉDIATE ----
@@ -5916,12 +5917,22 @@ export default function App() {
 
     const finalGallery = postDraft.gallery && postDraft.gallery.length > 0 ? postDraft.gallery : media.gallery;
 
+    const finalCategory = ((postDraft.category === 'Autre' || postDraft.category === 'Autre / Domaine personnalisé') && postDraft.customCategoryName?.trim())
+      ? postDraft.customCategoryName.trim()
+      : postDraft.category;
+
+    if (postDraft.customCategoryName?.trim() && !customCategories.includes(postDraft.customCategoryName.trim())) {
+      setCustomCategories(prev => [...prev, postDraft.customCategoryName.trim()]);
+    }
+
     const newListing = {
       ...(isEditingListing ? editingOriginalListing : {}),
       id: isEditingListing ? editingOriginalListing.id : Date.now(),
       title: rawTitle,
       author: profile.name,
-      category: postDraft.category,
+      category: finalCategory,
+      customCategory: (postDraft.category === 'Autre' || postDraft.category === 'Autre / Domaine personnalisé') || Boolean(postDraft.customCategoryName?.trim()),
+      customCategoryName: postDraft.customCategoryName?.trim() || null,
       verified: isEditingListing ? editingOriginalListing.verified : true,
       rating: isEditingListing ? editingOriginalListing.rating : 4.8,
       reviews: isEditingListing ? editingOriginalListing.reviews : 0,
@@ -8730,12 +8741,47 @@ export default function App() {
                 </div>
                 <div>
                   <label style={{ fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#CBD5E1' : '#374151' }}>{t('adCategoryLabel')}</label>
-                  <select value={postDraft.category} onChange={(e) => setPostDraft(prev => ({ ...prev, category: e.target.value }))} style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFF', color: darkMode ? '#FFF' : '#111827', borderRadius: '12px' }}>
-                    <option value="Cours & Compétences" style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>{t('catSkills')}</option>
-                    <option value="Prêt de Matériel" style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>{t('catTools')}</option>
-                    <option value="Services & Dépannage" style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>{t('catServices')}</option>
-                    <option value="Logement & Stay Swap" style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>{t('catHousing')}</option>
+                  <select
+                    value={postDraft.category}
+                    onChange={(e) => setPostDraft(prev => ({ ...prev, category: e.target.value }))}
+                    style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFF', color: darkMode ? '#FFF' : '#111827', borderRadius: '12px', fontSize: '13px' }}
+                  >
+                    <option value="Cours & Compétences" style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>🎓 Cours, Langues & Compétences</option>
+                    <option value="Bricolage, Travaux & Jardin" style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>🛠️ Bricolage, Travaux & Jardin</option>
+                    <option value="Tech, Digital & Bureautique" style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>💻 Tech, Digital & Bureautique</option>
+                    <option value="Prêt d’Outillage & Équipements" style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>🔨 Prêt d’Outillage & Équipements</option>
+                    <option value="Véhicules & Mobilité" style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>🚗 Véhicules & Mobilité</option>
+                    <option value="Logement, Espaces & Stay Swap" style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>🏠 Logement, Espaces & Stay Swap</option>
+                    <option value="Audiovisuel, Photo & Son" style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>📷 Audiovisuel, Photo & Son</option>
+                    <option value="Services à la personne & Entraide" style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>🤝 Services à la personne & Entraide</option>
+                    <option value="Santé, Sport & Bien-être" style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>🧘 Santé, Sport & Bien-être</option>
+                    <option value="Événements & Fêtes" style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>🎉 Événements & Matériel de fête</option>
+                    <option value="Mode & Beauté" style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>✂️ Mode, Beauté & Accessoires</option>
+                    <option value="Autre" style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>✨ Autre / Domaine personnalisé</option>
                   </select>
+
+                  {(postDraft.category === 'Autre' || postDraft.category === 'Autre / Domaine personnalisé') && (
+                    <div style={{ marginTop: '8px', animation: 'fadeIn 0.25s ease' }}>
+                      <label style={{ fontSize: '11px', fontWeight: '800', color: darkMode ? '#FDE68A' : '#D97706', display: 'block', marginBottom: '4px' }}>
+                        ✍️ Précisez votre catégorie personnalisée (optimisée SEO) :
+                      </label>
+                      <input
+                        type="text"
+                        value={postDraft.customCategoryName || ''}
+                        onChange={(e) => setPostDraft(prev => ({ ...prev, customCategoryName: e.target.value }))}
+                        placeholder="Ex : Apiculture urbaine, Restauration de meubles anciens..."
+                        style={{
+                          width: '100%',
+                          padding: '10px 12px',
+                          border: darkMode ? '1.5px solid #F59E0B' : '1.5px solid #D97706',
+                          backgroundColor: darkMode ? 'rgba(245,158,11,0.1)' : '#FFFBEB',
+                          color: darkMode ? '#FFF' : '#111827',
+                          borderRadius: '12px',
+                          fontSize: '13px',
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label style={{ fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#CBD5E1' : '#374151' }}>{t('adFormatLabel')}</label>

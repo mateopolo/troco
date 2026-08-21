@@ -112,6 +112,21 @@ export default function PublishWizard({
                     <option key={cat} value={cat}>{cat}</option>
                   ))}
                 </select>
+
+                {(postDraft.category === 'Autre' || postDraft.category === 'Autre / Domaine personnalisé') && (
+                  <div style={{ marginTop: '8px' }}>
+                    <label style={{ fontSize: '11px', fontWeight: '800', color: darkMode ? '#FDE68A' : '#D97706', display: 'block', marginBottom: '4px' }}>
+                      ✍️ Précisez votre catégorie personnalisée :
+                    </label>
+                    <input
+                      type="text"
+                      value={postDraft.customCategoryName || ''}
+                      onChange={(e) => setPostDraft(prev => ({ ...prev, customCategoryName: e.target.value }))}
+                      placeholder="Ex : Apiculture urbaine, Reliure d'art..."
+                      style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #F59E0B', borderRadius: '12px', fontSize: '13px', backgroundColor: darkMode ? 'rgba(245,158,11,0.1)' : '#FFFBEB', color: darkMode ? '#FFF' : '#111827' }}
+                    />
+                  </div>
+                )}
               </div>
 
               <div>

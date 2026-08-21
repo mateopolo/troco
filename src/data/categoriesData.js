@@ -2,6 +2,22 @@
 // PRESETS INTELLIGENTS DE COMPÉTENCES, ÉQUIPEMENTS & BIO — TROCO
 // ============================================================================
 
+export const TROCO_CATEGORIES = [
+  { id: 'all', label: 'Toutes catégories', icon: 'Sparkles', emoji: '✨' },
+  { id: 'skills', label: 'Cours & Compétences', icon: 'GraduationCap', emoji: '🎓', desc: 'Langues, soutien scolaire, musique, formations, code' },
+  { id: 'diy', label: 'Bricolage, Travaux & Jardin', icon: 'Wrench', emoji: '🛠️', desc: 'Plomberie, électricité, jardinage, peinture, rénovation' },
+  { id: 'tech', label: 'Tech, Digital & Bureautique', icon: 'Laptop', emoji: '💻', desc: 'Dev web, dépannage PC/Mac, design, vidéo, SEO, IA' },
+  { id: 'tools', label: 'Prêt d’Outillage & Équipements', icon: 'Hammer', emoji: '🔨', desc: 'Perceuses, nettoyeurs haute pression, scies, échafaudages' },
+  { id: 'vehicles', label: 'Véhicules & Mobilité', icon: 'Car', emoji: '🚗', desc: 'Utilitaires, citadines, vélos cargos, remorques' },
+  { id: 'housing', label: 'Logement, Espaces & Stay Swap', icon: 'Home', emoji: '🏠', desc: 'Échange de maison, studios, box de stockage, bureaux' },
+  { id: 'media', label: 'Audiovisuel, Photo & Son', icon: 'Camera', emoji: '📷', desc: 'Caméras 4K, drones, micros studio, instruments' },
+  { id: 'services', label: 'Services à la personne & Entraide', icon: 'HeartHandshake', emoji: '🤝', desc: 'Garde d’animaux, déménagement, cuisine, couture' },
+  { id: 'wellness', label: 'Santé, Sport & Bien-être', icon: 'Activity', emoji: '🧘', desc: 'Coaching sportif, yoga, pilates, méditation' },
+  { id: 'events', label: 'Événements & Matériel de fête', icon: 'PartyPopper', emoji: '🎉', desc: 'Sonorisation, barnums, mobilier, lumières' },
+  { id: 'fashion', label: 'Mode, Beauté & Accessoires', icon: 'Scissors', emoji: '✂️', desc: 'Coiffure, retouches, stylisme, confection' },
+  { id: 'other', label: 'Autre / Domaine personnalisé', icon: 'PlusCircle', emoji: '✨', desc: 'Rubrique sur-mesure pour tout besoin spécifique' },
+];
+
 export const SKILL_CATEGORIES = [
   {
     id: 'languages',
