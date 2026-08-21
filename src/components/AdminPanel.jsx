@@ -36,10 +36,10 @@ export default function AdminPanel({
   const [balanceDeltaEuro, setBalanceDeltaEuro] = useState('');
   const [balanceDeltaTokens, setBalanceDeltaTokens] = useState('');
 
-  // Vérification PIN d'accès (sécurité rapide)
+  // Vérification PIN d'accès (sécurité administrateur)
   const handleUnlock = (e) => {
     if (e) e.preventDefault();
-    if (pinInput.trim() === 'troco2026' || pinInput.trim() === 'admin' || currentUser?.role === 'admin') {
+    if (pinInput.trim() === '2601' || currentUser?.role === 'admin') {
       setIsUnlocked(true);
       setPinError('');
     } else {
@@ -158,7 +158,7 @@ export default function AdminPanel({
               <input
                 type="password"
                 autoFocus
-                placeholder="Code PIN (ex: troco2026)"
+                placeholder="Code PIN (ex: 2601)"
                 value={pinInput}
                 onChange={(e) => setPinInput(e.target.value)}
                 style={{

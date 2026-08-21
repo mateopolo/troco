@@ -94,6 +94,7 @@ export default function PaymentModal({
       if (currentUser?.name && !cardHolder) {
         setCardHolder(currentUser.name);
       }
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, initialMode, currentUser]);
 
