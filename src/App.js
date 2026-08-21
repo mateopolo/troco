@@ -2,12 +2,15 @@ import React, { useState, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Search, MapPin, Video, Star, Globe, Filter, MessageSquare, PlusCircle, User, ShieldCheck, Clock, CheckCircle, ArrowRight, X, Sparkles, Coins, Plus, Trash2, Camera, Pencil, Mic, PhoneOff, Flame, History, Check, Lock, CreditCard, Tag, Phone, UserPlus, ChevronLeft, ChevronRight, Maximize2, Minimize2, ZoomIn, ZoomOut, MicOff, VideoOff, Sun, Moon, Upload, Repeat, SwitchCamera, LogOut, FileText, Scale } from 'lucide-react';
+import { Search, MapPin, Video, Star, Globe, Filter, MessageSquare, PlusCircle, User, ShieldCheck, Clock, CheckCircle, ArrowRight, X, Sparkles, Coins, Plus, Trash2, Camera, Pencil, Mic, PhoneOff, Flame, History, Check, Lock, CreditCard, Tag, Phone, UserPlus, ChevronLeft, ChevronRight, Maximize2, Minimize2, ZoomIn, ZoomOut, MicOff, VideoOff, Sun, Moon, Upload, Repeat, SwitchCamera, LogOut, Scale, ShieldAlert } from 'lucide-react';
 import { auth, db } from './firebase';
 import { collection, addDoc, doc, updateDoc, serverTimestamp, onSnapshot, query, orderBy, setDoc, deleteDoc, getDoc, where } from 'firebase/firestore';
 import { RecaptchaVerifier, signInWithPhoneNumber, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, GoogleAuthProvider, GithubAuthProvider, OAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
 import ChatView from './components/ChatView';
 import { useWebRTC } from './hooks/useWebRTC';
+import AdminPanel from './components/AdminPanel';
+import ReportModal from './components/ReportModal';
+import { analyzeContent } from './utils/contentModeration';
 
 
 // ---- SYNTHÉTISEURS SONORES WEB AUDIO API (100% EMBARQUÉS - ZERO FICHIER EXTERNE) ----
@@ -3204,6 +3207,80 @@ export default function App() {
   const [signupSkillInput, setSignupSkillInput] = useState('');
   const [isLoadingSession, setIsLoadingSession] = useState(true);
 
+  // ---- ÉTATS MODÉRATION & PANEL ADMINISTRATEUR ----
+  const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [reportTarget, setReportTarget] = useState({ listing: null, user: null });
+  const [allReports, setAllReports] = useState([]);
+  const [allFirestoreUsers, setAllFirestoreUsers] = useState([]);
+
+  // ---- ÉCOUTE TEMPS RÉEL DES SIGNALEMENTS (MODÉRATION ADMIN) ----
+  useEffect(() => {
+    try {
+      const qReports = query(collection(db, 'reports'), orderBy('createdAt', 'desc'));
+      const unsub = onSnapshot(qReports, (snap) => {
+        const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        setAllReports(list);
+      }, (err) => console.warn('[Firestore] Reports listener:', err));
+      return () => unsub();
+    } catch (e) {
+      console.warn('Reports listener setup error:', e);
+    }
+  }, []);
+
+  // ---- ÉCOUTE TEMPS RÉEL DES UTILISATEURS (ANNUAIRE ADMIN) ----
+  useEffect(() => {
+    try {
+      const unsub = onSnapshot(collection(db, 'users'), (snap) => {
+        const list = snap.docs.map(d => ({ id: d.id, uid: d.id, ...d.data() }));
+        setAllFirestoreUsers(list);
+      }, (err) => console.warn('[Firestore] Users listener:', err));
+      return () => unsub();
+    } catch (e) {
+      console.warn('Users listener setup error:', e);
+    }
+  }, []);
+
+  // Handlers actions administrateur
+  const handleAdminUpdateUser = async (uid, updates) => {
+    if (!uid) return;
+    try {
+      await updateDoc(doc(db, 'users', uid), {
+        ...updates,
+        updatedAt: serverTimestamp(),
+      });
+    } catch (err) {
+      console.warn('[Firestore] handleAdminUpdateUser error:', err);
+      setAllFirestoreUsers(prev => prev.map(u => (u.uid === uid || u.id === uid) ? { ...u, ...updates } : u));
+    }
+  };
+
+  const handleAdminDeleteListing = async (listingId) => {
+    if (!listingId) return;
+    setListings(prev => prev.filter(l => String(l.id) !== String(listingId)));
+    try {
+      const targetListing = listings.find(l => String(l.id) === String(listingId));
+      if (targetListing?.firestoreId) {
+        await deleteDoc(doc(db, 'listings', targetListing.firestoreId));
+      }
+    } catch (err) {
+      console.warn('[Firestore] handleAdminDeleteListing error:', err);
+    }
+  };
+
+  const handleAdminResolveReport = async (reportId, status = 'resolved') => {
+    if (!reportId) return;
+    try {
+      await updateDoc(doc(db, 'reports', reportId), {
+        status,
+        resolvedAt: serverTimestamp(),
+      });
+    } catch (err) {
+      console.warn('[Firestore] handleAdminResolveReport error:', err);
+      setAllReports(prev => prev.map(r => r.id === reportId ? { ...r, status } : r));
+    }
+  };
+
   // ---- ÉCOUTE ET SYNCHRONISATION EN TEMPS RÉEL DU PROFIL FIREBASE USERS/{UID} ----
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -4889,39 +4966,6 @@ export default function App() {
     }));
   };
 
-  // ---- ÉDITION DU PROFIL ----
-  const handleStartEdit = () => {
-    setProfileDraft(profile);
-    setSaveMessage('');
-    setIsEditingProfile(true);
-  };
-
-  const handleSaveProfile = () => {
-    let cleanUsername = (profileDraft.username || '').trim();
-    if (!cleanUsername) {
-      cleanUsername = '@' + (profileDraft.name || 'user').toLowerCase().replace(/\s+/g, '');
-    } else if (!cleanUsername.startsWith('@')) {
-      cleanUsername = '@' + cleanUsername;
-    }
-    const updated = { ...profileDraft, username: cleanUsername };
-    setProfile(updated);
-    try {
-      window.localStorage.setItem('troco_user_profile', JSON.stringify(updated));
-    } catch (e) {
-      console.warn('Erreur sauvegarde profil dans localStorage (Quota dépassé):', e);
-      try {
-        // Fallback en cas de quota dépassé : réinitialiser avec un avatar par défaut non volumineux
-        const fallbackProfile = { ...updated, avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80' };
-        window.localStorage.setItem('troco_user_profile', JSON.stringify(fallbackProfile));
-      } catch (err) {
-        console.warn('Impossible de sauvegarder dans localStorage:', err);
-      }
-    }
-    setIsEditingProfile(false);
-    setSaveMessage('Profil mis à jour avec succès !');
-    window.setTimeout(() => setSaveMessage(''), 2600);
-  };
-
   const [listings, setListings] = useState(() => {
     try {
       const saved = localStorage.getItem('troco_user_listings');
@@ -5178,6 +5222,11 @@ export default function App() {
       return distance <= radiusKm;
     })();
 
+    // Filtrage Shadow-Ban & Utilisateurs bannis
+    const authorUser = allFirestoreUsers.find(u => (u.name && u.name.trim().toLowerCase() === (item.author || '').trim().toLowerCase()) || (u.uid && item.authorUid && u.uid === item.authorUid));
+    if (authorUser?.isBanned) return false;
+    if (authorUser?.isShadowBanned && item.author !== profile.name) return false;
+
     return item.status !== 'paused' && matchesSearch && matchesFormat && matchesCategory && matchesLanguage && matchesPayment && matchesDistance;
   }).sort((a, b) => (b.isBoosted ? 1 : 0) - (a.isBoosted ? 1 : 0));
 
@@ -5423,6 +5472,13 @@ export default function App() {
 
     if (!rawTitle || !rawDescription) {
       setPublishMessage(currentLang === 'FR' ? 'Ajoute un titre et une description pour publier ton annonce.' : currentLang === 'EN' ? 'Add a title and a description to publish your ad.' : currentLang === 'ES' ? 'Añade un título y una descripción para publicar tu anuncio.' : currentLang === 'IT' ? 'Aggiungi un titolo e una descrizione per pubblicare il tuo annuncio.' : currentLang === 'DE' ? 'Füge einen Titel und eine Beschreibung hinzu, um deine Anzeige zu veröffentlichen.' : currentLang === 'JA' ? 'タイトルと説明を追加して広告を公開してください。' : '添加标题和描述以发布您的广告。');
+      return;
+    }
+
+    // ---- MODÉRATION DE CONTENU AUTOMATIQUE ----
+    const moderationAnalysis = analyzeContent(`${rawTitle} ${rawDescription}`);
+    if (!moderationAnalysis.isClean && moderationAnalysis.score >= 40) {
+      setPublishMessage(`⚠️ Annonce non conforme aux règles Troco : ${moderationAnalysis.reasons.join(' ')}`);
       return;
     }
 
@@ -7608,7 +7664,35 @@ export default function App() {
                         )}
                       </div>
                       {selectedListing.authorProfile.name !== profile.name ? (
-                        <button onClick={() => handleStartDiscussion({ id: selectedListing.id, title: selectedListing.title, author: selectedListing.authorProfile.name, compensation: selectedListing.compensation })} className="premium-button" style={{ border: 'none', borderRadius: '999px', padding: '11px 16px', backgroundColor: '#04265A', color: '#FFF', fontWeight: '700', cursor: 'pointer', boxShadow: '0 10px 20px rgba(4,38,90,0.25)' }}>{t('startDiscussion')}</button>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          <button
+                            onClick={() => {
+                              setReportTarget({
+                                listing: selectedListing,
+                                user: { name: selectedListing.authorProfile.name, uid: selectedListing.authorProfile.uid || null }
+                              });
+                              setIsReportModalOpen(true);
+                            }}
+                            className="premium-button"
+                            title="Signaler un contenu abusif ou suspect"
+                            style={{
+                              border: 'none',
+                              borderRadius: '999px',
+                              padding: '11px 14px',
+                              backgroundColor: darkMode ? 'rgba(239,68,68,0.2)' : '#FEF2F2',
+                              color: '#EF4444',
+                              fontWeight: '700',
+                              fontSize: '12px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '5px',
+                            }}
+                          >
+                            <ShieldAlert size={14} /> Signaler
+                          </button>
+                          <button onClick={() => handleStartDiscussion({ id: selectedListing.id, title: selectedListing.title, author: selectedListing.authorProfile.name, compensation: selectedListing.compensation })} className="premium-button" style={{ border: 'none', borderRadius: '999px', padding: '11px 16px', backgroundColor: '#04265A', color: '#FFF', fontWeight: '700', cursor: 'pointer', boxShadow: '0 10px 20px rgba(4,38,90,0.25)' }}>{t('startDiscussion')}</button>
+                        </div>
                       ) : (
                         <div style={{ backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : '#F3F4F6', color: darkMode ? '#CBD5E1' : '#6B7280', padding: '10px 16px', borderRadius: '999px', fontSize: '13px', fontWeight: '700', border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #E5E7EB' }}>{t('authorAnnc')}</div>
                       )}
@@ -8164,7 +8248,26 @@ export default function App() {
                 <h3 style={{ margin: 0, fontSize: '22px', fontWeight: '800', color: darkMode ? '#FFFFFF' : '#111827', letterSpacing: '-0.01em' }}>{isEditingProfile ? profileDraft.name : profile.name}</h3>
                 <div style={{ fontSize: '13px', fontWeight: '800', color: darkMode ? '#60A5FA' : '#04265A', marginTop: '2px' }}>{isEditingProfile ? (profileDraft.username || '@user') : (profile.username || '@mateopolo')}</div>
               </div>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <button
+                  onClick={() => setIsAdminPanelOpen(true)}
+                  className="premium-button"
+                  style={{
+                    border: 'none',
+                    borderRadius: '999px',
+                    padding: '10px 14px',
+                    backgroundColor: darkMode ? 'rgba(239,68,68,0.2)' : '#FEF2F2',
+                    color: '#EF4444',
+                    fontWeight: '800',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <ShieldAlert size={14} /> Panel Modération
+                </button>
                 <button onClick={() => isEditingProfile ? handleSaveProfile() : handleStartEdit()} className="premium-button" style={{ border: 'none', borderRadius: '999px', padding: '10px 14px', backgroundColor: isEditingProfile ? '#04265A' : (darkMode ? 'rgba(255,255,255,0.1)' : '#F8FAFC'), color: isEditingProfile ? '#FFF' : (darkMode ? '#FFFFFF' : '#0F172A'), fontWeight: '700', cursor: 'pointer', boxShadow: '0 8px 16px -4px rgba(0,0,0,0.08)' }}>
                   {isEditingProfile ? t('saveProfile') : t('editProfile')}
                 </button>
@@ -9198,6 +9301,33 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* PANEL ADMINISTRATEUR & MODÉRATION (/admin) */}
+      <AdminPanel
+        isOpen={isAdminPanelOpen}
+        onClose={() => setIsAdminPanelOpen(false)}
+        darkMode={darkMode}
+        currentUser={profile}
+        allUsers={allFirestoreUsers}
+        allListings={listings}
+        allReports={allReports}
+        onUpdateUser={handleAdminUpdateUser}
+        onDeleteListing={handleAdminDeleteListing}
+        onResolveReport={handleAdminResolveReport}
+      />
+
+      {/* MODALE DE SIGNALEMENT COMMUNAUTAIRE */}
+      <ReportModal
+        isOpen={isReportModalOpen}
+        onClose={() => {
+          setIsReportModalOpen(false);
+          setReportTarget({ listing: null, user: null });
+        }}
+        targetListing={reportTarget.listing}
+        targetUser={reportTarget.user}
+        currentUser={profile}
+        darkMode={darkMode}
+      />
 
     </div>
   );
