@@ -12,6 +12,9 @@ import AdminPanel from './components/AdminPanel';
 import ReportModal from './components/ReportModal';
 import PaymentModal from './components/PaymentModal';
 import TransactionsHistoryModal from './components/TransactionsHistoryModal';
+import CguModal from './components/CguModal';
+import PrivacyCenterModal from './components/PrivacyCenterModal';
+import CookieBanner from './components/CookieBanner';
 import { analyzeContent } from './utils/contentModeration';
 
 
@@ -3223,6 +3226,9 @@ export default function App() {
     payload: null,
   });
   const [isTransactionsModalOpen, setIsTransactionsModalOpen] = useState(false);
+  // ---- ÉTATS CADRE JURIDIQUE, CGU & RGPD (BLOC 6) ----
+  const [isPrivacyCenterOpen, setIsPrivacyCenterOpen] = useState(false);
+  const [isCguViewerOpen, setIsCguViewerOpen] = useState(false);
   const [userTransactions, setUserTransactions] = useState(() => {
     try {
       const saved = localStorage.getItem('troco_user_transactions');
@@ -3348,6 +3354,26 @@ export default function App() {
       } catch (err) {
         console.warn('[Firestore] Error saving transaction:', err);
       }
+    }
+  };
+
+  // ---- GESTION DU CADRE JURIDIQUE & RGPD (BLOC 6) ----
+  const handleDeleteAccount = async () => {
+    const uid = profile?.uid || auth.currentUser?.uid;
+    try {
+      if (uid) {
+        // Suppression du document utilisateur dans Firestore
+        await deleteDoc(doc(db, 'users', uid));
+      }
+      localStorage.clear();
+      if (auth.currentUser) {
+        await signOut(auth);
+      }
+      window.location.reload();
+    } catch (err) {
+      console.error('Account deletion error:', err);
+      localStorage.clear();
+      window.location.reload();
     }
   };
 
@@ -6123,11 +6149,11 @@ export default function App() {
   };
 
   // ---- VALIDATION OBLIGATOIRE DES CGU / RGPD ----
-  const handleAcceptCgu = async () => {
-    const now = new Date().toISOString();
+  const handleAcceptCgu = async ({ cguVersion, acceptedAt } = {}) => {
+    const now = acceptedAt || new Date().toISOString();
     const uid = profile.uid || auth.currentUser?.uid;
     setProfile(prev => {
-      const updated = { ...prev, cguAcceptedAt: now };
+      const updated = { ...prev, cguAcceptedAt: now, cguVersion: cguVersion || '2026.1' };
       window.localStorage.setItem('troco_user_profile', JSON.stringify(updated));
       return updated;
     });
@@ -6135,6 +6161,7 @@ export default function App() {
       try {
         await updateDoc(doc(db, 'users', String(uid)), {
           cguAcceptedAt: serverTimestamp(),
+          cguVersion: cguVersion || '2026.1',
           updatedAt: serverTimestamp(),
         });
       } catch (e) {
@@ -8704,6 +8731,92 @@ export default function App() {
                 })}
               </div>
             </div>
+
+            {/* ---- CADRE JURIDIQUE & RGPD (BLOC 6) ---- */}
+            <div style={{ borderTop: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E2E8F0', paddingTop: '20px', marginTop: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                <ShieldCheck size={17} color={darkMode ? '#60A5FA' : '#04265A'} />
+                <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: darkMode ? '#FFFFFF' : '#111827' }}>Sécurité, Juridique & RGPD</h4>
+              </div>
+              <p style={{ fontSize: '12px', color: darkMode ? '#CBD5E1' : '#64748B', margin: '0 0 14px' }}>
+                Gérez vos données personnelles, exportez vos archives ou consultez les Conditions Générales de Troco.
+              </p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <button
+                  onClick={() => setIsPrivacyCenterOpen(true)}
+                  className="premium-button"
+                  style={{
+                    border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E2E8F0',
+                    borderRadius: '16px',
+                    padding: '14px 16px',
+                    backgroundColor: darkMode ? 'rgba(15,23,42,0.6)' : '#FFFFFF',
+                    color: darkMode ? '#F8FAFC' : '#0F172A',
+                    fontWeight: '700',
+                    fontSize: '13px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 8px rgba(15,23,42,0.04)',
+                  }}
+                >
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <Lock size={16} color="#3B82F6" /> Centre de Confidentialité & Export RGPD (JSON)
+                  </span>
+                  <ChevronRight size={16} color={darkMode ? '#94A3B8' : '#94A3B8'} />
+                </button>
+
+                <button
+                  onClick={() => setIsCguViewerOpen(true)}
+                  className="premium-button"
+                  style={{
+                    border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E2E8F0',
+                    borderRadius: '16px',
+                    padding: '14px 16px',
+                    backgroundColor: darkMode ? 'rgba(15,23,42,0.6)' : '#FFFFFF',
+                    color: darkMode ? '#F8FAFC' : '#0F172A',
+                    fontWeight: '700',
+                    fontSize: '13px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 8px rgba(15,23,42,0.04)',
+                  }}
+                >
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <Scale size={16} color="#8B5CF6" /> Conditions Générales & Charte Communautaire (v2026.1)
+                  </span>
+                  <ChevronRight size={16} color={darkMode ? '#94A3B8' : '#94A3B8'} />
+                </button>
+
+                <button
+                  onClick={() => setIsAdminPanelOpen(true)}
+                  className="premium-button"
+                  style={{
+                    border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E2E8F0',
+                    borderRadius: '16px',
+                    padding: '14px 16px',
+                    backgroundColor: darkMode ? 'rgba(15,23,42,0.6)' : '#FFFFFF',
+                    color: darkMode ? '#F8FAFC' : '#0F172A',
+                    fontWeight: '700',
+                    fontSize: '13px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 8px rgba(15,23,42,0.04)',
+                  }}
+                >
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <ShieldAlert size={16} color="#10B981" /> Panel Administrateur & Modération
+                  </span>
+                  <ChevronRight size={16} color={darkMode ? '#94A3B8' : '#94A3B8'} />
+                </button>
+              </div>
+            </div>
+
           </div>
         )}
 
@@ -9497,6 +9610,33 @@ export default function App() {
           setIsTransactionsModalOpen(false);
           handleOpenPayment(mode);
         }}
+      />
+
+      {/* MODALE D'ACCEPTATION & CONSULTATION DES CGU (BLOC 6) */}
+      <CguModal
+        isOpen={isCguViewerOpen || (Boolean(profile?.name) && !profile?.cguAcceptedAt)}
+        isMandatory={Boolean(profile?.name) && !profile?.cguAcceptedAt}
+        onClose={() => setIsCguViewerOpen(false)}
+        onAccept={handleAcceptCgu}
+        darkMode={darkMode}
+        currentUser={profile}
+      />
+
+      {/* CENTRE DE CONFIDENTIALITÉ & GESTION DES DROITS RGPD (BLOC 6) */}
+      <PrivacyCenterModal
+        isOpen={isPrivacyCenterOpen}
+        onClose={() => setIsPrivacyCenterOpen(false)}
+        darkMode={darkMode}
+        currentUser={profile}
+        userListings={listings}
+        userTransactions={userTransactions}
+        onDeleteAccount={handleDeleteAccount}
+      />
+
+      {/* BANNIÈRE COOKIES & TRACEURS CONFORME CNIL / RGPD (BLOC 6) */}
+      <CookieBanner
+        darkMode={darkMode}
+        onOpenPrivacyCenter={() => setIsPrivacyCenterOpen(true)}
       />
 
     </div>
