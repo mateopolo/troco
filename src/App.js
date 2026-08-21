@@ -6265,26 +6265,27 @@ export default function App() {
       const userDocRef = doc(db, 'users', uid);
       const userSnap = await getDoc(userDocRef);
 
-      const cleanName = user.displayName || user.email?.split('@')[0] || 'Mateo Polo';
-      const cleanUsername = '@' + cleanName.toLowerCase().replace(/[^a-z0-9_]/g, '');
+      const realName = user.displayName || user.email?.split('@')[0] || 'Utilisateur';
+      const realUsername = '@' + realName.toLowerCase().replace(/[^a-z0-9_]/g, '');
+      const realAvatar = user.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80';
 
       if (!userSnap.exists()) {
         const newUserData = {
           uid,
-          name: cleanName,
-          username: cleanUsername,
+          name: realName,
+          username: realUsername,
           email: user.email || '',
           phoneNumber: user.phoneNumber || '',
-          avatar: user.photoURL || 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80',
-          bio: 'Créateur de contenus, développeur et passionné d’échanges de compétences.',
+          avatar: realAvatar,
+          bio: 'Bienvenue sur mon profil Troco ! Prêt à échanger des services et partager des compétences.',
           location: 'Paris, France',
-          languages: ['FR', 'EN'],
-          skills: ['Python', 'Design', 'Musique'],
-          equipment: ['MacBook Pro', 'Casque Studio'],
-          euroBalance: 120,
-          trocoTokens: 8,
+          languages: ['FR'],
+          skills: [],
+          equipment: [],
+          euroBalance: 50,
+          trocoTokens: 5,
           loginMethod: 'Google',
-          cguAcceptedAt: new Date().toISOString(),
+          cguAcceptedAt: null,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         };
@@ -6301,32 +6302,16 @@ export default function App() {
       setIsAuthenticated(true);
       window.localStorage.setItem('troco_is_authenticated', 'true');
     } catch (err) {
-      console.warn('Google Sign-In Exception:', err);
-      if (err.code === 'auth/unauthorized-domain' || err.message?.includes('unauthorized-domain') || err.message?.includes('invalid') || err.code === 'auth/configuration-not-found' || err.code === 'auth/operation-not-allowed') {
-        const cleanUser = {
-          uid: 'google_usr_' + Date.now(),
-          name: 'Mateo Polo',
-          username: '@mateopolo',
-          email: 'mateo.polo@gmail.com',
-          phoneNumber: '',
-          avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80',
-          bio: 'Créateur de contenus, développeur et passionné d’échanges de compétences.',
-          location: 'Paris, France',
-          languages: ['FR', 'EN'],
-          skills: ['Python', 'Design', 'Musique'],
-          equipment: ['MacBook Pro', 'Casque Studio'],
-          euroBalance: 120,
-          trocoTokens: 8,
-          loginMethod: 'Google',
-          cguAcceptedAt: new Date().toISOString(),
-        };
-        setProfile(cleanUser);
-        setIsAuthenticated(true);
-        window.localStorage.setItem('troco_is_authenticated', 'true');
-        window.localStorage.setItem('troco_user_profile', JSON.stringify(cleanUser));
-        return;
+      console.warn('Google Sign-In Error:', err);
+      if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
+        setAuthError('Connexion annulée.');
+      } else if (err.code === 'auth/unauthorized-domain') {
+        setAuthError("⚠️ Domaine 'localhost' non autorisé dans Firebase Console (Authentication > Paramètres > Domaines autorisés).");
+      } else if (err.code === 'auth/operation-not-allowed' || err.code === 'auth/configuration-not-found' || err.message?.includes('invalid')) {
+        setAuthError("⚠️ Le fournisseur Google doit être activé dans votre console Firebase (Authentication > Mode de connexion > Google > Activer).");
+      } else {
+        setAuthError(err.message || 'Erreur lors de la connexion avec Google.');
       }
-      setAuthError(err.message || 'Erreur lors de la connexion avec Google.');
     } finally {
       setAuthLoading(false);
     }
@@ -6343,26 +6328,27 @@ export default function App() {
       const userDocRef = doc(db, 'users', uid);
       const userSnap = await getDoc(userDocRef);
 
-      const cleanName = user.displayName || user.reloadUserInfo?.screenName || 'Mateo Polo';
-      const cleanUsername = '@' + (user.reloadUserInfo?.screenName || cleanName).toLowerCase().replace(/[^a-z0-9_]/g, '');
+      const realName = user.displayName || user.reloadUserInfo?.screenName || 'Développeur';
+      const realUsername = '@' + (user.reloadUserInfo?.screenName || realName).toLowerCase().replace(/[^a-z0-9_]/g, '');
+      const realAvatar = user.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80';
 
       if (!userSnap.exists()) {
         const newUserData = {
           uid,
-          name: cleanName,
-          username: cleanUsername,
+          name: realName,
+          username: realUsername,
           email: user.email || '',
           phoneNumber: user.phoneNumber || '',
-          avatar: user.photoURL || 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80',
-          bio: 'Développeur Full-Stack passionné d’open-source et de partage de compétences.',
+          avatar: realAvatar,
+          bio: 'Développeur et passionné de tech sur Troco !',
           location: 'Paris, France',
           languages: ['FR', 'EN'],
-          skills: ['Développement Web', 'Python', 'React'],
-          equipment: ['MacBook Pro', 'Clavier Mécanique'],
-          euroBalance: 120,
-          trocoTokens: 8,
+          skills: [],
+          equipment: [],
+          euroBalance: 50,
+          trocoTokens: 5,
           loginMethod: 'GitHub',
-          cguAcceptedAt: new Date().toISOString(),
+          cguAcceptedAt: null,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         };
@@ -6379,32 +6365,16 @@ export default function App() {
       setIsAuthenticated(true);
       window.localStorage.setItem('troco_is_authenticated', 'true');
     } catch (err) {
-      console.warn('GitHub Sign-In Exception:', err);
-      if (err.code === 'auth/unauthorized-domain' || err.message?.includes('unauthorized-domain') || err.message?.includes('invalid') || err.code === 'auth/configuration-not-found' || err.code === 'auth/operation-not-allowed') {
-        const cleanUser = {
-          uid: 'github_usr_' + Date.now(),
-          name: 'Mateo Polo',
-          username: '@mateopolo',
-          email: 'mateo.dev@github.com',
-          phoneNumber: '',
-          avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80',
-          bio: 'Développeur Full-Stack passionné d’open-source et d’échanges de compétences.',
-          location: 'Paris, France',
-          languages: ['FR', 'EN'],
-          skills: ['React', 'JavaScript', 'Node.js'],
-          equipment: ['MacBook Pro', 'Écran 4K'],
-          euroBalance: 120,
-          trocoTokens: 8,
-          loginMethod: 'GitHub',
-          cguAcceptedAt: new Date().toISOString(),
-        };
-        setProfile(cleanUser);
-        setIsAuthenticated(true);
-        window.localStorage.setItem('troco_is_authenticated', 'true');
-        window.localStorage.setItem('troco_user_profile', JSON.stringify(cleanUser));
-        return;
+      console.warn('GitHub Sign-In Error:', err);
+      if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
+        setAuthError('Connexion annulée.');
+      } else if (err.code === 'auth/unauthorized-domain') {
+        setAuthError("⚠️ Domaine non autorisé dans Firebase Console (Authentication > Paramètres > Domaines autorisés).");
+      } else if (err.code === 'auth/operation-not-allowed' || err.code === 'auth/configuration-not-found') {
+        setAuthError("⚠️ Le fournisseur GitHub doit être activé dans votre console Firebase (Authentication > Mode de connexion > GitHub).");
+      } else {
+        setAuthError(err.message || 'Erreur lors de la connexion avec GitHub.');
       }
-      setAuthError(err.message || 'Erreur lors de la connexion avec GitHub.');
     } finally {
       setAuthLoading(false);
     }
@@ -6421,26 +6391,27 @@ export default function App() {
       const userDocRef = doc(db, 'users', uid);
       const userSnap = await getDoc(userDocRef);
 
-      const cleanName = user.displayName || user.email?.split('@')[0] || 'Mateo Polo';
-      const cleanUsername = '@' + cleanName.toLowerCase().replace(/[^a-z0-9_]/g, '');
+      const realName = user.displayName || user.email?.split('@')[0] || 'Membre Discord';
+      const realUsername = '@' + realName.toLowerCase().replace(/[^a-z0-9_]/g, '');
+      const realAvatar = user.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80';
 
       if (!userSnap.exists()) {
         const newUserData = {
           uid,
-          name: cleanName,
-          username: cleanUsername,
+          name: realName,
+          username: realUsername,
           email: user.email || '',
           phoneNumber: user.phoneNumber || '',
-          avatar: user.photoURL || 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80',
-          bio: 'Membre actif de la communauté. Prêt pour du streaming, audio et entraide technique.',
+          avatar: realAvatar,
+          bio: 'Membre actif sur Troco !',
           location: 'Paris, France',
           languages: ['FR'],
-          skills: ['Production Audio', 'Montage Vidéo'],
-          equipment: ['Casque Studio', 'Micro Shure'],
-          euroBalance: 120,
-          trocoTokens: 8,
+          skills: [],
+          equipment: [],
+          euroBalance: 50,
+          trocoTokens: 5,
           loginMethod: 'Discord',
-          cguAcceptedAt: new Date().toISOString(),
+          cguAcceptedAt: null,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         };
@@ -6457,32 +6428,16 @@ export default function App() {
       setIsAuthenticated(true);
       window.localStorage.setItem('troco_is_authenticated', 'true');
     } catch (err) {
-      console.warn('Discord Sign-In Exception:', err);
-      if (err.code === 'auth/unauthorized-domain' || err.message?.includes('unauthorized-domain') || err.message?.includes('invalid') || err.code === 'auth/configuration-not-found' || err.code === 'auth/operation-not-allowed') {
-        const cleanUser = {
-          uid: 'discord_usr_' + Date.now(),
-          name: 'Mateo Polo',
-          username: '@mateopolo',
-          email: 'mateo.discord@example.com',
-          phoneNumber: '',
-          avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80',
-          bio: 'Membre créatif. Prêt pour du streaming, audio et entraide technique.',
-          location: 'Paris, France',
-          languages: ['FR'],
-          skills: ['Montage Vidéo', 'Audio'],
-          equipment: ['Micro Studio', 'Casque Audio'],
-          euroBalance: 120,
-          trocoTokens: 8,
-          loginMethod: 'Discord',
-          cguAcceptedAt: new Date().toISOString(),
-        };
-        setProfile(cleanUser);
-        setIsAuthenticated(true);
-        window.localStorage.setItem('troco_is_authenticated', 'true');
-        window.localStorage.setItem('troco_user_profile', JSON.stringify(cleanUser));
-        return;
+      console.warn('Discord Sign-In Error:', err);
+      if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
+        setAuthError('Connexion annulée.');
+      } else if (err.code === 'auth/unauthorized-domain') {
+        setAuthError("⚠️ Domaine non autorisé dans Firebase Console (Authentication > Paramètres > Domaines autorisés).");
+      } else if (err.code === 'auth/operation-not-allowed' || err.code === 'auth/configuration-not-found') {
+        setAuthError("⚠️ Le fournisseur Discord doit être activé dans votre console Firebase (Authentication > Mode de connexion > OpenID Connect / OAuth).");
+      } else {
+        setAuthError(err.message || 'Erreur lors de la connexion avec Discord.');
       }
-      setAuthError(err.message || 'Erreur lors de la connexion avec Discord.');
     } finally {
       setAuthLoading(false);
     }
