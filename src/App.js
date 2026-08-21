@@ -4,7 +4,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Search, MapPin, Video, Star, Globe, Filter, MessageSquare, PlusCircle, User, ShieldCheck, Clock, CheckCircle, ArrowRight, X, Sparkles, Coins, Plus, Trash2, Camera, Pencil, Mic, PhoneOff, Flame, History, Check, Lock, CreditCard, Tag, Phone, UserPlus, ChevronLeft, ChevronRight, Maximize2, Minimize2, ZoomIn, ZoomOut, MicOff, VideoOff, Sun, Moon, Upload, Repeat, SwitchCamera, LogOut, Scale, ShieldAlert, FileText } from 'lucide-react';
 import { auth, db } from './firebase';
-import { collection, addDoc, doc, updateDoc, serverTimestamp, onSnapshot, query, orderBy, setDoc, deleteDoc, getDoc, where } from 'firebase/firestore';
+import { collection, addDoc, doc, updateDoc, serverTimestamp, onSnapshot, query, orderBy, setDoc, deleteDoc, getDoc, getDocs, where } from 'firebase/firestore';
 import { RecaptchaVerifier, signInWithPhoneNumber, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, GoogleAuthProvider, GithubAuthProvider, FacebookAuthProvider, OAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
 import ChatView from './components/ChatView';
 import { useWebRTC } from './hooks/useWebRTC';
@@ -17,6 +17,8 @@ import PrivacyCenterModal from './components/PrivacyCenterModal';
 import CookieBanner from './components/CookieBanner';
 import OnboardingWizardModal from './components/OnboardingWizardModal';
 import { analyzeContent } from './utils/contentModeration';
+import { validateListingContent, validateChatMessage } from './utils/moderationBlacklist';
+import { DIVERSE_AVATARS } from './data/categoriesData';
 
 
 // ---- SYNTHÉTISEURS SONORES WEB AUDIO API (100% EMBARQUÉS - ZERO FICHIER EXTERNE) ----
@@ -1765,6 +1767,8 @@ function FeedCardItem({
   getAuthorAvatar,
   profile,
   handleStartDiscussion,
+  isAdmin = false,
+  onAdminDeleteListing = null,
   t = (key) => key
 }) {
   const [localImageIndex, setLocalImageIndex] = useState(0);
@@ -2029,16 +2033,47 @@ function FeedCardItem({
             </span>
           ))}
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #F3F4F6' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #F3F4F6', gap: '8px', flexWrap: 'wrap' }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: '7px', fontWeight: '600', fontSize: '13px', color: darkMode ? '#F8FAFC' : '#374151' }}>
             <img src={item.author === profile.name ? profile.avatar : getAuthorAvatar(item.author)} alt={item.author} style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover', border: darkMode ? '1px solid #60A5FA' : '1px solid #E2E8F0' }} />
             {item.author}
           </span>
-          {item.author !== profile.name ? (
-            <button onClick={(event) => { event.stopPropagation(); handleStartDiscussion(item); }} className="premium-button" style={{ backgroundColor: '#04265A', color: '#FFF', border: 'none', padding: '8px 14px', borderRadius: '12px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', boxShadow: '0 6px 14px rgba(4,38,90,0.18)' }}>{t('proposeDealButton')} <ArrowRight size={12} /></button>
-          ) : (
-            <span style={{ backgroundColor: '#F3F4F6', color: '#6B7280', border: '1px solid #E5E7EB', padding: '7px 12px', borderRadius: '999px', fontSize: '11px', fontWeight: '600' }}>{t('authorAnnc')}</span>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (window.confirm(`[ADMINISTRATEUR]\nVoulez-vous supprimer définitivement l'annonce "${item.title}" ?`)) {
+                    if (onAdminDeleteListing) onAdminDeleteListing(item);
+                  }
+                }}
+                className="premium-button"
+                style={{
+                  border: 'none',
+                  borderRadius: '10px',
+                  padding: '7px 10px',
+                  backgroundColor: '#EF4444',
+                  color: '#FFFFFF',
+                  fontSize: '11px',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  boxShadow: '0 4px 10px rgba(239,68,68,0.25)'
+                }}
+                title="Supprimer immédiatement cette annonce (Admin)"
+              >
+                <Trash2 size={12} /> Modérer
+              </button>
+            )}
+            {item.author !== profile.name ? (
+              <button onClick={(event) => { event.stopPropagation(); handleStartDiscussion(item); }} className="premium-button" style={{ backgroundColor: '#04265A', color: '#FFF', border: 'none', padding: '8px 14px', borderRadius: '12px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', boxShadow: '0 6px 14px rgba(4,38,90,0.18)' }}>{t('proposeDealButton')} <ArrowRight size={12} /></button>
+            ) : (
+              <span style={{ backgroundColor: '#F3F4F6', color: '#6B7280', border: '1px solid #E5E7EB', padding: '7px 12px', borderRadius: '999px', fontSize: '11px', fontWeight: '600' }}>{t('authorAnnc')}</span>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -3472,13 +3507,16 @@ export default function App() {
     }
   };
 
-  const handleAdminDeleteListing = async (listingId) => {
-    if (!listingId) return;
-    setListings(prev => prev.filter(l => String(l.id) !== String(listingId)));
+  const handleAdminDeleteListing = async (listingOrId) => {
+    if (!listingOrId) return;
+    const targetId = typeof listingOrId === 'object' ? listingOrId.id : listingOrId;
+    setListings(prev => prev.filter(l => String(l.id) !== String(targetId)));
     try {
-      const targetListing = listings.find(l => String(l.id) === String(listingId));
-      if (targetListing?.firestoreId) {
-        await deleteDoc(doc(db, 'listings', targetListing.firestoreId));
+      const firestoreId = typeof listingOrId === 'object' && listingOrId.firestoreId
+        ? listingOrId.firestoreId
+        : listings.find(l => String(l.id) === String(targetId))?.firestoreId;
+      if (firestoreId) {
+        await deleteDoc(doc(db, 'listings', String(firestoreId)));
       }
     } catch (err) {
       console.warn('[Firestore] handleAdminDeleteListing error:', err);
@@ -4729,11 +4767,7 @@ export default function App() {
     { name: 'Noa', role: 'Modérateur', color: '#A7F3D0' },
   ];
 
-  const avatarOptions = [
-    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80',
-    'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80',
-    'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=200&q=80',
-  ];
+  const avatarOptions = DIVERSE_AVATARS;
 
   // ---- COHÉRENCE DES AVATARS & NOMS ----
   const femaleAvatars = [
@@ -5158,6 +5192,7 @@ export default function App() {
   ];
 
   const isDemoProfile = profile?.uid === 'demo_mateopolo' || (!profile?.uid && profile?.name === 'MATEO POLO');
+  const isAdmin = profile?.email === 'mateopolo91@gmail.com' || auth.currentUser?.email === 'mateopolo91@gmail.com' || profile?.role === 'admin';
   const closedDealsCount = isDemoProfile ? swapHistory.filter(entry => entry.status === 'Clôturé').length : (profile?.dealsCompleted ?? 0);
   const inProgressCount = isDemoProfile ? swapHistory.filter(entry => entry.status === 'En cours' || entry.status === 'Planifié').length : (profile?.dealsInProgress ?? 0);
   const ratedEntries = isDemoProfile ? swapHistory.filter(entry => entry.rating) : [];
@@ -5169,22 +5204,75 @@ export default function App() {
   const baseCategories = ['Tous', 'Cours/Compétences', 'Outillage', 'Services/Dépannage', 'Logement/Swap'];
   const allCategories = [...baseCategories, ...customCategories];
 
-  const handleAddSkill = () => {
+  // ---- GESTION COMPÉTENCES & MATÉRIEL AVEC PERSISTANCE FIRESTORE IMMÉDIATE ----
+  const handleAddSkill = async () => {
     const value = skillInput.trim();
-    if (!value) return;
-    setSkills(prev => [...prev, value]);
+    if (!value || skills.includes(value)) return;
+    const nextSkills = [...skills, value];
+    setSkills(nextSkills);
+    setProfile(prev => ({ ...prev, skills: nextSkills }));
+    setProfileDraft(prev => ({ ...prev, skills: nextSkills }));
     setSkillInput('');
+
+    const uid = profile?.uid || auth.currentUser?.uid;
+    if (uid) {
+      try {
+        await setDoc(doc(db, 'users', String(uid)), { skills: nextSkills, updatedAt: serverTimestamp() }, { merge: true });
+      } catch (e) {
+        console.warn('[Firestore] Skill save failed:', e);
+      }
+    }
   };
 
-  const handleRemoveSkill = (skill) => {
-    setSkills(prev => prev.filter(item => item !== skill));
+  const handleRemoveSkill = async (skill) => {
+    const nextSkills = skills.filter(item => item !== skill);
+    setSkills(nextSkills);
+    setProfile(prev => ({ ...prev, skills: nextSkills }));
+    setProfileDraft(prev => ({ ...prev, skills: nextSkills }));
+
+    const uid = profile?.uid || auth.currentUser?.uid;
+    if (uid) {
+      try {
+        await setDoc(doc(db, 'users', String(uid)), { skills: nextSkills, updatedAt: serverTimestamp() }, { merge: true });
+      } catch (e) {
+        console.warn('[Firestore] Skill remove failed:', e);
+      }
+    }
   };
 
-  const handleAddEquipment = () => {
+  const handleAddEquipment = async () => {
     const value = equipmentInput.trim();
-    if (!value) return;
-    setEquipment(prev => [...prev, value]);
+    if (!value || equipment.includes(value)) return;
+    const nextEquipment = [...equipment, value];
+    setEquipment(nextEquipment);
+    setProfile(prev => ({ ...prev, equipment: nextEquipment }));
+    setProfileDraft(prev => ({ ...prev, equipment: nextEquipment }));
     setEquipmentInput('');
+
+    const uid = profile?.uid || auth.currentUser?.uid;
+    if (uid) {
+      try {
+        await setDoc(doc(db, 'users', String(uid)), { equipment: nextEquipment, updatedAt: serverTimestamp() }, { merge: true });
+      } catch (e) {
+        console.warn('[Firestore] Equipment save failed:', e);
+      }
+    }
+  };
+
+  const handleRemoveEquipment = async (item) => {
+    const nextEquipment = equipment.filter(entry => entry !== item);
+    setEquipment(nextEquipment);
+    setProfile(prev => ({ ...prev, equipment: nextEquipment }));
+    setProfileDraft(prev => ({ ...prev, equipment: nextEquipment }));
+
+    const uid = profile?.uid || auth.currentUser?.uid;
+    if (uid) {
+      try {
+        await setDoc(doc(db, 'users', String(uid)), { equipment: nextEquipment, updatedAt: serverTimestamp() }, { merge: true });
+      } catch (e) {
+        console.warn('[Firestore] Equipment remove failed:', e);
+      }
+    }
   };
 
   const handleAddCategory = () => {
@@ -5202,10 +5290,6 @@ export default function App() {
 
   const paymentOptions = ['all', 'credits', 'cash', 'troc', 'hybrid'];
   const paymentLabels = { all: 'Tous', credits: 'Crédits', cash: 'Cash', troc: 'Troc', hybrid: 'Hybride' };
-
-  const handleRemoveEquipment = (item) => {
-    setEquipment(prev => prev.filter(entry => entry !== item));
-  };
 
   const toggleLanguage = (language) => {
     setProfile(prev => ({
@@ -5723,7 +5807,18 @@ export default function App() {
       return;
     }
 
-    // ---- MODÉRATION DE CONTENU AUTOMATIQUE ----
+    // ---- MODÉRATION DE CONTENU AUTOMATIQUE & LISTE NOIRE ----
+    const blacklistCheck = validateListingContent({
+      title: rawTitle,
+      description: rawDescription,
+      tags: postDraft.tags || []
+    });
+    if (!blacklistCheck.isValid) {
+      setPublishMessage(blacklistCheck.errorMessage);
+      alert(blacklistCheck.errorMessage);
+      return;
+    }
+
     const moderationAnalysis = analyzeContent(`${rawTitle} ${rawDescription}`);
     if (!moderationAnalysis.isClean && moderationAnalysis.score >= 40) {
       setPublishMessage(`⚠️ Annonce non conforme aux règles Troco : ${moderationAnalysis.reasons.join(' ')}`);
@@ -5950,6 +6045,13 @@ export default function App() {
     const text = messageDraft.trim();
     if (!text) return;
 
+    // ---- MODÉRATION DE MESSAGE (LISTE NOIRE) ----
+    const messageCheck = validateChatMessage(text);
+    if (!messageCheck.isValid) {
+      alert(messageCheck.errorMessage);
+      return;
+    }
+
     const chatId = selectedChat.id;
 
     // Réinitialiser immédiatement l'indicateur d'écriture
@@ -6003,6 +6105,14 @@ export default function App() {
     if (!newText || !newText.trim()) return;
     const cid = String(chatId);
     const trimmed = newText.trim();
+
+    // ---- MODÉRATION DE MESSAGE (LISTE NOIRE) ----
+    const editCheck = validateChatMessage(trimmed);
+    if (!editCheck.isValid) {
+      alert(editCheck.errorMessage);
+      return;
+    }
+
     setChatThreads(prev => ({
       ...prev,
       [chatId]: (prev[chatId] || []).map(m => String(m.id) === String(messageId) ? { ...m, text: trimmed, edited: true } : m),
@@ -6368,32 +6478,60 @@ export default function App() {
       const realAvatar = user.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80';
 
       if (!userSnap.exists()) {
-        const newUserData = {
-          uid,
-          name: realName,
-          username: realUsername || `@user_${uid.slice(0, 6)}`,
-          email: user.email || '',
-          phoneNumber: user.phoneNumber || '',
-          avatar: realAvatar,
-          bio: 'Bienvenue sur mon profil Troco ! Prêt à échanger des services et partager des compétences.',
-          location: 'Paris, France',
-          languages: ['FR'],
-          skills: [],
-          equipment: [],
-          dealsCompleted: 0,
-          dealsInProgress: 0,
-          rating: null,
-          onboardingCompleted: false,
-          euroBalance: 50,
-          trocoTokens: 5,
-          loginMethod: providerName,
-          cguAcceptedAt: null,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        };
-        await setDoc(userDocRef, newUserData, { merge: true });
-        setProfile(newUserData);
-        window.localStorage.setItem('troco_user_profile', JSON.stringify(newUserData));
+        let existingUserByEmail = null;
+        if (user.email) {
+          try {
+            const emailQuery = query(collection(db, 'users'), where('email', '==', user.email));
+            const emailSnap = await getDocs(emailQuery);
+            if (!emailSnap.empty) {
+              existingUserByEmail = emailSnap.docs[0].data();
+            }
+          } catch (e) {
+            console.warn('[Firestore] Email lookup for multi-auth linking failed:', e);
+          }
+        }
+
+        if (existingUserByEmail) {
+          const mergedUserData = {
+            ...existingUserByEmail,
+            uid,
+            email: user.email,
+            loginMethod: providerName,
+            updatedAt: serverTimestamp(),
+          };
+          if (user.photoURL && !mergedUserData.avatar) mergedUserData.avatar = user.photoURL;
+          if (user.displayName && !mergedUserData.name) mergedUserData.name = user.displayName;
+          await setDoc(userDocRef, mergedUserData, { merge: true });
+          setProfile(mergedUserData);
+          window.localStorage.setItem('troco_user_profile', JSON.stringify(mergedUserData));
+        } else {
+          const newUserData = {
+            uid,
+            name: realName,
+            username: realUsername || `@user_${uid.slice(0, 6)}`,
+            email: user.email || '',
+            phoneNumber: user.phoneNumber || '',
+            avatar: realAvatar,
+            bio: 'Bienvenue sur mon profil Troco ! Prêt à échanger des services et partager des compétences.',
+            location: 'Paris, France',
+            languages: ['FR'],
+            skills: [],
+            equipment: [],
+            dealsCompleted: 0,
+            dealsInProgress: 0,
+            rating: null,
+            onboardingCompleted: false,
+            euroBalance: 50,
+            trocoTokens: 5,
+            loginMethod: providerName,
+            cguAcceptedAt: null,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          };
+          await setDoc(userDocRef, newUserData, { merge: true });
+          setProfile(newUserData);
+          window.localStorage.setItem('troco_user_profile', JSON.stringify(newUserData));
+        }
       } else {
         const existingData = { ...userSnap.data(), uid };
         if (user.photoURL && !existingData.avatar) existingData.avatar = user.photoURL;
@@ -7990,6 +8128,38 @@ export default function App() {
                   ))}
                 </div>
               </div>
+
+              {isAdmin && (
+                <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: darkMode ? '1px solid rgba(239,68,68,0.3)' : '1px solid #FEE2E2' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (window.confirm(`[ADMINISTRATEUR]\nConfirmez-vous la suppression définitive de l'annonce "${selectedListing.title}" ?`)) {
+                        handleAdminDeleteListing(selectedListing);
+                        setSelectedListing(null);
+                      }
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      borderRadius: '14px',
+                      backgroundColor: '#EF4444',
+                      color: '#FFFFFF',
+                      fontWeight: '800',
+                      fontSize: '13px',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      boxShadow: '0 6px 16px rgba(239,68,68,0.25)'
+                    }}
+                  >
+                    <Trash2 size={16} /> Supprimer cette annonce (Action Administrateur)
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -8166,6 +8336,8 @@ export default function App() {
                     getAuthorAvatar={getAuthorAvatar}
                     profile={profile}
                     handleStartDiscussion={handleStartDiscussion}
+                    isAdmin={isAdmin}
+                    onAdminDeleteListing={handleAdminDeleteListing}
                     t={t}
                   />
                 ))}
@@ -8594,10 +8766,10 @@ export default function App() {
                     <Upload size={16} /> {t("uploadProfilePhoto")}
                   </button>
                 </div>
-                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "12px" }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(8, 1fr)", gap: "8px", maxHeight: "120px", overflowY: "auto", padding: "4px", marginBottom: "12px" }}>
                   {avatarOptions.map((avatar) => (
-                    <button key={avatar} onClick={() => setProfileDraft(prev => ({ ...prev, avatar }))} style={{ border: profileDraft.avatar === avatar ? (darkMode ? "2px solid #60A5FA" : "2px solid #04265A") : "2px solid transparent", borderRadius: "50%", padding: 0, background: "none", cursor: "pointer" }}>
-                      <img src={avatar} alt="avatar option" style={{ width: "46px", height: "46px", borderRadius: "50%", objectFit: "cover" }} />
+                    <button key={avatar} onClick={() => setProfileDraft(prev => ({ ...prev, avatar }))} style={{ border: profileDraft.avatar === avatar ? (darkMode ? "2.5px solid #60A5FA" : "2.5px solid #04265A") : "2px solid transparent", borderRadius: "50%", padding: 0, background: "none", cursor: "pointer", transform: profileDraft.avatar === avatar ? "scale(1.08)" : "scale(1)", transition: "all 0.2s" }}>
+                      <img src={avatar} alt="avatar option" style={{ width: "42px", height: "42px", borderRadius: "50%", objectFit: "cover" }} />
                     </button>
                   ))}
                 </div>
@@ -8711,8 +8883,19 @@ export default function App() {
               </div>
               {isEditingProfile && (
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  <input value={skillInput} onChange={(e) => setSkillInput(e.target.value)} placeholder="Ajouter une compétence" style={{ flex: 1, border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFF', color: darkMode ? '#FFF' : '#111827', borderRadius: '12px', padding: '10px 12px', fontSize: '13px' }} />
-                  <button onClick={handleAddSkill} className="premium-button" style={{ border: 'none', borderRadius: '12px', backgroundColor: '#04265A', color: '#FFF', padding: '10px 12px', cursor: 'pointer' }}><Plus size={14} /></button>
+                  <input
+                    value={skillInput}
+                    onChange={(e) => setSkillInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddSkill();
+                      }
+                    }}
+                    placeholder="Ajouter une compétence (ex: violon, plomberie...)"
+                    style={{ flex: 1, border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFF', color: darkMode ? '#FFF' : '#111827', borderRadius: '12px', padding: '10px 12px', fontSize: '13px' }}
+                  />
+                  <button type="button" onClick={handleAddSkill} className="premium-button" style={{ border: 'none', borderRadius: '12px', backgroundColor: '#04265A', color: '#FFF', padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: '700' }}><Plus size={14} /> Ajouter</button>
                 </div>
               )}
             </div>
@@ -8732,8 +8915,19 @@ export default function App() {
               </div>
               {isEditingProfile && (
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  <input value={equipmentInput} onChange={(e) => setEquipmentInput(e.target.value)} placeholder="Ajouter un outil" style={{ flex: 1, border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFF', color: darkMode ? '#FFF' : '#111827', borderRadius: '12px', padding: '10px 12px', fontSize: '13px' }} />
-                  <button onClick={handleAddEquipment} className="premium-button" style={{ border: 'none', borderRadius: '12px', backgroundColor: '#04265A', color: '#FFF', padding: '10px 12px', cursor: 'pointer' }}><Plus size={14} /></button>
+                  <input
+                    value={equipmentInput}
+                    onChange={(e) => setEquipmentInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddEquipment();
+                      }
+                    }}
+                    placeholder="Ajouter un outil ou matériel (ex: scie sauteuse, tente...)"
+                    style={{ flex: 1, border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFF', color: darkMode ? '#FFF' : '#111827', borderRadius: '12px', padding: '10px 12px', fontSize: '13px' }}
+                  />
+                  <button type="button" onClick={handleAddEquipment} className="premium-button" style={{ border: 'none', borderRadius: '12px', backgroundColor: '#D97706', color: '#FFF', padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: '700' }}><Plus size={14} /> Ajouter</button>
                 </div>
               )}
             </div>

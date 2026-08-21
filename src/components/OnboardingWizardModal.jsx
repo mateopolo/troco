@@ -10,23 +10,17 @@ import {
   Upload,
   Check,
   Tag,
-  Wrench
+  Wrench,
+  X,
+  Plus
 } from 'lucide-react';
 import {
   SKILL_CATEGORIES,
   EQUIPMENT_CATEGORIES,
   BIO_SUGGESTIONS,
-  ACCOUNT_TYPES
+  ACCOUNT_TYPES,
+  DIVERSE_AVATARS
 } from '../data/categoriesData';
-
-const DEFAULT_AVATARS = [
-  'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
-  'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80',
-  'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=200&q=80',
-  'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=200&q=80',
-  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
-  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
-];
 
 export default function OnboardingWizardModal({
   isOpen,
@@ -48,7 +42,7 @@ export default function OnboardingWizardModal({
     currentUser?.username || '@' + (currentUser?.name || 'user').toLowerCase().replace(/[^a-z0-9_]/g, '')
   );
   const [avatar, setAvatar] = useState(
-    currentUser?.avatar || DEFAULT_AVATARS[0]
+    currentUser?.avatar || DIVERSE_AVATARS[0]
   );
   const [location, setLocation] = useState(currentUser?.location || 'Paris, France');
 
@@ -103,7 +97,12 @@ export default function OnboardingWizardModal({
     );
   };
 
-  const addCustomSkill = () => {
+  const removeSkill = (skill) => {
+    setSelectedSkills(prev => prev.filter(s => s !== skill));
+  };
+
+  const addCustomSkill = (e) => {
+    if (e) e.preventDefault();
     const val = customSkillInput.trim();
     if (val && !selectedSkills.includes(val)) {
       setSelectedSkills(prev => [...prev, val]);
@@ -118,7 +117,12 @@ export default function OnboardingWizardModal({
     );
   };
 
-  const addCustomEquipment = () => {
+  const removeEquipment = (item) => {
+    setSelectedEquipment(prev => prev.filter(e => e !== item));
+  };
+
+  const addCustomEquipment = (e) => {
+    if (e) e.preventDefault();
     const val = customEquipInput.trim();
     if (val && !selectedEquipment.includes(val)) {
       setSelectedEquipment(prev => [...prev, val]);
@@ -497,8 +501,8 @@ export default function OnboardingWizardModal({
                   <div style={{ fontSize: '12px', fontWeight: '800', marginBottom: '6px' }}>
                     Choisissez un avatar ou importez votre photo :
                   </div>
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                    {DEFAULT_AVATARS.map((av) => (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: '8px', maxHeight: '110px', overflowY: 'auto', padding: '4px' }}>
+                    {DIVERSE_AVATARS.map((av) => (
                       <img
                         key={av}
                         src={av}
@@ -510,9 +514,10 @@ export default function OnboardingWizardModal({
                           borderRadius: '50%',
                           objectFit: 'cover',
                           cursor: 'pointer',
-                          border: avatar === av ? '2px solid #04265A' : '2px solid transparent',
+                          border: avatar === av ? '3px solid #04265A' : '2px solid transparent',
                           transform: avatar === av ? 'scale(1.1)' : 'scale(1)',
                           transition: 'all 0.2s',
+                          boxShadow: avatar === av ? '0 4px 10px rgba(4,38,90,0.3)' : 'none',
                         }}
                       />
                     ))}
@@ -564,6 +569,27 @@ export default function OnboardingWizardModal({
                     }}
                   />
                 </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: '800', display: 'block', marginBottom: '6px' }}>
+                    Ville / Localisation :
+                  </label>
+                  <input
+                    type="text"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    placeholder="Ex: Paris, France ou Lyon, France"
+                    style={{
+                      width: '100%',
+                      padding: '11px 14px',
+                      borderRadius: '14px',
+                      border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB',
+                      backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFF',
+                      color: darkMode ? '#FFF' : '#111827',
+                      fontSize: '13px',
+                      fontWeight: '700',
+                    }}
+                  />
+                </div>
               </div>
             </div>
           )}
@@ -577,16 +603,62 @@ export default function OnboardingWizardModal({
                 Ce que vous proposez & ce que vous possédez
               </h2>
               <p style={{ fontSize: '13px', color: darkMode ? '#94A3B8' : '#64748B', margin: '0 0 16px' }}>
-                Sélectionnez dans nos listes intelligentes ou ajoutez vos propres spécialités.
+                Sélectionnez dans nos listes intelligentes ou ajoutez vos propres spécialités personnalisées.
               </p>
 
               {/* 1. Compétences & Savoir-faire */}
               <div style={{ marginBottom: '20px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                   <div style={{ fontSize: '13px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <Tag size={15} color="#04265A" /> Mes Compétences & Savoir-faire ({selectedSkills.length}) :
+                    <Tag size={15} color="#04265A" /> Mes Compétences ({selectedSkills.length}) :
                   </div>
                 </div>
+
+                {/* Bulles sélectionnées actives (Presets + Personnalisées) */}
+                {selectedSkills.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px', padding: '10px', backgroundColor: darkMode ? 'rgba(4,38,90,0.2)' : '#EFF6FF', borderRadius: '14px', border: darkMode ? '1px solid rgba(96,165,250,0.2)' : '1px solid #BFDBFE' }}>
+                    {selectedSkills.map(skill => (
+                      <span
+                        key={skill}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '5px 10px',
+                          borderRadius: '999px',
+                          backgroundColor: '#04265A',
+                          color: '#FFFFFF',
+                          fontSize: '11px',
+                          fontWeight: '700',
+                          boxShadow: '0 2px 6px rgba(4,38,90,0.2)'
+                        }}
+                      >
+                        <Check size={11} color="#93C5FD" />
+                        {skill}
+                        <button
+                          type="button"
+                          onClick={() => removeSkill(skill)}
+                          style={{
+                            border: 'none',
+                            background: 'rgba(255,255,255,0.2)',
+                            borderRadius: '50%',
+                            width: '16px',
+                            height: '16px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            color: '#FFF',
+                            padding: 0,
+                            marginLeft: '2px'
+                          }}
+                        >
+                          <X size={10} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
 
                 {/* Onglets catégories de compétences */}
                 <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '6px', marginBottom: '10px' }}>
@@ -651,8 +723,13 @@ export default function OnboardingWizardModal({
                     type="text"
                     value={customSkillInput}
                     onChange={(e) => setCustomSkillInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && addCustomSkill()}
-                    placeholder="Autre compétence sur-mesure (ex: Cours de chant lyrique...)"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addCustomSkill(e);
+                      }
+                    }}
+                    placeholder="Autre compétence sur-mesure (ex: violon, chant lyrique...)"
                     style={{
                       flex: 1,
                       padding: '9px 12px',
@@ -664,6 +741,7 @@ export default function OnboardingWizardModal({
                     }}
                   />
                   <button
+                    type="button"
                     onClick={addCustomSkill}
                     style={{
                       border: 'none',
@@ -674,20 +752,69 @@ export default function OnboardingWizardModal({
                       fontWeight: '800',
                       fontSize: '12px',
                       cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
                     }}
                   >
-                    Ajouter
+                    <Plus size={13} /> Ajouter
                   </button>
                 </div>
               </div>
 
               {/* 2. Matériel & Équipements */}
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                   <div style={{ fontSize: '13px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <Wrench size={15} color="#D97706" /> Matériel & Équipement disponible ({selectedEquipment.length}) :
                   </div>
                 </div>
+
+                {/* Bulles sélectionnées actives (Presets + Personnalisées) */}
+                {selectedEquipment.length > 0 && (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px', padding: '10px', backgroundColor: darkMode ? 'rgba(217,119,6,0.15)' : '#FFFBEB', borderRadius: '14px', border: darkMode ? '1px solid rgba(245,158,11,0.2)' : '1px solid #FDE68A' }}>
+                    {selectedEquipment.map(item => (
+                      <span
+                        key={item}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '5px 10px',
+                          borderRadius: '999px',
+                          backgroundColor: '#D97706',
+                          color: '#FFFFFF',
+                          fontSize: '11px',
+                          fontWeight: '700',
+                          boxShadow: '0 2px 6px rgba(217,119,6,0.2)'
+                        }}
+                      >
+                        <Check size={11} color="#FEF3C7" />
+                        {item}
+                        <button
+                          type="button"
+                          onClick={() => removeEquipment(item)}
+                          style={{
+                            border: 'none',
+                            background: 'rgba(255,255,255,0.2)',
+                            borderRadius: '50%',
+                            width: '16px',
+                            height: '16px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            color: '#FFF',
+                            padding: 0,
+                            marginLeft: '2px'
+                          }}
+                        >
+                          <X size={10} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
 
                 {/* Onglets catégories de matériel */}
                 <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '6px', marginBottom: '10px' }}>
@@ -752,7 +879,12 @@ export default function OnboardingWizardModal({
                     type="text"
                     value={customEquipInput}
                     onChange={(e) => setCustomEquipInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && addCustomEquipment()}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addCustomEquipment(e);
+                      }
+                    }}
                     placeholder="Autre matériel spécifique (ex: Tente 4 places, GoPro Hero...)"
                     style={{
                       flex: 1,
@@ -765,6 +897,7 @@ export default function OnboardingWizardModal({
                     }}
                   />
                   <button
+                    type="button"
                     onClick={addCustomEquipment}
                     style={{
                       border: 'none',
@@ -775,9 +908,12 @@ export default function OnboardingWizardModal({
                       fontWeight: '800',
                       fontSize: '12px',
                       cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px'
                     }}
                   >
-                    Ajouter
+                    <Plus size={13} /> Ajouter
                   </button>
                 </div>
               </div>

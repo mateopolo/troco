@@ -36,14 +36,15 @@ export default function AdminPanel({
   const [balanceDeltaEuro, setBalanceDeltaEuro] = useState('');
   const [balanceDeltaTokens, setBalanceDeltaTokens] = useState('');
 
-  // Vérification PIN d'accès (sécurité administrateur)
+  // Vérification PIN d'accès (sécurité administrateur stricte)
   const handleUnlock = (e) => {
     if (e) e.preventDefault();
-    if (pinInput.trim() === '2601' || currentUser?.role === 'admin') {
+    const isAdminEmail = currentUser?.email === 'mateopolo91@gmail.com';
+    if (pinInput.trim() === '2609' || (isAdminEmail && pinInput.trim() === '2609')) {
       setIsUnlocked(true);
       setPinError('');
     } else {
-      setPinError('Code PIN incorrect. Veuillez réessayer.');
+      setPinError('Code PIN incorrect ou privilèges insuffisants.');
     }
   };
 
@@ -158,7 +159,7 @@ export default function AdminPanel({
               <input
                 type="password"
                 autoFocus
-                placeholder="Code PIN (ex: 2601)"
+                placeholder="Code PIN secret"
                 value={pinInput}
                 onChange={(e) => setPinInput(e.target.value)}
                 style={{

@@ -1,3 +1,5 @@
+import { DIVERSE_AVATARS } from './categoriesData';
+
 // ---- BASE DE DONNÉES MONDIALE & MOCK DATA (TROCO PLATFORM) ----
 
 export const femaleAvatars = [
@@ -12,11 +14,7 @@ export const maleAvatars = [
   'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
 ];
 
-export const avatarOptions = [
-  'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80',
-  'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80',
-  'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=200&q=80',
-];
+export const avatarOptions = DIVERSE_AVATARS;
 
 export const authorAvatars = {
   'Sofia M.': femaleAvatars[0],
