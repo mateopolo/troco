@@ -33,6 +33,7 @@ export default function ChatView({
   showingOriginalMessages = {},
   toggleOriginalMessage = () => {}
 }) {
+  const [deletedChatIds, setDeletedChatIds] = React.useState(new Set());
   const [mobileSubView, setMobileSubView] = useState('list'); // 'list' | 'room'
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [activeMenuMsgId, setActiveMenuMsgId] = useState(null);
@@ -92,6 +93,29 @@ export default function ChatView({
       else d = new Date();
       if (isNaN(d.getTime())) return '';
       return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch (_) {
+      return '';
+    }
+  };
+
+  // WhatsApp-style timestamp for chat list sidebar
+  const formatChatTimestamp = (val) => {
+    if (!val) return '';
+    try {
+      let d;
+      if (typeof val?.toDate === 'function') d = val.toDate();
+      else if (val?.seconds) d = new Date(val.seconds * 1000);
+      else if (typeof val === 'number' || typeof val === 'string') d = new Date(val);
+      else if (val instanceof Date) d = val;
+      else return '';
+      if (isNaN(d.getTime())) return '';
+      const now = new Date();
+      const diffMs = now - d;
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      if (diffDays === 0) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      if (diffDays === 1) return 'Hier';
+      if (diffDays < 7) return d.toLocaleDateString([], { weekday: 'short' });
+      return d.toLocaleDateString([], { day: '2-digit', month: '2-digit' });
     } catch (_) {
       return '';
     }
@@ -238,7 +262,7 @@ export default function ChatView({
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto', flex: 1, paddingRight: '4px' }}>
-            {mockChats.map(chat => {
+            {mockChats.filter(chat => !deletedChatIds.has(chat.id)).map(chat => {
               const isSelected = activeChatObj?.id === chat.id;
               const unreadCount = getChatUnreadCount(chat);
               const isUnread = unreadCount > 0;
@@ -248,64 +272,100 @@ export default function ChatView({
               const thread = chatThreads && chatThreads[chat.id];
               const lastMsgObjInThread = (thread && thread.length > 0) ? thread[thread.length - 1] : null;
               const rawLastMsg = getChatPreviewText(chat);
-
               const lastMsgText = getChatMessageDisplayContent
                 ? getChatMessageDisplayContent(lastMsgObjInThread || { text: rawLastMsg }, currentLang, false)
                 : rawLastMsg;
 
+              // WhatsApp-style timestamp from last message or chat metadata
+              const lastMsgTimestamp = lastMsgObjInThread?.timestamp || lastMsgObjInThread?.createdAt || chat.lastMessageAt || chat.updatedAt || null;
+              const chatTimestampLabel = formatChatTimestamp(lastMsgTimestamp);
+
               return (
-                <button
+                <div
                   key={chat.id}
-                  onClick={() => handleSelectChatMobile(chat)}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '12px', padding: '14px',
-                    borderRadius: '18px', border: 'none', cursor: 'pointer', textAlign: 'left',
-                    backgroundColor: isSelected
-                      ? (darkMode ? 'rgba(4,38,90,0.75)' : '#EFF6FF')
-                      : (isUnread ? (darkMode ? 'rgba(4,38,90,0.5)' : '#F0F9FF') : (darkMode ? 'rgba(15,23,42,0.45)' : 'rgba(248,250,252,0.8)')),
-                    borderLeft: isSelected
-                      ? (darkMode ? '4px solid #60A5FA' : '4px solid #04265A')
-                      : (isUnread ? (darkMode ? '4px solid #38BDF8' : '4px solid #0284C7') : '4px solid transparent'),
-                    boxShadow: isSelected ? '0 4px 14px rgba(4,38,90,0.15)' : (isUnread ? '0 2px 10px rgba(56,189,248,0.1)' : 'none'),
-                    transition: 'all 0.2s ease'
-                  }}
+                  style={{ position: 'relative' }}
+                  className="chat-row-container"
                 >
-                  <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'linear-gradient(135deg, #04265A 0%, #14B8A6 100%)', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '16px', flexShrink: 0, boxShadow: '0 4px 10px rgba(4,38,90,0.15)', position: 'relative' }}>
-                    {chat.user[0]}
-                    {unreadCount > 0 && (
-                      <span style={{
-                        position: 'absolute', top: '-4px', right: '-4px',
-                        minWidth: '18px', height: '18px', padding: '0 5px',
-                        backgroundColor: '#EF4444', color: '#FFF',
-                        borderRadius: '999px', border: '2px solid #FFF',
-                        fontSize: '10px', fontWeight: '900',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        boxShadow: '0 2px 8px rgba(239,68,68,0.6)'
-                      }}>
-                        {unreadCount > 9 ? '+9' : `+${unreadCount}`}
-                      </span>
-                    )}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px' }}>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: isUnread ? '800' : '600', fontSize: isUnread ? '14.5px' : '14px', color: isUnread ? (darkMode ? '#FFFFFF' : '#0F172A') : (darkMode ? '#CBD5E1' : '#111827') }}>
-                        {chat.user}
-                        {(chat.isDemo || chat.persona || (typeof chat.id === 'number' && chat.id < 300)) && (
-                          <span style={{ fontSize: '9px', fontWeight: '800', backgroundColor: darkMode ? 'rgba(168,85,247,0.25)' : '#F3E8FF', color: darkMode ? '#D8B4FE' : '#7E22CE', padding: '1px 6px', borderRadius: '6px' }}>
-                            🤖 Démo
-                          </span>
-                        )}
-                      </span>
-                      <span style={{ fontSize: '10px', color: isUnread ? (darkMode ? '#38BDF8' : '#0284C7') : (darkMode ? '#94A3B8' : '#64748B'), fontWeight: isUnread ? '800' : '600' }}>{statusText}</span>
+                  <button
+                    onClick={() => handleSelectChatMobile(chat)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '12px', padding: '14px',
+                      borderRadius: '18px', border: 'none', cursor: 'pointer', textAlign: 'left',
+                      width: '100%',
+                      backgroundColor: isSelected
+                        ? (darkMode ? 'rgba(4,38,90,0.75)' : '#EFF6FF')
+                        : (isUnread ? (darkMode ? 'rgba(4,38,90,0.5)' : '#F0F9FF') : (darkMode ? 'rgba(15,23,42,0.45)' : 'rgba(248,250,252,0.8)')),
+                      borderLeft: isSelected
+                        ? (darkMode ? '4px solid #60A5FA' : '4px solid #04265A')
+                        : (isUnread ? (darkMode ? '4px solid #38BDF8' : '4px solid #0284C7') : '4px solid transparent'),
+                      boxShadow: isSelected ? '0 4px 14px rgba(4,38,90,0.15)' : (isUnread ? '0 2px 10px rgba(56,189,248,0.1)' : 'none'),
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: 'linear-gradient(135deg, #04265A 0%, #14B8A6 100%)', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '16px', flexShrink: 0, boxShadow: '0 4px 10px rgba(4,38,90,0.15)', position: 'relative' }}>
+                      {chat.user[0]}
+                      {unreadCount > 0 && (
+                        <span style={{
+                          position: 'absolute', top: '-4px', right: '-4px',
+                          minWidth: '18px', height: '18px', padding: '0 5px',
+                          backgroundColor: '#EF4444', color: '#FFF',
+                          borderRadius: '999px', border: '2px solid #FFF',
+                          fontSize: '10px', fontWeight: '900',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          boxShadow: '0 2px 8px rgba(239,68,68,0.6)'
+                        }}>
+                          {unreadCount > 9 ? '+9' : `+${unreadCount}`}
+                        </span>
+                      )}
                     </div>
-                    <div style={{ fontSize: '12px', fontWeight: isUnread ? '800' : '500', color: isUnread ? (darkMode ? '#60A5FA' : '#0369A1') : (darkMode ? '#94A3B8' : '#04265A'), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: '2px' }}>
-                      {listingTitleText}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: isUnread ? '800' : '600', fontSize: isUnread ? '14.5px' : '14px', color: isUnread ? (darkMode ? '#FFFFFF' : '#0F172A') : (darkMode ? '#CBD5E1' : '#111827') }}>
+                          {chat.user}
+                          {(chat.isDemo || chat.persona || (typeof chat.id === 'number' && chat.id < 300)) && (
+                            <span style={{ fontSize: '9px', fontWeight: '800', backgroundColor: darkMode ? 'rgba(168,85,247,0.25)' : '#F3E8FF', color: darkMode ? '#D8B4FE' : '#7E22CE', padding: '1px 6px', borderRadius: '6px' }}>
+                              🤖 Démo
+                            </span>
+                          )}
+                        </span>
+                        {/* WhatsApp-style timestamp */}
+                        <span style={{ fontSize: '10px', color: isUnread ? (darkMode ? '#38BDF8' : '#0284C7') : (darkMode ? '#94A3B8' : '#64748B'), fontWeight: isUnread ? '800' : '500', flexShrink: 0, marginLeft: '6px' }}>
+                          {chatTimestampLabel || statusText}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '12px', fontWeight: isUnread ? '800' : '500', color: isUnread ? (darkMode ? '#60A5FA' : '#0369A1') : (darkMode ? '#94A3B8' : '#04265A'), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: '2px' }}>
+                        {listingTitleText}
+                      </div>
+                      <div style={{ fontSize: '11px', fontWeight: isUnread ? '800' : '400', color: isUnread ? (darkMode ? '#F8FAFC' : '#0F172A') : (darkMode ? '#94A3B8' : '#64748B'), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {lastMsgText}
+                      </div>
                     </div>
-                    <div style={{ fontSize: '11px', fontWeight: isUnread ? '800' : '400', color: isUnread ? (darkMode ? '#F8FAFC' : '#0F172A') : (darkMode ? '#94A3B8' : '#64748B'), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {lastMsgText}
-                    </div>
-                  </div>
-                </button>
+                  </button>
+
+                  {/* Delete/Archive button */}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeletedChatIds(prev => new Set([...prev, chat.id]));
+                      if (isSelected) setSelectedChat(null);
+                    }}
+                    title="Supprimer cette conversation"
+                    className="chat-delete-btn"
+                    style={{
+                      position: 'absolute', top: '50%', right: '10px',
+                      transform: 'translateY(-50%)',
+                      width: '28px', height: '28px', borderRadius: '50%',
+                      border: 'none',
+                      backgroundColor: darkMode ? 'rgba(239,68,68,0.15)' : 'rgba(239,68,68,0.08)',
+                      color: '#EF4444',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      cursor: 'pointer', opacity: 0, transition: 'opacity 0.2s ease',
+                      zIndex: 2, flexShrink: 0
+                    }}
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </div>
               );
             })}
           </div>

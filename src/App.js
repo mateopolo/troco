@@ -8415,46 +8415,48 @@ export default function App() {
                 </button>
               </div>
 
-              <div style={{ marginBottom: '14px', width: '100%', overflow: 'hidden' }}>
-                <div className="category-scroll-container">
-                  {allCategories.map(category => {
-                    const isSel = selectedCategory === category;
-                    return (
-                      <button
-                        key={category}
-                        onClick={() => setSelectedCategory(category)}
-                        className="premium-button category-pill"
-                        style={{
-                          border: isSel ? (darkMode ? '1px solid #60A5FA' : '1px solid #04265A') : (darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(226,232,240,0.9)'),
-                          backgroundColor: isSel ? (darkMode ? 'rgba(4,38,90,0.85)' : '#EFF6FF') : (darkMode ? 'rgba(30,41,59,0.7)' : 'rgba(248,250,252,0.95)'),
-                          color: isSel ? (darkMode ? '#93C5FD' : '#04265A') : (darkMode ? '#CBD5E1' : '#475569'),
-                          boxShadow: isSel ? '0 4px 14px rgba(4,38,90,0.15)' : '0 2px 8px rgba(15, 23, 42, 0.04)',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        {getCategoryLabel(category)}
-                      </button>
-                    );
-                  })}
-                  <button
-                    onClick={() => setIsCategoryModalOpen(true)}
-                    className="premium-button category-pill"
-                    style={{
-                      border: darkMode ? '1px dashed #60A5FA' : '1px dashed #04265A',
-                      backgroundColor: darkMode ? 'rgba(4,38,90,0.3)' : '#F0FDFA',
-                      color: darkMode ? '#93C5FD' : '#04265A',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    + {t('newCategory')}
-                  </button>
+              {/* Categories + view toggle — single aligned row */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px', width: '100%', minWidth: 0 }}>
+                <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+                  <div className="category-scroll-container">
+                    {allCategories.map(category => {
+                      const isSel = selectedCategory === category;
+                      return (
+                        <button
+                          key={category}
+                          onClick={() => setSelectedCategory(category)}
+                          className="premium-button category-pill"
+                          style={{
+                            border: isSel ? (darkMode ? '1px solid #60A5FA' : '1px solid #04265A') : (darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(226,232,240,0.9)'),
+                            backgroundColor: isSel ? (darkMode ? 'rgba(4,38,90,0.85)' : '#EFF6FF') : (darkMode ? 'rgba(30,41,59,0.7)' : 'rgba(248,250,252,0.95)'),
+                            color: isSel ? (darkMode ? '#93C5FD' : '#04265A') : (darkMode ? '#CBD5E1' : '#475569'),
+                            boxShadow: isSel ? '0 4px 14px rgba(4,38,90,0.15)' : '0 2px 8px rgba(15, 23, 42, 0.04)',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {getCategoryLabel(category)}
+                        </button>
+                      );
+                    })}
+                    <button
+                      onClick={() => setIsCategoryModalOpen(true)}
+                      className="premium-button category-pill"
+                      style={{
+                        border: darkMode ? '1px dashed #60A5FA' : '1px dashed #04265A',
+                        backgroundColor: darkMode ? 'rgba(4,38,90,0.3)' : '#F0FDFA',
+                        color: darkMode ? '#93C5FD' : '#04265A',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      + {t('newCategory')}
+                    </button>
+                  </div>
                 </div>
-              </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '14px' }}>
-                <div className="premium-panel" style={{ display: 'inline-flex', border: '1px solid rgba(226,232,240,0.9)', borderRadius: '999px', padding: '4px', backgroundColor: 'rgba(255,255,255,0.8)', boxShadow: '0 4px 20px -4px rgba(15, 23, 42, 0.06)' }}>
-                  <button onClick={() => setViewMode('list')} className="premium-nav-btn" style={{ border: 'none', borderRadius: '999px', padding: '7px 12px', backgroundColor: viewMode === 'list' ? '#04265A' : 'transparent', color: viewMode === 'list' ? '#FFF' : '#64748B', fontWeight: '700', cursor: 'pointer' }}>{t('viewList')}</button>
-                  <button onClick={() => { setViewMode('map'); setIsInfiniteRadius(true); }} className="premium-nav-btn" style={{ border: 'none', borderRadius: '999px', padding: '7px 12px', backgroundColor: viewMode === 'map' ? '#04265A' : 'transparent', color: viewMode === 'map' ? '#FFF' : '#64748B', fontWeight: '700', cursor: 'pointer' }}>{t('viewMap')}</button>
+                {/* View mode toggle — inlined right of category bar */}
+                <div className="premium-panel" style={{ display: 'inline-flex', flexShrink: 0, border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(226,232,240,0.9)', borderRadius: '999px', padding: '4px', backgroundColor: darkMode ? 'rgba(30,41,59,0.7)' : 'rgba(255,255,255,0.8)', boxShadow: '0 4px 20px -4px rgba(15, 23, 42, 0.06)', alignSelf: 'center' }}>
+                  <button onClick={() => setViewMode('list')} className="premium-nav-btn" style={{ border: 'none', borderRadius: '999px', padding: '7px 12px', backgroundColor: viewMode === 'list' ? '#04265A' : 'transparent', color: viewMode === 'list' ? '#FFF' : (darkMode ? '#CBD5E1' : '#64748B'), fontWeight: '700', cursor: 'pointer', fontSize: '12px' }}>{t('viewList')}</button>
+                  <button onClick={() => { setViewMode('map'); setIsInfiniteRadius(true); }} className="premium-nav-btn" style={{ border: 'none', borderRadius: '999px', padding: '7px 12px', backgroundColor: viewMode === 'map' ? '#04265A' : 'transparent', color: viewMode === 'map' ? '#FFF' : (darkMode ? '#CBD5E1' : '#64748B'), fontWeight: '700', cursor: 'pointer', fontSize: '12px' }}>{t('viewMap')}</button>
                 </div>
               </div>
 
