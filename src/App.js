@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Search, MapPin, Video, Star, Globe, Filter, MessageSquare, PlusCircle, User, ShieldCheck, Clock, CheckCircle, ArrowRight, X, Sparkles, Coins, Plus, Trash2, Camera, Pencil, Mic, PhoneOff, Flame, History, Check, Lock, CreditCard, Tag, Phone, UserPlus, ChevronLeft, ChevronRight, Maximize2, Minimize2, ZoomIn, ZoomOut, MicOff, VideoOff, Sun, Moon, Upload, Repeat } from 'lucide-react';
+import { Search, MapPin, Video, Star, Globe, Filter, MessageSquare, PlusCircle, User, ShieldCheck, Clock, CheckCircle, ArrowRight, X, Sparkles, Coins, Plus, Trash2, Camera, Pencil, Mic, PhoneOff, Flame, History, Check, Lock, CreditCard, Tag, Phone, UserPlus, ChevronLeft, ChevronRight, Maximize2, Minimize2, ZoomIn, ZoomOut, MicOff, VideoOff, Sun, Moon, Upload, Repeat, SwitchCamera } from 'lucide-react';
 import { auth, db } from './firebase';
 import { collection, addDoc, doc, updateDoc, serverTimestamp, onSnapshot, query, orderBy, setDoc, deleteDoc, getDoc, where } from 'firebase/firestore';
 import { RecaptchaVerifier, signInWithPhoneNumber, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
@@ -3422,6 +3422,9 @@ export default function App() {
     incomingCall,
     localVideoRef,
     remoteVideoRef,
+    facingMode,
+    hasMultipleCameras,
+    switchCamera,
     startCall,
     acceptIncomingCall,
     declineIncomingCall,
@@ -3431,7 +3434,7 @@ export default function App() {
     copyInviteLink,
   } = useWebRTC({ profileName: profile.name, selectedChat });
 
-  // ---- BLOC 1 : ÉTATS APPEL WEBRTC AVANCÉ (PIP, DRAG, SWAP & CHRONO DEAL) ----
+  // ---- ÉTATS APPEL WEBRTC AVANCÉ (PIP, DRAG POINTER EVENTS, SWAP & CHRONO DEAL) ----
   const [isCallPip, setIsCallPip] = useState(false);
   const [isSwapVideo, setIsSwapVideo] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
@@ -3439,7 +3442,16 @@ export default function App() {
     x: typeof window !== 'undefined' ? Math.max(10, window.innerWidth - 230) : 100,
     y: typeof window !== 'undefined' ? Math.max(10, window.innerHeight - 240) : 100
   });
-  const pipDragRef = useRef({ isDragging: false, startX: 0, startY: 0, initialPosX: 0, initialPosY: 0 });
+
+  // Gestion Pointer Events API unifiée pour le Drag-and-Drop (toucher/souris à 60fps)
+  const pipPointerDragRef = useRef({
+    isDragging: false,
+    startX: 0,
+    startY: 0,
+    initialPosX: 0,
+    initialPosY: 0,
+    movedDistance: 0,
+  });
 
   // Chronomètre de Deal en temps réel pendant l'appel (1h = 1 Jeton Troco)
   useEffect(() => {
@@ -3469,56 +3481,65 @@ export default function App() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Gestion du Drag-and-Drop pour la bulle PiP flottante
-  const handlePipDragStart = (e) => {
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    pipDragRef.current = {
+  // Handlers Pointer Events (pointerdown, pointermove, pointerup, pointercancel)
+  const handlePipPointerDown = (e) => {
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch (_) {}
+    pipPointerDragRef.current = {
       isDragging: true,
-      startX: clientX,
-      startY: clientY,
+      startX: e.clientX,
+      startY: e.clientY,
       initialPosX: pipPosition.x,
       initialPosY: pipPosition.y,
+      movedDistance: 0,
     };
   };
 
-  const handlePipDragMove = useCallback((e) => {
-    if (!pipDragRef.current.isDragging) return;
-    if (e.touches && e.cancelable) {
-      e.preventDefault();
-    }
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    const deltaX = clientX - pipDragRef.current.startX;
-    const deltaY = clientY - pipDragRef.current.startY;
+  const handlePipPointerMove = (e) => {
+    if (!pipPointerDragRef.current.isDragging) return;
+    const deltaX = e.clientX - pipPointerDragRef.current.startX;
+    const deltaY = e.clientY - pipPointerDragRef.current.startY;
+    pipPointerDragRef.current.movedDistance = Math.hypot(deltaX, deltaY);
 
     const pipWidth = 210;
     const pipHeight = 150;
-    const maxX = Math.max(10, window.innerWidth - pipWidth - 10);
-    const maxY = Math.max(10, window.innerHeight - pipHeight - 70);
+    const margin = 10;
+    const bottomNavOffset = 75;
+    const maxX = Math.max(margin, window.innerWidth - pipWidth - margin);
+    const maxY = Math.max(margin, window.innerHeight - pipHeight - bottomNavOffset);
 
-    const nextX = Math.max(10, Math.min(maxX, pipDragRef.current.initialPosX + deltaX));
-    const nextY = Math.max(10, Math.min(maxY, pipDragRef.current.initialPosY + deltaY));
+    const nextX = Math.max(margin, Math.min(maxX, pipPointerDragRef.current.initialPosX + deltaX));
+    const nextY = Math.max(margin, Math.min(maxY, pipPointerDragRef.current.initialPosY + deltaY));
 
     setPipPosition({ x: nextX, y: nextY });
-  }, [pipPosition]);
+  };
 
-  const handlePipDragEnd = useCallback(() => {
-    pipDragRef.current.isDragging = false;
-  }, []);
+  const handlePipPointerUp = (e) => {
+    if (!pipPointerDragRef.current.isDragging) return;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch (_) {}
+    pipPointerDragRef.current.isDragging = false;
+  };
 
-  useEffect(() => {
-    window.addEventListener('mousemove', handlePipDragMove);
-    window.addEventListener('mouseup', handlePipDragEnd);
-    window.addEventListener('touchmove', handlePipDragMove, { passive: false });
-    window.addEventListener('touchend', handlePipDragEnd);
-    return () => {
-      window.removeEventListener('mousemove', handlePipDragMove);
-      window.removeEventListener('mouseup', handlePipDragEnd);
-      window.removeEventListener('touchmove', handlePipDragMove);
-      window.removeEventListener('touchend', handlePipDragEnd);
-    };
-  }, [handlePipDragMove, handlePipDragEnd]);
+  const handlePipPointerCancel = (e) => {
+    if (!pipPointerDragRef.current.isDragging) return;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch (_) {}
+    pipPointerDragRef.current.isDragging = false;
+  };
+
+  const handlePipContentClick = (e) => {
+    // Si la distance parcourue est >= 6px, c'est un glisser-déposer : ignorer le clic pour éviter les faux déclenchements
+    if (pipPointerDragRef.current.movedDistance >= 6) {
+      e.stopPropagation();
+      return;
+    }
+    setIsCallPip(false);
+  };
 
   const handleAcceptIncomingCall = async () => {
     const res = await acceptIncomingCall();
@@ -8114,7 +8135,7 @@ export default function App() {
               />
             ) : null
           ) : (
-            /* Mode inversé (Swap) : flux local au centre */
+            /* Mode inversé (Swap) : flux local au centre (miroir uniquement si caméra frontale) */
             callState.type === 'video' && localStream && callState.camOn ? (
               <video
                 ref={localVideoRef}
@@ -8127,7 +8148,7 @@ export default function App() {
                   width: '100%',
                   height: '100%',
                   objectFit: 'cover',
-                  transform: 'scaleX(-1)',
+                  transform: facingMode === 'user' ? 'scaleX(-1)' : 'none',
                   zIndex: 2,
                 }}
               />
@@ -8292,7 +8313,7 @@ export default function App() {
                 transition: 'all 0.3s cubic-bezier(0.22, 1, 0.36, 1)'
               }}
             >
-              {/* Vignette normale = flux local */}
+              {/* Vignette normale = flux local (miroir uniquement si caméra avant) */}
               {!isSwapVideo ? (
                 callState.camOn && localStream ? (
                   <video
@@ -8302,7 +8323,9 @@ export default function App() {
                     autoPlay
                     style={{
                       width: '100%', height: '100%', objectFit: 'cover',
-                      transform: localZoom ? 'scaleX(-1) scale(1.6)' : 'scaleX(-1) scale(1.0)',
+                      transform: facingMode === 'user'
+                        ? (localZoom ? 'scaleX(-1) scale(1.6)' : 'scaleX(-1) scale(1.0)')
+                        : (localZoom ? 'scale(1.6)' : 'scale(1.0)'),
                       transition: 'transform 0.3s ease'
                     }}
                   />
@@ -8331,6 +8354,15 @@ export default function App() {
 
               {/* Boutons sur la vignette */}
               <div style={{ position: 'absolute', bottom: '6px', right: '6px', display: 'flex', gap: '4px' }}>
+                {hasMultipleCameras && callState.camOn && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); switchCamera(); }}
+                    title={facingMode === 'user' ? "Caméra arrière" : "Caméra avant"}
+                    style={{ border: 'none', borderRadius: '50%', width: '24px', height: '24px', backgroundColor: 'rgba(15,23,42,0.85)', color: '#38BDF8', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}
+                  >
+                    <SwitchCamera size={12} />
+                  </button>
+                )}
                 <button
                   onClick={(e) => { e.stopPropagation(); setLocalZoom(z => !z); }}
                   title={localZoom ? "Zoom arrière" : "Zoom caméra"}
@@ -8360,7 +8392,7 @@ export default function App() {
           <div style={{
             position: 'absolute', bottom: '32px', left: '50%', transform: 'translateX(-50%)',
             backgroundColor: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
-            padding: '12px 24px', borderRadius: '999px', display: 'flex', alignItems: 'center', gap: '16px',
+            padding: '12px 24px', borderRadius: '999px', display: 'flex', alignItems: 'center', gap: '14px',
             border: '1px solid rgba(255,255,255,0.12)', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', zIndex: 50
           }}>
             <button
@@ -8378,6 +8410,24 @@ export default function App() {
                 style={{ border: 'none', width: '46px', height: '46px', borderRadius: '50%', backgroundColor: callState.camOn ? 'rgba(255,255,255,0.15)' : '#EF4444', color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease' }}
               >
                 {callState.camOn ? <Camera size={18} /> : <VideoOff size={18} />}
+              </button>
+            )}
+
+            {/* BOUTON BASCULE CAMÉRA AVANT / ARRIÈRE (FLIP CAMERA MOBILE) */}
+            {callState.type === 'video' && callState.camOn && hasMultipleCameras && (
+              <button
+                onClick={switchCamera}
+                title={facingMode === 'user' ? "Basculer vers la caméra arrière" : "Basculer vers la caméra avant"}
+                style={{
+                  border: 'none', width: '46px', height: '46px', borderRadius: '50%',
+                  backgroundColor: facingMode === 'environment' ? '#38BDF8' : 'rgba(255,255,255,0.15)',
+                  color: facingMode === 'environment' ? '#0F172A' : '#FFF',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  transition: 'all 0.2s ease',
+                  boxShadow: facingMode === 'environment' ? '0 0 16px rgba(56,189,248,0.5)' : 'none',
+                }}
+              >
+                <SwitchCamera size={18} />
               </button>
             )}
 
@@ -8418,9 +8468,13 @@ export default function App() {
         </div>
       )}
 
-      {/* ---- BULLE FLOTTANTE PIP (PICTURE-IN-PICTURE & DRAG-AND-DROP) ---- */}
+      {/* ---- BULLE FLOTTANTE PIP (PICTURE-IN-PICTURE & DRAG-AND-DROP AVEC POINTER EVENTS) ---- */}
       {callState.active && isCallPip && (
         <div
+          onPointerDown={handlePipPointerDown}
+          onPointerMove={handlePipPointerMove}
+          onPointerUp={handlePipPointerUp}
+          onPointerCancel={handlePipPointerCancel}
           style={{
             position: 'fixed',
             left: `${pipPosition.x}px`,
@@ -8436,13 +8490,13 @@ export default function App() {
             display: 'flex',
             flexDirection: 'column',
             userSelect: 'none',
+            WebkitUserSelect: 'none',
             touchAction: 'none',
+            cursor: 'grab',
           }}
         >
           {/* HEADER PIP DRAGGABLE */}
           <div
-            onMouseDown={handlePipDragStart}
-            onTouchStart={handlePipDragStart}
             style={{
               padding: '6px 10px',
               backgroundColor: 'rgba(15,23,42,0.85)',
@@ -8450,9 +8504,9 @@ export default function App() {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              cursor: 'grab',
               zIndex: 10,
-              borderBottom: '1px solid rgba(255,255,255,0.1)'
+              borderBottom: '1px solid rgba(255,255,255,0.1)',
+              pointerEvents: 'none',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
@@ -8466,11 +8520,11 @@ export default function App() {
             </span>
           </div>
 
-          {/* CONTENU VIDÉO OU AVATAR DU PIP */}
+          {/* CONTENU VIDÉO OU AVATAR DU PIP (AVEC DISTINCTION TAP VS DRAG) */}
           <div
-            onClick={() => setIsCallPip(false)}
+            onClick={handlePipContentClick}
             title="Cliquer pour agrandir en plein écran"
-            style={{ flex: 1, position: 'relative', cursor: 'pointer', overflow: 'hidden' }}
+            style={{ flex: 1, position: 'relative', overflow: 'hidden' }}
           >
             {callState.type === 'video' && (remoteStream || localStream) ? (
               <video
@@ -8478,7 +8532,10 @@ export default function App() {
                 autoPlay
                 playsInline
                 muted={!remoteStream}
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                style={{
+                  width: '100%', height: '100%', objectFit: 'cover',
+                  transform: (!remoteStream && facingMode === 'user') ? 'scaleX(-1)' : 'none',
+                }}
               />
             ) : (
               <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', background: 'linear-gradient(135deg, #1E293B, #0F172A)' }}>
@@ -8490,11 +8547,14 @@ export default function App() {
             )}
 
             {/* CONTRÔLES FLOTTANTS MINIATURES SUR LE PIP */}
-            <div style={{
-              position: 'absolute', bottom: '6px', left: '6px', right: '6px',
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              zIndex: 10
-            }}>
+            <div
+              onPointerDown={(e) => e.stopPropagation()}
+              style={{
+                position: 'absolute', bottom: '6px', left: '6px', right: '6px',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                zIndex: 10
+              }}
+            >
               <button
                 onClick={(e) => { e.stopPropagation(); setIsCallPip(false); }}
                 title="Agrandir en plein écran"
@@ -8502,6 +8562,16 @@ export default function App() {
               >
                 <Maximize2 size={13} />
               </button>
+
+              {hasMultipleCameras && callState.type === 'video' && callState.camOn && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); switchCamera(); }}
+                  title="Changer de caméra"
+                  style={{ border: 'none', width: '28px', height: '28px', borderRadius: '50%', backgroundColor: 'rgba(15,23,42,0.85)', color: '#38BDF8', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <SwitchCamera size={13} />
+                </button>
+              )}
 
               <button
                 onClick={(e) => { e.stopPropagation(); toggleMic(); }}

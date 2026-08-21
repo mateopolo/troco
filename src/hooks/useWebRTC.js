@@ -38,12 +38,33 @@ export function useWebRTC({ profileName, selectedChat }) {
   const [localStream, setLocalStream]   = useState(null);
   const [remoteStream, setRemoteStream] = useState(null);
   const [incomingCall, setIncomingCall] = useState(null);
+  const [facingMode, setFacingMode] = useState('user'); // 'user' (front) ou 'environment' (back)
+  const [hasMultipleCameras, setHasMultipleCameras] = useState(false);
 
   const localVideoRef  = useRef(null);
   const remoteVideoRef = useRef(null);
   const pcRef          = useRef(null);
   const unsubsRef      = useRef([]);
   const activeChatIdRef = useRef(null);
+
+  // Détection des caméras disponibles sur l'appareil
+  useEffect(() => {
+    if (!navigator.mediaDevices?.enumerateDevices) {
+      const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || ('ontouchstart' in window);
+      setHasMultipleCameras(isMobile);
+      return;
+    }
+    navigator.mediaDevices.enumerateDevices()
+      .then(devices => {
+        const videoInputs = devices.filter(d => d.kind === 'videoinput');
+        const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || ('ontouchstart' in window);
+        setHasMultipleCameras(videoInputs.length > 1 || isMobile);
+      })
+      .catch(() => {
+        const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || ('ontouchstart' in window);
+        setHasMultipleCameras(isMobile);
+      });
+  }, []);
 
   useEffect(() => {
     if (localVideoRef.current && localStream) {
@@ -330,9 +351,80 @@ export function useWebRTC({ profileName, selectedChat }) {
     window.setTimeout(() => setCallState(prev => ({ ...prev, copied: false })), 1800);
   }, [selectedChat]);
 
+  // Basculement dynamique de caméra (avant/arrière) avec replaceTrack
+  const switchCamera = useCallback(async () => {
+    if (callState.type !== 'video' || !localStream) return;
+    const nextFacing = facingMode === 'user' ? 'environment' : 'user';
+    try {
+      // 1. Arrêt propre des anciennes pistes vidéo pour libérer le capteur matériel
+      localStream.getVideoTracks().forEach(track => {
+        try { track.stop(); } catch (_) {}
+      });
+
+      // 2. Demande du nouveau flux avec la contrainte de facingMode inversée
+      const newStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: nextFacing },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+        audio: false,
+      });
+
+      const newVideoTrack = newStream.getVideoTracks()[0];
+      if (!newVideoTrack) return;
+
+      // 3. Remplacement à chaud sur la RTCPeerConnection active sans couper l'appel
+      if (pcRef.current) {
+        const sender = pcRef.current.getSenders().find(s => s.track && s.track.kind === 'video');
+        if (sender) {
+          await sender.replaceTrack(newVideoTrack);
+        }
+      }
+
+      // 4. Maintien et recombinaison avec la piste audio locale existante
+      const audioTrack = localStream.getAudioTracks()[0];
+      const combinedTracks = audioTrack ? [newVideoTrack, audioTrack] : [newVideoTrack];
+      const combinedStream = new MediaStream(combinedTracks);
+
+      setLocalStream(combinedStream);
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = combinedStream;
+        localVideoRef.current.play().catch(() => {});
+      }
+      setFacingMode(nextFacing);
+    } catch (err) {
+      console.warn('[WebRTC] Erreur lors du basculement de caméra vers :', nextFacing, err);
+      // Fallback robuste : tentative de restauration de la caméra frontale en cas de refus
+      try {
+        const fallbackStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'user' } },
+          audio: false,
+        });
+        const fallbackTrack = fallbackStream.getVideoTracks()[0];
+        if (pcRef.current && fallbackTrack) {
+          const sender = pcRef.current.getSenders().find(s => s.track && s.track.kind === 'video');
+          if (sender) await sender.replaceTrack(fallbackTrack);
+        }
+        const audioTrack = localStream.getAudioTracks()[0];
+        const combined = audioTrack ? [fallbackTrack, audioTrack] : [fallbackTrack];
+        const fallbackCombined = new MediaStream(combined);
+        setLocalStream(fallbackCombined);
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = fallbackCombined;
+          localVideoRef.current.play().catch(() => {});
+        }
+        setFacingMode('user');
+      } catch (restoreErr) {
+        console.error('[WebRTC] Échec de restauration de la caméra frontale :', restoreErr);
+      }
+    }
+  }, [callState.type, localStream, facingMode]);
+
   return {
     callState, localStream, remoteStream, incomingCall,
     localVideoRef, remoteVideoRef,
+    facingMode, hasMultipleCameras, switchCamera,
     startCall, acceptIncomingCall, declineIncomingCall, endCall,
     toggleMic, toggleCam, copyInviteLink, playRingtone,
   };
