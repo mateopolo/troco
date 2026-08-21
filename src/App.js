@@ -3147,6 +3147,36 @@ export default function App() {
     );
   };
   const [activeTab, setActiveTab] = useState('feed');
+  const [profile, setProfile] = useState(() => {
+    const saved = window.localStorage.getItem('troco_user_profile');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { }
+    }
+    return {
+      name: 'MATEO POLO',
+      username: '@mateopolo',
+      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80',
+      bio: 'Créateur de contenus, développeur Python et passionné de musique. Je propose des services flexibles et des échanges de qualité.',
+      location: 'Paris, France',
+      languages: ['FR', 'EN', 'ES', 'IT'],
+      loginMethod: 'Google',
+      euroBalance: 128,
+      trocoTokens: 12,
+    };
+  });
+  const [profileDraft, setProfileDraft] = useState(profile);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [saveMessage, setSaveMessage] = useState('');
+  const [skills, setSkills] = useState([
+    'Prod musicale & Ableton Live',
+    'Scripts Python',
+  ]);
+  const [equipment, setEquipment] = useState([
+    'MacBook Pro 14',
+    'Microphone USB',
+  ]);
+  const [skillInput, setSkillInput] = useState('');
+  const [equipmentInput, setEquipmentInput] = useState('');
   const [formatFilter, setFormatFilter] = useState('all');
   const [selectedChat, setSelectedChat] = useState(null);
   const [readChats, setReadChats] = useState(() => {
@@ -3576,36 +3606,7 @@ export default function App() {
       document.head.appendChild(styleEl);
     }
   }, []);
-  const [isEditingProfile, setIsEditingProfile] = useState(false);
-  const [saveMessage, setSaveMessage] = useState('');
-  const [profile, setProfile] = useState(() => {
-    const saved = window.localStorage.getItem('troco_user_profile');
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) { }
-    }
-    return {
-      name: 'MATEO POLO',
-      username: '@mateopolo',
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80',
-      bio: 'Créateur de contenus, développeur Python et passionné de musique. Je propose des services flexibles et des échanges de qualité.',
-      location: 'Paris, France',
-      languages: ['FR', 'EN', 'ES', 'IT'],
-      loginMethod: 'Google',
-      euroBalance: 128,
-      trocoTokens: 12,
-    };
-  });
-  const [profileDraft, setProfileDraft] = useState(profile);
-  const [skills, setSkills] = useState([
-    'Prod musicale & Ableton Live',
-    'Scripts Python',
-  ]);
-  const [equipment, setEquipment] = useState([
-    'MacBook Pro 14',
-    'Microphone USB',
-  ]);
-  const [skillInput, setSkillInput] = useState('');
-  const [equipmentInput, setEquipmentInput] = useState('');
+  // État d'édition profil initialisé plus haut
   const [categoryInput, setCategoryInput] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [customCategories, setCustomCategories] = useState([]);
