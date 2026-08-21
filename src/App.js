@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -3241,10 +3241,10 @@ export default function App() {
       const saved = window.localStorage.getItem('troco_read_chats');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return new Set(parsed);
+        if (Array.isArray(parsed)) return new Set(parsed);
       }
     } catch (_) {}
-    return new Set(['201', '202', '101', '102', '103', '104', 201, 202, 101, 102, 103, 104]);
+    return new Set();
   }); // IDs des convos déjà lues
 
   useEffect(() => {
@@ -4717,13 +4717,29 @@ export default function App() {
     }
   };
 
-  // ---- COMPTEUR NON-LUS GLOBAL (Total exact des messages non lus) ----
-  const unreadCount = Object.entries(chatThreads).reduce((count, [chatId, thread]) => {
-    if (!thread || thread.length === 0) return count;
-    if (readChats.has(Number(chatId)) || readChats.has(String(chatId)) || readChats.has(chatId)) return count;
-    const unreadInThread = thread.filter(m => m.sender === 'them' || m.kind === 'deal').length;
-    return count + (unreadInThread > 0 ? unreadInThread : 1);
-  }, 0);
+  // ---- COMPTEUR NON-LUS GLOBAL (Total exact et persistant des messages non lus) ----
+  const unreadCount = useMemo(() => {
+    const allChats = chatsList && chatsList.length > 0 ? chatsList : mockChats;
+    return allChats.reduce((total, chat) => {
+      const cidStr = String(chat.id);
+      const isCurrentlyViewing = selectedChat && String(selectedChat.id) === cidStr && activeTab === 'chat';
+      if (isCurrentlyViewing) return total;
+
+      const isMarkedRead = readChats.has(chat.id) || readChats.has(cidStr) || readChats.has(Number(chat.id));
+      if (isMarkedRead) return total;
+
+      const thread = chatThreads[chat.id] || chatThreads[cidStr];
+      if (thread && thread.length > 0) {
+        const unreadInThread = thread.filter(m => (m.sender === 'them' || m.kind === 'deal' || (m.senderName && m.senderName !== profile?.name)));
+        return total + (unreadInThread.length > 0 ? unreadInThread.length : 1);
+      }
+
+      if (chat.lastSenderName && chat.lastSenderName.trim().toLowerCase() !== profile?.name?.trim().toLowerCase()) {
+        return total + (chat.unreadCount || 1);
+      }
+      return total;
+    }, 0);
+  }, [chatsList, mockChats, chatThreads, readChats, selectedChat, activeTab, profile?.name]);
 
   const createModernMapIcon = (isDarkMode = false) => {
     const primaryBg = isDarkMode ? 'rgba(96, 165, 250, 0.85)' : 'rgba(4, 38, 90, 0.85)';
@@ -9753,56 +9769,120 @@ export default function App() {
             </div>
           </div>
 
-          {/* SONNERIE / EN TRAIN D'APPELER — overlay animé pendant la phase ringing */}
+          {/* SONNERIE / EN TRAIN D'APPELER — overlay animé centré */}
           {callState.ringing && (
             <div style={{
-              position: 'absolute', inset: 0,
-              display: 'flex', flexDirection: 'column',
-              alignItems: 'center', justifyContent: 'center',
-              gap: '20px', zIndex: 30, pointerEvents: 'none',
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '18px',
+              zIndex: 30,
+              pointerEvents: 'none',
+              padding: '20px',
+              boxSizing: 'border-box'
             }}>
-              {[1, 2, 3].map(i => (
-                <div key={i} style={{
-                  position: 'absolute',
-                  width: `${120 + i * 48}px`,
-                  height: `${120 + i * 48}px`,
-                  borderRadius: '50%',
-                  border: '2px solid rgba(96,165,250,0.5)',
-                  animation: `notifPulse ${1 + i * 0.3}s ease-in-out infinite`,
-                  animationDelay: `${i * 0.2}s`,
-                }} />)
-              )}
-              <div style={{ width: '120px', height: '120px', borderRadius: '50%', background: 'linear-gradient(135deg, #60A5FA 0%, #04265A 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '46px', color: '#FFF', fontWeight: '800', boxShadow: '0 0 50px rgba(96,165,250,0.55)', zIndex: 1 }}>
-                {(selectedChat?.user || 'T')[0]}
+              <div style={{ position: 'relative', width: '130px', height: '130px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {[1, 2, 3].map(i => (
+                  <div key={i} style={{
+                    position: 'absolute',
+                    width: `${130 + i * 44}px`,
+                    height: `${130 + i * 44}px`,
+                    borderRadius: '50%',
+                    border: '2px solid rgba(96,165,250,0.45)',
+                    animation: `notifPulse ${1 + i * 0.3}s ease-in-out infinite`,
+                    animationDelay: `${i * 0.2}s`,
+                  }} />
+                ))}
+                <img
+                  src={getAuthorAvatar(selectedChat?.user || 'Thomas G.')}
+                  alt={selectedChat?.user || 'Interlocuteur'}
+                  style={{
+                    width: '120px',
+                    height: '120px',
+                    borderRadius: '50%',
+                    objectFit: 'cover',
+                    border: '3px solid #60A5FA',
+                    boxShadow: '0 0 50px rgba(96,165,250,0.55)',
+                    zIndex: 2
+                  }}
+                />
               </div>
-              <div style={{ color: '#FFFFFF', fontSize: '20px', fontWeight: '800', zIndex: 1 }}>{selectedChat?.user || ''}</div>
-              <div style={{ color: '#93C5FD', fontSize: '14px', fontWeight: '600', zIndex: 1, display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <div style={{ color: '#FFFFFF', fontSize: '22px', fontWeight: '800', textAlign: 'center', zIndex: 2, marginTop: '8px' }}>
+                {selectedChat?.user || 'Interlocuteur'}
+              </div>
+              <div style={{ color: '#93C5FD', fontSize: '14px', fontWeight: '700', zIndex: 2, display: 'inline-flex', alignItems: 'center', gap: '8px', backgroundColor: 'rgba(15,23,42,0.85)', padding: '7px 18px', borderRadius: '999px', border: '1px solid rgba(255,255,255,0.12)' }}>
                 <span style={{ display: 'inline-block', animation: 'notifPulse 1s ease-in-out infinite' }}>📞</span>
                 {callState.type === 'video' ? 'Appel vidéo en cours...' : 'Appel audio en cours...'}
               </div>
             </div>
           )}
 
-          {/* FALLBACK VISUEL : QUAND LA CAMÉRA EST COUPÉE OU EN APPEL AUDIO (ÉCRAN NOIR ÉVITÉ) */}
+          {/* FALLBACK VISUEL : QUAND LA CAMÉRA EST COUPÉE OU EN APPEL AUDIO (PARFAITEMENT CENTRÉ) */}
           {((!isSwapVideo && (!remoteStream || callState.type !== 'video')) || (isSwapVideo && (!localStream || !callState.camOn))) && !callState.ringing && (
-            <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', zIndex: 10, pointerEvents: 'none' }}>
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '16px',
+              zIndex: 10,
+              pointerEvents: 'none',
+              padding: '20px',
+              boxSizing: 'border-box'
+            }}>
               <div style={{
                 position: 'relative',
-                width: '130px', height: '130px', borderRadius: '50%',
-                background: 'linear-gradient(135deg, #60A5FA 0%, #04265A 100%)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '50px', color: '#FFF', fontWeight: '800',
-                boxShadow: '0 0 60px rgba(96,165,250,0.45)',
+                width: '140px',
+                height: '140px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
               }}>
-                {(!isSwapVideo ? (selectedChat?.user || 'Thomas G.') : profile.name)[0]}
-                <div style={{ position: 'absolute', bottom: '2px', right: '2px', width: '32px', height: '32px', borderRadius: '50%', backgroundColor: '#EF4444', border: '3px solid #0F172A', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFF' }}>
+                <img
+                  src={!isSwapVideo ? getAuthorAvatar(selectedChat?.user || 'Thomas G.') : (profile.avatar || getAuthorAvatar(profile.name))}
+                  alt="Avatar"
+                  style={{
+                    width: '140px',
+                    height: '140px',
+                    borderRadius: '50%',
+                    objectFit: 'cover',
+                    border: '3px solid #60A5FA',
+                    boxShadow: '0 0 60px rgba(96,165,250,0.45)'
+                  }}
+                />
+                <div style={{
+                  position: 'absolute',
+                  bottom: '4px',
+                  right: '4px',
+                  width: '34px',
+                  height: '34px',
+                  borderRadius: '50%',
+                  backgroundColor: '#EF4444',
+                  border: '3px solid #0F172A',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#FFF',
+                  boxShadow: '0 2px 10px rgba(239,68,68,0.5)'
+                }}>
                   <VideoOff size={16} />
                 </div>
               </div>
-              <div style={{ color: '#FFFFFF', fontSize: '20px', fontWeight: '800' }}>
+              <div style={{ color: '#FFFFFF', fontSize: '22px', fontWeight: '800', textAlign: 'center' }}>
                 {!isSwapVideo ? (selectedChat?.user || 'Thomas G.') : profile.name}
               </div>
-              <div style={{ color: '#93C5FD', fontSize: '13px', backgroundColor: 'rgba(15,23,42,0.7)', padding: '6px 14px', borderRadius: '999px', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <div style={{ color: '#93C5FD', fontSize: '13px', fontWeight: '600', backgroundColor: 'rgba(15,23,42,0.85)', padding: '7px 18px', borderRadius: '999px', border: '1px solid rgba(255,255,255,0.12)' }}>
                 {!isSwapVideo ? "Caméra de l'interlocuteur désactivée" : 'Votre caméra est désactivée'}
               </div>
             </div>

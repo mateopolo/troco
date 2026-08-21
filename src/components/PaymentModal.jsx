@@ -367,12 +367,79 @@ export default function PaymentModal({
           </button>
         </div>
 
-        {/* CORPS DE LA MODAL */}
-        <div style={{ padding: '24px', overflowY: 'auto' }}>
+          {/* CORPS DE LA MODAL */}
+          <div style={{ padding: '24px', overflowY: 'auto' }}>
 
-          {/* ÉCRAN DE SUCCÈS */}
-          {isSuccess ? (
-            <div style={{ textAlign: 'center', padding: '20px 10px' }}>
+            {/* SÉLECTEUR D'ONGLET DU PORTEFEUILLE (GÉRER MON SOLDE EURO / ACHETER DES JETONS) */}
+            {(mode === 'pack-tokens' || mode === 'topup-cash') && (
+              <div style={{
+                display: 'flex',
+                backgroundColor: darkMode ? 'rgba(15,23,42,0.6)' : '#F1F5F9',
+                borderRadius: '16px',
+                padding: '5px',
+                marginBottom: '22px',
+                border: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid #E2E8F0',
+                boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.04)'
+              }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode('topup-cash');
+                    setFormErrors({});
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '10px 14px',
+                    borderRadius: '12px',
+                    border: 'none',
+                    backgroundColor: mode === 'topup-cash' ? (darkMode ? '#04265A' : '#FFFFFF') : 'transparent',
+                    color: mode === 'topup-cash' ? (darkMode ? '#FFFFFF' : '#04265A') : (darkMode ? '#94A3B8' : '#64748B'),
+                    fontWeight: mode === 'topup-cash' ? '800' : '600',
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    boxShadow: mode === 'topup-cash' ? '0 4px 12px rgba(4,38,90,0.15)' : 'none',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <CreditCard size={15} /> Gérer mon solde Euro (€)
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode('pack-tokens');
+                    setFormErrors({});
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '10px 14px',
+                    borderRadius: '12px',
+                    border: 'none',
+                    backgroundColor: mode === 'pack-tokens' ? (darkMode ? '#D97706' : '#FFFFFF') : 'transparent',
+                    color: mode === 'pack-tokens' ? (darkMode ? '#FFFFFF' : '#D97706') : (darkMode ? '#94A3B8' : '#64748B'),
+                    fontWeight: mode === 'pack-tokens' ? '800' : '600',
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    boxShadow: mode === 'pack-tokens' ? '0 4px 12px rgba(217,119,6,0.2)' : 'none',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <Coins size={15} /> Acheter des Jetons
+                </button>
+              </div>
+            )}
+
+            {/* ÉCRAN DE SUCCÈS */}
+            {isSuccess ? (
+              <div style={{ textAlign: 'center', padding: '20px 10px' }}>
               <div style={{
                 width: '72px',
                 height: '72px',
