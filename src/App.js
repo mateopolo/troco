@@ -17,6 +17,7 @@ import PrivacyCenterModal from './components/PrivacyCenterModal';
 import CookieBanner from './components/CookieBanner';
 import OnboardingWizardModal from './components/OnboardingWizardModal';
 import WelcomeGiftCelebrationModal from './components/WelcomeGiftCelebrationModal';
+import VisioSettlementModal from './components/VisioSettlementModal';
 import { analyzeContent } from './utils/contentModeration';
 import { validateListingContent, validateChatMessage } from './utils/moderationBlacklist';
 import { DIVERSE_AVATARS } from './data/categoriesData';
@@ -3825,6 +3826,10 @@ export default function App() {
     movedDistance: 0,
   });
 
+  const [isSettlementModalOpen, setIsSettlementModalOpen] = useState(false);
+  const [settlementCallDuration, setSettlementCallDuration] = useState(0);
+  const prevActiveRef = useRef(false);
+
   // Chronomètre de Deal en temps réel pendant l'appel (1h = 1 Jeton Troco)
   useEffect(() => {
     let timer = null;
@@ -3832,7 +3837,13 @@ export default function App() {
       timer = setInterval(() => {
         setCallDuration(prev => prev + 1);
       }, 1000);
+      prevActiveRef.current = true;
     } else {
+      if (prevActiveRef.current && callDuration > 5) {
+        setSettlementCallDuration(callDuration);
+        setIsSettlementModalOpen(true);
+      }
+      prevActiveRef.current = false;
       setCallDuration(0);
       setIsCallPip(false);
       setIsSwapVideo(false);
@@ -3840,7 +3851,60 @@ export default function App() {
     return () => {
       if (timer) clearInterval(timer);
     };
-  }, [callState.active, callState.ringing]);
+  }, [callState.active, callState.ringing]); // eslint-disable-line
+
+  // Rétribution en jetons & structure transparente de frais (Étape 5)
+  const handleTransferCallTokens = async ({ tokens, insurance, duration }) => {
+    const costTokens = Number(tokens) || 1;
+    const insuranceFee = insurance ? 1.99 : 0;
+
+    setProfile(prev => ({
+      ...prev,
+      trocoTokens: Math.max(0, prev.trocoTokens - costTokens),
+      euroBalance: insuranceFee > 0 ? Number((prev.euroBalance - insuranceFee).toFixed(2)) : prev.euroBalance,
+      dealsCompleted: (prev.dealsCompleted || 0) + 1,
+    }));
+
+    playApplePaySound();
+    playBetclicBalanceSound(true);
+
+    const partner = selectedChat?.user || 'Interlocuteur';
+    const newTx = {
+      id: `tx-visio-${Date.now()}`,
+      title: `Rétribution Visio (${partner})`,
+      amount: insuranceFee,
+      tokens: costTokens,
+      type: 'token_transfer',
+      status: 'completed',
+      date: new Date().toISOString(),
+      partner: partner,
+      duration: duration,
+      freeServiceFee: true,
+    };
+    setUserTransactions(prev => [newTx, ...prev]);
+
+    const uid = profile?.uid || auth.currentUser?.uid;
+    if (uid) {
+      try {
+        await updateDoc(doc(db, 'users', uid), {
+          trocoTokens: Math.max(0, (profile.trocoTokens || 10) - costTokens),
+          euroBalance: insuranceFee > 0 ? Number(((profile.euroBalance || 0) - insuranceFee).toFixed(2)) : (profile.euroBalance || 0),
+          dealsCompleted: (profile.dealsCompleted || 0) + 1,
+          updatedAt: serverTimestamp(),
+        });
+        await addDoc(collection(db, 'transactions'), {
+          ...newTx,
+          userId: uid,
+          createdAt: serverTimestamp(),
+        });
+      } catch (e) {
+        console.warn('Erreur sauvegarde transaction visio:', e);
+      }
+    }
+
+    setSaveMessage(`🤝 ${costTokens} Jeton${costTokens > 1 ? 's' : ''} Troco transféré(s) à ${partner} (Frais de service : 0,00 €) !`);
+    setTimeout(() => setSaveMessage(''), 5000);
+  };
 
   // Formateur du chronomètre de deal (HH:MM:SS ou MM:SS)
   const formatCallTimer = (totalSeconds) => {
@@ -9656,17 +9720,44 @@ export default function App() {
                   <span>{callState.type === 'video' ? 'Appel vidéo en direct' : 'Appel audio HD'}</span>
                 </div>
               </div>
-              {/* CHRONOMÈTRE DE DEAL (1H = 1 JETON TROCO) */}
+              {/* CHRONOMÈTRE DE DEAL (1H = 1 JETON TROCO) & BOUTON RÉTRIBUTION DIRECTE */}
               {!callState.ringing && (
                 <div style={{
                   marginLeft: '8px', paddingLeft: '12px', borderLeft: '1px solid rgba(255,255,255,0.15)',
-                  display: 'flex', alignItems: 'center', gap: '6px', color: '#38BDF8', fontSize: '12px', fontWeight: '800'
+                  display: 'flex', alignItems: 'center', gap: '8px'
                 }}>
-                  <Clock size={13} />
-                  <span>{formatCallTimer(callDuration)}</span>
-                  <span style={{ fontSize: '10px', color: '#94A3B8', fontWeight: '600' }}>
-                    (🪙 {(callDuration / 3600).toFixed(2)})
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#38BDF8', fontSize: '12px', fontWeight: '800' }}>
+                    <Clock size={13} />
+                    <span>{formatCallTimer(callDuration)}</span>
+                    <span style={{ fontSize: '10px', color: '#94A3B8', fontWeight: '600' }}>
+                      (🪙 {(callDuration / 3600).toFixed(2)})
+                    </span>
+                  </div>
+
+                  <button
+                    onClick={() => {
+                      setSettlementCallDuration(callDuration);
+                      setIsSettlementModalOpen(true);
+                    }}
+                    title="Ouvrir le bilan & transférer des jetons"
+                    style={{
+                      border: '1px solid rgba(245,158,11,0.5)',
+                      backgroundColor: 'rgba(245,158,11,0.25)',
+                      color: '#FDE68A',
+                      padding: '3px 9px',
+                      borderRadius: '999px',
+                      fontSize: '11px',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      transition: 'all 0.2s ease',
+                    }}
+                  >
+                    <Coins size={11} color="#F59E0B" />
+                    <span>Rétribuer</span>
+                  </button>
                 </div>
               )}
 
@@ -10308,6 +10399,17 @@ export default function App() {
         darkMode={darkMode}
         trocoTokens={profile?.trocoTokens ?? 10}
         euroBalance={profile?.euroBalance ?? 0}
+      />
+
+      {/* BILAN DE SÉANCE VISIO & RÉTRIBUTION EN JETONS (CHANTIER 5) */}
+      <VisioSettlementModal
+        isOpen={isSettlementModalOpen}
+        onClose={() => setIsSettlementModalOpen(false)}
+        callDuration={settlementCallDuration || callDuration}
+        partnerName={selectedChat?.user || 'Interlocuteur'}
+        onTransferTokens={handleTransferCallTokens}
+        darkMode={darkMode}
+        currentUserTokens={profile?.trocoTokens ?? 10}
       />
 
       {/* MODALE D'ACCEPTATION & CONSULTATION DES CGU (BLOC 6) */}
