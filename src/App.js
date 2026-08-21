@@ -3725,7 +3725,7 @@ export default function App() {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [customCategories, setCustomCategories] = useState([]);
   const [radiusKm, setRadiusKm] = useState(20);
-  const [isInfiniteRadius, setIsInfiniteRadius] = useState(false);
+  const [isInfiniteRadius, setIsInfiniteRadius] = useState(true);
   const [hoveredCardId, setHoveredCardId] = useState(null);
   const [hoverSlideIndex, setHoverSlideIndex] = useState(0);
   const [isChatFullscreen, setIsChatFullscreen] = useState(false);
@@ -5562,7 +5562,22 @@ export default function App() {
     if (authorUser?.isShadowBanned && item.author !== profile.name) return false;
 
     return item.status !== 'paused' && matchesSearch && matchesFormat && matchesCategory && matchesLanguage && matchesPayment && matchesDistance;
-  }).sort((a, b) => (b.isBoosted ? 1 : 0) - (a.isBoosted ? 1 : 0));
+  }).sort((a, b) => {
+    // 1. Annonces boostées / sponsorisées en priorité absolue (PC & Mobile)
+    const aBoost = (a.isBoosted || a.sponsored) ? 1 : 0;
+    const bBoost = (b.isBoosted || b.sponsored) ? 1 : 0;
+    if (bBoost !== aBoost) return bBoost - aBoost;
+
+    // 2. Annonces urgentes en deuxième niveau de priorité
+    const aUrgent = (a.urgent || a.isUrgent) ? 1 : 0;
+    const bUrgent = (b.urgent || b.isUrgent) ? 1 : 0;
+    if (bUrgent !== aUrgent) return bUrgent - aUrgent;
+
+    // 3. Tri chronologique par identifiant
+    const aId = Number(a.id) || 0;
+    const bId = Number(b.id) || 0;
+    return bId - aId;
+  });
 
   const getListingDetail = (listing) => {
     const media = getSuggestedMedia(listing.title, listing.description || '', listing.image, listing.video);
@@ -8166,183 +8181,370 @@ export default function App() {
       )}
 
       {/* CONTENU DYNAMIQUE SELON L'ONGLET SÉLECTIONNÉ */}
-      <main key={`${activeTab}-${viewMode}`} className="premium-main" style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px 20px 90px', width: '100%' }}>
+      <main key={`${activeTab}-${viewMode}`} className="premium-main" style={{ maxWidth: activeTab === 'feed' ? '1460px' : '1200px', margin: '0 auto', padding: '20px 20px 90px', width: '100%', transition: 'max-width 0.3s ease' }}>
 
         {/* ONGLET 1 : EXPLORER / FEED */}
         {activeTab === 'feed' && (
-          <div>
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '18px' }}>
-              <div style={{ flex: 1, display: 'flex', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', border: '1px solid rgba(209,213,219,0.7)', borderRadius: '16px', padding: '10px 14px', boxShadow: '0 4px 20px -4px rgba(15, 23, 42, 0.06)' }}>
-                <Search size={18} color="#9CA3AF" style={{ marginRight: '10px' }} />
-                <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} type="text" placeholder={t('searchPlaceholder')} style={{ border: 'none', outline: 'none', width: '100%', fontSize: '14px', backgroundColor: 'transparent' }} />
-              </div>
-              <button
-                onClick={() => setIsFilterDrawerOpen(true)}
-                className="premium-button"
-                style={{
-                  backgroundColor: isInfiniteRadius || radiusKm >= 100 ? '#EFF6FF' : 'rgba(255,255,255,0.8)',
-                  backdropFilter: 'blur(16px)',
-                  WebkitBackdropFilter: 'blur(16px)',
-                  border: isInfiniteRadius || radiusKm >= 100 ? '1px solid #04265A' : '1px solid rgba(209,213,219,0.7)',
-                  borderRadius: '16px',
-                  padding: '10px 14px',
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 20px -4px rgba(15, 23, 42, 0.06)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  color: isInfiniteRadius || radiusKm >= 100 ? '#04265A' : '#374151',
-                  fontWeight: '700',
-                  fontSize: '13px'
-                }}
-              >
-                <Filter size={18} color={isInfiniteRadius || radiusKm >= 100 ? '#04265A' : '#374151'} />
-                <span>{isInfiniteRadius || radiusKm >= 100 ? `♾️ ${t('infinite')}` : `${radiusKm} km`}</span>
-              </button>
-            </div>
-
-            <div style={{ marginBottom: '14px', width: '100%', overflow: 'hidden' }}>
-              <div className="category-scroll-container">
-                {allCategories.map(category => {
-                  const isSel = selectedCategory === category;
-                  return (
-                    <button
-                      key={category}
-                      onClick={() => setSelectedCategory(category)}
-                      className="premium-button category-pill"
-                      style={{
-                        border: isSel ? (darkMode ? '1px solid #60A5FA' : '1px solid #04265A') : (darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(226,232,240,0.9)'),
-                        backgroundColor: isSel ? (darkMode ? 'rgba(4,38,90,0.85)' : '#EFF6FF') : (darkMode ? 'rgba(30,41,59,0.7)' : 'rgba(248,250,252,0.95)'),
-                        color: isSel ? (darkMode ? '#93C5FD' : '#04265A') : (darkMode ? '#CBD5E1' : '#475569'),
-                        boxShadow: isSel ? '0 4px 14px rgba(4,38,90,0.15)' : '0 2px 8px rgba(15, 23, 42, 0.04)',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      {getCategoryLabel(category)}
-                    </button>
-                  );
-                })}
+          <div className="feed-layout-container">
+            {/* BANNIÈRE LATÉRALE GAUCHE (DESKTOP) */}
+            <aside className="desktop-ad-banner" aria-label="Espace Partenaires Troco">
+              <div className="ad-card">
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '9px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', color: darkMode ? '#93C5FD' : '#04265A', backgroundColor: darkMode ? 'rgba(4,38,90,0.6)' : '#EFF6FF', padding: '3px 7px', borderRadius: '6px' }}>
+                    🌟 Partenaire Pro
+                  </span>
+                  <span style={{ fontSize: '9px', color: darkMode ? '#94A3B8' : '#94A3B8' }}>Sponsorisé</span>
+                </div>
+                <img
+                  src="https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=400&q=80"
+                  alt="Partenaire Outillage"
+                  style={{ width: '100%', height: '85px', objectFit: 'cover', borderRadius: '12px', marginBottom: '8px' }}
+                />
+                <div style={{ fontSize: '13px', fontWeight: '800', color: darkMode ? '#FFFFFF' : '#0F172A', marginBottom: '4px', lineHeight: 1.3 }}>
+                  Brico & Outillage Pro
+                </div>
+                <div style={{ fontSize: '11px', color: darkMode ? '#94A3B8' : '#64748B', lineHeight: 1.4, marginBottom: '8px' }}>
+                  Matériel certifié disponible en prêt immédiat avec caution Troco.
+                </div>
+                <div style={{ display: 'inline-block', fontSize: '10px', fontWeight: '800', color: '#16A34A', backgroundColor: '#DCFCE7', padding: '2px 8px', borderRadius: '999px', marginBottom: '8px' }}>
+                  -15% membres Troco
+                </div>
                 <button
-                  onClick={() => setIsCategoryModalOpen(true)}
-                  className="premium-button category-pill"
+                  type="button"
+                  onClick={() => {
+                    setSelectedCategory('Outillage');
+                    alert("🏷️ Code promo partenaire 'TROCO15' appliqué sur la catégorie Outillage !");
+                  }}
+                  className="premium-button"
                   style={{
-                    border: darkMode ? '1px dashed #60A5FA' : '1px dashed #04265A',
-                    backgroundColor: darkMode ? 'rgba(4,38,90,0.3)' : '#F0FDFA',
-                    color: darkMode ? '#93C5FD' : '#04265A',
+                    width: '100%',
+                    padding: '8px 10px',
+                    borderRadius: '10px',
+                    backgroundColor: '#04265A',
+                    color: '#FFF',
+                    fontSize: '11px',
+                    fontWeight: '700',
+                    border: 'none',
                     cursor: 'pointer'
                   }}
                 >
-                  + {t('newCategory')}
+                  Voir les offres
                 </button>
               </div>
-            </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '14px' }}>
-              <div className="premium-panel" style={{ display: 'inline-flex', border: '1px solid rgba(226,232,240,0.9)', borderRadius: '999px', padding: '4px', backgroundColor: 'rgba(255,255,255,0.8)', boxShadow: '0 4px 20px -4px rgba(15, 23, 42, 0.06)' }}>
-                <button onClick={() => setViewMode('list')} className="premium-nav-btn" style={{ border: 'none', borderRadius: '999px', padding: '7px 12px', backgroundColor: viewMode === 'list' ? '#04265A' : 'transparent', color: viewMode === 'list' ? '#FFF' : '#64748B', fontWeight: '700', cursor: 'pointer' }}>{t('viewList')}</button>
-                <button onClick={() => { setViewMode('map'); setIsInfiniteRadius(true); }} className="premium-nav-btn" style={{ border: 'none', borderRadius: '999px', padding: '7px 12px', backgroundColor: viewMode === 'map' ? '#04265A' : 'transparent', color: viewMode === 'map' ? '#FFF' : '#64748B', fontWeight: '700', cursor: 'pointer' }}>{t('viewMap')}</button>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', gap: '10px', marginBottom: '22px' }}>
-              <button onClick={() => setFormatFilter('all')} className="premium-button" style={{ flex: 1, padding: '10px', borderRadius: '14px', border: 'none', backgroundColor: formatFilter === 'all' ? '#04265A' : 'rgba(255,255,255,0.8)', color: formatFilter === 'all' ? '#FFF' : '#374151', fontSize: '12px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 4px 16px -4px rgba(15,23,42,0.08)' }}>{t('all')}</button>
-              <button onClick={() => setFormatFilter('onsite')} className="premium-button" style={{ flex: 1, padding: '10px', borderRadius: '14px', border: 'none', backgroundColor: formatFilter === 'onsite' ? '#04265A' : 'rgba(255,255,255,0.8)', color: formatFilter === 'onsite' ? '#FFF' : '#374151', fontSize: '12px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 4px 16px -4px rgba(15,23,42,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}><MapPin size={13} /> {t('onsite')}</button>
-              <button onClick={() => setFormatFilter('remote')} className="premium-button" style={{ flex: 1, padding: '10px', borderRadius: '14px', border: 'none', backgroundColor: formatFilter === 'remote' ? '#04265A' : 'rgba(255,255,255,0.8)', color: formatFilter === 'remote' ? '#FFF' : '#374151', fontSize: '12px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 4px 16px -4px rgba(15,23,42,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}><Video size={13} /> {t('remote')}</button>
-            </div>
-
-            {filteredListings.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '60px 20px', backgroundColor: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderRadius: '24px', border: '1px solid rgba(229,231,235,0.9)', boxShadow: '0 10px 30px rgba(0,0,0,0.04)', animation: 'fadeSlideUp 0.3s ease both' }}>
-                <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: '#EFF6FF', color: '#04265A', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', boxShadow: '0 8px 20px rgba(4,38,90,0.15)' }}>
-                  <Search size={28} />
+              <div className="ad-card">
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '9px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#D97706', backgroundColor: '#FEF3C7', padding: '3px 7px', borderRadius: '6px' }}>
+                    🎓 Mentorat
+                  </span>
+                  <span style={{ fontSize: '9px', color: darkMode ? '#94A3B8' : '#94A3B8' }}>Publicité</span>
                 </div>
-                <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#111827', margin: '0 0 8px' }}>Aucune annonce ne correspond à ta recherche</h3>
-                <p style={{ fontSize: '13px', color: '#64748B', margin: '0 0 20px', maxWidth: '420px', marginInline: 'auto', lineHeight: 1.6 }}>Essaie d'élargir ton rayon de recherche, de changer de catégorie ou de réinitialiser tes filtres pour découvrir les annonces des membres Troco.</p>
+                <img
+                  src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=400&q=80"
+                  alt="Academia Code"
+                  style={{ width: '100%', height: '85px', objectFit: 'cover', borderRadius: '12px', marginBottom: '8px' }}
+                />
+                <div style={{ fontSize: '13px', fontWeight: '800', color: darkMode ? '#FFFFFF' : '#0F172A', marginBottom: '4px', lineHeight: 1.3 }}>
+                  Academia Code & Langues
+                </div>
+                <div style={{ fontSize: '11px', color: darkMode ? '#94A3B8' : '#64748B', lineHeight: 1.4, marginBottom: '8px' }}>
+                  Mentorat accéléré et cours en visioconférence HD.
+                </div>
                 <button
-                  onClick={() => { setSearchQuery(''); setSelectedCategory('all'); setRadiusKm(100); setIsInfiniteRadius(true); setSelectedLanguages([]); setSelectedPayment('all'); setFormatFilter('all'); }}
+                  type="button"
+                  onClick={() => {
+                    setSelectedCategory('Cours/Compétences');
+                    setFormatFilter('remote');
+                  }}
                   className="premium-button"
-                  style={{ border: 'none', borderRadius: '999px', padding: '10px 22px', backgroundColor: '#04265A', color: '#FFF', fontWeight: '800', fontSize: '13px', cursor: 'pointer', boxShadow: '0 8px 18px rgba(4,38,90,0.2)' }}
+                  style={{
+                    width: '100%',
+                    padding: '8px 10px',
+                    borderRadius: '10px',
+                    backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : '#F1F5F9',
+                    color: darkMode ? '#FFF' : '#0F172A',
+                    fontSize: '11px',
+                    fontWeight: '700',
+                    border: 'none',
+                    cursor: 'pointer'
+                  }}
                 >
-                  Réinitialiser tous les filtres
+                  Trouver un mentor
                 </button>
               </div>
-            ) : viewMode === 'map' ? (
-              <div className="premium-panel" style={{ backgroundColor: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', borderRadius: '24px', padding: '10px', boxShadow: '0 10px 30px rgba(15,23,42,0.06)' }}>
-                <div style={{ position: 'relative', width: '100%', height: '550px', borderRadius: '18px', overflow: 'hidden', boxShadow: '0 14px 30px rgba(15,23,42,0.12)' }}>
-                  <MapContainer
-                    center={mapCenter}
-                    zoom={4}
-                    minZoom={2}
-                    maxBounds={[[-85, -180], [85, 180]]}
-                    maxBoundsViscosity={1.0}
-                    worldCopyJump={true}
-                    style={{ width: '100%', height: '100%' }}
+            </aside>
+
+            {/* CONTENU CENTRAL DU FEED */}
+            <div className="feed-main-content">
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '18px' }}>
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', border: '1px solid rgba(209,213,219,0.7)', borderRadius: '16px', padding: '10px 14px', boxShadow: '0 4px 20px -4px rgba(15, 23, 42, 0.06)' }}>
+                  <Search size={18} color="#9CA3AF" style={{ marginRight: '10px' }} />
+                  <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} type="text" placeholder={t('searchPlaceholder')} style={{ border: 'none', outline: 'none', width: '100%', fontSize: '14px', backgroundColor: 'transparent' }} />
+                </div>
+                <button
+                  onClick={() => setIsFilterDrawerOpen(true)}
+                  className="premium-button"
+                  style={{
+                    backgroundColor: isInfiniteRadius || radiusKm >= 100 ? '#EFF6FF' : 'rgba(255,255,255,0.8)',
+                    backdropFilter: 'blur(16px)',
+                    WebkitBackdropFilter: 'blur(16px)',
+                    border: isInfiniteRadius || radiusKm >= 100 ? '1px solid #04265A' : '1px solid rgba(209,213,219,0.7)',
+                    borderRadius: '16px',
+                    padding: '10px 14px',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 20px -4px rgba(15, 23, 42, 0.06)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    color: isInfiniteRadius || radiusKm >= 100 ? '#04265A' : '#374151',
+                    fontWeight: '700',
+                    fontSize: '13px'
+                  }}
+                >
+                  <Filter size={18} color={isInfiniteRadius || radiusKm >= 100 ? '#04265A' : '#374151'} />
+                  <span>{isInfiniteRadius || radiusKm >= 100 ? `♾️ ${t('infinite')}` : `${radiusKm} km`}</span>
+                </button>
+              </div>
+
+              <div style={{ marginBottom: '14px', width: '100%', overflow: 'hidden' }}>
+                <div className="category-scroll-container">
+                  {allCategories.map(category => {
+                    const isSel = selectedCategory === category;
+                    return (
+                      <button
+                        key={category}
+                        onClick={() => setSelectedCategory(category)}
+                        className="premium-button category-pill"
+                        style={{
+                          border: isSel ? (darkMode ? '1px solid #60A5FA' : '1px solid #04265A') : (darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(226,232,240,0.9)'),
+                          backgroundColor: isSel ? (darkMode ? 'rgba(4,38,90,0.85)' : '#EFF6FF') : (darkMode ? 'rgba(30,41,59,0.7)' : 'rgba(248,250,252,0.95)'),
+                          color: isSel ? (darkMode ? '#93C5FD' : '#04265A') : (darkMode ? '#CBD5E1' : '#475569'),
+                          boxShadow: isSel ? '0 4px 14px rgba(4,38,90,0.15)' : '0 2px 8px rgba(15, 23, 42, 0.04)',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {getCategoryLabel(category)}
+                      </button>
+                    );
+                  })}
+                  <button
+                    onClick={() => setIsCategoryModalOpen(true)}
+                    className="premium-button category-pill"
+                    style={{
+                      border: darkMode ? '1px dashed #60A5FA' : '1px dashed #04265A',
+                      backgroundColor: darkMode ? 'rgba(4,38,90,0.3)' : '#F0FDFA',
+                      color: darkMode ? '#93C5FD' : '#04265A',
+                      cursor: 'pointer'
+                    }}
                   >
-                    <TileLayer
-                      noWrap={true}
-                      bounds={[[-85, -180], [85, 180]]}
-                      attribution='&copy; Google Maps'
-                      url={`https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&hl=${currentLang.toLowerCase()}`}
-                    />
-                    {filteredListings.map(item => {
-                      const coords = item.coordinates || getCoordinatesForLocation(item.location);
-                      const media = getSuggestedMedia(item.title, item.description || '', item.image, item.video);
-                      const displayContent = getListingDisplayContent(item, currentLang, !!showingOriginalListings[item.id]);
-                      const localizedLoc = localizeLocation(item.location, currentLang);
-                      return (
-                        <Marker key={item.id} position={coords} icon={createModernMapIcon(darkMode)}>
-                          <Popup>
-                            <div style={{ minWidth: '190px', maxWidth: '280px', display: 'flex', flexDirection: 'column', gap: '6px', padding: '2px' }}>
-                              <div style={{ position: 'relative' }}>
-                                <img src={media.image} alt={displayContent.title} style={{ width: '100%', height: '80px', objectFit: 'cover', borderRadius: '10px' }} />
-                                {(item.isDemo || (typeof item.id === 'number' && item.id <= 20)) && (
-                                  <span style={{ position: 'absolute', top: '6px', left: '6px', backgroundColor: '#7E22CE', color: '#FFF', fontSize: '9px', fontWeight: '800', padding: '2px 6px', borderRadius: '6px' }}>
-                                    🤖 Annonce IA
-                                  </span>
-                                )}
-                              </div>
-                              <div style={{ fontWeight: '800', fontSize: '12px', color: '#111827', lineHeight: 1.3 }}>{displayContent.title}</div>
-                              <div style={{ fontSize: '11px', color: '#64748B', lineHeight: 1.4 }}>📍 {localizedLoc}</div>
-                              <div style={{ fontSize: '11px', color: '#04265A', fontWeight: '800' }}>{item.compensation}</div>
-                              <button onClick={(event) => { event.stopPropagation(); handleOpenListing(item); }} className="premium-button" style={{ border: 'none', borderRadius: '10px', padding: '7px 10px', backgroundColor: '#04265A', color: '#FFF', fontWeight: '700', cursor: 'pointer', marginTop: '2px', fontSize: '11px' }}>{t('viewListingButton')}</button>
-                            </div>
-                          </Popup>
-                        </Marker>
-                      );
-                    })}
-                  </MapContainer>
+                    + {t('newCategory')}
+                  </button>
                 </div>
               </div>
-            ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px' }}>
-                {filteredListings.map((item) => (
-                  <FeedCardItem
-                    key={item.id}
-                    item={item}
-                    darkMode={darkMode}
-                    hoveredCardId={hoveredCardId}
-                    setHoveredCardId={setHoveredCardId}
-                    hoverSlideIndex={hoverSlideIndex}
-                    handleOpenListing={handleOpenListing}
-                    getSuggestedMedia={getSuggestedMedia}
-                    getFallbackImage={getFallbackImage}
-                    formatCompensation={formatCompensation}
-                    getListingDisplayContent={getListingDisplayContent}
-                    currentLang={currentLang}
-                    showingOriginalListings={showingOriginalListings}
-                    toggleOriginalListing={toggleOriginalListing}
-                    localizeLocation={localizeLocation}
-                    localizeTags={localizeTags}
-                    generateTags={generateTags}
-                    getAuthorAvatar={getAuthorAvatar}
-                    profile={profile}
-                    handleStartDiscussion={handleStartDiscussion}
-                    isAdmin={isAdmin}
-                    onAdminDeleteListing={handleAdminDeleteListing}
-                    t={t}
-                  />
-                ))}
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '14px' }}>
+                <div className="premium-panel" style={{ display: 'inline-flex', border: '1px solid rgba(226,232,240,0.9)', borderRadius: '999px', padding: '4px', backgroundColor: 'rgba(255,255,255,0.8)', boxShadow: '0 4px 20px -4px rgba(15, 23, 42, 0.06)' }}>
+                  <button onClick={() => setViewMode('list')} className="premium-nav-btn" style={{ border: 'none', borderRadius: '999px', padding: '7px 12px', backgroundColor: viewMode === 'list' ? '#04265A' : 'transparent', color: viewMode === 'list' ? '#FFF' : '#64748B', fontWeight: '700', cursor: 'pointer' }}>{t('viewList')}</button>
+                  <button onClick={() => { setViewMode('map'); setIsInfiniteRadius(true); }} className="premium-nav-btn" style={{ border: 'none', borderRadius: '999px', padding: '7px 12px', backgroundColor: viewMode === 'map' ? '#04265A' : 'transparent', color: viewMode === 'map' ? '#FFF' : '#64748B', fontWeight: '700', cursor: 'pointer' }}>{t('viewMap')}</button>
+                </div>
               </div>
-            )}
+
+              <div style={{ display: 'flex', gap: '10px', marginBottom: '22px' }}>
+                <button onClick={() => setFormatFilter('all')} className="premium-button" style={{ flex: 1, padding: '10px', borderRadius: '14px', border: 'none', backgroundColor: formatFilter === 'all' ? '#04265A' : 'rgba(255,255,255,0.8)', color: formatFilter === 'all' ? '#FFF' : '#374151', fontSize: '12px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 4px 16px -4px rgba(15,23,42,0.08)' }}>{t('all')}</button>
+                <button onClick={() => setFormatFilter('onsite')} className="premium-button" style={{ flex: 1, padding: '10px', borderRadius: '14px', border: 'none', backgroundColor: formatFilter === 'onsite' ? '#04265A' : 'rgba(255,255,255,0.8)', color: formatFilter === 'onsite' ? '#FFF' : '#374151', fontSize: '12px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 4px 16px -4px rgba(15,23,42,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}><MapPin size={13} /> {t('onsite')}</button>
+                <button onClick={() => setFormatFilter('remote')} className="premium-button" style={{ flex: 1, padding: '10px', borderRadius: '14px', border: 'none', backgroundColor: formatFilter === 'remote' ? '#04265A' : 'rgba(255,255,255,0.8)', color: formatFilter === 'remote' ? '#FFF' : '#374151', fontSize: '12px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 4px 16px -4px rgba(15,23,42,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}><Video size={13} /> {t('remote')}</button>
+              </div>
+
+              {filteredListings.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '60px 20px', backgroundColor: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderRadius: '24px', border: '1px solid rgba(229,231,235,0.9)', boxShadow: '0 10px 30px rgba(0,0,0,0.04)', animation: 'fadeSlideUp 0.3s ease both' }}>
+                  <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: '#EFF6FF', color: '#04265A', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', boxShadow: '0 8px 20px rgba(4,38,90,0.15)' }}>
+                    <Search size={28} />
+                  </div>
+                  <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#111827', margin: '0 0 8px' }}>Aucune annonce ne correspond à ta recherche</h3>
+                  <p style={{ fontSize: '13px', color: '#64748B', margin: '0 0 20px', maxWidth: '420px', marginInline: 'auto', lineHeight: 1.6 }}>Essaie d'élargir ton rayon de recherche, de changer de catégorie ou de réinitialiser tes filtres pour découvrir les annonces des membres Troco.</p>
+                  <button
+                    onClick={() => { setSearchQuery(''); setSelectedCategory('all'); setRadiusKm(100); setIsInfiniteRadius(true); setSelectedLanguages([]); setSelectedPayment('all'); setFormatFilter('all'); }}
+                    className="premium-button"
+                    style={{ border: 'none', borderRadius: '999px', padding: '10px 22px', backgroundColor: '#04265A', color: '#FFF', fontWeight: '800', fontSize: '13px', cursor: 'pointer', boxShadow: '0 8px 18px rgba(4,38,90,0.2)' }}
+                  >
+                    Réinitialiser tous les filtres
+                  </button>
+                </div>
+              ) : viewMode === 'map' ? (
+                <div className="premium-panel" style={{ backgroundColor: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', borderRadius: '24px', padding: '10px', boxShadow: '0 10px 30px rgba(15,23,42,0.06)' }}>
+                  <div style={{ position: 'relative', width: '100%', height: '550px', borderRadius: '18px', overflow: 'hidden', boxShadow: '0 14px 30px rgba(15,23,42,0.12)' }}>
+                    <MapContainer
+                      center={mapCenter}
+                      zoom={4}
+                      minZoom={2}
+                      maxBounds={[[-85, -180], [85, 180]]}
+                      maxBoundsViscosity={1.0}
+                      worldCopyJump={true}
+                      style={{ width: '100%', height: '100%' }}
+                    >
+                      <TileLayer
+                        noWrap={true}
+                        bounds={[[-85, -180], [85, 180]]}
+                        attribution='&copy; Google Maps'
+                        url={`https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&hl=${currentLang.toLowerCase()}`}
+                      />
+                      {filteredListings.map(item => {
+                        const coords = item.coordinates || getCoordinatesForLocation(item.location);
+                        const media = getSuggestedMedia(item.title, item.description || '', item.image, item.video);
+                        const displayContent = getListingDisplayContent(item, currentLang, !!showingOriginalListings[item.id]);
+                        const localizedLoc = localizeLocation(item.location, currentLang);
+                        return (
+                          <Marker key={item.id} position={coords} icon={createModernMapIcon(darkMode)}>
+                            <Popup>
+                              <div style={{ minWidth: '190px', maxWidth: '280px', display: 'flex', flexDirection: 'column', gap: '6px', padding: '2px' }}>
+                                <div style={{ position: 'relative' }}>
+                                  <img src={media.image} alt={displayContent.title} style={{ width: '100%', height: '80px', objectFit: 'cover', borderRadius: '10px' }} />
+                                  {(item.isDemo || (typeof item.id === 'number' && item.id <= 20)) && (
+                                    <span style={{ position: 'absolute', top: '6px', left: '6px', backgroundColor: '#7E22CE', color: '#FFF', fontSize: '9px', fontWeight: '800', padding: '2px 6px', borderRadius: '6px' }}>
+                                      🤖 Annonce IA
+                                    </span>
+                                  )}
+                                </div>
+                                <div style={{ fontWeight: '800', fontSize: '12px', color: '#111827', lineHeight: 1.3 }}>{displayContent.title}</div>
+                                <div style={{ fontSize: '11px', color: '#64748B', lineHeight: 1.4 }}>📍 {localizedLoc}</div>
+                                <div style={{ fontSize: '11px', color: '#04265A', fontWeight: '800' }}>{item.compensation}</div>
+                                <button onClick={(event) => { event.stopPropagation(); handleOpenListing(item); }} className="premium-button" style={{ border: 'none', borderRadius: '10px', padding: '7px 10px', backgroundColor: '#04265A', color: '#FFF', fontWeight: '700', cursor: 'pointer', marginTop: '2px', fontSize: '11px' }}>{t('viewListingButton')}</button>
+                              </div>
+                            </Popup>
+                          </Marker>
+                        );
+                      })}
+                    </MapContainer>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px' }}>
+                  {filteredListings.map((item) => (
+                    <FeedCardItem
+                      key={item.id}
+                      item={item}
+                      darkMode={darkMode}
+                      hoveredCardId={hoveredCardId}
+                      setHoveredCardId={setHoveredCardId}
+                      hoverSlideIndex={hoverSlideIndex}
+                      handleOpenListing={handleOpenListing}
+                      getSuggestedMedia={getSuggestedMedia}
+                      getFallbackImage={getFallbackImage}
+                      formatCompensation={formatCompensation}
+                      getListingDisplayContent={getListingDisplayContent}
+                      currentLang={currentLang}
+                      showingOriginalListings={showingOriginalListings}
+                      toggleOriginalListing={toggleOriginalListing}
+                      localizeLocation={localizeLocation}
+                      localizeTags={localizeTags}
+                      generateTags={generateTags}
+                      getAuthorAvatar={getAuthorAvatar}
+                      profile={profile}
+                      handleStartDiscussion={handleStartDiscussion}
+                      isAdmin={isAdmin}
+                      onAdminDeleteListing={handleAdminDeleteListing}
+                      t={t}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* BANNIÈRE LATÉRALE DROITE (DESKTOP) */}
+            <aside className="desktop-ad-banner" aria-label="Monétisation & Boost Troco">
+              <div className="ad-card" style={{ border: darkMode ? '1px solid rgba(245,158,11,0.3)' : '1px solid #FDE68A' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '9px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#B45309', backgroundColor: '#FEF3C7', padding: '3px 7px', borderRadius: '6px' }}>
+                    🔥 Troco Boost
+                  </span>
+                  <span style={{ fontSize: '9px', color: darkMode ? '#94A3B8' : '#94A3B8' }}>Visibilité</span>
+                </div>
+                <img
+                  src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=400&q=80"
+                  alt="Booster annonce"
+                  style={{ width: '100%', height: '85px', objectFit: 'cover', borderRadius: '12px', marginBottom: '8px' }}
+                />
+                <div style={{ fontSize: '13px', fontWeight: '800', color: darkMode ? '#FFFFFF' : '#0F172A', marginBottom: '4px', lineHeight: 1.3 }}>
+                  Passez en tête du Feed !
+                </div>
+                <div style={{ fontSize: '11px', color: darkMode ? '#94A3B8' : '#64748B', lineHeight: 1.4, marginBottom: '6px' }}>
+                  Multipliez par 5 vos contacts en plaçant vos annonces en tête d'affiche.
+                </div>
+                <div style={{ fontSize: '11px', fontWeight: '800', color: darkMode ? '#FBBF24' : '#D97706', marginBottom: '8px' }}>
+                  À partir de 2,99€ / 7 jours
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const myListing = listings.find(l => l.author === profile.name) || listings[0];
+                    if (myListing) {
+                      setBoostingListing(myListing);
+                      setIsBoostModalOpen(true);
+                    } else {
+                      setActiveTab('profile');
+                      alert("💡 Créez ou sélectionnez l'une de vos annonces depuis votre profil pour activer le Boost !");
+                    }
+                  }}
+                  className="premium-button"
+                  style={{
+                    width: '100%',
+                    padding: '8px 10px',
+                    borderRadius: '10px',
+                    backgroundColor: '#D97706',
+                    color: '#FFF',
+                    fontSize: '11px',
+                    fontWeight: '800',
+                    border: 'none',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '4px',
+                    boxShadow: '0 4px 12px rgba(217,119,6,0.25)'
+                  }}
+                >
+                  <Flame size={13} /> Booster mon annonce
+                </button>
+              </div>
+
+              <div className="ad-card">
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '9px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#7E22CE', backgroundColor: '#F3E8FF', padding: '3px 7px', borderRadius: '6px' }}>
+                    🏢 Espace Pro
+                  </span>
+                  <span style={{ fontSize: '9px', color: darkMode ? '#94A3B8' : '#94A3B8' }}>Offre Pro</span>
+                </div>
+                <img
+                  src="https://images.unsplash.com/photo-1556761175-5973dc0f32e7?auto=format&fit=crop&w=400&q=80"
+                  alt="Troco Entreprise"
+                  style={{ width: '100%', height: '85px', objectFit: 'cover', borderRadius: '12px', marginBottom: '8px' }}
+                />
+                <div style={{ fontSize: '13px', fontWeight: '800', color: darkMode ? '#FFFFFF' : '#0F172A', marginBottom: '4px', lineHeight: 1.3 }}>
+                  Vous êtes une Entreprise ?
+                </div>
+                <div style={{ fontSize: '11px', color: darkMode ? '#94A3B8' : '#64748B', lineHeight: 1.4, marginBottom: '8px' }}>
+                  Abonnement Pro avec facturation TVA et échanges illimités.
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsCguViewerOpen(true)}
+                  className="premium-button"
+                  style={{
+                    width: '100%',
+                    padding: '8px 10px',
+                    borderRadius: '10px',
+                    backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : '#F1F5F9',
+                    color: darkMode ? '#FFF' : '#0F172A',
+                    fontSize: '11px',
+                    fontWeight: '700',
+                    border: 'none',
+                    cursor: 'pointer'
+                  }}
+                >
+                  En savoir plus
+                </button>
+              </div>
+            </aside>
           </div>
         )}
 

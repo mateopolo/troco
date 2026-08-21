@@ -412,3 +412,65 @@ header {
 body.dark-mode .ios-badge {
   border-color: #0F172A !important;
 }
+
+/* ---- BANNIÈRES PUBLICITAIRES LATÉRALES (DESKTOP) ---- */
+.feed-layout-container {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 24px;
+  width: 100%;
+  position: relative;
+}
+
+.feed-main-content {
+  flex: 1;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.desktop-ad-banner {
+  display: none;
+  width: 210px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 90px;
+  flex-direction: column;
+  gap: 16px;
+  z-index: 10;
+}
+
+@media (min-width: 1300px) {
+  .desktop-ad-banner {
+    display: flex;
+  }
+}
+
+.ad-card {
+  border-radius: 18px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.06);
+  transition: all 0.25s ease;
+  overflow: hidden;
+  position: relative;
+  text-align: left;
+}
+
+body.dark-mode .ad-card {
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+}
+
+.ad-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 32px -6px rgba(4, 38, 90, 0.12);
+}
+
+body.dark-mode .ad-card:hover {
+  box-shadow: 0 16px 32px -6px rgba(96, 165, 250, 0.15);
+}
