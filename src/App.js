@@ -18,6 +18,7 @@ import CookieBanner from './components/CookieBanner';
 import OnboardingWizardModal from './components/OnboardingWizardModal';
 import WelcomeGiftCelebrationModal from './components/WelcomeGiftCelebrationModal';
 import VisioSettlementModal from './components/VisioSettlementModal';
+import KycModal from './components/KycModal';
 import { analyzeContent } from './utils/contentModeration';
 import { validateListingContent, validateChatMessage } from './utils/moderationBlacklist';
 import { DIVERSE_AVATARS, TROCO_CATEGORIES } from './data/categoriesData';
@@ -3228,8 +3229,33 @@ export default function App() {
   // ---- ÉTATS CADRE JURIDIQUE, CGU & RGPD (BLOC 6) ----
   const [isPrivacyCenterOpen, setIsPrivacyCenterOpen] = useState(false);
   const [isCguViewerOpen, setIsCguViewerOpen] = useState(false);
+  // ---- ÉTAT VÉRIFICATION D'IDENTITÉ KYC ----
+  const [isKycModalOpen, setIsKycModalOpen] = useState(false);
   // ---- ÉTAT DU PARCOURS D'ONBOARDING INTERACTIF (CHANTIER 1) ----
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
+
+  const handleKycComplete = async () => {
+    const updatedProfile = {
+      ...profile,
+      kycVerified: true,
+      kycVerifiedAt: new Date().toISOString(),
+    };
+    setProfile(updatedProfile);
+    setProfileDraft(updatedProfile);
+    try {
+      localStorage.setItem('troco_user_profile', JSON.stringify(updatedProfile));
+    } catch (_) {}
+    if (auth.currentUser?.uid) {
+      try {
+        await updateDoc(doc(db, 'users', auth.currentUser.uid), {
+          kycVerified: true,
+          kycVerifiedAt: serverTimestamp(),
+        });
+      } catch (err) {
+        console.warn('[Firestore] Update KYC error:', err);
+      }
+    }
+  };
   const [userTransactions, setUserTransactions] = useState(() => {
     try {
       const saved = localStorage.getItem('troco_user_transactions');
@@ -5604,12 +5630,17 @@ export default function App() {
     const bBoost = (b.isBoosted || b.sponsored) ? 1 : 0;
     if (bBoost !== aBoost) return bBoost - aBoost;
 
-    // 2. Annonces urgentes en deuxième niveau de priorité
+    // 2. Annonces créées par de vrais utilisateurs (humains) avant les annonces Démo / IA
+    const aDemo = (a.isDemo || a.persona || (typeof a.id === 'number' && a.id < 300)) ? 1 : 0;
+    const bDemo = (b.isDemo || b.persona || (typeof b.id === 'number' && b.id < 300)) ? 1 : 0;
+    if (aDemo !== bDemo) return aDemo - bDemo;
+
+    // 3. Annonces urgentes en priorité
     const aUrgent = (a.urgent || a.isUrgent) ? 1 : 0;
     const bUrgent = (b.urgent || b.isUrgent) ? 1 : 0;
     if (bUrgent !== aUrgent) return bUrgent - aUrgent;
 
-    // 3. Tri chronologique par identifiant
+    // 4. Tri chronologique par identifiant / date de création
     const aId = Number(a.id) || 0;
     const bId = Number(b.id) || 0;
     return bId - aId;
@@ -9119,9 +9150,24 @@ export default function App() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
-                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: '700', padding: '6px 10px', borderRadius: '999px', backgroundColor: darkMode ? 'rgba(4,38,90,0.6)' : '#EFF6FF', color: darkMode ? '#93C5FD' : '#04265A' }}>
-                    <ShieldCheck size={12} /> {t('verifiedProfile')}
-                  </div>
+                  {profile.kycVerified ? (
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: '800', padding: '6px 12px', borderRadius: '999px', backgroundColor: darkMode ? 'rgba(16,185,129,0.2)' : '#D1FAE5', color: '#10B981', boxShadow: '0 2px 8px rgba(16,185,129,0.2)' }}>
+                      <ShieldCheck size={13} /> {t('verifiedProfile') || 'Identité Vérifiée'} ✅
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setIsKycModalOpen(true)}
+                      className="premium-button"
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: '800', padding: '6px 12px', borderRadius: '999px',
+                        backgroundColor: darkMode ? 'rgba(16,185,129,0.15)' : '#ECFDF5', color: '#059669',
+                        border: darkMode ? '1px solid rgba(16,185,129,0.3)' : '1px solid #A7F3D0', cursor: 'pointer'
+                      }}
+                    >
+                      <ShieldCheck size={13} /> Vérifier mon identité (+ Badge ✅)
+                    </button>
+                  )}
                   {profile.accountType && (
                     <span style={{
                       fontSize: '11px',
@@ -9149,6 +9195,29 @@ export default function App() {
                 <div style={{ fontSize: '13px', fontWeight: '800', color: darkMode ? '#60A5FA' : '#04265A', marginTop: '2px' }}>{isEditingProfile ? (profileDraft.username || '@user') : (profile.username || '@mateopolo')}</div>
               </div>
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                {!isEditingProfile && !profile.kycVerified && (
+                  <button
+                    type="button"
+                    onClick={() => setIsKycModalOpen(true)}
+                    className="premium-button"
+                    style={{
+                      border: 'none',
+                      borderRadius: '999px',
+                      padding: '10px 16px',
+                      backgroundColor: '#10B981',
+                      color: '#FFF',
+                      fontWeight: '800',
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      boxShadow: '0 4px 14px rgba(16,185,129,0.3)'
+                    }}
+                  >
+                    <ShieldCheck size={14} /> Vérifier mon profil
+                  </button>
+                )}
                 <button
                   onClick={() => setIsAdminPanelOpen(true)}
                   className="premium-button"
@@ -10624,6 +10693,15 @@ export default function App() {
         onTransferTokens={handleTransferCallTokens}
         darkMode={darkMode}
         currentUserTokens={profile?.trocoTokens ?? 10}
+      />
+
+      {/* MODULE DE VÉRIFICATION D'IDENTITÉ (KYC) */}
+      <KycModal
+        isOpen={isKycModalOpen}
+        onClose={() => setIsKycModalOpen(false)}
+        onComplete={handleKycComplete}
+        profile={profile}
+        darkMode={darkMode}
       />
 
       {/* MODALE D'ACCEPTATION & CONSULTATION DES CGU (BLOC 6) */}

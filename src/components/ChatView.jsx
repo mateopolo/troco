@@ -1,8 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Send, Phone, Video, Sparkles, Clock, CheckCircle,
-  ChevronLeft, Globe, MoreVertical, Edit2, Trash2, Copy, Check, X
+  ChevronLeft, Globe, MoreVertical, Edit2, Trash2, Copy, Check, X,
+  AlertTriangle
 } from 'lucide-react';
+import { doc, deleteDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 import { subscribeTranslations } from '../utils/translator';
 
 export default function ChatView({
@@ -33,7 +36,15 @@ export default function ChatView({
   showingOriginalMessages = {},
   toggleOriginalMessage = () => {}
 }) {
-  const [deletedChatIds, setDeletedChatIds] = React.useState(new Set());
+  const [deletedChatIds, setDeletedChatIds] = useState(() => {
+    try {
+      const saved = localStorage.getItem('troco_deleted_chats');
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch (_) {
+      return new Set();
+    }
+  });
+  const [confirmDeleteChat, setConfirmDeleteChat] = useState(null);
   const [mobileSubView, setMobileSubView] = useState('list'); // 'list' | 'room'
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [activeMenuMsgId, setActiveMenuMsgId] = useState(null);
@@ -151,6 +162,38 @@ export default function ChatView({
     }
     // 2. Sinon, le lastMessage provenant de Firestore
     return chat.lastMessage || '';
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!confirmDeleteChat) return;
+    const targetChat = confirmDeleteChat;
+    const targetId = targetChat.id;
+
+    // 1. Update local deletedChatIds set & localStorage
+    setDeletedChatIds(prev => {
+      const next = new Set([...prev, targetId]);
+      try {
+        localStorage.setItem('troco_deleted_chats', JSON.stringify([...next]));
+      } catch (_) {}
+      return next;
+    });
+
+    // 2. If active chat was deleted, reset selectedChat
+    if (activeChatObj?.id === targetId || effectiveSelectedChat?.id === targetId) {
+      setSelectedChat(null);
+    }
+
+    // 3. Firestore deletion
+    try {
+      const firestoreId = targetChat.firestoreId || (typeof targetId === 'string' ? targetId : null);
+      if (firestoreId) {
+        await deleteDoc(doc(db, 'chats', firestoreId));
+      }
+    } catch (err) {
+      console.warn('[Firestore] Chat delete error:', err);
+    }
+
+    setConfirmDeleteChat(null);
   };
 
   const handleSelectChatMobile = (chat) => {
@@ -349,8 +392,7 @@ export default function ChatView({
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      setDeletedChatIds(prev => new Set([...prev, chat.id]));
-                      if (isSelected) setSelectedChat(null);
+                      setConfirmDeleteChat(chat);
                     }}
                     title="Supprimer cette conversation"
                     className="chat-delete-btn"
@@ -887,6 +929,130 @@ export default function ChatView({
           </div>
             </>
           )}
+        </div>
+      )}
+
+      {/* MODALE DE CONFIRMATION DE SUPPRESSION DE DISCUSSION */}
+      {confirmDeleteChat && (
+        <div
+          onClick={() => setConfirmDeleteChat(null)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '20px'
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: darkMode ? '#1E293B' : '#FFFFFF',
+              color: darkMode ? '#F8FAFC' : '#0F172A',
+              borderRadius: '24px',
+              padding: '28px 24px',
+              maxWidth: '420px',
+              width: '100%',
+              boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.35)',
+              border: darkMode ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(226, 232, 240, 0.9)',
+              textAlign: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '16px',
+              animation: 'fadeIn 0.2s ease-out'
+            }}
+          >
+            <div style={{
+              width: '56px',
+              height: '56px',
+              borderRadius: '50%',
+              backgroundColor: darkMode ? 'rgba(239, 68, 68, 0.2)' : '#FEE2E2',
+              color: '#EF4444',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 8px 20px rgba(239, 68, 68, 0.2)'
+            }}>
+              <AlertTriangle size={28} />
+            </div>
+
+            <div>
+              <h3 style={{
+                margin: '0 0 8px 0',
+                fontSize: '18px',
+                fontWeight: '800',
+                color: darkMode ? '#FFFFFF' : '#0F172A'
+              }}>
+                Supprimer cette discussion ?
+              </h3>
+              <p style={{
+                margin: 0,
+                fontSize: '13px',
+                lineHeight: 1.5,
+                color: darkMode ? '#94A3B8' : '#64748B'
+              }}>
+                Es-tu sûr de vouloir supprimer la conversation avec <strong style={{ color: darkMode ? '#FFF' : '#111' }}>{confirmDeleteChat.user}</strong> ? Cette action est irréversible.
+              </p>
+            </div>
+
+            <div style={{
+              display: 'flex',
+              gap: '12px',
+              width: '100%',
+              marginTop: '8px'
+            }}>
+              <button
+                type="button"
+                onClick={() => setConfirmDeleteChat(null)}
+                style={{
+                  flex: 1,
+                  padding: '12px 16px',
+                  borderRadius: '14px',
+                  border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #E2E8F0',
+                  backgroundColor: darkMode ? 'rgba(255,255,255,0.05)' : '#F8FAFC',
+                  color: darkMode ? '#E2E8F0' : '#475569',
+                  fontSize: '13px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                className="premium-button"
+                style={{
+                  flex: 1,
+                  padding: '12px 16px',
+                  borderRadius: '14px',
+                  border: 'none',
+                  backgroundColor: '#EF4444',
+                  color: '#FFFFFF',
+                  fontSize: '13px',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                  boxShadow: '0 6px 18px rgba(239, 68, 68, 0.35)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px'
+                }}
+              >
+                <Trash2 size={15} /> Supprimer
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

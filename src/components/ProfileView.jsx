@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Star, ShieldCheck, Camera, Pencil, Check, Plus, Trash2, History } from 'lucide-react';
+import KycModal from './KycModal';
 
 export default function ProfileView({
   activeTab,
@@ -38,6 +39,8 @@ export default function ProfileView({
   AnimatedEuroBalance,
   AnimatedTokenBalance
 }) {
+  const [isKycModalOpen, setIsKycModalOpen] = useState(false);
+
   if (activeTab !== 'profile') return null;
 
   return (
@@ -99,14 +102,24 @@ export default function ProfileView({
           <div style={{ flex: 1, minWidth: '260px' }}>
             {!isEditingProfile ? (
               <>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px', flexWrap: 'wrap' }}>
                   <h1 style={{ margin: 0, fontSize: '24px', fontWeight: '800', color: darkMode ? '#FFF' : '#111827' }}>
                     {profile.name}
                   </h1>
                   <span style={{ fontSize: '13px', color: '#64748B', fontWeight: '600' }}>{profile.username}</span>
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: '#D1FAE5', color: '#059669', fontSize: '11px', fontWeight: '800', padding: '3px 8px', borderRadius: '999px' }}>
-                    <ShieldCheck size={13} /> Certifié
-                  </span>
+                  {profile.kycVerified ? (
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: '#D1FAE5', color: '#059669', fontSize: '11px', fontWeight: '800', padding: '3px 8px', borderRadius: '999px', boxShadow: '0 2px 8px rgba(16,185,129,0.2)' }}>
+                      <ShieldCheck size={13} /> Identité Vérifiée ✅
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setIsKycModalOpen(true)}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: darkMode ? 'rgba(16,185,129,0.15)' : '#ECFDF5', color: '#059669', border: darkMode ? '1px solid rgba(16,185,129,0.3)' : '1px solid #A7F3D0', fontSize: '11px', fontWeight: '800', padding: '4px 10px', borderRadius: '999px', cursor: 'pointer' }}
+                    >
+                      <ShieldCheck size={13} /> Vérifier mon identité (+ Badge ✅)
+                    </button>
+                  )}
                 </div>
 
                 <div style={{ fontSize: '13px', color: darkMode ? '#CBD5E1' : '#475569', lineHeight: 1.6, marginBottom: '14px' }}>
@@ -159,7 +172,23 @@ export default function ProfileView({
           </div>
 
           {/* BOUTON ÉDITION / SAUVEGARDE */}
-          <div>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+            {!isEditingProfile && !profile.kycVerified && (
+              <button
+                type="button"
+                onClick={() => setIsKycModalOpen(true)}
+                className="premium-button"
+                style={{
+                  border: 'none', borderRadius: '14px', padding: '10px 16px',
+                  backgroundColor: '#10B981',
+                  color: '#FFF', fontWeight: '800', fontSize: '13px',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
+                  boxShadow: '0 4px 14px rgba(16,185,129,0.3)'
+                }}
+              >
+                <ShieldCheck size={16} /> Vérifier mon profil
+              </button>
+            )}
             {!isEditingProfile ? (
               <button
                 onClick={handleStartEdit}
@@ -385,6 +414,23 @@ export default function ProfileView({
           ))}
         </div>
       </div>
+
+      {/* MODALE DE VÉRIFICATION D'IDENTITÉ (KYC) */}
+      <KycModal
+        isOpen={isKycModalOpen}
+        onClose={() => setIsKycModalOpen(false)}
+        onComplete={() => {
+          if (setProfile) {
+            setProfile(prev => ({
+              ...prev,
+              kycVerified: true,
+              kycVerifiedAt: new Date().toISOString()
+            }));
+          }
+        }}
+        profile={profile}
+        darkMode={darkMode}
+      />
     </div>
   );
 }
