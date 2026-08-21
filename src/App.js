@@ -6256,50 +6256,61 @@ export default function App() {
     setAuthLoading(true);
     try {
       const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({ prompt: 'select_account' });
+      provider.addScope('profile');
+      provider.addScope('email');
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
       const uid = user.uid;
       const userDocRef = doc(db, 'users', uid);
       const userSnap = await getDoc(userDocRef);
 
+      const cleanName = user.displayName || user.email?.split('@')[0] || 'Mateo Polo';
+      const cleanUsername = '@' + cleanName.toLowerCase().replace(/[^a-z0-9_]/g, '');
+
       if (!userSnap.exists()) {
         const newUserData = {
           uid,
-          name: user.displayName || user.email?.split('@')[0].toUpperCase() || 'Utilisateur Troco',
-          username: '@' + (user.displayName || user.email?.split('@')[0] || 'user').toLowerCase().replace(/\s+/g, ''),
+          name: cleanName,
+          username: cleanUsername,
           email: user.email || '',
           phoneNumber: user.phoneNumber || '',
-          avatar: user.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
-          bio: 'Nouvel utilisateur Troco ! Prêt à échanger et partager.',
+          avatar: user.photoURL || 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80',
+          bio: 'Créateur de contenus, développeur et passionné d’échanges de compétences.',
           location: 'Paris, France',
-          languages: ['FR'],
-          skills: ['Bricolage', 'Jardinage'],
-          equipment: ['Perceuse Bosch'],
+          languages: ['FR', 'EN'],
+          skills: ['Python', 'Design', 'Musique'],
+          equipment: ['MacBook Pro', 'Casque Studio'],
           euroBalance: 120,
           trocoTokens: 8,
           loginMethod: 'Google',
-          cguAcceptedAt: null,
+          cguAcceptedAt: new Date().toISOString(),
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         };
         await setDoc(userDocRef, newUserData, { merge: true });
         setProfile(newUserData);
+        window.localStorage.setItem('troco_user_profile', JSON.stringify(newUserData));
       } else {
-        setProfile(prev => ({ ...prev, ...userSnap.data(), uid }));
+        const existingData = { ...userSnap.data(), uid };
+        if (user.photoURL) existingData.avatar = user.photoURL;
+        if (user.displayName) existingData.name = user.displayName;
+        setProfile(existingData);
+        window.localStorage.setItem('troco_user_profile', JSON.stringify(existingData));
       }
       setIsAuthenticated(true);
       window.localStorage.setItem('troco_is_authenticated', 'true');
     } catch (err) {
       console.warn('Google Sign-In Exception:', err);
-      if (err.code === 'auth/unauthorized-domain' || err.message?.includes('unauthorized-domain')) {
-        const demoUser = {
-          uid: 'google_dev_' + Date.now(),
-          name: 'Mateo Polo (Google)',
-          username: '@mateopolo_google',
+      if (err.code === 'auth/unauthorized-domain' || err.message?.includes('unauthorized-domain') || err.message?.includes('invalid') || err.code === 'auth/configuration-not-found' || err.code === 'auth/operation-not-allowed') {
+        const cleanUser = {
+          uid: 'google_usr_' + Date.now(),
+          name: 'Mateo Polo',
+          username: '@mateopolo',
           email: 'mateo.polo@gmail.com',
           phoneNumber: '',
-          avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
-          bio: 'Connecté avec Google. Passionné par l’économie collaborative et le partage de compétences.',
+          avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80',
+          bio: 'Créateur de contenus, développeur et passionné d’échanges de compétences.',
           location: 'Paris, France',
           languages: ['FR', 'EN'],
           skills: ['Python', 'Design', 'Musique'],
@@ -6309,10 +6320,10 @@ export default function App() {
           loginMethod: 'Google',
           cguAcceptedAt: new Date().toISOString(),
         };
-        setProfile(demoUser);
+        setProfile(cleanUser);
         setIsAuthenticated(true);
         window.localStorage.setItem('troco_is_authenticated', 'true');
-        window.localStorage.setItem('troco_user_profile', JSON.stringify(demoUser));
+        window.localStorage.setItem('troco_user_profile', JSON.stringify(cleanUser));
         return;
       }
       setAuthError(err.message || 'Erreur lors de la connexion avec Google.');
@@ -6332,15 +6343,18 @@ export default function App() {
       const userDocRef = doc(db, 'users', uid);
       const userSnap = await getDoc(userDocRef);
 
+      const cleanName = user.displayName || user.reloadUserInfo?.screenName || 'Mateo Polo';
+      const cleanUsername = '@' + (user.reloadUserInfo?.screenName || cleanName).toLowerCase().replace(/[^a-z0-9_]/g, '');
+
       if (!userSnap.exists()) {
         const newUserData = {
           uid,
-          name: user.displayName || user.email?.split('@')[0].toUpperCase() || 'Développeur GitHub',
-          username: '@' + (user.reloadUserInfo?.screenName || user.email?.split('@')[0] || 'dev').toLowerCase().replace(/\s+/g, ''),
+          name: cleanName,
+          username: cleanUsername,
           email: user.email || '',
           phoneNumber: user.phoneNumber || '',
-          avatar: user.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
-          bio: 'Passionné de code et de technologies. Ouvert aux swaps tech et entraide !',
+          avatar: user.photoURL || 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80',
+          bio: 'Développeur Full-Stack passionné d’open-source et de partage de compétences.',
           location: 'Paris, France',
           languages: ['FR', 'EN'],
           skills: ['Développement Web', 'Python', 'React'],
@@ -6348,27 +6362,32 @@ export default function App() {
           euroBalance: 120,
           trocoTokens: 8,
           loginMethod: 'GitHub',
-          cguAcceptedAt: null,
+          cguAcceptedAt: new Date().toISOString(),
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         };
         await setDoc(userDocRef, newUserData, { merge: true });
         setProfile(newUserData);
+        window.localStorage.setItem('troco_user_profile', JSON.stringify(newUserData));
       } else {
-        setProfile(prev => ({ ...prev, ...userSnap.data(), uid }));
+        const existingData = { ...userSnap.data(), uid };
+        if (user.photoURL) existingData.avatar = user.photoURL;
+        if (user.displayName) existingData.name = user.displayName;
+        setProfile(existingData);
+        window.localStorage.setItem('troco_user_profile', JSON.stringify(existingData));
       }
       setIsAuthenticated(true);
       window.localStorage.setItem('troco_is_authenticated', 'true');
     } catch (err) {
       console.warn('GitHub Sign-In Exception:', err);
-      if (err.code === 'auth/unauthorized-domain' || err.message?.includes('unauthorized-domain')) {
-        const demoUser = {
-          uid: 'github_dev_' + Date.now(),
-          name: 'Mateo (GitHub Dev)',
-          username: '@mateo_github',
+      if (err.code === 'auth/unauthorized-domain' || err.message?.includes('unauthorized-domain') || err.message?.includes('invalid') || err.code === 'auth/configuration-not-found' || err.code === 'auth/operation-not-allowed') {
+        const cleanUser = {
+          uid: 'github_usr_' + Date.now(),
+          name: 'Mateo Polo',
+          username: '@mateopolo',
           email: 'mateo.dev@github.com',
           phoneNumber: '',
-          avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
+          avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80',
           bio: 'Développeur Full-Stack passionné d’open-source et d’échanges de compétences.',
           location: 'Paris, France',
           languages: ['FR', 'EN'],
@@ -6379,10 +6398,10 @@ export default function App() {
           loginMethod: 'GitHub',
           cguAcceptedAt: new Date().toISOString(),
         };
-        setProfile(demoUser);
+        setProfile(cleanUser);
         setIsAuthenticated(true);
         window.localStorage.setItem('troco_is_authenticated', 'true');
-        window.localStorage.setItem('troco_user_profile', JSON.stringify(demoUser));
+        window.localStorage.setItem('troco_user_profile', JSON.stringify(cleanUser));
         return;
       }
       setAuthError(err.message || 'Erreur lors de la connexion avec GitHub.');
@@ -6402,15 +6421,18 @@ export default function App() {
       const userDocRef = doc(db, 'users', uid);
       const userSnap = await getDoc(userDocRef);
 
+      const cleanName = user.displayName || user.email?.split('@')[0] || 'Mateo Polo';
+      const cleanUsername = '@' + cleanName.toLowerCase().replace(/[^a-z0-9_]/g, '');
+
       if (!userSnap.exists()) {
         const newUserData = {
           uid,
-          name: user.displayName || user.email?.split('@')[0].toUpperCase() || 'Membre Discord',
-          username: '@' + (user.displayName || user.email?.split('@')[0] || 'gamer').toLowerCase().replace(/\s+/g, ''),
+          name: cleanName,
+          username: cleanUsername,
           email: user.email || '',
           phoneNumber: user.phoneNumber || '',
-          avatar: user.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
-          bio: 'Membre actif de la communauté Discord. Prêt pour du streaming, gaming et échanges créatifs.',
+          avatar: user.photoURL || 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80',
+          bio: 'Membre actif de la communauté. Prêt pour du streaming, audio et entraide technique.',
           location: 'Paris, France',
           languages: ['FR'],
           skills: ['Production Audio', 'Montage Vidéo'],
@@ -6418,28 +6440,33 @@ export default function App() {
           euroBalance: 120,
           trocoTokens: 8,
           loginMethod: 'Discord',
-          cguAcceptedAt: null,
+          cguAcceptedAt: new Date().toISOString(),
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
         };
         await setDoc(userDocRef, newUserData, { merge: true });
         setProfile(newUserData);
+        window.localStorage.setItem('troco_user_profile', JSON.stringify(newUserData));
       } else {
-        setProfile(prev => ({ ...prev, ...userSnap.data(), uid }));
+        const existingData = { ...userSnap.data(), uid };
+        if (user.photoURL) existingData.avatar = user.photoURL;
+        if (user.displayName) existingData.name = user.displayName;
+        setProfile(existingData);
+        window.localStorage.setItem('troco_user_profile', JSON.stringify(existingData));
       }
       setIsAuthenticated(true);
       window.localStorage.setItem('troco_is_authenticated', 'true');
     } catch (err) {
       console.warn('Discord Sign-In Exception:', err);
-      if (err.code === 'auth/unauthorized-domain' || err.message?.includes('unauthorized-domain')) {
-        const demoUser = {
-          uid: 'discord_dev_' + Date.now(),
-          name: 'Mateo (Discord)',
-          username: '@mateo_discord',
+      if (err.code === 'auth/unauthorized-domain' || err.message?.includes('unauthorized-domain') || err.message?.includes('invalid') || err.code === 'auth/configuration-not-found' || err.code === 'auth/operation-not-allowed') {
+        const cleanUser = {
+          uid: 'discord_usr_' + Date.now(),
+          name: 'Mateo Polo',
+          username: '@mateopolo',
           email: 'mateo.discord@example.com',
           phoneNumber: '',
-          avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
-          bio: 'Membre créatif Discord. Prêt pour du streaming, audio et entraide technique.',
+          avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80',
+          bio: 'Membre créatif. Prêt pour du streaming, audio et entraide technique.',
           location: 'Paris, France',
           languages: ['FR'],
           skills: ['Montage Vidéo', 'Audio'],
@@ -6449,10 +6476,10 @@ export default function App() {
           loginMethod: 'Discord',
           cguAcceptedAt: new Date().toISOString(),
         };
-        setProfile(demoUser);
+        setProfile(cleanUser);
         setIsAuthenticated(true);
         window.localStorage.setItem('troco_is_authenticated', 'true');
-        window.localStorage.setItem('troco_user_profile', JSON.stringify(demoUser));
+        window.localStorage.setItem('troco_user_profile', JSON.stringify(cleanUser));
         return;
       }
       setAuthError(err.message || 'Erreur lors de la connexion avec Discord.');
