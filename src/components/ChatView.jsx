@@ -13,6 +13,8 @@ export default function ChatView({
   readChats,
   chatInputText,
   setChatInputText,
+  onTypingChange,
+  isThemTyping = false,
   handleSendMessage,
   handleEditMessage,
   handleDeleteMessage,
@@ -248,9 +250,13 @@ export default function ChatView({
                   style={{
                     display: 'flex', alignItems: 'center', gap: '12px', padding: '14px',
                     borderRadius: '18px', border: 'none', cursor: 'pointer', textAlign: 'left',
-                    backgroundColor: isSelected ? (darkMode ? 'rgba(4,38,90,0.65)' : '#EFF6FF') : (darkMode ? 'rgba(15,23,42,0.45)' : 'rgba(248,250,252,0.8)'),
-                    borderLeft: isSelected ? (darkMode ? '4px solid #60A5FA' : '4px solid #04265A') : (isUnread ? (darkMode ? '4px solid #38BDF8' : '4px solid #0284C7') : '4px solid transparent'),
-                    boxShadow: isSelected ? '0 4px 14px rgba(4,38,90,0.1)' : 'none',
+                    backgroundColor: isSelected
+                      ? (darkMode ? 'rgba(4,38,90,0.75)' : '#EFF6FF')
+                      : (isUnread ? (darkMode ? 'rgba(4,38,90,0.5)' : '#F0F9FF') : (darkMode ? 'rgba(15,23,42,0.45)' : 'rgba(248,250,252,0.8)')),
+                    borderLeft: isSelected
+                      ? (darkMode ? '4px solid #60A5FA' : '4px solid #04265A')
+                      : (isUnread ? (darkMode ? '4px solid #38BDF8' : '4px solid #0284C7') : '4px solid transparent'),
+                    boxShadow: isSelected ? '0 4px 14px rgba(4,38,90,0.15)' : (isUnread ? '0 2px 10px rgba(56,189,248,0.1)' : 'none'),
                     transition: 'all 0.2s ease'
                   }}
                 >
@@ -259,12 +265,12 @@ export default function ChatView({
                     {unreadCount > 0 && (
                       <span style={{
                         position: 'absolute', top: '-4px', right: '-4px',
-                        minWidth: '18px', height: '18px', padding: '0 4px',
+                        minWidth: '18px', height: '18px', padding: '0 5px',
                         backgroundColor: '#EF4444', color: '#FFF',
                         borderRadius: '999px', border: '2px solid #FFF',
-                        fontSize: '10px', fontWeight: '800',
+                        fontSize: '10px', fontWeight: '900',
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        boxShadow: '0 2px 6px rgba(239,68,68,0.5)'
+                        boxShadow: '0 2px 8px rgba(239,68,68,0.6)'
                       }}>
                         {unreadCount > 9 ? '+9' : `+${unreadCount}`}
                       </span>
@@ -272,13 +278,13 @@ export default function ChatView({
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px' }}>
-                      <span style={{ fontWeight: isUnread ? '800' : '600', fontSize: '14px', color: darkMode ? '#FFFFFF' : '#111827' }}>{chat.user}</span>
-                      <span style={{ fontSize: '10px', color: isUnread ? (darkMode ? '#60A5FA' : '#04265A') : (darkMode ? '#94A3B8' : '#64748B'), fontWeight: isUnread ? '800' : '600' }}>{statusText}</span>
+                      <span style={{ fontWeight: isUnread ? '800' : '600', fontSize: isUnread ? '14.5px' : '14px', color: isUnread ? (darkMode ? '#FFFFFF' : '#0F172A') : (darkMode ? '#CBD5E1' : '#111827') }}>{chat.user}</span>
+                      <span style={{ fontSize: '10px', color: isUnread ? (darkMode ? '#38BDF8' : '#0284C7') : (darkMode ? '#94A3B8' : '#64748B'), fontWeight: isUnread ? '800' : '600' }}>{statusText}</span>
                     </div>
-                    <div style={{ fontSize: '12px', fontWeight: isUnread ? '800' : '500', color: darkMode ? '#60A5FA' : '#04265A', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: '2px' }}>
+                    <div style={{ fontSize: '12px', fontWeight: isUnread ? '800' : '500', color: isUnread ? (darkMode ? '#60A5FA' : '#0369A1') : (darkMode ? '#94A3B8' : '#04265A'), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: '2px' }}>
                       {listingTitleText}
                     </div>
-                    <div style={{ fontSize: '11px', fontWeight: isUnread ? '700' : '400', color: isUnread ? (darkMode ? '#F8FAFC' : '#111827') : (darkMode ? '#CBD5E1' : '#64748B'), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <div style={{ fontSize: '11px', fontWeight: isUnread ? '800' : '400', color: isUnread ? (darkMode ? '#F8FAFC' : '#0F172A') : (darkMode ? '#94A3B8' : '#64748B'), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {lastMsgText}
                     </div>
                   </div>
@@ -379,40 +385,41 @@ export default function ChatView({
                 return (
                   <div key={msg.id} style={{
                     width: '100%',
-                    border: darkMode ? '1px solid rgba(20,184,166,0.4)' : '1px solid #99F6E4',
-                    borderRadius: '18px',
-                    padding: '16px',
-                    backgroundColor: darkMode ? 'rgba(15,23,42,0.85)' : '#F0FDFA',
-                    boxShadow: '0 8px 24px rgba(15,23,42,0.06)'
+                    border: darkMode ? '1.5px solid rgba(56,189,248,0.45)' : '1.5px solid #0284C7',
+                    borderRadius: '20px',
+                    padding: '18px',
+                    backgroundColor: darkMode ? 'rgba(15,23,42,0.92)' : '#F0F9FF',
+                    backgroundImage: darkMode ? 'linear-gradient(135deg, rgba(15,23,42,0.95) 0%, rgba(30,41,59,0.85) 100%)' : 'linear-gradient(135deg, #FFFFFF 0%, #F0F9FF 100%)',
+                    boxShadow: darkMode ? '0 10px 30px rgba(0,0,0,0.45), 0 0 16px rgba(56,189,248,0.12)' : '0 8px 24px rgba(2,132,199,0.12)'
                   }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', flexWrap: 'wrap', gap: '6px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '800', color: darkMode ? '#93C5FD' : '#04265A' }}>
-                        <Sparkles size={15} color={darkMode ? '#60A5FA' : '#04265A'} />
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '800', color: darkMode ? '#93C5FD' : '#0369A1' }}>
+                        <Sparkles size={16} color={darkMode ? '#38BDF8' : '#0284C7'} />
                         {isMine ? (t('myDealProposal') || 'Ma proposition de Deal') : (t('receivedDealProposal') || 'Proposition de Deal reçue')}
                       </div>
                       {status === 'pending' && isIncoming && (
-                        <span style={{ fontSize: '11px', fontWeight: '800', backgroundColor: darkMode ? 'rgba(245,158,11,0.2)' : '#FFFBEB', color: darkMode ? '#FBBF24' : '#D97706', padding: '4px 10px', borderRadius: '999px', border: darkMode ? '1px solid rgba(245,158,11,0.4)' : '1px solid #FDE68A' }}>
+                        <span style={{ fontSize: '11px', fontWeight: '800', backgroundColor: darkMode ? 'rgba(245,158,11,0.25)' : '#FEF3C7', color: darkMode ? '#FDE68A' : '#92400E', padding: '5px 12px', borderRadius: '999px', border: '1.5px solid #F59E0B', boxShadow: '0 2px 8px rgba(245,158,11,0.2)' }}>
                           ⚡ {t('waitingYourResponse') || 'En attente de ta réponse'}
                         </span>
                       )}
                       {status === 'pending' && isMine && (
-                        <span style={{ fontSize: '11px', fontWeight: '800', backgroundColor: darkMode ? 'rgba(148,163,184,0.2)' : '#F3F4F6', color: darkMode ? '#CBD5E1' : '#6B7280', padding: '4px 10px', borderRadius: '999px' }}>
+                        <span style={{ fontSize: '11px', fontWeight: '800', backgroundColor: darkMode ? 'rgba(148,163,184,0.25)' : '#F1F5F9', color: darkMode ? '#E2E8F0' : '#475569', padding: '5px 12px', borderRadius: '999px', border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #CBD5E1' }}>
                           {t('waitingResponse') || 'En attente de réponse'}
                         </span>
                       )}
                       {(status === 'confirmed' || status === 'accepted') && (
-                        <span style={{ fontSize: '11px', fontWeight: '800', backgroundColor: darkMode ? 'rgba(16,185,129,0.2)' : '#D1FAE5', color: darkMode ? '#34D399' : '#059669', padding: '4px 10px', borderRadius: '999px', border: darkMode ? '1px solid rgba(16,185,129,0.4)' : '1px solid #A7F3D0' }}>
+                        <span style={{ fontSize: '11px', fontWeight: '800', backgroundColor: darkMode ? 'rgba(16,185,129,0.25)' : '#D1FAE5', color: darkMode ? '#6EE7B7' : '#065F46', padding: '5px 12px', borderRadius: '999px', border: '1.5px solid #10B981', boxShadow: '0 2px 8px rgba(16,185,129,0.2)' }}>
                           ✓ {t('dealValidatedConfirmed') || 'Deal Validé & Confirmé'}
                         </span>
                       )}
                       {status === 'declined' && (
-                        <span style={{ fontSize: '11px', fontWeight: '800', backgroundColor: darkMode ? 'rgba(239,68,68,0.2)' : '#FEE2E2', color: darkMode ? '#F87171' : '#DC2626', padding: '4px 10px', borderRadius: '999px' }}>
-                          {t('declined') || 'Refusé'}
+                        <span style={{ fontSize: '11px', fontWeight: '800', backgroundColor: darkMode ? 'rgba(239,68,68,0.25)' : '#FEE2E2', color: darkMode ? '#FCA5A5' : '#991B1B', padding: '5px 12px', borderRadius: '999px', border: '1.5px solid #EF4444' }}>
+                          ✕ {t('declined') || 'Refusé'}
                         </span>
                       )}
                     </div>
 
-                    <div style={{ fontSize: '13px', color: darkMode ? '#E2E8F0' : '#334155', marginBottom: '8px', lineHeight: 1.5, fontWeight: '500' }}>
+                    <div style={{ fontSize: '13.5px', color: darkMode ? '#F1F5F9' : '#1E293B', marginBottom: '10px', lineHeight: 1.55, fontWeight: '600' }}>
                       {dealConditionsText}
                     </div>
                     {currentLang !== 'FR' && (
@@ -430,10 +437,11 @@ export default function ChatView({
                       </button>
                     )}
 
-                    <div style={{ display: 'flex', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
-                      {terms.euroAmount > 0 && <span style={{ backgroundColor: darkMode ? 'rgba(30,41,59,0.9)' : '#FFF', border: '1px solid #A7F3D0', color: darkMode ? '#60A5FA' : '#1D4ED8', borderRadius: '999px', padding: '5px 12px', fontSize: '12px', fontWeight: '800' }}>💶 {terms.euroAmount}€</span>}
-                      {terms.trocoTokens > 0 && <span style={{ backgroundColor: darkMode ? 'rgba(30,41,59,0.9)' : '#FFF', border: '1px solid #A7F3D0', color: darkMode ? '#60A5FA' : '#1D4ED8', borderRadius: '999px', padding: '5px 12px', fontSize: '12px', fontWeight: '800' }}>🪙 {terms.trocoTokens} {t('tokens') || 'Jeton(s)'}</span>}
-                      {terms.euroAmount === 0 && terms.trocoTokens === 0 && <span style={{ backgroundColor: darkMode ? 'rgba(30,41,59,0.9)' : '#FFF', border: '1px solid #A7F3D0', color: darkMode ? '#60A5FA' : '#1D4ED8', borderRadius: '999px', padding: '5px 12px', fontSize: '12px', fontWeight: '800' }}>🤝 {t('directSwap') || 'Troc direct'}</span>}
+                    {/* BADGES DE CONTREPARTIE À HAUT CONTRASTE */}
+                    <div style={{ display: 'flex', gap: '8px', marginBottom: '14px', flexWrap: 'wrap' }}>
+                      {terms.euroAmount > 0 && <span style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', border: darkMode ? '1.5px solid #38BDF8' : '1.5px solid #0284C7', color: darkMode ? '#38BDF8' : '#0369A1', borderRadius: '999px', padding: '5px 14px', fontSize: '12px', fontWeight: '800', boxShadow: '0 2px 8px rgba(2,132,199,0.15)' }}>💶 {terms.euroAmount}€</span>}
+                      {terms.trocoTokens > 0 && <span style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', border: darkMode ? '1.5px solid #FBBF24' : '1.5px solid #D97706', color: darkMode ? '#FBBF24' : '#B45309', borderRadius: '999px', padding: '5px 14px', fontSize: '12px', fontWeight: '800', boxShadow: '0 2px 8px rgba(245,158,11,0.15)' }}>🪙 {terms.trocoTokens} {t('tokens') || 'Jeton(s)'}</span>}
+                      {terms.euroAmount === 0 && terms.trocoTokens === 0 && <span style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', border: darkMode ? '1.5px solid #34D399' : '1.5px solid #059669', color: darkMode ? '#34D399' : '#047857', borderRadius: '999px', padding: '5px 14px', fontSize: '12px', fontWeight: '800', boxShadow: '0 2px 8px rgba(16,185,129,0.15)' }}>🤝 {t('directSwap') || 'Troc direct'}</span>}
                     </div>
 
                     {status === 'pending' && isIncoming && (
@@ -469,7 +477,7 @@ export default function ChatView({
                     )}
 
                     {status === 'pending' && isMine && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: darkMode ? 'rgba(15,23,42,0.5)' : '#F8FAFC', border: darkMode ? '1px dashed rgba(255,255,255,0.2)' : '1px dashed #E2E8F0', color: darkMode ? '#CBD5E1' : '#64748B', borderRadius: '12px', padding: '10px 14px', fontSize: '12px', fontWeight: '700' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: darkMode ? 'rgba(15,23,42,0.5)' : '#F8FAFC', border: darkMode ? '1px dashed rgba(255,255,255,0.2)' : '1px dashed #CBD5E1', color: darkMode ? '#CBD5E1' : '#64748B', borderRadius: '12px', padding: '10px 14px', fontSize: '12px', fontWeight: '700' }}>
                         <Clock size={14} /> {t('waitingInterlocutorResponse') || "En attente de la réponse de l'interlocuteur..."}
                       </div>
                     )}
@@ -669,6 +677,32 @@ export default function ChatView({
                 </div>
               );
             })}
+            {/* INDICATEUR DE SAISIE EN DIRECT (TYPING INDICATOR ANIMÉ) */}
+            {isThemTyping && (
+              <div style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '6px 14px',
+                borderRadius: '16px 16px 16px 4px',
+                backgroundColor: darkMode ? 'rgba(15,23,42,0.92)' : '#F0F9FF',
+                border: darkMode ? '1.5px solid rgba(56,189,248,0.45)' : '1.5px solid #0284C7',
+                boxShadow: darkMode ? '0 4px 14px rgba(0,0,0,0.3), 0 0 10px rgba(56,189,248,0.15)' : '0 4px 12px rgba(2,132,199,0.12)',
+                alignSelf: 'flex-start',
+                marginBottom: '4px',
+                animation: 'typingFadeIn 0.25s ease-out'
+              }}>
+                <span style={{ fontSize: '11.5px', fontWeight: '800', color: darkMode ? '#93C5FD' : '#0369A1' }}>
+                  {activeChatObj?.user} est en train d'écrire
+                </span>
+                <div style={{ display: 'flex', gap: '3px', alignItems: 'center' }}>
+                  <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: darkMode ? '#38BDF8' : '#0284C7', display: 'inline-block', animation: 'bounceDot 1.4s infinite ease-in-out', animationDelay: '0s' }} />
+                  <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: darkMode ? '#38BDF8' : '#0284C7', display: 'inline-block', animation: 'bounceDot 1.4s infinite ease-in-out', animationDelay: '0.2s' }} />
+                  <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: darkMode ? '#38BDF8' : '#0284C7', display: 'inline-block', animation: 'bounceDot 1.4s infinite ease-in-out', animationDelay: '0.4s' }} />
+                </div>
+              </div>
+            )}
+
             <div ref={messagesEndRef} />
           </div>
 
@@ -709,7 +743,13 @@ export default function ChatView({
               <input
                 type="text"
                 value={chatInputText}
-                onChange={(e) => setChatInputText(e.target.value)}
+                onChange={(e) => {
+                  if (onTypingChange) {
+                    onTypingChange(e.target.value);
+                  } else {
+                    setChatInputText(e.target.value);
+                  }
+                }}
                 onKeyDown={(e) => e.key === 'Enter' && onSubmitMessage()}
                 placeholder={editingMsg ? 'Modifie ton message...' : (t('typeYourMessage') || t('writeToInterlocutor') || 'Écris ton message...')}
                 style={{

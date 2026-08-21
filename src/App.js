@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -3268,6 +3268,14 @@ export default function App() {
           70% { transform: scale(1.15); }
           100% { opacity: 1; transform: scale(1); }
         }
+        @keyframes bounceDot {
+          0%, 80%, 100% { transform: translateY(0); opacity: 0.35; }
+          40% { transform: translateY(-5px); opacity: 1; }
+        }
+        @keyframes typingFadeIn {
+          0% { opacity: 0; transform: translateY(4px); }
+          100% { opacity: 1; transform: translateY(0); }
+        }
       `;
       document.head.appendChild(styleEl);
     }
@@ -5555,6 +5563,27 @@ export default function App() {
     });
   };
 
+  // ---- GESTION DU TYPING INDICATOR TEMPS RÉEL (DEBOUNCE 2.5S) ----
+  const typingTimeoutRef = useRef(null);
+
+  const handleTypingChange = (text) => {
+    setMessageDraft(text);
+    if (!selectedChat?.id || !profile?.name) return;
+    const chatId = String(selectedChat.id);
+
+    // Signaler sur Firestore qu'on est en train d'écrire
+    setDoc(doc(db, 'chats', chatId), {
+      typing: { [profile.name]: true }
+    }, { merge: true }).catch(() => {});
+
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => {
+      setDoc(doc(db, 'chats', chatId), {
+        typing: { [profile.name]: false }
+      }, { merge: true }).catch(() => {});
+    }, 2500);
+  };
+
   // ---- ENVOI DE MESSAGE (MESSAGERIE) ----
   const handleSendMessage = async () => {
     if (!selectedChat) return;
@@ -5562,6 +5591,14 @@ export default function App() {
     if (!text) return;
 
     const chatId = selectedChat.id;
+
+    // Réinitialiser immédiatement l'indicateur d'écriture
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    if (profile?.name) {
+      setDoc(doc(db, 'chats', String(chatId)), {
+        typing: { [profile.name]: false }
+      }, { merge: true }).catch(() => {});
+    }
 
     const newMessage = {
       id: Date.now(),
@@ -7235,34 +7272,42 @@ export default function App() {
         )}
 
         {/* ONGLET 2 : MESSAGERIE & NÉGOCIATIONS */}
-        {activeTab === 'chat' && (
-          <ChatView
-            activeTab={activeTab}
-            mockChats={chatsList}
-            selectedChat={selectedChat}
-            setSelectedChat={handleSelectChat}
-            chatThreads={chatThreads}
-            readChats={readChats}
-            chatInputText={messageDraft}
-            setChatInputText={setMessageDraft}
-            handleSendMessage={handleSendMessage}
-            handleEditMessage={handleEditMessage}
-            handleDeleteMessage={handleDeleteMessage}
-            openCounterOffer={openCounterOffer}
-            startCall={startCall}
-            handleAcceptDeal={handleAcceptDeal}
-            handleDeclineDeal={handleDeclineDeal}
-            profile={profile}
-            currentLang={currentLang}
-            t={t}
-            darkMode={darkMode}
-            getChatMessageDisplayContent={getChatMessageDisplayContent}
-            getListingTitleTranslation={getListingTitleTranslation}
-            formatStatus={formatStatus}
-            showingOriginalMessages={showingOriginalMessages}
-            toggleOriginalMessage={toggleOriginalMessage}
-          />
-        )}
+        {activeTab === 'chat' && (() => {
+          const activeChatData = chatsList.find(c => String(c.id) === String(selectedChat?.id));
+          const otherUserName = activeChatData?.user || selectedChat?.user;
+          const isThemTyping = !!(activeChatData?.typing && otherUserName && activeChatData.typing[otherUserName]);
+
+          return (
+            <ChatView
+              activeTab={activeTab}
+              mockChats={chatsList}
+              selectedChat={selectedChat}
+              setSelectedChat={handleSelectChat}
+              chatThreads={chatThreads}
+              readChats={readChats}
+              chatInputText={messageDraft}
+              setChatInputText={setMessageDraft}
+              onTypingChange={handleTypingChange}
+              isThemTyping={isThemTyping}
+              handleSendMessage={handleSendMessage}
+              handleEditMessage={handleEditMessage}
+              handleDeleteMessage={handleDeleteMessage}
+              openCounterOffer={openCounterOffer}
+              startCall={startCall}
+              handleAcceptDeal={handleAcceptDeal}
+              handleDeclineDeal={handleDeclineDeal}
+              profile={profile}
+              currentLang={currentLang}
+              t={t}
+              darkMode={darkMode}
+              getChatMessageDisplayContent={getChatMessageDisplayContent}
+              getListingTitleTranslation={getListingTitleTranslation}
+              formatStatus={formatStatus}
+              showingOriginalMessages={showingOriginalMessages}
+              toggleOriginalMessage={toggleOriginalMessage}
+            />
+          );
+        })()}
 
         {/* ONGLET 3 : DÉPOSER UNE ANNONCE */}
         {activeTab === 'post' && (
