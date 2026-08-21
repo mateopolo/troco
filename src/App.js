@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Search, MapPin, Video, Star, Globe, Filter, MessageSquare, PlusCircle, User, ShieldCheck, Clock, CheckCircle, ArrowRight, X, Sparkles, Coins, Plus, Trash2, Camera, Pencil, Mic, PhoneOff, Flame, History, Check, Lock, CreditCard, Tag, Phone, UserPlus, ChevronLeft, ChevronRight, Maximize2, Minimize2, ZoomIn, ZoomOut, MicOff, VideoOff, Sun, Moon, Upload, Repeat, SwitchCamera, LogOut, Scale, ShieldAlert } from 'lucide-react';
+import { Search, MapPin, Video, Star, Globe, Filter, MessageSquare, PlusCircle, User, ShieldCheck, Clock, CheckCircle, ArrowRight, X, Sparkles, Coins, Plus, Trash2, Camera, Pencil, Mic, PhoneOff, Flame, History, Check, Lock, CreditCard, Tag, Phone, UserPlus, ChevronLeft, ChevronRight, Maximize2, Minimize2, ZoomIn, ZoomOut, MicOff, VideoOff, Sun, Moon, Upload, Repeat, SwitchCamera, LogOut, Scale, ShieldAlert, FileText } from 'lucide-react';
 import { auth, db } from './firebase';
 import { collection, addDoc, doc, updateDoc, serverTimestamp, onSnapshot, query, orderBy, setDoc, deleteDoc, getDoc, where } from 'firebase/firestore';
 import { RecaptchaVerifier, signInWithPhoneNumber, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, GoogleAuthProvider, GithubAuthProvider, OAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
@@ -10,6 +10,8 @@ import ChatView from './components/ChatView';
 import { useWebRTC } from './hooks/useWebRTC';
 import AdminPanel from './components/AdminPanel';
 import ReportModal from './components/ReportModal';
+import PaymentModal from './components/PaymentModal';
+import TransactionsHistoryModal from './components/TransactionsHistoryModal';
 import { analyzeContent } from './utils/contentModeration';
 
 
@@ -3214,6 +3216,141 @@ export default function App() {
   const [allReports, setAllReports] = useState([]);
   const [allFirestoreUsers, setAllFirestoreUsers] = useState([]);
 
+  // ---- ÉTATS PAIEMENT & FACTURATION (BLOC 5) ----
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [paymentModalConfig, setPaymentModalConfig] = useState({
+    mode: 'pack-tokens',
+    payload: null,
+  });
+  const [isTransactionsModalOpen, setIsTransactionsModalOpen] = useState(false);
+  const [userTransactions, setUserTransactions] = useState(() => {
+    try {
+      const saved = localStorage.getItem('troco_user_transactions');
+      return saved ? JSON.parse(saved) : [
+        {
+          id: 'tx-seed-1',
+          transactionId: 'TRK-202603-4819',
+          label: 'Achat 5 Jetons Troco (Essentiel)',
+          mode: 'pack-tokens',
+          amountTtc: 49.99,
+          amountHt: 41.66,
+          tva: 8.33,
+          currency: 'EUR',
+          paymentMethod: 'Apple Pay',
+          authRef: 'APL-92KDA81',
+          date: '2026-03-10T14:23:00.000Z',
+          tokensPurchased: 5,
+        },
+        {
+          id: 'tx-seed-2',
+          transactionId: 'TRK-202603-3102',
+          label: 'Recharge Portefeuille Troco (20.00 €)',
+          mode: 'topup-cash',
+          amountTtc: 20.00,
+          amountHt: 16.67,
+          tva: 3.33,
+          currency: 'EUR',
+          paymentMethod: 'Carte Bancaire (VISA •••• 4242)',
+          authRef: 'STR-71NXL90',
+          date: '2026-03-05T09:12:00.000Z',
+          cashTopUp: 20.00,
+        },
+      ];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  // Écoute temps réel des transactions de l'utilisateur sur Firestore
+  useEffect(() => {
+    const uid = profile?.uid || auth.currentUser?.uid;
+    if (!uid) return;
+    try {
+      const qTx = query(
+        collection(db, 'transactions'),
+        where('userId', '==', uid),
+        orderBy('createdAt', 'desc')
+      );
+      const unsub = onSnapshot(qTx, (snap) => {
+        if (!snap.empty) {
+          const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          setUserTransactions(list);
+          try {
+            localStorage.setItem('troco_user_transactions', JSON.stringify(list));
+          } catch (e) {}
+        }
+      }, (err) => console.warn('[Firestore] Transactions listener:', err));
+      return () => unsub();
+    } catch (e) {
+      console.warn('Transactions listener error:', e);
+    }
+  }, [profile?.uid]);
+
+  // Handler d'ouverture du module de paiement
+  const handleOpenPayment = (mode = 'pack-tokens', payload = null) => {
+    setPaymentModalConfig({ mode, payload });
+    setIsPaymentModalOpen(true);
+  };
+
+  // Handler de succès de paiement (crédit solde, enregistrement transaction Firestore)
+  const handlePaymentSuccess = async (txData) => {
+    const uid = profile?.uid || auth.currentUser?.uid;
+
+    // 1. Mise à jour des soldes de l'utilisateur
+    let updatedEuro = profile.euroBalance;
+    let updatedTokens = profile.trocoTokens;
+
+    if (txData.mode === 'pack-tokens') {
+      updatedTokens += (txData.tokensPurchased || 0);
+    } else if (txData.mode === 'topup-cash') {
+      updatedEuro += (txData.cashTopUp || 0);
+    } else if (txData.mode === 'boost') {
+      if (txData.boostDetails?.listingId) {
+        setListings(prev => prev.map(item => item.id === txData.boostDetails.listingId ? { ...item, isBoosted: true } : item));
+      }
+    }
+
+    const updatedProfile = {
+      ...profile,
+      euroBalance: Number(updatedEuro.toFixed(2)),
+      trocoTokens: updatedTokens,
+    };
+    setProfile(updatedProfile);
+
+    // 2. Sauvegarde de la transaction dans le state local
+    const newTxRecord = {
+      id: 'tx-' + Date.now(),
+      ...txData,
+      userId: uid || 'guest',
+      userName: profile.name,
+      createdAt: new Date().toISOString(),
+    };
+    setUserTransactions(prev => [newTxRecord, ...prev]);
+    try {
+      localStorage.setItem('troco_user_transactions', JSON.stringify([newTxRecord, ...userTransactions]));
+    } catch (e) {}
+
+    // 3. Persistance sur Firestore users/{uid} et transactions
+    if (uid) {
+      try {
+        await updateDoc(doc(db, 'users', uid), {
+          euroBalance: updatedProfile.euroBalance,
+          trocoTokens: updatedProfile.trocoTokens,
+          updatedAt: serverTimestamp(),
+        });
+        await addDoc(collection(db, 'transactions'), {
+          ...txData,
+          userId: uid,
+          userName: profile.name,
+          userEmail: profile.email || '',
+          createdAt: serverTimestamp(),
+        });
+      } catch (err) {
+        console.warn('[Firestore] Error saving transaction:', err);
+      }
+    }
+  };
+
   // ---- ÉCOUTE TEMPS RÉEL DES SIGNALEMENTS (MODÉRATION ADMIN) ----
   useEffect(() => {
     try {
@@ -5346,9 +5483,7 @@ export default function App() {
   };
 
   const handleBoostListing = (listing) => {
-    setBoostingListing(listing);
-    setIsBoostModalOpen(true);
-    setBoostMessage('');
+    handleOpenPayment('boost', listing);
   };
 
   const closeCheckout = () => {
@@ -7047,10 +7182,10 @@ export default function App() {
             <p className="logo-slogan" style={{ fontSize: '10px', color: darkMode ? '#94A3B8' : '#6B7280', margin: 0, whiteSpace: 'nowrap' }}>{t('slogan')}</p>
           </button>
           <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'nowrap' }}>
-            <button onClick={() => setIsCreditModalOpen(true)} className="premium-button balance-badge" style={{ border: 'none', borderRadius: '999px', padding: '6px 10px', backgroundColor: darkMode ? 'rgba(4,38,90,0.45)' : 'rgba(4,38,90,0.08)', color: darkMode ? '#93C5FD' : '#04265A', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', position: 'relative', overflow: 'visible', whiteSpace: 'nowrap', flexShrink: 0 }}>
+            <button onClick={() => handleOpenPayment('topup-cash')} title="Recharger mon solde Euros" className="premium-button balance-badge" style={{ border: 'none', borderRadius: '999px', padding: '6px 10px', backgroundColor: darkMode ? 'rgba(4,38,90,0.45)' : 'rgba(4,38,90,0.08)', color: darkMode ? '#93C5FD' : '#04265A', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', position: 'relative', overflow: 'visible', whiteSpace: 'nowrap', flexShrink: 0 }}>
               <Coins size={13} style={{ flexShrink: 0 }} /> <AnimatedEuroBalance value={profile.euroBalance} prefix="€ " suffix="" style={{ fontSize: '11px', fontWeight: '700', whiteSpace: 'nowrap' }} />
             </button>
-            <button onClick={() => setIsCreditModalOpen(true)} className="premium-button balance-badge" style={{ border: 'none', borderRadius: '999px', padding: '6px 10px', backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : '#F3F4F6', color: darkMode ? '#FFF' : '#111827', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', position: 'relative', overflow: 'visible', whiteSpace: 'nowrap', flexShrink: 0 }}>
+            <button onClick={() => handleOpenPayment('pack-tokens')} title="Acheter des Jetons Troco" className="premium-button balance-badge" style={{ border: 'none', borderRadius: '999px', padding: '6px 10px', backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : '#F3F4F6', color: darkMode ? '#FFF' : '#111827', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', position: 'relative', overflow: 'visible', whiteSpace: 'nowrap', flexShrink: 0 }}>
               <Clock size={13} style={{ flexShrink: 0 }} /> <AnimatedTokenBalance value={profile.trocoTokens} formatFn={(v) => formatTokenCount(v, currentLang)} style={{ fontSize: '11px', fontWeight: '700', whiteSpace: 'nowrap' }} />
             </button>
             <button onClick={toggleDarkMode} title={darkMode ? "Activer le mode clair" : "Activer le mode sombre"} className="premium-button darkmode-btn" style={{ border: 'none', borderRadius: '50%', width: '34px', height: '34px', backgroundColor: darkMode ? 'rgba(255,255,255,0.12)' : '#F3F4F6', color: darkMode ? '#F59E0B' : '#04265A', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease', flexShrink: 0 }}>
@@ -8381,24 +8516,33 @@ export default function App() {
               </div>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', padding: '14px 16px', borderRadius: '20px', backgroundColor: darkMode ? 'rgba(15,23,42,0.6)' : '#F8FAFC', border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E2E8F0', marginBottom: '18px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px', borderRadius: '20px', backgroundColor: darkMode ? 'rgba(15,23,42,0.6)' : '#F8FAFC', border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E2E8F0', marginBottom: '18px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
                 <div>
                   <div style={{ fontSize: '11px', color: darkMode ? '#CBD5E1' : '#64748B' }}>{t('euroBalance')}</div>
-                  <div style={{ fontSize: '20px', fontWeight: '800', color: darkMode ? '#60A5FA' : '#0F172A', position: 'relative', overflow: 'visible' }}>
-                    <AnimatedEuroBalance value={profile.euroBalance} suffix=" €" style={{ fontSize: '20px', fontWeight: '800', color: darkMode ? '#60A5FA' : '#0F172A' }} />
+                  <div style={{ fontSize: '22px', fontWeight: '800', color: darkMode ? '#60A5FA' : '#0F172A', position: 'relative', overflow: 'visible' }}>
+                    <AnimatedEuroBalance value={profile.euroBalance} suffix=" €" style={{ fontSize: '22px', fontWeight: '800', color: darkMode ? '#60A5FA' : '#0F172A' }} />
                   </div>
                 </div>
-                <button onClick={() => setIsCreditModalOpen(true)} className="premium-button" style={{ border: 'none', borderRadius: '999px', padding: '9px 14px', backgroundColor: '#04265A', color: '#FFF', fontWeight: '700', cursor: 'pointer', boxShadow: '0 8px 16px rgba(4,38,90,0.2)' }}>{t('manageWallet')}</button>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button onClick={() => handleOpenPayment('topup-cash')} className="premium-button" style={{ border: 'none', borderRadius: '999px', padding: '9px 14px', backgroundColor: '#04265A', color: '#FFF', fontWeight: '700', fontSize: '12px', cursor: 'pointer', boxShadow: '0 8px 16px rgba(4,38,90,0.2)' }}>
+                    + Recharger (€)
+                  </button>
+                  <button onClick={() => setIsTransactionsModalOpen(true)} className="premium-button" style={{ border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #D1D5DB', borderRadius: '999px', padding: '9px 14px', backgroundColor: 'transparent', color: darkMode ? '#CBD5E1' : '#334155', fontWeight: '700', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <FileText size={13} /> Factures
+                  </button>
+                </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '10px', borderTop: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E2E8F0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '12px', borderTop: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E2E8F0', flexWrap: 'wrap', gap: '10px' }}>
                 <div>
                   <div style={{ fontSize: '11px', color: darkMode ? '#CBD5E1' : '#64748B' }}>{t('trocoTokensLabel')}</div>
-                  <div style={{ fontSize: '18px', fontWeight: '800', color: darkMode ? '#FFFFFF' : '#111827', position: 'relative', overflow: 'visible' }}>
-                    <AnimatedTokenBalance value={profile.trocoTokens} formatFn={(v) => formatTokenCount(v, currentLang)} style={{ fontSize: '18px', fontWeight: '800', color: darkMode ? '#FFFFFF' : '#111827' }} />
+                  <div style={{ fontSize: '19px', fontWeight: '800', color: darkMode ? '#FFFFFF' : '#111827', position: 'relative', overflow: 'visible' }}>
+                    <AnimatedTokenBalance value={profile.trocoTokens} formatFn={(v) => formatTokenCount(v, currentLang)} style={{ fontSize: '19px', fontWeight: '800', color: darkMode ? '#FFFFFF' : '#111827' }} />
                   </div>
                 </div>
-                <div style={{ fontSize: '12px', color: darkMode ? '#CBD5E1' : '#64748B' }}>{t('tokenRateNotice')}</div>
+                <button onClick={() => handleOpenPayment('pack-tokens')} className="premium-button" style={{ border: 'none', borderRadius: '999px', padding: '9px 14px', backgroundColor: '#D97706', color: '#FFF', fontWeight: '700', fontSize: '12px', cursor: 'pointer', boxShadow: '0 8px 16px rgba(217,119,6,0.2)' }}>
+                  + Acheter des Jetons
+                </button>
               </div>
             </div>
 
@@ -9327,6 +9471,32 @@ export default function App() {
         targetUser={reportTarget.user}
         currentUser={profile}
         darkMode={darkMode}
+      />
+
+      {/* PASSERELLE DE PAIEMENT SÉCURISÉE (BLOC 5) */}
+      <PaymentModal
+        isOpen={isPaymentModalOpen}
+        onClose={() => setIsPaymentModalOpen(false)}
+        darkMode={darkMode}
+        currentUser={profile}
+        initialMode={paymentModalConfig.mode}
+        initialPayload={paymentModalConfig.payload}
+        onSuccess={handlePaymentSuccess}
+        playBetclicSound={playBetclicBalanceSound}
+        playApplePaySound={playApplePaySound}
+      />
+
+      {/* HISTORIQUE DES TRANSACTIONS & FACTURES (BLOC 5) */}
+      <TransactionsHistoryModal
+        isOpen={isTransactionsModalOpen}
+        onClose={() => setIsTransactionsModalOpen(false)}
+        darkMode={darkMode}
+        currentUser={profile}
+        transactions={userTransactions}
+        onOpenPaymentModal={(mode) => {
+          setIsTransactionsModalOpen(false);
+          handleOpenPayment(mode);
+        }}
       />
 
     </div>
