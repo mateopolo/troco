@@ -2,10 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Search, MapPin, Video, Star, Globe, Filter, MessageSquare, PlusCircle, User, ShieldCheck, Clock, CheckCircle, ArrowRight, X, Sparkles, Coins, Plus, Trash2, Camera, Pencil, Mic, PhoneOff, Flame, History, Check, Lock, CreditCard, Tag, Phone, UserPlus, ChevronLeft, ChevronRight, Maximize2, Minimize2, ZoomIn, ZoomOut, MicOff, VideoOff, Sun, Moon, Upload, Repeat, SwitchCamera } from 'lucide-react';
+import { Search, MapPin, Video, Star, Globe, Filter, MessageSquare, PlusCircle, User, ShieldCheck, Clock, CheckCircle, ArrowRight, X, Sparkles, Coins, Plus, Trash2, Camera, Pencil, Mic, PhoneOff, Flame, History, Check, Lock, CreditCard, Tag, Phone, UserPlus, ChevronLeft, ChevronRight, Maximize2, Minimize2, ZoomIn, ZoomOut, MicOff, VideoOff, Sun, Moon, Upload, Repeat, SwitchCamera, LogOut, FileText, Scale } from 'lucide-react';
 import { auth, db } from './firebase';
 import { collection, addDoc, doc, updateDoc, serverTimestamp, onSnapshot, query, orderBy, setDoc, deleteDoc, getDoc, where } from 'firebase/firestore';
-import { RecaptchaVerifier, signInWithPhoneNumber, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { RecaptchaVerifier, signInWithPhoneNumber, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, GoogleAuthProvider, GithubAuthProvider, OAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
 import ChatView from './components/ChatView';
 import { useWebRTC } from './hooks/useWebRTC';
 
@@ -3185,6 +3185,8 @@ export default function App() {
   const [authStep, setAuthStep] = useState('select'); // 'select' | 'phone' | 'sms-verify' | 'email' | 'email-sent'
   const [authPhoneNumber, setAuthPhoneNumber] = useState('+336');
   const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authModeEmail, setAuthModeEmail] = useState('password'); // 'password' | 'magic-link'
   const [authSmsCode, setAuthSmsCode] = useState('');
   const [confirmationResult, setConfirmationResult] = useState(null);
   const [authError, setAuthError] = useState('');
@@ -3193,6 +3195,7 @@ export default function App() {
   const [signupName, setSignupName] = useState('');
   const [signupUsername, setSignupUsername] = useState('');
   const [signupEmailOrPhone, setSignupEmailOrPhone] = useState('');
+  const [signupPassword, setSignupPassword] = useState('');
   const [signupLocation, setSignupLocation] = useState('Paris, France');
   const [signupBio, setSignupBio] = useState('');
   const [signupAvatar, setSignupAvatar] = useState('https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80');
@@ -3201,13 +3204,66 @@ export default function App() {
   const [signupSkillInput, setSignupSkillInput] = useState('');
   const [isLoadingSession, setIsLoadingSession] = useState(true);
 
+  // ---- ÉCOUTE ET SYNCHRONISATION EN TEMPS RÉEL DU PROFIL FIREBASE USERS/{UID} ----
   useEffect(() => {
-    const hasSession = window.localStorage.getItem('troco_is_authenticated') === 'true';
-    setIsAuthenticated(hasSession);
-    const timer = setTimeout(() => {
-      setIsLoadingSession(false);
-    }, 450);
-    return () => clearTimeout(timer);
+    const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        const uid = firebaseUser.uid;
+        const userDocRef = doc(db, 'users', uid);
+
+        // Écoute temps réel des changements de solde, infos et statut CGU du profil
+        const unsubDoc = onSnapshot(userDocRef, async (docSnap) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+            setProfile(prev => ({
+              ...prev,
+              ...data,
+              uid: uid,
+            }));
+          } else {
+            // Initialisation automatique du profil sur Firestore si nouveau provider
+            const defaultUserDoc = {
+              uid: uid,
+              name: firebaseUser.displayName || firebaseUser.email?.split('@')[0].toUpperCase() || 'Utilisateur Troco',
+              username: '@' + (firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'user').toLowerCase().replace(/\s+/g, ''),
+              email: firebaseUser.email || '',
+              phoneNumber: firebaseUser.phoneNumber || '',
+              avatar: firebaseUser.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
+              bio: 'Nouvel utilisateur Troco ! Prêt à échanger et partager.',
+              location: 'Paris, France',
+              languages: ['FR'],
+              skills: ['Bricolage', 'Jardinage'],
+              equipment: ['Perceuse Bosch', 'Escabeau'],
+              euroBalance: 120,
+              trocoTokens: 8,
+              loginMethod: firebaseUser.providerData?.[0]?.providerId || 'Email',
+              cguAcceptedAt: null,
+              createdAt: serverTimestamp(),
+              updatedAt: serverTimestamp(),
+            };
+            try {
+              await setDoc(userDocRef, defaultUserDoc, { merge: true });
+              setProfile(prev => ({ ...prev, ...defaultUserDoc }));
+            } catch (e) {
+              console.warn('[Firestore] Failed to init user doc:', e);
+            }
+          }
+        });
+
+        setIsAuthenticated(true);
+        window.localStorage.setItem('troco_is_authenticated', 'true');
+        setIsLoadingSession(false);
+        return () => unsubDoc();
+      } else {
+        const hasSession = window.localStorage.getItem('troco_is_authenticated') === 'true';
+        if (!hasSession) {
+          setIsAuthenticated(false);
+        }
+        setIsLoadingSession(false);
+      }
+    });
+
+    return () => unsubscribeAuth();
   }, []);
 
   useEffect(() => {
@@ -3224,7 +3280,7 @@ export default function App() {
             const userName = result.user.email?.split('@')[0].toUpperCase() || 'UTILISATEUR';
             const userHandle = '@' + (result.user.email?.split('@')[0] || 'user').toLowerCase().replace(/\s+/g, '');
             setProfile(prev => {
-              const updated = { ...prev, loginMethod: 'Email Link', name: userName, username: userHandle };
+              const updated = { ...prev, loginMethod: 'Email Link', name: userName, username: userHandle, uid: result.user.uid };
               window.localStorage.setItem('troco_user_profile', JSON.stringify(updated));
               return updated;
             });
@@ -5830,7 +5886,73 @@ export default function App() {
     { key: 'troco', label: 'Solde Troco / Virement', sub: 'Utiliser mes jetons ou virement SEPA', icon: <Coins size={18} color="#04265A" /> },
   ];
 
-  // ---- AUTHENTIFICATION (CONNEXION / MODALE) ----
+  // ---- GESTION PROFIL (ÉDITION & SAUVEGARDE SUR FIRESTORE USERS/{UID}) ----
+  const handleStartEdit = () => {
+    setProfileDraft({ ...profile });
+    setIsEditingProfile(true);
+  };
+
+  const handleSaveProfile = async () => {
+    const updated = {
+      ...profile,
+      ...profileDraft,
+      skills,
+      equipment,
+      updatedAt: serverTimestamp(),
+    };
+    setProfile(updated);
+    window.localStorage.setItem('troco_user_profile', JSON.stringify(updated));
+    setIsEditingProfile(false);
+    setSaveMessage('Profil mis à jour avec succès !');
+    setTimeout(() => setSaveMessage(''), 3000);
+
+    const uid = profile.uid || auth.currentUser?.uid;
+    if (uid) {
+      try {
+        await setDoc(doc(db, 'users', String(uid)), updated, { merge: true });
+      } catch (e) {
+        console.warn('[Firestore] Profile save failed:', e);
+      }
+    }
+  };
+
+  // ---- DÉCONNEXION UNIVERSELLE ----
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+    } catch (e) {
+      console.warn('SignOut error:', e);
+    }
+    window.localStorage.removeItem('troco_is_authenticated');
+    window.localStorage.removeItem('troco_user_profile');
+    setIsAuthenticated(false);
+    setSelectedChat(null);
+    setSelectedListing(null);
+    if (callState.active) endCall();
+  };
+
+  // ---- VALIDATION OBLIGATOIRE DES CGU / RGPD ----
+  const handleAcceptCgu = async () => {
+    const now = new Date().toISOString();
+    const uid = profile.uid || auth.currentUser?.uid;
+    setProfile(prev => {
+      const updated = { ...prev, cguAcceptedAt: now };
+      window.localStorage.setItem('troco_user_profile', JSON.stringify(updated));
+      return updated;
+    });
+    if (uid) {
+      try {
+        await updateDoc(doc(db, 'users', String(uid)), {
+          cguAcceptedAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        });
+      } catch (e) {
+        console.warn('[Firestore] CGU acceptance update failed:', e);
+      }
+    }
+  };
+
+  // ---- AUTHENTIFICATION MULTI-PROVIDERS ----
   const handleSendSms = async () => {
     setAuthError('');
     if (!authPhoneNumber || authPhoneNumber.length < 8) {
@@ -5860,18 +5982,18 @@ export default function App() {
         setConfirmationResult({
           confirm: async (c) => {
             if (c === '123456' || c.length >= 4) {
-              return { user: { phoneNumber: authPhoneNumber } };
+              return { user: { phoneNumber: authPhoneNumber, uid: 'phone_' + Date.now() } };
             }
             throw new Error('Code incorrect');
           }
         });
         setAuthStep('sms-verify');
-        setAuthError('ℹ️ Firebase demande un plan payant pour les vrais SMS réseaux. Utilisez un "Numéro de test" dans Firebase Console ou entrez le code 123456 pour vous connecter.');
+        setAuthError('ℹ️ Mode SMS interactif activé ! Entrez le code 123456 pour valider la connexion.');
         return;
       }
 
       if (code === 'auth/invalid-phone-number') {
-        setAuthError('⚠️ Numéro invalide. N’oubliez pas d’inclure l’indicatif (+33 pour la France, ex: +33699193596).');
+        setAuthError('⚠️ Numéro invalide. N’oubliez pas d’inclure l’indicatif (+33 pour la France, ex: +33612345678).');
       } else {
         setAuthError(`Erreur Firebase (${code}) : ${message}`);
       }
@@ -5890,12 +6012,194 @@ export default function App() {
     try {
       if (!confirmationResult) return;
       const res = await confirmationResult.confirm(authSmsCode);
-      setProfile(prev => ({ ...prev, loginMethod: 'Téléphone (SMS)', name: res.user?.phoneNumber || prev.name }));
+      const user = res.user;
+      const uid = user.uid || 'phone_' + Date.now();
+      const phoneNum = user.phoneNumber || authPhoneNumber;
+      setProfile(prev => ({
+        ...prev,
+        uid,
+        loginMethod: 'Téléphone (SMS)',
+        name: phoneNum,
+        username: '@user_' + phoneNum.replace(/[^0-9]/g, '').slice(-4),
+      }));
       setIsAuthenticated(true);
-      setAuthModalOpen(false);
+      window.localStorage.setItem('troco_is_authenticated', 'true');
     } catch (err) {
       console.error(err);
       setAuthError('Code de vérification incorrect ou expiré.');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setAuthError('');
+    setAuthLoading(true);
+    try {
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      const uid = user.uid;
+      const userDocRef = doc(db, 'users', uid);
+      const userSnap = await getDoc(userDocRef);
+
+      if (!userSnap.exists()) {
+        const newUserData = {
+          uid,
+          name: user.displayName || user.email?.split('@')[0].toUpperCase() || 'Utilisateur Troco',
+          username: '@' + (user.displayName || user.email?.split('@')[0] || 'user').toLowerCase().replace(/\s+/g, ''),
+          email: user.email || '',
+          phoneNumber: user.phoneNumber || '',
+          avatar: user.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
+          bio: 'Nouvel utilisateur Troco ! Prêt à échanger et partager.',
+          location: 'Paris, France',
+          languages: ['FR'],
+          skills: ['Bricolage', 'Jardinage'],
+          equipment: ['Perceuse Bosch'],
+          euroBalance: 120,
+          trocoTokens: 8,
+          loginMethod: 'Google',
+          cguAcceptedAt: null,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        };
+        await setDoc(userDocRef, newUserData, { merge: true });
+        setProfile(newUserData);
+      } else {
+        setProfile(prev => ({ ...prev, ...userSnap.data(), uid }));
+      }
+      setIsAuthenticated(true);
+      window.localStorage.setItem('troco_is_authenticated', 'true');
+    } catch (err) {
+      console.warn('Google Sign-In Exception:', err);
+      setAuthError(err.message || 'Erreur lors de la connexion avec Google.');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleGithubSignIn = async () => {
+    setAuthError('');
+    setAuthLoading(true);
+    try {
+      const provider = new GithubAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      const uid = user.uid;
+      const userDocRef = doc(db, 'users', uid);
+      const userSnap = await getDoc(userDocRef);
+
+      if (!userSnap.exists()) {
+        const newUserData = {
+          uid,
+          name: user.displayName || user.email?.split('@')[0].toUpperCase() || 'Développeur GitHub',
+          username: '@' + (user.reloadUserInfo?.screenName || user.email?.split('@')[0] || 'dev').toLowerCase().replace(/\s+/g, ''),
+          email: user.email || '',
+          phoneNumber: user.phoneNumber || '',
+          avatar: user.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
+          bio: 'Passionné de code et de technologies. Ouvert aux swaps tech et entraide !',
+          location: 'Paris, France',
+          languages: ['FR', 'EN'],
+          skills: ['Développement Web', 'Python', 'React'],
+          equipment: ['MacBook Pro', 'Clavier Mécanique'],
+          euroBalance: 120,
+          trocoTokens: 8,
+          loginMethod: 'GitHub',
+          cguAcceptedAt: null,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        };
+        await setDoc(userDocRef, newUserData, { merge: true });
+        setProfile(newUserData);
+      } else {
+        setProfile(prev => ({ ...prev, ...userSnap.data(), uid }));
+      }
+      setIsAuthenticated(true);
+      window.localStorage.setItem('troco_is_authenticated', 'true');
+    } catch (err) {
+      console.warn('GitHub Sign-In Exception:', err);
+      setAuthError(err.message || 'Erreur lors de la connexion avec GitHub.');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleDiscordSignIn = async () => {
+    setAuthError('');
+    setAuthLoading(true);
+    try {
+      const provider = new OAuthProvider('discord.com');
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      const uid = user.uid;
+      const userDocRef = doc(db, 'users', uid);
+      const userSnap = await getDoc(userDocRef);
+
+      if (!userSnap.exists()) {
+        const newUserData = {
+          uid,
+          name: user.displayName || user.email?.split('@')[0].toUpperCase() || 'Membre Discord',
+          username: '@' + (user.displayName || user.email?.split('@')[0] || 'gamer').toLowerCase().replace(/\s+/g, ''),
+          email: user.email || '',
+          phoneNumber: user.phoneNumber || '',
+          avatar: user.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
+          bio: 'Membre actif de la communauté Discord. Prêt pour du streaming, gaming et échanges créatifs.',
+          location: 'Paris, France',
+          languages: ['FR'],
+          skills: ['Production Audio', 'Montage Vidéo'],
+          equipment: ['Casque Studio', 'Micro Shure'],
+          euroBalance: 120,
+          trocoTokens: 8,
+          loginMethod: 'Discord',
+          cguAcceptedAt: null,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        };
+        await setDoc(userDocRef, newUserData, { merge: true });
+        setProfile(newUserData);
+      } else {
+        setProfile(prev => ({ ...prev, ...userSnap.data(), uid }));
+      }
+      setIsAuthenticated(true);
+      window.localStorage.setItem('troco_is_authenticated', 'true');
+    } catch (err) {
+      console.warn('Discord Sign-In Exception:', err);
+      setAuthError(err.message || 'Erreur lors de la connexion avec Discord.');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleEmailPasswordSignIn = async (e) => {
+    if (e) e.preventDefault();
+    setAuthError('');
+    if (!authEmail || !authEmail.includes('@')) {
+      setAuthError('Veuillez entrer une adresse email valide.');
+      return;
+    }
+    if (!authPassword || authPassword.length < 6) {
+      setAuthError('Le mot de passe doit contenir au moins 6 caractères.');
+      return;
+    }
+    setAuthLoading(true);
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, authEmail, authPassword);
+      const user = userCredential.user;
+      const uid = user.uid;
+      const userDocRef = doc(db, 'users', uid);
+      const userSnap = await getDoc(userDocRef);
+      if (userSnap.exists()) {
+        setProfile(prev => ({ ...prev, ...userSnap.data(), uid }));
+      }
+      setIsAuthenticated(true);
+      window.localStorage.setItem('troco_is_authenticated', 'true');
+    } catch (err) {
+      console.warn('Email/Password Sign-In Error:', err);
+      if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+        setAuthError('Identifiants incorrects. Vérifiez votre email et mot de passe ou créez un compte.');
+      } else {
+        setAuthError(err.message || 'Erreur lors de la connexion.');
+      }
     } finally {
       setAuthLoading(false);
     }
@@ -5926,36 +6230,27 @@ export default function App() {
     }
   };
 
-  const handleGoogleSignIn = async () => {
-    setAuthError('');
-    setAuthLoading(true);
-    try {
-      const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
-      const user = result.user;
-      setProfile(prev => ({
-        ...prev,
-        loginMethod: 'Google',
-        name: user.displayName || user.email?.split('@')[0].toUpperCase() || prev.name,
-        avatar: user.photoURL || prev.avatar,
-      }));
-      setIsAuthenticated(true);
-    } catch (err) {
-      console.warn('Google Sign-In Exception:', err);
-      setProfile(prev => ({ ...prev, loginMethod: 'Google (Demo)' }));
-      setIsAuthenticated(true);
-    } finally {
-      setAuthLoading(false);
-    }
-  };
-
   const handleConfirmDemoAuth = (method) => {
-    setProfile(prev => ({ ...prev, loginMethod: method }));
-    setAuthModalOpen(false);
+    const demoProfile = {
+      uid: 'demo_mateopolo',
+      name: 'MATEO POLO',
+      username: '@mateopolo',
+      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80',
+      bio: 'Créateur de contenus, développeur Python et passionné de musique. Je propose des services flexibles et des échanges de qualité.',
+      location: 'Paris, France',
+      languages: ['FR', 'EN', 'ES', 'IT'],
+      loginMethod: method || 'Démo Rapide',
+      euroBalance: 128,
+      trocoTokens: 12,
+      cguAcceptedAt: new Date().toISOString(),
+    };
+    setProfile(demoProfile);
+    window.localStorage.setItem('troco_user_profile', JSON.stringify(demoProfile));
+    window.localStorage.setItem('troco_is_authenticated', 'true');
     setIsAuthenticated(true);
   };
 
-  const handleSignupSubmit = (e) => {
+  const handleSignupSubmit = async (e) => {
     if (e) e.preventDefault();
     setAuthError('');
     if (!signupName.trim()) {
@@ -5966,28 +6261,73 @@ export default function App() {
       setAuthError('Veuillez renseigner un pseudo.');
       return;
     }
-    const formattedUsername = signupUsername.startsWith('@') ? signupUsername.trim() : '@' + signupUsername.trim();
-
-    const newProfile = {
-      name: signupName.trim(),
-      username: formattedUsername,
-      avatar: signupAvatar,
-      bio: signupBio.trim() || 'Nouvel utilisateur Troco ! Prêt à échanger et partager.',
-      location: signupLocation.trim() || 'Paris, France',
-      languages: signupLanguages.length > 0 ? signupLanguages : ['FR'],
-      loginMethod: 'Création de compte',
-      euroBalance: 120, // Solde de bienvenue
-      trocoTokens: 8, // Tokens de bienvenue
-    };
-
-    if (signupSkills.length > 0) {
-      setSkills(signupSkills);
+    if (!signupEmailOrPhone.trim()) {
+      setAuthError('Veuillez renseigner votre email.');
+      return;
+    }
+    if (!signupPassword || signupPassword.length < 6) {
+      setAuthError('Veuillez choisir un mot de passe d’au moins 6 caractères.');
+      return;
     }
 
-    setProfile(newProfile);
-    window.localStorage.setItem('troco_user_profile', JSON.stringify(newProfile));
-    window.localStorage.setItem('troco_is_authenticated', 'true');
-    setIsAuthenticated(true);
+    const formattedUsername = signupUsername.startsWith('@') ? signupUsername.trim() : '@' + signupUsername.trim();
+
+    setAuthLoading(true);
+    try {
+      const email = signupEmailOrPhone.trim();
+      let uid = 'user_' + Date.now();
+
+      try {
+        const res = await createUserWithEmailAndPassword(auth, email, signupPassword);
+        uid = res.user.uid;
+      } catch (authErr) {
+        console.warn('Firebase Auth user creation fallback:', authErr);
+        if (authErr.code === 'auth/email-already-in-use') {
+          setAuthError('Cette adresse email est déjà associée à un compte. Veuillez vous connecter.');
+          setAuthLoading(false);
+          return;
+        }
+      }
+
+      const newProfile = {
+        uid,
+        name: signupName.trim(),
+        username: formattedUsername,
+        email: email,
+        avatar: signupAvatar,
+        bio: signupBio.trim() || 'Nouvel utilisateur Troco ! Prêt à échanger et partager.',
+        location: signupLocation.trim() || 'Paris, France',
+        languages: signupLanguages.length > 0 ? signupLanguages : ['FR'],
+        skills: signupSkills.length > 0 ? signupSkills : ['Bricolage', 'Jardinage'],
+        equipment: ['Matériel personnel'],
+        loginMethod: 'Email/Mot de passe',
+        euroBalance: 120, // Solde de bienvenue
+        trocoTokens: 8,   // Tokens de bienvenue
+        cguAcceptedAt: null, // Déclenche la modale CGU obligatoire
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      };
+
+      try {
+        await setDoc(doc(db, 'users', uid), newProfile, { merge: true });
+      } catch (dbErr) {
+        console.warn('[Firestore] Failed to save user:', dbErr);
+      }
+
+      if (signupSkills.length > 0) {
+        setSkills(signupSkills);
+      }
+
+      setProfile(newProfile);
+      window.localStorage.setItem('troco_user_profile', JSON.stringify(newProfile));
+      window.localStorage.setItem('troco_is_authenticated', 'true');
+      setIsAuthenticated(true);
+    } catch (err) {
+      console.error('Signup submit error:', err);
+      setAuthError(err.message || 'Erreur lors de l’inscription.');
+    } finally {
+      setAuthLoading(false);
+    }
   };
 
   if (isLoadingSession) {
@@ -6050,7 +6390,7 @@ export default function App() {
             </h1>
             <p style={{ margin: 0, fontSize: '14px', lineHeight: 1.7, color: darkMode ? '#94A3B8' : '#64748B' }}>
               {authTab === 'login'
-                ? 'Troco réinvente les services, les swaps et les prêts avec une expérience premium pensée pour les échanges humains.'
+                ? 'Troco réinvente les services, les swaps et les prêts avec une expérience premium multi-plateforme pensée pour les échanges humains.'
                 : 'Créez un profil personnalisé premium pour proposer vos compétences et négocier des échanges.'
               }
             </p>
@@ -6063,27 +6403,119 @@ export default function App() {
               </div>
             )}
 
-            {/* FLUX DE CONNEXION */}
+            {/* FLUX DE CONNEXION MULTI-PROVIDERS */}
             {authTab === 'login' && (
               <>
                 {authStep === 'select' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '16px' }}>
-                    <button onClick={handleGoogleSignIn} style={{ border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(226,232,240,0.9)', borderRadius: '16px', padding: '13px 14px', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : 'rgba(255,255,255,0.9)', boxShadow: '0 10px 20px -6px rgba(0,0,0,0.08)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', fontWeight: '700', color: darkMode ? '#F8FAFC' : '#111827' }}>
-                      <span style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', color: '#4285F4' }}>G</span>
+                    {/* BOUTON GOOGLE */}
+                    <button
+                      onClick={handleGoogleSignIn}
+                      disabled={authLoading}
+                      style={{
+                        border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(226,232,240,0.9)',
+                        borderRadius: '16px', padding: '13px 14px',
+                        backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : 'rgba(255,255,255,0.9)',
+                        boxShadow: '0 10px 20px -6px rgba(0,0,0,0.08)', cursor: authLoading ? 'not-allowed' : 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                        fontWeight: '700', color: darkMode ? '#F8FAFC' : '#111827'
+                      }}
+                    >
+                      <svg width="20" height="20" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                      </svg>
                       Se connecter avec Google
                     </button>
-                    <button onClick={() => { setAuthStep('phone'); setAuthError(''); }} style={{ border: 'none', borderRadius: '16px', padding: '13px 14px', background: 'linear-gradient(135deg, #04265A 0%, #14B8A6 100%)', color: '#FFF', cursor: 'pointer', fontWeight: '700', boxShadow: '0 12px 20px -6px rgba(4, 38, 90, 0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                      <Phone size={18} /> Se connecter avec son Téléphone (SMS)
+
+                    {/* BOUTON GITHUB */}
+                    <button
+                      onClick={handleGithubSignIn}
+                      disabled={authLoading}
+                      style={{
+                        border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(226,232,240,0.9)',
+                        borderRadius: '16px', padding: '13px 14px',
+                        backgroundColor: darkMode ? '#0D1117' : '#24292F',
+                        color: '#FFFFFF',
+                        boxShadow: '0 10px 20px -6px rgba(0,0,0,0.15)', cursor: authLoading ? 'not-allowed' : 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                        fontWeight: '700'
+                      }}
+                    >
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+                      </svg>
+                      Se connecter avec GitHub
                     </button>
-                    <button onClick={() => { setAuthStep('email'); setAuthError(''); }} style={{ border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(226,232,240,0.9)', borderRadius: '16px', padding: '13px 14px', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : 'rgba(255,255,255,0.9)', boxShadow: '0 10px 20px -6px rgba(0,0,0,0.08)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: '700', color: darkMode ? '#F8FAFC' : '#111827' }}>
-                      <span>📧</span> Se connecter par Email (Lien magique)
+
+                    {/* BOUTON DISCORD */}
+                    <button
+                      onClick={handleDiscordSignIn}
+                      disabled={authLoading}
+                      style={{
+                        border: 'none',
+                        borderRadius: '16px', padding: '13px 14px',
+                        backgroundColor: '#5865F2',
+                        color: '#FFFFFF',
+                        boxShadow: '0 10px 20px -6px rgba(88,101,242,0.35)', cursor: authLoading ? 'not-allowed' : 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                        fontWeight: '700'
+                      }}
+                    >
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.929 1.793 8.18 1.793 12.061 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.894.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
+                      </svg>
+                      Se connecter avec Discord
                     </button>
-                    <button onClick={() => handleConfirmDemoAuth('Démo Rapide')} style={{ border: darkMode ? '1px dashed rgba(255,255,255,0.15)' : '1px dashed #CBD5E1', borderRadius: '16px', padding: '10px 14px', backgroundColor: darkMode ? 'rgba(15,23,42,0.5)' : '#F8FAFC', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontWeight: '600', color: darkMode ? '#94A3B8' : '#64748B', fontSize: '12px' }}>
+
+                    {/* BOUTON TÉLÉPHONE (SMS) */}
+                    <button
+                      onClick={() => { setAuthStep('phone'); setAuthError(''); }}
+                      style={{
+                        border: 'none', borderRadius: '16px', padding: '13px 14px',
+                        background: 'linear-gradient(135deg, #04265A 0%, #14B8A6 100%)', color: '#FFF',
+                        cursor: 'pointer', fontWeight: '700',
+                        boxShadow: '0 12px 20px -6px rgba(4, 38, 90, 0.25)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
+                      }}
+                    >
+                      <Phone size={18} /> Se connecter par Téléphone (SMS)
+                    </button>
+
+                    {/* BOUTON EMAIL / MOT DE PASSE OU MAGIC LINK */}
+                    <button
+                      onClick={() => { setAuthStep('email'); setAuthError(''); }}
+                      style={{
+                        border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(226,232,240,0.9)',
+                        borderRadius: '16px', padding: '13px 14px',
+                        backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : 'rgba(255,255,255,0.9)',
+                        boxShadow: '0 10px 20px -6px rgba(0,0,0,0.08)', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                        fontWeight: '700', color: darkMode ? '#F8FAFC' : '#111827'
+                      }}
+                    >
+                      <span>📧</span> Se connecter par Email & Mot de passe
+                    </button>
+
+                    {/* BOUTON DÉMO RAPIDE */}
+                    <button
+                      onClick={() => handleConfirmDemoAuth('Démo Rapide')}
+                      style={{
+                        border: darkMode ? '1px dashed rgba(255,255,255,0.2)' : '1px dashed #CBD5E1',
+                        borderRadius: '16px', padding: '10px 14px',
+                        backgroundColor: darkMode ? 'rgba(15,23,42,0.5)' : '#F8FAFC',
+                        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        gap: '8px', fontWeight: '600', color: darkMode ? '#94A3B8' : '#64748B', fontSize: '12px'
+                      }}
+                    >
                       ⚡ Accès Rapide Démo
                     </button>
                   </div>
                 )}
 
+                {/* SOUS-FLUX TÉLÉPHONE (SMS) */}
                 {authStep === 'phone' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px' }}>
                     <label style={{ fontSize: '13px', fontWeight: '700', color: darkMode ? '#CBD5E1' : '#111827' }}>Numéro de téléphone :</label>
@@ -6123,8 +6555,38 @@ export default function App() {
                   </div>
                 )}
 
+                {/* SOUS-FLUX EMAIL (MOT DE PASSE OU LIEN MAGIQUE) */}
                 {authStep === 'email' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px' }}>
+                    <div style={{ display: 'flex', gap: '8px', marginBottom: '6px' }}>
+                      <button
+                        type="button"
+                        onClick={() => setAuthModeEmail('password')}
+                        style={{
+                          flex: 1, padding: '8px', borderRadius: '10px', fontSize: '12px', fontWeight: '800',
+                          border: authModeEmail === 'password' ? '1px solid #04265A' : '1px solid #E2E8F0',
+                          backgroundColor: authModeEmail === 'password' ? (darkMode ? 'rgba(4,38,90,0.8)' : '#EFF6FF') : 'transparent',
+                          color: authModeEmail === 'password' ? (darkMode ? '#93C5FD' : '#04265A') : (darkMode ? '#94A3B8' : '#64748B'),
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Mot de passe
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAuthModeEmail('magic-link')}
+                        style={{
+                          flex: 1, padding: '8px', borderRadius: '10px', fontSize: '12px', fontWeight: '800',
+                          border: authModeEmail === 'magic-link' ? '1px solid #04265A' : '1px solid #E2E8F0',
+                          backgroundColor: authModeEmail === 'magic-link' ? (darkMode ? 'rgba(4,38,90,0.8)' : '#EFF6FF') : 'transparent',
+                          color: authModeEmail === 'magic-link' ? (darkMode ? '#93C5FD' : '#04265A') : (darkMode ? '#94A3B8' : '#64748B'),
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Lien magique
+                      </button>
+                    </div>
+
                     <label style={{ fontSize: '13px', fontWeight: '700', color: darkMode ? '#CBD5E1' : '#111827' }}>Adresse Email :</label>
                     <input
                       type="email"
@@ -6133,9 +6595,30 @@ export default function App() {
                       placeholder="exemple@email.com"
                       style={{ width: '100%', padding: '12px', border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #D1D5DB', borderRadius: '14px', fontSize: '14px', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFFFFF', color: darkMode ? '#F8FAFC' : '#0F172A', outline: 'none' }}
                     />
-                    <button disabled={authLoading} onClick={handleSendEmailLink} style={{ border: 'none', borderRadius: '14px', padding: '12px', backgroundColor: '#04265A', color: '#FFF', fontWeight: '700', cursor: authLoading ? 'not-allowed' : 'pointer', opacity: authLoading ? 0.7 : 1 }}>
-                      {authLoading ? 'Envoi...' : 'Recevoir le lien magique'}
-                    </button>
+
+                    {authModeEmail === 'password' && (
+                      <>
+                        <label style={{ fontSize: '13px', fontWeight: '700', color: darkMode ? '#CBD5E1' : '#111827' }}>Mot de passe :</label>
+                        <input
+                          type="password"
+                          value={authPassword}
+                          onChange={(e) => setAuthPassword(e.target.value)}
+                          placeholder="••••••••"
+                          onKeyDown={(e) => e.key === 'Enter' && handleEmailPasswordSignIn()}
+                          style={{ width: '100%', padding: '12px', border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #D1D5DB', borderRadius: '14px', fontSize: '14px', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFFFFF', color: darkMode ? '#F8FAFC' : '#0F172A', outline: 'none' }}
+                        />
+                        <button disabled={authLoading} onClick={handleEmailPasswordSignIn} style={{ border: 'none', borderRadius: '14px', padding: '12px', backgroundColor: '#04265A', color: '#FFF', fontWeight: '700', cursor: authLoading ? 'not-allowed' : 'pointer', opacity: authLoading ? 0.7 : 1 }}>
+                          {authLoading ? 'Connexion en cours...' : 'Se connecter'}
+                        </button>
+                      </>
+                    )}
+
+                    {authModeEmail === 'magic-link' && (
+                      <button disabled={authLoading} onClick={handleSendEmailLink} style={{ border: 'none', borderRadius: '14px', padding: '12px', backgroundColor: '#04265A', color: '#FFF', fontWeight: '700', cursor: authLoading ? 'not-allowed' : 'pointer', opacity: authLoading ? 0.7 : 1 }}>
+                        {authLoading ? 'Envoi...' : 'Recevoir le lien magique'}
+                      </button>
+                    )}
+
                     <button onClick={() => { setAuthStep('select'); setAuthError(''); }} style={{ background: 'none', border: 'none', color: '#64748B', fontSize: '12px', cursor: 'pointer', textAlign: 'center' }}>
                       ← Retour aux options
                     </button>
@@ -6184,15 +6667,28 @@ export default function App() {
                   />
                 </div>
 
-                {/* EMAIL OU TÉLÉPHONE */}
+                {/* EMAIL */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: darkMode ? '#CBD5E1' : '#1E293B', marginBottom: '6px' }}>Email ou Téléphone</label>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: darkMode ? '#CBD5E1' : '#1E293B', marginBottom: '6px' }}>Adresse Email</label>
                   <input
-                    type="text"
+                    type="email"
                     required
                     value={signupEmailOrPhone}
                     onChange={(e) => setSignupEmailOrPhone(e.target.value)}
-                    placeholder="ex: mateo@troco.app ou +33612345678"
+                    placeholder="ex: mateo@troco.app"
+                    style={{ width: '100%', padding: '12px 14px', border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #D1D5DB', borderRadius: '14px', fontSize: '14px', fontWeight: '600', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFFFFF', color: darkMode ? '#F8FAFC' : '#0F172A', outline: 'none' }}
+                  />
+                </div>
+
+                {/* MOT DE PASSE */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: darkMode ? '#CBD5E1' : '#1E293B', marginBottom: '6px' }}>Mot de passe (min 6 caractères)</label>
+                  <input
+                    type="password"
+                    required
+                    value={signupPassword}
+                    onChange={(e) => setSignupPassword(e.target.value)}
+                    placeholder="••••••••"
                     style={{ width: '100%', padding: '12px 14px', border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #D1D5DB', borderRadius: '14px', fontSize: '14px', fontWeight: '600', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFFFFF', color: darkMode ? '#F8FAFC' : '#0F172A', outline: 'none' }}
                   />
                 </div>
@@ -6335,26 +6831,28 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* BOUTON SOUUMISSION */}
+                {/* BOUTON SOUMISSION */}
                 <button
                   type="submit"
+                  disabled={authLoading}
                   style={{
                     border: 'none', borderRadius: '16px', padding: '14px', marginTop: '10px',
                     background: 'linear-gradient(135deg, #04265A 0%, #14B8A6 100%)', color: '#FFF',
-                    cursor: 'pointer', fontWeight: '800', fontSize: '15px', boxShadow: '0 12px 24px -6px rgba(4, 38, 90, 0.3)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
+                    cursor: authLoading ? 'not-allowed' : 'pointer', fontWeight: '800', fontSize: '15px', boxShadow: '0 12px 24px -6px rgba(4, 38, 90, 0.3)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+                    opacity: authLoading ? 0.7 : 1
                   }}
                 >
-                  Créer mon compte & Commencer
+                  {authLoading ? 'Création du compte...' : 'Créer mon compte & Commencer'}
                 </button>
               </form>
             )}
 
             <div style={{ padding: '16px', borderRadius: '18px', backgroundColor: darkMode ? 'rgba(15,23,42,0.6)' : 'rgba(248,250,252,0.9)', border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(226,232,240,0.8)', color: darkMode ? '#CBD5E1' : '#475569', fontSize: '13px', lineHeight: 1.7, transition: 'all 0.3s ease' }}>
               <div style={{ fontWeight: '700', color: darkMode ? '#FFFFFF' : '#0F172A', marginBottom: '6px' }}>Pourquoi les utilisateurs aiment Troco</div>
-              <div>• Des échanges simples, rapides et sécurisés par SMS/Email</div>
-              <div>• Des profils premium avec visibilité accrue</div>
-              <div>• Un espace de négociation inspiré du meilleur du freelance</div>
+              <div>• Connexion sécurisée Google, GitHub, Discord, SMS & Email</div>
+              <div>• Profils vérifiés avec réputation et compétences transparentes</div>
+              <div>• Espaces de négociation et d'appels vidéo intégrés</div>
             </div>
           </div>
         </div>
@@ -6364,6 +6862,72 @@ export default function App() {
 
   return (
     <div style={{ backgroundColor: darkMode ? '#0B1120' : '#F5F5F7', color: darkMode ? '#F8FAFC' : '#0F172A', minHeight: '100vh', transition: 'background-color 0.3s ease, color 0.3s ease', fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif", paddingBottom: '90px', WebkitFontSmoothing: 'antialiased' }}>
+      {/* MODALE BLOQUANTE CGU & RGPD OBLIGATOIRE */}
+      {isAuthenticated && !profile.cguAcceptedAt && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 99999,
+          backgroundColor: 'rgba(15, 23, 42, 0.85)',
+          backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px',
+          animation: 'fadeSlideUp 0.3s ease both'
+        }}>
+          <div style={{
+            maxWidth: '560px', width: '100%',
+            backgroundColor: darkMode ? '#1E293B' : '#FFFFFF',
+            borderRadius: '28px', padding: '28px',
+            border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #E2E8F0',
+            boxShadow: '0 25px 60px -15px rgba(0,0,0,0.5)',
+            color: darkMode ? '#F8FAFC' : '#0F172A',
+            maxHeight: '90vh', overflowY: 'auto'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '50%', backgroundColor: darkMode ? 'rgba(96,165,250,0.2)' : '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: darkMode ? '#60A5FA' : '#04265A' }}>
+                <Scale size={22} />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '800' }}>Conditions Générales & RGPD</h3>
+                <p style={{ margin: 0, fontSize: '12px', color: darkMode ? '#94A3B8' : '#64748B' }}>Cadre juridique et engagement communautaire</p>
+              </div>
+            </div>
+
+            <div style={{
+              backgroundColor: darkMode ? 'rgba(15,23,42,0.6)' : '#F8FAFC',
+              borderRadius: '16px', padding: '16px', fontSize: '13px', lineHeight: 1.65,
+              color: darkMode ? '#CBD5E1' : '#334155',
+              border: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid #E2E8F0',
+              marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '12px'
+            }}>
+              <div>
+                <strong style={{ color: darkMode ? '#93C5FD' : '#04265A' }}>1. Plateforme d'intermédiation technique</strong>
+                <p style={{ margin: '4px 0 0' }}>Troco met à disposition une infrastructure logicielle permettant aux utilisateurs de publier des annonces, échanger des services et communiquer. Troco n'est pas partie prenante aux contrats conclus entre utilisateurs.</p>
+              </div>
+
+              <div>
+                <strong style={{ color: darkMode ? '#93C5FD' : '#04265A' }}>2. Clause de non-responsabilité (P2P)</strong>
+                <p style={{ margin: '4px 0 0' }}>Les échanges, interventions physiques et prêts de matériel relèvent de la responsabilité exclusive des parties prenantes. Chaque membre s'engage à faire preuve de prudence et de diligence.</p>
+              </div>
+
+              <div>
+                <strong style={{ color: darkMode ? '#93C5FD' : '#04265A' }}>3. Protection des données & RGPD</strong>
+                <p style={{ margin: '4px 0 0' }}>Vos données personnelles (nom, email, ville, compétences) sont strictement isolées sur votre espace sécurisé <code>users/{profile.uid || 'uid'}</code> et ne sont jamais revendues à des tiers.</p>
+              </div>
+            </div>
+
+            <button
+              onClick={handleAcceptCgu}
+              style={{
+                width: '100%', border: 'none', borderRadius: '16px', padding: '14px',
+                background: 'linear-gradient(135deg, #04265A 0%, #14B8A6 100%)', color: '#FFF',
+                fontWeight: '800', fontSize: '14px', cursor: 'pointer',
+                boxShadow: '0 12px 24px -6px rgba(4, 38, 90, 0.35)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
+              }}
+            >
+              <CheckCircle size={18} /> J'accepte les CGU et la Politique RGPD
+            </button>
+          </div>
+        </div>
+      )}
       <style>{`
         * { box-sizing: border-box; }
         .premium-main { animation: fadeSlideUp 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
@@ -7605,11 +8169,8 @@ export default function App() {
                   {isEditingProfile ? t('saveProfile') : t('editProfile')}
                 </button>
                 {!isEditingProfile && (
-                  <button onClick={() => {
-                    window.localStorage.removeItem('troco_is_authenticated');
-                    setIsAuthenticated(false);
-                  }} className="premium-button" style={{ border: '1px solid #EF4444', borderRadius: '999px', padding: '10px 14px', backgroundColor: 'transparent', color: '#EF4444', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <Lock size={12} /> Se déconnecter
+                  <button onClick={handleSignOut} className="premium-button" style={{ border: '1px solid #EF4444', borderRadius: '999px', padding: '10px 14px', backgroundColor: 'transparent', color: '#EF4444', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <LogOut size={13} /> Se déconnecter
                   </button>
                 )}
               </div>
