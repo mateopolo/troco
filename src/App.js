@@ -7465,7 +7465,7 @@ export default function App() {
   }
 
   return (
-    <div style={{ backgroundColor: darkMode ? '#0B1120' : '#F5F5F7', color: darkMode ? '#F8FAFC' : '#0F172A', minHeight: '100vh', transition: 'background-color 0.3s ease, color 0.3s ease', fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif", paddingBottom: '90px', WebkitFontSmoothing: 'antialiased' }}>
+    <div style={{ backgroundColor: darkMode ? '#0B1120' : '#F5F5F7', color: darkMode ? '#F8FAFC' : '#0F172A', minHeight: '100vh', transition: 'background-color 0.3s ease, color 0.3s ease', fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif", paddingBottom: isMobile && activeTab === 'chat' ? '0' : '90px', WebkitFontSmoothing: 'antialiased' }}>
       {/* MODALE BLOQUANTE CGU & RGPD OBLIGATOIRE */}
       {isAuthenticated && !profile.cguAcceptedAt && (
         <div style={{
@@ -8407,11 +8407,11 @@ export default function App() {
         key={`${activeTab}-${viewMode}`}
         className="premium-main"
         style={{
-          maxWidth: activeTab === 'feed' ? '1460px' : '1200px',
+          maxWidth: isMobile && activeTab === 'chat' ? '100%' : (activeTab === 'feed' ? '1460px' : '1200px'),
           margin: '0 auto',
-          padding: isMobile && activeTab === 'chat' ? '8px 8px 65px' : '20px 20px 90px',
+          padding: isMobile && activeTab === 'chat' ? '0' : '20px 20px 90px',
           width: '100%',
-          height: isMobile && activeTab === 'chat' ? 'calc(100dvh - 65px)' : 'auto',
+          height: isMobile && activeTab === 'chat' ? 'calc(100dvh - 60px - 65px)' : 'auto',
           boxSizing: 'border-box',
           display: isMobile && activeTab === 'chat' ? 'flex' : 'block',
           flexDirection: 'column',
