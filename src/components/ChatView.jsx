@@ -278,7 +278,14 @@ export default function ChatView({
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '3px' }}>
-                      <span style={{ fontWeight: isUnread ? '800' : '600', fontSize: isUnread ? '14.5px' : '14px', color: isUnread ? (darkMode ? '#FFFFFF' : '#0F172A') : (darkMode ? '#CBD5E1' : '#111827') }}>{chat.user}</span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: isUnread ? '800' : '600', fontSize: isUnread ? '14.5px' : '14px', color: isUnread ? (darkMode ? '#FFFFFF' : '#0F172A') : (darkMode ? '#CBD5E1' : '#111827') }}>
+                        {chat.user}
+                        {(chat.isDemo || chat.persona || (typeof chat.id === 'number' && chat.id < 300)) && (
+                          <span style={{ fontSize: '9px', fontWeight: '800', backgroundColor: darkMode ? 'rgba(168,85,247,0.25)' : '#F3E8FF', color: darkMode ? '#D8B4FE' : '#7E22CE', padding: '1px 6px', borderRadius: '6px' }}>
+                            🤖 Démo
+                          </span>
+                        )}
+                      </span>
                       <span style={{ fontSize: '10px', color: isUnread ? (darkMode ? '#38BDF8' : '#0284C7') : (darkMode ? '#94A3B8' : '#64748B'), fontWeight: isUnread ? '800' : '600' }}>{statusText}</span>
                     </div>
                     <div style={{ fontSize: '12px', fontWeight: isUnread ? '800' : '500', color: isUnread ? (darkMode ? '#60A5FA' : '#0369A1') : (darkMode ? '#94A3B8' : '#04265A'), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: '2px' }}>
@@ -332,7 +339,14 @@ export default function ChatView({
                 {activeChatObj?.user[0]}
               </div>
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontWeight: '800', fontSize: '15px', color: darkMode ? '#FFFFFF' : '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{activeChatObj?.user}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontWeight: '800', fontSize: '15px', color: darkMode ? '#FFFFFF' : '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{activeChatObj?.user}</span>
+                  {(activeChatObj?.isDemo || activeChatObj?.persona || (typeof activeChatObj?.id === 'number' && activeChatObj?.id < 300)) && (
+                    <span style={{ fontSize: '9px', fontWeight: '800', backgroundColor: darkMode ? 'rgba(168,85,247,0.25)' : '#F3E8FF', color: darkMode ? '#D8B4FE' : '#7E22CE', padding: '2px 7px', borderRadius: '6px' }}>
+                      🤖 Démo IA
+                    </span>
+                  )}
+                </div>
                 <div style={{ fontSize: '11px', color: darkMode ? '#60A5FA' : '#04265A', fontWeight: '800', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {getListingTitleTranslation ? getListingTitleTranslation(activeChatObj?.listing, currentLang) : activeChatObj?.listing}
                 </div>

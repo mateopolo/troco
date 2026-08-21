@@ -15,6 +15,7 @@ import TransactionsHistoryModal from './components/TransactionsHistoryModal';
 import CguModal from './components/CguModal';
 import PrivacyCenterModal from './components/PrivacyCenterModal';
 import CookieBanner from './components/CookieBanner';
+import OnboardingWizardModal from './components/OnboardingWizardModal';
 import { analyzeContent } from './utils/contentModeration';
 
 
@@ -1948,6 +1949,27 @@ function FeedCardItem({
             URGENT
           </span>
         )}
+        {(item.isDemo || (typeof item.id === 'number' && item.id <= 20)) && (
+          <span style={{
+            position: 'absolute',
+            top: item.urgent ? '42px' : '12px',
+            left: '12px',
+            backgroundColor: darkMode ? 'rgba(126,34,206,0.9)' : '#7E22CE',
+            color: '#FFF',
+            fontSize: '9.5px',
+            fontWeight: '800',
+            padding: '4px 8px',
+            borderRadius: '8px',
+            boxShadow: '0 4px 12px rgba(126,34,206,0.35)',
+            zIndex: 4,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '3px',
+            backdropFilter: 'blur(4px)'
+          }}>
+            🤖 Annonce IA
+          </span>
+        )}
 
         {media.video && (
           <span style={{ position: 'absolute', bottom: '12px', left: '12px', backgroundColor: isHovered ? '#04265A' : 'rgba(15,23,42,0.75)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', color: '#60A5FA', fontSize: '10px', fontWeight: '800', padding: '5px 9px', borderRadius: '10px', zIndex: 4, display: 'flex', alignItems: 'center', gap: '4px', transition: 'all 0.3s ease' }}>
@@ -3259,6 +3281,8 @@ export default function App() {
   // ---- ÉTATS CADRE JURIDIQUE, CGU & RGPD (BLOC 6) ----
   const [isPrivacyCenterOpen, setIsPrivacyCenterOpen] = useState(false);
   const [isCguViewerOpen, setIsCguViewerOpen] = useState(false);
+  // ---- ÉTAT DU PARCOURS D'ONBOARDING INTERACTIF (CHANTIER 1) ----
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   const [userTransactions, setUserTransactions] = useState(() => {
     try {
       const saved = localStorage.getItem('troco_user_transactions');
@@ -3490,6 +3514,8 @@ export default function App() {
               ...data,
               uid: uid,
             }));
+            if (Array.isArray(data.skills)) setSkills(data.skills);
+            if (Array.isArray(data.equipment)) setEquipment(data.equipment);
           } else {
             // Initialisation automatique du profil sur Firestore si nouveau provider
             const defaultUserDoc = {
@@ -3499,13 +3525,17 @@ export default function App() {
               email: firebaseUser.email || '',
               phoneNumber: firebaseUser.phoneNumber || '',
               avatar: firebaseUser.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
-              bio: 'Nouvel utilisateur Troco ! Prêt à échanger et partager.',
+              bio: 'Nouvel utilisateur sur Troco ! Prêt à partager mes compétences et échanger des services.',
               location: 'Paris, France',
               languages: ['FR'],
-              skills: ['Bricolage', 'Jardinage'],
-              equipment: ['Perceuse Bosch', 'Escabeau'],
-              euroBalance: 120,
-              trocoTokens: 8,
+              skills: [],
+              equipment: [],
+              euroBalance: 50,
+              trocoTokens: 5,
+              dealsCompleted: 0,
+              dealsInProgress: 0,
+              rating: null,
+              onboardingCompleted: false,
               loginMethod: firebaseUser.providerData?.[0]?.providerId || 'Email',
               cguAcceptedAt: null,
               createdAt: serverTimestamp(),
@@ -3535,6 +3565,52 @@ export default function App() {
 
     return () => unsubscribeAuth();
   }, []);
+
+  // ---- DÉTECTION ET OUVERTURE DU WIZARD D'ONBOARDING POUR NOUVEAUX COMPTES (CHANTIER 1) ----
+  useEffect(() => {
+    if (isAuthenticated && profile) {
+      const needsOnboarding = profile.onboardingCompleted === false || (profile.onboardingCompleted === undefined && profile.uid && profile.uid !== 'demo_mateopolo');
+      if (needsOnboarding) {
+        setIsOnboardingOpen(true);
+      }
+    }
+  }, [isAuthenticated, profile?.onboardingCompleted, profile?.uid]);
+
+  // ---- FINALISATION DU PARCOURS D'ONBOARDING (CHANTIER 1) ----
+  const handleCompleteOnboarding = async (completedData) => {
+    const updatedProfile = {
+      ...profile,
+      ...completedData,
+      onboardingCompleted: true,
+      dealsCompleted: profile.dealsCompleted ?? 0,
+      dealsInProgress: profile.dealsInProgress ?? 0,
+      rating: profile.rating ?? null,
+    };
+    setProfile(updatedProfile);
+    setProfileDraft(updatedProfile);
+    if (Array.isArray(completedData.skills)) setSkills(completedData.skills);
+    if (Array.isArray(completedData.equipment)) setEquipment(completedData.equipment);
+    window.localStorage.setItem('troco_user_profile', JSON.stringify(updatedProfile));
+
+    const uid = profile?.uid || auth.currentUser?.uid;
+    if (uid) {
+      try {
+        await setDoc(doc(db, 'users', uid), {
+          ...completedData,
+          onboardingCompleted: true,
+          dealsCompleted: profile.dealsCompleted ?? 0,
+          dealsInProgress: profile.dealsInProgress ?? 0,
+          rating: profile.rating ?? null,
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+      } catch (e) {
+        console.warn('[Firestore] Failed to save onboarding to Firestore:', e);
+      }
+    }
+    setIsOnboardingOpen(false);
+    setSaveMessage('✨ Bienvenue sur Troco ! Votre profil est configuré.');
+    setTimeout(() => setSaveMessage(''), 4000);
+  };
 
   useEffect(() => {
     if (isSignInWithEmailLink(auth, window.location.href)) {
@@ -4401,6 +4477,7 @@ export default function App() {
   const mockChats = [
     {
       id: 201,
+      isDemo: true,
       user: "Emma Roche",
       listing: "Initiation au Design UI/UX (Figma)",
       lastMessage: "Je te propose 20€ + 1 Jeton pour 2h de cours ce samedi !",
@@ -4416,6 +4493,7 @@ export default function App() {
     },
     {
       id: 202,
+      isDemo: true,
       user: "Thomas V.",
       listing: "Studio Photo Pro Paris",
       lastMessage: "Disponible ce vendredi pour un shooting contre 3 jetons ?",
@@ -4431,6 +4509,7 @@ export default function App() {
     },
     {
       id: 101,
+      isDemo: true,
       user: "Sofia M.",
       listing: "Cours de Piano",
       lastMessage: "D'accord pour 1 crédit l'heure ! Tu es libre samedi ?",
@@ -4446,6 +4525,7 @@ export default function App() {
     },
     {
       id: 102,
+      isDemo: true,
       user: "Marc L.",
       listing: "Prêt Perceuse Bosch",
       lastMessage: "Perceuse et coffret forets béton prêts. Prêt gratuit avec caution 30€.",
@@ -4461,6 +4541,7 @@ export default function App() {
     },
     {
       id: 103,
+      isDemo: true,
       user: "Karim B.",
       listing: "Réparation iPhone 13",
       lastMessage: "D'accord pour 25€ avec changement d'écran d'origine.",
@@ -4476,6 +4557,7 @@ export default function App() {
     },
     {
       id: 104,
+      isDemo: true,
       user: "Camille & Lucas",
       listing: "Stay Swap Marseille Vieux-Port",
       lastMessage: "Super ! Échange d'appartement confirmé pour le week-end du 20 mai !",
@@ -5075,10 +5157,14 @@ export default function App() {
     },
   ];
 
-  const closedDealsCount = swapHistory.filter(entry => entry.status === 'Clôturé').length;
-  const inProgressCount = swapHistory.filter(entry => entry.status === 'En cours' || entry.status === 'Planifié').length;
-  const ratedEntries = swapHistory.filter(entry => entry.rating);
-  const averageRating = ratedEntries.length ? (ratedEntries.reduce((sum, entry) => sum + entry.rating, 0) / ratedEntries.length).toFixed(1) : '—';
+  const isDemoProfile = profile?.uid === 'demo_mateopolo' || (!profile?.uid && profile?.name === 'MATEO POLO');
+  const closedDealsCount = isDemoProfile ? swapHistory.filter(entry => entry.status === 'Clôturé').length : (profile?.dealsCompleted ?? 0);
+  const inProgressCount = isDemoProfile ? swapHistory.filter(entry => entry.status === 'En cours' || entry.status === 'Planifié').length : (profile?.dealsInProgress ?? 0);
+  const ratedEntries = isDemoProfile ? swapHistory.filter(entry => entry.rating) : [];
+  const averageRating = isDemoProfile
+    ? (ratedEntries.length ? (ratedEntries.reduce((sum, entry) => sum + entry.rating, 0) / ratedEntries.length).toFixed(1) : '—')
+    : (profile?.rating ? Number(profile.rating).toFixed(1) : '—');
+  const userSwapHistory = isDemoProfile ? swapHistory : (profile?.swapHistory || []);
 
   const baseCategories = ['Tous', 'Cours/Compétences', 'Outillage', 'Services/Dépannage', 'Logement/Swap'];
   const allCategories = [...baseCategories, ...customCategories];
@@ -6282,6 +6368,10 @@ export default function App() {
           languages: ['FR'],
           skills: [],
           equipment: [],
+          dealsCompleted: 0,
+          dealsInProgress: 0,
+          rating: null,
+          onboardingCompleted: false,
           euroBalance: 50,
           trocoTokens: 5,
           loginMethod: 'Google',
@@ -6345,6 +6435,10 @@ export default function App() {
           languages: ['FR', 'EN'],
           skills: [],
           equipment: [],
+          dealsCompleted: 0,
+          dealsInProgress: 0,
+          rating: null,
+          onboardingCompleted: false,
           euroBalance: 50,
           trocoTokens: 5,
           loginMethod: 'GitHub',
@@ -6408,6 +6502,10 @@ export default function App() {
           languages: ['FR'],
           skills: [],
           equipment: [],
+          dealsCompleted: 0,
+          dealsInProgress: 0,
+          rating: null,
+          onboardingCompleted: false,
           euroBalance: 50,
           trocoTokens: 5,
           loginMethod: 'Discord',
@@ -6571,11 +6669,15 @@ export default function App() {
         bio: signupBio.trim() || 'Nouvel utilisateur Troco ! Prêt à échanger et partager.',
         location: signupLocation.trim() || 'Paris, France',
         languages: signupLanguages.length > 0 ? signupLanguages : ['FR'],
-        skills: signupSkills.length > 0 ? signupSkills : ['Bricolage', 'Jardinage'],
-        equipment: ['Matériel personnel'],
+        skills: signupSkills.length > 0 ? signupSkills : [],
+        equipment: [],
+        dealsCompleted: 0,
+        dealsInProgress: 0,
+        rating: null,
+        onboardingCompleted: false,
         loginMethod: 'Email/Mot de passe',
-        euroBalance: 120, // Solde de bienvenue
-        trocoTokens: 8,   // Tokens de bienvenue
+        euroBalance: 50, // Solde de bienvenue
+        trocoTokens: 5,   // Tokens de bienvenue
         cguAcceptedAt: null, // Déclenche la modale CGU obligatoire
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -7856,7 +7958,26 @@ export default function App() {
                   <>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', gap: '10px', flexWrap: 'wrap' }}>
                       <div>
-                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 10px', borderRadius: '999px', backgroundColor: darkMode ? 'rgba(4,38,90,0.6)' : '#EFF6FF', color: darkMode ? '#93C5FD' : '#04265A', fontSize: '11px', fontWeight: '800', marginBottom: '8px' }}><Sparkles size={12} /> {t('verifiedOffer')}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 10px', borderRadius: '999px', backgroundColor: darkMode ? 'rgba(4,38,90,0.6)' : '#EFF6FF', color: darkMode ? '#93C5FD' : '#04265A', fontSize: '11px', fontWeight: '800' }}>
+                            <Sparkles size={12} /> {t('verifiedOffer')}
+                          </div>
+                          {(selectedListing.isDemo || (typeof selectedListing.id === 'number' && selectedListing.id <= 20)) && (
+                            <span style={{
+                              fontSize: '11px',
+                              fontWeight: '800',
+                              padding: '5px 10px',
+                              borderRadius: '999px',
+                              backgroundColor: darkMode ? 'rgba(126,34,206,0.3)' : '#F3E8FF',
+                              color: darkMode ? '#D8B4FE' : '#7E22CE',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}>
+                              🤖 Annonce IA (Démo)
+                            </span>
+                          )}
+                        </div>
                         <h3 style={{ margin: '0 0 4px 0', fontSize: '22px', color: darkMode ? '#FFFFFF' : '#111827' }}>{detailDisplayContent.title}</h3>
                         {currentLang !== (selectedListing.nativeLang || 'FR') && (
                           <button
@@ -8091,7 +8212,14 @@ export default function App() {
                         <Marker key={item.id} position={coords} icon={createModernMapIcon(darkMode)}>
                           <Popup>
                             <div style={{ minWidth: '190px', maxWidth: '280px', display: 'flex', flexDirection: 'column', gap: '6px', padding: '2px' }}>
-                              <img src={media.image} alt={displayContent.title} style={{ width: '100%', height: '80px', objectFit: 'cover', borderRadius: '10px' }} />
+                              <div style={{ position: 'relative' }}>
+                                <img src={media.image} alt={displayContent.title} style={{ width: '100%', height: '80px', objectFit: 'cover', borderRadius: '10px' }} />
+                                {(item.isDemo || (typeof item.id === 'number' && item.id <= 20)) && (
+                                  <span style={{ position: 'absolute', top: '6px', left: '6px', backgroundColor: '#7E22CE', color: '#FFF', fontSize: '9px', fontWeight: '800', padding: '2px 6px', borderRadius: '6px' }}>
+                                    🤖 Annonce IA
+                                  </span>
+                                )}
+                              </div>
                               <div style={{ fontWeight: '800', fontSize: '12px', color: '#111827', lineHeight: 1.3 }}>{displayContent.title}</div>
                               <div style={{ fontSize: '11px', color: '#64748B', lineHeight: 1.4 }}>📍 {localizedLoc}</div>
                               <div style={{ fontSize: '11px', color: '#04265A', fontWeight: '800' }}>{item.compensation}</div>
@@ -8459,8 +8587,32 @@ export default function App() {
           <div style={{ backgroundColor: darkMode ? 'rgba(30,41,59,0.85)' : 'rgba(255,255,255,0.85)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', padding: '22px', borderRadius: '28px', border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(226,232,240,0.9)', boxShadow: '0 10px 30px rgba(15,23,42,0.06)', color: darkMode ? '#F8FAFC' : '#111827' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
               <div>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: '700', padding: '6px 10px', borderRadius: '999px', backgroundColor: darkMode ? 'rgba(4,38,90,0.6)' : '#EFF6FF', color: darkMode ? '#93C5FD' : '#04265A', marginBottom: '8px' }}>
-                  <ShieldCheck size={12} /> {t('verifiedProfile')}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                  <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: '700', padding: '6px 10px', borderRadius: '999px', backgroundColor: darkMode ? 'rgba(4,38,90,0.6)' : '#EFF6FF', color: darkMode ? '#93C5FD' : '#04265A' }}>
+                    <ShieldCheck size={12} /> {t('verifiedProfile')}
+                  </div>
+                  {profile.accountType && (
+                    <span style={{
+                      fontSize: '11px',
+                      fontWeight: '800',
+                      padding: '5px 10px',
+                      borderRadius: '999px',
+                      backgroundColor: profile.accountType === 'professional'
+                        ? (darkMode ? 'rgba(217,119,6,0.25)' : '#FEF3C7')
+                        : profile.accountType === 'company'
+                        ? (darkMode ? 'rgba(16,185,129,0.25)' : '#ECFDF5')
+                        : (darkMode ? 'rgba(4,38,90,0.6)' : '#EFF6FF'),
+                      color: profile.accountType === 'professional'
+                        ? (darkMode ? '#FDE68A' : '#92400E')
+                        : profile.accountType === 'company'
+                        ? (darkMode ? '#6EE7B7' : '#065F46')
+                        : (darkMode ? '#93C5FD' : '#04265A'),
+                    }}>
+                      {profile.accountType === 'professional' && '💼 Pro / Freelance'}
+                      {profile.accountType === 'company' && '🏢 Organisation / Asso'}
+                      {profile.accountType === 'particular' && '👤 Particulier'}
+                    </span>
+                  )}
                 </div>
                 <h3 style={{ margin: 0, fontSize: '22px', fontWeight: '800', color: darkMode ? '#FFFFFF' : '#111827', letterSpacing: '-0.01em' }}>{isEditingProfile ? profileDraft.name : profile.name}</h3>
                 <div style={{ fontSize: '13px', fontWeight: '800', color: darkMode ? '#60A5FA' : '#04265A', marginTop: '2px' }}>{isEditingProfile ? (profileDraft.username || '@user') : (profile.username || '@mateopolo')}</div>
@@ -8728,7 +8880,9 @@ export default function App() {
                 </div>
                 <div style={{ flex: 1, minWidth: '130px', border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E2E8F0', borderRadius: '16px', padding: '12px 14px', backgroundColor: darkMode ? 'rgba(15,23,42,0.6)' : '#F8FAFC' }}>
                   <div style={{ fontSize: '11px', color: darkMode ? '#CBD5E1' : '#64748B' }}>{t('averageRating')}</div>
-                  <div style={{ fontSize: '20px', fontWeight: '800', color: '#F59E0B', display: 'flex', alignItems: 'center', gap: '4px' }}>{averageRating} <Star size={15} fill="#F59E0B" color="#F59E0B" /></div>
+                  <div style={{ fontSize: '20px', fontWeight: '800', color: '#F59E0B', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    {averageRating} {averageRating !== '—' && <Star size={15} fill="#F59E0B" color="#F59E0B" />}
+                  </div>
                 </div>
                 <div style={{ flex: 1, minWidth: '130px', border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E2E8F0', borderRadius: '16px', padding: '12px 14px', backgroundColor: darkMode ? 'rgba(15,23,42,0.6)' : '#F8FAFC' }}>
                   <div style={{ fontSize: '11px', color: darkMode ? '#CBD5E1' : '#64748B' }}>{t('inProgressPlanned')}</div>
@@ -8737,53 +8891,84 @@ export default function App() {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {swapHistory.map((entry) => {
-                  const statusStyle = statusStyles[entry.status] || { bg: '#F3F4F6', text: '#6B7280' };
-                  return (
-                    <div key={entry.id} className="premium-card" style={{ border: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E2E8F0', borderRadius: '18px', padding: '14px', backgroundColor: darkMode ? 'rgba(15,23,42,0.7)' : '#FFFFFF', boxShadow: '0 2px 10px rgba(15,23,42,0.04)' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px', marginBottom: '6px' }}>
-                        <div>
-                          <div style={{ fontWeight: '800', fontSize: '13px', color: darkMode ? '#FFFFFF' : '#111827', lineHeight: 1.4 }}>{getListingTitleTranslation(entry.deal, currentLang)}</div>
-                          <div style={{ fontSize: '12px', color: darkMode ? '#CBD5E1' : '#64748B', marginTop: '3px' }}>{entry.counterparty} • {entry.date}</div>
-                        </div>
-                        <span style={{ fontSize: '10px', fontWeight: '800', padding: '5px 10px', borderRadius: '999px', backgroundColor: statusStyle.bg, color: statusStyle.text, whiteSpace: 'nowrap' }}>{formatStatus(entry.status)}</span>
-                      </div>
-                      <div style={{ fontSize: '11px', color: darkMode ? '#60A5FA' : '#04265A', fontWeight: '800', marginBottom: '8px' }}>{formatCompensation(entry.compensation)}</div>
-                      <div style={{ borderTop: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #F1F5F9', paddingTop: '10px' }}>
-                        {(() => {
-                          const isRevOrig = !!showingOriginalReviews[entry.id];
-                          const revTxt = getReviewTranslation(entry.review, currentLang, isRevOrig);
-                          return (
-                            <>
-                              {entry.rating ? (
-                                <>
-                                  <div style={{ display: 'flex', gap: '2px', marginBottom: '6px' }}>
-                                    {[1, 2, 3, 4, 5].map(star => (
-                                      <Star key={star} size={13} fill={star <= entry.rating ? '#F59E0B' : 'none'} color={star <= entry.rating ? '#F59E0B' : '#E2E8F0'} />
-                                    ))}
-                                  </div>
-                                  <div style={{ fontSize: '12px', color: darkMode ? '#E2E8F0' : '#475569', lineHeight: 1.6, fontStyle: 'italic' }}>« {revTxt} »</div>
-                                </>
-                              ) : (
-                                <div style={{ fontSize: '12px', color: darkMode ? '#CBD5E1' : '#64748B', lineHeight: 1.6 }}>{revTxt}</div>
-                              )}
-                              {currentLang !== 'FR' && (
-                                <button
-                                  onClick={() => toggleOriginalReview(entry.id)}
-                                  className="premium-button"
-                                  style={{ border: 'none', backgroundColor: 'transparent', color: darkMode ? '#60A5FA' : '#04265A', fontSize: '10px', fontWeight: '800', cursor: 'pointer', marginTop: '4px', display: 'inline-flex', alignItems: 'center', gap: '3px', padding: 0 }}
-                                >
-                                  <Globe size={10} color={darkMode ? '#60A5FA' : '#04265A'} />
-                                  {isRevOrig ? t('showTranslation') : t('showOriginal')}
-                                </button>
-                              )}
-                            </>
-                          );
-                        })()}
-                      </div>
+                {userSwapHistory.length === 0 ? (
+                  <div style={{ padding: '28px 20px', textAlign: 'center', borderRadius: '20px', backgroundColor: darkMode ? 'rgba(15,23,42,0.5)' : '#F8FAFC', border: darkMode ? '1px dashed rgba(255,255,255,0.15)' : '1px dashed #CBD5E1' }}>
+                    <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: darkMode ? 'rgba(96,165,250,0.15)' : '#EFF6FF', color: darkMode ? '#60A5FA' : '#04265A', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+                      <Sparkles size={22} />
                     </div>
-                  );
-                })}
+                    <div style={{ fontWeight: '800', fontSize: '15px', color: darkMode ? '#FFFFFF' : '#111827', marginBottom: '6px' }}>
+                      Nouveau profil (0 deal clôturé)
+                    </div>
+                    <p style={{ fontSize: '12px', color: darkMode ? '#94A3B8' : '#64748B', maxWidth: '380px', margin: '0 auto 16px', lineHeight: 1.6 }}>
+                      Vous n'avez pas encore d'échange clôturé. Parcourez l'explorateur ou proposez un deal sur une annonce pour démarrer !
+                    </p>
+                    <button
+                      onClick={() => setActiveTab('feed')}
+                      className="premium-button"
+                      style={{
+                        border: 'none',
+                        borderRadius: '999px',
+                        padding: '10px 20px',
+                        backgroundColor: '#04265A',
+                        color: '#FFF',
+                        fontWeight: '800',
+                        fontSize: '12px',
+                        cursor: 'pointer',
+                        boxShadow: '0 8px 18px rgba(4,38,90,0.25)'
+                      }}
+                    >
+                      Explorer les annonces
+                    </button>
+                  </div>
+                ) : (
+                  userSwapHistory.map((entry) => {
+                    const statusStyle = statusStyles[entry.status] || { bg: '#F3F4F6', text: '#6B7280' };
+                    return (
+                      <div key={entry.id} className="premium-card" style={{ border: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E2E8F0', borderRadius: '18px', padding: '14px', backgroundColor: darkMode ? 'rgba(15,23,42,0.7)' : '#FFFFFF', boxShadow: '0 2px 10px rgba(15,23,42,0.04)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px', marginBottom: '6px' }}>
+                          <div>
+                            <div style={{ fontWeight: '800', fontSize: '13px', color: darkMode ? '#FFFFFF' : '#111827', lineHeight: 1.4 }}>{getListingTitleTranslation(entry.deal, currentLang)}</div>
+                            <div style={{ fontSize: '12px', color: darkMode ? '#CBD5E1' : '#64748B', marginTop: '3px' }}>{entry.counterparty} • {entry.date}</div>
+                          </div>
+                          <span style={{ fontSize: '10px', fontWeight: '800', padding: '5px 10px', borderRadius: '999px', backgroundColor: statusStyle.bg, color: statusStyle.text, whiteSpace: 'nowrap' }}>{formatStatus(entry.status)}</span>
+                        </div>
+                        <div style={{ fontSize: '11px', color: darkMode ? '#60A5FA' : '#04265A', fontWeight: '800', marginBottom: '8px' }}>{formatCompensation(entry.compensation)}</div>
+                        <div style={{ borderTop: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #F1F5F9', paddingTop: '10px' }}>
+                          {(() => {
+                            const isRevOrig = !!showingOriginalReviews[entry.id];
+                            const revTxt = getReviewTranslation(entry.review, currentLang, isRevOrig);
+                            return (
+                              <>
+                                {entry.rating ? (
+                                  <>
+                                    <div style={{ display: 'flex', gap: '2px', marginBottom: '6px' }}>
+                                      {[1, 2, 3, 4, 5].map(star => (
+                                        <Star key={star} size={13} fill={star <= entry.rating ? '#F59E0B' : 'none'} color={star <= entry.rating ? '#F59E0B' : '#E2E8F0'} />
+                                      ))}
+                                    </div>
+                                    <div style={{ fontSize: '12px', color: darkMode ? '#E2E8F0' : '#475569', lineHeight: 1.6, fontStyle: 'italic' }}>« {revTxt} »</div>
+                                  </>
+                                ) : (
+                                  <div style={{ fontSize: '12px', color: darkMode ? '#CBD5E1' : '#64748B', lineHeight: 1.6 }}>{revTxt}</div>
+                                )}
+                                {currentLang !== 'FR' && (
+                                  <button
+                                    onClick={() => toggleOriginalReview(entry.id)}
+                                    className="premium-button"
+                                    style={{ border: 'none', backgroundColor: 'transparent', color: darkMode ? '#60A5FA' : '#04265A', fontSize: '10px', fontWeight: '800', cursor: 'pointer', marginTop: '4px', display: 'inline-flex', alignItems: 'center', gap: '3px', padding: 0 }}
+                                  >
+                                    <Globe size={10} color={darkMode ? '#60A5FA' : '#04265A'} />
+                                    {isRevOrig ? t('showTranslation') : t('showOriginal')}
+                                  </button>
+                                )}
+                              </>
+                            );
+                          })()}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
               </div>
             </div>
 
@@ -9667,10 +9852,18 @@ export default function App() {
         }}
       />
 
+      {/* PARCOURS D'ONBOARDING INTERACTIF POUR NOUVEAUX COMPTES (CHANTIER 1) */}
+      <OnboardingWizardModal
+        isOpen={isOnboardingOpen}
+        darkMode={darkMode}
+        currentUser={profile}
+        onComplete={handleCompleteOnboarding}
+      />
+
       {/* MODALE D'ACCEPTATION & CONSULTATION DES CGU (BLOC 6) */}
       <CguModal
-        isOpen={isCguViewerOpen || (Boolean(profile?.name) && !profile?.cguAcceptedAt)}
-        isMandatory={Boolean(profile?.name) && !profile?.cguAcceptedAt}
+        isOpen={isCguViewerOpen || (Boolean(profile?.name) && !profile?.cguAcceptedAt && profile?.onboardingCompleted)}
+        isMandatory={Boolean(profile?.name) && !profile?.cguAcceptedAt && profile?.onboardingCompleted}
         onClose={() => setIsCguViewerOpen(false)}
         onAccept={handleAcceptCgu}
         darkMode={darkMode}
