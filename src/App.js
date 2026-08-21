@@ -3541,18 +3541,18 @@ export default function App() {
   useEffect(() => {
     if (activeTab === 'profile' && isAuthenticated) {
       const alreadyCelebrated = window.localStorage.getItem('troco_welcome_gift_celebrated') === 'true';
-      if (!alreadyCelebrated && (profile?.trocoTokens === 10 || profile?.trocoTokens === 5)) {
+      if (!alreadyCelebrated && profile?.trocoTokens === 10 && (profile?.euroBalance === 0 || profile?.euroBalance === 0.00)) {
         window.localStorage.setItem('troco_welcome_gift_celebrated', 'true');
         playWelcomeGiftFanfare();
         setIsWelcomeGiftModalOpen(true);
       }
     }
-  }, [activeTab, isAuthenticated, profile?.trocoTokens]);
+  }, [activeTab, isAuthenticated, profile?.trocoTokens, profile?.euroBalance]);
 
   // ---- FINALISATION DU PARCOURS D'ONBOARDING (CHANTIER 1 & CADEAU DE BIENVENUE) ----
   const handleCompleteOnboarding = async (completedData) => {
-    const finalEuroBalance = completedData.euroBalance !== undefined ? completedData.euroBalance : (profile.euroBalance !== undefined ? profile.euroBalance : 0.00);
-    const finalTokens = completedData.trocoTokens !== undefined ? completedData.trocoTokens : 10;
+    const finalEuroBalance = 0.00; // Toujours 0€ à la création de compte
+    const finalTokens = 10; // Toujours 10 Jetons offerts à la bienvenue
     const updatedProfile = {
       ...profile,
       ...completedData,
@@ -10611,8 +10611,8 @@ export default function App() {
         isOpen={isWelcomeGiftModalOpen}
         onClose={() => setIsWelcomeGiftModalOpen(false)}
         darkMode={darkMode}
-        trocoTokens={profile?.trocoTokens ?? 10}
-        euroBalance={profile?.euroBalance ?? 0}
+        trocoTokens={10}
+        euroBalance={0}
       />
 
       {/* BILAN DE SÉANCE VISIO & RÉTRIBUTION EN JETONS (CHANTIER 5) */}

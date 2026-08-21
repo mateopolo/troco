@@ -78,8 +78,11 @@ export default function ChatView({
 
   if (activeTab !== 'chat') return null;
 
-  const currentChatId = selectedChat ? selectedChat.id : (mockChats[0]?.id || 201);
-  const activeChatObj = selectedChat || mockChats[0];
+  const visibleChats = mockChats.filter(chat => !deletedChatIds.has(chat.id));
+  // If selectedChat has been deleted, treat it as null
+  const effectiveSelectedChat = selectedChat && !deletedChatIds.has(selectedChat.id) ? selectedChat : null;
+  const currentChatId = effectiveSelectedChat ? effectiveSelectedChat.id : (visibleChats[0]?.id || 201);
+  const activeChatObj = effectiveSelectedChat || (visibleChats.length > 0 ? visibleChats[0] : null);
   const messages = chatThreads[currentChatId] || [];
 
   const formatMsgTime = (val) => {
@@ -257,12 +260,12 @@ export default function ChatView({
               {t('discussions') || 'Discussions'}
             </h3>
             <span style={{ fontSize: '11px', fontWeight: '800', backgroundColor: darkMode ? 'rgba(4,38,90,0.6)' : '#EFF6FF', color: darkMode ? '#93C5FD' : '#04265A', padding: '4px 10px', borderRadius: '999px' }}>
-              {mockChats.length} conv.
+              {visibleChats.length} conv.
             </span>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', overflowY: 'auto', flex: 1, paddingRight: '4px' }}>
-            {mockChats.filter(chat => !deletedChatIds.has(chat.id)).map(chat => {
+            {visibleChats.map(chat => {
               const isSelected = activeChatObj?.id === chat.id;
               const unreadCount = getChatUnreadCount(chat);
               const isUnread = unreadCount > 0;
@@ -386,6 +389,19 @@ export default function ChatView({
           boxSizing: 'border-box',
           overflowX: 'hidden'
         }}>
+          {/* ÉTAT VIDE : aucune conversation visible */}
+          {!activeChatObj ? (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', padding: '40px 20px', textAlign: 'center' }}>
+              <div style={{ width: '72px', height: '72px', borderRadius: '50%', backgroundColor: darkMode ? 'rgba(4,38,90,0.4)' : '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ fontSize: '32px' }}>💬</span>
+              </div>
+              <div>
+                <p style={{ margin: '0 0 6px', fontWeight: '800', fontSize: '16px', color: darkMode ? '#FFFFFF' : '#111827' }}>Aucune discussion</p>
+                <p style={{ margin: 0, fontSize: '13px', color: darkMode ? '#94A3B8' : '#64748B', lineHeight: 1.5 }}>Toutes vos conversations ont été supprimées.<br/>Contactez un membre pour en démarrer une.</p>
+              </div>
+            </div>
+          ) : (
+            <>
           {/* HEADER DISCUSSION */}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingBottom: '12px', borderBottom: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E2E8F0', marginBottom: '12px', gap: '6px', flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
@@ -869,6 +885,8 @@ export default function ChatView({
               </button>
             </div>
           </div>
+            </>
+          )}
         </div>
       )}
     </div>
