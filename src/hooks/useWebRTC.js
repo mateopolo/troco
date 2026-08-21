@@ -1,8 +1,9 @@
 /**
- * useWebRTC.js — Signalisation WebRTC temps réel via Firestore avec STUN mondial (Wi-Fi ⇄ 4G/5G) et gestion des autorisations
+ * useWebRTC.js — Signalisation WebRTC temps réel via Firestore avec STUN mondial (Wi-Fi ⇄ 4G/5G),
+ * Partage d'écran (Screen Share avec bascule instantanée) et Outils de modération Professeur / Admin d'appel
  *
  * Architecture Firestore :
- *   calls/{chatId}                          → type, from, to, status, offer, answer
+ *   calls/{chatId}                          → type, from, to, status, offer, answer, isScreenSharing, screenSharingBy, forceMuteParticipant, forceStopScreenShare
  *   calls/{chatId}/callerCandidates/{id}    → candidats ICE de l'appelant
  *   calls/{chatId}/calleeCandidates/{id}    → candidats ICE de l'appelé
  */
@@ -33,7 +34,8 @@ const ICE_CONFIG = {
 export function useWebRTC({ profileName, selectedChat }) {
   const [callState, setCallState] = useState({
     type: null, active: false, ringing: false,
-    micOn: true, camOn: true, inviteOpen: false, copied: false,
+    micOn: true, camOn: true, isScreenSharing: false, isHost: false,
+    inviteOpen: false, copied: false, remoteScreenSharing: false,
   });
   const [localStream, setLocalStream]   = useState(null);
   const [remoteStream, setRemoteStream] = useState(null);
@@ -46,6 +48,8 @@ export function useWebRTC({ profileName, selectedChat }) {
   const pcRef          = useRef(null);
   const unsubsRef      = useRef([]);
   const activeChatIdRef = useRef(null);
+  const screenTrackRef = useRef(null);
+  const cameraTrackRef = useRef(null);
 
   // Détection des caméras disponibles sur l'appareil
   useEffect(() => {
@@ -142,6 +146,14 @@ export function useWebRTC({ profileName, selectedChat }) {
       try { pcRef.current.close(); } catch (_) {}
       pcRef.current = null;
     }
+    if (screenTrackRef.current) {
+      try { screenTrackRef.current.stop(); } catch (_) {}
+      screenTrackRef.current = null;
+    }
+    if (cameraTrackRef.current) {
+      try { cameraTrackRef.current.stop(); } catch (_) {}
+      cameraTrackRef.current = null;
+    }
     setLocalStream(prev => {
       if (prev) prev.getTracks().forEach(t => t.stop());
       return null;
@@ -194,12 +206,12 @@ export function useWebRTC({ profileName, selectedChat }) {
     // Enveloppe d'autorisation explicite
     const stream = await _getLocalStream(type);
     if (!stream) {
-      setCallState({ type: null, active: false, ringing: false, micOn: true, camOn: true, inviteOpen: false, copied: false });
+      setCallState({ type: null, active: false, ringing: false, micOn: true, camOn: true, isScreenSharing: false, isHost: false, inviteOpen: false, copied: false, remoteScreenSharing: false });
       return;
     }
     setLocalStream(stream);
 
-    setCallState({ type, active: true, ringing: true, micOn: true, camOn: type === 'video', inviteOpen: false, copied: false });
+    setCallState({ type, active: true, ringing: true, micOn: true, camOn: type === 'video', isScreenSharing: false, isHost: true, inviteOpen: false, copied: false, remoteScreenSharing: false });
     playRingtone();
     if (navigator.vibrate) navigator.vibrate([300, 100, 300]);
 
@@ -215,20 +227,29 @@ export function useWebRTC({ profileName, selectedChat }) {
       to: selectedChat.user,
       status: 'ringing',
       offer: { type: offer.type, sdp: offer.sdp },
+      isScreenSharing: false,
       startedAt: serverTimestamp(),
     });
 
-    // Écouter la réponse SDP
+    // Écouter la réponse SDP et les signaux de modération
     const unsubAnswer = onSnapshot(doc(db, 'calls', String(chatId)), async (snap) => {
       if (!snap.exists()) {
         _cleanup();
-        setCallState({ type: null, active: false, ringing: false, micOn: true, camOn: true, inviteOpen: false, copied: false });
+        setCallState({ type: null, active: false, ringing: false, micOn: true, camOn: true, isScreenSharing: false, isHost: false, inviteOpen: false, copied: false, remoteScreenSharing: false });
         return;
       }
       const data = snap.data();
       if (data?.answer && !pc.currentRemoteDescription) {
         await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
         setCallState(prev => ({ ...prev, ringing: false }));
+      }
+
+      // Signal de partage d'écran distant
+      if (data?.isScreenSharing !== undefined) {
+        setCallState(prev => ({
+          ...prev,
+          remoteScreenSharing: data.isScreenSharing && data.screenSharingBy !== profileName,
+        }));
       }
     });
 
@@ -252,12 +273,12 @@ export function useWebRTC({ profileName, selectedChat }) {
     // Enveloppe d'autorisation explicite
     const stream = await _getLocalStream(type);
     if (!stream) {
-      setCallState({ type: null, active: false, ringing: false, micOn: true, camOn: true, inviteOpen: false, copied: false });
+      setCallState({ type: null, active: false, ringing: false, micOn: true, camOn: true, isScreenSharing: false, isHost: false, inviteOpen: false, copied: false, remoteScreenSharing: false });
       return null;
     }
     setLocalStream(stream);
 
-    setCallState({ type, active: true, ringing: false, micOn: true, camOn: type === 'video', inviteOpen: false, copied: false });
+    setCallState({ type, active: true, ringing: false, micOn: true, camOn: type === 'video', isScreenSharing: false, isHost: false, inviteOpen: false, copied: false, remoteScreenSharing: false });
 
     const callSnap = await getDoc(doc(db, 'calls', String(chatId)));
     if (!callSnap.exists()) return null;
@@ -278,7 +299,34 @@ export function useWebRTC({ profileName, selectedChat }) {
     const unsubCallDoc = onSnapshot(doc(db, 'calls', String(chatId)), (snap) => {
       if (!snap.exists()) {
         _cleanup();
-        setCallState({ type: null, active: false, ringing: false, micOn: true, camOn: true, inviteOpen: false, copied: false });
+        setCallState({ type: null, active: false, ringing: false, micOn: true, camOn: true, isScreenSharing: false, isHost: false, inviteOpen: false, copied: false, remoteScreenSharing: false });
+        return;
+      }
+      const data = snap.data();
+
+      // Signal de coupure micro par le professeur / hôte
+      if (data?.forceMuteParticipant) {
+        if (stream) {
+          stream.getAudioTracks().forEach(t => { t.enabled = false; });
+        }
+        setCallState(prev => ({ ...prev, micOn: false }));
+      }
+
+      // Signal d'arrêt de partage d'écran par le professeur / hôte
+      if (data?.forceStopScreenShare && screenTrackRef.current) {
+        if (screenTrackRef.current) {
+          screenTrackRef.current.stop();
+          screenTrackRef.current = null;
+        }
+        setCallState(prev => ({ ...prev, isScreenSharing: false }));
+      }
+
+      // Signal de partage d'écran distant
+      if (data?.isScreenSharing !== undefined) {
+        setCallState(prev => ({
+          ...prev,
+          remoteScreenSharing: data.isScreenSharing && data.screenSharingBy !== profileName,
+        }));
       }
     });
 
@@ -292,7 +340,7 @@ export function useWebRTC({ profileName, selectedChat }) {
 
     unsubsRef.current = [unsubCallDoc, unsubCaller];
     return { chatId, type, from };
-  }, [incomingCall, _getLocalStream, _createPC, _cleanup]);
+  }, [incomingCall, _getLocalStream, _createPC, _cleanup, profileName]);
 
   // Raccrochage avec suppression immédiate du signal Firestore
   const endCall = useCallback(() => {
@@ -301,7 +349,7 @@ export function useWebRTC({ profileName, selectedChat }) {
       deleteDoc(doc(db, 'calls', String(targetChatId))).catch(() => {});
     }
     _cleanup();
-    setCallState({ type: null, active: false, ringing: false, micOn: true, camOn: true, inviteOpen: false, copied: false });
+    setCallState({ type: null, active: false, ringing: false, micOn: true, camOn: true, isScreenSharing: false, isHost: false, inviteOpen: false, copied: false, remoteScreenSharing: false });
   }, [selectedChat, _cleanup]);
 
   // Refus d'appel avec suppression du signal
@@ -344,6 +392,133 @@ export function useWebRTC({ profileName, selectedChat }) {
     setCallState(prev => ({ ...prev, camOn: !prev.camOn }));
   }, [localStream, callState.camOn]);
 
+  // ---- FONCTIONNALITÉ 1 : PARTAGE D'ÉCRAN (SCREEN SHARE) AVEC BASCULE INSTANTANÉE ----
+  const toggleScreenShare = useCallback(async () => {
+    if (!pcRef.current || !localStream) return;
+
+    // Cas 1 : Arrêt du partage d'écran -> Revenir à la caméra
+    if (callState.isScreenSharing) {
+      try {
+        if (screenTrackRef.current) {
+          screenTrackRef.current.stop();
+          screenTrackRef.current = null;
+        }
+
+        let camTrack = cameraTrackRef.current;
+        if (!camTrack || camTrack.readyState === 'ended') {
+          const camStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
+            audio: false,
+          });
+          camTrack = camStream.getVideoTracks()[0];
+          cameraTrackRef.current = camTrack;
+        }
+
+        const sender = pcRef.current.getSenders().find(s => s.track && s.track.kind === 'video');
+        if (sender && camTrack) {
+          await sender.replaceTrack(camTrack);
+        }
+
+        const audioTrack = localStream.getAudioTracks()[0];
+        const combinedStream = new MediaStream(audioTrack ? [camTrack, audioTrack] : [camTrack]);
+        setLocalStream(combinedStream);
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = combinedStream;
+          localVideoRef.current.play().catch(() => {});
+        }
+        setCallState(prev => ({ ...prev, isScreenSharing: false }));
+
+        const targetChatId = activeChatIdRef.current || selectedChat?.id;
+        if (targetChatId) {
+          updateDoc(doc(db, 'calls', String(targetChatId)), {
+            isScreenSharing: false,
+            screenSharingBy: null,
+          }).catch(() => {});
+        }
+      } catch (err) {
+        console.warn('[WebRTC] Erreur lors du retour à la caméra :', err);
+      }
+      return;
+    }
+
+    // Cas 2 : Lancement du partage d'écran via getDisplayMedia
+    try {
+      if (!navigator.mediaDevices?.getDisplayMedia) {
+        alert("Le partage d'écran n'est pas supporté par votre navigateur (disponible sur PC, Mac et certains mobiles compatibles).");
+        return;
+      }
+
+      const screenStream = await navigator.mediaDevices.getDisplayMedia({
+        video: { cursor: 'always', displaySurface: 'monitor' },
+        audio: false,
+      });
+
+      const screenTrack = screenStream.getVideoTracks()[0];
+      if (!screenTrack) return;
+
+      screenTrackRef.current = screenTrack;
+      cameraTrackRef.current = localStream.getVideoTracks()[0];
+
+      // Écoute de l'arrêt natif du navigateur
+      screenTrack.onended = () => {
+        toggleScreenShare();
+      };
+
+      const sender = pcRef.current.getSenders().find(s => s.track && s.track.kind === 'video');
+      if (sender) {
+        await sender.replaceTrack(screenTrack);
+      }
+
+      const audioTrack = localStream.getAudioTracks()[0];
+      const combinedStream = new MediaStream(audioTrack ? [screenTrack, audioTrack] : [screenTrack]);
+      setLocalStream(combinedStream);
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = combinedStream;
+        localVideoRef.current.play().catch(() => {});
+      }
+      setCallState(prev => ({ ...prev, isScreenSharing: true }));
+
+      const targetChatId = activeChatIdRef.current || selectedChat?.id;
+      if (targetChatId) {
+        updateDoc(doc(db, 'calls', String(targetChatId)), {
+          isScreenSharing: true,
+          screenSharingBy: profileName,
+        }).catch(() => {});
+      }
+    } catch (err) {
+      console.warn('[WebRTC] getDisplayMedia annulé ou refusé :', err);
+    }
+  }, [callState.isScreenSharing, localStream, profileName, selectedChat]);
+
+  // ---- FONCTIONNALITÉ 2 : DROITS PROFESSEUR / HÔTE (MODÉRATION D'APPEL) ----
+  const hostMuteParticipant = useCallback(async () => {
+    const targetChatId = activeChatIdRef.current || selectedChat?.id;
+    if (!targetChatId) return;
+    try {
+      await updateDoc(doc(db, 'calls', String(targetChatId)), {
+        forceMuteParticipant: true,
+        moderatedAt: serverTimestamp(),
+      });
+      alert("Micro du participant coupé avec succès.");
+    } catch (err) {
+      console.warn('[WebRTC] hostMuteParticipant error:', err);
+    }
+  }, [selectedChat]);
+
+  const hostStopParticipantScreenShare = useCallback(async () => {
+    const targetChatId = activeChatIdRef.current || selectedChat?.id;
+    if (!targetChatId) return;
+    try {
+      await updateDoc(doc(db, 'calls', String(targetChatId)), {
+        forceStopScreenShare: true,
+        moderatedAt: serverTimestamp(),
+      });
+      alert("Partage d'écran du participant arrêté.");
+    } catch (err) {
+      console.warn('[WebRTC] hostStopParticipantScreenShare error:', err);
+    }
+  }, [selectedChat]);
+
   const copyInviteLink = useCallback(() => {
     const link = `https://troco.app/join/${selectedChat?.id || 'group'}`;
     navigator.clipboard?.writeText(link).catch(() => {});
@@ -353,15 +528,13 @@ export function useWebRTC({ profileName, selectedChat }) {
 
   // Basculement dynamique de caméra (avant/arrière) avec replaceTrack
   const switchCamera = useCallback(async () => {
-    if (callState.type !== 'video' || !localStream) return;
+    if (callState.type !== 'video' || !localStream || callState.isScreenSharing) return;
     const nextFacing = facingMode === 'user' ? 'environment' : 'user';
     try {
-      // 1. Arrêt propre des anciennes pistes vidéo pour libérer le capteur matériel
       localStream.getVideoTracks().forEach(track => {
         try { track.stop(); } catch (_) {}
       });
 
-      // 2. Demande du nouveau flux avec la contrainte de facingMode inversée
       const newStream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: { ideal: nextFacing },
@@ -374,7 +547,6 @@ export function useWebRTC({ profileName, selectedChat }) {
       const newVideoTrack = newStream.getVideoTracks()[0];
       if (!newVideoTrack) return;
 
-      // 3. Remplacement à chaud sur la RTCPeerConnection active sans couper l'appel
       if (pcRef.current) {
         const sender = pcRef.current.getSenders().find(s => s.track && s.track.kind === 'video');
         if (sender) {
@@ -382,7 +554,6 @@ export function useWebRTC({ profileName, selectedChat }) {
         }
       }
 
-      // 4. Maintien et recombinaison avec la piste audio locale existante
       const audioTrack = localStream.getAudioTracks()[0];
       const combinedTracks = audioTrack ? [newVideoTrack, audioTrack] : [newVideoTrack];
       const combinedStream = new MediaStream(combinedTracks);
@@ -394,38 +565,17 @@ export function useWebRTC({ profileName, selectedChat }) {
       }
       setFacingMode(nextFacing);
     } catch (err) {
-      console.warn('[WebRTC] Erreur lors du basculement de caméra vers :', nextFacing, err);
-      // Fallback robuste : tentative de restauration de la caméra frontale en cas de refus
-      try {
-        const fallbackStream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: 'user' } },
-          audio: false,
-        });
-        const fallbackTrack = fallbackStream.getVideoTracks()[0];
-        if (pcRef.current && fallbackTrack) {
-          const sender = pcRef.current.getSenders().find(s => s.track && s.track.kind === 'video');
-          if (sender) await sender.replaceTrack(fallbackTrack);
-        }
-        const audioTrack = localStream.getAudioTracks()[0];
-        const combined = audioTrack ? [fallbackTrack, audioTrack] : [fallbackTrack];
-        const fallbackCombined = new MediaStream(combined);
-        setLocalStream(fallbackCombined);
-        if (localVideoRef.current) {
-          localVideoRef.current.srcObject = fallbackCombined;
-          localVideoRef.current.play().catch(() => {});
-        }
-        setFacingMode('user');
-      } catch (restoreErr) {
-        console.error('[WebRTC] Échec de restauration de la caméra frontale :', restoreErr);
-      }
+      console.warn('[WebRTC] Erreur switchCamera vers :', nextFacing, err);
     }
-  }, [callState.type, localStream, facingMode]);
+  }, [callState.type, callState.isScreenSharing, localStream, facingMode]);
 
   return {
     callState, localStream, remoteStream, incomingCall,
     localVideoRef, remoteVideoRef,
     facingMode, hasMultipleCameras, switchCamera,
     startCall, acceptIncomingCall, declineIncomingCall, endCall,
-    toggleMic, toggleCam, copyInviteLink, playRingtone,
+    toggleMic, toggleCam, toggleScreenShare,
+    hostMuteParticipant, hostStopParticipantScreenShare,
+    copyInviteLink, playRingtone,
   };
 }

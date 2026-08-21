@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Search, MapPin, Video, Star, Globe, Filter, MessageSquare, PlusCircle, User, ShieldCheck, Clock, CheckCircle, ArrowRight, X, Sparkles, Coins, Plus, Trash2, Camera, Pencil, Mic, PhoneOff, Flame, History, Check, Lock, CreditCard, Tag, Phone, UserPlus, ChevronLeft, ChevronRight, Maximize2, Minimize2, ZoomIn, ZoomOut, MicOff, VideoOff, Sun, Moon, Upload, Repeat, SwitchCamera, LogOut, Scale, ShieldAlert, FileText } from 'lucide-react';
+import { Search, MapPin, Video, Star, Globe, Filter, MessageSquare, PlusCircle, User, ShieldCheck, Clock, CheckCircle, ArrowRight, X, Sparkles, Coins, Plus, Trash2, Camera, Pencil, Mic, PhoneOff, Flame, History, Check, Lock, CreditCard, Tag, Phone, UserPlus, ChevronLeft, ChevronRight, Maximize2, Minimize2, ZoomIn, ZoomOut, MicOff, VideoOff, Sun, Moon, Upload, Repeat, SwitchCamera, LogOut, Scale, ShieldAlert, FileText, Monitor, MonitorOff, Crown } from 'lucide-react';
 import { auth, db } from './firebase';
 import { collection, addDoc, doc, updateDoc, serverTimestamp, onSnapshot, query, orderBy, setDoc, deleteDoc, getDoc, getDocs, where } from 'firebase/firestore';
 import { RecaptchaVerifier, signInWithPhoneNumber, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, GoogleAuthProvider, GithubAuthProvider, FacebookAuthProvider, OAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
@@ -3739,13 +3739,23 @@ export default function App() {
     endCall,
     toggleMic,
     toggleCam,
+    toggleScreenShare,
+    hostMuteParticipant,
+    hostStopParticipantScreenShare,
     copyInviteLink,
   } = useWebRTC({ profileName: profile.name, selectedChat });
 
-  // ---- ÉTATS APPEL WEBRTC AVANCÉ (PIP, DRAG POINTER EVENTS, SWAP & CHRONO DEAL) ----
+  // ---- ÉTATS APPEL WEBRTC AVANCÉ (PIP, DRAG POINTER EVENTS, SWAP, PROFESSEUR & PARTAGE D'ÉCRAN) ----
   const [isCallPip, setIsCallPip] = useState(false);
   const [isSwapVideo, setIsSwapVideo] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
+  const [isTeacherMenuOpen, setIsTeacherMenuOpen] = useState(false);
+  const isTeacher = Boolean(
+    callState?.isHost ||
+    (selectedChat?.author && selectedChat.author.toLowerCase() === profile?.name?.toLowerCase()) ||
+    (selectedListing?.authorProfile?.name && selectedListing.authorProfile.name.toLowerCase() === profile?.name?.toLowerCase()) ||
+    (selectedChat?.listing && profile?.skills?.some(s => selectedChat.listing.toLowerCase().includes(s.toLowerCase())))
+  );
   const [pipPosition, setPipPosition] = useState({
     x: typeof window !== 'undefined' ? Math.max(10, window.innerWidth - 230) : 100,
     y: typeof window !== 'undefined' ? Math.max(10, window.innerHeight - 240) : 100
@@ -9605,6 +9615,32 @@ export default function App() {
                   </span>
                 </div>
               )}
+
+              {/* BADGE PARTAGE D'ÉCRAN ACTIF */}
+              {callState.isScreenSharing && (
+                <div style={{
+                  marginLeft: '8px', padding: '4px 10px',
+                  backgroundColor: 'rgba(16,185,129,0.25)', border: '1px solid #10B981',
+                  color: '#6EE7B7', borderRadius: '999px', fontSize: '11px', fontWeight: '800',
+                  display: 'flex', alignItems: 'center', gap: '5px', boxShadow: '0 0 12px rgba(16,185,129,0.3)'
+                }}>
+                  <Monitor size={12} />
+                  <span>Partage actif</span>
+                </div>
+              )}
+
+              {/* BADGE PROFESSEUR / HÔTE DE SESSION */}
+              {isTeacher && (
+                <div style={{
+                  marginLeft: '8px', padding: '4px 10px',
+                  backgroundColor: 'rgba(245,158,11,0.25)', border: '1px solid #F59E0B',
+                  color: '#FDE68A', borderRadius: '999px', fontSize: '11px', fontWeight: '800',
+                  display: 'flex', alignItems: 'center', gap: '5px', boxShadow: '0 0 12px rgba(245,158,11,0.3)'
+                }}>
+                  <Crown size={12} color="#F59E0B" />
+                  <span>Professeur / Hôte</span>
+                </div>
+              )}
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -9873,7 +9909,7 @@ export default function App() {
           <div style={{
             position: 'absolute', bottom: '32px', left: '50%', transform: 'translateX(-50%)',
             backgroundColor: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
-            padding: '12px 24px', borderRadius: '999px', display: 'flex', alignItems: 'center', gap: '14px',
+            padding: '12px 24px', borderRadius: '999px', display: 'flex', alignItems: 'center', gap: '12px',
             border: '1px solid rgba(255,255,255,0.12)', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', zIndex: 50
           }}>
             <button
@@ -9894,8 +9930,84 @@ export default function App() {
               </button>
             )}
 
+            {/* BOUTON PARTAGE D'ÉCRAN (SCREEN SHARE) AVEC BASCULE INSTANTANÉE */}
+            {callState.type === 'video' && (
+              <button
+                onClick={toggleScreenShare}
+                title={callState.isScreenSharing ? "Arrêter le partage d'écran (revenir à la caméra)" : "Partager mon écran"}
+                style={{
+                  border: 'none', width: '46px', height: '46px', borderRadius: '50%',
+                  backgroundColor: callState.isScreenSharing ? '#10B981' : 'rgba(255,255,255,0.15)',
+                  color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  transition: 'all 0.2s ease',
+                  boxShadow: callState.isScreenSharing ? '0 0 16px rgba(16,185,129,0.6)' : 'none'
+                }}
+              >
+                {callState.isScreenSharing ? <MonitorOff size={18} /> : <Monitor size={18} />}
+              </button>
+            )}
+
+            {/* BOUTON MODÉRATION PROFESSEUR / HÔTE DE SESSION */}
+            {isTeacher && (
+              <div style={{ position: 'relative' }}>
+                <button
+                  onClick={() => setIsTeacherMenuOpen(o => !o)}
+                  title="Outils Professeur / Modération"
+                  style={{
+                    width: '46px', height: '46px', borderRadius: '50%',
+                    backgroundColor: isTeacherMenuOpen ? '#F59E0B' : 'rgba(245,158,11,0.25)',
+                    border: '1.5px solid #F59E0B',
+                    color: isTeacherMenuOpen ? '#0F172A' : '#FDE68A',
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'all 0.2s ease',
+                    boxShadow: '0 0 12px rgba(245,158,11,0.3)'
+                  }}
+                >
+                  <Crown size={18} />
+                </button>
+
+                {isTeacherMenuOpen && (
+                  <div style={{
+                    position: 'absolute', bottom: '60px', left: '50%', transform: 'translateX(-50%)',
+                    backgroundColor: 'rgba(15,23,42,0.95)', backdropFilter: 'blur(16px)',
+                    borderRadius: '16px', border: '1.5px solid rgba(245,158,11,0.4)',
+                    boxShadow: '0 16px 40px rgba(0,0,0,0.6)', padding: '8px',
+                    display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '230px', zIndex: 100
+                  }}>
+                    <div style={{ padding: '6px 8px', fontSize: '11px', fontWeight: '800', color: '#FDE68A', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Crown size={12} color="#F59E0B" /> Modération du cours
+                    </div>
+                    <button
+                      onClick={() => { hostMuteParticipant(); setIsTeacherMenuOpen(false); }}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '8px',
+                        padding: '8px 10px', borderRadius: '10px', border: 'none',
+                        backgroundColor: 'rgba(239,68,68,0.15)', color: '#FCA5A5',
+                        fontSize: '12px', fontWeight: '700', cursor: 'pointer', textAlign: 'left',
+                        transition: 'background 0.2s ease'
+                      }}
+                    >
+                      <MicOff size={14} /> Couper le micro de l'élève
+                    </button>
+                    <button
+                      onClick={() => { hostStopParticipantScreenShare(); setIsTeacherMenuOpen(false); }}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '8px',
+                        padding: '8px 10px', borderRadius: '10px', border: 'none',
+                        backgroundColor: 'rgba(255,255,255,0.08)', color: '#93C5FD',
+                        fontSize: '12px', fontWeight: '700', cursor: 'pointer', textAlign: 'left',
+                        transition: 'background 0.2s ease'
+                      }}
+                    >
+                      <MonitorOff size={14} /> Arrêter le partage élève
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* BOUTON BASCULE CAMÉRA AVANT / ARRIÈRE (FLIP CAMERA MOBILE) */}
-            {callState.type === 'video' && callState.camOn && hasMultipleCameras && (
+            {callState.type === 'video' && callState.camOn && !callState.isScreenSharing && hasMultipleCameras && (
               <button
                 onClick={switchCamera}
                 title={facingMode === 'user' ? "Basculer vers la caméra arrière" : "Basculer vers la caméra avant"}
