@@ -138,8 +138,8 @@ export function useWebRTC({ profileName, selectedChat }) {
     }
   }, []);
 
-  // Nettoyage complet des flux, des écouteurs et suppression du document de signalisation
-  const _cleanup = useCallback(() => {
+  // Nettoyage complet des flux locaux et des écouteurs sans casser prématurément la salle
+  const _cleanup = useCallback((skipDocDelete = false) => {
     unsubsRef.current.forEach(u => { try { u(); } catch (_) {} });
     unsubsRef.current = [];
     if (pcRef.current) {
@@ -160,11 +160,27 @@ export function useWebRTC({ profileName, selectedChat }) {
     });
     setRemoteStream(null);
     const targetChatId = activeChatIdRef.current;
-    if (targetChatId) {
-      deleteDoc(doc(db, 'calls', String(targetChatId))).catch(() => {});
+    if (targetChatId && !skipDocDelete) {
+      // Retirer l'utilisateur de la liste des participants de la salle Teams
+      getDoc(doc(db, 'calls', String(targetChatId))).then(snap => {
+        if (snap.exists()) {
+          const data = snap.data();
+          const currentParts = Array.isArray(data.participants) ? data.participants : [];
+          const remainingParts = currentParts.filter(p => p !== profileName);
+          if (remainingParts.length === 0) {
+            deleteDoc(doc(db, 'calls', String(targetChatId))).catch(() => {});
+          } else {
+            updateDoc(doc(db, 'calls', String(targetChatId)), {
+              participants: remainingParts,
+              lastLeft: profileName,
+              updatedAt: serverTimestamp(),
+            }).catch(() => {});
+          }
+        }
+      }).catch(() => {});
     }
     activeChatIdRef.current = null;
-  }, []);
+  }, [profileName]);
 
   const _createPC = useCallback((chatId, role) => {
     const pc = new RTCPeerConnection(ICE_CONFIG);
@@ -172,13 +188,17 @@ export function useWebRTC({ profileName, selectedChat }) {
     activeChatIdRef.current = chatId;
 
     pc.ontrack = (e) => {
+      console.log('[WebRTC] ontrack reçu:', e.track.kind, e.streams);
       if (e.streams && e.streams[0]) {
         setRemoteStream(e.streams[0]);
       } else {
         setRemoteStream(prev => {
-          const stream = prev || new MediaStream();
-          stream.addTrack(e.track);
-          return stream;
+          const currentStream = prev || new MediaStream();
+          const existingTrack = currentStream.getTracks().find(t => t.id === e.track.id);
+          if (!existingTrack) {
+            currentStream.addTrack(e.track);
+          }
+          return new MediaStream(currentStream.getTracks());
         });
       }
     };
@@ -190,9 +210,32 @@ export function useWebRTC({ profileName, selectedChat }) {
       }
     };
 
+    // Gestion résiliente des changements d'état réseau (Mode Teams / Salle ouverte anti micro-lag)
+    pc.oniceconnectionstatechange = () => {
+      console.log('[WebRTC] ICE Connection State:', pc.iceConnectionState);
+      if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+        setCallState(prev => ({ ...prev, ringing: false, isReconnecting: false }));
+      } else if (pc.iceConnectionState === 'disconnected') {
+        console.warn('[WebRTC] ICE déconnecté momentanément — maintien de la session');
+        setCallState(prev => ({ ...prev, isReconnecting: true }));
+      } else if (pc.iceConnectionState === 'failed') {
+        console.warn('[WebRTC] ICE échoué — relance ICE restart');
+        try {
+          if (typeof pc.restartIce === 'function') {
+            pc.restartIce();
+          }
+        } catch (_) {}
+      }
+    };
+
     pc.onconnectionstatechange = () => {
-      if (['disconnected', 'failed', 'closed'].includes(pc.connectionState)) {
-        endCall();
+      console.log('[WebRTC] PeerConnection State:', pc.connectionState);
+      if (pc.connectionState === 'connected') {
+        setCallState(prev => ({ ...prev, ringing: false, isReconnecting: false }));
+      } else if (pc.connectionState === 'disconnected') {
+        setCallState(prev => ({ ...prev, isReconnecting: true }));
+      } else if (pc.connectionState === 'failed') {
+        setCallState(prev => ({ ...prev, isReconnecting: true }));
       }
     };
 
@@ -225,23 +268,29 @@ export function useWebRTC({ profileName, selectedChat }) {
       type,
       from: profileName,
       to: selectedChat.user,
+      participants: [profileName],
       status: 'ringing',
       offer: { type: offer.type, sdp: offer.sdp },
       isScreenSharing: false,
       startedAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
     });
 
     // Écouter la réponse SDP et les signaux de modération
     const unsubAnswer = onSnapshot(doc(db, 'calls', String(chatId)), async (snap) => {
       if (!snap.exists()) {
-        _cleanup();
+        _cleanup(true);
         setCallState({ type: null, active: false, ringing: false, micOn: true, camOn: true, isScreenSharing: false, isHost: false, inviteOpen: false, copied: false, remoteScreenSharing: false });
         return;
       }
       const data = snap.data();
       if (data?.answer && !pc.currentRemoteDescription) {
-        await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
-        setCallState(prev => ({ ...prev, ringing: false }));
+        try {
+          await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+          setCallState(prev => ({ ...prev, ringing: false }));
+        } catch (e) {
+          console.warn('[WebRTC] setRemoteDescription answer error:', e);
+        }
       }
 
       // Signal de partage d'écran distant
@@ -291,14 +340,18 @@ export function useWebRTC({ profileName, selectedChat }) {
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
 
+    const updatedParticipants = Array.from(new Set([...(callData.participants || [from]), profileName]));
+
     await updateDoc(doc(db, 'calls', String(chatId)), {
       answer: { type: answer.type, sdp: answer.sdp },
+      participants: updatedParticipants,
       status: 'connected',
+      updatedAt: serverTimestamp(),
     });
 
     const unsubCallDoc = onSnapshot(doc(db, 'calls', String(chatId)), (snap) => {
       if (!snap.exists()) {
-        _cleanup();
+        _cleanup(true);
         setCallState({ type: null, active: false, ringing: false, micOn: true, camOn: true, isScreenSharing: false, isHost: false, inviteOpen: false, copied: false, remoteScreenSharing: false });
         return;
       }
@@ -342,15 +395,11 @@ export function useWebRTC({ profileName, selectedChat }) {
     return { chatId, type, from };
   }, [incomingCall, _getLocalStream, _createPC, _cleanup, profileName]);
 
-  // Raccrochage avec suppression immédiate du signal Firestore
+  // Raccrochage avec gestion propre de la salle Teams
   const endCall = useCallback(() => {
-    const targetChatId = activeChatIdRef.current || selectedChat?.id;
-    if (targetChatId) {
-      deleteDoc(doc(db, 'calls', String(targetChatId))).catch(() => {});
-    }
-    _cleanup();
+    _cleanup(false);
     setCallState({ type: null, active: false, ringing: false, micOn: true, camOn: true, isScreenSharing: false, isHost: false, inviteOpen: false, copied: false, remoteScreenSharing: false });
-  }, [selectedChat, _cleanup]);
+  }, [_cleanup]);
 
   // Refus d'appel avec suppression du signal
   const declineIncomingCall = useCallback(() => {
