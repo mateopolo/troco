@@ -484,3 +484,27 @@ body.dark-mode .ad-card {
 body.dark-mode .ad-card:hover {
   box-shadow: 0 16px 32px -6px rgba(96, 165, 250, 0.15);
 }
+
+/* Animations et Fluidité Messagerie Mobile (Vinted / WhatsApp Style) */
+@keyframes typingFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes bounceDot {
+  0%, 80%, 100% {
+    transform: scale(0.6);
+    opacity: 0.4;
+  }
+  40% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+}
+

@@ -2138,6 +2138,13 @@ function FeedCardItem({
 
 export default function App() {
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('troco_dark_mode') === 'true');
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const toggleDarkMode = () => {
     setDarkMode(prev => {
@@ -8396,7 +8403,22 @@ export default function App() {
       )}
 
       {/* CONTENU DYNAMIQUE SELON L'ONGLET SÉLECTIONNÉ */}
-      <main key={`${activeTab}-${viewMode}`} className="premium-main" style={{ maxWidth: activeTab === 'feed' ? '1460px' : '1200px', margin: '0 auto', padding: '20px 20px 90px', width: '100%', transition: 'max-width 0.3s ease' }}>
+      <main
+        key={`${activeTab}-${viewMode}`}
+        className="premium-main"
+        style={{
+          maxWidth: activeTab === 'feed' ? '1460px' : '1200px',
+          margin: '0 auto',
+          padding: isMobile && activeTab === 'chat' ? '8px 8px 65px' : '20px 20px 90px',
+          width: '100%',
+          height: isMobile && activeTab === 'chat' ? 'calc(100dvh - 65px)' : 'auto',
+          boxSizing: 'border-box',
+          display: isMobile && activeTab === 'chat' ? 'flex' : 'block',
+          flexDirection: 'column',
+          overflow: isMobile && activeTab === 'chat' ? 'hidden' : 'visible',
+          transition: 'max-width 0.3s ease'
+        }}
+      >
 
         {/* ONGLET 1 : EXPLORER / FEED */}
         {activeTab === 'feed' && (
@@ -8800,6 +8822,7 @@ export default function App() {
               formatStatus={formatStatus}
               showingOriginalMessages={showingOriginalMessages}
               toggleOriginalMessage={toggleOriginalMessage}
+              isMobile={isMobile}
             />
           );
         })()}
