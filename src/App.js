@@ -19,6 +19,7 @@ import OnboardingWizardModal from './components/OnboardingWizardModal';
 import { analyzeContent } from './utils/contentModeration';
 import { validateListingContent, validateChatMessage } from './utils/moderationBlacklist';
 import { DIVERSE_AVATARS } from './data/categoriesData';
+import { getInstantOrQueueTranslation, subscribeTranslations } from './utils/translator';
 
 
 // ---- SYNTHÉTISEURS SONORES WEB AUDIO API (100% EMBARQUÉS - ZERO FICHIER EXTERNE) ----
@@ -1689,6 +1690,7 @@ const getTranslatedListing = (item, targetLang) => {
 
 const localizeLocation = (loc, lang) => {
   if (!loc) return loc;
+  if (lang === 'FR') return loc;
   let translated = loc;
   const map = {
     EN: { 'Pékin': 'Beijing', 'Chine': 'China', 'Japon': 'Japan', 'Allemagne': 'Germany', 'Espagne': 'Spain', 'Italie': 'Italy', 'Australie': 'Australia', 'Brésil': 'Brazil', 'Corée du Sud': 'South Korea', 'Londres': 'London', 'Rome': 'Rome', 'Barcelone': 'Barcelona', 'Séoul': 'Seoul', 'Florence': 'Florence', 'à distance': 'Remote', 'Sur place': 'On-site' },
@@ -1703,12 +1705,14 @@ const localizeLocation = (loc, lang) => {
     Object.keys(langMap).forEach(k => {
       translated = translated.replace(new RegExp(k, 'gi'), langMap[k]);
     });
+    return translated;
   }
-  return translated;
+  return getInstantOrQueueTranslation(loc, lang, 'auto');
 };
 
 const localizeTags = (tags, lang) => {
   if (!tags) return [];
+  if (lang === 'FR') return tags;
   const map = {
     EN: { 'Cours': 'Lessons', 'Musique': 'Music', 'Cuisine': 'Cooking', 'Bricolage': 'DIY', 'Dépannage': 'Repair', 'Logement': 'Housing', 'Tech': 'Tech', 'Sport & Bien-être': 'Sports & Wellness', 'Animaux': 'Pets', 'Photo & Vidéo': 'Photo & Video', 'À distance': 'Remote', 'Urgent': 'Urgent', 'Échange': 'Swap' },
     IT: { 'Cours': 'Lezioni', 'Musique': 'Musica', 'Cuisine': 'Cucina', 'Bricolage': 'Fai da te', 'Dépannage': 'Riparazioni', 'Logement': 'Alloggio', 'Tech': 'Tech', 'Sport & Bien-être': 'Sport & Benessere', 'Animaux': 'Animali', 'Photo & Vidéo': 'Foto & Video', 'À distance': 'A distanza', 'Urgent': 'Urgente', 'Échange': 'Scambio' },
@@ -1717,34 +1721,12 @@ const localizeTags = (tags, lang) => {
     JA: { 'Cours': 'レッスン', 'Musique': '音楽', 'Cuisine': '料理', 'Bricolage': 'DIY', 'Dépannage': '修理', 'Logement': '宿泊', 'Tech': '技術', 'Sport & Bien-être': 'スポーツ＆ウェルネス', 'Animaux': 'ペット', 'Photo & Vidéo': '写真＆動画', 'À distance': 'リモート', 'Urgent': '緊急', 'Échange': '交換' },
     ZH: { 'Cours': '课程', 'Musique': '音乐', 'Cuisine': '烹饪', 'Bricolage': 'DIY', 'Dépannage': '维修', 'Logement': '住宿', 'Tech': '技术', 'Sport & Bien-être': '运动与健康', 'Animaux': '宠物', 'Photo & Vidéo': '照片与视频', 'À distance': '远程', 'Urgent': '紧急', 'Échange': '交换' }
   };
-  if (!map[lang]) return tags;
-  return tags.map(t => map[lang][t] || t);
+  return tags.map(t => (map[lang] && map[lang][t]) ? map[lang][t] : getInstantOrQueueTranslation(t, lang, 'auto'));
 };
 
 const localizeReview = (text, lang) => {
   if (lang === 'FR' || !text) return text;
-  if (text.includes("clair sur les conditions") || text.includes("partenaire de confiance")) {
-    return lang === 'EN' ? "Very clear on conditions, excellent communication and service quality." :
-      lang === 'ES' ? "Muy claro en las condiciones, excelente comunicación y calidad de servicio." :
-        lang === 'IT' ? "Molto chiaro sulle condizioni, ottima comunicazione e qualità del servizio." :
-          lang === 'DE' ? "Sehr klare Bedingungen, tolle Kommunikation und Servicequalität." :
-            lang === 'JA' ? "条件が非常に明確で、コミュニケーションとサービスの質が優れています。" :
-              "条件非常明确，沟通和服务质量极佳。";
-  }
-  if (text.includes("pédagogique et hyper réactif") || text.includes("vrai plaisir")) {
-    return lang === 'EN' ? "Very pedagogical and highly responsive, a pleasure to work with." :
-      lang === 'ES' ? "Muy pedagógico y muy receptivo, un placer trabajar con él." :
-        lang === 'IT' ? "Molto pedagogico e molto reattivo, un vero piacere lavorarci." :
-          lang === 'DE' ? "Sehr pädagogisch und reaktionsschnell, eine Freude, damit zu arbeiten." :
-            lang === 'JA' ? "非常に教育的で対応が早く、一緒に仕事をするのが楽しいです。" :
-              "非常有教育意义且响应迅速，合作非常愉快。";
-  }
-  return lang === 'EN' ? "Very reliable for quick loans and repairs, I appreciated the transparency." :
-    lang === 'ES' ? "Muy fiable para préstamos rápidos y reparaciones, aprecié la transparencia." :
-      lang === 'IT' ? "Molto affidabile per prestiti veloci e riparazioni, ho apprezzato la trasparenza." :
-        lang === 'DE' ? "Sehr zuverlässig für schnelle Kredite und Reparaturen, ich schätze die Transparenz." :
-          lang === 'JA' ? "迅速な貸付と修理に非常に信頼でき、透明性を高く評価しています。" :
-            "对于快速贷款和维修非常可靠，我很欣赏这种透明度。";
+  return getInstantOrQueueTranslation(text, lang, 'auto');
 };
 
 function FeedCardItem({
@@ -2699,119 +2681,13 @@ export default function App() {
       if (propTemplates[targetLang]) return propTemplates[targetLang];
     }
 
-    let autoTranslated = rawText;
-    const phraseDictionary = {
-      ES: [
-        [/\bBonjour\b/gi, "¡Hola!"],
-        [/\bSalut\b/gi, "¡Hola!"],
-        [/\bHello\b/gi, "¡Hola!"],
-        [/\bMerci\b/gi, "¡Gracias!"],
-        [/\bParfait\b/gi, "Perfecto"],
-        [/\bSuper\b/gi, "Genial"],
-        [/\bTop\b/gi, "Estupendo"],
-        [/\bOui\b/gi, "Sí"],
-        [/\bNon\b/gi, "No"],
-        [/\bD'accord\b/gi, "De acuerdo"],
-        [/\bJetons?\b/gi, "Fichas"],
-        [/\bJeton Troco\b/gi, "Ficha Troco"],
-        [/\bCrédits?\b/gi, "Créditos"],
-        [/\bvisio\b/gi, "videollamada"],
-        [/\bformation\b/gi, "formación"],
-        [/\bsemaine\b/gi, "semana"],
-        [/\bsamedi\b/gi, "sábado"],
-        [/\bvendredi\b/gi, "viernes"],
-        [/\bdimanche\b/gi, "domingo"],
-        [/\bmatin\b/gi, "mañana"],
-        [/\bsoir\b/gi, "noche"],
-        [/\bheure\b/gi, "hora"],
-        [/\bheures\b/gi, "horas"],
-        [/\béchange\b/gi, "intercambio"],
-        [/\bgratuit\b/gi, "gratuito"],
-        [/\bcaution\b/gi, "fianza"],
-      ],
-      EN: [
-        [/\bBonjour\b/gi, "Hello!"],
-        [/\bSalut\b/gi, "Hi!"],
-        [/\bHello\b/gi, "Hello!"],
-        [/\bMerci\b/gi, "Thanks!"],
-        [/\bParfait\b/gi, "Perfect"],
-        [/\bSuper\b/gi, "Great"],
-        [/\bTop\b/gi, "Awesome"],
-        [/\bOui\b/gi, "Yes"],
-        [/\bNon\b/gi, "No"],
-        [/\bD'accord\b/gi, "Agreed"],
-        [/\bJetons?\b/gi, "Tokens"],
-        [/\bJeton Troco\b/gi, "Troco Token"],
-        [/\bCrédits?\b/gi, "Credits"],
-        [/\bvisio\b/gi, "video call"],
-        [/\bformation\b/gi, "training"],
-        [/\bsamedi\b/gi, "Saturday"],
-        [/\bvendredi\b/gi, "Friday"],
-        [/\bheure\b/gi, "hour"],
-        [/\bheures\b/gi, "hours"],
-        [/\béchange\b/gi, "exchange"],
-        [/\bgratuit\b/gi, "free"],
-        [/\bcaution\b/gi, "deposit"],
-      ],
-      DE: [
-        [/\bBonjour\b/gi, "Hallo!"],
-        [/\bSalut\b/gi, "Hallo!"],
-        [/\bMerci\b/gi, "Danke!"],
-        [/\bParfait\b/gi, "Perfekt"],
-        [/\bSuper\b/gi, "Super"],
-        [/\bOui\b/gi, "Ja"],
-        [/\bNon\b/gi, "Nein"],
-        [/\bD'accord\b/gi, "Einverstanden"],
-        [/\bJetons?\b/gi, "Tokens"],
-        [/\bvisio\b/gi, "Videoanruf"],
-        [/\béchange\b/gi, "Tausch"],
-        [/\bcaution\b/gi, "Kaution"],
-      ],
-      IT: [
-        [/\bBonjour\b/gi, "Ciao!"],
-        [/\bSalut\b/gi, "Ciao!"],
-        [/\bMerci\b/gi, "Grazie!"],
-        [/\bParfait\b/gi, "Perfetto"],
-        [/\bSuper\b/gi, "Fantastico"],
-        [/\bOui\b/gi, "Sì"],
-        [/\bNon\b/gi, "No"],
-        [/\bD'accord\b/gi, "D'accordo"],
-        [/\bJetons?\b/gi, "Gettoni"],
-        [/\bvisio\b/gi, "videochiamata"],
-        [/\béchange\b/gi, "scambio"],
-        [/\bcaution\b/gi, "cauzione"],
-      ],
-      JA: [
-        [/\bBonjour\b/gi, "こんにちは！"],
-        [/\bSalut\b/gi, "こんにちは！"],
-        [/\bMerci\b/gi, "ありがとうございます！"],
-        [/\bParfait\b/gi, "完璧です"],
-        [/\bSuper\b/gi, "素晴らしいです"],
-        [/\bOui\b/gi, "はい"],
-        [/\bD'accord\b/gi, "承知しました"],
-        [/\bJetons?\b/gi, "トークン"],
-        [/\bvisio\b/gi, "ビデオ通話"],
-      ],
-      ZH: [
-        [/\bBonjour\b/gi, "你好！"],
-        [/\bSalut\b/gi, "你好！"],
-        [/\bMerci\b/gi, "谢谢！"],
-        [/\bParfait\b/gi, "太好了"],
-        [/\bSuper\b/gi, "太棒了"],
-        [/\bOui\b/gi, "是的"],
-        [/\bD'accord\b/gi, "好的"],
-        [/\bJetons?\b/gi, "代币"],
-        [/\bvisio\b/gi, "视频在线"],
-      ]
-    };
-
-    if (phraseDictionary[targetLang]) {
-      for (const [pattern, replacement] of phraseDictionary[targetLang]) {
-        autoTranslated = autoTranslated.replace(pattern, replacement);
-      }
+    const knownMatch = knownMessageTranslations[rawText];
+    if (knownMatch && knownMatch[targetLang]) {
+      return knownMatch[targetLang];
     }
 
-    return formatCompensation(autoTranslated);
+    // Traduction automatique dynamique en temps réel
+    return getInstantOrQueueTranslation(rawText, targetLang, 'auto');
   };
 
   const formatTokenCount = (count, lang) => {
@@ -2837,7 +2713,7 @@ export default function App() {
       JA: "コンテンツクリエイター、Pythonデベロッパー、音楽愛好家。柔軟なサービスと高品質な交換を提供しています。",
       ZH: "内容创作者、Python 开发者及音乐爱好者。我提供灵活的服务与高质量的互换。"
     };
-    return bioMap[targetLang] || bioText;
+    return bioMap[targetLang] || getInstantOrQueueTranslation(bioText, targetLang, 'auto');
   };
 
   const getReviewTranslation = (reviewText, targetLang, forceOriginal = false) => {
@@ -2898,10 +2774,7 @@ export default function App() {
         ZH: "已预约周五 18:00 视频课程。已确认条件：1个代币 + 10欧。"
       }
     };
-    if (reviewMap[reviewText] && reviewMap[reviewText][targetLang]) {
-      return reviewMap[reviewText][targetLang];
-    }
-    return reviewText;
+    return reviewMap[reviewText]?.[targetLang] || getInstantOrQueueTranslation(reviewText, targetLang, 'auto');
   };
 
   const formatCompensation = (comp) => {
@@ -3151,32 +3024,39 @@ export default function App() {
   //   4. fallback item.translations['EN'] si présent
   //   5. dernier recours → contenu natif
   const getListingDisplayContent = (item, targetLang, forceOriginal = false) => {
-    if (!item) return { title: '', description: '' };
+    if (!item) return { title: '', description: '', compensation: '' };
     const nativeLang = item.nativeLang || 'FR';
 
     // Mode "voir l'original" forcé -> renvoyer immédiatement les textes natifs
     if (forceOriginal) {
-      return { title: item.title, description: item.description || '' };
+      return { title: item.title, description: item.description || '', compensation: item.compensation || '' };
     }
 
     const trans = item.translations;
     // Si une traduction existe pour la langue actuelle de l'interface -> l'utiliser
     if (trans && trans[targetLang] && trans[targetLang].title) {
-      return { title: trans[targetLang].title, description: trans[targetLang].description || item.description || '' };
+      return {
+        title: trans[targetLang].title,
+        description: trans[targetLang].description || item.description || '',
+        compensation: trans[targetLang].compensation || item.compensation || ''
+      };
     }
 
     // Si la langue de l'interface est la langue native de l'annonce -> texte natif
     if (targetLang === nativeLang) {
-      return { title: item.title, description: item.description || '' };
+      return { title: item.title, description: item.description || '', compensation: item.compensation || '' };
     }
 
-    // Fallback vers l'anglais si disponible
-    if (trans && trans['EN'] && trans['EN'].title && targetLang !== 'EN') {
-      return { title: trans['EN'].title, description: trans['EN'].description || item.description || '' };
-    }
+    // Traduction automatique dynamique en temps réel pour toute annonce
+    const dynamicTitle = getInstantOrQueueTranslation(item.title, targetLang, nativeLang);
+    const dynamicDesc = item.description ? getInstantOrQueueTranslation(item.description, targetLang, nativeLang) : '';
+    const dynamicComp = item.compensation ? getInstantOrQueueTranslation(item.compensation, targetLang, nativeLang) : '';
 
-    // Dernier recours : contenu natif
-    return { title: item.title, description: item.description || '' };
+    return {
+      title: dynamicTitle || item.title,
+      description: dynamicDesc || item.description || '',
+      compensation: dynamicComp || item.compensation || ''
+    };
   };
 
   // ---- GEOPRIVACY : FLOUTAGE ET TRONCATURE DE SÉCURITÉ DE LA POSITION GPS ----
@@ -3602,6 +3482,15 @@ export default function App() {
     });
 
     return () => unsubscribeAuth();
+  }, []);
+
+  // ---- ÉCOUTE ET RÉACTUALISATION EN TEMPS RÉEL DES TRADUCTIONS DYNAMIQUES ----
+  const [, setTranslationRevision] = useState(0);
+  useEffect(() => {
+    const unsub = subscribeTranslations(() => {
+      setTranslationRevision(r => r + 1);
+    });
+    return () => unsub();
   }, []);
 
   // ---- DÉTECTION ET OUVERTURE DU WIZARD D'ONBOARDING POUR NOUVEAUX COMPTES (CHANTIER 1) ----

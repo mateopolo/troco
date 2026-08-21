@@ -3,6 +3,7 @@ import {
   Send, Phone, Video, Sparkles, Clock, CheckCircle,
   ChevronLeft, Globe, MoreVertical, Edit2, Trash2, Copy, Check, X
 } from 'lucide-react';
+import { subscribeTranslations } from '../utils/translator';
 
 export default function ChatView({
   activeTab,
@@ -37,7 +38,16 @@ export default function ChatView({
   const [activeMenuMsgId, setActiveMenuMsgId] = useState(null);
   const [editingMsg, setEditingMsg] = useState(null); // { id, text }
   const [copiedMsgId, setCopiedMsgId] = useState(null);
+  const [, setTranslationRevision] = useState(0);
   const messagesEndRef = useRef(null);
+
+  // Réactualisation en temps réel dès qu'une traduction automatique de message est résolue
+  useEffect(() => {
+    const unsub = subscribeTranslations(() => {
+      setTranslationRevision(r => r + 1);
+    });
+    return () => unsub();
+  }, []);
 
   useEffect(() => {
     const handleResize = () => {
