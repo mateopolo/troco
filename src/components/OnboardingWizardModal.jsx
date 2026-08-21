@@ -146,8 +146,8 @@ export default function OnboardingWizardModal({
       bio: bio.trim(),
       cguAcceptedAt: new Date().toISOString(),
       cguVersion: '2026.1',
-      euroBalance: currentUser?.euroBalance ?? 50,
-      trocoTokens: currentUser?.trocoTokens ?? 5,
+      euroBalance: currentUser?.euroBalance !== undefined ? currentUser.euroBalance : 0.00,
+      trocoTokens: currentUser?.trocoTokens !== undefined ? currentUser.trocoTokens : 10,
     };
 
     try {

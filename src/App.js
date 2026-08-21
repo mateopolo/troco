@@ -16,6 +16,7 @@ import CguModal from './components/CguModal';
 import PrivacyCenterModal from './components/PrivacyCenterModal';
 import CookieBanner from './components/CookieBanner';
 import OnboardingWizardModal from './components/OnboardingWizardModal';
+import WelcomeGiftCelebrationModal from './components/WelcomeGiftCelebrationModal';
 import { analyzeContent } from './utils/contentModeration';
 import { validateListingContent, validateChatMessage } from './utils/moderationBlacklist';
 import { DIVERSE_AVATARS } from './data/categoriesData';
@@ -79,6 +80,35 @@ const playBetclicBalanceSound = (isIncrease = false) => {
     });
   } catch (e) {
     console.warn('Web Audio Context désactivé ou non supporté', e);
+  }
+};
+
+const playWelcomeGiftFanfare = () => {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const notes = [
+      { f: 523.25, t: 0.00, d: 0.15 },  // C5
+      { f: 659.25, t: 0.12, d: 0.15 },  // E5
+      { f: 783.99, t: 0.24, d: 0.18 },  // G5
+      { f: 1046.50, t: 0.38, d: 0.45 }, // C6
+      { f: 1318.51, t: 0.55, d: 0.60 }, // E6
+    ];
+    notes.forEach(({ f, t, d }) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(f, ctx.currentTime + t);
+      gain.gain.setValueAtTime(0.28, ctx.currentTime + t);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + d);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(ctx.currentTime + t);
+      osc.stop(ctx.currentTime + t + d);
+    });
+  } catch (e) {
+    console.warn('Web Audio fanfare error', e);
   }
 };
 
@@ -157,6 +187,7 @@ const AnimatedTokenBalance = ({ value, style, formatFn }) => {
     if (typeof value === 'number' && !isNaN(value) && prev !== value) {
       const diff = value - prev;
       setBadgeInfo({ delta: diff, id: prev + '_' + value });
+      playBetclicBalanceSound(diff > 0);
 
       const startTime = performance.now();
       const duration = 750;
@@ -3448,8 +3479,8 @@ export default function App() {
               languages: ['FR'],
               skills: [],
               equipment: [],
-              euroBalance: 50,
-              trocoTokens: 5,
+              euroBalance: 0.00,
+              trocoTokens: 10,
               dealsCompleted: 0,
               dealsInProgress: 0,
               rating: null,
@@ -3503,11 +3534,29 @@ export default function App() {
     }
   }, [isAuthenticated, profile?.onboardingCompleted, profile?.uid]);
 
-  // ---- FINALISATION DU PARCOURS D'ONBOARDING (CHANTIER 1) ----
+  const [isWelcomeGiftModalOpen, setIsWelcomeGiftModalOpen] = useState(false);
+
+  // Déclencheur automatique de célébration de bienvenue à l'atterrissage sur le profil
+  useEffect(() => {
+    if (activeTab === 'profile' && isAuthenticated) {
+      const alreadyCelebrated = window.localStorage.getItem('troco_welcome_gift_celebrated') === 'true';
+      if (!alreadyCelebrated && (profile?.trocoTokens === 10 || profile?.trocoTokens === 5)) {
+        window.localStorage.setItem('troco_welcome_gift_celebrated', 'true');
+        playWelcomeGiftFanfare();
+        setIsWelcomeGiftModalOpen(true);
+      }
+    }
+  }, [activeTab, isAuthenticated, profile?.trocoTokens]);
+
+  // ---- FINALISATION DU PARCOURS D'ONBOARDING (CHANTIER 1 & CADEAU DE BIENVENUE) ----
   const handleCompleteOnboarding = async (completedData) => {
+    const finalEuroBalance = completedData.euroBalance !== undefined ? completedData.euroBalance : (profile.euroBalance !== undefined ? profile.euroBalance : 0.00);
+    const finalTokens = completedData.trocoTokens !== undefined ? completedData.trocoTokens : 10;
     const updatedProfile = {
       ...profile,
       ...completedData,
+      euroBalance: finalEuroBalance,
+      trocoTokens: finalTokens,
       onboardingCompleted: true,
       dealsCompleted: profile.dealsCompleted ?? 0,
       dealsInProgress: profile.dealsInProgress ?? 0,
@@ -3518,12 +3567,15 @@ export default function App() {
     if (Array.isArray(completedData.skills)) setSkills(completedData.skills);
     if (Array.isArray(completedData.equipment)) setEquipment(completedData.equipment);
     window.localStorage.setItem('troco_user_profile', JSON.stringify(updatedProfile));
+    window.localStorage.setItem('troco_welcome_gift_celebrated', 'true');
 
     const uid = profile?.uid || auth.currentUser?.uid;
     if (uid) {
       try {
         await setDoc(doc(db, 'users', uid), {
           ...completedData,
+          euroBalance: finalEuroBalance,
+          trocoTokens: finalTokens,
           onboardingCompleted: true,
           dealsCompleted: profile.dealsCompleted ?? 0,
           dealsInProgress: profile.dealsInProgress ?? 0,
@@ -3535,8 +3587,10 @@ export default function App() {
       }
     }
     setIsOnboardingOpen(false);
-    setSaveMessage('✨ Bienvenue sur Troco ! Votre profil est configuré.');
-    setTimeout(() => setSaveMessage(''), 4000);
+    playWelcomeGiftFanfare();
+    setIsWelcomeGiftModalOpen(true);
+    setSaveMessage('🎁 +10 Jetons Troco offerts ! Bienvenue sur Troco.');
+    setTimeout(() => setSaveMessage(''), 5000);
   };
 
   useEffect(() => {
@@ -6451,8 +6505,8 @@ export default function App() {
             dealsInProgress: 0,
             rating: null,
             onboardingCompleted: false,
-            euroBalance: 50,
-            trocoTokens: 5,
+            euroBalance: 0.00,
+            trocoTokens: 10,
             loginMethod: providerName,
             cguAcceptedAt: null,
             createdAt: serverTimestamp(),
@@ -6631,8 +6685,8 @@ export default function App() {
         rating: null,
         onboardingCompleted: false,
         loginMethod: 'Email/Mot de passe',
-        euroBalance: 50, // Solde de bienvenue
-        trocoTokens: 5,   // Tokens de bienvenue
+        euroBalance: 0.00, // Solde fiduciaire initial à 0,00 €
+        trocoTokens: 10,   // Cadeau de bienvenue : +10 Jetons Troco
         cguAcceptedAt: null, // Déclenche la modale CGU obligatoire
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -10245,6 +10299,15 @@ export default function App() {
         darkMode={darkMode}
         currentUser={profile}
         onComplete={handleCompleteOnboarding}
+      />
+
+      {/* CÉLÉBRATION CADEAU DE BIENVENUE (+10 JETONS ET 0.00€ INITIALISÉ) */}
+      <WelcomeGiftCelebrationModal
+        isOpen={isWelcomeGiftModalOpen}
+        onClose={() => setIsWelcomeGiftModalOpen(false)}
+        darkMode={darkMode}
+        trocoTokens={profile?.trocoTokens ?? 10}
+        euroBalance={profile?.euroBalance ?? 0}
       />
 
       {/* MODALE D'ACCEPTATION & CONSULTATION DES CGU (BLOC 6) */}
