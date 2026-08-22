@@ -572,6 +572,52 @@ export function useWebRTC({ profileName, selectedChat }) {
     return () => unsub();
   }, [profileName, playRingtone]);
 
+  // 1. Battement de cœur (Heartbeat) toutes les 10 secondes pendant l'appel actif pour maintenir la session
+  useEffect(() => {
+    const chatId = activeCallChatIdRef.current || activeChatIdRef.current || selectedChat?.id;
+    if (!chatId || (!callState.active && !callState.ringing)) return;
+
+    const heartbeatInterval = setInterval(async () => {
+      try {
+        await setDoc(doc(db, 'calls', String(chatId)), {
+          lastPing: serverTimestamp(),
+          pingAt: Date.now(),
+          pingBy: profileName || 'user',
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+      } catch (err) {
+        console.warn('[WebRTC Heartbeat] ping write error:', err);
+      }
+    }, 10000);
+
+    return () => clearInterval(heartbeatInterval);
+  }, [callState.active, callState.ringing, selectedChat?.id, profileName]);
+
+  // 2. Nettoyage immédiat et résilient en cas de fermeture brutale de l'onglet ou du navigateur (beforeunload / pagehide)
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      const chatId = activeCallChatIdRef.current || activeChatIdRef.current || selectedChat?.id;
+      if (chatId && (callState.active || callState.ringing)) {
+        try {
+          setDoc(doc(db, 'chats', String(chatId)), {
+            activeCall: null,
+            isLive: false,
+            endedAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          }, { merge: true });
+          deleteDoc(doc(db, 'calls', String(chatId)));
+        } catch (_) {}
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('pagehide', handleBeforeUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('pagehide', handleBeforeUnload);
+    };
+  }, [callState.active, callState.ringing, selectedChat?.id]);
+
   const attachLocalStream = useCallback((el) => {
     if (el && localStream) {
       if (el.srcObject !== localStream) {
