@@ -4448,7 +4448,11 @@ export default function App() {
   const handleAcceptDeal = async (chatId, dealId, terms) => {
     // Règle métier : un utilisateur ne peut PAS accepter sa propre contre-proposition.
     const dealMessage = (chatThreads[chatId] || []).find(m => String(m.id) === String(dealId));
-    const isMe = dealMessage && (dealMessage.sender === 'me' || (dealMessage.senderName && dealMessage.senderName.trim().toLowerCase() === profile?.name?.trim().toLowerCase()));
+    const isMe = dealMessage && (
+      (dealMessage.senderName && profile?.name && dealMessage.senderName.trim().toLowerCase() === profile.name.trim().toLowerCase()) ||
+      (dealMessage.senderUid && profile?.uid && dealMessage.senderUid === profile.uid) ||
+      dealMessage.sender === 'me'
+    );
     if (isMe) return;
 
     const chat = (selectedChat && String(selectedChat.id) === String(chatId)) ? selectedChat : (chatsList.find(c => String(c.id) === String(chatId)) || mockChats.find(c => String(c.id) === String(chatId)));
@@ -4456,7 +4460,13 @@ export default function App() {
     const tokensAmount = Number(terms?.trocoTokens) || 0;
     const euroAmount = Number(terms?.euroAmount) || 0;
 
-    // 1. Si montant en euros > 0 et solde euro insuffisant, déclencher la passerelle de paiement
+    // 1. Vérification stricte du solde de jetons Troco
+    if (tokensAmount > 0 && (profile.trocoTokens || 0) < tokensAmount) {
+      alert(`Solde de Jetons Troco insuffisant (${profile.trocoTokens || 0} disponibles sur ${tokensAmount} requis). Veuillez recharger des jetons ou opter pour Troco Plus.`);
+      return;
+    }
+
+    // 2. Si montant en euros > 0 et solde euro insuffisant, déclencher la passerelle de paiement
     if (euroAmount > 0 && (profile.euroBalance || 0) < euroAmount) {
       handleOpenPayment('deal', {
         chatId,
@@ -4469,7 +4479,7 @@ export default function App() {
       return;
     }
 
-    // 2. Débit / Crédit dynamique des jetons et/ou euros
+    // 3. Débit / Crédit dynamique des jetons et/ou euros
     let newEuroBalance = profile.euroBalance || 0;
     let newTokensBalance = profile.trocoTokens || 0;
 
@@ -4494,7 +4504,7 @@ export default function App() {
     // Mise à jour de l'état du message et du chat
     setChatThreads(prev => ({
       ...prev,
-      [chatId]: (prev[chatId] || []).map(m => m.id === dealId ? { ...m, status: 'confirmed' } : m),
+      [chatId]: (prev[chatId] || []).map(m => String(m.id) === String(dealId) ? { ...m, status: 'confirmed' } : m),
     }));
     setChatStatusOverrides(prev => ({ ...prev, [chatId]: 'Deal Validé' }));
 
@@ -4517,7 +4527,7 @@ export default function App() {
     };
     setUserTransactions(prev => [newTx, ...prev]);
 
-    // 3. PERSISTANCE TRANSACTIONNELLE ATOMIQUE FIRESTORE (runTransaction)
+    // 4. PERSISTANCE TRANSACTIONNELLE ATOMIQUE FIRESTORE (runTransaction)
     const myUid = profile?.uid || auth.currentUser?.uid;
     if (myUid) {
       try {
@@ -4620,7 +4630,11 @@ export default function App() {
   const handleDeclineDeal = async (chatId, dealId) => {
     // Règle métier : seul le destinataire peut refuser.
     const dealMessage = (chatThreads[chatId] || []).find(m => String(m.id) === String(dealId));
-    const isMe = dealMessage && (dealMessage.sender === 'me' || (dealMessage.senderName && dealMessage.senderName.trim().toLowerCase() === profile?.name?.trim().toLowerCase()));
+    const isMe = dealMessage && (
+      (dealMessage.senderName && profile?.name && dealMessage.senderName.trim().toLowerCase() === profile.name.trim().toLowerCase()) ||
+      (dealMessage.senderUid && profile?.uid && dealMessage.senderUid === profile.uid) ||
+      dealMessage.sender === 'me'
+    );
     if (isMe) return;
 
     setChatThreads(prev => ({
@@ -4633,6 +4647,10 @@ export default function App() {
         status: 'declined',
         updatedAt: serverTimestamp(),
       });
+      await setDoc(doc(db, 'chats', String(chatId)), {
+        lastDealStatus: 'declined',
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
     } catch (e) {
       console.warn('[Firestore] deal decline write failed:', e);
     }
