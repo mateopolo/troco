@@ -258,7 +258,8 @@ export default function ListingDetailModal({
                     border: 'none', borderRadius: '50%', width: '38px', height: '38px',
                     backgroundColor: 'rgba(15,23,42,0.65)', color: '#FFF',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    cursor: 'pointer', zIndex: 10, backdropFilter: 'blur(6px)'
+                    cursor: 'pointer', zIndex: 10, backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
+                    pointerEvents: 'auto'
                   }}
                   title="Photo précédente"
                 >
@@ -275,25 +276,35 @@ export default function ListingDetailModal({
                     border: 'none', borderRadius: '50%', width: '38px', height: '38px',
                     backgroundColor: 'rgba(15,23,42,0.65)', color: '#FFF',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    cursor: 'pointer', zIndex: 10, backdropFilter: 'blur(6px)'
+                    cursor: 'pointer', zIndex: 10, backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
+                    pointerEvents: 'auto'
                   }}
                   title="Photo suivante"
                 >
                   <ChevronRight size={22} />
                 </button>
 
-                <div style={{ position: 'absolute', bottom: '12px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '6px', zIndex: 10 }}>
+                {/* PUCES / DOTS INDICATEURS DÉTAIL */}
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  style={{
+                    position: 'absolute', bottom: '12px', left: '50%', transform: 'translateX(-50%)',
+                    display: 'flex', alignItems: 'center', gap: '6px', zIndex: 10,
+                    backgroundColor: 'rgba(15,23,42,0.55)', padding: '4px 10px', borderRadius: '999px',
+                    backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', pointerEvents: 'auto'
+                  }}
+                >
                   {gallery.map((_, idx) => (
                     <div
                       key={idx}
-                      onClick={() => setSelectedImageIndex(idx)}
+                      onClick={(e) => { e.stopPropagation(); setSelectedImageIndex(idx); }}
                       style={{
-                        width: selectedImageIndex === idx ? '16px' : '7px',
-                        height: '7px',
+                        width: selectedImageIndex === idx ? '18px' : '6px',
+                        height: '6px',
                         borderRadius: '999px',
-                        backgroundColor: selectedImageIndex === idx ? '#FFF' : 'rgba(255,255,255,0.5)',
-                        transition: 'all 0.3s ease',
-                        cursor: 'pointer'
+                        backgroundColor: selectedImageIndex === idx ? '#60A5FA' : 'rgba(255,255,255,0.6)',
+                        cursor: 'pointer',
+                        transition: 'all 0.25s var(--ease-quiet)'
                       }}
                     />
                   ))}

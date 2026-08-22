@@ -1,5 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight, Video, Globe, MapPin, Tag, Trash2, ArrowRight } from 'lucide-react';
+import { useScrollReveal } from '../utils/useScrollReveal';
 
 export default function FeedCardItem({
   item,
@@ -29,18 +30,38 @@ export default function FeedCardItem({
   const [localImageIndex, setLocalImageIndex] = useState(0);
   const touchStartRef = useRef(null);
   const touchDeltaXRef = useRef(0);
+  const touchDeltaYRef = useRef(0);
   const isSwipingRef = useRef(false);
   const longPressTimerRef = useRef(null);
 
-  const media = getSuggestedMedia(item.title, item.description || '', item.image, item.video);
-  const isHovered = hoveredCardId === item.id;
-  const gallery = media.gallery && media.gallery.length > 0 ? media.gallery : [media.image];
-  const galleryLength = gallery.length;
-  const currentSlideIndex = isHovered && media.gallery?.[hoverSlideIndex] !== undefined
-    ? hoverSlideIndex
-    : localImageIndex;
-  const displayContent = getListingDisplayContent(item, currentLang, !!showingOriginalListings[item.id]);
+  // Hook Scroll Reveal natif (IntersectionObserver)
+  const revealRef = useScrollReveal({ threshold: 0.08 });
 
+  const media = getSuggestedMedia ? getSuggestedMedia(item.title, item.description || '', item.image, item.video) : {};
+  const isHovered = hoveredCardId === item.id;
+  
+  // Galerie complète : priorité aux photos utilisateurs (gallery), puis médias suggérés, puis fallback
+  const gallery = (item.gallery && item.gallery.length > 0)
+    ? item.gallery
+    : (media.gallery && media.gallery.length > 0
+      ? media.gallery
+      : [item.image || media.image || getFallbackImage(item.category, item.title)]);
+  
+  const galleryLength = gallery.length;
+
+  // Défilement automatique desktop au survol toutes les 1 500 ms
+  useEffect(() => {
+    if (!isHovered || galleryLength <= 1) return;
+    const interval = setInterval(() => {
+      setLocalImageIndex(prev => (prev + 1) % galleryLength);
+    }, 1500);
+    return () => clearInterval(interval);
+  }, [isHovered, galleryLength]);
+
+  const currentSlideIndex = localImageIndex % galleryLength;
+  const displayContent = getListingDisplayContent ? getListingDisplayContent(item, currentLang, !!showingOriginalListings[item.id]) : { title: item.title, description: item.description };
+
+  // GESTION DU SWIPE TACTILE FLUIDE SANS BLOQUER LE SCROLL VERTICAL
   const handleTouchStart = (e) => {
     if (!e.touches || e.touches.length === 0) return;
     touchStartRef.current = {
@@ -48,9 +69,10 @@ export default function FeedCardItem({
       y: e.touches[0].clientY,
     };
     touchDeltaXRef.current = 0;
+    touchDeltaYRef.current = 0;
     isSwipingRef.current = false;
 
-    // Détection d'un appui long (long-press tactile ~500ms) pour l'auteur de l'annonce
+    // Détection appui long (~500ms) pour l'auteur
     if (item.author === profile?.name && onOpenMobileActions) {
       if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
       longPressTimerRef.current = setTimeout(() => {
@@ -70,9 +92,12 @@ export default function FeedCardItem({
     const deltaY = touchStartRef.current.y - currentY;
 
     touchDeltaXRef.current = deltaX;
+    touchDeltaYRef.current = deltaY;
+
     if (Math.abs(deltaX) > 8 || Math.abs(deltaY) > 8) {
       if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
     }
+    // Si le mouvement horizontal dépasse nettement le mouvement vertical
     if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 12) {
       isSwipingRef.current = true;
     }
@@ -81,7 +106,7 @@ export default function FeedCardItem({
   const handleTouchEnd = () => {
     if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
     const deltaX = touchDeltaXRef.current;
-    if (isSwipingRef.current && Math.abs(deltaX) > 20 && galleryLength > 1) {
+    if (isSwipingRef.current && Math.abs(deltaX) > 22 && galleryLength > 1) {
       if (deltaX > 0) {
         setLocalImageIndex(prev => (prev + 1) % galleryLength);
       } else {
@@ -90,6 +115,7 @@ export default function FeedCardItem({
     }
     touchStartRef.current = null;
     touchDeltaXRef.current = 0;
+    touchDeltaYRef.current = 0;
   };
 
   const handleCardImageClick = (e) => {
@@ -104,9 +130,10 @@ export default function FeedCardItem({
 
   return (
     <div
+      ref={revealRef}
       onMouseEnter={() => setHoveredCardId(item.id)}
       onMouseLeave={() => setHoveredCardId(null)}
-      className="premium-card fade-up-in"
+      className="premium-card reveal-card"
       style={{
         backgroundColor: darkMode ? 'rgba(30,41,59,0.85)' : '#FFFFFF',
         border: item.isBoosted ? '2px solid #F59E0B' : (darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(229,231,235,0.9)'),
@@ -118,6 +145,7 @@ export default function FeedCardItem({
         transition: 'transform 0.4s var(--ease-quiet), box-shadow 0.4s var(--ease-quiet)'
       }}
     >
+      {/* CADRE PHOTO AVEC GESTION DU CARROUSEL, SWIPE ET SURVOL */}
       <div
         onClick={handleCardImageClick}
         onTouchStart={handleTouchStart}
@@ -141,8 +169,8 @@ export default function FeedCardItem({
                 height: '100%',
                 objectFit: 'cover',
                 opacity: isActive ? 1 : 0,
-                transition: 'transform 1200ms var(--ease-quiet), opacity 0.4s ease-in-out',
-                transform: isHovered && isActive ? 'scale(1.05)' : (isActive ? 'scale(1)' : 'scale(1.03)'),
+                transition: 'opacity 0.4s ease, transform 1200ms var(--ease-quiet)',
+                transform: isHovered && isActive ? 'scale(1.04)' : (isActive ? 'scale(1)' : 'scale(1.02)'),
                 pointerEvents: 'none',
                 WebkitUserDrag: 'none',
                 userSelect: 'none',
@@ -162,6 +190,7 @@ export default function FeedCardItem({
           zIndex: 3
         }} />
 
+        {/* FLÈCHES DE NAVIGATION MANUELLE (Z-INDEX 10 ET CLIC DIRECT RÉTABLI) */}
         {galleryLength > 1 && (
           <>
             <button
@@ -172,9 +201,11 @@ export default function FeedCardItem({
               style={{
                 position: 'absolute', top: '50%', left: '8px', transform: 'translateY(-50%)',
                 border: 'none', borderRadius: '50%', width: '28px', height: '28px',
-                backgroundColor: 'rgba(15,23,42,0.6)', color: '#FFF',
+                backgroundColor: 'rgba(15,23,42,0.65)', color: '#FFF',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', zIndex: 5, backdropFilter: 'blur(4px)'
+                cursor: 'pointer', zIndex: 10, backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
+                pointerEvents: 'auto',
+                transition: 'transform 0.2s var(--ease-quiet), background-color 0.2s ease'
               }}
               title="Photo précédente"
             >
@@ -188,15 +219,45 @@ export default function FeedCardItem({
               style={{
                 position: 'absolute', top: '50%', right: '8px', transform: 'translateY(-50%)',
                 border: 'none', borderRadius: '50%', width: '28px', height: '28px',
-                backgroundColor: 'rgba(15,23,42,0.6)', color: '#FFF',
+                backgroundColor: 'rgba(15,23,42,0.65)', color: '#FFF',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', zIndex: 5, backdropFilter: 'blur(4px)'
+                cursor: 'pointer', zIndex: 10, backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
+                pointerEvents: 'auto',
+                transition: 'transform 0.2s var(--ease-quiet), background-color 0.2s ease'
               }}
               title="Photo suivante"
             >
               <ChevronRight size={16} />
             </button>
           </>
+        )}
+
+        {/* PUCES INDICATRICES REFLÉTANT L'INDEX ACTIF */}
+        {galleryLength > 1 && (
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: 'absolute', bottom: '8px', left: '50%', transform: 'translateX(-50%)',
+              display: 'flex', alignItems: 'center', gap: '4px', zIndex: 10,
+              backgroundColor: 'rgba(15,23,42,0.5)', padding: '3px 8px', borderRadius: '999px',
+              backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', pointerEvents: 'auto'
+            }}
+          >
+            {gallery.map((_, idx) => (
+              <div
+                key={idx}
+                onClick={(e) => { e.stopPropagation(); setLocalImageIndex(idx); }}
+                style={{
+                  width: currentSlideIndex === idx ? '14px' : '5px',
+                  height: '5px',
+                  borderRadius: '999px',
+                  backgroundColor: currentSlideIndex === idx ? '#60A5FA' : 'rgba(255,255,255,0.6)',
+                  cursor: 'pointer',
+                  transition: 'all 0.25s var(--ease-quiet)'
+                }}
+              />
+            ))}
+          </div>
         )}
 
         {media.video && (
@@ -214,7 +275,7 @@ export default function FeedCardItem({
               width: '100%',
               height: '100%',
               objectFit: 'cover',
-              opacity: isHovered && hoverSlideIndex === 0 ? 1 : 0,
+              opacity: isHovered && currentSlideIndex === 0 ? 1 : 0,
               transition: 'opacity 0.4s ease',
               pointerEvents: 'none',
               zIndex: 2
@@ -260,21 +321,15 @@ export default function FeedCardItem({
           </span>
         )}
 
-        {galleryLength > 1 && (
-          <div style={{ position: 'absolute', bottom: '12px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '4px', zIndex: 4 }}>
-            {gallery.map((_, idx) => (
-              <div key={idx} style={{ width: currentSlideIndex === idx ? '14px' : '6px', height: '6px', borderRadius: '999px', backgroundColor: currentSlideIndex === idx ? '#FFF' : 'rgba(255,255,255,0.5)', transition: 'all 0.3s ease' }} />
-            ))}
-          </div>
-        )}
-
         <span style={{ position: 'absolute', bottom: '12px', right: '12px', backgroundColor: 'rgba(4,38,90,0.95)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', color: '#FFF', fontSize: '11px', fontWeight: 'bold', padding: '5px 9px', borderRadius: '10px', zIndex: 4 }}>
           {formatCompensation(item.compensation)}
         </span>
       </div>
+
+      {/* CORPS DE CARTE & TYPOGRAPHIE ÉDITORIALE */}
       <div style={{ padding: '16px 18px' }}>
         <div>
-          <h3 style={{ fontSize: '15px', fontWeight: '700', color: darkMode ? '#FFFFFF' : '#111827', margin: '0 0 4px 0', lineHeight: 1.35 }}>
+          <h3 className="font-sans" style={{ fontSize: '15.5px', fontWeight: '800', color: darkMode ? '#FFFFFF' : '#111827', margin: '0 0 4px 0', lineHeight: 1.35, letterSpacing: '-0.02em' }}>
             {displayContent.title}
           </h3>
           {currentLang !== (item.nativeLang || 'FR') && (
@@ -299,12 +354,36 @@ export default function FeedCardItem({
             </button>
           )}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '12px', color: darkMode ? '#CBD5E1' : '#6B7280', marginBottom: '10px' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+
+        {/* LOCALISATION & SOUS-TITRE EN STYLE ÉDITORIAL RAFFINÉ */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '12.5px', color: darkMode ? '#CBD5E1' : '#6B7280', marginBottom: '8px' }}>
+          <span className="font-editorial" style={{ display: 'flex', alignItems: 'center', gap: '4px', fontStyle: 'italic' }}>
             {item.type === 'remote' ? <Video size={13} color={darkMode ? '#60A5FA' : '#04265A'} /> : <MapPin size={13} color={darkMode ? '#60A5FA' : '#04265A'} />}
             {localizeLocation(item.location, currentLang)}
           </span>
         </div>
+
+        {/* MICRO-INTERACTION ÉTAPE 4 : APERÇU ANIMÉ DE LA DESCRIPTION AU SURVOL */}
+        {displayContent.description && (
+          <div
+            style={{
+              fontSize: '11.5px',
+              color: darkMode ? '#94A3B8' : '#64748B',
+              lineHeight: 1.45,
+              maxHeight: isHovered ? '48px' : '22px',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              display: '-webkit-box',
+              WebkitLineClamp: isHovered ? 2 : 1,
+              WebkitBoxOrient: 'vertical',
+              marginBottom: '10px',
+              transition: 'max-height 0.3s var(--ease-quiet), color 0.3s ease'
+            }}
+          >
+            {displayContent.description}
+          </div>
+        )}
+
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }}>
           {localizeTags((item.tags || generateTags(item.title, item.description || '')), currentLang).slice(0, 3).map(tag => (
             <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: darkMode ? 'rgba(4,38,90,0.45)' : '#EFF6FF', color: darkMode ? '#93C5FD' : '#04265A', borderRadius: '999px', padding: '4px 10px', fontSize: '10px', fontWeight: '800' }}>
@@ -312,8 +391,9 @@ export default function FeedCardItem({
             </span>
           ))}
         </div>
+
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #F3F4F6', gap: '8px', flexWrap: 'wrap' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '7px', fontWeight: '600', fontSize: '13px', color: darkMode ? '#F8FAFC' : '#374151' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '7px', fontWeight: '700', fontSize: '13px', color: darkMode ? '#F8FAFC' : '#374151' }}>
             <img src={item.author === profile.name ? profile.avatar : getAuthorAvatar(item.author)} alt={item.author} style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover', border: darkMode ? '1px solid #60A5FA' : '1px solid #E2E8F0' }} />
             {item.author}
           </span>

@@ -1,8 +1,9 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Video, MapPin, Tag, ArrowRight, Globe, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getSuggestedMedia as defaultGetSuggestedMedia, getFallbackImage as defaultGetFallbackImage } from '../utils/mediaUtils';
 import { localizeLocation as defaultLocalizeLocation, localizeTags as defaultLocalizeTags } from '../locales/translations';
 import { getAuthorAvatar as defaultGetAuthorAvatar } from '../data/mockData';
+import { useScrollReveal } from '../utils/useScrollReveal';
 
 const defaultGenerateTags = (title = '', description = '') => ['Échange', 'Service'];
 const defaultFormatCompensation = (comp) => comp || '';
@@ -38,6 +39,15 @@ export default function ListingCard({
   generateTags = defaultGenerateTags,
   getAuthorAvatar = defaultGetAuthorAvatar,
 }) {
+  const [localImageIndex, setLocalImageIndex] = useState(0);
+  const touchStartRef = useRef(null);
+  const touchDeltaXRef = useRef(0);
+  const touchDeltaYRef = useRef(0);
+  const isSwipingRef = useRef(false);
+
+  // Hook Scroll Reveal natif
+  const revealRef = useScrollReveal({ threshold: 0.08 });
+
   if (!item) return null;
 
   const safeGetSuggestedMedia = getSuggestedMedia || defaultGetSuggestedMedia;
@@ -50,22 +60,22 @@ export default function ListingCard({
   const safeGetAuthorAvatar = getAuthorAvatar || defaultGetAuthorAvatar;
   const safeProfile = profile || { name: 'MATEO POLO', avatar: '' };
 
-  const [localImageIndex, setLocalImageIndex] = useState(0);
-  const touchStartRef = useRef(null);
-  const touchDeltaXRef = useRef(0);
-  const isSwipingRef = useRef(false);
-
   const media = safeGetSuggestedMedia(item.title, item.description || '', item.image, item.video);
-  // Si l'annonce a déjà son propre tableau gallery (plusieurs photos utilisateur), on l'utilise directement.
-  const effectiveGallery = (item.gallery && item.gallery.length > 0) ? item.gallery : (media.gallery || [media.image]);
+  const effectiveGallery = (item.gallery && item.gallery.length > 0) ? item.gallery : (media.gallery || [media.image || safeGetFallbackImage(item.category, item.title)]);
   const isHovered = hoveredCardId === item.id;
   const galleryLength = effectiveGallery.length || 1;
-  const currentSlideIndex = isHovered && effectiveGallery[hoverSlideIndex] !== undefined
-    ? hoverSlideIndex
-    : localImageIndex;
-  const activeImage = effectiveGallery[currentSlideIndex] || media.image;
-  const displayContent = safeGetListingDisplayContent(item, currentLang, !!showingOriginalListings[item.id]);
 
+  // Défilement automatique au survol desktop toutes les 1 500 ms
+  useEffect(() => {
+    if (!isHovered || galleryLength <= 1) return;
+    const interval = setInterval(() => {
+      setLocalImageIndex(prev => (prev + 1) % galleryLength);
+    }, 1500);
+    return () => clearInterval(interval);
+  }, [isHovered, galleryLength]);
+
+  const currentSlideIndex = localImageIndex % galleryLength;
+  const displayContent = safeGetListingDisplayContent(item, currentLang, !!showingOriginalListings[item.id]);
 
   const handleTouchStart = (e) => {
     if (!e.touches || e.touches.length === 0) return;
@@ -74,6 +84,7 @@ export default function ListingCard({
       y: e.touches[0].clientY,
     };
     touchDeltaXRef.current = 0;
+    touchDeltaYRef.current = 0;
     isSwipingRef.current = false;
   };
 
@@ -85,6 +96,8 @@ export default function ListingCard({
     const deltaY = touchStartRef.current.y - currentY;
 
     touchDeltaXRef.current = deltaX;
+    touchDeltaYRef.current = deltaY;
+
     if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 12) {
       isSwipingRef.current = true;
     }
@@ -92,17 +105,16 @@ export default function ListingCard({
 
   const handleTouchEnd = () => {
     const deltaX = touchDeltaXRef.current;
-    if (isSwipingRef.current && Math.abs(deltaX) > 20 && galleryLength > 1) {
+    if (isSwipingRef.current && Math.abs(deltaX) > 22 && galleryLength > 1) {
       if (deltaX > 0) {
-        // Swiped left -> next photo
         setLocalImageIndex(prev => (prev + 1) % galleryLength);
       } else {
-        // Swiped right -> prev photo
         setLocalImageIndex(prev => (prev - 1 + galleryLength) % galleryLength);
       }
     }
     touchStartRef.current = null;
     touchDeltaXRef.current = 0;
+    touchDeltaYRef.current = 0;
   };
 
   const handleCardImageClick = (e) => {
@@ -117,9 +129,10 @@ export default function ListingCard({
 
   return (
     <div
+      ref={revealRef}
       onMouseEnter={() => setHoveredCardId(item.id)}
       onMouseLeave={() => setHoveredCardId(null)}
-      className="premium-card"
+      className="premium-card reveal-card"
       style={{
         display: 'flex',
         flexDirection: 'column',
@@ -141,7 +154,7 @@ export default function ListingCard({
         onTouchEnd={handleTouchEnd}
         style={{ position: 'relative', height: '200px', width: '100%', backgroundColor: '#F3F4F6', overflow: 'hidden', touchAction: 'pan-y' }}
       >
-        {/* SUPERPOSITION DES IMAGES DE LA GALERIE AVEC EFFET DE FONDU TRANSLUCIDE (CROSSFADE) */}
+        {/* SUPERPOSITION DES IMAGES DE LA GALERIE AVEC CROSSFADE & ZOOM SUBTIL */}
         {effectiveGallery.map((imgSrc, idx) => {
           const isActive = idx === currentSlideIndex;
           return (
@@ -158,8 +171,8 @@ export default function ListingCard({
                 height: '100%',
                 objectFit: 'cover',
                 opacity: isActive ? 1 : 0,
-                transition: 'transform 1200ms var(--ease-quiet), opacity 0.4s ease-in-out',
-                transform: isHovered && isActive ? 'scale(1.05)' : (isActive ? 'scale(1)' : 'scale(1.03)'),
+                transition: 'opacity 0.4s ease, transform 1200ms var(--ease-quiet)',
+                transform: isHovered && isActive ? 'scale(1.04)' : (isActive ? 'scale(1)' : 'scale(1.02)'),
                 pointerEvents: 'none',
                 WebkitUserDrag: 'none',
                 userSelect: 'none',
@@ -170,7 +183,7 @@ export default function ListingCard({
           );
         })}
 
-        {/* VOILE DE CONTRASTE PROGRESSIF DISCRET EN BAS DE PHOTO */}
+        {/* VOILE DE CONTRASTE PROGRESSIF */}
         <div style={{
           position: 'absolute',
           inset: 0,
@@ -179,7 +192,7 @@ export default function ListingCard({
           zIndex: 3
         }} />
 
-        {/* FLÈCHES TACTILES FLOTTANTES MANUELLES SUR MOBILE */}
+        {/* FLÈCHES DE NAVIGATION MANUELLE AVEC CLIC DIRECT */}
         {galleryLength > 1 && (
           <>
             <button
@@ -190,9 +203,11 @@ export default function ListingCard({
               style={{
                 position: 'absolute', top: '50%', left: '8px', transform: 'translateY(-50%)',
                 border: 'none', borderRadius: '50%', width: '28px', height: '28px',
-                backgroundColor: 'rgba(15,23,42,0.6)', color: '#FFF',
+                backgroundColor: 'rgba(15,23,42,0.65)', color: '#FFF',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', zIndex: 5, backdropFilter: 'blur(4px)'
+                cursor: 'pointer', zIndex: 10, backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
+                pointerEvents: 'auto',
+                transition: 'transform 0.2s var(--ease-quiet), background-color 0.2s ease'
               }}
               title="Photo précédente"
             >
@@ -206,9 +221,11 @@ export default function ListingCard({
               style={{
                 position: 'absolute', top: '50%', right: '8px', transform: 'translateY(-50%)',
                 border: 'none', borderRadius: '50%', width: '28px', height: '28px',
-                backgroundColor: 'rgba(15,23,42,0.6)', color: '#FFF',
+                backgroundColor: 'rgba(15,23,42,0.65)', color: '#FFF',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', zIndex: 5, backdropFilter: 'blur(4px)'
+                cursor: 'pointer', zIndex: 10, backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
+                pointerEvents: 'auto',
+                transition: 'transform 0.2s var(--ease-quiet), background-color 0.2s ease'
               }}
               title="Photo suivante"
             >
@@ -217,7 +234,34 @@ export default function ListingCard({
           </>
         )}
 
-        {/* COUCHE DE SURVOL : VIDÉO MP4 AVEC POSTER FIXE (SANS ÉCRAN NOIR) */}
+        {/* PUCES INDICATRICES DE DÉFILEMENT */}
+        {galleryLength > 1 && (
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              position: 'absolute', bottom: '8px', left: '50%', transform: 'translateX(-50%)',
+              display: 'flex', alignItems: 'center', gap: '4px', zIndex: 10,
+              backgroundColor: 'rgba(15,23,42,0.5)', padding: '3px 8px', borderRadius: '999px',
+              backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', pointerEvents: 'auto'
+            }}
+          >
+            {effectiveGallery.map((_, idx) => (
+              <div
+                key={idx}
+                onClick={(e) => { e.stopPropagation(); setLocalImageIndex(idx); }}
+                style={{
+                  width: currentSlideIndex === idx ? '14px' : '5px',
+                  height: '5px',
+                  borderRadius: '999px',
+                  backgroundColor: currentSlideIndex === idx ? '#60A5FA' : 'rgba(255,255,255,0.6)',
+                  cursor: 'pointer',
+                  transition: 'all 0.25s var(--ease-quiet)'
+                }}
+              />
+            ))}
+          </div>
+        )}
+
         {media.video && (
           <video
             src={media.video}
@@ -233,7 +277,7 @@ export default function ListingCard({
               width: '100%',
               height: '100%',
               objectFit: 'cover',
-              opacity: isHovered && hoverSlideIndex === 0 ? 1 : 0,
+              opacity: isHovered && currentSlideIndex === 0 ? 1 : 0,
               transition: 'opacity 0.4s ease',
               pointerEvents: 'none',
               zIndex: 2
@@ -251,26 +295,25 @@ export default function ListingCard({
             URGENT
           </span>
         )}
-        
-        {item.isDemo && (
+        {(item.isDemo || (typeof item.id === 'number' && item.id <= 20)) && (
           <span style={{
             position: 'absolute',
-            top: item.isBoosted ? '46px' : '12px',
-            right: '12px',
-            backgroundColor: 'rgba(30,41,59,0.82)',
-            backdropFilter: 'blur(6px)',
-            WebkitBackdropFilter: 'blur(6px)',
-            color: '#93C5FD',
-            fontSize: '9px',
+            top: item.urgent ? '42px' : '12px',
+            left: '12px',
+            backgroundColor: darkMode ? 'rgba(126,34,206,0.9)' : '#7E22CE',
+            color: '#FFF',
+            fontSize: '9.5px',
             fontWeight: '800',
             padding: '4px 8px',
             borderRadius: '8px',
-            border: '1px solid rgba(96,165,250,0.35)',
-            letterSpacing: '0.5px',
-            textTransform: 'uppercase',
+            boxShadow: '0 4px 12px rgba(126,34,206,0.35)',
             zIndex: 4,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '3px',
+            backdropFilter: 'blur(4px)'
           }}>
-            🧩 Annonce Test
+            🤖 Annonce IA
           </span>
         )}
 
@@ -280,76 +323,89 @@ export default function ListingCard({
           </span>
         )}
 
-        {/* PUCES INDICATRICES DE DÉFILEMENT (HOVER ET SWIPE MOBILE) */}
-        {galleryLength > 1 && (
-          <div style={{ position: 'absolute', bottom: '12px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '4px', zIndex: 4 }}>
-            {effectiveGallery.map((_, idx) => (
-              <div key={idx} style={{ width: currentSlideIndex === idx ? '14px' : '6px', height: '6px', borderRadius: '999px', backgroundColor: currentSlideIndex === idx ? '#FFF' : 'rgba(255,255,255,0.5)', transition: 'all 0.3s ease' }} />
-            ))}
-          </div>
-        )}
-
         <span style={{ position: 'absolute', bottom: '12px', right: '12px', backgroundColor: 'rgba(4,38,90,0.95)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', color: '#FFF', fontSize: '11px', fontWeight: 'bold', padding: '5px 9px', borderRadius: '10px', zIndex: 4 }}>
           {safeFormatCompensation(item.compensation)}
         </span>
       </div>
+
       <div style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'space-between' }}>
         <div>
-          <h3 style={{ fontSize: '15px', fontWeight: '700', color: darkMode ? '#FFFFFF' : '#111827', margin: '0 0 4px 0', lineHeight: 1.35 }}>
-            {displayContent.title}
-          </h3>
-          {currentLang !== (item.nativeLang || 'FR') && (
-            <button
-              onClick={(e) => toggleOriginalListing(item.id, e)}
+          <div>
+            <h3 className="font-sans" style={{ fontSize: '15.5px', fontWeight: '800', color: darkMode ? '#FFFFFF' : '#111827', margin: '0 0 4px 0', lineHeight: 1.35, letterSpacing: '-0.02em' }}>
+              {displayContent.title}
+            </h3>
+            {currentLang !== (item.nativeLang || 'FR') && (
+              <button
+                onClick={(e) => toggleOriginalListing(item.id, e)}
+                className="premium-button"
+                style={{
+                  border: 'none',
+                  backgroundColor: 'transparent',
+                  color: darkMode ? '#60A5FA' : '#04265A',
+                  fontSize: '11px',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '2px 0 6px 0'
+                }}
+              >
+                <Globe size={12} />
+                {showingOriginalListings[item.id] ? t('showTranslation') : t('showOriginal')}
+              </button>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '12.5px', color: darkMode ? '#CBD5E1' : '#6B7280', marginBottom: '8px' }}>
+            <span className="font-editorial" style={{ display: 'flex', alignItems: 'center', gap: '4px', fontStyle: 'italic' }}>
+              {item.type === 'remote' ? <Video size={13} color={darkMode ? '#60A5FA' : '#04265A'} /> : <MapPin size={13} color={darkMode ? '#60A5FA' : '#04265A'} />}
+              {safeLocalizeLocation(item.location, currentLang)}
+            </span>
+          </div>
+
+          {/* APERÇU ANIMÉ AU SURVOL */}
+          {displayContent.description && (
+            <div
               style={{
-                border: 'none',
-                background: 'none',
-                backgroundColor: 'transparent',
-                color: darkMode ? '#60A5FA' : '#04265A',
-                fontSize: '11px',
-                fontWeight: '800',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-                padding: '2px 0',
-                margin: '2px 0 4px 0',
-                outline: 'none',
-                boxShadow: 'none'
+                fontSize: '11.5px',
+                color: darkMode ? '#94A3B8' : '#64748B',
+                lineHeight: 1.45,
+                maxHeight: isHovered ? '48px' : '22px',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                display: '-webkit-box',
+                WebkitLineClamp: isHovered ? 2 : 1,
+                WebkitBoxOrient: 'vertical',
+                marginBottom: '10px',
+                transition: 'max-height 0.3s var(--ease-quiet), color 0.3s ease'
               }}
             >
-              <Globe size={12} style={{ flexShrink: 0 }} />
-              <span>{showingOriginalListings[item.id] ? t('showTranslation') : t('showOriginal')}</span>
-            </button>
+              {displayContent.description}
+            </div>
           )}
+
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }}>
+            {safeLocalizeTags((item.tags || safeGenerateTags(item.title, item.description || '')), currentLang).slice(0, 3).map(tag => (
+              <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: darkMode ? 'rgba(4,38,90,0.45)' : '#EFF6FF', color: darkMode ? '#93C5FD' : '#04265A', borderRadius: '999px', padding: '4px 10px', fontSize: '10px', fontWeight: '800' }}>
+                <Tag size={10} /> {tag}
+              </span>
+            ))}
+          </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '12px', color: darkMode ? '#CBD5E1' : '#6B7280', marginBottom: '10px' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            {item.type === 'remote' ? <Video size={13} color={darkMode ? '#60A5FA' : '#04265A'} /> : <MapPin size={13} color={darkMode ? '#60A5FA' : '#04265A'} />}
-            {safeLocalizeLocation(item.location, currentLang)}
-          </span>
-        </div>
-        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }}>
-          {safeLocalizeTags((item.tags || safeGenerateTags(item.title, item.description || '')), currentLang).slice(0, 3).map(tag => (
-            <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: darkMode ? 'rgba(4,38,90,0.45)' : '#EFF6FF', color: darkMode ? '#93C5FD' : '#04265A', borderRadius: '999px', padding: '4px 10px', fontSize: '10px', fontWeight: '800' }}>
-              <Tag size={10} /> {tag}
-            </span>
-          ))}
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', marginTop: 'auto', borderTop: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #F3F4F6' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '7px', fontWeight: '600', fontSize: '13px', color: darkMode ? '#F8FAFC' : '#374151' }}>
+
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #F3F4F6', gap: '8px', flexWrap: 'wrap' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '7px', fontWeight: '700', fontSize: '13px', color: darkMode ? '#F8FAFC' : '#374151' }}>
             <img src={item.author === safeProfile.name ? safeProfile.avatar : safeGetAuthorAvatar(item.author)} alt={item.author} style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover', border: darkMode ? '1px solid #60A5FA' : '1px solid #E2E8F0' }} />
             {item.author}
           </span>
-          {item.author !== safeProfile.name ? (
-            <button onClick={(event) => { event.stopPropagation(); handleStartDiscussion(item); }} className="premium-button borderless-orig-btn" style={{ backgroundColor: '#04265A', color: '#FFF', border: 'none', padding: '8px 14px', borderRadius: '12px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', boxShadow: '0 6px 14px rgba(4,38,90,0.18)' }}>
-              {t('proposeDealButton')} <ArrowRight size={12} />
-            </button>
-          ) : (
-            <span style={{ backgroundColor: '#F3F4F6', color: '#6B7280', border: '1px solid #E5E7EB', padding: '7px 12px', borderRadius: '999px', fontSize: '11px', fontWeight: '600' }}>
-              {t('authorAnnc')}
-            </span>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            {item.author !== safeProfile.name ? (
+              <button onClick={(event) => { event.stopPropagation(); handleStartDiscussion(item); }} className="premium-button" style={{ backgroundColor: '#04265A', color: '#FFF', border: 'none', padding: '8px 14px', borderRadius: '12px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', boxShadow: '0 6px 14px rgba(4,38,90,0.18)' }}>{t('proposeDealButton')} <ArrowRight size={12} /></button>
+            ) : (
+              <span style={{ backgroundColor: '#F3F4F6', color: '#6B7280', border: '1px solid #E5E7EB', padding: '6px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '600' }}>{t('authorAnnc')}</span>
+            )}
+          </div>
         </div>
       </div>
     </div>
