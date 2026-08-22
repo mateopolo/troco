@@ -56,18 +56,24 @@ export default function ChatView({
   const [, setTranslationRevision] = useState(0);
   const messagesEndRef = useRef(null);
 
-  const [viewportHeight, setViewportHeight] = useState(() => {
+  const [viewportMetrics, setViewportMetrics] = useState(() => {
     if (typeof window !== 'undefined' && window.visualViewport) {
-      return window.visualViewport.height;
+      return {
+        height: window.visualViewport.height,
+        offsetTop: window.visualViewport.offsetTop
+      };
     }
-    return null;
+    return { height: null, offsetTop: 0 };
   });
 
   // Écoute du Visual Viewport pour le clavier virtuel mobile (iOS Safari & Android)
   useEffect(() => {
     if (typeof window === 'undefined' || !window.visualViewport) return;
     const handleViewportUpdate = () => {
-      setViewportHeight(window.visualViewport.height);
+      setViewportMetrics({
+        height: window.visualViewport.height,
+        offsetTop: window.visualViewport.offsetTop
+      });
       if (messagesEndRef.current) {
         messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
       }
@@ -79,6 +85,16 @@ export default function ChatView({
       window.visualViewport?.removeEventListener('scroll', handleViewportUpdate);
     };
   }, []);
+
+  const handleSelectChatMobile = (chat) => {
+    if (setSelectedChat) setSelectedChat(chat);
+    setMobileSubView('room');
+  };
+
+  const handleBackToDiscussions = () => {
+    setMobileSubView('list');
+    if (setSelectedChat) setSelectedChat(null);
+  };
 
   // Bascule automatique sur la conversation lorsqu'un chat est sélectionné
   useEffect(() => {
@@ -322,11 +338,6 @@ export default function ChatView({
     }
 
     setConfirmDeleteChat(null);
-  };
-
-  const handleSelectChatMobile = (chat) => {
-    setSelectedChat(chat);
-    setMobileSubView('room');
   };
 
   const onSubmitMessage = () => {
@@ -602,19 +613,26 @@ export default function ChatView({
           <div
             className={isMobile ? "mobile-chat-fullscreen-layer" : ""}
             style={{
-              backgroundColor: darkMode ? '#0B1120' : '#FFFFFF',
-              borderRadius: isMobile ? '0' : '24px',
-              border: isMobile ? 'none' : (darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(229,231,235,0.9)'),
+              display: 'flex',
+              flexDirection: 'column',
+              height: isMobile ? (viewportMetrics.height ? `${viewportMetrics.height}px` : '100dvh') : '100%',
+              minHeight: 0,
+              maxHeight: isMobile ? (viewportMetrics.height ? `${viewportMetrics.height}px` : '100dvh') : '100%',
+              borderRadius: isMobile ? '0' : '20px',
+              overflow: 'hidden',
+              backgroundColor: darkMode ? 'rgba(30,41,59,0.85)' : 'rgba(255,255,255,0.85)',
+              backdropFilter: 'blur(16px)',
+              WebkitBackdropFilter: 'blur(16px)',
+              border: isMobile ? 'none' : (darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E2E8F0'),
               boxShadow: isMobile ? 'none' : '0 10px 30px rgba(15,23,42,0.06)',
-              display: 'flex', flexDirection: 'column',
-              height: isMobile ? (viewportHeight ? `${viewportHeight}px` : '100dvh') : '100%',
-              maxHeight: isMobile ? (viewportHeight ? `${viewportHeight}px` : '100dvh') : '100%',
-              width: isMobile ? '100vw' : '100%',
               position: isMobile ? 'fixed' : 'relative',
-              inset: isMobile ? 0 : 'auto',
-              zIndex: isMobile ? 100 : 'auto',
-              boxSizing: 'border-box',
-              overflow: 'hidden'
+              top: isMobile ? `${viewportMetrics.offsetTop || 0}px` : 'auto',
+              left: isMobile ? 0 : 'auto',
+              right: isMobile ? 0 : 'auto',
+              bottom: isMobile ? 'auto' : 'auto',
+              width: isMobile ? '100vw' : '100%',
+              zIndex: isMobile ? 1000 : 'auto',
+              boxSizing: 'border-box'
             }}
           >
             {!activeChatObj ? (
@@ -629,34 +647,34 @@ export default function ChatView({
               </div>
             ) : (
               <>
-                {/* 1. EN-TÊTE DU CHAT (NOM, STATUT, BOUTON RETOUR, APPEL VIDÉO) */}
+                {/* 1. EN-TÊTE DU CHAT (STICKY TOP - NOM, STATUT, BOUTON RETOUR, APPEL VIDÉO) */}
                 <div style={{
                   flexShrink: 0,
-                  width: '100%',
-                  height: isMobile ? '60px' : '64px',
-                  padding: isMobile ? 'max(8px, env(safe-area-inset-top, 8px)) 16px 8px 16px' : '12px 18px',
-                  borderBottom: darkMode ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(226,232,240,0.8)',
+                  height: '60px',
+                  padding: isMobile ? 'max(10px, env(safe-area-inset-top, 10px)) 16px 10px 16px' : '12px 18px',
+                  borderBottom: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(226,232,240,0.8)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  backgroundColor: darkMode ? 'rgba(11, 17, 32, 0.96)' : 'rgba(255, 255, 255, 0.96)',
+                  backgroundColor: darkMode ? 'rgba(15,23,42,0.95)' : 'rgba(255,255,255,0.95)',
                   backdropFilter: 'blur(20px)',
                   WebkitBackdropFilter: 'blur(20px)',
                   boxSizing: 'border-box',
                   zIndex: 30,
+                  width: '100%',
                   gap: '8px'
                 }}>
                   {/* Partie Gauche : Retour (Mobile) + Avatar + Nom + Annonce */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
                     {isMobile && (
                       <button
-                        onClick={() => setMobileSubView('list')}
+                        onClick={handleBackToDiscussions}
                         className="premium-button"
                         style={{
                           border: 'none',
                           borderRadius: '50%',
-                          width: '34px',
-                          height: '34px',
+                          width: '36px',
+                          height: '36px',
                           backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : '#EFF6FF',
                           color: darkMode ? '#60A5FA' : '#04265A',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -664,7 +682,7 @@ export default function ChatView({
                         }}
                         title="Retour aux discussions"
                       >
-                        <ChevronLeft size={20} />
+                        <ChevronLeft size={22} />
                       </button>
                     )}
                     <div style={{ position: 'relative', width: '36px', height: '36px', flexShrink: 0 }}>
@@ -1165,15 +1183,15 @@ export default function ChatView({
                   </div>
                 </div>
 
-                {/* 3. BARRE DE SAISIE INFÉRIEURE (INPUT + BOUTON D'ENVOI) */}
+                {/* 3. BARRE INFÉRIEURE DE SAISIE (STICKY BOTTOM AU-DESSUS DU CLAVIER) */}
                 <div style={{
                   flexShrink: 0,
                   width: '100%',
-                  padding: isMobile ? '10px 16px max(12px, env(safe-area-inset-bottom, 12px)) 16px' : '10px 18px 14px',
-                  background: darkMode ? 'rgba(11, 17, 32, 0.96)' : 'rgba(255, 255, 255, 0.96)',
+                  padding: isMobile ? '10px 14px max(12px, env(safe-area-inset-bottom, 12px)) 14px' : '10px 18px 14px',
+                  backgroundColor: darkMode ? 'rgba(15,23,42,0.98)' : 'rgba(255,255,255,0.98)',
                   backdropFilter: 'blur(20px)',
                   WebkitBackdropFilter: 'blur(20px)',
-                  borderTop: darkMode ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(226,232,240,0.8)',
+                  borderTop: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(226,232,240,0.8)',
                   boxSizing: 'border-box',
                   zIndex: 30,
                   display: 'flex',
@@ -1225,10 +1243,10 @@ export default function ChatView({
                         onKeyDown={(e) => e.key === 'Enter' && onSubmitMessage()}
                         placeholder={editingMsg ? 'Modifie ton message...' : (t('typeYourMessage') || t('writeToInterlocutor') || 'Écris ton message...')}
                         style={{
-                          flex: 1, padding: '11px 16px', borderRadius: '24px',
+                          flex: 1, padding: '11px 16px', borderRadius: '999px',
                           border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB',
                           backgroundColor: darkMode ? 'rgba(15,23,42,0.85)' : '#F8FAFC',
-                          color: darkMode ? '#FFF' : '#111827', fontSize: '14px', outline: 'none',
+                          color: darkMode ? '#FFF' : '#111827', fontSize: isMobile ? '16px' : '14px', outline: 'none',
                           boxSizing: 'border-box'
                         }}
                       />

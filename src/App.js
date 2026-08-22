@@ -6086,15 +6086,13 @@ export default function App() {
         key={`${activeTab}-${viewMode}`}
         className={`premium-main fade-up-in ${activeTab === 'chat' ? 'chat-mode' : ''}`}
         style={{
-          maxWidth: isMobile && activeTab === 'chat' ? '100%' : (activeTab === 'feed' ? '1460px' : '1200px'),
+          maxWidth: activeTab === 'feed' ? '1460px' : '1200px',
           margin: '0 auto',
-          padding: isMobile && activeTab === 'chat' ? '0' : '20px 20px 90px',
           width: '100%',
-          height: isMobile && activeTab === 'chat' ? 'calc(100dvh - 58px - 64px)' : 'auto',
           boxSizing: 'border-box',
-          display: isMobile && activeTab === 'chat' ? 'flex' : 'block',
-          flexDirection: 'column',
-          overflow: isMobile && activeTab === 'chat' ? 'hidden' : 'visible',
+          padding: isMobile ? '12px' : '20px 20px 90px',
+          display: 'block',
+          overflow: 'visible',
           transition: 'max-width 0.3s ease'
         }}
       >
