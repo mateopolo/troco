@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Search, MapPin, Video, Star, Globe, Filter, MessageSquare, PlusCircle, User, ShieldCheck, Clock, CheckCircle, X, Sparkles, Coins, Plus, Trash2, Camera, Pencil, Mic, PhoneOff, Flame, History, Check, Lock, CreditCard, Tag, Phone, UserPlus, ChevronLeft, ChevronRight, ChevronUp, Eye, EyeOff, Minimize2, MicOff, VideoOff, Sun, Moon, Upload, Repeat, SwitchCamera, LogOut, Scale, ShieldAlert, FileText, Monitor, MonitorOff, Crown, Image as ImageIcon } from 'lucide-react';
+import { Search, MapPin, Video, Star, Globe, Filter, MessageSquare, PlusCircle, User, ShieldCheck, Clock, CheckCircle, X, Sparkles, Coins, Plus, Trash2, Camera, Pencil, Mic, PhoneOff, Flame, History, Check, Lock, CreditCard, Tag, Phone, UserPlus, ChevronLeft, ChevronRight, ChevronUp, Eye, EyeOff, Minimize2, MicOff, VideoOff, Sun, Moon, Upload, Repeat, SwitchCamera, LogOut, Scale, ShieldAlert, FileText, Monitor, MonitorOff, Crown, GripHorizontal, Image as ImageIcon } from 'lucide-react';
 import { auth, db } from './firebase';
 import { collection, addDoc, doc, updateDoc, serverTimestamp, onSnapshot, query, orderBy, setDoc, deleteDoc, getDoc, getDocs, where, increment, runTransaction } from 'firebase/firestore';
 import { RecaptchaVerifier, signInWithPhoneNumber, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, GoogleAuthProvider, GithubAuthProvider, FacebookAuthProvider, OAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
@@ -1448,6 +1448,104 @@ export default function App() {
       setShowCallControls(false);
     }
   }, [callState?.isScreenSharing, callState?.remoteScreenSharing]);
+
+  // ---- DÉPLACEMENT TACTILE FLUIDE DE LA BARRE DE CONTRÔLES D'APPEL ----
+  const [callControlsPos, setCallControlsPos] = useState({ x: 0, y: 0 });
+  const [isDraggingCallControls, setIsDraggingCallControls] = useState(false);
+  const dragCallControlsRef = useRef({ startX: 0, startY: 0, initialX: 0, initialY: 0 });
+
+  const handleCallControlsPointerDown = (e) => {
+    if (e.target.closest('button')) return;
+    setIsDraggingCallControls(true);
+    dragCallControlsRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      initialX: callControlsPos.x,
+      initialY: callControlsPos.y,
+    };
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch (_) { }
+  };
+
+  const handleCallControlsPointerMove = (e) => {
+    if (!isDraggingCallControls) return;
+    const dx = e.clientX - dragCallControlsRef.current.startX;
+    const dy = e.clientY - dragCallControlsRef.current.startY;
+    setCallControlsPos({
+      x: dragCallControlsRef.current.initialX + dx,
+      y: dragCallControlsRef.current.initialY + dy,
+    });
+  };
+
+  const handleCallControlsPointerUp = (e) => {
+    if (isDraggingCallControls) {
+      setIsDraggingCallControls(false);
+      try {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      } catch (_) { }
+    }
+  };
+
+  // ---- GESTION DU STATUT EN LIGNE RÉEL (HEARTBEAT FIRESTORE < 30S) ----
+  const [presenceMap, setPresenceMap] = useState({});
+
+  useEffect(() => {
+    const uid = profile?.uid || (auth.currentUser && auth.currentUser.uid);
+    if (!uid) return;
+
+    const sendHeartbeat = async () => {
+      try {
+        await setDoc(doc(db, 'presence', String(uid)), {
+          uid: String(uid),
+          name: profile.name || 'Membre',
+          lastSeenMs: Date.now(),
+          lastSeen: serverTimestamp(),
+          online: true,
+        }, { merge: true });
+      } catch (_) { }
+    };
+
+    sendHeartbeat();
+    const interval = setInterval(sendHeartbeat, 15000); // Heartbeat toutes les 15s
+
+    const handleBeforeUnload = () => {
+      try {
+        setDoc(doc(db, 'presence', String(uid)), {
+          online: false,
+          lastSeenMs: Date.now() - 60000,
+        }, { merge: true }).catch(() => {});
+      } catch (_) { }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [profile?.uid, profile?.name]);
+
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'presence'), (snapshot) => {
+      const map = {};
+      const now = Date.now();
+      snapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        const lastSeenMs = data.lastSeenMs || (data.lastSeen?.toMillis ? data.lastSeen.toMillis() : (data.lastSeen?.seconds ? data.lastSeen.seconds * 1000 : 0));
+        // Seuil strict de 30 secondes pour le battement de coeur
+        const isOnline = data.online !== false && (now - lastSeenMs < 30000);
+        map[docSnap.id] = isOnline;
+        if (data.name) {
+          map[data.name.trim().toLowerCase()] = isOnline;
+        }
+      });
+      setPresenceMap(map);
+    }, (err) => {
+      console.debug('[Firestore] presence subscription error:', err);
+    });
+
+    return () => unsub();
+  }, []);
 
   // Gestion Pointer Events API unifiée pour le Drag-and-Drop (toucher/souris à 60fps)
   const pipPointerDragRef = useRef({
@@ -6941,6 +7039,7 @@ export default function App() {
               showingOriginalMessages={showingOriginalMessages}
               toggleOriginalMessage={toggleOriginalMessage}
               isMobile={isMobile}
+              presenceMap={presenceMap}
             />
           );
         })()}
@@ -8850,197 +8949,220 @@ export default function App() {
           )}
 
           {showCallControls && (
-            <div style={{
-              position: 'fixed',
-              bottom: 'max(20px, env(safe-area-inset-bottom, 20px))',
-              left: 'max(16px, env(safe-area-inset-left, 16px))',
-              right: 'auto',
-              transform: isCallInactive ? 'translateY(8px)' : 'translateY(0)',
-              backgroundColor: isCallInactive ? 'rgba(15, 23, 42, 0.45)' : 'rgba(15, 23, 42, 0.90)',
-              backdropFilter: 'blur(20px)',
-              WebkitBackdropFilter: 'blur(20px)',
-              padding: '10px 14px',
-              borderRadius: '26px',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'flex-start',
-              justifyContent: 'flex-start',
-              gap: '8px',
-              border: '1px solid rgba(255,255,255,0.14)',
-              boxShadow: '0 20px 50px rgba(0,0,0,0.6), 0 0 30px rgba(96,165,250,0.15)',
-              zIndex: 50,
-              width: 'auto',
-              maxWidth: 'calc(100% - 32px)',
-              boxSizing: 'border-box',
-              opacity: isCallInactive ? 0.28 : 1,
-              transition: 'all 500ms cubic-bezier(0.22, 1, 0.36, 1)',
-              animation: 'fadeSlideUp 0.25s ease both',
-              margin: '0',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '8px', flexWrap: 'wrap', width: '100%' }}>
-                {/* BOUTON ROUGE RACCROCHER EN PREMIER À GAUCHE */}
-                <button
-                  onClick={endCall}
-                  title="Raccrocher et quitter l'appel"
-                  style={{
-                    border: 'none', height: '44px', padding: '0 16px', borderRadius: '999px',
-                    backgroundColor: '#EF4444', color: '#FFF', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
-                    boxShadow: '0 6px 20px rgba(239,68,68,0.65)', fontWeight: '800', fontSize: '13px',
-                    flexShrink: 0, transition: 'transform 0.2s ease'
-                  }}
-                >
-                  <PhoneOff size={16} />
-                  <span>Raccrocher</span>
-                </button>
-
-                <button
-                  onClick={toggleMic}
-                  title={callState.micOn ? "Couper le micro" : "Activer le micro"}
-                  style={{ border: 'none', width: '44px', height: '44px', borderRadius: '50%', backgroundColor: callState.micOn ? 'rgba(255,255,255,0.15)' : '#EF4444', color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease', flexShrink: 0 }}
-                >
-                  {callState.micOn ? <Mic size={18} /> : <MicOff size={18} />}
-                </button>
-
-                {callState.type === 'video' && (
-                  <button
-                    onClick={toggleCam}
-                    title={callState.camOn ? "Couper la caméra" : "Activer la caméra"}
-                    style={{ border: 'none', width: '44px', height: '44px', borderRadius: '50%', backgroundColor: callState.camOn ? 'rgba(255,255,255,0.15)' : '#EF4444', color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease', flexShrink: 0 }}
-                  >
-                    {callState.camOn ? <Camera size={18} /> : <VideoOff size={18} />}
-                  </button>
-                )}
-
-                {/* PARTAGE D'ÉCRAN */}
-                {callState.type === 'video' && (
-                  <button
-                    onClick={toggleScreenShare}
-                    title={callState.isScreenSharing ? "Arrêter le partage d'écran" : "Partager mon écran"}
-                    style={{
-                      border: 'none', width: '44px', height: '44px', borderRadius: '50%',
-                      backgroundColor: callState.isScreenSharing ? '#10B981' : 'rgba(255,255,255,0.15)',
-                      color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      transition: 'all 0.2s ease', flexShrink: 0,
-                      boxShadow: callState.isScreenSharing ? '0 0 16px rgba(16,185,129,0.6)' : 'none'
-                    }}
-                  >
-                    {callState.isScreenSharing ? <MonitorOff size={18} /> : <Monitor size={18} />}
-                  </button>
-                )}
-
-                {/* BASCULE CAMÉRA AVANT / ARRIÈRE MOBILE */}
-                {callState.type === 'video' && callState.camOn && !callState.isScreenSharing && hasMultipleCameras && (
-                  <button
-                    onClick={switchCamera}
-                    title={facingMode === 'user' ? "Caméra arrière" : "Caméra avant"}
-                    style={{
-                      border: 'none', width: '44px', height: '44px', borderRadius: '50%',
-                      backgroundColor: facingMode === 'environment' ? '#38BDF8' : 'rgba(255,255,255,0.15)',
-                      color: facingMode === 'environment' ? '#0F172A' : '#FFF',
-                      cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      transition: 'all 0.2s ease', flexShrink: 0
-                    }}
-                  >
-                    <SwitchCamera size={18} />
-                  </button>
-                )}
-
-                {callState.type === 'video' && (
-                  <button
-                    onClick={() => setIsSwapVideo(s => !s)}
-                    title="Inverser les caméras"
-                    style={{ border: 'none', width: '44px', height: '44px', borderRadius: '50%', backgroundColor: isSwapVideo ? '#60A5FA' : 'rgba(255,255,255,0.15)', color: isSwapVideo ? '#0F172A' : '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease', flexShrink: 0 }}
-                  >
-                    <Repeat size={18} />
-                  </button>
-                )}
-
-                <button
-                  onClick={copyInviteLink}
-                  title="Inviter un participant"
-                  style={{
-                    border: '1px solid rgba(255,255,255,0.2)', height: '44px', padding: '0 12px', borderRadius: '999px',
-                    backgroundColor: 'rgba(255,255,255,0.12)', color: '#FFF', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '700', flexShrink: 0
-                  }}
-                >
-                  <UserPlus size={15} /> <span>Inviter</span>
-                </button>
-
-                {/* BOUTON MODE IMMERSION (MASQUER COMMANDES) */}
-                <button
-                  onClick={() => setShowCallControls(false)}
-                  title="Mode Immersion (Masquer commandes)"
-                  style={{ border: 'none', width: '44px', height: '44px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.15)', color: '#93C5FD', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease', flexShrink: 0 }}
-                >
-                  <EyeOff size={18} />
-                </button>
-
-                <button
-                  onClick={() => setIsCallPip(true)}
-                  title="Réduire l'appel (PiP)"
-                  style={{ border: 'none', width: '44px', height: '44px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.15)', color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease', flexShrink: 0 }}
-                >
-                  <Minimize2 size={18} />
-                </button>
-
-                {isTeacher && (
-                  <div style={{ position: 'relative', flexShrink: 0 }}>
-                    <button
-                      onClick={() => setIsTeacherMenuOpen(o => !o)}
-                      title="Outils Professeur / Modération"
-                      style={{
-                        width: '44px', height: '44px', borderRadius: '50%',
-                        backgroundColor: isTeacherMenuOpen ? '#F59E0B' : 'rgba(245,158,11,0.25)',
-                        border: '1.5px solid #F59E0B',
-                        color: isTeacherMenuOpen ? '#0F172A' : '#FDE68A',
-                        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        transition: 'all 0.2s ease',
-                        boxShadow: '0 0 12px rgba(245,158,11,0.3)'
-                      }}
-                    >
-                      <Crown size={18} />
-                    </button>
-
-                    {isTeacherMenuOpen && (
-                      <div style={{
-                        position: 'absolute', bottom: '56px', left: '0',
-                        backgroundColor: 'rgba(15,23,42,0.95)', backdropFilter: 'blur(16px)',
-                        borderRadius: '16px', border: '1.5px solid rgba(245,158,11,0.4)',
-                        boxShadow: '0 16px 40px rgba(0,0,0,0.6)', padding: '8px',
-                        display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '230px', zIndex: 120
-                      }}>
-                        <div style={{ padding: '6px 8px', fontSize: '11px', fontWeight: '800', color: '#FDE68A', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <Crown size={12} color="#F59E0B" /> Modération du cours
-                        </div>
-                        <button
-                          onClick={() => { hostMuteParticipant(); setIsTeacherMenuOpen(false); }}
-                          style={{
-                            display: 'flex', alignItems: 'center', gap: '8px',
-                            padding: '8px 10px', borderRadius: '10px', border: 'none',
-                            backgroundColor: 'rgba(239,68,68,0.15)', color: '#FCA5A5',
-                            fontSize: '12px', fontWeight: '700', cursor: 'pointer', textAlign: 'left',
-                          }}
-                        >
-                          <MicOff size={14} /> Couper le micro de l'élève
-                        </button>
-                        <button
-                          onClick={() => { hostStopParticipantScreenShare(); setIsTeacherMenuOpen(false); }}
-                          style={{
-                            display: 'flex', alignItems: 'center', gap: '8px',
-                            padding: '8px 10px', borderRadius: '10px', border: 'none',
-                            backgroundColor: 'rgba(255,255,255,0.08)', color: '#93C5FD',
-                            fontSize: '12px', fontWeight: '700', cursor: 'pointer', textAlign: 'left',
-                          }}
-                        >
-                          <MonitorOff size={14} /> Arrêter le partage élève
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
+            <div
+              onPointerDown={handleCallControlsPointerDown}
+              onPointerMove={handleCallControlsPointerMove}
+              onPointerUp={handleCallControlsPointerUp}
+              onPointerCancel={handleCallControlsPointerUp}
+              style={{
+                position: 'fixed',
+                bottom: 'max(20px, env(safe-area-inset-bottom, 20px))',
+                left: '50%',
+                transform: `translate(calc(-50% + ${callControlsPos.x}px), ${callControlsPos.y}px)`,
+                backgroundColor: isCallInactive ? 'rgba(15, 23, 42, 0.55)' : 'rgba(15, 23, 42, 0.92)',
+                backdropFilter: 'blur(24px)',
+                WebkitBackdropFilter: 'blur(24px)',
+                padding: '10px 16px',
+                borderRadius: '999px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '10px',
+                border: '1px solid rgba(255,255,255,0.18)',
+                boxShadow: '0 20px 50px rgba(0,0,0,0.65), 0 0 30px rgba(96,165,250,0.2)',
+                zIndex: 50,
+                maxWidth: 'calc(100vw - 24px)',
+                boxSizing: 'border-box',
+                opacity: isCallInactive ? 0.35 : 1,
+                cursor: isDraggingCallControls ? 'grabbing' : 'grab',
+                touchAction: 'none',
+                overflowX: 'auto',
+                WebkitOverflowScrolling: 'touch',
+                scrollbarWidth: 'none',
+                userSelect: 'none',
+                WebkitUserSelect: 'none',
+                animation: 'fadeSlideUp 0.25s ease both',
+                margin: 0,
+              }}
+            >
+              {/* POIGNÉE DE GLISSER-DÉPOSER TACTILE */}
+              <div
+                title="Glisser pour déplacer les commandes"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'rgba(255,255,255,0.4)',
+                  paddingRight: '2px',
+                  cursor: isDraggingCallControls ? 'grabbing' : 'grab',
+                  flexShrink: 0
+                }}
+              >
+                <GripHorizontal size={16} />
               </div>
+
+              {/* BOUTON ROUGE RACCROCHER EN PREMIER */}
+              <button
+                onClick={endCall}
+                title="Raccrocher et quitter l'appel"
+                style={{
+                  border: 'none', height: '44px', padding: '0 16px', borderRadius: '999px',
+                  backgroundColor: '#EF4444', color: '#FFF', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                  boxShadow: '0 6px 20px rgba(239,68,68,0.65)', fontWeight: '800', fontSize: '13px',
+                  flexShrink: 0, transition: 'transform 0.2s ease'
+                }}
+              >
+                <PhoneOff size={16} />
+                <span>Raccrocher</span>
+              </button>
+
+              <button
+                onClick={toggleMic}
+                title={callState.micOn ? "Couper le micro" : "Activer le micro"}
+                style={{ border: 'none', width: '44px', height: '44px', borderRadius: '50%', backgroundColor: callState.micOn ? 'rgba(255,255,255,0.15)' : '#EF4444', color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease', flexShrink: 0 }}
+              >
+                {callState.micOn ? <Mic size={18} /> : <MicOff size={18} />}
+              </button>
+
+              {callState.type === 'video' && (
+                <button
+                  onClick={toggleCam}
+                  title={callState.camOn ? "Couper la caméra" : "Activer la caméra"}
+                  style={{ border: 'none', width: '44px', height: '44px', borderRadius: '50%', backgroundColor: callState.camOn ? 'rgba(255,255,255,0.15)' : '#EF4444', color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease', flexShrink: 0 }}
+                >
+                  {callState.camOn ? <Camera size={18} /> : <VideoOff size={18} />}
+                </button>
+              )}
+
+              {/* PARTAGE D'ÉCRAN */}
+              {callState.type === 'video' && (
+                <button
+                  onClick={toggleScreenShare}
+                  title={callState.isScreenSharing ? "Arrêter le partage d'écran" : "Partager mon écran"}
+                  style={{
+                    border: 'none', width: '44px', height: '44px', borderRadius: '50%',
+                    backgroundColor: callState.isScreenSharing ? '#10B981' : 'rgba(255,255,255,0.15)',
+                    color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'all 0.2s ease', flexShrink: 0,
+                    boxShadow: callState.isScreenSharing ? '0 0 16px rgba(16,185,129,0.6)' : 'none'
+                  }}
+                >
+                  {callState.isScreenSharing ? <MonitorOff size={18} /> : <Monitor size={18} />}
+                </button>
+              )}
+
+              {/* BASCULE CAMÉRA AVANT / ARRIÈRE MOBILE */}
+              {callState.type === 'video' && callState.camOn && !callState.isScreenSharing && hasMultipleCameras && (
+                <button
+                  onClick={switchCamera}
+                  title={facingMode === 'user' ? "Caméra arrière" : "Caméra avant"}
+                  style={{
+                    border: 'none', width: '44px', height: '44px', borderRadius: '50%',
+                    backgroundColor: facingMode === 'environment' ? '#38BDF8' : 'rgba(255,255,255,0.15)',
+                    color: facingMode === 'environment' ? '#0F172A' : '#FFF',
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'all 0.2s ease', flexShrink: 0
+                  }}
+                >
+                  <SwitchCamera size={18} />
+                </button>
+              )}
+
+              {callState.type === 'video' && (
+                <button
+                  onClick={() => setIsSwapVideo(s => !s)}
+                  title="Inverser les caméras"
+                  style={{ border: 'none', width: '44px', height: '44px', borderRadius: '50%', backgroundColor: isSwapVideo ? '#60A5FA' : 'rgba(255,255,255,0.15)', color: isSwapVideo ? '#0F172A' : '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease', flexShrink: 0 }}
+                >
+                  <Repeat size={18} />
+                </button>
+              )}
+
+              <button
+                onClick={copyInviteLink}
+                title="Inviter un participant"
+                style={{
+                  border: '1px solid rgba(255,255,255,0.2)', height: '44px', padding: '0 12px', borderRadius: '999px',
+                  backgroundColor: 'rgba(255,255,255,0.12)', color: '#FFF', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '700', flexShrink: 0
+                }}
+              >
+                <UserPlus size={15} /> <span>Inviter</span>
+              </button>
+
+              {/* BOUTON MODE IMMERSION (MASQUER COMMANDES) */}
+              <button
+                onClick={() => setShowCallControls(false)}
+                title="Mode Immersion (Masquer commandes)"
+                style={{ border: 'none', width: '44px', height: '44px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.15)', color: '#93C5FD', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease', flexShrink: 0 }}
+              >
+                <EyeOff size={18} />
+              </button>
+
+              <button
+                onClick={() => setIsCallPip(true)}
+                title="Réduire l'appel (PiP)"
+                style={{ border: 'none', width: '44px', height: '44px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.15)', color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease', flexShrink: 0 }}
+              >
+                <Minimize2 size={18} />
+              </button>
+
+              {isTeacher && (
+                <div style={{ position: 'relative', flexShrink: 0 }}>
+                  <button
+                    onClick={() => setIsTeacherMenuOpen(o => !o)}
+                    title="Outils Professeur / Modération"
+                    style={{
+                      width: '44px', height: '44px', borderRadius: '50%',
+                      backgroundColor: isTeacherMenuOpen ? '#F59E0B' : 'rgba(245,158,11,0.25)',
+                      border: '1.5px solid #F59E0B',
+                      color: isTeacherMenuOpen ? '#0F172A' : '#FDE68A',
+                      cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      transition: 'all 0.2s ease',
+                      boxShadow: '0 0 12px rgba(245,158,11,0.3)'
+                    }}
+                  >
+                    <Crown size={18} />
+                  </button>
+
+                  {isTeacherMenuOpen && (
+                    <div style={{
+                      position: 'absolute', bottom: '56px', left: '0',
+                      backgroundColor: 'rgba(15,23,42,0.95)', backdropFilter: 'blur(16px)',
+                      borderRadius: '16px', border: '1.5px solid rgba(245,158,11,0.4)',
+                      boxShadow: '0 16px 40px rgba(0,0,0,0.6)', padding: '8px',
+                      display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '230px', zIndex: 120
+                    }}>
+                      <div style={{ padding: '6px 8px', fontSize: '11px', fontWeight: '800', color: '#FDE68A', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Crown size={12} color="#F59E0B" /> Modération du cours
+                      </div>
+                      <button
+                        onClick={() => { hostMuteParticipant(); setIsTeacherMenuOpen(false); }}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '8px',
+                          padding: '8px 10px', borderRadius: '10px', border: 'none',
+                          backgroundColor: 'rgba(239,68,68,0.15)', color: '#FCA5A5',
+                          fontSize: '12px', fontWeight: '700', cursor: 'pointer', textAlign: 'left',
+                        }}
+                      >
+                        <MicOff size={14} /> Couper le micro de l'élève
+                      </button>
+                      <button
+                        onClick={() => { hostStopParticipantScreenShare(); setIsTeacherMenuOpen(false); }}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '8px',
+                          padding: '8px 10px', borderRadius: '10px', border: 'none',
+                          backgroundColor: 'rgba(255,255,255,0.08)', color: '#93C5FD',
+                          fontSize: '12px', fontWeight: '700', cursor: 'pointer', textAlign: 'left',
+                        }}
+                      >
+                        <MonitorOff size={14} /> Arrêter le partage élève
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>

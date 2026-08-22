@@ -36,7 +36,8 @@ export default function ChatView({
   formatStatus,
   showingOriginalMessages = {},
   toggleOriginalMessage = () => {},
-  isMobile: isMobileProp = undefined
+  isMobile: isMobileProp = undefined,
+  presenceMap = {}
 }) {
   const [deletedChatIds, setDeletedChatIds] = useState(() => {
     try {
@@ -167,6 +168,16 @@ export default function ChatView({
   const currentChatId = effectiveSelectedChat ? effectiveSelectedChat.id : (visibleChats[0]?.id || 201);
   const activeChatObj = effectiveSelectedChat || (visibleChats.length > 0 ? visibleChats[0] : null);
   const messages = chatThreads[currentChatId] || [];
+
+  // Helper de statut en ligne réel basé sur le heartbeat Firestore (< 30s)
+  const isUserOnline = (userIdentifier, userUid = null) => {
+    if (!presenceMap) return false;
+    if (userUid && presenceMap[String(userUid)]) return true;
+    if (userIdentifier && presenceMap[String(userIdentifier).trim().toLowerCase()]) return true;
+    return false;
+  };
+
+  const activeChatIsOnline = isUserOnline(activeChatObj?.user, activeChatObj?.authorUid || activeChatObj?.userId);
 
   // Détection d'une proposition de deal en attente émise par l'utilisateur courant (Anti-Spam)
   const pendingDealFromMe = messages.find(m => (m.type === 'deal' || m.kind === 'deal') && (m.status === 'pending' || !m.status) && m.sender === 'me');
@@ -460,27 +471,30 @@ export default function ChatView({
               <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg, #04265A 0%, #14B8A6 100%)', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '14px', boxShadow: '0 4px 10px rgba(4,38,90,0.15)' }}>
                 {activeChatObj?.user ? activeChatObj.user[0].toUpperCase() : 'T'}
               </div>
-              <div
-                title={activeChatObj?.isDemo || (typeof activeChatObj?.id === 'number' && activeChatObj?.id < 300) ? 'En ligne' : 'Actif'}
-                style={{
-                  position: 'absolute', bottom: '0', right: '0',
-                  width: '9px', height: '9px', borderRadius: '50%',
-                  backgroundColor: '#10B981',
-                  border: darkMode ? '2px solid #1E293B' : '2px solid #FFF',
-                  boxShadow: '0 0 6px rgba(16,185,129,0.8)'
-                }}
-              />
+              {activeChatIsOnline && (
+                <div
+                  title="En ligne"
+                  style={{
+                    position: 'absolute', bottom: '0', right: '0',
+                    width: '9px', height: '9px', borderRadius: '50%',
+                    backgroundColor: '#10B981',
+                    border: darkMode ? '2px solid #1E293B' : '2px solid #FFF',
+                    boxShadow: '0 0 6px rgba(16,185,129,0.8)'
+                  }}
+                />
+              )}
             </div>
             <div style={{ minWidth: 0, flex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <span style={{ fontWeight: '800', fontSize: isMobile ? '14px' : '14.5px', color: darkMode ? '#FFFFFF' : '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {activeChatObj?.user}
                 </span>
-                {(activeChatObj?.isDemo || activeChatObj?.persona || (typeof activeChatObj?.id === 'number' && activeChatObj?.id < 300)) ? (
+                {(activeChatObj?.isDemo || activeChatObj?.persona || (typeof activeChatObj?.id === 'number' && activeChatObj?.id < 300)) && (
                   <span style={{ fontSize: '8px', fontWeight: '800', backgroundColor: darkMode ? 'rgba(168,85,247,0.25)' : '#F3E8FF', color: darkMode ? '#D8B4FE' : '#7E22CE', padding: '1px 4px', borderRadius: '4px', flexShrink: 0 }}>
                     IA
                   </span>
-                ) : (
+                )}
+                {activeChatIsOnline && (
                   <span style={{ fontSize: '8.5px', fontWeight: '800', backgroundColor: darkMode ? 'rgba(16,185,129,0.2)' : '#ECFDF5', color: '#059669', padding: '1px 5px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
                     <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#10B981' }} /> En ligne
                   </span>
@@ -654,130 +668,175 @@ export default function ChatView({
                 );
               }
 
-              // RENDU DES PROPOSITIONS DE DEAL
+              // RENDU DES PROPOSITIONS DE DEAL (ALIGNEMENT BILATÉRAL STRICT DROITE / GAUCHE)
               if (msg.type === 'deal' || msg.kind === 'deal') {
-                const { terms, status, sender } = msg;
+                const { terms = {}, status, sender } = msg;
                 const isMine = sender === 'me';
-                const isIncoming = sender === 'them';
+                const isIncoming = !isMine;
+                const partnerName = activeChatObj?.user || 'l’interlocuteur';
                 const dealConditionsText = getChatMessageDisplayContent
                   ? getChatMessageDisplayContent({ text: terms.conditions }, currentLang, isMsgOriginal)
                   : terms.conditions;
 
                 return (
-                  <div key={msg.id} style={{
-                    width: '100%',
-                    border: darkMode ? '1.5px solid rgba(56,189,248,0.45)' : '1.5px solid #0284C7',
-                    borderRadius: '20px',
-                    padding: isMobile ? '14px 14px' : '18px',
-                    backgroundColor: darkMode ? 'rgba(15,23,42,0.92)' : '#F0F9FF',
-                    backgroundImage: darkMode ? 'linear-gradient(135deg, rgba(15,23,42,0.95) 0%, rgba(30,41,59,0.85) 100%)' : 'linear-gradient(135deg, #FFFFFF 0%, #F0F9FF 100%)',
-                    boxShadow: darkMode ? '0 10px 30px rgba(0,0,0,0.45), 0 0 16px rgba(56,189,248,0.12)' : '0 8px 24px rgba(2,132,199,0.12)',
-                    boxSizing: 'border-box'
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', flexWrap: 'wrap', gap: '6px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '800', color: darkMode ? '#93C5FD' : '#0369A1' }}>
-                        <Sparkles size={15} color={darkMode ? '#38BDF8' : '#0284C7'} />
-                        {isMine ? (t('myDealProposal') || 'Ma proposition de Deal') : (t('receivedDealProposal') || 'Proposition de Deal')}
+                  <div
+                    key={msg.id}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: isMine ? 'flex-end' : 'flex-start',
+                      width: '100%',
+                      margin: '6px 0',
+                      boxSizing: 'border-box'
+                    }}
+                  >
+                    <div style={{
+                      width: isMobile ? '92%' : '78%',
+                      maxWidth: '500px',
+                      border: isMine
+                        ? (darkMode ? '1.5px solid rgba(96,165,250,0.45)' : '1.5px solid #3B82F6')
+                        : (darkMode ? '1.5px solid rgba(56,189,248,0.45)' : '1.5px solid #0284C7'),
+                      borderRadius: '20px',
+                      borderBottomRightRadius: isMine ? '4px' : '20px',
+                      borderBottomLeftRadius: isIncoming ? '4px' : '20px',
+                      padding: isMobile ? '14px' : '18px',
+                      backgroundColor: isMine
+                        ? (darkMode ? 'rgba(30,58,138,0.35)' : '#EFF6FF')
+                        : (darkMode ? 'rgba(15,23,42,0.92)' : '#F0F9FF'),
+                      backgroundImage: isMine
+                        ? (darkMode ? 'linear-gradient(135deg, rgba(30,58,138,0.45) 0%, rgba(15,23,42,0.95) 100%)' : 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)')
+                        : (darkMode ? 'linear-gradient(135deg, rgba(15,23,42,0.95) 0%, rgba(30,41,59,0.85) 100%)' : 'linear-gradient(135deg, #FFFFFF 0%, #F0F9FF 100%)'),
+                      boxShadow: darkMode ? '0 10px 30px rgba(0,0,0,0.45), 0 0 16px rgba(56,189,248,0.12)' : '0 8px 24px rgba(2,132,199,0.12)',
+                      boxSizing: 'border-box'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', flexWrap: 'wrap', gap: '6px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '800', color: isMine ? (darkMode ? '#93C5FD' : '#1D4ED8') : (darkMode ? '#38BDF8' : '#0369A1') }}>
+                          <Sparkles size={15} color={isMine ? (darkMode ? '#93C5FD' : '#2563EB') : (darkMode ? '#38BDF8' : '#0284C7')} />
+                          {isMine ? (t('myDealProposal') || 'Ma proposition de Deal') : (t('receivedDealProposal') || 'Proposition de Deal reçue')}
+                        </div>
+                        {status === 'pending' && isIncoming && (
+                          <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: darkMode ? 'rgba(245,158,11,0.25)' : '#FEF3C7', color: darkMode ? '#FDE68A' : '#92400E', padding: '3px 8px', borderRadius: '999px', border: '1.5px solid #F59E0B' }}>
+                            ⚡ Réponse attendue
+                          </span>
+                        )}
+                        {status === 'pending' && isMine && (
+                          <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: darkMode ? 'rgba(148,163,184,0.25)' : '#F1F5F9', color: darkMode ? '#E2E8F0' : '#475569', padding: '3px 8px', borderRadius: '999px', border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #CBD5E1' }}>
+                            {t('waitingResponse') || 'En attente'}
+                          </span>
+                        )}
+                        {(status === 'confirmed' || status === 'accepted') && (
+                          <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: darkMode ? 'rgba(160,230,180,0.25)' : '#D1FAE5', color: darkMode ? '#6EE7B7' : '#065F46', padding: '3px 8px', borderRadius: '999px', border: '1.5px solid #10B981' }}>
+                            ✓ Confirmé
+                          </span>
+                        )}
+                        {status === 'declined' && (
+                          <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: darkMode ? 'rgba(239,68,68,0.25)' : '#FEE2E2', color: darkMode ? '#FCA5A5' : '#991B1B', padding: '3px 8px', borderRadius: '999px', border: '1.5px solid #EF4444' }}>
+                            ✕ Refusé
+                          </span>
+                        )}
                       </div>
+
+                      <div style={{ fontSize: '13px', color: darkMode ? '#F1F5F9' : '#1E293B', marginBottom: '8px', lineHeight: 1.5, fontWeight: '600' }}>
+                        {dealConditionsText}
+                      </div>
+                      {currentLang !== 'FR' && (
+                        <button
+                          onClick={() => toggleOriginalMessage(msg.id)}
+                          className="premium-button"
+                          style={{
+                            border: 'none', background: 'none', cursor: 'pointer',
+                            color: darkMode ? '#60A5FA' : '#04265A', fontSize: '11px',
+                            fontWeight: '800', display: 'inline-flex', alignItems: 'center',
+                            gap: '4px', marginBottom: '10px', padding: 0
+                          }}
+                        >
+                          <Globe size={11} style={{ flexShrink: 0 }} /> <span>{isMsgOriginal ? t('showTranslation') : t('showOriginal')}</span>
+                        </button>
+                      )}
+
+                      {/* BADGES DE CONTREPARTIE */}
+                      <div style={{ display: 'flex', gap: '6px', marginBottom: '12px', flexWrap: 'wrap' }}>
+                        {terms.durationType && (
+                          <span style={{
+                            backgroundColor: darkMode ? '#0F172A' : '#FFF',
+                            border: darkMode ? '1.5px solid #818CF8' : '1.5px solid #4F46E5',
+                            color: darkMode ? '#A5B4FC' : '#4338CA',
+                            borderRadius: '999px', padding: '3px 9px', fontSize: '11px', fontWeight: '800'
+                          }}>
+                            ⏱️ {terms.durationType === 'hourly' ? `${terms.durationValue || 1}h` : terms.durationType === 'daily' ? `${terms.durationValue || 1}j` : terms.durationType === 'monthly' ? `${terms.durationValue || 1} mois` : terms.durationType === 'fixed' ? 'Forfait' : 'Libre'}
+                          </span>
+                        )}
+                        {terms.euroAmount > 0 && <span style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', border: darkMode ? '1.5px solid #38BDF8' : '1.5px solid #0284C7', color: darkMode ? '#38BDF8' : '#0369A1', borderRadius: '999px', padding: '3px 9px', fontSize: '11px', fontWeight: '800' }}>💶 {terms.euroAmount}€</span>}
+                        {terms.trocoTokens > 0 && <span style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', border: darkMode ? '1.5px solid #FBBF24' : '1.5px solid #D97706', color: darkMode ? '#FBBF24' : '#B45309', borderRadius: '999px', padding: '3px 9px', fontSize: '11px', fontWeight: '800' }}>🪙 {terms.trocoTokens} Jetons</span>}
+                        {terms.euroAmount === 0 && terms.trocoTokens === 0 && <span style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', border: darkMode ? '1.5px solid #34D399' : '1.5px solid #059669', color: darkMode ? '#34D399' : '#047857', borderRadius: '999px', padding: '3px 9px', fontSize: '11px', fontWeight: '800' }}>🤝 Troc direct</span>}
+                      </div>
+
+                      {/* ACTIONS INTERACTIVES POUR LE DESTINATAIRE : ACCEPTER / REFUSER / CONTRE-PROPOSER */}
                       {status === 'pending' && isIncoming && (
-                        <span style={{ fontSize: '10.5px', fontWeight: '800', backgroundColor: darkMode ? 'rgba(245,158,11,0.25)' : '#FEF3C7', color: darkMode ? '#FDE68A' : '#92400E', padding: '4px 10px', borderRadius: '999px', border: '1.5px solid #F59E0B' }}>
-                          ⚡ Réponse attendue
-                        </span>
+                        <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
+                          <button
+                            onClick={() => handleAcceptDeal(currentChatId, msg.id, terms)}
+                            className="premium-button"
+                            style={{
+                              flex: '1 1 30%', border: 'none', borderRadius: '12px', padding: '9px 6px',
+                              backgroundColor: '#10B981',
+                              color: '#FFF',
+                              fontSize: '11.5px', fontWeight: '800', cursor: 'pointer',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
+                              boxShadow: '0 4px 12px rgba(16,185,129,0.3)'
+                            }}
+                          >
+                            ✓ Accepter
+                          </button>
+                          <button
+                            onClick={() => openCounterOffer(terms, msg.id)}
+                            className="premium-button"
+                            style={{
+                              flex: '1 1 30%', border: 'none', borderRadius: '12px', padding: '9px 6px',
+                              backgroundColor: darkMode ? '#60A5FA' : '#04265A',
+                              color: darkMode ? '#0F172A' : '#FFF',
+                              fontSize: '11.5px', fontWeight: '800', cursor: 'pointer',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
+                              boxShadow: '0 4px 12px rgba(4,38,90,0.2)'
+                            }}
+                          >
+                            ⚡ Contre-proposer
+                          </button>
+                          <button
+                            onClick={() => handleDeclineDeal(currentChatId, msg.id)}
+                            className="premium-button"
+                            style={{
+                              flex: '1 1 25%', border: darkMode ? '1px solid rgba(239,68,68,0.4)' : '1px solid #FECACA',
+                              borderRadius: '12px', padding: '9px 6px',
+                              backgroundColor: darkMode ? 'rgba(239,68,68,0.15)' : '#FEF2F2',
+                              color: darkMode ? '#FCA5A5' : '#DC2626',
+                              fontSize: '11.5px', fontWeight: '800', cursor: 'pointer'
+                            }}
+                          >
+                            ✕ Refuser
+                          </button>
+                        </div>
                       )}
+
+                      {/* STATUT EN ATTENTE POUR L'EXPÉDITEUR */}
                       {status === 'pending' && isMine && (
-                        <span style={{ fontSize: '10.5px', fontWeight: '800', backgroundColor: darkMode ? 'rgba(148,163,184,0.25)' : '#F1F5F9', color: darkMode ? '#E2E8F0' : '#475569', padding: '4px 10px', borderRadius: '999px', border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #CBD5E1' }}>
-                          {t('waitingResponse') || 'En attente'}
-                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: darkMode ? 'rgba(15,23,42,0.6)' : '#F8FAFC', border: darkMode ? '1px dashed rgba(255,255,255,0.2)' : '1px dashed #CBD5E1', color: darkMode ? '#CBD5E1' : '#64748B', borderRadius: '12px', padding: '8px 12px', fontSize: '11.5px', fontWeight: '700' }}>
+                          <Clock size={13} /> <span>En attente de la réponse de {partnerName}...</span>
+                        </div>
                       )}
+
                       {(status === 'confirmed' || status === 'accepted') && (
-                        <span style={{ fontSize: '10.5px', fontWeight: '800', backgroundColor: darkMode ? 'rgba(160,230,180,0.25)' : '#D1FAE5', color: darkMode ? '#6EE7B7' : '#065F46', padding: '4px 10px', borderRadius: '999px', border: '1.5px solid #10B981' }}>
-                          ✓ Validé & Confirmé
-                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: darkMode ? 'rgba(16,185,129,0.2)' : '#D1FAE5', color: darkMode ? '#34D399' : '#059669', borderRadius: '12px', padding: '8px 12px', fontSize: '11.5px', fontWeight: '800' }}>
+                          <CheckCircle size={14} /> <span>Deal validé et scellé avec {partnerName}.</span>
+                        </div>
                       )}
+
                       {status === 'declined' && (
-                        <span style={{ fontSize: '10.5px', fontWeight: '800', backgroundColor: darkMode ? 'rgba(239,68,68,0.25)' : '#FEE2E2', color: darkMode ? '#FCA5A5' : '#991B1B', padding: '4px 10px', borderRadius: '999px', border: '1.5px solid #EF4444' }}>
-                          ✕ Refusé
-                        </span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: darkMode ? 'rgba(239,68,68,0.2)' : '#FEE2E2', color: darkMode ? '#FCA5A5' : '#DC2626', borderRadius: '12px', padding: '8px 12px', fontSize: '11.5px', fontWeight: '800' }}>
+                          <AlertTriangle size={14} /> <span>Proposition déclinée.</span>
+                        </div>
                       )}
                     </div>
-
-                    <div style={{ fontSize: '13px', color: darkMode ? '#F1F5F9' : '#1E293B', marginBottom: '8px', lineHeight: 1.5, fontWeight: '600' }}>
-                      {dealConditionsText}
-                    </div>
-                    {currentLang !== 'FR' && (
-                      <button
-                        onClick={() => toggleOriginalMessage(msg.id)}
-                        className="premium-button"
-                        style={{
-                          border: 'none', background: 'none', cursor: 'pointer',
-                          color: darkMode ? '#60A5FA' : '#04265A', fontSize: '11px',
-                          fontWeight: '800', display: 'inline-flex', alignItems: 'center',
-                          gap: '4px', marginBottom: '10px', padding: 0
-                        }}
-                      >
-                        <Globe size={11} style={{ flexShrink: 0 }} /> <span>{isMsgOriginal ? t('showTranslation') : t('showOriginal')}</span>
-                      </button>
-                    )}
-
-                    {/* BADGES DE CONTREPARTIE */}
-                    <div style={{ display: 'flex', gap: '6px', marginBottom: '12px', flexWrap: 'wrap' }}>
-                      {terms.durationType && (
-                        <span style={{
-                          backgroundColor: darkMode ? '#0F172A' : '#FFF',
-                          border: darkMode ? '1.5px solid #818CF8' : '1.5px solid #4F46E5',
-                          color: darkMode ? '#A5B4FC' : '#4338CA',
-                          borderRadius: '999px', padding: '4px 10px', fontSize: '11px', fontWeight: '800'
-                        }}>
-                          ⏱️ {terms.durationType === 'hourly' ? `${terms.durationValue || 1}h` : terms.durationType === 'daily' ? `${terms.durationValue || 1}j` : terms.durationType === 'monthly' ? `${terms.durationValue || 1} mois` : terms.durationType === 'fixed' ? 'Forfait' : 'Libre'}
-                        </span>
-                      )}
-                      {terms.euroAmount > 0 && <span style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', border: darkMode ? '1.5px solid #38BDF8' : '1.5px solid #0284C7', color: darkMode ? '#38BDF8' : '#0369A1', borderRadius: '999px', padding: '4px 10px', fontSize: '11px', fontWeight: '800' }}>💶 {terms.euroAmount}€</span>}
-                      {terms.trocoTokens > 0 && <span style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', border: darkMode ? '1.5px solid #FBBF24' : '1.5px solid #D97706', color: darkMode ? '#FBBF24' : '#B45309', borderRadius: '999px', padding: '4px 10px', fontSize: '11px', fontWeight: '800' }}>🪙 {terms.trocoTokens} Jetons</span>}
-                      {terms.euroAmount === 0 && terms.trocoTokens === 0 && <span style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', border: darkMode ? '1.5px solid #34D399' : '1.5px solid #059669', color: darkMode ? '#34D399' : '#047857', borderRadius: '999px', padding: '4px 10px', fontSize: '11px', fontWeight: '800' }}>🤝 Troc direct</span>}
-                    </div>
-
-                    {status === 'pending' && isIncoming && (
-                      <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
-                        <button
-                          onClick={() => handleAcceptDeal(currentChatId, msg.id, terms)}
-                          className="premium-button"
-                          style={{
-                            flex: 1, border: 'none', borderRadius: '12px', padding: '10px 8px',
-                            backgroundColor: darkMode ? '#60A5FA' : '#04265A',
-                            color: darkMode ? '#0F172A' : '#FFF',
-                            fontSize: '12px', fontWeight: '800', cursor: 'pointer',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'
-                          }}
-                        >
-                          ✓ Accepter
-                        </button>
-                        <button
-                          onClick={() => handleDeclineDeal(currentChatId, msg.id)}
-                          className="premium-button"
-                          style={{
-                            flex: 1, border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB',
-                            borderRadius: '12px', padding: '10px 8px',
-                            backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : '#FFF',
-                            color: darkMode ? '#F8FAFC' : '#6B7280',
-                            fontSize: '12px', fontWeight: '800', cursor: 'pointer'
-                          }}
-                        >
-                          ✕ Refuser
-                        </button>
-                      </div>
-                    )}
-
-                    {status === 'pending' && isMine && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: darkMode ? 'rgba(15,23,42,0.5)' : '#F8FAFC', border: darkMode ? '1px dashed rgba(255,255,255,0.2)' : '1px dashed #CBD5E1', color: darkMode ? '#CBD5E1' : '#64748B', borderRadius: '12px', padding: '8px 12px', fontSize: '11.5px', fontWeight: '700' }}>
-                        <Clock size={13} /> <span>En attente de la réponse...</span>
-                      </div>
-                    )}
-
-                    {(status === 'confirmed' || status === 'accepted') && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: darkMode ? 'rgba(16,185,129,0.2)' : '#D1FAE5', color: darkMode ? '#34D399' : '#059669', borderRadius: '12px', padding: '8px 12px', fontSize: '11.5px', fontWeight: '800' }}>
-                        <CheckCircle size={14} /> <span>Deal confirmé et verrouillé.</span>
-                      </div>
-                    )}
                   </div>
                 );
               }
@@ -1167,6 +1226,18 @@ export default function ChatView({
                       >
                         <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'linear-gradient(135deg, #04265A 0%, #14B8A6 100%)', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '15px', flexShrink: 0, boxShadow: '0 4px 10px rgba(4,38,90,0.15)', position: 'relative' }}>
                           {chat.user[0]}
+                          {isUserOnline(chat.user, chat.authorUid || chat.userId) && (
+                            <span
+                              title="En ligne"
+                              style={{
+                                position: 'absolute', bottom: '0', right: '0',
+                                width: '10px', height: '10px',
+                                backgroundColor: '#10B981',
+                                borderRadius: '50%', border: darkMode ? '2px solid #1E293B' : '2px solid #FFF',
+                                boxShadow: '0 0 6px rgba(16,185,129,0.8)'
+                              }}
+                            />
+                          )}
                           {unreadCount > 0 && (
                             <span style={{
                               position: 'absolute', top: '-4px', right: '-4px',
