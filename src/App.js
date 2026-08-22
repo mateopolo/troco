@@ -1452,6 +1452,26 @@ export default function App() {
     }
   }, [remoteStream]);
 
+  // Décrochage universel direct avec bascule immédiate vers la visio plein écran
+  const handleAcceptIncomingCall = async () => {
+    try {
+      const res = await acceptIncomingCall();
+      if (res?.chatId) {
+        const foundChat = (chatsList || []).find(c => String(c.id) === String(res.chatId)) || (mockChats || []).find(c => String(c.id) === String(res.chatId));
+        if (foundChat) {
+          setSelectedChat(foundChat);
+        } else {
+          setSelectedChat({ id: res.chatId, user: res.from || 'Interlocuteur' });
+        }
+      }
+      setIsCallPip(false);
+      setIsSwapVideo(false);
+      setShowCallControls(true);
+    } catch (e) {
+      console.warn('[WebRTC] Accept incoming call error:', e);
+    }
+  };
+
   // État de gestion tactile d'annonce mobile (Chantier 4)
   const [mobileListingActionTarget, setMobileListingActionTarget] = useState(null);
 
@@ -1886,21 +1906,6 @@ export default function App() {
       return;
     }
     setIsCallPip(false);
-  };
-
-  const handleAcceptIncomingCall = async () => {
-    const res = await acceptIncomingCall();
-    if (res) {
-      const conv = chatsList.find(c => String(c.id) === String(res.chatId)) || {
-        id: res.chatId,
-        user: res.from,
-        listing: 'Appel en direct',
-        status: 'active',
-        terms: '',
-      };
-      setSelectedChat(conv);
-      setActiveTab('chat');
-    }
   };
 
   // ---- BASE DE DONNÉES MONDIALE — TRADUCTIONS 100% INLINE (item.translations) ----
@@ -3457,7 +3462,11 @@ export default function App() {
     const itemTitleNorm = removeAccents(item.title || '');
     const itemCategoryNorm = removeAccents(item.category || '');
     const itemCompNorm = removeAccents(item.compensation || '');
-    const itemTagsNorm = removeAccents((item.tags || []).join(' '));
+    const allTags = [
+      ...(Array.isArray(item.tags) ? item.tags : []),
+      ...(typeof generateTags === 'function' ? (generateTags(item.title || '', item.description || '') || []) : [])
+    ];
+    const itemTagsNorm = removeAccents(allTags.join(' '));
     const itemDescNorm = removeAccents(item.description || '');
     const transText = item.translations ? Object.values(item.translations).map(t => `${t.title || ''} ${t.description || ''}`).join(' ') : '';
     const itemTransNorm = removeAccents(transText);
@@ -3545,10 +3554,16 @@ export default function App() {
     const bUrgent = (b.urgent || b.isUrgent) ? 1 : 0;
     if (bUrgent !== aUrgent) return bUrgent - aUrgent;
 
-    // 4. Tri chronologique par identifiant / date de création
-    const aId = Number(a.id) || 0;
-    const bId = Number(b.id) || 0;
-    return bId - aId;
+    // 4. Tri chronologique par date de création ou identifiant
+    const getTime = (item) => {
+      if (item.createdAt?.toMillis) return item.createdAt.toMillis();
+      if (item.createdAt?.seconds) return item.createdAt.seconds * 1000;
+      if (typeof item.createdAt === 'string') return new Date(item.createdAt).getTime() || 0;
+      if (typeof item.createdAt === 'number') return item.createdAt;
+      const numId = Number(String(item.id).replace(/\D/g, ''));
+      return isNaN(numId) ? 0 : numId;
+    };
+    return getTime(b) - getTime(a);
   });
 
   const getListingDetail = (listing) => {
@@ -4414,10 +4429,11 @@ export default function App() {
 
   const handleAcceptDeal = async (chatId, dealId, terms) => {
     // Règle métier : un utilisateur ne peut PAS accepter sa propre contre-proposition.
-    const dealMessage = (chatThreads[chatId] || []).find(m => m.id === dealId);
-    if (!dealMessage || dealMessage.sender === 'me') return;
+    const dealMessage = (chatThreads[chatId] || []).find(m => String(m.id) === String(dealId));
+    const isMe = dealMessage && (dealMessage.sender === 'me' || (dealMessage.senderName && dealMessage.senderName.trim().toLowerCase() === profile?.name?.trim().toLowerCase()));
+    if (isMe) return;
 
-    const chat = selectedChat && selectedChat.id === chatId ? selectedChat : mockChats.find(c => c.id === chatId);
+    const chat = (selectedChat && String(selectedChat.id) === String(chatId)) ? selectedChat : (chatsList.find(c => String(c.id) === String(chatId)) || mockChats.find(c => String(c.id) === String(chatId)));
     const partnerName = chat?.user || 'Interlocuteur';
     const tokensAmount = Number(terms?.trocoTokens) || 0;
     const euroAmount = Number(terms?.euroAmount) || 0;
@@ -4585,12 +4601,13 @@ export default function App() {
 
   const handleDeclineDeal = async (chatId, dealId) => {
     // Règle métier : seul le destinataire peut refuser.
-    const dealMessage = (chatThreads[chatId] || []).find(m => m.id === dealId);
-    if (!dealMessage || dealMessage.sender === 'me') return;
+    const dealMessage = (chatThreads[chatId] || []).find(m => String(m.id) === String(dealId));
+    const isMe = dealMessage && (dealMessage.sender === 'me' || (dealMessage.senderName && dealMessage.senderName.trim().toLowerCase() === profile?.name?.trim().toLowerCase()));
+    if (isMe) return;
 
     setChatThreads(prev => ({
       ...prev,
-      [chatId]: prev[chatId].map(m => m.id === dealId ? { ...m, status: 'declined' } : m),
+      [chatId]: (prev[chatId] || []).map(m => String(m.id) === String(dealId) ? { ...m, status: 'declined' } : m),
     }));
 
     try {
@@ -8634,17 +8651,17 @@ export default function App() {
       {incomingCall && !callState.active && (
         <div style={{
           position: 'fixed', top: '16px', left: '50%', transform: 'translateX(-50%)',
-          width: 'calc(100% - 32px)', maxWidth: '500px', zIndex: 4000,
+          width: 'calc(100% - 32px)', maxWidth: '520px', zIndex: 9999,
           background: 'linear-gradient(135deg, rgba(15,23,42,0.98) 0%, rgba(30,41,59,0.98) 100%)',
-          backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-          border: '1px solid rgba(96,165,250,0.35)',
-          borderRadius: '20px',
+          backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
+          border: '1.5px solid rgba(96,165,250,0.5)',
+          borderRadius: '24px',
           padding: '14px 18px',
           display: 'flex', alignItems: 'center', gap: '14px',
-          boxShadow: '0 12px 40px rgba(0,0,0,0.6), 0 0 20px rgba(96,165,250,0.15)',
-          animation: 'slideDownIn 0.3s ease-out forwards',
+          boxShadow: '0 16px 48px rgba(0,0,0,0.7), 0 0 24px rgba(96,165,250,0.25)',
+          animation: 'slideDownIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards',
         }}>
-          <div style={{ width: '46px', height: '46px', borderRadius: '50%', background: 'linear-gradient(135deg, #60A5FA, #04265A)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', color: '#FFF', fontWeight: '800', flexShrink: 0, boxShadow: '0 4px 12px rgba(4,38,90,0.3)' }}>
+          <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, #60A5FA, #04265A)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', color: '#FFF', fontWeight: '800', flexShrink: 0, boxShadow: '0 4px 12px rgba(4,38,90,0.3)' }}>
             {incomingCall.from ? incomingCall.from[0].toUpperCase() : 'T'}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -9092,39 +9109,18 @@ export default function App() {
 
           {showCallControls && (
             <div
+              className="call-controls-bar"
               onPointerDown={handleCallControlsPointerDown}
               onPointerMove={handleCallControlsPointerMove}
               onPointerUp={handleCallControlsPointerUp}
               onPointerCancel={handleCallControlsPointerUp}
               style={{
-                position: 'fixed',
-                bottom: 'max(20px, env(safe-area-inset-bottom, 20px))',
-                left: '50%',
                 transform: `translate(calc(-50% + ${callControlsPos.x}px), ${callControlsPos.y}px)`,
                 backgroundColor: isCallInactive ? 'rgba(15, 23, 42, 0.55)' : 'rgba(15, 23, 42, 0.92)',
                 backdropFilter: 'blur(24px)',
                 WebkitBackdropFilter: 'blur(24px)',
-                padding: '10px 16px',
-                borderRadius: '999px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '10px',
-                border: '1px solid rgba(255,255,255,0.18)',
-                boxShadow: '0 20px 50px rgba(0,0,0,0.65), 0 0 30px rgba(96,165,250,0.2)',
-                zIndex: 50,
-                maxWidth: 'calc(100vw - 24px)',
-                boxSizing: 'border-box',
                 opacity: isCallInactive ? 0.35 : 1,
                 cursor: isDraggingCallControls ? 'grabbing' : 'grab',
-                touchAction: 'none',
-                overflowX: 'auto',
-                WebkitOverflowScrolling: 'touch',
-                scrollbarWidth: 'none',
-                userSelect: 'none',
-                WebkitUserSelect: 'none',
-                animation: 'fadeSlideUp 0.25s ease both',
-                margin: 0,
               }}
             >
               {/* POIGNÉE DE GLISSER-DÉPOSER TACTILE */}
@@ -9145,6 +9141,7 @@ export default function App() {
 
               {/* BOUTON ROUGE RACCROCHER EN PREMIER */}
               <button
+                className="hangup-btn"
                 onClick={endCall}
                 title="Raccrocher et quitter l'appel"
                 style={{

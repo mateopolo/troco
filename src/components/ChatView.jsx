@@ -670,9 +670,11 @@ export default function ChatView({
 
               // RENDU DES PROPOSITIONS DE DEAL (ALIGNEMENT BILATÉRAL STRICT DROITE / GAUCHE)
               if (msg.type === 'deal' || msg.kind === 'deal') {
-                const { terms = {}, status, sender } = msg;
-                const isMine = sender === 'me';
+                const { terms = {} } = msg;
+                const isMine = msg.sender === 'me' || (msg.senderName && profile?.name && msg.senderName.trim().toLowerCase() === profile.name.trim().toLowerCase()) || (typeof msg.sender === 'string' && profile?.name && msg.sender.trim().toLowerCase() === profile.name.trim().toLowerCase());
                 const isIncoming = !isMine;
+                const currentDealStatus = msg.status || 'pending';
+                const isDealPending = currentDealStatus === 'pending' || currentDealStatus === 'proposed' || currentDealStatus === 'en_attente';
                 const partnerName = activeChatObj?.user || 'l’interlocuteur';
                 const dealConditionsText = getChatMessageDisplayContent
                   ? getChatMessageDisplayContent({ text: terms.conditions }, currentLang, isMsgOriginal)
@@ -714,22 +716,22 @@ export default function ChatView({
                           <Sparkles size={15} color={isMine ? (darkMode ? '#93C5FD' : '#2563EB') : (darkMode ? '#38BDF8' : '#0284C7')} />
                           {isMine ? (t('myDealProposal') || 'Ma proposition de Deal') : (t('receivedDealProposal') || 'Proposition de Deal reçue')}
                         </div>
-                        {status === 'pending' && isIncoming && (
+                        {isDealPending && isIncoming && (
                           <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: darkMode ? 'rgba(245,158,11,0.25)' : '#FEF3C7', color: darkMode ? '#FDE68A' : '#92400E', padding: '3px 8px', borderRadius: '999px', border: '1.5px solid #F59E0B' }}>
                             ⚡ Réponse attendue
                           </span>
                         )}
-                        {status === 'pending' && isMine && (
+                        {isDealPending && isMine && (
                           <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: darkMode ? 'rgba(148,163,184,0.25)' : '#F1F5F9', color: darkMode ? '#E2E8F0' : '#475569', padding: '3px 8px', borderRadius: '999px', border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #CBD5E1' }}>
                             {t('waitingResponse') || 'En attente'}
                           </span>
                         )}
-                        {(status === 'confirmed' || status === 'accepted') && (
+                        {(currentDealStatus === 'confirmed' || currentDealStatus === 'accepted') && (
                           <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: darkMode ? 'rgba(160,230,180,0.25)' : '#D1FAE5', color: darkMode ? '#6EE7B7' : '#065F46', padding: '3px 8px', borderRadius: '999px', border: '1.5px solid #10B981' }}>
                             ✓ Confirmé
                           </span>
                         )}
-                        {status === 'declined' && (
+                        {currentDealStatus === 'declined' && (
                           <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: darkMode ? 'rgba(239,68,68,0.25)' : '#FEE2E2', color: darkMode ? '#FCA5A5' : '#991B1B', padding: '3px 8px', borderRadius: '999px', border: '1.5px solid #EF4444' }}>
                             ✕ Refusé
                           </span>
@@ -772,7 +774,7 @@ export default function ChatView({
                       </div>
 
                       {/* ACTIONS INTERACTIVES POUR LE DESTINATAIRE : ACCEPTER / REFUSER / CONTRE-PROPOSER */}
-                      {status === 'pending' && isIncoming && (
+                      {isDealPending && isIncoming && (
                         <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
                           <button
                             onClick={() => handleAcceptDeal(currentChatId, msg.id, terms)}
@@ -819,19 +821,19 @@ export default function ChatView({
                       )}
 
                       {/* STATUT EN ATTENTE POUR L'EXPÉDITEUR */}
-                      {status === 'pending' && isMine && (
+                      {isDealPending && isMine && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: darkMode ? 'rgba(15,23,42,0.6)' : '#F8FAFC', border: darkMode ? '1px dashed rgba(255,255,255,0.2)' : '1px dashed #CBD5E1', color: darkMode ? '#CBD5E1' : '#64748B', borderRadius: '12px', padding: '8px 12px', fontSize: '11.5px', fontWeight: '700' }}>
                           <Clock size={13} /> <span>En attente de la réponse de {partnerName}...</span>
                         </div>
                       )}
 
-                      {(status === 'confirmed' || status === 'accepted') && (
+                      {(currentDealStatus === 'confirmed' || currentDealStatus === 'accepted') && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: darkMode ? 'rgba(16,185,129,0.2)' : '#D1FAE5', color: darkMode ? '#34D399' : '#059669', borderRadius: '12px', padding: '8px 12px', fontSize: '11.5px', fontWeight: '800' }}>
                           <CheckCircle size={14} /> <span>Deal validé et scellé avec {partnerName}.</span>
                         </div>
                       )}
 
-                      {status === 'declined' && (
+                      {currentDealStatus === 'declined' && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: darkMode ? 'rgba(239,68,68,0.2)' : '#FEE2E2', color: darkMode ? '#FCA5A5' : '#DC2626', borderRadius: '12px', padding: '8px 12px', fontSize: '11.5px', fontWeight: '800' }}>
                           <AlertTriangle size={14} /> <span>Proposition déclinée.</span>
                         </div>
