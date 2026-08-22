@@ -1,0 +1,95 @@
+🏛️ PILIER 1 : Architecture, Performance & Fluidité (Le Moteur)
+Optimisation FCP (First Contentful Paint) : Chargement instantané via préchargement des polices et CSS critique.
+Lazy Loading intelligent : Chargement des modules lourds uniquement à l'affichage.
+Format WebP/AVIF : Compression d'image nouvelle génération via next/image.
+Architecture PWA (Progressive Web App) : Installation mobile/desktop et fonctionnement hors-ligne partiel.
+Code-splitting agressif : Découpage du bundle JS et import dynamique.
+Mise en cache hybride (Edge + Redis) : Réponse en <50ms pour les profils et annonces.
+Pagination côté serveur (Cursor-based) : Fluidité infinie des listes d'annonces.
+Monitoring Sentry/Datadog : Traçabilité des erreurs en temps réel.
+Compression Brotli : Réduction drastique des payloads réseau.
+Rendu adaptatif (SSR/SSG/ISR) : SEO parfait et pages ultra-rapides.
+🎨 PILIER 2 : Design System & "Voice-First" (L'Expérience)
+Design System unifié : Variables CSS strictes pour une cohérence absolue.
+Micro-interactions : Retours visuels subtils (Framer Motion) pour une sensation "premium".
+Mode Sombre automatique : Respect des préférences système avec contraste WCAG AA.
+Skeleton Screens : Perception de vitesse accrue lors des chargements.
+Navigation "Thumb-friendly" : Menu principal en bas de l'écran sur mobile.
+Glassmorphism subtil : Flous d'arrière-plan pour un rendu haut de gamme.
+Voice-to-Listing (Vos Idées) 🗣️ : Dépôt d'annonce en 15 secondes par commande vocale.
+Chatbot vocal intégré : Pour répondre aux demandes d'informations sans sortir le clavier.
+Mode "Focus" : Suspension des notifications non-urgentes lors d'un échange en cours.
+Tableau de bord personnalisable : Widgets déplaçables par l'utilisateur.
+💰 PILIER 3 : Tokenomics & Économie Circulaire (Le Carburant)
+Monnaie fondante / Redistribution (Vos Idées) ⏳ : Bonus pour réinjection ou réallocation automatique des jetons dormants vers l'entraide locale.
+Micro-sessions express SOS (Vos Idées) ⚡ : Visio flash (5-10 min) pour dépannage rapide contre micro-paiement en jetons.
+Taux de change dynamique : Valeur du Jeton ajustée selon l'offre et la demande locale de compétences.
+Portefeuille multi-devises : Gestion simultanée de Temps, de Jetons Troco et de Points d'Impact ESG.
+Escrow (Séquestre) numérique : Blocage automatique des jetons jusqu'à validation finale des deux parties.
+Bourse aux compétences : Graphiques d'historique de valeur pour visualiser la demande d'une compétence.
+Monétisation éthique : Pas de frais cachés, uniquement une micro-commission sur les échanges de grande valeur ou les abonnements Pro.
+Tokenisation de l'impact : Conversion des heures d'entraide solidaire en NFT d'impact social non transférables (Proof of Humanity).
+🛡️ PILIER 4 : Sécurité Terrain & Confiance (Le Bouclier)
+État des lieux photo horodaté (Vos Idées) 📸 : 3 photos in-app obligatoires au départ/retour pour verrouiller l'état du bien.
+Micro-assurance intégrée (Vos Idées) 🛡️ : Option à micro-tarif (ex: 0,99 €) via API pour couvrir casse/vol.
+Vérification par QR Code dynamique : Scan mutuel lors de la rencontre physique pour activer le début de l'échange.
+Système de "Tiers de Confiance" : Possibilité de désigner un ami commun comme arbitre en cas de litige.
+Notation de la ponctualité : Score spécifique, distinct de la qualité du service ou de l'objet.
+Notation à double aveugle : Les notes ne sont révélées qu'une fois les deux parties évaluées.
+Score de Fiabilité Troco : Algorithme combinant ancienneté, taux de réponse et ponctualité.
+Modération IA des avis : Détection des faux avis ou des insultes avant publication.
+Garantie "Sérénité" : Partenariat avec un assureur pour les prêts d'objets de grande valeur.
+Bouton "Urgence / Panique" : Alerte géolocalisée envoyée aux modérateurs et contacts de confiance en cas de problème physique.
+⚖️ PILIER 5 : Cadrage Juridique & Fiscal (Le Cadre Légal)
+Conformité DAC7 automatisée (Vos Idées) 📊 : Génération automatique du récapitulatif fiscal annuel pour les utilisateurs dépassant les seuils européens.
+Charte d'entraide non-professionnelle (Vos Idées) 📜 : Verrouillage contractuel contre le risque de travail dissimulé.
+Traçabilité GDPR (Droit à l'oubli) : Suppression automatisée et sécurisée des données après X années d'inactivité.
+Export comptable pour auto-entrepreneurs : Pour les utilisateurs utilisant Troco en mode B2B ponctuel.
+Générateur de CGU personnalisées : Pour les "Cercles Fermés" qui souhaitent ajouter leurs propres règles internes.
+Contrat d'échange numérique : PDF signé électroniquement (via lien SMS) récapitulant les termes.
+Clause de non-subordination : Rappels in-app réguliers sur la nature bénévole/collaborative des échanges.
+📍 PILIER 6 : Croissance Hyper-Locale & Communauté (L'Ancrage)
+Cercles fermés & Grappes (Vos Idées) 🏘️ : Sous-espaces dédiés (résidence, campus, entreprise) pour un circuit ultra-court.
+Royalties de parrainage en temps (Vos Idées) 🎁 : Fraction symbolique créditée au parrain lors du premier échange réussi du filleul.
+Hubs Communautaires Locaux : Organisation d'événements physiques ("Troco Apéro", "Repair Café Troco").
+Mode "Urgence / Entraide" : Flux dédié pour les besoins immédiats de proximité.
+Carte interactive sécurisée : Visualisation en zone de 500m (floutage de l'adresse exacte).
+Partenariats Mairies : Subventions locales pour l'animation des hubs Troco.
+Mode "Anonyme" : Identité révélée uniquement après acceptation de la demande (pour les objets sensibles).
+🤖 PILIER 7 : IA Opérationnelle & Automatisation (Le Cerveau)
+IA de Matching Prédictif : Suggestions hyper-pertinentes avant même la recherche.
+Assistant de Négociation IA : Chatbot qui aide à rédiger et trouver des compromis.
+Détection de fraude par IA : Analyse sémantique des messages pour repérer les arnaques classiques.
+Chatbot de médiation IA : Aide à trouver un compromis avant l'intervention humaine.
+Traduction en temps réel : Dans les chats pour faciliter le "Stay Swap" international.
+Analyse d'image par IA : Détection automatique de la catégorie et de l'état du matériel photographié.
+Échanges en chaîne (Multi-parties) : Algorithme de matching circulaire (A->B, B->C, C->A).
+Mode "Échange Express" : Matching instantané pour offres/demandes parfaitement complémentaires.
+🎮 PILIER 8 : Gamification & Engagement (La Motivation)
+Passeport Troco : Historique visuel des compétences acquises et partagées.
+Défis d'équipe : "Défi de quartier" (ex: nettoyer un parc ensemble).
+Trophées d'impact social : "100 kg de déchets évités", "50h de cours donnés".
+Niveaux et Titres : "Super Troqueur", "Ambassadeur Local" avec avantages visibles.
+Streaks de générosité : Récompenses pour les échanges réalisés consécutivement chaque semaine.
+Classements locaux : Top 10 des contributeurs du quartier (sans pression, juste pour la gloire).
+Badges de vérification graduels : Email, Tél, Identité, Compétence certifiée.
+Réputation portable (Web3/SSI) : Exportation des badges vers d'autres plateformes.
+🤝 PILIER 9 : Partenariats & Écosystème (L'Expansion)
+API Ouverte et Widgets : Intégration du moteur Troco sur les sites d'associations ou mairies.
+Impact Écologique Mesurable : Calcul de l'empreinte carbone économisée (badge "Éco-Héros").
+Troco pour les Pros (B2B) : Échange de services d'entreprise contre du matériel ou d'autres services.
+Intégration Calendriers Pro : Synchronisation avec Cal.com, Calendly, Google Workspace.
+Intégration Transports : Calcul d'itinéraire optimisé pour aller chercher l'objet (transports/vélo).
+Marketplace de pièces détachées : Pour faciliter la réparation avant l'échange.
+Partenariats Fablabs : Accès aux ateliers de bricolage partagés pour les échanges de matériel lourd.
+Troco Solidaire : Bouton pour offrir ses jetons à des associations caritatives locales.
+Troco Éducation : Partenariat avec les écoles pour les heures de soutien scolaire.
+🚀 PILIER 10 : Innovation Hardware & IoT (Le Futur)
+Troco Box (App Companion) : Scan de code-barres pour ajouter instantanément un objet de chez soi à son inventaire Troco.
+Réalité Augmentée (AR) : Visualisation d'un meuble chez soi avant l'échange.
+Intégration IoT : Alerte si l'objet prêté (ex: perceuse connectée) dépasse un seuil d'utilisation.
+Support Santé/Bien-être : Suivi des minutes de yoga/méditation offertes.
+Prêt de véhicules : Vérification automatique du permis et de l'assurance via API.
+Troco Kids : Section supervisée pour l'échange de jouets ou soutien scolaire.
+Mode Hors-Ligne enrichi : Signature du contrat hors-ligne, synchronisée au retour du réseau.
+Intégration Domotique : Déverrouillage de smart lockers Troco dans les halls d'immeuble.

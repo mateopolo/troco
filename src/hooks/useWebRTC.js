@@ -203,10 +203,13 @@ export function useWebRTC({ profileName, selectedChat }) {
       }
     };
 
-    const myCands = role === 'caller' ? 'callerCandidates' : 'calleeCandidates';
+    const myCands1 = role === 'caller' ? 'callerCandidates' : 'calleeCandidates';
+    const myCands2 = role === 'caller' ? 'offerCandidates' : 'answerCandidates';
     pc.onicecandidate = ({ candidate }) => {
       if (candidate) {
-        addDoc(collection(db, 'calls', String(chatId), myCands), candidate.toJSON()).catch(() => {});
+        const candJson = candidate.toJSON();
+        addDoc(collection(db, 'calls', String(chatId), myCands1), candJson).catch(() => {});
+        addDoc(collection(db, 'calls', String(chatId), myCands2), candJson).catch(() => {});
       }
     };
 
@@ -302,8 +305,15 @@ export function useWebRTC({ profileName, selectedChat }) {
       }
     });
 
-    // Écouter les candidats ICE de l'appelé
-    const unsubCallee = onSnapshot(collection(db, 'calls', String(chatId), 'calleeCandidates'), (snap) => {
+    // Écouter les candidats ICE de l'appelé (support calleeCandidates & answerCandidates)
+    const unsubCallee1 = onSnapshot(collection(db, 'calls', String(chatId), 'calleeCandidates'), (snap) => {
+      snap.docChanges().forEach(ch => {
+        if (ch.type === 'added') {
+          pc.addIceCandidate(new RTCIceCandidate(ch.doc.data())).catch(() => {});
+        }
+      });
+    });
+    const unsubCallee2 = onSnapshot(collection(db, 'calls', String(chatId), 'answerCandidates'), (snap) => {
       snap.docChanges().forEach(ch => {
         if (ch.type === 'added') {
           pc.addIceCandidate(new RTCIceCandidate(ch.doc.data())).catch(() => {});
@@ -311,7 +321,7 @@ export function useWebRTC({ profileName, selectedChat }) {
       });
     });
 
-    unsubsRef.current = [unsubAnswer, unsubCallee];
+    unsubsRef.current = [unsubAnswer, unsubCallee1, unsubCallee2];
   }, [selectedChat, profileName, playRingtone, _getLocalStream, _createPC, _cleanup]);
 
   const acceptIncomingCall = useCallback(async () => {
@@ -383,7 +393,14 @@ export function useWebRTC({ profileName, selectedChat }) {
       }
     });
 
-    const unsubCaller = onSnapshot(collection(db, 'calls', String(chatId), 'callerCandidates'), (snap) => {
+    const unsubCaller1 = onSnapshot(collection(db, 'calls', String(chatId), 'callerCandidates'), (snap) => {
+      snap.docChanges().forEach(ch => {
+        if (ch.type === 'added') {
+          pc.addIceCandidate(new RTCIceCandidate(ch.doc.data())).catch(() => {});
+        }
+      });
+    });
+    const unsubCaller2 = onSnapshot(collection(db, 'calls', String(chatId), 'offerCandidates'), (snap) => {
       snap.docChanges().forEach(ch => {
         if (ch.type === 'added') {
           pc.addIceCandidate(new RTCIceCandidate(ch.doc.data())).catch(() => {});
@@ -391,7 +408,7 @@ export function useWebRTC({ profileName, selectedChat }) {
       });
     });
 
-    unsubsRef.current = [unsubCallDoc, unsubCaller];
+    unsubsRef.current = [unsubCallDoc, unsubCaller1, unsubCaller2];
     return { chatId, type, from };
   }, [incomingCall, _getLocalStream, _createPC, _cleanup, profileName]);
 
@@ -408,13 +425,15 @@ export function useWebRTC({ profileName, selectedChat }) {
     setIncomingCall(null);
   }, [incomingCall]);
 
-  // Écoute des appels entrants pour cet utilisateur (to === profileName)
+  // Écoute des appels entrants pour cet utilisateur (to === profileName avec tolérance casse)
   useEffect(() => {
     if (!profileName) return;
+    const normalizedProfile = profileName.trim().toLowerCase();
     const unsub = onSnapshot(collection(db, 'calls'), (snap) => {
       snap.docChanges().forEach(change => {
         const data = change.doc.data();
-        if (change.type === 'added' && data.to === profileName && data.status === 'ringing') {
+        const targetTo = (data?.to || '').trim().toLowerCase();
+        if ((change.type === 'added' || change.type === 'modified') && targetTo === normalizedProfile && data.status === 'ringing') {
           setIncomingCall({ chatId: change.doc.id, type: data.type, from: data.from });
           playRingtone();
           if (navigator.vibrate) navigator.vibrate([400, 150, 400, 150, 400]);
@@ -426,6 +445,24 @@ export function useWebRTC({ profileName, selectedChat }) {
     });
     return () => unsub();
   }, [profileName, playRingtone]);
+
+  const attachLocalStream = useCallback((el) => {
+    if (el && localStream) {
+      if (el.srcObject !== localStream) {
+        el.srcObject = localStream;
+      }
+      el.play().catch(() => {});
+    }
+  }, [localStream]);
+
+  const attachRemoteStream = useCallback((el) => {
+    if (el && remoteStream) {
+      if (el.srcObject !== remoteStream) {
+        el.srcObject = remoteStream;
+      }
+      el.play().catch(() => {});
+    }
+  }, [remoteStream]);
 
   const toggleMic = useCallback(() => {
     if (localStream) {
@@ -621,6 +658,7 @@ export function useWebRTC({ profileName, selectedChat }) {
   return {
     callState, localStream, remoteStream, incomingCall,
     localVideoRef, remoteVideoRef,
+    attachLocalStream, attachRemoteStream,
     facingMode, hasMultipleCameras, switchCamera,
     startCall, acceptIncomingCall, declineIncomingCall, endCall,
     toggleMic, toggleCam, toggleScreenShare,

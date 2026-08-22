@@ -26,6 +26,9 @@ import { getInstantOrQueueTranslation, subscribeTranslations } from './utils/tra
 import { playApplePaySound, playBetclicBalanceSound, playWelcomeGiftFanfare } from './utils/audioService';
 import { AnimatedEuroBalance, AnimatedTokenBalance } from './components/AnimatedBalances';
 import FeedCardItem from './components/FeedCardItem';
+import PhotoGrid from './components/PhotoGrid';
+import InvoiceCalculator, { generateInvoiceRef, calculateListingInvoice } from './components/InvoiceCalculator';
+import CallOverlay from './components/CallOverlay';
 import {
   translations,
   calculateHaversineDistance,
@@ -3337,24 +3340,59 @@ export default function App() {
       return;
     }
 
-    if (mode === 'edit-listing') {
-      window.setTimeout(() => {
-        const { newListing, wantsUrgent } = payload;
-        setProfile(prev => ({ ...prev, euroBalance: Number((prev.euroBalance - amount).toFixed(2)) }));
-        if (wantsUrgent && (!editingOriginalListing || !editingOriginalListing.urgent)) {
-          setProfile(prev => ({ ...prev, euroBalance: Number((prev.euroBalance - 1.99).toFixed(2)) }));
-        }
-        setListings(prev => prev.map(item => item.id === newListing.id ? newListing : item));
+    if (mode === 'edit-listing' || mode === 'publish-options') {
+      window.setTimeout(async () => {
+        const { newListing, invoiceCalc } = payload || {};
+        if (!newListing) return;
 
-        if (editingOriginalListing?.firestoreId) {
+        setProfile(prev => ({ ...prev, euroBalance: Number((prev.euroBalance - amount).toFixed(2)) }));
+
+        // Enregistrement de la transaction avec référence unique TRK-YYYYMM-XXXX
+        const invoiceRef = generateInvoiceRef();
+        const txRecord = {
+          id: `tx-${Date.now()}`,
+          type: isEditingListing ? 'edit-listing' : 'publish-options',
+          title: isEditingListing ? `Modification annonce — ${newListing.title}` : `Options publication — ${newListing.title}`,
+          amount: amount,
+          currency: 'EUR',
+          status: 'completed',
+          invoiceRef: invoiceRef,
+          date: new Date().toISOString(),
+          createdAt: serverTimestamp(),
+          userId: profile.uid || auth.currentUser?.uid || 'anonymous',
+          items: invoiceCalc?.items || [],
+        };
+        try {
+          await addDoc(collection(db, 'transactions'), txRecord);
+        } catch (e) {
+          console.warn('[Firestore] transaction addDoc failed:', e);
+        }
+        setUserTransactions(prev => [txRecord, ...prev]);
+
+        if (isEditingListing) {
+          setListings(prev => prev.map(item => item.id === newListing.id ? newListing : item));
+          if (editingOriginalListing?.firestoreId) {
+            try {
+              const { id: _localId, firestoreId: _fid, ...firestorePayload } = newListing;
+              updateDoc(doc(db, 'listings', editingOriginalListing.firestoreId), {
+                ...firestorePayload,
+                updatedAt: serverTimestamp(),
+              }).catch(e => console.warn('[Firestore] updateDoc failed:', e));
+            } catch (e) {
+              console.warn('[Firestore] updateDoc error:', e);
+            }
+          }
+        } else {
+          setListings(prev => [newListing, ...prev]);
           try {
-            const { id: _localId, firestoreId: _fid, ...firestorePayload } = newListing;
-            updateDoc(doc(db, 'listings', editingOriginalListing.firestoreId), {
+            const { id: _localId, ...firestorePayload } = newListing;
+            addDoc(collection(db, 'listings'), {
               ...firestorePayload,
+              createdAt: serverTimestamp(),
               updatedAt: serverTimestamp(),
-            }).catch(e => console.warn('[Firestore] updateDoc failed:', e));
+            }).catch(e => console.warn('[Firestore] addDoc failed:', e));
           } catch (e) {
-            console.warn('[Firestore] updateDoc error:', e);
+            console.warn('[Firestore] addDoc error:', e);
           }
         }
 
@@ -3405,12 +3443,67 @@ export default function App() {
   };
 
 
+  const handlePhotoGridAdd = async (event) => {
+    const files = Array.from(event.target.files || []);
+    if (files.length === 0) return;
+    const currentGallery = postDraft.gallery && postDraft.gallery.length > 0
+      ? [...postDraft.gallery]
+      : (postDraft.imageUrl ? [postDraft.imageUrl] : []);
+
+    const remainingSlots = 8 - currentGallery.length;
+    if (remainingSlots <= 0) return;
+
+    const filesToProcess = files.slice(0, remainingSlots);
+    const newPhotos = [];
+    for (const file of filesToProcess) {
+      const compressed = await compressImage(file, 800, 800, 0.75);
+      if (compressed) newPhotos.push(compressed);
+    }
+
+    const updatedGallery = [...currentGallery, ...newPhotos].slice(0, 8);
+    setPostDraft(prev => ({
+      ...prev,
+      gallery: updatedGallery,
+      imageUrl: updatedGallery[0] || prev.imageUrl,
+    }));
+  };
+
+  const handlePhotoGridRemove = (index) => {
+    const currentGallery = postDraft.gallery && postDraft.gallery.length > 0
+      ? [...postDraft.gallery]
+      : (postDraft.imageUrl ? [postDraft.imageUrl] : []);
+    const updated = currentGallery.filter((_, i) => i !== index);
+    setPostDraft(prev => ({
+      ...prev,
+      gallery: updated,
+      imageUrl: updated[0] || '',
+    }));
+  };
+
+  const handlePhotoGridAutoGenerate = () => {
+    const suggested = getSuggestedMedia(postDraft.title, postDraft.description);
+    const updatedGallery = suggested.gallery && suggested.gallery.length > 0 ? suggested.gallery : [suggested.image];
+    setPostDraft(prev => ({
+      ...prev,
+      imageUrl: suggested.image,
+      videoUrl: suggested.video,
+      gallery: updatedGallery,
+    }));
+  };
+
   const handleImageFileUpload = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
     const compressedDataUrl = await compressImage(file, 800, 800, 0.75);
     if (compressedDataUrl) {
-      setPostDraft(prev => ({ ...prev, imageUrl: compressedDataUrl }));
+      setPostDraft(prev => {
+        const curGallery = prev.gallery && prev.gallery.length > 0 ? prev.gallery : [];
+        return {
+          ...prev,
+          imageUrl: compressedDataUrl,
+          gallery: curGallery.length === 0 ? [compressedDataUrl] : curGallery,
+        };
+      });
     }
   };
 
@@ -3429,7 +3522,7 @@ export default function App() {
     const rawDescription = (postDraft.description || '').trim();
 
     if (!rawTitle || !rawDescription) {
-      setPublishMessage(currentLang === 'FR' ? 'Ajoute un titre et une description pour publier ton annonce.' : currentLang === 'EN' ? 'Add a title and a description to publish your ad.' : currentLang === 'ES' ? 'Añade un título y una descripción para publicar tu anuncio.' : currentLang === 'IT' ? 'Aggiungi un titolo e una descrizione per pubblicare il tuo annuncio.' : currentLang === 'DE' ? 'Füge einen Titel und eine Beschreibung hinzu, um deine Anzeige zu veröffentlichen.' : currentLang === 'JA' ? 'タイトルと説明を追加して広告を公開してください。' : '添加标题和描述以发布您的广告。');
+      setPublishMessage(currentLang === 'FR' ? 'Ajoute un titre et une description pour publier ton annonce.' : currentLang === 'EN' ? 'Add a title and a description to publish your ad.' : currentLang === 'ES' ? 'Añade un título y una descripción para publicar tu anuncio.' : currentLang === 'IT' ? 'Aggiungi un titre e una descrizione per pubblicare il tuo annuncio.' : currentLang === 'DE' ? 'Füge einen Titel und eine Beschreibung hinzu, um deine Anzeige zu veröffentlichen.' : currentLang === 'JA' ? 'タイトルと説明を追加して広告を公開してください。' : '添加标题和描述以发布您的广告。');
       return;
     }
 
@@ -3452,12 +3545,6 @@ export default function App() {
     }
 
     const wantsUrgent = postDraft.isUrgent;
-    if (wantsUrgent && profile.euroBalance < 1.99) {
-      setPublishMessage(`Solde Euros insuffisant pour activer l'option Urgent (1,99€ requis, solde actuel : ${profile.euroBalance.toFixed(2)}€). Recharge ton portefeuille ou désactive l'option.`);
-      setPostStep(3);
-      return;
-    }
-
     const compensationText = postDraft.compensation === 'credits'
       ? '1h = 1 Crédit'
       : postDraft.compensation === 'cash'
@@ -3516,7 +3603,7 @@ export default function App() {
       type: postDraft.format,
       languages: profile.languages.slice(0, 2),
       compensation: compensationText,
-      image: media.image,
+      image: finalGallery[0] || media.image,
       video: media.video,
       gallery: finalGallery,
       urgent: wantsUrgent,
@@ -3527,42 +3614,73 @@ export default function App() {
       translations: baseTranslations,
     };
 
+    // ---- CALCUL FACTURATION / DEVIS EN TEMPS RÉEL (ÉTAPE 2) ----
+    const textChanged = isEditingListing
+      ? (rawTitle !== (editingOriginalListing?.title || '') || rawDescription !== (editingOriginalListing?.description || ''))
+      : false;
+    const invoiceCalc = calculateListingInvoice({
+      isUrgent: wantsUrgent,
+      photoCount: finalGallery.length,
+      isEditing: isEditingListing,
+      isEditingContentChanged: textChanged,
+    });
+
+    const totalToPay = invoiceCalc.totalTTC;
+
+    // Si options payantes requises et solde insuffisant -> Déclencher la passerelle de paiement
+    if (totalToPay > 0 && profile.euroBalance < totalToPay) {
+      openCheckout({
+        mode: 'publish-options',
+        amount: totalToPay,
+        label: isEditingListing ? `Options modification annonce (${totalToPay.toFixed(2)} €)` : `Options de publication (${totalToPay.toFixed(2)} €)`,
+        payload: { newListing, invoiceCalc }
+      });
+      return;
+    }
+
+    // Débit solde si payant et solde suffisant
+    if (totalToPay > 0) {
+      setProfile(prev => ({ ...prev, euroBalance: Number((prev.euroBalance - totalToPay).toFixed(2)) }));
+
+      // Enregistrement de la facture horodatée avec référence unique TRK-YYYYMM-XXXX
+      const invoiceRef = generateInvoiceRef();
+      const txRecord = {
+        id: `tx-${Date.now()}`,
+        type: isEditingListing ? 'edit-listing' : 'publish-options',
+        title: isEditingListing ? `Modification annonce — ${rawTitle}` : `Options publication — ${rawTitle}`,
+        amount: totalToPay,
+        currency: 'EUR',
+        status: 'completed',
+        invoiceRef: invoiceRef,
+        date: new Date().toISOString(),
+        createdAt: serverTimestamp(),
+        userId: profile.uid || auth.currentUser?.uid || 'anonymous',
+        items: invoiceCalc.items,
+      };
+      try {
+        await addDoc(collection(db, 'transactions'), txRecord);
+      } catch (e) {
+        console.warn('[Firestore] transaction addDoc failed:', e);
+      }
+      setUserTransactions(prev => [txRecord, ...prev]);
+    }
+
     if (isEditingListing) {
-      const textChanged = rawTitle !== (editingOriginalListing?.title || '') || rawDescription !== (editingOriginalListing?.description || '');
-      const galleryLength = finalGallery.length;
-      if (textChanged || galleryLength > 4) {
-        openCheckout({
-          mode: 'edit-listing',
-          amount: 1.99,
-          label: t('editCostsMoneyTitle') || 'Modification Payante',
-          payload: { newListing, wantsUrgent }
-        });
-        return; // Stop here and wait for checkout success
-      } else {
-        if (wantsUrgent && !editingOriginalListing.urgent) {
-          playApplePaySound();
-          setProfile(prev => ({ ...prev, euroBalance: Number((prev.euroBalance - 1.99).toFixed(2)) }));
-        }
-        // ── Local state ──
-        setListings(prev => prev.map(item => item.id === newListing.id ? newListing : item));
-        // ── Firestore : mise à jour du document existant ──
-        if (editingOriginalListing.firestoreId) {
-          try {
-            const { id: _localId, firestoreId: _fid, ...firestorePayload } = newListing;
-            await updateDoc(doc(db, 'listings', editingOriginalListing.firestoreId), {
-              ...firestorePayload,
-              updatedAt: serverTimestamp(),
-            });
-          } catch (e) {
-            console.warn('[Firestore] updateDoc failed:', e);
-          }
+      // ── Local state ──
+      setListings(prev => prev.map(item => item.id === newListing.id ? newListing : item));
+      // ── Firestore : mise à jour du document existant ──
+      if (editingOriginalListing?.firestoreId) {
+        try {
+          const { id: _localId, firestoreId: _fid, ...firestorePayload } = newListing;
+          await updateDoc(doc(db, 'listings', editingOriginalListing.firestoreId), {
+            ...firestorePayload,
+            updatedAt: serverTimestamp(),
+          });
+        } catch (e) {
+          console.warn('[Firestore] updateDoc failed:', e);
         }
       }
     } else {
-      if (wantsUrgent) {
-        playApplePaySound();
-        setProfile(prev => ({ ...prev, euroBalance: Number((prev.euroBalance - 1.99).toFixed(2)) }));
-      }
       // ── Local state ──
       setListings(prev => [newListing, ...prev]);
       // ── Firestore : création du document ──
@@ -3577,28 +3695,23 @@ export default function App() {
         console.warn('[Firestore] addDoc failed:', e);
       }
     }
-    const urgentMsg = wantsUrgent ? (
-      currentLang === 'FR' ? ' • Option Urgent activée (1,99€ déduits de ton solde Euro)' :
-        currentLang === 'EN' ? ' • Urgent option activated (€1.99 deducted from your Euro balance)' :
-          currentLang === 'ES' ? ' • Opción Urgente activada (1,99€ deducidos de tu saldo)' :
-            currentLang === 'IT' ? ' • Opzione Urgente attivata (1,99€ detratti dal tuo saldo)' :
-              currentLang === 'DE' ? ' • Dringend-Option aktiviert (1,99€ vom Guthaben abgezogen)' :
-                currentLang === 'JA' ? ' • お急ぎオプション有効 (残高から1.99ユーロ控除)' :
-                  ' • 紧急选项已激活（从您的余额中扣除1.99欧元）'
-    ) : '';
+
+    const urgentMsg = wantsUrgent ? ' • Option Urgent activée' : '';
     const publishedMsg = isEditingListing
-      ? (currentLang === 'FR' ? 'Annonce modifiée :' : currentLang === 'EN' ? 'Ad updated:' : currentLang === 'ES' ? 'Anuncio modificado:' : currentLang === 'IT' ? 'Annuncio modificato:' : currentLang === 'DE' ? 'Anzeige aktualisiert:' : currentLang === 'JA' ? '広告を更新しました:' : '广告已更新:')
-      : (currentLang === 'FR' ? 'Annonce publiée :' : currentLang === 'EN' ? 'Ad published:' : currentLang === 'ES' ? 'Anuncio publicado:' : currentLang === 'IT' ? 'Annuncio pubblicato:' : currentLang === 'DE' ? 'Anzeige veröffentlicht:' : currentLang === 'JA' ? '公開された広告:' : '广告已发布:');
+      ? (currentLang === 'FR' ? 'Annonce modifiée avec succès :' : 'Listing updated successfully:')
+      : (currentLang === 'FR' ? 'Annonce publiée avec succès :' : 'Listing published successfully:');
     setPublishMessage(`${publishedMsg} ${newListing.title}${urgentMsg}`);
 
-    // Afficher le popup de confirmation puis naviguer vers l'annonce
+    // Son de confirmation Apple Pay
     playApplePaySound();
+
+    // Redirection immédiate vers la vue détaillée de l'annonce modifiée/publiée
     const updatedListingDetail = getListingDetail(newListing);
     setPublishedListing(updatedListingDetail);
     setShowPublishedPopup(true);
     setSelectedListing(updatedListingDetail);
 
-    // Reset du formulaire et du mode édition
+    // Reset du formulaire
     setIsEditingListing(false);
     setEditingOriginalListing(null);
     setPostStep(1);
@@ -6426,42 +6539,21 @@ export default function App() {
 
                 {/* ---- MÉDIAS INTELLIGENTS (PHOTO & VIDÉO) ---- */}
                 <div style={{ padding: '16px', borderRadius: '18px', backgroundColor: darkMode ? 'rgba(15,23,42,0.6)' : '#F8FAFC', border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <Sparkles size={16} color={darkMode ? '#60A5FA' : '#04265A'} />
-                      <label style={{ fontSize: '13px', fontWeight: '800', color: darkMode ? '#FFFFFF' : '#111827' }}>{t('adMediaTitle')}</label>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const suggested = getSuggestedMedia(postDraft.title, postDraft.description);
-                        setPostDraft(prev => ({ ...prev, imageUrl: suggested.image, videoUrl: suggested.video }));
-                      }}
-                      className="premium-button"
-                      style={{ border: 'none', borderRadius: '10px', padding: '6px 12px', backgroundColor: darkMode ? 'rgba(4,38,90,0.7)' : '#EFF6FF', color: darkMode ? '#93C5FD' : '#04265A', fontSize: '11px', fontWeight: '800', cursor: 'pointer' }}
-                    >
-                      {t('autoGenerateVisuals')}
-                    </button>
-                  </div>
                   <p style={{ margin: 0, fontSize: '12px', color: darkMode ? '#CBD5E1' : '#64748B', lineHeight: 1.5 }}>
                     {t('adMediaDesc')}
                   </p>
 
-                  {/* SECTION PHOTO */}
-                  <div>
-                    <div style={{ fontSize: '12px', fontWeight: '700', color: darkMode ? '#CBD5E1' : '#374151', marginBottom: '6px' }}>{t('mainPhotoLabel')}</div>
-                    <input value={postDraft.imageUrl} onChange={(e) => setPostDraft(prev => ({ ...prev, imageUrl: e.target.value }))} placeholder={t('photoUrlPlaceholder')} style={{ width: '100%', padding: '9px 12px', border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFF', color: darkMode ? '#FFF' : '#111827', borderRadius: '10px', fontSize: '12px', marginBottom: '8px' }} />
-                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                      <img src={getSuggestedMedia(postDraft.title, postDraft.description, postDraft.imageUrl).image} alt="aperçu" style={{ width: '90px', height: '65px', objectFit: 'cover', borderRadius: '10px', border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB' }} />
-                      <label style={{ flex: 1, border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB', borderRadius: '10px', padding: '8px', backgroundColor: darkMode ? 'rgba(30,41,59,0.8)' : '#FFF', color: darkMode ? '#E2E8F0' : '#374151', fontSize: '11px', fontWeight: '800', cursor: 'pointer', textAlign: 'center' }}>
-                        <Plus size={12} style={{ verticalAlign: 'middle', marginRight: '4px' }} /> {t('importPhoto')}
-                        <input type="file" accept="image/*" onChange={handleImageFileUpload} style={{ display: 'none' }} />
-                      </label>
-                      <button type="button" onClick={() => setPostDraft(prev => ({ ...prev, gallery: [...(prev.gallery || [getSuggestedMedia(prev.title, prev.description, prev.imageUrl).image]), 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=800&q=80'] }))} style={{ flex: 1, border: darkMode ? '1px dashed rgba(255,255,255,0.3)' : '1px dashed #D1D5DB', borderRadius: '10px', padding: '8px', backgroundColor: darkMode ? 'rgba(15,23,42,0.5)' : '#F8FAFC', color: darkMode ? '#E2E8F0' : '#374151', fontSize: '11px', fontWeight: '800', cursor: 'pointer' }}>
-                        <Plus size={12} style={{ verticalAlign: 'middle', marginRight: '4px' }} /> {t('addPhoto')} ({(postDraft.gallery || []).length || 1})
-                      </button>
-                    </div>
-                  </div>
+                  {/* GRILLE VISUELLE DE PHOTOS LEBONCOIN (ÉTAPE 1) */}
+                  <PhotoGrid
+                    photos={postDraft.gallery && postDraft.gallery.length > 0 ? postDraft.gallery : (postDraft.imageUrl ? [postDraft.imageUrl] : [])}
+                    onAddPhoto={handlePhotoGridAdd}
+                    onRemovePhoto={handlePhotoGridRemove}
+                    onAutoGenerate={handlePhotoGridAutoGenerate}
+                    maxPhotos={8}
+                    darkMode={darkMode}
+                    t={t}
+                    currentLang={currentLang}
+                  />
 
                   {/* SECTION VIDÉO */}
                   <div>
@@ -6703,29 +6795,51 @@ export default function App() {
               </div>
             )}
 
-            {postStep === 4 && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                <div style={{ padding: '14px', borderRadius: '16px', backgroundColor: darkMode ? 'rgba(15,23,42,0.6)' : '#F8FAFC', border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E2E8F0' }}>
-                  <div style={{ fontSize: '11px', color: darkMode ? '#CBD5E1' : '#64748B', marginBottom: '6px' }}>{t('previewLabel')}</div>
-                  <img src={postDraft.imageUrl.trim() || getSuggestedImage(postDraft.title, postDraft.description)} alt="aperçu" style={{ width: '100%', height: '160px', objectFit: 'cover', borderRadius: '14px', marginBottom: '10px' }} />
-                  <div style={{ fontSize: '16px', fontWeight: '800', color: darkMode ? '#FFFFFF' : '#111827' }}>{postDraft.title || t('titleToBeDefined')}</div>
-                  <div style={{ fontSize: '12px', color: darkMode ? '#CBD5E1' : '#64748B', margin: '6px 0' }}>{postDraft.category === 'Cours & Compétences' ? t('catSkills') : postDraft.category === 'Prêt de Matériel' ? t('catTools') : postDraft.category === 'Services & Dépannage' ? t('catServices') : postDraft.category === 'Logement & Stay Swap' ? t('catHousing') : postDraft.category} • {postDraft.format === 'remote' ? t('remote') : t('onsite')}</div>
-                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '8px' }}>
-                    {((postDraft.tags && postDraft.tags.length > 0) ? postDraft.tags : (generateTags(postDraft.title, postDraft.description) || [])).map(tag => (
-                      <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: darkMode ? 'rgba(4,38,90,0.6)' : '#EFF6FF', color: darkMode ? '#93C5FD' : '#04265A', borderRadius: '999px', padding: '4px 9px', fontSize: '10px', fontWeight: '800' }}><Tag size={10} /> {tag}</span>
-                    ))}
-                  </div>
-                  <div style={{ fontSize: '13px', color: darkMode ? '#E2E8F0' : '#475569', lineHeight: 1.6 }}>{postDraft.description || t('addDescriptionConvincing')}</div>
-                  <div style={{ marginTop: '8px', fontSize: '12px', color: darkMode ? '#60A5FA' : '#04265A', fontWeight: '800' }}>{t('compensationLabel')} {postDraft.compensation === 'credits' ? t('timeCreditOption') : postDraft.compensation === 'cash' ? `${postDraft.price || '20'}€` : postDraft.compensation === 'hybrid' ? `${postDraft.price || '20'}€ + ${t('timeCreditOption')}` : t('directSwapOption')}</div>
-                  {postDraft.isUrgent && (
-                    <div style={{ marginTop: '8px', display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: darkMode ? 'rgba(127,29,29,0.3)' : '#FEF2F2', color: darkMode ? '#F87171' : '#B91C1C', fontSize: '11px', fontWeight: '800', padding: '5px 10px', borderRadius: '10px' }}>
-                      <Flame size={12} /> {t('priorityNotice')}
+            {postStep === 4 && (() => {
+              const currentPhotoList = postDraft.gallery && postDraft.gallery.length > 0
+                ? postDraft.gallery
+                : (postDraft.imageUrl ? [postDraft.imageUrl] : []);
+              const isEditingContentChanged = isEditingListing
+                ? ((postDraft.title || '').trim() !== (editingOriginalListing?.title || '') || (postDraft.description || '').trim() !== (editingOriginalListing?.description || ''))
+                : false;
+
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  {/* APERÇU DE L'ANNONCE */}
+                  <div style={{ padding: '14px', borderRadius: '16px', backgroundColor: darkMode ? 'rgba(15,23,42,0.6)' : '#F8FAFC', border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E2E8F0' }}>
+                    <div style={{ fontSize: '11px', color: darkMode ? '#CBD5E1' : '#64748B', marginBottom: '6px' }}>{t('previewLabel')}</div>
+                    <img src={postDraft.imageUrl.trim() || getSuggestedImage(postDraft.title, postDraft.description)} alt="aperçu" style={{ width: '100%', height: '160px', objectFit: 'cover', borderRadius: '14px', marginBottom: '10px' }} />
+                    <div style={{ fontSize: '16px', fontWeight: '800', color: darkMode ? '#FFFFFF' : '#111827' }}>{postDraft.title || t('titleToBeDefined')}</div>
+                    <div style={{ fontSize: '12px', color: darkMode ? '#CBD5E1' : '#64748B', margin: '6px 0' }}>{postDraft.category === 'Cours & Compétences' ? t('catSkills') : postDraft.category === 'Prêt de Matériel' ? t('catTools') : postDraft.category === 'Services & Dépannage' ? t('catServices') : postDraft.category === 'Logement & Stay Swap' ? t('catHousing') : postDraft.category} • {postDraft.format === 'remote' ? t('remote') : t('onsite')}</div>
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                      {((postDraft.tags && postDraft.tags.length > 0) ? postDraft.tags : (generateTags(postDraft.title, postDraft.description) || [])).map(tag => (
+                        <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: darkMode ? 'rgba(4,38,90,0.6)' : '#EFF6FF', color: darkMode ? '#93C5FD' : '#04265A', borderRadius: '999px', padding: '4px 9px', fontSize: '10px', fontWeight: '800' }}><Tag size={10} /> {tag}</span>
+                      ))}
                     </div>
-                  )}
+                    <div style={{ fontSize: '13px', color: darkMode ? '#E2E8F0' : '#475569', lineHeight: 1.6 }}>{postDraft.description || t('addDescriptionConvincing')}</div>
+                    <div style={{ marginTop: '8px', fontSize: '12px', color: darkMode ? '#60A5FA' : '#04265A', fontWeight: '800' }}>{t('compensationLabel')} {postDraft.compensation === 'credits' ? t('timeCreditOption') : postDraft.compensation === 'cash' ? `${postDraft.price || '20'}€` : postDraft.compensation === 'hybrid' ? `${postDraft.price || '20'}€ + ${t('timeCreditOption')}` : t('directSwapOption')}</div>
+                    {postDraft.isUrgent && (
+                      <div style={{ marginTop: '8px', display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: darkMode ? 'rgba(127,29,29,0.3)' : '#FEF2F2', color: darkMode ? '#F87171' : '#B91C1C', fontSize: '11px', fontWeight: '800', padding: '5px 10px', borderRadius: '10px' }}>
+                        <Flame size={12} /> {t('priorityNotice')}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* CALCULATEUR DE DEVIS & FACTURATION TVA (ÉTAPE 2) */}
+                  <InvoiceCalculator
+                    isUrgent={!!postDraft.isUrgent}
+                    photoCount={currentPhotoList.length}
+                    isEditing={isEditingListing}
+                    isEditingContentChanged={isEditingContentChanged}
+                    darkMode={darkMode}
+                    t={t}
+                    currentLang={currentLang}
+                  />
+
+                  <div style={{ fontSize: '13px', color: darkMode ? '#CBD5E1' : '#64748B' }}>{t('publishVisibilityNotice')}</div>
                 </div>
-                <div style={{ fontSize: '13px', color: darkMode ? '#CBD5E1' : '#64748B' }}>{t('publishVisibilityNotice')}</div>
-              </div>
-            )}
+              );
+            })()}
 
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '18px' }}>
               {postStep > 1 ? (
@@ -6733,13 +6847,34 @@ export default function App() {
               ) : <span />}
               {postStep < 4 ? (
                 <button onClick={() => setPostStep(prev => prev + 1)} className="premium-button" style={{ border: 'none', borderRadius: '999px', padding: '10px 16px', backgroundColor: darkMode ? '#60A5FA' : '#04265A', color: darkMode ? '#0F172A' : '#FFF', fontWeight: '800', cursor: 'pointer', boxShadow: '0 8px 18px rgba(4,38,90,0.2)' }}>{t('continueButton')}</button>
-              ) : (
-                <button onClick={handlePublishAnnouncement} className="premium-button" style={{ border: 'none', borderRadius: '999px', padding: '10px 16px', backgroundColor: darkMode ? '#60A5FA' : '#04265A', color: darkMode ? '#0F172A' : '#FFF', fontWeight: '800', cursor: 'pointer', boxShadow: '0 8px 18px rgba(4,38,90,0.2)' }}>
-                  {isEditingListing
-                    ? (currentLang === 'FR' ? 'Sauvegarder les modifications' : currentLang === 'EN' ? 'Save changes' : currentLang === 'ES' ? 'Guardar cambios' : currentLang === 'IT' ? 'Salva modifiche' : currentLang === 'DE' ? 'Änderungen speichern' : currentLang === 'JA' ? '変更を保存' : '保存更改')
-                    : t('publishAdButton')}
-                </button>
-              )}
+              ) : (() => {
+                const currentPhotoList = postDraft.gallery && postDraft.gallery.length > 0
+                  ? postDraft.gallery
+                  : (postDraft.imageUrl ? [postDraft.imageUrl] : []);
+                const isEditingContentChanged = isEditingListing
+                  ? ((postDraft.title || '').trim() !== (editingOriginalListing?.title || '') || (postDraft.description || '').trim() !== (editingOriginalListing?.description || ''))
+                  : false;
+                const quote = calculateListingInvoice({
+                  isUrgent: !!postDraft.isUrgent,
+                  photoCount: currentPhotoList.length,
+                  isEditing: isEditingListing,
+                  isEditingContentChanged: isEditingContentChanged,
+                });
+
+                const buttonLabel = isEditingListing
+                  ? (quote.totalTTC > 0
+                      ? (currentLang === 'FR' ? `Valider et payer ${quote.totalTTC.toFixed(2)} €` : `Confirm & Pay €${quote.totalTTC.toFixed(2)}`)
+                      : (currentLang === 'FR' ? 'Sauvegarder les modifications' : 'Save changes'))
+                  : (quote.totalTTC > 0
+                      ? (currentLang === 'FR' ? `Publier et payer ${quote.totalTTC.toFixed(2)} €` : `Publish & Pay €${quote.totalTTC.toFixed(2)}`)
+                      : t('publishAdButton'));
+
+                return (
+                  <button onClick={handlePublishAnnouncement} className="premium-button" style={{ border: 'none', borderRadius: '999px', padding: '10px 20px', backgroundColor: quote.totalTTC > 0 ? '#F59E0B' : (darkMode ? '#60A5FA' : '#04265A'), color: quote.totalTTC > 0 ? '#FFFFFF' : (darkMode ? '#0F172A' : '#FFF'), fontWeight: '800', cursor: 'pointer', boxShadow: '0 8px 18px rgba(4,38,90,0.2)' }}>
+                    {buttonLabel}
+                  </button>
+                );
+              })()}
             </div>
           </div>
         )}
@@ -8359,129 +8494,29 @@ export default function App() {
       )}
 
       {/* ---- BULLE FLOTTANTE PIP (PICTURE-IN-PICTURE & DRAG-AND-DROP AVEC POINTER EVENTS) ---- */}
-      {callState.active && isCallPip && (
-        <div
-          onPointerDown={handlePipPointerDown}
-          onPointerMove={handlePipPointerMove}
-          onPointerUp={handlePipPointerUp}
-          onPointerCancel={handlePipPointerCancel}
-          style={{
-            position: 'fixed',
-            left: `${pipPosition.x}px`,
-            top: `${pipPosition.y}px`,
-            width: '210px',
-            height: '145px',
-            zIndex: 3500,
-            borderRadius: '18px',
-            overflow: 'hidden',
-            boxShadow: '0 16px 40px rgba(0,0,0,0.6), 0 0 20px rgba(96,165,250,0.3)',
-            border: '2px solid #60A5FA',
-            backgroundColor: '#0F172A',
-            display: 'flex',
-            flexDirection: 'column',
-            userSelect: 'none',
-            WebkitUserSelect: 'none',
-            touchAction: 'none',
-            cursor: 'grab',
-          }}
-        >
-          {/* HEADER PIP DRAGGABLE */}
-          <div
-            style={{
-              padding: '6px 10px',
-              backgroundColor: 'rgba(15,23,42,0.85)',
-              backdropFilter: 'blur(10px)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              zIndex: 10,
-              borderBottom: '1px solid rgba(255,255,255,0.1)',
-              pointerEvents: 'none',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
-              <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#22C55E' }} />
-              <span style={{ color: '#FFF', fontSize: '11px', fontWeight: '800', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {selectedChat?.user || 'Appel'}
-              </span>
-            </div>
-            <span style={{ color: '#38BDF8', fontSize: '10px', fontWeight: '800' }}>
-              {formatCallTimer(callDuration)}
-            </span>
-          </div>
-
-          {/* CONTENU VIDÉO OU AVATAR DU PIP (AVEC DISTINCTION TAP VS DRAG) */}
-          <div
-            onClick={handlePipContentClick}
-            title="Cliquer pour agrandir en plein écran"
-            style={{ flex: 1, position: 'relative', overflow: 'hidden' }}
-          >
-            {callState.type === 'video' && (remoteStream || localStream) ? (
-              <video
-                ref={remoteStream ? attachRemoteStream : attachLocalStream}
-                autoPlay
-                playsInline
-                muted={!remoteStream}
-                style={{
-                  width: '100%', height: '100%', objectFit: 'cover',
-                  transform: (!remoteStream && facingMode === 'user') ? 'scaleX(-1)' : 'none',
-                }}
-              />
-            ) : (
-              <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', background: 'linear-gradient(135deg, #1E293B, #0F172A)' }}>
-                <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(135deg, #60A5FA, #04265A)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFF', fontWeight: '800', fontSize: '16px' }}>
-                  {(selectedChat?.user || 'T')[0]}
-                </div>
-                <span style={{ color: '#93C5FD', fontSize: '10px', fontWeight: '600' }}>En direct</span>
-              </div>
-            )}
-
-            {/* CONTRÔLES FLOTTANTS MINIATURES SUR LE PIP */}
-            <div
-              onPointerDown={(e) => e.stopPropagation()}
-              style={{
-                position: 'absolute', bottom: '6px', left: '6px', right: '6px',
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                zIndex: 10
-              }}
-            >
-              <button
-                onClick={(e) => { e.stopPropagation(); setIsCallPip(false); }}
-                title="Agrandir en plein écran"
-                style={{ border: 'none', width: '28px', height: '28px', borderRadius: '50%', backgroundColor: 'rgba(15,23,42,0.85)', color: '#60A5FA', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              >
-                <Maximize2 size={13} />
-              </button>
-
-              {hasMultipleCameras && callState.type === 'video' && callState.camOn && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); switchCamera(); }}
-                  title="Changer de caméra"
-                  style={{ border: 'none', width: '28px', height: '28px', borderRadius: '50%', backgroundColor: 'rgba(15,23,42,0.85)', color: '#38BDF8', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                >
-                  <SwitchCamera size={13} />
-                </button>
-              )}
-
-              <button
-                onClick={(e) => { e.stopPropagation(); toggleMic(); }}
-                title={callState.micOn ? "Couper micro" : "Activer micro"}
-                style={{ border: 'none', width: '28px', height: '28px', borderRadius: '50%', backgroundColor: callState.micOn ? 'rgba(15,23,42,0.85)' : '#EF4444', color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              >
-                {callState.micOn ? <Mic size={13} /> : <MicOff size={13} />}
-              </button>
-
-              <button
-                onClick={(e) => { e.stopPropagation(); endCall(); }}
-                title="Raccrocher"
-                style={{ border: 'none', width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#EF4444', color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              >
-                <PhoneOff size={13} />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <CallOverlay
+        callState={callState}
+        isCallPip={isCallPip}
+        setIsCallPip={setIsCallPip}
+        pipPosition={pipPosition}
+        handlePipPointerDown={handlePipPointerDown}
+        handlePipPointerMove={handlePipPointerMove}
+        handlePipPointerUp={handlePipPointerUp}
+        handlePipPointerCancel={handlePipPointerCancel}
+        handlePipContentClick={handlePipContentClick}
+        selectedChat={selectedChat}
+        callDuration={callDuration}
+        formatCallTimer={formatCallTimer}
+        remoteStream={remoteStream}
+        localStream={localStream}
+        facingMode={facingMode}
+        attachRemoteStream={attachRemoteStream}
+        attachLocalStream={attachLocalStream}
+        hasMultipleCameras={hasMultipleCameras}
+        switchCamera={switchCamera}
+        toggleMic={toggleMic}
+        endCall={endCall}
+      />
 
       {/* PANEL ADMINISTRATEUR & MODÉRATION (/admin) */}
       <AdminPanel
