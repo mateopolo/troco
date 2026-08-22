@@ -8729,7 +8729,7 @@ export default function App() {
           style={{
             position: 'fixed',
             inset: 0,
-            zIndex: 3000,
+            zIndex: 99999,
             backgroundColor: '#0F172A',
             display: 'flex',
             flexDirection: 'column',
