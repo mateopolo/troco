@@ -710,16 +710,6 @@ body.dark-mode .ad-card:hover {
   input, textarea, select {
     font-size: 16px !important;
   }
-
-  .mobile-chat-fullscreen-layer {
-    position: fixed !important;
-    left: 0 !important;
-    right: 0 !important;
-    width: 100vw !important;
-    z-index: 1000 !important;
-    border-radius: 0 !important;
-    overscroll-behavior: none;
-  }
 }
 
 
