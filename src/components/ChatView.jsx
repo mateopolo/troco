@@ -56,33 +56,17 @@ export default function ChatView({
   const [, setTranslationRevision] = useState(0);
   const messagesEndRef = useRef(null);
 
-  const [viewportMetrics, setViewportMetrics] = useState(() => {
-    if (typeof window !== 'undefined' && window.visualViewport) {
-      return {
-        height: window.visualViewport.height,
-        offsetTop: window.visualViewport.offsetTop
-      };
-    }
-    return { height: null, offsetTop: 0 };
-  });
-
-  // Écoute du Visual Viewport pour le clavier virtuel mobile (iOS Safari & Android)
+  // Auto-scroll des messages lors de l'ouverture du clavier mobile
   useEffect(() => {
     if (typeof window === 'undefined' || !window.visualViewport) return;
     const handleViewportUpdate = () => {
-      setViewportMetrics({
-        height: window.visualViewport.height,
-        offsetTop: window.visualViewport.offsetTop
-      });
       if (messagesEndRef.current) {
         messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
       }
     };
     window.visualViewport.addEventListener('resize', handleViewportUpdate);
-    window.visualViewport.addEventListener('scroll', handleViewportUpdate);
     return () => {
       window.visualViewport?.removeEventListener('resize', handleViewportUpdate);
-      window.visualViewport?.removeEventListener('scroll', handleViewportUpdate);
     };
   }, []);
 
@@ -613,25 +597,19 @@ export default function ChatView({
           <div
             className={isMobile ? "mobile-chat-fullscreen-layer" : ""}
             style={{
+              position: isMobile ? 'fixed' : 'relative',
+              inset: isMobile ? 0 : 'auto',
+              width: isMobile ? '100vw' : '100%',
+              height: isMobile ? '100dvh' : '100%',
+              maxHeight: isMobile ? '100dvh' : '100%',
+              zIndex: isMobile ? 9999 : 'auto',
               display: 'flex',
               flexDirection: 'column',
-              height: isMobile ? (viewportMetrics.height ? `${viewportMetrics.height}px` : '100dvh') : '100%',
-              minHeight: 0,
-              maxHeight: isMobile ? (viewportMetrics.height ? `${viewportMetrics.height}px` : '100dvh') : '100%',
-              borderRadius: isMobile ? '0' : '20px',
               overflow: 'hidden',
-              backgroundColor: darkMode ? 'rgba(30,41,59,0.85)' : 'rgba(255,255,255,0.85)',
-              backdropFilter: 'blur(16px)',
-              WebkitBackdropFilter: 'blur(16px)',
+              backgroundColor: darkMode ? '#0B1120' : '#FFFFFF',
+              borderRadius: isMobile ? '0' : '20px',
               border: isMobile ? 'none' : (darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E2E8F0'),
               boxShadow: isMobile ? 'none' : '0 10px 30px rgba(15,23,42,0.06)',
-              position: isMobile ? 'fixed' : 'relative',
-              top: isMobile ? `${viewportMetrics.offsetTop || 0}px` : 'auto',
-              left: isMobile ? 0 : 'auto',
-              right: isMobile ? 0 : 'auto',
-              bottom: isMobile ? 'auto' : 'auto',
-              width: isMobile ? '100vw' : '100%',
-              zIndex: isMobile ? 1000 : 'auto',
               boxSizing: 'border-box'
             }}
           >
@@ -1187,7 +1165,7 @@ export default function ChatView({
                 <div style={{
                   flexShrink: 0,
                   width: '100%',
-                  padding: isMobile ? '10px 14px max(12px, env(safe-area-inset-bottom, 12px)) 14px' : '10px 18px 14px',
+                  padding: isMobile ? '10px 14px max(14px, env(safe-area-inset-bottom, 14px)) 14px' : '10px 18px 14px',
                   backgroundColor: darkMode ? 'rgba(15,23,42,0.98)' : 'rgba(255,255,255,0.98)',
                   backdropFilter: 'blur(20px)',
                   WebkitBackdropFilter: 'blur(20px)',

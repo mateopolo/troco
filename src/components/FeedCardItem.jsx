@@ -179,8 +179,9 @@ export default function FeedCardItem({
         }
       }}
       onClick={() => handleOpenListing(item)}
-      onMouseEnter={() => setHoveredCardId(item.id)}
-      onMouseLeave={() => setHoveredCardId(null)}
+      onTouchStart={() => { if (setHoveredCardId) setHoveredCardId(item.id); }}
+      onMouseEnter={() => { if (setHoveredCardId) setHoveredCardId(item.id); }}
+      onMouseLeave={() => { if (setHoveredCardId) setHoveredCardId(null); }}
       className="premium-card reveal-card"
       style={{
         backgroundColor: darkMode ? 'rgba(30,41,59,0.85)' : '#FFFFFF',
