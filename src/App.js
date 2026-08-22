@@ -1359,6 +1359,33 @@ export default function App() {
     y: typeof window !== 'undefined' ? Math.max(10, window.innerHeight - 240) : 100
   });
 
+  // ---- MODE IMMERSION & TRANSPARENCE AUTOMATIQUE (INACTIVITÉ 5 SECONDES) ----
+  const [isCallInactive, setIsCallInactive] = useState(false);
+  const callInactivityTimerRef = useRef(null);
+
+  const resetCallInactivity = useCallback(() => {
+    setIsCallInactive(false);
+    if (callInactivityTimerRef.current) {
+      clearTimeout(callInactivityTimerRef.current);
+    }
+    callInactivityTimerRef.current = setTimeout(() => {
+      setIsCallInactive(true);
+    }, 5000);
+  }, []);
+
+  useEffect(() => {
+    if (callState?.active && !isCallPip) {
+      resetCallInactivity();
+      return () => {
+        if (callInactivityTimerRef.current) {
+          clearTimeout(callInactivityTimerRef.current);
+        }
+      };
+    } else {
+      setIsCallInactive(false);
+    }
+  }, [callState?.active, isCallPip, resetCallInactivity]);
+
   // Masquage automatique des commandes lors du lancement d'un partage d'écran pour 100% de visibilité
   useEffect(() => {
     if (callState?.isScreenSharing || callState?.remoteScreenSharing) {
@@ -7899,7 +7926,6 @@ export default function App() {
                 <span>Modifier l'annonce</span>
               </button>
 
-              {/* BOOSTER */}
               <button
                 onClick={() => {
                   const target = mobileListingActionTarget;
@@ -7918,7 +7944,6 @@ export default function App() {
                 <span>Booster l'annonce (Top visibilité)</span>
               </button>
 
-              {/* PAUSER / RÉACTIVER */}
               <button
                 onClick={() => {
                   const targetId = mobileListingActionTarget.id;
@@ -7937,7 +7962,6 @@ export default function App() {
                 <span>{mobileListingActionTarget.status === 'paused' ? 'Réactiver l\'annonce' : 'Mettre en pause'}</span>
               </button>
 
-              {/* SUPPRIMER */}
               <button
                 onClick={() => {
                   const targetId = mobileListingActionTarget.id;
@@ -8008,7 +8032,6 @@ export default function App() {
         </div>
       )}
 
-      {/* ---- BANDEAU APPEL ENTRANT (STATIQUE & ERGONOMIQUE SANS DÉCALAGE DE BOUTONS) ---- */}
       {incomingCall && !callState.active && (
         <div style={{
           position: 'fixed', top: '16px', left: '50%', transform: 'translateX(-50%)',
@@ -8065,21 +8088,27 @@ export default function App() {
 
       {/* ---- MODAL DE VISIO / APPEL PLEIN ÉCRAN (QUAND PAS EN MODE PIP) ---- */}
       {callState.active && !isCallPip && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          zIndex: 3000,
-          backgroundColor: '#0F172A',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          overflow: 'hidden',
-          animation: 'fadeSlideUp 0.3s ease both'
-        }}>
-          {/* FLUX PRINCIPAL CENTRAL (INVERSION SWAP-AWARE) */}
+        <div
+          onPointerDown={resetCallInactivity}
+          onPointerMove={resetCallInactivity}
+          onTouchStart={resetCallInactivity}
+          onClick={resetCallInactivity}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 3000,
+            backgroundColor: '#0F172A',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            overflow: 'hidden',
+            animation: 'fadeSlideUp 0.3s ease both',
+            userSelect: 'none',
+            WebkitUserSelect: 'none'
+          }}
+        >
           {!isSwapVideo ? (
-            /* Mode normal : flux distant au centre */
             callState.type === 'video' && remoteStream && !callState.ringing ? (
               <video
                 ref={attachRemoteStream}
@@ -8096,7 +8125,6 @@ export default function App() {
               />
             ) : null
           ) : (
-            /* Mode inversé (Swap) : flux local au centre (miroir uniquement si caméra frontale) */
             callState.type === 'video' && localStream && callState.camOn ? (
               <video
                 ref={attachLocalStream}
@@ -8116,38 +8144,63 @@ export default function App() {
             ) : null
           )}
 
-          {/* FLUX AUDIO WEBRTC INVISIBLE POUR CONTINUITÉ DU SON */}
           {remoteStream && (
             <audio ref={attachRemoteStream} autoPlay playsInline style={{ display: 'none' }} />
           )}
 
           <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(circle at 50% 40%, rgba(96,165,250,0.15) 0%, transparent 60%)', zIndex: 1 }} />
 
-          {/* BANDEAU SUPÉRIEUR AVEC CHRONOMÈTRE DE DEAL, SWAP & BOUTON RÉDUIRE PIP */}
+          {/* BANDEAU SUPÉRIEUR CENTRÉ (SUPPORT ENCOCHE / SAFE AREA & MODE IMMERSION) */}
           <div style={{
-            position: 'absolute', top: '24px', left: '24px', right: '24px',
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            zIndex: 20
+            position: 'fixed',
+            top: 'max(16px, env(safe-area-inset-top, 16px))',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: 'calc(100% - 32px)',
+            maxWidth: '680px',
+            zIndex: 50,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            boxSizing: 'border-box',
+            paddingLeft: 'max(0px, env(safe-area-inset-left, 0px))',
+            paddingRight: 'max(0px, env(safe-area-inset-right, 0px))',
+            transition: 'all 500ms cubic-bezier(0.22, 1, 0.36, 1)',
+            opacity: isCallInactive ? 0.35 : 1,
+            pointerEvents: isCallInactive ? 'none' : 'auto'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', backgroundColor: 'rgba(15,23,42,0.75)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', padding: '8px 16px', borderRadius: '999px', border: '1px solid rgba(255,255,255,0.12)' }}>
-              <img src={getAuthorAvatar(selectedChat?.user || 'Thomas G.')} alt={selectedChat?.user || 'Thomas G.'} style={{ width: '32px', height: '32px', borderRadius: '50%', border: '2px solid #60A5FA' }} />
-              <div>
-                <div style={{ color: '#FFFFFF', fontSize: '13px', fontWeight: '800' }}>{selectedChat?.user || 'Thomas G.'}</div>
-                <div style={{ color: '#60A5FA', fontSize: '11px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              backgroundColor: isCallInactive ? 'transparent' : 'rgba(15,23,42,0.78)',
+              backdropFilter: isCallInactive ? 'none' : 'blur(16px)',
+              WebkitBackdropFilter: isCallInactive ? 'none' : 'blur(16px)',
+              padding: '8px 14px',
+              borderRadius: '999px',
+              border: isCallInactive ? '1px solid transparent' : '1px solid rgba(255,255,255,0.12)',
+              transition: 'all 500ms cubic-bezier(0.22, 1, 0.36, 1)',
+              boxShadow: isCallInactive ? 'none' : '0 10px 30px rgba(0,0,0,0.3)',
+              minWidth: 0,
+              overflow: 'hidden'
+            }}>
+              <img src={getAuthorAvatar(selectedChat?.user || 'Thomas G.')} alt={selectedChat?.user || 'Thomas G.'} style={{ width: '30px', height: '30px', borderRadius: '50%', border: '2px solid #60A5FA', flexShrink: 0 }} />
+              <div style={{ minWidth: 0 }}>
+                <div style={{ color: '#FFFFFF', fontSize: '12.5px', fontWeight: '800', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{selectedChat?.user || 'Thomas G.'}</div>
+                <div style={{ color: '#60A5FA', fontSize: '10.5px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}>
                   {callState.type === 'video' ? <Video size={11} /> : <Phone size={11} />}
-                  <span>{callState.type === 'video' ? 'Appel vidéo en direct' : 'Appel audio HD'}</span>
+                  <span>{callState.type === 'video' ? 'Appel vidéo' : 'Appel audio'}</span>
                 </div>
               </div>
-              {/* CHRONOMÈTRE DE DEAL (1H = 1 JETON TROCO) & BOUTON RÉTRIBUTION DIRECTE */}
               {!callState.ringing && (
                 <div style={{
-                  marginLeft: '8px', paddingLeft: '12px', borderLeft: '1px solid rgba(255,255,255,0.15)',
-                  display: 'flex', alignItems: 'center', gap: '8px'
+                  marginLeft: '6px', paddingLeft: '10px', borderLeft: isCallInactive ? '1px solid transparent' : '1px solid rgba(255,255,255,0.15)',
+                  display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0
                 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#38BDF8', fontSize: '12px', fontWeight: '800' }}>
-                    <Clock size={13} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#38BDF8', fontSize: '11.5px', fontWeight: '800' }}>
+                    <Clock size={12} />
                     <span>{formatCallTimer(callDuration)}</span>
-                    <span style={{ fontSize: '10px', color: '#94A3B8', fontWeight: '600' }}>
+                    <span style={{ fontSize: '9.5px', color: '#94A3B8', fontWeight: '600' }}>
                       (🪙 {(callDuration / 3600).toFixed(2)})
                     </span>
                   </div>
@@ -8162,9 +8215,9 @@ export default function App() {
                       border: '1px solid rgba(245,158,11,0.5)',
                       backgroundColor: 'rgba(245,158,11,0.25)',
                       color: '#FDE68A',
-                      padding: '3px 9px',
+                      padding: '3px 8px',
                       borderRadius: '999px',
-                      fontSize: '11px',
+                      fontSize: '10.5px',
                       fontWeight: '800',
                       cursor: 'pointer',
                       display: 'flex',
@@ -8179,104 +8232,97 @@ export default function App() {
                 </div>
               )}
 
-              {/* BADGE RECONNEXION / PARTICIPANT ATTENTE (MODE TEAMS / SALLE OUVERTE) */}
               {callState.isReconnecting && (
                 <div style={{
-                  marginLeft: '8px', padding: '4px 10px',
+                  marginLeft: '6px', padding: '3px 8px',
                   backgroundColor: 'rgba(245,158,11,0.25)', border: '1px solid #F59E0B',
-                  color: '#FDE68A', borderRadius: '999px', fontSize: '11px', fontWeight: '800',
-                  display: 'flex', alignItems: 'center', gap: '5px', animation: 'notifPulse 1.5s infinite'
+                  color: '#FDE68A', borderRadius: '999px', fontSize: '10.5px', fontWeight: '800',
+                  display: 'flex', alignItems: 'center', gap: '4px', animation: 'notifPulse 1.5s infinite',
+                  flexShrink: 0
                 }}>
                   <span>🔄 Reconnexion...</span>
                 </div>
               )}
 
-              {/* BADGE PARTAGE D'ÉCRAN ACTIF */}
               {callState.isScreenSharing && (
                 <div style={{
-                  marginLeft: '8px', padding: '4px 10px',
+                  marginLeft: '6px', padding: '3px 8px',
                   backgroundColor: 'rgba(16,185,129,0.25)', border: '1px solid #10B981',
-                  color: '#6EE7B7', borderRadius: '999px', fontSize: '11px', fontWeight: '800',
-                  display: 'flex', alignItems: 'center', gap: '5px', boxShadow: '0 0 12px rgba(16,185,129,0.3)'
+                  color: '#6EE7B7', borderRadius: '999px', fontSize: '10.5px', fontWeight: '800',
+                  display: 'flex', alignItems: 'center', gap: '4px', boxShadow: '0 0 12px rgba(16,185,129,0.3)',
+                  flexShrink: 0
                 }}>
-                  <Monitor size={12} />
+                  <Monitor size={11} />
                   <span>Partage actif</span>
                 </div>
               )}
 
-              {/* BADGE PROFESSEUR / HÔTE DE SESSION */}
               {isTeacher && (
                 <div style={{
-                  marginLeft: '8px', padding: '4px 10px',
+                  marginLeft: '6px', padding: '3px 8px',
                   backgroundColor: 'rgba(245,158,11,0.25)', border: '1px solid #F59E0B',
-                  color: '#FDE68A', borderRadius: '999px', fontSize: '11px', fontWeight: '800',
-                  display: 'flex', alignItems: 'center', gap: '5px', boxShadow: '0 0 12px rgba(245,158,11,0.3)'
+                  color: '#FDE68A', borderRadius: '999px', fontSize: '10.5px', fontWeight: '800',
+                  display: 'flex', alignItems: 'center', gap: '4px', boxShadow: '0 0 12px rgba(245,158,11,0.3)',
+                  flexShrink: 0
                 }}>
-                  <Crown size={12} color="#F59E0B" />
-                  <span>Professeur / Hôte</span>
+                  <Crown size={11} color="#F59E0B" />
+                  <span>Hôte</span>
                 </div>
               )}
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              {/* BOUTON SWAP DES CAMÉRAS */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
               {callState.type === 'video' && (
                 <button
                   onClick={() => setIsSwapVideo(s => !s)}
                   title={isSwapVideo ? "Afficher l'interlocuteur en grand" : "M'afficher en grand"}
                   style={{
-                    border: 'none', width: '42px', height: '42px', borderRadius: '50%',
-                    backgroundColor: isSwapVideo ? 'rgba(96,165,250,0.3)' : 'rgba(255,255,255,0.15)',
-                    backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+                    border: '1px solid rgba(255,255,255,0.15)', width: '38px', height: '38px', borderRadius: '50%',
+                    backgroundColor: isSwapVideo ? 'rgba(96,165,250,0.35)' : 'rgba(15,23,42,0.75)',
+                    backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)',
                     color: isSwapVideo ? '#60A5FA' : '#FFF',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     cursor: 'pointer', transition: 'all 0.2s ease'
                   }}
                 >
-                  <Repeat size={18} />
+                  <Repeat size={16} />
                 </button>
               )}
 
-              {/* BOUTON RÉDUIRE EN MODE PIP */}
               <button
                 onClick={() => setIsCallPip(true)}
                 title="Réduire en bulle flottante (PiP)"
                 style={{
-                  border: 'none', width: '42px', height: '42px', borderRadius: '50%',
-                  backgroundColor: 'rgba(255,255,255,0.15)', backdropFilter: 'blur(8px)',
-                  WebkitBackdropFilter: 'blur(8px)', color: '#FFF',
+                  border: '1px solid rgba(255,255,255,0.15)', width: '38px', height: '38px', borderRadius: '50%',
+                  backgroundColor: 'rgba(15,23,42,0.75)', backdropFilter: 'blur(10px)',
+                  WebkitBackdropFilter: 'blur(10px)', color: '#FFF',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   cursor: 'pointer', transition: 'all 0.2s ease'
                 }}
               >
-                <Minimize2 size={18} />
+                <Minimize2 size={16} />
               </button>
 
-              {/* BOUTON QUITTER / RACCROCHER */}
               <button
                 onClick={endCall}
                 title="Quitter l'appel"
                 style={{
-                  border: 'none', width: '42px', height: '42px', borderRadius: '50%',
-                  backgroundColor: 'rgba(239,68,68,0.25)', backdropFilter: 'blur(8px)',
-                  WebkitBackdropFilter: 'blur(8px)', color: '#F87171',
+                  border: '1px solid rgba(239,68,68,0.4)', width: '38px', height: '38px', borderRadius: '50%',
+                  backgroundColor: 'rgba(239,68,68,0.3)', backdropFilter: 'blur(10px)',
+                  WebkitBackdropFilter: 'blur(10px)', color: '#F87171',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   cursor: 'pointer', transition: 'all 0.2s ease'
                 }}
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
           </div>
 
-          {/* SONNERIE / EN TRAIN D'APPELER — overlay animé centré */}
           {callState.ringing && (
             <div style={{
               position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
+              top: 0, left: 0, right: 0, bottom: 0,
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
@@ -8301,193 +8347,114 @@ export default function App() {
                 ))}
                 <img
                   src={getAuthorAvatar(selectedChat?.user || 'Thomas G.')}
-                  alt={selectedChat?.user || 'Interlocuteur'}
+                  alt={selectedChat?.user || 'Thomas G.'}
+                  style={{
+                    width: '110px',
+                    height: '110px',
+                    borderRadius: '50%',
+                    objectFit: 'cover',
+                    border: '3px solid #60A5FA',
+                    boxShadow: '0 0 30px rgba(96,165,250,0.5)',
+                    position: 'relative',
+                    zIndex: 2,
+                  }}
+                />
+              </div>
+
+              <div style={{ textAlign: 'center' }}>
+                <h3 style={{ color: '#FFFFFF', fontSize: '20px', fontWeight: '800', margin: '0 0 6px 0' }}>
+                  {selectedChat?.user || 'Thomas G.'}
+                </h3>
+                <p style={{ color: '#93C5FD', fontSize: '13px', margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                  <Sparkles size={14} />
+                  <span>{callState.type === 'video' ? 'Appel vidéo en cours...' : 'Appel vocal HD en cours...'}</span>
+                </p>
+              </div>
+            </div>
+          )}
+
+          {(!remoteStream || callState.type === 'audio' || isSwapVideo) && !callState.ringing && (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', zIndex: 10 }}>
+              <div style={{ position: 'relative' }}>
+                <img
+                  src={isSwapVideo ? profile.avatar : getAuthorAvatar(selectedChat?.user || 'Thomas G.')}
+                  alt={isSwapVideo ? profile.name : (selectedChat?.user || 'Thomas G.')}
                   style={{
                     width: '120px',
                     height: '120px',
                     borderRadius: '50%',
-                    objectFit: 'cover',
-                    border: '3px solid #60A5FA',
-                    boxShadow: '0 0 50px rgba(96,165,250,0.55)',
-                    zIndex: 2
-                  }}
-                />
-              </div>
-              <div style={{ color: '#FFFFFF', fontSize: '22px', fontWeight: '800', textAlign: 'center', zIndex: 2, marginTop: '8px' }}>
-                {selectedChat?.user || 'Interlocuteur'}
-              </div>
-              <div style={{ color: '#93C5FD', fontSize: '14px', fontWeight: '700', zIndex: 2, display: 'inline-flex', alignItems: 'center', gap: '8px', backgroundColor: 'rgba(15,23,42,0.85)', padding: '7px 18px', borderRadius: '999px', border: '1px solid rgba(255,255,255,0.12)' }}>
-                <span style={{ display: 'inline-block', animation: 'notifPulse 1s ease-in-out infinite' }}>📞</span>
-                {callState.type === 'video' ? 'Appel vidéo en cours...' : 'Appel audio en cours...'}
-              </div>
-            </div>
-          )}
-
-          {/* FALLBACK VISUEL : QUAND LA CAMÉRA EST COUPÉE OU EN APPEL AUDIO (PARFAITEMENT CENTRÉ) */}
-          {((!isSwapVideo && (!remoteStream || callState.type !== 'video')) || (isSwapVideo && (!localStream || !callState.camOn))) && !callState.ringing && (
-            <div style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '16px',
-              zIndex: 10,
-              pointerEvents: 'none',
-              padding: '20px',
-              boxSizing: 'border-box'
-            }}>
-              <div style={{
-                position: 'relative',
-                width: '140px',
-                height: '140px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <img
-                  src={!isSwapVideo ? getAuthorAvatar(selectedChat?.user || 'Thomas G.') : (profile.avatar || getAuthorAvatar(profile.name))}
-                  alt="Avatar"
-                  style={{
-                    width: '140px',
-                    height: '140px',
-                    borderRadius: '50%',
-                    objectFit: 'cover',
-                    border: '3px solid #60A5FA',
-                    boxShadow: '0 0 60px rgba(96,165,250,0.45)'
+                    border: '4px solid #60A5FA',
+                    boxShadow: '0 0 40px rgba(96, 165, 250, 0.4)',
+                    objectFit: 'cover'
                   }}
                 />
                 <div style={{
-                  position: 'absolute',
-                  bottom: '4px',
-                  right: '4px',
-                  width: '34px',
-                  height: '34px',
-                  borderRadius: '50%',
-                  backgroundColor: '#EF4444',
-                  border: '3px solid #0F172A',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#FFF',
-                  boxShadow: '0 2px 10px rgba(239,68,68,0.5)'
-                }}>
-                  <VideoOff size={16} />
-                </div>
+                  position: 'absolute', bottom: '6px', right: '6px',
+                  width: '18px', height: '18px', borderRadius: '50%',
+                  backgroundColor: '#10B981', border: '3px solid #0F172A',
+                  boxShadow: '0 0 10px #10B981'
+                }} />
               </div>
-              <div style={{ color: '#FFFFFF', fontSize: '22px', fontWeight: '800', textAlign: 'center' }}>
-                {!isSwapVideo ? (selectedChat?.user || 'Thomas G.') : profile.name}
-              </div>
-              <div style={{ color: '#93C5FD', fontSize: '13px', fontWeight: '600', backgroundColor: 'rgba(15,23,42,0.85)', padding: '7px 18px', borderRadius: '999px', border: '1px solid rgba(255,255,255,0.12)' }}>
-                {!isSwapVideo ? "Caméra de l'interlocuteur désactivée" : 'Votre caméra est désactivée'}
+              <div style={{ textAlign: 'center' }}>
+                <h2 style={{ color: '#FFFFFF', fontSize: '22px', fontWeight: '800', margin: '0 0 4px 0' }}>
+                  {isSwapVideo ? `${profile.name} (Vous)` : (selectedChat?.user || 'Thomas G.')}
+                </h2>
+                <span style={{ color: '#94A3B8', fontSize: '13px', fontWeight: '600' }}>
+                  {callState.type === 'video' ? (isSwapVideo ? "Flux local en plein écran" : "Caméra distante désactivée") : "Appel audio sécurisé WebRTC"}
+                </span>
               </div>
             </div>
           )}
 
-          {/* VIGNETTE EN COIN (FLUX SECONDAIRE SWAP-AWARE AVEC CLIC POUR INVERSER) */}
-          {callState.type === 'video' && (
-            <div
-              onClick={() => setIsSwapVideo(s => !s)}
-              title="Cliquer pour inverser les vues"
-              style={{
-                position: 'absolute', bottom: '120px', right: '20px',
-                width: localZoom ? '220px' : '150px',
-                height: localZoom ? '150px' : '105px',
-                borderRadius: '20px', overflow: 'hidden',
-                border: '2px solid #60A5FA',
-                boxShadow: '0 16px 40px rgba(0,0,0,0.6)',
-                zIndex: 20, backgroundColor: '#0F172A',
-                cursor: 'pointer',
-                transition: 'all 0.3s cubic-bezier(0.22, 1, 0.36, 1)'
-              }}
+          {!isSwapVideo && callState.type === 'video' && localStream && callState.camOn && !callState.ringing && (
+            <div style={{
+              position: 'fixed',
+              top: 'max(80px, calc(env(safe-area-inset-top, 16px) + 60px))',
+              right: 'max(16px, env(safe-area-inset-right, 16px))',
+              width: '110px',
+              height: '150px',
+              borderRadius: '18px',
+              overflow: 'hidden',
+              border: '2px solid rgba(255,255,255,0.25)',
+              boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+              backgroundColor: '#1E293B',
+              zIndex: 30,
+              cursor: 'pointer',
+              transition: 'all 500ms cubic-bezier(0.22, 1, 0.36, 1)',
+              opacity: isCallInactive ? 0.5 : 1
+            }}
+            onClick={() => setIsSwapVideo(true)}
+            title="Cliquer pour m'afficher en grand"
             >
-              {/* Vignette normale = flux local (miroir uniquement si caméra avant) */}
-              {!isSwapVideo ? (
-                callState.camOn && localStream ? (
-                  <video
-                    ref={attachLocalStream}
-                    muted
-                    playsInline
-                    autoPlay
-                    style={{
-                      width: '100%', height: '100%', objectFit: 'cover',
-                      transform: facingMode === 'user'
-                        ? (localZoom ? 'scaleX(-1) scale(1.6)' : 'scaleX(-1) scale(1.0)')
-                        : (localZoom ? 'scale(1.6)' : 'scale(1.0)'),
-                      transition: 'transform 0.3s ease'
-                    }}
-                  />
-                ) : (
-                  <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', backgroundColor: '#1E293B', color: '#94A3B8' }}>
-                    <VideoOff size={18} color="#EF4444" />
-                    <span style={{ fontSize: '10px', fontWeight: '700' }}>Caméra off</span>
-                  </div>
-                )
-              ) : (
-                /* Vignette inversée = flux distant */
-                remoteStream ? (
-                  <video
-                    ref={attachRemoteStream}
-                    playsInline
-                    autoPlay
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  />
-                ) : (
-                  <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', backgroundColor: '#1E293B', color: '#94A3B8' }}>
-                    <VideoOff size={18} color="#EF4444" />
-                    <span style={{ fontSize: '10px', fontWeight: '700' }}>Caméra off</span>
-                  </div>
-                )
-              )}
-
-              {/* Boutons sur la vignette */}
-              <div style={{ position: 'absolute', bottom: '6px', right: '6px', display: 'flex', gap: '4px' }}>
-                {hasMultipleCameras && callState.camOn && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); switchCamera(); }}
-                    title={facingMode === 'user' ? "Caméra arrière" : "Caméra avant"}
-                    style={{ border: 'none', borderRadius: '50%', width: '24px', height: '24px', backgroundColor: 'rgba(15,23,42,0.85)', color: '#38BDF8', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}
-                  >
-                    <SwitchCamera size={12} />
-                  </button>
-                )}
-                <button
-                  onClick={(e) => { e.stopPropagation(); setLocalZoom(z => !z); }}
-                  title={localZoom ? "Zoom arrière" : "Zoom caméra"}
-                  style={{ border: 'none', borderRadius: '50%', width: '24px', height: '24px', backgroundColor: 'rgba(15,23,42,0.85)', color: '#60A5FA', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}
-                >
-                  {localZoom ? <ZoomOut size={12} /> : <ZoomIn size={12} />}
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); setIsSwapVideo(s => !s); }}
-                  title="Inverser les caméras"
-                  style={{ border: 'none', borderRadius: '50%', width: '24px', height: '24px', backgroundColor: 'rgba(15,23,42,0.85)', color: '#60A5FA', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}
-                >
-                  <Repeat size={12} />
-                </button>
+              <video
+                ref={attachLocalStream}
+                muted
+                autoPlay
+                playsInline
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'cover',
+                  transform: facingMode === 'user' ? 'scaleX(-1)' : 'none'
+                }}
+              />
+              <div style={{
+                position: 'absolute', bottom: '6px', left: '6px',
+                backgroundColor: 'rgba(15,23,42,0.75)', padding: '2px 6px',
+                borderRadius: '6px', color: '#FFF', fontSize: '9px', fontWeight: '700'
+              }}>
+                Moi
               </div>
             </div>
           )}
 
-          {/* NOTIFICATION D'INVITATION COPIÉE */}
-          {callState.copied && (
-            <div style={{ position: 'absolute', bottom: '100px', left: '50%', transform: 'translateX(-50%)', backgroundColor: '#04265A', color: '#FFF', padding: '8px 18px', borderRadius: '999px', fontSize: '12px', fontWeight: '700', boxShadow: '0 6px 20px rgba(4,38,90,0.5)', zIndex: 60 }}>
-              Lien d'invitation copié !
-            </div>
-          )}
-
-          {/* BOUTON FLOTTANT DISCRET : RÉAFFICHER LES COMMANDES EN MODE IMMERSION */}
           {!showCallControls && (
             <button
               onClick={() => setShowCallControls(true)}
               className="premium-button"
               style={{
-                position: 'absolute',
-                bottom: '24px',
+                position: 'fixed',
+                bottom: 'max(24px, env(safe-area-inset-bottom, 24px))',
                 left: '50%',
                 transform: 'translateX(-50%)',
                 backgroundColor: 'rgba(15, 23, 42, 0.82)',
@@ -8504,7 +8471,7 @@ export default function App() {
                 alignItems: 'center',
                 gap: '8px',
                 boxShadow: '0 8px 24px rgba(0,0,0,0.5), 0 0 16px rgba(96,165,250,0.25)',
-                zIndex: 100,
+                zIndex: 50,
                 animation: 'fadeSlideUp 0.25s ease both'
               }}
             >
@@ -8514,18 +8481,34 @@ export default function App() {
             </button>
           )}
 
-          {/* BARRE DE CONTRÔLES PRINCIPALE RESPONSIVE (MOBILE 2 LIGNES / DESKTOP PILULE) */}
           {showCallControls && (
             <div style={{
-              position: 'absolute', bottom: '24px', left: '50%', transform: 'translateX(-50%)',
-              backgroundColor: 'rgba(15, 23, 42, 0.88)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-              padding: '12px 18px', borderRadius: '26px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px',
-              border: '1px solid rgba(255,255,255,0.14)', boxShadow: '0 20px 50px rgba(0,0,0,0.6), 0 0 30px rgba(96,165,250,0.15)',
-              zIndex: 100, width: 'calc(100% - 32px)', maxWidth: '460px', boxSizing: 'border-box',
-              animation: 'fadeSlideUp 0.25s ease both'
+              position: 'fixed',
+              bottom: 'max(20px, env(safe-area-inset-bottom, 20px))',
+              left: '50%',
+              transform: isCallInactive ? 'translateX(-50%) translateY(8px)' : 'translateX(-50%) translateY(0)',
+              backgroundColor: isCallInactive ? 'rgba(15, 23, 42, 0.45)' : 'rgba(15, 23, 42, 0.90)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              padding: '10px 16px',
+              borderRadius: '26px',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              border: '1px solid rgba(255,255,255,0.14)',
+              boxShadow: '0 20px 50px rgba(0,0,0,0.6), 0 0 30px rgba(96,165,250,0.15)',
+              zIndex: 50,
+              width: 'auto',
+              maxWidth: 'calc(100% - 32px)',
+              boxSizing: 'border-box',
+              opacity: isCallInactive ? 0.28 : 1,
+              transition: 'all 500ms cubic-bezier(0.22, 1, 0.36, 1)',
+              animation: 'fadeSlideUp 0.25s ease both',
+              margin: '0 auto',
             }}>
-              {/* LIGNE 1 : CONTRÔLES FLUX & MÉDIAS */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', flexWrap: 'wrap', width: '100%' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', flexWrap: 'wrap', width: '100%' }}>
                 <button
                   onClick={toggleMic}
                   title={callState.micOn ? "Couper le micro" : "Activer le micro"}
