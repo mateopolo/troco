@@ -595,26 +595,17 @@ export default function ChatView({
         {/* SALLE DE CONVERSATION (Visible sur Desktop ou sur Mobile en sous-vue 'room') */}
         {(!isMobile || mobileSubView === 'room') && (
           <div style={{
-            position: isMobile ? 'fixed' : 'relative',
-            inset: isMobile ? 0 : 'auto',
-            top: isMobile ? 0 : 'auto',
-            left: isMobile ? 0 : 'auto',
-            right: isMobile ? 0 : 'auto',
-            bottom: isMobile ? 0 : 'auto',
-            width: isMobile ? '100vw' : '100%',
-            height: isMobile ? '100dvh' : '100%',
-            maxHeight: isMobile ? '100dvh' : 'none',
-            zIndex: isMobile ? 9999 : 'auto',
-            backgroundColor: darkMode ? '#0A0F1D' : '#F8FAFC',
-            backdropFilter: isMobile ? 'none' : 'blur(24px)',
-            WebkitBackdropFilter: isMobile ? 'none' : 'blur(24px)',
+            backgroundColor: darkMode ? 'rgba(30, 41, 59, 0.94)' : 'rgba(255,255,255,0.94)',
+            backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
             borderRadius: isMobile ? '0' : '24px',
             border: isMobile ? 'none' : (darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(229,231,235,0.9)'),
             boxShadow: isMobile ? 'none' : '0 10px 30px rgba(15,23,42,0.06)',
-            display: 'flex',
-            flexDirection: 'column',
+            display: 'flex', flexDirection: 'column',
+            height: '100%',
+            width: '100%',
             boxSizing: 'border-box',
             overflow: 'hidden',
+            position: 'relative'
           }}>
             {!activeChatObj ? (
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', padding: '40px 20px', textAlign: 'center' }}>
@@ -628,23 +619,15 @@ export default function ChatView({
               </div>
             ) : (
               <>
-                {/* 1. EN-TÊTE STATIQUE DU CHAT (SAFE AREA TOP) */}
+                {/* 1. EN-TÊTE STATIQUE DU CHAT */}
                 <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  padding: isMobile
-                    ? 'max(10px, env(safe-area-inset-top, 10px)) 16px 10px 16px'
-                    : '12px 18px',
-                  borderBottom: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid #E2E8F0',
-                  backgroundColor: darkMode ? '#0A0F1D' : '#FFFFFF',
-                  gap: '8px',
-                  flexShrink: 0,
-                  zIndex: 30,
-                  width: '100%',
-                  boxSizing: 'border-box',
-                  minHeight: isMobile ? '60px' : '56px',
-                  height: isMobile ? 'auto' : '56px',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  padding: isMobile ? '10px 12px' : '12px 18px',
+                  borderBottom: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E2E8F0',
+                  backgroundColor: darkMode ? 'rgba(30, 41, 59, 0.98)' : 'rgba(255,255,255,0.98)',
+                  backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+                  gap: '8px', flexShrink: 0, zIndex: 30, width: '100%', boxSizing: 'border-box',
+                  minHeight: '56px'
                 }}>
                   {/* Partie Gauche : Retour (Mobile) + Avatar + Nom + Annonce */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
@@ -655,20 +638,16 @@ export default function ChatView({
                         style={{
                           border: 'none',
                           borderRadius: '50%',
-                          width: '38px',
-                          height: '38px',
-                          backgroundColor: darkMode ? 'rgba(255,255,255,0.12)' : '#EFF6FF',
+                          width: '34px',
+                          height: '34px',
+                          backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : '#EFF6FF',
                           color: darkMode ? '#60A5FA' : '#04265A',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          cursor: 'pointer',
-                          flexShrink: 0,
-                          padding: 0
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          cursor: 'pointer', flexShrink: 0
                         }}
                         title="Retour aux discussions"
                       >
-                        <ChevronLeft size={22} />
+                        <ChevronLeft size={20} />
                       </button>
                     )}
                     <div style={{ position: 'relative', width: '36px', height: '36px', flexShrink: 0 }}>
@@ -978,6 +957,7 @@ export default function ChatView({
 
                       const isMe = msg.sender === 'me';
                       const isMenuOpen = activeMenuMsgId === msg.id;
+                      const timeString = formatMsgTime(msg.timestamp || msg.createdAt || msg.id);
 
                       return (
                         <div
@@ -987,20 +967,64 @@ export default function ChatView({
                             flexDirection: 'column',
                             alignItems: isMe ? 'flex-end' : 'flex-start',
                             width: '100%',
-                            position: 'relative',
+                            position: 'relative'
                           }}
                         >
                           <div
-                            className="msg-bubble-wrapper"
                             style={{
                               display: 'flex',
                               alignItems: 'center',
-                              gap: '6px',
-                              flexDirection: isMe ? 'row' : 'row-reverse',
-                              maxWidth: isMobile ? '88%' : '78%',
-                              position: 'relative',
+                              gap: '4px',
+                              flexDirection: isMe ? 'row-reverse' : 'row',
+                              maxWidth: isMobile ? '88%' : '76%',
+                              position: 'relative'
                             }}
                           >
+                            <div
+                              style={{
+                                padding: '10px 14px',
+                                borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+                                backgroundColor: isMe
+                                  ? (darkMode ? '#3B82F6' : '#04265A')
+                                  : (darkMode ? 'rgba(30, 41, 59, 0.95)' : '#F1F5F9'),
+                                color: isMe
+                                  ? '#FFFFFF'
+                                  : (darkMode ? '#F8FAFC' : '#0F172A'),
+                                border: isMe
+                                  ? 'none'
+                                  : (darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(226,232,240,0.8)'),
+                                boxShadow: isMe
+                                  ? '0 4px 14px rgba(4,38,90,0.2)'
+                                  : '0 2px 8px rgba(15,23,42,0.04)',
+                                wordBreak: 'break-word',
+                                position: 'relative',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '4px'
+                              }}
+                            >
+                              <div style={{ fontSize: '13.5px', lineHeight: 1.45, fontWeight: '500' }}>
+                                {translatedText}
+                              </div>
+
+                              <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: isMe ? 'flex-end' : 'flex-start',
+                                gap: '6px',
+                                marginTop: '2px'
+                              }}>
+                                <span style={{
+                                  fontSize: '9.5px',
+                                  color: isMe ? 'rgba(255,255,255,0.75)' : (darkMode ? '#94A3B8' : '#64748B'),
+                                  fontWeight: '600'
+                                }}>
+                                  {timeString}
+                                </span>
+                                {isMe && renderMessageStatus(msg)}
+                              </div>
+                            </div>
+
                             {/* BOUTON D'ACTIONS DU MESSAGE */}
                             <div className="msg-action-menu-container" style={{ position: 'relative' }}>
                               <button
@@ -1008,20 +1032,13 @@ export default function ChatView({
                                   e.stopPropagation();
                                   setActiveMenuMsgId(isMenuOpen ? null : msg.id);
                                 }}
+                                className="msg-hover-btn"
                                 style={{
-                                  border: 'none',
-                                  background: 'none',
+                                  border: 'none', background: 'none', cursor: 'pointer',
+                                  padding: '4px', borderRadius: '50%',
                                   color: darkMode ? '#94A3B8' : '#64748B',
-                                  cursor: 'pointer',
-                                  padding: '4px',
-                                  borderRadius: '50%',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  opacity: isMenuOpen ? 1 : 0.6,
-                                  transition: 'opacity 0.2s',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center'
                                 }}
-                                title="Options du message"
                               >
                                 <span style={{ fontSize: '14px', lineHeight: 1 }}>⋮</span>
                               </button>
@@ -1033,36 +1050,26 @@ export default function ChatView({
                                     top: '100%',
                                     [isMe ? 'right' : 'left']: 0,
                                     backgroundColor: darkMode ? '#1E293B' : '#FFFFFF',
-                                    border: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E2E8F0',
                                     borderRadius: '12px',
-                                    boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
                                     padding: '4px',
+                                    boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+                                    border: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E2E8F0',
                                     zIndex: 50,
-                                    minWidth: '140px',
                                     display: 'flex',
                                     flexDirection: 'column',
-                                    gap: '2px',
-                                    animation: 'fadeIn 0.15s ease-out',
+                                    minWidth: '120px'
                                   }}
                                 >
                                   <button
                                     onClick={() => handleCopyMsg(msg)}
                                     style={{
-                                      border: 'none',
-                                      background: 'none',
-                                      padding: '8px 10px',
-                                      borderRadius: '8px',
-                                      color: darkMode ? '#E2E8F0' : '#1E293B',
-                                      fontSize: '12px',
-                                      fontWeight: '600',
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      gap: '8px',
-                                      cursor: 'pointer',
-                                      textAlign: 'left',
+                                      border: 'none', background: 'none', padding: '6px 10px',
+                                      display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px',
+                                      color: darkMode ? '#E2E8F0' : '#334155', cursor: 'pointer', borderRadius: '8px',
+                                      textAlign: 'left'
                                     }}
                                   >
-                                    {copiedMsgId === msg.id ? <Check size={14} color="#10B981" /> : <Copy size={14} />}
+                                    {copiedMsgId === msg.id ? <Check size={12} color="#10B981" /> : <Copy size={12} />}
                                     <span>{copiedMsgId === msg.id ? 'Copié !' : 'Copier'}</span>
                                   </button>
 
@@ -1074,21 +1081,13 @@ export default function ChatView({
                                         setActiveMenuMsgId(null);
                                       }}
                                       style={{
-                                        border: 'none',
-                                        background: 'none',
-                                        padding: '8px 10px',
-                                        borderRadius: '8px',
-                                        color: darkMode ? '#E2E8F0' : '#1E293B',
-                                        fontSize: '12px',
-                                        fontWeight: '600',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '8px',
-                                        cursor: 'pointer',
-                                        textAlign: 'left',
+                                        border: 'none', background: 'none', padding: '6px 10px',
+                                        display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px',
+                                        color: darkMode ? '#E2E8F0' : '#334155', cursor: 'pointer', borderRadius: '8px',
+                                        textAlign: 'left'
                                       }}
                                     >
-                                      <Edit2 size={14} />
+                                      <Edit2 size={12} />
                                       <span>Modifier</span>
                                     </button>
                                   )}
@@ -1096,72 +1095,22 @@ export default function ChatView({
                                   {isMe && handleDeleteMessage && (
                                     <button
                                       onClick={() => {
-                                        handleDeleteMessage(activeChatObj?.id, msg.id);
+                                        handleDeleteMessage(activeChatObj.id, msg.id);
                                         setActiveMenuMsgId(null);
                                       }}
                                       style={{
-                                        border: 'none',
-                                        background: 'none',
-                                        padding: '8px 10px',
-                                        borderRadius: '8px',
-                                        color: '#EF4444',
-                                        fontSize: '12px',
-                                        fontWeight: '600',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '8px',
-                                        cursor: 'pointer',
-                                        textAlign: 'left',
+                                        border: 'none', background: 'none', padding: '6px 10px',
+                                        display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px',
+                                        color: '#EF4444', cursor: 'pointer', borderRadius: '8px',
+                                        textAlign: 'left'
                                       }}
                                     >
-                                      <Trash2 size={14} />
+                                      <Trash2 size={12} />
                                       <span>Supprimer</span>
                                     </button>
                                   )}
                                 </div>
                               )}
-                            </div>
-
-                            {/* BULLE DE MESSAGE */}
-                            <div
-                              style={{
-                                padding: '10px 14px',
-                                borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
-                                backgroundColor: isMe
-                                  ? (darkMode ? '#2563EB' : '#04265A')
-                                  : (darkMode ? 'rgba(30, 41, 59, 0.95)' : '#F1F5F9'),
-                                color: isMe
-                                  ? '#FFFFFF'
-                                  : (darkMode ? '#F8FAFC' : '#0F172A'),
-                                fontSize: '13.5px',
-                                lineHeight: '1.45',
-                                wordBreak: 'break-word',
-                                boxShadow: isMe
-                                  ? '0 4px 14px rgba(4,38,90,0.2)'
-                                  : '0 2px 6px rgba(0,0,0,0.04)',
-                                border: isMe
-                                  ? 'none'
-                                  : (darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid #E2E8F0'),
-                              }}
-                            >
-                              <div>{translatedText}</div>
-
-                              {/* PIED DE BULLE : HEURE + STATUT DE LECTURE */}
-                              <div
-                                style={{
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'flex-end',
-                                  gap: '4px',
-                                  marginTop: '4px',
-                                  fontSize: '10px',
-                                  color: isMe ? 'rgba(255,255,255,0.7)' : (darkMode ? '#94A3B8' : '#64748B'),
-                                }}
-                              >
-                                {msg.time && <span>{msg.time}</span>}
-                                {msg.edited && <span style={{ fontStyle: 'italic', fontSize: '9px' }}>(modifié)</span>}
-                                {isMe && renderMessageStatus(msg)}
-                              </div>
                             </div>
                           </div>
                         </div>
@@ -1169,16 +1118,23 @@ export default function ChatView({
                     })}
 
                     {isThemTyping && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '4px 8px' }}>
-                        <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: 'linear-gradient(135deg, #04265A 0%, #14B8A6 100%)', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '10px' }}>
-                          {activeChatObj?.user ? activeChatObj.user[0].toUpperCase() : 'T'}
-                        </div>
-                        <div style={{
-                          padding: '8px 12px', borderRadius: '16px 16px 16px 4px',
-                          backgroundColor: darkMode ? 'rgba(30, 41, 59, 0.9)' : '#F1F5F9',
-                          border: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid #E2E8F0',
-                          display: 'flex', alignItems: 'center', gap: '4px'
-                        }}>
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '6px 12px',
+                        borderRadius: '16px',
+                        backgroundColor: darkMode ? 'rgba(15,23,42,0.92)' : '#F0F9FF',
+                        border: darkMode ? '1.5px solid rgba(56,189,248,0.45)' : '1.5px solid #0284C7',
+                        boxShadow: darkMode ? '0 4px 14px rgba(0,0,0,0.3), 0 0 10px rgba(56,189,248,0.15)' : '0 4px 12px rgba(2,132,199,0.12)',
+                        alignSelf: 'flex-start',
+                        marginBottom: '4px',
+                        animation: 'typingFadeIn 0.25s ease-out'
+                      }}>
+                        <span style={{ fontSize: '11.5px', fontWeight: '800', color: darkMode ? '#93C5FD' : '#0369A1' }}>
+                          {activeChatObj?.user} écrit
+                        </span>
+                        <div style={{ display: 'flex', gap: '3px', alignItems: 'center' }}>
                           <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: darkMode ? '#38BDF8' : '#0284C7', display: 'inline-block', animation: 'bounceDot 1.4s infinite ease-in-out', animationDelay: '0s' }} />
                           <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: darkMode ? '#38BDF8' : '#0284C7', display: 'inline-block', animation: 'bounceDot 1.4s infinite ease-in-out', animationDelay: '0.2s' }} />
                           <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: darkMode ? '#38BDF8' : '#0284C7', display: 'inline-block', animation: 'bounceDot 1.4s infinite ease-in-out', animationDelay: '0.4s' }} />
@@ -1190,22 +1146,14 @@ export default function ChatView({
                   </div>
                 </div>
 
-                {/* 3. BARRE DE SAISIE INFÉRIEURE (SAFE AREA BOTTOM & ANTI AUTO-ZOOM 16px) */}
+                {/* 3. BARRE DE SAISIE STATIQUE & VERROUILLÉE */}
                 <div style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '6px',
-                  padding: isMobile
-                    ? '10px 16px max(16px, env(safe-area-inset-bottom, 16px)) 16px'
-                    : '10px 18px 14px',
-                  borderTop: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid #E2E8F0',
-                  backgroundColor: darkMode ? 'rgba(15,23,42,0.98)' : 'rgba(255,255,255,0.98)',
-                  backdropFilter: 'blur(20px)',
-                  WebkitBackdropFilter: 'blur(20px)',
-                  flexShrink: 0,
-                  zIndex: 30,
-                  width: '100%',
-                  boxSizing: 'border-box'
+                  display: 'flex', flexDirection: 'column', gap: '6px',
+                  padding: isMobile ? '8px 12px 10px' : '10px 18px 14px',
+                  borderTop: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E2E8F0',
+                  backgroundColor: darkMode ? 'rgba(30, 41, 59, 0.98)' : 'rgba(255,255,255,0.98)',
+                  backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+                  flexShrink: 0, zIndex: 30, width: '100%', boxSizing: 'border-box'
                 }}>
                   <div style={{
                     maxWidth: '680px',
@@ -1238,7 +1186,7 @@ export default function ChatView({
                       </div>
                     )}
 
-                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', width: '100%' }}>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                       <input
                         type="text"
                         value={chatInputText}
@@ -1252,14 +1200,10 @@ export default function ChatView({
                         onKeyDown={(e) => e.key === 'Enter' && onSubmitMessage()}
                         placeholder={editingMsg ? 'Modifie ton message...' : (t('typeYourMessage') || t('writeToInterlocutor') || 'Écris ton message...')}
                         style={{
-                          flex: 1,
-                          padding: '12px 16px',
-                          borderRadius: '24px',
+                          flex: 1, padding: '11px 16px', borderRadius: '24px',
                           border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB',
                           backgroundColor: darkMode ? 'rgba(15,23,42,0.85)' : '#F8FAFC',
-                          color: darkMode ? '#FFF' : '#111827',
-                          fontSize: '16px', // ANTI AUTO-ZOOM WEBKIT iOS STRICT
-                          outline: 'none',
+                          color: darkMode ? '#FFF' : '#111827', fontSize: '14px', outline: 'none',
                           boxSizing: 'border-box'
                         }}
                       />
@@ -1267,18 +1211,11 @@ export default function ChatView({
                         onClick={onSubmitMessage}
                         className="premium-button"
                         style={{
-                          border: 'none',
-                          borderRadius: '50%',
-                          width: '44px',
-                          height: '44px',
+                          border: 'none', borderRadius: '50%', width: '42px', height: '42px',
                           backgroundColor: darkMode ? '#60A5FA' : '#04265A',
-                          color: darkMode ? '#0F172A' : '#FFF',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          boxShadow: '0 4px 14px rgba(4,38,90,0.25)',
-                          flexShrink: 0
+                          color: darkMode ? '#0F172A' : '#FFF', cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          boxShadow: '0 4px 14px rgba(4,38,90,0.25)', flexShrink: 0
                         }}
                         title="Envoyer"
                       >
