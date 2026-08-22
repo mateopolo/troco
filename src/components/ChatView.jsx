@@ -605,6 +605,50 @@ export default function ChatView({
                   </div>
                 </div>
 
+                {/* BANDEAU CLIGNOTANT SALLE ACTIVE / APPEL EN COURS (MODE TEAMS) */}
+                {activeChatObj?.activeCall?.isLive && (
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: isMobile ? '8px 12px' : '10px 18px',
+                    backgroundColor: darkMode ? 'rgba(16, 185, 129, 0.18)' : '#ECFDF5',
+                    borderBottom: darkMode ? '1px solid rgba(16, 185, 129, 0.4)' : '1px solid #A7F3D0',
+                    color: darkMode ? '#34D399' : '#065F46',
+                    fontSize: isMobile ? '11px' : '12px',
+                    fontWeight: '800',
+                    animation: 'fadeSlideUp 0.3s ease both',
+                    zIndex: 25,
+                    flexShrink: 0,
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, overflow: 'hidden' }}>
+                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10B981', flexShrink: 0, boxShadow: '0 0 8px #10B981', animation: 'pulse 1.5s infinite' }} />
+                      <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        🟢 {activeChatObj.activeCall.type === 'video' ? 'Appel vidéo' : 'Appel audio'} en cours (Salle active)
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => startCall(activeChatObj.activeCall.type || 'video')}
+                      className="premium-button"
+                      style={{
+                        border: 'none',
+                        borderRadius: '999px',
+                        padding: '5px 14px',
+                        backgroundColor: '#10B981',
+                        color: '#FFF',
+                        fontSize: '11px',
+                        fontWeight: '800',
+                        cursor: 'pointer',
+                        boxShadow: '0 2px 8px rgba(16, 185, 129, 0.4)',
+                        flexShrink: 0,
+                        marginLeft: '8px'
+                      }}
+                    >
+                      Rejoindre l’appel
+                    </button>
+                  </div>
+                )}
+
                 {/* 2. ZONE CENTRALE DES MESSAGES (SEUL ÉLÉMENT SCROLLABLE, CENTRÉ & ÉQUILIBRÉ) */}
                 <div style={{
                   flex: 1,
@@ -629,6 +673,41 @@ export default function ChatView({
                       const translatedText = getChatMessageDisplayContent
                         ? getChatMessageDisplayContent(msg, currentLang, isMsgOriginal)
                         : (msg.text || '');
+
+                      // RENDU DES MESSAGES SYSTÈME / JOURNAUX D'APPEL
+                      if (msg.sender === 'system' || msg.kind === 'call-log' || msg.type === 'call-log') {
+                        const isMissed = msg.status === 'missed' || (msg.text && msg.text.includes('manqué'));
+                        return (
+                          <div key={msg.id} style={{
+                            display: 'flex',
+                            justifyContent: 'center',
+                            margin: '6px 0',
+                            width: '100%'
+                          }}>
+                            <div style={{
+                              padding: '6px 14px',
+                              borderRadius: '999px',
+                              backgroundColor: isMissed
+                                ? (darkMode ? 'rgba(239, 68, 68, 0.18)' : '#FEE2E2')
+                                : (darkMode ? 'rgba(16, 185, 129, 0.18)' : '#D1FAE5'),
+                              border: isMissed
+                                ? (darkMode ? '1px solid rgba(239, 68, 68, 0.35)' : '1px solid #FECACA')
+                                : (darkMode ? '1px solid rgba(16, 185, 129, 0.35)' : '1px solid #A7F3D0'),
+                              color: isMissed
+                                ? (darkMode ? '#FCA5A5' : '#DC2626')
+                                : (darkMode ? '#6EE7B7' : '#047857'),
+                              fontSize: '11.5px',
+                              fontWeight: '700',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+                            }}>
+                              <span>{translatedText || msg.text}</span>
+                            </div>
+                          </div>
+                        );
+                      }
 
                       if (msg.type === 'deal' || msg.kind === 'deal') {
                         const { terms, status, sender } = msg;

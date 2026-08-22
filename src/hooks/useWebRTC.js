@@ -245,9 +245,19 @@ export function useWebRTC({ profileName, selectedChat }) {
     return pc;
   }, []); // eslint-disable-line
 
+  const callStartTimeRef = useRef(null);
+  const activeCallChatIdRef = useRef(null);
+  const activeCallTypeRef = useRef(null);
+  const isCallConnectedRef = useRef(false);
+
   const startCall = useCallback(async (type) => {
     const chatId = selectedChat?.id;
     if (!chatId) return;
+
+    callStartTimeRef.current = Date.now();
+    activeCallChatIdRef.current = String(chatId);
+    activeCallTypeRef.current = type;
+    isCallConnectedRef.current = false;
 
     // Enveloppe d'autorisation explicite
     const stream = await _getLocalStream(type);
@@ -279,6 +289,18 @@ export function useWebRTC({ profileName, selectedChat }) {
       updatedAt: serverTimestamp(),
     });
 
+    // Mettre à jour l'état de la salle active dans la conversation (Mode Teams)
+    setDoc(doc(db, 'chats', String(chatId)), {
+      activeCall: {
+        chatId: String(chatId),
+        host: profileName,
+        type: type,
+        isLive: true,
+        startedAt: serverTimestamp(),
+        participants: [profileName],
+      }
+    }, { merge: true }).catch(() => {});
+
     // Écouter la réponse SDP et les signaux de modération
     const unsubAnswer = onSnapshot(doc(db, 'calls', String(chatId)), async (snap) => {
       if (!snap.exists()) {
@@ -290,6 +312,7 @@ export function useWebRTC({ profileName, selectedChat }) {
       if (data?.answer && !pc.currentRemoteDescription) {
         try {
           await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+          isCallConnectedRef.current = true;
           setCallState(prev => ({ ...prev, ringing: false }));
         } catch (e) {
           console.warn('[WebRTC] setRemoteDescription answer error:', e);
@@ -329,6 +352,11 @@ export function useWebRTC({ profileName, selectedChat }) {
     const { chatId, type, from } = incomingCall;
     setIncomingCall(null);
 
+    callStartTimeRef.current = Date.now();
+    activeCallChatIdRef.current = String(chatId);
+    activeCallTypeRef.current = type;
+    isCallConnectedRef.current = true;
+
     // Enveloppe d'autorisation explicite
     const stream = await _getLocalStream(type);
     if (!stream) {
@@ -358,6 +386,15 @@ export function useWebRTC({ profileName, selectedChat }) {
       status: 'connected',
       updatedAt: serverTimestamp(),
     });
+
+    // Mettre à jour les participants de la salle dans chats/{chatId}
+    setDoc(doc(db, 'chats', String(chatId)), {
+      activeCall: {
+        isLive: true,
+        type,
+        participants: updatedParticipants,
+      }
+    }, { merge: true }).catch(() => {});
 
     const unsubCallDoc = onSnapshot(doc(db, 'calls', String(chatId)), (snap) => {
       if (!snap.exists()) {
@@ -412,16 +449,85 @@ export function useWebRTC({ profileName, selectedChat }) {
     return { chatId, type, from };
   }, [incomingCall, _getLocalStream, _createPC, _cleanup, profileName]);
 
-  // Raccrochage avec gestion propre de la salle Teams
+  // Raccrochage avec gestion propre de la salle Teams et journalisation automatique
   const endCall = useCallback(() => {
+    const chatId = activeCallChatIdRef.current || selectedChat?.id;
+    const durationSecs = callStartTimeRef.current ? Math.max(1, Math.floor((Date.now() - callStartTimeRef.current) / 1000)) : 0;
+    const callType = activeCallTypeRef.current || callState.type || 'video';
+    const wasConnected = isCallConnectedRef.current || !callState.ringing;
+
+    if (chatId) {
+      // Clôturer la salle active dans le chat
+      setDoc(doc(db, 'chats', String(chatId)), {
+        activeCall: { isLive: false, endedAt: serverTimestamp() }
+      }, { merge: true }).catch(() => {});
+
+      // Journalisation dans la sous-collection messages
+      if (wasConnected) {
+        const mins = String(Math.floor(durationSecs / 60)).padStart(2, '0');
+        const secs = String(durationSecs % 60).padStart(2, '0');
+        const typeLabel = callType === 'video' ? 'Appel vidéo' : 'Appel audio';
+        const logText = `📞 ${typeLabel} terminé • Durée : ${mins}:${secs}`;
+        addDoc(collection(db, 'chats', String(chatId), 'messages'), {
+          sender: 'system',
+          senderName: 'Troco Direct',
+          text: logText,
+          kind: 'call-log',
+          callType: callType,
+          duration: durationSecs,
+          createdAt: serverTimestamp(),
+          translations: {
+            FR: logText,
+            EN: `📞 ${callType === 'video' ? 'Video' : 'Audio'} call ended • Duration: ${mins}:${secs}`
+          }
+        }).catch(() => {});
+      } else {
+        const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const logText = `📵 Appel manqué à ${timeStr}`;
+        addDoc(collection(db, 'chats', String(chatId), 'messages'), {
+          sender: 'system',
+          senderName: 'Troco Direct',
+          text: logText,
+          kind: 'call-log',
+          status: 'missed',
+          createdAt: serverTimestamp(),
+          translations: {
+            FR: logText,
+            EN: `📵 Missed call at ${timeStr}`
+          }
+        }).catch(() => {});
+      }
+    }
+
     _cleanup(false);
     setCallState({ type: null, active: false, ringing: false, micOn: true, camOn: true, isScreenSharing: false, isHost: false, inviteOpen: false, copied: false, remoteScreenSharing: false });
-  }, [_cleanup]);
+  }, [_cleanup, selectedChat?.id, callState.type, callState.ringing]);
 
-  // Refus d'appel avec suppression du signal
+  // Refus d'appel avec suppression du signal et journal d'appel manqué
   const declineIncomingCall = useCallback(() => {
     if (!incomingCall) return;
-    deleteDoc(doc(db, 'calls', String(incomingCall.chatId))).catch(() => {});
+    const { chatId } = incomingCall;
+
+    setDoc(doc(db, 'chats', String(chatId)), {
+      activeCall: { isLive: false, endedAt: serverTimestamp() }
+    }, { merge: true }).catch(() => {});
+
+    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const logText = `📵 Appel manqué à ${timeStr}`;
+    addDoc(collection(db, 'chats', String(chatId), 'messages'), {
+      sender: 'system',
+      senderName: 'Troco Direct',
+      text: logText,
+      kind: 'call-log',
+      status: 'missed',
+      createdAt: serverTimestamp(),
+      translations: {
+        FR: logText,
+        EN: `📵 Missed call at ${timeStr}`
+      }
+    }).catch(() => {});
+
+    deleteDoc(doc(db, 'calls', String(chatId))).catch(() => {});
     setIncomingCall(null);
   }, [incomingCall]);
 

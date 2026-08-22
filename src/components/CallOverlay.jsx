@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
-  Maximize2, SwitchCamera, Mic, MicOff, PhoneOff
+  Maximize2, SwitchCamera, Mic, MicOff, PhoneOff,
+  ChevronLeft, ChevronRight, PictureInPicture2
 } from 'lucide-react';
 
 export default function CallOverlay({
@@ -8,6 +9,7 @@ export default function CallOverlay({
   isCallPip,
   setIsCallPip,
   pipPosition,
+  setPipPosition,
   handlePipPointerDown,
   handlePipPointerMove,
   handlePipPointerUp,
@@ -26,7 +28,71 @@ export default function CallOverlay({
   toggleMic,
   endCall,
 }) {
+  const [isDocked, setIsDocked] = useState(null); // 'left' | 'right' | null
+  const videoRef = useRef(null);
+
+  // Détection du bord pour repliage automatique sur le côté (Docking latéral type FaceTime)
+  useEffect(() => {
+    if (!pipPosition) return;
+    const screenW = typeof window !== 'undefined' ? window.innerWidth : 400;
+    if (pipPosition.x <= 20) {
+      setIsDocked('left');
+    } else if (pipPosition.x >= screenW - 60) {
+      setIsDocked('right');
+    } else {
+      setIsDocked(null);
+    }
+  }, [pipPosition]);
+
+  // Support Picture-in-Picture Natif du navigateur
+  const handleRequestNativePip = async (e) => {
+    if (e) e.stopPropagation();
+    try {
+      const vid = videoRef.current;
+      if (document.pictureInPictureElement) {
+        await document.exitPictureInPicture();
+      } else if (vid && vid.requestPictureInPicture) {
+        await vid.requestPictureInPicture();
+      } else if (vid && vid.webkitSetPresentationMode) {
+        vid.webkitSetPresentationMode('picture-in-picture');
+      }
+    } catch (err) {
+      console.warn('[WebRTC] Native PiP non supporté ou refusé:', err);
+    }
+  };
+
+  // Passage en PiP natif automatique lors du basculement d'onglet en arrière-plan
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden && callState?.active && callState?.type === 'video' && videoRef.current) {
+        if (typeof videoRef.current.requestPictureInPicture === 'function' && !document.pictureInPictureElement) {
+          videoRef.current.requestPictureInPicture().catch(() => {});
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [callState?.active, callState?.type]);
+
   if (!callState?.active || !isCallPip) return null;
+
+  const handleUndock = (e) => {
+    if (e) e.stopPropagation();
+    const screenW = typeof window !== 'undefined' ? window.innerWidth : 400;
+    if (setPipPosition) {
+      setPipPosition(prev => ({
+        ...prev,
+        x: isDocked === 'left' ? 20 : Math.max(10, screenW - 230),
+      }));
+    }
+    setIsDocked(null);
+  };
+
+  const currentX = isDocked === 'left'
+    ? -165
+    : isDocked === 'right'
+      ? (typeof window !== 'undefined' ? window.innerWidth - 45 : 300)
+      : pipPosition.x;
 
   return (
     <div
@@ -36,14 +102,16 @@ export default function CallOverlay({
       onPointerCancel={handlePipPointerCancel}
       style={{
         position: 'fixed',
-        left: `${pipPosition.x}px`,
+        left: `${currentX}px`,
         top: `${pipPosition.y}px`,
         width: '210px',
         height: '145px',
         zIndex: 3500,
         borderRadius: '18px',
         overflow: 'hidden',
-        boxShadow: '0 16px 40px rgba(0,0,0,0.6), 0 0 20px rgba(96,165,250,0.3)',
+        boxShadow: isDocked
+          ? '0 8px 30px rgba(0,0,0,0.7), 0 0 20px rgba(96,165,250,0.4)'
+          : '0 16px 40px rgba(0,0,0,0.6), 0 0 20px rgba(96,165,250,0.3)',
         border: '2px solid #60A5FA',
         backgroundColor: '#0F172A',
         display: 'flex',
@@ -51,9 +119,41 @@ export default function CallOverlay({
         userSelect: 'none',
         WebkitUserSelect: 'none',
         touchAction: 'none',
-        cursor: 'grab',
+        cursor: isDocked ? 'pointer' : 'grab',
+        transition: isDocked ? 'left 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)' : 'none',
       }}
     >
+      {/* LANGUETTE / TIROIR RÉTRACTABLE SUR LE BORD (MODE DOCKED STYLE FACETIME) */}
+      {isDocked && (
+        <div
+          onClick={handleUndock}
+          title="Faire ressortir l'appel"
+          style={{
+            position: 'absolute',
+            inset: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+            backdropFilter: 'blur(16px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: isDocked === 'left' ? 'flex-end' : 'flex-start',
+            padding: '0 8px',
+            zIndex: 100,
+            cursor: 'pointer',
+          }}
+        >
+          <div style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: '4px',
+            color: '#60A5FA',
+          }}>
+            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#22C55E', animation: 'pulse 1.5s infinite' }} />
+            {isDocked === 'left' ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+          </div>
+        </div>
+      )}
+
       {/* HEADER PIP DRAGGABLE */}
       <div
         style={{
@@ -87,7 +187,11 @@ export default function CallOverlay({
       >
         {callState.type === 'video' && (remoteStream || localStream) ? (
           <video
-            ref={remoteStream ? attachRemoteStream : attachLocalStream}
+            ref={(el) => {
+              videoRef.current = el;
+              if (remoteStream && attachRemoteStream) attachRemoteStream(el);
+              else if (localStream && attachLocalStream) attachLocalStream(el);
+            }}
             autoPlay
             playsInline
             muted={!remoteStream}
@@ -122,6 +226,18 @@ export default function CallOverlay({
           >
             <Maximize2 size={13} />
           </button>
+
+          {/* BOUTON PIP NATIF DU SYSTÈME */}
+          {callState.type === 'video' && (
+            <button
+              type="button"
+              onClick={handleRequestNativePip}
+              title="Activer le PiP natif du navigateur"
+              style={{ border: 'none', width: '28px', height: '28px', borderRadius: '50%', backgroundColor: 'rgba(15,23,42,0.85)', color: '#38BDF8', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              <PictureInPicture2 size={13} />
+            </button>
+          )}
 
           {hasMultipleCameras && callState.type === 'video' && callState.camOn && (
             <button
