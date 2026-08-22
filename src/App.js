@@ -4,7 +4,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Search, MapPin, Video, Star, Globe, Filter, MessageSquare, PlusCircle, User, ShieldCheck, Clock, CheckCircle, ArrowRight, X, Sparkles, Coins, Plus, Trash2, Camera, Pencil, Mic, PhoneOff, Flame, History, Check, Lock, CreditCard, Tag, Phone, UserPlus, ChevronLeft, ChevronRight, ChevronUp, Eye, EyeOff, Maximize2, Minimize2, ZoomIn, ZoomOut, MicOff, VideoOff, Sun, Moon, Upload, Repeat, SwitchCamera, LogOut, Scale, ShieldAlert, FileText, Monitor, MonitorOff, Crown, Image as ImageIcon } from 'lucide-react';
 import { auth, db } from './firebase';
-import { collection, addDoc, doc, updateDoc, serverTimestamp, onSnapshot, query, orderBy, setDoc, deleteDoc, getDoc, getDocs, where, increment } from 'firebase/firestore';
+import { collection, addDoc, doc, updateDoc, serverTimestamp, onSnapshot, query, orderBy, setDoc, deleteDoc, getDoc, getDocs, where, increment, runTransaction } from 'firebase/firestore';
 import { RecaptchaVerifier, signInWithPhoneNumber, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, GoogleAuthProvider, GithubAuthProvider, FacebookAuthProvider, OAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
 import ChatView from './components/ChatView';
 import { useWebRTC } from './hooks/useWebRTC';
@@ -1544,50 +1544,78 @@ export default function App() {
     };
     setUserTransactions(prev => [newTx, ...prev]);
 
+    // PERSISTANCE TRANSACTIONNELLE ATOMIQUE FIRESTORE (runTransaction)
     const uid = profile?.uid || auth.currentUser?.uid;
     if (uid) {
       try {
-        await updateDoc(doc(db, 'users', uid), {
-          trocoTokens: Math.max(0, (profile.trocoTokens || 10) - costTokens),
-          euroBalance: insuranceFee > 0 ? Number(((profile.euroBalance || 0) - insuranceFee).toFixed(2)) : (profile.euroBalance || 0),
-          dealsCompleted: (profile.dealsCompleted || 0) + 1,
-          updatedAt: serverTimestamp(),
-        });
-        await addDoc(collection(db, 'transactions'), {
-          ...newTx,
-          userId: uid,
-          createdAt: serverTimestamp(),
-        });
-
-        // Créditer également le compte du partenaire dans Firestore
-        try {
-          let partnerDocRef = null;
-          if (selectedChat?.authorUid || selectedChat?.partnerUid) {
-            partnerDocRef = doc(db, 'users', selectedChat.authorUid || selectedChat.partnerUid);
-          } else if (partner) {
+        let partnerUid = selectedChat?.authorUid || selectedChat?.partnerUid;
+        if (!partnerUid && partner) {
+          try {
             const userQuery = query(collection(db, 'users'), where('name', '==', partner));
             const uSnap = await getDocs(userQuery);
             if (!uSnap.empty) {
-              partnerDocRef = doc(db, 'users', uSnap.docs[0].id);
+              partnerUid = uSnap.docs[0].id;
             }
+          } catch (_) {}
+        }
+
+        await runTransaction(db, async (transaction) => {
+          // 1. Lecture atomique du payeur
+          const payerRef = doc(db, 'users', uid);
+          const payerSnap = await transaction.get(payerRef);
+
+          let currentTokens = profile.trocoTokens || 10;
+          let currentEuro = profile.euroBalance || 0;
+          let currentDeals = profile.dealsCompleted || 0;
+
+          if (payerSnap.exists()) {
+            const pData = payerSnap.data();
+            currentTokens = pData.trocoTokens !== undefined ? pData.trocoTokens : currentTokens;
+            currentEuro = pData.euroBalance !== undefined ? pData.euroBalance : currentEuro;
+            currentDeals = pData.dealsCompleted !== undefined ? pData.dealsCompleted : currentDeals;
           }
 
-          if (partnerDocRef) {
-            const partnerSnap = await getDoc(partnerDocRef);
-            if (partnerSnap.exists()) {
-              const partnerData = partnerSnap.data();
-              await updateDoc(partnerDocRef, {
-                trocoTokens: (partnerData.trocoTokens || 0) + costTokens,
-                dealsCompleted: (partnerData.dealsCompleted || 0) + 1,
-                updatedAt: serverTimestamp(),
-              });
-            }
+          // 2. Lecture atomique du partenaire (si identifié)
+          let partnerRef = null;
+          let partnerSnap = null;
+          if (partnerUid) {
+            partnerRef = doc(db, 'users', partnerUid);
+            partnerSnap = await transaction.get(partnerRef);
           }
-        } catch (err) {
-          console.warn('[Firestore] partner visio credit error:', err);
-        }
+
+          // 3. Écriture atomique débit payeur
+          transaction.set(payerRef, {
+            trocoTokens: Math.max(0, currentTokens - costTokens),
+            euroBalance: insuranceFee > 0 ? Number(Math.max(0, currentEuro - insuranceFee).toFixed(2)) : currentEuro,
+            dealsCompleted: currentDeals + 1,
+            updatedAt: serverTimestamp(),
+          }, { merge: true });
+
+          // 4. Écriture atomique crédit partenaire
+          if (partnerRef && partnerSnap && partnerSnap.exists()) {
+            const partData = partnerSnap.data();
+            const partTokens = partData.trocoTokens || 0;
+            const partDeals = partData.dealsCompleted || 0;
+
+            transaction.update(partnerRef, {
+              trocoTokens: partTokens + costTokens,
+              dealsCompleted: partDeals + 1,
+              updatedAt: serverTimestamp(),
+            });
+          }
+
+          // 5. Enregistrement atomique de la transaction
+          const txDocRef = doc(collection(db, 'transactions'));
+          transaction.set(txDocRef, {
+            ...newTx,
+            userId: uid,
+            userName: profile.name,
+            partnerUid: partnerUid || null,
+            createdAt: serverTimestamp(),
+          });
+        });
       } catch (e) {
-        console.warn('Erreur sauvegarde transaction visio:', e);
+        console.warn('[Firestore] Atomic runTransaction visio error:', e);
       }
     }
 
@@ -4193,65 +4221,99 @@ export default function App() {
     };
     setUserTransactions(prev => [newTx, ...prev]);
 
-    // Persistance Firestore
+    // 3. PERSISTANCE TRANSACTIONNELLE ATOMIQUE FIRESTORE (runTransaction)
     const myUid = profile?.uid || auth.currentUser?.uid;
     if (myUid) {
       try {
-        await updateDoc(doc(db, 'users', myUid), {
-          euroBalance: updatedProfile.euroBalance,
-          trocoTokens: updatedProfile.trocoTokens,
-          dealsCompleted: updatedProfile.dealsCompleted,
-          updatedAt: serverTimestamp(),
-        });
-        await addDoc(collection(db, 'transactions'), {
-          ...newTx,
-          userId: myUid,
-          userName: profile.name,
-          createdAt: serverTimestamp(),
-        });
-
-        // Mettre à jour le statut du message deal dans Firestore
-        try {
-          await updateDoc(doc(db, 'chats', String(chatId), 'messages', String(dealId)), {
-            status: 'confirmed',
-            updatedAt: serverTimestamp(),
-          });
-          await setDoc(doc(db, 'chats', String(chatId)), {
-            lastDealStatus: 'confirmed',
-            updatedAt: serverTimestamp(),
-          }, { merge: true });
-        } catch (_) {}
-
-        // Si le partenaire a un identifiant ou nom, créditer son compte
-        try {
-          let partnerDocRef = null;
-          if (chat?.authorUid || chat?.partnerUid) {
-            partnerDocRef = doc(db, 'users', chat.authorUid || chat.partnerUid);
-          } else if (partnerName) {
+        // Résoudre la référence du partenaire
+        let partnerUid = chat?.authorUid || chat?.partnerUid;
+        if (!partnerUid && partnerName) {
+          try {
             const userQuery = query(collection(db, 'users'), where('name', '==', partnerName));
             const uSnap = await getDocs(userQuery);
             if (!uSnap.empty) {
-              partnerDocRef = doc(db, 'users', uSnap.docs[0].id);
+              partnerUid = uSnap.docs[0].id;
             }
+          } catch (_) {}
+        }
+
+        await runTransaction(db, async (transaction) => {
+          // Lecture atomique 1 : Compte de l'acheteur / payeur
+          const buyerRef = doc(db, 'users', myUid);
+          const buyerSnap = await transaction.get(buyerRef);
+
+          let currentBuyerEuro = profile.euroBalance || 0;
+          let currentBuyerTokens = profile.trocoTokens || 0;
+          let currentBuyerDeals = profile.dealsCompleted || 0;
+
+          if (buyerSnap.exists()) {
+            const bData = buyerSnap.data();
+            currentBuyerEuro = bData.euroBalance !== undefined ? bData.euroBalance : currentBuyerEuro;
+            currentBuyerTokens = bData.trocoTokens !== undefined ? bData.trocoTokens : currentBuyerTokens;
+            currentBuyerDeals = bData.dealsCompleted !== undefined ? bData.dealsCompleted : currentBuyerDeals;
           }
 
-          if (partnerDocRef) {
-            const partnerSnap = await getDoc(partnerDocRef);
-            if (partnerSnap.exists()) {
-              const partnerData = partnerSnap.data();
-              await updateDoc(partnerDocRef, {
-                euroBalance: Number(((partnerData.euroBalance || 0) + euroAmount).toFixed(2)),
-                trocoTokens: (partnerData.trocoTokens || 0) + tokensAmount,
-                dealsCompleted: (partnerData.dealsCompleted || 0) + 1,
-                updatedAt: serverTimestamp(),
-              });
-            }
+          // Lecture atomique 2 : Compte du vendeur / bénéficiaire
+          let sellerSnap = null;
+          let sellerRef = null;
+          if (partnerUid) {
+            sellerRef = doc(db, 'users', partnerUid);
+            sellerSnap = await transaction.get(sellerRef);
           }
-        } catch (err) {
-          console.warn('[Firestore] partner credit write error:', err);
-        }
+
+          // Calculs atomiques
+          const finalBuyerEuro = euroAmount > 0 ? Number(Math.max(0, currentBuyerEuro - euroAmount).toFixed(2)) : currentBuyerEuro;
+          const finalBuyerTokens = tokensAmount > 0 ? Math.max(0, currentBuyerTokens - tokensAmount) : currentBuyerTokens;
+
+          // Écriture 1 : Débit de l'acheteur
+          transaction.set(buyerRef, {
+            euroBalance: finalBuyerEuro,
+            trocoTokens: finalBuyerTokens,
+            dealsCompleted: currentBuyerDeals + 1,
+            updatedAt: serverTimestamp(),
+          }, { merge: true });
+
+          // Écriture 2 : Crédit du vendeur
+          if (sellerRef && sellerSnap && sellerSnap.exists()) {
+            const sData = sellerSnap.data();
+            const currentSellerEuro = sData.euroBalance || 0;
+            const currentSellerTokens = sData.trocoTokens || 0;
+            const currentSellerDeals = sData.dealsCompleted || 0;
+
+            transaction.update(sellerRef, {
+              euroBalance: Number((currentSellerEuro + euroAmount).toFixed(2)),
+              trocoTokens: currentSellerTokens + tokensAmount,
+              dealsCompleted: currentSellerDeals + 1,
+              updatedAt: serverTimestamp(),
+            });
+          }
+
+          // Écriture 3 : Enregistrement de la trace transactionnelle
+          const txDocRef = doc(collection(db, 'transactions'));
+          transaction.set(txDocRef, {
+            ...newTx,
+            userId: myUid,
+            userName: profile.name,
+            partnerUid: partnerUid || null,
+            createdAt: serverTimestamp(),
+          });
+
+          // Écriture 4 : Mise à jour du message de deal dans le chat
+          const msgRef = doc(db, 'chats', String(chatId), 'messages', String(dealId));
+          transaction.set(msgRef, {
+            status: 'confirmed',
+            updatedAt: serverTimestamp(),
+          }, { merge: true });
+
+          // Écriture 5 : Mise à jour du document parent chat
+          const chatDocRef = doc(db, 'chats', String(chatId));
+          transaction.set(chatDocRef, {
+            lastDealStatus: 'confirmed',
+            updatedAt: serverTimestamp(),
+          }, { merge: true });
+        });
       } catch (err) {
-        console.warn('[Firestore] deal accept write error:', err);
+        console.warn('[Firestore] Atomic runTransaction deal error:', err);
       }
     }
 
