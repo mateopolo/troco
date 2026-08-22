@@ -157,14 +157,14 @@ export default function ProfileView({
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '14px', fontWeight: '800', color: '#F59E0B' }}>
-                    {closedDealsCount > 0 ? (
+                    {closedDealsCount > 0 && averageRating !== '—' ? (
                       <>
                         <Star size={18} fill="#F59E0B" /> {averageRating}
                         <span style={{ color: '#94A3B8', fontWeight: '600', fontSize: '12px' }}>({closedDealsCount} deals)</span>
                       </>
                     ) : (
                       <span style={{ fontSize: '12px', fontWeight: '600', color: darkMode ? '#94A3B8' : '#64748B' }}>
-                        Pas encore d'avis (0 échange)
+                        Nouveau membre • Aucun échange
                       </span>
                     )}
                   </div>

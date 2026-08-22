@@ -3170,7 +3170,7 @@ export default function App() {
   const ratedEntries = isDemoProfile ? swapHistory.filter(entry => entry.rating) : [];
   const averageRating = isDemoProfile
     ? (ratedEntries.length ? (ratedEntries.reduce((sum, entry) => sum + entry.rating, 0) / ratedEntries.length).toFixed(1) : '—')
-    : (profile?.rating ? Number(profile.rating).toFixed(1) : (closedDealsCount > 0 ? '5.0' : '—'));
+    : (profile?.rating ? Number(profile.rating).toFixed(1) : '—');
   const userSwapHistory = isDemoProfile ? swapHistory : (profile?.swapHistory || []);
 
   const baseCategories = ['Tous', ...TROCO_CATEGORIES.filter(c => c.id !== 'all').map(c => c.label)];
@@ -4951,6 +4951,8 @@ export default function App() {
             dealsCompleted: 0,
             dealsInProgress: 0,
             rating: null,
+            reviewsCount: 0,
+            swapHistory: [],
             onboardingCompleted: false,
             euroBalance: 0.00,
             trocoTokens: 10,
@@ -5130,6 +5132,8 @@ export default function App() {
         dealsCompleted: 0,
         dealsInProgress: 0,
         rating: null,
+        reviewsCount: 0,
+        swapHistory: [],
         onboardingCompleted: false,
         loginMethod: 'Email/Mot de passe',
         euroBalance: 0.00, // Solde fiduciaire initial à 0,00 €
