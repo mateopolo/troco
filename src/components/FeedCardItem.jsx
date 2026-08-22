@@ -28,6 +28,7 @@ export default function FeedCardItem({
   t = (key) => key
 }) {
   const [localImageIndex, setLocalImageIndex] = useState(0);
+  const [typedText, setTypedText] = useState('');
   const touchStartRef = useRef(null);
   const touchDeltaXRef = useRef(0);
   const touchDeltaYRef = useRef(0);
@@ -39,6 +40,25 @@ export default function FeedCardItem({
 
   const media = getSuggestedMedia ? getSuggestedMedia(item.title, item.description || '', item.image, item.video) : {};
   const isHovered = hoveredCardId === item.id;
+  const displayContent = getListingDisplayContent ? getListingDisplayContent(item, currentLang, !!showingOriginalListings[item.id]) : { title: item.title, description: item.description };
+
+  // EFFET MACHINE À ÉCRIRE (TYPEWRITER) FLUIDE AU SURVOL SANS AUCUN CHEVAUCHEMENT
+  useEffect(() => {
+    if (!isHovered || !displayContent.description) {
+      setTypedText('');
+      return;
+    }
+    let currentIdx = 0;
+    const fullText = displayContent.description.slice(0, 110);
+    const typingInterval = setInterval(() => {
+      currentIdx++;
+      setTypedText(fullText.slice(0, currentIdx));
+      if (currentIdx >= fullText.length) {
+        clearInterval(typingInterval);
+      }
+    }, 20);
+    return () => clearInterval(typingInterval);
+  }, [isHovered, displayContent.description]);
   
   // Galerie complète : priorité aux photos utilisateurs (gallery), puis médias suggérés, puis fallback
   const gallery = (item.gallery && item.gallery.length > 0)
@@ -59,7 +79,6 @@ export default function FeedCardItem({
   }, [isHovered, galleryLength]);
 
   const currentSlideIndex = localImageIndex % galleryLength;
-  const displayContent = getListingDisplayContent ? getListingDisplayContent(item, currentLang, !!showingOriginalListings[item.id]) : { title: item.title, description: item.description };
 
   // GESTION DU SWIPE TACTILE FLUIDE SANS BLOQUER LE SCROLL VERTICAL
   const handleTouchStart = (e) => {
@@ -363,24 +382,34 @@ export default function FeedCardItem({
           </span>
         </div>
 
-        {/* MICRO-INTERACTION ÉTAPE 4 : APERÇU ANIMÉ DE LA DESCRIPTION AU SURVOL */}
+        {/* MICRO-INTERACTION ÉTAPE 4 : APERÇU ANIMÉ TYPEWRITER SANS CHEVAUCHEMENT */}
         {displayContent.description && (
           <div
             style={{
               fontSize: '11.5px',
               color: darkMode ? '#94A3B8' : '#64748B',
               lineHeight: 1.45,
-              maxHeight: isHovered ? '48px' : '22px',
+              minHeight: '34px',
+              maxHeight: '48px',
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               display: '-webkit-box',
-              WebkitLineClamp: isHovered ? 2 : 1,
+              WebkitLineClamp: 2,
               WebkitBoxOrient: 'vertical',
               marginBottom: '10px',
-              transition: 'max-height 0.3s var(--ease-quiet), color 0.3s ease'
+              transition: 'color 0.25s ease'
             }}
           >
-            {displayContent.description}
+            {isHovered ? (
+              <span>
+                {typedText}
+                {typedText.length < (displayContent.description?.slice(0, 110)?.length || 0) && (
+                  <span style={{ color: '#60A5FA', animation: 'pulse 0.8s infinite', fontWeight: '900' }}>|</span>
+                )}
+              </span>
+            ) : (
+              displayContent.description
+            )}
           </div>
         )}
 

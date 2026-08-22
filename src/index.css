@@ -387,11 +387,55 @@ header {
 }
 
 .premium-main {
-  padding: 20px 20px 90px !important;
-  max-width: 1280px !important;
-  margin: 0 auto !important;
-  width: 100% !important;
-  box-sizing: border-box !important;
+  padding: 20px 20px 90px;
+  max-width: 1280px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* ADAPTATION DU CONTENEUR DE CHAT MOBILE SANS PADDING ÉCRASANT */
+@media (max-width: 768px) {
+  .premium-main.chat-mode {
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: 100% !important;
+    height: calc(100dvh - 58px - 64px) !important;
+    height: calc(100svh - 58px - 64px) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+  }
+}
+
+/* ORBES DE LUEUR AMBIANTE (GLOW ORBS) */
+@keyframes orbBreathe {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.3;
+  }
+  50% {
+    transform: translate(15px, -15px) scale(1.1);
+    opacity: 0.5;
+  }
+}
+
+.glow-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+  z-index: 0;
+  will-change: transform, opacity;
+  animation: orbBreathe 8s ease-in-out infinite;
+}
+
+.glow-orb-primary {
+  background: radial-gradient(circle, rgba(96, 165, 250, 0.28) 0%, rgba(4, 38, 90, 0.04) 70%, transparent 100%);
+}
+
+.glow-orb-secondary {
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.22) 0%, rgba(20, 184, 166, 0.04) 70%, transparent 100%);
 }
 
 @media (max-width: 640px) {

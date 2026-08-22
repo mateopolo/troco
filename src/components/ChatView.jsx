@@ -56,6 +56,20 @@ export default function ChatView({
   const [, setTranslationRevision] = useState(0);
   const messagesEndRef = useRef(null);
 
+  // Écoute du Visual Viewport pour le clavier virtuel mobile
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.visualViewport) return;
+    const handleViewportResize = () => {
+      if (messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      }
+    };
+    window.visualViewport.addEventListener('resize', handleViewportResize);
+    return () => {
+      window.visualViewport?.removeEventListener('resize', handleViewportResize);
+    };
+  }, []);
+
   // Bascule automatique sur la conversation lorsqu'un chat est sélectionné
   useEffect(() => {
     if (selectedChat && !deletedChatIds.has(selectedChat.id)) {
@@ -479,7 +493,7 @@ export default function ChatView({
             backgroundColor: darkMode ? 'rgba(30, 41, 59, 0.94)' : 'rgba(255,255,255,0.94)',
             backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
             borderRadius: isMobile ? '0' : '24px',
-            border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(229,231,235,0.9)',
+            border: isMobile ? 'none' : (darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(229,231,235,0.9)'),
             boxShadow: isMobile ? 'none' : '0 10px 30px rgba(15,23,42,0.06)',
             display: 'flex', flexDirection: 'column',
             height: '100%',

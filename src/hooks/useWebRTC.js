@@ -457,17 +457,20 @@ export function useWebRTC({ profileName, selectedChat }) {
     const wasConnected = isCallConnectedRef.current || !callState.ringing;
 
     if (chatId) {
-      // Clôturer la salle active dans le chat
+      // Clôturer la salle active dans le chat pour masquer le bandeau vert immédiatement
       setDoc(doc(db, 'chats', String(chatId)), {
         activeCall: { isLive: false, endedAt: serverTimestamp() }
       }, { merge: true }).catch(() => {});
 
-      // Journalisation dans la sous-collection messages
+      // Journalisation détaillée avec horodatage exact et durée
+      const now = new Date();
+      const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
       if (wasConnected) {
         const mins = String(Math.floor(durationSecs / 60)).padStart(2, '0');
         const secs = String(durationSecs % 60).padStart(2, '0');
         const typeLabel = callType === 'video' ? 'Appel vidéo' : 'Appel audio';
-        const logText = `📞 ${typeLabel} terminé • Durée : ${mins}:${secs}`;
+        const logText = `📞 ${typeLabel} terminé • ${timeStr} • Durée : ${mins}:${secs}`;
         addDoc(collection(db, 'chats', String(chatId), 'messages'), {
           sender: 'system',
           senderName: 'Troco Direct',
@@ -478,12 +481,11 @@ export function useWebRTC({ profileName, selectedChat }) {
           createdAt: serverTimestamp(),
           translations: {
             FR: logText,
-            EN: `📞 ${callType === 'video' ? 'Video' : 'Audio'} call ended • Duration: ${mins}:${secs}`
+            EN: `📞 ${callType === 'video' ? 'Video' : 'Audio'} call ended • ${timeStr} • Duration: ${mins}:${secs}`
           }
         }).catch(() => {});
       } else {
-        const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        const logText = `📵 Appel manqué à ${timeStr}`;
+        const logText = `📵 Appel sans réponse • ${timeStr}`;
         addDoc(collection(db, 'chats', String(chatId), 'messages'), {
           sender: 'system',
           senderName: 'Troco Direct',
@@ -493,7 +495,7 @@ export function useWebRTC({ profileName, selectedChat }) {
           createdAt: serverTimestamp(),
           translations: {
             FR: logText,
-            EN: `📵 Missed call at ${timeStr}`
+            EN: `📵 Missed call • ${timeStr}`
           }
         }).catch(() => {});
       }
@@ -513,7 +515,7 @@ export function useWebRTC({ profileName, selectedChat }) {
     }, { merge: true }).catch(() => {});
 
     const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const logText = `📵 Appel manqué à ${timeStr}`;
+    const logText = `📵 Appel sans réponse • ${timeStr}`;
     addDoc(collection(db, 'chats', String(chatId), 'messages'), {
       sender: 'system',
       senderName: 'Troco Direct',
@@ -523,7 +525,7 @@ export function useWebRTC({ profileName, selectedChat }) {
       createdAt: serverTimestamp(),
       translations: {
         FR: logText,
-        EN: `📵 Missed call at ${timeStr}`
+        EN: `📵 Missed call • ${timeStr}`
       }
     }).catch(() => {});
 

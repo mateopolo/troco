@@ -5094,7 +5094,11 @@ export default function App() {
   }
 
   return (
-    <div style={{ backgroundColor: darkMode ? '#0B1120' : '#F5F5F7', color: darkMode ? '#F8FAFC' : '#0F172A', minHeight: '100vh', transition: 'background-color 0.3s ease, color 0.3s ease', fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif", paddingBottom: isMobile && activeTab === 'chat' ? '0' : '90px', WebkitFontSmoothing: 'antialiased' }}>
+    <div style={{ backgroundColor: darkMode ? '#0B1120' : '#F5F5F7', color: darkMode ? '#F8FAFC' : '#0F172A', minHeight: '100vh', transition: 'background-color 0.3s ease, color 0.3s ease', fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif", paddingBottom: isMobile && activeTab === 'chat' ? '0' : '90px', WebkitFontSmoothing: 'antialiased', position: 'relative', overflowX: 'hidden' }}>
+      {/* ORBES DE LUEUR AMBIANTE FLUIDES (Étape 4) */}
+      <div className="glow-orb glow-orb-primary" style={{ top: '8%', left: '-100px', width: '380px', height: '380px' }} />
+      <div className="glow-orb glow-orb-secondary" style={{ top: '40%', right: '-120px', width: '420px', height: '420px' }} />
+
       {/* MODALE BLOQUANTE CGU & RGPD OBLIGATOIRE */}
       {isAuthenticated && !profile.cguAcceptedAt && (
         <div style={{
@@ -6053,13 +6057,13 @@ export default function App() {
       {/* CONTENU DYNAMIQUE SELON L'ONGLET SÉLECTIONNÉ */}
       <main
         key={`${activeTab}-${viewMode}`}
-        className="premium-main fade-up-in"
+        className={`premium-main fade-up-in ${activeTab === 'chat' ? 'chat-mode' : ''}`}
         style={{
           maxWidth: isMobile && activeTab === 'chat' ? '100%' : (activeTab === 'feed' ? '1460px' : '1200px'),
           margin: '0 auto',
           padding: isMobile && activeTab === 'chat' ? '0' : '20px 20px 90px',
           width: '100%',
-          height: isMobile && activeTab === 'chat' ? 'calc(100dvh - 60px - 65px)' : 'auto',
+          height: isMobile && activeTab === 'chat' ? 'calc(100dvh - 58px - 64px)' : 'auto',
           boxSizing: 'border-box',
           display: isMobile && activeTab === 'chat' ? 'flex' : 'block',
           flexDirection: 'column',
