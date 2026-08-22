@@ -29,7 +29,6 @@ export default function FeedCardItem({
 }) {
   const [localImageIndex, setLocalImageIndex] = useState(0);
   const [typedText, setTypedText] = useState('');
-  const [isScrollVisible, setIsScrollVisible] = useState(false);
   const cardElementRef = useRef(null);
   const touchStartRef = useRef(null);
   const touchDeltaXRef = useRef(0);
@@ -44,28 +43,9 @@ export default function FeedCardItem({
   const isHovered = hoveredCardId === item.id;
   const displayContent = getListingDisplayContent ? getListingDisplayContent(item, currentLang, !!showingOriginalListings[item.id]) : { title: item.title, description: item.description };
 
-  // DÉTECTION AU SCROLL : DÈS QUE L'ANNONCE EST VISIBLE À 30% DANS L'ÉCRAN
+  // EFFET MACHINE À ÉCRIRE (TYPEWRITER) EXCLUSIF AU SURVOL DE CETTE CARTE
   useEffect(() => {
-    const el = cardElementRef.current;
-    if (!el || typeof IntersectionObserver === 'undefined') {
-      setIsScrollVisible(true);
-      return;
-    }
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsScrollVisible(true);
-        }
-      },
-      { threshold: 0.3 }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
-  // EFFET MACHINE À ÉCRIRE (TYPEWRITER) AU SCROLL (30% VISIBLE) OU SURVOL SANS BLOCAGE
-  useEffect(() => {
-    if ((!isScrollVisible && !isHovered) || !displayContent.description) {
+    if (!isHovered || !displayContent.description) {
       setTypedText('');
       return;
     }
@@ -78,8 +58,11 @@ export default function FeedCardItem({
         clearInterval(typingInterval);
       }
     }, 18);
-    return () => clearInterval(typingInterval);
-  }, [isScrollVisible, isHovered, displayContent.description]);
+    return () => {
+      clearInterval(typingInterval);
+      setTypedText('');
+    };
+  }, [isHovered, displayContent.description]);
   
   // Galerie complète : priorité aux photos utilisateurs (gallery), puis médias suggérés, puis fallback
   const gallery = (item.gallery && item.gallery.length > 0)
@@ -430,10 +413,10 @@ export default function FeedCardItem({
               transition: 'color 0.25s ease'
             }}
           >
-            {(isScrollVisible || isHovered) ? (
+            {isHovered && typedText ? (
               <span>
-                {typedText || displayContent.description.slice(0, 110)}
-                {typedText.length > 0 && typedText.length < (displayContent.description?.slice(0, 110)?.length || 0) && (
+                {typedText}
+                {typedText.length < (displayContent.description?.slice(0, 110)?.length || 0) && (
                   <span style={{ color: '#60A5FA', animation: 'pulse 0.8s infinite', fontWeight: '900' }}>|</span>
                 )}
               </span>

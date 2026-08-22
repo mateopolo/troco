@@ -306,6 +306,11 @@ export function useWebRTC({ profileName, selectedChat }) {
       if (!snap.exists()) {
         _cleanup(true);
         setCallState({ type: null, active: false, ringing: false, micOn: true, camOn: true, isScreenSharing: false, isHost: false, inviteOpen: false, copied: false, remoteScreenSharing: false });
+        setDoc(doc(db, 'chats', String(chatId)), {
+          activeCall: null,
+          isLive: false,
+          updatedAt: serverTimestamp()
+        }, { merge: true }).catch(() => {});
         return;
       }
       const data = snap.data();
@@ -400,6 +405,11 @@ export function useWebRTC({ profileName, selectedChat }) {
       if (!snap.exists()) {
         _cleanup(true);
         setCallState({ type: null, active: false, ringing: false, micOn: true, camOn: true, isScreenSharing: false, isHost: false, inviteOpen: false, copied: false, remoteScreenSharing: false });
+        setDoc(doc(db, 'chats', String(chatId)), {
+          activeCall: null,
+          isLive: false,
+          updatedAt: serverTimestamp()
+        }, { merge: true }).catch(() => {});
         return;
       }
       const data = snap.data();
@@ -459,8 +469,13 @@ export function useWebRTC({ profileName, selectedChat }) {
     if (chatId) {
       // Clôturer la salle active dans le chat pour masquer le bandeau vert immédiatement
       setDoc(doc(db, 'chats', String(chatId)), {
-        activeCall: { isLive: false, endedAt: serverTimestamp() }
+        activeCall: null,
+        isLive: false,
+        endedAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
       }, { merge: true }).catch(() => {});
+
+      deleteDoc(doc(db, 'calls', String(chatId))).catch(() => {});
 
       // Journalisation détaillée avec horodatage exact et durée
       const now = new Date();
@@ -511,7 +526,10 @@ export function useWebRTC({ profileName, selectedChat }) {
     const { chatId } = incomingCall;
 
     setDoc(doc(db, 'chats', String(chatId)), {
-      activeCall: { isLive: false, endedAt: serverTimestamp() }
+      activeCall: null,
+      isLive: false,
+      endedAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
     }, { merge: true }).catch(() => {});
 
     const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });

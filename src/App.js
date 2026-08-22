@@ -4,7 +4,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Search, MapPin, Video, Star, Globe, Filter, MessageSquare, PlusCircle, User, ShieldCheck, Clock, CheckCircle, ArrowRight, X, Sparkles, Coins, Plus, Trash2, Camera, Pencil, Mic, PhoneOff, Flame, History, Check, Lock, CreditCard, Tag, Phone, UserPlus, ChevronLeft, ChevronRight, ChevronUp, Eye, EyeOff, Maximize2, Minimize2, ZoomIn, ZoomOut, MicOff, VideoOff, Sun, Moon, Upload, Repeat, SwitchCamera, LogOut, Scale, ShieldAlert, FileText, Monitor, MonitorOff, Crown, Image as ImageIcon } from 'lucide-react';
 import { auth, db } from './firebase';
-import { collection, addDoc, doc, updateDoc, serverTimestamp, onSnapshot, query, orderBy, setDoc, deleteDoc, getDoc, getDocs, where } from 'firebase/firestore';
+import { collection, addDoc, doc, updateDoc, serverTimestamp, onSnapshot, query, orderBy, setDoc, deleteDoc, getDoc, getDocs, where, increment } from 'firebase/firestore';
 import { RecaptchaVerifier, signInWithPhoneNumber, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, GoogleAuthProvider, GithubAuthProvider, FacebookAuthProvider, OAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
 import ChatView from './components/ChatView';
 import { useWebRTC } from './hooks/useWebRTC';
@@ -1558,6 +1558,34 @@ export default function App() {
           userId: uid,
           createdAt: serverTimestamp(),
         });
+
+        // Créditer également le compte du partenaire dans Firestore
+        try {
+          let partnerDocRef = null;
+          if (selectedChat?.authorUid || selectedChat?.partnerUid) {
+            partnerDocRef = doc(db, 'users', selectedChat.authorUid || selectedChat.partnerUid);
+          } else if (partner) {
+            const userQuery = query(collection(db, 'users'), where('name', '==', partner));
+            const uSnap = await getDocs(userQuery);
+            if (!uSnap.empty) {
+              partnerDocRef = doc(db, 'users', uSnap.docs[0].id);
+            }
+          }
+
+          if (partnerDocRef) {
+            const partnerSnap = await getDoc(partnerDocRef);
+            if (partnerSnap.exists()) {
+              const partnerData = partnerSnap.data();
+              await updateDoc(partnerDocRef, {
+                trocoTokens: (partnerData.trocoTokens || 0) + costTokens,
+                dealsCompleted: (partnerData.dealsCompleted || 0) + 1,
+                updatedAt: serverTimestamp(),
+              });
+            }
+          }
+        } catch (err) {
+          console.warn('[Firestore] partner visio credit error:', err);
+        }
       } catch (e) {
         console.warn('Erreur sauvegarde transaction visio:', e);
       }
@@ -2383,10 +2411,30 @@ export default function App() {
     return () => unsub();
   }, [profile?.name]);
 
-  const handleSelectChat = (chat) => {
+  const handleSelectChat = async (chat) => {
     setSelectedChat(chat);
     if (chat?.id) {
-      setReadChats(prev => new Set([...prev, chat.id, String(chat.id), Number(chat.id)]));
+      const cidStr = String(chat.id);
+      setReadChats(prev => new Set([...prev, chat.id, cidStr, Number(chat.id)]));
+
+      // Mettre à jour Firestore pour marquer le chat et ses messages comme lus
+      try {
+        setDoc(doc(db, 'chats', cidStr), {
+          unreadCount: 0,
+          updatedAt: serverTimestamp(),
+        }, { merge: true }).catch(() => {});
+
+        const msgsSnap = await getDocs(collection(db, 'chats', cidStr, 'messages'));
+        msgsSnap.forEach((dSnap) => {
+          const d = dSnap.data();
+          if (d.read !== true && (d.sender === 'them' || (d.senderName && d.senderName !== profile?.name))) {
+            updateDoc(doc(db, 'chats', cidStr, 'messages', dSnap.id), {
+              read: true,
+              status: 'read'
+            }).catch(() => {});
+          }
+        });
+      } catch (_) {}
     }
   };
 
@@ -3955,6 +4003,7 @@ export default function App() {
       await addDoc(collection(db, 'chats', String(chatId), 'messages'), {
         senderName: profile.name,
         text,
+        read: false,
         status: 'sent',
         createdAt: serverTimestamp(),
       });
@@ -3964,6 +4013,7 @@ export default function App() {
         listing: selectedChat.listing,
         lastMessage: text,
         lastSenderName: profile.name,
+        unreadCount: increment(1),
         participants: selectedChat.participants || [profile.name, selectedChat.user],
         updatedAt: serverTimestamp(),
       }, { merge: true });
@@ -4160,20 +4210,45 @@ export default function App() {
           createdAt: serverTimestamp(),
         });
 
-        // Si le partenaire a un identifiant, créditer son compte
-        if (chat?.authorUid || chat?.partnerUid) {
-          const partnerUid = chat.authorUid || chat.partnerUid;
-          const partnerDocRef = doc(db, 'users', partnerUid);
-          const partnerSnap = await getDoc(partnerDocRef);
-          if (partnerSnap.exists()) {
-            const partnerData = partnerSnap.data();
-            await updateDoc(partnerDocRef, {
-              euroBalance: Number(((partnerData.euroBalance || 0) + euroAmount).toFixed(2)),
-              trocoTokens: (partnerData.trocoTokens || 0) + tokensAmount,
-              dealsCompleted: (partnerData.dealsCompleted || 0) + 1,
-              updatedAt: serverTimestamp(),
-            });
+        // Mettre à jour le statut du message deal dans Firestore
+        try {
+          await updateDoc(doc(db, 'chats', String(chatId), 'messages', String(dealId)), {
+            status: 'confirmed',
+            updatedAt: serverTimestamp(),
+          });
+          await setDoc(doc(db, 'chats', String(chatId)), {
+            lastDealStatus: 'confirmed',
+            updatedAt: serverTimestamp(),
+          }, { merge: true });
+        } catch (_) {}
+
+        // Si le partenaire a un identifiant ou nom, créditer son compte
+        try {
+          let partnerDocRef = null;
+          if (chat?.authorUid || chat?.partnerUid) {
+            partnerDocRef = doc(db, 'users', chat.authorUid || chat.partnerUid);
+          } else if (partnerName) {
+            const userQuery = query(collection(db, 'users'), where('name', '==', partnerName));
+            const uSnap = await getDocs(userQuery);
+            if (!uSnap.empty) {
+              partnerDocRef = doc(db, 'users', uSnap.docs[0].id);
+            }
           }
+
+          if (partnerDocRef) {
+            const partnerSnap = await getDoc(partnerDocRef);
+            if (partnerSnap.exists()) {
+              const partnerData = partnerSnap.data();
+              await updateDoc(partnerDocRef, {
+                euroBalance: Number(((partnerData.euroBalance || 0) + euroAmount).toFixed(2)),
+                trocoTokens: (partnerData.trocoTokens || 0) + tokensAmount,
+                dealsCompleted: (partnerData.dealsCompleted || 0) + 1,
+                updatedAt: serverTimestamp(),
+              });
+            }
+          }
+        } catch (err) {
+          console.warn('[Firestore] partner credit write error:', err);
         }
       } catch (err) {
         console.warn('[Firestore] deal accept write error:', err);
@@ -4184,7 +4259,7 @@ export default function App() {
     setTimeout(() => setSaveMessage(''), 5000);
   };
 
-  const handleDeclineDeal = (chatId, dealId) => {
+  const handleDeclineDeal = async (chatId, dealId) => {
     // Règle métier : seul le destinataire peut refuser.
     const dealMessage = (chatThreads[chatId] || []).find(m => m.id === dealId);
     if (!dealMessage || dealMessage.sender === 'me') return;
@@ -4193,6 +4268,15 @@ export default function App() {
       ...prev,
       [chatId]: prev[chatId].map(m => m.id === dealId ? { ...m, status: 'declined' } : m),
     }));
+
+    try {
+      await updateDoc(doc(db, 'chats', String(chatId), 'messages', String(dealId)), {
+        status: 'declined',
+        updatedAt: serverTimestamp(),
+      });
+    } catch (e) {
+      console.warn('[Firestore] deal decline write failed:', e);
+    }
   };
 
   const renderDealCard = (message, chatId, otherName) => {
