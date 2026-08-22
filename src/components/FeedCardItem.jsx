@@ -29,6 +29,8 @@ export default function FeedCardItem({
 }) {
   const [localImageIndex, setLocalImageIndex] = useState(0);
   const [typedText, setTypedText] = useState('');
+  const [isScrollVisible, setIsScrollVisible] = useState(false);
+  const cardElementRef = useRef(null);
   const touchStartRef = useRef(null);
   const touchDeltaXRef = useRef(0);
   const touchDeltaYRef = useRef(0);
@@ -42,9 +44,28 @@ export default function FeedCardItem({
   const isHovered = hoveredCardId === item.id;
   const displayContent = getListingDisplayContent ? getListingDisplayContent(item, currentLang, !!showingOriginalListings[item.id]) : { title: item.title, description: item.description };
 
-  // EFFET MACHINE À ÉCRIRE (TYPEWRITER) FLUIDE AU SURVOL SANS AUCUN CHEVAUCHEMENT
+  // DÉTECTION AU SCROLL : DÈS QUE L'ANNONCE EST VISIBLE À 30% DANS L'ÉCRAN
   useEffect(() => {
-    if (!isHovered || !displayContent.description) {
+    const el = cardElementRef.current;
+    if (!el || typeof IntersectionObserver === 'undefined') {
+      setIsScrollVisible(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsScrollVisible(true);
+        }
+      },
+      { threshold: 0.3 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  // EFFET MACHINE À ÉCRIRE (TYPEWRITER) AU SCROLL (30% VISIBLE) OU SURVOL SANS BLOCAGE
+  useEffect(() => {
+    if ((!isScrollVisible && !isHovered) || !displayContent.description) {
       setTypedText('');
       return;
     }
@@ -56,9 +77,9 @@ export default function FeedCardItem({
       if (currentIdx >= fullText.length) {
         clearInterval(typingInterval);
       }
-    }, 20);
+    }, 18);
     return () => clearInterval(typingInterval);
-  }, [isHovered, displayContent.description]);
+  }, [isScrollVisible, isHovered, displayContent.description]);
   
   // Galerie complète : priorité aux photos utilisateurs (gallery), puis médias suggérés, puis fallback
   const gallery = (item.gallery && item.gallery.length > 0)
@@ -150,7 +171,13 @@ export default function FeedCardItem({
 
   return (
     <div
-      ref={revealRef}
+      ref={(el) => {
+        cardElementRef.current = el;
+        if (revealRef) {
+          if (typeof revealRef === 'function') revealRef(el);
+          else revealRef.current = el;
+        }
+      }}
       onClick={() => handleOpenListing(item)}
       onMouseEnter={() => setHoveredCardId(item.id)}
       onMouseLeave={() => setHoveredCardId(null)}
@@ -336,9 +363,9 @@ export default function FeedCardItem({
           </span>
         )}
 
-        {media.video && (
-          <span style={{ position: 'absolute', bottom: '12px', left: '12px', backgroundColor: isHovered ? '#04265A' : 'rgba(15,23,42,0.75)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', color: '#60A5FA', fontSize: '10px', fontWeight: '800', padding: '5px 9px', borderRadius: '10px', zIndex: 4, display: 'flex', alignItems: 'center', gap: '4px', transition: 'all 0.3s ease' }}>
-            <Video size={12} /> {isHovered ? (t('livePlayback') || 'Lecture') : (t('demoVideo') || 'Vidéo')}
+        {item.isBoosted && (
+          <span style={{ position: 'absolute', top: '12px', left: (item.urgent || item.isDemo) ? 'auto' : '12px', right: (item.urgent || item.isDemo) ? '12px' : 'auto', backgroundColor: '#F59E0B', color: '#FFF', fontSize: '10px', fontWeight: '900', padding: '4px 8px', borderRadius: '8px', zIndex: 4, letterSpacing: '0.05em' }}>
+            TOP VISIBILITÉ
           </span>
         )}
 
@@ -350,7 +377,7 @@ export default function FeedCardItem({
       {/* CORPS DE CARTE & TYPOGRAPHIE ÉDITORIALE */}
       <div style={{ padding: '16px 18px' }}>
         <div>
-          <h3 className="font-sans" style={{ fontSize: '15.5px', fontWeight: '800', color: darkMode ? '#FFFFFF' : '#111827', margin: '0 0 4px 0', lineHeight: 1.35, letterSpacing: '-0.02em' }}>
+          <h3 className="font-sans" style={{ fontSize: '15.5px', fontWeight: '800', color: darkMode ? '#FFFFFF' : '#111827', margin: '0 0 4px 0', lineHeight: 1.35, letterSpacing: '-0.02em', cursor: 'pointer' }}>
             {displayContent.title}
           </h3>
           {currentLang !== (item.nativeLang || 'FR') && (
@@ -384,7 +411,7 @@ export default function FeedCardItem({
           </span>
         </div>
 
-        {/* MICRO-INTERACTION ÉTAPE 4 : APERÇU ANIMÉ TYPEWRITER SANS CHEVAUCHEMENT */}
+        {/* MICRO-INTERACTION ÉTAPE 3 : APERÇU ANIMÉ TYPEWRITER DÉCLENCHÉ AU SCROLL (30%) OU SURVOL */}
         {displayContent.description && (
           <div
             style={{
@@ -402,10 +429,10 @@ export default function FeedCardItem({
               transition: 'color 0.25s ease'
             }}
           >
-            {isHovered ? (
+            {(isScrollVisible || isHovered) ? (
               <span>
-                {typedText}
-                {typedText.length < (displayContent.description?.slice(0, 110)?.length || 0) && (
+                {typedText || displayContent.description.slice(0, 110)}
+                {typedText.length > 0 && typedText.length < (displayContent.description?.slice(0, 110)?.length || 0) && (
                   <span style={{ color: '#60A5FA', animation: 'pulse 0.8s infinite', fontWeight: '900' }}>|</span>
                 )}
               </span>

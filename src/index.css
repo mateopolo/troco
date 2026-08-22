@@ -705,3 +705,11 @@ body.dark-mode .ad-card:hover {
   }
 }
 
+/* FORCER LA TAILLE DE POLICE MINIMALE SUR MOBILE POUR BLOQUER L'AUTO-ZOOM iOS */
+@media screen and (max-width: 768px) {
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+}
+
+

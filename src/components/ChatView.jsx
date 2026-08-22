@@ -56,17 +56,27 @@ export default function ChatView({
   const [, setTranslationRevision] = useState(0);
   const messagesEndRef = useRef(null);
 
-  // Écoute du Visual Viewport pour le clavier virtuel mobile
+  const [viewportHeight, setViewportHeight] = useState(() => {
+    if (typeof window !== 'undefined' && window.visualViewport) {
+      return window.visualViewport.height;
+    }
+    return null;
+  });
+
+  // Écoute du Visual Viewport pour le clavier virtuel mobile (iOS Safari & Android)
   useEffect(() => {
     if (typeof window === 'undefined' || !window.visualViewport) return;
-    const handleViewportResize = () => {
+    const handleViewportUpdate = () => {
+      setViewportHeight(window.visualViewport.height);
       if (messagesEndRef.current) {
         messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
       }
     };
-    window.visualViewport.addEventListener('resize', handleViewportResize);
+    window.visualViewport.addEventListener('resize', handleViewportUpdate);
+    window.visualViewport.addEventListener('scroll', handleViewportUpdate);
     return () => {
-      window.visualViewport?.removeEventListener('resize', handleViewportResize);
+      window.visualViewport?.removeEventListener('resize', handleViewportUpdate);
+      window.visualViewport?.removeEventListener('scroll', handleViewportUpdate);
     };
   }, []);
 
@@ -171,6 +181,18 @@ export default function ChatView({
     } catch (_) {
       return '';
     }
+  };
+
+  const handleCopyMsg = (msg) => {
+    if (!msg) return;
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(msg.text || '');
+      }
+    } catch (_) {}
+    setCopiedMsgId(msg.id);
+    setTimeout(() => setCopiedMsgId(null), 1500);
+    setActiveMenuMsgId(null);
   };
 
   // Formatage intelligent des dates et heures en français
@@ -577,19 +599,24 @@ export default function ChatView({
 
         {/* SALLE DE CONVERSATION (Visible sur Desktop ou sur Mobile en sous-vue 'room') */}
         {(!isMobile || mobileSubView === 'room') && (
-          <div style={{
-            backgroundColor: darkMode ? 'rgba(30, 41, 59, 0.94)' : 'rgba(255,255,255,0.94)',
-            backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
-            borderRadius: isMobile ? '0' : '24px',
-            border: isMobile ? 'none' : (darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(229,231,235,0.9)'),
-            boxShadow: isMobile ? 'none' : '0 10px 30px rgba(15,23,42,0.06)',
-            display: 'flex', flexDirection: 'column',
-            height: '100%',
-            width: '100%',
-            boxSizing: 'border-box',
-            overflow: 'hidden',
-            position: 'relative'
-          }}>
+          <div
+            className={isMobile ? "mobile-chat-fullscreen-layer" : ""}
+            style={{
+              backgroundColor: darkMode ? '#0B1120' : '#FFFFFF',
+              borderRadius: isMobile ? '0' : '24px',
+              border: isMobile ? 'none' : (darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(229,231,235,0.9)'),
+              boxShadow: isMobile ? 'none' : '0 10px 30px rgba(15,23,42,0.06)',
+              display: 'flex', flexDirection: 'column',
+              height: isMobile ? (viewportHeight ? `${viewportHeight}px` : '100dvh') : '100%',
+              maxHeight: isMobile ? (viewportHeight ? `${viewportHeight}px` : '100dvh') : '100%',
+              width: isMobile ? '100vw' : '100%',
+              position: isMobile ? 'fixed' : 'relative',
+              inset: isMobile ? 0 : 'auto',
+              zIndex: isMobile ? 100 : 'auto',
+              boxSizing: 'border-box',
+              overflow: 'hidden'
+            }}
+          >
             {!activeChatObj ? (
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', padding: '40px 20px', textAlign: 'center' }}>
                 <div style={{ width: '72px', height: '72px', borderRadius: '50%', backgroundColor: darkMode ? 'rgba(4,38,90,0.4)' : '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -602,15 +629,22 @@ export default function ChatView({
               </div>
             ) : (
               <>
-                {/* 1. EN-TÊTE STATIQUE & VERROUILLÉ (PINNED TOP - PARFAITEMENT CENTRÉ SANS RETOUR À LA LIGNE) */}
+                {/* 1. EN-TÊTE DU CHAT (NOM, STATUT, BOUTON RETOUR, APPEL VIDÉO) */}
                 <div style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                  padding: isMobile ? '10px 12px' : '12px 18px',
-                  borderBottom: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E2E8F0',
-                  backgroundColor: darkMode ? 'rgba(30, 41, 59, 0.98)' : 'rgba(255,255,255,0.98)',
-                  backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-                  gap: '8px', flexShrink: 0, zIndex: 30, width: '100%', boxSizing: 'border-box',
-                  minHeight: '56px'
+                  flexShrink: 0,
+                  width: '100%',
+                  height: isMobile ? '60px' : '64px',
+                  padding: isMobile ? 'max(8px, env(safe-area-inset-top, 8px)) 16px 8px 16px' : '12px 18px',
+                  borderBottom: darkMode ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(226,232,240,0.8)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  backgroundColor: darkMode ? 'rgba(11, 17, 32, 0.96)' : 'rgba(255, 255, 255, 0.96)',
+                  backdropFilter: 'blur(20px)',
+                  WebkitBackdropFilter: 'blur(20px)',
+                  boxSizing: 'border-box',
+                  zIndex: 30,
+                  gap: '8px'
                 }}>
                   {/* Partie Gauche : Retour (Mobile) + Avatar + Nom + Annonce */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
@@ -940,171 +974,175 @@ export default function ChatView({
 
                       const isMe = msg.sender === 'me';
                       const isMenuOpen = activeMenuMsgId === msg.id;
+                      const timeString = formatMsgTime(msg.timestamp || msg.createdAt || msg.id);
 
                       return (
                         <div
                           key={msg.id}
-                          className="msg-action-menu-container"
                           style={{
                             display: 'flex',
                             flexDirection: 'column',
                             alignItems: isMe ? 'flex-end' : 'flex-start',
-                            alignSelf: isMe ? 'flex-end' : 'flex-start',
-                            position: 'relative',
-                            maxWidth: isMobile ? '86%' : '75%'
+                            width: '100%',
+                            position: 'relative'
                           }}
                         >
                           <div
-                            onClick={() => setActiveMenuMsgId(prev => prev === msg.id ? null : msg.id)}
                             style={{
-                              padding: '10px 14px',
-                              borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
-                              backgroundColor: isMe ? (darkMode ? '#60A5FA' : '#04265A') : (darkMode ? 'rgba(15,23,42,0.85)' : '#F1F5F9'),
-                              color: isMe ? (darkMode ? '#0F172A' : '#FFF') : (darkMode ? '#F8FAFC' : '#1E293B'),
-                              fontWeight: isMe ? '600' : '500',
-                              fontSize: isMobile ? '13.5px' : '14px',
-                              lineHeight: 1.4,
-                              boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
-                              wordBreak: 'break-word',
-                              position: 'relative',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            <div>{translatedText}</div>
-                            
-                            <div style={{
                               display: 'flex',
                               alignItems: 'center',
-                              justifyContent: 'flex-end',
                               gap: '4px',
-                              marginTop: '4px',
-                              fontSize: '10px',
-                              color: isMe ? (darkMode ? 'rgba(15,23,42,0.65)' : 'rgba(255,255,255,0.75)') : (darkMode ? '#94A3B8' : '#64748B'),
-                              fontWeight: '600',
-                              userSelect: 'none',
-                            }}>
-                              {msg.edited && (
-                                <span style={{ fontSize: '9px', fontStyle: 'italic', opacity: 0.85 }}>
-                                  ({t('edited') || 'modifié'})
-                                </span>
-                              )}
-                              <span>{formatMsgTime(msg.createdAt || msg.timestamp || msg.id)}</span>
-                              {isMe && renderMessageStatus(msg)}
-                            </div>
-
-                            {/* MENU FLOTTANT DES ACTIONS */}
-                            {isMenuOpen && (
-                              <div
-                                onClick={(e) => e.stopPropagation()}
-                                style={{
-                                  position: 'absolute',
-                                  top: '100%',
-                                  [isMe ? 'right' : 'left']: 0,
-                                  zIndex: 50,
-                                  minWidth: '130px',
-                                  marginTop: '4px',
-                                  backgroundColor: darkMode ? 'rgba(30,41,59,0.98)' : '#FFFFFF',
-                                  backdropFilter: 'blur(16px)',
-                                  borderRadius: '14px',
-                                  border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #E2E8F0',
-                                  boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
-                                  padding: '4px',
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  gap: '2px',
-                                }}
-                              >
-                                <button
-                                  onClick={() => {
-                                    navigator.clipboard?.writeText(msg.text || '');
-                                    setCopiedMsgId(msg.id);
-                                    setTimeout(() => setCopiedMsgId(null), 1500);
-                                    setActiveMenuMsgId(null);
-                                  }}
-                                  className="premium-button"
-                                  style={{
-                                    display: 'flex', alignItems: 'center', gap: '8px',
-                                    padding: '7px 9px', borderRadius: '8px', border: 'none',
-                                    backgroundColor: 'transparent', color: darkMode ? '#F8FAFC' : '#1E293B',
-                                    fontSize: '12px', fontWeight: '700', cursor: 'pointer', textAlign: 'left',
-                                    width: '100%',
-                                  }}
-                                >
-                                  {copiedMsgId === msg.id ? <Check size={13} color="#10B981" /> : <Copy size={13} />}
-                                  {copiedMsgId === msg.id ? 'Copié !' : 'Copier'}
-                                </button>
-
-                                {isMe && (
-                                  <button
-                                    onClick={() => {
-                                      setEditingMsg({ id: msg.id, text: msg.text || '' });
-                                      setChatInputText(msg.text || '');
-                                      setActiveMenuMsgId(null);
-                                    }}
-                                    className="premium-button"
-                                    style={{
-                                      display: 'flex', alignItems: 'center', gap: '8px',
-                                      padding: '7px 9px', borderRadius: '8px', border: 'none',
-                                      backgroundColor: 'transparent', color: darkMode ? '#60A5FA' : '#04265A',
-                                      fontSize: '12px', fontWeight: '700', cursor: 'pointer', textAlign: 'left',
-                                      width: '100%',
-                                    }}
-                                  >
-                                    <Edit2 size={13} /> Modifier
-                                  </button>
-                                )}
-
-                                {isMe && (
-                                  <button
-                                    onClick={() => {
-                                      if (handleDeleteMessage) {
-                                        handleDeleteMessage(currentChatId, msg.id);
-                                      }
-                                      setActiveMenuMsgId(null);
-                                    }}
-                                    className="premium-button"
-                                    style={{
-                                      display: 'flex', alignItems: 'center', gap: '8px',
-                                      padding: '7px 9px', borderRadius: '8px', border: 'none',
-                                      backgroundColor: 'transparent', color: '#EF4444',
-                                      fontSize: '12px', fontWeight: '700', cursor: 'pointer', textAlign: 'left',
-                                      width: '100%',
-                                    }}
-                                  >
-                                    <Trash2 size={13} color="#EF4444" /> Supprimer
-                                  </button>
-                                )}
-                              </div>
-                            )}
-                          </div>
-
-                          {currentLang !== 'FR' && (
-                            <button
-                              onClick={() => toggleOriginalMessage(msg.id)}
-                              className="premium-button"
+                              flexDirection: isMe ? 'row-reverse' : 'row',
+                              maxWidth: isMobile ? '88%' : '76%',
+                              position: 'relative'
+                            }}
+                          >
+                            <div
                               style={{
-                                border: 'none', background: 'none', cursor: 'pointer',
-                                color: isMe ? (darkMode ? '#60A5FA' : '#04265A') : (darkMode ? '#94A3B8' : '#64748B'),
-                                fontSize: '10px', fontWeight: '800', display: 'inline-flex',
-                                alignItems: 'center', gap: '3px', marginTop: '3px',
-                                padding: '2px 4px'
+                                padding: '10px 14px',
+                                borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+                                backgroundColor: isMe
+                                  ? (darkMode ? '#3B82F6' : '#04265A')
+                                  : (darkMode ? 'rgba(30, 41, 59, 0.95)' : '#F1F5F9'),
+                                color: isMe
+                                  ? '#FFFFFF'
+                                  : (darkMode ? '#F8FAFC' : '#0F172A'),
+                                border: isMe
+                                  ? 'none'
+                                  : (darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(226,232,240,0.8)'),
+                                boxShadow: isMe
+                                  ? '0 4px 14px rgba(4,38,90,0.2)'
+                                  : '0 2px 8px rgba(15,23,42,0.04)',
+                                wordBreak: 'break-word',
+                                position: 'relative',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                gap: '4px'
                               }}
                             >
-                              {isMsgOriginal ? t('showTranslation') : t('showOriginal')}
-                            </button>
-                          )}
+                              <div style={{ fontSize: '13.5px', lineHeight: 1.45, fontWeight: '500' }}>
+                                {translatedText}
+                              </div>
+
+                              <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: isMe ? 'flex-end' : 'flex-start',
+                                gap: '6px',
+                                marginTop: '2px'
+                              }}>
+                                <span style={{
+                                  fontSize: '9.5px',
+                                  color: isMe ? 'rgba(255,255,255,0.75)' : (darkMode ? '#94A3B8' : '#64748B'),
+                                  fontWeight: '600'
+                                }}>
+                                  {timeString}
+                                </span>
+                                {isMe && (
+                                  <CheckCircle size={10} color={msg.read ? '#38BDF8' : 'rgba(255,255,255,0.7)'} />
+                                )}
+                              </div>
+                            </div>
+
+                            {/* BOUTON D'ACTIONS DU MESSAGE */}
+                            <div className="msg-action-menu-container" style={{ position: 'relative' }}>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveMenuMsgId(isMenuOpen ? null : msg.id);
+                                }}
+                                className="msg-hover-btn"
+                                style={{
+                                  border: 'none', background: 'none', cursor: 'pointer',
+                                  padding: '4px', borderRadius: '50%',
+                                  color: darkMode ? '#94A3B8' : '#64748B',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                }}
+                              >
+                                <span style={{ fontSize: '14px', lineHeight: 1 }}>⋮</span>
+                              </button>
+
+                              {isMenuOpen && (
+                                <div
+                                  style={{
+                                    position: 'absolute',
+                                    top: '100%',
+                                    [isMe ? 'right' : 'left']: 0,
+                                    backgroundColor: darkMode ? '#1E293B' : '#FFFFFF',
+                                    borderRadius: '12px',
+                                    padding: '4px',
+                                    boxShadow: '0 8px 24px rgba(0,0,0,0.25)',
+                                    border: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E2E8F0',
+                                    zIndex: 50,
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    minWidth: '120px'
+                                  }}
+                                >
+                                  <button
+                                    onClick={() => handleCopyMsg(msg)}
+                                    style={{
+                                      border: 'none', background: 'none', padding: '6px 10px',
+                                      display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px',
+                                      color: darkMode ? '#E2E8F0' : '#334155', cursor: 'pointer', borderRadius: '8px',
+                                      textAlign: 'left'
+                                    }}
+                                  >
+                                    {copiedMsgId === msg.id ? <Check size={12} color="#10B981" /> : <Copy size={12} />}
+                                    <span>{copiedMsgId === msg.id ? 'Copié !' : 'Copier'}</span>
+                                  </button>
+
+                                  {isMe && handleEditMessage && (
+                                    <button
+                                      onClick={() => {
+                                        setEditingMsg({ id: msg.id, text: msg.text });
+                                        setChatInputText(msg.text);
+                                        setActiveMenuMsgId(null);
+                                      }}
+                                      style={{
+                                        border: 'none', background: 'none', padding: '6px 10px',
+                                        display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px',
+                                        color: darkMode ? '#E2E8F0' : '#334155', cursor: 'pointer', borderRadius: '8px',
+                                        textAlign: 'left'
+                                      }}
+                                    >
+                                      <Edit2 size={12} />
+                                      <span>Modifier</span>
+                                    </button>
+                                  )}
+
+                                  {isMe && handleDeleteMessage && (
+                                    <button
+                                      onClick={() => {
+                                        handleDeleteMessage(activeChatObj.id, msg.id);
+                                        setActiveMenuMsgId(null);
+                                      }}
+                                      style={{
+                                        border: 'none', background: 'none', padding: '6px 10px',
+                                        display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px',
+                                        color: '#EF4444', cursor: 'pointer', borderRadius: '8px',
+                                        textAlign: 'left'
+                                      }}
+                                    >
+                                      <Trash2 size={12} />
+                                      <span>Supprimer</span>
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       );
                     })}
 
-                    {/* INDICATEUR DE SAISIE EN DIRECT */}
                     {isThemTyping && (
                       <div style={{
-                        display: 'inline-flex',
+                        display: 'flex',
                         alignItems: 'center',
-                        gap: '8px',
-                        padding: '6px 14px',
-                        borderRadius: '16px 16px 16px 4px',
+                        gap: '6px',
+                        padding: '6px 12px',
+                        borderRadius: '16px',
                         backgroundColor: darkMode ? 'rgba(15,23,42,0.92)' : '#F0F9FF',
                         border: darkMode ? '1.5px solid rgba(56,189,248,0.45)' : '1.5px solid #0284C7',
                         boxShadow: darkMode ? '0 4px 14px rgba(0,0,0,0.3), 0 0 10px rgba(56,189,248,0.15)' : '0 4px 12px rgba(2,132,199,0.12)',
@@ -1127,14 +1165,20 @@ export default function ChatView({
                   </div>
                 </div>
 
-                {/* 3. BARRE DE SAISIE STATIQUE & VERROUILLÉE (PINNED BOTTOM - CENTRÉE) */}
+                {/* 3. BARRE DE SAISIE INFÉRIEURE (INPUT + BOUTON D'ENVOI) */}
                 <div style={{
-                  display: 'flex', flexDirection: 'column', gap: '6px',
-                  padding: isMobile ? '8px 12px 10px' : '10px 18px 14px',
-                  borderTop: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E2E8F0',
-                  backgroundColor: darkMode ? 'rgba(30, 41, 59, 0.98)' : 'rgba(255,255,255,0.98)',
-                  backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-                  flexShrink: 0, zIndex: 30, width: '100%', boxSizing: 'border-box'
+                  flexShrink: 0,
+                  width: '100%',
+                  padding: isMobile ? '10px 16px max(12px, env(safe-area-inset-bottom, 12px)) 16px' : '10px 18px 14px',
+                  background: darkMode ? 'rgba(11, 17, 32, 0.96)' : 'rgba(255, 255, 255, 0.96)',
+                  backdropFilter: 'blur(20px)',
+                  WebkitBackdropFilter: 'blur(20px)',
+                  borderTop: darkMode ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(226,232,240,0.8)',
+                  boxSizing: 'border-box',
+                  zIndex: 30,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '6px'
                 }}>
                   <div style={{
                     maxWidth: '680px',
