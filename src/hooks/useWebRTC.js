@@ -31,7 +31,7 @@ const ICE_CONFIG = {
   iceCandidatePoolSize: 10,
 };
 
-export function useWebRTC({ profileName, selectedChat }) {
+export function useWebRTC({ profileName, profileUid, selectedChat }) {
   const [callState, setCallState] = useState({
     type: null, active: false, ringing: false,
     micOn: true, camOn: true, isScreenSharing: false, isHost: false,
@@ -280,7 +280,9 @@ export function useWebRTC({ profileName, selectedChat }) {
     await setDoc(doc(db, 'calls', String(chatId)), {
       type,
       from: profileName,
+      fromUid: profileUid || null,
       to: selectedChat.user,
+      toUid: selectedChat.partnerUid || selectedChat.uid || null,
       participants: [profileName],
       status: 'ringing',
       offer: { type: offer.type, sdp: offer.sdp },
@@ -350,7 +352,7 @@ export function useWebRTC({ profileName, selectedChat }) {
     });
 
     unsubsRef.current = [unsubAnswer, unsubCallee1, unsubCallee2];
-  }, [selectedChat, profileName, playRingtone, _getLocalStream, _createPC, _cleanup]);
+  }, [selectedChat, profileName, profileUid, playRingtone, _getLocalStream, _createPC, _cleanup]);
 
   const acceptIncomingCall = useCallback(async () => {
     if (!incomingCall) return null;
@@ -551,16 +553,18 @@ export function useWebRTC({ profileName, selectedChat }) {
     setIncomingCall(null);
   }, [incomingCall]);
 
-  // Écoute des appels entrants pour cet utilisateur (to === profileName avec tolérance casse)
+  // Écoute universelle des appels entrants pour cet utilisateur
   useEffect(() => {
-    if (!profileName) return;
-    const normalizedProfile = profileName.trim().toLowerCase();
+    if (!profileName && !profileUid) return;
+    const normalizedProfile = (profileName || '').trim().toLowerCase();
     const unsub = onSnapshot(collection(db, 'calls'), (snap) => {
       snap.docChanges().forEach(change => {
         const data = change.doc.data();
         const targetTo = (data?.to || '').trim().toLowerCase();
-        if ((change.type === 'added' || change.type === 'modified') && targetTo === normalizedProfile && data.status === 'ringing') {
-          setIncomingCall({ chatId: change.doc.id, type: data.type, from: data.from });
+        const isMatch = (normalizedProfile && targetTo === normalizedProfile) ||
+                        (profileUid && data?.toUid === profileUid);
+        if ((change.type === 'added' || change.type === 'modified') && isMatch && data.status === 'ringing') {
+          setIncomingCall({ chatId: change.doc.id, type: data.type, from: data.from, fromUid: data.fromUid });
           playRingtone();
           if (navigator.vibrate) navigator.vibrate([400, 150, 400, 150, 400]);
         }
@@ -570,7 +574,7 @@ export function useWebRTC({ profileName, selectedChat }) {
       });
     });
     return () => unsub();
-  }, [profileName, playRingtone]);
+  }, [profileName, profileUid, playRingtone]);
 
   // 1. Battement de cœur (Heartbeat) toutes les 10 secondes pendant l'appel actif pour maintenir la session
   useEffect(() => {

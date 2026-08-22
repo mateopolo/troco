@@ -1431,7 +1431,7 @@ export default function App() {
     hostMuteParticipant,
     hostStopParticipantScreenShare,
     copyInviteLink,
-  } = useWebRTC({ profileName: profile.name, selectedChat });
+  } = useWebRTC({ profileName: profile.name, profileUid: profile?.uid || (auth.currentUser && auth.currentUser.uid), selectedChat });
 
   // Attacheurs de flux universels sans conflit de ref (évite les écrans noirs sur tous navigateurs)
   const attachLocalStream = useCallback((el) => {
@@ -8668,7 +8668,7 @@ export default function App() {
       {incomingCall && !callState.active && (
         <div style={{
           position: 'fixed', top: '16px', left: '50%', transform: 'translateX(-50%)',
-          width: 'calc(100% - 32px)', maxWidth: '520px', zIndex: 9999,
+          width: 'calc(100% - 32px)', maxWidth: '520px', zIndex: 999999,
           background: 'linear-gradient(135deg, rgba(15,23,42,0.98) 0%, rgba(30,41,59,0.98) 100%)',
           backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
           border: '1.5px solid rgba(96,165,250,0.5)',
