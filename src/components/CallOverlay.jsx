@@ -35,9 +35,9 @@ export default function CallOverlay({
   useEffect(() => {
     if (!pipPosition) return;
     const screenW = typeof window !== 'undefined' ? window.innerWidth : 400;
-    if (pipPosition.x <= 20) {
+    if (pipPosition.x <= 25) {
       setIsDocked('left');
-    } else if (pipPosition.x >= screenW - 60) {
+    } else if (pipPosition.x >= screenW - 65) {
       setIsDocked('right');
     } else {
       setIsDocked(null);
@@ -82,7 +82,7 @@ export default function CallOverlay({
     if (setPipPosition) {
       setPipPosition(prev => ({
         ...prev,
-        x: isDocked === 'left' ? 20 : Math.max(10, screenW - 230),
+        x: isDocked === 'left' ? 25 : Math.max(10, screenW - 230),
       }));
     }
     setIsDocked(null);

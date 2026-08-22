@@ -871,6 +871,21 @@ export default function App() {
       if (txData.boostDetails?.listingId) {
         setListings(prev => prev.map(item => item.id === txData.boostDetails.listingId ? { ...item, isBoosted: true } : item));
       }
+    } else if (txData.mode === 'deal') {
+      if (txData.payload?.chatId && txData.payload?.dealId) {
+        const { chatId, dealId, terms, partnerName } = txData.payload;
+        const tokensAmount = Number(terms?.trocoTokens) || 0;
+        if (tokensAmount > 0) {
+          updatedTokens = Math.max(0, updatedTokens - tokensAmount);
+        }
+        setChatThreads(prev => ({
+          ...prev,
+          [chatId]: (prev[chatId] || []).map(m => m.id === dealId ? { ...m, status: 'confirmed' } : m),
+        }));
+        setChatStatusOverrides(prev => ({ ...prev, [chatId]: 'Deal Validé' }));
+        setSaveMessage(`🤝 Deal validé et réglé avec succès avec ${partnerName || 'votre partenaire'} !`);
+        setTimeout(() => setSaveMessage(''), 5000);
+      }
     }
 
     const updatedProfile = {
@@ -1359,6 +1374,64 @@ export default function App() {
     y: typeof window !== 'undefined' ? Math.max(10, window.innerHeight - 240) : 100
   });
 
+  const [localVideoPosition, setLocalVideoPosition] = useState({
+    x: typeof window !== 'undefined' ? Math.max(16, window.innerWidth - 130) : 250,
+    y: 85
+  });
+  const localVideoPointerDragRef = useRef({
+    isDragging: false,
+    startX: 0,
+    startY: 0,
+    initialPosX: 0,
+    initialPosY: 0,
+    movedDistance: 0,
+  });
+
+  const handleLocalVideoPointerDown = (e) => {
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch (_) {}
+    localVideoPointerDragRef.current = {
+      isDragging: true,
+      startX: e.clientX,
+      startY: e.clientY,
+      initialPosX: localVideoPosition.x,
+      initialPosY: localVideoPosition.y,
+      movedDistance: 0,
+    };
+  };
+
+  const handleLocalVideoPointerMove = (e) => {
+    if (!localVideoPointerDragRef.current.isDragging) return;
+    const deltaX = e.clientX - localVideoPointerDragRef.current.startX;
+    const deltaY = e.clientY - localVideoPointerDragRef.current.startY;
+    localVideoPointerDragRef.current.movedDistance = Math.hypot(deltaX, deltaY);
+
+    const vidW = 110;
+    const vidH = 150;
+    const maxX = Math.max(10, window.innerWidth - vidW - 10);
+    const maxY = Math.max(10, window.innerHeight - vidH - 80);
+
+    const nextX = Math.max(10, Math.min(maxX, localVideoPointerDragRef.current.initialPosX + deltaX));
+    const nextY = Math.max(10, Math.min(maxY, localVideoPointerDragRef.current.initialPosY + deltaY));
+
+    setLocalVideoPosition({ x: nextX, y: nextY });
+  };
+
+  const handleLocalVideoPointerUp = (e) => {
+    if (!localVideoPointerDragRef.current.isDragging) return;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch (_) {}
+    localVideoPointerDragRef.current.isDragging = false;
+  };
+
+  const handleLocalVideoClick = () => {
+    if (localVideoPointerDragRef.current.movedDistance >= 6) return;
+    setIsSwapVideo(true);
+  };
+
   // ---- MODE IMMERSION & TRANSPARENCE AUTOMATIQUE (INACTIVITÉ 5 SECONDES) ----
   const [isCallInactive, setIsCallInactive] = useState(false);
   const callInactivityTimerRef = useRef(null);
@@ -1527,15 +1600,13 @@ export default function App() {
     const deltaY = e.clientY - pipPointerDragRef.current.startY;
     pipPointerDragRef.current.movedDistance = Math.hypot(deltaX, deltaY);
 
-    const pipWidth = 210;
-    const pipHeight = 150;
-    const margin = 10;
     const bottomNavOffset = 75;
-    const maxX = Math.max(margin, window.innerWidth - pipWidth - margin);
-    const maxY = Math.max(margin, window.innerHeight - pipHeight - bottomNavOffset);
+    const minX = 0;
+    const maxX = Math.max(0, window.innerWidth - 45);
+    const maxY = Math.max(10, window.innerHeight - 150 - bottomNavOffset);
 
-    const nextX = Math.max(margin, Math.min(maxX, pipPointerDragRef.current.initialPosX + deltaX));
-    const nextY = Math.max(margin, Math.min(maxY, pipPointerDragRef.current.initialPosY + deltaY));
+    const nextX = Math.max(minX, Math.min(maxX, pipPointerDragRef.current.initialPosX + deltaX));
+    const nextY = Math.max(10, Math.min(maxY, pipPointerDragRef.current.initialPosY + deltaY));
 
     setPipPosition({ x: nextX, y: nextY });
   };
@@ -4001,31 +4072,116 @@ export default function App() {
     }
   };
 
-  const handleAcceptDeal = (chatId, dealId, terms) => {
+  const handleAcceptDeal = async (chatId, dealId, terms) => {
     // Règle métier : un utilisateur ne peut PAS accepter sa propre contre-proposition.
     const dealMessage = (chatThreads[chatId] || []).find(m => m.id === dealId);
     if (!dealMessage || dealMessage.sender === 'me') return;
 
+    const chat = selectedChat && selectedChat.id === chatId ? selectedChat : mockChats.find(c => c.id === chatId);
+    const partnerName = chat?.user || 'Interlocuteur';
+    const tokensAmount = Number(terms?.trocoTokens) || 0;
+    const euroAmount = Number(terms?.euroAmount) || 0;
+
+    // 1. Si montant en euros > 0 et solde euro insuffisant, déclencher la passerelle de paiement
+    if (euroAmount > 0 && (profile.euroBalance || 0) < euroAmount) {
+      handleOpenPayment('deal', {
+        chatId,
+        dealId,
+        terms,
+        amount: euroAmount,
+        partnerName,
+        label: `Paiement du deal avec ${partnerName}`
+      });
+      return;
+    }
+
+    // 2. Débit / Crédit dynamique des jetons et/ou euros
+    let newEuroBalance = profile.euroBalance || 0;
+    let newTokensBalance = profile.trocoTokens || 0;
+
+    if (euroAmount > 0) {
+      newEuroBalance = Number(Math.max(0, newEuroBalance - euroAmount).toFixed(2));
+    }
+    if (tokensAmount > 0) {
+      newTokensBalance = Math.max(0, newTokensBalance - tokensAmount);
+    }
+
+    const updatedProfile = {
+      ...profile,
+      euroBalance: newEuroBalance,
+      trocoTokens: newTokensBalance,
+      dealsCompleted: (profile.dealsCompleted || 0) + 1,
+    };
+    setProfile(updatedProfile);
+    try {
+      localStorage.setItem('troco_user_profile', JSON.stringify(updatedProfile));
+    } catch (_) {}
+
+    // Mise à jour de l'état du message et du chat
     setChatThreads(prev => ({
       ...prev,
-      [chatId]: prev[chatId].map(m => m.id === dealId ? { ...m, status: 'accepted' } : m),
+      [chatId]: (prev[chatId] || []).map(m => m.id === dealId ? { ...m, status: 'confirmed' } : m),
     }));
-    const chat = selectedChat && selectedChat.id === chatId ? selectedChat : mockChats.find(c => c.id === chatId);
+    setChatStatusOverrides(prev => ({ ...prev, [chatId]: 'Deal Validé' }));
 
-    if (terms.euroAmount > 0) {
-      openCheckout({
-        mode: 'deal',
-        amount: terms.euroAmount,
-        label: `Paiement du deal avec ${chat?.user || 'l\'interlocuteur'}`,
-        payload: { chatId, dealId },
-      });
-    } else {
-      setChatThreads(prev => ({
-        ...prev,
-        [chatId]: prev[chatId].map(m => m.id === dealId ? { ...m, status: 'confirmed' } : m),
-      }));
-      setChatStatusOverrides(prev => ({ ...prev, [chatId]: 'Deal Validé' }));
+    // Sons de succès
+    playBetclicBalanceSound(true);
+    playApplePaySound();
+
+    // Enregistrement de la transaction
+    const newTx = {
+      id: `tx-deal-${Date.now()}`,
+      transactionId: `TRK-DEAL-${Date.now().toString().slice(-6)}`,
+      label: `Deal avec ${partnerName} (${terms?.conditions || 'Prestation/Troc'})`,
+      amountTtc: euroAmount,
+      tokens: tokensAmount,
+      mode: 'deal',
+      status: 'completed',
+      date: new Date().toISOString(),
+      partner: partnerName,
+      createdAt: new Date().toISOString(),
+    };
+    setUserTransactions(prev => [newTx, ...prev]);
+
+    // Persistance Firestore
+    const myUid = profile?.uid || auth.currentUser?.uid;
+    if (myUid) {
+      try {
+        await updateDoc(doc(db, 'users', myUid), {
+          euroBalance: updatedProfile.euroBalance,
+          trocoTokens: updatedProfile.trocoTokens,
+          dealsCompleted: updatedProfile.dealsCompleted,
+          updatedAt: serverTimestamp(),
+        });
+        await addDoc(collection(db, 'transactions'), {
+          ...newTx,
+          userId: myUid,
+          userName: profile.name,
+          createdAt: serverTimestamp(),
+        });
+
+        // Si le partenaire a un identifiant, créditer son compte
+        if (chat?.authorUid || chat?.partnerUid) {
+          const partnerUid = chat.authorUid || chat.partnerUid;
+          const partnerDocRef = doc(db, 'users', partnerUid);
+          const partnerSnap = await getDoc(partnerDocRef);
+          if (partnerSnap.exists()) {
+            const partnerData = partnerSnap.data();
+            await updateDoc(partnerDocRef, {
+              euroBalance: Number(((partnerData.euroBalance || 0) + euroAmount).toFixed(2)),
+              trocoTokens: (partnerData.trocoTokens || 0) + tokensAmount,
+              dealsCompleted: (partnerData.dealsCompleted || 0) + 1,
+              updatedAt: serverTimestamp(),
+            });
+          }
+        }
+      } catch (err) {
+        console.warn('[Firestore] deal accept write error:', err);
+      }
     }
+
+    setSaveMessage(`🤝 Deal validé avec succès ! ${tokensAmount > 0 ? `${tokensAmount} Jeton(s) transféré(s). ` : ''}${euroAmount > 0 ? `${euroAmount}€ réglé(s).` : ''}`);
+    setTimeout(() => setSaveMessage(''), 5000);
   };
 
   const handleDeclineDeal = (chatId, dealId) => {
@@ -8148,21 +8304,21 @@ export default function App() {
 
           <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(circle at 50% 40%, rgba(96,165,250,0.15) 0%, transparent 60%)', zIndex: 1 }} />
 
-          {/* BANDEAU SUPÉRIEUR CENTRÉ (SUPPORT ENCOCHE / SAFE AREA & MODE IMMERSION) */}
+          {/* BANDEAU SUPÉRIEUR ANCRÉ À GAUCHE (SUPPORT ENCOCHE / SAFE AREA & MODE IMMERSION) */}
           <div style={{
             position: 'fixed',
             top: 'max(16px, env(safe-area-inset-top, 16px))',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            width: 'calc(100% - 32px)',
-            maxWidth: '680px',
+            left: 'max(16px, env(safe-area-inset-left, 16px))',
+            right: 'auto',
+            transform: 'none',
+            width: 'auto',
+            maxWidth: 'calc(100% - 32px)',
             zIndex: 50,
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between',
+            justifyContent: 'flex-start',
+            gap: '8px',
             boxSizing: 'border-box',
-            paddingLeft: 'max(0px, env(safe-area-inset-left, 0px))',
-            paddingRight: 'max(0px, env(safe-area-inset-right, 0px))',
             transition: 'all 500ms cubic-bezier(0.22, 1, 0.36, 1)',
             opacity: isCallInactive ? 0.35 : 1,
             pointerEvents: isCallInactive ? 'none' : 'auto'
@@ -8405,24 +8561,31 @@ export default function App() {
           )}
 
           {!isSwapVideo && callState.type === 'video' && localStream && callState.camOn && !callState.ringing && (
-            <div style={{
-              position: 'fixed',
-              top: 'max(80px, calc(env(safe-area-inset-top, 16px) + 60px))',
-              right: 'max(16px, env(safe-area-inset-right, 16px))',
-              width: '110px',
-              height: '150px',
-              borderRadius: '18px',
-              overflow: 'hidden',
-              border: '2px solid rgba(255,255,255,0.25)',
-              boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
-              backgroundColor: '#1E293B',
-              zIndex: 30,
-              cursor: 'pointer',
-              transition: 'all 500ms cubic-bezier(0.22, 1, 0.36, 1)',
-              opacity: isCallInactive ? 0.5 : 1
-            }}
-            onClick={() => setIsSwapVideo(true)}
-            title="Cliquer pour m'afficher en grand"
+            <div
+              onPointerDown={handleLocalVideoPointerDown}
+              onPointerMove={handleLocalVideoPointerMove}
+              onPointerUp={handleLocalVideoPointerUp}
+              onPointerCancel={handleLocalVideoPointerUp}
+              onClick={handleLocalVideoClick}
+              title="Cliquer pour m'afficher en grand / Glisser pour déplacer"
+              style={{
+                position: 'fixed',
+                left: `${localVideoPosition.x}px`,
+                top: `${localVideoPosition.y}px`,
+                width: '110px',
+                height: '150px',
+                borderRadius: '18px',
+                overflow: 'hidden',
+                border: '2px solid rgba(96,165,250,0.6)',
+                boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+                backgroundColor: '#1E293B',
+                zIndex: 40,
+                cursor: 'grab',
+                userSelect: 'none',
+                WebkitUserSelect: 'none',
+                touchAction: 'none',
+                opacity: isCallInactive ? 0.5 : 1
+              }}
             >
               <video
                 ref={attachLocalStream}
@@ -8433,13 +8596,15 @@ export default function App() {
                   width: '100%',
                   height: '100%',
                   objectFit: 'cover',
-                  transform: facingMode === 'user' ? 'scaleX(-1)' : 'none'
+                  transform: facingMode === 'user' ? 'scaleX(-1)' : 'none',
+                  pointerEvents: 'none'
                 }}
               />
               <div style={{
                 position: 'absolute', bottom: '6px', left: '6px',
                 backgroundColor: 'rgba(15,23,42,0.75)', padding: '2px 6px',
-                borderRadius: '6px', color: '#FFF', fontSize: '9px', fontWeight: '700'
+                borderRadius: '6px', color: '#FFF', fontSize: '9px', fontWeight: '700',
+                pointerEvents: 'none'
               }}>
                 Moi
               </div>
@@ -8453,8 +8618,9 @@ export default function App() {
               style={{
                 position: 'fixed',
                 bottom: 'max(24px, env(safe-area-inset-bottom, 24px))',
-                left: '50%',
-                transform: 'translateX(-50%)',
+                left: 'max(16px, env(safe-area-inset-left, 16px))',
+                right: 'auto',
+                transform: 'none',
                 backgroundColor: 'rgba(15, 23, 42, 0.82)',
                 backdropFilter: 'blur(16px)',
                 WebkitBackdropFilter: 'blur(16px)',
@@ -8483,17 +8649,18 @@ export default function App() {
             <div style={{
               position: 'fixed',
               bottom: 'max(20px, env(safe-area-inset-bottom, 20px))',
-              left: '50%',
-              transform: isCallInactive ? 'translateX(-50%) translateY(8px)' : 'translateX(-50%) translateY(0)',
+              left: 'max(16px, env(safe-area-inset-left, 16px))',
+              right: 'auto',
+              transform: isCallInactive ? 'translateY(8px)' : 'translateY(0)',
               backgroundColor: isCallInactive ? 'rgba(15, 23, 42, 0.45)' : 'rgba(15, 23, 42, 0.90)',
               backdropFilter: 'blur(20px)',
               WebkitBackdropFilter: 'blur(20px)',
-              padding: '10px 16px',
+              padding: '10px 14px',
               borderRadius: '26px',
               display: 'flex',
               flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
+              alignItems: 'flex-start',
+              justifyContent: 'flex-start',
               gap: '8px',
               border: '1px solid rgba(255,255,255,0.14)',
               boxShadow: '0 20px 50px rgba(0,0,0,0.6), 0 0 30px rgba(96,165,250,0.15)',
@@ -8504,13 +8671,29 @@ export default function App() {
               opacity: isCallInactive ? 0.28 : 1,
               transition: 'all 500ms cubic-bezier(0.22, 1, 0.36, 1)',
               animation: 'fadeSlideUp 0.25s ease both',
-              margin: '0 auto',
+              margin: '0',
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', flexWrap: 'wrap', width: '100%' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '8px', flexWrap: 'wrap', width: '100%' }}>
+                {/* BOUTON ROUGE RACCROCHER EN PREMIER À GAUCHE */}
+                <button
+                  onClick={endCall}
+                  title="Raccrocher et quitter l'appel"
+                  style={{
+                    border: 'none', height: '44px', padding: '0 16px', borderRadius: '999px',
+                    backgroundColor: '#EF4444', color: '#FFF', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                    boxShadow: '0 6px 20px rgba(239,68,68,0.65)', fontWeight: '800', fontSize: '13px',
+                    flexShrink: 0, transition: 'transform 0.2s ease'
+                  }}
+                >
+                  <PhoneOff size={16} />
+                  <span>Raccrocher</span>
+                </button>
+
                 <button
                   onClick={toggleMic}
                   title={callState.micOn ? "Couper le micro" : "Activer le micro"}
-                  style={{ border: 'none', width: '44px', height: '44px', borderRadius: '50%', backgroundColor: callState.micOn ? 'rgba(255,255,255,0.15)' : '#EF4444', color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease' }}
+                  style={{ border: 'none', width: '44px', height: '44px', borderRadius: '50%', backgroundColor: callState.micOn ? 'rgba(255,255,255,0.15)' : '#EF4444', color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease', flexShrink: 0 }}
                 >
                   {callState.micOn ? <Mic size={18} /> : <MicOff size={18} />}
                 </button>
@@ -8519,7 +8702,7 @@ export default function App() {
                   <button
                     onClick={toggleCam}
                     title={callState.camOn ? "Couper la caméra" : "Activer la caméra"}
-                    style={{ border: 'none', width: '44px', height: '44px', borderRadius: '50%', backgroundColor: callState.camOn ? 'rgba(255,255,255,0.15)' : '#EF4444', color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease' }}
+                    style={{ border: 'none', width: '44px', height: '44px', borderRadius: '50%', backgroundColor: callState.camOn ? 'rgba(255,255,255,0.15)' : '#EF4444', color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease', flexShrink: 0 }}
                   >
                     {callState.camOn ? <Camera size={18} /> : <VideoOff size={18} />}
                   </button>
@@ -8534,7 +8717,7 @@ export default function App() {
                       border: 'none', width: '44px', height: '44px', borderRadius: '50%',
                       backgroundColor: callState.isScreenSharing ? '#10B981' : 'rgba(255,255,255,0.15)',
                       color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      transition: 'all 0.2s ease',
+                      transition: 'all 0.2s ease', flexShrink: 0,
                       boxShadow: callState.isScreenSharing ? '0 0 16px rgba(16,185,129,0.6)' : 'none'
                     }}
                   >
@@ -8552,7 +8735,7 @@ export default function App() {
                       backgroundColor: facingMode === 'environment' ? '#38BDF8' : 'rgba(255,255,255,0.15)',
                       color: facingMode === 'environment' ? '#0F172A' : '#FFF',
                       cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      transition: 'all 0.2s ease',
+                      transition: 'all 0.2s ease', flexShrink: 0
                     }}
                   >
                     <SwitchCamera size={18} />
@@ -8563,17 +8746,29 @@ export default function App() {
                   <button
                     onClick={() => setIsSwapVideo(s => !s)}
                     title="Inverser les caméras"
-                    style={{ border: 'none', width: '44px', height: '44px', borderRadius: '50%', backgroundColor: isSwapVideo ? '#60A5FA' : 'rgba(255,255,255,0.15)', color: isSwapVideo ? '#0F172A' : '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease' }}
+                    style={{ border: 'none', width: '44px', height: '44px', borderRadius: '50%', backgroundColor: isSwapVideo ? '#60A5FA' : 'rgba(255,255,255,0.15)', color: isSwapVideo ? '#0F172A' : '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease', flexShrink: 0 }}
                   >
                     <Repeat size={18} />
                   </button>
                 )}
 
+                <button
+                  onClick={copyInviteLink}
+                  title="Inviter un participant"
+                  style={{
+                    border: '1px solid rgba(255,255,255,0.2)', height: '44px', padding: '0 12px', borderRadius: '999px',
+                    backgroundColor: 'rgba(255,255,255,0.12)', color: '#FFF', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '700', flexShrink: 0
+                  }}
+                >
+                  <UserPlus size={15} /> <span>Inviter</span>
+                </button>
+
                 {/* BOUTON MODE IMMERSION (MASQUER COMMANDES) */}
                 <button
                   onClick={() => setShowCallControls(false)}
                   title="Mode Immersion (Masquer commandes)"
-                  style={{ border: 'none', width: '44px', height: '44px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.15)', color: '#93C5FD', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease' }}
+                  style={{ border: 'none', width: '44px', height: '44px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.15)', color: '#93C5FD', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease', flexShrink: 0 }}
                 >
                   <EyeOff size={18} />
                 </button>
@@ -8581,44 +8776,13 @@ export default function App() {
                 <button
                   onClick={() => setIsCallPip(true)}
                   title="Réduire l'appel (PiP)"
-                  style={{ border: 'none', width: '44px', height: '44px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.15)', color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease' }}
+                  style={{ border: 'none', width: '44px', height: '44px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.15)', color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease', flexShrink: 0 }}
                 >
                   <Minimize2 size={18} />
                 </button>
-              </div>
-
-              {/* LIGNE 2 : ACTIONS PRINCIPALES & RACCROCHAGE PRIORITAIRE IMPOSSIBLE À MANQUER */}
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px', width: '100%', paddingTop: '4px', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-                <button
-                  onClick={copyInviteLink}
-                  title="Inviter un participant"
-                  style={{
-                    border: '1px solid rgba(255,255,255,0.2)', height: '44px', padding: '0 14px', borderRadius: '999px',
-                    backgroundColor: 'rgba(255,255,255,0.12)', color: '#FFF', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '700'
-                  }}
-                >
-                  <UserPlus size={16} /> <span>Inviter</span>
-                </button>
-
-                {/* BOUTON ROUGE RACCROCHER CENTRÉ, GRAND, 100% VISIBLE ET ERGONOMIQUE */}
-                <button
-                  onClick={endCall}
-                  title="Raccrocher et quitter l'appel"
-                  style={{
-                    border: 'none', height: '46px', padding: '0 20px', borderRadius: '999px',
-                    backgroundColor: '#EF4444', color: '#FFF', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                    boxShadow: '0 6px 20px rgba(239,68,68,0.65)', fontWeight: '800', fontSize: '13px',
-                    transition: 'transform 0.2s ease'
-                  }}
-                >
-                  <PhoneOff size={18} />
-                  <span>Raccrocher</span>
-                </button>
 
                 {isTeacher && (
-                  <div style={{ position: 'relative' }}>
+                  <div style={{ position: 'relative', flexShrink: 0 }}>
                     <button
                       onClick={() => setIsTeacherMenuOpen(o => !o)}
                       title="Outils Professeur / Modération"
@@ -8637,7 +8801,7 @@ export default function App() {
 
                     {isTeacherMenuOpen && (
                       <div style={{
-                        position: 'absolute', bottom: '56px', right: '0',
+                        position: 'absolute', bottom: '56px', left: '0',
                         backgroundColor: 'rgba(15,23,42,0.95)', backdropFilter: 'blur(16px)',
                         borderRadius: '16px', border: '1.5px solid rgba(245,158,11,0.4)',
                         boxShadow: '0 16px 40px rgba(0,0,0,0.6)', padding: '8px',
