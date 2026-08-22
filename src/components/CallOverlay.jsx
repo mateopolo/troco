@@ -148,7 +148,7 @@ export default function CallOverlay({
             gap: '4px',
             color: '#60A5FA',
           }}>
-            <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#22C55E', animation: 'pulse 1.5s infinite' }} />
+            <div className="breathing-dot" style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#22C55E' }} />
             {isDocked === 'left' ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
           </div>
         </div>
@@ -169,7 +169,7 @@ export default function CallOverlay({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
-          <div style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#22C55E' }} />
+          <div className="breathing-dot" style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#22C55E' }} />
           <span style={{ color: '#FFF', fontSize: '11px', fontWeight: '800', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {selectedChat?.user || 'Appel'}
           </span>

@@ -76,7 +76,7 @@ export default function ProfileView({
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+    <div className="fade-up-in" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* BANNIÈRE PROFIL ET IDENTITÉ */}
       <div style={{
         ...cardStyle,

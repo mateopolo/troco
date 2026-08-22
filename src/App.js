@@ -1376,6 +1376,17 @@ export default function App() {
     movedDistance: 0,
   });
 
+  // Condensation et élévation du header supérieur au défilement (Micro-interactions)
+  const [isScrolled, setIsScrolled] = useState(false);
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrolled = window.scrollY > 40;
+      setIsScrolled(prev => prev !== scrolled ? scrolled : prev);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   const [isSettlementModalOpen, setIsSettlementModalOpen] = useState(false);
   const [settlementCallDuration, setSettlementCallDuration] = useState(0);
   const prevActiveRef = useRef(false);
@@ -5204,25 +5215,44 @@ export default function App() {
         input, select, textarea { font-family: inherit; }
       `}</style>
 
-      {/* HEADER FIXE GLASSMORPHISM */}
-      <header style={{ backgroundColor: darkMode ? 'rgba(15,23,42,0.85)' : 'rgba(255,255,255,0.72)', backdropFilter: 'blur(20px) saturate(180%)', WebkitBackdropFilter: 'blur(20px) saturate(180%)', borderBottom: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(226,232,240,0.7)', padding: '12px 16px', position: 'sticky', top: 0, zIndex: 40, boxShadow: '0 1px 24px rgba(15,23,42,0.04)', width: '100%', boxSizing: 'border-box' }}>
+      {/* HEADER FIXE GLASSMORPHISM FLUIDE AVEC CONDENSATION AU SCROLL */}
+      <header style={{
+        backgroundColor: darkMode
+          ? (isScrolled ? 'rgba(15,23,42,0.95)' : 'rgba(15,23,42,0.85)')
+          : (isScrolled ? 'rgba(255,255,255,0.94)' : 'rgba(255,255,255,0.72)'),
+        backdropFilter: isScrolled ? 'blur(28px) saturate(200%)' : 'blur(20px) saturate(180%)',
+        WebkitBackdropFilter: isScrolled ? 'blur(28px) saturate(200%)' : 'blur(20px) saturate(180%)',
+        borderBottom: darkMode
+          ? (isScrolled ? '1px solid rgba(255,255,255,0.18)' : '1px solid rgba(255,255,255,0.1)')
+          : (isScrolled ? '1px solid rgba(203,213,225,0.9)' : '1px solid rgba(226,232,240,0.7)'),
+        padding: isScrolled ? '9px 16px' : '12px 16px',
+        position: 'sticky',
+        top: 0,
+        zIndex: 40,
+        boxShadow: isScrolled
+          ? (darkMode ? '0 12px 30px rgba(0,0,0,0.5)' : '0 10px 30px rgba(15,23,42,0.08)')
+          : '0 1px 24px rgba(15,23,42,0.04)',
+        width: '100%',
+        boxSizing: 'border-box',
+        transition: 'padding 0.3s var(--ease-quiet), background-color 0.3s var(--ease-quiet), box-shadow 0.3s var(--ease-quiet), border-color 0.3s var(--ease-quiet)'
+      }}>
         <div className="header-container" style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', width: '100%', boxSizing: 'border-box' }}>
           {/* PARTIE 3 : LOGO TROCO CLICKABLE -> RETOUR ACCUEIL */}
           <button onClick={() => { setActiveTab('feed'); setSelectedListing(null); setSelectedChat(null); if (callState.active) endCall(); }} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: '4px 6px', borderRadius: '12px', textAlign: 'left', flexShrink: 0 }}>
-            <h1 style={{ fontSize: '18px', fontWeight: '800', color: darkMode ? '#60A5FA' : '#04265A', margin: 0, letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>Troco</h1>
+            <h1 style={{ fontSize: isScrolled ? '17px' : '18px', fontWeight: '800', color: darkMode ? '#60A5FA' : '#04265A', margin: 0, letterSpacing: '-0.02em', whiteSpace: 'nowrap', transition: 'font-size 0.3s var(--ease-quiet)' }}>Troco</h1>
             <p className="logo-slogan" style={{ fontSize: '10px', color: darkMode ? '#94A3B8' : '#6B7280', margin: 0, whiteSpace: 'nowrap' }}>{t('slogan')}</p>
           </button>
           <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'nowrap' }}>
-            <button onClick={() => handleOpenPayment('topup-cash')} title="Recharger mon solde Euros" className="premium-button balance-badge" style={{ border: 'none', borderRadius: '999px', padding: '6px 10px', backgroundColor: darkMode ? 'rgba(4,38,90,0.45)' : 'rgba(4,38,90,0.08)', color: darkMode ? '#93C5FD' : '#04265A', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', position: 'relative', overflow: 'visible', whiteSpace: 'nowrap', flexShrink: 0 }}>
+            <button onClick={() => handleOpenPayment('topup-cash')} title="Recharger mon solde Euros" className="premium-button balance-badge" style={{ border: 'none', borderRadius: '999px', padding: isScrolled ? '5px 9px' : '6px 10px', backgroundColor: darkMode ? 'rgba(4,38,90,0.45)' : 'rgba(4,38,90,0.08)', color: darkMode ? '#93C5FD' : '#04265A', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', position: 'relative', overflow: 'visible', whiteSpace: 'nowrap', flexShrink: 0, transition: 'padding 0.3s var(--ease-quiet)' }}>
               <Coins size={13} style={{ flexShrink: 0 }} /> <AnimatedEuroBalance value={profile.euroBalance} prefix="€ " suffix="" style={{ fontSize: '11px', fontWeight: '700', whiteSpace: 'nowrap' }} />
             </button>
-            <button onClick={() => handleOpenPayment('pack-tokens')} title="Acheter des Jetons Troco" className="premium-button balance-badge" style={{ border: 'none', borderRadius: '999px', padding: '6px 10px', backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : '#F3F4F6', color: darkMode ? '#FFF' : '#111827', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', position: 'relative', overflow: 'visible', whiteSpace: 'nowrap', flexShrink: 0 }}>
+            <button onClick={() => handleOpenPayment('pack-tokens')} title="Acheter des Jetons Troco" className="premium-button balance-badge" style={{ border: 'none', borderRadius: '999px', padding: isScrolled ? '5px 9px' : '6px 10px', backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : '#F3F4F6', color: darkMode ? '#FFF' : '#111827', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', position: 'relative', overflow: 'visible', whiteSpace: 'nowrap', flexShrink: 0, transition: 'padding 0.3s var(--ease-quiet)' }}>
               <Clock size={13} style={{ flexShrink: 0 }} /> <AnimatedTokenBalance value={profile.trocoTokens} formatFn={(v) => formatTokenCount(v, currentLang)} style={{ fontSize: '11px', fontWeight: '700', whiteSpace: 'nowrap' }} />
             </button>
-            <button onClick={toggleDarkMode} title={darkMode ? "Activer le mode clair" : "Activer le mode sombre"} className="premium-button darkmode-btn" style={{ border: 'none', borderRadius: '50%', width: '34px', height: '34px', backgroundColor: darkMode ? 'rgba(255,255,255,0.12)' : '#F3F4F6', color: darkMode ? '#F59E0B' : '#04265A', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s ease', flexShrink: 0 }}>
-              {darkMode ? <Sun size={16} /> : <Moon size={16} />}
+            <button onClick={toggleDarkMode} title={darkMode ? "Activer le mode clair" : "Activer le mode sombre"} className="premium-button darkmode-btn" style={{ border: 'none', borderRadius: '50%', width: isScrolled ? '32px' : '34px', height: isScrolled ? '32px' : '34px', backgroundColor: darkMode ? 'rgba(255,255,255,0.12)' : '#F3F4F6', color: darkMode ? '#F59E0B' : '#04265A', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.3s var(--ease-quiet)', flexShrink: 0 }}>
+              {darkMode ? <Sun size={15} /> : <Moon size={15} />}
             </button>
-            <button onClick={() => setIsLangModalOpen(true)} className="premium-button lang-btn" style={{ border: 'none', borderRadius: '20px', padding: '5px 10px', backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : '#F3F4F6', color: darkMode ? '#FFF' : '#111827', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', whiteSpace: 'nowrap', flexShrink: 0 }}>
+            <button onClick={() => setIsLangModalOpen(true)} className="premium-button lang-btn" style={{ border: 'none', borderRadius: '20px', padding: isScrolled ? '4px 9px' : '5px 10px', backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : '#F3F4F6', color: darkMode ? '#FFF' : '#111827', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', whiteSpace: 'nowrap', flexShrink: 0, transition: 'padding 0.3s var(--ease-quiet)' }}>
               <Globe size={13} color={darkMode ? '#93C5FD' : '#04265A'} style={{ flexShrink: 0 }} />
               <span>{currentLang === 'FR' ? '🇫🇷 FR' : currentLang === 'EN' ? '🇬🇧 EN' : currentLang === 'ES' ? '🇪🇸 ES' : currentLang === 'IT' ? '🇮🇹 IT' : currentLang === 'DE' ? '🇩🇪 DE' : currentLang === 'JA' ? '🇯🇵 JA' : '🇨🇳 ZH'}</span>
             </button>
@@ -6023,7 +6053,7 @@ export default function App() {
       {/* CONTENU DYNAMIQUE SELON L'ONGLET SÉLECTIONNÉ */}
       <main
         key={`${activeTab}-${viewMode}`}
-        className="premium-main"
+        className="premium-main fade-up-in"
         style={{
           maxWidth: isMobile && activeTab === 'chat' ? '100%' : (activeTab === 'feed' ? '1460px' : '1200px'),
           margin: '0 auto',

@@ -622,7 +622,7 @@ export default function ChatView({
                     flexShrink: 0,
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, overflow: 'hidden' }}>
-                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10B981', flexShrink: 0, boxShadow: '0 0 8px #10B981', animation: 'pulse 1.5s infinite' }} />
+                      <span className="breathing-dot" style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#10B981', flexShrink: 0, boxShadow: '0 0 8px #10B981' }} />
                       <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         🟢 {activeChatObj.activeCall.type === 'video' ? 'Appel vidéo' : 'Appel audio'} en cours (Salle active)
                       </span>

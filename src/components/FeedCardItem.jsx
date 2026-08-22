@@ -106,7 +106,7 @@ export default function FeedCardItem({
     <div
       onMouseEnter={() => setHoveredCardId(item.id)}
       onMouseLeave={() => setHoveredCardId(null)}
-      className="premium-card"
+      className="premium-card fade-up-in"
       style={{
         backgroundColor: darkMode ? 'rgba(30,41,59,0.85)' : '#FFFFFF',
         border: item.isBoosted ? '2px solid #F59E0B' : (darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(229,231,235,0.9)'),
@@ -114,8 +114,8 @@ export default function FeedCardItem({
         overflow: 'hidden',
         boxShadow: item.isBoosted ? '0 12px 34px rgba(245,158,11,0.14)' : '0 2px 14px rgba(15, 23, 42, 0.05)',
         cursor: 'pointer',
-        transform: isHovered ? 'translateY(-4px) scale(1.02)' : 'none',
-        transition: 'transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s ease'
+        transform: isHovered ? 'translateY(-5px) scale(1.015)' : 'none',
+        transition: 'transform 0.4s var(--ease-quiet), box-shadow 0.4s var(--ease-quiet)'
       }}
     >
       <div
@@ -141,8 +141,8 @@ export default function FeedCardItem({
                 height: '100%',
                 objectFit: 'cover',
                 opacity: isActive ? 1 : 0,
-                transition: 'opacity 0.4s ease-in-out, transform 0.4s ease-in-out',
-                transform: isActive ? 'scale(1)' : 'scale(1.03)',
+                transition: 'transform 1200ms var(--ease-quiet), opacity 0.4s ease-in-out',
+                transform: isHovered && isActive ? 'scale(1.05)' : (isActive ? 'scale(1)' : 'scale(1.03)'),
                 pointerEvents: 'none',
                 WebkitUserDrag: 'none',
                 userSelect: 'none',
@@ -152,6 +152,15 @@ export default function FeedCardItem({
             />
           );
         })}
+
+        {/* VOILE DE CONTRASTE PROGRESSIF DISCRET EN BAS DE PHOTO */}
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'linear-gradient(to top, rgba(15, 23, 42, 0.45) 0%, rgba(15, 23, 42, 0) 50%)',
+          pointerEvents: 'none',
+          zIndex: 3
+        }} />
 
         {galleryLength > 1 && (
           <>
