@@ -20,7 +20,7 @@ import WelcomeGiftCelebrationModal from './components/WelcomeGiftCelebrationModa
 import VisioSettlementModal from './components/VisioSettlementModal';
 import KycModal from './components/KycModal';
 import { analyzeContent } from './utils/contentModeration';
-import { validateListingContent, validateChatMessage } from './utils/moderationBlacklist';
+import { validateListingContent, validateChatMessage, validateProfileContent } from './utils/moderationBlacklist';
 import { DIVERSE_AVATARS, TROCO_CATEGORIES } from './data/categoriesData';
 import { getInstantOrQueueTranslation, subscribeTranslations } from './utils/translator';
 import { playApplePaySound, playBetclicBalanceSound, playWelcomeGiftFanfare } from './utils/audioService';
@@ -4547,6 +4547,19 @@ export default function App() {
   };
 
   const handleSaveProfile = async () => {
+    // ---- MODÉRATION DU PROFIL (LISTE NOIRE ÉTENDUE) ----
+    const profileCheck = validateProfileContent({
+      name: profileDraft.name,
+      username: profileDraft.username,
+      bio: profileDraft.bio,
+      skills,
+      equipment
+    });
+    if (!profileCheck.isValid) {
+      alert(profileCheck.errorMessage);
+      return;
+    }
+
     const updated = {
       ...profile,
       ...profileDraft,
