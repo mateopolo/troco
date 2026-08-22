@@ -8783,19 +8783,18 @@ export default function App() {
 
           <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(circle at 50% 40%, rgba(96,165,250,0.15) 0%, transparent 60%)', zIndex: 1 }} />
 
-          {/* BANDEAU SUPÉRIEUR ANCRÉ À GAUCHE (SUPPORT ENCOCHE / SAFE AREA & MODE IMMERSION) */}
+          {/* BANDEAU SUPÉRIEUR CENTRÉ & ADAPTATIF MOBILE (SUPPORT ENCOCHE / SAFE AREA) */}
           <div style={{
             position: 'fixed',
             top: 'max(16px, env(safe-area-inset-top, 16px))',
-            left: 'max(16px, env(safe-area-inset-left, 16px))',
-            right: 'auto',
-            transform: 'none',
-            width: 'auto',
-            maxWidth: 'calc(100% - 32px)',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: 'calc(100% - 24px)',
+            maxWidth: '480px',
             zIndex: 50,
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'flex-start',
+            justifyContent: 'space-between',
             gap: '8px',
             boxSizing: 'border-box',
             transition: 'all 500ms cubic-bezier(0.22, 1, 0.36, 1)',
@@ -9236,6 +9235,7 @@ export default function App() {
               )}
 
               <button
+                className="invite-btn"
                 onClick={copyInviteLink}
                 title="Inviter un participant"
                 style={{
