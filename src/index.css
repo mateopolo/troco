@@ -57,6 +57,13 @@ body.dark-mode {
   color: #F8FAFC;
 }
 
+/* BLINDAGE ANTI-AUTO-ZOOM WEBKIT iOS (Interdiction du zoom agressif sur input < 16px) */
+@media screen and (max-width: 768px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
 ::selection {
   background: rgba(4, 38, 90, 0.35);
   color: #FFFFFF;
