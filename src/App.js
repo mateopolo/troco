@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Search, MapPin, Video, Star, Globe, Filter, MessageSquare, PlusCircle, User, ShieldCheck, Clock, CheckCircle, ArrowRight, X, Sparkles, Coins, Plus, Trash2, Camera, Pencil, Mic, PhoneOff, Flame, History, Check, Lock, CreditCard, Tag, Phone, UserPlus, ChevronLeft, ChevronRight, Maximize2, Minimize2, ZoomIn, ZoomOut, MicOff, VideoOff, Sun, Moon, Upload, Repeat, SwitchCamera, LogOut, Scale, ShieldAlert, FileText, Monitor, MonitorOff, Crown } from 'lucide-react';
+import { Search, MapPin, Video, Star, Globe, Filter, MessageSquare, PlusCircle, User, ShieldCheck, Clock, CheckCircle, ArrowRight, X, Sparkles, Coins, Plus, Trash2, Camera, Pencil, Mic, PhoneOff, Flame, History, Check, Lock, CreditCard, Tag, Phone, UserPlus, ChevronLeft, ChevronRight, Maximize2, Minimize2, ZoomIn, ZoomOut, MicOff, VideoOff, Sun, Moon, Upload, Repeat, SwitchCamera, LogOut, Scale, ShieldAlert, FileText, Monitor, MonitorOff, Crown, Image as ImageIcon } from 'lucide-react';
 import { auth, db } from './firebase';
 import { collection, addDoc, doc, updateDoc, serverTimestamp, onSnapshot, query, orderBy, setDoc, deleteDoc, getDoc, getDocs, where } from 'firebase/firestore';
 import { RecaptchaVerifier, signInWithPhoneNumber, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, GoogleAuthProvider, GithubAuthProvider, FacebookAuthProvider, OAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
@@ -3195,7 +3195,10 @@ export default function App() {
   ]);
   const [skillInput, setSkillInput] = useState('');
   const [equipmentInput, setEquipmentInput] = useState('');
+  const [portfolioImages, setPortfolioImages] = useState(() => profile?.portfolioImages || []);
+  const [portfolioUrlInput, setPortfolioUrlInput] = useState('');
   const [formatFilter, setFormatFilter] = useState('all');
+
   const [selectedChat, setSelectedChat] = useState(null);
   const [readChats, setReadChats] = useState(() => {
     try {
@@ -5207,16 +5210,18 @@ export default function App() {
     else if (/(remorque|déménagement|demenagement|transport|utilitaire)/.test(text)) themeKey = 'remorque';
 
     const itemTheme = themeMedia[themeKey] || themeMedia.default;
-    const allImgs = itemTheme.images || [];
 
-    const rawCandidates = userImage && userImage.trim()
-      ? [userImage, ...allImgs]
-      : [...allImgs];
+    // RÈGLE : si l'utilisateur a fourni sa propre image, galerie = ses images UNIQUEMENT.
+    // Les Unsplash ne servent que de fallback unique quand aucune image n'est fournie.
+    const hasUserImage = userImage && typeof userImage === 'string' && userImage.trim() !== '';
 
-    // ÉRADICATION DÉFINITIVE ET STRICTE DES DOUBLONS:
-    // Filtre Set radical : exactement les URLs uniques.
-    // Si la thématique n'a qu'une seule ou deux images uniques, uniqueImages a 1 ou 2 éléments.
-    const uniqueImages = [...new Set(rawCandidates.filter(img => img && typeof img === 'string' && img.trim() !== ''))];
+    let uniqueImages;
+    if (hasUserImage) {
+      uniqueImages = [userImage];
+    } else {
+      const fallbackImg = (itemTheme.images && itemTheme.images[0]) || defaultPostDraft.image;
+      uniqueImages = [fallbackImg];
+    }
 
     const mainImage = uniqueImages[0] || defaultPostDraft.image;
     const chosenVideo = userVideo && userVideo.trim() ? userVideo : (itemTheme.videos?.[0] || '');
@@ -6493,6 +6498,7 @@ export default function App() {
       ...profileDraft,
       skills,
       equipment,
+      portfolioImages,
       updatedAt: serverTimestamp(),
     };
     setProfile(updated);
@@ -6507,6 +6513,34 @@ export default function App() {
         await setDoc(doc(db, 'users', String(uid)), updated, { merge: true });
       } catch (e) {
         console.warn('[Firestore] Profile save failed:', e);
+      }
+    }
+  };
+
+  // ---- PORTFOLIO PHOTOS ----
+  const handleAddPortfolioImage = async (url) => {
+    if (!url || typeof url !== 'string' || !url.trim()) return;
+    const newImages = [...portfolioImages, url.trim()];
+    setPortfolioImages(newImages);
+    const uid = profile.uid || auth.currentUser?.uid;
+    if (uid) {
+      try {
+        await setDoc(doc(db, 'users', String(uid)), { portfolioImages: newImages }, { merge: true });
+      } catch (e) {
+        console.warn('[Firestore] Portfolio add failed:', e);
+      }
+    }
+  };
+
+  const handleRemovePortfolioImage = async (idx) => {
+    const newImages = portfolioImages.filter((_, i) => i !== idx);
+    setPortfolioImages(newImages);
+    const uid = profile.uid || auth.currentUser?.uid;
+    if (uid) {
+      try {
+        await setDoc(doc(db, 'users', String(uid)), { portfolioImages: newImages }, { merge: true });
+      } catch (e) {
+        console.warn('[Firestore] Portfolio remove failed:', e);
       }
     }
   };
@@ -9586,6 +9620,117 @@ export default function App() {
               </div>
             </div>
 
+            {/* ---- PORTFOLIO PHOTOS ---- */}
+            <div style={{ borderTop: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E2E8F0', paddingTop: '20px', marginTop: '4px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                <ImageIcon size={17} color={darkMode ? '#60A5FA' : '#04265A'} />
+                <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: darkMode ? '#FFFFFF' : '#111827' }}>📸 Mon Portfolio</h4>
+                <span style={{ marginLeft: 'auto', fontSize: '11px', color: darkMode ? '#94A3B8' : '#64748B', fontWeight: '700' }}>{portfolioImages.length} photo{portfolioImages.length !== 1 ? 's' : ''}</span>
+              </div>
+              <p style={{ fontSize: '12px', color: darkMode ? '#CBD5E1' : '#64748B', margin: '0 0 14px' }}>
+                Ajoute des photos authentiques pour mettre en valeur ton savoir-faire.
+              </p>
+
+              {portfolioImages.length > 0 ? (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '14px' }}>
+                  {portfolioImages.map((src, idx) => (
+                    <div key={idx} style={{ position: 'relative', aspectRatio: '1', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+                      <img src={src} alt={`Portfolio ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={(e) => { e.target.style.display = 'none'; }} />
+                      <button
+                        onClick={() => handleRemovePortfolioImage(idx)}
+                        style={{
+                          position: 'absolute', top: '5px', right: '5px',
+                          border: 'none', width: '24px', height: '24px', borderRadius: '50%',
+                          backgroundColor: 'rgba(15,23,42,0.75)', color: '#FFF', cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          backdropFilter: 'blur(4px)', fontSize: '12px', fontWeight: '800'
+                        }}
+                        title="Supprimer"
+                      >✕</button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{
+                  textAlign: 'center', padding: '24px 16px', marginBottom: '14px',
+                  borderRadius: '14px',
+                  border: darkMode ? '2px dashed rgba(255,255,255,0.12)' : '2px dashed #D1D5DB',
+                  color: darkMode ? '#64748B' : '#94A3B8', fontSize: '13px', fontWeight: '600'
+                }}>
+                  Aucune photo — ajoute des images pour te démarquer 📷
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                <input
+                  id="portfolio-url-input"
+                  type="text"
+                  value={portfolioUrlInput}
+                  onChange={(e) => setPortfolioUrlInput(e.target.value)}
+                  placeholder="Colle une URL d'image..."
+                  style={{
+                    flex: 1, minWidth: '180px', padding: '10px 14px',
+                    border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB',
+                    borderRadius: '12px', fontSize: '13px',
+                    backgroundColor: darkMode ? 'rgba(15,23,42,0.5)' : '#F8FAFC',
+                    color: darkMode ? '#FFF' : '#111827', outline: 'none'
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && portfolioUrlInput.trim()) {
+                      handleAddPortfolioImage(portfolioUrlInput.trim());
+                      setPortfolioUrlInput('');
+                    }
+                  }}
+                />
+                <button
+                  onClick={() => {
+                    if (portfolioUrlInput.trim()) {
+                      handleAddPortfolioImage(portfolioUrlInput.trim());
+                      setPortfolioUrlInput('');
+                    }
+                  }}
+                  className="premium-button"
+                  style={{
+                    border: 'none', borderRadius: '12px', padding: '10px 14px',
+                    backgroundColor: portfolioUrlInput.trim() ? (darkMode ? '#60A5FA' : '#04265A') : (darkMode ? 'rgba(255,255,255,0.1)' : '#E2E8F0'),
+                    color: portfolioUrlInput.trim() ? '#FFF' : (darkMode ? '#475569' : '#94A3B8'),
+                    fontWeight: '800', cursor: portfolioUrlInput.trim() ? 'pointer' : 'not-allowed', fontSize: '13px',
+                    display: 'flex', alignItems: 'center', gap: '6px'
+                  }}
+                >
+                  <Plus size={16} /> Ajouter
+                </button>
+                <button
+                  onClick={() => document.getElementById('portfolio-file-input')?.click()}
+                  style={{
+                    border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #D1D5DB',
+                    borderRadius: '12px', padding: '10px 14px',
+                    backgroundColor: darkMode ? 'rgba(255,255,255,0.07)' : '#FFF',
+                    color: darkMode ? '#93C5FD' : '#04265A',
+                    fontWeight: '800', cursor: 'pointer', fontSize: '13px',
+                    display: 'flex', alignItems: 'center', gap: '6px'
+                  }}
+                >
+                  📷 Photo
+                </button>
+                <input
+                  id="portfolio-file-input"
+                  type="file"
+                  accept="image/*"
+                  style={{ display: 'none' }}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (ev) => handleAddPortfolioImage(ev.target.result);
+                    reader.readAsDataURL(file);
+                    e.target.value = '';
+                  }}
+                />
+              </div>
+
+            </div>
+
             {/* ---- HISTORIQUE DES SWAPS & DEALS ---- */}
             <div style={{ borderTop: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E2E8F0', paddingTop: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
@@ -9643,6 +9788,7 @@ export default function App() {
                   </div>
                 ) : (
                   userSwapHistory.map((entry) => {
+                    const isClosed = entry.status === 'Clôturé';
                     const statusStyle = statusStyles[entry.status] || { bg: '#F3F4F6', text: '#6B7280' };
                     return (
                       <div key={entry.id} className="premium-card" style={{ border: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E2E8F0', borderRadius: '18px', padding: '14px', backgroundColor: darkMode ? 'rgba(15,23,42,0.7)' : '#FFFFFF', boxShadow: '0 2px 10px rgba(15,23,42,0.04)' }}>
@@ -9655,36 +9801,41 @@ export default function App() {
                         </div>
                         <div style={{ fontSize: '11px', color: darkMode ? '#60A5FA' : '#04265A', fontWeight: '800', marginBottom: '8px' }}>{formatCompensation(entry.compensation)}</div>
                         <div style={{ borderTop: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #F1F5F9', paddingTop: '10px' }}>
-                          {(() => {
+                          {isClosed ? (() => {
                             const isRevOrig = !!showingOriginalReviews[entry.id];
-                            const revTxt = getReviewTranslation(entry.review, currentLang, isRevOrig);
+                            const revTxt = entry.review ? getReviewTranslation(entry.review, currentLang, isRevOrig) : null;
                             return (
                               <>
-                                {entry.rating ? (
-                                  <>
-                                    <div style={{ display: 'flex', gap: '2px', marginBottom: '6px' }}>
-                                      {[1, 2, 3, 4, 5].map(star => (
-                                        <Star key={star} size={13} fill={star <= entry.rating ? '#F59E0B' : 'none'} color={star <= entry.rating ? '#F59E0B' : '#E2E8F0'} />
-                                      ))}
-                                    </div>
-                                    <div style={{ fontSize: '12px', color: darkMode ? '#E2E8F0' : '#475569', lineHeight: 1.6, fontStyle: 'italic' }}>« {revTxt} »</div>
-                                  </>
-                                ) : (
-                                  <div style={{ fontSize: '12px', color: darkMode ? '#CBD5E1' : '#64748B', lineHeight: 1.6 }}>{revTxt}</div>
+                                {entry.rating != null && (
+                                  <div style={{ display: 'flex', gap: '2px', marginBottom: '6px' }}>
+                                    {[1, 2, 3, 4, 5].map(star => (
+                                      <Star key={star} size={13} fill={star <= entry.rating ? '#F59E0B' : 'none'} color={star <= entry.rating ? '#F59E0B' : '#E2E8F0'} />
+                                    ))}
+                                  </div>
                                 )}
-                                {currentLang !== 'FR' && (
+                                {revTxt && (
+                                  <div style={{ fontSize: '12px', color: darkMode ? '#E2E8F0' : '#475569', lineHeight: 1.6, fontStyle: 'italic' }}>« {revTxt} »</div>
+                                )}
+                                {!entry.rating && !revTxt && (
+                                  <div style={{ fontSize: '12px', color: darkMode ? '#64748B' : '#94A3B8', fontStyle: 'italic' }}>Deal clôturé — aucun avis laissé.</div>
+                                )}
+                                {currentLang !== 'FR' && revTxt && (
                                   <button
                                     onClick={() => toggleOriginalReview(entry.id)}
                                     className="premium-button"
                                     style={{ border: 'none', backgroundColor: 'transparent', color: darkMode ? '#60A5FA' : '#04265A', fontSize: '10px', fontWeight: '800', cursor: 'pointer', marginTop: '4px', display: 'inline-flex', alignItems: 'center', gap: '3px', padding: 0 }}
                                   >
                                     <Globe size={10} color={darkMode ? '#60A5FA' : '#04265A'} />
-                                    {isRevOrig ? t('showTranslation') : t('showOriginal')}
+                                    {showingOriginalReviews[entry.id] ? t('showTranslation') : t('showOriginal')}
                                   </button>
                                 )}
                               </>
                             );
-                          })()}
+                          })() : (
+                            <div style={{ fontSize: '12px', color: entry.status === 'En cours' ? (darkMode ? '#38BDF8' : '#0284C7') : (darkMode ? '#FCD34D' : '#D97706'), fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              {entry.status === 'En cours' ? '🔄' : '📅'} {entry.status === 'En cours' ? 'Échange en cours...' : 'Rendez-vous planifié'}
+                            </div>
+                          )}
                         </div>
                       </div>
                     );

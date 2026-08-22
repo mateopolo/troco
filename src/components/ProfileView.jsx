@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Star, ShieldCheck, Camera, Pencil, Check, Plus, Trash2, History } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Star, ShieldCheck, Camera, Pencil, Check, Plus, Trash2, History, Image as ImageIcon, X, Upload } from 'lucide-react';
 import KycModal from './KycModal';
 
 export default function ProfileView({
@@ -37,21 +37,50 @@ export default function ProfileView({
   t,
   darkMode,
   AnimatedEuroBalance,
-  AnimatedTokenBalance
+  AnimatedTokenBalance,
+  // Portfolio props
+  portfolioImages = [],
+  onAddPortfolioImage,
+  onRemovePortfolioImage,
 }) {
   const [isKycModalOpen, setIsKycModalOpen] = useState(false);
+  const [portfolioUrlInput, setPortfolioUrlInput] = useState('');
+  const portfolioFileInputRef = useRef(null);
 
   if (activeTab !== 'profile') return null;
+
+  const handleAddPortfolioUrl = () => {
+    const url = portfolioUrlInput.trim();
+    if (!url) return;
+    if (onAddPortfolioImage) onAddPortfolioImage(url);
+    setPortfolioUrlInput('');
+  };
+
+  const handlePortfolioFileUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      if (onAddPortfolioImage) onAddPortfolioImage(ev.target.result);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const cardStyle = {
+    backgroundColor: darkMode ? 'rgba(30, 41, 59, 0.8)' : 'rgba(255,255,255,0.85)',
+    backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+    borderRadius: '24px', padding: '22px',
+    border: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(255,255,255,0.8)',
+    boxShadow: '0 16px 40px rgba(0,0,0,0.05)',
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
       {/* BANNIÈRE PROFIL ET IDENTITÉ */}
       <div style={{
-        backgroundColor: darkMode ? 'rgba(30, 41, 59, 0.8)' : 'rgba(255,255,255,0.85)',
-        backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+        ...cardStyle,
         borderRadius: '28px', padding: '28px',
-        border: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(255,255,255,0.8)',
-        boxShadow: '0 20px 50px rgba(0,0,0,0.06)',
         position: 'relative'
       }}>
         {saveMessage && (
@@ -128,7 +157,16 @@ export default function ProfileView({
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '14px', fontWeight: '800', color: '#F59E0B' }}>
-                    <Star size={18} fill="#F59E0B" /> {averageRating} <span style={{ color: '#94A3B8', fontWeight: '600', fontSize: '12px' }}>({closedDealsCount} deals)</span>
+                    {closedDealsCount > 0 ? (
+                      <>
+                        <Star size={18} fill="#F59E0B" /> {averageRating}
+                        <span style={{ color: '#94A3B8', fontWeight: '600', fontSize: '12px' }}>({closedDealsCount} deals)</span>
+                      </>
+                    ) : (
+                      <span style={{ fontSize: '12px', fontWeight: '600', color: darkMode ? '#94A3B8' : '#64748B' }}>
+                        Pas encore d'avis (0 échange)
+                      </span>
+                    )}
                   </div>
                   <div style={{ fontSize: '12px', color: darkMode ? '#94A3B8' : '#64748B', fontWeight: '600' }}>
                     📍 {profile.location}
@@ -226,12 +264,7 @@ export default function ProfileView({
       {/* PORTEFEUILLE DE CRÉDITS & SOLDE EUROS */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
         {/* CARTE JETONS TROCO */}
-        <div style={{
-          backgroundColor: darkMode ? 'rgba(30, 41, 59, 0.8)' : 'rgba(255,255,255,0.85)',
-          backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-          borderRadius: '24px', padding: '22px', border: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(255,255,255,0.8)',
-          boxShadow: '0 16px 40px rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'space-between'
-        }}>
+        <div style={{ ...cardStyle, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <div style={{ fontSize: '12px', fontWeight: '800', color: darkMode ? '#94A3B8' : '#64748B', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: '4px' }}>
               Solde Crédits Temps
@@ -258,12 +291,7 @@ export default function ProfileView({
         </div>
 
         {/* CARTE SOLDE EURO */}
-        <div style={{
-          backgroundColor: darkMode ? 'rgba(30, 41, 59, 0.8)' : 'rgba(255,255,255,0.85)',
-          backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-          borderRadius: '24px', padding: '22px', border: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(255,255,255,0.8)',
-          boxShadow: '0 16px 40px rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'space-between'
-        }}>
+        <div style={{ ...cardStyle, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <div style={{ fontSize: '12px', fontWeight: '800', color: darkMode ? '#94A3B8' : '#64748B', letterSpacing: '0.04em', textTransform: 'uppercase', marginBottom: '4px' }}>
               Solde Porte-Monnaie (€)
@@ -293,11 +321,7 @@ export default function ProfileView({
       {/* SKILLS ET MATÉRIEL */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
         {/* COMPÉTENCES & SERVICES */}
-        <div style={{
-          backgroundColor: darkMode ? 'rgba(30, 41, 59, 0.8)' : 'rgba(255,255,255,0.85)',
-          backdropFilter: 'blur(20px)', borderRadius: '24px', padding: '22px',
-          border: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(255,255,255,0.8)'
-        }}>
+        <div style={cardStyle}>
           <h3 style={{ margin: '0 0 14px', fontSize: '16px', fontWeight: '800', color: darkMode ? '#FFF' : '#111827' }}>
             🎯 Compétences & Services Proposés
           </h3>
@@ -328,11 +352,7 @@ export default function ProfileView({
         </div>
 
         {/* OUTILS & MATÉRIEL AU PRÊT */}
-        <div style={{
-          backgroundColor: darkMode ? 'rgba(30, 41, 59, 0.8)' : 'rgba(255,255,255,0.85)',
-          backdropFilter: 'blur(20px)', borderRadius: '24px', padding: '22px',
-          border: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(255,255,255,0.8)'
-        }}>
+        <div style={cardStyle}>
           <h3 style={{ margin: '0 0 14px', fontSize: '16px', fontWeight: '800', color: darkMode ? '#FFF' : '#111827' }}>
             🧰 Matériel & Équipement au Prêt
           </h3>
@@ -363,12 +383,115 @@ export default function ProfileView({
         </div>
       </div>
 
+      {/* 📸 MON PORTFOLIO */}
+      <div style={{ ...cardStyle, borderRadius: '24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px', flexWrap: 'wrap', gap: '10px' }}>
+          <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: darkMode ? '#FFF' : '#111827', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <ImageIcon size={20} color={darkMode ? '#60A5FA' : '#04265A'} /> Mon Portfolio
+          </h3>
+          <span style={{ fontSize: '12px', fontWeight: '700', color: darkMode ? '#94A3B8' : '#64748B' }}>
+            {portfolioImages.length} photo{portfolioImages.length !== 1 ? 's' : ''}
+          </span>
+        </div>
+
+        {/* Grille des photos */}
+        {portfolioImages.length > 0 ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '18px' }}>
+            {portfolioImages.map((src, idx) => (
+              <div key={idx} style={{ position: 'relative', aspectRatio: '1', borderRadius: '14px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+                <img
+                  src={src}
+                  alt={`Portfolio ${idx + 1}`}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                  onError={(e) => { e.target.style.display = 'none'; }}
+                />
+                <button
+                  onClick={() => onRemovePortfolioImage && onRemovePortfolioImage(idx)}
+                  style={{
+                    position: 'absolute', top: '6px', right: '6px',
+                    border: 'none', width: '26px', height: '26px', borderRadius: '50%',
+                    backgroundColor: 'rgba(15,23,42,0.72)',
+                    color: '#FFF', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    backdropFilter: 'blur(4px)', boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+                  }}
+                  title="Supprimer cette photo"
+                >
+                  <X size={13} />
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={{
+            textAlign: 'center', padding: '32px 16px', marginBottom: '16px',
+            borderRadius: '16px',
+            border: darkMode ? '2px dashed rgba(255,255,255,0.12)' : '2px dashed #D1D5DB',
+            color: darkMode ? '#64748B' : '#94A3B8',
+            fontSize: '13px', fontWeight: '600', lineHeight: 1.5
+          }}>
+            <ImageIcon size={32} style={{ marginBottom: '10px', opacity: 0.4 }} />
+            <div>Aucune photo dans ton portfolio pour l'instant.</div>
+            <div style={{ fontSize: '12px', marginTop: '4px', opacity: 0.7 }}>Ajoute des photos pour mettre en valeur ton travail.</div>
+          </div>
+        )}
+
+        {/* Ajout d'une photo */}
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <input
+            type="text"
+            value={portfolioUrlInput}
+            onChange={(e) => setPortfolioUrlInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleAddPortfolioUrl()}
+            placeholder="Colle une URL d'image..."
+            style={{
+              flex: 1, minWidth: '180px', padding: '10px 14px',
+              border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB',
+              borderRadius: '12px', fontSize: '13px',
+              backgroundColor: darkMode ? 'rgba(15,23,42,0.5)' : '#F8FAFC',
+              color: darkMode ? '#FFF' : '#111827', outline: 'none'
+            }}
+          />
+          <button
+            onClick={handleAddPortfolioUrl}
+            disabled={!portfolioUrlInput.trim()}
+            style={{
+              border: 'none', borderRadius: '12px', padding: '10px 14px',
+              backgroundColor: portfolioUrlInput.trim() ? (darkMode ? '#60A5FA' : '#04265A') : (darkMode ? 'rgba(255,255,255,0.1)' : '#E2E8F0'),
+              color: portfolioUrlInput.trim() ? '#FFF' : (darkMode ? '#475569' : '#94A3B8'),
+              fontWeight: '800', cursor: portfolioUrlInput.trim() ? 'pointer' : 'not-allowed',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '13px',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <Plus size={16} /> Ajouter
+          </button>
+          <button
+            onClick={() => portfolioFileInputRef.current?.click()}
+            style={{
+              border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #D1D5DB',
+              borderRadius: '12px', padding: '10px 14px',
+              backgroundColor: darkMode ? 'rgba(255,255,255,0.07)' : '#FFF',
+              color: darkMode ? '#93C5FD' : '#04265A',
+              fontWeight: '800', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '13px'
+            }}
+            title="Uploader une photo depuis ton appareil"
+          >
+            <Upload size={15} /> Photo
+          </button>
+          <input
+            type="file"
+            ref={portfolioFileInputRef}
+            onChange={handlePortfolioFileUpload}
+            accept="image/*"
+            style={{ display: 'none' }}
+          />
+        </div>
+      </div>
+
       {/* HISTORIQUE DES DEALS */}
-      <div style={{
-        backgroundColor: darkMode ? 'rgba(30, 41, 59, 0.8)' : 'rgba(255,255,255,0.85)',
-        backdropFilter: 'blur(20px)', borderRadius: '24px', padding: '24px',
-        border: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(255,255,255,0.8)'
-      }}>
+      <div style={{ ...cardStyle, borderRadius: '24px', padding: '24px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
           <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: darkMode ? '#FFF' : '#111827', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <History size={20} color={darkMode ? '#60A5FA' : '#04265A'} /> Historique des Deals & Évaluations
@@ -378,41 +501,64 @@ export default function ProfileView({
           </span>
         </div>
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {swapHistory.map(item => (
-            <div key={item.id} style={{ padding: '16px', borderRadius: '16px', backgroundColor: darkMode ? 'rgba(15,23,42,0.5)' : '#F8FAFC', border: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid #E2E8F0', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
-              <div style={{ flex: 1, minWidth: '240px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                  <span style={{ fontWeight: '800', fontSize: '14px', color: darkMode ? '#FFF' : '#111827' }}>{item.deal}</span>
-                  <span style={{ fontSize: '11px', fontWeight: '800', padding: '2px 8px', borderRadius: '999px', backgroundColor: item.status === 'Clôturé' ? '#D1FAE5' : '#EFF6FF', color: item.status === 'Clôturé' ? '#059669' : '#04265A' }}>
-                    {item.status}
-                  </span>
-                </div>
-                <div style={{ fontSize: '12px', color: darkMode ? '#CBD5E1' : '#475569', marginBottom: '6px' }}>
-                  Avec <strong>{item.counterparty}</strong> • {item.date}
-                </div>
-                {item.review && (
-                  <div style={{ fontSize: '12px', fontStyle: 'italic', color: darkMode ? '#94A3B8' : '#64748B', lineHeight: 1.5 }}>
-                    « {item.review} »
+        {swapHistory.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '32px', color: darkMode ? '#94A3B8' : '#64748B', fontSize: '14px', fontWeight: '600' }}>
+            <div style={{ fontSize: '36px', marginBottom: '10px' }}>🤝</div>
+            <div>Pas encore d'échanges.</div>
+            <div style={{ fontSize: '12px', marginTop: '6px', opacity: 0.7 }}>Tes deals et avis apparaîtront ici une fois clôturés.</div>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {swapHistory.map(item => {
+              const isClosed = item.status === 'Clôturé';
+              return (
+                <div key={item.id} style={{ padding: '16px', borderRadius: '16px', backgroundColor: darkMode ? 'rgba(15,23,42,0.5)' : '#F8FAFC', border: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid #E2E8F0', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px', flexWrap: 'wrap' }}>
+                  <div style={{ flex: 1, minWidth: '240px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                      <span style={{ fontWeight: '800', fontSize: '14px', color: darkMode ? '#FFF' : '#111827' }}>{item.deal}</span>
+                      <span style={{ fontSize: '11px', fontWeight: '800', padding: '2px 8px', borderRadius: '999px', backgroundColor: isClosed ? '#D1FAE5' : (item.status === 'En cours' ? '#EFF6FF' : '#FEF3C7'), color: isClosed ? '#059669' : (item.status === 'En cours' ? '#04265A' : '#92400E') }}>
+                        {item.status}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: '12px', color: darkMode ? '#CBD5E1' : '#475569', marginBottom: '6px' }}>
+                      Avec <strong>{item.counterparty}</strong> • {item.date}
+                    </div>
+                    {/* Avis textuel : uniquement pour les deals CLÔTURÉS */}
+                    {isClosed && item.review && (
+                      <div style={{ fontSize: '12px', fontStyle: 'italic', color: darkMode ? '#94A3B8' : '#64748B', lineHeight: 1.5 }}>
+                        « {item.review} »
+                      </div>
+                    )}
+                    {!isClosed && (
+                      <div style={{ fontSize: '11px', color: darkMode ? '#475569' : '#94A3B8', fontStyle: 'italic' }}>
+                        {item.status === 'En cours' ? 'Échange en cours...' : 'Rendez-vous planifié'}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
 
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '13px', fontWeight: '800', color: darkMode ? '#34D399' : '#059669', marginBottom: '4px' }}>
-                  {item.compensation}
-                </div>
-                {item.rating && (
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '2px', color: '#F59E0B', fontWeight: '800', fontSize: '13px' }}>
-                    {[...Array(item.rating)].map((_, i) => (
-                      <Star key={i} size={13} fill="#F59E0B" />
-                    ))}
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: '13px', fontWeight: '800', color: darkMode ? '#34D399' : '#059669', marginBottom: '4px' }}>
+                      {item.compensation}
+                    </div>
+                    {/* Étoiles : uniquement pour les deals CLÔTURÉS avec note */}
+                    {isClosed && item.rating != null && (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '2px', color: '#F59E0B', fontWeight: '800', fontSize: '13px' }}>
+                        {[...Array(item.rating)].map((_, i) => (
+                          <Star key={i} size={13} fill="#F59E0B" />
+                        ))}
+                      </div>
+                    )}
+                    {!isClosed && (
+                      <span style={{ fontSize: '11px', fontWeight: '700', color: item.status === 'En cours' ? '#0284C7' : '#D97706', backgroundColor: item.status === 'En cours' ? (darkMode ? 'rgba(2,132,199,0.15)' : '#E0F2FE') : (darkMode ? 'rgba(217,119,6,0.15)' : '#FEF3C7'), padding: '2px 8px', borderRadius: '999px' }}>
+                        {item.status === 'En cours' ? '🔄 En cours' : '📅 Planifié'}
+                      </span>
+                    )}
                   </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* MODALE DE VÉRIFICATION D'IDENTITÉ (KYC) */}

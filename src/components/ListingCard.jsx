@@ -56,13 +56,16 @@ export default function ListingCard({
   const isSwipingRef = useRef(false);
 
   const media = safeGetSuggestedMedia(item.title, item.description || '', item.image, item.video);
+  // Si l'annonce a déjà son propre tableau gallery (plusieurs photos utilisateur), on l'utilise directement.
+  const effectiveGallery = (item.gallery && item.gallery.length > 0) ? item.gallery : (media.gallery || [media.image]);
   const isHovered = hoveredCardId === item.id;
-  const galleryLength = media.gallery?.length || 1;
-  const currentSlideIndex = isHovered && media.gallery?.[hoverSlideIndex] !== undefined
+  const galleryLength = effectiveGallery.length || 1;
+  const currentSlideIndex = isHovered && effectiveGallery[hoverSlideIndex] !== undefined
     ? hoverSlideIndex
     : localImageIndex;
-  const activeImage = media.gallery?.[currentSlideIndex] || media.image;
+  const activeImage = effectiveGallery[currentSlideIndex] || media.image;
   const displayContent = safeGetListingDisplayContent(item, currentLang, !!showingOriginalListings[item.id]);
+
 
   const handleTouchStart = (e) => {
     if (!e.touches || e.touches.length === 0) return;
@@ -139,7 +142,7 @@ export default function ListingCard({
         style={{ position: 'relative', height: '200px', width: '100%', backgroundColor: '#F3F4F6', overflow: 'hidden', touchAction: 'pan-y' }}
       >
         {/* SUPERPOSITION DES IMAGES DE LA GALERIE AVEC EFFET DE FONDU TRANSLUCIDE (CROSSFADE) */}
-        {(media.gallery && media.gallery.length > 0 ? media.gallery : [media.image]).map((imgSrc, idx) => {
+        {effectiveGallery.map((imgSrc, idx) => {
           const isActive = idx === currentSlideIndex;
           return (
             <img
@@ -271,7 +274,7 @@ export default function ListingCard({
         {/* PUCES INDICATRICES DE DÉFILEMENT (HOVER ET SWIPE MOBILE) */}
         {galleryLength > 1 && (
           <div style={{ position: 'absolute', bottom: '12px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '4px', zIndex: 4 }}>
-            {media.gallery.map((_, idx) => (
+            {effectiveGallery.map((_, idx) => (
               <div key={idx} style={{ width: currentSlideIndex === idx ? '14px' : '6px', height: '6px', borderRadius: '999px', backgroundColor: currentSlideIndex === idx ? '#FFF' : 'rgba(255,255,255,0.5)', transition: 'all 0.3s ease' }} />
             ))}
           </div>

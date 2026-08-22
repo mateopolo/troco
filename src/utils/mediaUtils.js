@@ -134,13 +134,21 @@ export function getSuggestedMedia(title = '', description = '', userImage = '', 
   else if (/(appartement|maison|logement|échange|echange|swap|chalet|studio|vacances|weekend|soho|villa)/.test(text)) themeKey = 'logement';
 
   const itemTheme = themeMedia[themeKey] || themeMedia.default;
-  const allImgs = itemTheme.images || [];
 
-  const rawCandidates = userImage && userImage.trim()
-    ? [userImage, ...allImgs]
-    : [...allImgs];
+  // RÈGLE : si l'utilisateur a fourni sa propre image, on n'injecte AUCUNE photo stock.
+  // Les Unsplash ne servent que de fallback unique quand l'utilisateur n'a rien fourni.
+  const hasUserImage = userImage && typeof userImage === 'string' && userImage.trim() !== '';
 
-  const uniqueImages = [...new Set(rawCandidates.filter(img => img && typeof img === 'string' && img.trim() !== ''))];
+  let uniqueImages;
+  if (hasUserImage) {
+    // Galerie = uniquement les images de l'utilisateur (pas de mélange Unsplash)
+    uniqueImages = [userImage];
+  } else {
+    // Aucune image utilisateur → fallback : 1 seule image thématique Unsplash
+    const fallbackImg = (itemTheme.images && itemTheme.images[0]) || defaultImage;
+    uniqueImages = [fallbackImg];
+  }
+
   const mainImage = uniqueImages[0] || defaultImage;
   const chosenVideo = userVideo && userVideo.trim() ? userVideo : (itemTheme.videos?.[0] || '');
 

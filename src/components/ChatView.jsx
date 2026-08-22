@@ -350,6 +350,13 @@ export default function ChatView({
                   const lastMsgTimestamp = lastMsgObjInThread?.timestamp || lastMsgObjInThread?.createdAt || chat.lastMessageAt || chat.updatedAt || null;
                   const chatTimestampLabel = formatChatTimestamp(lastMsgTimestamp);
 
+                  const lastMsgSender = lastMsgObjInThread?.sender || null;
+                  const lastSenderIsMe = lastMsgSender === 'me';
+                  const lastSenderIsThem = lastMsgSender === 'them';
+                  // Badge visible uniquement quand c'est à l'utilisateur de répondre
+                  const showReplyBadge = isUnread && lastSenderIsThem;
+                  const showWaitingBadge = !isUnread && lastSenderIsMe;
+
                   return (
                     <div
                       key={chat.id}
@@ -405,8 +412,34 @@ export default function ChatView({
                           <div style={{ fontSize: '12px', fontWeight: isUnread ? '800' : '500', color: isUnread ? (darkMode ? '#60A5FA' : '#0369A1') : (darkMode ? '#94A3B8' : '#04265A'), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: '2px' }}>
                             {listingTitleText}
                           </div>
-                          <div style={{ fontSize: '11px', fontWeight: isUnread ? '800' : '400', color: isUnread ? (darkMode ? '#F8FAFC' : '#0F172A') : (darkMode ? '#94A3B8' : '#64748B'), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {lastMsgText}
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+                            <div style={{ fontSize: '11px', fontWeight: isUnread ? '800' : '400', color: isUnread ? (darkMode ? '#F8FAFC' : '#0F172A') : (darkMode ? '#94A3B8' : '#64748B'), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, minWidth: 0 }}>
+                              {lastMsgText}
+                            </div>
+                            {showReplyBadge && (
+                              <span style={{
+                                flexShrink: 0,
+                                fontSize: '10px', fontWeight: '800',
+                                backgroundColor: darkMode ? 'rgba(56,189,248,0.2)' : '#E0F2FE',
+                                color: darkMode ? '#38BDF8' : '#0369A1',
+                                padding: '2px 7px', borderRadius: '999px',
+                                border: darkMode ? '1px solid rgba(56,189,248,0.4)' : '1px solid #BAE6FD',
+                                whiteSpace: 'nowrap',
+                                animation: 'pulse 2s infinite'
+                              }}>
+                                💬 À toi !
+                              </span>
+                            )}
+                            {showWaitingBadge && !isUnread && (
+                              <span style={{
+                                flexShrink: 0,
+                                fontSize: '10px', fontWeight: '600',
+                                color: darkMode ? '#475569' : '#94A3B8',
+                                whiteSpace: 'nowrap'
+                              }}>
+                                ⏳
+                              </span>
+                            )}
                           </div>
                         </div>
                       </button>
