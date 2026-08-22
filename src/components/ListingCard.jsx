@@ -79,6 +79,7 @@ export default function ListingCard({
 
   const handleTouchStart = (e) => {
     if (!e.touches || e.touches.length === 0) return;
+    if (setHoveredCardId) setHoveredCardId(item.id);
     touchStartRef.current = {
       x: e.touches[0].clientX,
       y: e.touches[0].clientY,
@@ -130,6 +131,7 @@ export default function ListingCard({
   return (
     <div
       ref={revealRef}
+      onClick={() => handleOpenListing(item)}
       onMouseEnter={() => setHoveredCardId(item.id)}
       onMouseLeave={() => setHoveredCardId(null)}
       className="premium-card reveal-card"

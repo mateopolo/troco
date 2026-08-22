@@ -6198,7 +6198,7 @@ export default function App() {
               {/* Categories + view toggle — single aligned row */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px', width: '100%', minWidth: 0 }}>
                 <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
-                  <div className="category-scroll-container">
+                  <div className="category-scroll-container" style={{ paddingRight: '24px' }}>
                     {allCategories.map(category => {
                       const isSel = selectedCategory === category;
                       return (
@@ -6235,15 +6235,123 @@ export default function App() {
 
                 {/* View mode toggle — inlined right of category bar */}
                 <div className="premium-panel" style={{ display: 'inline-flex', flexShrink: 0, border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(226,232,240,0.9)', borderRadius: '999px', padding: '4px', backgroundColor: darkMode ? 'rgba(30,41,59,0.7)' : 'rgba(255,255,255,0.8)', boxShadow: '0 4px 20px -4px rgba(15, 23, 42, 0.06)', alignSelf: 'center' }}>
-                  <button onClick={() => setViewMode('list')} className="premium-nav-btn" style={{ border: 'none', borderRadius: '999px', padding: '7px 12px', backgroundColor: viewMode === 'list' ? '#04265A' : 'transparent', color: viewMode === 'list' ? '#FFF' : (darkMode ? '#CBD5E1' : '#64748B'), fontWeight: '700', cursor: 'pointer', fontSize: '12px' }}>{t('viewList')}</button>
-                  <button onClick={() => { setViewMode('map'); setIsInfiniteRadius(true); }} className="premium-nav-btn" style={{ border: 'none', borderRadius: '999px', padding: '7px 12px', backgroundColor: viewMode === 'map' ? '#04265A' : 'transparent', color: viewMode === 'map' ? '#FFF' : (darkMode ? '#CBD5E1' : '#64748B'), fontWeight: '700', cursor: 'pointer', fontSize: '12px' }}>{t('viewMap')}</button>
+                  <button onClick={() => setViewMode('list')} className="premium-nav-btn" style={{ border: 'none', borderRadius: '999px', padding: '7px 12px', backgroundColor: viewMode === 'list' ? (darkMode ? '#3B82F6' : '#04265A') : 'transparent', color: viewMode === 'list' ? '#FFF' : (darkMode ? '#CBD5E1' : '#64748B'), fontWeight: '700', cursor: 'pointer', fontSize: '12px' }}>{t('viewList')}</button>
+                  <button onClick={() => { setViewMode('map'); setIsInfiniteRadius(true); }} className="premium-nav-btn" style={{ border: 'none', borderRadius: '999px', padding: '7px 12px', backgroundColor: viewMode === 'map' ? (darkMode ? '#3B82F6' : '#04265A') : 'transparent', color: viewMode === 'map' ? '#FFF' : (darkMode ? '#CBD5E1' : '#64748B'), fontWeight: '700', cursor: 'pointer', fontSize: '12px' }}>{t('viewMap')}</button>
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '10px', marginBottom: '22px' }}>
-                <button onClick={() => setFormatFilter('all')} className="premium-button" style={{ flex: 1, padding: '10px', borderRadius: '14px', border: 'none', backgroundColor: formatFilter === 'all' ? '#04265A' : 'rgba(255,255,255,0.8)', color: formatFilter === 'all' ? '#FFF' : '#374151', fontSize: '12px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 4px 16px -4px rgba(15,23,42,0.08)' }}>{t('all')}</button>
-                <button onClick={() => setFormatFilter('onsite')} className="premium-button" style={{ flex: 1, padding: '10px', borderRadius: '14px', border: 'none', backgroundColor: formatFilter === 'onsite' ? '#04265A' : 'rgba(255,255,255,0.8)', color: formatFilter === 'onsite' ? '#FFF' : '#374151', fontSize: '12px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 4px 16px -4px rgba(15,23,42,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}><MapPin size={13} /> {t('onsite')}</button>
-                <button onClick={() => setFormatFilter('remote')} className="premium-button" style={{ flex: 1, padding: '10px', borderRadius: '14px', border: 'none', backgroundColor: formatFilter === 'remote' ? '#04265A' : 'rgba(255,255,255,0.8)', color: formatFilter === 'remote' ? '#FFF' : '#374151', fontSize: '12px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 4px 16px -4px rgba(15,23,42,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}><Video size={13} /> {t('remote')}</button>
+              {/* SÉLECTEUR SEGMENTÉ FORMAT APPLE-GRADE (STYLE IOS GLASSMORPHISM) */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                maxWidth: isMobile ? '100%' : '480px',
+                width: '100%',
+                margin: '0 auto 20px auto',
+                padding: '4px',
+                borderRadius: '16px',
+                backgroundColor: darkMode ? 'rgba(30, 41, 59, 0.75)' : 'rgba(241, 245, 249, 0.92)',
+                backdropFilter: 'blur(16px)',
+                WebkitBackdropFilter: 'blur(16px)',
+                border: darkMode ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(226, 232, 240, 0.85)',
+                boxShadow: darkMode ? '0 4px 16px rgba(0,0,0,0.2)' : '0 2px 10px rgba(15,23,42,0.04)',
+                boxSizing: 'border-box',
+                gap: '4px'
+              }}>
+                <button
+                  type="button"
+                  onClick={() => setFormatFilter('all')}
+                  className="premium-button"
+                  style={{
+                    flex: 1,
+                    padding: '8px 12px',
+                    borderRadius: '12px',
+                    border: 'none',
+                    backgroundColor: formatFilter === 'all'
+                      ? (darkMode ? '#3B82F6' : '#04265A')
+                      : 'transparent',
+                    color: formatFilter === 'all'
+                      ? '#FFFFFF'
+                      : (darkMode ? '#94A3B8' : '#64748B'),
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    boxShadow: formatFilter === 'all'
+                      ? (darkMode ? '0 2px 8px rgba(59,130,246,0.35)' : '0 2px 8px rgba(4,38,90,0.25)')
+                      : 'none',
+                    transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)'
+                  }}
+                >
+                  <Globe size={13} />
+                  <span>{t('all')}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setFormatFilter('onsite')}
+                  className="premium-button"
+                  style={{
+                    flex: 1,
+                    padding: '8px 12px',
+                    borderRadius: '12px',
+                    border: 'none',
+                    backgroundColor: formatFilter === 'onsite'
+                      ? (darkMode ? '#3B82F6' : '#04265A')
+                      : 'transparent',
+                    color: formatFilter === 'onsite'
+                      ? '#FFFFFF'
+                      : (darkMode ? '#94A3B8' : '#64748B'),
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    boxShadow: formatFilter === 'onsite'
+                      ? (darkMode ? '0 2px 8px rgba(59,130,246,0.35)' : '0 2px 8px rgba(4,38,90,0.25)')
+                      : 'none',
+                    transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)'
+                  }}
+                >
+                  <MapPin size={13} />
+                  <span>{t('onsite')}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setFormatFilter('remote')}
+                  className="premium-button"
+                  style={{
+                    flex: 1,
+                    padding: '8px 12px',
+                    borderRadius: '12px',
+                    border: 'none',
+                    backgroundColor: formatFilter === 'remote'
+                      ? (darkMode ? '#3B82F6' : '#04265A')
+                      : 'transparent',
+                    color: formatFilter === 'remote'
+                      ? '#FFFFFF'
+                      : (darkMode ? '#94A3B8' : '#64748B'),
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    boxShadow: formatFilter === 'remote'
+                      ? (darkMode ? '0 2px 8px rgba(59,130,246,0.35)' : '0 2px 8px rgba(4,38,90,0.25)')
+                      : 'none',
+                    transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)'
+                  }}
+                >
+                  <Video size={13} />
+                  <span>{t('remote')}</span>
+                </button>
               </div>
 
               {filteredListings.length === 0 ? (
@@ -7579,7 +7687,15 @@ export default function App() {
       </main>
 
       {/* BARRE DE NAVIGATION EN BAS (GLASSMORPHISM) */}
-      <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, backgroundColor: darkMode ? 'rgba(15,23,42,0.88)' : 'rgba(255,255,255,0.78)', backdropFilter: 'blur(20px) saturate(180%)', WebkitBackdropFilter: 'blur(20px) saturate(180%)', borderTop: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(226,232,240,0.7)', padding: '10px 0', zIndex: 40, boxShadow: '0 -6px 30px rgba(15,23,42,0.05)' }}>
+      <nav style={{
+        display: (isMobile && activeTab === 'chat' && selectedChat) ? 'none' : 'block',
+        position: 'fixed', bottom: 0, left: 0, right: 0,
+        backgroundColor: darkMode ? 'rgba(15,23,42,0.88)' : 'rgba(255,255,255,0.78)',
+        backdropFilter: 'blur(20px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+        borderTop: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(226,232,240,0.7)',
+        padding: '10px 0', zIndex: 40, boxShadow: '0 -6px 30px rgba(15,23,42,0.05)'
+      }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-around', alignItems: 'center' }}>
 
           <button onClick={() => setActiveTab('feed')} className="premium-nav-btn" style={{ border: 'none', background: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', color: activeTab === 'feed' ? (darkMode ? '#60A5FA' : '#04265A') : darkMode ? '#64748B' : '#9CA3AF', cursor: 'pointer', padding: '6px 14px', borderRadius: '16px' }}>

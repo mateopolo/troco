@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   Send, Phone, Video, Sparkles, Clock, CheckCircle,
   ChevronLeft, Globe, Edit2, Trash2, Copy, Check, X,
@@ -111,16 +111,54 @@ export default function ChatView({
     }
   }, [chatThreads, selectedChat, mobileSubView]);
 
+  const getChatLatestTimestamp = useCallback((chat) => {
+    if (!chat) return 0;
+    const thread = chatThreads && (chatThreads[chat.id] || chatThreads[String(chat.id)]);
+    if (thread && thread.length > 0) {
+      const lastMsg = thread[thread.length - 1];
+      const val = lastMsg.createdAt || lastMsg.timestamp || lastMsg.time;
+      if (val) {
+        if (typeof val?.toMillis === 'function') return val.toMillis();
+        if (typeof val?.toDate === 'function') return val.toDate().getTime();
+        if (val?.seconds) return val.seconds * 1000;
+        const t = new Date(val).getTime();
+        if (!isNaN(t)) return t;
+      }
+    }
+    const chatVal = chat.lastMessageAt || chat.updatedAt || chat.lastMessageTime || chat.createdAt || chat.timestamp;
+    if (chatVal) {
+      if (typeof chatVal?.toMillis === 'function') return chatVal.toMillis();
+      if (typeof chatVal?.toDate === 'function') return chatVal.toDate().getTime();
+      if (chatVal?.seconds) return chatVal.seconds * 1000;
+      const t = new Date(chatVal).getTime();
+      if (!isNaN(t)) return t;
+    }
+    // Ordre par défaut réaliste
+    if (typeof chat.id === 'number') {
+      return chat.id > 200 ? 1700000000000 + chat.id * 1000 : 1600000000000 + chat.id * 1000;
+    }
+    return 0;
+  }, [chatThreads]);
+
+  // TRI CHRONOLOGIQUE RIGOUREUX DÉCROISSANT (Le message le plus récent reste toujours au sommet)
+  const visibleChats = useMemo(() => {
+    const list = (mockChats || []).filter(chat => !deletedChatIds.has(chat.id));
+    return [...list].sort((a, b) => {
+      const timeA = getChatLatestTimestamp(a);
+      const timeB = getChatLatestTimestamp(b);
+      return timeB - timeA;
+    });
+  }, [mockChats, deletedChatIds, getChatLatestTimestamp]);
+
   if (activeTab !== 'chat') return null;
 
-  const visibleChats = mockChats.filter(chat => !deletedChatIds.has(chat.id));
   const effectiveSelectedChat = selectedChat && !deletedChatIds.has(selectedChat.id) ? selectedChat : null;
   const currentChatId = effectiveSelectedChat ? effectiveSelectedChat.id : (visibleChats[0]?.id || 201);
   const activeChatObj = effectiveSelectedChat || (visibleChats.length > 0 ? visibleChats[0] : null);
   const messages = chatThreads[currentChatId] || [];
 
   const formatMsgTime = (val) => {
-    if (!val) return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    if (!val) return new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
     try {
       let d;
       if (typeof val?.toDate === 'function') d = val.toDate();
@@ -129,33 +167,83 @@ export default function ChatView({
       else if (val instanceof Date) d = val;
       else d = new Date();
       if (isNaN(d.getTime())) return '';
-      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
     } catch (_) {
       return '';
     }
   };
 
-  // WhatsApp-style timestamp for chat list sidebar
-  const formatChatTimestamp = (val) => {
-    if (!val) return '';
-    try {
-      let d;
+  // Formatage intelligent des dates et heures en français
+  const formatChatTimestamp = (val, chat, thread) => {
+    let d = null;
+    if (val) {
       if (typeof val?.toDate === 'function') d = val.toDate();
       else if (val?.seconds) d = new Date(val.seconds * 1000);
-      else if (typeof val === 'number' || typeof val === 'string') d = new Date(val);
-      else if (val instanceof Date) d = val;
-      else return '';
-      if (isNaN(d.getTime())) return '';
-      const now = new Date();
-      const diffMs = now - d;
-      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-      if (diffDays === 0) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      if (diffDays === 1) return 'Hier';
-      if (diffDays < 7) return d.toLocaleDateString([], { weekday: 'short' });
-      return d.toLocaleDateString([], { day: '2-digit', month: '2-digit' });
-    } catch (_) {
-      return '';
+      else if (typeof val === 'number' || typeof val === 'string') {
+        const parsed = new Date(val);
+        if (!isNaN(parsed.getTime())) d = parsed;
+      } else if (val instanceof Date) d = val;
     }
+    if (!d && thread && thread.length > 0) {
+      const lastMsg = thread[thread.length - 1];
+      const mVal = lastMsg.createdAt || lastMsg.timestamp;
+      if (typeof mVal?.toDate === 'function') d = mVal.toDate();
+      else if (mVal?.seconds) d = new Date(mVal.seconds * 1000);
+      else if (mVal) {
+        const parsed = new Date(mVal);
+        if (!isNaN(parsed.getTime())) d = parsed;
+      }
+    }
+    if (!d && chat?.updatedAt) {
+      const cVal = chat.updatedAt;
+      if (typeof cVal?.toDate === 'function') d = cVal.toDate();
+      else if (cVal?.seconds) d = new Date(cVal.seconds * 1000);
+      else {
+        const parsed = new Date(cVal);
+        if (!isNaN(parsed.getTime())) d = parsed;
+      }
+    }
+
+    if (!d || isNaN(d.getTime())) {
+      return chat?.time || '';
+    }
+
+    const now = new Date();
+    const diffMs = now.getTime() - d.getTime();
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+
+    // Moins de 2 minutes
+    if (diffMinutes < 2 && diffMinutes >= 0) {
+      return "À l'instant";
+    }
+
+    // Aujourd'hui : afficher l'heure exacte (ex: « 13:13 »)
+    const isToday = d.getDate() === now.getDate() &&
+                    d.getMonth() === now.getMonth() &&
+                    d.getFullYear() === now.getFullYear();
+    if (isToday) {
+      return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    // Hier : « Hier » (ou « Hier 15:22 »)
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    const isYesterday = d.getDate() === yesterday.getDate() &&
+                        d.getMonth() === yesterday.getMonth() &&
+                        d.getFullYear() === yesterday.getFullYear();
+    if (isYesterday) {
+      return `Hier ${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
+    }
+
+    // Cette semaine : nom complet du jour en français (ex: « Samedi »)
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    if (diffDays < 7 && diffDays > 0) {
+      const dayName = d.toLocaleDateString('fr-FR', { weekday: 'long' });
+      return dayName.charAt(0).toUpperCase() + dayName.slice(1);
+    }
+
+    // Plus ancien : date courte en français (ex: « 18/08 »)
+    return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
   };
 
   const getChatUnreadCount = (chat) => {
@@ -362,7 +450,7 @@ export default function ChatView({
                     : rawLastMsg;
 
                   const lastMsgTimestamp = lastMsgObjInThread?.timestamp || lastMsgObjInThread?.createdAt || chat.lastMessageAt || chat.updatedAt || null;
-                  const chatTimestampLabel = formatChatTimestamp(lastMsgTimestamp);
+                  const chatTimestampLabel = formatChatTimestamp(lastMsgTimestamp, chat, thread);
 
                   const lastMsgSender = lastMsgObjInThread?.sender || null;
                   const lastSenderIsMe = lastMsgSender === 'me';
