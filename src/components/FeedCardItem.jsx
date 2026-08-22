@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight, Video, Globe, MapPin, Tag, Trash2, ArrowRight } from 'lucide-react';
 import { useScrollReveal } from '../utils/useScrollReveal';
 
-export default function FeedCardItem({
+function FeedCardItem({
   item,
   darkMode,
   hoveredCardId,
@@ -504,3 +504,5 @@ export default function FeedCardItem({
     </div>
   );
 }
+
+export default React.memo(FeedCardItem);

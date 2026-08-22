@@ -9,7 +9,7 @@ import { doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { subscribeTranslations } from '../utils/translator';
 
-export default function ChatView({
+function ChatView({
   activeTab,
   mockChats,
   selectedChat,
@@ -1504,3 +1504,5 @@ export default function ChatView({
     </>
   );
 }
+
+export default React.memo(ChatView);

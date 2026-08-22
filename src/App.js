@@ -3452,119 +3452,132 @@ export default function App() {
     return String(str).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   };
 
-  const filteredListings = listings.filter((item) => {
-    const rawQuery = searchQuery.trim();
-    const cleanQuery = removeAccents(rawQuery);
-    const words = cleanQuery.split(/\s+/).filter(Boolean);
-    const expandedWords = words.map(w => CITY_ALIASES[w] || w);
+  const filteredListings = useMemo(() => {
+    return listings.filter((item) => {
+      const rawQuery = searchQuery.trim();
+      const cleanQuery = removeAccents(rawQuery);
+      const words = cleanQuery.split(/\s+/).filter(Boolean);
+      const expandedWords = words.map(w => CITY_ALIASES[w] || w);
 
-    const itemLocationNorm = removeAccents(item.location || '');
-    const itemTitleNorm = removeAccents(item.title || '');
-    const itemCategoryNorm = removeAccents(item.category || '');
-    const itemCompNorm = removeAccents(item.compensation || '');
-    const allTags = [
-      ...(Array.isArray(item.tags) ? item.tags : []),
-      ...(typeof generateTags === 'function' ? (generateTags(item.title || '', item.description || '') || []) : [])
-    ];
-    const itemTagsNorm = removeAccents(allTags.join(' '));
-    const itemDescNorm = removeAccents(item.description || '');
-    const transText = item.translations ? Object.values(item.translations).map(t => `${t.title || ''} ${t.description || ''}`).join(' ') : '';
-    const itemTransNorm = removeAccents(transText);
+      const itemLocationNorm = removeAccents(item.location || '');
+      const itemTitleNorm = removeAccents(item.title || '');
+      const itemCategoryNorm = removeAccents(item.category || '');
+      const itemCompNorm = removeAccents(item.compensation || '');
+      const allTags = [
+        ...(Array.isArray(item.tags) ? item.tags : []),
+        ...(typeof generateTags === 'function' ? (generateTags(item.title || '', item.description || '') || []) : [])
+      ];
+      const itemTagsNorm = removeAccents(allTags.join(' '));
+      const itemDescNorm = removeAccents(item.description || '');
+      const transText = item.translations ? Object.values(item.translations).map(t => `${t.title || ''} ${t.description || ''}`).join(' ') : '';
+      const itemTransNorm = removeAccents(transText);
 
-    const searchText = `${itemTitleNorm} ${itemCategoryNorm} ${itemLocationNorm} ${itemCompNorm} ${itemTagsNorm} ${itemDescNorm} ${itemTransNorm}`;
+      const searchText = `${itemTitleNorm} ${itemCategoryNorm} ${itemLocationNorm} ${itemCompNorm} ${itemTagsNorm} ${itemDescNorm} ${itemTransNorm}`;
 
-    const matchesSearch = (() => {
-      if (!cleanQuery) return true;
+      const matchesSearch = (() => {
+        if (!cleanQuery) return true;
 
-      // 1. Match direct du texte
-      if (searchText.includes(cleanQuery)) return true;
+        // 1. Match direct du texte
+        if (searchText.includes(cleanQuery)) return true;
 
-      // 2. Match via alias étendu (ex: "parie" -> "paris")
-      const expandedQuery = expandedWords.join(' ');
-      if (searchText.includes(expandedQuery)) return true;
+        // 2. Match via alias étendu (ex: "parie" -> "paris")
+        const expandedQuery = expandedWords.join(' ');
+        if (searchText.includes(expandedQuery)) return true;
 
-      // 3. Match mot par mot
-      return expandedWords.every(w => searchText.includes(w));
-    })();
-    const matchesFormat = (() => {
-      if (formatFilter === 'all' || !formatFilter) return true;
-      const itemFormat = item.format || item.type || 'onsite';
-      if (formatFilter === 'remote') {
-        return itemFormat === 'remote' || itemFormat === 'both';
-      }
-      if (formatFilter === 'onsite') {
-        return itemFormat === 'onsite' || itemFormat === 'both';
-      }
-      return itemFormat === formatFilter;
-    })();
+        // 3. Match mot par mot
+        return expandedWords.every(w => searchText.includes(w));
+      })();
+      const matchesFormat = (() => {
+        if (formatFilter === 'all' || !formatFilter) return true;
+        const itemFormat = item.format || item.type || 'onsite';
+        if (formatFilter === 'remote') {
+          return itemFormat === 'remote' || itemFormat === 'both';
+        }
+        if (formatFilter === 'onsite') {
+          return itemFormat === 'onsite' || itemFormat === 'both';
+        }
+        return itemFormat === formatFilter;
+      })();
 
-    const matchesCategory = (() => {
-      if (!selectedCategory || selectedCategory === 'all' || selectedCategory === 'Tous') return true;
-      const cat = String(item.category || '').toLowerCase();
-      const selCat = String(selectedCategory || '').toLowerCase();
+      const matchesCategory = (() => {
+        if (!selectedCategory || selectedCategory === 'all' || selectedCategory === 'Tous') return true;
+        const cat = String(item.category || '').toLowerCase();
+        const selCat = String(selectedCategory || '').toLowerCase();
 
 
-      if (selCat.includes('cours') || selCat.includes('compétence')) {
-        return cat.includes('cours') || cat.includes('compétence') || cat.includes('formation') || cat.includes('coaching');
-      }
-      if (selCat.includes('outillage') || selCat.includes('matériel')) {
-        return cat.includes('outillage') || cat.includes('matériel') || cat.includes('prêt');
-      }
-      if (selCat.includes('services') || selCat.includes('dépannage')) {
-        return cat.includes('services') || cat.includes('dépannage') || cat.includes('réparation');
-      }
-      if (selCat.includes('logement') || selCat.includes('swap')) {
-        return cat.includes('logement') || cat.includes('swap') || cat.includes('hébergement');
-      }
-      return cat.includes(selCat);
-    })();
+        if (selCat.includes('cours') || selCat.includes('compétence')) {
+          return cat.includes('cours') || cat.includes('compétence') || cat.includes('formation') || cat.includes('coaching');
+        }
+        if (selCat.includes('outillage') || selCat.includes('matériel')) {
+          return cat.includes('outillage') || cat.includes('matériel') || cat.includes('prêt');
+        }
+        if (selCat.includes('services') || selCat.includes('dépannage')) {
+          return cat.includes('services') || cat.includes('dépannage') || cat.includes('réparation');
+        }
+        if (selCat.includes('logement') || selCat.includes('swap')) {
+          return cat.includes('logement') || cat.includes('swap') || cat.includes('hébergement');
+        }
+        return cat.includes(selCat);
+      })();
 
-    const itemLangs = item.languages ? [...item.languages, ...(item.translations ? Object.keys(item.translations) : []), item.nativeLang || 'FR'] : [item.nativeLang || 'FR', ...(item.translations ? Object.keys(item.translations) : [])];
-    const matchesLanguage = selectedLanguages.length === 0 || itemLangs.some(lang => selectedLanguages.includes(lang));
-    const matchesPayment = selectedPayment === 'all' || (selectedPayment === 'credits' && item.compensation.includes('Crédit')) || (selectedPayment === 'cash' && item.compensation.includes('€')) || (selectedPayment === 'troc' && item.compensation.includes('Troc')) || (selectedPayment === 'hybrid' && item.compensation.includes('+'));
+      const itemLangs = item.languages ? [...item.languages, ...(item.translations ? Object.keys(item.translations) : []), item.nativeLang || 'FR'] : [item.nativeLang || 'FR', ...(item.translations ? Object.keys(item.translations) : [])];
+      const matchesLanguage = selectedLanguages.length === 0 || itemLangs.some(lang => selectedLanguages.includes(lang));
+      const matchesPayment = selectedPayment === 'all' || (selectedPayment === 'credits' && item.compensation.includes('Crédit')) || (selectedPayment === 'cash' && item.compensation.includes('€')) || (selectedPayment === 'troc' && item.compensation.includes('Troc')) || (selectedPayment === 'hybrid' && item.compensation.includes('+'));
 
-    const distance = getListingDistance(item);
-    const matchesDistance = (() => {
-      if (isInfiniteRadius || radiusKm >= 2000) return true;
-      // Si on n'a pas pu calculer la distance (pas de coordonnées) :
-      // on affiche l'annonce quand même pour ne pas vider le feed.
-      if (distance === null) return true;
-      return distance <= radiusKm;
-    })();
+      const distance = getListingDistance(item);
+      const matchesDistance = (() => {
+        if (isInfiniteRadius || radiusKm >= 2000) return true;
+        // Si on n'a pas pu calculer la distance (pas de coordonnées) :
+        // on affiche l'annonce quand même pour ne pas vider le feed.
+        if (distance === null) return true;
+        return distance <= radiusKm;
+      })();
 
-    // Filtrage Shadow-Ban & Utilisateurs bannis
-    const authorUser = allFirestoreUsers.find(u => (u.name && u.name.trim().toLowerCase() === (item.author || '').trim().toLowerCase()) || (u.uid && item.authorUid && u.uid === item.authorUid));
-    if (authorUser?.isBanned) return false;
-    if (authorUser?.isShadowBanned && item.author !== profile.name) return false;
+      // Filtrage Shadow-Ban & Utilisateurs bannis
+      const authorUser = allFirestoreUsers.find(u => (u.name && u.name.trim().toLowerCase() === (item.author || '').trim().toLowerCase()) || (u.uid && item.authorUid && u.uid === item.authorUid));
+      if (authorUser?.isBanned) return false;
+      if (authorUser?.isShadowBanned && item.author !== profile.name) return false;
 
-    return item.status !== 'paused' && matchesSearch && matchesFormat && matchesCategory && matchesLanguage && matchesPayment && matchesDistance;
-  }).sort((a, b) => {
-    // 1. Annonces boostées / sponsorisées en priorité absolue (PC & Mobile)
-    const aBoost = (a.isBoosted || a.sponsored) ? 1 : 0;
-    const bBoost = (b.isBoosted || b.sponsored) ? 1 : 0;
-    if (bBoost !== aBoost) return bBoost - aBoost;
+      return item.status !== 'paused' && matchesSearch && matchesFormat && matchesCategory && matchesLanguage && matchesPayment && matchesDistance;
+    }).sort((a, b) => {
+      // 1. Annonces boostées / sponsorisées en priorité absolue (PC & Mobile)
+      const aBoost = (a.isBoosted || a.sponsored) ? 1 : 0;
+      const bBoost = (b.isBoosted || b.sponsored) ? 1 : 0;
+      if (bBoost !== aBoost) return bBoost - aBoost;
 
-    // 2. Annonces créées par de vrais utilisateurs (humains) avant les annonces Démo / IA
-    const aDemo = (a.isDemo || a.persona || (typeof a.id === 'number' && a.id < 300)) ? 1 : 0;
-    const bDemo = (b.isDemo || b.persona || (typeof b.id === 'number' && b.id < 300)) ? 1 : 0;
-    if (aDemo !== bDemo) return aDemo - bDemo;
+      // 2. Annonces créées par de vrais utilisateurs (humains) avant les annonces Démo / IA
+      const aDemo = (a.isDemo || a.persona || (typeof a.id === 'number' && a.id < 300)) ? 1 : 0;
+      const bDemo = (b.isDemo || b.persona || (typeof b.id === 'number' && b.id < 300)) ? 1 : 0;
+      if (aDemo !== bDemo) return aDemo - bDemo;
 
-    // 3. Annonces urgentes en priorité
-    const aUrgent = (a.urgent || a.isUrgent) ? 1 : 0;
-    const bUrgent = (b.urgent || b.isUrgent) ? 1 : 0;
-    if (bUrgent !== aUrgent) return bUrgent - aUrgent;
+      // 3. Annonces urgentes en priorité
+      const aUrgent = (a.urgent || a.isUrgent) ? 1 : 0;
+      const bUrgent = (b.urgent || b.isUrgent) ? 1 : 0;
+      if (bUrgent !== aUrgent) return bUrgent - aUrgent;
 
-    // 4. Tri chronologique par date de création ou identifiant
-    const getTime = (item) => {
-      if (item.createdAt?.toMillis) return item.createdAt.toMillis();
-      if (item.createdAt?.seconds) return item.createdAt.seconds * 1000;
-      if (typeof item.createdAt === 'string') return new Date(item.createdAt).getTime() || 0;
-      if (typeof item.createdAt === 'number') return item.createdAt;
-      const numId = Number(String(item.id).replace(/\D/g, ''));
-      return isNaN(numId) ? 0 : numId;
-    };
-    return getTime(b) - getTime(a);
-  });
+      // 4. Tri chronologique par date de création ou identifiant
+      const getTime = (item) => {
+        if (item.createdAt?.toMillis) return item.createdAt.toMillis();
+        if (item.createdAt?.seconds) return item.createdAt.seconds * 1000;
+        if (typeof item.createdAt === 'string') return new Date(item.createdAt).getTime() || 0;
+        if (typeof item.createdAt === 'number') return item.createdAt;
+        const numId = Number(String(item.id).replace(/\D/g, ''));
+        return isNaN(numId) ? 0 : numId;
+      };
+      return getTime(b) - getTime(a);
+    });
+  }, [
+    listings,
+    searchQuery,
+    formatFilter,
+    selectedCategory,
+    selectedLanguages,
+    selectedPayment,
+    radiusKm,
+    isInfiniteRadius,
+    profile.name,
+    allFirestoreUsers
+  ]);
 
   const getListingDetail = (listing) => {
     const media = getSuggestedMedia(listing.title, listing.description || '', listing.image, listing.video);

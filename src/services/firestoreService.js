@@ -1,0 +1,270 @@
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  setDoc,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  query,
+  where,
+  orderBy,
+  limit,
+  onSnapshot,
+  serverTimestamp,
+  runTransaction
+} from 'firebase/firestore';
+import { db } from '../firebase';
+
+/**
+ * ==============================================================================
+ * FIRESTORE SERVICE — ENTERPRISE DATA ACCESS LAYER (DAL)
+ * ==============================================================================
+ * Centralise tous les appels Firestore avec validation de type, gestion d'erreurs
+ * atomique et désabonnements propres pour éliminer les fuites mémoire.
+ */
+
+// ------------------------------------------------------------------------------
+// 1. GESTION DES ANNONCES (LISTINGS)
+// ------------------------------------------------------------------------------
+
+/**
+ * Écoute en temps réel les annonces Firestore
+ * @param {Function} onUpdate Callback avec les annonces formatées
+ * @param {Function} onError Callback en cas d'erreur
+ * @returns {Function} Fonction de désabonnement propre (unsubscribe)
+ */
+export const subscribeToListings = (onUpdate, onError) => {
+  try {
+    const q = query(collection(db, 'listings'), orderBy('createdAt', 'desc'));
+    return onSnapshot(q, (snapshot) => {
+      const items = snapshot.docs.map(d => ({
+        id: d.id,
+        ...d.data()
+      }));
+      onUpdate(items);
+    }, (error) => {
+      console.warn('[FirestoreService] subscribeToListings error:', error);
+      if (onError) onError(error);
+    });
+  } catch (err) {
+    console.warn('[FirestoreService] subscribeToListings setup failed:', err);
+    return () => {};
+  }
+};
+
+/**
+ * Crée une nouvelle annonce dans Firestore
+ */
+export const createListing = async (listingData) => {
+  try {
+    const docRef = await addDoc(collection(db, 'listings'), {
+      ...listingData,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+    return { success: true, id: docRef.id };
+  } catch (error) {
+    console.error('[FirestoreService] createListing error:', error);
+    return { success: false, error };
+  }
+};
+
+/**
+ * Supprime une annonce
+ */
+export const deleteListing = async (listingId) => {
+  try {
+    await deleteDoc(doc(db, 'listings', String(listingId)));
+    return { success: true };
+  } catch (error) {
+    console.error('[FirestoreService] deleteListing error:', error);
+    return { success: false, error };
+  }
+};
+
+// ------------------------------------------------------------------------------
+// 2. GESTION DES DISCUSSIONS & MESSAGES (CHATS)
+// ------------------------------------------------------------------------------
+
+/**
+ * Écoute les discussions de l'utilisateur connecté
+ */
+export const subscribeToUserChats = (userName, onUpdate, onError) => {
+  if (!userName || typeof userName !== 'string') return () => {};
+  try {
+    const q = query(
+      collection(db, 'chats'),
+      where('participants', 'array-contains', userName.trim())
+    );
+    return onSnapshot(q, (snapshot) => {
+      const chats = snapshot.docs.map(d => ({
+        id: d.id,
+        ...d.data()
+      }));
+      onUpdate(chats);
+    }, (error) => {
+      console.warn('[FirestoreService] subscribeToUserChats error:', error);
+      if (onError) onError(error);
+    });
+  } catch (err) {
+    console.warn('[FirestoreService] subscribeToUserChats setup failed:', err);
+    return () => {};
+  }
+};
+
+/**
+ * Écoute les messages d'une discussion spécifique
+ */
+export const subscribeToChatMessages = (chatId, onUpdate, onError) => {
+  if (!chatId) return () => {};
+  try {
+    const q = query(
+      collection(db, 'chats', String(chatId), 'messages'),
+      orderBy('createdAt', 'asc')
+    );
+    return onSnapshot(q, (snapshot) => {
+      const messages = snapshot.docs.map(d => ({
+        id: d.id,
+        ...d.data()
+      }));
+      onUpdate(messages);
+    }, (error) => {
+      console.warn('[FirestoreService] subscribeToChatMessages error:', error);
+      if (onError) onError(error);
+    });
+  } catch (err) {
+    console.warn('[FirestoreService] subscribeToChatMessages setup failed:', err);
+    return () => {};
+  }
+};
+
+/**
+ * Envoie un message dans un chat Firestore
+ */
+export const sendChatMessage = async (chatId, messageData) => {
+  if (!chatId || !messageData) return { success: false };
+  try {
+    const messagesRef = collection(db, 'chats', String(chatId), 'messages');
+    const docRef = await addDoc(messagesRef, {
+      ...messageData,
+      createdAt: serverTimestamp(),
+    });
+
+    // Mise à jour de l'aperçu du chat
+    const chatDocRef = doc(db, 'chats', String(chatId));
+    await setDoc(chatDocRef, {
+      lastMessage: messageData.text || 'Message',
+      lastSenderName: messageData.senderName || 'Utilisateur',
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+
+    return { success: true, id: docRef.id };
+  } catch (error) {
+    console.error('[FirestoreService] sendChatMessage error:', error);
+    return { success: false, error };
+  }
+};
+
+// ------------------------------------------------------------------------------
+// 3. NÉGOCIATION DE DEALS ET TRANSACTIONS ATOMIQUES
+// ------------------------------------------------------------------------------
+
+/**
+ * Valide un deal et exécute le transfert de soldes de façon atomique
+ */
+export const executeDealTransaction = async ({
+  chatId,
+  dealId,
+  buyerUid,
+  sellerUid,
+  euroAmount = 0,
+  trocoTokens = 0,
+}) => {
+  try {
+    await runTransaction(db, async (transaction) => {
+      // 1. Mise à jour de l'état du deal dans le chat
+      const msgRef = doc(db, 'chats', String(chatId), 'messages', String(dealId));
+      transaction.update(msgRef, {
+        status: 'confirmed',
+        updatedAt: serverTimestamp(),
+      });
+
+      // 2. Transfert de solde si les UIDs sont présents
+      if (buyerUid && sellerUid) {
+        const buyerRef = doc(db, 'users', String(buyerUid));
+        const sellerRef = doc(db, 'users', String(sellerUid));
+
+        const buyerDoc = await transaction.get(buyerRef);
+        const sellerDoc = await transaction.get(sellerRef);
+
+        if (buyerDoc.exists() && sellerDoc.exists()) {
+          const buyerData = buyerDoc.data();
+          const sellerData = sellerDoc.data();
+
+          const newBuyerTokens = Math.max(0, (buyerData.trocoTokens || 0) - trocoTokens);
+          const newBuyerEuro = Math.max(0, (buyerData.euroBalance || 0) - euroAmount);
+          const newSellerTokens = (sellerData.trocoTokens || 0) + trocoTokens;
+          const newSellerEuro = (sellerData.euroBalance || 0) + euroAmount;
+
+          transaction.update(buyerRef, {
+            trocoTokens: newBuyerTokens,
+            euroBalance: newBuyerEuro,
+            updatedAt: serverTimestamp(),
+          });
+
+          transaction.update(sellerRef, {
+            trocoTokens: newSellerTokens,
+            euroBalance: newSellerEuro,
+            updatedAt: serverTimestamp(),
+          });
+        }
+      }
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('[FirestoreService] executeDealTransaction error:', error);
+    return { success: false, error };
+  }
+};
+
+// ------------------------------------------------------------------------------
+// 4. STATUT EN LIGNE (PRESENCE) & FRAPPE (TYPING)
+// ------------------------------------------------------------------------------
+
+/**
+ * Met à jour l'indicateur de frappe dans un chat
+ */
+export const setChatTypingStatus = async (chatId, userName, isTyping) => {
+  if (!chatId || !userName) return;
+  try {
+    const typingRef = doc(db, 'chats', String(chatId), 'typing', userName.trim());
+    if (isTyping) {
+      await setDoc(typingRef, { isTyping: true, updatedAt: serverTimestamp() });
+    } else {
+      await deleteDoc(typingRef);
+    }
+  } catch (e) {
+    // Silencieux
+  }
+};
+
+/**
+ * Écoute si l'interlocuteur est en train d'écrire
+ */
+export const subscribeToTyping = (chatId, currentUserName, onTypingChange) => {
+  if (!chatId || !currentUserName) return () => {};
+  try {
+    const typingCollRef = collection(db, 'chats', String(chatId), 'typing');
+    return onSnapshot(typingCollRef, (snapshot) => {
+      const otherTyping = snapshot.docs.some(
+        d => d.id !== currentUserName.trim() && d.data()?.isTyping
+      );
+      onTypingChange(otherTyping);
+    }, () => onTypingChange(false));
+  } catch (e) {
+    return () => {};
+  }
+};
