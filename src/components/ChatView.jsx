@@ -671,7 +671,11 @@ function ChatView({
               // RENDU DES PROPOSITIONS DE DEAL (ALIGNEMENT BILATÉRAL STRICT DROITE / GAUCHE)
               if (msg.type === 'deal' || msg.kind === 'deal') {
                 const { terms = {} } = msg;
-                const isMine = msg.sender === 'me' || (msg.senderName && profile?.name && msg.senderName.trim().toLowerCase() === profile.name.trim().toLowerCase()) || (typeof msg.sender === 'string' && profile?.name && msg.sender.trim().toLowerCase() === profile.name.trim().toLowerCase());
+                const isMine = (msg.senderName && profile?.name)
+                  ? (msg.senderName.trim().toLowerCase() === profile.name.trim().toLowerCase())
+                  : (msg.senderUid && profile?.uid)
+                    ? (msg.senderUid === profile.uid)
+                    : (msg.sender === 'me');
                 const isIncoming = !isMine;
                 const currentDealStatus = msg.status || 'pending';
                 const isDealPending = currentDealStatus === 'pending' || currentDealStatus === 'proposed' || currentDealStatus === 'en_attente';
@@ -688,16 +692,16 @@ function ChatView({
                       flexDirection: 'column',
                       alignItems: isMine ? 'flex-end' : 'flex-start',
                       width: '100%',
-                      margin: '6px 0',
+                      margin: '8px 0',
                       boxSizing: 'border-box'
                     }}
                   >
                     <div style={{
-                      width: isMobile ? '92%' : '78%',
-                      maxWidth: '500px',
+                      width: isMobile ? '94%' : '80%',
+                      maxWidth: '520px',
                       border: isMine
-                        ? (darkMode ? '1.5px solid rgba(96,165,250,0.45)' : '1.5px solid #3B82F6')
-                        : (darkMode ? '1.5px solid rgba(56,189,248,0.45)' : '1.5px solid #0284C7'),
+                        ? (darkMode ? '1.5px solid rgba(96,165,250,0.5)' : '1.5px solid #3B82F6')
+                        : (darkMode ? '1.5px solid rgba(56,189,248,0.5)' : '1.5px solid #0284C7'),
                       borderRadius: '20px',
                       borderBottomRightRadius: isMine ? '4px' : '20px',
                       borderBottomLeftRadius: isIncoming ? '4px' : '20px',
@@ -714,7 +718,7 @@ function ChatView({
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', flexWrap: 'wrap', gap: '6px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '800', color: isMine ? (darkMode ? '#93C5FD' : '#1D4ED8') : (darkMode ? '#38BDF8' : '#0369A1') }}>
                           <Sparkles size={15} color={isMine ? (darkMode ? '#93C5FD' : '#2563EB') : (darkMode ? '#38BDF8' : '#0284C7')} />
-                          {isMine ? (t('myDealProposal') || 'Ma proposition de Deal') : (t('receivedDealProposal') || 'Proposition de Deal reçue')}
+                          {isMine ? (t('myDealProposal') || 'Ma proposition de Deal') : `Proposition de Deal reçue de ${msg.senderName || partnerName}`}
                         </div>
                         {isDealPending && isIncoming && (
                           <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: darkMode ? 'rgba(245,158,11,0.25)' : '#FEF3C7', color: darkMode ? '#FDE68A' : '#92400E', padding: '3px 8px', borderRadius: '999px', border: '1.5px solid #F59E0B' }}>
@@ -727,8 +731,8 @@ function ChatView({
                           </span>
                         )}
                         {(currentDealStatus === 'confirmed' || currentDealStatus === 'accepted') && (
-                          <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: darkMode ? 'rgba(160,230,180,0.25)' : '#D1FAE5', color: darkMode ? '#6EE7B7' : '#065F46', padding: '3px 8px', borderRadius: '999px', border: '1.5px solid #10B981' }}>
-                            ✓ Confirmé
+                          <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: darkMode ? 'rgba(16,185,129,0.25)' : '#D1FAE5', color: darkMode ? '#6EE7B7' : '#065F46', padding: '3px 8px', borderRadius: '999px', border: '1.5px solid #10B981' }}>
+                            ✓ Validé & Scellé
                           </span>
                         )}
                         {currentDealStatus === 'declined' && (
@@ -768,51 +772,54 @@ function ChatView({
                             ⏱️ {terms.durationType === 'hourly' ? `${terms.durationValue || 1}h` : terms.durationType === 'daily' ? `${terms.durationValue || 1}j` : terms.durationType === 'monthly' ? `${terms.durationValue || 1} mois` : terms.durationType === 'fixed' ? 'Forfait' : 'Libre'}
                           </span>
                         )}
-                        {terms.euroAmount > 0 && <span style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', border: darkMode ? '1.5px solid #38BDF8' : '1.5px solid #0284C7', color: darkMode ? '#38BDF8' : '#0369A1', borderRadius: '999px', padding: '3px 9px', fontSize: '11px', fontWeight: '800' }}>💶 {terms.euroAmount}€</span>}
-                        {terms.trocoTokens > 0 && <span style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', border: darkMode ? '1.5px solid #FBBF24' : '1.5px solid #D97706', color: darkMode ? '#FBBF24' : '#B45309', borderRadius: '999px', padding: '3px 9px', fontSize: '11px', fontWeight: '800' }}>🪙 {terms.trocoTokens} Jetons</span>}
-                        {terms.euroAmount === 0 && terms.trocoTokens === 0 && <span style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', border: darkMode ? '1.5px solid #34D399' : '1.5px solid #059669', color: darkMode ? '#34D399' : '#047857', borderRadius: '999px', padding: '3px 9px', fontSize: '11px', fontWeight: '800' }}>🤝 Troc direct</span>}
+                        {Number(terms.euroAmount) > 0 && <span style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', border: darkMode ? '1.5px solid #38BDF8' : '1.5px solid #0284C7', color: darkMode ? '#38BDF8' : '#0369A1', borderRadius: '999px', padding: '3px 9px', fontSize: '11px', fontWeight: '800' }}>💶 {terms.euroAmount}€</span>}
+                        {Number(terms.trocoTokens) > 0 && <span style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', border: darkMode ? '1.5px solid #FBBF24' : '1.5px solid #D97706', color: darkMode ? '#FBBF24' : '#B45309', borderRadius: '999px', padding: '3px 9px', fontSize: '11px', fontWeight: '800' }}>🪙 {terms.trocoTokens} Jetons</span>}
+                        {Number(terms.euroAmount) === 0 && Number(terms.trocoTokens) === 0 && <span style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', border: darkMode ? '1.5px solid #34D399' : '1.5px solid #059669', color: darkMode ? '#34D399' : '#047857', borderRadius: '999px', padding: '3px 9px', fontSize: '11px', fontWeight: '800' }}>🤝 Troc direct</span>}
                       </div>
 
                       {/* ACTIONS INTERACTIVES POUR LE DESTINATAIRE : ACCEPTER / REFUSER / CONTRE-PROPOSER */}
                       {isDealPending && isIncoming && (
-                        <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
                           <button
+                            type="button"
                             onClick={() => handleAcceptDeal(currentChatId, msg.id, terms)}
                             className="premium-button"
                             style={{
-                              flex: '1 1 30%', border: 'none', borderRadius: '12px', padding: '9px 6px',
+                              flex: '1 1 30%', border: 'none', borderRadius: '12px', padding: '10px 8px',
                               backgroundColor: '#10B981',
                               color: '#FFF',
-                              fontSize: '11.5px', fontWeight: '800', cursor: 'pointer',
+                              fontSize: '12px', fontWeight: '800', cursor: 'pointer',
                               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
-                              boxShadow: '0 4px 12px rgba(16,185,129,0.3)'
+                              boxShadow: '0 4px 12px rgba(16,185,129,0.35)'
                             }}
                           >
                             ✓ Accepter
                           </button>
                           <button
+                            type="button"
                             onClick={() => openCounterOffer(terms, msg.id)}
                             className="premium-button"
                             style={{
-                              flex: '1 1 30%', border: 'none', borderRadius: '12px', padding: '9px 6px',
+                              flex: '1 1 30%', border: 'none', borderRadius: '12px', padding: '10px 8px',
                               backgroundColor: darkMode ? '#60A5FA' : '#04265A',
                               color: darkMode ? '#0F172A' : '#FFF',
-                              fontSize: '11.5px', fontWeight: '800', cursor: 'pointer',
+                              fontSize: '12px', fontWeight: '800', cursor: 'pointer',
                               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
-                              boxShadow: '0 4px 12px rgba(4,38,90,0.2)'
+                              boxShadow: '0 4px 12px rgba(4,38,90,0.25)'
                             }}
                           >
                             ⚡ Contre-proposer
                           </button>
                           <button
+                            type="button"
                             onClick={() => handleDeclineDeal(currentChatId, msg.id)}
                             className="premium-button"
                             style={{
                               flex: '1 1 25%', border: darkMode ? '1px solid rgba(239,68,68,0.4)' : '1px solid #FECACA',
-                              borderRadius: '12px', padding: '9px 6px',
+                              borderRadius: '12px', padding: '10px 8px',
                               backgroundColor: darkMode ? 'rgba(239,68,68,0.15)' : '#FEF2F2',
                               color: darkMode ? '#FCA5A5' : '#DC2626',
-                              fontSize: '11.5px', fontWeight: '800', cursor: 'pointer'
+                              fontSize: '12px', fontWeight: '800', cursor: 'pointer'
                             }}
                           >
                             ✕ Refuser
@@ -820,10 +827,19 @@ function ChatView({
                         </div>
                       )}
 
-                      {/* STATUT EN ATTENTE POUR L'EXPÉDITEUR */}
+                      {/* STATUT EN ATTENTE POUR L'EXPÉDITEUR AVEC BOUTON DE MODIFICATION */}
                       {isDealPending && isMine && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: darkMode ? 'rgba(15,23,42,0.6)' : '#F8FAFC', border: darkMode ? '1px dashed rgba(255,255,255,0.2)' : '1px dashed #CBD5E1', color: darkMode ? '#CBD5E1' : '#64748B', borderRadius: '12px', padding: '8px 12px', fontSize: '11.5px', fontWeight: '700' }}>
-                          <Clock size={13} /> <span>En attente de la réponse de {partnerName}...</span>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', backgroundColor: darkMode ? 'rgba(15,23,42,0.6)' : '#F8FAFC', border: darkMode ? '1px dashed rgba(255,255,255,0.2)' : '1px dashed #CBD5E1', color: darkMode ? '#CBD5E1' : '#64748B', borderRadius: '12px', padding: '8px 12px', fontSize: '11.5px', fontWeight: '700', flexWrap: 'wrap' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <Clock size={13} /> <span>En attente de la réponse de {partnerName}...</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => openCounterOffer(terms, msg.id)}
+                            style={{ border: 'none', background: 'none', color: darkMode ? '#60A5FA' : '#04265A', fontWeight: '800', fontSize: '11px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
+                          >
+                            <Edit2 size={11} /> Modifier
+                          </button>
                         </div>
                       )}
 
@@ -835,7 +851,7 @@ function ChatView({
 
                       {currentDealStatus === 'declined' && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: darkMode ? 'rgba(239,68,68,0.2)' : '#FEE2E2', color: darkMode ? '#FCA5A5' : '#DC2626', borderRadius: '12px', padding: '8px 12px', fontSize: '11.5px', fontWeight: '800' }}>
-                          <AlertTriangle size={14} /> <span>Proposition déclinée.</span>
+                          <AlertTriangle size={14} /> <span>Proposition déclinée. Vous pouvez faire une nouvelle offre.</span>
                         </div>
                       )}
                     </div>

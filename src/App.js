@@ -19,6 +19,7 @@ import OnboardingWizardModal from './components/OnboardingWizardModal';
 import WelcomeGiftCelebrationModal from './components/WelcomeGiftCelebrationModal';
 import VisioSettlementModal from './components/VisioSettlementModal';
 import KycModal from './components/KycModal';
+import CounterOfferModal from './components/CounterOfferModal';
 import { analyzeContent } from './utils/contentModeration';
 import { validateListingContent, validateChatMessage, validateProfileContent } from './utils/moderationBlacklist';
 import { DIVERSE_AVATARS, TROCO_CATEGORIES } from './data/categoriesData';
@@ -4355,7 +4356,7 @@ export default function App() {
     if (existingTerms) {
       setCounterOfferDraft({
         euroAmount: existingTerms.euroAmount ? String(existingTerms.euroAmount) : '',
-        trocoTokens: existingTerms.trocoTokens ? String(existingTerms.trocoTokens) : '',
+        trocoTokens: existingTerms.trocoTokens !== undefined ? String(existingTerms.trocoTokens) : '1',
         durationType: existingTerms.durationType || 'hourly',
         durationValue: existingTerms.durationValue ? String(existingTerms.durationValue) : '1',
         conditions: existingTerms.conditions || '',
@@ -4364,38 +4365,38 @@ export default function App() {
     } else {
       setCounterOfferDraft({
         euroAmount: '',
-        trocoTokens: '',
+        trocoTokens: '1',
         durationType: 'hourly',
         durationValue: '1',
-        conditions: selectedChat.terms || '',
+        conditions: selectedChat.listing ? `Proposition pour : ${selectedChat.listing}` : (selectedChat.terms || '1h d\'échange contre 1 Jeton Troco.'),
       });
       setEditingDealId(null);
     }
     setIsCounterOfferOpen(true);
   };
 
-  const submitCounterOffer = async () => {
+  const handleCounterOfferSubmit = async (terms) => {
     if (!selectedChat) return;
     const chatId = selectedChat.id;
-    const euroAmount = Number(counterOfferDraft.euroAmount) || 0;
-    const trocoTokens = Number(counterOfferDraft.trocoTokens) || 0;
-    const durationType = counterOfferDraft.durationType || 'hourly';
-    const durationValue = counterOfferDraft.durationValue || '1';
-    const conditions = counterOfferDraft.conditions.trim() || 'Échange convenu.';
-    const terms = { euroAmount, trocoTokens, durationType, durationValue, conditions };
+    const euroAmount = Number(terms.euroAmount) || 0;
+    const trocoTokens = Number(terms.trocoTokens) || 0;
+    const durationType = terms.durationType || 'hourly';
+    const durationValue = terms.durationValue ? String(terms.durationValue) : '1';
+    const conditions = (terms.conditions && terms.conditions.trim()) || `${durationValue}h d'échange pour ${trocoTokens > 0 ? `${trocoTokens} Jeton(s)` : ''} ${euroAmount > 0 ? `${euroAmount}€` : ''}`.trim() || 'Échange convenu.';
+    const fullTerms = { euroAmount, trocoTokens, durationType, durationValue, conditions };
 
     if (editingDealId) {
       // Modification de la proposition existante
       setChatThreads(prev => ({
         ...prev,
-        [chatId]: (prev[chatId] || []).map(m => m.id === editingDealId ? { ...m, terms, updatedAt: new Date().toISOString() } : m)
+        [chatId]: (prev[chatId] || []).map(m => String(m.id) === String(editingDealId) ? { ...m, terms: fullTerms, updatedAt: new Date().toISOString() } : m)
       }));
       setIsCounterOfferOpen(false);
       setEditingDealId(null);
 
       try {
         await updateDoc(doc(db, 'chats', String(chatId), 'messages', String(editingDealId)), {
-          terms,
+          terms: fullTerms,
           updatedAt: serverTimestamp(),
         });
       } catch (e) {
@@ -4407,10 +4408,13 @@ export default function App() {
     const dealMessage = {
       id: Date.now(),
       sender: 'me',
+      senderName: profile.name,
+      senderUid: profile.uid || auth.currentUser?.uid,
       kind: 'deal',
       dealId: `deal-${Date.now()}`,
       status: 'pending',
-      terms,
+      terms: fullTerms,
+      createdAt: Date.now(),
     };
 
     setChatThreads(prev => ({ ...prev, [chatId]: [...(prev[chatId] || []), dealMessage] }));
@@ -4421,10 +4425,11 @@ export default function App() {
       await addDoc(collection(db, 'chats', String(chatId), 'messages'), {
         sender: 'me',
         senderName: profile.name,
+        senderUid: profile.uid || auth.currentUser?.uid,
         kind: 'deal',
         dealId: dealMessage.dealId,
         status: 'pending',
-        terms,
+        terms: fullTerms,
         createdAt: serverTimestamp(),
       });
       await setDoc(doc(db, 'chats', String(chatId)), {
@@ -5993,97 +5998,7 @@ export default function App() {
         </div>
       )}
 
-      {/* ---- MODALE CONTRE-PROPOSITION ---- */}
-      {isCounterOfferOpen && selectedChat && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', zIndex: 65 }}>
-          <div style={{ width: '100%', maxWidth: '440px', backgroundColor: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(26px) saturate(180%)', WebkitBackdropFilter: 'blur(26px) saturate(180%)', borderRadius: '26px', padding: '22px', boxShadow: '0 26px 70px rgba(2,6,23,0.25)', border: '1px solid rgba(255,255,255,0.8)', position: 'relative' }}>
-            <button onClick={() => setIsCounterOfferOpen(false)} style={{ position: 'absolute', top: '14px', right: '14px', border: 'none', backgroundColor: '#F3F4F6', width: '34px', height: '34px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-              <X size={16} color="#374151" />
-            </button>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-              <Sparkles size={17} color="#04265A" />
-              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: '#111827' }}>{t('counterOfferTitle')}</h3>
-            </div>
-            <p style={{ fontSize: '12px', color: '#64748B', margin: '0 0 14px', lineHeight: 1.5 }}>Ajuste les termes de la proposition avec {selectedChat.user} — Durée, Jetons Troco, montant en euros et conditions d'échange.</p>
 
-            {/* PRESETS RAPIDES DE NÉGOCIATION */}
-            <div style={{ marginBottom: '14px' }}>
-              <label style={{ fontSize: '11px', fontWeight: '800', color: '#64748B', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
-                ⚡ Presets de négociation rapide :
-              </label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
-                <button
-                  type="button"
-                  onClick={() => setCounterOfferDraft(prev => ({ ...prev, trocoTokens: '1', euroAmount: '', durationType: 'hourly', durationValue: '1', conditions: '1 heure de session = 1 Jeton Troco' }))}
-                  style={{ border: '1px solid #F59E0B', borderRadius: '10px', padding: '7px 4px', backgroundColor: '#FEF3C7', color: '#92400E', fontSize: '11px', fontWeight: '800', cursor: 'pointer', textAlign: 'center' }}
-                >
-                  🪙 1h / 1 Jeton
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCounterOfferDraft(prev => ({ ...prev, trocoTokens: '0', euroAmount: '', durationType: 'fixed', durationValue: '1', conditions: 'Troc direct solidaire sans compensation financière' }))}
-                  style={{ border: '1px solid #10B981', borderRadius: '10px', padding: '7px 4px', backgroundColor: '#D1FAE5', color: '#065F46', fontSize: '11px', fontWeight: '800', cursor: 'pointer', textAlign: 'center' }}
-                >
-                  🔄 Troc pur
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setCounterOfferDraft(prev => ({ ...prev, trocoTokens: '1', euroAmount: '15', durationType: 'hourly', durationValue: '1', conditions: 'Formule Hybride : 1 Jeton Troco + 15€' }))}
-                  style={{ border: '1px solid #3B82F6', borderRadius: '10px', padding: '7px 4px', backgroundColor: '#DBEAFE', color: '#1E40AF', fontSize: '11px', fontWeight: '800', cursor: 'pointer', textAlign: 'center' }}
-                >
-                  ⚡ Hybride
-                </button>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '18px' }}>
-              {/* SÉLECTION DU FORMAT DE DURÉE NÉGOCIÉ */}
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: '800', color: '#374151' }}>⏱️ Format de durée convenu</label>
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '8px', marginTop: '6px' }}>
-                  <select
-                    value={counterOfferDraft.durationType || 'hourly'}
-                    onChange={(e) => setCounterOfferDraft(prev => ({ ...prev, durationType: e.target.value }))}
-                    style={{ width: '100%', padding: '9px 12px', border: '1px solid #D1D5DB', borderRadius: '12px', fontSize: '13px' }}
-                  >
-                    <option value="hourly">À l'heure (session visio/cours)</option>
-                    <option value="daily">À la journée (prêt/chantier)</option>
-                    <option value="monthly">Au mois (séjour/location)</option>
-                    <option value="fixed">Au forfait global</option>
-                    <option value="indefinite">Durée libre</option>
-                  </select>
-                  <input
-                    type="number"
-                    min="1"
-                    value={counterOfferDraft.durationValue || '1'}
-                    onChange={(e) => setCounterOfferDraft(prev => ({ ...prev, durationValue: e.target.value }))}
-                    placeholder="Qté"
-                    style={{ width: '100%', padding: '9px 12px', border: '1px solid #D1D5DB', borderRadius: '12px', fontSize: '13px' }}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: '800', color: '#374151' }}>🪙 Jetons Troco</label>
-                <input type="number" min="0" value={counterOfferDraft.trocoTokens} onChange={(e) => setCounterOfferDraft(prev => ({ ...prev, trocoTokens: e.target.value }))} placeholder="Ex : 1" style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: '1px solid #D1D5DB', borderRadius: '12px', fontSize: '14px' }} />
-              </div>
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: '800', color: '#374151' }}>💶 Montant en euros (€)</label>
-                <input type="number" min="0" value={counterOfferDraft.euroAmount} onChange={(e) => setCounterOfferDraft(prev => ({ ...prev, euroAmount: e.target.value }))} placeholder="Ex : 15" style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: '1px solid #D1D5DB', borderRadius: '12px', fontSize: '14px' }} />
-              </div>
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: '800', color: '#374151' }}>📝 Conditions d'échange & Remarques</label>
-                <textarea rows={2} value={counterOfferDraft.conditions} onChange={(e) => setCounterOfferDraft(prev => ({ ...prev, conditions: e.target.value }))} placeholder="Ex : 1 séance d'essai de 30 min, puis tarif horaire..." style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: '1px solid #D1D5DB', borderRadius: '12px', fontSize: '13px', resize: 'vertical' }} />
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button onClick={() => setIsCounterOfferOpen(false)} style={{ flex: 1, border: '1px solid #D1D5DB', borderRadius: '14px', padding: '11px', backgroundColor: '#FFF', color: '#6B7280', fontWeight: '800', cursor: 'pointer' }}>{t('cancelButton')}</button>
-              <button onClick={submitCounterOffer} style={{ flex: 2, border: 'none', borderRadius: '14px', padding: '11px', backgroundColor: '#04265A', color: '#FFF', fontWeight: '800', cursor: 'pointer', boxShadow: '0 8px 18px rgba(4,38,90,0.22)' }}>{t('sendCounterOffer')}</button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {isLangModalOpen && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.55)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', zIndex: 65 }}>
@@ -9344,6 +9259,22 @@ export default function App() {
         targetUser={reportTarget.user}
         currentUser={profile}
         darkMode={darkMode}
+      />
+
+      {/* MODALE DE PROPOSITION DE DEAL & CONTRE-OFFRE */}
+      <CounterOfferModal
+        isOpen={isCounterOfferOpen}
+        onClose={() => {
+          setIsCounterOfferOpen(false);
+          setEditingDealId(null);
+        }}
+        onSubmit={handleCounterOfferSubmit}
+        initialTerms={editingDealId ? (chatThreads[selectedChat?.id] || []).find(m => String(m.id) === String(editingDealId))?.terms : counterOfferDraft}
+        isEditing={Boolean(editingDealId)}
+        partnerName={selectedChat?.user || 'Interlocuteur'}
+        listingTitle={selectedChat?.listing || ''}
+        darkMode={darkMode}
+        t={t}
       />
 
       {/* PASSERELLE DE PAIEMENT SÉCURISÉE (BLOC 5) */}
