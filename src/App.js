@@ -680,10 +680,6 @@ export default function App() {
   }, [readChats]);
   const [selectedListing, setSelectedListing] = useState(null);
   const [messageDraft, setMessageDraft] = useState('');
-  const [isCreditModalOpen, setIsCreditModalOpen] = useState(false);
-  const [walletTab, setWalletTab] = useState('cash');
-  const [walletAmount, setWalletAmount] = useState(20);
-  const [paymentMode, setPaymentMode] = useState('hybrid');
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState('list');
@@ -847,27 +843,62 @@ export default function App() {
   };
 
   // Handler de succès de paiement (crédit solde, enregistrement transaction Firestore)
+  // Handler de succès de paiement (crédit solde, abonnement Troco Plus, enregistrement transaction Firestore)
   const handlePaymentSuccess = async (txData) => {
     const uid = profile?.uid || auth.currentUser?.uid;
 
-    // 1. Mise à jour des soldes de l'utilisateur
+    // 1. Mise à jour des soldes et du statut d'abonnement de l'utilisateur
     let updatedEuro = profile.euroBalance;
     let updatedTokens = profile.trocoTokens;
+    let updatedTrocoPlus = profile.isTrocoPlus || false;
+    let updatedTrocoPlusPlan = profile.trocoPlusPlan || null;
 
-    if (txData.mode === 'pack-tokens') {
+    if (txData.mode === 'troco-plus' || txData.mode === 'pack-tokens') {
       updatedTokens += (txData.tokensPurchased || 0);
+      updatedTrocoPlus = true;
+      updatedTrocoPlusPlan = txData.subscriptionPlan?.planKey || 'essential';
+      setSaveMessage(`⭐ Abonnement ${txData.subscriptionPlan?.title || 'Troco Plus'} activé avec succès ! +${txData.tokensPurchased} jetons crédités.`);
+      setTimeout(() => setSaveMessage(''), 6000);
     } else if (txData.mode === 'topup-cash') {
-      updatedEuro += (txData.cashTopUp || 0);
+      const topUpAmount = Number(txData.cashTopUp) || 0;
+      if (topUpAmount > 0) {
+        updatedEuro = Number((updatedEuro + topUpAmount).toFixed(2));
+        setSaveMessage(`💳 Solde rechargé avec succès (+${topUpAmount.toFixed(2)} € via ${txData.paymentMethod}).`);
+        setTimeout(() => setSaveMessage(''), 5000);
+      }
     } else if (txData.mode === 'boost') {
+      if (txData.paymentMethod?.includes('Solde')) {
+        updatedEuro = Math.max(0, Number((updatedEuro - (txData.amountTtc || 0)).toFixed(2)));
+      }
       if (txData.boostDetails?.listingId) {
         setListings(prev => prev.map(item => item.id === txData.boostDetails.listingId ? { ...item, isBoosted: true } : item));
       }
     } else if (txData.mode === 'deal') {
+      if (txData.paymentMethod?.includes('Solde')) {
+        updatedEuro = Math.max(0, Number((updatedEuro - (txData.amountTtc || 0)).toFixed(2)));
+      }
       if (txData.payload?.chatId && txData.payload?.dealId) {
-        const { chatId, dealId, terms, partnerName } = txData.payload;
+        const { chatId, dealId, terms, partnerName, partnerUid } = txData.payload;
         const tokensAmount = Number(terms?.trocoTokens) || 0;
+        const euroAmount = Number(terms?.euroAmount) || 0;
         if (tokensAmount > 0) {
           updatedTokens = Math.max(0, updatedTokens - tokensAmount);
+        }
+        // Crédit du partenaire si montant euro spécifié
+        if (euroAmount > 0 && partnerUid) {
+          try {
+            const partnerRef = doc(db, 'users', String(partnerUid));
+            const partnerSnap = await getDoc(partnerRef);
+            if (partnerSnap.exists()) {
+              const currentPartnerBal = Number(partnerSnap.data().euroBalance) || 0;
+              await updateDoc(partnerRef, {
+                euroBalance: Number((currentPartnerBal + euroAmount).toFixed(2)),
+                updatedAt: serverTimestamp(),
+              });
+            }
+          } catch (e) {
+            console.warn('[Firestore] Credit partner error:', e);
+          }
         }
         setChatThreads(prev => ({
           ...prev,
@@ -883,6 +914,8 @@ export default function App() {
       ...profile,
       euroBalance: Number(updatedEuro.toFixed(2)),
       trocoTokens: updatedTokens,
+      isTrocoPlus: updatedTrocoPlus,
+      trocoPlusPlan: updatedTrocoPlusPlan,
     };
     setProfile(updatedProfile);
 
@@ -3650,39 +3683,36 @@ export default function App() {
   };
 
   const closeCheckout = () => {
-    const { mode, amount, payload } = checkout;
+    const { mode, amount, payload, method } = checkout;
     setCheckout(prev => ({ ...prev, open: false, step: 'method', payload: null }));
 
     // ---- GARDE ANTI-DOUBLE-EXÉCUTION ----
     if (checkoutAppliedRef.current) return;
     checkoutAppliedRef.current = true;
 
-    // ---- SÉQUENCE ORDONNANCÉE : les changements de solde se font APRÈS fermeture du modal ----
-    if (mode === 'wallet-tokens') {
-      // Étape 1 : euros débitées 400ms après la fermeture
-      window.setTimeout(() => {
-        setProfile(prev => ({ ...prev, euroBalance: Number((prev.euroBalance - amount).toFixed(2)) }));
-        playBetclicBalanceSound(false);
-      }, 400);
-      // Étape 2 : cling Apple Pay + jetons crédités 900ms après (sentiment de transvase)
-      window.setTimeout(() => {
-        const tokenAmount = payload?.tokenAmount || 0;
-        playApplePaySound();
-        setProfile(prev => ({ ...prev, trocoTokens: prev.trocoTokens + tokenAmount }));
-      }, 900);
-      return;
-    }
+    // Si paiement par solde Troco existant : décrémenter le solde de l'utilisateur
+    const isPaidWithWallet = method === 'troco' || method === 'wallet';
+    const chargedFromWallet = isPaidWithWallet && amount > 0;
 
-    if (mode === 'wallet-cash') {
-      window.setTimeout(() => {
-        setProfile(prev => ({ ...prev, euroBalance: Number((prev.euroBalance + amount).toFixed(2)) }));
-      }, 400);
-      return;
+    if (chargedFromWallet) {
+      if (profile.euroBalance < amount) {
+        alert('Solde Euros insuffisant dans votre portefeuille Troco.');
+        return;
+      }
+      setProfile(prev => {
+        const newBal = Number(Math.max(0, prev.euroBalance - amount).toFixed(2));
+        if (profile?.uid) {
+          updateDoc(doc(db, 'users', profile.uid), {
+            euroBalance: newBal,
+            updatedAt: serverTimestamp(),
+          }).catch(e => console.warn('[Firestore] update balance error:', e));
+        }
+        return { ...prev, euroBalance: newBal };
+      });
     }
 
     if (mode === 'boost') {
       window.setTimeout(() => {
-        setProfile(prev => ({ ...prev, euroBalance: Number((prev.euroBalance - amount).toFixed(2)) }));
         setListings(prev => prev.map(item => item.id === payload?.listingId ? { ...item, isBoosted: true } : item));
         setBoostMessage(`Annonce boostée avec succès pendant 7 jours !`);
       }, 400);
@@ -3690,12 +3720,29 @@ export default function App() {
     }
 
     if (mode === 'deal') {
-      window.setTimeout(() => {
+      window.setTimeout(async () => {
         setChatThreads(prev => ({
           ...prev,
           [payload?.chatId]: (prev[payload?.chatId] || []).map(m => m.id === payload?.dealId ? { ...m, status: 'confirmed' } : m),
         }));
         setChatStatusOverrides(prev => ({ ...prev, [payload?.chatId]: 'Deal Validé' }));
+
+        // Si le deal comprenait des euros et un vendeur identifié, créditer le vendeur
+        if (payload?.partnerUid && payload?.euroAmount && Number(payload.euroAmount) > 0) {
+          try {
+            const partnerRef = doc(db, 'users', String(payload.partnerUid));
+            const partnerSnap = await getDoc(partnerRef);
+            if (partnerSnap.exists()) {
+              const currentPartnerBal = Number(partnerSnap.data().euroBalance) || 0;
+              await updateDoc(partnerRef, {
+                euroBalance: Number((currentPartnerBal + Number(payload.euroAmount)).toFixed(2)),
+                updatedAt: serverTimestamp(),
+              });
+            }
+          } catch (e) {
+            console.warn('[Firestore] Credit partner in deal error:', e);
+          }
+        }
       }, 400);
       return;
     }
@@ -3704,8 +3751,6 @@ export default function App() {
       window.setTimeout(async () => {
         const { newListing, invoiceCalc } = payload || {};
         if (!newListing) return;
-
-        setProfile(prev => ({ ...prev, euroBalance: Number((prev.euroBalance - amount).toFixed(2)) }));
 
         // Enregistrement de la transaction avec référence unique TRK-YYYYMM-XXXX
         const invoiceRef = generateInvoiceRef();
@@ -3778,6 +3823,11 @@ export default function App() {
   const checkoutAppliedRef = useRef(false);
 
   const handleConfirmPayment = () => {
+    // Vérification de sécurité si paiement par solde
+    if ((checkout.method === 'troco' || checkout.method === 'wallet') && (profile.euroBalance || 0) < (checkout.amount || 0)) {
+      alert(`Solde insuffisant (${(profile.euroBalance || 0).toFixed(2)} € disponibles sur ${(checkout.amount || 0).toFixed(2)} € requis). Veuillez recharger votre portefeuille.`);
+      return;
+    }
     checkoutAppliedRef.current = false; // reset guard for this payment
     setCheckout(prev => ({ ...prev, step: 'processing' }));
     window.setTimeout(() => {
@@ -5804,8 +5854,8 @@ export default function App() {
             <button onClick={() => handleOpenPayment('topup-cash')} title="Recharger mon solde Euros" className="premium-button balance-badge" style={{ border: 'none', borderRadius: '999px', padding: isScrolled ? '5px 9px' : '6px 10px', backgroundColor: darkMode ? 'rgba(4,38,90,0.45)' : 'rgba(4,38,90,0.08)', color: darkMode ? '#93C5FD' : '#04265A', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', position: 'relative', overflow: 'visible', whiteSpace: 'nowrap', flexShrink: 0, transition: 'padding 0.3s var(--ease-quiet)' }}>
               <Coins size={13} style={{ flexShrink: 0 }} /> <AnimatedEuroBalance value={profile.euroBalance} prefix="€ " suffix="" style={{ fontSize: '11px', fontWeight: '700', whiteSpace: 'nowrap' }} />
             </button>
-            <button onClick={() => handleOpenPayment('pack-tokens')} title="Acheter des Jetons Troco" className="premium-button balance-badge" style={{ border: 'none', borderRadius: '999px', padding: isScrolled ? '5px 9px' : '6px 10px', backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : '#F3F4F6', color: darkMode ? '#FFF' : '#111827', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', position: 'relative', overflow: 'visible', whiteSpace: 'nowrap', flexShrink: 0, transition: 'padding 0.3s var(--ease-quiet)' }}>
-              <Clock size={13} style={{ flexShrink: 0 }} /> <AnimatedTokenBalance value={profile.trocoTokens} formatFn={(v) => formatTokenCount(v, currentLang)} style={{ fontSize: '11px', fontWeight: '700', whiteSpace: 'nowrap' }} />
+            <button onClick={() => handleOpenPayment('troco-plus')} title="S'abonner à Troco Plus" className="premium-button balance-badge" style={{ border: 'none', borderRadius: '999px', padding: isScrolled ? '5px 9px' : '6px 10px', backgroundColor: darkMode ? 'rgba(217,119,6,0.25)' : '#FEF3C7', color: darkMode ? '#FCD34D' : '#92400E', fontWeight: '800', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', position: 'relative', overflow: 'visible', whiteSpace: 'nowrap', flexShrink: 0, transition: 'padding 0.3s var(--ease-quiet)' }}>
+              <Sparkles size={13} color="#F59E0B" style={{ flexShrink: 0 }} /> <AnimatedTokenBalance value={profile.trocoTokens} formatFn={(v) => formatTokenCount(v, currentLang)} style={{ fontSize: '11px', fontWeight: '800', whiteSpace: 'nowrap' }} />
             </button>
             <button onClick={toggleDarkMode} title={darkMode ? "Activer le mode clair" : "Activer le mode sombre"} className="premium-button darkmode-btn" style={{ border: 'none', borderRadius: '50%', width: isScrolled ? '32px' : '34px', height: isScrolled ? '32px' : '34px', backgroundColor: darkMode ? 'rgba(255,255,255,0.12)' : '#F3F4F6', color: darkMode ? '#F59E0B' : '#04265A', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.3s var(--ease-quiet)', flexShrink: 0 }}>
               {darkMode ? <Sun size={15} /> : <Moon size={15} />}
@@ -6051,84 +6101,6 @@ export default function App() {
                 </button>
               ))}
             </div>
-          </div>
-        </div>
-      )}
-
-      {isCreditModalOpen && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.55)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', zIndex: 50 }}>
-          <div style={{ backgroundColor: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(24px) saturate(180%)', WebkitBackdropFilter: 'blur(24px) saturate(180%)', borderRadius: '24px', width: '100%', maxWidth: '560px', padding: '22px', boxShadow: '0 24px 60px rgba(0,0,0,0.20)', border: '1px solid rgba(255,255,255,0.7)', position: 'relative' }}>
-            <button onClick={() => setIsCreditModalOpen(false)} style={{ position: 'absolute', top: '14px', right: '14px', border: 'none', backgroundColor: '#F3F4F6', width: '34px', height: '34px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-              <X size={16} color="#374151" />
-            </button>
-
-            <div style={{ marginBottom: '18px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#04265A', fontWeight: '700', marginBottom: '6px' }}>
-                <Coins size={18} />
-                <span>{t('wallet')}</span>
-              </div>
-              <h3 style={{ margin: 0, fontSize: '20px', color: '#111827' }}>{t('manageWalletSub')}</h3>
-              <p style={{ margin: '6px 0 0', fontSize: '13px', color: '#6B7280' }}>{t('walletNotice')}</p>
-            </div>
-
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '14px' }}>
-              <button onClick={() => setWalletTab('cash')} style={{ flex: 1, border: walletTab === 'cash' ? '1px solid #04265A' : '1px solid #E5E7EB', borderRadius: '14px', padding: '10px', backgroundColor: walletTab === 'cash' ? '#EFF6FF' : 'rgba(250,250,250,0.8)', color: '#111827', fontWeight: '700', cursor: 'pointer' }}>{t('rechargeCash')}</button>
-              <button onClick={() => setWalletTab('tokens')} style={{ flex: 1, border: walletTab === 'tokens' ? '1px solid #04265A' : '1px solid #E5E7EB', borderRadius: '14px', padding: '10px', backgroundColor: walletTab === 'tokens' ? '#EFF6FF' : 'rgba(250,250,250,0.8)', color: '#111827', fontWeight: '700', cursor: 'pointer' }}>{t('buyTokens')}</button>
-            </div>
-
-            {walletTab === 'cash' ? (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  {[10, 20, 50].map(amount => (
-                    <button key={amount} onClick={() => setWalletAmount(amount)} style={{ border: walletAmount === amount ? '1px solid #04265A' : '1px solid #D1D5DB', borderRadius: '999px', padding: '8px 12px', backgroundColor: walletAmount === amount ? '#EFF6FF' : '#FFF', color: '#111827', fontWeight: '700', cursor: 'pointer' }}>{amount}€</button>
-                  ))}
-                </div>
-                <div style={{ border: '1px solid #E5E7EB', borderRadius: '16px', padding: '14px', backgroundColor: '#F8FAFC' }}>
-                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#374151' }}>{t('customAmount')}</label>
-                  <input type="number" min="1" value={walletAmount} onChange={(e) => setWalletAmount(Number(e.target.value))} style={{ width: '100%', marginTop: '8px', border: '1px solid #D1D5DB', borderRadius: '12px', padding: '10px 12px' }} />
-                </div>
-                <button onClick={() => { setIsCreditModalOpen(false); openCheckout({ mode: 'wallet-cash', amount: walletAmount, label: 'Rechargement du solde Euro' }); }} className="premium-button" style={{ width: '100%', border: 'none', borderRadius: '14px', padding: '12px', backgroundColor: '#04265A', color: '#FFFFFF', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                  <Lock size={14} /> {t('rechargeAction')} {walletAmount}€ — {t('securePaymentHeader')}
-                </button>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {[
-                  { amount: 1, euros: 12, titleKey: 'pack1Token' },
-                  { amount: 5, euros: 50, titleKey: 'pack5Tokens' }
-                ].map(pack => {
-                  const titleText = t(pack.titleKey);
-                  const tokenText = formatTokenCount(pack.amount, currentLang);
-                  const buyBtnText = `${t('buyAction')} ${tokenText} — ${pack.euros}€`;
-                  return (
-                    <div key={pack.titleKey} style={{ border: '1px solid #E5E7EB', borderRadius: '16px', padding: '14px', backgroundColor: 'rgba(250,250,250,0.8)' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                        <div style={{ fontWeight: '700', color: '#111827' }}>{titleText}</div>
-                        <span style={{ fontSize: '13px', fontWeight: '700', color: '#04265A' }}>{pack.euros}€</span>
-                      </div>
-                      <p style={{ margin: '0 0 10px', fontSize: '13px', color: '#6B7280', lineHeight: 1.5 }}>{t('tokenPackSub')}</p>
-                      {profile.euroBalance < pack.euros && (
-                        <div style={{ fontSize: '12px', color: '#EF4444', fontWeight: '600', marginBottom: '8px', padding: '8px 10px', backgroundColor: '#FEF2F2', borderRadius: '10px', border: '1px solid #FECACA' }}>
-                          ⚠️ Solde insuffisant ({profile.euroBalance.toFixed(2)}€ disponibles sur {pack.euros}€ requis) — Recharge ton solde Euro d'abord.
-                        </div>
-                      )}
-                      <button
-                        onClick={() => {
-                          if (profile.euroBalance < pack.euros) return;
-                          setIsCreditModalOpen(false);
-                          openCheckout({ mode: 'wallet-tokens', amount: pack.euros, label: titleText, payload: { tokenAmount: pack.amount } });
-                        }}
-                        disabled={profile.euroBalance < pack.euros}
-                        className="premium-button"
-                        style={{ width: '100%', border: 'none', borderRadius: '12px', padding: '10px', backgroundColor: profile.euroBalance < pack.euros ? '#94A3B8' : '#04265A', color: '#FFFFFF', fontWeight: '700', cursor: profile.euroBalance < pack.euros ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', opacity: profile.euroBalance < pack.euros ? 0.6 : 1 }}
-                      >
-                        <Lock size={13} /> {buyBtnText}
-                      </button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
           </div>
         </div>
       )}
@@ -7913,8 +7885,8 @@ export default function App() {
                     <AnimatedTokenBalance value={profile.trocoTokens} formatFn={(v) => formatTokenCount(v, currentLang)} style={{ fontSize: '19px', fontWeight: '800', color: darkMode ? '#FFFFFF' : '#111827' }} />
                   </div>
                 </div>
-                <button onClick={() => handleOpenPayment('pack-tokens')} className="premium-button" style={{ border: 'none', borderRadius: '999px', padding: '9px 14px', backgroundColor: '#D97706', color: '#FFF', fontWeight: '700', fontSize: '12px', cursor: 'pointer', boxShadow: '0 8px 16px rgba(217,119,6,0.2)' }}>
-                  + Acheter des Jetons
+                <button onClick={() => handleOpenPayment('troco-plus')} className="premium-button" style={{ border: 'none', borderRadius: '999px', padding: '9px 16px', backgroundColor: '#D97706', color: '#FFF', fontWeight: '800', fontSize: '12px', cursor: 'pointer', boxShadow: '0 8px 16px rgba(217,119,6,0.25)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Sparkles size={14} /> {profile.isTrocoPlus ? '⭐ Gérer Troco Plus' : '+ S\'abonner à Troco Plus'}
                 </button>
               </div>
             </div>

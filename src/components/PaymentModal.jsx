@@ -37,13 +37,13 @@ export default function PaymentModal({
   onClose,
   darkMode = false,
   currentUser = null,
-  initialMode = 'pack-tokens', // 'pack-tokens' | 'topup-cash' | 'boost' | 'caution' | 'deal'
+  initialMode = 'troco-plus', // 'troco-plus' | 'topup-cash' | 'boost' | 'caution' | 'deal'
   initialPayload = null,
   onSuccess = null,
   playBetclicSound = null,
   playApplePaySound = null,
 }) {
-  const [mode, setMode] = useState(initialMode);
+  const [mode, setMode] = useState(initialMode === 'pack-tokens' ? 'troco-plus' : initialMode);
   const [paymentMethod, setPaymentMethod] = useState('applePay'); // 'applePay' | 'card' | 'wallet'
   const [isProcessing, setIsProcessing] = useState(false);
   const [show3DSecure, setShow3DSecure] = useState(false);
@@ -59,14 +59,49 @@ export default function PaymentModal({
   const [cardCvc, setCardCvc] = useState('');
   const [formErrors, setFormErrors] = useState({});
 
-  // Sélection Pack Jetons
-  const tokenPacks = [
-    { id: 'pack-1', tokens: 1, price: 12.00, discount: null, label: 'Unité', popular: false, desc: 'Idéal pour tester un premier échange' },
-    { id: 'pack-3', tokens: 3, price: 29.99, unitPrice: 10.00, discount: '-16%', label: 'Découverte', popular: false, desc: 'Parfait pour un week-end d’activités' },
-    { id: 'pack-5', tokens: 5, price: 49.99, unitPrice: 9.99, discount: '-17%', label: 'Essentiel', popular: true, desc: 'Le choix préféré des membres Troco' },
-    { id: 'pack-10', tokens: 10, price: 89.99, unitPrice: 8.99, discount: '-25%', label: 'Pro / Communauté', popular: false, desc: 'Tarif le plus avantageux' },
+  // Plans d'abonnement Troco Plus (remplace l'achat unitaire de jetons)
+  const trocoPlusPlans = [
+    {
+      id: 'plus-essential',
+      planKey: 'essential',
+      title: 'Troco Plus Essentiel',
+      price: 9.99,
+      period: '/ mois',
+      tokensMonthly: 5,
+      boostsMonthly: 1,
+      badge: '⭐ Membre Plus',
+      popular: true,
+      features: [
+        '5 Jetons Troco crédités chaque mois',
+        '1 Boost d\'annonce offert par mois',
+        'Badge ⭐ Membre Plus sur le profil',
+        'Priorité de contact sur les deals',
+        'Sans engagement • Annulable en 1 clic'
+      ],
+      desc: 'Parfait pour échanger régulièrement et booster vos services'
+    },
+    {
+      id: 'plus-pro',
+      planKey: 'pro',
+      title: 'Troco Plus Illimité & Pro',
+      price: 19.99,
+      period: '/ mois',
+      tokensMonthly: 15,
+      boostsMonthly: 3,
+      badge: '👑 VIP Pro',
+      popular: false,
+      features: [
+        '15 Jetons Troco crédités chaque mois',
+        '3 Boosts d\'annonces offerts par mois',
+        'Badge exclusif 👑 VIP Pro',
+        'Visibilité maximale carte & feed',
+        'Support prioritaire 7j/7 & 0 commission',
+        'Sans engagement • Annulable en 1 clic'
+      ],
+      desc: 'Idéal pour les experts, artisans et utilisateurs intensifs'
+    },
   ];
-  const [selectedTokenPack, setSelectedTokenPack] = useState(tokenPacks[2]); // Pack 5 par défaut
+  const [selectedTrocoPlusPlan, setSelectedTrocoPlusPlan] = useState(trocoPlusPlans[0]);
 
   // Sélection Recharge Cash
   const cashAmounts = [10, 20, 50, 100];
@@ -84,13 +119,18 @@ export default function PaymentModal({
   // Réinitialisation lors de l'ouverture
   useEffect(() => {
     if (isOpen) {
-      setMode(initialMode || 'pack-tokens');
+      const normalizedMode = (initialMode === 'pack-tokens' || initialMode === 'troco-plus') ? 'troco-plus' : initialMode;
+      setMode(normalizedMode || 'troco-plus');
       setIsProcessing(false);
       setShow3DSecure(false);
       setIsSuccess(false);
       setOtpCode('');
       setOtpError('');
       setFormErrors({});
+      // Si rechargement ou abonnement, le mode doit être bancaire
+      if (normalizedMode === 'troco-plus' || normalizedMode === 'topup-cash') {
+        setPaymentMethod('applePay');
+      }
       if (currentUser?.name && !cardHolder) {
         setCardHolder(currentUser.name);
       }
@@ -102,8 +142,8 @@ export default function PaymentModal({
 
   // Calcul du montant total
   const getAmountToPay = () => {
-    if (mode === 'pack-tokens') {
-      return selectedTokenPack.price;
+    if (mode === 'troco-plus' || mode === 'pack-tokens') {
+      return selectedTrocoPlusPlan.price;
     }
     if (mode === 'topup-cash') {
       return customCashAmount ? parseFloat(customCashAmount) || 0 : selectedCashAmount;
@@ -252,7 +292,7 @@ export default function PaymentModal({
 
     const resultPayload = {
       transactionId,
-      mode,
+      mode: (mode === 'pack-tokens' || mode === 'troco-plus') ? 'troco-plus' : mode,
       amountTtc: totalTtc,
       amountHt: totalHt,
       tva,
@@ -260,13 +300,14 @@ export default function PaymentModal({
       paymentMethod: paymentMeta.method,
       authRef: paymentMeta.authRef,
       date: new Date().toISOString(),
-      tokensPurchased: mode === 'pack-tokens' ? selectedTokenPack.tokens : 0,
+      tokensPurchased: (mode === 'pack-tokens' || mode === 'troco-plus') ? selectedTrocoPlusPlan.tokensMonthly : 0,
+      subscriptionPlan: (mode === 'pack-tokens' || mode === 'troco-plus') ? selectedTrocoPlusPlan : null,
       cashTopUp: mode === 'topup-cash' ? amountToPay : 0,
       boostDetails: mode === 'boost' ? (initialPayload || selectedBoost) : null,
       cautionDetails: mode === 'caution' ? initialPayload : null,
       dealDetails: mode === 'deal' ? initialPayload : null,
-      label: mode === 'pack-tokens'
-        ? `Achat ${selectedTokenPack.tokens} Jeton(s) Troco (${selectedTokenPack.label})`
+      label: (mode === 'pack-tokens' || mode === 'troco-plus')
+        ? `Abonnement Mensuel ${selectedTrocoPlusPlan.title} (${selectedTrocoPlusPlan.price.toFixed(2)} €/mois)`
         : mode === 'topup-cash'
           ? `Recharge Portefeuille Troco (${amountToPay.toFixed(2)} €)`
           : mode === 'boost'
@@ -313,7 +354,7 @@ export default function PaymentModal({
         flexDirection: 'column',
       }}>
 
-        {/* HEADER MODAL */}
+              {/* HEADER MODAL */}
         <div style={{
           padding: '20px 24px',
           borderBottom: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid #F1F5F9',
@@ -333,11 +374,11 @@ export default function PaymentModal({
               color: '#FFF',
               boxShadow: '0 4px 12px rgba(59,130,246,0.3)',
             }}>
-              {mode === 'pack-tokens' ? <Coins size={20} /> : <CreditCard size={20} />}
+              {(mode === 'troco-plus' || mode === 'pack-tokens') ? <Sparkles size={20} /> : <CreditCard size={20} />}
             </div>
             <div>
               <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800', letterSpacing: '-0.01em' }}>
-                {mode === 'pack-tokens' && 'Acheter des Jetons Troco'}
+                {(mode === 'troco-plus' || mode === 'pack-tokens') && 'Abonnement Troco Plus'}
                 {mode === 'topup-cash' && 'Recharger mon Portefeuille'}
                 {mode === 'boost' && 'Booster une Annonce'}
                 {mode === 'caution' && 'Empreinte de Caution'}
@@ -370,8 +411,8 @@ export default function PaymentModal({
           {/* CORPS DE LA MODAL */}
           <div style={{ padding: '24px', overflowY: 'auto' }}>
 
-            {/* SÉLECTEUR D'ONGLET DU PORTEFEUILLE (GÉRER MON SOLDE EURO / ACHETER DES JETONS) */}
-            {(mode === 'pack-tokens' || mode === 'topup-cash') && (
+            {/* SÉLECTEUR D'ONGLET DU PORTEFEUILLE (GÉRER MON SOLDE EURO / ABONNEMENT TROCO PLUS) */}
+            {(mode === 'troco-plus' || mode === 'pack-tokens' || mode === 'topup-cash') && (
               <div style={{
                 display: 'flex',
                 backgroundColor: darkMode ? 'rgba(15,23,42,0.6)' : '#F1F5F9',
@@ -385,6 +426,7 @@ export default function PaymentModal({
                   type="button"
                   onClick={() => {
                     setMode('topup-cash');
+                    setPaymentMethod('applePay');
                     setFormErrors({});
                   }}
                   style={{
@@ -405,13 +447,14 @@ export default function PaymentModal({
                     transition: 'all 0.2s ease'
                   }}
                 >
-                  <CreditCard size={15} /> Gérer mon solde Euro (€)
+                  <CreditCard size={15} /> Recharger mon solde (€)
                 </button>
 
                 <button
                   type="button"
                   onClick={() => {
-                    setMode('pack-tokens');
+                    setMode('troco-plus');
+                    setPaymentMethod('applePay');
                     setFormErrors({});
                   }}
                   style={{
@@ -419,20 +462,20 @@ export default function PaymentModal({
                     padding: '10px 14px',
                     borderRadius: '12px',
                     border: 'none',
-                    backgroundColor: mode === 'pack-tokens' ? (darkMode ? '#D97706' : '#FFFFFF') : 'transparent',
-                    color: mode === 'pack-tokens' ? (darkMode ? '#FFFFFF' : '#D97706') : (darkMode ? '#94A3B8' : '#64748B'),
-                    fontWeight: mode === 'pack-tokens' ? '800' : '600',
+                    backgroundColor: (mode === 'troco-plus' || mode === 'pack-tokens') ? (darkMode ? '#D97706' : '#FFFFFF') : 'transparent',
+                    color: (mode === 'troco-plus' || mode === 'pack-tokens') ? (darkMode ? '#FFFFFF' : '#D97706') : (darkMode ? '#94A3B8' : '#64748B'),
+                    fontWeight: (mode === 'troco-plus' || mode === 'pack-tokens') ? '800' : '600',
                     fontSize: '13px',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '6px',
-                    boxShadow: mode === 'pack-tokens' ? '0 4px 12px rgba(217,119,6,0.2)' : 'none',
+                    boxShadow: (mode === 'troco-plus' || mode === 'pack-tokens') ? '0 4px 12px rgba(217,119,6,0.2)' : 'none',
                     transition: 'all 0.2s ease'
                   }}
                 >
-                  <Coins size={15} /> Acheter des Jetons
+                  <Sparkles size={15} /> Abonnement Troco Plus
                 </button>
               </div>
             )}
@@ -509,71 +552,85 @@ export default function PaymentModal({
           ) : (
             <>
               {/* ÉTAPE 1 : SÉLECTION DE L'OFFRE / DU MONTANT */}
-              {mode === 'pack-tokens' && (
+              {(mode === 'troco-plus' || mode === 'pack-tokens') && (
                 <div style={{ marginBottom: '22px' }}>
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: '800', marginBottom: '10px', color: darkMode ? '#E2E8F0' : '#334155' }}>
-                    1. Choisissez votre pack de Jetons Troco
+                    1. Choisissez votre abonnement mensuel Troco Plus
                   </label>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
-                    {tokenPacks.map(pack => {
-                      const isSelected = selectedTokenPack.id === pack.id;
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {trocoPlusPlans.map(plan => {
+                      const isSelected = selectedTrocoPlusPlan.id === plan.id;
                       return (
                         <div
-                          key={pack.id}
-                          onClick={() => setSelectedTokenPack(pack)}
+                          key={plan.id}
+                          onClick={() => setSelectedTrocoPlusPlan(plan)}
                           style={{
-                            padding: '14px',
-                            borderRadius: '16px',
-                            border: isSelected ? '2px solid #3B82F6' : (darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E2E8F0'),
-                            backgroundColor: isSelected ? (darkMode ? 'rgba(59,130,246,0.15)' : '#EFF6FF') : (darkMode ? 'rgba(15,23,42,0.4)' : '#F8FAFC'),
+                            padding: '16px',
+                            borderRadius: '18px',
+                            border: isSelected ? '2px solid #F59E0B' : (darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E2E8F0'),
+                            backgroundColor: isSelected ? (darkMode ? 'rgba(245,158,11,0.14)' : '#FEF3C7') : (darkMode ? 'rgba(15,23,42,0.4)' : '#F8FAFC'),
                             cursor: 'pointer',
                             position: 'relative',
                             transition: 'all 0.2s ease',
                           }}
                         >
-                          {pack.discount && (
+                          {plan.popular && (
                             <span style={{
                               position: 'absolute',
-                              top: '-8px',
-                              right: '10px',
-                              backgroundColor: '#10B981',
-                              color: '#FFF',
-                              fontSize: '10px',
-                              fontWeight: '800',
-                              padding: '2px 6px',
-                              borderRadius: '999px',
-                            }}>
-                              {pack.discount}
-                            </span>
-                          )}
-                          {pack.popular && (
-                            <span style={{
-                              position: 'absolute',
-                              top: '-8px',
-                              left: '10px',
+                              top: '-9px',
+                              right: '16px',
                               backgroundColor: '#F59E0B',
                               color: '#FFF',
-                              fontSize: '10px',
+                              fontSize: '11px',
                               fontWeight: '800',
-                              padding: '2px 6px',
+                              padding: '2px 8px',
                               borderRadius: '999px',
+                              boxShadow: '0 2px 6px rgba(245,158,11,0.35)'
                             }}>
-                              ⭐ Recommandé
+                              ⭐ Le plus populaire
                             </span>
                           )}
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
-                            <Coins size={16} color="#F59E0B" />
-                            <strong style={{ fontSize: '15px' }}>{pack.tokens} Jeton{pack.tokens > 1 ? 's' : ''}</strong>
+
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
+                            <div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <strong style={{ fontSize: '16px', color: darkMode ? '#FFF' : '#111827' }}>{plan.title}</strong>
+                                <span style={{
+                                  fontSize: '11px', fontWeight: '800', padding: '3px 8px', borderRadius: '999px',
+                                  backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : '#EFF6FF',
+                                  color: darkMode ? '#93C5FD' : '#04265A'
+                                }}>
+                                  {plan.badge}
+                                </span>
+                              </div>
+                              <p style={{ margin: '4px 0 10px', fontSize: '12px', color: darkMode ? '#94A3B8' : '#64748B' }}>
+                                {plan.desc}
+                              </p>
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                              <div style={{ fontSize: '20px', fontWeight: '900', color: isSelected ? '#D97706' : (darkMode ? '#60A5FA' : '#04265A') }}>
+                                {plan.price.toFixed(2)} €
+                              </div>
+                              <div style={{ fontSize: '11px', color: darkMode ? '#94A3B8' : '#64748B', fontWeight: '600' }}>
+                                {plan.period}
+                              </div>
+                            </div>
                           </div>
-                          <div style={{ fontSize: '18px', fontWeight: '800', color: darkMode ? '#60A5FA' : '#04265A', marginBottom: '4px' }}>
-                            {pack.price.toFixed(2)} €
-                          </div>
-                          <div style={{ fontSize: '11px', color: darkMode ? '#94A3B8' : '#64748B' }}>
-                            {pack.desc}
+
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', borderTop: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.06)', paddingTop: '10px' }}>
+                            {plan.features.map((feat, idx) => (
+                              <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: darkMode ? '#CBD5E1' : '#334155', fontWeight: '600' }}>
+                                <Check size={14} color="#10B981" />
+                                <span>{feat}</span>
+                              </div>
+                            ))}
                           </div>
                         </div>
                       );
                     })}
+                  </div>
+                  <div style={{ marginTop: '10px', padding: '8px 12px', borderRadius: '10px', backgroundColor: darkMode ? 'rgba(59,130,246,0.1)' : '#EFF6FF', color: darkMode ? '#93C5FD' : '#1D4ED8', fontSize: '11px', fontWeight: '700', textAlign: 'center' }}>
+                    💡 Les abonnements Troco Plus sont renouvelés automatiquement chaque mois et résiliables à tout instant en un clic.
                   </div>
                 </div>
               )}
@@ -581,7 +638,7 @@ export default function PaymentModal({
               {mode === 'topup-cash' && (
                 <div style={{ marginBottom: '22px' }}>
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: '800', marginBottom: '10px', color: darkMode ? '#E2E8F0' : '#334155' }}>
-                    1. Choisissez le montant de votre recharge (€)
+                    1. Choisissez le montant de votre recharge réelle (€)
                   </label>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginBottom: '12px' }}>
                     {cashAmounts.map(amt => {
@@ -612,7 +669,7 @@ export default function PaymentModal({
                       type="number"
                       min="5"
                       max="1000"
-                      placeholder="Ou montant libre (ex: 75 €)"
+                      placeholder="Ou montant libre en € (ex: 75)"
                       value={customCashAmount}
                       onChange={(e) => setCustomCashAmount(e.target.value)}
                       style={{
@@ -685,9 +742,9 @@ export default function PaymentModal({
               {/* ÉTAPE 2 : SÉLECTION DU MOYEN DE PAIEMENT */}
               <div style={{ marginBottom: '22px' }}>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: '800', marginBottom: '10px', color: darkMode ? '#E2E8F0' : '#334155' }}>
-                  2. Moyen de Paiement
+                  2. Moyen de Paiement Sécurisé
                 </label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: (mode === 'troco-plus' || mode === 'pack-tokens' || mode === 'topup-cash') ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: '10px' }}>
                   {/* Option Apple Pay */}
                   <button
                     type="button"
@@ -707,7 +764,7 @@ export default function PaymentModal({
                       gap: '6px',
                     }}
                   >
-                    <Smartphone size={16} /> Pay
+                    <Smartphone size={16} /> Apple Pay
                   </button>
 
                   {/* Option Carte Bancaire */}
@@ -732,27 +789,31 @@ export default function PaymentModal({
                     <CreditCard size={16} /> Carte CB
                   </button>
 
-                  {/* Option Solde Portefeuille (si disponible) */}
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('wallet')}
-                    style={{
-                      padding: '12px 8px',
-                      borderRadius: '14px',
-                      border: paymentMethod === 'wallet' ? '2px solid #10B981' : (darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E2E8F0'),
-                      backgroundColor: paymentMethod === 'wallet' ? (darkMode ? 'rgba(16,185,129,0.18)' : '#ECFDF5') : (darkMode ? 'rgba(15,23,42,0.4)' : '#F8FAFC'),
-                      color: paymentMethod === 'wallet' ? '#10B981' : (darkMode ? '#CBD5E1' : '#334155'),
-                      fontWeight: '800',
-                      fontSize: '13px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px',
-                    }}
-                  >
-                    <Coins size={16} /> Solde ({currentUser?.euroBalance || 0}€)
-                  </button>
+                  {/* Option Solde Portefeuille (uniquement pour deal, caution, boost) */}
+                  {mode !== 'troco-plus' && mode !== 'pack-tokens' && mode !== 'topup-cash' && (
+                    <button
+                      type="button"
+                      disabled={(currentUser?.euroBalance || 0) < amountToPay}
+                      onClick={() => setPaymentMethod('wallet')}
+                      style={{
+                        padding: '12px 8px',
+                        borderRadius: '14px',
+                        border: paymentMethod === 'wallet' ? '2px solid #10B981' : (darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E2E8F0'),
+                        backgroundColor: paymentMethod === 'wallet' ? (darkMode ? 'rgba(16,185,129,0.18)' : '#ECFDF5') : (darkMode ? 'rgba(15,23,42,0.4)' : '#F8FAFC'),
+                        color: paymentMethod === 'wallet' ? '#10B981' : (darkMode ? '#CBD5E1' : '#334155'),
+                        fontWeight: '800',
+                        fontSize: '13px',
+                        cursor: (currentUser?.euroBalance || 0) < amountToPay ? 'not-allowed' : 'pointer',
+                        opacity: (currentUser?.euroBalance || 0) < amountToPay ? 0.5 : 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                      }}
+                    >
+                      <Coins size={16} /> Solde ({currentUser?.euroBalance || 0}€)
+                    </button>
+                  )}
                 </div>
               </div>
 
