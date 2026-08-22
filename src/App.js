@@ -731,6 +731,14 @@ export default function App() {
   const [reportTarget, setReportTarget] = useState({ listing: null, user: null });
   const [allReports, setAllReports] = useState([]);
   const [allFirestoreUsers, setAllFirestoreUsers] = useState([]);
+  const categoryScrollRef = useRef(null);
+
+  const scrollCategories = (direction) => {
+    if (categoryScrollRef.current) {
+      const scrollAmount = direction === 'left' ? -220 : 220;
+      categoryScrollRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+  };
 
   // ---- ÉTATS PAIEMENT & FACTURATION (BLOC 5) ----
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -1000,6 +1008,80 @@ export default function App() {
       console.warn('[Firestore] handleAdminResolveReport error:', err);
       setAllReports(prev => prev.map(r => r.id === reportId ? { ...r, status } : r));
     }
+  };
+
+  // ---- RÉINITIALISATION TOTALE D'UN UTILISATEUR (WIPE & RESET ADMIN) ----
+  const handleAdminResetUser = async (uid, userData = null) => {
+    if (!uid) return;
+    try {
+      const resetData = {
+        euroBalance: 0.00,
+        trocoTokens: 10,
+        dealsCompleted: 0,
+        dealsInProgress: 0,
+        skills: [],
+        equipment: [],
+        bio: 'Nouvel utilisateur sur Troco ! Prêt à partager mes compétences et échanger des services.',
+        kycVerified: false,
+        onboardingCompleted: false,
+        hasClaimedWelcomeGift: false,
+        isBanned: false,
+        isShadowBanned: false,
+        updatedAt: serverTimestamp(),
+      };
+
+      // 1. Mise à jour Firestore users/{uid}
+      await updateDoc(doc(db, 'users', String(uid)), resetData);
+
+      // 2. Suppression de toutes les annonces de cet utilisateur sur Firestore et en local
+      const userName = userData?.name || allFirestoreUsers.find(u => u.uid === uid || u.id === uid)?.name;
+      const userListings = listings.filter(l =>
+        (l.userId && String(l.userId) === String(uid)) ||
+        (userName && l.author === userName)
+      );
+
+      for (const l of userListings) {
+        if (l.firestoreId) {
+          try {
+            await deleteDoc(doc(db, 'listings', String(l.firestoreId)));
+          } catch (e) {
+            console.warn('[Firestore] Delete user listing error:', e);
+          }
+        }
+      }
+
+      setListings(prev => prev.filter(l =>
+        !(l.userId && String(l.userId) === String(uid)) &&
+        !(userName && l.author === userName)
+      ));
+
+      // 3. Mise à jour de l'état allFirestoreUsers
+      setAllFirestoreUsers(prev => prev.map(u => (u.uid === uid || u.id === uid) ? { ...u, ...resetData } : u));
+
+      // 4. Si c'est l'utilisateur courant, réinitialiser son profil local + déclencher l'onboarding
+      if (profile?.uid === uid || auth.currentUser?.uid === uid) {
+        setProfile(prev => ({
+          ...prev,
+          ...resetData,
+        }));
+        setSkills([]);
+        setEquipment([]);
+        try {
+          localStorage.removeItem('troco_onboarding_completed');
+          localStorage.removeItem('troco_welcome_gift_claimed');
+        } catch (_) { }
+      }
+
+      alert(`✅ Le profil ${userName || uid} a été réinitialisé avec succès (solde 0.00€, 10 jetons, onboarding réactivé, annonces supprimées).`);
+    } catch (err) {
+      console.warn('[Firestore] handleAdminResetUser error:', err);
+      alert(`Erreur lors de la réinitialisation du profil : ${err.message}`);
+    }
+  };
+
+  const handleAdminEditListing = (listing) => {
+    setIsAdminPanelOpen(false);
+    handleStartEditListing(listing);
   };
 
   // ---- ÉCOUTE ET SYNCHRONISATION EN TEMPS RÉEL DU PROFIL FIREBASE USERS/{UID} ----
@@ -6672,9 +6754,55 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Barre des catégories 100% pleine largeur et défilement fluide sans chevauchement */}
-              <div style={{ marginBottom: '16px', width: '100%', minWidth: 0, overflow: 'hidden' }}>
-                <div className="category-scroll-container" style={{ paddingBottom: '4px' }}>
+              {/* Barre des catégories avec Carrousel fluide et flèches de navigation latérales */}
+              <div style={{
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                marginBottom: '16px',
+                width: '100%',
+                minWidth: 0,
+                gap: '8px'
+              }}>
+                {/* Flèche de défilement gauche */}
+                <button
+                  type="button"
+                  onClick={() => scrollCategories('left')}
+                  title="Faire défiler vers la gauche"
+                  className="premium-button"
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(226,232,240,0.9)',
+                    backgroundColor: darkMode ? 'rgba(30,41,59,0.85)' : 'rgba(255,255,255,0.9)',
+                    color: darkMode ? '#93C5FD' : '#04265A',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    flexShrink: 0,
+                    boxShadow: darkMode ? '0 4px 12px rgba(0,0,0,0.25)' : '0 2px 8px rgba(15,23,42,0.06)',
+                    backdropFilter: 'blur(12px)',
+                    WebkitBackdropFilter: 'blur(12px)',
+                    zIndex: 2,
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <ChevronLeft size={16} />
+                </button>
+
+                {/* Conteneur de défilement des catégories */}
+                <div
+                  ref={categoryScrollRef}
+                  className="category-scroll-container"
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    paddingBottom: '4px',
+                    scrollBehavior: 'smooth'
+                  }}
+                >
                   {allCategories.map(category => {
                     const isSel = selectedCategory === category;
                     return (
@@ -6701,12 +6829,41 @@ export default function App() {
                       border: darkMode ? '1px dashed #60A5FA' : '1px dashed #04265A',
                       backgroundColor: darkMode ? 'rgba(4,38,90,0.3)' : '#F0FDFA',
                       color: darkMode ? '#93C5FD' : '#04265A',
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      flexShrink: 0
                     }}
                   >
                     + {t('newCategory')}
                   </button>
                 </div>
+
+                {/* Flèche de défilement droite */}
+                <button
+                  type="button"
+                  onClick={() => scrollCategories('right')}
+                  title="Faire défiler vers la droite"
+                  className="premium-button"
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(226,232,240,0.9)',
+                    backgroundColor: darkMode ? 'rgba(30,41,59,0.85)' : 'rgba(255,255,255,0.9)',
+                    color: darkMode ? '#93C5FD' : '#04265A',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    flexShrink: 0,
+                    boxShadow: darkMode ? '0 4px 12px rgba(0,0,0,0.25)' : '0 2px 8px rgba(15,23,42,0.06)',
+                    backdropFilter: 'blur(12px)',
+                    WebkitBackdropFilter: 'blur(12px)',
+                    zIndex: 2,
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <ChevronRight size={16} />
+                </button>
               </div>
 
               {/* SÉLECTEUR SEGMENTÉ FORMAT APPLE-GRADE (STYLE IOS GLASSMORPHISM) */}
@@ -9219,6 +9376,8 @@ export default function App() {
         onUpdateUser={handleAdminUpdateUser}
         onDeleteListing={handleAdminDeleteListing}
         onResolveReport={handleAdminResolveReport}
+        onResetUser={handleAdminResetUser}
+        onEditListing={handleAdminEditListing}
       />
 
       {/* MODALE DE SIGNALEMENT COMMUNAUTAIRE */}

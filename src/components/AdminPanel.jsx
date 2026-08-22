@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import {
   Shield, Users, FileText, CheckCircle, Search,
   Trash2, EyeOff, Lock, ArrowLeft, Coins,
-  Check, ShieldAlert, Sparkles
+  Check, ShieldAlert, Sparkles, RotateCcw, Pencil
 } from 'lucide-react';
 import { analyzeContent } from '../utils/contentModeration';
 
@@ -17,6 +17,8 @@ export default function AdminPanel({
   onUpdateUser = null,
   onDeleteListing = null,
   onResolveReport = null,
+  onResetUser = null,
+  onEditListing = null,
 }) {
   const [activeTab, setActiveTab] = useState('reports'); // 'reports' | 'users' | 'listings' | 'moderator'
   const [pinInput, setPinInput] = useState('');
@@ -686,6 +688,34 @@ export default function AdminPanel({
                         >
                           💳 Ajuster les soldes (€ / 🪙)
                         </button>
+
+                        {onResetUser && (
+                          <button
+                            onClick={() => {
+                              const userName = u.name || u.username || 'cet utilisateur';
+                              if (window.confirm(`⚠️ CONFIRMATION DE RÉINITIALISATION DU COMPTE\n\nÊtes-vous absolument sûr de vouloir réinitialiser intégralement le profil de « ${userName} » ?\n\nCette action va :\n- Remettre son solde en euros à 0.00€\n- Réinitialiser ses jetons de bienvenue à 10\n- Purger ses compétences et son historique de deals\n- Supprimer toutes ses annonces publiées\n- Forcer son onboarding à se relancer à sa prochaine connexion comme un nouvel utilisateur.`)) {
+                                onResetUser(uid, u);
+                              }
+                            }}
+                            style={{
+                              padding: '8px 10px',
+                              borderRadius: '10px',
+                              border: darkMode ? '1px solid rgba(239,68,68,0.3)' : '1px solid #FCA5A5',
+                              backgroundColor: darkMode ? 'rgba(239,68,68,0.15)' : '#FEF2F2',
+                              color: darkMode ? '#FCA5A5' : '#DC2626',
+                              fontSize: '11px',
+                              fontWeight: '800',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px',
+                              transition: 'all 0.2s ease'
+                            }}
+                          >
+                            <RotateCcw size={12} /> 🔄 Réinitialiser le profil (Wipe & Reset)
+                          </button>
+                        )}
                       </div>
                     </div>
                   );
@@ -753,6 +783,18 @@ export default function AdminPanel({
                     </div>
 
                     <div style={{ display: 'flex', gap: '8px' }}>
+                      {onEditListing && (
+                        <button
+                          onClick={() => onEditListing(listing)}
+                          style={{
+                            flex: 1, padding: '8px', borderRadius: '10px', border: 'none',
+                            backgroundColor: darkMode ? '#3B82F6' : '#04265A', color: '#FFF', fontWeight: '700', fontSize: '12px', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'
+                          }}
+                        >
+                          <Pencil size={13} /> Modifier
+                        </button>
+                      )}
                       {onDeleteListing && (
                         <button
                           onClick={() => {
