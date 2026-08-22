@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Search, MapPin, Video, Star, Globe, Filter, MessageSquare, PlusCircle, User, ShieldCheck, Clock, CheckCircle, ArrowRight, X, Sparkles, Coins, Plus, Trash2, Camera, Pencil, Mic, PhoneOff, Flame, History, Check, Lock, CreditCard, Tag, Phone, UserPlus, ChevronLeft, ChevronRight, ChevronUp, Eye, EyeOff, Maximize2, Minimize2, ZoomIn, ZoomOut, MicOff, VideoOff, Sun, Moon, Upload, Repeat, SwitchCamera, LogOut, Scale, ShieldAlert, FileText, Monitor, MonitorOff, Crown, Image as ImageIcon } from 'lucide-react';
+import { Search, MapPin, Video, Star, Globe, Filter, MessageSquare, PlusCircle, User, ShieldCheck, Clock, CheckCircle, X, Sparkles, Coins, Plus, Trash2, Camera, Pencil, Mic, PhoneOff, Flame, History, Check, Lock, CreditCard, Tag, Phone, UserPlus, ChevronLeft, ChevronRight, ChevronUp, Eye, EyeOff, Minimize2, MicOff, VideoOff, Sun, Moon, Upload, Repeat, SwitchCamera, LogOut, Scale, ShieldAlert, FileText, Monitor, MonitorOff, Crown, Image as ImageIcon } from 'lucide-react';
 import { auth, db } from './firebase';
 import { collection, addDoc, doc, updateDoc, serverTimestamp, onSnapshot, query, orderBy, setDoc, deleteDoc, getDoc, getDocs, where, increment, runTransaction } from 'firebase/firestore';
 import { RecaptchaVerifier, signInWithPhoneNumber, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, GoogleAuthProvider, GithubAuthProvider, FacebookAuthProvider, OAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
@@ -35,26 +35,9 @@ import {
   localizeLocation,
   localizeTags,
   localizeReview,
-  formatTokenCount,
   knownTitles,
   knownMessageTranslations,
-  knownCompMap
 } from './data/translationsData';
-import {
-  mockListings,
-  mockChats,
-  initialChatThreads,
-  swapHistory,
-  themeMedia,
-  fallbackCategoryImages,
-  locationCoordinatesMap,
-  authorAvatars,
-  femaleAvatars,
-  maleAvatars,
-  feminineFirstNames,
-  groupParticipants,
-  statusStyles
-} from './data/mockData';
 
 export default function App() {
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('troco_dark_mode') === 'true');
@@ -686,14 +669,14 @@ export default function App() {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) return new Set(parsed);
       }
-    } catch (_) {}
+    } catch (_) { }
     return new Set();
   }); // IDs des convos déjà lues
 
   useEffect(() => {
     try {
       window.localStorage.setItem('troco_read_chats', JSON.stringify([...readChats]));
-    } catch (_) {}
+    } catch (_) { }
   }, [readChats]);
   const [selectedListing, setSelectedListing] = useState(null);
   const [messageDraft, setMessageDraft] = useState('');
@@ -774,7 +757,7 @@ export default function App() {
     setProfileDraft(updatedProfile);
     try {
       localStorage.setItem('troco_user_profile', JSON.stringify(updatedProfile));
-    } catch (_) {}
+    } catch (_) { }
     if (auth.currentUser?.uid) {
       try {
         await updateDoc(doc(db, 'users', auth.currentUser.uid), {
@@ -840,7 +823,7 @@ export default function App() {
           setUserTransactions(list);
           try {
             localStorage.setItem('troco_user_transactions', JSON.stringify(list));
-          } catch (e) {}
+          } catch (e) { }
         }
       }, (err) => console.warn('[Firestore] Transactions listener:', err));
       return () => unsub();
@@ -906,7 +889,7 @@ export default function App() {
     setUserTransactions(prev => [newTxRecord, ...prev]);
     try {
       localStorage.setItem('troco_user_transactions', JSON.stringify([newTxRecord, ...userTransactions]));
-    } catch (e) {}
+    } catch (e) { }
 
     // 3. Persistance sur Firestore users/{uid} et transactions
     if (uid) {
@@ -1341,7 +1324,7 @@ export default function App() {
       if (el.srcObject !== localStream) {
         el.srcObject = localStream;
       }
-      el.play().catch(() => {});
+      el.play().catch(() => { });
     }
   }, [localStream]);
 
@@ -1350,7 +1333,7 @@ export default function App() {
       if (el.srcObject !== remoteStream) {
         el.srcObject = remoteStream;
       }
-      el.play().catch(() => {});
+      el.play().catch(() => { });
     }
   }, [remoteStream]);
 
@@ -1391,7 +1374,7 @@ export default function App() {
     if (e.button !== 0 && e.pointerType === 'mouse') return;
     try {
       e.currentTarget.setPointerCapture(e.pointerId);
-    } catch (_) {}
+    } catch (_) { }
     localVideoPointerDragRef.current = {
       isDragging: true,
       startX: e.clientX,
@@ -1423,7 +1406,7 @@ export default function App() {
     if (!localVideoPointerDragRef.current.isDragging) return;
     try {
       e.currentTarget.releasePointerCapture(e.pointerId);
-    } catch (_) {}
+    } catch (_) { }
     localVideoPointerDragRef.current.isDragging = false;
   };
 
@@ -1556,7 +1539,7 @@ export default function App() {
             if (!uSnap.empty) {
               partnerUid = uSnap.docs[0].id;
             }
-          } catch (_) {}
+          } catch (_) { }
         }
 
         await runTransaction(db, async (transaction) => {
@@ -1639,7 +1622,7 @@ export default function App() {
     if (e.button !== 0 && e.pointerType === 'mouse') return;
     try {
       e.currentTarget.setPointerCapture(e.pointerId);
-    } catch (_) {}
+    } catch (_) { }
     pipPointerDragRef.current = {
       isDragging: true,
       startX: e.clientX,
@@ -1671,7 +1654,7 @@ export default function App() {
     if (!pipPointerDragRef.current.isDragging) return;
     try {
       e.currentTarget.releasePointerCapture(e.pointerId);
-    } catch (_) {}
+    } catch (_) { }
     pipPointerDragRef.current.isDragging = false;
   };
 
@@ -1679,7 +1662,7 @@ export default function App() {
     if (!pipPointerDragRef.current.isDragging) return;
     try {
       e.currentTarget.releasePointerCapture(e.pointerId);
-    } catch (_) {}
+    } catch (_) { }
     pipPointerDragRef.current.isDragging = false;
   };
 
@@ -2413,7 +2396,7 @@ export default function App() {
         const otherUser = Array.isArray(data.participants)
           ? data.participants.find(p => p && p.trim().toLowerCase() !== profile.name.trim().toLowerCase()) || data.user || 'Interlocuteur'
           : data.user || 'Interlocuteur';
-        
+
         const fChatId = data.id || docSnap.id;
 
         return {
@@ -2450,7 +2433,7 @@ export default function App() {
         setDoc(doc(db, 'chats', cidStr), {
           unreadCount: 0,
           updatedAt: serverTimestamp(),
-        }, { merge: true }).catch(() => {});
+        }, { merge: true }).catch(() => { });
 
         const msgsSnap = await getDocs(collection(db, 'chats', cidStr, 'messages'));
         msgsSnap.forEach((dSnap) => {
@@ -2459,10 +2442,10 @@ export default function App() {
             updateDoc(doc(db, 'chats', cidStr, 'messages', dSnap.id), {
               read: true,
               status: 'read'
-            }).catch(() => {});
+            }).catch(() => { });
           }
         });
-      } catch (_) {}
+      } catch (_) { }
     }
   };
 
@@ -2479,8 +2462,12 @@ export default function App() {
 
       const thread = chatThreads[chat.id] || chatThreads[cidStr];
       if (thread && thread.length > 0) {
-        const unreadInThread = thread.filter(m => (m.sender === 'them' || m.kind === 'deal' || (m.senderName && m.senderName !== profile?.name)));
-        return total + (unreadInThread.length > 0 ? unreadInThread.length : 1);
+        const unreadInThread = thread.filter(m => 
+          !m.read && 
+          m.status !== 'read' && 
+          (m.sender === 'them' || m.kind === 'deal' || (m.senderName && m.senderName !== profile?.name))
+        );
+        return total + unreadInThread.length;
       }
 
       if (chat.lastSenderName && chat.lastSenderName.trim().toLowerCase() !== profile?.name?.trim().toLowerCase()) {
@@ -2958,14 +2945,14 @@ export default function App() {
     },
   ];
 
-  const isDemoProfile = profile?.uid === 'demo_mateopolo' || (!profile?.uid && profile?.name === 'MATEO POLO');
+  const isDemoProfile = Boolean(profile?.isDemo || (profile?.uid && profile.uid.startsWith('demo_')));
   const isAdmin = profile?.email === 'mateopolo91@gmail.com' || auth.currentUser?.email === 'mateopolo91@gmail.com' || profile?.role === 'admin';
   const closedDealsCount = isDemoProfile ? swapHistory.filter(entry => entry.status === 'Clôturé').length : (profile?.dealsCompleted ?? 0);
   const inProgressCount = isDemoProfile ? swapHistory.filter(entry => entry.status === 'En cours' || entry.status === 'Planifié').length : (profile?.dealsInProgress ?? 0);
   const ratedEntries = isDemoProfile ? swapHistory.filter(entry => entry.rating) : [];
   const averageRating = isDemoProfile
     ? (ratedEntries.length ? (ratedEntries.reduce((sum, entry) => sum + entry.rating, 0) / ratedEntries.length).toFixed(1) : '—')
-    : (profile?.rating ? Number(profile.rating).toFixed(1) : '—');
+    : (profile?.rating ? Number(profile.rating).toFixed(1) : (closedDealsCount > 0 ? '5.0' : '—'));
   const userSwapHistory = isDemoProfile ? swapHistory : (profile?.swapHistory || []);
 
   const baseCategories = ['Tous', ...TROCO_CATEGORIES.filter(c => c.id !== 'all').map(c => c.label)];
@@ -3143,7 +3130,7 @@ export default function App() {
       }
     );
     return () => unsub();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ---- SYNC MESSAGES EN TEMPS RÉEL (chat actif) ----
@@ -3184,7 +3171,7 @@ export default function App() {
               status: 'read',
               read: true,
               readAt: serverTimestamp(),
-            }).catch(() => {});
+            }).catch(() => { });
           }
         });
       }
@@ -3780,6 +3767,11 @@ export default function App() {
       setCustomCategories(prev => [...prev, postDraft.customCategoryName.trim()]);
     }
 
+    // Calcul précis des coordonnées géographiques (~300-500m autour de la position)
+    const jitterLat = (Math.random() - 0.5) * 0.007;
+    const jitterLng = (Math.random() - 0.5) * 0.007;
+    const resolvedCoords = postDraft.coordinates || (userCoords ? [userCoords[0] + jitterLat, userCoords[1] + jitterLng] : [48.8566 + jitterLat, 2.3522 + jitterLng]);
+
     const newListing = {
       ...(isEditingListing ? editingOriginalListing : {}),
       id: isEditingListing ? editingOriginalListing.id : Date.now(),
@@ -3788,13 +3780,14 @@ export default function App() {
       category: finalCategory,
       customCategory: (postDraft.category === 'Autre' || postDraft.category === 'Autre / Domaine personnalisé') || Boolean(postDraft.customCategoryName?.trim()),
       customCategoryName: postDraft.customCategoryName?.trim() || null,
-      verified: isEditingListing ? editingOriginalListing.verified : true,
-      rating: isEditingListing ? editingOriginalListing.rating : 4.8,
-      reviews: isEditingListing ? editingOriginalListing.reviews : 0,
+      verified: isEditingListing ? editingOriginalListing.verified : (profile?.kycVerified || false),
+      rating: isEditingListing ? editingOriginalListing.rating : null,
+      reviews: isEditingListing ? (editingOriginalListing.reviews || 0) : 0,
       status: postDraft.status || 'active',
       location: (postDraft.location || '').trim() || (postDraft.format === 'remote' ? 'À distance' : 'Sur place'),
+      coordinates: isEditingListing && editingOriginalListing.coordinates ? editingOriginalListing.coordinates : resolvedCoords,
       type: postDraft.format,
-      languages: profile.languages.slice(0, 2),
+      languages: profile.languages ? profile.languages.slice(0, 2) : ['FR'],
       compensation: compensationText,
       image: finalGallery[0] || media.image,
       video: media.video,
@@ -3977,13 +3970,13 @@ export default function App() {
     // Signaler sur Firestore qu'on est en train d'écrire
     setDoc(doc(db, 'chats', chatId), {
       typing: { [profile.name]: true }
-    }, { merge: true }).catch(() => {});
+    }, { merge: true }).catch(() => { });
 
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     typingTimeoutRef.current = setTimeout(() => {
       setDoc(doc(db, 'chats', chatId), {
         typing: { [profile.name]: false }
-      }, { merge: true }).catch(() => {});
+      }, { merge: true }).catch(() => { });
     }, 2500);
   };
 
@@ -4007,7 +4000,7 @@ export default function App() {
     if (profile?.name) {
       setDoc(doc(db, 'chats', String(chatId)), {
         typing: { [profile.name]: false }
-      }, { merge: true }).catch(() => {});
+      }, { merge: true }).catch(() => { });
     }
 
     const newMessage = {
@@ -4096,14 +4089,30 @@ export default function App() {
     }
   };
 
-  // ---- CONTRE-PROPOSITION ----
-  const openCounterOffer = () => {
+  // ---- CONTRE-PROPOSITION / GESTION DE DEAL (AVEC ANTI-SPAM ET ÉDITION D'OFFRE EN ATTENTE) ----
+  const [editingDealId, setEditingDealId] = useState(null);
+
+  const openCounterOffer = (existingTerms = null, dealMsgId = null) => {
     if (!selectedChat) return;
-    setCounterOfferDraft({
-      euroAmount: '',
-      trocoTokens: '',
-      conditions: selectedChat.terms || '',
-    });
+    if (existingTerms) {
+      setCounterOfferDraft({
+        euroAmount: existingTerms.euroAmount ? String(existingTerms.euroAmount) : '',
+        trocoTokens: existingTerms.trocoTokens ? String(existingTerms.trocoTokens) : '',
+        durationType: existingTerms.durationType || 'hourly',
+        durationValue: existingTerms.durationValue ? String(existingTerms.durationValue) : '1',
+        conditions: existingTerms.conditions || '',
+      });
+      setEditingDealId(dealMsgId);
+    } else {
+      setCounterOfferDraft({
+        euroAmount: '',
+        trocoTokens: '',
+        durationType: 'hourly',
+        durationValue: '1',
+        conditions: selectedChat.terms || '',
+      });
+      setEditingDealId(null);
+    }
     setIsCounterOfferOpen(true);
   };
 
@@ -4114,18 +4123,41 @@ export default function App() {
     const trocoTokens = Number(counterOfferDraft.trocoTokens) || 0;
     const durationType = counterOfferDraft.durationType || 'hourly';
     const durationValue = counterOfferDraft.durationValue || '1';
-    const conditions = counterOfferDraft.conditions.trim() || 'Échange à définir ensemble.';
+    const conditions = counterOfferDraft.conditions.trim() || 'Échange convenu.';
+    const terms = { euroAmount, trocoTokens, durationType, durationValue, conditions };
+
+    if (editingDealId) {
+      // Modification de la proposition existante
+      setChatThreads(prev => ({
+        ...prev,
+        [chatId]: (prev[chatId] || []).map(m => m.id === editingDealId ? { ...m, terms, updatedAt: new Date().toISOString() } : m)
+      }));
+      setIsCounterOfferOpen(false);
+      setEditingDealId(null);
+
+      try {
+        await updateDoc(doc(db, 'chats', String(chatId), 'messages', String(editingDealId)), {
+          terms,
+          updatedAt: serverTimestamp(),
+        });
+      } catch (e) {
+        console.warn('[Firestore] deal update failed:', e);
+      }
+      return;
+    }
+
     const dealMessage = {
       id: Date.now(),
       sender: 'me',
       kind: 'deal',
       dealId: `deal-${Date.now()}`,
       status: 'pending',
-      terms: { euroAmount, trocoTokens, durationType, durationValue, conditions },
+      terms,
     };
 
     setChatThreads(prev => ({ ...prev, [chatId]: [...(prev[chatId] || []), dealMessage] }));
     setIsCounterOfferOpen(false);
+    setEditingDealId(null);
 
     try {
       await addDoc(collection(db, 'chats', String(chatId), 'messages'), {
@@ -4134,7 +4166,7 @@ export default function App() {
         kind: 'deal',
         dealId: dealMessage.dealId,
         status: 'pending',
-        terms: { euroAmount, trocoTokens, durationType, durationValue, conditions },
+        terms,
         createdAt: serverTimestamp(),
       });
       await setDoc(doc(db, 'chats', String(chatId)), {
@@ -4193,7 +4225,7 @@ export default function App() {
     setProfile(updatedProfile);
     try {
       localStorage.setItem('troco_user_profile', JSON.stringify(updatedProfile));
-    } catch (_) {}
+    } catch (_) { }
 
     // Mise à jour de l'état du message et du chat
     setChatThreads(prev => ({
@@ -4234,7 +4266,7 @@ export default function App() {
             if (!uSnap.empty) {
               partnerUid = uSnap.docs[0].id;
             }
-          } catch (_) {}
+          } catch (_) { }
         }
 
         await runTransaction(db, async (transaction) => {
@@ -4961,10 +4993,10 @@ export default function App() {
                       }}
                     >
                       <svg width="20" height="20" viewBox="0 0 24 24">
-                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
                       </svg>
                       Continuer avec Google
                     </button>
@@ -4984,10 +5016,10 @@ export default function App() {
                       }}
                     >
                       <svg width="19" height="19" viewBox="0 0 21 21" fill="none">
-                        <rect x="1" y="1" width="9" height="9" fill="#F25022"/>
-                        <rect x="11" y="1" width="9" height="9" fill="#7FBA00"/>
-                        <rect x="1" y="11" width="9" height="9" fill="#00A4EF"/>
-                        <rect x="11" y="11" width="9" height="9" fill="#FFB900"/>
+                        <rect x="1" y="1" width="9" height="9" fill="#F25022" />
+                        <rect x="11" y="1" width="9" height="9" fill="#7FBA00" />
+                        <rect x="1" y="11" width="9" height="9" fill="#00A4EF" />
+                        <rect x="11" y="11" width="9" height="9" fill="#FFB900" />
                       </svg>
                       Continuer avec Microsoft
                     </button>
@@ -5007,7 +5039,7 @@ export default function App() {
                       }}
                     >
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                        <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
                       </svg>
                       Continuer avec Facebook
                     </button>
@@ -5027,7 +5059,7 @@ export default function App() {
                       }}
                     >
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                        <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
+                        <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
                       </svg>
                       Continuer avec GitHub
                     </button>
@@ -6492,19 +6524,20 @@ export default function App() {
 
             {/* CONTENU CENTRAL DU FEED */}
             <div className="feed-main-content">
-              <div style={{ display: 'flex', gap: '8px', marginBottom: '18px' }}>
-                <div style={{ flex: 1, display: 'flex', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', border: '1px solid rgba(209,213,219,0.7)', borderRadius: '16px', padding: '10px 14px', boxShadow: '0 4px 20px -4px rgba(15, 23, 42, 0.06)' }}>
+              {/* Ligne Recherche + Filtre Rayon + Bascule Vue Liste / Carte */}
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '14px', flexWrap: 'wrap', alignItems: 'center' }}>
+                <div style={{ flex: 1, minWidth: '220px', display: 'flex', alignItems: 'center', backgroundColor: darkMode ? 'rgba(30,41,59,0.8)' : 'rgba(255,255,255,0.8)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(209,213,219,0.7)', borderRadius: '16px', padding: '10px 14px', boxShadow: '0 4px 20px -4px rgba(15, 23, 42, 0.06)' }}>
                   <Search size={18} color="#9CA3AF" style={{ marginRight: '10px' }} />
-                  <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} type="text" placeholder={t('searchPlaceholder')} style={{ border: 'none', outline: 'none', width: '100%', fontSize: '14px', backgroundColor: 'transparent' }} />
+                  <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} type="text" placeholder={t('searchPlaceholder')} style={{ border: 'none', outline: 'none', width: '100%', fontSize: '14px', backgroundColor: 'transparent', color: darkMode ? '#FFF' : '#111827' }} />
                 </div>
                 <button
                   onClick={() => setIsFilterDrawerOpen(true)}
                   className="premium-button"
                   style={{
-                    backgroundColor: isInfiniteRadius || radiusKm >= 100 ? '#EFF6FF' : 'rgba(255,255,255,0.8)',
+                    backgroundColor: isInfiniteRadius || radiusKm >= 100 ? (darkMode ? 'rgba(4,38,90,0.8)' : '#EFF6FF') : (darkMode ? 'rgba(30,41,59,0.8)' : 'rgba(255,255,255,0.8)'),
                     backdropFilter: 'blur(16px)',
                     WebkitBackdropFilter: 'blur(16px)',
-                    border: isInfiniteRadius || radiusKm >= 100 ? '1px solid #04265A' : '1px solid rgba(209,213,219,0.7)',
+                    border: isInfiniteRadius || radiusKm >= 100 ? (darkMode ? '1px solid #60A5FA' : '1px solid #04265A') : (darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(209,213,219,0.7)'),
                     borderRadius: '16px',
                     padding: '10px 14px',
                     cursor: 'pointer',
@@ -6512,58 +6545,56 @@ export default function App() {
                     display: 'flex',
                     alignItems: 'center',
                     gap: '6px',
-                    color: isInfiniteRadius || radiusKm >= 100 ? '#04265A' : '#374151',
+                    color: isInfiniteRadius || radiusKm >= 100 ? (darkMode ? '#93C5FD' : '#04265A') : (darkMode ? '#CBD5E1' : '#374151'),
                     fontWeight: '700',
                     fontSize: '13px'
                   }}
                 >
-                  <Filter size={18} color={isInfiniteRadius || radiusKm >= 100 ? '#04265A' : '#374151'} />
+                  <Filter size={18} color={isInfiniteRadius || radiusKm >= 100 ? (darkMode ? '#93C5FD' : '#04265A') : '#374151'} />
                   <span>{isInfiniteRadius || radiusKm >= 100 ? `♾️ ${t('infinite')}` : `${radiusKm} km`}</span>
                 </button>
+
+                {/* Sélecteur de vue (Liste / Carte) dédié et étanche */}
+                <div className="premium-panel" style={{ display: 'inline-flex', flexShrink: 0, border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(226,232,240,0.9)', borderRadius: '999px', padding: '3px', backgroundColor: darkMode ? 'rgba(30,41,59,0.7)' : 'rgba(255,255,255,0.8)', boxShadow: '0 4px 20px -4px rgba(15, 23, 42, 0.06)' }}>
+                  <button onClick={() => setViewMode('list')} className="premium-nav-btn" style={{ border: 'none', borderRadius: '999px', padding: '8px 14px', backgroundColor: viewMode === 'list' ? (darkMode ? '#3B82F6' : '#04265A') : 'transparent', color: viewMode === 'list' ? '#FFF' : (darkMode ? '#CBD5E1' : '#64748B'), fontWeight: '700', cursor: 'pointer', fontSize: '12px' }}>{t('viewList')}</button>
+                  <button onClick={() => { setViewMode('map'); setIsInfiniteRadius(true); }} className="premium-nav-btn" style={{ border: 'none', borderRadius: '999px', padding: '8px 14px', backgroundColor: viewMode === 'map' ? (darkMode ? '#3B82F6' : '#04265A') : 'transparent', color: viewMode === 'map' ? '#FFF' : (darkMode ? '#CBD5E1' : '#64748B'), fontWeight: '700', cursor: 'pointer', fontSize: '12px' }}>{t('viewMap')}</button>
+                </div>
               </div>
 
-              {/* Categories + view toggle — single aligned row */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px', width: '100%', minWidth: 0 }}>
-                <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
-                  <div className="category-scroll-container" style={{ paddingRight: '24px' }}>
-                    {allCategories.map(category => {
-                      const isSel = selectedCategory === category;
-                      return (
-                        <button
-                          key={category}
-                          onClick={() => setSelectedCategory(category)}
-                          className="premium-button category-pill"
-                          style={{
-                            border: isSel ? (darkMode ? '1px solid #60A5FA' : '1px solid #04265A') : (darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(226,232,240,0.9)'),
-                            backgroundColor: isSel ? (darkMode ? 'rgba(4,38,90,0.85)' : '#EFF6FF') : (darkMode ? 'rgba(30,41,59,0.7)' : 'rgba(248,250,252,0.95)'),
-                            color: isSel ? (darkMode ? '#93C5FD' : '#04265A') : (darkMode ? '#CBD5E1' : '#475569'),
-                            boxShadow: isSel ? '0 4px 14px rgba(4,38,90,0.15)' : '0 2px 8px rgba(15, 23, 42, 0.04)',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          {getCategoryLabel(category)}
-                        </button>
-                      );
-                    })}
-                    <button
-                      onClick={() => setIsCategoryModalOpen(true)}
-                      className="premium-button category-pill"
-                      style={{
-                        border: darkMode ? '1px dashed #60A5FA' : '1px dashed #04265A',
-                        backgroundColor: darkMode ? 'rgba(4,38,90,0.3)' : '#F0FDFA',
-                        color: darkMode ? '#93C5FD' : '#04265A',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      + {t('newCategory')}
-                    </button>
-                  </div>
-                </div>
-
-                {/* View mode toggle — inlined right of category bar */}
-                <div className="premium-panel" style={{ display: 'inline-flex', flexShrink: 0, border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(226,232,240,0.9)', borderRadius: '999px', padding: '4px', backgroundColor: darkMode ? 'rgba(30,41,59,0.7)' : 'rgba(255,255,255,0.8)', boxShadow: '0 4px 20px -4px rgba(15, 23, 42, 0.06)', alignSelf: 'center' }}>
-                  <button onClick={() => setViewMode('list')} className="premium-nav-btn" style={{ border: 'none', borderRadius: '999px', padding: '7px 12px', backgroundColor: viewMode === 'list' ? (darkMode ? '#3B82F6' : '#04265A') : 'transparent', color: viewMode === 'list' ? '#FFF' : (darkMode ? '#CBD5E1' : '#64748B'), fontWeight: '700', cursor: 'pointer', fontSize: '12px' }}>{t('viewList')}</button>
-                  <button onClick={() => { setViewMode('map'); setIsInfiniteRadius(true); }} className="premium-nav-btn" style={{ border: 'none', borderRadius: '999px', padding: '7px 12px', backgroundColor: viewMode === 'map' ? (darkMode ? '#3B82F6' : '#04265A') : 'transparent', color: viewMode === 'map' ? '#FFF' : (darkMode ? '#CBD5E1' : '#64748B'), fontWeight: '700', cursor: 'pointer', fontSize: '12px' }}>{t('viewMap')}</button>
+              {/* Barre des catégories 100% pleine largeur et défilement fluide sans chevauchement */}
+              <div style={{ marginBottom: '16px', width: '100%', minWidth: 0, overflow: 'hidden' }}>
+                <div className="category-scroll-container" style={{ paddingBottom: '4px' }}>
+                  {allCategories.map(category => {
+                    const isSel = selectedCategory === category;
+                    return (
+                      <button
+                        key={category}
+                        onClick={() => setSelectedCategory(category)}
+                        className="premium-button category-pill"
+                        style={{
+                          border: isSel ? (darkMode ? '1px solid #60A5FA' : '1px solid #04265A') : (darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(226,232,240,0.9)'),
+                          backgroundColor: isSel ? (darkMode ? 'rgba(4,38,90,0.85)' : '#EFF6FF') : (darkMode ? 'rgba(30,41,59,0.7)' : 'rgba(248,250,252,0.95)'),
+                          color: isSel ? (darkMode ? '#93C5FD' : '#04265A') : (darkMode ? '#CBD5E1' : '#475569'),
+                          boxShadow: isSel ? '0 4px 14px rgba(4,38,90,0.15)' : '0 2px 8px rgba(15, 23, 42, 0.04)',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {getCategoryLabel(category)}
+                      </button>
+                    );
+                  })}
+                  <button
+                    onClick={() => setIsCategoryModalOpen(true)}
+                    className="premium-button category-pill"
+                    style={{
+                      border: darkMode ? '1px dashed #60A5FA' : '1px dashed #04265A',
+                      backgroundColor: darkMode ? 'rgba(4,38,90,0.3)' : '#F0FDFA',
+                      color: darkMode ? '#93C5FD' : '#04265A',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    + {t('newCategory')}
+                  </button>
                 </div>
               </div>
 
@@ -7340,11 +7371,11 @@ export default function App() {
 
                 const buttonLabel = isEditingListing
                   ? (quote.totalTTC > 0
-                      ? (currentLang === 'FR' ? `Valider et payer ${quote.totalTTC.toFixed(2)} €` : `Confirm & Pay €${quote.totalTTC.toFixed(2)}`)
-                      : (currentLang === 'FR' ? 'Sauvegarder les modifications' : 'Save changes'))
+                    ? (currentLang === 'FR' ? `Valider et payer ${quote.totalTTC.toFixed(2)} €` : `Confirm & Pay €${quote.totalTTC.toFixed(2)}`)
+                    : (currentLang === 'FR' ? 'Sauvegarder les modifications' : 'Save changes'))
                   : (quote.totalTTC > 0
-                      ? (currentLang === 'FR' ? `Publier et payer ${quote.totalTTC.toFixed(2)} €` : `Publish & Pay €${quote.totalTTC.toFixed(2)}`)
-                      : t('publishAdButton'));
+                    ? (currentLang === 'FR' ? `Publier et payer ${quote.totalTTC.toFixed(2)} €` : `Publish & Pay €${quote.totalTTC.toFixed(2)}`)
+                    : t('publishAdButton'));
 
                 return (
                   <button onClick={handlePublishAnnouncement} className="premium-button" style={{ border: 'none', borderRadius: '999px', padding: '10px 20px', backgroundColor: quote.totalTTC > 0 ? '#F59E0B' : (darkMode ? '#60A5FA' : '#04265A'), color: quote.totalTTC > 0 ? '#FFFFFF' : (darkMode ? '#0F172A' : '#FFF'), fontWeight: '800', cursor: 'pointer', boxShadow: '0 8px 18px rgba(4,38,90,0.2)' }}>
@@ -7389,13 +7420,13 @@ export default function App() {
                       backgroundColor: profile.accountType === 'professional'
                         ? (darkMode ? 'rgba(217,119,6,0.25)' : '#FEF3C7')
                         : profile.accountType === 'company'
-                        ? (darkMode ? 'rgba(16,185,129,0.25)' : '#ECFDF5')
-                        : (darkMode ? 'rgba(4,38,90,0.6)' : '#EFF6FF'),
+                          ? (darkMode ? 'rgba(16,185,129,0.25)' : '#ECFDF5')
+                          : (darkMode ? 'rgba(4,38,90,0.6)' : '#EFF6FF'),
                       color: profile.accountType === 'professional'
                         ? (darkMode ? '#FDE68A' : '#92400E')
                         : profile.accountType === 'company'
-                        ? (darkMode ? '#6EE7B7' : '#065F46')
-                        : (darkMode ? '#93C5FD' : '#04265A'),
+                          ? (darkMode ? '#6EE7B7' : '#065F46')
+                          : (darkMode ? '#93C5FD' : '#04265A'),
                     }}>
                       {profile.accountType === 'professional' && '💼 Pro / Freelance'}
                       {profile.accountType === 'company' && '🏢 Organisation / Asso'}
@@ -7551,11 +7582,38 @@ export default function App() {
             <div style={{ marginBottom: '18px' }}>
               <div style={{ fontSize: '12px', fontWeight: '700', color: darkMode ? '#CBD5E1' : '#64748B', marginBottom: '8px' }}>{t('spokenLanguages')}</div>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                {['FR', 'EN', 'ES', 'IT'].map((language) => {
-                  const active = (isEditingProfile ? profileDraft.languages : profile.languages).includes(language);
+                {[
+                  { code: 'FR', label: 'FR 🇫🇷' },
+                  { code: 'EN', label: 'EN 🇬🇧' },
+                  { code: 'ES', label: 'ES 🇪🇸' },
+                  { code: 'IT', label: 'IT 🇮🇹' },
+                  { code: 'DE', label: 'DE 🇩🇪' },
+                  { code: 'PT', label: 'PT 🇵🇹' },
+                  { code: 'AR', label: 'AR 🇸🇦' },
+                  { code: 'ZH', label: 'ZH 🇨🇳' },
+                  { code: 'JA', label: 'JA 🇯🇵' },
+                  { code: 'RU', label: 'RU 🇷🇺' },
+                  { code: 'NL', label: 'NL 🇳🇱' },
+                  { code: 'KO', label: 'KO 🇰🇷' },
+                ].map(({ code, label }) => {
+                  const active = (isEditingProfile ? (profileDraft.languages || []) : (profile.languages || [])).includes(code);
                   return (
-                    <button key={language} onClick={() => isEditingProfile ? toggleLanguage(language) : null} style={{ border: active ? (darkMode ? '1px solid #60A5FA' : '1px solid #04265A') : (darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #E2E8F0'), backgroundColor: active ? (darkMode ? 'rgba(4,38,90,0.7)' : '#EFF6FF') : (darkMode ? 'rgba(30,41,59,0.5)' : '#F8FAFC'), color: active ? (darkMode ? '#93C5FD' : '#04265A') : (darkMode ? '#CBD5E1' : '#475569'), padding: '8px 12px', borderRadius: '999px', fontSize: '12px', fontWeight: '800', cursor: isEditingProfile ? 'pointer' : 'default' }}>
-                      {language}
+                    <button
+                      key={code}
+                      onClick={() => isEditingProfile ? toggleLanguage(code) : null}
+                      style={{
+                        border: active ? (darkMode ? '1px solid #60A5FA' : '1px solid #04265A') : (darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #E2E8F0'),
+                        backgroundColor: active ? (darkMode ? 'rgba(4,38,90,0.7)' : '#EFF6FF') : (darkMode ? 'rgba(30,41,59,0.5)' : '#F8FAFC'),
+                        color: active ? (darkMode ? '#93C5FD' : '#04265A') : (darkMode ? '#CBD5E1' : '#475569'),
+                        padding: '7px 12px',
+                        borderRadius: '999px',
+                        fontSize: '12px',
+                        fontWeight: '800',
+                        cursor: isEditingProfile ? 'pointer' : 'default',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      {label}
                     </button>
                   );
                 })}

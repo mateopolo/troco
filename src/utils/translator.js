@@ -35,7 +35,7 @@ function saveCacheToStorage() {
 }
 
 /**
- * Normaliser les codes de langue
+ * Normaliser les codes de langue (support étendu mondial)
  */
 export function normalizeLangCode(lang) {
   if (!lang) return 'fr';
@@ -44,9 +44,16 @@ export function normalizeLangCode(lang) {
   if (l === 'es') return 'es';
   if (l === 'it') return 'it';
   if (l === 'de') return 'de';
+  if (l === 'pt' || l === 'br') return 'pt';
+  if (l === 'ar') return 'ar';
+  if (l === 'ru') return 'ru';
+  if (l === 'nl') return 'nl';
   if (l === 'ja' || l === 'jp') return 'ja';
   if (l === 'zh' || l === 'cn') return 'zh-CN';
-  return 'fr';
+  if (l === 'ko' || l === 'kr') return 'ko';
+  if (l === 'tr') return 'tr';
+  if (l === 'pl') return 'pl';
+  return l.length === 2 ? l : 'fr';
 }
 
 /**

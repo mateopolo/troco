@@ -168,6 +168,9 @@ export default function ChatView({
   const activeChatObj = effectiveSelectedChat || (visibleChats.length > 0 ? visibleChats[0] : null);
   const messages = chatThreads[currentChatId] || [];
 
+  // Détection d'une proposition de deal en attente émise par l'utilisateur courant (Anti-Spam)
+  const pendingDealFromMe = messages.find(m => (m.type === 'deal' || m.kind === 'deal') && (m.status === 'pending' || !m.status) && m.sender === 'me');
+
   const formatMsgTime = (val) => {
     if (!val) return new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
     try {
@@ -457,16 +460,29 @@ export default function ChatView({
               <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg, #04265A 0%, #14B8A6 100%)', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '14px', boxShadow: '0 4px 10px rgba(4,38,90,0.15)' }}>
                 {activeChatObj?.user ? activeChatObj.user[0].toUpperCase() : 'T'}
               </div>
-              <div style={{ position: 'absolute', bottom: '0', right: '0', width: '9px', height: '9px', borderRadius: '50%', backgroundColor: '#10B981', border: darkMode ? '2px solid #1E293B' : '2px solid #FFF' }} />
+              <div
+                title={activeChatObj?.isDemo || (typeof activeChatObj?.id === 'number' && activeChatObj?.id < 300) ? 'En ligne' : 'Actif'}
+                style={{
+                  position: 'absolute', bottom: '0', right: '0',
+                  width: '9px', height: '9px', borderRadius: '50%',
+                  backgroundColor: '#10B981',
+                  border: darkMode ? '2px solid #1E293B' : '2px solid #FFF',
+                  boxShadow: '0 0 6px rgba(16,185,129,0.8)'
+                }}
+              />
             </div>
             <div style={{ minWidth: 0, flex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <span style={{ fontWeight: '800', fontSize: isMobile ? '14px' : '14.5px', color: darkMode ? '#FFFFFF' : '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {activeChatObj?.user}
                 </span>
-                {(activeChatObj?.isDemo || activeChatObj?.persona || (typeof activeChatObj?.id === 'number' && activeChatObj?.id < 300)) && (
+                {(activeChatObj?.isDemo || activeChatObj?.persona || (typeof activeChatObj?.id === 'number' && activeChatObj?.id < 300)) ? (
                   <span style={{ fontSize: '8px', fontWeight: '800', backgroundColor: darkMode ? 'rgba(168,85,247,0.25)' : '#F3E8FF', color: darkMode ? '#D8B4FE' : '#7E22CE', padding: '1px 4px', borderRadius: '4px', flexShrink: 0 }}>
                     IA
+                  </span>
+                ) : (
+                  <span style={{ fontSize: '8.5px', fontWeight: '800', backgroundColor: darkMode ? 'rgba(16,185,129,0.2)' : '#ECFDF5', color: '#059669', padding: '1px 5px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                    <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#10B981' }} /> En ligne
                   </span>
                 )}
               </div>
@@ -505,7 +521,13 @@ export default function ChatView({
               <Video size={15} />
             </button>
             <button
-              onClick={openCounterOffer}
+              onClick={() => {
+                if (pendingDealFromMe) {
+                  openCounterOffer(pendingDealFromMe.terms, pendingDealFromMe.id);
+                } else {
+                  openCounterOffer();
+                }
+              }}
               className="premium-button"
               style={{
                 border: 'none',
@@ -513,16 +535,16 @@ export default function ChatView({
                 width: isMobile ? '34px' : 'auto',
                 height: '34px',
                 padding: isMobile ? '0' : '0 10px',
-                backgroundColor: darkMode ? '#60A5FA' : '#04265A',
-                color: darkMode ? '#0F172A' : '#FFF',
+                backgroundColor: pendingDealFromMe ? (darkMode ? '#F59E0B' : '#D97706') : (darkMode ? '#60A5FA' : '#04265A'),
+                color: pendingDealFromMe ? '#FFF' : (darkMode ? '#0F172A' : '#FFF'),
                 fontWeight: '800', fontSize: '11px', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
                 boxShadow: '0 4px 12px rgba(4,38,90,0.2)'
               }}
-              title={t('counterOffer') || 'Proposer un deal / Contre-offre'}
+              title={pendingDealFromMe ? "Modifier ma proposition de deal en attente" : (t('counterOffer') || 'Proposer un deal / Contre-offre')}
             >
               <Sparkles size={14} />
-              {!isMobile && <span>Deal</span>}
+              {!isMobile && <span>{pendingDealFromMe ? 'Modifier Deal' : 'Deal'}</span>}
             </button>
           </div>
         </div>

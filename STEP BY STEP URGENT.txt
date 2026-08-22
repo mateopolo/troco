@@ -1,0 +1,37 @@
+🗺️ Feuille de Route & Plan d'Amélioration de Troco
+1. Statut de Présence en Ligne (Temps Réel)
+Fonctionnalité : Détecter et afficher si un utilisateur est en ligne, absent ou hors ligne en fonction de son activité sur l'application.
+
+2. Flux de Négociation & Validation des Deals dans le Chat
+Acceptation / Refus : Permettre explicitement au destinataire d'une proposition ou contre-proposition de deal de l'accepter ou de la refuser directement depuis la bulle de discussion.
+
+Anti-Spam de Négociation : Empêcher le spam de propositions en verrouillant l'envoi d'une nouvelle offre tant que l'autre partie n'a pas répondu (possibilité de modifier sa proposition en cours, mais pas d'enchaîner les propositions à l'infini sans retour).
+
+Page de Checkout Intégrée : Instaurer un tunnel de type checkout au moment de valider un deal financier, affichant clairement le récapitulatif, la TVA et les éventuels frais de service avant de débiter/créditer les soldes.
+
+3. Logique des Notifications (Compteur Global & Un, par Un)
+Compteur Dynamique : Le badge rouge de notification globale doit s'incrémenter précisément de +1 par message/deal reçu et décrémenter de manière granulaire au fur et à mesure que les messages de chaque conversation sont consultés.
+
+Remise à Zéro : Dès qu'une conversation contenant des messages non lus est ouverte, le compteur associé à ce chat tombe à zéro et la bulle globale se met à jour en temps réel.
+
+4. Ergonomie & Affichage de l'Accueil (Feed)
+Barre des Catégories & Vues : Corriger le chevauchement visuel des catégories (ex: « Logement, Espaces ») qui passent actuellement derrière les boutons « Vue liste » et « Vue carte ». Repositionner le sélecteur de vue ou intégrer un défilement tactile fluide.
+
+Géolocalisation des Annonces (Pins) : S'assurer que chaque nouvelle annonce publiée apparaît correctement sur la carte interactive Leaflet à proximité de sa position géographique (dans un rayon précis de ~500m pour le repérage).
+
+5. Traduction Multilingue Dynamique
+Traduction à la Volée : Permettre la traduction automatique et instantanée des annonces créées par les utilisateurs dans n'importe quelle langue (ex: allemand, espagnol, etc.), sans se limiter aux dictionnaires prédéfinis des annonces de démonstration.
+
+Profil Utilisateur (Langues) : Remplacer le système actuel par un menu déroulant complet listant l'ensemble des langues mondiales pour rendre l'application véritablement planétaire.
+
+6. Ergonomie & Commandes des Appels Visio / Audio
+Boutons Flottants Déplaçables : Permettre de déplacer librement de manière tactile (glisser-déposer) la barre de contrôles de l'appel (caméra, micro, raccrocher) n'importe où sur l'écran.
+
+Alignement & Propreté : Centrer et aligner proprement les icônes à l'intérieur des bulles de contrôle.
+
+Correction du Swap Vidéo : Lorsque l'on bascule sa propre vidéo en grand écran pendant l'appel, masquer ou repositionner proprement l'overlay « Vous » pour ne pas obstruer l'affichage du flux local.
+
+Fallback Caméra Coupée : Lorsqu'un utilisateur désactive sa caméra pendant un appel, afficher sa photo de profil et son pseudo/nom à la place d'un écran noir brut.
+
+7. Intégrité des Profils (Vierge par Défaut)
+Profils Réels vs Agents IA : Les comptes utilisateurs réels (comme le tien) doivent commencer avec un historique totalement vierge (0 deal clôturé, aucune note moyenne, pas d'avis fictifs). Réserver les historiques de swap et les notes uniquement aux profils et annonces de démonstration générés par l'IA.
