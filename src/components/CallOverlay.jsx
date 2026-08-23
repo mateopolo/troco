@@ -112,8 +112,8 @@ export default function CallOverlay({
         boxShadow: isDocked
           ? '0 8px 30px rgba(0,0,0,0.7), 0 0 20px rgba(96,165,250,0.4)'
           : '0 16px 40px rgba(0,0,0,0.6), 0 0 20px rgba(96,165,250,0.3)',
-        border: '2px solid #60A5FA',
-        backgroundColor: '#0F172A',
+        border: '2px solid #C67D5B',
+        backgroundColor: '#1A1715',
         display: 'flex',
         flexDirection: 'column',
         userSelect: 'none',
@@ -131,7 +131,7 @@ export default function CallOverlay({
           style={{
             position: 'absolute',
             inset: 0,
-            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+            backgroundColor: 'rgba(26, 23, 21, 0.95)',
             backdropFilter: 'blur(16px)',
             display: 'flex',
             alignItems: 'center',
@@ -146,9 +146,9 @@ export default function CallOverlay({
             flexDirection: 'column',
             alignItems: 'center',
             gap: '4px',
-            color: '#60A5FA',
+            color: '#C67D5B',
           }}>
-            <div className="breathing-dot" style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#22C55E' }} />
+            <div className="breathing-dot" style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#9CAF88' }} />
             {isDocked === 'left' ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
           </div>
         </div>
@@ -158,23 +158,23 @@ export default function CallOverlay({
       <div
         style={{
           padding: '6px 10px',
-          backgroundColor: 'rgba(15,23,42,0.85)',
+          backgroundColor: 'rgba(26, 23, 21, 0.88)',
           backdropFilter: 'blur(10px)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           zIndex: 10,
-          borderBottom: '1px solid rgba(255,255,255,0.1)',
+          borderBottom: '1px solid rgba(232, 221, 211, 0.12)',
           pointerEvents: 'none',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
-          <div className="breathing-dot" style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#22C55E' }} />
-          <span style={{ color: '#FFF', fontSize: '11px', fontWeight: '800', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <div className="breathing-dot" style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#9CAF88' }} />
+          <span style={{ color: '#FAF7F2', fontSize: '11px', fontWeight: '800', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {selectedChat?.user || 'Appel'}
           </span>
         </div>
-        <span style={{ color: '#38BDF8', fontSize: '10px', fontWeight: '800' }}>
+        <span style={{ color: '#C67D5B', fontSize: '10px', fontWeight: '800' }}>
           {formatCallTimer ? formatCallTimer(callDuration) : `${callDuration}s`}
         </span>
       </div>
@@ -201,11 +201,11 @@ export default function CallOverlay({
             }}
           />
         ) : (
-          <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', background: 'linear-gradient(135deg, #1E293B, #0F172A)' }}>
-            <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(135deg, #60A5FA, #04265A)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFF', fontWeight: '800', fontSize: '16px' }}>
+          <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', background: '#1A1715' }}>
+            <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFF', fontWeight: '800', fontSize: '16px' }}>
               {(selectedChat?.user || 'T')[0]}
             </div>
-            <span style={{ color: '#93C5FD', fontSize: '10px', fontWeight: '600' }}>En direct</span>
+            <span style={{ color: '#D4C5B5', fontSize: '10px', fontWeight: '600' }}>En direct</span>
           </div>
         )}
 
@@ -222,7 +222,7 @@ export default function CallOverlay({
             type="button"
             onClick={(e) => { e.stopPropagation(); setIsCallPip(false); }}
             title="Agrandir en plein écran"
-            style={{ border: 'none', width: '28px', height: '28px', borderRadius: '50%', backgroundColor: 'rgba(15,23,42,0.85)', color: '#60A5FA', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            style={{ border: 'none', width: '28px', height: '28px', borderRadius: '50%', backgroundColor: 'rgba(26, 23, 21, 0.85)', color: '#FAF7F2', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
             <Maximize2 size={13} />
           </button>

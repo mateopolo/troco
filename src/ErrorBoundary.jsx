@@ -81,14 +81,15 @@ export class ErrorBoundary extends React.Component {
               <button
                 onClick={() => window.location.reload()}
                 style={{
-                  backgroundColor: '#04265A',
+                  background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)',
                   color: '#FFFFFF',
-                  border: '1px solid rgba(255,255,255,0.2)',
+                  border: 'none',
                   borderRadius: '14px',
                   padding: '12px 20px',
-                  fontWeight: '700',
+                  fontWeight: '800',
                   fontSize: '13px',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  boxShadow: '0 6px 16px rgba(198,125,91,0.25)'
                 }}
               >
                 Recharger

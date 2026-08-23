@@ -167,11 +167,11 @@ function FeedCardItem({
       onMouseLeave={() => { if (setHoveredCardId) setHoveredCardId(null); }}
       className="premium-card reveal-card"
       style={{
-        backgroundColor: darkMode ? 'rgba(30,41,59,0.85)' : '#FFFFFF',
-        border: item.isBoosted ? '2px solid #F59E0B' : (darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(229,231,235,0.9)'),
+        backgroundColor: darkMode ? 'rgba(35,30,27,0.92)' : '#FAF7F2',
+        border: item.isBoosted ? '2px solid #C67D5B' : (darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3'),
         borderRadius: '20px',
         overflow: 'hidden',
-        boxShadow: item.isBoosted ? '0 12px 34px rgba(245,158,11,0.14)' : '0 2px 14px rgba(15, 23, 42, 0.05)',
+        boxShadow: item.isBoosted ? '0 12px 34px rgba(198,125,91,0.2)' : '0 4px 18px rgba(61, 53, 48, 0.05)',
         cursor: 'pointer',
         transform: isHovered ? 'translateY(-5px) scale(1.015)' : 'none',
         transition: 'transform 0.4s var(--ease-quiet), box-shadow 0.4s var(--ease-quiet)'
@@ -219,7 +219,7 @@ function FeedCardItem({
         <div style={{
           position: 'absolute',
           inset: 0,
-          background: 'linear-gradient(to top, rgba(15, 23, 42, 0.45) 0%, rgba(15, 23, 42, 0) 50%)',
+          background: 'linear-gradient(to top, rgba(61, 53, 48, 0.45) 0%, rgba(61, 53, 48, 0) 50%)',
           pointerEvents: 'none',
           zIndex: 3
         }} />
@@ -235,7 +235,7 @@ function FeedCardItem({
               style={{
                 position: 'absolute', top: '50%', left: '8px', transform: 'translateY(-50%)',
                 border: 'none', borderRadius: '50%', width: '28px', height: '28px',
-                backgroundColor: 'rgba(15,23,42,0.65)', color: '#FFF',
+                backgroundColor: 'rgba(61,53,48,0.7)', color: '#FFF',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer', zIndex: 10, backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
                 pointerEvents: 'auto',
@@ -253,7 +253,7 @@ function FeedCardItem({
               style={{
                 position: 'absolute', top: '50%', right: '8px', transform: 'translateY(-50%)',
                 border: 'none', borderRadius: '50%', width: '28px', height: '28px',
-                backgroundColor: 'rgba(15,23,42,0.65)', color: '#FFF',
+                backgroundColor: 'rgba(61,53,48,0.7)', color: '#FFF',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer', zIndex: 10, backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
                 pointerEvents: 'auto',
@@ -273,7 +273,7 @@ function FeedCardItem({
             style={{
               position: 'absolute', bottom: '8px', left: '50%', transform: 'translateX(-50%)',
               display: 'flex', alignItems: 'center', gap: '4px', zIndex: 10,
-              backgroundColor: 'rgba(15,23,42,0.5)', padding: '3px 8px', borderRadius: '999px',
+              backgroundColor: 'rgba(61,53,48,0.6)', padding: '3px 8px', borderRadius: '999px',
               backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', pointerEvents: 'auto'
             }}
           >
@@ -285,7 +285,7 @@ function FeedCardItem({
                   width: currentSlideIndex === idx ? '14px' : '5px',
                   height: '5px',
                   borderRadius: '999px',
-                  backgroundColor: currentSlideIndex === idx ? '#60A5FA' : 'rgba(255,255,255,0.6)',
+                  backgroundColor: currentSlideIndex === idx ? '#C67D5B' : 'rgba(255,255,255,0.6)',
                   cursor: 'pointer',
                   transition: 'all 0.25s var(--ease-quiet)'
                 }}
@@ -309,36 +309,45 @@ function FeedCardItem({
               width: '100%',
               height: '100%',
               objectFit: 'cover',
-              opacity: isHovered && currentSlideIndex === 0 ? 1 : 0,
-              transition: 'opacity 0.4s ease',
-              pointerEvents: 'none',
-              zIndex: 2
+              zIndex: 2,
+              pointerEvents: 'none'
             }}
           />
         )}
 
-        {item.isBoosted && (
-          <span className="sponsored-badge" style={{ position: 'absolute', top: '12px', right: '12px', backgroundColor: '#F59E0B', color: '#FFF', fontSize: '11px', fontWeight: '800', padding: '6px 10px', borderRadius: '10px', boxShadow: '0 6px 16px rgba(245,158,11,0.45)', zIndex: 4 }}>
-            🔥 Sponsorisé
-          </span>
-        )}
+        {/* BADGES DISTINCTIFS SUR L'IMAGE */}
         {item.urgent && (
-          <span style={{ position: 'absolute', top: '12px', left: '12px', backgroundColor: 'rgba(239,68,68,0.95)', color: '#FFF', fontSize: '10px', fontWeight: '800', padding: '5px 9px', borderRadius: '10px', boxShadow: '0 6px 16px rgba(239,68,68,0.35)', zIndex: 4 }}>
+          <span style={{
+            position: 'absolute',
+            top: '12px',
+            left: '12px',
+            backgroundColor: '#C67D5B',
+            color: '#FFF',
+            fontSize: '10px',
+            fontWeight: '900',
+            padding: '4px 8px',
+            borderRadius: '8px',
+            boxShadow: '0 4px 12px rgba(198,125,91,0.4)',
+            zIndex: 4,
+            letterSpacing: '0.05em'
+          }}>
             URGENT
           </span>
         )}
-        {(item.isDemo || (typeof item.id === 'number' && item.id <= 20)) && (
+
+        {item.isDemo && (
           <span style={{
             position: 'absolute',
-            top: item.urgent ? '42px' : '12px',
-            left: '12px',
-            backgroundColor: darkMode ? 'rgba(126,34,206,0.9)' : '#7E22CE',
-            color: '#FFF',
-            fontSize: '9.5px',
+            top: '12px',
+            left: item.urgent ? 'auto' : '12px',
+            right: item.urgent ? '12px' : 'auto',
+            backgroundColor: 'rgba(107,94,84,0.92)',
+            color: '#FAF7F2',
+            fontSize: '10px',
             fontWeight: '800',
             padding: '4px 8px',
             borderRadius: '8px',
-            boxShadow: '0 4px 12px rgba(126,34,206,0.35)',
+            boxShadow: '0 4px 12px rgba(61,53,48,0.3)',
             zIndex: 4,
             display: 'flex',
             alignItems: 'center',
@@ -350,12 +359,12 @@ function FeedCardItem({
         )}
 
         {item.isBoosted && (
-          <span style={{ position: 'absolute', top: '12px', left: (item.urgent || item.isDemo) ? 'auto' : '12px', right: (item.urgent || item.isDemo) ? '12px' : 'auto', backgroundColor: '#F59E0B', color: '#FFF', fontSize: '10px', fontWeight: '900', padding: '4px 8px', borderRadius: '8px', zIndex: 4, letterSpacing: '0.05em' }}>
+          <span style={{ position: 'absolute', top: '12px', left: (item.urgent || item.isDemo) ? 'auto' : '12px', right: (item.urgent || item.isDemo) ? '12px' : 'auto', backgroundColor: '#C67D5B', color: '#FFF', fontSize: '10px', fontWeight: '900', padding: '4px 8px', borderRadius: '8px', zIndex: 4, letterSpacing: '0.05em' }}>
             TOP VISIBILITÉ
           </span>
         )}
 
-        <span style={{ position: 'absolute', bottom: '12px', right: '12px', backgroundColor: 'rgba(4,38,90,0.95)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', color: '#FFF', fontSize: '11px', fontWeight: 'bold', padding: '5px 9px', borderRadius: '10px', zIndex: 4 }}>
+        <span style={{ position: 'absolute', bottom: '12px', right: '12px', backgroundColor: 'rgba(61,53,48,0.92)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', color: '#FAF7F2', fontSize: '11px', fontWeight: 'bold', padding: '5px 9px', borderRadius: '10px', zIndex: 4 }}>
           {formatCompensation(item.compensation)}
         </span>
       </div>
@@ -363,7 +372,7 @@ function FeedCardItem({
       {/* CORPS DE CARTE & TYPOGRAPHIE ÉDITORIALE */}
       <div style={{ padding: '16px 18px' }}>
         <div>
-          <h3 className="font-sans" style={{ fontSize: '15.5px', fontWeight: '800', color: darkMode ? '#FFFFFF' : '#111827', margin: '0 0 4px 0', lineHeight: 1.35, letterSpacing: '-0.02em', cursor: 'pointer' }}>
+          <h3 className="font-editorial-heading" style={{ fontSize: '18px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530', margin: '0 0 4px 0', lineHeight: 1.3, letterSpacing: '-0.015em', cursor: 'pointer' }}>
             {displayContent.title}
           </h3>
           {currentLang !== (item.nativeLang || 'FR') && (
@@ -373,7 +382,7 @@ function FeedCardItem({
               style={{
                 border: 'none',
                 backgroundColor: 'transparent',
-                color: darkMode ? '#60A5FA' : '#04265A',
+                color: darkMode ? '#E8DDD3' : '#C67D5B',
                 fontSize: '11px',
                 fontWeight: '800',
                 cursor: 'pointer',
@@ -390,9 +399,9 @@ function FeedCardItem({
         </div>
 
         {/* LOCALISATION & SOUS-TITRE EN STYLE ÉDITORIAL RAFFINÉ */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '12.5px', color: darkMode ? '#CBD5E1' : '#6B7280', marginBottom: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '12.5px', color: darkMode ? '#D4C5B5' : '#6B5E54', marginBottom: '8px' }}>
           <span className="font-editorial" style={{ display: 'flex', alignItems: 'center', gap: '4px', fontStyle: 'italic' }}>
-            {item.type === 'remote' ? <Video size={13} color={darkMode ? '#60A5FA' : '#04265A'} /> : <MapPin size={13} color={darkMode ? '#60A5FA' : '#04265A'} />}
+            {item.type === 'remote' ? <Video size={13} color={darkMode ? '#E8DDD3' : '#C67D5B'} /> : <MapPin size={13} color={darkMode ? '#E8DDD3' : '#C67D5B'} />}
             {localizeLocation(item.location, currentLang)}
           </span>
         </div>
@@ -401,9 +410,9 @@ function FeedCardItem({
         {displayContent.description && (
           <div
             style={{
-              fontSize: '11.5px',
-              color: darkMode ? '#94A3B8' : '#64748B',
-              lineHeight: 1.45,
+              fontSize: '12px',
+              color: darkMode ? '#D4C5B5' : '#6B5E54',
+              lineHeight: 1.5,
               minHeight: '34px',
               maxHeight: '48px',
               overflow: 'hidden',
@@ -419,7 +428,7 @@ function FeedCardItem({
               <span>
                 {typedText}
                 {typedText.length < (displayContent.description?.slice(0, 110)?.length || 0) && (
-                  <span style={{ color: '#60A5FA', animation: 'pulse 0.8s infinite', fontWeight: '900' }}>|</span>
+                  <span style={{ color: '#C67D5B', animation: 'pulse 0.8s infinite', fontWeight: '900' }}>|</span>
                 )}
               </span>
             ) : (
@@ -430,15 +439,15 @@ function FeedCardItem({
 
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }}>
           {localizeTags((item.tags || generateTags(item.title, item.description || '')), currentLang).slice(0, 3).map(tag => (
-            <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: darkMode ? 'rgba(4,38,90,0.45)' : '#EFF6FF', color: darkMode ? '#93C5FD' : '#04265A', borderRadius: '999px', padding: '4px 10px', fontSize: '10px', fontWeight: '800' }}>
+            <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: darkMode ? 'rgba(198,125,91,0.18)' : '#F5EAE4', color: darkMode ? '#F5EAE4' : '#A8644A', borderRadius: '999px', padding: '4px 10px', fontSize: '10px', fontWeight: '700' }}>
               <Tag size={10} /> {tag}
             </span>
           ))}
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #F3F4F6', gap: '8px', flexWrap: 'wrap' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '7px', fontWeight: '700', fontSize: '13px', color: darkMode ? '#F8FAFC' : '#374151' }}>
-            <img src={item.author === profile.name ? profile.avatar : getAuthorAvatar(item.author)} alt={item.author} style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover', border: darkMode ? '1px solid #60A5FA' : '1px solid #E2E8F0' }} />
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3', gap: '8px', flexWrap: 'wrap' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '7px', fontWeight: '700', fontSize: '13px', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
+            <img src={item.author === profile.name ? profile.avatar : getAuthorAvatar(item.author)} alt={item.author} style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover', border: darkMode ? '1px solid #D4C5B5' : '1px solid #E8DDD3' }} />
             {item.author}
           </span>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -456,7 +465,7 @@ function FeedCardItem({
                   border: 'none',
                   borderRadius: '10px',
                   padding: '7px 10px',
-                  backgroundColor: '#EF4444',
+                  backgroundColor: '#C67D5B',
                   color: '#FFFFFF',
                   fontSize: '11px',
                   fontWeight: '800',
@@ -464,7 +473,7 @@ function FeedCardItem({
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '4px',
-                  boxShadow: '0 4px 10px rgba(239,68,68,0.25)'
+                  boxShadow: '0 4px 10px rgba(198,125,91,0.25)'
                 }}
                 title="Supprimer immédiatement cette annonce (Admin)"
               >
@@ -472,18 +481,18 @@ function FeedCardItem({
               </button>
             )}
             {item.author !== profile.name ? (
-              <button onClick={(event) => { event.stopPropagation(); handleStartDiscussion(item); }} className="premium-button" style={{ backgroundColor: '#04265A', color: '#FFF', border: 'none', padding: '8px 14px', borderRadius: '12px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', boxShadow: '0 6px 14px rgba(4,38,90,0.18)' }}>{t('proposeDealButton')} <ArrowRight size={12} /></button>
+              <button onClick={(event) => { event.stopPropagation(); handleStartDiscussion(item); }} className="premium-button" style={{ background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)', color: '#FFF', border: 'none', padding: '9px 16px', borderRadius: '999px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', boxShadow: '0 6px 16px rgba(198,125,91,0.28)' }}>{t('proposeDealButton')} <ArrowRight size={12} /></button>
             ) : (
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ backgroundColor: '#F3F4F6', color: '#6B7280', border: '1px solid #E5E7EB', padding: '6px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '600' }}>{t('authorAnnc')}</span>
+                <span style={{ backgroundColor: darkMode ? '#231E1B' : '#F5F0E8', color: darkMode ? '#D4C5B5' : '#6B5E54', border: '1px solid #E8DDD3', padding: '6px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '600' }}>{t('authorAnnc')}</span>
                 {onOpenMobileActions && (
                   <button
                     onClick={(e) => { e.stopPropagation(); onOpenMobileActions(item); }}
                     className="premium-button"
                     style={{
-                      border: '1px solid #93C5FD',
-                      backgroundColor: '#EFF6FF',
-                      color: '#04265A',
+                      border: '1px solid #D4C5B5',
+                      backgroundColor: '#FAF7F2',
+                      color: '#3D3530',
                       padding: '6px 10px',
                       borderRadius: '999px',
                       fontSize: '11px',

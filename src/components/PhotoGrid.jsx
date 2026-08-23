@@ -19,8 +19,8 @@ export default function PhotoGrid({
     <div style={{
       padding: '18px',
       borderRadius: '20px',
-      backgroundColor: darkMode ? 'rgba(15, 23, 42, 0.65)' : '#F8FAFC',
-      border: darkMode ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid #E2E8F0',
+      backgroundColor: darkMode ? '#1A1715' : '#FAF7F2',
+      border: darkMode ? '1px solid rgba(232, 221, 211, 0.12)' : '1px solid #E8DDD3',
       display: 'flex',
       flexDirection: 'column',
       gap: '14px',
@@ -29,12 +29,12 @@ export default function PhotoGrid({
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <ImageIcon size={18} color={darkMode ? '#60A5FA' : '#04265A'} />
-            <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: darkMode ? '#FFFFFF' : '#0F172A' }}>
+            <ImageIcon size={18} color="#C67D5B" />
+            <h4 className="font-editorial-heading" style={{ margin: 0, fontSize: '17px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
               {currentLang === 'FR' ? 'Photos de l’annonce' : 'Listing photos'} ({count}/{maxPhotos})
             </h4>
           </div>
-          <p style={{ margin: '4px 0 0', fontSize: '11px', color: darkMode ? '#94A3B8' : '#64748B' }}>
+          <p style={{ margin: '4px 0 0', fontSize: '11px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>
             {currentLang === 'FR'
               ? '4 photos gratuites incluses • Jusqu’à 8 photos pour maximiser vos contacts'
               : '4 free photos included • Up to 8 photos to maximize your reach'}
@@ -50,8 +50,8 @@ export default function PhotoGrid({
               border: 'none',
               borderRadius: '12px',
               padding: '7px 12px',
-              backgroundColor: darkMode ? 'rgba(4, 38, 90, 0.7)' : '#EFF6FF',
-              color: darkMode ? '#93C5FD' : '#04265A',
+              backgroundColor: darkMode ? 'rgba(198, 125, 91, 0.25)' : '#F5EAE4',
+              color: darkMode ? '#FAF7F2' : '#A8644A',
               fontSize: '11px',
               fontWeight: '800',
               cursor: 'pointer',
@@ -73,8 +73,8 @@ export default function PhotoGrid({
           justifyContent: 'space-between',
           padding: '10px 14px',
           borderRadius: '14px',
-          backgroundColor: darkMode ? 'rgba(245, 158, 11, 0.15)' : '#FEF3C7',
-          border: darkMode ? '1px solid rgba(245, 158, 11, 0.4)' : '1px solid #FDE68A',
+          backgroundColor: darkMode ? 'rgba(217, 119, 6, 0.15)' : '#FEF3C7',
+          border: darkMode ? '1px solid rgba(217, 119, 6, 0.4)' : '1px solid #FDE68A',
           color: darkMode ? '#FDE68A' : '#92400E',
           fontSize: '12px',
           fontWeight: '700',
@@ -112,10 +112,10 @@ export default function PhotoGrid({
               borderRadius: '16px',
               overflow: 'hidden',
               border: idx === 0
-                ? (darkMode ? '2px solid #60A5FA' : '2px solid #04265A')
-                : (darkMode ? '1px solid rgba(255, 255, 255, 0.15)' : '1px solid #CBD5E1'),
-              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
-              backgroundColor: '#0F172A',
+                ? '2px solid #C67D5B'
+                : (darkMode ? '1px solid rgba(232, 221, 211, 0.15)' : '1px solid #E8DDD3'),
+              boxShadow: '0 4px 12px rgba(61, 53, 48, 0.08)',
+              backgroundColor: '#1A1715',
             }}
           >
             <img
@@ -135,7 +135,7 @@ export default function PhotoGrid({
                 position: 'absolute',
                 bottom: '6px',
                 left: '6px',
-                backgroundColor: 'rgba(4, 38, 90, 0.92)',
+                backgroundColor: 'rgba(61, 53, 48, 0.92)',
                 backdropFilter: 'blur(4px)',
                 WebkitBackdropFilter: 'blur(4px)',
                 color: '#FFF',
@@ -154,7 +154,7 @@ export default function PhotoGrid({
               position: 'absolute',
               top: '6px',
               left: '6px',
-              backgroundColor: idx < 4 ? 'rgba(15, 23, 42, 0.75)' : 'rgba(217, 119, 6, 0.95)',
+              backgroundColor: idx < 4 ? 'rgba(61, 53, 48, 0.75)' : 'rgba(217, 119, 6, 0.95)',
               color: '#FFF',
               fontSize: '10px',
               fontWeight: '800',
@@ -204,8 +204,8 @@ export default function PhotoGrid({
             width: '100%',
             aspectRatio: '1 / 1',
             borderRadius: '16px',
-            border: darkMode ? '2px dashed rgba(255, 255, 255, 0.25)' : '2px dashed #94A3B8',
-            backgroundColor: darkMode ? 'rgba(30, 41, 59, 0.5)' : '#F1F5F9',
+            border: darkMode ? '2px dashed rgba(232, 221, 211, 0.25)' : '2px dashed #D4C5B5',
+            backgroundColor: darkMode ? '#231E1B' : '#F5F0E8',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -218,8 +218,8 @@ export default function PhotoGrid({
               width: '38px',
               height: '38px',
               borderRadius: '50%',
-              backgroundColor: darkMode ? 'rgba(96, 165, 250, 0.15)' : '#EFF6FF',
-              color: darkMode ? '#60A5FA' : '#04265A',
+              backgroundColor: darkMode ? 'rgba(198, 125, 91, 0.2)' : '#F5EAE4',
+              color: '#C67D5B',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -229,13 +229,13 @@ export default function PhotoGrid({
             <span style={{
               fontSize: '11px',
               fontWeight: '800',
-              color: darkMode ? '#CBD5E1' : '#334155',
+              color: darkMode ? '#FAF7F2' : '#3D3530',
             }}>
               Ajouter photo
             </span>
             <span style={{
               fontSize: '9px',
-              color: darkMode ? '#94A3B8' : '#64748B',
+              color: darkMode ? '#D4C5B5' : '#6B5E54',
             }}>
               {count < 4 ? 'Inclus (gratuit)' : 'Pack (+1,99 €)'}
             </span>

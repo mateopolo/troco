@@ -57,53 +57,53 @@ export default function CookieBanner({
       maxWidth: '640px',
       margin: '0 auto',
       zIndex: 3800,
-      backgroundColor: darkMode ? 'rgba(30, 41, 59, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+      backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
       backdropFilter: 'blur(16px)',
       WebkitBackdropFilter: 'blur(16px)',
-      borderRadius: '20px',
-      padding: '16px 20px',
-      boxShadow: darkMode ? '0 20px 40px rgba(0,0,0,0.6), 0 0 25px rgba(96,165,250,0.15)' : '0 20px 40px rgba(0,0,0,0.15)',
-      border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #E2E8F0',
-      color: darkMode ? '#F8FAFC' : '#0F172A',
+      borderRadius: '24px',
+      padding: '18px 22px',
+      boxShadow: darkMode ? '0 20px 40px rgba(0,0,0,0.8), 0 0 25px rgba(198,125,91,0.15)' : '0 20px 40px rgba(61,53,48,0.18)',
+      border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
+      color: darkMode ? '#FAF7F2' : '#3D3530',
       animation: 'slideUp 0.3s ease-out',
     }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
         <div style={{
-          width: '36px',
-          height: '36px',
-          borderRadius: '10px',
-          backgroundColor: darkMode ? 'rgba(59,130,246,0.2)' : '#EFF6FF',
-          color: darkMode ? '#60A5FA' : '#04265A',
+          width: '40px',
+          height: '40px',
+          borderRadius: '12px',
+          backgroundColor: darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4',
+          color: '#C67D5B',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           flexShrink: 0,
         }}>
-          <ShieldCheck size={20} />
+          <ShieldCheck size={22} />
         </div>
 
         <div style={{ flex: 1 }}>
-          <div style={{ fontSize: '13px', fontWeight: '800', marginBottom: '4px' }}>
+          <div className="font-editorial-heading" style={{ fontSize: '17px', fontWeight: '600', marginBottom: '4px', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
             🍪 Respect de votre vie privée & Cookies
           </div>
-          <p style={{ margin: 0, fontSize: '12px', color: darkMode ? '#94A3B8' : '#64748B', lineHeight: 1.5 }}>
+          <p style={{ margin: 0, fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', lineHeight: 1.5 }}>
             Troco utilise des traceurs nécessaires au bon fonctionnement de la plateforme et à la mesure d'audience anonyme. Vous pouvez personnaliser vos choix à tout moment.
           </p>
 
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '12px' }}>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '14px' }}>
             <button
               onClick={handleAcceptAll}
               className="premium-button"
               style={{
                 border: 'none',
                 borderRadius: '999px',
-                padding: '8px 16px',
-                backgroundColor: '#04265A',
+                padding: '8px 18px',
+                background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)',
                 color: '#FFF',
-                fontWeight: '700',
+                fontWeight: '800',
                 fontSize: '12px',
                 cursor: 'pointer',
-                boxShadow: '0 4px 12px rgba(4,38,90,0.25)',
+                boxShadow: '0 4px 12px rgba(198,125,91,0.25)',
               }}
             >
               Tout accepter
@@ -113,11 +113,11 @@ export default function CookieBanner({
               onClick={handleDeclineAll}
               className="premium-button"
               style={{
-                border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #CBD5E1',
+                border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
                 borderRadius: '999px',
                 padding: '8px 14px',
                 backgroundColor: 'transparent',
-                color: darkMode ? '#CBD5E1' : '#475569',
+                color: darkMode ? '#D4C5B5' : '#6B5E54',
                 fontWeight: '700',
                 fontSize: '12px',
                 cursor: 'pointer',
@@ -137,8 +137,8 @@ export default function CookieBanner({
                   border: 'none',
                   borderRadius: '999px',
                   padding: '8px 12px',
-                  backgroundColor: darkMode ? 'rgba(255,255,255,0.08)' : '#F1F5F9',
-                  color: darkMode ? '#93C5FD' : '#3B82F6',
+                  backgroundColor: darkMode ? 'rgba(232,221,211,0.1)' : '#F5EAE4',
+                  color: '#C67D5B',
                   fontWeight: '700',
                   fontSize: '12px',
                   cursor: 'pointer',
@@ -158,7 +158,7 @@ export default function CookieBanner({
           style={{
             border: 'none',
             background: 'transparent',
-            color: darkMode ? '#94A3B8' : '#94A3B8',
+            color: darkMode ? '#D4C5B5' : '#6B5E54',
             cursor: 'pointer',
             padding: '4px',
           }}

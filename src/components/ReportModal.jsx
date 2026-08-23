@@ -93,7 +93,7 @@ export default function ReportModal({
         position: 'fixed',
         inset: 0,
         zIndex: 99999,
-        backgroundColor: 'rgba(15, 23, 42, 0.75)',
+        backgroundColor: 'rgba(61, 53, 48, 0.72)',
         backdropFilter: 'blur(14px)',
         WebkitBackdropFilter: 'blur(14px)',
         display: 'flex',
@@ -108,12 +108,12 @@ export default function ReportModal({
         style={{
           width: '100%',
           maxWidth: '520px',
-          backgroundColor: darkMode ? '#1E293B' : '#FFFFFF',
+          backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
           borderRadius: '24px',
           padding: '24px',
-          boxShadow: darkMode ? '0 25px 50px -12px rgba(0,0,0,0.6)' : '0 25px 50px -12px rgba(15,23,42,0.15)',
-          border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E2E8F0',
-          color: darkMode ? '#F8FAFC' : '#0F172A',
+          boxShadow: darkMode ? '0 25px 50px -12px rgba(0,0,0,0.8)' : '0 25px 50px -12px rgba(61,53,48,0.2)',
+          border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
+          color: darkMode ? '#FAF7F2' : '#3D3530',
           position: 'relative',
         }}
         onClick={(e) => e.stopPropagation()}
@@ -126,8 +126,8 @@ export default function ReportModal({
             top: '18px',
             right: '18px',
             border: 'none',
-            background: darkMode ? 'rgba(255,255,255,0.1)' : '#F1F5F9',
-            color: darkMode ? '#CBD5E1' : '#64748B',
+            background: darkMode ? 'rgba(232,221,211,0.1)' : '#F5EAE4',
+            color: darkMode ? '#FAF7F2' : '#3D3530',
             borderRadius: '50%',
             width: '32px',
             height: '32px',
@@ -181,8 +181,8 @@ export default function ReportModal({
                 <ShieldAlert size={22} />
               </div>
               <div>
-                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800' }}>Signaler un contenu</h3>
-                <p style={{ margin: '2px 0 0', fontSize: '12px', color: darkMode ? '#94A3B8' : '#64748B' }}>
+                <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530' }}>Signaler un contenu</h3>
+                <p style={{ margin: '2px 0 0', fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>
                   Concerne : <strong>{targetTitle}</strong> {targetAuthor ? `(${targetAuthor})` : ''}
                 </p>
               </div>
@@ -208,7 +208,7 @@ export default function ReportModal({
 
             {/* LISTE DES MOTIFS */}
             <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', marginBottom: '8px', color: darkMode ? '#CBD5E1' : '#334155' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', marginBottom: '8px', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
                 Quel est le problème ?
               </label>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -222,17 +222,17 @@ export default function ReportModal({
                         padding: '12px 14px',
                         borderRadius: '14px',
                         border: isSelected
-                          ? (darkMode ? '2px solid #EF4444' : '2px solid #DC2626')
-                          : (darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E2E8F0'),
+                          ? '2px solid #DC2626'
+                          : (darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3'),
                         backgroundColor: isSelected
-                          ? (darkMode ? 'rgba(239,68,68,0.12)' : '#FEF2F2')
-                          : (darkMode ? 'rgba(15,23,42,0.4)' : '#F8FAFC'),
+                          ? (darkMode ? 'rgba(239,68,68,0.15)' : '#FEF2F2')
+                          : (darkMode ? '#1A1715' : '#FFF'),
                         cursor: 'pointer',
                         transition: 'all 0.2s ease',
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <span style={{ fontSize: '13px', fontWeight: isSelected ? '800' : '700', color: isSelected ? (darkMode ? '#FCA5A5' : '#991B1B') : (darkMode ? '#F1F5F9' : '#0F172A') }}>
+                        <span style={{ fontSize: '13px', fontWeight: isSelected ? '800' : '700', color: isSelected ? (darkMode ? '#FCA5A5' : '#991B1B') : (darkMode ? '#FAF7F2' : '#3D3530') }}>
                           {r.label}
                         </span>
                         <input
@@ -243,7 +243,7 @@ export default function ReportModal({
                           style={{ accentColor: '#DC2626', cursor: 'pointer' }}
                         />
                       </div>
-                      <div style={{ fontSize: '11px', color: darkMode ? '#94A3B8' : '#64748B', marginTop: '4px' }}>
+                      <div style={{ fontSize: '11px', color: darkMode ? '#D4C5B5' : '#6B5E54', marginTop: '4px' }}>
                         {r.desc}
                       </div>
                     </div>
@@ -254,7 +254,7 @@ export default function ReportModal({
 
             {/* DÉTAILS COMPLÉMENTAIRES */}
             <div>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', marginBottom: '6px', color: darkMode ? '#CBD5E1' : '#334155' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', marginBottom: '6px', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
                 Détails complémentaires (facultatif) :
               </label>
               <textarea
@@ -267,9 +267,9 @@ export default function ReportModal({
                   padding: '10px 12px',
                   borderRadius: '12px',
                   fontSize: '13px',
-                  backgroundColor: darkMode ? 'rgba(15,23,42,0.7)' : '#FFFFFF',
-                  color: darkMode ? '#F8FAFC' : '#0F172A',
-                  border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #CBD5E1',
+                  backgroundColor: darkMode ? '#1A1715' : '#FFFFFF',
+                  color: darkMode ? '#FAF7F2' : '#3D3530',
+                  border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
                   outline: 'none',
                   resize: 'none',
                 }}
@@ -285,9 +285,9 @@ export default function ReportModal({
                   flex: 1,
                   padding: '12px',
                   borderRadius: '14px',
-                  border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #D1D5DB',
+                  border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
                   background: 'transparent',
-                  color: darkMode ? '#CBD5E1' : '#475569',
+                  color: darkMode ? '#D4C5B5' : '#6B5E54',
                   fontWeight: '700',
                   fontSize: '13px',
                   cursor: 'pointer',

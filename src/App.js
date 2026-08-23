@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Search, MapPin, Video, Star, Globe, Filter, MessageSquare, PlusCircle, User, ShieldCheck, Clock, CheckCircle, X, Sparkles, Coins, Plus, Trash2, Camera, Pencil, Mic, PhoneOff, Flame, History, Check, Lock, CreditCard, Tag, Phone, UserPlus, ChevronLeft, ChevronRight, ChevronUp, Eye, EyeOff, Minimize2, MicOff, VideoOff, Sun, Moon, Upload, Repeat, SwitchCamera, LogOut, Scale, ShieldAlert, FileText, Monitor, MonitorOff, Crown, GripHorizontal, Image as ImageIcon } from 'lucide-react';
+import { Search, MapPin, Video, Star, Globe, Filter, MessageSquare, PlusCircle, User, ShieldCheck, Clock, CheckCircle, X, Sparkles, Coins, Plus, Trash2, Camera, Pencil, Mic, PhoneOff, Flame, History, Check, Lock, CreditCard, Tag, Phone, UserPlus, ChevronLeft, ChevronRight, ChevronUp, Eye, EyeOff, Minimize2, MicOff, VideoOff, Sun, Moon, Upload, Repeat, SwitchCamera, LogOut, Scale, ShieldAlert, FileText, Monitor, MonitorOff, Crown, GripHorizontal, Mail, Image as ImageIcon } from 'lucide-react';
 import { auth, db } from './firebase';
 import { collection, addDoc, doc, updateDoc, serverTimestamp, onSnapshot, query, orderBy, setDoc, deleteDoc, getDoc, getDocs, where, increment, runTransaction } from 'firebase/firestore';
 import { RecaptchaVerifier, signInWithPhoneNumber, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, GoogleAuthProvider, GithubAuthProvider, FacebookAuthProvider, OAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
@@ -3115,10 +3115,10 @@ export default function App() {
 
   // ---- HISTORIQUE DES SWAPS & DEALS ----
   const statusStyles = {
-    'Clôturé': { bg: '#ECFDF5', text: '#059669' },
-    'En cours': { bg: '#EFF6FF', text: '#04265A' },
-    'Planifié': { bg: '#FFFBEB', text: '#D97706' },
-    'En attente': { bg: '#F3F4F6', text: '#6B7280' },
+    'Clôturé': { bg: '#EBF0E6', text: '#3D4A35' },
+    'En cours': { bg: '#F5EAE4', text: '#A8644A' },
+    'Planifié': { bg: '#FEF3C7', text: '#92400E' },
+    'En attente': { bg: '#F5F0E8', text: '#6B5E54' },
   };
 
   const swapHistory = [
@@ -4661,57 +4661,57 @@ export default function App() {
     const isMine = sender === 'me';
     const isIncoming = sender === 'them';
     return (
-      <div style={{ width: '100%', border: '1px solid #99F6E4', borderRadius: '16px', padding: '12px', backgroundColor: '#F0FDFA', boxShadow: '0 8px 20px rgba(4,38,90,0.08)', animation: 'fadeSlideUp 0.35s ease both' }}>
+      <div style={{ width: '100%', border: '1px solid #E8DDD3', borderRadius: '16px', padding: '12px', backgroundColor: darkMode ? '#231E1B' : '#FAF7F2', boxShadow: '0 8px 20px rgba(61,53,48,0.06)', animation: 'fadeSlideUp 0.35s ease both' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', gap: '8px', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '800', color: '#04265A' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '800', color: '#C67D5B' }}>
             <Sparkles size={14} /> {isMine ? 'Ma contre-proposition' : 'Contre-proposition reçue'}
           </div>
           {status === 'pending' && isMine && (
-            <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: '#F3F4F6', color: '#6B7280', padding: '4px 9px', borderRadius: '999px' }}>
+            <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', color: darkMode ? '#D4C5B5' : '#6B5E54', padding: '4px 9px', borderRadius: '999px' }}>
               En attente de la réponse de {otherName}
             </span>
           )}
           {status === 'pending' && isIncoming && (
-            <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: '#FFFBEB', color: '#D97706', padding: '4px 9px', borderRadius: '999px' }}>En attente de ta réponse</span>
+            <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: '#FEF3C7', color: '#92400E', padding: '4px 9px', borderRadius: '999px' }}>En attente de ta réponse</span>
           )}
-          {status === 'accepted' && <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: '#EFF6FF', color: '#04265A', padding: '4px 9px', borderRadius: '999px' }}>Acceptée • Paiement en cours</span>}
-          {status === 'confirmed' && <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: '#D1FAE5', color: '#059669', padding: '4px 9px', borderRadius: '999px' }}>Deal validé ✓</span>}
-          {status === 'declined' && <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: '#F3F4F6', color: '#6B7280', padding: '4px 9px', borderRadius: '999px' }}>{isMine ? 'Refusée par l\'autre partie' : 'Refusée'}</span>}
+          {status === 'accepted' && <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: '#F5EAE4', color: '#A8644A', padding: '4px 9px', borderRadius: '999px' }}>Acceptée • Paiement en cours</span>}
+          {status === 'confirmed' && <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: '#EBF0E6', color: '#3D4A35', padding: '4px 9px', borderRadius: '999px' }}>Deal validé ✓</span>}
+          {status === 'declined' && <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', color: '#EF4444', padding: '4px 9px', borderRadius: '999px' }}>{isMine ? 'Refusée par l\'autre partie' : 'Refusée'}</span>}
         </div>
-        <div style={{ fontSize: '13px', color: '#334155', lineHeight: 1.5, marginBottom: '10px' }}>{terms.conditions}</div>
+        <div style={{ fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54', lineHeight: 1.5, marginBottom: '10px' }}>{terms.conditions}</div>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '10px' }}>
           {terms.durationType && (
-            <span style={{ backgroundColor: '#FFFFFF', border: '1px solid #93C5FD', color: '#1E40AF', borderRadius: '999px', padding: '5px 11px', fontSize: '12px', fontWeight: '800' }}>
+            <span style={{ backgroundColor: darkMode ? '#1A1715' : '#FFFFFF', border: '1px solid #E8DDD3', color: '#C67D5B', borderRadius: '999px', padding: '5px 11px', fontSize: '12px', fontWeight: '800' }}>
               ⏱️ {terms.durationType === 'hourly' ? `${terms.durationValue || 1} heure(s)` : terms.durationType === 'daily' ? `${terms.durationValue || 1} jour(s)` : terms.durationType === 'monthly' ? `${terms.durationValue || 1} mois` : terms.durationType === 'fixed' ? 'Forfait global' : 'Durée libre'}
             </span>
           )}
-          {terms.euroAmount > 0 && <span style={{ backgroundColor: '#FFFFFF', border: '1px solid #A7F3D0', color: '#1D4ED8', borderRadius: '999px', padding: '5px 11px', fontSize: '12px', fontWeight: '800' }}>💶 {terms.euroAmount}€</span>}
-          {terms.trocoTokens > 0 && <span style={{ backgroundColor: '#FFFFFF', border: '1px solid #A7F3D0', color: '#1D4ED8', borderRadius: '999px', padding: '5px 11px', fontSize: '12px', fontWeight: '800' }}>🪙 {terms.trocoTokens} Jeton{terms.trocoTokens > 1 ? 's' : ''}</span>}
-          {terms.euroAmount === 0 && terms.trocoTokens === 0 && <span style={{ backgroundColor: '#FFFFFF', border: '1px solid #A7F3D0', color: '#1D4ED8', borderRadius: '999px', padding: '5px 11px', fontSize: '12px', fontWeight: '800' }}>🤝 Troc direct</span>}
+          {terms.euroAmount > 0 && <span style={{ backgroundColor: darkMode ? '#1A1715' : '#FFFFFF', border: '1px solid #E8DDD3', color: '#C67D5B', borderRadius: '999px', padding: '5px 11px', fontSize: '12px', fontWeight: '800' }}>💶 {terms.euroAmount}€</span>}
+          {terms.trocoTokens > 0 && <span style={{ backgroundColor: darkMode ? '#1A1715' : '#FFFFFF', border: '1px solid #E8DDD3', color: '#C67D5B', borderRadius: '999px', padding: '5px 11px', fontSize: '12px', fontWeight: '800' }}>🪙 {terms.trocoTokens} Jeton{terms.trocoTokens > 1 ? 's' : ''}</span>}
+          {terms.euroAmount === 0 && terms.trocoTokens === 0 && <span style={{ backgroundColor: darkMode ? '#1A1715' : '#FFFFFF', border: '1px solid #E8DDD3', color: '#C67D5B', borderRadius: '999px', padding: '5px 11px', fontSize: '12px', fontWeight: '800' }}>🤝 Troc direct</span>}
         </div>
         {status === 'pending' && isIncoming && (
           <div style={{ display: 'flex', gap: '8px' }}>
-            <button onClick={() => handleAcceptDeal(chatId, message.id, terms)} className="premium-button" style={{ flex: 1, border: 'none', borderRadius: '12px', padding: '9px', backgroundColor: '#04265A', color: '#FFF', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}>✓ Accepter</button>
-            <button onClick={() => handleDeclineDeal(chatId, message.id)} className="premium-button" style={{ flex: 1, border: '1px solid #D1D5DB', borderRadius: '12px', padding: '9px', backgroundColor: '#FFFFFF', color: '#6B7280', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}>✕ Refuser</button>
+            <button onClick={() => handleAcceptDeal(chatId, message.id, terms)} className="premium-button" style={{ flex: 1, border: 'none', borderRadius: '12px', padding: '9px', background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)', color: '#FFF', fontSize: '12px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 12px rgba(198,125,91,0.25)' }}>✓ Accepter</button>
+            <button onClick={() => handleDeclineDeal(chatId, message.id)} className="premium-button" style={{ flex: 1, border: '1px solid #E8DDD3', borderRadius: '12px', padding: '9px', backgroundColor: darkMode ? '#1A1715' : '#FFFFFF', color: darkMode ? '#D4C5B5' : '#6B5E54', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}>✕ Refuser</button>
           </div>
         )}
         {status === 'pending' && isMine && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#F8FAFC', border: '1px dashed #E2E8F0', color: '#64748B', borderRadius: '12px', padding: '9px 12px', fontSize: '12px', fontWeight: '700' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', border: '1px dashed #E8DDD3', color: darkMode ? '#D4C5B5' : '#6B5E54', borderRadius: '12px', padding: '9px 12px', fontSize: '12px', fontWeight: '700' }}>
             <Clock size={13} /> En attente de la réponse de {otherName} — tu ne peux pas accepter ta propre proposition.
           </div>
         )}
         {status === 'confirmed' && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#D1FAE5', color: '#1D4ED8', borderRadius: '12px', padding: '9px 12px', fontSize: '12px', fontWeight: '800' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#EBF0E6', color: '#3D4A35', borderRadius: '12px', padding: '9px 12px', fontSize: '12px', fontWeight: '800' }}>
             <CheckCircle size={15} /> Deal confirmé — conditions verrouillées.
           </div>
         )}
         {status === 'declined' && isIncoming && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#F3F4F6', color: '#6B7280', borderRadius: '12px', padding: '9px 12px', fontSize: '12px', fontWeight: '700' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', color: '#EF4444', borderRadius: '12px', padding: '9px 12px', fontSize: '12px', fontWeight: '700' }}>
             Proposition refusée. Tu peux en proposer une nouvelle.
           </div>
         )}
         {status === 'declined' && isMine && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#F3F4F6', color: '#6B7280', borderRadius: '12px', padding: '9px 12px', fontSize: '12px', fontWeight: '700' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', color: '#EF4444', borderRadius: '12px', padding: '9px 12px', fontSize: '12px', fontWeight: '700' }}>
             {otherName} a refusé cette proposition. Tu peux en proposer une nouvelle.
           </div>
         )}
@@ -4721,8 +4721,8 @@ export default function App() {
 
   const paymentMethods = [
     { key: 'applePay', label: 'Apple Pay', sub: 'Paiement instantané et sécurisé', icon: <span style={{ backgroundColor: '#000000', color: '#FFF', borderRadius: '7px', padding: '3px 8px', fontSize: '12px', fontWeight: '800', fontStyle: 'italic' }}> Pay</span> },
-    { key: 'card', label: 'Carte bancaire', sub: 'Visa • Mastercard • Amex', icon: <CreditCard size={18} color="#04265A" /> },
-    { key: 'troco', label: 'Solde Troco / Virement', sub: 'Utiliser mes jetons ou virement SEPA', icon: <Coins size={18} color="#04265A" /> },
+    { key: 'card', label: 'Carte bancaire', sub: 'Visa • Mastercard • Amex', icon: <CreditCard size={18} color="#C67D5B" /> },
+    { key: 'troco', label: 'Solde Troco / Virement', sub: 'Utiliser mes jetons ou virement SEPA', icon: <Coins size={18} color="#C67D5B" /> },
   ];
 
   // ---- GESTION PROFIL (ÉDITION & SAUVEGARDE SUR FIRESTORE USERS/{UID}) ----
@@ -5203,10 +5203,10 @@ export default function App() {
 
   if (isLoadingSession) {
     return (
-      <div style={{ minHeight: '100vh', backgroundColor: darkMode ? '#0B1120' : '#F5F5F7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif" }}>
+      <div style={{ minHeight: '100vh', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif" }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
-          <div style={{ width: '40px', height: '40px', border: '3px solid rgba(20,184,166,0.15)', borderTop: '3px solid #14B8A6', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }}></div>
-          <div style={{ color: darkMode ? '#94A3B8' : '#64748B', fontSize: '13px', fontWeight: '600' }}>Vérification de la session...</div>
+          <div style={{ width: '40px', height: '40px', border: '3px solid rgba(198,125,91,0.15)', borderTop: '3px solid #C67D5B', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }}></div>
+          <div style={{ color: darkMode ? '#D4C5B5' : '#6B5E54', fontSize: '13px', fontWeight: '600' }}>Vérification de la session...</div>
         </div>
       </div>
     );
@@ -5214,7 +5214,7 @@ export default function App() {
 
   if (!isAuthenticated) {
     return (
-      <div style={{ minHeight: '100vh', background: darkMode ? '#0B1120' : 'linear-gradient(160deg, #F5F5F7 0%, #E8F7F1 100%)', color: darkMode ? '#F8FAFC' : '#0F172A', fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif", display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', position: 'relative', transition: 'background 0.3s ease' }}>
+      <div style={{ minHeight: '100vh', background: darkMode ? '#1A1715' : '#F5F0E8', color: darkMode ? '#FAF7F2' : '#3D3530', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', position: 'relative', transition: 'background 0.3s ease' }}>
 
         {/* BOUTON SWITCH MODE SOMBRE / CLAIR */}
         <button
@@ -5222,54 +5222,54 @@ export default function App() {
           title={darkMode ? "Activer le mode clair" : "Activer le mode sombre"}
           style={{
             position: 'absolute', top: '24px', right: '24px',
-            border: 'none', borderRadius: '50%', width: '42px', height: '42px',
-            backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(255,255,255,0.85)',
-            color: darkMode ? '#F59E0B' : '#04265A',
+            border: darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #E8DDD3', borderRadius: '50%', width: '42px', height: '42px',
+            backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
+            color: darkMode ? '#F59E0B' : '#6B5E54',
             cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 8px 24px rgba(0,0,0,0.06)', transition: 'all 0.25s ease', zIndex: 50
+            boxShadow: '0 8px 24px rgba(61,53,48,0.08)', transition: 'all 0.25s ease', zIndex: 50
           }}
         >
           {darkMode ? <Sun size={20} /> : <Moon size={20} />}
         </button>
 
         <div id="recaptcha-container"></div>
-        <div style={{ width: '100%', maxWidth: '520px', backgroundColor: darkMode ? 'rgba(30,41,59,0.85)' : 'rgba(255,255,255,0.75)', backdropFilter: 'blur(24px) saturate(180%)', WebkitBackdropFilter: 'blur(24px) saturate(180%)', borderRadius: '28px', boxShadow: darkMode ? '0 24px 60px rgba(0, 0, 0, 0.35)' : '0 24px 60px rgba(15, 23, 42, 0.10)', border: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(255,255,255,0.7)', overflow: 'hidden', transition: 'all 0.3s ease' }}>
+        <div style={{ width: '100%', maxWidth: '520px', backgroundColor: darkMode ? '#231E1B' : '#FAF7F2', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', borderRadius: '28px', boxShadow: darkMode ? '0 24px 60px rgba(0, 0, 0, 0.45)' : '0 24px 60px rgba(61, 53, 48, 0.08)', border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3', overflow: 'hidden', transition: 'all 0.3s ease' }}>
 
           {/* SÉLECTEUR D'ONGLETS CONNEXION / INSCRIPTION */}
-          <div style={{ display: 'flex', borderBottom: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(226,232,240,0.8)' }}>
+          <div style={{ display: 'flex', borderBottom: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3' }}>
             <button
               onClick={() => { setAuthTab('login'); setAuthError(''); }}
-              style={{ flex: 1, padding: '16px', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '15px', fontWeight: '800', color: authTab === 'login' ? (darkMode ? '#60A5FA' : '#04265A') : (darkMode ? '#94A3B8' : '#94A3B8'), borderBottom: authTab === 'login' ? (darkMode ? '3px solid #60A5FA' : '3px solid #04265A') : '3px solid transparent', transition: 'all 0.2s ease' }}
+              style={{ flex: 1, padding: '16px', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '15px', fontWeight: '800', color: authTab === 'login' ? '#C67D5B' : (darkMode ? '#9A8E84' : '#6B5E54'), borderBottom: authTab === 'login' ? '3px solid #C67D5B' : '3px solid transparent', transition: 'all 0.2s ease' }}
             >
               Se connecter
             </button>
             <button
               onClick={() => { setAuthTab('signup'); setAuthError(''); }}
-              style={{ flex: 1, padding: '16px', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '15px', fontWeight: '800', color: authTab === 'signup' ? (darkMode ? '#60A5FA' : '#04265A') : (darkMode ? '#94A3B8' : '#94A3B8'), borderBottom: authTab === 'signup' ? (darkMode ? '3px solid #60A5FA' : '3px solid #04265A') : '3px solid transparent', transition: 'all 0.2s ease' }}
+              style={{ flex: 1, padding: '16px', border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '15px', fontWeight: '800', color: authTab === 'signup' ? '#C67D5B' : (darkMode ? '#9A8E84' : '#6B5E54'), borderBottom: authTab === 'signup' ? '3px solid #C67D5B' : '3px solid transparent', transition: 'all 0.2s ease' }}
             >
               Créer un compte
             </button>
           </div>
 
           <div style={{ padding: '28px 28px 18px' }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', padding: '8px 12px', borderRadius: '999px', backgroundColor: darkMode ? 'rgba(4,38,90,0.6)' : '#EFF6FF', color: darkMode ? '#93C5FD' : '#04265A', fontSize: '12px', fontWeight: '700', marginBottom: '14px' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', padding: '8px 12px', borderRadius: '999px', backgroundColor: darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4', color: darkMode ? '#FAF7F2' : '#A8644A', fontSize: '12px', fontWeight: '700', marginBottom: '14px' }}>
               <Sparkles size={14} style={{ marginRight: '6px' }} />
               {authTab === 'login' ? 'Bienvenue sur Troco' : 'Rejoindre la communauté'}
             </div>
-            <h1 style={{ fontSize: '28px', fontWeight: '800', margin: '0 0 12px', color: darkMode ? '#FFFFFF' : '#111827', letterSpacing: '-0.02em', lineHeight: 1.25 }}>
+            <h1 className="font-editorial-heading" style={{ fontSize: '28px', fontWeight: '600', margin: '0 0 12px', color: darkMode ? '#FAF7F2' : '#3D3530', letterSpacing: '-0.02em', lineHeight: 1.25 }}>
               {authTab === 'login' ? 'Échange, partage, crée sans limites.' : 'Créez votre compte Troco.'}
             </h1>
-            <p style={{ margin: 0, fontSize: '14px', lineHeight: 1.7, color: darkMode ? '#94A3B8' : '#64748B' }}>
+            <p style={{ margin: 0, fontSize: '14px', lineHeight: 1.7, color: darkMode ? '#D4C5B5' : '#6B5E54' }}>
               {authTab === 'login'
-                ? 'Troco réinvente les services, les swaps et les prêts avec une expérience premium multi-plateforme pensée pour les échanges humains.'
-                : 'Créez un profil personnalisé premium pour proposer vos compétences et négocier des échanges.'
+                ? 'Troco réinvente les services, les swaps et les prêts avec une expérience premium pensée pour les échanges humains.'
+                : 'Créez un profil personnalisé pour proposer vos compétences et négocier des échanges.'
               }
             </p>
           </div>
 
           <div style={{ padding: '0 28px 28px' }}>
             {authError && (
-              <div style={{ marginBottom: '14px', padding: '10px 14px', borderRadius: '12px', backgroundColor: '#FEF2F2', color: '#991B1B', fontSize: '12px', fontWeight: '600' }}>
+              <div style={{ marginBottom: '14px', padding: '10px 14px', borderRadius: '12px', backgroundColor: darkMode ? '#2D1B1B' : '#FEF2F2', color: '#DC2626', fontSize: '12px', fontWeight: '600', border: '1px solid #FECACA' }}>
                 {authError}
               </div>
             )}
@@ -5284,12 +5284,12 @@ export default function App() {
                       onClick={handleGoogleSignIn}
                       disabled={authLoading}
                       style={{
-                        border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(226,232,240,0.9)',
+                        border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
                         borderRadius: '16px', padding: '13px 14px',
-                        backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : 'rgba(255,255,255,0.9)',
-                        boxShadow: '0 10px 20px -6px rgba(0,0,0,0.08)', cursor: authLoading ? 'not-allowed' : 'pointer',
+                        backgroundColor: darkMode ? '#1A1715' : '#FFFFFF',
+                        boxShadow: '0 4px 14px rgba(61,53,48,0.05)', cursor: authLoading ? 'not-allowed' : 'pointer',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
-                        fontWeight: '700', color: darkMode ? '#F8FAFC' : '#111827'
+                        fontWeight: '700', color: darkMode ? '#FAF7F2' : '#3D3530'
                       }}
                     >
                       <svg width="20" height="20" viewBox="0 0 24 24">
@@ -5306,11 +5306,11 @@ export default function App() {
                       onClick={handleMicrosoftSignIn}
                       disabled={authLoading}
                       style={{
-                        border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(226,232,240,0.9)',
+                        border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
                         borderRadius: '16px', padding: '13px 14px',
-                        backgroundColor: darkMode ? '#1E293B' : '#F8FAFC',
-                        color: darkMode ? '#FFFFFF' : '#1E293B',
-                        boxShadow: '0 10px 20px -6px rgba(0,0,0,0.08)', cursor: authLoading ? 'not-allowed' : 'pointer',
+                        backgroundColor: darkMode ? '#1A1715' : '#FFFFFF',
+                        color: darkMode ? '#FAF7F2' : '#3D3530',
+                        boxShadow: '0 4px 14px rgba(61,53,48,0.05)', cursor: authLoading ? 'not-allowed' : 'pointer',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
                         fontWeight: '700'
                       }}
@@ -5333,7 +5333,7 @@ export default function App() {
                         borderRadius: '16px', padding: '13px 14px',
                         backgroundColor: '#1877F2',
                         color: '#FFFFFF',
-                        boxShadow: '0 10px 20px -6px rgba(24,119,242,0.35)', cursor: authLoading ? 'not-allowed' : 'pointer',
+                        boxShadow: '0 8px 18px rgba(24,119,242,0.25)', cursor: authLoading ? 'not-allowed' : 'pointer',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
                         fontWeight: '700'
                       }}
@@ -5344,64 +5344,51 @@ export default function App() {
                       Continuer avec Facebook
                     </button>
 
-                    {/* BOUTON GITHUB */}
+                    {/* BOUTON TÉLÉPHONE */}
                     <button
-                      onClick={handleGithubSignIn}
+                      onClick={() => { setAuthStep('phone'); setAuthError(''); }}
                       disabled={authLoading}
                       style={{
-                        border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(226,232,240,0.9)',
+                        border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
                         borderRadius: '16px', padding: '13px 14px',
-                        backgroundColor: darkMode ? '#0D1117' : '#24292F',
-                        color: '#FFFFFF',
-                        boxShadow: '0 10px 20px -6px rgba(0,0,0,0.15)', cursor: authLoading ? 'not-allowed' : 'pointer',
+                        backgroundColor: darkMode ? '#1A1715' : '#FFFFFF',
+                        color: darkMode ? '#FAF7F2' : '#3D3530',
+                        boxShadow: '0 4px 14px rgba(61,53,48,0.05)', cursor: authLoading ? 'not-allowed' : 'pointer',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
                         fontWeight: '700'
                       }}
                     >
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-                        <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
-                      </svg>
-                      Continuer avec GitHub
+                      <Phone size={18} color="#C67D5B" />
+                      Continuer avec mon Numéro
                     </button>
 
-                    {/* BOUTON TÉLÉPHONE (SMS) */}
-                    <button
-                      onClick={() => { setAuthStep('phone'); setAuthError(''); }}
-                      style={{
-                        border: 'none', borderRadius: '16px', padding: '13px 14px',
-                        background: 'linear-gradient(135deg, #04265A 0%, #14B8A6 100%)', color: '#FFF',
-                        cursor: 'pointer', fontWeight: '700',
-                        boxShadow: '0 12px 20px -6px rgba(4, 38, 90, 0.25)',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
-                      }}
-                    >
-                      <Phone size={18} /> Se connecter par Téléphone (SMS)
-                    </button>
-
-                    {/* BOUTON EMAIL / MOT DE PASSE OU MAGIC LINK */}
+                    {/* BOUTON EMAIL */}
                     <button
                       onClick={() => { setAuthStep('email'); setAuthError(''); }}
+                      disabled={authLoading}
                       style={{
-                        border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(226,232,240,0.9)',
+                        border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
                         borderRadius: '16px', padding: '13px 14px',
-                        backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : 'rgba(255,255,255,0.9)',
-                        boxShadow: '0 10px 20px -6px rgba(0,0,0,0.08)', cursor: 'pointer',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                        fontWeight: '700', color: darkMode ? '#F8FAFC' : '#111827'
+                        backgroundColor: darkMode ? '#1A1715' : '#FFFFFF',
+                        color: darkMode ? '#FAF7F2' : '#3D3530',
+                        boxShadow: '0 4px 14px rgba(61,53,48,0.05)', cursor: authLoading ? 'not-allowed' : 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+                        fontWeight: '700'
                       }}
                     >
-                      <span>📧</span> Se connecter par Email & Mot de passe
+                      <Mail size={18} color="#C67D5B" />
+                      Continuer avec un Email
                     </button>
 
-                    {/* BOUTON DÉMO RAPIDE */}
+                    {/* ACCÈS DÉMO RAPIDE */}
                     <button
-                      onClick={() => handleConfirmDemoAuth('Démo Rapide')}
+                      onClick={handleConfirmDemoAuth}
                       style={{
-                        border: darkMode ? '1px dashed rgba(255,255,255,0.2)' : '1px dashed #CBD5E1',
+                        border: darkMode ? '1px dashed rgba(232,221,211,0.25)' : '1px dashed #D4C5B5',
                         borderRadius: '16px', padding: '10px 14px',
-                        backgroundColor: darkMode ? 'rgba(15,23,42,0.5)' : '#F8FAFC',
+                        backgroundColor: darkMode ? '#1A1715' : '#F5F0E8',
                         cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        gap: '8px', fontWeight: '600', color: darkMode ? '#94A3B8' : '#64748B', fontSize: '12px'
+                        gap: '8px', fontWeight: '700', color: darkMode ? '#D4C5B5' : '#6B5E54', fontSize: '12px'
                       }}
                     >
                       ⚡ Accès Rapide Démo
@@ -5412,18 +5399,18 @@ export default function App() {
                 {/* SOUS-FLUX TÉLÉPHONE (SMS) */}
                 {authStep === 'phone' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px' }}>
-                    <label style={{ fontSize: '13px', fontWeight: '700', color: darkMode ? '#CBD5E1' : '#111827' }}>Numéro de téléphone :</label>
+                    <label style={{ fontSize: '13px', fontWeight: '700', color: darkMode ? '#D4C5B5' : '#3D3530' }}>Numéro de téléphone :</label>
                     <input
                       type="tel"
                       value={authPhoneNumber}
                       onChange={(e) => setAuthPhoneNumber(e.target.value)}
                       placeholder="+33612345678"
-                      style={{ width: '100%', padding: '12px', border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #D1D5DB', borderRadius: '14px', fontSize: '14px', fontWeight: '600', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFFFFF', color: darkMode ? '#F8FAFC' : '#0F172A', outline: 'none' }}
+                      style={{ width: '100%', padding: '12px', border: darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #E8DDD3', borderRadius: '14px', fontSize: '14px', fontWeight: '600', backgroundColor: darkMode ? '#1A1715' : '#FFFFFF', color: darkMode ? '#FAF7F2' : '#3D3530', outline: 'none' }}
                     />
-                    <button disabled={authLoading} onClick={handleSendSms} style={{ border: 'none', borderRadius: '14px', padding: '12px', backgroundColor: '#04265A', color: '#FFF', fontWeight: '700', cursor: authLoading ? 'not-allowed' : 'pointer', opacity: authLoading ? 0.7 : 1 }}>
+                    <button disabled={authLoading} onClick={handleSendSms} style={{ border: 'none', borderRadius: '14px', padding: '12px', backgroundColor: '#C67D5B', color: '#FFF', fontWeight: '700', cursor: authLoading ? 'not-allowed' : 'pointer', opacity: authLoading ? 0.7 : 1 }}>
                       {authLoading ? 'Envoi du SMS...' : 'Envoyer le code par SMS'}
                     </button>
-                    <button onClick={() => { setAuthStep('select'); setAuthError(''); }} style={{ background: 'none', border: 'none', color: '#64748B', fontSize: '12px', cursor: 'pointer', textAlign: 'center' }}>
+                    <button onClick={() => { setAuthStep('select'); setAuthError(''); }} style={{ background: 'none', border: 'none', color: '#6B5E54', fontSize: '12px', cursor: 'pointer', textAlign: 'center' }}>
                       ← Retour aux options
                     </button>
                   </div>
@@ -5431,25 +5418,25 @@ export default function App() {
 
                 {authStep === 'sms-verify' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px' }}>
-                    <div style={{ fontSize: '13px', color: darkMode ? '#CBD5E1' : '#475569' }}>Un SMS contenant un code de confirmation a été envoyé au <strong>{authPhoneNumber}</strong>.</div>
-                    <label style={{ fontSize: '13px', fontWeight: '700', color: darkMode ? '#CBD5E1' : '#111827' }}>Code de confirmation :</label>
+                    <div style={{ fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>Un SMS contenant un code de confirmation a été envoyé au <strong>{authPhoneNumber}</strong>.</div>
+                    <label style={{ fontSize: '13px', fontWeight: '700', color: darkMode ? '#D4C5B5' : '#3D3530' }}>Code de confirmation :</label>
                     <input
                       type="text"
                       value={authSmsCode}
                       onChange={(e) => setAuthSmsCode(e.target.value)}
                       placeholder="123456"
-                      style={{ width: '100%', padding: '12px', border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #D1D5DB', borderRadius: '14px', fontSize: '16px', fontWeight: '700', letterSpacing: '4px', textAlign: 'center', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFFFFF', color: darkMode ? '#F8FAFC' : '#0F172A', outline: 'none' }}
+                      style={{ width: '100%', padding: '12px', border: darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #E8DDD3', borderRadius: '14px', fontSize: '16px', fontWeight: '700', letterSpacing: '4px', textAlign: 'center', backgroundColor: darkMode ? '#1A1715' : '#FFFFFF', color: darkMode ? '#FAF7F2' : '#3D3530', outline: 'none' }}
                     />
-                    <button disabled={authLoading} onClick={handleVerifySmsCode} style={{ border: 'none', borderRadius: '14px', padding: '12px', backgroundColor: '#10B981', color: '#FFF', fontWeight: '700', cursor: authLoading ? 'not-allowed' : 'pointer', opacity: authLoading ? 0.7 : 1 }}>
+                    <button disabled={authLoading} onClick={handleVerifySmsCode} style={{ border: 'none', borderRadius: '14px', padding: '12px', background: 'linear-gradient(135deg, #9CAF88 0%, #7A8F6A 100%)', color: '#FFF', fontWeight: '700', cursor: authLoading ? 'not-allowed' : 'pointer', opacity: authLoading ? 0.7 : 1 }}>
                       {authLoading ? 'Vérification...' : 'Valider et se connecter'}
                     </button>
-                    <button onClick={() => { setAuthStep('phone'); setAuthError(''); }} style={{ background: 'none', border: 'none', color: '#64748B', fontSize: '12px', cursor: 'pointer', textAlign: 'center' }}>
+                    <button onClick={() => { setAuthStep('phone'); setAuthError(''); }} style={{ background: 'none', border: 'none', color: '#6B5E54', fontSize: '12px', cursor: 'pointer', textAlign: 'center' }}>
                       ← Modifier le numéro
                     </button>
                   </div>
                 )}
 
-                {/* SOUS-FLUX EMAIL (MOT DE PASSE OU LIEN MAGIQUE) */}
+                {/* SOUS-FLUX EMAIL */}
                 {authStep === 'email' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px' }}>
                     <div style={{ display: 'flex', gap: '8px', marginBottom: '6px' }}>
@@ -5458,9 +5445,9 @@ export default function App() {
                         onClick={() => setAuthModeEmail('password')}
                         style={{
                           flex: 1, padding: '8px', borderRadius: '10px', fontSize: '12px', fontWeight: '800',
-                          border: authModeEmail === 'password' ? '1px solid #04265A' : '1px solid #E2E8F0',
-                          backgroundColor: authModeEmail === 'password' ? (darkMode ? 'rgba(4,38,90,0.8)' : '#EFF6FF') : 'transparent',
-                          color: authModeEmail === 'password' ? (darkMode ? '#93C5FD' : '#04265A') : (darkMode ? '#94A3B8' : '#64748B'),
+                          border: authModeEmail === 'password' ? '1px solid #C67D5B' : '1px solid #E8DDD3',
+                          backgroundColor: authModeEmail === 'password' ? (darkMode ? 'rgba(198,125,91,0.25)' : '#F5EAE4') : 'transparent',
+                          color: authModeEmail === 'password' ? (darkMode ? '#FAF7F2' : '#A8644A') : (darkMode ? '#D4C5B5' : '#6B5E54'),
                           cursor: 'pointer'
                         }}
                       >
@@ -5471,9 +5458,9 @@ export default function App() {
                         onClick={() => setAuthModeEmail('magic-link')}
                         style={{
                           flex: 1, padding: '8px', borderRadius: '10px', fontSize: '12px', fontWeight: '800',
-                          border: authModeEmail === 'magic-link' ? '1px solid #04265A' : '1px solid #E2E8F0',
-                          backgroundColor: authModeEmail === 'magic-link' ? (darkMode ? 'rgba(4,38,90,0.8)' : '#EFF6FF') : 'transparent',
-                          color: authModeEmail === 'magic-link' ? (darkMode ? '#93C5FD' : '#04265A') : (darkMode ? '#94A3B8' : '#64748B'),
+                          border: authModeEmail === 'magic-link' ? '1px solid #C67D5B' : '1px solid #E8DDD3',
+                          backgroundColor: authModeEmail === 'magic-link' ? (darkMode ? 'rgba(198,125,91,0.25)' : '#F5EAE4') : 'transparent',
+                          color: authModeEmail === 'magic-link' ? (darkMode ? '#FAF7F2' : '#A8644A') : (darkMode ? '#D4C5B5' : '#6B5E54'),
                           cursor: 'pointer'
                         }}
                       >
@@ -5481,39 +5468,39 @@ export default function App() {
                       </button>
                     </div>
 
-                    <label style={{ fontSize: '13px', fontWeight: '700', color: darkMode ? '#CBD5E1' : '#111827' }}>Adresse Email :</label>
+                    <label style={{ fontSize: '13px', fontWeight: '700', color: darkMode ? '#D4C5B5' : '#3D3530' }}>Adresse Email :</label>
                     <input
                       type="email"
                       value={authEmail}
                       onChange={(e) => setAuthEmail(e.target.value)}
                       placeholder="exemple@email.com"
-                      style={{ width: '100%', padding: '12px', border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #D1D5DB', borderRadius: '14px', fontSize: '14px', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFFFFF', color: darkMode ? '#F8FAFC' : '#0F172A', outline: 'none' }}
+                      style={{ width: '100%', padding: '12px', border: darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #E8DDD3', borderRadius: '14px', fontSize: '14px', backgroundColor: darkMode ? '#1A1715' : '#FFFFFF', color: darkMode ? '#FAF7F2' : '#3D3530', outline: 'none' }}
                     />
 
                     {authModeEmail === 'password' && (
                       <>
-                        <label style={{ fontSize: '13px', fontWeight: '700', color: darkMode ? '#CBD5E1' : '#111827' }}>Mot de passe :</label>
+                        <label style={{ fontSize: '13px', fontWeight: '700', color: darkMode ? '#D4C5B5' : '#3D3530' }}>Mot de passe :</label>
                         <input
                           type="password"
                           value={authPassword}
                           onChange={(e) => setAuthPassword(e.target.value)}
                           placeholder="••••••••"
                           onKeyDown={(e) => e.key === 'Enter' && handleEmailPasswordSignIn()}
-                          style={{ width: '100%', padding: '12px', border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #D1D5DB', borderRadius: '14px', fontSize: '14px', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFFFFF', color: darkMode ? '#F8FAFC' : '#0F172A', outline: 'none' }}
+                          style={{ width: '100%', padding: '12px', border: darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #E8DDD3', borderRadius: '14px', fontSize: '14px', backgroundColor: darkMode ? '#1A1715' : '#FFFFFF', color: darkMode ? '#FAF7F2' : '#3D3530', outline: 'none' }}
                         />
-                        <button disabled={authLoading} onClick={handleEmailPasswordSignIn} style={{ border: 'none', borderRadius: '14px', padding: '12px', backgroundColor: '#04265A', color: '#FFF', fontWeight: '700', cursor: authLoading ? 'not-allowed' : 'pointer', opacity: authLoading ? 0.7 : 1 }}>
+                        <button disabled={authLoading} onClick={handleEmailPasswordSignIn} style={{ border: 'none', borderRadius: '14px', padding: '12px', backgroundColor: '#C67D5B', color: '#FFF', fontWeight: '700', cursor: authLoading ? 'not-allowed' : 'pointer', opacity: authLoading ? 0.7 : 1 }}>
                           {authLoading ? 'Connexion en cours...' : 'Se connecter'}
                         </button>
                       </>
                     )}
 
                     {authModeEmail === 'magic-link' && (
-                      <button disabled={authLoading} onClick={handleSendEmailLink} style={{ border: 'none', borderRadius: '14px', padding: '12px', backgroundColor: '#04265A', color: '#FFF', fontWeight: '700', cursor: authLoading ? 'not-allowed' : 'pointer', opacity: authLoading ? 0.7 : 1 }}>
+                      <button disabled={authLoading} onClick={handleSendEmailLink} style={{ border: 'none', borderRadius: '14px', padding: '12px', backgroundColor: '#C67D5B', color: '#FFF', fontWeight: '700', cursor: authLoading ? 'not-allowed' : 'pointer', opacity: authLoading ? 0.7 : 1 }}>
                         {authLoading ? 'Envoi...' : 'Recevoir le lien magique'}
                       </button>
                     )}
 
-                    <button onClick={() => { setAuthStep('select'); setAuthError(''); }} style={{ background: 'none', border: 'none', color: '#64748B', fontSize: '12px', cursor: 'pointer', textAlign: 'center' }}>
+                    <button onClick={() => { setAuthStep('select'); setAuthError(''); }} style={{ background: 'none', border: 'none', color: '#6B5E54', fontSize: '12px', cursor: 'pointer', textAlign: 'center' }}>
                       ← Retour aux options
                     </button>
                   </div>
@@ -5521,9 +5508,9 @@ export default function App() {
 
                 {authStep === 'email-sent' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px', textAlign: 'center' }}>
-                    <div style={{ fontSize: '14px', fontWeight: '700', color: '#04265A' }}>✉️ Vérifiez votre boîte mail</div>
-                    <div style={{ fontSize: '13px', color: darkMode ? '#CBD5E1' : '#475569', lineHeight: 1.6 }}>Un lien de connexion magique a été envoyé à <strong>{authEmail}</strong>. Cliquez dessus depuis votre appareil pour vous connecter.</div>
-                    <button onClick={() => { setAuthStep('select'); setAuthError(''); }} style={{ background: 'none', border: 'none', color: '#64748B', fontSize: '12px', cursor: 'pointer', textAlign: 'center', marginTop: '8px' }}>
+                    <div style={{ fontSize: '14px', fontWeight: '700', color: '#C67D5B' }}>✉️ Vérifiez votre boîte mail</div>
+                    <div style={{ fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54', lineHeight: 1.6 }}>Un lien de connexion magique a été envoyé à <strong>{authEmail}</strong>. Cliquez dessus pour vous connecter.</div>
+                    <button onClick={() => { setAuthStep('select'); setAuthError(''); }} style={{ background: 'none', border: 'none', color: '#6B5E54', fontSize: '12px', cursor: 'pointer', textAlign: 'center', marginTop: '8px' }}>
                       ← Retour aux options
                     </button>
                   </div>
@@ -5537,84 +5524,84 @@ export default function App() {
 
                 {/* NOM COMPLET */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: darkMode ? '#CBD5E1' : '#1E293B', marginBottom: '6px' }}>Nom Complet</label>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: darkMode ? '#D4C5B5' : '#3D3530', marginBottom: '6px' }}>Nom Complet</label>
                   <input
                     type="text"
                     required
                     value={signupName}
                     onChange={(e) => setSignupName(e.target.value)}
                     placeholder="ex: Mateo Polo"
-                    style={{ width: '100%', padding: '12px 14px', border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #D1D5DB', borderRadius: '14px', fontSize: '14px', fontWeight: '600', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFFFFF', color: darkMode ? '#F8FAFC' : '#0F172A', outline: 'none' }}
+                    style={{ width: '100%', padding: '12px 14px', border: darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #E8DDD3', borderRadius: '14px', fontSize: '14px', fontWeight: '600', backgroundColor: darkMode ? '#1A1715' : '#FFFFFF', color: darkMode ? '#FAF7F2' : '#3D3530', outline: 'none' }}
                   />
                 </div>
 
                 {/* PSEUDO */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: darkMode ? '#CBD5E1' : '#1E293B', marginBottom: '6px' }}>Pseudo (@)</label>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: darkMode ? '#D4C5B5' : '#3D3530', marginBottom: '6px' }}>Pseudo (@)</label>
                   <input
                     type="text"
                     required
                     value={signupUsername}
                     onChange={(e) => setSignupUsername(e.target.value)}
                     placeholder="ex: mateopolo"
-                    style={{ width: '100%', padding: '12px 14px', border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #D1D5DB', borderRadius: '14px', fontSize: '14px', fontWeight: '600', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFFFFF', color: darkMode ? '#F8FAFC' : '#0F172A', outline: 'none' }}
+                    style={{ width: '100%', padding: '12px 14px', border: darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #E8DDD3', borderRadius: '14px', fontSize: '14px', fontWeight: '600', backgroundColor: darkMode ? '#1A1715' : '#FFFFFF', color: darkMode ? '#FAF7F2' : '#3D3530', outline: 'none' }}
                   />
                 </div>
 
                 {/* EMAIL */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: darkMode ? '#CBD5E1' : '#1E293B', marginBottom: '6px' }}>Adresse Email</label>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: darkMode ? '#D4C5B5' : '#3D3530', marginBottom: '6px' }}>Adresse Email</label>
                   <input
                     type="email"
                     required
                     value={signupEmailOrPhone}
                     onChange={(e) => setSignupEmailOrPhone(e.target.value)}
                     placeholder="ex: mateo@troco.app"
-                    style={{ width: '100%', padding: '12px 14px', border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #D1D5DB', borderRadius: '14px', fontSize: '14px', fontWeight: '600', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFFFFF', color: darkMode ? '#F8FAFC' : '#0F172A', outline: 'none' }}
+                    style={{ width: '100%', padding: '12px 14px', border: darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #E8DDD3', borderRadius: '14px', fontSize: '14px', fontWeight: '600', backgroundColor: darkMode ? '#1A1715' : '#FFFFFF', color: darkMode ? '#FAF7F2' : '#3D3530', outline: 'none' }}
                   />
                 </div>
 
                 {/* MOT DE PASSE */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: darkMode ? '#CBD5E1' : '#1E293B', marginBottom: '6px' }}>Mot de passe (min 6 caractères)</label>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: darkMode ? '#D4C5B5' : '#3D3530', marginBottom: '6px' }}>Mot de passe (min 6 caractères)</label>
                   <input
                     type="password"
                     required
                     value={signupPassword}
                     onChange={(e) => setSignupPassword(e.target.value)}
                     placeholder="••••••••"
-                    style={{ width: '100%', padding: '12px 14px', border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #D1D5DB', borderRadius: '14px', fontSize: '14px', fontWeight: '600', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFFFFF', color: darkMode ? '#F8FAFC' : '#0F172A', outline: 'none' }}
+                    style={{ width: '100%', padding: '12px 14px', border: darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #E8DDD3', borderRadius: '14px', fontSize: '14px', fontWeight: '600', backgroundColor: darkMode ? '#1A1715' : '#FFFFFF', color: darkMode ? '#FAF7F2' : '#3D3530', outline: 'none' }}
                   />
                 </div>
 
                 {/* VILLE / LOCALISATION */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: darkMode ? '#CBD5E1' : '#1E293B', marginBottom: '6px' }}>Ville / Localisation</label>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: darkMode ? '#D4C5B5' : '#3D3530', marginBottom: '6px' }}>Ville / Localisation</label>
                   <input
                     type="text"
                     required
                     value={signupLocation}
                     onChange={(e) => setSignupLocation(e.target.value)}
                     placeholder="ex: Paris, France"
-                    style={{ width: '100%', padding: '12px 14px', border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #D1D5DB', borderRadius: '14px', fontSize: '14px', fontWeight: '600', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFFFFF', color: darkMode ? '#F8FAFC' : '#0F172A', outline: 'none' }}
+                    style={{ width: '100%', padding: '12px 14px', border: darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #E8DDD3', borderRadius: '14px', fontSize: '14px', fontWeight: '600', backgroundColor: darkMode ? '#1A1715' : '#FFFFFF', color: darkMode ? '#FAF7F2' : '#3D3530', outline: 'none' }}
                   />
                 </div>
 
                 {/* BIOGRAPHIE */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: darkMode ? '#CBD5E1' : '#1E293B', marginBottom: '6px' }}>Bio / Description</label>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: darkMode ? '#D4C5B5' : '#3D3530', marginBottom: '6px' }}>Bio / Description</label>
                   <textarea
                     rows={2}
                     value={signupBio}
                     onChange={(e) => setSignupBio(e.target.value)}
                     placeholder="Parlez-nous de vous, de vos services ou de ce que vous cherchez..."
-                    style={{ width: '100%', padding: '12px 14px', border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #D1D5DB', borderRadius: '14px', fontSize: '13px', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFFFFF', color: darkMode ? '#F8FAFC' : '#0F172A', outline: 'none', resize: 'none' }}
+                    style={{ width: '100%', padding: '12px 14px', border: darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #E8DDD3', borderRadius: '14px', fontSize: '13px', backgroundColor: darkMode ? '#1A1715' : '#FFFFFF', color: darkMode ? '#FAF7F2' : '#3D3530', outline: 'none', resize: 'none' }}
                   />
                 </div>
 
                 {/* CHOIX DE L'AVATAR PRESET */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: darkMode ? '#CBD5E1' : '#1E293B', marginBottom: '6px' }}>Choisissez un Avatar</label>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: darkMode ? '#D4C5B5' : '#3D3530', marginBottom: '6px' }}>Choisissez un Avatar</label>
                   <div style={{ display: 'flex', gap: '10px', alignItems: 'center', marginTop: '6px' }}>
                     {[
                       'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
@@ -5628,7 +5615,7 @@ export default function App() {
                         type="button"
                         onClick={() => setSignupAvatar(av)}
                         style={{
-                          border: signupAvatar === av ? (darkMode ? '3px solid #60A5FA' : '3px solid #14B8A6') : '3px solid transparent',
+                          border: signupAvatar === av ? '3px solid #C67D5B' : '3px solid transparent',
                           borderRadius: '50%', padding: 0, background: 'none', cursor: 'pointer', transition: 'all 0.2s ease',
                           transform: signupAvatar === av ? 'scale(1.1)' : 'scale(1)',
                         }}
@@ -5641,7 +5628,7 @@ export default function App() {
 
                 {/* LANGUES PARLÉES */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: darkMode ? '#CBD5E1' : '#1E293B', marginBottom: '8px' }}>Langues Parlées</label>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: darkMode ? '#D4C5B5' : '#3D3530', marginBottom: '8px' }}>Langues Parlées</label>
                   <div style={{ display: 'flex', gap: '8px' }}>
                     {['FR', 'EN', 'ES', 'IT'].map((lang) => {
                       const selected = signupLanguages.includes(lang);
@@ -5658,14 +5645,14 @@ export default function App() {
                           }}
                           style={{
                             border: selected
-                              ? (darkMode ? '1px solid #60A5FA' : '1px solid #04265A')
-                              : (darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #E2E8F0'),
+                              ? '1px solid #C67D5B'
+                              : (darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3'),
                             backgroundColor: selected
-                              ? (darkMode ? 'rgba(4,38,90,0.7)' : '#EFF6FF')
-                              : (darkMode ? 'rgba(30,41,59,0.5)' : '#F8FAFC'),
+                              ? (darkMode ? 'rgba(198,125,91,0.25)' : '#F5EAE4')
+                              : (darkMode ? '#1A1715' : '#FAF7F2'),
                             color: selected
-                              ? (darkMode ? '#93C5FD' : '#04265A')
-                              : (darkMode ? '#CBD5E1' : '#475569'),
+                              ? (darkMode ? '#FAF7F2' : '#A8644A')
+                              : (darkMode ? '#D4C5B5' : '#6B5E54'),
                             padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '800', cursor: 'pointer', transition: 'all 0.2s ease'
                           }}
                         >
@@ -5678,14 +5665,14 @@ export default function App() {
 
                 {/* COMPÉTENCES / SKILLS */}
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: darkMode ? '#CBD5E1' : '#1E293B', marginBottom: '6px' }}>Vos Compétences (CV)</label>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: darkMode ? '#D4C5B5' : '#3D3530', marginBottom: '6px' }}>Vos Compétences (CV)</label>
                   <div style={{ display: 'flex', gap: '6px', marginBottom: '8px' }}>
                     <input
                       type="text"
                       value={signupSkillInput}
                       onChange={(e) => setSignupSkillInput(e.target.value)}
                       placeholder="ex: Bricolage, Ableton..."
-                      style={{ flex: 1, padding: '10px 12px', border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #D1D5DB', borderRadius: '12px', fontSize: '13px', outline: 'none', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFFFFF', color: darkMode ? '#F8FAFC' : '#0F172A' }}
+                      style={{ flex: 1, padding: '10px 12px', border: darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #E8DDD3', borderRadius: '12px', fontSize: '13px', outline: 'none', backgroundColor: darkMode ? '#1A1715' : '#FFFFFF', color: darkMode ? '#FAF7F2' : '#3D3530' }}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
                           e.preventDefault();
@@ -5704,19 +5691,19 @@ export default function App() {
                           setSignupSkillInput('');
                         }
                       }}
-                      style={{ border: 'none', borderRadius: '12px', backgroundColor: '#04265A', color: '#FFF', padding: '10px 14px', fontWeight: '700', cursor: 'pointer' }}
+                      style={{ border: 'none', borderRadius: '12px', backgroundColor: '#C67D5B', color: '#FFF', padding: '10px 14px', fontWeight: '700', cursor: 'pointer' }}
                     >
                       Ajouter
                     </button>
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                     {signupSkills.map((sk) => (
-                      <span key={sk} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: darkMode ? 'rgba(4,38,90,0.6)' : '#EFF6FF', color: darkMode ? '#93C5FD' : '#04265A', padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700' }}>
+                      <span key={sk} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4', color: darkMode ? '#FAF7F2' : '#A8644A', padding: '4px 10px', borderRadius: '20px', fontSize: '11px', fontWeight: '700' }}>
                         {sk}
                         <button
                           type="button"
                           onClick={() => setSignupSkills(prev => prev.filter(s => s !== sk))}
-                          style={{ border: 'none', background: 'transparent', color: '#EF4444', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}
+                          style={{ border: 'none', background: 'transparent', color: '#C67D5B', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center' }}
                         >
                           <X size={10} />
                         </button>
@@ -5731,8 +5718,8 @@ export default function App() {
                   disabled={authLoading}
                   style={{
                     border: 'none', borderRadius: '16px', padding: '14px', marginTop: '10px',
-                    background: 'linear-gradient(135deg, #04265A 0%, #14B8A6 100%)', color: '#FFF',
-                    cursor: authLoading ? 'not-allowed' : 'pointer', fontWeight: '800', fontSize: '15px', boxShadow: '0 12px 24px -6px rgba(4, 38, 90, 0.3)',
+                    background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)', color: '#FFF',
+                    cursor: authLoading ? 'not-allowed' : 'pointer', fontWeight: '800', fontSize: '15px', boxShadow: '0 12px 24px -6px rgba(198, 125, 91, 0.35)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
                     opacity: authLoading ? 0.7 : 1
                   }}
@@ -5742,9 +5729,9 @@ export default function App() {
               </form>
             )}
 
-            <div style={{ padding: '16px', borderRadius: '18px', backgroundColor: darkMode ? 'rgba(15,23,42,0.6)' : 'rgba(248,250,252,0.9)', border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(226,232,240,0.8)', color: darkMode ? '#CBD5E1' : '#475569', fontSize: '13px', lineHeight: 1.7, transition: 'all 0.3s ease' }}>
-              <div style={{ fontWeight: '700', color: darkMode ? '#FFFFFF' : '#0F172A', marginBottom: '6px' }}>Pourquoi les utilisateurs aiment Troco</div>
-              <div>• Connexion sécurisée Google, GitHub, Discord, SMS & Email</div>
+            <div style={{ padding: '16px', borderRadius: '18px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3', color: darkMode ? '#D4C5B5' : '#6B5E54', fontSize: '13px', lineHeight: 1.7, transition: 'all 0.3s ease' }}>
+              <div style={{ fontWeight: '700', color: darkMode ? '#FAF7F2' : '#3D3530', marginBottom: '6px' }}>Pourquoi les utilisateurs aiment Troco</div>
+              <div>• Connexion sécurisée Google, SMS & Email</div>
               <div>• Profils vérifiés avec réputation et compétences transparentes</div>
               <div>• Espaces de négociation et d'appels vidéo intégrés</div>
             </div>
@@ -5755,8 +5742,8 @@ export default function App() {
   }
 
   return (
-    <div style={{ backgroundColor: darkMode ? '#0B1120' : '#F5F5F7', color: darkMode ? '#F8FAFC' : '#0F172A', minHeight: '100vh', transition: 'background-color 0.3s ease, color 0.3s ease', fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif", paddingBottom: isMobile && activeTab === 'chat' ? '0' : '90px', WebkitFontSmoothing: 'antialiased', position: 'relative', overflowX: 'hidden' }}>
-      {/* ORBES DE LUEUR AMBIANTE FLUIDES (Étape 4) */}
+    <div style={{ backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', color: darkMode ? '#FAF7F2' : '#3D3530', minHeight: '100vh', transition: 'background-color 0.3s ease, color 0.3s ease', paddingBottom: isMobile && activeTab === 'chat' ? '0' : '90px', WebkitFontSmoothing: 'antialiased', position: 'relative', overflowX: 'hidden' }}>
+      {/* ORBES DE LUEUR AMBIANTE FLUIDES */}
       <div className="glow-orb glow-orb-primary" style={{ top: '8%', left: '-100px', width: '380px', height: '380px' }} />
       <div className="glow-orb glow-orb-secondary" style={{ top: '40%', right: '-120px', width: '420px', height: '420px' }} />
 
@@ -5764,49 +5751,49 @@ export default function App() {
       {isAuthenticated && !profile.cguAcceptedAt && (
         <div style={{
           position: 'fixed', inset: 0, zIndex: 99999,
-          backgroundColor: 'rgba(15, 23, 42, 0.85)',
+          backgroundColor: 'rgba(61, 53, 48, 0.75)',
           backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px',
           animation: 'fadeSlideUp 0.3s ease both'
         }}>
           <div style={{
             maxWidth: '560px', width: '100%',
-            backgroundColor: darkMode ? '#1E293B' : '#FFFFFF',
+            backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
             borderRadius: '28px', padding: '28px',
-            border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #E2E8F0',
+            border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
             boxShadow: '0 25px 60px -15px rgba(0,0,0,0.5)',
-            color: darkMode ? '#F8FAFC' : '#0F172A',
+            color: darkMode ? '#FAF7F2' : '#3D3530',
             maxHeight: '90vh', overflowY: 'auto'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
-              <div style={{ width: '42px', height: '42px', borderRadius: '50%', backgroundColor: darkMode ? 'rgba(96,165,250,0.2)' : '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: darkMode ? '#60A5FA' : '#04265A' }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '50%', backgroundColor: darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#C67D5B' }}>
                 <Scale size={22} />
               </div>
               <div>
-                <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '800' }}>Conditions Générales & RGPD</h3>
-                <p style={{ margin: 0, fontSize: '12px', color: darkMode ? '#94A3B8' : '#64748B' }}>Cadre juridique et engagement communautaire</p>
+                <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '22px', fontWeight: '600' }}>Conditions Générales & RGPD</h3>
+                <p style={{ margin: 0, fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>Cadre juridique et engagement communautaire</p>
               </div>
             </div>
 
             <div style={{
-              backgroundColor: darkMode ? 'rgba(15,23,42,0.6)' : '#F8FAFC',
+              backgroundColor: darkMode ? '#1A1715' : '#F5F0E8',
               borderRadius: '16px', padding: '16px', fontSize: '13px', lineHeight: 1.65,
-              color: darkMode ? '#CBD5E1' : '#334155',
-              border: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid #E2E8F0',
+              color: darkMode ? '#D4C5B5' : '#6B5E54',
+              border: darkMode ? '1px solid rgba(232,221,211,0.1)' : '1px solid #E8DDD3',
               marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '12px'
             }}>
               <div>
-                <strong style={{ color: darkMode ? '#93C5FD' : '#04265A' }}>1. Plateforme d'intermédiation technique</strong>
+                <strong style={{ color: darkMode ? '#FAF7F2' : '#3D3530' }}>1. Plateforme d'intermédiation technique</strong>
                 <p style={{ margin: '4px 0 0' }}>Troco met à disposition une infrastructure logicielle permettant aux utilisateurs de publier des annonces, échanger des services et communiquer. Troco n'est pas partie prenante aux contrats conclus entre utilisateurs.</p>
               </div>
 
               <div>
-                <strong style={{ color: darkMode ? '#93C5FD' : '#04265A' }}>2. Clause de non-responsabilité (P2P)</strong>
+                <strong style={{ color: darkMode ? '#FAF7F2' : '#3D3530' }}>2. Clause de non-responsabilité (P2P)</strong>
                 <p style={{ margin: '4px 0 0' }}>Les échanges, interventions physiques et prêts de matériel relèvent de la responsabilité exclusive des parties prenantes. Chaque membre s'engage à faire preuve de prudence et de diligence.</p>
               </div>
 
               <div>
-                <strong style={{ color: darkMode ? '#93C5FD' : '#04265A' }}>3. Protection des données & RGPD</strong>
+                <strong style={{ color: darkMode ? '#FAF7F2' : '#3D3530' }}>3. Protection des données & RGPD</strong>
                 <p style={{ margin: '4px 0 0' }}>Vos données personnelles (nom, email, ville, compétences) sont strictement isolées sur votre espace sécurisé <code>users/{profile.uid || 'uid'}</code> et ne sont jamais revendues à des tiers.</p>
               </div>
             </div>
@@ -5815,9 +5802,9 @@ export default function App() {
               onClick={handleAcceptCgu}
               style={{
                 width: '100%', border: 'none', borderRadius: '16px', padding: '14px',
-                background: 'linear-gradient(135deg, #04265A 0%, #14B8A6 100%)', color: '#FFF',
+                background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)', color: '#FFF',
                 fontWeight: '800', fontSize: '14px', cursor: 'pointer',
-                boxShadow: '0 12px 24px -6px rgba(4, 38, 90, 0.35)',
+                boxShadow: '0 12px 24px -6px rgba(198, 125, 91, 0.35)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
               }}
             >
@@ -5835,14 +5822,14 @@ export default function App() {
         .premium-card { border-radius: 20px !important; }
         .premium-card:hover {
           transform: translateY(-4px) scale(1.02) !important;
-          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06) !important;
+          box-shadow: 0 10px 30px rgba(61, 53, 48, 0.08) !important;
         }
         .premium-nav-btn:hover, .premium-pill:hover, .premium-panel:hover, .premium-button:hover {
           transform: scale(1.02);
-          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+          box-shadow: 0 10px 30px rgba(61, 53, 48, 0.08);
         }
         .glass-surface {
-          background: rgba(255,255,255,0.72);
+          background: rgba(250,247,242,0.85);
           backdrop-filter: blur(20px) saturate(180%);
           -webkit-backdrop-filter: blur(20px) saturate(180%);
         }
@@ -5859,8 +5846,8 @@ export default function App() {
           100% { transform: scale(1); opacity: 1; }
         }
         @keyframes pulseGlow {
-          0%, 100% { box-shadow: 0 0 0 0 rgba(245,158,11,0.35); }
-          50% { box-shadow: 0 0 0 6px rgba(245,158,11,0); }
+          0%, 100% { box-shadow: 0 0 0 0 rgba(198,125,91,0.35); }
+          50% { box-shadow: 0 0 0 6px rgba(198,125,91,0); }
         }
         @keyframes pulseRing {
           0% { box-shadow: 0 0 0 0 rgba(255,255,255,0.35); }
@@ -5874,7 +5861,7 @@ export default function App() {
         .sponsored-badge { animation: pulseGlow 2s ease-in-out infinite; }
         .call-ring { animation: pulseRing 1.8s ease-out infinite; }
         .wave-bar {
-          width: 4px; border-radius: 999px; background: #60A5FA;
+          width: 4px; border-radius: 999px; background: #C67D5B;
           animation: soundWave 1.1s ease-in-out infinite;
         }
         input, select, textarea { font-family: inherit; }
@@ -5926,88 +5913,88 @@ export default function App() {
       </header>
 
       {isBoostModalOpen && boostingListing && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.55)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', zIndex: 55 }}>
-          <div style={{ backgroundColor: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(24px) saturate(180%)', WebkitBackdropFilter: 'blur(24px) saturate(180%)', borderRadius: '24px', width: '100%', maxWidth: '420px', padding: '22px', boxShadow: '0 24px 60px rgba(0,0,0,0.20)', border: '1px solid rgba(255,255,255,0.7)', position: 'relative' }}>
-            <button onClick={() => { setIsBoostModalOpen(false); setBoostingListing(null); setBoostMessage(''); }} style={{ position: 'absolute', top: '14px', right: '14px', border: 'none', backgroundColor: '#F3F4F6', width: '34px', height: '34px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-              <X size={16} color="#374151" />
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(61,53,48,0.72)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', zIndex: 80 }}>
+          <div style={{ width: '100%', maxWidth: '440px', backgroundColor: darkMode ? '#231E1B' : '#FAF7F2', borderRadius: '24px', padding: '24px', boxShadow: darkMode ? '0 25px 60px rgba(0,0,0,0.8)' : '0 25px 60px rgba(61,53,48,0.25)', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', position: 'relative' }}>
+            <button onClick={() => setIsBoostModalOpen(false)} style={{ position: 'absolute', top: '14px', right: '14px', border: 'none', backgroundColor: darkMode ? 'rgba(232,221,211,0.1)' : '#F5EAE4', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
+              <X size={16} />
             </button>
-            <div style={{ fontWeight: '800', color: '#111827', marginBottom: '8px', fontSize: '17px' }}>🔥 Booster cette annonce</div>
-            <div style={{ fontSize: '13px', color: '#64748B', lineHeight: 1.6, marginBottom: '14px' }}>Mets en avant <strong>{boostingListing.title}</strong> pendant 7 jours pour <strong>2,99€</strong>.</div>
-            <button onClick={confirmBoostListing} className="premium-button" style={{ width: '100%', border: 'none', borderRadius: '14px', padding: '12px', backgroundColor: '#F59E0B', color: '#FFFFFF', fontWeight: '700', cursor: 'pointer', boxShadow: '0 10px 20px rgba(245,158,11,0.25)' }}>Valider le boost — procéder au paiement</button>
-            {boostMessage && <div style={{ marginTop: '10px', fontSize: '12px', color: '#04265A', fontWeight: '700' }}>{boostMessage}</div>}
+            <div className="font-editorial-heading" style={{ fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530', marginBottom: '8px', fontSize: '20px' }}>🔥 Booster cette annonce</div>
+            <div style={{ fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54', lineHeight: 1.6, marginBottom: '16px' }}>Mets en avant <strong>{boostingListing.title}</strong> pendant 7 jours pour <strong>2,99€</strong>.</div>
+            <button onClick={confirmBoostListing} className="premium-button" style={{ width: '100%', border: 'none', borderRadius: '14px', padding: '12px', background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)', color: '#FFFFFF', fontWeight: '800', cursor: 'pointer', boxShadow: '0 10px 20px rgba(198,125,91,0.25)' }}>Valider le boost — procéder au paiement</button>
+            {boostMessage && <div style={{ marginTop: '10px', fontSize: '12px', color: '#C67D5B', fontWeight: '700' }}>{boostMessage}</div>}
           </div>
         </div>
       )}
 
       {/* ---- CHECKOUT / TUNNEL DE PAIEMENT SIMULÉ ---- */}
       {checkout.open && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(2,6,23,0.55)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', zIndex: 75 }}>
-          <div style={{ width: '100%', maxWidth: '460px', backgroundColor: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(28px) saturate(180%)', WebkitBackdropFilter: 'blur(28px) saturate(180%)', borderRadius: '28px', padding: '24px', boxShadow: '0 30px 80px rgba(2,6,23,0.30)', border: '1px solid rgba(255,255,255,0.8)', position: 'relative' }}>
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(61,53,48,0.7)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', zIndex: 75 }}>
+          <div style={{ width: '100%', maxWidth: '460px', backgroundColor: darkMode ? '#231E1B' : '#FAF7F2', backdropFilter: 'blur(28px) saturate(180%)', WebkitBackdropFilter: 'blur(28px) saturate(180%)', borderRadius: '28px', padding: '24px', boxShadow: '0 30px 80px rgba(61,53,48,0.30)', border: darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #E8DDD3', position: 'relative' }}>
             {checkout.step === 'success' ? (
               <div style={{ textAlign: 'center', padding: '18px 8px' }}>
-                <div style={{ width: '76px', height: '76px', borderRadius: '50%', backgroundColor: '#D1FAE5', color: '#059669', margin: '0 auto 18px', display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'popIn 0.5s cubic-bezier(0.22,1,0.36,1) both' }}>
+                <div style={{ width: '76px', height: '76px', borderRadius: '50%', backgroundColor: '#EBF0E6', color: '#3D4A35', margin: '0 auto 18px', display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'popIn 0.5s cubic-bezier(0.22,1,0.36,1) both' }}>
                   <Check size={36} strokeWidth={3} />
                 </div>
-                <h3 style={{ margin: '0 0 10px', fontSize: '19px', fontWeight: '800', color: '#111827', lineHeight: 1.4 }}>{t('transactionSuccess')}</h3>
-                <p style={{ margin: '0 0 6px', fontSize: '13px', color: '#64748B' }}>{checkout.label}</p>
-                <p style={{ margin: '0 0 20px', fontSize: '22px', fontWeight: '800', color: '#04265A' }}>{(checkout.amount || 0).toFixed(2)} €</p>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '12px', color: '#059669', fontWeight: '700', marginBottom: '18px' }}>
+                <h3 className="font-editorial-heading" style={{ margin: '0 0 10px', fontSize: '22px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530', lineHeight: 1.4 }}>{t('transactionSuccess')}</h3>
+                <p style={{ margin: '0 0 6px', fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>{checkout.label}</p>
+                <p style={{ margin: '0 0 20px', fontSize: '24px', fontWeight: '800', color: '#C67D5B' }}>{(checkout.amount || 0).toFixed(2)} €</p>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '12px', color: '#7A8F6A', fontWeight: '700', marginBottom: '18px' }}>
                   <ShieldCheck size={14} /> {t('encryptedPayment')}
                 </div>
-                <button onClick={closeCheckout} className="premium-button" style={{ width: '100%', border: 'none', borderRadius: '16px', padding: '14px', backgroundColor: '#04265A', color: '#FFF', fontWeight: '800', cursor: 'pointer', boxShadow: '0 10px 22px rgba(4,38,90,0.25)' }}>{t('doneButton')}</button>
+                <button onClick={closeCheckout} className="premium-button" style={{ width: '100%', border: 'none', borderRadius: '16px', padding: '14px', background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)', color: '#FFF', fontWeight: '800', cursor: 'pointer', boxShadow: '0 10px 22px rgba(198,125,91,0.25)' }}>{t('doneButton')}</button>
               </div>
             ) : checkout.step === 'processing' ? (
               <div style={{ textAlign: 'center', padding: '34px 8px' }}>
-                <div style={{ width: '46px', height: '46px', margin: '0 auto 20px', border: '3px solid rgba(4,38,90,0.18)', borderTopColor: '#04265A', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                <div style={{ fontWeight: '800', color: '#111827', fontSize: '15px' }}>{t('transactionProcessing')}</div>
-                <p style={{ fontSize: '12px', color: '#64748B', marginTop: '8px' }}>{t('secureBankConnection')}</p>
+                <div style={{ width: '46px', height: '46px', margin: '0 auto 20px', border: '3px solid rgba(198,125,91,0.2)', borderTopColor: '#C67D5B', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                <div style={{ fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530', fontSize: '15px' }}>{t('transactionProcessing')}</div>
+                <p style={{ fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', marginTop: '8px' }}>{t('secureBankConnection')}</p>
               </div>
             ) : (
               <>
-                <button onClick={closeCheckout} style={{ position: 'absolute', top: '16px', right: '16px', border: 'none', backgroundColor: '#F3F4F6', width: '34px', height: '34px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                  <X size={16} color="#374151" />
+                <button onClick={closeCheckout} style={{ position: 'absolute', top: '16px', right: '16px', border: 'none', backgroundColor: darkMode ? 'rgba(232,221,211,0.1)' : '#F5EAE4', width: '34px', height: '34px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+                  <X size={16} color={darkMode ? '#FAF7F2' : '#3D3530'} />
                 </button>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                  <Lock size={16} color="#04265A" />
-                  <span style={{ fontSize: '12px', fontWeight: '800', color: '#04265A', letterSpacing: '0.04em' }}>{t('securePaymentHeader')}</span>
+                  <Lock size={16} color="#C67D5B" />
+                  <span style={{ fontSize: '12px', fontWeight: '800', color: '#C67D5B', letterSpacing: '0.04em' }}>{t('securePaymentHeader')}</span>
                 </div>
-                <h3 style={{ margin: '0 0 16px', fontSize: '19px', fontWeight: '800', color: '#111827' }}>{checkout.label || 'Paiement'}</h3>
+                <h3 className="font-editorial-heading" style={{ margin: '0 0 16px', fontSize: '22px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{checkout.label || 'Paiement'}</h3>
 
-                <div style={{ border: '1px solid #E2E8F0', borderRadius: '16px', padding: '14px', backgroundColor: '#F8FAFC', marginBottom: '18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: '13px', color: '#64748B' }}>{t('amountToPay')}</span>
-                  <span style={{ fontSize: '22px', fontWeight: '800', color: '#111827' }}>{(checkout.amount || 0).toFixed(2)} €</span>
+                <div style={{ border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', borderRadius: '16px', padding: '14px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', marginBottom: '18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>{t('amountToPay')}</span>
+                  <span style={{ fontSize: '22px', fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{(checkout.amount || 0).toFixed(2)} €</span>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
                   {paymentMethods.map(method => (
-                    <button key={method.key} onClick={() => setCheckout(prev => ({ ...prev, method: method.key }))} style={{ display: 'flex', alignItems: 'center', gap: '12px', border: checkout.method === method.key ? '1.5px solid #04265A' : '1px solid #E2E8F0', borderRadius: '14px', padding: '12px 14px', backgroundColor: checkout.method === method.key ? '#EFF6FF' : '#FFFFFF', cursor: 'pointer', textAlign: 'left' }}>
+                    <button key={method.key} onClick={() => setCheckout(prev => ({ ...prev, method: method.key }))} style={{ display: 'flex', alignItems: 'center', gap: '12px', border: checkout.method === method.key ? '1.5px solid #C67D5B' : (darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3'), borderRadius: '14px', padding: '12px 14px', backgroundColor: checkout.method === method.key ? (darkMode ? 'rgba(198,125,91,0.25)' : '#F5EAE4') : (darkMode ? '#1A1715' : '#FFFFFF'), cursor: 'pointer', textAlign: 'left' }}>
                       {method.icon}
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: '13px', fontWeight: '800', color: '#111827' }}>{method.label}</div>
-                        <div style={{ fontSize: '11px', color: '#64748B' }}>{method.sub}</div>
+                        <div style={{ fontSize: '13px', fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{method.label}</div>
+                        <div style={{ fontSize: '11px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>{method.sub}</div>
                       </div>
-                      <div style={{ width: '18px', height: '18px', borderRadius: '50%', border: checkout.method === method.key ? '5px solid #04265A' : '1.5px solid #D1D5DB' }} />
+                      <div style={{ width: '18px', height: '18px', borderRadius: '50%', border: checkout.method === method.key ? '5px solid #C67D5B' : '1.5px solid #E8DDD3' }} />
                     </button>
                   ))}
                 </div>
 
                 {checkout.method === 'card' && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px', padding: '12px', borderRadius: '14px', backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0' }}>
-                    <input placeholder="1234 5678 9012 3456" style={{ width: '100%', padding: '10px 12px', border: '1px solid #D1D5DB', borderRadius: '10px', fontSize: '13px', backgroundColor: '#FFF' }} />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px', padding: '12px', borderRadius: '14px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3' }}>
+                    <input placeholder="1234 5678 9012 3456" style={{ width: '100%', padding: '10px 12px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', borderRadius: '10px', fontSize: '13px', backgroundColor: darkMode ? '#231E1B' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530' }} />
                     <div style={{ display: 'flex', gap: '8px' }}>
-                      <input placeholder="MM/AA" style={{ flex: 1, padding: '10px 12px', border: '1px solid #D1D5DB', borderRadius: '10px', fontSize: '13px', backgroundColor: '#FFF' }} />
-                      <input placeholder="CVC" style={{ flex: 1, padding: '10px 12px', border: '1px solid #D1D5DB', borderRadius: '10px', fontSize: '13px', backgroundColor: '#FFF' }} />
+                      <input placeholder="MM/AA" style={{ flex: 1, padding: '10px 12px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', borderRadius: '10px', fontSize: '13px', backgroundColor: darkMode ? '#231E1B' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530' }} />
+                      <input placeholder="CVC" style={{ flex: 1, padding: '10px 12px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', borderRadius: '10px', fontSize: '13px', backgroundColor: darkMode ? '#231E1B' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530' }} />
                     </div>
                   </div>
                 )}
 
                 {checkout.method === 'troco' && (
-                  <div style={{ marginBottom: '16px', padding: '12px', borderRadius: '14px', backgroundColor: '#FFF7ED', border: '1px solid #FDE68A', fontSize: '12px', color: '#92400E', lineHeight: 1.6 }}>
+                  <div style={{ marginBottom: '16px', padding: '12px', borderRadius: '14px', backgroundColor: darkMode ? 'rgba(217,119,6,0.15)' : '#FEF3C7', border: '1px solid #E8DDD3', fontSize: '12px', color: darkMode ? '#FDE68A' : '#92400E', lineHeight: 1.6 }}>
                     💡 Recharge depuis ton solde Troco ou par virement SEPA. Tes jetons seront convertis automatiquement si le solde est insuffisant.
                   </div>
                 )}
 
-                <button onClick={handleConfirmPayment} className="premium-button" style={{ width: '100%', border: 'none', borderRadius: '16px', padding: '14px', backgroundColor: '#04265A', color: '#FFF', fontWeight: '800', cursor: 'pointer', boxShadow: '0 10px 22px rgba(4,38,90,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                <button onClick={handleConfirmPayment} className="premium-button" style={{ width: '100%', border: 'none', borderRadius: '16px', padding: '14px', background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)', color: '#FFF', fontWeight: '800', cursor: 'pointer', boxShadow: '0 10px 22px rgba(198,125,91,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                   <Lock size={15} /> Payer {(checkout.amount || 0).toFixed(2)} €
                 </button>
               </>
@@ -6019,16 +6006,16 @@ export default function App() {
 
 
       {isLangModalOpen && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.55)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', zIndex: 65 }}>
-          <div style={{ backgroundColor: darkMode ? '#1E293B' : 'rgba(255,255,255,0.92)', backdropFilter: 'blur(24px) saturate(180%)', WebkitBackdropFilter: 'blur(24px) saturate(180%)', borderRadius: '24px', width: '100%', maxWidth: '380px', padding: '24px', boxShadow: '0 24px 60px rgba(0,0,0,0.25)', border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(255,255,255,0.8)', position: 'relative' }}>
-            <button onClick={() => setIsLangModalOpen(false)} style={{ position: 'absolute', top: '16px', right: '16px', border: 'none', backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : '#F3F4F6', width: '34px', height: '34px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: darkMode ? '#FFF' : '#374151' }}>
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(61,53,48,0.7)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', zIndex: 65 }}>
+          <div style={{ backgroundColor: darkMode ? '#231E1B' : '#FAF7F2', backdropFilter: 'blur(24px) saturate(180%)', WebkitBackdropFilter: 'blur(24px) saturate(180%)', borderRadius: '24px', width: '100%', maxWidth: '380px', padding: '24px', boxShadow: '0 24px 60px rgba(61,53,48,0.25)', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', position: 'relative' }}>
+            <button onClick={() => setIsLangModalOpen(false)} style={{ position: 'absolute', top: '16px', right: '16px', border: 'none', backgroundColor: darkMode ? 'rgba(232,221,211,0.1)' : '#F5EAE4', width: '34px', height: '34px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
               <X size={16} />
             </button>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', color: darkMode ? '#60A5FA' : '#04265A' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', color: '#C67D5B' }}>
               <Globe size={20} />
-              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: darkMode ? '#FFF' : '#111827' }}>{t('selectLanguage')}</h3>
+              <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{t('selectLanguage')}</h3>
             </div>
-            <p style={{ fontSize: '12px', color: darkMode ? '#94A3B8' : '#64748B', margin: '0 0 16px', lineHeight: 1.5 }}>
+            <p style={{ fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', margin: '0 0 16px', lineHeight: 1.5 }}>
               L'interface et les annonces seront instantanément traduites dans la langue choisie.
             </p>
 
@@ -6052,10 +6039,10 @@ export default function App() {
                     justify: 'space-between',
                     padding: '12px 16px',
                     borderRadius: '14px',
-                    border: currentLang === lang.code ? (darkMode ? '2px solid #60A5FA' : '2px solid #04265A') : (darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E2E8F0'),
-                    backgroundColor: currentLang === lang.code ? (darkMode ? 'rgba(4,38,90,0.5)' : '#EFF6FF') : (darkMode ? 'rgba(255,255,255,0.05)' : '#FFF'),
+                    border: currentLang === lang.code ? '2px solid #C67D5B' : (darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3'),
+                    backgroundColor: currentLang === lang.code ? (darkMode ? 'rgba(198,125,91,0.25)' : '#F5EAE4') : (darkMode ? '#1A1715' : '#FAF7F2'),
                     cursor: 'pointer',
-                    color: darkMode ? '#FFF' : '#111827',
+                    color: currentLang === lang.code ? (darkMode ? '#FAF7F2' : '#A8644A') : (darkMode ? '#D4C5B5' : '#3D3530'),
                     fontWeight: currentLang === lang.code ? '800' : '600',
                     fontSize: '13px'
                   }}
@@ -6064,7 +6051,7 @@ export default function App() {
                     <span style={{ fontSize: '18px' }}>{lang.flag}</span>
                     <span>{lang.label}</span>
                   </span>
-                  {currentLang === lang.code && <CheckCircle size={16} color={darkMode ? '#60A5FA' : '#04265A'} />}
+                  {currentLang === lang.code && <CheckCircle size={16} color="#C67D5B" />}
                 </button>
               ))}
             </div>
@@ -6073,13 +6060,13 @@ export default function App() {
       )}
 
       {isFilterDrawerOpen && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15,23,42,0.5)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', zIndex: 55, display: 'flex', justifyContent: 'flex-end' }}>
-          <div style={{ width: '100%', maxWidth: '360px', height: '100%', backgroundColor: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(24px) saturate(180%)', WebkitBackdropFilter: 'blur(24px) saturate(180%)', padding: '20px', boxShadow: '-12px 0 40px rgba(0,0,0,0.16)', overflowY: 'auto', borderLeft: '1px solid rgba(255,255,255,0.7)' }}>
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(61,53,48,0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', zIndex: 55, display: 'flex', justifyContent: 'flex-end' }}>
+          <div style={{ width: '100%', maxWidth: '360px', height: '100%', backgroundColor: darkMode ? '#231E1B' : '#FAF7F2', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', padding: '20px', boxShadow: '-12px 0 40px rgba(0,0,0,0.25)', overflowY: 'auto', borderLeft: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 style={{ margin: 0, fontSize: '18px', color: '#111827' }}>{t('filtersTitle')}</h3>
-              <button onClick={() => setIsFilterDrawerOpen(false)} style={{ border: 'none', background: 'none', cursor: 'pointer' }}><X size={18} /></button>
+              <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{t('filtersTitle')}</h3>
+              <button onClick={() => setIsFilterDrawerOpen(false)} style={{ border: 'none', background: darkMode ? 'rgba(255,255,255,0.08)' : '#E8DDD3', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: darkMode ? '#FFF' : '#3D3530' }}><X size={16} /></button>
             </div>
-            <div style={{ padding: '10px 14px', borderRadius: '14px', backgroundColor: '#EFF6FF', border: '1px solid #A7F3D0', color: '#04265A', fontSize: '12px', fontWeight: '800', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ padding: '10px 14px', borderRadius: '14px', backgroundColor: darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', color: darkMode ? '#FAF7F2' : '#A8644A', fontSize: '12px', fontWeight: '800', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Sparkles size={16} />
               <span>
                 {isInfiniteRadius || radiusKm >= 100
@@ -6095,9 +6082,9 @@ export default function App() {
                 className="premium-button"
                 style={{
                   width: '100%',
-                  border: isGeolocated ? '1px solid #10B981' : (darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB'),
-                  backgroundColor: isGeolocated ? (darkMode ? 'rgba(16,185,129,0.2)' : '#D1FAE5') : (darkMode ? 'rgba(15,23,42,0.6)' : '#F3F4F6'),
-                  color: isGeolocated ? (darkMode ? '#34D399' : '#059669') : (darkMode ? '#FFF' : '#111827'),
+                  border: isGeolocated ? '1px solid #9CAF88' : (darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #E8DDD3'),
+                  backgroundColor: isGeolocated ? (darkMode ? 'rgba(156,175,136,0.25)' : '#EBF0E6') : (darkMode ? '#1A1715' : '#F5F0E8'),
+                  color: isGeolocated ? '#3D4A35' : (darkMode ? '#FAF7F2' : '#3D3530'),
                   padding: '10px 14px',
                   borderRadius: '14px',
                   fontSize: '12px',
@@ -6109,19 +6096,19 @@ export default function App() {
                   gap: '8px'
                 }}
               >
-                <MapPin size={15} color={isGeolocated ? '#10B981' : (darkMode ? '#93C5FD' : '#04265A')} />
+                <MapPin size={15} color={isGeolocated ? '#9CAF88' : '#C67D5B'} />
                 {isGeolocating ? 'Localisation...' : isGeolocated ? '📍 Position sécurisée active' : t('useMyLocation')}
               </button>
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-              <label style={{ fontSize: '12px', fontWeight: '700', color: darkMode ? '#CBD5E1' : '#374151' }}>{t('searchRadius')}</label>
+              <label style={{ fontSize: '12px', fontWeight: '700', color: darkMode ? '#D4C5B5' : '#3D3530' }}>{t('searchRadius')}</label>
               <button
                 onClick={() => setIsInfiniteRadius(prev => !prev)}
                 style={{
-                  border: isInfiniteRadius || radiusKm >= 2000 ? (darkMode ? '1px solid #60A5FA' : '1px solid #04265A') : (darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB'),
-                  backgroundColor: isInfiniteRadius || radiusKm >= 2000 ? (darkMode ? 'rgba(4,38,90,0.5)' : '#EFF6FF') : (darkMode ? 'rgba(15,23,42,0.5)' : '#FFF'),
-                  color: isInfiniteRadius || radiusKm >= 2000 ? (darkMode ? '#93C5FD' : '#04265A') : (darkMode ? '#CBD5E1' : '#64748B'),
+                  border: isInfiniteRadius || radiusKm >= 2000 ? '1px solid #C67D5B' : (darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #E8DDD3'),
+                  backgroundColor: isInfiniteRadius || radiusKm >= 2000 ? (darkMode ? 'rgba(198,125,91,0.25)' : '#F5EAE4') : (darkMode ? '#1A1715' : '#FAF7F2'),
+                  color: isInfiniteRadius || radiusKm >= 2000 ? (darkMode ? '#FAF7F2' : '#A8644A') : (darkMode ? '#D4C5B5' : '#6B5E54'),
                   borderRadius: '999px',
                   padding: '4px 10px',
                   fontSize: '11px',
@@ -6150,11 +6137,12 @@ export default function App() {
               style={{
                 width: '100%',
                 marginTop: '4px',
-                background: `linear-gradient(to right, #04265A 0%, #04265A ${(isInfiniteRadius ? 2000 : radiusKm) / 2000 * 100}%, ${darkMode ? '#334155' : '#E2E8F0'} ${(isInfiniteRadius ? 2000 : radiusKm) / 2000 * 100}%, ${darkMode ? '#334155' : '#E2E8F0'} 100%)`
+                accentColor: '#C67D5B',
+                background: `linear-gradient(to right, #C67D5B 0%, #C67D5B ${(isInfiniteRadius ? 2000 : radiusKm) / 2000 * 100}%, ${darkMode ? '#3D3530' : '#E8DDD3'} ${(isInfiniteRadius ? 2000 : radiusKm) / 2000 * 100}%, ${darkMode ? '#3D3530' : '#E8DDD3'} 100%)`
               }}
             />
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-              <div style={{ fontSize: '12px', color: darkMode ? '#93C5FD' : '#04265A', fontWeight: '800' }}>
+              <div style={{ fontSize: '12px', color: darkMode ? '#FAF7F2' : '#3D3530', fontWeight: '800' }}>
                 {isInfiniteRadius || radiusKm >= 2000 ? '♾️ Infini (Monde entier)' : `📍 Jusqu'à ${radiusKm} km`}
               </div>
               <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
@@ -6163,9 +6151,9 @@ export default function App() {
                     key={preset}
                     onClick={() => { setRadiusKm(preset); setIsInfiniteRadius(preset >= 2000); }}
                     style={{
-                      border: !isInfiniteRadius && radiusKm === preset ? (darkMode ? '1px solid #60A5FA' : '1px solid #04265A') : (darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E2E8F0'),
-                      backgroundColor: !isInfiniteRadius && radiusKm === preset ? (darkMode ? 'rgba(4,38,90,0.5)' : '#EFF6FF') : (darkMode ? 'rgba(15,23,42,0.5)' : '#F8FAFC'),
-                      color: !isInfiniteRadius && radiusKm === preset ? (darkMode ? '#93C5FD' : '#04265A') : (darkMode ? '#CBD5E1' : '#475569'),
+                      border: !isInfiniteRadius && radiusKm === preset ? '1px solid #C67D5B' : (darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3'),
+                      backgroundColor: !isInfiniteRadius && radiusKm === preset ? (darkMode ? 'rgba(198,125,91,0.25)' : '#F5EAE4') : (darkMode ? '#1A1715' : '#FAF7F2'),
+                      color: !isInfiniteRadius && radiusKm === preset ? (darkMode ? '#FAF7F2' : '#A8644A') : (darkMode ? '#D4C5B5' : '#6B5E54'),
                       borderRadius: '8px',
                       padding: '3px 7px',
                       fontSize: '10px',
@@ -6178,7 +6166,7 @@ export default function App() {
                 ))}
               </div>
             </div>
-            <label style={{ fontSize: '12px', fontWeight: '700', color: '#374151' }}>{t('languages') || 'Langues'}</label>
+            <label style={{ fontSize: '12px', fontWeight: '700', color: darkMode ? '#D4C5B5' : '#3D3530' }}>{t('languages') || 'Langues'}</label>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px', marginBottom: '12px' }}>
               {[
                 { code: 'FR', label: '🇫🇷 FR' },
@@ -6193,9 +6181,9 @@ export default function App() {
                   key={code}
                   onClick={() => toggleLanguageFilter(code)}
                   style={{
-                    border: selectedLanguages.includes(code) ? '1px solid #04265A' : '1px solid #D1D5DB',
-                    backgroundColor: selectedLanguages.includes(code) ? '#EFF6FF' : '#FFF',
-                    color: selectedLanguages.includes(code) ? '#04265A' : '#111827',
+                    border: selectedLanguages.includes(code) ? '1px solid #C67D5B' : (darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3'),
+                    backgroundColor: selectedLanguages.includes(code) ? (darkMode ? 'rgba(198,125,91,0.25)' : '#F5EAE4') : (darkMode ? '#1A1715' : '#FAF7F2'),
+                    color: selectedLanguages.includes(code) ? (darkMode ? '#FAF7F2' : '#A8644A') : (darkMode ? '#D4C5B5' : '#6B5E54'),
                     borderRadius: '999px',
                     padding: '6px 12px',
                     fontSize: '12px',
@@ -6210,10 +6198,10 @@ export default function App() {
                 </button>
               ))}
             </div>
-            <label style={{ fontSize: '12px', fontWeight: '700', color: '#374151' }}>Rétribution</label>
+            <label style={{ fontSize: '12px', fontWeight: '700', color: darkMode ? '#D4C5B5' : '#3D3530' }}>Rétribution</label>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
               {paymentOptions.map(option => (
-                <button key={option} onClick={() => setSelectedPayment(option)} style={{ border: selectedPayment === option ? '1px solid #04265A' : '1px solid #D1D5DB', backgroundColor: selectedPayment === option ? '#EFF6FF' : '#FFF', color: '#111827', borderRadius: '999px', padding: '6px 10px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>{paymentLabels[option]}</button>
+                <button key={option} onClick={() => setSelectedPayment(option)} style={{ border: selectedPayment === option ? '1px solid #C67D5B' : (darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3'), backgroundColor: selectedPayment === option ? (darkMode ? 'rgba(198,125,91,0.25)' : '#F5EAE4') : (darkMode ? '#1A1715' : '#FAF7F2'), color: selectedPayment === option ? (darkMode ? '#FAF7F2' : '#A8644A') : (darkMode ? '#D4C5B5' : '#6B5E54'), borderRadius: '999px', padding: '6px 10px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>{paymentLabels[option]}</button>
               ))}
             </div>
           </div>
@@ -6221,28 +6209,28 @@ export default function App() {
       )}
 
       {isCategoryModalOpen && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', zIndex: 60 }}>
-          <div style={{ backgroundColor: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(24px) saturate(180%)', WebkitBackdropFilter: 'blur(24px) saturate(180%)', borderRadius: '20px', width: '100%', maxWidth: '360px', padding: '20px', border: '1px solid rgba(255,255,255,0.7)' }}>
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(61,53,48,0.65)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', zIndex: 60 }}>
+          <div style={{ backgroundColor: darkMode ? '#231E1B' : '#FAF7F2', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', borderRadius: '20px', width: '100%', maxWidth: '360px', padding: '20px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-              <h3 style={{ margin: 0, fontSize: '17px', color: '#111827' }}>{t('addCategory')}</h3>
-              <button onClick={() => setIsCategoryModalOpen(false)} style={{ border: 'none', background: 'none', cursor: 'pointer' }}><X size={16} /></button>
+              <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{t('addCategory')}</h3>
+              <button onClick={() => setIsCategoryModalOpen(false)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: darkMode ? '#FFF' : '#3D3530' }}><X size={16} /></button>
             </div>
-            <input value={categoryInput} onChange={(e) => setCategoryInput(e.target.value)} placeholder={t('categoryPlaceholder')} style={{ width: '100%', border: '1px solid #D1D5DB', borderRadius: '12px', padding: '10px 12px', marginBottom: '10px' }} />
-            <button onClick={handleAddCategory} style={{ width: '100%', border: 'none', borderRadius: '12px', padding: '10px 12px', backgroundColor: '#04265A', color: '#FFF', fontWeight: '700', cursor: 'pointer' }}>{t('addButton')}</button>
+            <input value={categoryInput} onChange={(e) => setCategoryInput(e.target.value)} placeholder={t('categoryPlaceholder')} style={{ width: '100%', border: '1px solid #E8DDD3', borderRadius: '12px', padding: '10px 12px', marginBottom: '10px', backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530', outline: 'none' }} />
+            <button onClick={handleAddCategory} style={{ width: '100%', border: 'none', borderRadius: '12px', padding: '10px 12px', background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)', color: '#FFF', fontWeight: '700', cursor: 'pointer' }}>{t('addButton')}</button>
           </div>
         </div>
       )}
 
       {selectedListing && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(2, 6, 23, 0.55)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', zIndex: 80, overflowY: 'auto', padding: '16px' }}>
-          <div style={{ maxWidth: '760px', margin: '0 auto', backgroundColor: darkMode ? 'rgba(15,23,42,0.95)' : 'rgba(255,255,255,0.92)', backdropFilter: 'blur(24px) saturate(180%)', WebkitBackdropFilter: 'blur(24px) saturate(180%)', borderRadius: '28px', overflow: 'hidden', boxShadow: darkMode ? '0 30px 90px rgba(0,0,0,0.65)' : '0 30px 90px rgba(0,0,0,0.25)', border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(255,255,255,0.7)', color: darkMode ? '#F8FAFC' : '#111827' }}>
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(61, 53, 48, 0.72)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', zIndex: 80, overflowY: 'auto', padding: '16px' }}>
+          <div style={{ maxWidth: '760px', margin: '0 auto', backgroundColor: darkMode ? '#231E1B' : '#FAF7F2', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', borderRadius: '28px', overflow: 'hidden', boxShadow: darkMode ? '0 30px 90px rgba(0,0,0,0.65)' : '0 30px 90px rgba(61,53,48,0.2)', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
 
-            {/* CARROUSEL HÉRO INTERACTIF (VIDÉO + GALERIE COHÉRENTE SANS DOUBLONS) */}
+            {/* CARROUSEL HÉRO INTERACTIF */}
             <div
               onTouchStart={handleModalTouchStart}
               onTouchMove={handleModalTouchMove}
               onTouchEnd={handleModalTouchEnd}
-              style={{ position: 'relative', width: '100%', height: '340px', backgroundColor: '#0F172A', touchAction: 'pan-y', userSelect: 'none', WebkitUserSelect: 'none', overflow: 'hidden' }}
+              style={{ position: 'relative', width: '100%', height: '340px', backgroundColor: '#1A1715', touchAction: 'pan-y', userSelect: 'none', WebkitUserSelect: 'none', overflow: 'hidden' }}
             >
               {detailMediaTab === 'video' && selectedListing.video ? (
                 <video
@@ -6293,11 +6281,11 @@ export default function App() {
               )}
 
               {/* BOUTON FERMER */}
-              <button onClick={() => { setSelectedListing(null); setSelectedDetailImageIndex(0); setDetailMediaTab('image'); }} style={{ position: 'absolute', top: '14px', right: '14px', border: 'none', width: '38px', height: '38px', borderRadius: '50%', backgroundColor: 'rgba(255,255,255,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10, boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }}><X size={18} /></button>
+              <button onClick={() => { setSelectedListing(null); setSelectedDetailImageIndex(0); setDetailMediaTab('image'); }} style={{ position: 'absolute', top: '14px', right: '14px', border: 'none', width: '38px', height: '38px', borderRadius: '50%', backgroundColor: 'rgba(250,247,242,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10, boxShadow: '0 4px 12px rgba(61,53,48,0.15)', color: '#3D3530' }}><X size={18} /></button>
 
               {selectedListing.isBoosted && <span className="sponsored-badge" style={{ position: 'absolute', top: '14px', left: '14px', backgroundColor: '#F59E0B', color: '#FFF', fontSize: '11px', fontWeight: '800', padding: '6px 10px', borderRadius: '10px', boxShadow: '0 6px 16px rgba(245,158,11,0.45)', zIndex: 10 }}>🔥 Sponsorisé</span>}
 
-              {/* FLÈCHES DE NAVIGATION LATÉRALE DANS LE CARROUSEL — STYLE MINIMALISTE & CLEAN */}
+              {/* FLÈCHES DE NAVIGATION LATÉRALE */}
               {detailMediaTab === 'image' && (selectedListing.gallery?.length || 0) > 1 && (
                 <>
                   <button
@@ -6308,7 +6296,7 @@ export default function App() {
                       border: 'none',
                       width: '38px', height: '38px',
                       borderRadius: '50%',
-                      backgroundColor: 'rgba(0,0,0,0.25)',
+                      backgroundColor: 'rgba(61,53,48,0.4)',
                       backdropFilter: 'blur(8px)',
                       WebkitBackdropFilter: 'blur(8px)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -6317,8 +6305,6 @@ export default function App() {
                       outline: 'none',
                       boxShadow: 'none'
                     }}
-                    onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.25)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.25)'; }}
                   >
                     <ChevronLeft size={20} color="#FFFFFF" strokeWidth={2.5} />
                   </button>
@@ -6330,7 +6316,7 @@ export default function App() {
                       border: 'none',
                       width: '38px', height: '38px',
                       borderRadius: '50%',
-                      backgroundColor: 'rgba(0,0,0,0.25)',
+                      backgroundColor: 'rgba(61,53,48,0.4)',
                       backdropFilter: 'blur(8px)',
                       WebkitBackdropFilter: 'blur(8px)',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -6339,17 +6325,15 @@ export default function App() {
                       outline: 'none',
                       boxShadow: 'none'
                     }}
-                    onMouseEnter={e => { e.currentTarget.style.backgroundColor = 'rgba(255,255,255,0.25)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.25)'; }}
                   >
                     <ChevronRight size={20} color="#FFFFFF" strokeWidth={2.5} />
                   </button>
                 </>
               )}
 
-              {/* PUCES INDICATRICES DE POSITION (DOTS BULLETS) */}
+              {/* PUCES INDICATRICES */}
               {detailMediaTab === 'image' && (selectedListing.gallery?.length || 0) > 1 && (
-                <div style={{ position: 'absolute', bottom: '14px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '6px', zIndex: 10, backgroundColor: 'rgba(15,23,42,0.6)', padding: '6px 12px', borderRadius: '999px', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
+                <div style={{ position: 'absolute', bottom: '14px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '6px', zIndex: 10, backgroundColor: 'rgba(61,53,48,0.6)', padding: '6px 12px', borderRadius: '999px', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
                   {selectedListing.gallery.map((_, idx) => (
                     <div
                       key={idx}
@@ -6358,7 +6342,7 @@ export default function App() {
                         width: selectedDetailImageIndex === idx ? '20px' : '8px',
                         height: '8px',
                         borderRadius: '999px',
-                        backgroundColor: selectedDetailImageIndex === idx ? '#60A5FA' : 'rgba(255,255,255,0.5)',
+                        backgroundColor: selectedDetailImageIndex === idx ? '#C67D5B' : 'rgba(255,255,255,0.5)',
                         cursor: 'pointer',
                         transition: 'all 0.3s ease'
                       }}
@@ -6370,11 +6354,11 @@ export default function App() {
               {/* COMMUTATEUR MÉDIA BASCULE VIDÉO / GALERIE */}
               <div style={{ position: 'absolute', bottom: '14px', left: '14px', display: 'flex', gap: '8px', zIndex: 10 }}>
                 {selectedListing.video && (
-                  <button onClick={() => setDetailMediaTab('video')} style={{ border: 'none', borderRadius: '999px', padding: '7px 14px', backgroundColor: detailMediaTab === 'video' ? '#04265A' : 'rgba(15,23,42,0.75)', color: '#FFF', fontSize: '12px', fontWeight: '800', cursor: 'pointer', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <button onClick={() => setDetailMediaTab('video')} style={{ border: 'none', borderRadius: '999px', padding: '7px 14px', backgroundColor: detailMediaTab === 'video' ? '#C67D5B' : 'rgba(61,53,48,0.75)', color: '#FFF', fontSize: '12px', fontWeight: '800', cursor: 'pointer', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', gap: '5px' }}>
                     <Video size={13} /> {t('demoVideo')}
                   </button>
                 )}
-                <button onClick={() => setDetailMediaTab('image')} style={{ border: 'none', borderRadius: '999px', padding: '7px 14px', backgroundColor: detailMediaTab === 'image' ? '#04265A' : 'rgba(15,23,42,0.75)', color: '#FFF', fontSize: '12px', fontWeight: '800', cursor: 'pointer', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <button onClick={() => setDetailMediaTab('image')} style={{ border: 'none', borderRadius: '999px', padding: '7px 14px', backgroundColor: detailMediaTab === 'image' ? '#C67D5B' : 'rgba(61,53,48,0.75)', color: '#FFF', fontSize: '12px', fontWeight: '800', cursor: 'pointer', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', gap: '5px' }}>
                   <Camera size={13} /> Photos ({selectedListing.gallery?.length || 1})
                 </button>
               </div>
@@ -6389,7 +6373,7 @@ export default function App() {
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', gap: '10px', flexWrap: 'wrap' }}>
                       <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '8px' }}>
-                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 10px', borderRadius: '999px', backgroundColor: darkMode ? 'rgba(4,38,90,0.6)' : '#EFF6FF', color: darkMode ? '#93C5FD' : '#04265A', fontSize: '11px', fontWeight: '800' }}>
+                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 10px', borderRadius: '999px', backgroundColor: darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4', color: darkMode ? '#FAF7F2' : '#A8644A', fontSize: '11px', fontWeight: '800' }}>
                             <Sparkles size={12} /> {t('verifiedOffer')}
                           </div>
                           {(selectedListing.isDemo || (typeof selectedListing.id === 'number' && selectedListing.id <= 20)) && (
@@ -6398,8 +6382,8 @@ export default function App() {
                               fontWeight: '800',
                               padding: '5px 10px',
                               borderRadius: '999px',
-                              backgroundColor: darkMode ? 'rgba(126,34,206,0.3)' : '#F3E8FF',
-                              color: darkMode ? '#D8B4FE' : '#7E22CE',
+                              backgroundColor: darkMode ? 'rgba(107,94,84,0.4)' : '#EDE6DF',
+                              color: darkMode ? '#D4C5B5' : '#6B5E54',
                               display: 'inline-flex',
                               alignItems: 'center',
                               gap: '4px'
@@ -6408,7 +6392,7 @@ export default function App() {
                             </span>
                           )}
                         </div>
-                        <h3 style={{ margin: '0 0 4px 0', fontSize: '22px', color: darkMode ? '#FFFFFF' : '#111827' }}>{detailDisplayContent.title}</h3>
+                        <h3 className="font-editorial-heading" style={{ margin: '0 0 4px 0', fontSize: '24px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{detailDisplayContent.title}</h3>
                         {currentLang !== (selectedListing.nativeLang || 'FR') && (
                           <button
                             onClick={(e) => toggleOriginalListing(selectedListing.id, e)}
@@ -6416,7 +6400,7 @@ export default function App() {
                             style={{
                               border: 'none',
                               backgroundColor: 'transparent',
-                              color: darkMode ? '#60A5FA' : '#04265A',
+                              color: '#C67D5B',
                               fontSize: '12px',
                               fontWeight: '800',
                               cursor: 'pointer',
@@ -6426,7 +6410,7 @@ export default function App() {
                               padding: '2px 0 6px 0'
                             }}
                           >
-                            <Globe size={13} color={darkMode ? '#60A5FA' : '#04265A'} />
+                            <Globe size={13} color="#C67D5B" />
                             {isDetailShowingOriginal ? t('showTranslation') : t('showOriginal')}
                           </button>
                         )}
@@ -6459,53 +6443,53 @@ export default function App() {
                           >
                             <ShieldAlert size={14} /> Signaler
                           </button>
-                          <button onClick={() => handleStartDiscussion({ id: selectedListing.id, title: selectedListing.title, author: selectedListing.authorProfile.name, compensation: selectedListing.compensation })} className="premium-button" style={{ border: 'none', borderRadius: '999px', padding: '11px 16px', backgroundColor: '#04265A', color: '#FFF', fontWeight: '700', cursor: 'pointer', boxShadow: '0 10px 20px rgba(4,38,90,0.25)' }}>{t('startDiscussion')}</button>
+                          <button onClick={() => handleStartDiscussion({ id: selectedListing.id, title: selectedListing.title, author: selectedListing.authorProfile.name, compensation: selectedListing.compensation })} className="premium-button" style={{ border: 'none', borderRadius: '999px', padding: '11px 16px', background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)', color: '#FFF', fontWeight: '800', cursor: 'pointer', boxShadow: '0 8px 20px rgba(198,125,91,0.35)' }}>{t('startDiscussion')}</button>
                         </div>
                       ) : (
-                        <div style={{ backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : '#F3F4F6', color: darkMode ? '#CBD5E1' : '#6B7280', padding: '10px 16px', borderRadius: '999px', fontSize: '13px', fontWeight: '700', border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #E5E7EB' }}>{t('authorAnnc')}</div>
+                        <div style={{ backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', color: darkMode ? '#D4C5B5' : '#6B5E54', padding: '10px 16px', borderRadius: '999px', fontSize: '13px', fontWeight: '700', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3' }}>{t('authorAnnc')}</div>
                       )}
                     </div>
-                    <p style={{ margin: '0 0 14px', lineHeight: 1.7, color: darkMode ? '#CBD5E1' : '#475569', fontSize: '14px' }}>{detailDisplayContent.description}</p>
+                    <p style={{ margin: '0 0 14px', lineHeight: 1.7, color: darkMode ? '#D4C5B5' : '#6B5E54', fontSize: '14px' }}>{detailDisplayContent.description}</p>
                   </>
                 );
               })()}
 
               <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '14px' }}>
                 {localizeTags(selectedListing.tags, currentLang).map(tag => (
-                  <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: darkMode ? 'rgba(4,38,90,0.6)' : '#EFF6FF', color: darkMode ? '#93C5FD' : '#04265A', borderRadius: '999px', padding: '5px 10px', fontSize: '11px', fontWeight: '800' }}><Tag size={11} /> {tag}</span>
+                  <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4', color: darkMode ? '#FAF7F2' : '#A8644A', borderRadius: '999px', padding: '5px 10px', fontSize: '11px', fontWeight: '800' }}><Tag size={11} /> {tag}</span>
                 ))}
               </div>
 
-              <div style={{ border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E2E8F0', borderRadius: '16px', padding: '14px', backgroundColor: darkMode ? 'rgba(30,41,59,0.7)' : '#F8FAFC', marginBottom: '14px' }}>
-                <div style={{ fontWeight: '800', fontSize: '13px', color: darkMode ? '#F8FAFC' : '#111827', marginBottom: '6px' }}>{t('compensation')}</div>
-                <div style={{ fontSize: '13px', color: darkMode ? '#60A5FA' : '#04265A', fontWeight: '700' }}>{formatCompensation(selectedListing.compensation)}</div>
+              <div style={{ border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3', borderRadius: '16px', padding: '14px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', marginBottom: '14px' }}>
+                <div style={{ fontWeight: '800', fontSize: '13px', color: darkMode ? '#FAF7F2' : '#3D3530', marginBottom: '6px' }}>{t('compensation')}</div>
+                <div style={{ fontSize: '13px', color: '#C67D5B', fontWeight: '700' }}>{formatCompensation(selectedListing.compensation)}</div>
               </div>
-              <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '14px', padding: '14px', borderRadius: '16px', backgroundColor: darkMode ? 'rgba(245,158,11,0.12)' : '#FFF7ED', border: darkMode ? '1px solid rgba(245,158,11,0.3)' : '1px solid #FFEDD5' }}>
-                <img src={selectedListing.authorProfile.avatar} alt={selectedListing.authorProfile.name} style={{ width: '56px', height: '56px', borderRadius: '50%', objectFit: 'cover' }} />
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '14px', padding: '14px', borderRadius: '16px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3' }}>
+                <img src={selectedListing.authorProfile.avatar} alt={selectedListing.authorProfile.name} style={{ width: '56px', height: '56px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #E8DDD3' }} />
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: '800', color: darkMode ? '#FFFFFF' : '#111827' }}>{selectedListing.authorProfile.name}</div>
-                  <div style={{ fontSize: '13px', color: darkMode ? '#CBD5E1' : '#64748B', marginTop: '4px' }}>{getBioTranslation(selectedListing.authorProfile.bio, currentLang, !!showingOriginalListings[selectedListing.id])}</div>
+                  <div style={{ fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{selectedListing.authorProfile.name}</div>
+                  <div style={{ fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54', marginTop: '4px' }}>{getBioTranslation(selectedListing.authorProfile.bio, currentLang, !!showingOriginalListings[selectedListing.id])}</div>
                 </div>
               </div>
               <div style={{ marginBottom: '14px' }}>
-                <div style={{ fontWeight: '800', fontSize: '13px', color: darkMode ? '#F8FAFC' : '#111827', marginBottom: '8px' }}>{t('socialNetworks')}</div>
+                <div style={{ fontWeight: '800', fontSize: '13px', color: darkMode ? '#FAF7F2' : '#3D3530', marginBottom: '8px' }}>{t('socialNetworks')}</div>
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  {selectedListing.authorProfile.socials.map(link => <span key={link} style={{ border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #E2E8F0', borderRadius: '999px', padding: '6px 10px', fontSize: '12px', color: darkMode ? '#93C5FD' : '#04265A', fontWeight: '700', backgroundColor: darkMode ? 'rgba(30,41,59,0.5)' : 'transparent' }}>{link}</span>)}
+                  {selectedListing.authorProfile.socials.map(link => <span key={link} style={{ border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', borderRadius: '999px', padding: '6px 10px', fontSize: '12px', color: '#C67D5B', fontWeight: '700', backgroundColor: darkMode ? '#1A1715' : '#FAF7F2' }}>{link}</span>)}
                 </div>
               </div>
               <div style={{ marginBottom: '14px' }}>
-                <div style={{ fontWeight: '800', fontSize: '13px', color: darkMode ? '#F8FAFC' : '#111827', marginBottom: '8px' }}>{t('portfolio')}</div>
+                <div style={{ fontWeight: '800', fontSize: '13px', color: darkMode ? '#FAF7F2' : '#3D3530', marginBottom: '8px' }}>{t('portfolio')}</div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '8px' }}>
                   {selectedListing.authorProfile.portfolio.map((image, index) => <img key={image + index} src={image} alt="portfolio" style={{ width: '100%', height: '80px', objectFit: 'cover', borderRadius: '14px' }} />)}
                 </div>
               </div>
               <div>
-                <div style={{ fontWeight: '800', fontSize: '13px', color: darkMode ? '#F8FAFC' : '#111827', marginBottom: '8px' }}>{t('reviews')}</div>
+                <div style={{ fontWeight: '800', fontSize: '13px', color: darkMode ? '#FAF7F2' : '#3D3530', marginBottom: '8px' }}>{t('reviews')}</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {selectedListing.authorProfile.reviews.map((review, index) => (
-                    <div key={review.text + index} style={{ border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E2E8F0', borderRadius: '14px', padding: '12px', backgroundColor: darkMode ? 'rgba(30,41,59,0.6)' : '#FAFAFA' }}>
+                    <div key={review.text + index} style={{ border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3', borderRadius: '14px', padding: '12px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8' }}>
                       <div style={{ color: '#F59E0B', marginBottom: '4px' }}>{'⭐'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}</div>
-                      <div style={{ fontSize: '13px', color: darkMode ? '#E2E8F0' : '#334155' }}>{localizeReview(review.text, currentLang)}</div>
+                      <div style={{ fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>{localizeReview(review.text, currentLang)}</div>
                     </div>
                   ))}
                 </div>
@@ -6570,23 +6554,23 @@ export default function App() {
             <aside className="desktop-ad-banner" aria-label="Espace Partenaires Troco">
               <div className="ad-card">
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '9px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', color: darkMode ? '#93C5FD' : '#04265A', backgroundColor: darkMode ? 'rgba(4,38,90,0.6)' : '#EFF6FF', padding: '3px 7px', borderRadius: '6px' }}>
+                  <span style={{ fontSize: '9px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', color: darkMode ? '#FAF7F2' : '#A8644A', backgroundColor: darkMode ? 'rgba(198,125,91,0.25)' : '#F5EAE4', padding: '3px 7px', borderRadius: '6px' }}>
                     🌟 Partenaire Pro
                   </span>
-                  <span style={{ fontSize: '9px', color: darkMode ? '#94A3B8' : '#94A3B8' }}>Sponsorisé</span>
+                  <span style={{ fontSize: '9px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>Sponsorisé</span>
                 </div>
                 <img
                   src="https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=400&q=80"
                   alt="Partenaire Outillage"
                   style={{ width: '100%', height: '85px', objectFit: 'cover', borderRadius: '12px', marginBottom: '8px' }}
                 />
-                <div style={{ fontSize: '13px', fontWeight: '800', color: darkMode ? '#FFFFFF' : '#0F172A', marginBottom: '4px', lineHeight: 1.3 }}>
+                <div style={{ fontSize: '13px', fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530', marginBottom: '4px', lineHeight: 1.3 }}>
                   Brico & Outillage Pro
                 </div>
-                <div style={{ fontSize: '11px', color: darkMode ? '#94A3B8' : '#64748B', lineHeight: 1.4, marginBottom: '8px' }}>
+                <div style={{ fontSize: '11px', color: darkMode ? '#D4C5B5' : '#6B5E54', lineHeight: 1.4, marginBottom: '8px' }}>
                   Matériel certifié disponible en prêt immédiat avec caution Troco.
                 </div>
-                <div style={{ display: 'inline-block', fontSize: '10px', fontWeight: '800', color: '#16A34A', backgroundColor: '#DCFCE7', padding: '2px 8px', borderRadius: '999px', marginBottom: '8px' }}>
+                <div style={{ display: 'inline-block', fontSize: '10px', fontWeight: '800', color: '#3D4A35', backgroundColor: '#EBF0E6', padding: '2px 8px', borderRadius: '999px', marginBottom: '8px', border: '1px solid #D4DFCE' }}>
                   -15% membres Troco
                 </div>
                 <button
@@ -6600,7 +6584,7 @@ export default function App() {
                     width: '100%',
                     padding: '8px 10px',
                     borderRadius: '10px',
-                    backgroundColor: '#04265A',
+                    background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)',
                     color: '#FFF',
                     fontSize: '11px',
                     fontWeight: '700',
@@ -6617,17 +6601,17 @@ export default function App() {
                   <span style={{ fontSize: '9px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#D97706', backgroundColor: '#FEF3C7', padding: '3px 7px', borderRadius: '6px' }}>
                     🎓 Mentorat
                   </span>
-                  <span style={{ fontSize: '9px', color: darkMode ? '#94A3B8' : '#94A3B8' }}>Publicité</span>
+                  <span style={{ fontSize: '9px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>Publicité</span>
                 </div>
                 <img
                   src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=400&q=80"
                   alt="Academia Code"
                   style={{ width: '100%', height: '85px', objectFit: 'cover', borderRadius: '12px', marginBottom: '8px' }}
                 />
-                <div style={{ fontSize: '13px', fontWeight: '800', color: darkMode ? '#FFFFFF' : '#0F172A', marginBottom: '4px', lineHeight: 1.3 }}>
+                <div style={{ fontSize: '13px', fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530', marginBottom: '4px', lineHeight: 1.3 }}>
                   Academia Code & Langues
                 </div>
-                <div style={{ fontSize: '11px', color: darkMode ? '#94A3B8' : '#64748B', lineHeight: 1.4, marginBottom: '8px' }}>
+                <div style={{ fontSize: '11px', color: darkMode ? '#D4C5B5' : '#6B5E54', lineHeight: 1.4, marginBottom: '8px' }}>
                   Mentorat accéléré et cours en visioconférence HD.
                 </div>
                 <button
@@ -6641,11 +6625,11 @@ export default function App() {
                     width: '100%',
                     padding: '8px 10px',
                     borderRadius: '10px',
-                    backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : '#F1F5F9',
-                    color: darkMode ? '#FFF' : '#0F172A',
+                    backgroundColor: darkMode ? '#1A1715' : '#FAF7F2',
+                    color: darkMode ? '#FAF7F2' : '#3D3530',
                     fontSize: '11px',
                     fontWeight: '700',
-                    border: 'none',
+                    border: '1px solid #E8DDD3',
                     cursor: 'pointer'
                   }}
                 >
@@ -6658,38 +6642,38 @@ export default function App() {
             <div className="feed-main-content">
               {/* Ligne Recherche + Filtre Rayon + Bascule Vue Liste / Carte */}
               <div style={{ display: 'flex', gap: '8px', marginBottom: '14px', flexWrap: 'wrap', alignItems: 'center' }}>
-                <div style={{ flex: 1, minWidth: '220px', display: 'flex', alignItems: 'center', backgroundColor: darkMode ? 'rgba(30,41,59,0.8)' : 'rgba(255,255,255,0.8)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(209,213,219,0.7)', borderRadius: '16px', padding: '10px 14px', boxShadow: '0 4px 20px -4px rgba(15, 23, 42, 0.06)' }}>
-                  <Search size={18} color="#9CA3AF" style={{ marginRight: '10px' }} />
-                  <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} type="text" placeholder={t('searchPlaceholder')} style={{ border: 'none', outline: 'none', width: '100%', fontSize: '14px', backgroundColor: 'transparent', color: darkMode ? '#FFF' : '#111827' }} />
+                <div style={{ flex: 1, minWidth: '220px', display: 'flex', alignItems: 'center', backgroundColor: darkMode ? '#231E1B' : '#FAF7F2', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', borderRadius: '16px', padding: '10px 14px', boxShadow: '0 4px 20px -4px rgba(61, 53, 48, 0.05)' }}>
+                  <Search size={18} color="#C67D5B" style={{ marginRight: '10px' }} />
+                  <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} type="text" placeholder={t('searchPlaceholder')} style={{ border: 'none', outline: 'none', width: '100%', fontSize: '14px', backgroundColor: 'transparent', color: darkMode ? '#FAF7F2' : '#3D3530' }} />
                 </div>
                 <button
                   onClick={() => setIsFilterDrawerOpen(true)}
                   className="premium-button"
                   style={{
-                    backgroundColor: isInfiniteRadius || radiusKm >= 100 ? (darkMode ? 'rgba(4,38,90,0.8)' : '#EFF6FF') : (darkMode ? 'rgba(30,41,59,0.8)' : 'rgba(255,255,255,0.8)'),
+                    backgroundColor: isInfiniteRadius || radiusKm >= 100 ? (darkMode ? 'rgba(198,125,91,0.25)' : '#F5EAE4') : (darkMode ? '#231E1B' : '#FAF7F2'),
                     backdropFilter: 'blur(16px)',
                     WebkitBackdropFilter: 'blur(16px)',
-                    border: isInfiniteRadius || radiusKm >= 100 ? (darkMode ? '1px solid #60A5FA' : '1px solid #04265A') : (darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(209,213,219,0.7)'),
+                    border: isInfiniteRadius || radiusKm >= 100 ? '1px solid #C67D5B' : (darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3'),
                     borderRadius: '16px',
                     padding: '10px 14px',
                     cursor: 'pointer',
-                    boxShadow: '0 4px 20px -4px rgba(15, 23, 42, 0.06)',
+                    boxShadow: '0 4px 20px -4px rgba(61, 53, 48, 0.05)',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '6px',
-                    color: isInfiniteRadius || radiusKm >= 100 ? (darkMode ? '#93C5FD' : '#04265A') : (darkMode ? '#CBD5E1' : '#374151'),
+                    color: isInfiniteRadius || radiusKm >= 100 ? (darkMode ? '#FAF7F2' : '#A8644A') : (darkMode ? '#D4C5B5' : '#6B5E54'),
                     fontWeight: '700',
                     fontSize: '13px'
                   }}
                 >
-                  <Filter size={18} color={isInfiniteRadius || radiusKm >= 100 ? (darkMode ? '#93C5FD' : '#04265A') : '#374151'} />
+                  <Filter size={18} color={isInfiniteRadius || radiusKm >= 100 ? '#C67D5B' : (darkMode ? '#D4C5B5' : '#6B5E54')} />
                   <span>{isInfiniteRadius || radiusKm >= 100 ? `♾️ ${t('infinite')}` : `${radiusKm} km`}</span>
                 </button>
 
                 {/* Sélecteur de vue (Liste / Carte) dédié et étanche */}
-                <div className="premium-panel" style={{ display: 'inline-flex', flexShrink: 0, border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(226,232,240,0.9)', borderRadius: '999px', padding: '3px', backgroundColor: darkMode ? 'rgba(30,41,59,0.7)' : 'rgba(255,255,255,0.8)', boxShadow: '0 4px 20px -4px rgba(15, 23, 42, 0.06)' }}>
-                  <button onClick={() => setViewMode('list')} className="premium-nav-btn" style={{ border: 'none', borderRadius: '999px', padding: '8px 14px', backgroundColor: viewMode === 'list' ? (darkMode ? '#3B82F6' : '#04265A') : 'transparent', color: viewMode === 'list' ? '#FFF' : (darkMode ? '#CBD5E1' : '#64748B'), fontWeight: '700', cursor: 'pointer', fontSize: '12px' }}>{t('viewList')}</button>
-                  <button onClick={() => { setViewMode('map'); setIsInfiniteRadius(true); }} className="premium-nav-btn" style={{ border: 'none', borderRadius: '999px', padding: '8px 14px', backgroundColor: viewMode === 'map' ? (darkMode ? '#3B82F6' : '#04265A') : 'transparent', color: viewMode === 'map' ? '#FFF' : (darkMode ? '#CBD5E1' : '#64748B'), fontWeight: '700', cursor: 'pointer', fontSize: '12px' }}>{t('viewMap')}</button>
+                <div className="premium-panel" style={{ display: 'inline-flex', flexShrink: 0, border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', borderRadius: '999px', padding: '3px', backgroundColor: darkMode ? '#231E1B' : '#FAF7F2', boxShadow: '0 4px 20px -4px rgba(61, 53, 48, 0.05)' }}>
+                  <button onClick={() => setViewMode('list')} className="premium-nav-btn" style={{ border: 'none', borderRadius: '999px', padding: '8px 14px', backgroundColor: viewMode === 'list' ? '#C67D5B' : 'transparent', color: viewMode === 'list' ? '#FFF' : (darkMode ? '#D4C5B5' : '#6B5E54'), fontWeight: '700', cursor: 'pointer', fontSize: '12px' }}>{t('viewList')}</button>
+                  <button onClick={() => { setViewMode('map'); setIsInfiniteRadius(true); }} className="premium-nav-btn" style={{ border: 'none', borderRadius: '999px', padding: '8px 14px', backgroundColor: viewMode === 'map' ? '#C67D5B' : 'transparent', color: viewMode === 'map' ? '#FFF' : (darkMode ? '#D4C5B5' : '#6B5E54'), fontWeight: '700', cursor: 'pointer', fontSize: '12px' }}>{t('viewMap')}</button>
                 </div>
               </div>
 
@@ -6713,17 +6697,15 @@ export default function App() {
                     width: '32px',
                     height: '32px',
                     borderRadius: '50%',
-                    border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(226,232,240,0.9)',
-                    backgroundColor: darkMode ? 'rgba(30,41,59,0.85)' : 'rgba(255,255,255,0.9)',
-                    color: darkMode ? '#93C5FD' : '#04265A',
+                    border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
+                    backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
+                    color: '#C67D5B',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     cursor: 'pointer',
                     flexShrink: 0,
-                    boxShadow: darkMode ? '0 4px 12px rgba(0,0,0,0.25)' : '0 2px 8px rgba(15,23,42,0.06)',
-                    backdropFilter: 'blur(12px)',
-                    WebkitBackdropFilter: 'blur(12px)',
+                    boxShadow: '0 2px 8px rgba(61,53,48,0.06)',
                     zIndex: 2,
                     transition: 'all 0.2s ease'
                   }}
@@ -6750,10 +6732,10 @@ export default function App() {
                         onClick={() => setSelectedCategory(category)}
                         className="premium-button category-pill"
                         style={{
-                          border: isSel ? (darkMode ? '1px solid #60A5FA' : '1px solid #04265A') : (darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(226,232,240,0.9)'),
-                          backgroundColor: isSel ? (darkMode ? 'rgba(4,38,90,0.85)' : '#EFF6FF') : (darkMode ? 'rgba(30,41,59,0.7)' : 'rgba(248,250,252,0.95)'),
-                          color: isSel ? (darkMode ? '#93C5FD' : '#04265A') : (darkMode ? '#CBD5E1' : '#475569'),
-                          boxShadow: isSel ? '0 4px 14px rgba(4,38,90,0.15)' : '0 2px 8px rgba(15, 23, 42, 0.04)',
+                          border: isSel ? '1px solid #C67D5B' : (darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3'),
+                          backgroundColor: isSel ? (darkMode ? 'rgba(198,125,91,0.25)' : '#F5EAE4') : (darkMode ? '#1A1715' : '#FAF7F2'),
+                          color: isSel ? (darkMode ? '#FAF7F2' : '#A8644A') : (darkMode ? '#D4C5B5' : '#6B5E54'),
+                          boxShadow: isSel ? '0 4px 14px rgba(198,125,91,0.2)' : '0 2px 8px rgba(61, 53, 48, 0.04)',
                           cursor: 'pointer'
                         }}
                       >
@@ -6765,9 +6747,9 @@ export default function App() {
                     onClick={() => setIsCategoryModalOpen(true)}
                     className="premium-button category-pill"
                     style={{
-                      border: darkMode ? '1px dashed #60A5FA' : '1px dashed #04265A',
-                      backgroundColor: darkMode ? 'rgba(4,38,90,0.3)' : '#F0FDFA',
-                      color: darkMode ? '#93C5FD' : '#04265A',
+                      border: '1px dashed #C67D5B',
+                      backgroundColor: darkMode ? 'rgba(198,125,91,0.15)' : '#F5EAE4',
+                      color: '#C67D5B',
                       cursor: 'pointer',
                       flexShrink: 0
                     }}
@@ -6786,17 +6768,15 @@ export default function App() {
                     width: '32px',
                     height: '32px',
                     borderRadius: '50%',
-                    border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(226,232,240,0.9)',
-                    backgroundColor: darkMode ? 'rgba(30,41,59,0.85)' : 'rgba(255,255,255,0.9)',
-                    color: darkMode ? '#93C5FD' : '#04265A',
+                    border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
+                    backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
+                    color: '#C67D5B',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     cursor: 'pointer',
                     flexShrink: 0,
-                    boxShadow: darkMode ? '0 4px 12px rgba(0,0,0,0.25)' : '0 2px 8px rgba(15,23,42,0.06)',
-                    backdropFilter: 'blur(12px)',
-                    WebkitBackdropFilter: 'blur(12px)',
+                    boxShadow: '0 2px 8px rgba(61,53,48,0.06)',
                     zIndex: 2,
                     transition: 'all 0.2s ease'
                   }}
@@ -6805,7 +6785,7 @@ export default function App() {
                 </button>
               </div>
 
-              {/* SÉLECTEUR SEGMENTÉ FORMAT APPLE-GRADE (STYLE IOS GLASSMORPHISM) */}
+              {/* SÉLECTEUR SEGMENTÉ FORMAT */}
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -6814,11 +6794,11 @@ export default function App() {
                 margin: '0 auto 20px auto',
                 padding: '4px',
                 borderRadius: '16px',
-                backgroundColor: darkMode ? 'rgba(30, 41, 59, 0.75)' : 'rgba(241, 245, 249, 0.92)',
+                backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
                 backdropFilter: 'blur(16px)',
                 WebkitBackdropFilter: 'blur(16px)',
-                border: darkMode ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid rgba(226, 232, 240, 0.85)',
-                boxShadow: darkMode ? '0 4px 16px rgba(0,0,0,0.2)' : '0 2px 10px rgba(15,23,42,0.04)',
+                border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
+                boxShadow: '0 2px 10px rgba(61,53,48,0.04)',
                 boxSizing: 'border-box',
                 gap: '4px'
               }}>
@@ -6832,11 +6812,11 @@ export default function App() {
                     borderRadius: '12px',
                     border: 'none',
                     backgroundColor: formatFilter === 'all'
-                      ? (darkMode ? '#3B82F6' : '#04265A')
+                      ? '#C67D5B'
                       : 'transparent',
                     color: formatFilter === 'all'
                       ? '#FFFFFF'
-                      : (darkMode ? '#94A3B8' : '#64748B'),
+                      : (darkMode ? '#D4C5B5' : '#6B5E54'),
                     fontSize: '12px',
                     fontWeight: '700',
                     cursor: 'pointer',
@@ -6845,7 +6825,7 @@ export default function App() {
                     justifyContent: 'center',
                     gap: '6px',
                     boxShadow: formatFilter === 'all'
-                      ? (darkMode ? '0 2px 8px rgba(59,130,246,0.35)' : '0 2px 8px rgba(4,38,90,0.25)')
+                      ? '0 2px 8px rgba(198,125,91,0.3)'
                       : 'none',
                     transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)'
                   }}
@@ -6864,11 +6844,11 @@ export default function App() {
                     borderRadius: '12px',
                     border: 'none',
                     backgroundColor: formatFilter === 'onsite'
-                      ? (darkMode ? '#3B82F6' : '#04265A')
+                      ? '#C67D5B'
                       : 'transparent',
                     color: formatFilter === 'onsite'
                       ? '#FFFFFF'
-                      : (darkMode ? '#94A3B8' : '#64748B'),
+                      : (darkMode ? '#D4C5B5' : '#6B5E54'),
                     fontSize: '12px',
                     fontWeight: '700',
                     cursor: 'pointer',
@@ -6877,7 +6857,7 @@ export default function App() {
                     justifyContent: 'center',
                     gap: '6px',
                     boxShadow: formatFilter === 'onsite'
-                      ? (darkMode ? '0 2px 8px rgba(59,130,246,0.35)' : '0 2px 8px rgba(4,38,90,0.25)')
+                      ? '0 2px 8px rgba(198,125,91,0.3)'
                       : 'none',
                     transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)'
                   }}
@@ -6896,11 +6876,11 @@ export default function App() {
                     borderRadius: '12px',
                     border: 'none',
                     backgroundColor: formatFilter === 'remote'
-                      ? (darkMode ? '#3B82F6' : '#04265A')
+                      ? '#C67D5B'
                       : 'transparent',
                     color: formatFilter === 'remote'
                       ? '#FFFFFF'
-                      : (darkMode ? '#94A3B8' : '#64748B'),
+                      : (darkMode ? '#D4C5B5' : '#6B5E54'),
                     fontSize: '12px',
                     fontWeight: '700',
                     cursor: 'pointer',
@@ -6909,7 +6889,7 @@ export default function App() {
                     justifyContent: 'center',
                     gap: '6px',
                     boxShadow: formatFilter === 'remote'
-                      ? (darkMode ? '0 2px 8px rgba(59,130,246,0.35)' : '0 2px 8px rgba(4,38,90,0.25)')
+                      ? '0 2px 8px rgba(198,125,91,0.3)'
                       : 'none',
                     transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)'
                   }}
@@ -6920,23 +6900,23 @@ export default function App() {
               </div>
 
               {filteredListings.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '60px 20px', backgroundColor: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderRadius: '24px', border: '1px solid rgba(229,231,235,0.9)', boxShadow: '0 10px 30px rgba(0,0,0,0.04)', animation: 'fadeSlideUp 0.3s ease both' }}>
-                  <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: '#EFF6FF', color: '#04265A', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', boxShadow: '0 8px 20px rgba(4,38,90,0.15)' }}>
+                <div style={{ textAlign: 'center', padding: '60px 20px', backgroundColor: darkMode ? '#231E1B' : '#FAF7F2', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderRadius: '24px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', boxShadow: '0 10px 30px rgba(61,53,48,0.05)', animation: 'fadeSlideUp 0.3s ease both' }}>
+                  <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4', color: '#C67D5B', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', boxShadow: '0 8px 20px rgba(198,125,91,0.15)' }}>
                     <Search size={28} />
                   </div>
-                  <h3 style={{ fontSize: '18px', fontWeight: '800', color: '#111827', margin: '0 0 8px' }}>Aucune annonce ne correspond à ta recherche</h3>
-                  <p style={{ fontSize: '13px', color: '#64748B', margin: '0 0 20px', maxWidth: '420px', marginInline: 'auto', lineHeight: 1.6 }}>Essaie d'élargir ton rayon de recherche, de changer de catégorie ou de réinitialiser tes filtres pour découvrir les annonces des membres Troco.</p>
+                  <h3 className="font-editorial-heading" style={{ fontSize: '20px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530', margin: '0 0 8px' }}>Aucune annonce ne correspond à ta recherche</h3>
+                  <p style={{ fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54', margin: '0 0 20px', maxWidth: '420px', marginInline: 'auto', lineHeight: 1.6 }}>Essaie d'élargir ton rayon de recherche, de changer de catégorie ou de réinitialiser tes filtres pour découvrir les annonces des membres Troco.</p>
                   <button
                     onClick={() => { setSearchQuery(''); setSelectedCategory('all'); setRadiusKm(100); setIsInfiniteRadius(true); setSelectedLanguages([]); setSelectedPayment('all'); setFormatFilter('all'); }}
                     className="premium-button"
-                    style={{ border: 'none', borderRadius: '999px', padding: '10px 22px', backgroundColor: '#04265A', color: '#FFF', fontWeight: '800', fontSize: '13px', cursor: 'pointer', boxShadow: '0 8px 18px rgba(4,38,90,0.2)' }}
+                    style={{ border: 'none', borderRadius: '999px', padding: '10px 22px', background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)', color: '#FFF', fontWeight: '800', fontSize: '13px', cursor: 'pointer', boxShadow: '0 8px 18px rgba(198,125,91,0.3)' }}
                   >
                     Réinitialiser tous les filtres
                   </button>
                 </div>
               ) : viewMode === 'map' ? (
-                <div className="premium-panel" style={{ backgroundColor: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', borderRadius: '24px', padding: '10px', boxShadow: '0 10px 30px rgba(15,23,42,0.06)' }}>
-                  <div style={{ position: 'relative', width: '100%', height: '550px', borderRadius: '18px', overflow: 'hidden', boxShadow: '0 14px 30px rgba(15,23,42,0.12)' }}>
+                <div className="premium-panel" style={{ backgroundColor: darkMode ? '#231E1B' : '#FAF7F2', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', borderRadius: '24px', padding: '10px', boxShadow: '0 10px 30px rgba(61,53,48,0.06)', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3' }}>
+                  <div style={{ position: 'relative', width: '100%', height: '550px', borderRadius: '18px', overflow: 'hidden', boxShadow: '0 14px 30px rgba(61,53,48,0.1)' }}>
                     <MapContainer
                       center={mapCenter}
                       zoom={4}
@@ -6964,15 +6944,15 @@ export default function App() {
                                 <div style={{ position: 'relative' }}>
                                   <img src={media.image} alt={displayContent.title} style={{ width: '100%', height: '80px', objectFit: 'cover', borderRadius: '10px' }} />
                                   {(item.isDemo || (typeof item.id === 'number' && item.id <= 20)) && (
-                                    <span style={{ position: 'absolute', top: '6px', left: '6px', backgroundColor: '#7E22CE', color: '#FFF', fontSize: '9px', fontWeight: '800', padding: '2px 6px', borderRadius: '6px' }}>
+                                    <span style={{ position: 'absolute', top: '6px', left: '6px', backgroundColor: '#C67D5B', color: '#FFF', fontSize: '9px', fontWeight: '800', padding: '2px 6px', borderRadius: '6px' }}>
                                       🤖 Annonce IA
                                     </span>
                                   )}
                                 </div>
-                                <div style={{ fontWeight: '800', fontSize: '12px', color: '#111827', lineHeight: 1.3 }}>{displayContent.title}</div>
-                                <div style={{ fontSize: '11px', color: '#64748B', lineHeight: 1.4 }}>📍 {localizedLoc}</div>
-                                <div style={{ fontSize: '11px', color: '#04265A', fontWeight: '800' }}>{item.compensation}</div>
-                                <button onClick={(event) => { event.stopPropagation(); handleOpenListing(item); }} className="premium-button" style={{ border: 'none', borderRadius: '10px', padding: '7px 10px', backgroundColor: '#04265A', color: '#FFF', fontWeight: '700', cursor: 'pointer', marginTop: '2px', fontSize: '11px' }}>{t('viewListingButton')}</button>
+                                <div style={{ fontWeight: '800', fontSize: '12px', color: '#3D3530', lineHeight: 1.3 }}>{displayContent.title}</div>
+                                <div style={{ fontSize: '11px', color: '#6B5E54', lineHeight: 1.4 }}>📍 {localizedLoc}</div>
+                                <div style={{ fontSize: '11px', color: '#C67D5B', fontWeight: '800' }}>{item.compensation}</div>
+                                <button onClick={(event) => { event.stopPropagation(); handleOpenListing(item); }} className="premium-button" style={{ border: 'none', borderRadius: '10px', padding: '7px 10px', background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)', color: '#FFF', fontWeight: '700', cursor: 'pointer', marginTop: '2px', fontSize: '11px' }}>{t('viewListingButton')}</button>
                               </div>
                             </Popup>
                           </Marker>
@@ -7155,38 +7135,38 @@ export default function App() {
 
         {/* ONGLET 3 : DÉPOSER UNE ANNONCE */}
         {activeTab === 'post' && (
-          <div style={{ backgroundColor: darkMode ? 'rgba(30,41,59,0.85)' : 'rgba(255,255,255,0.85)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', padding: '20px', borderRadius: '24px', border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(229,231,235,0.9)', boxShadow: '0 10px 30px rgba(15,23,42,0.06)', color: darkMode ? '#F8FAFC' : '#111827' }}>
+          <div style={{ backgroundColor: darkMode ? '#231E1B' : '#FAF7F2', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', padding: '20px', borderRadius: '24px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', boxShadow: '0 10px 30px rgba(61,53,48,0.06)', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
               <div>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: '700', padding: '6px 10px', borderRadius: '999px', backgroundColor: darkMode ? 'rgba(4,38,90,0.6)' : '#EFF6FF', color: darkMode ? '#93C5FD' : '#04265A', marginBottom: '8px' }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: '800', padding: '6px 10px', borderRadius: '999px', backgroundColor: darkMode ? 'rgba(198,125,91,0.25)' : '#F5EAE4', color: darkMode ? '#FAF7F2' : '#A8644A', marginBottom: '8px' }}>
                   <Sparkles size={12} /> {t('guidedPath')}
                 </div>
-                <h2 style={{ fontSize: '18px', fontWeight: '800', color: darkMode ? '#FFFFFF' : '#111827', margin: 0 }}>{t('postTitle')}</h2>
+                <h2 className="font-editorial-heading" style={{ fontSize: '24px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530', margin: 0 }}>{t('postTitle')}</h2>
               </div>
-              <div style={{ fontSize: '12px', color: darkMode ? '#CBD5E1' : '#64748B', fontWeight: '700' }}>{postStep}/4</div>
+              <div style={{ fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', fontWeight: '700' }}>{postStep}/4</div>
             </div>
             {publishMessage && (
-              <div style={{ marginBottom: '14px', padding: '12px 14px', borderRadius: '14px', backgroundColor: darkMode ? 'rgba(4,38,90,0.6)' : '#EFF6FF', color: darkMode ? '#93C5FD' : '#04265A', fontSize: '13px', fontWeight: '700', lineHeight: 1.5 }}>
+              <div style={{ marginBottom: '14px', padding: '12px 14px', borderRadius: '14px', backgroundColor: darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4', color: darkMode ? '#FAF7F2' : '#A8644A', fontSize: '13px', fontWeight: '700', lineHeight: 1.5, border: '1px solid #E8DDD3' }}>
                 {publishMessage}
               </div>
             )}
 
             <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
               {[1, 2, 3, 4].map(step => (
-                <div key={step} style={{ flex: 1, height: '6px', borderRadius: '999px', backgroundColor: postStep >= step ? (darkMode ? '#60A5FA' : '#04265A') : (darkMode ? 'rgba(255,255,255,0.15)' : '#E5E7EB'), transition: 'all 0.3s ease' }} />
+                <div key={step} style={{ flex: 1, height: '6px', borderRadius: '999px', backgroundColor: postStep >= step ? '#C67D5B' : (darkMode ? 'rgba(232,221,211,0.15)' : '#E8DDD3'), transition: 'all 0.3s ease' }} />
               ))}
             </div>
 
             {postStep === 1 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <div style={{ fontSize: '13px', color: darkMode ? '#CBD5E1' : '#64748B' }}>{t('chooseAdTypePrompt')}</div>
-                <button onClick={() => setPostDraft(prev => ({ ...prev, type: 'offer' }))} style={{ border: '1px solid', borderColor: postDraft.type === 'offer' ? (darkMode ? '#60A5FA' : '#04265A') : (darkMode ? 'rgba(255,255,255,0.15)' : '#E5E7EB'), borderRadius: '16px', padding: '14px', backgroundColor: postDraft.type === 'offer' ? (darkMode ? 'rgba(4,38,90,0.7)' : '#EFF6FF') : (darkMode ? 'rgba(15,23,42,0.6)' : '#FFF'), textAlign: 'left', cursor: 'pointer', transition: 'all 0.2s ease' }}>
-                  <div style={{ fontWeight: '800', color: darkMode ? '#FFFFFF' : '#111827' }}>{t('iOfferService')}</div>
-                  <div style={{ fontSize: '12px', color: darkMode ? '#CBD5E1' : '#64748B', marginTop: '4px' }}>{t('iOfferServiceSub')}</div>
+                <div style={{ fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>{t('chooseAdTypePrompt')}</div>
+                <button onClick={() => setPostDraft(prev => ({ ...prev, type: 'offer' }))} style={{ border: '1px solid', borderColor: postDraft.type === 'offer' ? '#C67D5B' : (darkMode ? 'rgba(232,221,211,0.15)' : '#E8DDD3'), borderRadius: '16px', padding: '14px', backgroundColor: postDraft.type === 'offer' ? (darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4') : (darkMode ? '#1A1715' : '#FAF7F2'), textAlign: 'left', cursor: 'pointer', transition: 'all 0.2s ease' }}>
+                  <div style={{ fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{t('iOfferService')}</div>
+                  <div style={{ fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', marginTop: '4px' }}>{t('iOfferServiceSub')}</div>
                 </button>
-                <button onClick={() => setPostDraft(prev => ({ ...prev, type: 'request' }))} style={{ border: '1px solid', borderColor: postDraft.type === 'request' ? (darkMode ? '#60A5FA' : '#04265A') : (darkMode ? 'rgba(255,255,255,0.15)' : '#E5E7EB'), borderRadius: '16px', padding: '14px', backgroundColor: postDraft.type === 'request' ? (darkMode ? 'rgba(4,38,90,0.7)' : '#EFF6FF') : (darkMode ? 'rgba(15,23,42,0.6)' : '#FFF'), textAlign: 'left', cursor: 'pointer', transition: 'all 0.2s ease' }}>
-                  <div style={{ fontWeight: '800', color: darkMode ? '#FFFFFF' : '#111827' }}>{t('iRequestService')}</div>
-                  <div style={{ fontSize: '12px', color: darkMode ? '#CBD5E1' : '#64748B', marginTop: '4px' }}>{t('iRequestServiceSub')}</div>
+                <button onClick={() => setPostDraft(prev => ({ ...prev, type: 'request' }))} style={{ border: '1px solid', borderColor: postDraft.type === 'request' ? '#C67D5B' : (darkMode ? 'rgba(232,221,211,0.15)' : '#E8DDD3'), borderRadius: '16px', padding: '14px', backgroundColor: postDraft.type === 'request' ? (darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4') : (darkMode ? '#1A1715' : '#FAF7F2'), textAlign: 'left', cursor: 'pointer', transition: 'all 0.2s ease' }}>
+                  <div style={{ fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{t('iRequestService')}</div>
+                  <div style={{ fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', marginTop: '4px' }}>{t('iRequestServiceSub')}</div>
                 </button>
               </div>
             )}
@@ -7194,33 +7174,33 @@ export default function App() {
             {postStep === 2 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#CBD5E1' : '#374151' }}>{t('adTitleLabel')}</label>
-                  <input value={postDraft.title} onChange={(e) => setPostDraft(prev => ({ ...prev, title: e.target.value }))} type="text" placeholder={t('adTitlePlaceholder')} style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFF', color: darkMode ? '#FFF' : '#111827', borderRadius: '12px' }} />
+                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>{t('adTitleLabel')}</label>
+                  <input value={postDraft.title} onChange={(e) => setPostDraft(prev => ({ ...prev, title: e.target.value }))} type="text" placeholder={t('adTitlePlaceholder')} style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530', borderRadius: '12px' }} />
                 </div>
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#CBD5E1' : '#374151' }}>{t('adCategoryLabel')}</label>
+                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>{t('adCategoryLabel')}</label>
                   <select
                     value={postDraft.category}
                     onChange={(e) => setPostDraft(prev => ({ ...prev, category: e.target.value }))}
-                    style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFF', color: darkMode ? '#FFF' : '#111827', borderRadius: '12px', fontSize: '13px' }}
+                    style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530', borderRadius: '12px', fontSize: '13px' }}
                   >
-                    <option value="Cours & Compétences" style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>🎓 Cours, Langues & Compétences</option>
-                    <option value="Bricolage, Travaux & Jardin" style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>🛠️ Bricolage, Travaux & Jardin</option>
-                    <option value="Tech, Digital & Bureautique" style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>💻 Tech, Digital & Bureautique</option>
-                    <option value="Prêt d’Outillage & Équipements" style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>🔨 Prêt d’Outillage & Équipements</option>
-                    <option value="Véhicules & Mobilité" style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>🚗 Véhicules & Mobilité</option>
-                    <option value="Logement, Espaces & Stay Swap" style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>🏠 Logement, Espaces & Stay Swap</option>
-                    <option value="Audiovisuel, Photo & Son" style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>📷 Audiovisuel, Photo & Son</option>
-                    <option value="Services à la personne & Entraide" style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>🤝 Services à la personne & Entraide</option>
-                    <option value="Santé, Sport & Bien-être" style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>🧘 Santé, Sport & Bien-être</option>
-                    <option value="Événements & Fêtes" style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>🎉 Événements & Matériel de fête</option>
-                    <option value="Mode & Beauté" style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>✂️ Mode, Beauté & Accessoires</option>
-                    <option value="Autre" style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>✨ Autre / Domaine personnalisé</option>
+                    <option value="Cours & Compétences" style={{ backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>🎓 Cours, Langues & Compétences</option>
+                    <option value="Bricolage, Travaux & Jardin" style={{ backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>🛠️ Bricolage, Travaux & Jardin</option>
+                    <option value="Tech, Digital & Bureautique" style={{ backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>💻 Tech, Digital & Bureautique</option>
+                    <option value="Prêt d’Outillage & Équipements" style={{ backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>🔨 Prêt d’Outillage & Équipements</option>
+                    <option value="Véhicules & Mobilité" style={{ backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>🚗 Véhicules & Mobilité</option>
+                    <option value="Logement, Espaces & Stay Swap" style={{ backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>🏠 Logement, Espaces & Stay Swap</option>
+                    <option value="Audiovisuel, Photo & Son" style={{ backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>📷 Audiovisuel, Photo & Son</option>
+                    <option value="Services à la personne & Entraide" style={{ backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>🤝 Services à la personne & Entraide</option>
+                    <option value="Santé, Sport & Bien-être" style={{ backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>🧘 Santé, Sport & Bien-être</option>
+                    <option value="Événements & Fêtes" style={{ backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>🎉 Événements & Matériel de fête</option>
+                    <option value="Mode & Beauté" style={{ backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>✂️ Mode, Beauté & Accessoires</option>
+                    <option value="Autre" style={{ backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>✨ Autre / Domaine personnalisé</option>
                   </select>
 
                   {(postDraft.category === 'Autre' || postDraft.category === 'Autre / Domaine personnalisé') && (
                     <div style={{ marginTop: '8px', animation: 'fadeIn 0.25s ease' }}>
-                      <label style={{ fontSize: '11px', fontWeight: '800', color: darkMode ? '#FDE68A' : '#D97706', display: 'block', marginBottom: '4px' }}>
+                      <label style={{ fontSize: '11px', fontWeight: '800', color: '#C67D5B', display: 'block', marginBottom: '4px' }}>
                         ✍️ Précisez votre catégorie personnalisée (optimisée SEO) :
                       </label>
                       <input
@@ -7231,9 +7211,9 @@ export default function App() {
                         style={{
                           width: '100%',
                           padding: '10px 12px',
-                          border: darkMode ? '1.5px solid #F59E0B' : '1.5px solid #D97706',
-                          backgroundColor: darkMode ? 'rgba(245,158,11,0.1)' : '#FFFBEB',
-                          color: darkMode ? '#FFF' : '#111827',
+                          border: '1.5px solid #C67D5B',
+                          backgroundColor: darkMode ? 'rgba(198,125,91,0.1)' : '#F5EAE4',
+                          color: darkMode ? '#FAF7F2' : '#3D3530',
                           borderRadius: '12px',
                           fontSize: '13px',
                         }}
@@ -7242,24 +7222,24 @@ export default function App() {
                   )}
                 </div>
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#CBD5E1' : '#374151' }}>{t('adFormatLabel')}</label>
-                  <select value={postDraft.format} onChange={(e) => setPostDraft(prev => ({ ...prev, format: e.target.value }))} style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFF', color: darkMode ? '#FFF' : '#111827', borderRadius: '12px' }}>
-                    <option value="onsite" style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>{t('onsite')}</option>
-                    <option value="remote" style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>{t('remote')}</option>
+                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>{t('adFormatLabel')}</label>
+                  <select value={postDraft.format} onChange={(e) => setPostDraft(prev => ({ ...prev, format: e.target.value }))} style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530', borderRadius: '12px' }}>
+                    <option value="onsite" style={{ backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>{t('onsite')}</option>
+                    <option value="remote" style={{ backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>{t('remote')}</option>
                   </select>
                 </div>
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#CBD5E1' : '#374151' }}>{t('adDescriptionLabel')}</label>
-                  <textarea value={postDraft.description} onChange={(e) => setPostDraft(prev => ({ ...prev, description: e.target.value }))} rows={4} placeholder={t('adDescriptionPlaceholder')} style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFF', color: darkMode ? '#FFF' : '#111827', borderRadius: '12px', resize: 'vertical' }} />
+                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>{t('adDescriptionLabel')}</label>
+                  <textarea value={postDraft.description} onChange={(e) => setPostDraft(prev => ({ ...prev, description: e.target.value }))} rows={4} placeholder={t('adDescriptionPlaceholder')} style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530', borderRadius: '12px', resize: 'vertical' }} />
                 </div>
 
                 {/* ---- MÉDIAS INTELLIGENTS (PHOTO & VIDÉO) ---- */}
-                <div style={{ padding: '16px', borderRadius: '18px', backgroundColor: darkMode ? 'rgba(15,23,42,0.6)' : '#F8FAFC', border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                  <p style={{ margin: 0, fontSize: '12px', color: darkMode ? '#CBD5E1' : '#64748B', lineHeight: 1.5 }}>
+                <div style={{ padding: '16px', borderRadius: '18px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <p style={{ margin: 0, fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', lineHeight: 1.5 }}>
                     {t('adMediaDesc')}
                   </p>
 
-                  {/* GRILLE VISUELLE DE PHOTOS LEBONCOIN (ÉTAPE 1) */}
+                  {/* GRILLE VISUELLE DE PHOTOS */}
                   <PhotoGrid
                     photos={postDraft.gallery && postDraft.gallery.length > 0 ? postDraft.gallery : (postDraft.imageUrl ? [postDraft.imageUrl] : [])}
                     onAddPhoto={handlePhotoGridAdd}
@@ -7273,13 +7253,13 @@ export default function App() {
 
                   {/* SECTION VIDÉO */}
                   <div>
-                    <div style={{ fontSize: '12px', fontWeight: '700', color: darkMode ? '#CBD5E1' : '#374151', marginBottom: '6px' }}>{t('miniVideoLabel')}</div>
-                    <input value={postDraft.videoUrl} onChange={(e) => setPostDraft(prev => ({ ...prev, videoUrl: e.target.value }))} placeholder={t('videoUrlPlaceholder')} style={{ width: '100%', padding: '9px 12px', border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFF', color: darkMode ? '#FFF' : '#111827', borderRadius: '10px', fontSize: '12px', marginBottom: '8px' }} />
+                    <div style={{ fontSize: '12px', fontWeight: '700', color: darkMode ? '#D4C5B5' : '#6B5E54', marginBottom: '6px' }}>{t('miniVideoLabel')}</div>
+                    <input value={postDraft.videoUrl} onChange={(e) => setPostDraft(prev => ({ ...prev, videoUrl: e.target.value }))} placeholder={t('videoUrlPlaceholder')} style={{ width: '100%', padding: '9px 12px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', backgroundColor: darkMode ? '#231E1B' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530', borderRadius: '10px', fontSize: '12px', marginBottom: '8px' }} />
                     <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                      <div style={{ width: '90px', height: '65px', borderRadius: '10px', overflow: 'hidden', border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB', backgroundColor: '#0F172A' }}>
+                      <div style={{ width: '90px', height: '65px', borderRadius: '10px', overflow: 'hidden', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', backgroundColor: '#1A1715' }}>
                         <video src={getSuggestedMedia(postDraft.title, postDraft.description, postDraft.imageUrl, postDraft.videoUrl).video} autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       </div>
-                      <label style={{ flex: 1, border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB', borderRadius: '10px', padding: '8px', backgroundColor: darkMode ? 'rgba(30,41,59,0.8)' : '#FFF', color: darkMode ? '#E2E8F0' : '#374151', fontSize: '11px', fontWeight: '800', cursor: 'pointer', textAlign: 'center' }}>
+                      <label style={{ flex: 1, border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', borderRadius: '10px', padding: '8px', backgroundColor: darkMode ? '#231E1B' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530', fontSize: '11px', fontWeight: '800', cursor: 'pointer', textAlign: 'center' }}>
                         <Plus size={12} style={{ verticalAlign: 'middle', marginRight: '4px' }} /> {t('importVideo')}
                         <input type="file" accept="video/*" onChange={handleVideoFileUpload} style={{ display: 'none' }} />
                       </label>
@@ -7287,11 +7267,11 @@ export default function App() {
                   </div>
 
                   <div>
-                    <div style={{ fontSize: '11px', fontWeight: '800', color: darkMode ? '#CBD5E1' : '#64748B', marginBottom: '6px' }}>{currentLang === 'FR' ? 'Tags (Mots-clés)' : 'Tags (Keywords)'}</div>
+                    <div style={{ fontSize: '11px', fontWeight: '800', color: darkMode ? '#D4C5B5' : '#6B5E54', marginBottom: '6px' }}>{currentLang === 'FR' ? 'Tags (Mots-clés)' : 'Tags (Keywords)'}</div>
 
                     <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '8px', alignItems: 'center' }}>
                       {(postDraft.tags || []).map(tag => (
-                        <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: darkMode ? 'rgba(4,38,90,0.8)' : '#04265A', color: '#FFF', borderRadius: '999px', padding: '4px 9px', fontSize: '10px', fontWeight: '800' }}>
+                        <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: '#C67D5B', color: '#FFF', borderRadius: '999px', padding: '4px 9px', fontSize: '10px', fontWeight: '800' }}>
                           <Tag size={10} /> {tag}
                           <button type="button" onClick={() => setPostDraft(prev => ({ ...prev, tags: (prev.tags || []).filter(t => t !== tag) }))} style={{ background: 'none', border: 'none', color: '#FFF', cursor: 'pointer', padding: 0, marginLeft: '2px', display: 'flex' }}><X size={10} /></button>
                         </span>
@@ -7315,14 +7295,14 @@ export default function App() {
                       />
                     </div>
 
-                    <div style={{ fontSize: '10px', color: darkMode ? '#94A3B8' : '#64748B', marginBottom: '6px' }}>{currentLang === 'FR' ? 'Suggestions (cliquez pour ajouter) :' : 'Suggestions (click to add):'}</div>
+                    <div style={{ fontSize: '10px', color: darkMode ? '#D4C5B5' : '#6B5E54', marginBottom: '6px' }}>{currentLang === 'FR' ? 'Suggestions (cliquez pour ajouter) :' : 'Suggestions (click to add):'}</div>
                     <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                       {generateTags(postDraft.title, postDraft.description).filter(t => !(postDraft.tags || []).includes(t)).map(tag => (
                         <button
                           key={tag}
                           type="button"
                           onClick={() => setPostDraft(prev => ({ ...prev, tags: [...(prev.tags || []), tag] }))}
-                          style={{ border: darkMode ? '1px dashed rgba(255,255,255,0.3)' : '1px dashed #CBD5E1', background: 'transparent', color: darkMode ? '#CBD5E1' : '#64748B', borderRadius: '999px', padding: '3px 9px', fontSize: '10px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                          style={{ border: darkMode ? '1px dashed rgba(232,221,211,0.3)' : '1px dashed #D4C5B5', background: 'transparent', color: darkMode ? '#D4C5B5' : '#6B5E54', borderRadius: '999px', padding: '3px 9px', fontSize: '10px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                         >
                           <Plus size={10} /> {tag}
                         </button>
@@ -7336,7 +7316,7 @@ export default function App() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 {/* PRESETS RAPIDES DE RÉTRIBUTION & DURÉE */}
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: '800', color: darkMode ? '#CBD5E1' : '#374151', display: 'block', marginBottom: '8px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '800', color: darkMode ? '#D4C5B5' : '#6B5E54', display: 'block', marginBottom: '8px' }}>
                     ⚡ Formules et Presets rapides :
                   </label>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px' }}>
@@ -7345,9 +7325,9 @@ export default function App() {
                       onClick={() => setPostDraft(prev => ({ ...prev, compensation: 'credits', durationType: 'hourly', durationValue: '1', trocoTokens: '1' }))}
                       style={{
                         padding: '9px 10px', borderRadius: '12px',
-                        border: (postDraft.compensation === 'credits' && postDraft.durationType === 'hourly') ? '2px solid #F59E0B' : (darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #D1D5DB'),
-                        backgroundColor: (postDraft.compensation === 'credits' && postDraft.durationType === 'hourly') ? (darkMode ? 'rgba(245,158,11,0.2)' : '#FEF3C7') : (darkMode ? 'rgba(30,41,59,0.5)' : '#FFF'),
-                        color: darkMode ? '#FDE68A' : '#92400E', fontWeight: '800', fontSize: '11px', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s ease'
+                        border: (postDraft.compensation === 'credits' && postDraft.durationType === 'hourly') ? '2px solid #C67D5B' : (darkMode ? '1px solid rgba(232,221,211,0.1)' : '1px solid #E8DDD3'),
+                        backgroundColor: (postDraft.compensation === 'credits' && postDraft.durationType === 'hourly') ? (darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4') : (darkMode ? '#1A1715' : '#FFF'),
+                        color: (postDraft.compensation === 'credits' && postDraft.durationType === 'hourly') ? '#A8644A' : (darkMode ? '#D4C5B5' : '#6B5E54'), fontWeight: '800', fontSize: '11px', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s ease'
                       }}
                     >
                       🪙 1h / 1 Jeton
@@ -7358,9 +7338,9 @@ export default function App() {
                       onClick={() => setPostDraft(prev => ({ ...prev, compensation: 'troc', durationType: 'daily', durationValue: '1' }))}
                       style={{
                         padding: '9px 10px', borderRadius: '12px',
-                        border: (postDraft.compensation === 'troc' && postDraft.durationType === 'daily') ? '2px solid #10B981' : (darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #D1D5DB'),
-                        backgroundColor: (postDraft.compensation === 'troc' && postDraft.durationType === 'daily') ? (darkMode ? 'rgba(16,185,129,0.2)' : '#D1FAE5') : (darkMode ? 'rgba(30,41,59,0.5)' : '#FFF'),
-                        color: darkMode ? '#6EE7B7' : '#065F46', fontWeight: '800', fontSize: '11px', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s ease'
+                        border: (postDraft.compensation === 'troc' && postDraft.durationType === 'daily') ? '2px solid #9CAF88' : (darkMode ? '1px solid rgba(232,221,211,0.1)' : '1px solid #E8DDD3'),
+                        backgroundColor: (postDraft.compensation === 'troc' && postDraft.durationType === 'daily') ? (darkMode ? 'rgba(156,175,136,0.2)' : '#EBF0E6') : (darkMode ? '#1A1715' : '#FFF'),
+                        color: (postDraft.compensation === 'troc' && postDraft.durationType === 'daily') ? '#3D4A35' : (darkMode ? '#D4C5B5' : '#6B5E54'), fontWeight: '800', fontSize: '11px', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s ease'
                       }}
                     >
                       🔄 1 jour / Troc
@@ -7371,9 +7351,9 @@ export default function App() {
                       onClick={() => setPostDraft(prev => ({ ...prev, compensation: 'troc', durationType: 'fixed', durationValue: '1' }))}
                       style={{
                         padding: '9px 10px', borderRadius: '12px',
-                        border: (postDraft.compensation === 'troc' && postDraft.durationType === 'fixed') ? '2px solid #3B82F6' : (darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #D1D5DB'),
-                        backgroundColor: (postDraft.compensation === 'troc' && postDraft.durationType === 'fixed') ? (darkMode ? 'rgba(59,130,246,0.2)' : '#DBEAFE') : (darkMode ? 'rgba(30,41,59,0.5)' : '#FFF'),
-                        color: darkMode ? '#93C5FD' : '#1E40AF', fontWeight: '800', fontSize: '11px', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s ease'
+                        border: (postDraft.compensation === 'troc' && postDraft.durationType === 'fixed') ? '2px solid #C67D5B' : (darkMode ? '1px solid rgba(232,221,211,0.1)' : '1px solid #E8DDD3'),
+                        backgroundColor: (postDraft.compensation === 'troc' && postDraft.durationType === 'fixed') ? (darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4') : (darkMode ? '#1A1715' : '#FFF'),
+                        color: (postDraft.compensation === 'troc' && postDraft.durationType === 'fixed') ? '#A8644A' : (darkMode ? '#D4C5B5' : '#6B5E54'), fontWeight: '800', fontSize: '11px', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s ease'
                       }}
                     >
                       💎 Forfait libre
@@ -7384,9 +7364,9 @@ export default function App() {
                       onClick={() => setPostDraft(prev => ({ ...prev, compensation: 'cash', durationType: 'hourly', price: '25' }))}
                       style={{
                         padding: '9px 10px', borderRadius: '12px',
-                        border: (postDraft.compensation === 'cash') ? '2px solid #8B5CF6' : (darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #D1D5DB'),
-                        backgroundColor: (postDraft.compensation === 'cash') ? (darkMode ? 'rgba(139,92,246,0.2)' : '#EDE9FE') : (darkMode ? 'rgba(30,41,59,0.5)' : '#FFF'),
-                        color: darkMode ? '#C4B5FD' : '#5B21B6', fontWeight: '800', fontSize: '11px', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s ease'
+                        border: (postDraft.compensation === 'cash') ? '2px solid #C67D5B' : (darkMode ? '1px solid rgba(232,221,211,0.1)' : '1px solid #E8DDD3'),
+                        backgroundColor: (postDraft.compensation === 'cash') ? (darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4') : (darkMode ? '#1A1715' : '#FFF'),
+                        color: (postDraft.compensation === 'cash') ? '#A8644A' : (darkMode ? '#D4C5B5' : '#6B5E54'), fontWeight: '800', fontSize: '11px', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s ease'
                       }}
                     >
                       💶 Rémunéré (€)
@@ -7396,20 +7376,20 @@ export default function App() {
 
                 {/* SÉLECTEUR DE FORMAT DE DURÉE */}
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#CBD5E1' : '#374151', display: 'block', marginBottom: '6px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#D4C5B5' : '#6B5E54', display: 'block', marginBottom: '6px' }}>
                     ⏱️ Format & Unité de durée :
                   </label>
                   <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '8px' }}>
                     <select
                       value={postDraft.durationType || 'hourly'}
                       onChange={(e) => setPostDraft(prev => ({ ...prev, durationType: e.target.value }))}
-                      style={{ width: '100%', padding: '10px 12px', border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFF', color: darkMode ? '#FFF' : '#111827', borderRadius: '12px', fontSize: '13px' }}
+                      style={{ width: '100%', padding: '10px 12px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530', borderRadius: '12px', fontSize: '13px' }}
                     >
-                      <option value="hourly" style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>À l'heure (cours, visio, prestation)</option>
-                      <option value="daily" style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>À la journée (prêt, véhicule, chantier)</option>
-                      <option value="monthly" style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>Au mois (coworking, hébergement)</option>
-                      <option value="fixed" style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>Au forfait global (clé en main)</option>
-                      <option value="indefinite" style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>Indéfini / Libre négociation</option>
+                      <option value="hourly" style={{ backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>À l'heure (cours, visio, prestation)</option>
+                      <option value="daily" style={{ backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>À la journée (prêt, véhicule, chantier)</option>
+                      <option value="monthly" style={{ backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>Au mois (coworking, hébergement)</option>
+                      <option value="fixed" style={{ backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>Au forfait global (clé en main)</option>
+                      <option value="indefinite" style={{ backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>Indéfini / Libre négociation</option>
                     </select>
 
                     {postDraft.durationType !== 'indefinite' && postDraft.durationType !== 'fixed' && (
@@ -7419,7 +7399,7 @@ export default function App() {
                         value={postDraft.durationValue || '1'}
                         onChange={(e) => setPostDraft(prev => ({ ...prev, durationValue: e.target.value }))}
                         placeholder="Qté (ex: 1)"
-                        style={{ width: '100%', padding: '10px 12px', border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFF', color: darkMode ? '#FFF' : '#111827', borderRadius: '12px', fontSize: '13px' }}
+                        style={{ width: '100%', padding: '10px 12px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530', borderRadius: '12px', fontSize: '13px' }}
                       />
                     )}
                   </div>
@@ -7427,79 +7407,79 @@ export default function App() {
 
                 {/* SÉLECTEUR DU MODE DE RÉTRIBUTION */}
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#CBD5E1' : '#374151' }}>{t('retributionModeLabel')}</label>
-                  <select value={postDraft.compensation} onChange={(e) => setPostDraft(prev => ({ ...prev, compensation: e.target.value }))} style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFF', color: darkMode ? '#FFF' : '#111827', borderRadius: '12px' }}>
-                    <option value="credits" style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>{t('timeCreditOption')}</option>
-                    <option value="cash" style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>{t('euroPaymentOption')}</option>
-                    <option value="troc" style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>{t('directSwapOption')}</option>
-                    <option value="hybrid" style={{ backgroundColor: darkMode ? '#0F172A' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>{t('hybridOption')}</option>
+                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>{t('retributionModeLabel')}</label>
+                  <select value={postDraft.compensation} onChange={(e) => setPostDraft(prev => ({ ...prev, compensation: e.target.value }))} style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530', borderRadius: '12px' }}>
+                    <option value="credits" style={{ backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>{t('timeCreditOption')}</option>
+                    <option value="cash" style={{ backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>{t('euroPaymentOption')}</option>
+                    <option value="troc" style={{ backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>{t('directSwapOption')}</option>
+                    <option value="hybrid" style={{ backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>{t('hybridOption')}</option>
                   </select>
                 </div>
 
                 {postDraft.compensation === 'credits' && (
                   <div>
-                    <label style={{ fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#FCD34D' : '#374151' }}>{t('trocoTokensAmountLabel')}</label>
-                    <input value={postDraft.trocoTokens || '1'} onChange={(e) => setPostDraft(prev => ({ ...prev, trocoTokens: e.target.value }))} type="number" min="1" placeholder="Ex : 1" style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFF', color: darkMode ? '#FFF' : '#111827', borderRadius: '12px' }} />
+                    <label style={{ fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{t('trocoTokensAmountLabel')}</label>
+                    <input value={postDraft.trocoTokens || '1'} onChange={(e) => setPostDraft(prev => ({ ...prev, trocoTokens: e.target.value }))} type="number" min="1" placeholder="Ex : 1" style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530', borderRadius: '12px' }} />
                   </div>
                 )}
 
                 {(postDraft.compensation === 'cash' || postDraft.compensation === 'hybrid') && (
                   <div>
-                    <label style={{ fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#CBD5E1' : '#374151' }}>{t('expectedAmountLabel')}</label>
-                    <input value={postDraft.compensation === 'hybrid' ? postDraft.euroAmount : postDraft.price} onChange={(e) => setPostDraft(prev => ({ ...prev, ...(prev.compensation === 'hybrid' ? { euroAmount: e.target.value } : { price: e.target.value }) }))} type="number" min="0" placeholder="Ex : 20" style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFF', color: darkMode ? '#FFF' : '#111827', borderRadius: '12px' }} />
+                    <label style={{ fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>{t('expectedAmountLabel')}</label>
+                    <input value={postDraft.compensation === 'hybrid' ? postDraft.euroAmount : postDraft.price} onChange={(e) => setPostDraft(prev => ({ ...prev, ...(prev.compensation === 'hybrid' ? { euroAmount: e.target.value } : { price: e.target.value }) }))} type="number" min="0" placeholder="Ex : 20" style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530', borderRadius: '12px' }} />
                   </div>
                 )}
 
                 {postDraft.compensation === 'hybrid' && (
-                  <div style={{ padding: '12px', borderRadius: '14px', backgroundColor: darkMode ? 'rgba(120,53,15,0.25)' : '#FFF7ED', border: darkMode ? '1px solid rgba(245,158,11,0.4)' : '1px solid #FDE68A', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ padding: '12px', borderRadius: '14px', backgroundColor: darkMode ? 'rgba(198,125,91,0.15)' : '#F5EAE4', border: darkMode ? '1px solid rgba(198,125,91,0.3)' : '1px solid #E8DDD3', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     <div>
-                      <label style={{ fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#FCD34D' : '#374151' }}>{t('trocoTokensAmountLabel')}</label>
-                      <input value={postDraft.trocoTokens} onChange={(e) => setPostDraft(prev => ({ ...prev, trocoTokens: e.target.value }))} type="number" min="1" placeholder="Ex : 2" style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFF', color: darkMode ? '#FFF' : '#111827', borderRadius: '12px' }} />
+                      <label style={{ fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{t('trocoTokensAmountLabel')}</label>
+                      <input value={postDraft.trocoTokens} onChange={(e) => setPostDraft(prev => ({ ...prev, trocoTokens: e.target.value }))} type="number" min="1" placeholder="Ex : 2" style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530', borderRadius: '12px' }} />
                     </div>
                     <div>
-                      <label style={{ fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#FCD34D' : '#374151' }}>{t('expectedAmountLabel')}</label>
-                      <input value={postDraft.euroAmount} onChange={(e) => setPostDraft(prev => ({ ...prev, euroAmount: e.target.value }))} type="number" min="0" placeholder="Ex : 10" style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFF', color: darkMode ? '#FFF' : '#111827', borderRadius: '12px' }} />
+                      <label style={{ fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{t('expectedAmountLabel')}</label>
+                      <input value={postDraft.euroAmount} onChange={(e) => setPostDraft(prev => ({ ...prev, euroAmount: e.target.value }))} type="number" min="0" placeholder="Ex : 10" style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530', borderRadius: '12px' }} />
                     </div>
                   </div>
                 )}
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#CBD5E1' : '#374151' }}>{t('locationZoneLabel')}</label>
-                  <input value={postDraft.location} onChange={(e) => setPostDraft(prev => ({ ...prev, location: e.target.value }))} type="text" placeholder="Paris, Lyon, à distance, etc." style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFF', color: darkMode ? '#FFF' : '#111827', borderRadius: '12px' }} />
+                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>{t('locationZoneLabel')}</label>
+                  <input value={postDraft.location} onChange={(e) => setPostDraft(prev => ({ ...prev, location: e.target.value }))} type="text" placeholder="Paris, Lyon, à distance, etc." style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530', borderRadius: '12px' }} />
                 </div>
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#CBD5E1' : '#374151' }}>{t('availabilityLabel')}</label>
-                  <textarea value={postDraft.availability} onChange={(e) => setPostDraft(prev => ({ ...prev, availability: e.target.value }))} rows={2} placeholder="Ex : disponibilités ce week-end, en visio le soir" style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFF', color: darkMode ? '#FFF' : '#111827', borderRadius: '12px', resize: 'vertical' }} />
+                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>{t('availabilityLabel')}</label>
+                  <textarea value={postDraft.availability} onChange={(e) => setPostDraft(prev => ({ ...prev, availability: e.target.value }))} rows={2} placeholder="Ex : disponibilités ce week-end, en visio le soir" style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530', borderRadius: '12px', resize: 'vertical' }} />
                 </div>
                 {postDraft.type === 'offer' && (
-                  <div style={{ padding: '12px', borderRadius: '14px', backgroundColor: darkMode ? 'rgba(15,23,42,0.6)' : '#F8FAFC', border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E2E8F0' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#CBD5E1' : '#374151' }}>
+                  <div style={{ padding: '12px', borderRadius: '14px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>
                       <input type="checkbox" checked={postDraft.requiresCaution} onChange={(e) => setPostDraft(prev => ({ ...prev, requiresCaution: e.target.checked, cautionAmount: e.target.checked ? prev.cautionAmount : '' }))} />
                       {t('requireCautionLabel')}
                     </label>
                     {postDraft.requiresCaution && (
                       <div style={{ marginTop: '8px' }}>
-                        <label style={{ fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#CBD5E1' : '#374151' }}>{t('cautionAmountLabel')}</label>
-                        <input value={postDraft.cautionAmount} onChange={(e) => setPostDraft(prev => ({ ...prev, cautionAmount: e.target.value }))} type="number" min="0" placeholder="Ex : 50" style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFF', color: darkMode ? '#FFF' : '#111827', borderRadius: '12px' }} />
+                        <label style={{ fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>{t('cautionAmountLabel')}</label>
+                        <input value={postDraft.cautionAmount} onChange={(e) => setPostDraft(prev => ({ ...prev, cautionAmount: e.target.value }))} type="number" min="0" placeholder="Ex : 50" style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530', borderRadius: '12px' }} />
                       </div>
                     )}
                   </div>
                 )}
 
-                <div style={{ padding: '14px', borderRadius: '16px', backgroundColor: darkMode ? 'rgba(120,53,15,0.25)' : '#FFF7ED', border: postDraft.isUrgent ? '1.5px solid #F59E0B' : (darkMode ? '1px solid rgba(245,158,11,0.4)' : '1px solid #FDE68A') }}>
+                <div style={{ padding: '14px', borderRadius: '16px', backgroundColor: darkMode ? 'rgba(198,125,91,0.15)' : '#F5EAE4', border: postDraft.isUrgent ? '1.5px solid #C67D5B' : (darkMode ? '1px solid rgba(198,125,91,0.3)' : '1px solid #E8DDD3') }}>
                   <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer' }}>
-                    <input type="checkbox" checked={postDraft.isUrgent} onChange={(e) => setPostDraft(prev => ({ ...prev, isUrgent: e.target.checked }))} style={{ marginTop: '3px', accentColor: '#F59E0B', width: '16px', height: '16px' }} />
+                    <input type="checkbox" checked={postDraft.isUrgent} onChange={(e) => setPostDraft(prev => ({ ...prev, isUrgent: e.target.checked }))} style={{ marginTop: '3px', accentColor: '#C67D5B', width: '16px', height: '16px' }} />
                     <span style={{ flex: 1 }}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '800', color: darkMode ? '#FBBF24' : '#92400E' }}>
-                        <Flame size={15} color="#F59E0B" /> {t('setUrgentLabel')}
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
+                        <Flame size={15} color="#C67D5B" /> {t('setUrgentLabel')}
                       </span>
-                      <span style={{ display: 'block', fontSize: '12px', color: darkMode ? '#FCD34D' : '#B45309', marginTop: '4px', lineHeight: 1.5 }}>
+                      <span style={{ display: 'block', fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', marginTop: '4px', lineHeight: 1.5 }}>
                         {t('urgentBadgeDesc')}
                       </span>
                     </span>
-                    <span style={{ fontSize: '12px', fontWeight: '900', color: '#EA580C', backgroundColor: darkMode ? 'rgba(15,23,42,0.9)' : '#FFF', border: '1px solid #FDE68A', borderRadius: '999px', padding: '5px 12px', whiteSpace: 'nowrap', boxShadow: '0 4px 10px rgba(245,158,11,0.15)' }}>{formatCompensation('1.99€ ou 1 Jeton')}</span>
+                    <span style={{ fontSize: '12px', fontWeight: '900', color: '#A8644A', backgroundColor: darkMode ? '#1A1715' : '#FFF', border: '1px solid #E8DDD3', borderRadius: '999px', padding: '5px 12px', whiteSpace: 'nowrap', boxShadow: '0 4px 10px rgba(198,125,91,0.15)' }}>{formatCompensation('1.99€ ou 1 Jeton')}</span>
                   </label>
                   {postDraft.isUrgent && (
-                    <div style={{ marginTop: '10px', fontSize: '12px', color: darkMode ? '#F87171' : '#B91C1C', lineHeight: 1.6, backgroundColor: darkMode ? 'rgba(127,29,29,0.3)' : '#FEF2F2', borderRadius: '12px', padding: '10px 12px' }}>
+                    <div style={{ marginTop: '10px', fontSize: '12px', color: darkMode ? '#FAF7F2' : '#3D3530', lineHeight: 1.6, backgroundColor: darkMode ? 'rgba(127,29,29,0.3)' : '#FEF2F2', borderRadius: '12px', padding: '10px 12px' }}>
                       {profile.euroBalance >= 1.99 ? (
                         <span>Un supplément de <strong>1,99€</strong> sera débité de ton solde Euro (<strong>{profile.euroBalance.toFixed(2)}€</strong> disponibles) automatiquement à la publication.</span>
                       ) : (
@@ -7522,26 +7502,26 @@ export default function App() {
               return (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                   {/* APERÇU DE L'ANNONCE */}
-                  <div style={{ padding: '14px', borderRadius: '16px', backgroundColor: darkMode ? 'rgba(15,23,42,0.6)' : '#F8FAFC', border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E2E8F0' }}>
-                    <div style={{ fontSize: '11px', color: darkMode ? '#CBD5E1' : '#64748B', marginBottom: '6px' }}>{t('previewLabel')}</div>
+                  <div style={{ padding: '14px', borderRadius: '16px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3' }}>
+                    <div style={{ fontSize: '11px', color: darkMode ? '#D4C5B5' : '#6B5E54', marginBottom: '6px' }}>{t('previewLabel')}</div>
                     <img src={postDraft.imageUrl.trim() || getSuggestedImage(postDraft.title, postDraft.description)} alt="aperçu" style={{ width: '100%', height: '160px', objectFit: 'cover', borderRadius: '14px', marginBottom: '10px' }} />
-                    <div style={{ fontSize: '16px', fontWeight: '800', color: darkMode ? '#FFFFFF' : '#111827' }}>{postDraft.title || t('titleToBeDefined')}</div>
-                    <div style={{ fontSize: '12px', color: darkMode ? '#CBD5E1' : '#64748B', margin: '6px 0' }}>{postDraft.category === 'Cours & Compétences' ? t('catSkills') : postDraft.category === 'Prêt de Matériel' ? t('catTools') : postDraft.category === 'Services & Dépannage' ? t('catServices') : postDraft.category === 'Logement & Stay Swap' ? t('catHousing') : postDraft.category} • {postDraft.format === 'remote' ? t('remote') : t('onsite')}</div>
+                    <div className="font-editorial-heading" style={{ fontSize: '18px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{postDraft.title || t('titleToBeDefined')}</div>
+                    <div style={{ fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', margin: '6px 0' }}>{postDraft.category === 'Cours & Compétences' ? t('catSkills') : postDraft.category === 'Prêt de Matériel' ? t('catTools') : postDraft.category === 'Services & Dépannage' ? t('catServices') : postDraft.category === 'Logement & Stay Swap' ? t('catHousing') : postDraft.category} • {postDraft.format === 'remote' ? t('remote') : t('onsite')}</div>
                     <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '8px' }}>
                       {((postDraft.tags && postDraft.tags.length > 0) ? postDraft.tags : (generateTags(postDraft.title, postDraft.description) || [])).map(tag => (
-                        <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: darkMode ? 'rgba(4,38,90,0.6)' : '#EFF6FF', color: darkMode ? '#93C5FD' : '#04265A', borderRadius: '999px', padding: '4px 9px', fontSize: '10px', fontWeight: '800' }}><Tag size={10} /> {tag}</span>
+                        <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4', color: darkMode ? '#FAF7F2' : '#A8644A', borderRadius: '999px', padding: '4px 9px', fontSize: '10px', fontWeight: '800' }}><Tag size={10} /> {tag}</span>
                       ))}
                     </div>
-                    <div style={{ fontSize: '13px', color: darkMode ? '#E2E8F0' : '#475569', lineHeight: 1.6 }}>{postDraft.description || t('addDescriptionConvincing')}</div>
-                    <div style={{ marginTop: '8px', fontSize: '12px', color: darkMode ? '#60A5FA' : '#04265A', fontWeight: '800' }}>{t('compensationLabel')} {postDraft.compensation === 'credits' ? t('timeCreditOption') : postDraft.compensation === 'cash' ? `${postDraft.price || '20'}€` : postDraft.compensation === 'hybrid' ? `${postDraft.price || '20'}€ + ${t('timeCreditOption')}` : t('directSwapOption')}</div>
+                    <div style={{ fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54', lineHeight: 1.6 }}>{postDraft.description || t('addDescriptionConvincing')}</div>
+                    <div style={{ marginTop: '8px', fontSize: '12px', color: '#C67D5B', fontWeight: '800' }}>{t('compensationLabel')} {postDraft.compensation === 'credits' ? t('timeCreditOption') : postDraft.compensation === 'cash' ? `${postDraft.price || '20'}€` : postDraft.compensation === 'hybrid' ? `${postDraft.price || '20'}€ + ${t('timeCreditOption')}` : t('directSwapOption')}</div>
                     {postDraft.isUrgent && (
-                      <div style={{ marginTop: '8px', display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: darkMode ? 'rgba(127,29,29,0.3)' : '#FEF2F2', color: darkMode ? '#F87171' : '#B91C1C', fontSize: '11px', fontWeight: '800', padding: '5px 10px', borderRadius: '10px' }}>
+                      <div style={{ marginTop: '8px', display: 'inline-flex', alignItems: 'center', gap: '6px', backgroundColor: darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4', color: '#A8644A', fontSize: '11px', fontWeight: '800', padding: '5px 10px', borderRadius: '10px' }}>
                         <Flame size={12} /> {t('priorityNotice')}
                       </div>
                     )}
                   </div>
 
-                  {/* CALCULATEUR DE DEVIS & FACTURATION TVA (ÉTAPE 2) */}
+                  {/* CALCULATEUR DE DEVIS & FACTURATION TVA */}
                   <InvoiceCalculator
                     isUrgent={!!postDraft.isUrgent}
                     photoCount={currentPhotoList.length}
@@ -7552,17 +7532,17 @@ export default function App() {
                     currentLang={currentLang}
                   />
 
-                  <div style={{ fontSize: '13px', color: darkMode ? '#CBD5E1' : '#64748B' }}>{t('publishVisibilityNotice')}</div>
+                  <div style={{ fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>{t('publishVisibilityNotice')}</div>
                 </div>
               );
             })()}
 
             <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '18px' }}>
               {postStep > 1 ? (
-                <button onClick={() => setPostStep(prev => prev - 1)} className="premium-button" style={{ border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB', borderRadius: '999px', padding: '10px 16px', backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : '#FFF', color: darkMode ? '#FFF' : '#334155', fontWeight: '700', cursor: 'pointer' }}>{t('backButton')}</button>
+                <button onClick={() => setPostStep(prev => prev - 1)} className="premium-button" style={{ border: darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #E8DDD3', borderRadius: '999px', padding: '10px 16px', backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530', fontWeight: '700', cursor: 'pointer' }}>{t('backButton')}</button>
               ) : <span />}
               {postStep < 4 ? (
-                <button onClick={() => setPostStep(prev => prev + 1)} className="premium-button" style={{ border: 'none', borderRadius: '999px', padding: '10px 16px', backgroundColor: darkMode ? '#60A5FA' : '#04265A', color: darkMode ? '#0F172A' : '#FFF', fontWeight: '800', cursor: 'pointer', boxShadow: '0 8px 18px rgba(4,38,90,0.2)' }}>{t('continueButton')}</button>
+                <button onClick={() => setPostStep(prev => prev + 1)} className="premium-button" style={{ border: 'none', borderRadius: '999px', padding: '10px 16px', background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)', color: '#FFF', fontWeight: '800', cursor: 'pointer', boxShadow: '0 8px 18px rgba(198,125,91,0.3)' }}>{t('continueButton')}</button>
               ) : (() => {
                 const currentPhotoList = postDraft.gallery && postDraft.gallery.length > 0
                   ? postDraft.gallery
@@ -7586,7 +7566,7 @@ export default function App() {
                     : t('publishAdButton'));
 
                 return (
-                  <button onClick={handlePublishAnnouncement} className="premium-button" style={{ border: 'none', borderRadius: '999px', padding: '10px 20px', backgroundColor: quote.totalTTC > 0 ? '#F59E0B' : (darkMode ? '#60A5FA' : '#04265A'), color: quote.totalTTC > 0 ? '#FFFFFF' : (darkMode ? '#0F172A' : '#FFF'), fontWeight: '800', cursor: 'pointer', boxShadow: '0 8px 18px rgba(4,38,90,0.2)' }}>
+                  <button onClick={handlePublishAnnouncement} className="premium-button" style={{ border: 'none', borderRadius: '999px', padding: '10px 20px', background: quote.totalTTC > 0 ? '#F59E0B' : 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)', color: '#FFF', fontWeight: '800', cursor: 'pointer', boxShadow: '0 8px 18px rgba(198,125,91,0.3)' }}>
                     {buttonLabel}
                   </button>
                 );
@@ -7597,12 +7577,12 @@ export default function App() {
 
         {/* ONGLET 4 : PROFIL UTILISATEUR */}
         {activeTab === 'profile' && (
-          <div style={{ backgroundColor: darkMode ? 'rgba(30,41,59,0.85)' : 'rgba(255,255,255,0.85)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', padding: '22px', borderRadius: '28px', border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(226,232,240,0.9)', boxShadow: '0 10px 30px rgba(15,23,42,0.06)', color: darkMode ? '#F8FAFC' : '#111827' }}>
+          <div style={{ backgroundColor: darkMode ? '#231E1B' : '#FAF7F2', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', padding: '22px', borderRadius: '28px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', boxShadow: '0 10px 30px rgba(61,53,48,0.06)', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
                   {profile.kycVerified ? (
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: '800', padding: '6px 12px', borderRadius: '999px', backgroundColor: darkMode ? 'rgba(16,185,129,0.2)' : '#D1FAE5', color: '#10B981', boxShadow: '0 2px 8px rgba(16,185,129,0.2)' }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: '800', padding: '6px 12px', borderRadius: '999px', backgroundColor: darkMode ? 'rgba(156,175,136,0.25)' : '#EBF0E6', color: '#3D4A35', border: '1px solid #D4DFCE' }}>
                       <ShieldCheck size={13} /> {t('verifiedProfile') || 'Identité Vérifiée'} ✅
                     </div>
                   ) : (
@@ -7612,8 +7592,8 @@ export default function App() {
                       className="premium-button"
                       style={{
                         display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: '800', padding: '6px 12px', borderRadius: '999px',
-                        backgroundColor: darkMode ? 'rgba(16,185,129,0.15)' : '#ECFDF5', color: '#059669',
-                        border: darkMode ? '1px solid rgba(16,185,129,0.3)' : '1px solid #A7F3D0', cursor: 'pointer'
+                        backgroundColor: darkMode ? 'rgba(156,175,136,0.15)' : '#EBF0E6', color: '#3D4A35',
+                        border: '1px solid #D4DFCE', cursor: 'pointer'
                       }}
                     >
                       <ShieldCheck size={13} /> Vérifier mon identité (+ Badge ✅)
@@ -7628,13 +7608,14 @@ export default function App() {
                       backgroundColor: profile.accountType === 'professional'
                         ? (darkMode ? 'rgba(217,119,6,0.25)' : '#FEF3C7')
                         : profile.accountType === 'company'
-                          ? (darkMode ? 'rgba(16,185,129,0.25)' : '#ECFDF5')
-                          : (darkMode ? 'rgba(4,38,90,0.6)' : '#EFF6FF'),
+                          ? (darkMode ? 'rgba(156,175,136,0.25)' : '#EBF0E6')
+                          : (darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4'),
                       color: profile.accountType === 'professional'
                         ? (darkMode ? '#FDE68A' : '#92400E')
                         : profile.accountType === 'company'
-                          ? (darkMode ? '#6EE7B7' : '#065F46')
-                          : (darkMode ? '#93C5FD' : '#04265A'),
+                          ? (darkMode ? '#FAF7F2' : '#3D4A35')
+                          : (darkMode ? '#FAF7F2' : '#A8644A'),
+                      border: '1px solid #E8DDD3'
                     }}>
                       {profile.accountType === 'professional' && '💼 Pro / Freelance'}
                       {profile.accountType === 'company' && '🏢 Organisation / Asso'}
@@ -7642,8 +7623,8 @@ export default function App() {
                     </span>
                   )}
                 </div>
-                <h3 style={{ margin: 0, fontSize: '22px', fontWeight: '800', color: darkMode ? '#FFFFFF' : '#111827', letterSpacing: '-0.01em' }}>{isEditingProfile ? profileDraft.name : profile.name}</h3>
-                <div style={{ fontSize: '13px', fontWeight: '800', color: darkMode ? '#60A5FA' : '#04265A', marginTop: '2px' }}>{isEditingProfile ? (profileDraft.username || '@user') : (profile.username || '@mateopolo')}</div>
+                <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '24px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530', letterSpacing: '-0.01em' }}>{isEditingProfile ? profileDraft.name : profile.name}</h3>
+                <div style={{ fontSize: '13px', fontWeight: '800', color: '#C67D5B', marginTop: '2px' }}>{isEditingProfile ? (profileDraft.username || '@user') : (profile.username || '@mateopolo')}</div>
               </div>
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                 {!isEditingProfile && !profile.kycVerified && (
@@ -7655,7 +7636,7 @@ export default function App() {
                       border: 'none',
                       borderRadius: '999px',
                       padding: '10px 16px',
-                      backgroundColor: '#10B981',
+                      backgroundColor: '#9CAF88',
                       color: '#FFF',
                       fontWeight: '800',
                       fontSize: '12px',
@@ -7663,7 +7644,7 @@ export default function App() {
                       display: 'flex',
                       alignItems: 'center',
                       gap: '6px',
-                      boxShadow: '0 4px 14px rgba(16,185,129,0.3)'
+                      boxShadow: '0 4px 14px rgba(156,175,136,0.3)'
                     }}
                   >
                     <ShieldCheck size={14} /> Vérifier mon profil
@@ -7688,7 +7669,7 @@ export default function App() {
                 >
                   <ShieldAlert size={14} /> Panel Modération
                 </button>
-                <button onClick={() => isEditingProfile ? handleSaveProfile() : handleStartEdit()} className="premium-button" style={{ border: 'none', borderRadius: '999px', padding: '10px 14px', backgroundColor: isEditingProfile ? '#04265A' : (darkMode ? 'rgba(255,255,255,0.1)' : '#F8FAFC'), color: isEditingProfile ? '#FFF' : (darkMode ? '#FFFFFF' : '#0F172A'), fontWeight: '700', cursor: 'pointer', boxShadow: '0 8px 16px -4px rgba(0,0,0,0.08)' }}>
+                <button onClick={() => isEditingProfile ? handleSaveProfile() : handleStartEdit()} className="premium-button" style={{ border: '1px solid #E8DDD3', borderRadius: '999px', padding: '10px 14px', backgroundColor: isEditingProfile ? '#C67D5B' : (darkMode ? '#1A1715' : '#FAF7F2'), color: isEditingProfile ? '#FFF' : (darkMode ? '#FAF7F2' : '#3D3530'), fontWeight: '700', cursor: 'pointer', boxShadow: '0 4px 12px rgba(61,53,48,0.06)' }}>
                   {isEditingProfile ? t('saveProfile') : t('editProfile')}
                 </button>
                 {!isEditingProfile && (
@@ -7701,9 +7682,9 @@ export default function App() {
 
             <input type="file" ref={profileAvatarFileInputRef} onChange={handleAvatarFileUpload} accept="image/*" style={{ display: "none" }} />
             <div style={{ position: "relative", marginBottom: "18px", display: "inline-block", cursor: isEditingProfile ? "pointer" : "default" }} onClick={() => isEditingProfile && profileAvatarFileInputRef.current && profileAvatarFileInputRef.current.click()}>
-              <img src={isEditingProfile ? profileDraft.avatar : profile.avatar} alt={profile.name} style={{ width: "112px", height: "112px", borderRadius: "50%", objectFit: "cover", border: darkMode ? "3px solid #60A5FA" : "3px solid #DBEAFE", boxShadow: "0 14px 28px rgba(4,38,90,0.18)", transition: "all 0.3s ease" }} />
+              <img src={isEditingProfile ? profileDraft.avatar : profile.avatar} alt={profile.name} style={{ width: "112px", height: "112px", borderRadius: "50%", objectFit: "cover", border: darkMode ? "3px solid #C67D5B" : "3px solid #E8DDD3", boxShadow: "0 14px 28px rgba(61,53,48,0.15)", transition: "all 0.3s ease" }} />
               {isEditingProfile && (
-                <button title={t("uploadProfilePhoto")} onClick={(e) => { e.stopPropagation(); profileAvatarFileInputRef.current && profileAvatarFileInputRef.current.click(); }} style={{ position: "absolute", right: "0", bottom: "0", width: "38px", height: "38px", borderRadius: "50%", border: "none", backgroundColor: "#04265A", color: "#FFF", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 8px 16px rgba(4,38,90,0.25)" }}>
+                <button title={t("uploadProfilePhoto")} onClick={(e) => { e.stopPropagation(); profileAvatarFileInputRef.current && profileAvatarFileInputRef.current.click(); }} style={{ position: "absolute", right: "0", bottom: "0", width: "38px", height: "38px", borderRadius: "50%", border: "none", backgroundColor: "#C67D5B", color: "#FFF", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 8px 16px rgba(198,125,91,0.25)" }}>
                   <Pencil size={16} />
                 </button>
               )}
@@ -7717,11 +7698,11 @@ export default function App() {
                     className="premium-button"
                     style={{
                       width: "100%",
-                      border: darkMode ? "1.5px dashed #60A5FA" : "1.5px dashed #04265A",
+                      border: "1.5px dashed #C67D5B",
                       borderRadius: "14px",
                       padding: "12px 14px",
-                      backgroundColor: darkMode ? "rgba(4,38,90,0.4)" : "#EFF6FF",
-                      color: darkMode ? "#93C5FD" : "#04265A",
+                      backgroundColor: darkMode ? "rgba(198,125,91,0.2)" : "#F5EAE4",
+                      color: darkMode ? "#FAF7F2" : "#A8644A",
                       fontWeight: "800",
                       fontSize: "13px",
                       cursor: "pointer",
@@ -7729,7 +7710,7 @@ export default function App() {
                       alignItems: "center",
                       justifyContent: "center",
                       gap: "8px",
-                      boxShadow: "0 4px 14px rgba(4,38,90,0.08)"
+                      boxShadow: "0 4px 14px rgba(198,125,91,0.1)"
                     }}
                   >
                     <Upload size={16} /> {t("uploadProfilePhoto")}
@@ -7737,14 +7718,14 @@ export default function App() {
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(8, 1fr)", gap: "8px", maxHeight: "120px", overflowY: "auto", padding: "4px", marginBottom: "12px" }}>
                   {avatarOptions.map((avatar) => (
-                    <button key={avatar} onClick={() => setProfileDraft(prev => ({ ...prev, avatar }))} style={{ border: profileDraft.avatar === avatar ? (darkMode ? "2.5px solid #60A5FA" : "2.5px solid #04265A") : "2px solid transparent", borderRadius: "50%", padding: 0, background: "none", cursor: "pointer", transform: profileDraft.avatar === avatar ? "scale(1.08)" : "scale(1)", transition: "all 0.2s" }}>
+                    <button key={avatar} onClick={() => setProfileDraft(prev => ({ ...prev, avatar }))} style={{ border: profileDraft.avatar === avatar ? "2.5px solid #C67D5B" : "2px solid transparent", borderRadius: "50%", padding: 0, background: "none", cursor: "pointer", transform: profileDraft.avatar === avatar ? "scale(1.08)" : "scale(1)", transition: "all 0.2s" }}>
                       <img src={avatar} alt="avatar option" style={{ width: "42px", height: "42px", borderRadius: "50%", objectFit: "cover" }} />
                     </button>
                   ))}
                 </div>
                 <div style={{ marginBottom: "14px" }}>
-                  <label style={{ fontSize: "12px", fontWeight: "800", color: darkMode ? "#CBD5E1" : "#374151" }}>URL de ta photo de profil (aperçu instantané)</label>
-                  <input value={profileDraft.avatar} onChange={(e) => setProfileDraft(prev => ({ ...prev, avatar: e.target.value }))} placeholder="https://exemple.com/avatar.jpg" style={{ width: "100%", padding: "10px 12px", marginTop: "6px", border: darkMode ? "1px solid rgba(255,255,255,0.2)" : "1px solid #D1D5DB", backgroundColor: darkMode ? "rgba(15,23,42,0.8)" : "#FFF", color: darkMode ? "#FFF" : "#111827", borderRadius: "12px", fontSize: "13px" }} />
+                  <label style={{ fontSize: "12px", fontWeight: "800", color: darkMode ? "#D4C5B5" : "#6B5E54" }}>URL de ta photo de profil (aperçu instantané)</label>
+                  <input value={profileDraft.avatar} onChange={(e) => setProfileDraft(prev => ({ ...prev, avatar: e.target.value }))} placeholder="https://exemple.com/avatar.jpg" style={{ width: "100%", padding: "10px 12px", marginTop: "6px", border: darkMode ? "1px solid rgba(232,221,211,0.15)" : "1px solid #E8DDD3", backgroundColor: darkMode ? "#1A1715" : "#FFF", color: darkMode ? "#FAF7F2" : "#3D3530", borderRadius: "12px", fontSize: "13px" }} />
                 </div>
               </>
             )}
@@ -7754,41 +7735,41 @@ export default function App() {
                 <>
                   <div style={{ display: 'flex', gap: '10px' }}>
                     <div style={{ flex: 1 }}>
-                      <label style={{ fontSize: '11px', fontWeight: '700', color: darkMode ? '#CBD5E1' : '#64748B' }}>Nom complet</label>
-                      <input value={profileDraft.name} onChange={(e) => setProfileDraft(prev => ({ ...prev, name: e.target.value }))} placeholder="Nom" style={{ width: '100%', border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFF', borderRadius: '12px', padding: '10px 12px', fontSize: '14px', fontWeight: '700', color: darkMode ? '#FFF' : '#111827' }} />
+                      <label style={{ fontSize: '11px', fontWeight: '700', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>Nom complet</label>
+                      <input value={profileDraft.name} onChange={(e) => setProfileDraft(prev => ({ ...prev, name: e.target.value }))} placeholder="Nom" style={{ width: '100%', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', backgroundColor: darkMode ? '#1A1715' : '#FFF', borderRadius: '12px', padding: '10px 12px', fontSize: '14px', fontWeight: '700', color: darkMode ? '#FAF7F2' : '#3D3530' }} />
                     </div>
                     <div style={{ flex: 1 }}>
-                      <label style={{ fontSize: '11px', fontWeight: '700', color: darkMode ? '#CBD5E1' : '#64748B' }}>Pseudo (@)</label>
-                      <input value={profileDraft.username || ''} onChange={(e) => setProfileDraft(prev => ({ ...prev, username: e.target.value }))} placeholder="@pseudo" style={{ width: '100%', border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFF', borderRadius: '12px', padding: '10px 12px', fontSize: '14px', fontWeight: '700', color: darkMode ? '#60A5FA' : '#04265A' }} />
+                      <label style={{ fontSize: '11px', fontWeight: '700', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>Pseudo (@)</label>
+                      <input value={profileDraft.username || ''} onChange={(e) => setProfileDraft(prev => ({ ...prev, username: e.target.value }))} placeholder="@pseudo" style={{ width: '100%', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', backgroundColor: darkMode ? '#1A1715' : '#FFF', borderRadius: '12px', padding: '10px 12px', fontSize: '14px', fontWeight: '700', color: '#C67D5B' }} />
                     </div>
                   </div>
-                  <textarea value={profileDraft.bio} onChange={(e) => setProfileDraft(prev => ({ ...prev, bio: e.target.value }))} rows={3} style={{ width: '100%', border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFF', borderRadius: '14px', padding: '12px 14px', resize: 'vertical', fontSize: '13px', color: darkMode ? '#E2E8F0' : '#475569' }} />
-                  <input value={profileDraft.location} onChange={(e) => setProfileDraft(prev => ({ ...prev, location: e.target.value }))} style={{ width: '100%', border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFF', borderRadius: '14px', padding: '12px 14px', fontSize: '13px', color: darkMode ? '#E2E8F0' : '#475569' }} />
+                  <textarea value={profileDraft.bio} onChange={(e) => setProfileDraft(prev => ({ ...prev, bio: e.target.value }))} rows={3} style={{ width: '100%', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', backgroundColor: darkMode ? '#1A1715' : '#FFF', borderRadius: '14px', padding: '12px 14px', resize: 'vertical', fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54' }} />
+                  <input value={profileDraft.location} onChange={(e) => setProfileDraft(prev => ({ ...prev, location: e.target.value }))} style={{ width: '100%', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', backgroundColor: darkMode ? '#1A1715' : '#FFF', borderRadius: '14px', padding: '12px 14px', fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54' }} />
                 </>
               ) : (
                 <>
-                  <div style={{ backgroundColor: darkMode ? 'rgba(15,23,42,0.6)' : '#F8FAFC', padding: '14px 16px', borderRadius: '16px', border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E2E8F0' }}>
-                    <div style={{ fontSize: '14px', lineHeight: 1.7, color: darkMode ? '#E2E8F0' : '#475569' }}>
+                  <div style={{ backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', padding: '14px 16px', borderRadius: '16px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3' }}>
+                    <div style={{ fontSize: '14px', lineHeight: 1.7, color: darkMode ? '#D4C5B5' : '#6B5E54' }}>
                       {getBioTranslation(profile.bio, currentLang, showingOriginalBio)}
                     </div>
                     {currentLang !== 'FR' && (
                       <button
                         onClick={() => setShowingOriginalBio(prev => !prev)}
                         className="premium-button"
-                        style={{ border: 'none', backgroundColor: 'transparent', color: darkMode ? '#60A5FA' : '#04265A', fontSize: '11px', fontWeight: '800', cursor: 'pointer', marginTop: '6px', display: 'inline-flex', alignItems: 'center', gap: '4px', padding: 0 }}
+                        style={{ border: 'none', backgroundColor: 'transparent', color: '#C67D5B', fontSize: '11px', fontWeight: '800', cursor: 'pointer', marginTop: '6px', display: 'inline-flex', alignItems: 'center', gap: '4px', padding: 0 }}
                       >
-                        <Globe size={12} color={darkMode ? '#60A5FA' : '#04265A'} />
+                        <Globe size={12} color="#C67D5B" />
                         {showingOriginalBio ? t('showTranslation') : t('showOriginal')}
                       </button>
                     )}
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: darkMode ? '#CBD5E1' : '#64748B' }}><MapPin size={14} color={darkMode ? '#60A5FA' : '#04265A'} /> {profile.location}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}><MapPin size={14} color="#C67D5B" /> {profile.location}</div>
                 </>
               )}
             </div>
 
             <div style={{ marginBottom: '18px' }}>
-              <div style={{ fontSize: '12px', fontWeight: '700', color: darkMode ? '#CBD5E1' : '#64748B', marginBottom: '8px' }}>{t('spokenLanguages')}</div>
+              <div style={{ fontSize: '12px', fontWeight: '700', color: darkMode ? '#D4C5B5' : '#6B5E54', marginBottom: '8px' }}>{t('spokenLanguages')}</div>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 {[
                   { code: 'FR', label: 'FR 🇫🇷' },
@@ -7810,9 +7791,9 @@ export default function App() {
                       key={code}
                       onClick={() => isEditingProfile ? toggleLanguage(code) : null}
                       style={{
-                        border: active ? (darkMode ? '1px solid #60A5FA' : '1px solid #04265A') : (darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #E2E8F0'),
-                        backgroundColor: active ? (darkMode ? 'rgba(4,38,90,0.7)' : '#EFF6FF') : (darkMode ? 'rgba(30,41,59,0.5)' : '#F8FAFC'),
-                        color: active ? (darkMode ? '#93C5FD' : '#04265A') : (darkMode ? '#CBD5E1' : '#475569'),
+                        border: active ? '1px solid #C67D5B' : (darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3'),
+                        backgroundColor: active ? (darkMode ? 'rgba(198,125,91,0.25)' : '#F5EAE4') : (darkMode ? '#1A1715' : '#FAF7F2'),
+                        color: active ? (darkMode ? '#FAF7F2' : '#A8644A') : (darkMode ? '#D4C5B5' : '#6B5E54'),
                         padding: '7px 12px',
                         borderRadius: '999px',
                         fontSize: '12px',
@@ -7828,165 +7809,64 @@ export default function App() {
               </div>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px', borderRadius: '20px', backgroundColor: darkMode ? 'rgba(15,23,42,0.6)' : '#F8FAFC', border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E2E8F0', marginBottom: '18px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px', borderRadius: '20px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3', marginBottom: '18px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
                 <div>
-                  <div style={{ fontSize: '11px', color: darkMode ? '#CBD5E1' : '#64748B' }}>{t('euroBalance')}</div>
-                  <div style={{ fontSize: '22px', fontWeight: '800', color: darkMode ? '#60A5FA' : '#0F172A', position: 'relative', overflow: 'visible' }}>
-                    <AnimatedEuroBalance value={profile.euroBalance} suffix=" €" style={{ fontSize: '22px', fontWeight: '800', color: darkMode ? '#60A5FA' : '#0F172A' }} />
+                  <div style={{ fontSize: '11px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>{t('euroBalance')}</div>
+                  <div style={{ fontSize: '22px', fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530', position: 'relative', overflow: 'visible' }}>
+                    <AnimatedEuroBalance value={profile.euroBalance} suffix=" €" style={{ fontSize: '22px', fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530' }} />
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  <button onClick={() => handleOpenPayment('topup-cash')} className="premium-button" style={{ border: 'none', borderRadius: '999px', padding: '9px 14px', backgroundColor: '#04265A', color: '#FFF', fontWeight: '700', fontSize: '12px', cursor: 'pointer', boxShadow: '0 8px 16px rgba(4,38,90,0.2)' }}>
+                  <button onClick={() => handleOpenPayment('topup-cash')} className="premium-button" style={{ border: 'none', borderRadius: '999px', padding: '9px 14px', background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)', color: '#FFF', fontWeight: '700', fontSize: '12px', cursor: 'pointer', boxShadow: '0 8px 16px rgba(198,125,91,0.25)' }}>
                     + Recharger (€)
                   </button>
-                  <button onClick={() => setIsTransactionsModalOpen(true)} className="premium-button" style={{ border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #D1D5DB', borderRadius: '999px', padding: '9px 14px', backgroundColor: 'transparent', color: darkMode ? '#CBD5E1' : '#334155', fontWeight: '700', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <button onClick={() => setIsTransactionsModalOpen(true)} className="premium-button" style={{ border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', borderRadius: '999px', padding: '9px 14px', backgroundColor: 'transparent', color: darkMode ? '#D4C5B5' : '#6B5E54', fontWeight: '700', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
                     <FileText size={13} /> Factures
                   </button>
                 </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '12px', borderTop: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E2E8F0', flexWrap: 'wrap', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '12px', borderTop: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3', flexWrap: 'wrap', gap: '10px' }}>
                 <div>
-                  <div style={{ fontSize: '11px', color: darkMode ? '#CBD5E1' : '#64748B' }}>{t('trocoTokensLabel')}</div>
-                  <div style={{ fontSize: '19px', fontWeight: '800', color: darkMode ? '#FFFFFF' : '#111827', position: 'relative', overflow: 'visible' }}>
-                    <AnimatedTokenBalance value={profile.trocoTokens} formatFn={(v) => formatTokenCount(v, currentLang)} style={{ fontSize: '19px', fontWeight: '800', color: darkMode ? '#FFFFFF' : '#111827' }} />
+                  <div style={{ fontSize: '11px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>{t('trocoTokensLabel')}</div>
+                  <div style={{ fontSize: '19px', fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530', position: 'relative', overflow: 'visible' }}>
+                    <AnimatedTokenBalance value={profile.trocoTokens} formatFn={(v) => formatTokenCount(v, currentLang)} style={{ fontSize: '19px', fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530' }} />
                   </div>
                 </div>
-                <button onClick={() => handleOpenPayment('troco-plus')} className="premium-button" style={{ border: 'none', borderRadius: '999px', padding: '9px 16px', backgroundColor: '#D97706', color: '#FFF', fontWeight: '800', fontSize: '12px', cursor: 'pointer', boxShadow: '0 8px 16px rgba(217,119,6,0.25)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <button onClick={() => handleOpenPayment('troco-plus')} className="premium-button" style={{ border: 'none', borderRadius: '999px', padding: '9px 16px', background: 'linear-gradient(135deg, #D97706 0%, #B45309 100%)', color: '#FFF', fontWeight: '800', fontSize: '12px', cursor: 'pointer', boxShadow: '0 8px 16px rgba(217,119,6,0.25)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <Sparkles size={14} /> {profile.isTrocoPlus ? '⭐ Gérer Troco Plus' : '+ S\'abonner à Troco Plus'}
                 </button>
               </div>
             </div>
 
             {saveMessage && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: darkMode ? '#34D399' : '#04265A', fontSize: '13px', fontWeight: '700', marginBottom: '18px' }}>
-                <CheckCircle size={16} /> {saveMessage}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#7A8F6A', fontSize: '12px', fontWeight: '800', marginTop: '10px' }}>
+                <Check size={14} /> {saveMessage}
               </div>
             )}
 
-            <div style={{ marginBottom: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: darkMode ? '#FFFFFF' : '#111827' }}>{t('skillsCV')}</h4>
-                <span style={{ fontSize: '11px', color: darkMode ? '#CBD5E1' : '#64748B' }}>{t('servicesExpertise')}</span>
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
-                {skills.map((skill) => (
-                  <div key={skill} style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: darkMode ? 'rgba(30,41,59,0.7)' : '#F8FAFC', border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #E2E8F0', borderRadius: '999px', padding: '9px 12px' }}>
-                    <span style={{ fontSize: '12px', color: darkMode ? '#F1F5F9' : '#334155', fontWeight: '600' }}>{skill}</span>
-                    {isEditingProfile && <button onClick={() => handleRemoveSkill(skill)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#EF4444', padding: 0 }}><Trash2 size={12} /></button>}
-                  </div>
-                ))}
-              </div>
-              {isEditingProfile && (
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <input
-                    value={skillInput}
-                    onChange={(e) => setSkillInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleAddSkill();
-                      }
-                    }}
-                    placeholder="Ajouter une compétence (ex: violon, plomberie...)"
-                    style={{ flex: 1, border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFF', color: darkMode ? '#FFF' : '#111827', borderRadius: '12px', padding: '10px 12px', fontSize: '13px' }}
-                  />
-                  <button type="button" onClick={handleAddSkill} className="premium-button" style={{ border: 'none', borderRadius: '12px', backgroundColor: '#04265A', color: '#FFF', padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: '700' }}><Plus size={14} /> Ajouter</button>
-                </div>
-              )}
-            </div>
-
-            <div style={{ marginBottom: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: darkMode ? '#FFFFFF' : '#111827' }}>{t('availableEquipment')}</h4>
-                <span style={{ fontSize: '11px', color: darkMode ? '#CBD5E1' : '#64748B' }}>{t('loansTools')}</span>
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '12px' }}>
-                {equipment.map((item) => (
-                  <div key={item} style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: darkMode ? 'rgba(30,41,59,0.7)' : '#F8FAFC', border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #E2E8F0', borderRadius: '999px', padding: '9px 12px' }}>
-                    <span style={{ fontSize: '12px', color: darkMode ? '#F1F5F9' : '#334155', fontWeight: '600' }}>{item}</span>
-                    {isEditingProfile && <button onClick={() => handleRemoveEquipment(item)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#EF4444', padding: 0 }}><Trash2 size={12} /></button>}
-                  </div>
-                ))}
-              </div>
-              {isEditingProfile && (
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <input
-                    value={equipmentInput}
-                    onChange={(e) => setEquipmentInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        handleAddEquipment();
-                      }
-                    }}
-                    placeholder="Ajouter un outil ou matériel (ex: scie sauteuse, tente...)"
-                    style={{ flex: 1, border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB', backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFF', color: darkMode ? '#FFF' : '#111827', borderRadius: '12px', padding: '10px 12px', fontSize: '13px' }}
-                  />
-                  <button type="button" onClick={handleAddEquipment} className="premium-button" style={{ border: 'none', borderRadius: '12px', backgroundColor: '#D97706', color: '#FFF', padding: '10px 14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px', fontWeight: '700' }}><Plus size={14} /> Ajouter</button>
-                </div>
-              )}
-            </div>
-
-            <div style={{ marginBottom: '24px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: darkMode ? '#FFFFFF' : '#111827' }}>{t('myListings')}</h4>
-                <span style={{ fontSize: '11px', color: darkMode ? '#CBD5E1' : '#64748B' }}>{listings.filter(item => item.author === profile.name).length} {t('inTotal')}</span>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px' }}>
-                {listings.filter(item => item.author === profile.name).map((item) => (
-                  <div key={item.id} style={{ border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E2E8F0', borderRadius: '16px', overflow: 'hidden', backgroundColor: darkMode ? 'rgba(30,41,59,0.8)' : '#F8FAFC' }}>
-                    <div style={{ position: 'relative' }}>
-                      <img src={item.image} alt={item.title} style={{ width: '100%', height: '96px', objectFit: 'cover' }} />
-                      {item.urgent && <span style={{ position: 'absolute', top: '8px', left: '8px', backgroundColor: 'rgba(239,68,68,0.95)', color: '#FFF', fontSize: '9px', fontWeight: '800', padding: '4px 8px', borderRadius: '8px' }}>URGENT</span>}
-                      {item.isBoosted && <span style={{ position: 'absolute', top: '8px', right: '8px', backgroundColor: '#F59E0B', color: '#FFF', fontSize: '9px', fontWeight: '800', padding: '4px 8px', borderRadius: '8px' }}>🔥 Sponsorisé</span>}
-                    </div>
-                    <div style={{ padding: '12px' }}>
-                      <div style={{ fontSize: '12px', fontWeight: '700', color: darkMode ? '#FFFFFF' : '#111827', marginBottom: '4px' }}>{item.title}</div>
-                      <div style={{ fontSize: '11px', color: darkMode ? '#60A5FA' : '#64748B', fontWeight: '700', marginBottom: '8px' }}>{item.compensation}</div>
-                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '10px' }}>
-                        {(item.tags || generateTags(item.title, item.description || '')).slice(0, 2).map(tag => (
-                          <span key={tag} style={{ backgroundColor: darkMode ? 'rgba(4,38,90,0.6)' : '#EFF6FF', color: darkMode ? '#93C5FD' : '#04265A', borderRadius: '999px', padding: '3px 8px', fontSize: '9px', fontWeight: '800' }}>{tag}</span>
-                        ))}
-                      </div>
-                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', flexDirection: 'column' }}>
-                        <div style={{ display: 'flex', gap: '6px' }}>
-                          <button onClick={() => handleStartEditListing(item)} className="premium-button" style={{ flex: 1, border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB', borderRadius: '10px', padding: '7px 8px', backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : '#FFF', color: darkMode ? '#FFF' : '#111827', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>{t('editAdBtn')}</button>
-                          <button onClick={() => handleBoostListing(item)} className="premium-button" style={{ flex: 1, border: 'none', borderRadius: '10px', padding: '7px 8px', backgroundColor: '#F59E0B', color: '#FFF', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>{t('boostButtonLabel')}</button>
-                        </div>
-                        <div style={{ display: 'flex', gap: '6px' }}>
-                          <button onClick={() => handleTogglePauseListing(item.id)} className="premium-button" style={{ flex: 1, border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB', borderRadius: '10px', padding: '7px 8px', backgroundColor: item.status === 'paused' ? (darkMode ? 'rgba(255,255,255,0.05)' : '#F3F4F6') : (darkMode ? 'rgba(255,255,255,0.1)' : '#FFF'), color: darkMode ? '#FFF' : '#111827', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>{t(item.status === 'paused' ? 'resumeAd' : 'pauseAd')}</button>
-                          <button onClick={() => handleDeleteListing(item.id)} className="premium-button" style={{ flex: 1, border: 'none', borderRadius: '10px', padding: '7px 8px', backgroundColor: '#EF4444', color: '#FFF', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>{t('deleteAd')}</button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
             {/* ---- PORTFOLIO PHOTOS ---- */}
-            <div style={{ borderTop: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E2E8F0', paddingTop: '20px', marginTop: '4px' }}>
+            <div style={{ borderTop: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3', paddingTop: '20px', marginTop: '4px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                <ImageIcon size={17} color={darkMode ? '#60A5FA' : '#04265A'} />
-                <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: darkMode ? '#FFFFFF' : '#111827' }}>📸 Mon Portfolio</h4>
-                <span style={{ marginLeft: 'auto', fontSize: '11px', color: darkMode ? '#94A3B8' : '#64748B', fontWeight: '700' }}>{portfolioImages.length} photo{portfolioImages.length !== 1 ? 's' : ''}</span>
+                <ImageIcon size={17} color="#C67D5B" />
+                <h4 className="font-editorial-heading" style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530' }}>📸 Mon Portfolio</h4>
+                <span style={{ marginLeft: 'auto', fontSize: '11px', color: darkMode ? '#D4C5B5' : '#6B5E54', fontWeight: '700' }}>{portfolioImages.length} photo{portfolioImages.length !== 1 ? 's' : ''}</span>
               </div>
-              <p style={{ fontSize: '12px', color: darkMode ? '#CBD5E1' : '#64748B', margin: '0 0 14px' }}>
+              <p style={{ fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', margin: '0 0 14px' }}>
                 Ajoute des photos authentiques pour mettre en valeur ton savoir-faire.
               </p>
 
               {portfolioImages.length > 0 ? (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '14px' }}>
                   {portfolioImages.map((src, idx) => (
-                    <div key={idx} style={{ position: 'relative', aspectRatio: '1', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+                    <div key={idx} style={{ position: 'relative', aspectRatio: '1', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(61,53,48,0.1)' }}>
                       <img src={src} alt={`Portfolio ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={(e) => { e.target.style.display = 'none'; }} />
                       <button
                         onClick={() => handleRemovePortfolioImage(idx)}
                         style={{
                           position: 'absolute', top: '5px', right: '5px',
                           border: 'none', width: '24px', height: '24px', borderRadius: '50%',
-                          backgroundColor: 'rgba(15,23,42,0.75)', color: '#FFF', cursor: 'pointer',
+                          backgroundColor: 'rgba(61,53,48,0.75)', color: '#FFF', cursor: 'pointer',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           backdropFilter: 'blur(4px)', fontSize: '12px', fontWeight: '800'
                         }}
@@ -7999,8 +7879,8 @@ export default function App() {
                 <div style={{
                   textAlign: 'center', padding: '24px 16px', marginBottom: '14px',
                   borderRadius: '14px',
-                  border: darkMode ? '2px dashed rgba(255,255,255,0.12)' : '2px dashed #D1D5DB',
-                  color: darkMode ? '#64748B' : '#94A3B8', fontSize: '13px', fontWeight: '600'
+                  border: darkMode ? '2px dashed rgba(232,221,211,0.2)' : '2px dashed #E8DDD3',
+                  color: darkMode ? '#D4C5B5' : '#6B5E54', fontSize: '13px', fontWeight: '600'
                 }}>
                   Aucune photo — ajoute des images pour te démarquer 📷
                 </div>
@@ -8015,10 +7895,10 @@ export default function App() {
                   placeholder="Colle une URL d'image..."
                   style={{
                     flex: 1, minWidth: '180px', padding: '10px 14px',
-                    border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB',
+                    border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
                     borderRadius: '12px', fontSize: '13px',
-                    backgroundColor: darkMode ? 'rgba(15,23,42,0.5)' : '#F8FAFC',
-                    color: darkMode ? '#FFF' : '#111827', outline: 'none'
+                    backgroundColor: darkMode ? '#1A1715' : '#FAF7F2',
+                    color: darkMode ? '#FAF7F2' : '#3D3530', outline: 'none'
                   }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && portfolioUrlInput.trim()) {
@@ -8037,8 +7917,8 @@ export default function App() {
                   className="premium-button"
                   style={{
                     border: 'none', borderRadius: '12px', padding: '10px 14px',
-                    backgroundColor: portfolioUrlInput.trim() ? (darkMode ? '#60A5FA' : '#04265A') : (darkMode ? 'rgba(255,255,255,0.1)' : '#E2E8F0'),
-                    color: portfolioUrlInput.trim() ? '#FFF' : (darkMode ? '#475569' : '#94A3B8'),
+                    background: portfolioUrlInput.trim() ? 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)' : (darkMode ? 'rgba(232,221,211,0.1)' : '#E8DDD3'),
+                    color: portfolioUrlInput.trim() ? '#FFF' : (darkMode ? '#6B5E54' : '#9A8E84'),
                     fontWeight: '800', cursor: portfolioUrlInput.trim() ? 'pointer' : 'not-allowed', fontSize: '13px',
                     display: 'flex', alignItems: 'center', gap: '6px'
                   }}
@@ -8048,10 +7928,10 @@ export default function App() {
                 <button
                   onClick={() => document.getElementById('portfolio-file-input')?.click()}
                   style={{
-                    border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #D1D5DB',
+                    border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
                     borderRadius: '12px', padding: '10px 14px',
-                    backgroundColor: darkMode ? 'rgba(255,255,255,0.07)' : '#FFF',
-                    color: darkMode ? '#93C5FD' : '#04265A',
+                    backgroundColor: darkMode ? '#1A1715' : '#FFF',
+                    color: '#C67D5B',
                     fontWeight: '800', cursor: 'pointer', fontSize: '13px',
                     display: 'flex', alignItems: 'center', gap: '6px'
                   }}
@@ -8077,40 +7957,40 @@ export default function App() {
             </div>
 
             {/* ---- HISTORIQUE DES SWAPS & DEALS ---- */}
-            <div style={{ borderTop: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E2E8F0', paddingTop: '20px' }}>
+            <div style={{ borderTop: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3', paddingTop: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                <History size={17} color={darkMode ? '#60A5FA' : '#04265A'} />
-                <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: darkMode ? '#FFFFFF' : '#111827' }}>{t('swapHistory')}</h4>
+                <History size={17} color="#C67D5B" />
+                <h4 className="font-editorial-heading" style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{t('swapHistory')}</h4>
               </div>
-              <p style={{ fontSize: '12px', color: darkMode ? '#CBD5E1' : '#64748B', margin: '0 0 14px' }}>{t('swapHistorySub')}</p>
+              <p style={{ fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', margin: '0 0 14px' }}>{t('swapHistorySub')}</p>
 
               <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' }}>
-                <div style={{ flex: 1, minWidth: '130px', border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E2E8F0', borderRadius: '16px', padding: '12px 14px', backgroundColor: darkMode ? 'rgba(15,23,42,0.6)' : '#F8FAFC' }}>
-                  <div style={{ fontSize: '11px', color: darkMode ? '#CBD5E1' : '#64748B' }}>{t('closedDeals')}</div>
-                  <div style={{ fontSize: '20px', fontWeight: '800', color: darkMode ? '#FFFFFF' : '#111827' }}>{closedDealsCount}</div>
+                <div style={{ flex: 1, minWidth: '130px', border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3', borderRadius: '16px', padding: '12px 14px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8' }}>
+                  <div style={{ fontSize: '11px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>{t('closedDeals')}</div>
+                  <div style={{ fontSize: '20px', fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{closedDealsCount}</div>
                 </div>
-                <div style={{ flex: 1, minWidth: '130px', border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E2E8F0', borderRadius: '16px', padding: '12px 14px', backgroundColor: darkMode ? 'rgba(15,23,42,0.6)' : '#F8FAFC' }}>
-                  <div style={{ fontSize: '11px', color: darkMode ? '#CBD5E1' : '#64748B' }}>{t('averageRating')}</div>
+                <div style={{ flex: 1, minWidth: '130px', border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3', borderRadius: '16px', padding: '12px 14px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8' }}>
+                  <div style={{ fontSize: '11px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>{t('averageRating')}</div>
                   <div style={{ fontSize: '20px', fontWeight: '800', color: '#F59E0B', display: 'flex', alignItems: 'center', gap: '4px' }}>
                     {averageRating} {averageRating !== '—' && <Star size={15} fill="#F59E0B" color="#F59E0B" />}
                   </div>
                 </div>
-                <div style={{ flex: 1, minWidth: '130px', border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E2E8F0', borderRadius: '16px', padding: '12px 14px', backgroundColor: darkMode ? 'rgba(15,23,42,0.6)' : '#F8FAFC' }}>
-                  <div style={{ fontSize: '11px', color: darkMode ? '#CBD5E1' : '#64748B' }}>{t('inProgressPlanned')}</div>
-                  <div style={{ fontSize: '20px', fontWeight: '800', color: darkMode ? '#60A5FA' : '#04265A' }}>{inProgressCount}</div>
+                <div style={{ flex: 1, minWidth: '130px', border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3', borderRadius: '16px', padding: '12px 14px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8' }}>
+                  <div style={{ fontSize: '11px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>{t('inProgressPlanned')}</div>
+                  <div style={{ fontSize: '20px', fontWeight: '800', color: '#C67D5B' }}>{inProgressCount}</div>
                 </div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {userSwapHistory.length === 0 ? (
-                  <div style={{ padding: '28px 20px', textAlign: 'center', borderRadius: '20px', backgroundColor: darkMode ? 'rgba(15,23,42,0.5)' : '#F8FAFC', border: darkMode ? '1px dashed rgba(255,255,255,0.15)' : '1px dashed #CBD5E1' }}>
-                    <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: darkMode ? 'rgba(96,165,250,0.15)' : '#EFF6FF', color: darkMode ? '#60A5FA' : '#04265A', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+                  <div style={{ padding: '28px 20px', textAlign: 'center', borderRadius: '20px', backgroundColor: darkMode ? '#1A1715' : '#FAF7F2', border: darkMode ? '1px dashed rgba(232,221,211,0.2)' : '1px dashed #E8DDD3' }}>
+                    <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4', color: '#C67D5B', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
                       <Sparkles size={22} />
                     </div>
-                    <div style={{ fontWeight: '800', fontSize: '15px', color: darkMode ? '#FFFFFF' : '#111827', marginBottom: '6px' }}>
+                    <div className="font-editorial-heading" style={{ fontWeight: '600', fontSize: '16px', color: darkMode ? '#FAF7F2' : '#3D3530', marginBottom: '6px' }}>
                       Nouveau profil (0 deal clôturé)
                     </div>
-                    <p style={{ fontSize: '12px', color: darkMode ? '#94A3B8' : '#64748B', maxWidth: '380px', margin: '0 auto 16px', lineHeight: 1.6 }}>
+                    <p style={{ fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', maxWidth: '380px', margin: '0 auto 16px', lineHeight: 1.6 }}>
                       Vous n'avez pas encore d'échange clôturé. Parcourez l'explorateur ou proposez un deal sur une annonce pour démarrer !
                     </p>
                     <button
@@ -8120,12 +8000,12 @@ export default function App() {
                         border: 'none',
                         borderRadius: '999px',
                         padding: '10px 20px',
-                        backgroundColor: '#04265A',
+                        background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)',
                         color: '#FFF',
                         fontWeight: '800',
                         fontSize: '12px',
                         cursor: 'pointer',
-                        boxShadow: '0 8px 18px rgba(4,38,90,0.25)'
+                        boxShadow: '0 8px 18px rgba(198,125,91,0.3)'
                       }}
                     >
                       Explorer les annonces
@@ -8136,16 +8016,16 @@ export default function App() {
                     const isClosed = entry.status === 'Clôturé';
                     const statusStyle = statusStyles[entry.status] || { bg: '#F3F4F6', text: '#6B7280' };
                     return (
-                      <div key={entry.id} className="premium-card" style={{ border: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E2E8F0', borderRadius: '18px', padding: '14px', backgroundColor: darkMode ? 'rgba(15,23,42,0.7)' : '#FFFFFF', boxShadow: '0 2px 10px rgba(15,23,42,0.04)' }}>
+                      <div key={entry.id} className="premium-card" style={{ border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3', borderRadius: '18px', padding: '14px', backgroundColor: darkMode ? '#1A1715' : '#FAF7F2', boxShadow: '0 2px 10px rgba(61,53,48,0.04)' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px', marginBottom: '6px' }}>
                           <div>
-                            <div style={{ fontWeight: '800', fontSize: '13px', color: darkMode ? '#FFFFFF' : '#111827', lineHeight: 1.4 }}>{getListingTitleTranslation(entry.deal, currentLang)}</div>
-                            <div style={{ fontSize: '12px', color: darkMode ? '#CBD5E1' : '#64748B', marginTop: '3px' }}>{entry.counterparty} • {entry.date}</div>
+                            <div className="font-editorial-heading" style={{ fontWeight: '600', fontSize: '14px', color: darkMode ? '#FAF7F2' : '#3D3530', lineHeight: 1.4 }}>{getListingTitleTranslation(entry.deal, currentLang)}</div>
+                            <div style={{ fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', marginTop: '3px' }}>{entry.counterparty} • {entry.date}</div>
                           </div>
                           <span style={{ fontSize: '10px', fontWeight: '800', padding: '5px 10px', borderRadius: '999px', backgroundColor: statusStyle.bg, color: statusStyle.text, whiteSpace: 'nowrap' }}>{formatStatus(entry.status)}</span>
                         </div>
-                        <div style={{ fontSize: '11px', color: darkMode ? '#60A5FA' : '#04265A', fontWeight: '800', marginBottom: '8px' }}>{formatCompensation(entry.compensation)}</div>
-                        <div style={{ borderTop: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #F1F5F9', paddingTop: '10px' }}>
+                        <div style={{ fontSize: '11px', color: '#C67D5B', fontWeight: '800', marginBottom: '8px' }}>{formatCompensation(entry.compensation)}</div>
+                        <div style={{ borderTop: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3', paddingTop: '10px' }}>
                           {isClosed ? (() => {
                             const isRevOrig = !!showingOriginalReviews[entry.id];
                             const revTxt = entry.review ? getReviewTranslation(entry.review, currentLang, isRevOrig) : null;
@@ -8159,25 +8039,25 @@ export default function App() {
                                   </div>
                                 )}
                                 {revTxt && (
-                                  <div style={{ fontSize: '12px', color: darkMode ? '#E2E8F0' : '#475569', lineHeight: 1.6, fontStyle: 'italic' }}>« {revTxt} »</div>
+                                  <div style={{ fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', lineHeight: 1.6, fontStyle: 'italic' }}>« {revTxt} »</div>
                                 )}
                                 {!entry.rating && !revTxt && (
-                                  <div style={{ fontSize: '12px', color: darkMode ? '#64748B' : '#94A3B8', fontStyle: 'italic' }}>Deal clôturé — aucun avis laissé.</div>
+                                  <div style={{ fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', fontStyle: 'italic' }}>Deal clôturé — aucun avis laissé.</div>
                                 )}
                                 {currentLang !== 'FR' && revTxt && (
                                   <button
                                     onClick={() => toggleOriginalReview(entry.id)}
                                     className="premium-button"
-                                    style={{ border: 'none', backgroundColor: 'transparent', color: darkMode ? '#60A5FA' : '#04265A', fontSize: '10px', fontWeight: '800', cursor: 'pointer', marginTop: '4px', display: 'inline-flex', alignItems: 'center', gap: '3px', padding: 0 }}
+                                    style={{ border: 'none', backgroundColor: 'transparent', color: '#C67D5B', fontSize: '10px', fontWeight: '800', cursor: 'pointer', marginTop: '4px', display: 'inline-flex', alignItems: 'center', gap: '3px', padding: 0 }}
                                   >
-                                    <Globe size={10} color={darkMode ? '#60A5FA' : '#04265A'} />
+                                    <Globe size={10} color="#C67D5B" />
                                     {showingOriginalReviews[entry.id] ? t('showTranslation') : t('showOriginal')}
                                   </button>
                                 )}
                               </>
                             );
                           })() : (
-                            <div style={{ fontSize: '12px', color: entry.status === 'En cours' ? (darkMode ? '#38BDF8' : '#0284C7') : (darkMode ? '#FCD34D' : '#D97706'), fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <div style={{ fontSize: '12px', color: entry.status === 'En cours' ? '#C67D5B' : '#D97706', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px' }}>
                               {entry.status === 'En cours' ? '🔄' : '📅'} {entry.status === 'En cours' ? 'Échange en cours...' : 'Rendez-vous planifié'}
                             </div>
                           )}
@@ -8189,13 +8069,13 @@ export default function App() {
               </div>
             </div>
 
-            {/* ---- CADRE JURIDIQUE & RGPD (BLOC 6) ---- */}
-            <div style={{ borderTop: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E2E8F0', paddingTop: '20px', marginTop: '20px' }}>
+            {/* ---- CADRE JURIDIQUE & RGPD ---- */}
+            <div style={{ borderTop: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3', paddingTop: '20px', marginTop: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                <ShieldCheck size={17} color={darkMode ? '#60A5FA' : '#04265A'} />
-                <h4 style={{ margin: 0, fontSize: '15px', fontWeight: '800', color: darkMode ? '#FFFFFF' : '#111827' }}>Sécurité, Juridique & RGPD</h4>
+                <ShieldCheck size={17} color="#C67D5B" />
+                <h4 className="font-editorial-heading" style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530' }}>Sécurité, Juridique & RGPD</h4>
               </div>
-              <p style={{ fontSize: '12px', color: darkMode ? '#CBD5E1' : '#64748B', margin: '0 0 14px' }}>
+              <p style={{ fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', margin: '0 0 14px' }}>
                 Gérez vos données personnelles, exportez vos archives ou consultez les Conditions Générales de Troco.
               </p>
 
@@ -8204,72 +8084,72 @@ export default function App() {
                   onClick={() => setIsPrivacyCenterOpen(true)}
                   className="premium-button"
                   style={{
-                    border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E2E8F0',
+                    border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3',
                     borderRadius: '16px',
                     padding: '14px 16px',
-                    backgroundColor: darkMode ? 'rgba(15,23,42,0.6)' : '#FFFFFF',
-                    color: darkMode ? '#F8FAFC' : '#0F172A',
+                    backgroundColor: darkMode ? '#1A1715' : '#FAF7F2',
+                    color: darkMode ? '#FAF7F2' : '#3D3530',
                     fontWeight: '700',
                     fontSize: '13px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     cursor: 'pointer',
-                    boxShadow: '0 2px 8px rgba(15,23,42,0.04)',
+                    boxShadow: '0 2px 8px rgba(61,53,48,0.04)',
                   }}
                 >
                   <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <Lock size={16} color="#3B82F6" /> Centre de Confidentialité & Export RGPD (JSON)
+                    <Lock size={16} color="#C67D5B" /> Centre de Confidentialité & Export RGPD (JSON)
                   </span>
-                  <ChevronRight size={16} color={darkMode ? '#94A3B8' : '#94A3B8'} />
+                  <ChevronRight size={16} color="#C67D5B" />
                 </button>
 
                 <button
                   onClick={() => setIsCguViewerOpen(true)}
                   className="premium-button"
                   style={{
-                    border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E2E8F0',
+                    border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3',
                     borderRadius: '16px',
                     padding: '14px 16px',
-                    backgroundColor: darkMode ? 'rgba(15,23,42,0.6)' : '#FFFFFF',
-                    color: darkMode ? '#F8FAFC' : '#0F172A',
+                    backgroundColor: darkMode ? '#1A1715' : '#FAF7F2',
+                    color: darkMode ? '#FAF7F2' : '#3D3530',
                     fontWeight: '700',
                     fontSize: '13px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     cursor: 'pointer',
-                    boxShadow: '0 2px 8px rgba(15,23,42,0.04)',
+                    boxShadow: '0 2px 8px rgba(61,53,48,0.04)',
                   }}
                 >
                   <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <Scale size={16} color="#8B5CF6" /> Conditions Générales & Charte Communautaire (v2026.1)
+                    <Scale size={16} color="#C67D5B" /> Conditions Générales & Charte Communautaire (v2026.1)
                   </span>
-                  <ChevronRight size={16} color={darkMode ? '#94A3B8' : '#94A3B8'} />
+                  <ChevronRight size={16} color="#C67D5B" />
                 </button>
 
                 <button
                   onClick={() => setIsAdminPanelOpen(true)}
                   className="premium-button"
                   style={{
-                    border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E2E8F0',
+                    border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3',
                     borderRadius: '16px',
                     padding: '14px 16px',
-                    backgroundColor: darkMode ? 'rgba(15,23,42,0.6)' : '#FFFFFF',
-                    color: darkMode ? '#F8FAFC' : '#0F172A',
+                    backgroundColor: darkMode ? '#1A1715' : '#FAF7F2',
+                    color: darkMode ? '#FAF7F2' : '#3D3530',
                     fontWeight: '700',
                     fontSize: '13px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     cursor: 'pointer',
-                    boxShadow: '0 2px 8px rgba(15,23,42,0.04)',
+                    boxShadow: '0 2px 8px rgba(61,53,48,0.04)',
                   }}
                 >
                   <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <ShieldAlert size={16} color="#10B981" /> Panel Administrateur & Modération
+                    <ShieldAlert size={16} color="#9CAF88" /> Panel Administrateur & Modération
                   </span>
-                  <ChevronRight size={16} color={darkMode ? '#94A3B8' : '#94A3B8'} />
+                  <ChevronRight size={16} color="#C67D5B" />
                 </button>
               </div>
             </div>
@@ -8307,8 +8187,8 @@ export default function App() {
                   right: '-8px',
                   minWidth: '16px',
                   height: '16px',
-                  backgroundColor: '#EF4444',
-                  color: '#FFF',
+                  backgroundColor: '#3D3530',
+                  color: '#FAF7F2',
                   fontSize: '9px',
                   fontWeight: '900',
                   borderRadius: '999px',
@@ -8316,9 +8196,8 @@ export default function App() {
                   alignItems: 'center',
                   justifyContent: 'center',
                   padding: '0 3px',
-                  border: darkMode ? '1.5px solid rgba(24,21,19,0.9)' : '1.5px solid #fff',
-                  boxShadow: '0 2px 8px rgba(239,68,68,0.5)',
-                  animation: 'notifPulse 2s ease-in-out infinite',
+                  border: darkMode ? '1.5px solid rgba(24,21,19,0.9)' : '1.5px solid #FAF7F2',
+                  boxShadow: '0 2px 8px rgba(61,53,48,0.4)',
                   letterSpacing: '-0.3px',
                 }}>
                   {unreadCount > 9 ? '9+' : unreadCount}
@@ -8330,7 +8209,6 @@ export default function App() {
 
           <button
             onClick={() => {
-              // Si déjà sur l'onglet Déposer → reset du formulaire pour nouvelle annonce
               if (activeTab === 'post') {
                 setPostStep(1);
                 setPostDraft(defaultPostDraft);
@@ -8357,7 +8235,7 @@ export default function App() {
       {/* POPUP CONFIRMATION PUBLICATION */}
       {showPublishedPopup && publishedListing && (
         <div
-          style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(4,38,90,0.55)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', zIndex: 9000 }}
+          style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(61,53,48,0.7)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', zIndex: 9000 }}
           onClick={() => {
             setShowPublishedPopup(false);
             setSelectedListing(publishedListing);
@@ -8366,13 +8244,13 @@ export default function App() {
         >
           <div
             onClick={e => e.stopPropagation()}
-            style={{ background: darkMode ? 'rgba(15,23,42,0.97)' : 'rgba(255,255,255,0.98)', backdropFilter: 'blur(24px)', borderRadius: '28px', padding: '32px 28px', maxWidth: '380px', width: '100%', boxShadow: '0 32px 80px rgba(4,38,90,0.3)', border: darkMode ? '1px solid rgba(96,165,250,0.3)' : '1px solid rgba(4,38,90,0.12)', textAlign: 'center', animation: 'popupIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both' }}
+            style={{ background: darkMode ? '#231E1B' : '#FAF7F2', backdropFilter: 'blur(24px)', borderRadius: '28px', padding: '32px 28px', maxWidth: '380px', width: '100%', boxShadow: '0 32px 80px rgba(61,53,48,0.3)', border: darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #E8DDD3', textAlign: 'center', animation: 'popupIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both' }}
           >
             {/* Icône checkmark animée */}
-            <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: 'linear-gradient(135deg, #10B981, #059669)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', boxShadow: '0 12px 32px rgba(16,185,129,0.4)', animation: 'checkPop 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.15s both' }}>
+            <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: 'linear-gradient(135deg, #9CAF88, #7A8F6A)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', boxShadow: '0 12px 32px rgba(156,175,136,0.4)', animation: 'checkPop 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.15s both' }}>
               <CheckCircle size={38} color="#FFF" />
             </div>
-            <h2 style={{ margin: '0 0 8px', fontSize: '22px', fontWeight: '900', color: darkMode ? '#F1F5F9' : '#0F172A', lineHeight: 1.2 }}>
+            <h2 className="font-editorial-heading" style={{ margin: '0 0 8px', fontSize: '24px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530', lineHeight: 1.2 }}>
               {currentLang === 'FR' ? '🎉 Annonce publiée !' :
                 currentLang === 'EN' ? '🎉 Ad published!' :
                   currentLang === 'ES' ? '🎉 ¡Anuncio publicado!' :
@@ -8381,7 +8259,7 @@ export default function App() {
                         currentLang === 'JA' ? '🎉 広告を公開しました！' :
                           '🎉 广告已发布！'}
             </h2>
-            <p style={{ margin: '0 0 6px', fontSize: '14px', color: darkMode ? '#94A3B8' : '#64748B', lineHeight: 1.6 }}>
+            <p style={{ margin: '0 0 6px', fontSize: '14px', color: darkMode ? '#D4C5B5' : '#6B5E54', lineHeight: 1.6 }}>
               {currentLang === 'FR' ? 'Votre annonce est maintenant visible dans le flux, sur la carte et dans les résultats de recherche.' :
                 currentLang === 'EN' ? 'Your ad is now visible in the feed, on the map and in search results.' :
                   currentLang === 'ES' ? 'Tu anuncio ahora es visible en el feed, en el mapa y en los resultados de búsqueda.' :
@@ -8390,7 +8268,7 @@ export default function App() {
                         currentLang === 'JA' ? '広告はフィード、マップ、検索結果に表示されるようになりました。' :
                           '您的广告现在可以在动态、地图和搜索结果中看到。'}
             </p>
-            <p style={{ margin: '0 0 24px', fontSize: '13px', fontWeight: '700', color: darkMode ? '#60A5FA' : '#04265A' }}>« {publishedListing.title} »</p>
+            <p style={{ margin: '0 0 24px', fontSize: '13px', fontWeight: '700', color: '#C67D5B' }}>« {publishedListing.title} »</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <button
                 onClick={() => {
@@ -8399,7 +8277,7 @@ export default function App() {
                   setActiveTab('feed');
                 }}
                 className="premium-button"
-                style={{ width: '100%', border: 'none', borderRadius: '16px', padding: '14px', background: 'linear-gradient(135deg, #04265A, #1D4ED8)', color: '#FFF', fontWeight: '800', fontSize: '15px', cursor: 'pointer', boxShadow: '0 8px 24px rgba(4,38,90,0.35)' }}
+                style={{ width: '100%', border: 'none', borderRadius: '16px', padding: '14px', background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)', color: '#FFF', fontWeight: '800', fontSize: '15px', cursor: 'pointer', boxShadow: '0 8px 24px rgba(198,125,91,0.35)' }}
               >
                 {currentLang === 'FR' ? 'Voir mon annonce →' :
                   currentLang === 'EN' ? 'View my listing →' :
@@ -8415,7 +8293,7 @@ export default function App() {
                   setPostStep(1);
                   setPostDraft(defaultPostDraft);
                 }}
-                style={{ width: '100%', border: `1px solid ${darkMode ? 'rgba(255,255,255,0.15)' : '#E2E8F0'}`, borderRadius: '16px', padding: '13px', background: 'transparent', color: darkMode ? '#94A3B8' : '#64748B', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}
+                style={{ width: '100%', border: darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #E8DDD3', borderRadius: '16px', padding: '13px', background: 'transparent', color: darkMode ? '#D4C5B5' : '#6B5E54', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}
               >
                 {currentLang === 'FR' ? '+ Déposer une autre annonce' :
                   currentLang === 'EN' ? '+ Post another listing' :
@@ -8429,13 +8307,13 @@ export default function App() {
         </div>
       )}
 
-      {/* ---- MODALE D'ACTION TACTILE SUR ANNONCE MOBILE (CHANTIER 4) ---- */}
+      {/* ---- MODALE D'ACTION TACTILE SUR ANNONCE MOBILE ---- */}
       {mobileListingActionTarget && (
         <div
           onClick={() => setMobileListingActionTarget(null)}
           style={{
             position: 'fixed', inset: 0,
-            backgroundColor: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+            backgroundColor: 'rgba(61, 53, 48, 0.72)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
             display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '0', zIndex: 4000,
             animation: 'fadeSlideUp 0.25s ease both'
           }}
@@ -8443,31 +8321,31 @@ export default function App() {
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              backgroundColor: darkMode ? 'rgba(30, 41, 59, 0.98)' : '#FFFFFF',
+              backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
               borderRadius: '24px 24px 0 0', width: '100%', maxWidth: '500px',
-              padding: '20px 20px 32px', boxShadow: '0 -10px 40px rgba(0,0,0,0.35)',
-              border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #E2E8F0',
+              padding: '20px 20px 32px', boxShadow: '0 -10px 40px rgba(61,53,48,0.25)',
+              border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
               position: 'relative', display: 'flex', flexDirection: 'column', gap: '14px'
             }}
           >
             {/* Barre de drag */}
-            <div style={{ width: '40px', height: '4px', borderRadius: '999px', backgroundColor: darkMode ? 'rgba(255,255,255,0.2)' : '#CBD5E1', margin: '0 auto 6px' }} />
+            <div style={{ width: '40px', height: '4px', borderRadius: '999px', backgroundColor: darkMode ? 'rgba(232,221,211,0.2)' : '#D4C5B5', margin: '0 auto 6px' }} />
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
                 <img src={mobileListingActionTarget.image} alt={mobileListingActionTarget.title} style={{ width: '48px', height: '48px', borderRadius: '12px', objectFit: 'cover' }} />
                 <div style={{ minWidth: 0 }}>
-                  <div style={{ fontWeight: '800', fontSize: '15px', color: darkMode ? '#FFF' : '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  <div className="font-editorial-heading" style={{ fontWeight: '600', fontSize: '16px', color: darkMode ? '#FAF7F2' : '#3D3530', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {mobileListingActionTarget.title}
                   </div>
-                  <div style={{ fontSize: '12px', color: darkMode ? '#93C5FD' : '#64748B', fontWeight: '700' }}>
+                  <div style={{ fontSize: '12px', color: '#C67D5B', fontWeight: '700' }}>
                     {mobileListingActionTarget.compensation} • {mobileListingActionTarget.status === 'paused' ? 'En pause' : 'Active'}
                   </div>
                 </div>
               </div>
               <button
                 onClick={() => setMobileListingActionTarget(null)}
-                style={{ border: 'none', backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : '#F3F4F6', color: darkMode ? '#FFF' : '#374151', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                style={{ border: 'none', backgroundColor: darkMode ? 'rgba(232,221,211,0.1)' : '#F5EAE4', color: darkMode ? '#FAF7F2' : '#3D3530', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
               >
                 <X size={16} />
               </button>
@@ -8484,8 +8362,8 @@ export default function App() {
                 className="premium-button"
                 style={{
                   display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px',
-                  borderRadius: '16px', border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E2E8F0',
-                  backgroundColor: darkMode ? 'rgba(15,23,42,0.6)' : '#F8FAFC', color: darkMode ? '#FFF' : '#111827',
+                  borderRadius: '16px', border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3',
+                  backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530',
                   fontSize: '14px', fontWeight: '700', cursor: 'pointer'
                 }}
               >
@@ -8502,8 +8380,8 @@ export default function App() {
                 className="premium-button"
                 style={{
                   display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px',
-                  borderRadius: '16px', border: '1px solid rgba(245,158,11,0.4)',
-                  backgroundColor: darkMode ? 'rgba(245,158,11,0.15)' : '#FEF3C7', color: '#D97706',
+                  borderRadius: '16px', border: '1px solid #E8DDD3',
+                  backgroundColor: darkMode ? 'rgba(217,119,6,0.15)' : '#FEF3C7', color: '#D97706',
                   fontSize: '14px', fontWeight: '800', cursor: 'pointer'
                 }}
               >
@@ -8520,8 +8398,8 @@ export default function App() {
                 className="premium-button"
                 style={{
                   display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px',
-                  borderRadius: '16px', border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E2E8F0',
-                  backgroundColor: darkMode ? 'rgba(15,23,42,0.6)' : '#F8FAFC', color: darkMode ? '#FFF' : '#111827',
+                  borderRadius: '16px', border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3',
+                  backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530',
                   fontSize: '14px', fontWeight: '700', cursor: 'pointer'
                 }}
               >
@@ -8551,14 +8429,14 @@ export default function App() {
       )}
 
       {isLangModalOpen && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', zIndex: 3500 }}>
-          <div style={{ backgroundColor: darkMode ? 'rgba(30, 41, 59, 0.95)' : 'rgba(255,255,255,0.95)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', borderRadius: '24px', width: '100%', maxWidth: '400px', padding: '24px', boxShadow: '0 24px 60px rgba(0,0,0,0.3)', border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(255,255,255,0.8)', position: 'relative' }}>
-            <button onClick={() => setIsLangModalOpen(false)} style={{ position: 'absolute', top: '16px', right: '16px', border: 'none', backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : '#F3F4F6', color: darkMode ? '#FFF' : '#374151', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(61, 53, 48, 0.72)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', zIndex: 3500 }}>
+          <div style={{ backgroundColor: darkMode ? '#231E1B' : '#FAF7F2', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', borderRadius: '24px', width: '100%', maxWidth: '400px', padding: '24px', boxShadow: '0 24px 60px rgba(61,53,48,0.25)', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', position: 'relative' }}>
+            <button onClick={() => setIsLangModalOpen(false)} style={{ position: 'absolute', top: '16px', right: '16px', border: 'none', backgroundColor: darkMode ? 'rgba(232,221,211,0.1)' : '#F5EAE4', color: darkMode ? '#FAF7F2' : '#3D3530', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
               <X size={16} />
             </button>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-              <Globe size={20} color={darkMode ? '#93C5FD' : '#04265A'} />
-              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: darkMode ? '#FFF' : '#111827' }}>{t('selectLanguage')}</h3>
+              <Globe size={20} color="#C67D5B" />
+              <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{t('selectLanguage')}</h3>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {[
@@ -8580,9 +8458,9 @@ export default function App() {
                     justifyContent: 'space-between',
                     padding: '12px 16px',
                     borderRadius: '14px',
-                    border: currentLang === lang.code ? (darkMode ? '2px solid #60A5FA' : '2px solid #04265A') : (darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E2E8F0'),
-                    backgroundColor: currentLang === lang.code ? (darkMode ? 'rgba(4,38,90,0.5)' : '#EFF6FF') : (darkMode ? 'rgba(15,23,42,0.5)' : '#FFF'),
-                    color: darkMode ? '#FFF' : '#111827',
+                    border: currentLang === lang.code ? '1.5px solid #C67D5B' : (darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3'),
+                    backgroundColor: currentLang === lang.code ? (darkMode ? 'rgba(198,125,91,0.25)' : '#F5EAE4') : (darkMode ? '#1A1715' : '#FFF'),
+                    color: darkMode ? '#FAF7F2' : '#3D3530',
                     fontWeight: '700',
                     fontSize: '14px',
                     cursor: 'pointer'
@@ -8591,7 +8469,7 @@ export default function App() {
                   <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <span style={{ fontSize: '18px' }}>{lang.flag}</span> {lang.label}
                   </span>
-                  {currentLang === lang.code && <Check size={18} color={darkMode ? '#60A5FA' : '#04265A'} />}
+                  {currentLang === lang.code && <Check size={18} color="#C67D5B" />}
                 </button>
               ))}
             </div>
@@ -8603,24 +8481,24 @@ export default function App() {
         <div style={{
           position: 'fixed', top: '16px', left: '50%', transform: 'translateX(-50%)',
           width: 'calc(100% - 32px)', maxWidth: '520px', zIndex: 999999,
-          background: 'linear-gradient(135deg, rgba(15,23,42,0.98) 0%, rgba(30,41,59,0.98) 100%)',
+          background: darkMode ? 'rgba(35,30,27,0.98)' : 'rgba(250,247,242,0.98)',
           backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
-          border: '1.5px solid rgba(96,165,250,0.5)',
+          border: '1.5px solid #C67D5B',
           borderRadius: '24px',
           padding: '14px 18px',
           display: 'flex', alignItems: 'center', gap: '14px',
-          boxShadow: '0 16px 48px rgba(0,0,0,0.7), 0 0 24px rgba(96,165,250,0.25)',
+          boxShadow: '0 16px 48px rgba(61,53,48,0.3)',
           animation: 'slideDownIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards',
         }}>
-          <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, #60A5FA, #04265A)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', color: '#FFF', fontWeight: '800', flexShrink: 0, boxShadow: '0 4px 12px rgba(4,38,90,0.3)' }}>
+          <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', color: '#FFF', fontWeight: '800', flexShrink: 0, boxShadow: '0 4px 12px rgba(198,125,91,0.3)' }}>
             {incomingCall.from ? incomingCall.from[0].toUpperCase() : 'T'}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ color: '#FFF', fontWeight: '800', fontSize: '15px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <div style={{ color: darkMode ? '#FAF7F2' : '#3D3530', fontWeight: '800', fontSize: '15px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {incomingCall.from}
             </div>
-            <div style={{ color: '#93C5FD', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: '600' }}>
-              {incomingCall.type === 'video' ? <Video size={13} color="#60A5FA" /> : <Phone size={13} color="#60A5FA" />}
+            <div style={{ color: '#C67D5B', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: '600' }}>
+              {incomingCall.type === 'video' ? <Video size={13} color="#C67D5B" /> : <Phone size={13} color="#C67D5B" />}
               <span>{incomingCall.type === 'video' ? 'Appel vidéo entrant...' : 'Appel audio entrant...'}</span>
             </div>
           </div>
@@ -8641,9 +8519,9 @@ export default function App() {
               onClick={handleAcceptIncomingCall}
               style={{
                 border: 'none', width: '44px', height: '44px', borderRadius: '50%',
-                backgroundColor: '#22C55E', color: '#FFF', cursor: 'pointer',
+                backgroundColor: '#9CAF88', color: '#FFF', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 4px 14px rgba(34,197,94,0.4)',
+                boxShadow: '0 4px 14px rgba(156,175,136,0.4)',
               }}
               title="Accepter l'appel"
             >

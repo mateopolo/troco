@@ -1,89 +1,77 @@
 import React from 'react';
-import { FileText, ShieldCheck, Flame, Image as ImageIcon, Edit3, CheckCircle2 } from 'lucide-react';
+import { FileText, CheckCircle2, ShieldCheck, Flame, Image as ImageIcon, Edit3 } from 'lucide-react';
 
-export const generateInvoiceRef = () => {
-  const date = new Date();
-  const yyyy = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, '0');
-  const rand = Math.floor(1000 + Math.random() * 9000);
-  return `TRK-${yyyy}${mm}-${rand}`;
-};
-
-export const calculateListingInvoice = ({
+/**
+ * Calculateur de devis et facture automatisé pour la publication et le boost d'annonces Troco.
+ */
+export function calculateListingInvoice({
   isUrgent = false,
-  photoCount = 0,
+  extraPhotosCount = 0,
   isEditing = false,
-  isEditingContentChanged = false,
-}) => {
+}) {
   const items = [];
 
-  if (isUrgent) {
+  // Pack photos au-delà de 4 photos gratuites (+1,99€)
+  if (extraPhotosCount > 0) {
     items.push({
-      id: 'urgent',
-      label: 'Option Urgence & Boost visibilité (7 jours)',
-      desc: 'Mise en avant prioritaire en tête de feed avec badge flamme',
-      amount: 1.99,
-      icon: 'flame',
-    });
-  }
-
-  if (photoCount > 4) {
-    items.push({
-      id: 'photos',
-      label: `Pack Photos Supplémentaires (${photoCount} photos)`,
-      desc: 'Capacité étendue jusqu’à 8 photos HD',
+      id: 'extra_photos',
+      label: `Pack Photos Supplémentaires (+${extraPhotosCount} photo${extraPhotosCount > 1 ? 's' : ''})`,
+      desc: 'Hébergement haute résolution & visibilité renforcée',
       amount: 1.99,
       icon: 'image',
     });
   }
 
-  if (isEditing && isEditingContentChanged) {
+  // Option annonce urgente / boost (+1,99€)
+  if (isUrgent) {
     items.push({
-      id: 'edit',
-      label: 'Frais de modification de contenu de l’annonce',
-      desc: 'Réévaluation et mise à jour de la publication',
+      id: 'urgent_boost',
+      label: 'Mise en avant Urgente (Flamme 🔥)',
+      desc: 'Badge prioritaire & remontée en tête du fil pendant 7 jours',
       amount: 1.99,
-      icon: 'edit',
+      icon: 'flame',
     });
   }
 
-  const totalTTC = items.reduce((acc, item) => acc + item.amount, 0);
-  const totalHT = totalTTC > 0 ? Number((totalTTC / 1.20).toFixed(2)) : 0;
-  const totalTVA = totalTTC > 0 ? Number((totalTTC - totalHT).toFixed(2)) : 0;
+  const totalTTC = items.reduce((sum, item) => sum + item.amount, 0);
+  const totalHT = Number((totalTTC / 1.20).toFixed(2));
+  const totalTVA = Number((totalTTC - totalHT).toFixed(2));
 
   return {
     items,
     totalHT,
     totalTVA,
     totalTTC: Number(totalTTC.toFixed(2)),
+    hasPaidOptions: items.length > 0,
   };
-};
+}
+
+export function generateInvoiceRef() {
+  const date = new Date();
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  const rand = Math.floor(1000 + Math.random() * 9000);
+  return `TRC-${y}${m}${d}-${rand}`;
+}
 
 export default function InvoiceCalculator({
   isUrgent = false,
-  photoCount = 0,
+  extraPhotosCount = 0,
   isEditing = false,
-  isEditingContentChanged = false,
   darkMode = false,
-  t = (k) => k,
   currentLang = 'FR',
 }) {
-  const invoice = calculateListingInvoice({
-    isUrgent,
-    photoCount,
-    isEditing,
-    isEditingContentChanged,
-  });
-
+  const invoice = calculateListingInvoice({ isUrgent, extraPhotosCount, isEditing });
   const { items, totalHT, totalTVA, totalTTC } = invoice;
 
   return (
     <div style={{
       borderRadius: '20px',
       padding: '18px',
-      backgroundColor: darkMode ? 'rgba(15, 23, 42, 0.75)' : '#F8FAFC',
-      border: darkMode ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid #E2E8F0',
-      boxShadow: '0 8px 24px rgba(0, 0, 0, 0.06)',
+      backgroundColor: darkMode ? '#1A1715' : '#FAF7F2',
+      border: darkMode ? '1px solid rgba(232, 221, 211, 0.15)' : '1px solid #E8DDD3',
+      boxShadow: darkMode ? '0 8px 24px rgba(0, 0, 0, 0.5)' : '0 8px 24px rgba(61, 53, 48, 0.06)',
       display: 'flex',
       flexDirection: 'column',
       gap: '14px',
@@ -91,16 +79,16 @@ export default function InvoiceCalculator({
       {/* HEADER FACTURE */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <FileText size={18} color={darkMode ? '#60A5FA' : '#04265A'} />
-          <h4 style={{ margin: 0, fontSize: '14px', fontWeight: '800', color: darkMode ? '#FFFFFF' : '#0F172A' }}>
+          <FileText size={18} color="#C67D5B" />
+          <h4 className="font-editorial-heading" style={{ margin: 0, fontSize: '17px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
             {currentLang === 'FR' ? 'Récapitulatif & Devis de publication' : 'Publication Quote & Summary'}
           </h4>
         </div>
         <span style={{
           fontSize: '11px',
           fontWeight: '700',
-          color: darkMode ? '#94A3B8' : '#64748B',
-          backgroundColor: darkMode ? 'rgba(255, 255, 255, 0.08)' : '#EDF2F7',
+          color: darkMode ? '#D4C5B5' : '#6B5E54',
+          backgroundColor: darkMode ? 'rgba(232, 221, 211, 0.1)' : '#F5EAE4',
           padding: '3px 8px',
           borderRadius: '8px',
         }}>
@@ -117,21 +105,21 @@ export default function InvoiceCalculator({
           justifyContent: 'space-between',
           padding: '10px 12px',
           borderRadius: '12px',
-          backgroundColor: darkMode ? 'rgba(30, 41, 59, 0.5)' : '#FFFFFF',
-          border: darkMode ? '1px solid rgba(255, 255, 255, 0.06)' : '1px solid #E2E8F0',
+          backgroundColor: darkMode ? '#231E1B' : '#FFF',
+          border: darkMode ? '1px solid rgba(232, 221, 211, 0.08)' : '1px solid #E8DDD3',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <CheckCircle2 size={16} color="#10B981" />
+            <CheckCircle2 size={16} color="#7A8F6A" />
             <div>
-              <div style={{ fontSize: '12px', fontWeight: '700', color: darkMode ? '#FFFFFF' : '#111827' }}>
+              <div style={{ fontSize: '12px', fontWeight: '700', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
                 {isEditing ? 'Mise à jour standard de l’annonce' : 'Publication d’annonce standard (4 photos incluses)'}
               </div>
-              <div style={{ fontSize: '10px', color: darkMode ? '#94A3B8' : '#64748B' }}>
+              <div style={{ fontSize: '10px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>
                 Diffusion illimitée sur la plateforme Troco
               </div>
             </div>
           </div>
-          <span style={{ fontSize: '12px', fontWeight: '800', color: '#10B981' }}>
+          <span style={{ fontSize: '12px', fontWeight: '800', color: '#7A8F6A' }}>
             0,00 €
           </span>
         </div>
@@ -146,14 +134,14 @@ export default function InvoiceCalculator({
               justifyContent: 'space-between',
               padding: '10px 12px',
               borderRadius: '12px',
-              backgroundColor: darkMode ? 'rgba(245, 158, 11, 0.12)' : '#FFFBEB',
-              border: darkMode ? '1px solid rgba(245, 158, 11, 0.3)' : '1px solid #FDE68A',
+              backgroundColor: darkMode ? 'rgba(217, 119, 6, 0.15)' : '#FEF3C7',
+              border: darkMode ? '1px solid rgba(217, 119, 6, 0.3)' : '1px solid #FDE68A',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              {item.icon === 'flame' && <Flame size={16} color="#F59E0B" />}
-              {item.icon === 'image' && <ImageIcon size={16} color="#3B82F6" />}
-              {item.icon === 'edit' && <Edit3 size={16} color="#8B5CF6" />}
+              {item.icon === 'flame' && <Flame size={16} color="#D97706" />}
+              {item.icon === 'image' && <ImageIcon size={16} color="#C67D5B" />}
+              {item.icon === 'edit' && <Edit3 size={16} color="#C67D5B" />}
               <div>
                 <div style={{ fontSize: '12px', fontWeight: '700', color: darkMode ? '#FDE68A' : '#92400E' }}>
                   {item.label}
@@ -174,16 +162,16 @@ export default function InvoiceCalculator({
       <div style={{
         marginTop: '6px',
         paddingTop: '12px',
-        borderTop: darkMode ? '1px solid rgba(255, 255, 255, 0.1)' : '1px solid #E2E8F0',
+        borderTop: darkMode ? '1px solid rgba(232, 221, 211, 0.1)' : '1px solid #E8DDD3',
         display: 'flex',
         flexDirection: 'column',
         gap: '6px',
       }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: darkMode ? '#94A3B8' : '#64748B' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>
           <span>Sous-total HT :</span>
           <span>{totalHT.toFixed(2)} €</span>
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: darkMode ? '#94A3B8' : '#64748B' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>
           <span>TVA (20 %) :</span>
           <span>{totalTVA.toFixed(2)} €</span>
         </div>
@@ -193,21 +181,21 @@ export default function InvoiceCalculator({
           alignItems: 'center',
           fontSize: '14px',
           fontWeight: '800',
-          color: darkMode ? '#FFFFFF' : '#0F172A',
+          color: darkMode ? '#FAF7F2' : '#3D3530',
           marginTop: '4px',
           paddingTop: '6px',
-          borderTop: darkMode ? '1px dashed rgba(255, 255, 255, 0.15)' : '1px dashed #CBD5E1',
+          borderTop: darkMode ? '1px dashed rgba(232, 221, 211, 0.15)' : '1px dashed #D4C5B5',
         }}>
           <span>Total TTC :</span>
-          <span style={{ fontSize: '16px', color: totalTTC > 0 ? (darkMode ? '#60A5FA' : '#04265A') : '#10B981' }}>
+          <span style={{ fontSize: '16px', color: totalTTC > 0 ? '#C67D5B' : '#7A8F6A' }}>
             {totalTTC > 0 ? `${totalTTC.toFixed(2)} €` : '0,00 € (Gratuit)'}
           </span>
         </div>
       </div>
 
       {/* NOTE DE SÉCURITÉ */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10px', color: darkMode ? '#94A3B8' : '#64748B', justifyContent: 'center' }}>
-        <ShieldCheck size={13} color="#10B981" /> Facture générée automatiquement et stockée dans votre profil
+      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10px', color: darkMode ? '#D4C5B5' : '#6B5E54', justifyContent: 'center' }}>
+        <ShieldCheck size={13} color="#7A8F6A" /> Facture générée automatiquement et stockée dans votre profil
       </div>
     </div>
   );

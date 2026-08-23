@@ -112,7 +112,7 @@ export default function PrivacyCenterModal({
       position: 'fixed',
       inset: 0,
       zIndex: 4000,
-      backgroundColor: 'rgba(15, 23, 42, 0.75)',
+      backgroundColor: 'rgba(61, 53, 48, 0.72)',
       backdropFilter: 'blur(10px)',
       WebkitBackdropFilter: 'blur(10px)',
       display: 'flex',
@@ -122,15 +122,15 @@ export default function PrivacyCenterModal({
       animation: 'fadeIn 0.25s ease-out',
     }}>
       <div style={{
-        backgroundColor: darkMode ? '#1E293B' : '#FFFFFF',
+        backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
         borderRadius: '24px',
         width: '100%',
         maxWidth: '680px',
         maxHeight: '92vh',
         overflowY: 'auto',
-        boxShadow: darkMode ? '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 30px rgba(96,165,250,0.15)' : '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-        border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E2E8F0',
-        color: darkMode ? '#F8FAFC' : '#0F172A',
+        boxShadow: darkMode ? '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 30px rgba(198,125,91,0.15)' : '0 25px 50px -12px rgba(61, 53, 48, 0.25)',
+        border: darkMode ? '1px solid rgba(232, 221, 211, 0.15)' : '1px solid #E8DDD3',
+        color: darkMode ? '#FAF7F2' : '#3D3530',
         position: 'relative',
         display: 'flex',
         flexDirection: 'column',
@@ -139,7 +139,7 @@ export default function PrivacyCenterModal({
         {/* HEADER */}
         <div style={{
           padding: '20px 24px',
-          borderBottom: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid #F1F5F9',
+          borderBottom: darkMode ? '1px solid rgba(232,221,211,0.08)' : '1px solid #E8DDD3',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -149,20 +149,20 @@ export default function PrivacyCenterModal({
               width: '40px',
               height: '40px',
               borderRadius: '12px',
-              background: 'linear-gradient(135deg, #04265A, #3B82F6)',
+              background: 'linear-gradient(135deg, #C67D5B, #A8644A)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               color: '#FFF',
-              boxShadow: '0 4px 12px rgba(59,130,246,0.3)',
+              boxShadow: '0 4px 12px rgba(198,125,91,0.3)',
             }}>
               <Lock size={20} />
             </div>
             <div>
-              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800', letterSpacing: '-0.01em' }}>
+              <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '20px', fontWeight: '600', letterSpacing: '-0.01em' }}>
                 Centre de Confidentialité & RGPD
               </h3>
-              <p style={{ margin: '2px 0 0', fontSize: '12px', color: darkMode ? '#94A3B8' : '#64748B' }}>
+              <p style={{ margin: '2px 0 0', fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>
                 Contrôlez vos données personnelles et vos préférences de confidentialité
               </p>
             </div>
@@ -172,8 +172,8 @@ export default function PrivacyCenterModal({
             onClick={onClose}
             style={{
               border: 'none',
-              background: darkMode ? 'rgba(255,255,255,0.08)' : '#F1F5F9',
-              color: darkMode ? '#94A3B8' : '#64748B',
+              background: darkMode ? 'rgba(232,221,211,0.1)' : '#F5EAE4',
+              color: darkMode ? '#FAF7F2' : '#3D3530',
               width: '32px',
               height: '32px',
               borderRadius: '50%',
@@ -190,7 +190,7 @@ export default function PrivacyCenterModal({
         {/* ONGLETS */}
         <div style={{
           display: 'flex',
-          borderBottom: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid #F1F5F9',
+          borderBottom: darkMode ? '1px solid rgba(232,221,211,0.08)' : '1px solid #E8DDD3',
           padding: '0 24px',
           gap: '8px',
         }}>
@@ -209,10 +209,10 @@ export default function PrivacyCenterModal({
                 fontSize: '13px',
                 fontWeight: '800',
                 color: activeTab === tab.id
-                  ? (tab.id === 'deletion' ? '#EF4444' : (darkMode ? '#60A5FA' : '#04265A'))
-                  : (darkMode ? '#94A3B8' : '#64748B'),
+                  ? (tab.id === 'deletion' ? '#EF4444' : '#C67D5B')
+                  : (darkMode ? '#D4C5B5' : '#6B5E54'),
                 borderBottom: activeTab === tab.id
-                  ? (tab.id === 'deletion' ? '3px solid #EF4444' : '3px solid #3B82F6')
+                  ? (tab.id === 'deletion' ? '3px solid #EF4444' : '3px solid #C67D5B')
                   : '3px solid transparent',
                 cursor: 'pointer',
               }}
@@ -231,29 +231,29 @@ export default function PrivacyCenterModal({
               <div style={{
                 padding: '16px',
                 borderRadius: '16px',
-                backgroundColor: darkMode ? 'rgba(59,130,246,0.12)' : '#EFF6FF',
-                border: darkMode ? '1px solid rgba(59,130,246,0.25)' : '1px solid #DBEAFE',
+                backgroundColor: darkMode ? 'rgba(198,125,91,0.15)' : '#F5EAE4',
+                border: darkMode ? '1px solid rgba(198,125,91,0.25)' : '1px solid #E8DDD3',
                 marginBottom: '20px',
               }}>
-                <div style={{ fontWeight: '800', fontSize: '14px', color: darkMode ? '#93C5FD' : '#1E40AF', marginBottom: '4px' }}>
+                <div style={{ fontWeight: '800', fontSize: '14px', color: '#A8644A', marginBottom: '4px' }}>
                   Droit à la portabilité des données (Art. 20 RGPD)
                 </div>
-                <div style={{ fontSize: '12px', color: darkMode ? '#BFDBFE' : '#3B82F6', lineHeight: 1.6 }}>
+                <div style={{ fontSize: '12px', color: darkMode ? '#FAF7F2' : '#6B5E54', lineHeight: 1.6 }}>
                   Conformément à la réglementation européenne, vous pouvez exporter à tout moment l'intégralité des données rattachées à votre compte Troco dans un format structuré et lisible par machine (.json).
                 </div>
               </div>
 
               <div style={{
-                backgroundColor: darkMode ? 'rgba(15,23,42,0.5)' : '#F8FAFC',
+                backgroundColor: darkMode ? '#1A1715' : '#FFF',
                 borderRadius: '16px',
                 padding: '18px',
-                border: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid #E2E8F0',
+                border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3',
                 marginBottom: '24px',
               }}>
-                <div style={{ fontSize: '13px', fontWeight: '800', marginBottom: '12px' }}>
+                <div className="font-editorial-heading" style={{ fontSize: '15px', fontWeight: '600', marginBottom: '12px' }}>
                   Éléments inclus dans votre archive :
                 </div>
-                <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '12px', color: darkMode ? '#CBD5E1' : '#64748B', lineHeight: 1.8 }}>
+                <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', lineHeight: 1.8 }}>
                   <li><strong>Informations de profil :</strong> Nom, nom d'utilisateur, bio, localisation, compétences, langues, date d'inscription.</li>
                   <li><strong>Soldes & Jetons :</strong> Solde Euros (€), solde de Jetons Troco (🪙).</li>
                   <li><strong>Annonces créées :</strong> Titres, descriptions, prix, caution et photos.</li>
@@ -271,7 +271,7 @@ export default function PrivacyCenterModal({
                   padding: '16px',
                   borderRadius: '16px',
                   border: 'none',
-                  backgroundColor: '#04265A',
+                  background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)',
                   color: '#FFF',
                   fontWeight: '800',
                   fontSize: '14px',
@@ -280,7 +280,7 @@ export default function PrivacyCenterModal({
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '8px',
-                  boxShadow: '0 10px 25px -5px rgba(4,38,90,0.3)',
+                  boxShadow: '0 10px 25px -5px rgba(198,125,91,0.3)',
                 }}
               >
                 <Download size={18} />
@@ -292,8 +292,8 @@ export default function PrivacyCenterModal({
                   marginTop: '12px',
                   padding: '10px',
                   borderRadius: '12px',
-                  backgroundColor: '#ECFDF5',
-                  color: '#059669',
+                  backgroundColor: darkMode ? 'rgba(156,175,136,0.25)' : '#EBF0E6',
+                  color: '#3D4A35',
                   fontSize: '12px',
                   fontWeight: '700',
                   textAlign: 'center',
@@ -307,7 +307,7 @@ export default function PrivacyCenterModal({
           {/* ONGLET 2 : CONSENTEMENTS & PRÉFÉRENCES */}
           {activeTab === 'consents' && (
             <div>
-              <div style={{ fontSize: '13px', color: darkMode ? '#CBD5E1' : '#64748B', marginBottom: '18px', lineHeight: 1.6 }}>
+              <div style={{ fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54', marginBottom: '18px', lineHeight: 1.6 }}>
                 Gérez vos consentements concernant l'utilisation des traceurs, cookies et communications de la plateforme Troco.
               </div>
 
@@ -316,19 +316,19 @@ export default function PrivacyCenterModal({
                 <div style={{
                   padding: '16px',
                   borderRadius: '16px',
-                  backgroundColor: darkMode ? 'rgba(15,23,42,0.5)' : '#F8FAFC',
-                  border: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid #E2E8F0',
+                  backgroundColor: darkMode ? '#1A1715' : '#FFF',
+                  border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
                 }}>
                   <div>
-                    <div style={{ fontWeight: '800', fontSize: '14px' }}>Cookies Techniques & Sécurité</div>
-                    <div style={{ fontSize: '12px', color: darkMode ? '#94A3B8' : '#64748B', marginTop: '2px' }}>
+                    <div className="font-editorial-heading" style={{ fontWeight: '600', fontSize: '15px' }}>Cookies Techniques & Sécurité</div>
+                    <div style={{ fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', marginTop: '2px' }}>
                       Indispensables à la session Firebase, au chiffrement et au bon fonctionnement de la plateforme.
                     </div>
                   </div>
-                  <span style={{ fontSize: '11px', fontWeight: '800', color: '#10B981', backgroundColor: '#ECFDF5', padding: '4px 10px', borderRadius: '999px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: '800', color: '#3D4A35', backgroundColor: darkMode ? 'rgba(156,175,136,0.25)' : '#EBF0E6', padding: '4px 10px', borderRadius: '999px' }}>
                     Toujours actif
                   </span>
                 </div>
@@ -337,15 +337,15 @@ export default function PrivacyCenterModal({
                 <div style={{
                   padding: '16px',
                   borderRadius: '16px',
-                  backgroundColor: darkMode ? 'rgba(15,23,42,0.5)' : '#F8FAFC',
-                  border: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid #E2E8F0',
+                  backgroundColor: darkMode ? '#1A1715' : '#FFF',
+                  border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
                 }}>
                   <div>
-                    <div style={{ fontWeight: '800', fontSize: '14px' }}>Statistiques & Performance Anonymes</div>
-                    <div style={{ fontSize: '12px', color: darkMode ? '#94A3B8' : '#64748B', marginTop: '2px' }}>
+                    <div className="font-editorial-heading" style={{ fontWeight: '600', fontSize: '15px' }}>Statistiques & Performance Anonymes</div>
+                    <div style={{ fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', marginTop: '2px' }}>
                       Permet d'améliorer la fluidité de l'application sans collecter de données identifiantes.
                     </div>
                   </div>
@@ -358,7 +358,7 @@ export default function PrivacyCenterModal({
                     />
                     <span style={{
                       position: 'absolute', inset: 0,
-                      backgroundColor: consents.analytics ? '#3B82F6' : (darkMode ? '#334155' : '#CBD5E1'),
+                      backgroundColor: consents.analytics ? '#C67D5B' : (darkMode ? '#3D3530' : '#E8DDD3'),
                       borderRadius: '24px', transition: '0.2s',
                     }}>
                       <span style={{
@@ -373,15 +373,15 @@ export default function PrivacyCenterModal({
                 <div style={{
                   padding: '16px',
                   borderRadius: '16px',
-                  backgroundColor: darkMode ? 'rgba(15,23,42,0.5)' : '#F8FAFC',
-                  border: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid #E2E8F0',
+                  backgroundColor: darkMode ? '#1A1715' : '#FFF',
+                  border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'space-between',
                 }}>
                   <div>
-                    <div style={{ fontWeight: '800', fontSize: '14px' }}>Alertes d'échanges de Proximité</div>
-                    <div style={{ fontSize: '12px', color: darkMode ? '#94A3B8' : '#64748B', marginTop: '2px' }}>
+                    <div className="font-editorial-heading" style={{ fontWeight: '600', fontSize: '15px' }}>Alertes d'échanges de Proximité</div>
+                    <div style={{ fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', marginTop: '2px' }}>
                       Notifications lorsque de nouveaux trocs sont publiés près de chez vous.
                     </div>
                   </div>
@@ -394,7 +394,7 @@ export default function PrivacyCenterModal({
                     />
                     <span style={{
                       position: 'absolute', inset: 0,
-                      backgroundColor: consents.proximityAlerts ? '#3B82F6' : (darkMode ? '#334155' : '#CBD5E1'),
+                      backgroundColor: consents.proximityAlerts ? '#C67D5B' : (darkMode ? '#3D3530' : '#E8DDD3'),
                       borderRadius: '24px', transition: '0.2s',
                     }}>
                       <span style={{
@@ -441,9 +441,9 @@ export default function PrivacyCenterModal({
                     width: '100%',
                     padding: '12px 14px',
                     borderRadius: '12px',
-                    border: deleteError ? '2px solid #EF4444' : (darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #CBD5E1'),
-                    backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFF',
-                    color: darkMode ? '#FFF' : '#0F172A',
+                    border: deleteError ? '2px solid #EF4444' : (darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3'),
+                    backgroundColor: darkMode ? '#1A1715' : '#FFF',
+                    color: darkMode ? '#FAF7F2' : '#3D3530',
                     fontSize: '14px',
                     fontWeight: '700',
                     outline: 'none',
@@ -462,7 +462,7 @@ export default function PrivacyCenterModal({
                   padding: '16px',
                   borderRadius: '16px',
                   border: 'none',
-                  backgroundColor: deleteConfirmationText.trim().toUpperCase() === 'SUPPRIMER' ? '#EF4444' : (darkMode ? '#334155' : '#CBD5E1'),
+                  backgroundColor: deleteConfirmationText.trim().toUpperCase() === 'SUPPRIMER' ? '#EF4444' : (darkMode ? '#3D3530' : '#E8DDD3'),
                   color: '#FFF',
                   fontWeight: '800',
                   fontSize: '14px',

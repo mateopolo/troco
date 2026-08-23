@@ -1,47 +1,71 @@
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..600&family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,600&family=Inter:wght@300;400;500;600;700;800&display=swap');
 
 :root {
   --ease-quiet: cubic-bezier(.22, 1, .36, 1);
   --ease-emphasis: cubic-bezier(.16, 1, .3, 1);
-  --font-editorial: 'Cormorant Garamond', 'Fraunces', Georgia, serif;
-  --font-sans: 'Inter', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-editorial: 'Cormorant Garamond', Georgia, serif;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
   /* STILLPOINT WARM BOUTIQUE PALETTE */
   --sand: #E8DDD3;
   --sand-dark: #D4C5B5;
   --sage: #9CAF88;
   --sage-dark: #7A8F6A;
+  --sage-light: #EBF0E6;
   --offwhite: #FAF7F2;
   --terracotta: #C67D5B;
   --terracotta-dark: #A8644A;
+  --terracotta-light: #F5EAE4;
   --linen: #F5F0E8;
-  --td: #3D3530;
-  --tm: #6B5E54;
-  --tl: #9A8E84;
+  --td: #3D3530;       /* Text Dark / Espresso */
+  --tm: #6B5E54;       /* Text Mid / Muted Brown */
+  --tl: #9A8E84;       /* Text Light / Warm Sand */
+  --card-bg: #FAF7F2;
+  --border-warm: #E8DDD3;
 }
 
-/* TYPOGRAPHIE ÉDITORIALE HAUT DE GAMME */
+/* TYPOGRAPHIE GLOBALE STRICTEMENT BOUTIQUE */
+h1, h2, h3, h4, .font-editorial, .font-editorial-heading, .font-serif {
+  font-family: var(--font-editorial) !important;
+  letter-spacing: -0.015em;
+  color: var(--td);
+}
+
+h1 {
+  font-size: clamp(26px, 4vw, 36px);
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+h2 {
+  font-size: clamp(20px, 3vw, 26px);
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+h3 {
+  font-size: 19px;
+  font-weight: 600;
+}
+
+body, p, span, button, input, select, textarea, div, a, label {
+  font-family: var(--font-sans);
+}
+
 .font-editorial {
   font-family: var(--font-editorial) !important;
   font-style: italic;
   font-weight: 400;
-  letter-spacing: -0.01em;
 }
 
 .font-editorial-heading {
   font-family: var(--font-editorial) !important;
   font-style: normal;
   font-weight: 600;
-  letter-spacing: -0.02em;
-}
-
-.font-serif {
-  font-family: var(--font-editorial) !important;
 }
 
 .font-sans {
   font-family: var(--font-sans) !important;
-  letter-spacing: -0.015em;
 }
 
 * {
@@ -74,14 +98,23 @@ body {
 }
 
 body.dark-mode {
-  background-color: #181513;
+  background-color: #1A1715;
   background-image: 
     radial-gradient(at 20% 20%, rgba(41, 37, 36, 0.7) 0px, transparent 70%),
     radial-gradient(at 80% 80%, rgba(168, 100, 74, 0.12) 0px, transparent 65%);
   color: #FAF7F2;
 }
 
-/* BLINDAGE ANTI-AUTO-ZOOM WEBKIT iOS (Interdiction du zoom agressif sur input < 16px) */
+body.dark-mode h1,
+body.dark-mode h2,
+body.dark-mode h3,
+body.dark-mode h4,
+body.dark-mode h5,
+body.dark-mode h6 {
+  color: #FAF7F2 !important;
+}
+
+/* BLINDAGE ANTI-AUTO-ZOOM WEBKIT iOS */
 @media screen and (max-width: 768px) {
   input, select, textarea {
     font-size: 16px !important;
@@ -89,11 +122,11 @@ body.dark-mode {
 }
 
 ::selection {
-  background: rgba(4, 38, 90, 0.35);
-  color: #FFFFFF;
+  background: rgba(198, 125, 91, 0.3);
+  color: var(--td);
 }
 
-/* Custom Sleek Scrollbar */
+/* Custom Sleek Warm Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -104,21 +137,21 @@ body.dark-mode {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(4, 38, 90, 0.35);
+  background: rgba(107, 94, 84, 0.3);
   border-radius: 999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(4, 38, 90, 0.65);
+  background: rgba(107, 94, 84, 0.6);
 }
 
-/* Custom Range Slider (Gauge / Rayon) */
+/* Custom Range Slider */
 input[type=range] {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
   height: 8px;
-  background: #E2E8F0;
+  background: var(--sand);
   border-radius: 999px;
   outline: none;
   transition: background 0.3s var(--ease-quiet);
@@ -126,7 +159,7 @@ input[type=range] {
 }
 
 body.dark-mode input[type=range] {
-  background: #334155;
+  background: #3D3530;
 }
 
 input[type=range]::-webkit-slider-thumb {
@@ -135,16 +168,16 @@ input[type=range]::-webkit-slider-thumb {
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: #04265A;
+  background: var(--terracotta);
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(4, 38, 90, 0.45);
+  box-shadow: 0 4px 12px rgba(198, 125, 91, 0.4);
   border: 2.5px solid #FFFFFF;
   transition: transform 0.2s var(--ease-quiet), background-color 0.2s var(--ease-quiet);
 }
 
 input[type=range]::-webkit-slider-thumb:hover {
-  transform: scale(1.18);
-  background: #06377B;
+  transform: scale(1.15);
+  background: var(--terracotta-dark);
 }
 
 input[type=range]::-moz-range-thumb {
@@ -453,15 +486,19 @@ body.dark-mode .premium-card:hover {
 }
 
 /* Clean Form Controls */
+/* Clean Form Controls */
 input, textarea, select {
   font-family: inherit;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  background-color: #FAF7F2;
+  color: var(--td);
+  border: 1px solid var(--sand);
 }
 
 input:focus, textarea:focus, select:focus {
   outline: none;
-  border-color: #04265A !important;
-  box-shadow: 0 0 0 3px rgba(4, 38, 90, 0.22) !important;
+  border-color: var(--terracotta) !important;
+  box-shadow: 0 0 0 3px rgba(198, 125, 91, 0.22) !important;
 }
 
 button {
@@ -469,33 +506,24 @@ button {
 }
 
 /* Accessibility & High Contrast Rules for Dark Mode (WCAG AA/AAA) */
-body.dark-mode h1,
-body.dark-mode h2,
-body.dark-mode h3,
-body.dark-mode h4,
-body.dark-mode h5,
-body.dark-mode h6 {
-  color: #FFFFFF;
-}
-
 body.dark-mode input,
 body.dark-mode textarea,
 body.dark-mode select {
-  background-color: rgba(15, 23, 42, 0.85);
-  color: #FFFFFF;
-  border-color: rgba(255, 255, 255, 0.2);
+  background-color: #231E1B;
+  color: #FAF7F2;
+  border-color: rgba(232, 221, 211, 0.2);
 }
 
 body.dark-mode input::placeholder,
 body.dark-mode textarea::placeholder {
-  color: #94A3B8;
+  color: #9A8E84;
 }
 
 body.dark-mode input:focus,
 body.dark-mode textarea:focus,
 body.dark-mode select:focus {
-  border-color: #60A5FA !important;
-  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.25) !important;
+  border-color: var(--terracotta) !important;
+  box-shadow: 0 0 0 3px rgba(198, 125, 91, 0.35) !important;
 }
 
 /* Desktop vs Mobile Layout Rules */
@@ -553,22 +581,22 @@ header {
   }
 }
 
-/* ORBES DE LUEUR AMBIANTE (GLOW ORBS) */
+/* ORBES DE LUEUR AMBIANTE CHAUDE (GLOW ORBS) */
 @keyframes orbBreathe {
   0%, 100% {
     transform: translate(0, 0) scale(1);
-    opacity: 0.3;
+    opacity: 0.25;
   }
   50% {
     transform: translate(15px, -15px) scale(1.1);
-    opacity: 0.5;
+    opacity: 0.45;
   }
 }
 
 .glow-orb {
   position: absolute;
   border-radius: 50%;
-  filter: blur(80px);
+  filter: blur(90px);
   pointer-events: none;
   z-index: 0;
   will-change: transform, opacity;
@@ -576,11 +604,11 @@ header {
 }
 
 .glow-orb-primary {
-  background: radial-gradient(circle, rgba(96, 165, 250, 0.28) 0%, rgba(4, 38, 90, 0.04) 70%, transparent 100%);
+  background: radial-gradient(circle, rgba(198, 125, 91, 0.22) 0%, rgba(232, 221, 211, 0.08) 70%, transparent 100%);
 }
 
 .glow-orb-secondary {
-  background: radial-gradient(circle, rgba(16, 185, 129, 0.22) 0%, rgba(20, 184, 166, 0.04) 70%, transparent 100%);
+  background: radial-gradient(circle, rgba(156, 175, 136, 0.2) 0%, rgba(232, 221, 211, 0.06) 70%, transparent 100%);
 }
 
 @media (max-width: 640px) {
@@ -689,32 +717,34 @@ header {
   opacity: 1 !important;
 }
 
-/* iOS Style Notification Badge */
+/* ÉLÉGANT BADGE DE NOTIFICATION STILLPOINT (Espresso foncé au lieu de rouge criard) */
 .ios-badge {
   position: absolute !important;
   top: -4px !important;
   right: -6px !important;
-  background: linear-gradient(135deg, #FF3B30, #E02B20) !important;
-  color: #FFFFFF !important;
+  background: #3D3530 !important;
+  color: #FAF7F2 !important;
   font-size: 9px !important;
   font-weight: 800 !important;
   min-width: 16px !important;
   height: 16px !important;
   padding: 0 4px !important;
   border-radius: 999px !important;
-  border: 1.8px solid #FFFFFF !important;
-  box-shadow: 0 2px 8px rgba(255, 59, 48, 0.65) !important;
+  border: 1.8px solid #F5F0E8 !important;
+  box-shadow: 0 2px 8px rgba(61, 53, 48, 0.4) !important;
   display: inline-flex !important;
   align-items: center !important;
   justify-content: center !important;
   line-height: 1 !important;
-  animation: notifPulse 1.8s ease-in-out infinite !important;
+  animation: notifPulse 2.2s ease-in-out infinite !important;
   pointer-events: none !important;
   z-index: 10 !important;
 }
 
 body.dark-mode .ios-badge {
-  border-color: #0F172A !important;
+  background: #E8DDD3 !important;
+  color: #1A1715 !important;
+  border-color: #231E1B !important;
 }
 
 /* ---- BANNIÈRES PUBLICITAIRES LATÉRALES (DESKTOP) ---- */
@@ -753,11 +783,11 @@ body.dark-mode .ios-badge {
 .ad-card {
   border-radius: 18px;
   padding: 14px;
-  background: rgba(255, 255, 255, 0.88);
+  background: rgba(250, 247, 242, 0.92);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(226, 232, 240, 0.9);
-  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.06);
+  border: 1px solid rgba(232, 221, 211, 0.9);
+  box-shadow: 0 10px 25px -5px rgba(61, 53, 48, 0.05);
   transition: all 0.25s ease;
   overflow: hidden;
   position: relative;
@@ -765,21 +795,21 @@ body.dark-mode .ios-badge {
 }
 
 body.dark-mode .ad-card {
-  background: rgba(15, 23, 42, 0.75);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+  background: rgba(35, 30, 27, 0.85);
+  border: 1px solid rgba(232, 221, 211, 0.12);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.35);
 }
 
 .ad-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 16px 32px -6px rgba(4, 38, 90, 0.12);
+  box-shadow: 0 16px 32px -6px rgba(61, 53, 48, 0.12);
 }
 
 body.dark-mode .ad-card:hover {
-  box-shadow: 0 16px 32px -6px rgba(96, 165, 250, 0.15);
+  box-shadow: 0 16px 32px -6px rgba(0, 0, 0, 0.5);
 }
 
-/* Animations et Fluidité Messagerie Mobile (Vinted / WhatsApp Style) */
+/* Animations et Fluidité Messagerie Mobile */
 @keyframes typingFadeIn {
   from {
     opacity: 0;
@@ -819,8 +849,8 @@ body.dark-mode .ad-card:hover {
 }
 
 @keyframes notifPulse {
-  0%, 100% { transform: scale(1); box-shadow: 0 2px 8px rgba(239,68,68,0.5); }
-  50% { transform: scale(1.18); box-shadow: 0 4px 14px rgba(239,68,68,0.75); }
+  0%, 100% { transform: scale(1); box-shadow: 0 2px 8px rgba(61,53,48,0.4); }
+  50% { transform: scale(1.15); box-shadow: 0 4px 12px rgba(61,53,48,0.6); }
 }
 
 @keyframes slideDownIn {
@@ -850,14 +880,14 @@ body.dark-mode .ad-card:hover {
   }
 }
 
-/* FORCER LA TAILLE DE POLICE MINIMALE SUR MOBILE POUR BLOQUER L'AUTO-ZOOM iOS */
+/* FORCER LA TAILLE DE POLICE MINIMALE SUR MOBILE */
 @media screen and (max-width: 768px) {
   input, textarea, select {
     font-size: 16px !important;
   }
 }
 
-/* ---- CONTRÔLES D'APPEL WEBRTC — DOCK TACTILE 2 LIGNES GAUCHE ---- */
+/* ---- CONTRÔLES D'APPEL WEBRTC — DOCK TACTILE STILLPOINT ---- */
 .call-controls-dock {
   position: fixed;
   bottom: max(16px, env(safe-area-inset-bottom, 16px));
@@ -867,11 +897,11 @@ body.dark-mode .ad-card:hover {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  background-color: rgba(15, 23, 42, 0.92);
+  background-color: rgba(26, 23, 21, 0.94);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border: 1.5px solid rgba(96, 165, 250, 0.35);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.65), 0 0 30px rgba(96, 165, 250, 0.2);
+  border: 1.5px solid rgba(232, 221, 211, 0.25);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.65), 0 0 30px rgba(198, 125, 91, 0.15);
   z-index: 50;
   box-sizing: border-box;
   touch-action: none;
@@ -892,8 +922,8 @@ body.dark-mode .ad-card:hover {
   width: 42px;
   height: 42px;
   border-radius: 50%;
-  background-color: rgba(255, 255, 255, 0.14);
-  color: #FFF;
+  background-color: rgba(255, 255, 255, 0.12);
+  color: #FAF7F2;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -904,7 +934,7 @@ body.dark-mode .ad-card:hover {
 
 .call-btn-circle:hover {
   transform: scale(1.08);
-  background-color: rgba(255, 255, 255, 0.22);
+  background-color: rgba(255, 255, 255, 0.2);
 }
 
 .call-btn-circle:active {
@@ -912,13 +942,13 @@ body.dark-mode .ad-card:hover {
 }
 
 .call-btn-hangup {
-  background-color: #EF4444 !important;
+  background-color: var(--terracotta) !important;
   color: #FFF !important;
-  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.6) !important;
+  box-shadow: 0 4px 14px rgba(198, 125, 91, 0.5) !important;
 }
 
 .call-btn-hangup:hover {
-  background-color: #DC2626 !important;
+  background-color: var(--terracotta-dark) !important;
 }
 
 @media (max-width: 600px), (orientation: landscape) and (max-height: 520px) {

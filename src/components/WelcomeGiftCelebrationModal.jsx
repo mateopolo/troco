@@ -1,16 +1,23 @@
-import React, { useEffect } from 'react';
-import { Sparkles, Coins, Check, ArrowRight, ShieldCheck, Clock, X } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import {
+  Coins, Sparkles, Check, ArrowRight,
+  ShieldCheck, Clock, X
+} from 'lucide-react';
 
 export default function WelcomeGiftCelebrationModal({
   isOpen,
   onClose,
-  darkMode = false,
   trocoTokens = 10,
   euroBalance = 0,
+  darkMode = false,
 }) {
+  const [showConfetti, setShowConfetti] = useState(false);
+
   useEffect(() => {
     if (isOpen) {
-      if (navigator.vibrate) navigator.vibrate([100, 50, 150, 50, 200]);
+      setShowConfetti(true);
+      const timer = setTimeout(() => setShowConfetti(false), 3500);
+      return () => clearTimeout(timer);
     }
   }, [isOpen]);
 
@@ -21,64 +28,88 @@ export default function WelcomeGiftCelebrationModal({
       style={{
         position: 'fixed',
         inset: 0,
-        backgroundColor: 'rgba(15, 23, 42, 0.85)',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
+        zIndex: 9999,
+        backgroundColor: 'rgba(61, 53, 48, 0.72)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         padding: '16px',
-        zIndex: 5000,
-        animation: 'fadeIn 0.3s ease',
+        animation: 'fadeIn 0.3s ease-out',
       }}
     >
-      <div
-        style={{
-          position: 'relative',
-          backgroundColor: darkMode ? '#0F172A' : '#FFFFFF',
-          color: darkMode ? '#F8FAFC' : '#0F172A',
-          borderRadius: '32px',
-          padding: '36px 28px',
-          maxWidth: '460px',
-          width: '100%',
-          boxShadow: '0 25px 60px rgba(0,0,0,0.5), 0 0 40px rgba(245,158,11,0.25)',
-          border: '2px solid rgba(245,158,11,0.4)',
-          textAlign: 'center',
-          overflow: 'hidden',
-          animation: 'scaleUp 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
-        }}
-      >
-        {/* HALO LUMINEUX DORÉ D'ARRIÈRE-PLAN */}
+      {/* EFFET VISUEL DE PARTICULES SOLAIRES / FESTIVES */}
+      {showConfetti && (
         <div
           style={{
             position: 'absolute',
-            top: '-80px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            width: '280px',
-            height: '280px',
-            borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(245,158,11,0.35) 0%, rgba(245,158,11,0) 70%)',
+            inset: 0,
             pointerEvents: 'none',
+            overflow: 'hidden',
           }}
-        />
+        >
+          {Array.from({ length: 28 }).map((_, i) => {
+            const left = Math.random() * 100;
+            const delay = Math.random() * 1.5;
+            const duration = 2 + Math.random() * 2;
+            const colors = ['#C67D5B', '#9CAF88', '#D97706', '#E8DDD3', '#FAF7F2'];
+            const color = colors[i % colors.length];
+            const size = 6 + Math.random() * 8;
 
-        {/* BOUTON FERMER */}
+            return (
+              <div
+                key={i}
+                style={{
+                  position: 'absolute',
+                  top: '-20px',
+                  left: `${left}%`,
+                  width: `${size}px`,
+                  height: `${size}px`,
+                  backgroundColor: color,
+                  borderRadius: i % 2 === 0 ? '50%' : '2px',
+                  opacity: 0.85,
+                  transform: `rotate(${Math.random() * 360}deg)`,
+                  animation: `confettiFall ${duration}s ease-in ${delay}s infinite`,
+                }}
+              />
+            );
+          })}
+        </div>
+      )}
+
+      {/* MODAL CONTAINER */}
+      <div
+        style={{
+          backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
+          borderRadius: '32px',
+          padding: '32px 24px',
+          maxWidth: '460px',
+          width: '100%',
+          boxShadow: darkMode ? '0 30px 60px -12px rgba(0, 0, 0, 0.8), 0 0 35px rgba(198,125,91,0.2)' : '0 30px 60px -12px rgba(61, 53, 48, 0.25)',
+          border: darkMode ? '1px solid rgba(232, 221, 211, 0.15)' : '1px solid #E8DDD3',
+          color: darkMode ? '#FAF7F2' : '#3D3530',
+          textAlign: 'center',
+          position: 'relative',
+          animation: 'scaleUp 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
+        }}
+      >
+        {/* BOUTON DE FERMETURE RAPIDE */}
         <button
           onClick={onClose}
           style={{
             position: 'absolute',
-            top: '16px',
-            right: '16px',
-            backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+            top: '20px',
+            right: '20px',
             border: 'none',
+            background: darkMode ? 'rgba(232,221,211,0.1)' : '#F5EAE4',
+            width: '34px',
+            height: '34px',
             borderRadius: '50%',
-            width: '36px',
-            height: '36px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: darkMode ? '#94A3B8' : '#64748B',
+            color: darkMode ? '#FAF7F2' : '#3D3530',
             cursor: 'pointer',
           }}
         >
@@ -92,11 +123,11 @@ export default function WelcomeGiftCelebrationModal({
               width: '90px',
               height: '90px',
               borderRadius: '50%',
-              background: 'linear-gradient(135deg, #F59E0B, #D97706, #B45309)',
+              background: 'linear-gradient(135deg, #D97706, #B45309)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 12px 30px rgba(245,158,11,0.5)',
+              boxShadow: '0 12px 30px rgba(217,119,6,0.4)',
               margin: '0 auto',
               border: '3px solid #FDE68A',
             }}
@@ -110,13 +141,13 @@ export default function WelcomeGiftCelebrationModal({
               position: 'absolute',
               top: '-8px',
               right: '-16px',
-              backgroundColor: '#10B981',
+              backgroundColor: '#9CAF88',
               color: '#FFFFFF',
               fontSize: '13px',
               fontWeight: '900',
               padding: '4px 12px',
               borderRadius: '999px',
-              boxShadow: '0 6px 16px rgba(16,185,129,0.5)',
+              boxShadow: '0 6px 16px rgba(156,175,136,0.5)',
               border: '2px solid #FFFFFF',
               letterSpacing: '0.02em',
             }}
@@ -127,15 +158,15 @@ export default function WelcomeGiftCelebrationModal({
 
         {/* TITRE & SOUS-TITRE */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '6px' }}>
-          <Sparkles size={20} color="#F59E0B" />
-          <h2 style={{ fontSize: '24px', fontWeight: '900', margin: 0, letterSpacing: '-0.02em' }}>
+          <Sparkles size={20} color="#C67D5B" />
+          <h2 className="font-editorial-heading" style={{ fontSize: '26px', fontWeight: '600', margin: 0, letterSpacing: '-0.02em', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
             Cadeau de Bienvenue !
           </h2>
-          <Sparkles size={20} color="#F59E0B" />
+          <Sparkles size={20} color="#C67D5B" />
         </div>
 
-        <p style={{ fontSize: '14px', color: darkMode ? '#94A3B8' : '#64748B', lineHeight: '1.5', margin: '0 0 22px' }}>
-          Votre compte est prêt. Nous vous offrons <strong style={{ color: darkMode ? '#FDE68A' : '#D97706' }}>{trocoTokens} Jetons Troco</strong> pour démarrer vos premiers échanges en toute liberté.
+        <p style={{ fontSize: '14px', color: darkMode ? '#D4C5B5' : '#6B5E54', lineHeight: '1.5', margin: '0 0 22px' }}>
+          Votre compte est prêt. Nous vous offrons <strong style={{ color: '#C67D5B' }}>{trocoTokens} Jetons Troco</strong> pour démarrer vos premiers échanges en toute liberté.
         </p>
 
         {/* RÉSUMÉ DU PORTEFEUILLE INITIAL */}
@@ -144,33 +175,33 @@ export default function WelcomeGiftCelebrationModal({
             display: 'grid',
             gridTemplateColumns: '1fr 1fr',
             gap: '12px',
-            backgroundColor: darkMode ? 'rgba(30,41,59,0.7)' : '#F8FAFC',
+            backgroundColor: darkMode ? '#1A1715' : '#FFF',
             borderRadius: '20px',
             padding: '14px',
-            border: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid #E2E8F0',
+            border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3',
             marginBottom: '22px',
           }}
         >
-          <div style={{ textAlign: 'center', borderRight: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid #E2E8F0', paddingRight: '6px' }}>
-            <div style={{ fontSize: '11px', fontWeight: '700', color: darkMode ? '#94A3B8' : '#64748B', textTransform: 'uppercase' }}>
+          <div style={{ textAlign: 'center', borderRight: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3', paddingRight: '6px' }}>
+            <div style={{ fontSize: '11px', fontWeight: '700', color: darkMode ? '#D4C5B5' : '#6B5E54', textTransform: 'uppercase' }}>
               Solde Porte-monnaie
             </div>
-            <div style={{ fontSize: '20px', fontWeight: '900', color: '#10B981', marginTop: '4px' }}>
+            <div style={{ fontSize: '20px', fontWeight: '900', color: '#7A8F6A', marginTop: '4px' }}>
               {euroBalance.toFixed(2)} €
             </div>
-            <div style={{ fontSize: '10px', color: darkMode ? '#64748B' : '#94A3B8', marginTop: '2px' }}>
+            <div style={{ fontSize: '10px', color: darkMode ? '#9A8E84' : '#6B5E54', marginTop: '2px' }}>
               Zéro frais caché
             </div>
           </div>
 
           <div style={{ textAlign: 'center', paddingLeft: '6px' }}>
-            <div style={{ fontSize: '11px', fontWeight: '700', color: darkMode ? '#FDE68A' : '#D97706', textTransform: 'uppercase' }}>
+            <div style={{ fontSize: '11px', fontWeight: '700', color: '#D97706', textTransform: 'uppercase' }}>
               Solde Jetons Troco
             </div>
-            <div style={{ fontSize: '20px', fontWeight: '900', color: darkMode ? '#FDE68A' : '#D97706', marginTop: '4px' }}>
+            <div style={{ fontSize: '20px', fontWeight: '900', color: '#D97706', marginTop: '4px' }}>
               {trocoTokens} Jetons 🪙
             </div>
-            <div style={{ fontSize: '10px', color: darkMode ? '#64748B' : '#94A3B8', marginTop: '2px' }}>
+            <div style={{ fontSize: '10px', color: darkMode ? '#9A8E84' : '#6B5E54', marginTop: '2px' }}>
               = {trocoTokens}h de services
             </div>
           </div>
@@ -178,23 +209,23 @@ export default function WelcomeGiftCelebrationModal({
 
         {/* AVANTAGES IMMÉDIATS */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', textAlign: 'left', marginBottom: '24px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: darkMode ? '#CBD5E1' : '#475569' }}>
-            <div style={{ width: '20px', height: '20px', borderRadius: '50%', backgroundColor: 'rgba(16,185,129,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <Check size={12} color="#10B981" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>
+            <div style={{ width: '20px', height: '20px', borderRadius: '50%', backgroundColor: darkMode ? 'rgba(156,175,136,0.25)' : '#EBF0E6', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Check size={12} color="#7A8F6A" />
             </div>
             <span>Réservez des cours, du matériel ou des services sans carte bancaire</span>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: darkMode ? '#CBD5E1' : '#475569' }}>
-            <div style={{ width: '20px', height: '20px', borderRadius: '50%', backgroundColor: 'rgba(16,185,129,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <Clock size={12} color="#10B981" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>
+            <div style={{ width: '20px', height: '20px', borderRadius: '50%', backgroundColor: darkMode ? 'rgba(156,175,136,0.25)' : '#EBF0E6', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Clock size={12} color="#7A8F6A" />
             </div>
             <span>1 Jeton = 1 heure de prestation solidaire ou de prêt</span>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: darkMode ? '#CBD5E1' : '#475569' }}>
-            <div style={{ width: '20px', height: '20px', borderRadius: '50%', backgroundColor: 'rgba(16,185,129,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <ShieldCheck size={12} color="#10B981" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>
+            <div style={{ width: '20px', height: '20px', borderRadius: '50%', backgroundColor: darkMode ? 'rgba(156,175,136,0.25)' : '#EBF0E6', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <ShieldCheck size={12} color="#7A8F6A" />
             </div>
             <span>Gagnez de nouveaux jetons dès que vous rendez service</span>
           </div>
@@ -203,9 +234,10 @@ export default function WelcomeGiftCelebrationModal({
         {/* BOUTON D'ACTION PRINCIPALE */}
         <button
           onClick={onClose}
+          className="premium-button"
           style={{
             width: '100%',
-            backgroundColor: '#04265A',
+            background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)',
             color: '#FFFFFF',
             border: 'none',
             borderRadius: '16px',
@@ -217,7 +249,7 @@ export default function WelcomeGiftCelebrationModal({
             alignItems: 'center',
             justifyContent: 'center',
             gap: '8px',
-            boxShadow: '0 10px 24px rgba(4,38,90,0.3)',
+            boxShadow: '0 10px 24px rgba(198,125,91,0.3)',
             transition: 'all 0.2s ease',
           }}
         >

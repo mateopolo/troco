@@ -1,29 +1,34 @@
 import React, { useState } from 'react';
-import { Clock, Coins, Check, Sparkles, X, ArrowRight, HeartHandshake } from 'lucide-react';
+import {
+  HeartHandshake, Coins, Clock, ArrowRight,
+  Sparkles, Check, X
+} from 'lucide-react';
 
 export default function VisioSettlementModal({
   isOpen,
   onClose,
-  callDuration = 0,
-  partnerName = 'Interlocuteur',
+  callDuration = 0, // En secondes
+  partnerName = 'Partenaire',
   onTransferTokens,
-  darkMode = false,
   currentUserTokens = 10,
+  darkMode = false,
 }) {
+  const [selectedTokens, setSelectedTokens] = useState(() => {
+    const minutes = Math.ceil(callDuration / 60);
+    return Math.max(1, Math.min(5, Math.ceil(minutes / 30)));
+  });
   const [includeInsurance, setIncludeInsurance] = useState(false);
-  const [selectedTokens, setSelectedTokens] = useState(1);
   const [isTransferred, setIsTransferred] = useState(false);
 
   if (!isOpen) return null;
 
-  const hours = Math.floor(callDuration / 3600);
-  const minutes = Math.floor((callDuration % 3600) / 60);
+  // Calcul du temps formaté (ex: 24m 12s)
+  const minutes = Math.floor(callDuration / 60);
   const seconds = callDuration % 60;
-  const formattedTime = hours > 0
-    ? `${hours}h ${minutes.toString().padStart(2, '0')}min`
-    : `${minutes}min ${seconds.toString().padStart(2, '0')}s`;
+  const formattedTime = `${minutes}m ${seconds < 10 ? '0' : ''}${seconds}s`;
 
-  const calculatedTokens = Math.max(1, Math.round((callDuration / 3600) * 10) / 10 || 1);
+  // Équivalence recommandée en jetons (1h = 1 jeton)
+  const calculatedTokens = Math.max(1, Math.ceil(minutes / 60));
 
   const handleConfirmTransfer = () => {
     if (onTransferTokens) {
@@ -35,9 +40,8 @@ export default function VisioSettlementModal({
     }
     setIsTransferred(true);
     setTimeout(() => {
-      setIsTransferred(false);
       onClose();
-    }, 1800);
+    }, 1500);
   };
 
   return (
@@ -45,31 +49,30 @@ export default function VisioSettlementModal({
       style={{
         position: 'fixed',
         inset: 0,
-        backgroundColor: 'rgba(15, 23, 42, 0.85)',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
+        zIndex: 5000,
+        backgroundColor: 'rgba(61, 53, 48, 0.72)',
+        backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         padding: '16px',
-        zIndex: 5000,
-        animation: 'fadeIn 0.3s ease',
+        animation: 'fadeIn 0.25s ease-out',
       }}
     >
       <div
         style={{
-          position: 'relative',
-          backgroundColor: darkMode ? '#0F172A' : '#FFFFFF',
-          color: darkMode ? '#F8FAFC' : '#0F172A',
-          borderRadius: '32px',
-          padding: '32px 26px',
-          maxWidth: '480px',
+          backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
+          borderRadius: '28px',
+          padding: '28px 24px',
+          maxWidth: '460px',
           width: '100%',
-          boxShadow: '0 25px 60px rgba(0,0,0,0.5), 0 0 40px rgba(96,165,250,0.25)',
-          border: darkMode ? '1.5px solid rgba(255,255,255,0.12)' : '1.5px solid #E2E8F0',
+          boxShadow: darkMode ? '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 30px rgba(198,125,91,0.15)' : '0 25px 50px -12px rgba(61, 53, 48, 0.25)',
+          border: darkMode ? '1px solid rgba(232, 221, 211, 0.15)' : '1px solid #E8DDD3',
+          color: darkMode ? '#FAF7F2' : '#3D3530',
           textAlign: 'center',
-          overflow: 'hidden',
-          animation: 'scaleUp 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
+          position: 'relative',
+          animation: 'scaleUp 0.3s ease-out',
         }}
       >
         {/* BOUTON FERMER */}
@@ -77,17 +80,17 @@ export default function VisioSettlementModal({
           onClick={onClose}
           style={{
             position: 'absolute',
-            top: '16px',
-            right: '16px',
-            backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+            top: '18px',
+            right: '18px',
             border: 'none',
+            background: darkMode ? 'rgba(232,221,211,0.1)' : '#F5EAE4',
+            width: '32px',
+            height: '32px',
             borderRadius: '50%',
-            width: '36px',
-            height: '36px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: darkMode ? '#94A3B8' : '#64748B',
+            color: darkMode ? '#FAF7F2' : '#3D3530',
             cursor: 'pointer',
           }}
         >
@@ -100,23 +103,23 @@ export default function VisioSettlementModal({
             width: '76px',
             height: '76px',
             borderRadius: '50%',
-            background: 'linear-gradient(135deg, #3B82F6, #1D4ED8, #04265A)',
+            background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 10px 25px rgba(59,130,246,0.4)',
+            boxShadow: '0 10px 25px rgba(198,125,91,0.4)',
             margin: '0 auto 16px',
-            border: '3px solid #93C5FD',
+            border: '3px solid #E8DDD3',
           }}
         >
           <HeartHandshake size={38} color="#FFF" />
         </div>
 
-        <h2 style={{ fontSize: '22px', fontWeight: '900', margin: '0 0 6px', letterSpacing: '-0.02em' }}>
+        <h2 className="font-editorial-heading" style={{ fontSize: '24px', fontWeight: '600', margin: '0 0 6px', letterSpacing: '-0.02em', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
           Bilan de la séance & Rétribution
         </h2>
-        <p style={{ fontSize: '13px', color: darkMode ? '#94A3B8' : '#64748B', margin: '0 0 20px' }}>
-          Séance terminée avec <strong style={{ color: darkMode ? '#60A5FA' : '#04265A' }}>{partnerName}</strong>
+        <p style={{ fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54', margin: '0 0 20px' }}>
+          Séance terminée avec <strong style={{ color: '#C67D5B' }}>{partnerName}</strong>
         </p>
 
         {/* CADRE RECAP DURÉE & JETONS */}
@@ -125,27 +128,27 @@ export default function VisioSettlementModal({
             display: 'grid',
             gridTemplateColumns: '1fr 1fr',
             gap: '12px',
-            backgroundColor: darkMode ? 'rgba(30,41,59,0.7)' : '#F8FAFC',
+            backgroundColor: darkMode ? '#1A1715' : '#FFF',
             borderRadius: '20px',
             padding: '14px',
-            border: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid #E2E8F0',
+            border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3',
             marginBottom: '20px',
           }}
         >
-          <div style={{ textAlign: 'center', borderRight: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid #E2E8F0', paddingRight: '6px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', fontSize: '11px', fontWeight: '700', color: darkMode ? '#94A3B8' : '#64748B', textTransform: 'uppercase' }}>
-              <Clock size={12} /> Durée de la visio
+          <div style={{ textAlign: 'center', borderRight: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3', paddingRight: '6px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', fontSize: '11px', fontWeight: '700', color: darkMode ? '#D4C5B5' : '#6B5E54', textTransform: 'uppercase' }}>
+              <Clock size={12} color="#C67D5B" /> Durée de la visio
             </div>
-            <div style={{ fontSize: '19px', fontWeight: '900', color: darkMode ? '#F8FAFC' : '#0F172A', marginTop: '4px' }}>
+            <div style={{ fontSize: '19px', fontWeight: '900', color: darkMode ? '#FAF7F2' : '#3D3530', marginTop: '4px' }}>
               {formattedTime}
             </div>
           </div>
 
           <div style={{ textAlign: 'center', paddingLeft: '6px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', fontSize: '11px', fontWeight: '700', color: '#F59E0B', textTransform: 'uppercase' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', fontSize: '11px', fontWeight: '700', color: '#D97706', textTransform: 'uppercase' }}>
               <Coins size={12} /> Équivalent Jetons
             </div>
-            <div style={{ fontSize: '19px', fontWeight: '900', color: '#F59E0B', marginTop: '4px' }}>
+            <div style={{ fontSize: '19px', fontWeight: '900', color: '#D97706', marginTop: '4px' }}>
               {calculatedTokens} Jeton{calculatedTokens > 1 ? 's' : ''} 🪙
             </div>
           </div>
@@ -153,7 +156,7 @@ export default function VisioSettlementModal({
 
         {/* SÉLECTEUR DE JETONS À TRANSFÉRER */}
         <div style={{ textAlign: 'left', marginBottom: '18px' }}>
-          <label style={{ fontSize: '12px', fontWeight: '800', color: darkMode ? '#CBD5E1' : '#334155', display: 'block', marginBottom: '8px' }}>
+          <label style={{ fontSize: '12px', fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530', display: 'block', marginBottom: '8px' }}>
             Nombre de Jetons Troco à transférer :
           </label>
           <div style={{ display: 'flex', gap: '8px' }}>
@@ -165,9 +168,9 @@ export default function VisioSettlementModal({
                   flex: 1,
                   padding: '10px 0',
                   borderRadius: '12px',
-                  border: selectedTokens === num ? '2px solid #3B82F6' : (darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #CBD5E1'),
-                  backgroundColor: selectedTokens === num ? (darkMode ? 'rgba(59,130,246,0.25)' : '#EFF6FF') : (darkMode ? 'rgba(30,41,59,0.5)' : '#FFF'),
-                  color: selectedTokens === num ? '#3B82F6' : (darkMode ? '#CBD5E1' : '#475569'),
+                  border: selectedTokens === num ? '2px solid #C67D5B' : (darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3'),
+                  backgroundColor: selectedTokens === num ? (darkMode ? 'rgba(198,125,91,0.25)' : '#F5EAE4') : (darkMode ? '#1A1715' : '#FFF'),
+                  color: selectedTokens === num ? (darkMode ? '#FAF7F2' : '#A8644A') : (darkMode ? '#D4C5B5' : '#6B5E54'),
                   fontWeight: '800',
                   fontSize: '13px',
                   cursor: 'pointer',
@@ -183,21 +186,22 @@ export default function VisioSettlementModal({
         {/* STRUCTURE DE FRAIS TRANSPARENTE */}
         <div
           style={{
-            backgroundColor: darkMode ? 'rgba(15,23,42,0.6)' : '#F1F5F9',
+            backgroundColor: darkMode ? '#1A1715' : '#F5F0E8',
             borderRadius: '16px',
             padding: '12px 14px',
             marginBottom: '20px',
             textAlign: 'left',
+            border: darkMode ? '1px solid rgba(232,221,211,0.08)' : '1px solid #E8DDD3',
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', marginBottom: '6px' }}>
-            <span style={{ color: darkMode ? '#94A3B8' : '#64748B' }}>Frais de service & plateforme Troco :</span>
-            <span style={{ fontWeight: '800', color: '#10B981' }}>0,00 € (100% Gratuit)</span>
+            <span style={{ color: darkMode ? '#D4C5B5' : '#6B5E54' }}>Frais de service & plateforme Troco :</span>
+            <span style={{ fontWeight: '800', color: '#7A8F6A' }}>0,00 € (100% Gratuit)</span>
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', marginBottom: '8px' }}>
-            <span style={{ color: darkMode ? '#94A3B8' : '#64748B' }}>Transfert de Jetons solidaire :</span>
-            <span style={{ fontWeight: '800', color: '#F59E0B' }}>-{selectedTokens} Jeton{selectedTokens > 1 ? 's' : ''}</span>
+            <span style={{ color: darkMode ? '#D4C5B5' : '#6B5E54' }}>Transfert de Jetons solidaire :</span>
+            <span style={{ fontWeight: '800', color: '#D97706' }}>-{selectedTokens} Jeton{selectedTokens > 1 ? 's' : ''}</span>
           </div>
 
           {/* OPTION MICRO-ASSURANCE OPTIONNELLE */}
@@ -208,8 +212,8 @@ export default function VisioSettlementModal({
               justifyContent: 'space-between',
               padding: '8px 10px',
               borderRadius: '10px',
-              backgroundColor: includeInsurance ? (darkMode ? 'rgba(16,185,129,0.15)' : '#ECFDF5') : 'transparent',
-              border: includeInsurance ? '1px solid #10B981' : (darkMode ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.06)'),
+              backgroundColor: includeInsurance ? (darkMode ? 'rgba(156,175,136,0.2)' : '#EBF0E6') : 'transparent',
+              border: includeInsurance ? '1px solid #9CAF88' : (darkMode ? '1px solid rgba(232,221,211,0.08)' : '1px solid rgba(0,0,0,0.06)'),
               cursor: 'pointer',
               marginTop: '4px',
             }}
@@ -219,18 +223,18 @@ export default function VisioSettlementModal({
                 type="checkbox"
                 checked={includeInsurance}
                 onChange={(e) => setIncludeInsurance(e.target.checked)}
-                style={{ accentColor: '#10B981', cursor: 'pointer' }}
+                style={{ accentColor: '#C67D5B', cursor: 'pointer' }}
               />
               <div>
-                <div style={{ fontSize: '12px', fontWeight: '800', color: darkMode ? '#F8FAFC' : '#0F172A' }}>
+                <div style={{ fontSize: '12px', fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
                   🛡️ Option Sérénité & Assurance
                 </div>
-                <div style={{ fontSize: '10px', color: darkMode ? '#94A3B8' : '#64748B' }}>
+                <div style={{ fontSize: '10px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>
                   Protection du matériel & garantie d'engagement
                 </div>
               </div>
             </div>
-            <span style={{ fontSize: '12px', fontWeight: '800', color: includeInsurance ? '#10B981' : (darkMode ? '#94A3B8' : '#64748B') }}>
+            <span style={{ fontSize: '12px', fontWeight: '800', color: includeInsurance ? '#7A8F6A' : (darkMode ? '#D4C5B5' : '#6B5E54') }}>
               +1,99 €
             </span>
           </label>
@@ -240,9 +244,10 @@ export default function VisioSettlementModal({
         <button
           onClick={handleConfirmTransfer}
           disabled={currentUserTokens < selectedTokens}
+          className="premium-button"
           style={{
             width: '100%',
-            backgroundColor: currentUserTokens < selectedTokens ? '#94A3B8' : (isTransferred ? '#10B981' : '#04265A'),
+            background: currentUserTokens < selectedTokens ? (darkMode ? '#3D3530' : '#E8DDD3') : (isTransferred ? 'linear-gradient(135deg, #9CAF88 0%, #7A8F6A 100%)' : 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)'),
             color: '#FFFFFF',
             border: 'none',
             borderRadius: '16px',
@@ -254,7 +259,7 @@ export default function VisioSettlementModal({
             alignItems: 'center',
             justifyContent: 'center',
             gap: '8px',
-            boxShadow: '0 10px 24px rgba(4,38,90,0.3)',
+            boxShadow: currentUserTokens < selectedTokens ? 'none' : '0 10px 24px rgba(198,125,91,0.3)',
             transition: 'all 0.2s ease',
           }}
         >
@@ -280,7 +285,7 @@ export default function VisioSettlementModal({
             marginTop: '10px',
             background: 'none',
             border: 'none',
-            color: darkMode ? '#94A3B8' : '#64748B',
+            color: darkMode ? '#D4C5B5' : '#6B5E54',
             fontSize: '12px',
             fontWeight: '700',
             cursor: 'pointer',

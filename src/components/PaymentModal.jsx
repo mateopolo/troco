@@ -330,25 +330,25 @@ export default function PaymentModal({
       position: 'fixed',
       inset: 0,
       zIndex: 4000,
-      backgroundColor: 'rgba(15, 23, 42, 0.75)',
+      backgroundColor: 'rgba(61, 53, 48, 0.72)',
       backdropFilter: 'blur(10px)',
       WebkitBackdropFilter: 'blur(10px)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       padding: '16px',
-      animation: 'fadeIn 0.25s ease-out',
+      animation: 'fadeIn 0.2s ease',
     }}>
       <div style={{
-        backgroundColor: darkMode ? '#1E293B' : '#FFFFFF',
+        backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
         borderRadius: '24px',
         width: '100%',
         maxWidth: '560px',
         maxHeight: '92vh',
         overflowY: 'auto',
-        boxShadow: darkMode ? '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 30px rgba(96,165,250,0.15)' : '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-        border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E2E8F0',
-        color: darkMode ? '#F8FAFC' : '#0F172A',
+        boxShadow: darkMode ? '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 35px rgba(198,125,91,0.2)' : '0 25px 50px -12px rgba(61, 53, 48, 0.25)',
+        border: darkMode ? '1px solid rgba(232, 221, 211, 0.15)' : '1px solid #E8DDD3',
+        color: darkMode ? '#FAF7F2' : '#3D3530',
         position: 'relative',
         display: 'flex',
         flexDirection: 'column',
@@ -357,7 +357,7 @@ export default function PaymentModal({
               {/* HEADER MODAL */}
         <div style={{
           padding: '20px 24px',
-          borderBottom: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid #F1F5F9',
+          borderBottom: darkMode ? '1px solid rgba(232,221,211,0.08)' : '1px solid #E8DDD3',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -367,25 +367,25 @@ export default function PaymentModal({
               width: '38px',
               height: '38px',
               borderRadius: '12px',
-              background: 'linear-gradient(135deg, #04265A, #3B82F6)',
+              background: 'linear-gradient(135deg, #C67D5B, #A8644A)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               color: '#FFF',
-              boxShadow: '0 4px 12px rgba(59,130,246,0.3)',
+              boxShadow: '0 4px 12px rgba(198,125,91,0.3)',
             }}>
               {(mode === 'troco-plus' || mode === 'pack-tokens') ? <Sparkles size={20} /> : <CreditCard size={20} />}
             </div>
             <div>
-              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800', letterSpacing: '-0.01em' }}>
+              <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '20px', fontWeight: '600', letterSpacing: '-0.01em', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
                 {(mode === 'troco-plus' || mode === 'pack-tokens') && 'Abonnement Troco Plus'}
                 {mode === 'topup-cash' && 'Recharger mon Portefeuille'}
                 {mode === 'boost' && 'Booster une Annonce'}
                 {mode === 'caution' && 'Empreinte de Caution'}
                 {mode === 'deal' && 'Paiement Sécurisé du Deal'}
               </h3>
-              <p style={{ margin: '2px 0 0', fontSize: '12px', color: darkMode ? '#94A3B8' : '#64748B', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <ShieldCheck size={13} color="#10B981" /> Paiement 100% chiffré & sécurisé SSL 256 bits
+              <p style={{ margin: '2px 0 0', fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <ShieldCheck size={13} color="#9CAF88" /> Paiement 100% chiffré & sécurisé SSL 256 bits
               </p>
             </div>
           </div>
@@ -393,8 +393,8 @@ export default function PaymentModal({
             onClick={onClose}
             style={{
               border: 'none',
-              background: darkMode ? 'rgba(255,255,255,0.08)' : '#F1F5F9',
-              color: darkMode ? '#94A3B8' : '#64748B',
+              background: darkMode ? 'rgba(232,221,211,0.1)' : '#F5EAE4',
+              color: darkMode ? '#FAF7F2' : '#3D3530',
               width: '32px',
               height: '32px',
               borderRadius: '50%',
@@ -415,11 +415,11 @@ export default function PaymentModal({
             {(mode === 'troco-plus' || mode === 'pack-tokens' || mode === 'topup-cash') && (
               <div style={{
                 display: 'flex',
-                backgroundColor: darkMode ? 'rgba(15,23,42,0.6)' : '#F1F5F9',
+                backgroundColor: darkMode ? '#1A1715' : '#F5F0E8',
                 borderRadius: '16px',
                 padding: '5px',
                 marginBottom: '22px',
-                border: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid #E2E8F0',
+                border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3',
                 boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.04)'
               }}>
                 <button
@@ -434,8 +434,8 @@ export default function PaymentModal({
                     padding: '10px 14px',
                     borderRadius: '12px',
                     border: 'none',
-                    backgroundColor: mode === 'topup-cash' ? (darkMode ? '#04265A' : '#FFFFFF') : 'transparent',
-                    color: mode === 'topup-cash' ? (darkMode ? '#FFFFFF' : '#04265A') : (darkMode ? '#94A3B8' : '#64748B'),
+                    backgroundColor: mode === 'topup-cash' ? (darkMode ? '#C67D5B' : '#FAF7F2') : 'transparent',
+                    color: mode === 'topup-cash' ? (darkMode ? '#FAF7F2' : '#A8644A') : (darkMode ? '#D4C5B5' : '#6B5E54'),
                     fontWeight: mode === 'topup-cash' ? '800' : '600',
                     fontSize: '13px',
                     cursor: 'pointer',
@@ -443,7 +443,7 @@ export default function PaymentModal({
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '6px',
-                    boxShadow: mode === 'topup-cash' ? '0 4px 12px rgba(4,38,90,0.15)' : 'none',
+                    boxShadow: mode === 'topup-cash' ? '0 4px 12px rgba(198,125,91,0.15)' : 'none',
                     transition: 'all 0.2s ease'
                   }}
                 >
@@ -462,8 +462,8 @@ export default function PaymentModal({
                     padding: '10px 14px',
                     borderRadius: '12px',
                     border: 'none',
-                    backgroundColor: (mode === 'troco-plus' || mode === 'pack-tokens') ? (darkMode ? '#D97706' : '#FFFFFF') : 'transparent',
-                    color: (mode === 'troco-plus' || mode === 'pack-tokens') ? (darkMode ? '#FFFFFF' : '#D97706') : (darkMode ? '#94A3B8' : '#64748B'),
+                    backgroundColor: (mode === 'troco-plus' || mode === 'pack-tokens') ? '#D97706' : 'transparent',
+                    color: (mode === 'troco-plus' || mode === 'pack-tokens') ? '#FFFFFF' : (darkMode ? '#D4C5B5' : '#6B5E54'),
                     fontWeight: (mode === 'troco-plus' || mode === 'pack-tokens') ? '800' : '600',
                     fontSize: '13px',
                     cursor: 'pointer',
@@ -487,47 +487,47 @@ export default function PaymentModal({
                 width: '72px',
                 height: '72px',
                 borderRadius: '50%',
-                backgroundColor: '#ECFDF5',
-                color: '#10B981',
+                backgroundColor: darkMode ? 'rgba(156,175,136,0.25)' : '#EBF0E6',
+                color: '#3D4A35',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 margin: '0 auto 16px',
-                border: '4px solid #D1FAE5',
+                border: '4px solid #9CAF88',
               }}>
                 <Check size={38} strokeWidth={3} />
               </div>
-              <h4 style={{ margin: '0 0 6px', fontSize: '20px', fontWeight: '800', color: darkMode ? '#FFFFFF' : '#0F172A' }}>
+              <h4 className="font-editorial-heading" style={{ margin: '0 0 6px', fontSize: '22px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
                 Paiement Validé avec Succès !
               </h4>
-              <p style={{ margin: '0 0 20px', fontSize: '13px', color: darkMode ? '#94A3B8' : '#64748B' }}>
+              <p style={{ margin: '0 0 20px', fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>
                 Votre transaction a été enregistrée et votre compte mis à jour instantanément.
               </p>
 
               <div style={{
-                backgroundColor: darkMode ? 'rgba(15,23,42,0.6)' : '#F8FAFC',
+                backgroundColor: darkMode ? '#1A1715' : '#FFF',
                 borderRadius: '16px',
                 padding: '16px',
-                border: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid #E2E8F0',
+                border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
                 textAlign: 'left',
                 marginBottom: '24px',
                 fontSize: '13px',
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ color: darkMode ? '#94A3B8' : '#64748B' }}>Référence :</span>
-                  <strong style={{ fontFamily: 'monospace', color: '#3B82F6' }}>{successDetails?.transactionId}</strong>
+                  <span style={{ color: darkMode ? '#D4C5B5' : '#6B5E54' }}>Référence :</span>
+                  <strong style={{ fontFamily: 'monospace', color: '#C67D5B' }}>{successDetails?.transactionId}</strong>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ color: darkMode ? '#94A3B8' : '#64748B' }}>Objet :</span>
+                  <span style={{ color: darkMode ? '#D4C5B5' : '#6B5E54' }}>Objet :</span>
                   <strong>{successDetails?.label}</strong>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ color: darkMode ? '#94A3B8' : '#64748B' }}>Moyen utilisé :</span>
+                  <span style={{ color: darkMode ? '#D4C5B5' : '#6B5E54' }}>Moyen utilisé :</span>
                   <span>{successDetails?.paymentMethod}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '8px', borderTop: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E2E8F0', fontSize: '15px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '8px', borderTop: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', fontSize: '15px' }}>
                   <span style={{ fontWeight: '800' }}>Total TTC débité :</span>
-                  <strong style={{ color: '#10B981', fontWeight: '800' }}>{successDetails?.amountTtc.toFixed(2)} €</strong>
+                  <strong style={{ color: '#7A8F6A', fontWeight: '800' }}>{successDetails?.amountTtc.toFixed(2)} €</strong>
                 </div>
               </div>
 
@@ -539,11 +539,12 @@ export default function PaymentModal({
                   padding: '14px',
                   borderRadius: '14px',
                   border: 'none',
-                  backgroundColor: '#04265A',
+                  background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)',
                   color: '#FFF',
                   fontWeight: '800',
                   fontSize: '14px',
                   cursor: 'pointer',
+                  boxShadow: '0 4px 14px rgba(198,125,91,0.25)'
                 }}
               >
                 Terminer & Retourner à Troco
@@ -554,7 +555,7 @@ export default function PaymentModal({
               {/* ÉTAPE 1 : SÉLECTION DE L'OFFRE / DU MONTANT */}
               {(mode === 'troco-plus' || mode === 'pack-tokens') && (
                 <div style={{ marginBottom: '22px' }}>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '800', marginBottom: '10px', color: darkMode ? '#E2E8F0' : '#334155' }}>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '800', marginBottom: '10px', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
                     1. Choisissez votre abonnement mensuel Troco Plus
                   </label>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -567,8 +568,8 @@ export default function PaymentModal({
                           style={{
                             padding: '16px',
                             borderRadius: '18px',
-                            border: isSelected ? '2px solid #F59E0B' : (darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E2E8F0'),
-                            backgroundColor: isSelected ? (darkMode ? 'rgba(245,158,11,0.14)' : '#FEF3C7') : (darkMode ? 'rgba(15,23,42,0.4)' : '#F8FAFC'),
+                            border: isSelected ? '2px solid #C67D5B' : (darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3'),
+                            backgroundColor: isSelected ? (darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4') : (darkMode ? '#1A1715' : '#FAF7F2'),
                             cursor: 'pointer',
                             position: 'relative',
                             transition: 'all 0.2s ease',
@@ -579,13 +580,13 @@ export default function PaymentModal({
                               position: 'absolute',
                               top: '-9px',
                               right: '16px',
-                              backgroundColor: '#F59E0B',
+                              backgroundColor: '#C67D5B',
                               color: '#FFF',
                               fontSize: '11px',
                               fontWeight: '800',
                               padding: '2px 8px',
                               borderRadius: '999px',
-                              boxShadow: '0 2px 6px rgba(245,158,11,0.35)'
+                              boxShadow: '0 2px 6px rgba(198,125,91,0.35)'
                             }}>
                               ⭐ Le plus populaire
                             </span>
@@ -594,33 +595,33 @@ export default function PaymentModal({
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
                             <div>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <strong style={{ fontSize: '16px', color: darkMode ? '#FFF' : '#111827' }}>{plan.title}</strong>
+                                <strong className="font-editorial-heading" style={{ fontSize: '17px', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{plan.title}</strong>
                                 <span style={{
                                   fontSize: '11px', fontWeight: '800', padding: '3px 8px', borderRadius: '999px',
-                                  backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : '#EFF6FF',
-                                  color: darkMode ? '#93C5FD' : '#04265A'
+                                  backgroundColor: darkMode ? 'rgba(198,125,91,0.25)' : '#F5EAE4',
+                                  color: darkMode ? '#FAF7F2' : '#A8644A'
                                 }}>
                                   {plan.badge}
                                 </span>
                               </div>
-                              <p style={{ margin: '4px 0 10px', fontSize: '12px', color: darkMode ? '#94A3B8' : '#64748B' }}>
+                              <p style={{ margin: '4px 0 10px', fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>
                                 {plan.desc}
                               </p>
                             </div>
                             <div style={{ textAlign: 'right' }}>
-                              <div style={{ fontSize: '20px', fontWeight: '900', color: isSelected ? '#D97706' : (darkMode ? '#60A5FA' : '#04265A') }}>
+                              <div style={{ fontSize: '20px', fontWeight: '900', color: isSelected ? '#C67D5B' : (darkMode ? '#FAF7F2' : '#3D3530') }}>
                                 {plan.price.toFixed(2)} €
                               </div>
-                              <div style={{ fontSize: '11px', color: darkMode ? '#94A3B8' : '#64748B', fontWeight: '600' }}>
+                              <div style={{ fontSize: '11px', color: darkMode ? '#D4C5B5' : '#6B5E54', fontWeight: '600' }}>
                                 {plan.period}
                               </div>
                             </div>
                           </div>
 
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', borderTop: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.06)', paddingTop: '10px' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', borderTop: darkMode ? '1px solid rgba(232,221,211,0.08)' : '1px solid #E8DDD3', paddingTop: '10px' }}>
                             {plan.features.map((feat, idx) => (
-                              <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: darkMode ? '#CBD5E1' : '#334155', fontWeight: '600' }}>
-                                <Check size={14} color="#10B981" />
+                              <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', fontWeight: '600' }}>
+                                <Check size={14} color="#9CAF88" />
                                 <span>{feat}</span>
                               </div>
                             ))}
@@ -629,7 +630,7 @@ export default function PaymentModal({
                       );
                     })}
                   </div>
-                  <div style={{ marginTop: '10px', padding: '8px 12px', borderRadius: '10px', backgroundColor: darkMode ? 'rgba(59,130,246,0.1)' : '#EFF6FF', color: darkMode ? '#93C5FD' : '#1D4ED8', fontSize: '11px', fontWeight: '700', textAlign: 'center' }}>
+                  <div style={{ marginTop: '10px', padding: '8px 12px', borderRadius: '10px', backgroundColor: darkMode ? 'rgba(198,125,91,0.15)' : '#F5EAE4', color: darkMode ? '#FAF7F2' : '#A8644A', fontSize: '11px', fontWeight: '700', textAlign: 'center' }}>
                     💡 Les abonnements Troco Plus sont renouvelés automatiquement chaque mois et résiliables à tout instant en un clic.
                   </div>
                 </div>
@@ -637,7 +638,7 @@ export default function PaymentModal({
 
               {mode === 'topup-cash' && (
                 <div style={{ marginBottom: '22px' }}>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '800', marginBottom: '10px', color: darkMode ? '#E2E8F0' : '#334155' }}>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '800', marginBottom: '10px', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
                     1. Choisissez le montant de votre recharge réelle (€)
                   </label>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginBottom: '12px' }}>
@@ -651,9 +652,9 @@ export default function PaymentModal({
                           style={{
                             padding: '14px 10px',
                             borderRadius: '14px',
-                            border: isSelected ? '2px solid #3B82F6' : (darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E2E8F0'),
-                            backgroundColor: isSelected ? (darkMode ? 'rgba(59,130,246,0.18)' : '#EFF6FF') : (darkMode ? 'rgba(15,23,42,0.4)' : '#F8FAFC'),
-                            color: isSelected ? (darkMode ? '#60A5FA' : '#04265A') : (darkMode ? '#FFF' : '#1E293B'),
+                            border: isSelected ? '2px solid #C67D5B' : (darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3'),
+                            backgroundColor: isSelected ? (darkMode ? 'rgba(198,125,91,0.25)' : '#F5EAE4') : (darkMode ? '#1A1715' : '#FAF7F2'),
+                            color: isSelected ? (darkMode ? '#FAF7F2' : '#A8644A') : (darkMode ? '#D4C5B5' : '#3D3530'),
                             fontWeight: '800',
                             fontSize: '16px',
                             cursor: 'pointer',
@@ -676,9 +677,9 @@ export default function PaymentModal({
                         width: '100%',
                         padding: '12px 14px',
                         borderRadius: '12px',
-                        border: customCashAmount ? '2px solid #3B82F6' : (darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #D1D5DB'),
-                        backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFF',
-                        color: darkMode ? '#FFF' : '#0F172A',
+                        border: customCashAmount ? '2px solid #C67D5B' : (darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3'),
+                        backgroundColor: darkMode ? '#1A1715' : '#FFF',
+                        color: darkMode ? '#FAF7F2' : '#3D3530',
                         fontSize: '14px',
                         outline: 'none',
                       }}
@@ -689,7 +690,7 @@ export default function PaymentModal({
 
               {mode === 'boost' && (
                 <div style={{ marginBottom: '22px' }}>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '800', marginBottom: '10px', color: darkMode ? '#E2E8F0' : '#334155' }}>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '800', marginBottom: '10px', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
                     1. Choisissez votre formule de visibilité
                   </label>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -703,8 +704,8 @@ export default function PaymentModal({
                           style={{
                             padding: '14px',
                             borderRadius: '16px',
-                            border: isSelected ? '2px solid #F59E0B' : (darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E2E8F0'),
-                            backgroundColor: isSelected ? (darkMode ? 'rgba(245,158,11,0.12)' : '#FFFBEB') : (darkMode ? 'rgba(15,23,42,0.4)' : '#F8FAFC'),
+                            border: isSelected ? '2px solid #C67D5B' : (darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3'),
+                            backgroundColor: isSelected ? (darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4') : (darkMode ? '#1A1715' : '#FAF7F2'),
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
@@ -716,8 +717,8 @@ export default function PaymentModal({
                               width: '36px',
                               height: '36px',
                               borderRadius: '10px',
-                              backgroundColor: isSelected ? '#F59E0B' : (darkMode ? 'rgba(255,255,255,0.1)' : '#E2E8F0'),
-                              color: isSelected ? '#FFF' : (darkMode ? '#CBD5E1' : '#64748B'),
+                              backgroundColor: isSelected ? '#C67D5B' : (darkMode ? '#3D3530' : '#E8DDD3'),
+                              color: isSelected ? '#FFF' : (darkMode ? '#D4C5B5' : '#6B5E54'),
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
@@ -725,11 +726,11 @@ export default function PaymentModal({
                               <IconComponent size={18} />
                             </div>
                             <div>
-                              <strong style={{ fontSize: '14px' }}>{b.title}</strong>
-                              <div style={{ fontSize: '11px', color: darkMode ? '#94A3B8' : '#64748B' }}>{b.desc}</div>
+                              <strong className="font-editorial-heading" style={{ fontSize: '15px' }}>{b.title}</strong>
+                              <div style={{ fontSize: '11px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>{b.desc}</div>
                             </div>
                           </div>
-                          <div style={{ fontSize: '16px', fontWeight: '800', color: isSelected ? '#D97706' : (darkMode ? '#FFF' : '#0F172A') }}>
+                          <div style={{ fontSize: '16px', fontWeight: '800', color: isSelected ? '#C67D5B' : (darkMode ? '#FAF7F2' : '#3D3530') }}>
                             {b.price.toFixed(2)} €
                           </div>
                         </div>
@@ -741,7 +742,7 @@ export default function PaymentModal({
 
               {/* ÉTAPE 2 : SÉLECTION DU MOYEN DE PAIEMENT */}
               <div style={{ marginBottom: '22px' }}>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '800', marginBottom: '10px', color: darkMode ? '#E2E8F0' : '#334155' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '800', marginBottom: '10px', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
                   2. Moyen de Paiement Sécurisé
                 </label>
                 <div style={{ display: 'grid', gridTemplateColumns: (mode === 'troco-plus' || mode === 'pack-tokens' || mode === 'topup-cash') ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: '10px' }}>
@@ -752,9 +753,9 @@ export default function PaymentModal({
                     style={{
                       padding: '12px 8px',
                       borderRadius: '14px',
-                      border: paymentMethod === 'applePay' ? '2px solid #000' : (darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E2E8F0'),
-                      backgroundColor: paymentMethod === 'applePay' ? (darkMode ? '#000' : '#000') : (darkMode ? 'rgba(15,23,42,0.4)' : '#F8FAFC'),
-                      color: paymentMethod === 'applePay' ? '#FFF' : (darkMode ? '#CBD5E1' : '#334155'),
+                      border: paymentMethod === 'applePay' ? '2px solid #3D3530' : (darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3'),
+                      backgroundColor: paymentMethod === 'applePay' ? '#3D3530' : (darkMode ? '#1A1715' : '#FAF7F2'),
+                      color: paymentMethod === 'applePay' ? '#FFF' : (darkMode ? '#D4C5B5' : '#6B5E54'),
                       fontWeight: '800',
                       fontSize: '13px',
                       cursor: 'pointer',
@@ -774,9 +775,9 @@ export default function PaymentModal({
                     style={{
                       padding: '12px 8px',
                       borderRadius: '14px',
-                      border: paymentMethod === 'card' ? '2px solid #3B82F6' : (darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E2E8F0'),
-                      backgroundColor: paymentMethod === 'card' ? (darkMode ? 'rgba(59,130,246,0.18)' : '#EFF6FF') : (darkMode ? 'rgba(15,23,42,0.4)' : '#F8FAFC'),
-                      color: paymentMethod === 'card' ? (darkMode ? '#60A5FA' : '#04265A') : (darkMode ? '#CBD5E1' : '#334155'),
+                      border: paymentMethod === 'card' ? '2px solid #C67D5B' : (darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3'),
+                      backgroundColor: paymentMethod === 'card' ? (darkMode ? 'rgba(198,125,91,0.25)' : '#F5EAE4') : (darkMode ? '#1A1715' : '#FAF7F2'),
+                      color: paymentMethod === 'card' ? (darkMode ? '#FAF7F2' : '#A8644A') : (darkMode ? '#D4C5B5' : '#6B5E54'),
                       fontWeight: '800',
                       fontSize: '13px',
                       cursor: 'pointer',
@@ -798,9 +799,9 @@ export default function PaymentModal({
                       style={{
                         padding: '12px 8px',
                         borderRadius: '14px',
-                        border: paymentMethod === 'wallet' ? '2px solid #10B981' : (darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E2E8F0'),
-                        backgroundColor: paymentMethod === 'wallet' ? (darkMode ? 'rgba(16,185,129,0.18)' : '#ECFDF5') : (darkMode ? 'rgba(15,23,42,0.4)' : '#F8FAFC'),
-                        color: paymentMethod === 'wallet' ? '#10B981' : (darkMode ? '#CBD5E1' : '#334155'),
+                        border: paymentMethod === 'wallet' ? '2px solid #9CAF88' : (darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3'),
+                        backgroundColor: paymentMethod === 'wallet' ? (darkMode ? 'rgba(156,175,136,0.25)' : '#EBF0E6') : (darkMode ? '#1A1715' : '#FAF7F2'),
+                        color: paymentMethod === 'wallet' ? '#3D4A35' : (darkMode ? '#D4C5B5' : '#6B5E54'),
                         fontWeight: '800',
                         fontSize: '13px',
                         cursor: (currentUser?.euroBalance || 0) < amountToPay ? 'not-allowed' : 'pointer',
@@ -820,10 +821,10 @@ export default function PaymentModal({
               {/* FORMULAIRE CARTE BANCAIRE INTERACTIF */}
               {paymentMethod === 'card' && (
                 <div style={{
-                  backgroundColor: darkMode ? 'rgba(15,23,42,0.6)' : '#F8FAFC',
+                  backgroundColor: darkMode ? '#1A1715' : '#FFF',
                   borderRadius: '18px',
                   padding: '18px',
-                  border: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E2E8F0',
+                  border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
                   marginBottom: '22px',
                 }}>
                   {/* APERÇU VISUEL DE LA CARTE */}
@@ -834,9 +835,9 @@ export default function PaymentModal({
                       ? 'linear-gradient(135deg, #EB001B, #F79E1B)'
                       : cardBrand === 'amex'
                         ? 'linear-gradient(135deg, #0077A6, #00A3E0)'
-                        : 'linear-gradient(135deg, #04265A, #1E40AF)',
+                        : 'linear-gradient(135deg, #C67D5B, #3D3530)',
                     color: '#FFF',
-                    boxShadow: '0 10px 20px -5px rgba(4,38,90,0.4)',
+                    boxShadow: '0 10px 20px -5px rgba(61,53,48,0.4)',
                     marginBottom: '16px',
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
@@ -866,7 +867,7 @@ export default function PaymentModal({
                   {/* CHAMPS DE SAISIE */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: darkMode ? '#CBD5E1' : '#475569', marginBottom: '4px' }}>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: darkMode ? '#D4C5B5' : '#6B5E54', marginBottom: '4px' }}>
                         Numéro de carte
                       </label>
                       <input
@@ -879,9 +880,9 @@ export default function PaymentModal({
                           width: '100%',
                           padding: '10px 12px',
                           borderRadius: '10px',
-                          border: formErrors.cardNumber ? '1px solid #EF4444' : (darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #D1D5DB'),
-                          backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFF',
-                          color: darkMode ? '#FFF' : '#0F172A',
+                          border: formErrors.cardNumber ? '1px solid #EF4444' : (darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3'),
+                          backgroundColor: darkMode ? '#231E1B' : '#FFF',
+                          color: darkMode ? '#FAF7F2' : '#3D3530',
                           fontSize: '14px',
                           outline: 'none',
                         }}
@@ -890,7 +891,7 @@ export default function PaymentModal({
                     </div>
 
                     <div>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: darkMode ? '#CBD5E1' : '#475569', marginBottom: '4px' }}>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: darkMode ? '#D4C5B5' : '#6B5E54', marginBottom: '4px' }}>
                         Nom sur la carte
                       </label>
                       <input
@@ -902,9 +903,9 @@ export default function PaymentModal({
                           width: '100%',
                           padding: '10px 12px',
                           borderRadius: '10px',
-                          border: formErrors.cardHolder ? '1px solid #EF4444' : (darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #D1D5DB'),
-                          backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFF',
-                          color: darkMode ? '#FFF' : '#0F172A',
+                          border: formErrors.cardHolder ? '1px solid #EF4444' : (darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3'),
+                          backgroundColor: darkMode ? '#231E1B' : '#FFF',
+                          color: darkMode ? '#FAF7F2' : '#3D3530',
                           fontSize: '14px',
                           outline: 'none',
                         }}
@@ -913,7 +914,7 @@ export default function PaymentModal({
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                       <div>
-                        <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: darkMode ? '#CBD5E1' : '#475569', marginBottom: '4px' }}>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: darkMode ? '#D4C5B5' : '#6B5E54', marginBottom: '4px' }}>
                           Expiration (MM/AA)
                         </label>
                         <input
@@ -926,9 +927,9 @@ export default function PaymentModal({
                             width: '100%',
                             padding: '10px 12px',
                             borderRadius: '10px',
-                            border: formErrors.cardExpiry ? '1px solid #EF4444' : (darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #D1D5DB'),
-                            backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFF',
-                            color: darkMode ? '#FFF' : '#0F172A',
+                            border: formErrors.cardExpiry ? '1px solid #EF4444' : (darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3'),
+                            backgroundColor: darkMode ? '#231E1B' : '#FFF',
+                            color: darkMode ? '#FAF7F2' : '#3D3530',
                             fontSize: '14px',
                             outline: 'none',
                           }}
@@ -936,7 +937,7 @@ export default function PaymentModal({
                         {formErrors.cardExpiry && <span style={{ fontSize: '11px', color: '#EF4444' }}>{formErrors.cardExpiry}</span>}
                       </div>
                       <div>
-                        <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: darkMode ? '#CBD5E1' : '#475569', marginBottom: '4px' }}>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: darkMode ? '#D4C5B5' : '#6B5E54', marginBottom: '4px' }}>
                           CVC / CVV
                         </label>
                         <input
@@ -949,9 +950,9 @@ export default function PaymentModal({
                             width: '100%',
                             padding: '10px 12px',
                             borderRadius: '10px',
-                            border: formErrors.cardCvc ? '1px solid #EF4444' : (darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #D1D5DB'),
-                            backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFF',
-                            color: darkMode ? '#FFF' : '#0F172A',
+                            border: formErrors.cardCvc ? '1px solid #EF4444' : (darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3'),
+                            backgroundColor: darkMode ? '#231E1B' : '#FFF',
+                            color: darkMode ? '#FAF7F2' : '#3D3530',
                             fontSize: '14px',
                             outline: 'none',
                           }}
@@ -967,19 +968,20 @@ export default function PaymentModal({
               <div style={{
                 padding: '16px',
                 borderRadius: '16px',
-                backgroundColor: darkMode ? 'rgba(15,23,42,0.4)' : '#F1F5F9',
+                backgroundColor: darkMode ? '#1A1715' : '#F5F0E8',
+                border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 marginBottom: '16px',
               }}>
                 <div>
-                  <div style={{ fontSize: '11px', color: darkMode ? '#94A3B8' : '#64748B' }}>Montant total TTC</div>
-                  <div style={{ fontSize: '22px', fontWeight: '800', color: darkMode ? '#60A5FA' : '#04265A' }}>
+                  <div style={{ fontSize: '11px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>Montant total TTC</div>
+                  <div style={{ fontSize: '22px', fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
                     {amountToPay.toFixed(2)} €
                   </div>
                 </div>
-                <div style={{ fontSize: '11px', color: darkMode ? '#94A3B8' : '#64748B', textAlign: 'right' }}>
+                <div style={{ fontSize: '11px', color: darkMode ? '#D4C5B5' : '#6B5E54', textAlign: 'right' }}>
                   Dont TVA 20% : {(amountToPay * 0.20 / 1.20).toFixed(2)} €
                 </div>
               </div>
@@ -994,7 +996,7 @@ export default function PaymentModal({
                   padding: '16px',
                   borderRadius: '16px',
                   border: 'none',
-                  backgroundColor: paymentMethod === 'applePay' ? '#000' : '#04265A',
+                  background: paymentMethod === 'applePay' ? '#3D3530' : 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)',
                   color: '#FFF',
                   fontWeight: '800',
                   fontSize: '15px',
@@ -1003,7 +1005,7 @@ export default function PaymentModal({
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '8px',
-                  boxShadow: '0 10px 25px -5px rgba(4,38,90,0.3)',
+                  boxShadow: '0 10px 25px -5px rgba(198,125,91,0.3)',
                   transition: 'all 0.2s ease',
                   opacity: (isProcessing || amountToPay <= 0) ? 0.7 : 1,
                 }}
@@ -1031,7 +1033,7 @@ export default function PaymentModal({
             position: 'absolute',
             inset: 0,
             zIndex: 4100,
-            backgroundColor: 'rgba(15, 23, 42, 0.85)',
+            backgroundColor: 'rgba(61, 53, 48, 0.8)',
             backdropFilter: 'blur(8px)',
             borderRadius: '24px',
             display: 'flex',
@@ -1041,21 +1043,21 @@ export default function PaymentModal({
             animation: 'fadeIn 0.2s ease-out',
           }}>
             <div style={{
-              backgroundColor: darkMode ? '#1E293B' : '#FFFFFF',
+              backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
               borderRadius: '20px',
               padding: '24px',
               width: '100%',
               maxWidth: '380px',
               textAlign: 'center',
-              border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #E2E8F0',
-              boxShadow: '0 20px 40px rgba(0,0,0,0.4)',
+              border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
+              boxShadow: '0 20px 40px rgba(61,53,48,0.4)',
             }}>
               <div style={{
                 width: '48px',
                 height: '48px',
                 borderRadius: '50%',
-                backgroundColor: '#EFF6FF',
-                color: '#3B82F6',
+                backgroundColor: darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4',
+                color: '#C67D5B',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -1063,10 +1065,10 @@ export default function PaymentModal({
               }}>
                 <ShieldCheck size={26} />
               </div>
-              <h4 style={{ margin: '0 0 6px', fontSize: '17px', fontWeight: '800' }}>
+              <h4 className="font-editorial-heading" style={{ margin: '0 0 6px', fontSize: '19px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
                 Authentification 3D Secure
               </h4>
-              <p style={{ margin: '0 0 16px', fontSize: '12px', color: darkMode ? '#94A3B8' : '#64748B', lineHeight: 1.5 }}>
+              <p style={{ margin: '0 0 16px', fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', lineHeight: 1.5 }}>
                 Votre banque demande une confirmation pour le paiement de <strong>{amountToPay.toFixed(2)} €</strong>.
               </p>
 
@@ -1085,9 +1087,9 @@ export default function PaymentModal({
                     fontSize: '20px',
                     letterSpacing: '8px',
                     borderRadius: '12px',
-                    border: otpError ? '2px solid #EF4444' : (darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #CBD5E1'),
-                    backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#F8FAFC',
-                    color: darkMode ? '#FFF' : '#0F172A',
+                    border: otpError ? '2px solid #EF4444' : (darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #E8DDD3'),
+                    backgroundColor: darkMode ? '#1A1715' : '#FFF',
+                    color: darkMode ? '#FAF7F2' : '#3D3530',
                     outline: 'none',
                   }}
                 />
@@ -1102,9 +1104,9 @@ export default function PaymentModal({
                     flex: 1,
                     padding: '12px',
                     borderRadius: '12px',
-                    border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #CBD5E1',
+                    border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
                     backgroundColor: 'transparent',
-                    color: darkMode ? '#CBD5E1' : '#64748B',
+                    color: darkMode ? '#D4C5B5' : '#6B5E54',
                     fontWeight: '700',
                     fontSize: '13px',
                     cursor: 'pointer',
@@ -1121,7 +1123,7 @@ export default function PaymentModal({
                     padding: '12px',
                     borderRadius: '12px',
                     border: 'none',
-                    backgroundColor: '#04265A',
+                    background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)',
                     color: '#FFF',
                     fontWeight: '800',
                     fontSize: '13px',

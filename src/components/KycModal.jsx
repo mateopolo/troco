@@ -51,7 +51,6 @@ export default function KycModal({ isOpen, onClose, onComplete, profile, darkMod
   };
 
   const handleSimulateSelfie = () => {
-    // If user doesn't upload a real file, we use their profile avatar or a sample selfie
     const sampleSelfie = profile?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80';
     setSelfiePreview(sampleSelfie);
   };
@@ -94,7 +93,7 @@ export default function KycModal({ isOpen, onClose, onComplete, profile, darkMod
         left: 0,
         right: 0,
         bottom: 0,
-        backgroundColor: 'rgba(15, 23, 42, 0.75)',
+        backgroundColor: 'rgba(61, 53, 48, 0.72)',
         backdropFilter: 'blur(10px)',
         WebkitBackdropFilter: 'blur(10px)',
         display: 'flex',
@@ -108,15 +107,15 @@ export default function KycModal({ isOpen, onClose, onComplete, profile, darkMod
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          backgroundColor: darkMode ? '#1E293B' : '#FFFFFF',
-          color: darkMode ? '#F8FAFC' : '#0F172A',
+          backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
+          color: darkMode ? '#FAF7F2' : '#3D3530',
           borderRadius: '28px',
           maxWidth: '520px',
           width: '100%',
           maxHeight: '90vh',
           overflowY: 'auto',
-          boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.4)',
-          border: darkMode ? '1px solid rgba(255, 255, 255, 0.12)' : '1px solid rgba(226, 232, 240, 0.9)',
+          boxShadow: '0 25px 60px -15px rgba(61, 53, 48, 0.4)',
+          border: darkMode ? '1px solid rgba(232, 221, 211, 0.15)' : '1px solid #E8DDD3',
           position: 'relative',
           display: 'flex',
           flexDirection: 'column'
@@ -125,7 +124,7 @@ export default function KycModal({ isOpen, onClose, onComplete, profile, darkMod
         {/* EN-TÊTE MODALE */}
         <div style={{
           padding: '24px 24px 16px',
-          borderBottom: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid #F1F5F9',
+          borderBottom: darkMode ? '1px solid rgba(232,221,211,0.08)' : '1px solid #E8DDD3',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between'
@@ -135,20 +134,20 @@ export default function KycModal({ isOpen, onClose, onComplete, profile, darkMod
               width: '42px',
               height: '42px',
               borderRadius: '14px',
-              background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+              background: 'linear-gradient(135deg, #9CAF88 0%, #7A8F6A 100%)',
               color: '#FFF',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 4px 14px rgba(16,185,129,0.35)'
+              boxShadow: '0 4px 14px rgba(156,175,136,0.35)'
             }}>
               <ShieldCheck size={24} />
             </div>
             <div>
-              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: darkMode ? '#FFF' : '#0F172A' }}>
+              <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
                 Vérification d'Identité (KYC)
               </h3>
-              <span style={{ fontSize: '12px', color: darkMode ? '#94A3B8' : '#64748B', fontWeight: '500' }}>
+              <span style={{ fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', fontWeight: '500' }}>
                 Échanges 100% sécurisés & Badge Vérifié ✅
               </span>
             </div>
@@ -161,8 +160,8 @@ export default function KycModal({ isOpen, onClose, onComplete, profile, darkMod
               height: '32px',
               borderRadius: '50%',
               border: 'none',
-              backgroundColor: darkMode ? 'rgba(255,255,255,0.08)' : '#F1F5F9',
-              color: darkMode ? '#CBD5E1' : '#64748B',
+              backgroundColor: darkMode ? 'rgba(232,221,211,0.1)' : '#F5EAE4',
+              color: darkMode ? '#FAF7F2' : '#3D3530',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
@@ -177,9 +176,9 @@ export default function KycModal({ isOpen, onClose, onComplete, profile, darkMod
         <div style={{
           display: 'flex',
           padding: '12px 24px',
-          backgroundColor: darkMode ? 'rgba(15,23,42,0.4)' : '#F8FAFC',
+          backgroundColor: darkMode ? '#1A1715' : '#F5F0E8',
           gap: '8px',
-          borderBottom: darkMode ? '1px solid rgba(255,255,255,0.05)' : '1px solid #F1F5F9'
+          borderBottom: darkMode ? '1px solid rgba(232,221,211,0.08)' : '1px solid #E8DDD3'
         }}>
           {[
             { num: 1, label: 'Pièce d’identité' },
@@ -203,7 +202,7 @@ export default function KycModal({ isOpen, onClose, onComplete, profile, darkMod
                   width: '24px',
                   height: '24px',
                   borderRadius: '50%',
-                  backgroundColor: isDone ? '#10B981' : (isActive ? '#04265A' : (darkMode ? '#334155' : '#CBD5E1')),
+                  backgroundColor: isDone ? '#9CAF88' : (isActive ? '#C67D5B' : (darkMode ? '#3D3530' : '#E8DDD3')),
                   color: '#FFF',
                   fontSize: '11px',
                   fontWeight: '800',
@@ -216,7 +215,7 @@ export default function KycModal({ isOpen, onClose, onComplete, profile, darkMod
                 <span style={{
                   fontSize: '11px',
                   fontWeight: isActive ? '800' : '600',
-                  color: isActive ? (darkMode ? '#60A5FA' : '#04265A') : (darkMode ? '#94A3B8' : '#64748B'),
+                  color: isActive ? '#C67D5B' : (darkMode ? '#D4C5B5' : '#6B5E54'),
                   whiteSpace: 'nowrap'
                 }}>
                   {s.label}
@@ -233,7 +232,7 @@ export default function KycModal({ isOpen, onClose, onComplete, profile, darkMod
           {step === 1 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
-                <label style={{ fontSize: '13px', fontWeight: '800', color: darkMode ? '#FFF' : '#111827', display: 'block', marginBottom: '8px' }}>
+                <label style={{ fontSize: '13px', fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530', display: 'block', marginBottom: '8px' }}>
                   1. Sélectionne ton type de pièce d'identité
                 </label>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
@@ -250,14 +249,14 @@ export default function KycModal({ isOpen, onClose, onComplete, profile, darkMod
                         padding: '12px 8px',
                         borderRadius: '16px',
                         border: docType === item.id
-                          ? (darkMode ? '2px solid #60A5FA' : '2px solid #04265A')
-                          : (darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E2E8F0'),
+                          ? '1.5px solid #C67D5B'
+                          : (darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3'),
                         backgroundColor: docType === item.id
-                          ? (darkMode ? 'rgba(4,38,90,0.5)' : '#EFF6FF')
-                          : (darkMode ? 'rgba(15,23,42,0.4)' : '#FFF'),
+                          ? (darkMode ? 'rgba(198,125,91,0.25)' : '#F5EAE4')
+                          : (darkMode ? '#1A1715' : '#FFF'),
                         color: docType === item.id
-                          ? (darkMode ? '#93C5FD' : '#04265A')
-                          : (darkMode ? '#CBD5E1' : '#475569'),
+                          ? (darkMode ? '#FAF7F2' : '#A8644A')
+                          : (darkMode ? '#D4C5B5' : '#6B5E54'),
                         cursor: 'pointer',
                         textAlign: 'center',
                         display: 'flex',
@@ -276,7 +275,7 @@ export default function KycModal({ isOpen, onClose, onComplete, profile, darkMod
 
               {/* ZONE D'UPLOAD / PHOTO */}
               <div>
-                <label style={{ fontSize: '13px', fontWeight: '800', color: darkMode ? '#FFF' : '#111827', display: 'block', marginBottom: '8px' }}>
+                <label style={{ fontSize: '13px', fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530', display: 'block', marginBottom: '8px' }}>
                   2. Photo nette du recto de ta pièce
                 </label>
                 <input
@@ -292,7 +291,7 @@ export default function KycModal({ isOpen, onClose, onComplete, profile, darkMod
                     position: 'relative',
                     borderRadius: '18px',
                     overflow: 'hidden',
-                    border: darkMode ? '1.5px solid rgba(255,255,255,0.15)' : '1.5px solid #CBD5E1',
+                    border: darkMode ? '1.5px solid rgba(232,221,211,0.15)' : '1.5px solid #E8DDD3',
                     maxHeight: '180px'
                   }}>
                     <img
@@ -310,7 +309,7 @@ export default function KycModal({ isOpen, onClose, onComplete, profile, darkMod
                         padding: '6px 12px',
                         borderRadius: '999px',
                         border: 'none',
-                        backgroundColor: 'rgba(0,0,0,0.7)',
+                        backgroundColor: 'rgba(61,53,48,0.75)',
                         color: '#FFF',
                         fontSize: '11px',
                         fontWeight: '700',
@@ -327,12 +326,12 @@ export default function KycModal({ isOpen, onClose, onComplete, profile, darkMod
                   <div
                     onClick={() => fileInputRef.current?.click()}
                     style={{
-                      border: darkMode ? '2px dashed rgba(255,255,255,0.2)' : '2px dashed #CBD5E1',
+                      border: darkMode ? '2px dashed rgba(232,221,211,0.2)' : '2px dashed #E8DDD3',
                       borderRadius: '18px',
                       padding: '30px 20px',
                       textAlign: 'center',
                       cursor: 'pointer',
-                      backgroundColor: darkMode ? 'rgba(15,23,42,0.3)' : '#F8FAFC',
+                      backgroundColor: darkMode ? '#1A1715' : '#F5F0E8',
                       transition: 'all 0.2s ease',
                       display: 'flex',
                       flexDirection: 'column',
@@ -344,18 +343,18 @@ export default function KycModal({ isOpen, onClose, onComplete, profile, darkMod
                       width: '48px',
                       height: '48px',
                       borderRadius: '50%',
-                      backgroundColor: darkMode ? 'rgba(4,38,90,0.5)' : '#EFF6FF',
-                      color: darkMode ? '#93C5FD' : '#04265A',
+                      backgroundColor: darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4',
+                      color: '#C67D5B',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center'
                     }}>
                       <Upload size={22} />
                     </div>
-                    <span style={{ fontSize: '13px', fontWeight: '700', color: darkMode ? '#FFF' : '#111827' }}>
+                    <span style={{ fontSize: '13px', fontWeight: '700', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
                       Clique pour importer ta pièce d'identité
                     </span>
-                    <span style={{ fontSize: '11px', color: darkMode ? '#94A3B8' : '#64748B' }}>
+                    <span style={{ fontSize: '11px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>
                       JPG, PNG ou PDF lisible (max 10 Mo)
                     </span>
                   </div>
@@ -369,8 +368,8 @@ export default function KycModal({ isOpen, onClose, onComplete, profile, darkMod
                 gap: '8px',
                 padding: '10px 14px',
                 borderRadius: '12px',
-                backgroundColor: darkMode ? 'rgba(16,185,129,0.1)' : '#ECFDF5',
-                color: darkMode ? '#6EE7B7' : '#065F46',
+                backgroundColor: darkMode ? 'rgba(156,175,136,0.2)' : '#EBF0E6',
+                color: '#3D4A35',
                 fontSize: '11px',
                 fontWeight: '600'
               }}>
@@ -388,14 +387,15 @@ export default function KycModal({ isOpen, onClose, onComplete, profile, darkMod
                     padding: '12px 24px',
                     borderRadius: '14px',
                     border: 'none',
-                    backgroundColor: docPreview ? '#04265A' : (darkMode ? '#334155' : '#CBD5E1'),
+                    background: docPreview ? 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)' : (darkMode ? '#3D3530' : '#E8DDD3'),
                     color: '#FFF',
                     fontWeight: '800',
                     fontSize: '13px',
                     cursor: docPreview ? 'pointer' : 'not-allowed',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '8px'
+                    gap: '8px',
+                    boxShadow: docPreview ? '0 4px 14px rgba(198,125,91,0.25)' : 'none'
                   }}
                 >
                   Continuer vers le Selfie <ChevronRight size={16} />
@@ -408,10 +408,10 @@ export default function KycModal({ isOpen, onClose, onComplete, profile, darkMod
           {step === 2 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div>
-                <h4 style={{ margin: '0 0 6px 0', fontSize: '15px', fontWeight: '800', color: darkMode ? '#FFF' : '#111827' }}>
+                <h4 className="font-editorial-heading" style={{ margin: '0 0 6px 0', fontSize: '18px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
                   Selfie de vérification en direct
                 </h4>
-                <p style={{ margin: 0, fontSize: '12px', color: darkMode ? '#94A3B8' : '#64748B', lineHeight: 1.5 }}>
+                <p style={{ margin: 0, fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', lineHeight: 1.5 }}>
                   Positionne ton visage dans le cadre pour prouver que tu es bien le titulaire du document.
                 </p>
               </div>
@@ -429,12 +429,12 @@ export default function KycModal({ isOpen, onClose, onComplete, profile, darkMod
                 position: 'relative',
                 borderRadius: '24px',
                 height: '240px',
-                backgroundColor: '#0F172A',
+                backgroundColor: '#1A1715',
                 overflow: 'hidden',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                border: darkMode ? '2px solid rgba(255,255,255,0.2)' : '2px solid #04265A'
+                border: darkMode ? '2px solid rgba(232,221,211,0.2)' : '2px solid #E8DDD3'
               }}>
                 {selfiePreview ? (
                   <>
@@ -443,14 +443,14 @@ export default function KycModal({ isOpen, onClose, onComplete, profile, darkMod
                       alt="Selfie preview"
                       style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     />
-                    {/* CADRE BIOMÉTRIQUE VERT */}
+                    {/* CADRE BIOMÉTRIQUE SAGE */}
                     <div style={{
                       position: 'absolute',
                       width: '150px',
                       height: '190px',
                       borderRadius: '999px',
-                      border: '3px solid #10B981',
-                      boxShadow: '0 0 20px rgba(16,185,129,0.5)',
+                      border: '3px solid #9CAF88',
+                      boxShadow: '0 0 20px rgba(156,175,136,0.5)',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center'
@@ -458,7 +458,7 @@ export default function KycModal({ isOpen, onClose, onComplete, profile, darkMod
                       <div style={{
                         position: 'absolute',
                         bottom: '-12px',
-                        backgroundColor: '#10B981',
+                        backgroundColor: '#9CAF88',
                         color: '#FFF',
                         padding: '2px 10px',
                         borderRadius: '999px',
@@ -475,7 +475,7 @@ export default function KycModal({ isOpen, onClose, onComplete, profile, darkMod
                     flexDirection: 'column',
                     alignItems: 'center',
                     gap: '12px',
-                    color: '#FFF',
+                    color: '#FAF7F2',
                     padding: '20px',
                     textAlign: 'center'
                   }}>
@@ -483,15 +483,15 @@ export default function KycModal({ isOpen, onClose, onComplete, profile, darkMod
                       width: '140px',
                       height: '170px',
                       borderRadius: '999px',
-                      border: '2px dashed #38BDF8',
+                      border: '2px dashed #C67D5B',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      backgroundColor: 'rgba(56,189,248,0.05)'
+                      backgroundColor: 'rgba(198,125,91,0.1)'
                     }}>
-                      <Camera size={36} color="#38BDF8" />
+                      <Camera size={36} color="#C67D5B" />
                     </div>
-                    <span style={{ fontSize: '12px', color: '#94A3B8' }}>
+                    <span style={{ fontSize: '12px', color: '#D4C5B5' }}>
                       Prends un selfie ou utilise la caméra
                     </span>
                   </div>
@@ -507,9 +507,9 @@ export default function KycModal({ isOpen, onClose, onComplete, profile, darkMod
                     flex: 1,
                     padding: '12px',
                     borderRadius: '14px',
-                    border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #CBD5E1',
-                    backgroundColor: darkMode ? 'rgba(255,255,255,0.05)' : '#F8FAFC',
-                    color: darkMode ? '#FFF' : '#111827',
+                    border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
+                    backgroundColor: darkMode ? '#1A1715' : '#F5F0E8',
+                    color: darkMode ? '#FAF7F2' : '#3D3530',
                     fontWeight: '700',
                     fontSize: '12px',
                     cursor: 'pointer',
@@ -528,8 +528,8 @@ export default function KycModal({ isOpen, onClose, onComplete, profile, darkMod
                     padding: '12px 16px',
                     borderRadius: '14px',
                     border: 'none',
-                    backgroundColor: darkMode ? 'rgba(4,38,90,0.6)' : '#EFF6FF',
-                    color: darkMode ? '#93C5FD' : '#04265A',
+                    backgroundColor: darkMode ? 'rgba(198,125,91,0.25)' : '#F5EAE4',
+                    color: darkMode ? '#FAF7F2' : '#A8644A',
                     fontWeight: '800',
                     fontSize: '12px',
                     cursor: 'pointer'
@@ -548,7 +548,7 @@ export default function KycModal({ isOpen, onClose, onComplete, profile, darkMod
                     borderRadius: '12px',
                     border: 'none',
                     backgroundColor: 'transparent',
-                    color: darkMode ? '#94A3B8' : '#64748B',
+                    color: darkMode ? '#D4C5B5' : '#6B5E54',
                     fontWeight: '700',
                     fontSize: '13px',
                     cursor: 'pointer'
@@ -565,7 +565,7 @@ export default function KycModal({ isOpen, onClose, onComplete, profile, darkMod
                     padding: '12px 24px',
                     borderRadius: '14px',
                     border: 'none',
-                    backgroundColor: selfiePreview ? '#10B981' : (darkMode ? '#334155' : '#CBD5E1'),
+                    background: selfiePreview ? 'linear-gradient(135deg, #9CAF88 0%, #7A8F6A 100%)' : (darkMode ? '#3D3530' : '#E8DDD3'),
                     color: '#FFF',
                     fontWeight: '800',
                     fontSize: '13px',
@@ -573,7 +573,7 @@ export default function KycModal({ isOpen, onClose, onComplete, profile, darkMod
                     display: 'flex',
                     alignItems: 'center',
                     gap: '8px',
-                    boxShadow: selfiePreview ? '0 4px 14px rgba(16,185,129,0.3)' : 'none'
+                    boxShadow: selfiePreview ? '0 4px 14px rgba(156,175,136,0.3)' : 'none'
                   }}
                 >
                   Lancer l'analyse biométrique <Sparkles size={16} />
@@ -591,44 +591,44 @@ export default function KycModal({ isOpen, onClose, onComplete, profile, darkMod
                     width: '80px',
                     height: '80px',
                     borderRadius: '50%',
-                    border: '4px solid #38BDF8',
+                    border: '4px solid #C67D5B',
                     borderTopColor: 'transparent',
                     animation: 'spin 1s linear infinite',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center'
                   }}>
-                    <Sparkles size={32} color="#38BDF8" />
+                    <Sparkles size={32} color="#C67D5B" />
                   </div>
 
                   <div>
-                    <h4 style={{ margin: '0 0 6px 0', fontSize: '18px', fontWeight: '800', color: darkMode ? '#FFF' : '#111827' }}>
+                    <h4 className="font-editorial-heading" style={{ margin: '0 0 6px 0', fontSize: '20px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
                       Analyse de conformité en cours...
                     </h4>
-                    <p style={{ margin: 0, fontSize: '13px', color: darkMode ? '#94A3B8' : '#64748B' }}>
+                    <p style={{ margin: 0, fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>
                       Vérification holographique et matching biométrique instantané
                     </p>
                   </div>
 
                   {/* BARRE DE PROGRESSION */}
-                  <div style={{ width: '100%', height: '8px', borderRadius: '999px', backgroundColor: darkMode ? '#334155' : '#E2E8F0', overflow: 'hidden' }}>
+                  <div style={{ width: '100%', height: '8px', borderRadius: '999px', backgroundColor: darkMode ? '#3D3530' : '#E8DDD3', overflow: 'hidden' }}>
                     <div style={{
                       width: `${scanProgress}%`,
                       height: '100%',
                       borderRadius: '999px',
-                      background: 'linear-gradient(90deg, #38BDF8 0%, #10B981 100%)',
+                      background: 'linear-gradient(90deg, #C67D5B 0%, #9CAF88 100%)',
                       transition: 'width 0.4s ease'
                     }} />
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', width: '100%', textAlign: 'left', fontSize: '12px', fontWeight: '600' }}>
-                    <div style={{ color: scanProgress >= 30 ? '#10B981' : '#94A3B8', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ color: scanProgress >= 30 ? '#7A8F6A' : '#9A8E84', display: 'flex', alignItems: 'center', gap: '6px' }}>
                       {scanProgress >= 30 ? '✓' : '•'} Détection des sécurités du document ({docType.toUpperCase()})
                     </div>
-                    <div style={{ color: scanProgress >= 70 ? '#10B981' : '#94A3B8', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ color: scanProgress >= 70 ? '#7A8F6A' : '#9A8E84', display: 'flex', alignItems: 'center', gap: '6px' }}>
                       {scanProgress >= 70 ? '✓' : '•'} Correspondance faciale et test de vivacité (Liveness)
                     </div>
-                    <div style={{ color: scanProgress >= 100 ? '#10B981' : '#94A3B8', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <div style={{ color: scanProgress >= 100 ? '#7A8F6A' : '#9A8E84', display: 'flex', alignItems: 'center', gap: '6px' }}>
                       {scanProgress >= 100 ? '✓' : '•'} Attribution du badge Officiel Troco
                     </div>
                   </div>
@@ -639,12 +639,12 @@ export default function KycModal({ isOpen, onClose, onComplete, profile, darkMod
                     width: '76px',
                     height: '76px',
                     borderRadius: '50%',
-                    backgroundColor: '#10B981',
+                    background: 'linear-gradient(135deg, #9CAF88 0%, #7A8F6A 100%)',
                     color: '#FFF',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    boxShadow: '0 10px 25px rgba(16,185,129,0.4)',
+                    boxShadow: '0 10px 25px rgba(156,175,136,0.4)',
                     animation: 'scaleIn 0.3s ease-out'
                   }}>
                     <CheckCircle2 size={44} />
@@ -655,8 +655,8 @@ export default function KycModal({ isOpen, onClose, onComplete, profile, darkMod
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '4px',
-                      backgroundColor: darkMode ? 'rgba(16,185,129,0.2)' : '#D1FAE5',
-                      color: '#10B981',
+                      backgroundColor: darkMode ? 'rgba(156,175,136,0.25)' : '#EBF0E6',
+                      color: '#3D4A35',
                       padding: '4px 12px',
                       borderRadius: '999px',
                       fontSize: '11px',
@@ -665,10 +665,10 @@ export default function KycModal({ isOpen, onClose, onComplete, profile, darkMod
                     }}>
                       <ShieldCheck size={14} /> IDENTITÉ 100% VÉRIFIÉE
                     </span>
-                    <h3 style={{ margin: '0 0 8px 0', fontSize: '22px', fontWeight: '900', color: darkMode ? '#FFF' : '#111827' }}>
+                    <h3 className="font-editorial-heading" style={{ margin: '0 0 8px 0', fontSize: '24px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
                       Félicitations {profile?.name || ''} !
                     </h3>
-                    <p style={{ margin: 0, fontSize: '13px', color: darkMode ? '#CBD5E1' : '#475569', lineHeight: 1.6 }}>
+                    <p style={{ margin: 0, fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54', lineHeight: 1.6 }}>
                       Ton profil dispose désormais du badge officiel <strong>Certifié Vérifié ✅</strong>. Tes annonces et propositions inspirent une confiance maximale dans la communauté.
                     </p>
                   </div>
@@ -677,8 +677,8 @@ export default function KycModal({ isOpen, onClose, onComplete, profile, darkMod
                     width: '100%',
                     padding: '14px',
                     borderRadius: '16px',
-                    backgroundColor: darkMode ? 'rgba(4,38,90,0.4)' : '#EFF6FF',
-                    border: darkMode ? '1px solid rgba(96,165,250,0.3)' : '1px solid #BFDBFE',
+                    backgroundColor: darkMode ? '#1A1715' : '#F5F0E8',
+                    border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '12px',
@@ -687,16 +687,16 @@ export default function KycModal({ isOpen, onClose, onComplete, profile, darkMod
                     <img
                       src={profile?.avatar || selfiePreview}
                       alt="avatar"
-                      style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #10B981' }}
+                      style={{ width: '48px', height: '48px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #9CAF88' }}
                     />
                     <div>
-                      <div style={{ fontSize: '14px', fontWeight: '800', color: darkMode ? '#FFF' : '#04265A', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div style={{ fontSize: '14px', fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530', display: 'flex', alignItems: 'center', gap: '6px' }}>
                         {profile?.name}
-                        <span style={{ fontSize: '10px', backgroundColor: '#10B981', color: '#FFF', padding: '1px 6px', borderRadius: '999px' }}>
+                        <span style={{ fontSize: '10px', backgroundColor: '#9CAF88', color: '#FFF', padding: '1px 6px', borderRadius: '999px' }}>
                           ✓ Vérifié
                         </span>
                       </div>
-                      <div style={{ fontSize: '11px', color: darkMode ? '#93C5FD' : '#64748B' }}>
+                      <div style={{ fontSize: '11px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>
                         Document validé le {new Date().toLocaleDateString('fr-FR')}
                       </div>
                     </div>
@@ -711,12 +711,12 @@ export default function KycModal({ isOpen, onClose, onComplete, profile, darkMod
                       padding: '14px',
                       borderRadius: '16px',
                       border: 'none',
-                      backgroundColor: '#10B981',
+                      background: 'linear-gradient(135deg, #9CAF88 0%, #7A8F6A 100%)',
                       color: '#FFF',
                       fontWeight: '800',
                       fontSize: '14px',
                       cursor: 'pointer',
-                      boxShadow: '0 8px 20px rgba(16,185,129,0.35)',
+                      boxShadow: '0 8px 20px rgba(156,175,136,0.35)',
                       marginTop: '8px'
                     }}
                   >

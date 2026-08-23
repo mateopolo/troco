@@ -129,12 +129,12 @@ export default function AdminPanel({
             style={{
               width: '100%',
               maxWidth: '420px',
-              backgroundColor: darkMode ? 'rgba(30,41,59,0.9)' : '#FFFFFF',
+              backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
               borderRadius: '24px',
               padding: '32px 24px',
               textAlign: 'center',
-              boxShadow: '0 20px 50px rgba(0,0,0,0.15)',
-              border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E2E8F0',
+              boxShadow: '0 20px 50px rgba(61,53,48,0.15)',
+              border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
             }}
           >
             <div
@@ -142,8 +142,8 @@ export default function AdminPanel({
                 width: '56px',
                 height: '56px',
                 borderRadius: '50%',
-                backgroundColor: darkMode ? 'rgba(96,165,250,0.2)' : '#EFF6FF',
-                color: darkMode ? '#60A5FA' : '#04265A',
+                backgroundColor: darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4',
+                color: '#C67D5B',
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -152,8 +152,8 @@ export default function AdminPanel({
             >
               <Lock size={28} />
             </div>
-            <h2 style={{ fontSize: '22px', fontWeight: '800', margin: '0 0 8px' }}>Espace Administrateur</h2>
-            <p style={{ fontSize: '13px', color: darkMode ? '#94A3B8' : '#64748B', margin: '0 0 20px', lineHeight: 1.6 }}>
+            <h2 className="font-editorial-heading" style={{ fontSize: '24px', fontWeight: '600', margin: '0 0 8px', color: darkMode ? '#FAF7F2' : '#3D3530' }}>Espace Administrateur</h2>
+            <p style={{ fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54', margin: '0 0 20px', lineHeight: 1.6 }}>
               Veuillez saisir votre code d'accès administrateur pour gérer les signalements et la modération de la plateforme Troco.
             </p>
 
@@ -173,9 +173,9 @@ export default function AdminPanel({
                   textAlign: 'center',
                   fontWeight: '800',
                   outline: 'none',
-                  backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#F8FAFC',
-                  color: darkMode ? '#F8FAFC' : '#0F172A',
-                  border: pinError ? '2px solid #EF4444' : (darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #CBD5E1'),
+                  backgroundColor: darkMode ? '#1A1715' : '#FFF',
+                  color: darkMode ? '#FAF7F2' : '#3D3530',
+                  border: pinError ? '2px solid #EF4444' : (darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3'),
                 }}
               />
 
@@ -188,8 +188,8 @@ export default function AdminPanel({
                   type="button"
                   onClick={onClose}
                   style={{
-                    flex: 1, padding: '12px', borderRadius: '14px', border: '1px solid #CBD5E1',
-                    background: 'transparent', color: darkMode ? '#CBD5E1' : '#64748B', fontWeight: '700', cursor: 'pointer'
+                    flex: 1, padding: '12px', borderRadius: '14px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
+                    background: 'transparent', color: darkMode ? '#D4C5B5' : '#6B5E54', fontWeight: '700', cursor: 'pointer'
                   }}
                 >
                   Retour
@@ -198,8 +198,8 @@ export default function AdminPanel({
                   type="submit"
                   style={{
                     flex: 2, padding: '12px', borderRadius: '14px', border: 'none',
-                    background: 'linear-gradient(135deg, #04265A 0%, #14B8A6 100%)', color: '#FFF',
-                    fontWeight: '800', cursor: 'pointer', boxShadow: '0 8px 20px rgba(4,38,90,0.3)'
+                    background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)', color: '#FFF',
+                    fontWeight: '800', cursor: 'pointer', boxShadow: '0 8px 20px rgba(198,125,91,0.25)'
                   }}
                 >
                   Déverrouiller
@@ -303,29 +303,29 @@ export default function AdminPanel({
               </div>
             </div>
 
-            <div style={{ padding: '16px', borderRadius: '18px', backgroundColor: darkMode ? 'rgba(30,41,59,0.7)' : '#FFFFFF', border: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid #E2E8F0' }}>
-              <div style={{ fontSize: '12px', fontWeight: '700', color: darkMode ? '#94A3B8' : '#64748B', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Coins size={14} /> Masse Monétaire
+            <div style={{ padding: '16px', borderRadius: '18px', backgroundColor: darkMode ? '#1A1715' : '#FAF7F2', border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3' }}>
+              <div style={{ fontSize: '12px', fontWeight: '700', color: darkMode ? '#D4C5B5' : '#6B5E54', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Coins size={14} color="#C67D5B" /> Masse Monétaire
               </div>
-              <div style={{ fontSize: '18px', fontWeight: '800', marginTop: '6px', color: darkMode ? '#60A5FA' : '#04265A' }}>
+              <div style={{ fontSize: '18px', fontWeight: '800', marginTop: '6px', color: '#C67D5B' }}>
                 {kpis.totalEurosInSystem}€ • {kpis.totalTokensInSystem} 🪙
               </div>
-              <div style={{ fontSize: '11px', color: darkMode ? '#94A3B8' : '#64748B', marginTop: '4px' }}>
+              <div style={{ fontSize: '11px', color: darkMode ? '#9A8E84' : '#6B5E54', marginTop: '4px' }}>
                 Soldes cumulés
               </div>
             </div>
           </div>
 
           {/* SÉLECTEUR D'ONGLETS */}
-          <div style={{ display: 'flex', gap: '8px', borderBottom: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E2E8F0', paddingBottom: '12px', marginBottom: '20px', overflowX: 'auto' }}>
+          <div style={{ display: 'flex', gap: '8px', borderBottom: darkMode ? '1px solid rgba(232,221,211,0.08)' : '1px solid #E8DDD3', paddingBottom: '12px', marginBottom: '20px', overflowX: 'auto' }}>
             <button
               onClick={() => setActiveTab('reports')}
               style={{
                 border: 'none',
                 borderRadius: '12px',
                 padding: '10px 16px',
-                backgroundColor: activeTab === 'reports' ? (darkMode ? '#EF4444' : '#DC2626') : 'transparent',
-                color: activeTab === 'reports' ? '#FFFFFF' : (darkMode ? '#CBD5E1' : '#64748B'),
+                backgroundColor: activeTab === 'reports' ? '#DC2626' : 'transparent',
+                color: activeTab === 'reports' ? '#FFFFFF' : (darkMode ? '#D4C5B5' : '#6B5E54'),
                 fontWeight: '800',
                 fontSize: '13px',
                 cursor: 'pointer',
@@ -343,8 +343,8 @@ export default function AdminPanel({
                 border: 'none',
                 borderRadius: '12px',
                 padding: '10px 16px',
-                backgroundColor: activeTab === 'users' ? (darkMode ? '#60A5FA' : '#04265A') : 'transparent',
-                color: activeTab === 'users' ? (darkMode ? '#0F172A' : '#FFFFFF') : (darkMode ? '#CBD5E1' : '#64748B'),
+                backgroundColor: activeTab === 'users' ? '#C67D5B' : 'transparent',
+                color: activeTab === 'users' ? '#FFFFFF' : (darkMode ? '#D4C5B5' : '#6B5E54'),
                 fontWeight: '800',
                 fontSize: '13px',
                 cursor: 'pointer',
@@ -362,8 +362,8 @@ export default function AdminPanel({
                 border: 'none',
                 borderRadius: '12px',
                 padding: '10px 16px',
-                backgroundColor: activeTab === 'listings' ? (darkMode ? '#60A5FA' : '#04265A') : 'transparent',
-                color: activeTab === 'listings' ? (darkMode ? '#0F172A' : '#FFFFFF') : (darkMode ? '#CBD5E1' : '#64748B'),
+                backgroundColor: activeTab === 'listings' ? '#C67D5B' : 'transparent',
+                color: activeTab === 'listings' ? '#FFFFFF' : (darkMode ? '#D4C5B5' : '#6B5E54'),
                 fontWeight: '800',
                 fontSize: '13px',
                 cursor: 'pointer',
@@ -381,8 +381,8 @@ export default function AdminPanel({
                 border: 'none',
                 borderRadius: '12px',
                 padding: '10px 16px',
-                backgroundColor: activeTab === 'moderator' ? (darkMode ? '#60A5FA' : '#04265A') : 'transparent',
-                color: activeTab === 'moderator' ? (darkMode ? '#0F172A' : '#FFFFFF') : (darkMode ? '#CBD5E1' : '#64748B'),
+                backgroundColor: activeTab === 'moderator' ? '#C67D5B' : 'transparent',
+                color: activeTab === 'moderator' ? '#FFFFFF' : (darkMode ? '#D4C5B5' : '#6B5E54'),
                 fontWeight: '800',
                 fontSize: '13px',
                 cursor: 'pointer',
@@ -615,10 +615,10 @@ export default function AdminPanel({
                             <div style={{ fontSize: '14px', fontWeight: '800', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                               {u.name || 'Utilisateur'}
                             </div>
-                            <div style={{ fontSize: '12px', fontWeight: '700', color: darkMode ? '#60A5FA' : '#04265A' }}>
+                            <div style={{ fontSize: '12px', fontWeight: '700', color: '#C67D5B' }}>
                               {u.username || '@user'}
                             </div>
-                            <div style={{ fontSize: '11px', color: darkMode ? '#94A3B8' : '#64748B' }}>
+                            <div style={{ fontSize: '11px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>
                               {u.email || u.phoneNumber || u.location || 'Membre Troco'}
                             </div>
                           </div>
@@ -627,7 +627,7 @@ export default function AdminPanel({
                         {/* BADGES D'ÉTAT */}
                         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }}>
                           {isAdmin && (
-                            <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: '#EFF6FF', color: '#1D4ED8', padding: '2px 8px', borderRadius: '12px' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: darkMode ? 'rgba(198,125,91,0.25)' : '#F5EAE4', color: '#A8644A', padding: '2px 8px', borderRadius: '12px' }}>
                               🛡️ Admin
                             </span>
                           )}
@@ -768,16 +768,16 @@ export default function AdminPanel({
                         alt={listing.title}
                         style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '12px', marginBottom: '10px' }}
                       />
-                      <div style={{ fontSize: '11px', fontWeight: '700', color: darkMode ? '#60A5FA' : '#04265A', marginBottom: '4px' }}>
+                      <div style={{ fontSize: '11px', fontWeight: '700', color: '#C67D5B', marginBottom: '4px' }}>
                         {listing.category}
                       </div>
-                      <h4 style={{ margin: '0 0 6px', fontSize: '14px', fontWeight: '800', lineHeight: 1.3 }}>
+                      <h4 className="font-editorial-heading" style={{ margin: '0 0 6px', fontSize: '16px', fontWeight: '600', lineHeight: 1.3 }}>
                         {listing.title}
                       </h4>
-                      <p style={{ margin: '0 0 8px', fontSize: '11px', color: darkMode ? '#94A3B8' : '#64748B' }}>
+                      <p style={{ margin: '0 0 8px', fontSize: '11px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>
                         Par <strong>{listing.author}</strong> • {listing.location || 'France'}
                       </p>
-                      <div style={{ fontSize: '12px', fontWeight: '800', color: darkMode ? '#34D399' : '#059669', marginBottom: '12px' }}>
+                      <div style={{ fontSize: '12px', fontWeight: '800', color: '#7A8F6A', marginBottom: '12px' }}>
                         {listing.compensation}
                       </div>
                     </div>
@@ -788,7 +788,7 @@ export default function AdminPanel({
                           onClick={() => onEditListing(listing)}
                           style={{
                             flex: 1, padding: '8px', borderRadius: '10px', border: 'none',
-                            backgroundColor: darkMode ? '#3B82F6' : '#04265A', color: '#FFF', fontWeight: '700', fontSize: '12px', cursor: 'pointer',
+                            background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)', color: '#FFF', fontWeight: '700', fontSize: '12px', cursor: 'pointer',
                             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'
                           }}
                         >
@@ -821,9 +821,9 @@ export default function AdminPanel({
           {/* ONGLET 4 : TESTEUR MODÉRATEUR IA */}
           {activeTab === 'moderator' && (
             <div style={{ maxWidth: '700px' }}>
-              <div style={{ padding: '20px', borderRadius: '20px', backgroundColor: darkMode ? 'rgba(30,41,59,0.8)' : '#FFFFFF', border: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid #E2E8F0', marginBottom: '20px' }}>
-                <h3 style={{ margin: '0 0 8px', fontSize: '16px', fontWeight: '800' }}>Bac à sable de modération heuristique</h3>
-                <p style={{ margin: '0 0 14px', fontSize: '12px', color: darkMode ? '#94A3B8' : '#64748B' }}>
+              <div style={{ padding: '20px', borderRadius: '20px', backgroundColor: darkMode ? '#1A1715' : '#FFFFFF', border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3', marginBottom: '20px' }}>
+                <h3 className="font-editorial-heading" style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: '600' }}>Bac à sable de modération heuristique</h3>
+                <p style={{ margin: '0 0 14px', fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>
                   Testez en direct l'algorithme de détection des fraudes, mots-clés interdits et coordonnées sensibles.
                 </p>
 
@@ -838,19 +838,19 @@ export default function AdminPanel({
                     borderRadius: '12px',
                     fontSize: '13px',
                     outline: 'none',
-                    backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#F8FAFC',
-                    color: darkMode ? '#F8FAFC' : '#0F172A',
-                    border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #CBD5E1',
+                    backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
+                    color: darkMode ? '#FAF7F2' : '#3D3530',
+                    border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
                     marginBottom: '16px',
                   }}
                 />
 
-                <div style={{ padding: '14px', borderRadius: '14px', backgroundColor: sandboxAnalysis.isClean ? (darkMode ? 'rgba(16,185,129,0.15)' : '#ECFDF5') : (darkMode ? 'rgba(239,68,68,0.15)' : '#FEF2F2'), border: sandboxAnalysis.isClean ? '1px solid #10B981' : '1px solid #EF4444' }}>
+                <div style={{ padding: '14px', borderRadius: '14px', backgroundColor: sandboxAnalysis.isClean ? (darkMode ? 'rgba(156,175,136,0.2)' : '#EBF0E6') : (darkMode ? 'rgba(239,68,68,0.15)' : '#FEF2F2'), border: sandboxAnalysis.isClean ? '1px solid #9CAF88' : '1px solid #EF4444' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '13px', fontWeight: '800', color: sandboxAnalysis.isClean ? '#10B981' : '#DC2626' }}>
+                    <span style={{ fontSize: '13px', fontWeight: '800', color: sandboxAnalysis.isClean ? '#3D4A35' : '#DC2626' }}>
                       {sandboxAnalysis.isClean ? '✓ Contenu Conforme' : '⚠️ Risque Détecté'}
                     </span>
-                    <span style={{ fontSize: '12px', fontWeight: '800', color: sandboxAnalysis.isClean ? '#10B981' : '#DC2626' }}>
+                    <span style={{ fontSize: '12px', fontWeight: '800', color: sandboxAnalysis.isClean ? '#3D4A35' : '#DC2626' }}>
                       Score de risque : {sandboxAnalysis.score}/100
                     </span>
                   </div>
@@ -874,7 +874,7 @@ export default function AdminPanel({
                 position: 'fixed',
                 inset: 0,
                 zIndex: 99999,
-                backgroundColor: 'rgba(15, 23, 42, 0.75)',
+                backgroundColor: 'rgba(61, 53, 48, 0.72)',
                 backdropFilter: 'blur(10px)',
                 display: 'flex',
                 alignItems: 'center',
@@ -887,16 +887,16 @@ export default function AdminPanel({
                 style={{
                   width: '100%',
                   maxWidth: '440px',
-                  backgroundColor: darkMode ? '#1E293B' : '#FFFFFF',
+                  backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
                   borderRadius: '24px',
                   padding: '24px',
-                  color: darkMode ? '#F8FAFC' : '#0F172A',
-                  border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #E2E8F0',
+                  color: darkMode ? '#FAF7F2' : '#3D3530',
+                  border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
                 }}
                 onClick={(e) => e.stopPropagation()}
               >
-                <h3 style={{ margin: '0 0 4px', fontSize: '18px', fontWeight: '800' }}>Ajuster les soldes</h3>
-                <p style={{ margin: '0 0 16px', fontSize: '12px', color: darkMode ? '#94A3B8' : '#64748B' }}>
+                <h3 className="font-editorial-heading" style={{ margin: '0 0 4px', fontSize: '20px', fontWeight: '600' }}>Ajuster les soldes</h3>
+                <p style={{ margin: '0 0 16px', fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>
                   Utilisateur : <strong>{balanceModalUser.name}</strong> ({balanceModalUser.username})
                 </p>
 
@@ -912,8 +912,8 @@ export default function AdminPanel({
                       onChange={(e) => setBalanceDeltaEuro(e.target.value)}
                       style={{
                         width: '100%', padding: '10px', borderRadius: '10px', fontSize: '13px',
-                        backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFFFFF', color: darkMode ? '#FFF' : '#000',
-                        border: '1px solid #CBD5E1', outline: 'none'
+                        backgroundColor: darkMode ? '#1A1715' : '#FFFFFF', color: darkMode ? '#FFF' : '#000',
+                        border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', outline: 'none'
                       }}
                     />
                   </div>
@@ -929,8 +929,8 @@ export default function AdminPanel({
                       onChange={(e) => setBalanceDeltaTokens(e.target.value)}
                       style={{
                         width: '100%', padding: '10px', borderRadius: '10px', fontSize: '13px',
-                        backgroundColor: darkMode ? 'rgba(15,23,42,0.8)' : '#FFFFFF', color: darkMode ? '#FFF' : '#000',
-                        border: '1px solid #CBD5E1', outline: 'none'
+                        backgroundColor: darkMode ? '#1A1715' : '#FFFFFF', color: darkMode ? '#FFF' : '#000',
+                        border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', outline: 'none'
                       }}
                     />
                   </div>
@@ -939,7 +939,7 @@ export default function AdminPanel({
                 <div style={{ display: 'flex', gap: '10px' }}>
                   <button
                     onClick={() => setBalanceModalUser(null)}
-                    style={{ flex: 1, padding: '10px', borderRadius: '12px', border: '1px solid #CBD5E1', background: 'transparent', color: darkMode ? '#CBD5E1' : '#64748B', fontWeight: '700', cursor: 'pointer' }}
+                    style={{ flex: 1, padding: '10px', borderRadius: '12px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', background: 'transparent', color: darkMode ? '#D4C5B5' : '#6B5E54', fontWeight: '700', cursor: 'pointer' }}
                   >
                     Annuler
                   </button>
@@ -958,7 +958,7 @@ export default function AdminPanel({
                       }
                       setBalanceModalUser(null);
                     }}
-                    style={{ flex: 2, padding: '10px', borderRadius: '12px', border: 'none', backgroundColor: '#04265A', color: '#FFF', fontWeight: '800', cursor: 'pointer' }}
+                    style={{ flex: 2, padding: '10px', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)', color: '#FFF', fontWeight: '800', cursor: 'pointer' }}
                   >
                     Appliquer la modification
                   </button>
