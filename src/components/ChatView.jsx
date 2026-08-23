@@ -440,12 +440,12 @@ function ChatView({
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: isMobile ? '10px 12px' : '0 18px',
-          paddingTop: isMobile ? 'max(16px, env(safe-area-inset-top))' : '0',
-          minHeight: isMobile ? 'calc(58px + max(16px, env(safe-area-inset-top)))' : '64px',
+          paddingTop: isMobile ? 'max(46px, env(safe-area-inset-top, 46px))' : '0',
+          minHeight: isMobile ? 'calc(54px + max(46px, env(safe-area-inset-top, 46px)))' : '64px',
           borderBottom: '1px solid var(--border-color)',
           backgroundColor: 'var(--bg-glass)',
           backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-          gap: '8px', flexShrink: 0, zIndex: 30, width: '100%', boxSizing: 'border-box'
+          gap: '8px', flexShrink: 0, zIndex: 50, width: '100%', boxSizing: 'border-box'
         }}>
           {/* Partie Gauche : Retour (Mobile) + Avatar + Nom + Annonce */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
@@ -1048,12 +1048,12 @@ function ChatView({
         {/* 3. BARRE DE SAISIE FIXE EN BAS (SANS GAP SUPERFLU) */}
         <div style={{
           display: 'flex', flexDirection: 'column', gap: '6px',
-          padding: isMobile ? '8px 12px' : '8px 16px',
-          paddingBottom: (isMobile && effectiveSelectedChat) ? 'max(16px, env(safe-area-inset-bottom))' : '10px',
+          padding: isMobile ? '10px 12px' : '8px 16px',
+          paddingBottom: isMobile ? 'max(24px, env(safe-area-inset-bottom, 24px))' : '10px',
           borderTop: '1px solid var(--border-color)',
           backgroundColor: 'var(--bg-glass)',
           backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-          flexShrink: 0, zIndex: 30, width: '100%', boxSizing: 'border-box'
+          flexShrink: 0, zIndex: 50, width: '100%', boxSizing: 'border-box'
         }}>
           <div style={{
             maxWidth: '680px',
