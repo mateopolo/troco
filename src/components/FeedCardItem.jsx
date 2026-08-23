@@ -161,7 +161,7 @@ function FeedCardItem({
       onTouchStart={() => { if (setHoveredCardId) setHoveredCardId(item.id); }}
       onMouseEnter={() => { if (setHoveredCardId) setHoveredCardId(item.id); }}
       onMouseLeave={() => { if (setHoveredCardId) setHoveredCardId(null); }}
-      className="premium-card reveal-card gsap-card"
+      className="premium-card"
       style={{
         backgroundColor: 'var(--bg-card)',
         border: item.isBoosted ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',

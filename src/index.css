@@ -492,8 +492,8 @@ input[type=range]::-moz-range-thumb:hover {
 
 /* SYSTÈME D'APPARITION AU DÉFILEMENT (INTERSECTION OBSERVER SCROLL REVEAL) */
 .reveal-card {
-  opacity: 0;
-  transform: translateY(28px);
+  opacity: 1;
+  transform: none;
   transition: opacity 800ms var(--ease-quiet), transform 800ms var(--ease-quiet) !important;
   will-change: opacity, transform;
 }

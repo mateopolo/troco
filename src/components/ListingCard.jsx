@@ -162,7 +162,7 @@ export default function ListingCard({
       onClick={() => handleOpenListing(item)}
       onMouseEnter={() => setHoveredCardId(item.id)}
       onMouseLeave={() => setHoveredCardId(null)}
-      className="premium-card reveal-card gsap-card"
+      className="premium-card"
       style={{
         display: 'flex',
         flexDirection: 'column',
