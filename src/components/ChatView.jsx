@@ -433,15 +433,15 @@ function ChatView({
         boxSizing: 'border-box',
         overflow: 'hidden',
         position: 'relative',
-        backgroundColor: 'var(--bg-global)'
+        backgroundColor: 'transparent'
       }}>
-        {/* 1. EN-TÊTE FIXE DU CHAT (60px) */}
+        {/* 1. EN-TÊTE FIXE DU CHAT (64px) */}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: isMobile ? '0 12px' : '12px 18px',
+          padding: isMobile ? '0 12px' : '0 18px',
           paddingTop: isMobile ? 'max(6px, env(safe-area-inset-top))' : '0',
           height: isMobile ? '60px' : '64px',
-          minHeight: isMobile ? '60px' : '56px',
+          minHeight: isMobile ? '60px' : '64px',
           borderBottom: '1px solid var(--border-color)',
           backgroundColor: 'var(--bg-glass)',
           backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
@@ -617,7 +617,7 @@ function ChatView({
             flex: 1,
             overflowY: 'auto',
             padding: isMobile ? '12px 10px' : '18px 20px',
-            backgroundColor: 'var(--bg-global)',
+            backgroundColor: 'transparent',
             display: 'flex',
             flexDirection: 'column',
             gap: '10px',
@@ -1157,14 +1157,23 @@ function ChatView({
             backgroundColor: 'var(--bg-glass)',
             backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
             borderRadius: isMobile ? '0' : '24px',
-            padding: isMobile ? '12px 14px' : '18px',
             border: '1px solid var(--border-color)',
             boxShadow: isMobile ? 'none' : 'var(--shadow-card)',
-            display: 'flex', flexDirection: 'column', gap: '10px',
+            display: 'flex', flexDirection: 'column',
             height: '100%',
             overflow: 'hidden'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px', flexShrink: 0 }}>
+            {/* EN-TÊTE SYMÉTRIQUE DU VOLET DISCUSSIONS (64px) */}
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '0 18px',
+              height: isMobile ? '60px' : '64px',
+              minHeight: isMobile ? '60px' : '64px',
+              borderBottom: '1px solid var(--border-color)',
+              backgroundColor: 'var(--bg-glass)',
+              flexShrink: 0,
+              boxSizing: 'border-box'
+            }}>
               <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: 'var(--text-main)' }}>
                 {t('discussions') || 'Discussions'}
               </h3>
@@ -1179,7 +1188,7 @@ function ChatView({
               gap: '6px',
               overflowY: 'auto',
               flex: 1,
-              paddingRight: '2px',
+              padding: '12px',
               overscrollBehavior: 'contain',
               WebkitOverflowScrolling: 'touch',
               touchAction: 'pan-y'
@@ -1222,19 +1231,22 @@ function ChatView({
                         onClick={() => handleSelectChatMobile(chat)}
                         style={{
                           display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px',
-                          borderRadius: '16px', border: 'none', cursor: 'pointer', textAlign: 'left',
+                          borderRadius: '16px', cursor: 'pointer', textAlign: 'left',
                           width: '100%',
                           backgroundColor: isSelected
                             ? 'var(--bg-subtle)'
-                            : (isUnread ? 'var(--bg-card)' : 'var(--bg-card)'),
+                            : (isUnread ? 'var(--bg-subtle)' : 'transparent'),
+                          border: isSelected
+                            ? '1px solid var(--border-color)'
+                            : '1px solid transparent',
                           borderLeft: isSelected
                             ? '4px solid var(--accent-primary)'
-                            : (isUnread ? '4px solid var(--border-dark)' : '4px solid transparent'),
-                          boxShadow: isSelected ? 'var(--shadow-accent)' : 'none',
+                            : (isUnread ? '4px solid var(--accent-terracotta)' : '4px solid transparent'),
+                          boxShadow: isSelected ? 'var(--shadow-card)' : 'none',
                           transition: 'all 0.2s ease'
                         }}
                       >
-                        <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--text-main) 0%, var(--text-secondary) 100%)', color: 'var(--bg-global)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '15px', flexShrink: 0, boxShadow: 'var(--shadow-card)', position: 'relative' }}>
+                        <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--text-main) 0%, var(--text-secondary) 100%)', color: 'var(--bg-card)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '15px', flexShrink: 0, boxShadow: 'var(--shadow-card)', position: 'relative' }}>
                           {chat.user[0]}
                           {isUserOnline(chat.user, chat.authorUid || chat.userId) && (
                             <span
@@ -1248,6 +1260,7 @@ function ChatView({
                               }}
                             />
                           )}
+
                           {unreadCount > 0 && (
                             <span style={{
                               position: 'absolute', top: '-4px', right: '-4px',
