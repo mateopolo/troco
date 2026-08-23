@@ -114,12 +114,7 @@ function ChatView({
     return () => window.removeEventListener('click', handleOutsideClick);
   }, []);
 
-  // Auto-scroll to bottom of messages
-  useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [chatThreads, selectedChat, mobileSubView]);
+
 
   const getChatLatestTimestamp = useCallback((chat) => {
     if (!chat) return 0;
@@ -160,12 +155,19 @@ function ChatView({
     });
   }, [mockChats, deletedChatIds, getChatLatestTimestamp]);
 
-  if (activeTab !== 'chat') return null;
-
   const effectiveSelectedChat = (selectedChat && !deletedChatIds.has(selectedChat.id)) ? selectedChat : null;
   const currentChatId = effectiveSelectedChat ? effectiveSelectedChat.id : null;
   const activeChatObj = effectiveSelectedChat;
-  const messages = currentChatId ? (chatThreads[currentChatId] || []) : [];
+  const messages = useMemo(() => {
+    return currentChatId ? (chatThreads[currentChatId] || []) : [];
+  }, [currentChatId, chatThreads]);
+
+  // Auto-scroll fiable vers le bas des messages (Mission 3)
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+  }, [selectedChat, messages, mobileSubView]);
+
+  if (activeTab !== 'chat') return null;
 
   // Helper de statut en ligne réel basé sur le heartbeat Firestore (< 30s)
   const isUserOnline = (userIdentifier, userUid = null) => {
@@ -611,12 +613,11 @@ function ChatView({
 
         {/* 2. ZONE DE MESSAGES DÉROULANTE (SEUL ÉLÉMENT QUI SCROLLE) */}
         <div
-          ref={messagesEndRef}
           style={{
             flex: 1,
             minHeight: 0,
             overflowY: 'auto',
-            padding: isMobile ? '12px 10px' : '18px 20px',
+            padding: isMobile ? '12px 10px' : '16px 20px',
             backgroundColor: 'transparent',
             display: 'flex',
             flexDirection: 'column',
@@ -872,9 +873,12 @@ function ChatView({
                     }}
                   >
                     <div
+                      className="message-bubble"
                       style={{
                         padding: '10px 14px',
-                        borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+                        borderRadius: isMe
+                          ? 'min(var(--border-radius-card, 18px), 24px) min(var(--border-radius-card, 18px), 24px) 4px min(var(--border-radius-card, 18px), 24px)'
+                          : 'min(var(--border-radius-card, 18px), 24px) min(var(--border-radius-card, 18px), 24px) min(var(--border-radius-card, 18px), 24px) 4px',
                         backgroundColor: isMe
                           ? 'var(--accent-primary)'
                           : 'var(--bg-card)',
@@ -1041,11 +1045,11 @@ function ChatView({
           </div>
         </div>
 
-        {/* 3. BARRE DE SAISIE FIXE EN BAS */}
+        {/* 3. BARRE DE SAISIE FIXE EN BAS (SANS GAP SUPERFLU) */}
         <div style={{
           display: 'flex', flexDirection: 'column', gap: '6px',
-          padding: isMobile ? '8px 12px' : '10px 18px 14px',
-          paddingBottom: isMobile ? 'max(10px, env(safe-area-inset-bottom))' : '14px',
+          padding: isMobile ? '6px 10px' : '8px 16px',
+          paddingBottom: (isMobile && effectiveSelectedChat) ? 'max(6px, env(safe-area-inset-bottom))' : '8px',
           borderTop: '1px solid var(--border-color)',
           backgroundColor: 'var(--bg-glass)',
           backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
@@ -1136,9 +1140,9 @@ function ChatView({
           flexDirection: 'column',
           width: '100%',
           flex: 1,
-          height: isMobile ? '100%' : 'calc(100vh - 160px)',
+          height: '100%',
           minHeight: 0,
-          maxHeight: isMobile ? '100%' : '840px',
+          maxHeight: '100%',
           overflow: 'hidden',
           position: 'relative'
         }}

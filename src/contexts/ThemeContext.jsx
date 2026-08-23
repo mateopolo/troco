@@ -631,7 +631,17 @@ export function ThemeProvider({ children }) {
     // Studio Extended Variables
     const currentFont = TYPOGRAPHY_OPTIONS[typography]?.fontFamily || TYPOGRAPHY_OPTIONS.editorial.fontFamily;
     root.style.setProperty('--font-family-main', currentFont);
-    root.style.setProperty('--border-radius-main', `${borderRadius}px`);
+
+    // SÉPARATION STRICTE DE LA GÉOMÉTRIE DU RADIUS (BOUTONS vs CARTES/BULLES)
+    const numRadius = Number(borderRadius) || 14;
+    const buttonRadius = `${numRadius}px`;
+    const cardRadius = `${Math.min(numRadius, 32)}px`;
+
+    root.style.setProperty('--border-radius-button', buttonRadius);
+    root.style.setProperty('--border-radius-card', cardRadius);
+    root.style.setProperty('--border-radius-main', cardRadius);
+    root.style.setProperty('--border-radius', cardRadius);
+
     root.style.setProperty('--base-zoom', `${baseZoom}`);
     root.style.zoom = `${baseZoom}`;
 

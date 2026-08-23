@@ -6771,12 +6771,17 @@ export default function App() {
           margin: '0 auto',
           width: '100%',
           boxSizing: 'border-box',
-          height: activeTab === 'chat' ? (isMobile ? 'calc(100dvh - 60px)' : 'calc(100dvh - 75px)') : 'auto',
+          height: activeTab === 'chat'
+            ? (isMobile ? (selectedChat ? 'calc(100dvh - 60px)' : 'calc(100dvh - 125px)') : 'calc(100dvh - 129px)')
+            : 'auto',
+          maxHeight: activeTab === 'chat'
+            ? (isMobile ? (selectedChat ? 'calc(100dvh - 60px)' : 'calc(100dvh - 125px)') : 'calc(100dvh - 129px)')
+            : 'none',
           display: activeTab === 'chat' ? 'flex' : 'block',
           flexDirection: activeTab === 'chat' ? 'column' : 'initial',
           overflow: activeTab === 'chat' ? 'hidden' : 'visible',
           padding: activeTab === 'chat'
-            ? (isMobile ? '2px 4px 75px' : '8px 16px 20px')
+            ? (isMobile ? (selectedChat ? '0' : '0 6px') : '0 16px')
             : (isMobile ? '12px 12px 90px' : '20px 20px 90px'),
           transition: 'max-width 0.3s ease'
         }}
@@ -8813,7 +8818,7 @@ export default function App() {
                       Forme des Boutons & Cartes
                     </label>
                     <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--accent-primary)', fontFamily: 'monospace' }}>
-                      {borderRadius >= 900 ? 'Pilule (999px)' : `${borderRadius || 14}px`}
+                      {borderRadius >= 900 ? 'Pilule (999px • Cartes max 32px)' : `${borderRadius || 14}px`}
                     </span>
                   </div>
                   <input

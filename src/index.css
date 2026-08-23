@@ -8,6 +8,9 @@
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   --font-family-main: 'Cormorant Garamond', Georgia, serif;
   --border-radius-main: 14px;
+  --border-radius-button: 14px;
+  --border-radius-card: 14px;
+  --border-radius: 14px;
   --base-zoom: 1;
   --accent-contrast-text: #FFFFFF;
 
@@ -120,6 +123,12 @@ h3 {
 .premium-card {
   transition: transform 0.6s var(--ease-monopo), box-shadow 0.6s var(--ease-monopo), border-color 0.4s ease !important;
   will-change: transform;
+}
+
+.message-bubble {
+  border-radius: var(--border-radius-card, 18px);
+  max-width: 85%;
+  word-break: break-word;
 }
 
 /* ============================================================================
