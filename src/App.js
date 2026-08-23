@@ -6853,6 +6853,9 @@ export default function App() {
           height: activeTab === 'chat'
             ? (isMobile ? (selectedChat ? 'calc(100dvh - 60px)' : 'calc(100dvh - 125px)') : 'calc(100dvh - 129px)')
             : 'auto',
+          maxHeight: activeTab === 'chat'
+            ? (isMobile ? (selectedChat ? 'calc(100dvh - 60px)' : 'calc(100dvh - 125px)') : 'calc(100dvh - 129px)')
+            : 'none',
           padding: activeTab === 'chat'
             ? (isMobile ? (selectedChat ? '0' : '0 6px') : '0 16px')
             : (isMobile ? '12px 12px 90px' : '20px 20px 90px'),
