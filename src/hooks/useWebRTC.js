@@ -1,127 +1,151 @@
+/**
+ * useWebRTC.js — Signalisation WebRTC temps réel via Firestore avec STUN mondial (Wi-Fi ⇄ 4G/5G),
+ * Partage d'écran (Screen Share avec bascule instantanée) et Outils de modération Professeur / Admin d'appel
+ *
+ * Architecture Firestore :
+ *   calls/{chatId}                          → type, from, to, status, offer, answer, isScreenSharing, screenSharingBy, forceMuteParticipant, forceStopScreenShare
+ *   calls/{chatId}/callerCandidates/{id}    → candidats ICE de l'appelant
+ *   calls/{chatId}/calleeCandidates/{id}    → candidats ICE de l'appelé
+ */
+
 import { useRef, useState, useEffect, useCallback } from 'react';
 import {
-  doc, collection, addDoc, updateDoc, deleteDoc,
-  onSnapshot, getDoc, serverTimestamp, setDoc
+  doc, collection, addDoc, setDoc, updateDoc, deleteDoc,
+  onSnapshot, getDoc, serverTimestamp,
 } from 'firebase/firestore';
-import { db, auth } from '../firebase';
+import { db } from '../firebase';
 
+// Configuration STUN globale robuste (Google STUN pour traversée NAT, 4G, 5G et Wi-Fi)
 const ICE_CONFIG = {
   iceServers: [
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun1.l.google.com:19302' }
-  ]
+    {
+      urls: [
+        'stun:stun.l.google.com:19302',
+        'stun:stun1.l.google.com:19302',
+        'stun:stun2.l.google.com:19302',
+        'stun:stun3.l.google.com:19302',
+        'stun:stun4.l.google.com:19302',
+      ],
+    },
+  ],
+  iceCandidatePoolSize: 10,
 };
 
-export function useWebRTC({ profileName, profileUid, selectedChat }) {
+export function useWebRTC({ profileName, selectedChat }) {
   const [callState, setCallState] = useState({
     type: null, active: false, ringing: false,
     micOn: true, camOn: true, isScreenSharing: false, isHost: false,
-    remoteScreenSharing: false
+    inviteOpen: false, copied: false, remoteScreenSharing: false,
   });
-
   const [localStream, setLocalStream] = useState(null);
   const [remoteStream, setRemoteStream] = useState(null);
   const [incomingCall, setIncomingCall] = useState(null);
+  const [facingMode, setFacingMode] = useState('user'); // 'user' (front) ou 'environment' (back)
+  const [hasMultipleCameras, setHasMultipleCameras] = useState(false);
 
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const pcRef = useRef(null);
   const unsubsRef = useRef([]);
   const activeChatIdRef = useRef(null);
-
   const screenTrackRef = useRef(null);
   const cameraTrackRef = useRef(null);
 
-  const ringtoneCtxRef = useRef(null);
-  const ringtoneIntervalRef = useRef(null);
-  const pendingCandidatesRef = useRef([]);
-
-  // =======================================================================
-  // 1. GESTION DE LA SONNERIE (Nettoyage strict)
-  // =======================================================================
-  const stopRingtone = useCallback(() => {
-    if (ringtoneIntervalRef.current) {
-      clearInterval(ringtoneIntervalRef.current);
-      ringtoneIntervalRef.current = null;
+  // Détection des caméras disponibles sur l'appareil
+  useEffect(() => {
+    if (!navigator.mediaDevices?.enumerateDevices) {
+      const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || ('ontouchstart' in window);
+      setHasMultipleCameras(isMobile);
+      return;
     }
-    if (ringtoneCtxRef.current) {
-      try { ringtoneCtxRef.current.close(); } catch (_) { }
-      ringtoneCtxRef.current = null;
-    }
+    navigator.mediaDevices.enumerateDevices()
+      .then(devices => {
+        const videoInputs = devices.filter(d => d.kind === 'videoinput');
+        const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || ('ontouchstart' in window);
+        setHasMultipleCameras(videoInputs.length > 1 || isMobile);
+      })
+      .catch(() => {
+        const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || ('ontouchstart' in window);
+        setHasMultipleCameras(isMobile);
+      });
   }, []);
 
-  const playRingtone = useCallback(() => {
-    stopRingtone();
-    try {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (!AudioCtx) return;
-      const ctx = new AudioCtx();
-      ringtoneCtxRef.current = ctx;
-
-      const triggerBeep = () => {
-        if (!ringtoneCtxRef.current || ringtoneCtxRef.current.state === 'closed') return;
-        const cur = ringtoneCtxRef.current.currentTime;
-        const beep = (freq, start, dur) => {
-          try {
-            const osc = ringtoneCtxRef.current.createOscillator();
-            const gain = ringtoneCtxRef.current.createGain();
-            osc.connect(gain);
-            gain.connect(ringtoneCtxRef.current.destination);
-            osc.frequency.value = freq;
-            osc.type = 'sine';
-            gain.gain.setValueAtTime(0, cur + start);
-            gain.gain.linearRampToValueAtTime(0.1, cur + start + 0.05);
-            gain.gain.linearRampToValueAtTime(0, cur + start + dur);
-            osc.start(cur + start);
-            osc.stop(cur + start + dur + 0.05);
-          } catch (_) { }
-        };
-        beep(440, 0, 0.3);
-        beep(880, 0.4, 0.3);
-      };
-
-      triggerBeep();
-      ringtoneIntervalRef.current = setInterval(triggerBeep, 2500);
-    } catch (_) { }
-  }, [stopRingtone]);
-
-  // =======================================================================
-  // 2. ATTACHEMENT SÉCURISÉ DES FLUX AUX BALISES VIDÉO
-  // =======================================================================
   useEffect(() => {
     if (localVideoRef.current && localStream) {
       localVideoRef.current.srcObject = localStream;
+      localVideoRef.current.play().catch(() => { });
     }
   }, [localStream]);
 
   useEffect(() => {
     if (remoteVideoRef.current && remoteStream) {
       remoteVideoRef.current.srcObject = remoteStream;
+      remoteVideoRef.current.play().catch(() => { });
     }
   }, [remoteStream]);
 
-  const attachLocalStream = useCallback((el) => {
-    if (el && localStream) el.srcObject = localStream;
-  }, [localStream]);
+  useEffect(() => { return () => { _cleanup(); }; }, []); // eslint-disable-line
 
-  const attachRemoteStream = useCallback((el) => {
-    if (el && remoteStream) el.srcObject = remoteStream;
-  }, [remoteStream]);
+  const playRingtone = useCallback(() => {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const beep = (freq, start, dur) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.frequency.value = freq; osc.type = 'sine';
+        gain.gain.setValueAtTime(0, ctx.currentTime + start);
+        gain.gain.linearRampToValueAtTime(0.2, ctx.currentTime + start + 0.05);
+        gain.gain.linearRampToValueAtTime(0, ctx.currentTime + start + dur);
+        osc.start(ctx.currentTime + start);
+        osc.stop(ctx.currentTime + start + dur + 0.05);
+      };
+      beep(440, 0, 0.35); beep(880, 0.45, 0.35);
+      beep(440, 0.9, 0.35); beep(880, 1.35, 0.35);
+    } catch (_) { }
+  }, []);
 
-  // =======================================================================
-  // 3. NETTOYAGE COMPLET (CLEANUP)
-  // =======================================================================
+  // Gestion sécurisée des autorisations Caméra / Micro avec alertes claires
+  const _getLocalStream = useCallback(async (type) => {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      alert("Votre navigateur ne prend pas en charge l'accès à la caméra et au microphone (WebRTC).");
+      return null;
+    }
+    const constraints = type === 'video'
+      ? { video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }, audio: true }
+      : { video: false, audio: true };
+    try {
+      return await navigator.mediaDevices.getUserMedia(constraints);
+    } catch (err) {
+      console.warn('getUserMedia primary failed:', err);
+      try {
+        return await navigator.mediaDevices.getUserMedia({ video: type === 'video', audio: true });
+      } catch (fallbackErr) {
+        console.error('getUserMedia fallback failed:', fallbackErr);
+        if (fallbackErr.name === 'NotAllowedError' || fallbackErr.name === 'PermissionDeniedError') {
+          alert("Accès caméra / microphone refusé :\n\nPour passer des appels audio ou visio sur Troco, veuillez autoriser l'accès aux périphériques dans les paramètres de votre navigateur (cliquez sur l'icône 🔒 à gauche de la barre d'adresse).");
+        } else if (fallbackErr.name === 'NotFoundError' || fallbackErr.name === 'DevicesNotFoundError') {
+          alert("Périphérique introuvable :\n\nAucun microphone ou caméra n'a été détecté sur votre appareil. Veuillez brancher un périphérique et réessayer.");
+        } else if (fallbackErr.name === 'NotReadableError' || fallbackErr.name === 'TrackStartError') {
+          alert("Périphérique déjà utilisé :\n\nVotre caméra ou microphone est actuellement occupé par une autre application (Zoom, Teams, etc.). Veuillez la fermer puis relancer l'appel.");
+        } else {
+          alert("Impossible d'initialiser les flux audio/vidéo. Veuillez vérifier les autorisations de votre navigateur.");
+        }
+        return null;
+      }
+    }
+  }, []);
+
+  // Nettoyage complet des flux, des écouteurs et suppression du document de signalisation
   const _cleanup = useCallback(() => {
-    stopRingtone();
-    pendingCandidatesRef.current = [];
     unsubsRef.current.forEach(u => { try { u(); } catch (_) { } });
     unsubsRef.current = [];
-
     if (pcRef.current) {
       try { pcRef.current.close(); } catch (_) { }
       pcRef.current = null;
     }
-
     if (screenTrackRef.current) {
       try { screenTrackRef.current.stop(); } catch (_) { }
       screenTrackRef.current = null;
@@ -130,44 +154,16 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
       try { cameraTrackRef.current.stop(); } catch (_) { }
       cameraTrackRef.current = null;
     }
-
     setLocalStream(prev => {
       if (prev) prev.getTracks().forEach(t => t.stop());
       return null;
     });
     setRemoteStream(null);
+    const targetChatId = activeChatIdRef.current;
+    if (targetChatId) {
+      deleteDoc(doc(db, 'calls', String(targetChatId))).catch(() => { });
+    }
     activeChatIdRef.current = null;
-  }, [stopRingtone]);
-
-  useEffect(() => { return () => _cleanup(); }, [_cleanup]);
-
-  // =======================================================================
-  // 4. MOTEUR WEBRTC (PEER CONNECTION & ICE CANDIDATES)
-  // =======================================================================
-  const addOrQueueCandidate = useCallback(async (candidateData) => {
-    if (!candidateData) return;
-    const pc = pcRef.current;
-    if (!pc) return;
-    try {
-      const candidate = new RTCIceCandidate(candidateData);
-      // RÈGLE D'OR : On n'ajoute les ICE que SI la remoteDescription est prête
-      if (pc.remoteDescription && pc.remoteDescription.type) {
-        await pc.addIceCandidate(candidate);
-      } else {
-        pendingCandidatesRef.current.push(candidate);
-      }
-    } catch (err) {
-      console.warn('[WebRTC] Erreur ICE Candidate:', err);
-    }
-  }, []);
-
-  const flushPendingCandidates = useCallback(async () => {
-    const pc = pcRef.current;
-    if (!pc || !pc.remoteDescription) return;
-    while (pendingCandidatesRef.current.length > 0) {
-      const cand = pendingCandidatesRef.current.shift();
-      try { await pc.addIceCandidate(cand); } catch (_) { }
-    }
   }, []);
 
   const _createPC = useCallback((chatId, role) => {
@@ -175,50 +171,49 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
     pcRef.current = pc;
     activeChatIdRef.current = chatId;
 
-    // Réception du flux distant
     pc.ontrack = (e) => {
       if (e.streams && e.streams[0]) {
         setRemoteStream(e.streams[0]);
+      } else {
+        setRemoteStream(prev => {
+          const stream = prev || new MediaStream();
+          stream.addTrack(e.track);
+          return stream;
+        });
       }
     };
 
-    // Envoi de nos candidats ICE vers Firestore
-    const myCandidatesCollection = role === 'caller' ? 'callerCandidates' : 'calleeCandidates';
+    const myCands = role === 'caller' ? 'callerCandidates' : 'calleeCandidates';
     pc.onicecandidate = ({ candidate }) => {
       if (candidate) {
-        addDoc(collection(db, 'calls', String(chatId), myCandidatesCollection), candidate.toJSON()).catch(() => { });
+        addDoc(collection(db, 'calls', String(chatId), myCands), candidate.toJSON()).catch(() => { });
+      }
+    };
+
+    pc.onconnectionstatechange = () => {
+      if (['disconnected', 'failed', 'closed'].includes(pc.connectionState)) {
+        endCall();
       }
     };
 
     return pc;
-  }, []);
+  }, []); // eslint-disable-line
 
-  const _getLocalStream = async (type) => {
-    try {
-      const constraints = type === 'video'
-        ? { video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: true }
-        : { video: false, audio: true };
-      return await navigator.mediaDevices.getUserMedia(constraints);
-    } catch (err) {
-      console.error("Erreur d'accès à la caméra/micro:", err);
-      alert("Impossible d'accéder à la caméra ou au micro. Vérifiez vos autorisations.");
-      return null;
-    }
-  };
-
-  // =======================================================================
-  // 5. APPELER (CALLER)
-  // =======================================================================
-  const startCall = async (type) => {
+  const startCall = useCallback(async (type) => {
     const chatId = selectedChat?.id;
     if (!chatId) return;
 
+    // Enveloppe d'autorisation explicite
     const stream = await _getLocalStream(type);
-    if (!stream) return;
+    if (!stream) {
+      setCallState({ type: null, active: false, ringing: false, micOn: true, camOn: true, isScreenSharing: false, isHost: false, inviteOpen: false, copied: false, remoteScreenSharing: false });
+      return;
+    }
     setLocalStream(stream);
 
-    setCallState({ type, active: true, ringing: true, micOn: true, camOn: type === 'video', isScreenSharing: false, isHost: true, remoteScreenSharing: false });
+    setCallState({ type, active: true, ringing: true, micOn: true, camOn: type === 'video', isScreenSharing: false, isHost: true, inviteOpen: false, copied: false, remoteScreenSharing: false });
     playRingtone();
+    if (navigator.vibrate) navigator.vibrate([300, 100, 300]);
 
     const pc = _createPC(chatId, 'caller');
     stream.getTracks().forEach(t => pc.addTrack(t, stream));
@@ -226,75 +221,73 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
 
-    const partnerName = selectedChat?.user || 'Interlocuteur';
-    const myUid = profileUid || (auth.currentUser && auth.currentUser.uid) || null;
-
-    // Création du document d'appel
     await setDoc(doc(db, 'calls', String(chatId)), {
       type,
       from: profileName,
-      fromUid: myUid,
-      to: partnerName,
+      to: selectedChat.user,
       status: 'ringing',
       offer: { type: offer.type, sdp: offer.sdp },
+      isScreenSharing: false,
       startedAt: serverTimestamp(),
     });
 
-    // Écoute de la réponse de l'interlocuteur
+    // Écouter la réponse SDP et les signaux de modération
     const unsubAnswer = onSnapshot(doc(db, 'calls', String(chatId)), async (snap) => {
       if (!snap.exists()) {
-        endCall();
+        _cleanup();
+        setCallState({ type: null, active: false, ringing: false, micOn: true, camOn: true, isScreenSharing: false, isHost: false, inviteOpen: false, copied: false, remoteScreenSharing: false });
         return;
       }
       const data = snap.data();
       if (data?.answer && !pc.currentRemoteDescription) {
         await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
-        stopRingtone();
         setCallState(prev => ({ ...prev, ringing: false }));
-        await flushPendingCandidates();
       }
+
+      // Signal de partage d'écran distant
       if (data?.isScreenSharing !== undefined) {
-        setCallState(prev => ({ ...prev, remoteScreenSharing: data.isScreenSharing && data.screenSharingBy !== profileName }));
+        setCallState(prev => ({
+          ...prev,
+          remoteScreenSharing: data.isScreenSharing && data.screenSharingBy !== profileName,
+        }));
       }
     });
 
-    // Écoute des candidats ICE de l'interlocuteur
+    // Écouter les candidats ICE de l'appelé
     const unsubCallee = onSnapshot(collection(db, 'calls', String(chatId), 'calleeCandidates'), (snap) => {
       snap.docChanges().forEach(ch => {
-        if (ch.type === 'added') addOrQueueCandidate(ch.doc.data());
+        if (ch.type === 'added') {
+          pc.addIceCandidate(new RTCIceCandidate(ch.doc.data())).catch(() => { });
+        }
       });
     });
 
     unsubsRef.current = [unsubAnswer, unsubCallee];
-  };
+  }, [selectedChat, profileName, playRingtone, _getLocalStream, _createPC, _cleanup]);
 
-  // =======================================================================
-  // 6. DÉCROCHER (CALLEE)
-  // =======================================================================
-  const acceptIncomingCall = async () => {
-    if (!incomingCall) return;
-    const { chatId, type } = incomingCall;
+  const acceptIncomingCall = useCallback(async () => {
+    if (!incomingCall) return null;
+    const { chatId, type, from } = incomingCall;
     setIncomingCall(null);
-    stopRingtone();
 
+    // Enveloppe d'autorisation explicite
     const stream = await _getLocalStream(type);
     if (!stream) {
-      endCall();
-      return;
+      setCallState({ type: null, active: false, ringing: false, micOn: true, camOn: true, isScreenSharing: false, isHost: false, inviteOpen: false, copied: false, remoteScreenSharing: false });
+      return null;
     }
     setLocalStream(stream);
-    setCallState({ type, active: true, ringing: false, micOn: true, camOn: type === 'video', isScreenSharing: false, isHost: false, remoteScreenSharing: false });
+
+    setCallState({ type, active: true, ringing: false, micOn: true, camOn: type === 'video', isScreenSharing: false, isHost: false, inviteOpen: false, copied: false, remoteScreenSharing: false });
 
     const callSnap = await getDoc(doc(db, 'calls', String(chatId)));
-    if (!callSnap.exists()) return;
+    if (!callSnap.exists()) return null;
     const callData = callSnap.data();
 
     const pc = _createPC(chatId, 'callee');
     stream.getTracks().forEach(t => pc.addTrack(t, stream));
 
     await pc.setRemoteDescription(new RTCSessionDescription(callData.offer));
-    await flushPendingCandidates();
-
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
 
@@ -305,142 +298,284 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
 
     const unsubCallDoc = onSnapshot(doc(db, 'calls', String(chatId)), (snap) => {
       if (!snap.exists()) {
-        endCall();
+        _cleanup();
+        setCallState({ type: null, active: false, ringing: false, micOn: true, camOn: true, isScreenSharing: false, isHost: false, inviteOpen: false, copied: false, remoteScreenSharing: false });
         return;
       }
       const data = snap.data();
+
+      // Signal de coupure micro par le professeur / hôte
+      if (data?.forceMuteParticipant) {
+        if (stream) {
+          stream.getAudioTracks().forEach(t => { t.enabled = false; });
+        }
+        setCallState(prev => ({ ...prev, micOn: false }));
+      }
+
+      // Signal d'arrêt de partage d'écran par le professeur / hôte
+      if (data?.forceStopScreenShare && screenTrackRef.current) {
+        if (screenTrackRef.current) {
+          screenTrackRef.current.stop();
+          screenTrackRef.current = null;
+        }
+        setCallState(prev => ({ ...prev, isScreenSharing: false }));
+      }
+
+      // Signal de partage d'écran distant
       if (data?.isScreenSharing !== undefined) {
-        setCallState(prev => ({ ...prev, remoteScreenSharing: data.isScreenSharing && data.screenSharingBy !== profileName }));
+        setCallState(prev => ({
+          ...prev,
+          remoteScreenSharing: data.isScreenSharing && data.screenSharingBy !== profileName,
+        }));
       }
     });
 
     const unsubCaller = onSnapshot(collection(db, 'calls', String(chatId), 'callerCandidates'), (snap) => {
       snap.docChanges().forEach(ch => {
-        if (ch.type === 'added') addOrQueueCandidate(ch.doc.data());
+        if (ch.type === 'added') {
+          pc.addIceCandidate(new RTCIceCandidate(ch.doc.data())).catch(() => { });
+        }
       });
     });
 
     unsubsRef.current = [unsubCallDoc, unsubCaller];
-  };
+    return { chatId, type, from };
+  }, [incomingCall, _getLocalStream, _createPC, _cleanup, profileName]);
 
-  // =======================================================================
-  // 7. RACCROCHER / REFUSER
-  // =======================================================================
+  // Raccrochage avec suppression immédiate du signal Firestore
   const endCall = useCallback(() => {
-    const chatId = activeChatIdRef.current || incomingCall?.chatId || selectedChat?.id;
-    if (chatId) {
-      deleteDoc(doc(db, 'calls', String(chatId))).catch(() => { });
+    const targetChatId = activeChatIdRef.current || selectedChat?.id;
+    if (targetChatId) {
+      deleteDoc(doc(db, 'calls', String(targetChatId))).catch(() => { });
     }
     _cleanup();
-    setIncomingCall(null);
-    setCallState({ type: null, active: false, ringing: false, micOn: true, camOn: true, isScreenSharing: false, isHost: false, remoteScreenSharing: false });
-  }, [_cleanup, incomingCall, selectedChat]);
+    setCallState({ type: null, active: false, ringing: false, micOn: true, camOn: true, isScreenSharing: false, isHost: false, inviteOpen: false, copied: false, remoteScreenSharing: false });
+  }, [selectedChat, _cleanup]);
 
+  // Refus d'appel avec suppression du signal
   const declineIncomingCall = useCallback(() => {
-    endCall();
-  }, [endCall]);
+    if (!incomingCall) return;
+    deleteDoc(doc(db, 'calls', String(incomingCall.chatId))).catch(() => { });
+    setIncomingCall(null);
+  }, [incomingCall]);
 
-  // =======================================================================
-  // 8. ÉCOUTE GLOBALE DES APPELS ENTRANTS
-  // =======================================================================
+  // Écoute des appels entrants pour cet utilisateur (to === profileName)
   useEffect(() => {
     if (!profileName) return;
-    const normalizedProfile = profileName.trim().toLowerCase();
-
     const unsub = onSnapshot(collection(db, 'calls'), (snap) => {
       snap.docChanges().forEach(change => {
         const data = change.doc.data();
-        if (!data) return;
-
-        const targetTo = (data.to || '').trim().toLowerCase();
-
-        // Si l'appel est pour nous et qu'il sonne
-        if ((change.type === 'added' || change.type === 'modified') && targetTo === normalizedProfile && data.status === 'ringing') {
-          setIncomingCall({ chatId: change.doc.id, type: data.type || 'video', from: data.from || 'Interlocuteur' });
+        if (change.type === 'added' && data.to === profileName && data.status === 'ringing') {
+          setIncomingCall({ chatId: change.doc.id, type: data.type, from: data.from });
           playRingtone();
+          if (navigator.vibrate) navigator.vibrate([400, 150, 400, 150, 400]);
         }
-
-        // Si l'appel est annulé ou supprimé
-        if (change.type === 'removed' || (change.type === 'modified' && data.status !== 'ringing')) {
+        if (change.type === 'removed') {
           setIncomingCall(prev => prev?.chatId === change.doc.id ? null : prev);
-          stopRingtone();
         }
       });
     });
     return () => unsub();
-  }, [profileName, playRingtone, stopRingtone]);
+  }, [profileName, playRingtone]);
 
-  // =======================================================================
-  // 9. CONTRÔLES (MICRO, CAMÉRA, PARTAGE ÉCRAN)
-  // =======================================================================
-  const toggleMic = () => {
+  const toggleMic = useCallback(() => {
     if (localStream) {
-      localStream.getAudioTracks().forEach(t => t.enabled = !callState.micOn);
-      setCallState(prev => ({ ...prev, micOn: !prev.micOn }));
+      localStream.getAudioTracks().forEach(t => { t.enabled = !callState.micOn; });
     }
-  };
+    setCallState(prev => ({ ...prev, micOn: !prev.micOn }));
+  }, [localStream, callState.micOn]);
 
-  const toggleCam = () => {
+  const toggleCam = useCallback(() => {
     if (localStream) {
-      localStream.getVideoTracks().forEach(t => t.enabled = !callState.camOn);
-      setCallState(prev => ({ ...prev, camOn: !prev.camOn }));
+      localStream.getVideoTracks().forEach(t => { t.enabled = !callState.camOn; });
     }
-  };
+    setCallState(prev => ({ ...prev, camOn: !prev.camOn }));
+  }, [localStream, callState.camOn]);
 
-  const toggleScreenShare = async () => {
+  // ---- FONCTIONNALITÉ 1 : PARTAGE D'ÉCRAN (SCREEN SHARE) AVEC BASCULE INSTANTANÉE ----
+  const toggleScreenShare = useCallback(async () => {
     if (!pcRef.current || !localStream) return;
-    const chatId = activeChatIdRef.current;
 
+    // Cas 1 : Arrêt du partage d'écran -> Revenir à la caméra
     if (callState.isScreenSharing) {
-      // Revenir à la caméra
-      if (screenTrackRef.current) {
-        screenTrackRef.current.stop();
-        screenTrackRef.current = null;
-      }
       try {
-        const camStream = await navigator.mediaDevices.getUserMedia({ video: true });
-        const camTrack = camStream.getVideoTracks()[0];
-        cameraTrackRef.current = camTrack;
+        if (screenTrackRef.current) {
+          screenTrackRef.current.stop();
+          screenTrackRef.current = null;
+        }
+
+        let camTrack = cameraTrackRef.current;
+        if (!camTrack || camTrack.readyState === 'ended') {
+          const camStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
+            audio: false,
+          });
+          camTrack = camStream.getVideoTracks()[0];
+          cameraTrackRef.current = camTrack;
+        }
 
         const sender = pcRef.current.getSenders().find(s => s.track && s.track.kind === 'video');
-        if (sender && camTrack) await sender.replaceTrack(camTrack);
+        if (sender && camTrack) {
+          await sender.replaceTrack(camTrack);
+        }
 
         const audioTrack = localStream.getAudioTracks()[0];
-        const newLocalStream = new MediaStream(audioTrack ? [camTrack, audioTrack] : [camTrack]);
-        setLocalStream(newLocalStream);
-
-        if (chatId) updateDoc(doc(db, 'calls', String(chatId)), { isScreenSharing: false });
+        const combinedStream = new MediaStream(audioTrack ? [camTrack, audioTrack] : [camTrack]);
+        setLocalStream(combinedStream);
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = combinedStream;
+          localVideoRef.current.play().catch(() => { });
+        }
         setCallState(prev => ({ ...prev, isScreenSharing: false }));
-      } catch (e) { console.warn("Erreur retour caméra:", e); }
-    } else {
-      // Lancer le partage d'écran
-      try {
-        const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-        const screenTrack = screenStream.getVideoTracks()[0];
-        screenTrackRef.current = screenTrack;
-        cameraTrackRef.current = localStream.getVideoTracks()[0];
 
-        screenTrack.onended = () => toggleScreenShare(); // Si l'utilisateur clique sur "Arrêter le partage" du navigateur
-
-        const sender = pcRef.current.getSenders().find(s => s.track && s.track.kind === 'video');
-        if (sender && screenTrack) await sender.replaceTrack(screenTrack);
-
-        const audioTrack = localStream.getAudioTracks()[0];
-        const newLocalStream = new MediaStream(audioTrack ? [screenTrack, audioTrack] : [screenTrack]);
-        setLocalStream(newLocalStream);
-
-        if (chatId) updateDoc(doc(db, 'calls', String(chatId)), { isScreenSharing: true, screenSharingBy: profileName });
-        setCallState(prev => ({ ...prev, isScreenSharing: true }));
-      } catch (e) { console.warn("Partage d'écran refusé ou annulé:", e); }
+        const targetChatId = activeChatIdRef.current || selectedChat?.id;
+        if (targetChatId) {
+          updateDoc(doc(db, 'calls', String(targetChatId)), {
+            isScreenSharing: false,
+            screenSharingBy: null,
+          }).catch(() => { });
+        }
+      } catch (err) {
+        console.warn('[WebRTC] Erreur lors du retour à la caméra :', err);
+      }
+      return;
     }
-  };
 
-  // On retourne une API épurée, débarrassée des fioritures inutiles
+    // Cas 2 : Lancement du partage d'écran via getDisplayMedia
+    try {
+      if (!navigator.mediaDevices?.getDisplayMedia) {
+        alert("Le partage d'écran n'est pas supporté par votre navigateur (disponible sur PC, Mac et certains mobiles compatibles).");
+        return;
+      }
+
+      const screenStream = await navigator.mediaDevices.getDisplayMedia({
+        video: { cursor: 'always', displaySurface: 'monitor' },
+        audio: false,
+      });
+
+      const screenTrack = screenStream.getVideoTracks()[0];
+      if (!screenTrack) return;
+
+      screenTrackRef.current = screenTrack;
+      cameraTrackRef.current = localStream.getVideoTracks()[0];
+
+      // Écoute de l'arrêt natif du navigateur
+      screenTrack.onended = () => {
+        toggleScreenShare();
+      };
+
+      const sender = pcRef.current.getSenders().find(s => s.track && s.track.kind === 'video');
+      if (sender) {
+        await sender.replaceTrack(screenTrack);
+      }
+
+      const audioTrack = localStream.getAudioTracks()[0];
+      const combinedStream = new MediaStream(audioTrack ? [screenTrack, audioTrack] : [screenTrack]);
+      setLocalStream(combinedStream);
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = combinedStream;
+        localVideoRef.current.play().catch(() => { });
+      }
+      setCallState(prev => ({ ...prev, isScreenSharing: true }));
+
+      const targetChatId = activeChatIdRef.current || selectedChat?.id;
+      if (targetChatId) {
+        updateDoc(doc(db, 'calls', String(targetChatId)), {
+          isScreenSharing: true,
+          screenSharingBy: profileName,
+        }).catch(() => { });
+      }
+    } catch (err) {
+      console.warn('[WebRTC] getDisplayMedia annulé ou refusé :', err);
+    }
+  }, [callState.isScreenSharing, localStream, profileName, selectedChat]);
+
+  // ---- FONCTIONNALITÉ 2 : DROITS PROFESSEUR / HÔTE (MODÉRATION D'APPEL) ----
+  const hostMuteParticipant = useCallback(async () => {
+    const targetChatId = activeChatIdRef.current || selectedChat?.id;
+    if (!targetChatId) return;
+    try {
+      await updateDoc(doc(db, 'calls', String(targetChatId)), {
+        forceMuteParticipant: true,
+        moderatedAt: serverTimestamp(),
+      });
+      alert("Micro du participant coupé avec succès.");
+    } catch (err) {
+      console.warn('[WebRTC] hostMuteParticipant error:', err);
+    }
+  }, [selectedChat]);
+
+  const hostStopParticipantScreenShare = useCallback(async () => {
+    const targetChatId = activeChatIdRef.current || selectedChat?.id;
+    if (!targetChatId) return;
+    try {
+      await updateDoc(doc(db, 'calls', String(targetChatId)), {
+        forceStopScreenShare: true,
+        moderatedAt: serverTimestamp(),
+      });
+      alert("Partage d'écran du participant arrêté.");
+    } catch (err) {
+      console.warn('[WebRTC] hostStopParticipantScreenShare error:', err);
+    }
+  }, [selectedChat]);
+
+  const copyInviteLink = useCallback(() => {
+    const link = `https://troco.app/join/${selectedChat?.id || 'group'}`;
+    navigator.clipboard?.writeText(link).catch(() => { });
+    setCallState(prev => ({ ...prev, copied: true }));
+    window.setTimeout(() => setCallState(prev => ({ ...prev, copied: false })), 1800);
+  }, [selectedChat]);
+
+  // Basculement dynamique de caméra (avant/arrière) avec replaceTrack
+  const switchCamera = useCallback(async () => {
+    if (callState.type !== 'video' || !localStream || callState.isScreenSharing) return;
+    const nextFacing = facingMode === 'user' ? 'environment' : 'user';
+    try {
+      localStream.getVideoTracks().forEach(track => {
+        try { track.stop(); } catch (_) { }
+      });
+
+      const newStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: nextFacing },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+        audio: false,
+      });
+
+      const newVideoTrack = newStream.getVideoTracks()[0];
+      if (!newVideoTrack) return;
+
+      if (pcRef.current) {
+        const sender = pcRef.current.getSenders().find(s => s.track && s.track.kind === 'video');
+        if (sender) {
+          await sender.replaceTrack(newVideoTrack);
+        }
+      }
+
+      const audioTrack = localStream.getAudioTracks()[0];
+      const combinedTracks = audioTrack ? [newVideoTrack, audioTrack] : [newVideoTrack];
+      const combinedStream = new MediaStream(combinedTracks);
+
+      setLocalStream(combinedStream);
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = combinedStream;
+        localVideoRef.current.play().catch(() => { });
+      }
+      setFacingMode(nextFacing);
+    } catch (err) {
+      console.warn('[WebRTC] Erreur switchCamera vers :', nextFacing, err);
+    }
+  }, [callState.type, callState.isScreenSharing, localStream, facingMode]);
+
   return {
     callState, localStream, remoteStream, incomingCall,
     localVideoRef, remoteVideoRef,
-    attachLocalStream, attachRemoteStream,
+    facingMode, hasMultipleCameras, switchCamera,
     startCall, acceptIncomingCall, declineIncomingCall, endCall,
-    toggleMic, toggleCam, toggleScreenShare
+    toggleMic, toggleCam, toggleScreenShare,
+    hostMuteParticipant, hostStopParticipantScreenShare,
+    copyInviteLink, playRingtone,
   };
 }
