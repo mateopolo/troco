@@ -191,13 +191,14 @@ function FeedCardItem({
         border: item.isBoosted ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
         borderRadius: '20px',
         overflow: 'hidden',
-        boxShadow: item.isBoosted ? 'var(--shadow-accent)' : 'var(--shadow-card)',
+        boxShadow: item.isBoosted
+          ? '0 12px 30px rgba(185, 139, 115, 0.45)'
+          : (isHovered ? '0 16px 36px rgba(63, 66, 56, 0.12)' : 'var(--shadow-card)'),
         cursor: 'pointer',
         transform: isVisible
-          ? (isHovered ? 'translateY(-6px) scale(1.015)' : 'translateY(0) scale(1)')
-          : 'translateY(36px) scale(0.965)',
-        filter: isVisible ? 'blur(0px)' : 'blur(4px)',
-        transition: 'opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1), transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), filter 0.5s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s var(--ease-quiet)'
+          ? (isHovered ? 'translateY(-6px) scale(1.018)' : 'translateY(0) scale(1)')
+          : 'translateY(22px) scale(0.985)',
+        transition: 'opacity 0.42s cubic-bezier(0.22, 1, 0.36, 1), transform 0.42s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s cubic-bezier(0.22, 1, 0.36, 1)'
       }}
     >
       {/* CADRE PHOTO AVEC GESTION DU CARROUSEL, SWIPE ET SURVOL */}

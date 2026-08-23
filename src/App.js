@@ -701,7 +701,7 @@ export default function App() {
   const TAB_ORDER = { feed: 0, chat: 1, post: 2, profile: 3, admin: 4 };
   const prevTabRef = useRef(activeTab);
 
-  // Transition d'écrans haute-couture Apple Fluid Depth (Directional Swipe, Blur & Scale)
+  // Transition d'écrans haute-couture (Crisp Silk Lift & Organic Glide sans flou)
   useGSAP(() => {
     if (!mainContainerRef.current) return;
     
@@ -718,18 +718,18 @@ export default function App() {
       mainContainerRef.current,
       {
         opacity: 0,
-        x: direction * 45,
-        scale: 0.968,
-        filter: 'blur(6px)',
+        x: direction * 24,
+        y: 10,
+        scale: 0.988,
       },
       {
         opacity: 1,
         x: 0,
+        y: 0,
         scale: 1,
-        filter: 'blur(0px)',
-        duration: 0.44,
-        ease: 'power3.out',
-        clearProps: 'transform,opacity,filter',
+        duration: 0.38,
+        ease: 'power2.out',
+        clearProps: 'transform,opacity',
       }
     );
   }, { dependencies: [activeTab, viewMode], scope: mainContainerRef });
