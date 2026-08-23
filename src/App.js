@@ -5075,6 +5075,7 @@ export default function App() {
   };
 
   const handleConfirmDemoAuth = (method) => {
+    const loginMethodName = (typeof method === 'string' && method.trim()) ? method : 'Démo Rapide';
     const demoProfile = {
       uid: 'demo_mateopolo',
       name: 'MATEO POLO',
@@ -5083,15 +5084,29 @@ export default function App() {
       bio: 'Créateur de contenus, développeur Python et passionné de musique. Je propose des services flexibles et des échanges de qualité.',
       location: 'Paris, France',
       languages: ['FR', 'EN', 'ES', 'IT'],
-      loginMethod: method || 'Démo Rapide',
+      loginMethod: loginMethodName,
       euroBalance: 128,
       trocoTokens: 12,
+      isDemo: true,
+      dealsCompleted: 3,
+      dealsInProgress: 1,
+      rating: 4.9,
+      reviewsCount: 3,
+      skills: ['Développement Web', 'Design UI/UX', 'Python', 'Montage Vidéo'],
+      equipment: ['MacBook Pro M3', 'Micro Shure SM7B', 'Caméra Sony A7IV'],
+      onboardingCompleted: true,
       cguAcceptedAt: new Date().toISOString(),
     };
+    try {
+      window.localStorage.setItem('troco_user_profile', JSON.stringify(demoProfile));
+      window.localStorage.setItem('troco_is_authenticated', 'true');
+    } catch (e) {
+      console.warn('Storage error on demo auth:', e);
+    }
     setProfile(demoProfile);
-    window.localStorage.setItem('troco_user_profile', JSON.stringify(demoProfile));
-    window.localStorage.setItem('troco_is_authenticated', 'true');
+    setProfileDraft(demoProfile);
     setIsAuthenticated(true);
+    setAuthError('');
   };
 
   const handleSignupSubmit = async (e) => {
@@ -5361,13 +5376,15 @@ export default function App() {
 
                     {/* ACCÈS DÉMO RAPIDE */}
                     <button
-                      onClick={handleConfirmDemoAuth}
+                      type="button"
+                      onClick={() => handleConfirmDemoAuth('Démo Rapide')}
                       style={{
-                        border: darkMode ? '1px dashed rgba(232,221,211,0.25)' : '1px dashed #D4C5B5',
+                        border: '1px dashed var(--border-color)',
                         borderRadius: '16px', padding: '10px 14px',
-                        backgroundColor: darkMode ? '#1A1715' : '#F5F0E8',
+                        backgroundColor: 'var(--bg-subtle)',
                         cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        gap: '8px', fontWeight: '700', color: darkMode ? '#D4C5B5' : '#6B5E54', fontSize: '12px'
+                        gap: '8px', fontWeight: '700', color: 'var(--text-secondary)', fontSize: '12px',
+                        transition: 'all 0.2s ease'
                       }}
                     >
                       ⚡ Accès Rapide Démo

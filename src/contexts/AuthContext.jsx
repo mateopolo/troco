@@ -411,6 +411,7 @@ export const AuthProvider = ({ children }) => {
 
   // Connexion Démo
   const handleConfirmDemoAuth = (method) => {
+    const loginMethodName = (typeof method === 'string' && method.trim()) ? method : 'Démo Rapide';
     const demoProfile = {
       uid: 'demo_mateopolo',
       name: 'MATEO POLO',
@@ -419,19 +420,28 @@ export const AuthProvider = ({ children }) => {
       bio: 'Créateur de contenus, développeur Python et passionné de musique. Je propose des services flexibles et des échanges de qualité.',
       location: 'Paris, France',
       languages: ['FR', 'EN', 'ES', 'IT'],
-      loginMethod: method || 'Démo Rapide',
+      loginMethod: loginMethodName,
       euroBalance: 128,
       trocoTokens: 12,
       isDemo: true,
       dealsCompleted: 3,
       dealsInProgress: 1,
       rating: 4.9,
+      reviewsCount: 3,
+      skills: ['Développement Web', 'Design UI/UX', 'Python', 'Montage Vidéo'],
+      equipment: ['MacBook Pro M3', 'Micro Shure SM7B', 'Caméra Sony A7IV'],
+      onboardingCompleted: true,
       cguAcceptedAt: new Date().toISOString(),
     };
+    try {
+      window.localStorage.setItem('troco_user_profile', JSON.stringify(demoProfile));
+      window.localStorage.setItem('troco_is_authenticated', 'true');
+    } catch (e) {
+      console.warn('Storage error on demo auth:', e);
+    }
     setProfile(demoProfile);
-    window.localStorage.setItem('troco_user_profile', JSON.stringify(demoProfile));
-    window.localStorage.setItem('troco_is_authenticated', 'true');
     setIsAuthenticated(true);
+    setAuthError('');
   };
 
   // SMS Auth Handlers
