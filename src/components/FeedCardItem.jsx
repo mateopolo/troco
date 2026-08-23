@@ -28,12 +28,34 @@ function FeedCardItem({
 }) {
   const [localImageIndex, setLocalImageIndex] = useState(0);
   const [typedText, setTypedText] = useState('');
+  const [isVisible, setIsVisible] = useState(false);
   const cardElementRef = useRef(null);
   const touchStartRef = useRef(null);
   const touchDeltaXRef = useRef(0);
   const touchDeltaYRef = useRef(0);
   const isSwipingRef = useRef(false);
   const longPressTimerRef = useRef(null);
+
+  // SCROLL-DRIVEN CASCADE REVEAL (APPLE FLUID DEPTH)
+  useEffect(() => {
+    const el = cardElementRef.current;
+    if (!el) return;
+    if (typeof IntersectionObserver === 'undefined') {
+      setIsVisible(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true);
+          observer.unobserve(el);
+        }
+      },
+      { threshold: 0.05, rootMargin: '0px 0px -30px 0px' }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   const media = getSuggestedMedia ? getSuggestedMedia(item.title, item.description || '', item.image, item.video) : {};
   const isHovered = hoveredCardId === item.id;
@@ -161,9 +183,9 @@ function FeedCardItem({
       onTouchStart={() => { if (setHoveredCardId) setHoveredCardId(item.id); }}
       onMouseEnter={() => { if (setHoveredCardId) setHoveredCardId(item.id); }}
       onMouseLeave={() => { if (setHoveredCardId) setHoveredCardId(null); }}
-      className="premium-card"
+      className="premium-card fluid-reveal-card"
       style={{
-        opacity: 1,
+        opacity: isVisible ? 1 : 0,
         visibility: 'visible',
         backgroundColor: 'var(--bg-card)',
         border: item.isBoosted ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
@@ -171,8 +193,11 @@ function FeedCardItem({
         overflow: 'hidden',
         boxShadow: item.isBoosted ? 'var(--shadow-accent)' : 'var(--shadow-card)',
         cursor: 'pointer',
-        transform: isHovered ? 'translateY(-5px) scale(1.015)' : 'none',
-        transition: 'transform 0.4s var(--ease-quiet), box-shadow 0.4s var(--ease-quiet)'
+        transform: isVisible
+          ? (isHovered ? 'translateY(-6px) scale(1.015)' : 'translateY(0) scale(1)')
+          : 'translateY(36px) scale(0.965)',
+        filter: isVisible ? 'blur(0px)' : 'blur(4px)',
+        transition: 'opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1), transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), filter 0.5s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s var(--ease-quiet)'
       }}
     >
       {/* CADRE PHOTO AVEC GESTION DU CARROUSEL, SWIPE ET SURVOL */}

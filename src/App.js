@@ -698,21 +698,40 @@ export default function App() {
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState('list');
 
-  // Animation GSAP fluide pour les transitions d'onglets (Smooth Fade & Slide avec clearProps)
+  const TAB_ORDER = { feed: 0, chat: 1, post: 2, profile: 3, admin: 4 };
+  const prevTabRef = useRef(activeTab);
+
+  // Transition d'écrans haute-couture Apple Fluid Depth (Directional Swipe, Blur & Scale)
   useGSAP(() => {
-    if (activeTab !== 'chat' && mainContainerRef.current) {
-      gsap.fromTo(
-        mainContainerRef.current,
-        { opacity: 0, y: 16 },
-        {
-          opacity: 1,
-          y: 0,
-          duration: 0.42,
-          ease: 'power2.out',
-          clearProps: 'transform,opacity',
-        }
-      );
-    }
+    if (!mainContainerRef.current) return;
+    
+    // Sur mobile avec chat ouvert en plein écran, isolation totale
+    if (isMobile && activeTab === 'chat' && selectedChat) return;
+
+    const prevIdx = TAB_ORDER[prevTabRef.current] ?? 0;
+    const currentIdx = TAB_ORDER[activeTab] ?? 0;
+    const direction = currentIdx >= prevIdx ? 1 : -1;
+    prevTabRef.current = activeTab;
+
+    gsap.killTweensOf(mainContainerRef.current);
+    gsap.fromTo(
+      mainContainerRef.current,
+      {
+        opacity: 0,
+        x: direction * 45,
+        scale: 0.968,
+        filter: 'blur(6px)',
+      },
+      {
+        opacity: 1,
+        x: 0,
+        scale: 1,
+        filter: 'blur(0px)',
+        duration: 0.44,
+        ease: 'power3.out',
+        clearProps: 'transform,opacity,filter',
+      }
+    );
   }, { dependencies: [activeTab, viewMode], scope: mainContainerRef });
   // eslint-disable-next-line no-unused-vars
   const [selectedMapItem, setSelectedMapItem] = useState(null);
