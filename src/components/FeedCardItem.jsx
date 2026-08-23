@@ -163,6 +163,8 @@ function FeedCardItem({
       onMouseLeave={() => { if (setHoveredCardId) setHoveredCardId(null); }}
       className="premium-card"
       style={{
+        opacity: 1,
+        visibility: 'visible',
         backgroundColor: 'var(--bg-card)',
         border: item.isBoosted ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
         borderRadius: '20px',

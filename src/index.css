@@ -1328,3 +1328,9 @@ body.dark-mode .ad-card:hover {
     height: 38px !important;
   }
 }
+
+/* FORCAGE AFFICHAGE FEED NATIVE */
+.premium-card {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
