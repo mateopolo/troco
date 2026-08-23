@@ -3622,14 +3622,14 @@ export default function App() {
       })();
       const matchesFormat = (() => {
         if (formatFilter === 'all' || !formatFilter) return true;
-        const itemFormat = item.format || item.type || 'onsite';
+        const itemFormat = String(item.format || (item.type === 'remote' ? 'remote' : (item.type === 'both' ? 'both' : 'onsite'))).toLowerCase();
         if (formatFilter === 'remote') {
-          return itemFormat === 'remote' || itemFormat === 'both';
+          return itemFormat === 'remote' || itemFormat === 'both' || itemFormat.includes('visio') || itemFormat.includes('distance');
         }
         if (formatFilter === 'onsite') {
-          return itemFormat === 'onsite' || itemFormat === 'both';
+          return itemFormat === 'onsite' || itemFormat === 'both' || itemFormat.includes('presentiel') || itemFormat.includes('sur place');
         }
-        return itemFormat === formatFilter;
+        return true;
       })();
 
       const matchesCategory = (() => {
@@ -6053,17 +6053,14 @@ export default function App() {
     <div style={{
       backgroundColor: 'var(--bg-global)',
       color: 'var(--text-main)',
-      minHeight: (isMobile && activeTab === 'chat' && selectedChat) ? '100dvh' : '100vh',
-      height: (isMobile && activeTab === 'chat' && selectedChat) ? '100dvh' : 'auto',
-      maxHeight: (isMobile && activeTab === 'chat' && selectedChat) ? '100dvh' : 'none',
-      display: (isMobile && activeTab === 'chat' && selectedChat) ? 'flex' : 'block',
-      flexDirection: (isMobile && activeTab === 'chat' && selectedChat) ? 'column' : 'initial',
-      overflow: (isMobile && activeTab === 'chat' && selectedChat) ? 'hidden' : 'visible',
+      minHeight: '100vh',
+      height: 'auto',
+      display: 'block',
+      overflowX: 'hidden',
       transition: 'background-color 0.3s ease, color 0.3s ease',
       paddingBottom: isMobile && activeTab === 'chat' ? '0' : '90px',
       WebkitFontSmoothing: 'antialiased',
       position: 'relative',
-      overflowX: 'hidden',
       fontFamily: 'var(--font-family-main)'
     }}>
       {/* FOND LIQUIDE IRIDESCENT (PASTEL EDITION) */}
@@ -6895,17 +6892,12 @@ export default function App() {
           margin: '0 auto',
           width: '100%',
           boxSizing: 'border-box',
-          flex: activeTab === 'chat' ? 1 : 'none',
-          minHeight: activeTab === 'chat' ? 0 : 'auto',
-          height: activeTab === 'chat'
-            ? (isMobile ? (selectedChat ? '100%' : 'calc(100dvh - 125px)') : 'calc(100dvh - 129px)')
-            : 'auto',
-          maxHeight: activeTab === 'chat'
-            ? (isMobile ? (selectedChat ? '100%' : 'calc(100dvh - 125px)') : 'calc(100dvh - 129px)')
-            : 'none',
           display: activeTab === 'chat' ? 'flex' : 'block',
           flexDirection: activeTab === 'chat' ? 'column' : 'initial',
           overflow: activeTab === 'chat' ? 'hidden' : 'visible',
+          height: activeTab === 'chat'
+            ? (isMobile ? (selectedChat ? 'calc(100dvh - 60px)' : 'calc(100dvh - 125px)') : 'calc(100dvh - 129px)')
+            : 'auto',
           padding: activeTab === 'chat'
             ? (isMobile ? (selectedChat ? '0' : '0 6px') : '0 16px')
             : (isMobile ? '12px 12px 90px' : '20px 20px 90px'),
