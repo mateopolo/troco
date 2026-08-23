@@ -1313,8 +1313,24 @@ export default function App() {
   const [isInfiniteRadius, setIsInfiniteRadius] = useState(true);
   const [hoveredCardId, setHoveredCardId] = useState(null);
   const [hoverSlideIndex, setHoverSlideIndex] = useState(0);
-  const [isChatFullscreen, setIsChatFullscreen] = useState(false);
-  const [gridColumns, setGridColumns] = useState(isMobile ? 2 : 3);
+  const [gridColumns, setGridColumns] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = window.localStorage.getItem('troco_grid_columns');
+      if (saved) {
+        const num = Number(saved);
+        if ([2, 3, 4].includes(num)) return num;
+      }
+      return window.innerWidth < 768 ? 2 : 3;
+    }
+    return 3;
+  });
+
+  const handleSelectGridColumns = (num) => {
+    setGridColumns(num);
+    try {
+      window.localStorage.setItem('troco_grid_columns', String(num));
+    } catch (_) {}
+  };
 
   // Verrouillage absolu du scroll global dans l'onglet Chat (comportement application native iOS)
   useEffect(() => {
@@ -3691,25 +3707,21 @@ export default function App() {
 
   useGSAP(() => {
     if (!listingsGridRef.current) return;
-    const cards = listingsGridRef.current.querySelectorAll('.gsap-card, .premium-card');
+    const cards = listingsGridRef.current.querySelectorAll('.premium-card');
     if (!cards || cards.length === 0) return;
 
     gsap.fromTo(cards,
-      { opacity: 0, y: 40 },
+      { opacity: 0, y: 15 },
       {
         opacity: 1,
         y: 0,
-        duration: 0.6,
+        duration: 0.35,
         ease: 'power2.out',
-        stagger: 0.1,
-        scrollTrigger: {
-          trigger: listingsGridRef.current,
-          start: 'top 88%',
-          toggleActions: 'play none none none'
-        }
+        stagger: 0.03,
+        clearProps: 'all'
       }
     );
-  }, { dependencies: [filteredListings, selectedCategory, viewMode, formatFilter], scope: listingsGridRef });
+  }, { dependencies: [selectedCategory, viewMode, formatFilter], scope: listingsGridRef });
 
   const getListingDetail = (listing) => {
     const media = getSuggestedMedia(listing.title, listing.description || '', listing.image, listing.video);
@@ -6864,7 +6876,7 @@ export default function App() {
         key={`${activeTab}-${viewMode}`}
         className={`premium-main fade-up-in ${activeTab === 'chat' ? 'chat-mode' : ''}`}
         style={{
-          maxWidth: activeTab === 'feed' ? '1460px' : '1240px',
+          maxWidth: activeTab === 'feed' ? (gridColumns === 4 ? '1640px' : '1460px') : '1240px',
           margin: '0 auto',
           width: '100%',
           boxSizing: 'border-box',
@@ -7267,7 +7279,7 @@ export default function App() {
                     <button
                       key={num}
                       type="button"
-                      onClick={() => setGridColumns(num)}
+                      onClick={() => handleSelectGridColumns(num)}
                       className="premium-button"
                       title={`${num} colonnes`}
                       style={{
@@ -7385,7 +7397,9 @@ export default function App() {
                   style={{
                     display: 'grid',
                     gridTemplateColumns: `repeat(${gridColumns}, minmax(0, 1fr))`,
-                    gap: isMobile ? '12px' : '24px'
+                    gap: gridColumns === 4 ? (isMobile ? '10px' : '16px') : (isMobile ? '12px' : '24px'),
+                    width: '100%',
+                    boxSizing: 'border-box'
                   }}
                 >
                   {filteredListings.map((item) => (

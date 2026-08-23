@@ -1,12 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight, Video, Globe, MapPin, Tag, Trash2, ArrowRight, Sparkles } from 'lucide-react';
-import { gsap } from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { useGSAP } from '@gsap/react';
-
-if (typeof window !== 'undefined') {
-  gsap.registerPlugin(ScrollTrigger, useGSAP);
-}
 
 function FeedCardItem({
   item,
@@ -41,27 +34,6 @@ function FeedCardItem({
   const touchDeltaYRef = useRef(0);
   const isSwipingRef = useRef(false);
   const longPressTimerRef = useRef(null);
-
-  // GSAP ScrollTrigger animation
-  useGSAP(() => {
-    if (!cardElementRef.current) return;
-    gsap.fromTo(
-      cardElementRef.current,
-      { opacity: 0, y: 35, scale: 0.98 },
-      {
-        opacity: 1,
-        y: 0,
-        scale: 1,
-        duration: 0.6,
-        ease: 'power2.out',
-        scrollTrigger: {
-          trigger: cardElementRef.current,
-          start: 'top 88%',
-          toggleActions: 'play none none reverse',
-        },
-      }
-    );
-  }, { scope: cardElementRef });
 
   const media = getSuggestedMedia ? getSuggestedMedia(item.title, item.description || '', item.image, item.video) : {};
   const isHovered = hoveredCardId === item.id;
