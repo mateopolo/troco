@@ -701,7 +701,7 @@ export default function App() {
   const TAB_ORDER = { feed: 0, chat: 1, post: 2, profile: 3, admin: 4 };
   const prevTabRef = useRef(activeTab);
 
-  // Transition d'écrans haute-couture (Crisp Silk Lift & Organic Glide sans flou)
+  // Transition d'onglets & écrans GSAP (Organic Spring Glide + Back Ease)
   useGSAP(() => {
     if (!mainContainerRef.current) return;
     
@@ -718,17 +718,17 @@ export default function App() {
       mainContainerRef.current,
       {
         opacity: 0,
-        x: direction * 24,
-        y: 10,
-        scale: 0.988,
+        x: direction * 28,
+        y: 12,
+        scale: 0.985,
       },
       {
         opacity: 1,
         x: 0,
         y: 0,
         scale: 1,
-        duration: 0.38,
-        ease: 'power2.out',
+        duration: 0.42,
+        ease: 'back.out(1.15)',
         clearProps: 'transform,opacity',
       }
     );
@@ -3723,6 +3723,46 @@ export default function App() {
   ]);
 
   const listingsGridRef = useRef(null);
+
+  // GSAP SCROLLTRIGGER : CASCADE FLUIDE DES ANNONCES AU DÉFILEMENT (OPTION 1)
+  useGSAP(() => {
+    if (activeTab !== 'feed' || viewMode !== 'list') return;
+
+    const timer = setTimeout(() => {
+      const cards = gsap.utils.toArray('.feed-card-item');
+      if (!cards.length) return;
+
+      ScrollTrigger.batch(cards, {
+        start: 'top 92%',
+        onEnter: (batch) => {
+          gsap.fromTo(
+            batch,
+            {
+              opacity: 0,
+              y: 28,
+              scale: 0.98,
+            },
+            {
+              opacity: 1,
+              y: 0,
+              scale: 1,
+              duration: 0.48,
+              ease: 'back.out(1.18)',
+              stagger: 0.06,
+              overwrite: 'auto',
+              clearProps: 'transform,opacity',
+            }
+          );
+        },
+        once: true,
+      });
+    }, 60);
+
+    return () => {
+      clearTimeout(timer);
+      ScrollTrigger.getAll().forEach(t => t.kill());
+    };
+  }, { dependencies: [activeTab, filteredListings.length, viewMode], scope: listingsGridRef });
 
   const getListingDetail = (listing) => {
     const media = getSuggestedMedia(listing.title, listing.description || '', listing.image, listing.video);

@@ -28,34 +28,12 @@ function FeedCardItem({
 }) {
   const [localImageIndex, setLocalImageIndex] = useState(0);
   const [typedText, setTypedText] = useState('');
-  const [isVisible, setIsVisible] = useState(false);
   const cardElementRef = useRef(null);
   const touchStartRef = useRef(null);
   const touchDeltaXRef = useRef(0);
   const touchDeltaYRef = useRef(0);
   const isSwipingRef = useRef(false);
   const longPressTimerRef = useRef(null);
-
-  // SCROLL-DRIVEN CASCADE REVEAL (APPLE FLUID DEPTH)
-  useEffect(() => {
-    const el = cardElementRef.current;
-    if (!el) return;
-    if (typeof IntersectionObserver === 'undefined') {
-      setIsVisible(true);
-      return;
-    }
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setIsVisible(true);
-          observer.unobserve(el);
-        }
-      },
-      { threshold: 0.05, rootMargin: '0px 0px -30px 0px' }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
 
   const media = getSuggestedMedia ? getSuggestedMedia(item.title, item.description || '', item.image, item.video) : {};
   const isHovered = hoveredCardId === item.id;
@@ -183,10 +161,8 @@ function FeedCardItem({
       onTouchStart={() => { if (setHoveredCardId) setHoveredCardId(item.id); }}
       onMouseEnter={() => { if (setHoveredCardId) setHoveredCardId(item.id); }}
       onMouseLeave={() => { if (setHoveredCardId) setHoveredCardId(null); }}
-      className="premium-card fluid-reveal-card"
+      className="feed-card-item premium-card"
       style={{
-        opacity: isVisible ? 1 : 0,
-        visibility: 'visible',
         backgroundColor: 'var(--bg-card)',
         border: item.isBoosted ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
         borderRadius: '20px',
@@ -195,10 +171,8 @@ function FeedCardItem({
           ? '0 12px 30px rgba(185, 139, 115, 0.45)'
           : (isHovered ? '0 16px 36px rgba(63, 66, 56, 0.12)' : 'var(--shadow-card)'),
         cursor: 'pointer',
-        transform: isVisible
-          ? (isHovered ? 'translateY(-6px) scale(1.018)' : 'translateY(0) scale(1)')
-          : 'translateY(22px) scale(0.985)',
-        transition: 'opacity 0.42s cubic-bezier(0.22, 1, 0.36, 1), transform 0.42s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s cubic-bezier(0.22, 1, 0.36, 1)'
+        transform: isHovered ? 'translateY(-6px) scale(1.018)' : 'none',
+        transition: 'transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s cubic-bezier(0.22, 1, 0.36, 1)'
       }}
     >
       {/* CADRE PHOTO AVEC GESTION DU CARROUSEL, SWIPE ET SURVOL */}
