@@ -1315,20 +1315,29 @@ export default function App() {
   const [hoverSlideIndex, setHoverSlideIndex] = useState(0);
   const [gridColumns, setGridColumns] = useState(() => {
     if (typeof window !== 'undefined') {
-      const saved = window.localStorage.getItem('troco_grid_columns');
+      const isMob = window.innerWidth < 768;
+      const saved = window.localStorage.getItem(isMob ? 'troco_grid_columns_mob' : 'troco_grid_columns_desk');
       if (saved) {
         const num = Number(saved);
-        if ([2, 3, 4].includes(num)) return num;
+        if (isMob ? [1, 2].includes(num) : [2, 3, 4].includes(num)) return num;
       }
-      return window.innerWidth < 768 ? 2 : 3;
+      return isMob ? 1 : 3;
     }
     return 3;
   });
 
+  useEffect(() => {
+    setGridColumns(prev => {
+      if (isMobile && ![1, 2].includes(prev)) return 1;
+      if (!isMobile && ![2, 3, 4].includes(prev)) return 3;
+      return prev;
+    });
+  }, [isMobile]);
+
   const handleSelectGridColumns = (num) => {
     setGridColumns(num);
     try {
-      window.localStorage.setItem('troco_grid_columns', String(num));
+      window.localStorage.setItem(isMobile ? 'troco_grid_columns_mob' : 'troco_grid_columns_desk', String(num));
     } catch (_) {}
   };
 
@@ -6044,7 +6053,12 @@ export default function App() {
     <div style={{
       backgroundColor: 'var(--bg-global)',
       color: 'var(--text-main)',
-      minHeight: '100vh',
+      minHeight: (isMobile && activeTab === 'chat' && selectedChat) ? '100dvh' : '100vh',
+      height: (isMobile && activeTab === 'chat' && selectedChat) ? '100dvh' : 'auto',
+      maxHeight: (isMobile && activeTab === 'chat' && selectedChat) ? '100dvh' : 'none',
+      display: (isMobile && activeTab === 'chat' && selectedChat) ? 'flex' : 'block',
+      flexDirection: (isMobile && activeTab === 'chat' && selectedChat) ? 'column' : 'initial',
+      overflow: (isMobile && activeTab === 'chat' && selectedChat) ? 'hidden' : 'visible',
       transition: 'background-color 0.3s ease, color 0.3s ease',
       paddingBottom: isMobile && activeTab === 'chat' ? '0' : '90px',
       WebkitFontSmoothing: 'antialiased',
@@ -6192,6 +6206,7 @@ export default function App() {
         position: 'sticky',
         top: 0,
         zIndex: 50,
+        flexShrink: 0,
         boxShadow: isScrolled
           ? 'var(--shadow-card)'
           : '0 1px 24px rgba(0,0,0,0.03)',
@@ -6350,7 +6365,7 @@ export default function App() {
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    justify: 'space-between',
+                    justifyContent: 'space-between',
                     padding: '12px 16px',
                     borderRadius: '14px',
                     border: currentLang === lang.code ? '2px solid #C67D5B' : (darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3'),
@@ -6880,11 +6895,13 @@ export default function App() {
           margin: '0 auto',
           width: '100%',
           boxSizing: 'border-box',
+          flex: activeTab === 'chat' ? 1 : 'none',
+          minHeight: activeTab === 'chat' ? 0 : 'auto',
           height: activeTab === 'chat'
-            ? (isMobile ? (selectedChat ? 'calc(100dvh - 60px)' : 'calc(100dvh - 125px)') : 'calc(100dvh - 129px)')
+            ? (isMobile ? (selectedChat ? '100%' : 'calc(100dvh - 125px)') : 'calc(100dvh - 129px)')
             : 'auto',
           maxHeight: activeTab === 'chat'
-            ? (isMobile ? (selectedChat ? 'calc(100dvh - 60px)' : 'calc(100dvh - 125px)') : 'calc(100dvh - 129px)')
+            ? (isMobile ? (selectedChat ? '100%' : 'calc(100dvh - 125px)') : 'calc(100dvh - 129px)')
             : 'none',
           display: activeTab === 'chat' ? 'flex' : 'block',
           flexDirection: activeTab === 'chat' ? 'column' : 'initial',
@@ -7258,7 +7275,7 @@ export default function App() {
                   </button>
                 </div>
 
-                {/* SÉLECTEUR DE COLONNES DE GRILLE (2, 3 ou 4 COLONNES AVEC ICÔNES GÉOMÉTRIQUES) */}
+                {/* SÉLECTEUR DE COLONNES DE GRILLE (MOBILE: 1, 2 | DESKTOP: 2, 3, 4) */}
                 <div
                   style={{
                     display: 'flex',
@@ -7273,15 +7290,15 @@ export default function App() {
                     gap: '4px',
                     flexShrink: 0
                   }}
-                  title="Affichage en 2, 3 ou 4 colonnes"
+                  title={isMobile ? "Affichage en 1 ou 2 colonnes" : "Affichage en 2, 3 ou 4 colonnes"}
                 >
-                  {[2, 3, 4].map((num) => (
+                  {(isMobile ? [1, 2] : [2, 3, 4]).map((num) => (
                     <button
                       key={num}
                       type="button"
                       onClick={() => handleSelectGridColumns(num)}
                       className="premium-button"
-                      title={`${num} colonnes`}
+                      title={`${num} colonne${num > 1 ? 's' : ''}`}
                       style={{
                         padding: '7px 10px',
                         borderRadius: '12px',
@@ -7304,7 +7321,11 @@ export default function App() {
                         transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)'
                       }}
                     >
-                      {num === 2 ? (
+                      {num === 1 ? (
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                          <rect x="2" y="2" width="12" height="12" rx="2" />
+                        </svg>
+                      ) : num === 2 ? (
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                           <rect x="1.5" y="2" width="5.5" height="12" rx="1.5" />
                           <rect x="9" y="2" width="5.5" height="12" rx="1.5" />
@@ -7396,7 +7417,7 @@ export default function App() {
                   ref={listingsGridRef}
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: `repeat(${gridColumns}, minmax(0, 1fr))`,
+                    gridTemplateColumns: gridColumns === 1 ? '1fr' : `repeat(${gridColumns}, minmax(0, 1fr))`,
                     gap: gridColumns === 4 ? (isMobile ? '10px' : '16px') : (isMobile ? '12px' : '24px'),
                     width: '100%',
                     boxSizing: 'border-box'
