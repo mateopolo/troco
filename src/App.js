@@ -1314,8 +1314,26 @@ export default function App() {
   const [hoveredCardId, setHoveredCardId] = useState(null);
   const [hoverSlideIndex, setHoverSlideIndex] = useState(0);
   const [isChatFullscreen, setIsChatFullscreen] = useState(false);
-  const [localZoom, setLocalZoom] = useState(false);
-  const [gridColumns, setGridColumns] = useState(isMobile ? 1 : 3);
+  const [gridColumns, setGridColumns] = useState(isMobile ? 2 : 3);
+
+  // Verrouillage absolu du scroll global dans l'onglet Chat (comportement application native iOS)
+  useEffect(() => {
+    if (activeTab === 'chat' && selectedChat) {
+      const originalBodyOverflow = document.body.style.overflow;
+      const originalDocOverflow = document.documentElement.style.overflow;
+      const originalTouchAction = document.body.style.touchAction;
+
+      document.body.style.overflow = 'hidden';
+      document.documentElement.style.overflow = 'hidden';
+      document.body.style.touchAction = 'none';
+
+      return () => {
+        document.body.style.overflow = originalBodyOverflow;
+        document.documentElement.style.overflow = originalDocOverflow;
+        document.body.style.touchAction = originalTouchAction;
+      };
+    }
+  }, [activeTab, selectedChat]);
 
   useEffect(() => {
     if (viewMode === 'map') {
@@ -7228,7 +7246,7 @@ export default function App() {
                   </button>
                 </div>
 
-                {/* SÉLECTEUR DE COLONNES DE GRILLE (1, 2, 3 COLONNES) */}
+                {/* SÉLECTEUR DE COLONNES DE GRILLE (2, 3 ou 4 COLONNES AVEC ICÔNES GÉOMÉTRIQUES) */}
                 <div
                   style={{
                     display: 'flex',
@@ -7243,16 +7261,17 @@ export default function App() {
                     gap: '4px',
                     flexShrink: 0
                   }}
-                  title="Affichage en 1, 2 ou 3 colonnes"
+                  title="Affichage en 2, 3 ou 4 colonnes"
                 >
-                  {[1, 2, 3].map((num) => (
+                  {[2, 3, 4].map((num) => (
                     <button
                       key={num}
                       type="button"
                       onClick={() => setGridColumns(num)}
                       className="premium-button"
+                      title={`${num} colonnes`}
                       style={{
-                        padding: '8px 12px',
+                        padding: '7px 10px',
                         borderRadius: '12px',
                         border: 'none',
                         backgroundColor: gridColumns === num
@@ -7261,20 +7280,37 @@ export default function App() {
                         color: gridColumns === num
                           ? '#FFFFFF'
                           : 'var(--text-secondary)',
-                        fontSize: '12px',
-                        fontWeight: '800',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        minWidth: '34px',
+                        minWidth: '32px',
+                        height: '32px',
                         boxShadow: gridColumns === num
                           ? 'var(--shadow-accent)'
                           : 'none',
                         transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)'
                       }}
                     >
-                      {num === 1 ? '1 col' : num === 2 ? '2 col' : '3 col'}
+                      {num === 2 ? (
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                          <rect x="1.5" y="2" width="5.5" height="12" rx="1.5" />
+                          <rect x="9" y="2" width="5.5" height="12" rx="1.5" />
+                        </svg>
+                      ) : num === 3 ? (
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                          <rect x="1" y="2" width="3.5" height="12" rx="1" />
+                          <rect x="6.25" y="2" width="3.5" height="12" rx="1" />
+                          <rect x="11.5" y="2" width="3.5" height="12" rx="1" />
+                        </svg>
+                      ) : (
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                          <rect x="0.75" y="2" width="2.6" height="12" rx="0.75" />
+                          <rect x="4.6" y="2" width="2.6" height="12" rx="0.75" />
+                          <rect x="8.45" y="2" width="2.6" height="12" rx="0.75" />
+                          <rect x="12.3" y="2" width="2.6" height="12" rx="0.75" />
+                        </svg>
+                      )}
                     </button>
                   ))}
                 </div>
@@ -7348,12 +7384,8 @@ export default function App() {
                   ref={listingsGridRef}
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: gridColumns === 1
-                      ? '1fr'
-                      : gridColumns === 2
-                        ? 'repeat(2, minmax(0, 1fr))'
-                        : 'repeat(3, minmax(0, 1fr))',
-                    gap: '24px'
+                    gridTemplateColumns: `repeat(${gridColumns}, minmax(0, 1fr))`,
+                    gap: isMobile ? '12px' : '24px'
                   }}
                 >
                   {filteredListings.map((item) => (

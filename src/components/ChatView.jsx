@@ -623,6 +623,7 @@ function ChatView({
             flexDirection: 'column',
             gap: '10px',
             overscrollBehavior: 'contain',
+            overscrollBehaviorY: 'contain',
             WebkitOverflowScrolling: 'touch',
             touchAction: 'pan-y',
             boxSizing: 'border-box'
