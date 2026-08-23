@@ -633,6 +633,7 @@ export function ThemeProvider({ children }) {
     root.style.setProperty('--font-family-main', currentFont);
     root.style.setProperty('--border-radius-main', `${borderRadius}px`);
     root.style.setProperty('--base-zoom', `${baseZoom}`);
+    root.style.zoom = `${baseZoom}`;
 
     // Contrast text on primary button
     const contrastOnPrimary = getContrastColor(vars['--accent-primary'] || customColors.primary);

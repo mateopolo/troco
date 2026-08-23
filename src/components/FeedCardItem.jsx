@@ -1,6 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight, Video, Globe, MapPin, Tag, Trash2, ArrowRight } from 'lucide-react';
-import { useScrollReveal } from '../utils/useScrollReveal';
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useGSAP } from '@gsap/react';
+
+if (typeof window !== 'undefined') {
+  gsap.registerPlugin(ScrollTrigger, useGSAP);
+}
 
 function FeedCardItem({
   item,
@@ -36,8 +42,26 @@ function FeedCardItem({
   const isSwipingRef = useRef(false);
   const longPressTimerRef = useRef(null);
 
-  // Hook Scroll Reveal natif (IntersectionObserver)
-  const revealRef = useScrollReveal({ threshold: 0.08 });
+  // GSAP ScrollTrigger animation
+  useGSAP(() => {
+    if (!cardElementRef.current) return;
+    gsap.fromTo(
+      cardElementRef.current,
+      { opacity: 0, y: 35, scale: 0.98 },
+      {
+        opacity: 1,
+        y: 0,
+        scale: 1,
+        duration: 0.6,
+        ease: 'power2.out',
+        scrollTrigger: {
+          trigger: cardElementRef.current,
+          start: 'top 88%',
+          toggleActions: 'play none none reverse',
+        },
+      }
+    );
+  }, { scope: cardElementRef });
 
   const media = getSuggestedMedia ? getSuggestedMedia(item.title, item.description || '', item.image, item.video) : {};
   const isHovered = hoveredCardId === item.id;
@@ -154,18 +178,12 @@ function FeedCardItem({
 
   return (
     <div
-      ref={(el) => {
-        cardElementRef.current = el;
-        if (revealRef) {
-          if (typeof revealRef === 'function') revealRef(el);
-          else revealRef.current = el;
-        }
-      }}
+      ref={cardElementRef}
       onClick={() => handleOpenListing(item)}
       onTouchStart={() => { if (setHoveredCardId) setHoveredCardId(item.id); }}
       onMouseEnter={() => { if (setHoveredCardId) setHoveredCardId(item.id); }}
       onMouseLeave={() => { if (setHoveredCardId) setHoveredCardId(null); }}
-      className="premium-card reveal-card"
+      className="premium-card reveal-card gsap-card"
       style={{
         backgroundColor: 'var(--bg-card)',
         border: item.isBoosted ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',

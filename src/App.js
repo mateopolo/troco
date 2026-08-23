@@ -5761,13 +5761,11 @@ export default function App() {
       backgroundColor: 'var(--bg-global)',
       color: 'var(--text-main)',
       minHeight: '100vh',
-      transition: 'background-color 0.3s ease, color 0.3s ease, transform 0.2s ease',
+      transition: 'background-color 0.3s ease, color 0.3s ease',
       paddingBottom: isMobile && activeTab === 'chat' ? '0' : '90px',
       WebkitFontSmoothing: 'antialiased',
       position: 'relative',
       overflowX: 'hidden',
-      transform: 'scale(var(--base-zoom, 1))',
-      transformOrigin: 'top center',
       fontFamily: 'var(--font-family-main)'
     }}>
       {/* ORBES DE LUEUR AMBIANTE FLUIDES */}
@@ -8751,43 +8749,94 @@ export default function App() {
 
       </main>
 
-      {/* BARRE DE NAVIGATION EN BAS (GLASSMORPHISM WARM THEMED) */}
+      {/* BARRE DE NAVIGATION EN BAS (ULTRA-GLASSMORPHISM THEMED & DOCKED) */}
       <nav style={{
         display: (isMobile && activeTab === 'chat' && selectedChat) ? 'none' : 'block',
-        position: 'fixed', bottom: 0, left: 0, right: 0,
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
         backgroundColor: 'var(--bg-glass)',
-        backdropFilter: 'blur(24px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+        backdropFilter: 'blur(30px) saturate(200%)',
+        WebkitBackdropFilter: 'blur(30px) saturate(200%)',
         borderTop: '1px solid var(--border-color)',
-        padding: '10px 0', zIndex: 40,
-        boxShadow: 'var(--shadow-card)'
+        padding: '8px 16px max(8px, env(safe-area-inset-bottom, 8px))',
+        zIndex: 99999,
+        boxShadow: '0 -4px 32px rgba(0,0,0,0.08)',
+        transition: 'background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease'
       }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-around', alignItems: 'center' }}>
+        <div style={{
+          maxWidth: '800px',
+          margin: '0 auto',
+          display: 'flex',
+          justifyContent: 'space-around',
+          alignItems: 'center',
+          gap: '8px'
+        }}>
 
-          <button onClick={() => { setActiveTab('feed'); setSelectedChat(null); }} className="premium-nav-btn" style={{ border: 'none', background: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', color: activeTab === 'feed' ? 'var(--accent-primary)' : 'var(--text-secondary)', cursor: 'pointer', padding: '6px 14px', borderRadius: '16px' }}>
-            <Search size={20} />
-            <span style={{ fontSize: '10.5px', fontWeight: '700' }}>{t('explorer')}</span>
+          {/* 1. EXPLORER */}
+          <button
+            type="button"
+            onClick={() => { setActiveTab('feed'); setSelectedChat(null); }}
+            className="premium-nav-btn"
+            style={{
+              border: activeTab === 'feed' ? '1px solid var(--border-color)' : '1px solid transparent',
+              background: activeTab === 'feed' ? 'var(--bg-subtle)' : 'transparent',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '3px',
+              color: activeTab === 'feed' ? 'var(--accent-primary)' : 'var(--text-secondary)',
+              cursor: 'pointer',
+              padding: '6px 18px',
+              borderRadius: 'var(--border-radius-main, 16px)',
+              transition: 'all 0.2s ease',
+              transform: activeTab === 'feed' ? 'scale(1.04)' : 'scale(1)'
+            }}
+          >
+            <Search size={21} color={activeTab === 'feed' ? 'var(--accent-primary)' : 'var(--text-secondary)'} />
+            <span style={{ fontSize: '11px', fontWeight: activeTab === 'feed' ? '800' : '600' }}>{t('explorer')}</span>
           </button>
 
-          <button onClick={() => { setActiveTab('chat'); setSelectedChat(null); }} className="premium-nav-btn" style={{ border: 'none', background: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', color: activeTab === 'chat' ? 'var(--accent-primary)' : 'var(--text-secondary)', cursor: 'pointer', padding: '6px 14px', borderRadius: '16px', position: 'relative' }}>
+          {/* 2. MESSAGES */}
+          <button
+            type="button"
+            onClick={() => { setActiveTab('chat'); setSelectedChat(null); }}
+            className="premium-nav-btn"
+            style={{
+              border: activeTab === 'chat' ? '1px solid var(--border-color)' : '1px solid transparent',
+              background: activeTab === 'chat' ? 'var(--bg-subtle)' : 'transparent',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '3px',
+              color: activeTab === 'chat' ? 'var(--accent-primary)' : 'var(--text-secondary)',
+              cursor: 'pointer',
+              padding: '6px 18px',
+              borderRadius: 'var(--border-radius-main, 16px)',
+              position: 'relative',
+              transition: 'all 0.2s ease',
+              transform: activeTab === 'chat' ? 'scale(1.04)' : 'scale(1)'
+            }}
+          >
             <span style={{ position: 'relative', display: 'inline-flex' }}>
-              <MessageSquare size={20} />
+              <MessageSquare size={21} color={activeTab === 'chat' ? 'var(--accent-primary)' : 'var(--text-secondary)'} />
               {unreadCount > 0 && (
                 <span style={{
                   position: 'absolute',
                   top: '-6px',
-                  right: '-8px',
+                  right: '-10px',
                   minWidth: '16px',
                   height: '16px',
-                  backgroundColor: 'var(--text-main)',
-                  color: 'var(--bg-global)',
+                  backgroundColor: 'var(--accent-primary)',
+                  color: 'var(--accent-contrast-text, #FFFFFF)',
                   fontSize: '9px',
                   fontWeight: '900',
                   borderRadius: '999px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  padding: '0 3px',
+                  padding: '0 4px',
                   border: '1.5px solid var(--bg-card)',
                   boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
                   letterSpacing: '-0.3px',
@@ -8796,10 +8845,12 @@ export default function App() {
                 </span>
               )}
             </span>
-            <span style={{ fontSize: '10.5px', fontWeight: '700' }}>{t('messages')}</span>
+            <span style={{ fontSize: '11px', fontWeight: activeTab === 'chat' ? '800' : '600' }}>{t('messages')}</span>
           </button>
 
+          {/* 3. PUBLIER */}
           <button
+            type="button"
             onClick={() => {
               setSelectedChat(null);
               if (activeTab === 'post') {
@@ -8811,15 +8862,48 @@ export default function App() {
                 setActiveTab('post');
               }
             }}
-            style={{ border: 'none', background: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', color: activeTab === 'post' ? 'var(--accent-primary)' : 'var(--text-secondary)', cursor: 'pointer', padding: '6px 14px', borderRadius: '16px' }}
+            className="premium-nav-btn"
+            style={{
+              border: activeTab === 'post' ? '1px solid var(--border-color)' : '1px solid transparent',
+              background: activeTab === 'post' ? 'var(--bg-subtle)' : 'transparent',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '3px',
+              color: activeTab === 'post' ? 'var(--accent-primary)' : 'var(--text-secondary)',
+              cursor: 'pointer',
+              padding: '6px 18px',
+              borderRadius: 'var(--border-radius-main, 16px)',
+              transition: 'all 0.2s ease',
+              transform: activeTab === 'post' ? 'scale(1.04)' : 'scale(1)'
+            }}
           >
-            <PlusCircle size={26} color={activeTab === 'post' ? 'var(--accent-primary)' : 'var(--text-secondary)'} />
-            <span style={{ fontSize: '10.5px', fontWeight: '700' }}>{t('post')}</span>
+            <PlusCircle size={25} color={activeTab === 'post' ? 'var(--accent-primary)' : 'var(--text-secondary)'} />
+            <span style={{ fontSize: '11px', fontWeight: activeTab === 'post' ? '800' : '600' }}>{t('post')}</span>
           </button>
 
-          <button onClick={() => { setActiveTab('profile'); setSelectedChat(null); }} className="premium-nav-btn" style={{ border: 'none', background: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', color: activeTab === 'profile' ? 'var(--accent-primary)' : 'var(--text-secondary)', cursor: 'pointer', padding: '6px 14px', borderRadius: '16px' }}>
-            <User size={20} />
-            <span style={{ fontSize: '10.5px', fontWeight: '700' }}>{t('profile')}</span>
+          {/* 4. PROFIL */}
+          <button
+            type="button"
+            onClick={() => { setActiveTab('profile'); setSelectedChat(null); }}
+            className="premium-nav-btn"
+            style={{
+              border: activeTab === 'profile' ? '1px solid var(--border-color)' : '1px solid transparent',
+              background: activeTab === 'profile' ? 'var(--bg-subtle)' : 'transparent',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '3px',
+              color: activeTab === 'profile' ? 'var(--accent-primary)' : 'var(--text-secondary)',
+              cursor: 'pointer',
+              padding: '6px 18px',
+              borderRadius: 'var(--border-radius-main, 16px)',
+              transition: 'all 0.2s ease',
+              transform: activeTab === 'profile' ? 'scale(1.04)' : 'scale(1)'
+            }}
+          >
+            <User size={21} color={activeTab === 'profile' ? 'var(--accent-primary)' : 'var(--text-secondary)'} />
+            <span style={{ fontSize: '11px', fontWeight: activeTab === 'profile' ? '800' : '600' }}>{t('profile')}</span>
           </button>
 
         </div>
