@@ -155,7 +155,7 @@ export default function OnboardingWizardModal({
     <div style={{
       position: 'fixed',
       inset: 0,
-      backgroundColor: 'rgba(61, 53, 48, 0.72)',
+      backgroundColor: 'var(--overlay-bg)',
       backdropFilter: 'blur(16px)',
       WebkitBackdropFilter: 'blur(16px)',
       display: 'flex',
@@ -165,15 +165,15 @@ export default function OnboardingWizardModal({
       zIndex: 100,
     }}>
       <div style={{
-        backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
-        color: darkMode ? '#FAF7F2' : '#3D3530',
+        backgroundColor: 'var(--bg-card)',
+        color: 'var(--text-main)',
         borderRadius: '28px',
         width: '100%',
         maxWidth: '680px',
         maxHeight: '90vh',
         overflowY: 'auto',
-        border: darkMode ? '1px solid rgba(232, 221, 211, 0.15)' : '1px solid #E8DDD3',
-        boxShadow: darkMode ? '0 30px 90px rgba(0, 0, 0, 0.8)' : '0 30px 90px rgba(61, 53, 48, 0.25)',
+        border: '1px solid var(--border-color)',
+        boxShadow: 'var(--shadow-modal)',
         position: 'relative',
         display: 'flex',
         flexDirection: 'column',
@@ -181,7 +181,7 @@ export default function OnboardingWizardModal({
         {/* BARRE DE PROGRESSION EN HAUT */}
         <div style={{
           padding: '24px 28px 18px',
-          borderBottom: darkMode ? '1px solid rgba(232, 221, 211, 0.1)' : '1px solid #E8DDD3',
+          borderBottom: '1px solid var(--border-color)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -189,7 +189,7 @@ export default function OnboardingWizardModal({
                 width: '32px',
                 height: '32px',
                 borderRadius: '10px',
-                background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)',
+                background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -198,10 +198,10 @@ export default function OnboardingWizardModal({
                 <Sparkles size={16} />
               </div>
               <div>
-                <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '18px', fontWeight: '600', letterSpacing: '-0.01em', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
+                <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '18px', fontWeight: '600', letterSpacing: '-0.01em', color: 'var(--text-main)' }}>
                   Bienvenue sur Troco
                 </h3>
-                <span style={{ fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>
+                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
                   Étape {step} sur 4
                 </span>
               </div>
@@ -211,8 +211,8 @@ export default function OnboardingWizardModal({
               fontWeight: '800',
               padding: '4px 10px',
               borderRadius: '999px',
-              backgroundColor: darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4',
-              color: darkMode ? '#FAF7F2' : '#A8644A',
+              backgroundColor: 'var(--bg-subtle)',
+              color: 'var(--accent-primary)',
             }}>
               {step === 1 && '📜 Conditions & Règles'}
               {step === 2 && '👤 Identité & Profil'}
@@ -231,8 +231,8 @@ export default function OnboardingWizardModal({
                   height: '6px',
                   borderRadius: '999px',
                   backgroundColor: s <= step
-                    ? '#C67D5B'
-                    : (darkMode ? 'rgba(232,221,211,0.15)' : '#E8DDD3'),
+                    ? 'var(--accent-primary)'
+                    : 'var(--border-color)',
                   transition: 'background-color 0.3s ease',
                 }}
               />
@@ -248,10 +248,10 @@ export default function OnboardingWizardModal({
           {/* ================================================================ */}
           {step === 1 && (
             <div>
-              <h2 className="font-editorial-heading" style={{ fontSize: '22px', fontWeight: '600', margin: '0 0 8px', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
+              <h2 className="font-editorial-heading" style={{ fontSize: '22px', fontWeight: '600', margin: '0 0 8px', color: 'var(--text-main)' }}>
                 Le Pacte de Confiance Troco (v2026.1)
               </h2>
-              <p style={{ fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54', margin: '0 0 18px', lineHeight: 1.6 }}>
+              <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '0 0 18px', lineHeight: 1.6 }}>
                 Pour garantir une expérience 100% sécurisée, bienveillante et transparente, chaque membre s’engage à respecter nos 6 piliers fondamentaux.
               </p>
 
@@ -264,13 +264,13 @@ export default function OnboardingWizardModal({
                 <div style={{
                   padding: '12px',
                   borderRadius: '16px',
-                  backgroundColor: darkMode ? '#1A1715' : '#FFF',
-                  border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3',
+                  backgroundColor: 'var(--bg-subtle)',
+                  border: '1px solid var(--border-color)',
                 }}>
-                  <div style={{ fontSize: '13px', fontWeight: '800', color: '#C67D5B', marginBottom: '4px' }}>
+                  <div style={{ fontSize: '13px', fontWeight: '800', color: 'var(--accent-primary)', marginBottom: '4px' }}>
                     ⏳ 1h = 1 Jeton Troco
                   </div>
-                  <div style={{ fontSize: '11px', color: darkMode ? '#D4C5B5' : '#6B5E54', lineHeight: 1.5 }}>
+                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
                     La valeur du temps est universelle. 1 heure de partage équivaut strictement à 1 Jeton de service.
                   </div>
                 </div>
@@ -278,13 +278,13 @@ export default function OnboardingWizardModal({
                 <div style={{
                   padding: '12px',
                   borderRadius: '16px',
-                  backgroundColor: darkMode ? '#1A1715' : '#FFF',
-                  border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3',
+                  backgroundColor: 'var(--bg-subtle)',
+                  border: '1px solid var(--border-color)',
                 }}>
-                  <div style={{ fontSize: '13px', fontWeight: '800', color: '#7A8F6A', marginBottom: '4px' }}>
+                  <div style={{ fontSize: '13px', fontWeight: '800', color: 'var(--accent-success)', marginBottom: '4px' }}>
                     🛡️ Sécurité & Cautions
                   </div>
-                  <div style={{ fontSize: '11px', color: darkMode ? '#D4C5B5' : '#6B5E54', lineHeight: 1.5 }}>
+                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
                     Les prêts de matériel sont couverts par des pré-autorisations bancaires virtuelles libérées au retour.
                   </div>
                 </div>
@@ -292,13 +292,13 @@ export default function OnboardingWizardModal({
                 <div style={{
                   padding: '12px',
                   borderRadius: '16px',
-                  backgroundColor: darkMode ? '#1A1715' : '#FFF',
-                  border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3',
+                  backgroundColor: 'var(--bg-subtle)',
+                  border: '1px solid var(--border-color)',
                 }}>
                   <div style={{ fontSize: '13px', fontWeight: '800', color: '#EF4444', marginBottom: '4px' }}>
                     🚫 Tolérance Zéro Fraude
                   </div>
-                  <div style={{ fontSize: '11px', color: darkMode ? '#D4C5B5' : '#6B5E54', lineHeight: 1.5 }}>
+                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
                     Interdiction formelle des faux coupons et arnaques. Tout manquement entraîne un Shadow-Ban irréversible.
                   </div>
                 </div>
@@ -306,13 +306,13 @@ export default function OnboardingWizardModal({
                 <div style={{
                   padding: '12px',
                   borderRadius: '16px',
-                  backgroundColor: darkMode ? '#1A1715' : '#FFF',
-                  border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3',
+                  backgroundColor: 'var(--bg-subtle)',
+                  border: '1px solid var(--border-color)',
                 }}>
-                  <div style={{ fontSize: '13px', fontWeight: '800', color: '#C67D5B', marginBottom: '4px' }}>
+                  <div style={{ fontSize: '13px', fontWeight: '800', color: 'var(--accent-primary)', marginBottom: '4px' }}>
                     🔒 Conformité RGPD Totale
                   </div>
-                  <div style={{ fontSize: '11px', color: darkMode ? '#D4C5B5' : '#6B5E54', lineHeight: 1.5 }}>
+                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
                     Chiffrement bancaire, export complet de vos données JSON et droit à l’oubli en 1 clic dans vos paramètres.
                   </div>
                 </div>
@@ -325,27 +325,27 @@ export default function OnboardingWizardModal({
                 gap: '12px',
                 padding: '14px',
                 borderRadius: '16px',
-                backgroundColor: darkMode ? '#1A1715' : '#F5EAE4',
-                border: darkMode ? '1px solid rgba(198,125,91,0.25)' : '1px solid #E8DDD3',
+                backgroundColor: 'var(--bg-subtle)',
+                border: '1px solid var(--border-color)',
               }}>
-                <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer', fontSize: '12px', lineHeight: 1.5 }}>
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer', fontSize: '12px', lineHeight: 1.5, color: 'var(--text-main)' }}>
                   <input
                     type="checkbox"
                     checked={cguConsent}
                     onChange={(e) => setCguConsent(e.target.checked)}
-                    style={{ marginTop: '2px', width: '16px', height: '16px', accentColor: '#C67D5B', cursor: 'pointer' }}
+                    style={{ marginTop: '2px', width: '16px', height: '16px', accentColor: 'var(--accent-primary)', cursor: 'pointer' }}
                   />
                   <span>
                     J'ai pris connaissance et j'accepte sans réserve les <strong>Conditions Générales d'Utilisation (CGU v2026.1)</strong> et le barème d'échange 1h = 1 Jeton.
                   </span>
                 </label>
 
-                <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer', fontSize: '12px', lineHeight: 1.5 }}>
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer', fontSize: '12px', lineHeight: 1.5, color: 'var(--text-main)' }}>
                   <input
                     type="checkbox"
                     checked={privacyConsent}
                     onChange={(e) => setPrivacyConsent(e.target.checked)}
-                    style={{ marginTop: '2px', width: '16px', height: '16px', accentColor: '#C67D5B', cursor: 'pointer' }}
+                    style={{ marginTop: '2px', width: '16px', height: '16px', accentColor: 'var(--accent-primary)', cursor: 'pointer' }}
                   />
                   <span>
                     J'accepte la <strong>Politique de Confidentialité</strong> relative à la protection de mes données personnelles conformément au Règlement Général sur la Protection des Données (RGPD).
@@ -360,10 +360,10 @@ export default function OnboardingWizardModal({
           {/* ================================================================ */}
           {step === 2 && (
             <div>
-              <h2 className="font-editorial-heading" style={{ fontSize: '22px', fontWeight: '600', margin: '0 0 6px', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
+              <h2 className="font-editorial-heading" style={{ fontSize: '22px', fontWeight: '600', margin: '0 0 6px', color: 'var(--text-main)' }}>
                 Quel est votre profil sur Troco ?
               </h2>
-              <p style={{ fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54', margin: '0 0 16px' }}>
+              <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '0 0 16px' }}>
                 Sélectionnez votre type d'activité pour adapter vos propositions et badges.
               </p>
 
@@ -388,11 +388,12 @@ export default function OnboardingWizardModal({
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         backgroundColor: isSelected
-                          ? (darkMode ? 'rgba(198,125,91,0.25)' : '#F5EAE4')
-                          : (darkMode ? '#1A1715' : '#FFF'),
+                          ? 'var(--bg-subtle)'
+                          : 'var(--bg-card)',
                         border: isSelected
-                          ? '2px solid #C67D5B'
-                          : (darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3'),
+                          ? '2px solid var(--accent-primary)'
+                          : '1px solid var(--border-color)',
+                        boxShadow: isSelected ? 'var(--shadow-accent)' : 'none',
                         transition: 'all 0.2s ease',
                       }}
                     >
@@ -401,8 +402,8 @@ export default function OnboardingWizardModal({
                           width: '40px',
                           height: '40px',
                           borderRadius: '12px',
-                          backgroundColor: isSelected ? '#C67D5B' : (darkMode ? '#231E1B' : '#F5F0E8'),
-                          color: isSelected ? '#FFF' : (darkMode ? '#D4C5B5' : '#6B5E54'),
+                          backgroundColor: isSelected ? 'var(--accent-primary)' : 'var(--bg-subtle)',
+                          color: isSelected ? '#FFF' : 'var(--text-secondary)',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
@@ -412,10 +413,10 @@ export default function OnboardingWizardModal({
                           {t.id === 'company' && <Building2 size={20} />}
                         </div>
                         <div>
-                          <div style={{ fontWeight: '800', fontSize: '14px', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
+                          <div style={{ fontWeight: '800', fontSize: '14px', color: 'var(--text-main)' }}>
                             {t.label}
                           </div>
-                          <div style={{ fontSize: '11px', color: darkMode ? '#D4C5B5' : '#6B5E54', marginTop: '2px' }}>
+                          <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
                             {t.desc}
                           </div>
                         </div>
@@ -424,8 +425,8 @@ export default function OnboardingWizardModal({
                         width: '20px',
                         height: '20px',
                         borderRadius: '50%',
-                        border: isSelected ? '5px solid #C67D5B' : '2px solid #D4C5B5',
-                        backgroundColor: isSelected ? '#FFF' : 'transparent',
+                        border: isSelected ? '5px solid var(--accent-primary)' : '2px solid var(--border-color)',
+                        backgroundColor: isSelected ? 'var(--bg-card)' : 'transparent',
                       }} />
                     </div>
                   );
@@ -439,8 +440,8 @@ export default function OnboardingWizardModal({
                 alignItems: 'center',
                 padding: '16px',
                 borderRadius: '18px',
-                backgroundColor: darkMode ? '#1A1715' : '#FFF',
-                border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3',
+                backgroundColor: 'var(--bg-subtle)',
+                border: '1px solid var(--border-color)',
                 marginBottom: '16px',
               }}>
                 <div style={{ position: 'relative' }}>
@@ -452,7 +453,7 @@ export default function OnboardingWizardModal({
                       height: '72px',
                       borderRadius: '50%',
                       objectFit: 'cover',
-                      border: '2px solid #C67D5B',
+                      border: '2px solid var(--accent-primary)',
                     }}
                   />
                   <button
@@ -464,14 +465,14 @@ export default function OnboardingWizardModal({
                       width: '28px',
                       height: '28px',
                       borderRadius: '50%',
-                      background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)',
+                      background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
                       color: '#FFF',
                       border: 'none',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       cursor: 'pointer',
-                      boxShadow: '0 4px 10px rgba(198,125,91,0.3)',
+                      boxShadow: 'var(--shadow-accent)',
                     }}
                     title="Importer une photo"
                   >
@@ -487,7 +488,7 @@ export default function OnboardingWizardModal({
                 </div>
 
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '12px', fontWeight: '800', marginBottom: '6px' }}>
+                  <div style={{ fontSize: '12px', fontWeight: '800', marginBottom: '6px', color: 'var(--text-main)' }}>
                     Choisissez un avatar ou importez votre photo :
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: '8px', maxHeight: '110px', overflowY: 'auto', padding: '4px' }}>
@@ -503,10 +504,10 @@ export default function OnboardingWizardModal({
                           borderRadius: '50%',
                           objectFit: 'cover',
                           cursor: 'pointer',
-                          border: avatar === av ? '3px solid #C67D5B' : '2px solid transparent',
+                          border: avatar === av ? '3px solid var(--accent-primary)' : '2px solid transparent',
                           transform: avatar === av ? 'scale(1.1)' : 'scale(1)',
                           transition: 'all 0.2s',
-                          boxShadow: avatar === av ? '0 4px 10px rgba(198,125,91,0.3)' : 'none',
+                          boxShadow: avatar === av ? 'var(--shadow-accent)' : 'none',
                         }}
                       />
                     ))}
@@ -517,7 +518,7 @@ export default function OnboardingWizardModal({
               {/* Nom & Pseudo */}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: '800', display: 'block', marginBottom: '6px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '800', display: 'block', marginBottom: '6px', color: 'var(--text-secondary)' }}>
                     Nom affiché :
                   </label>
                   <input
@@ -529,9 +530,9 @@ export default function OnboardingWizardModal({
                       width: '100%',
                       padding: '11px 14px',
                       borderRadius: '14px',
-                      border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
-                      backgroundColor: darkMode ? '#1A1715' : '#FFF',
-                      color: darkMode ? '#FAF7F2' : '#3D3530',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: 'var(--bg-subtle)',
+                      color: 'var(--text-main)',
                       fontSize: '13px',
                       fontWeight: '700',
                       outline: 'none',
@@ -539,7 +540,7 @@ export default function OnboardingWizardModal({
                   />
                 </div>
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: '800', display: 'block', marginBottom: '6px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '800', display: 'block', marginBottom: '6px', color: 'var(--text-secondary)' }}>
                     Identifiant public :
                   </label>
                   <input
@@ -551,9 +552,9 @@ export default function OnboardingWizardModal({
                       width: '100%',
                       padding: '11px 14px',
                       borderRadius: '14px',
-                      border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
-                      backgroundColor: darkMode ? '#1A1715' : '#FFF',
-                      color: darkMode ? '#FAF7F2' : '#3D3530',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: 'var(--bg-subtle)',
+                      color: 'var(--accent-primary)',
                       fontSize: '13px',
                       fontWeight: '700',
                       outline: 'none',
@@ -561,7 +562,7 @@ export default function OnboardingWizardModal({
                   />
                 </div>
                 <div style={{ gridColumn: 'span 2' }}>
-                  <label style={{ fontSize: '12px', fontWeight: '800', display: 'block', marginBottom: '6px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '800', display: 'block', marginBottom: '6px', color: 'var(--text-secondary)' }}>
                     Ville / Localisation :
                   </label>
                   <input
@@ -573,9 +574,9 @@ export default function OnboardingWizardModal({
                       width: '100%',
                       padding: '11px 14px',
                       borderRadius: '14px',
-                      border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
-                      backgroundColor: darkMode ? '#1A1715' : '#FFF',
-                      color: darkMode ? '#FAF7F2' : '#3D3530',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: 'var(--bg-subtle)',
+                      color: 'var(--text-main)',
                       fontSize: '13px',
                       fontWeight: '700',
                       outline: 'none',
@@ -591,24 +592,24 @@ export default function OnboardingWizardModal({
           {/* ================================================================ */}
           {step === 3 && (
             <div>
-              <h2 className="font-editorial-heading" style={{ fontSize: '22px', fontWeight: '600', margin: '0 0 6px', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
+              <h2 className="font-editorial-heading" style={{ fontSize: '22px', fontWeight: '600', margin: '0 0 6px', color: 'var(--text-main)' }}>
                 Que souhaitez-vous échanger ou prêter ?
               </h2>
-              <p style={{ fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54', margin: '0 0 16px' }}>
+              <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '0 0 16px' }}>
                 Sélectionnez vos savoir-faire et le matériel disponible chez vous. Vous pourrez en ajouter d'autres à tout moment.
               </p>
 
               {/* 1. Compétences & Savoir-faire */}
               <div style={{ marginBottom: '20px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <div style={{ fontSize: '13px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px', color: '#C67D5B' }}>
+                  <div style={{ fontSize: '13px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--accent-primary)' }}>
                     <Tag size={15} /> Mes Compétences ({selectedSkills.length}) :
                   </div>
                 </div>
 
                 {/* Bulles sélectionnées actives */}
                 {selectedSkills.length > 0 && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px', padding: '10px', backgroundColor: darkMode ? '#1A1715' : '#F5EAE4', borderRadius: '14px', border: darkMode ? '1px solid rgba(198,125,91,0.25)' : '1px solid #E8DDD3' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px', padding: '10px', backgroundColor: 'var(--bg-subtle)', borderRadius: '14px', border: '1px solid var(--border-color)' }}>
                     {selectedSkills.map(skill => (
                       <span
                         key={skill}
@@ -618,11 +619,11 @@ export default function OnboardingWizardModal({
                           gap: '6px',
                           padding: '5px 10px',
                           borderRadius: '999px',
-                          background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)',
+                          background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
                           color: '#FFFFFF',
                           fontSize: '11px',
                           fontWeight: '700',
-                          boxShadow: '0 2px 6px rgba(198,125,91,0.2)'
+                          boxShadow: 'var(--shadow-accent)'
                         }}
                       >
                         <Check size={11} />
@@ -662,11 +663,11 @@ export default function OnboardingWizardModal({
                         whiteSpace: 'nowrap',
                         padding: '6px 12px',
                         borderRadius: '999px',
-                        border: activeSkillCategory === cat.id ? 'none' : (darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3'),
+                        border: activeSkillCategory === cat.id ? 'none' : '1px solid var(--border-color)',
                         backgroundColor: activeSkillCategory === cat.id
-                          ? '#C67D5B'
-                          : (darkMode ? '#1A1715' : '#FFF'),
-                        color: activeSkillCategory === cat.id ? '#FFF' : (darkMode ? '#D4C5B5' : '#6B5E54'),
+                          ? 'var(--accent-primary)'
+                          : 'var(--bg-subtle)',
+                        color: activeSkillCategory === cat.id ? '#FFF' : 'var(--text-secondary)',
                         fontSize: '11px',
                         fontWeight: '700',
                         cursor: 'pointer',
@@ -691,15 +692,16 @@ export default function OnboardingWizardModal({
                           gap: '6px',
                           padding: '6px 11px',
                           borderRadius: '999px',
-                          border: isSelected ? '1px solid #C67D5B' : (darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3'),
+                          border: isSelected ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-color)',
                           backgroundColor: isSelected
-                            ? (darkMode ? 'rgba(198,125,91,0.25)' : '#F5EAE4')
-                            : (darkMode ? '#1A1715' : '#FFF'),
-                          color: isSelected ? (darkMode ? '#FAF7F2' : '#A8644A') : (darkMode ? '#D4C5B5' : '#6B5E54'),
+                            ? 'var(--bg-subtle)'
+                            : 'var(--bg-card)',
+                          color: isSelected ? 'var(--accent-primary)' : 'var(--text-secondary)',
                           fontSize: '11px',
                           fontWeight: isSelected ? '800' : '600',
                           cursor: 'pointer',
                           transition: 'all 0.15s ease',
+                          boxShadow: isSelected ? 'var(--shadow-card)' : 'none'
                         }}
                       >
                         {isSelected && <Check size={12} />}
@@ -726,9 +728,9 @@ export default function OnboardingWizardModal({
                       flex: 1,
                       padding: '9px 12px',
                       borderRadius: '12px',
-                      border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
-                      backgroundColor: darkMode ? '#1A1715' : '#FFF',
-                      color: darkMode ? '#FAF7F2' : '#3D3530',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: 'var(--bg-subtle)',
+                      color: 'var(--text-main)',
                       fontSize: '12px',
                       outline: 'none',
                     }}
@@ -740,14 +742,15 @@ export default function OnboardingWizardModal({
                       border: 'none',
                       borderRadius: '12px',
                       padding: '0 14px',
-                      background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)',
+                      background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
                       color: '#FFF',
                       fontWeight: '800',
                       fontSize: '12px',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '4px'
+                      gap: '4px',
+                      boxShadow: 'var(--shadow-accent)'
                     }}
                   >
                     <Plus size={13} /> Ajouter
@@ -758,14 +761,14 @@ export default function OnboardingWizardModal({
               {/* 2. Matériel & Équipements */}
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <div style={{ fontSize: '13px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px', color: '#D97706' }}>
+                  <div style={{ fontSize: '13px', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--accent-primary)' }}>
                     <Wrench size={15} /> Matériel & Équipement disponible ({selectedEquipment.length}) :
                   </div>
                 </div>
 
                 {/* Bulles sélectionnées actives */}
                 {selectedEquipment.length > 0 && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px', padding: '10px', backgroundColor: darkMode ? 'rgba(217,119,6,0.15)' : '#FFFBEB', borderRadius: '14px', border: darkMode ? '1px solid rgba(245,158,11,0.2)' : '1px solid #FDE68A' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px', padding: '10px', backgroundColor: 'var(--bg-subtle)', borderRadius: '14px', border: '1px solid var(--border-color)' }}>
                     {selectedEquipment.map(item => (
                       <span
                         key={item}
@@ -775,14 +778,14 @@ export default function OnboardingWizardModal({
                           gap: '6px',
                           padding: '5px 10px',
                           borderRadius: '999px',
-                          backgroundColor: '#D97706',
+                          backgroundColor: 'var(--accent-primary)',
                           color: '#FFFFFF',
                           fontSize: '11px',
                           fontWeight: '700',
-                          boxShadow: '0 2px 6px rgba(217,119,6,0.2)'
+                          boxShadow: 'var(--shadow-accent)'
                         }}
                       >
-                        <Check size={11} color="#FEF3C7" />
+                        <Check size={11} color="#FFF" />
                         {item}
                         <button
                           type="button"
@@ -819,11 +822,11 @@ export default function OnboardingWizardModal({
                         whiteSpace: 'nowrap',
                         padding: '6px 12px',
                         borderRadius: '999px',
-                        border: activeEquipCategory === cat.id ? 'none' : (darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3'),
+                        border: activeEquipCategory === cat.id ? 'none' : '1px solid var(--border-color)',
                         backgroundColor: activeEquipCategory === cat.id
-                          ? '#D97706'
-                          : (darkMode ? '#1A1715' : '#FFF'),
-                        color: activeEquipCategory === cat.id ? '#FFF' : (darkMode ? '#D4C5B5' : '#6B5E54'),
+                          ? 'var(--accent-primary)'
+                          : 'var(--bg-subtle)',
+                        color: activeEquipCategory === cat.id ? '#FFF' : 'var(--text-secondary)',
                         fontSize: '11px',
                         fontWeight: '700',
                         cursor: 'pointer',
@@ -848,15 +851,16 @@ export default function OnboardingWizardModal({
                           gap: '6px',
                           padding: '6px 11px',
                           borderRadius: '999px',
-                          border: isSelected ? '1px solid #D97706' : (darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3'),
+                          border: isSelected ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-color)',
                           backgroundColor: isSelected
-                            ? (darkMode ? 'rgba(217,119,6,0.25)' : '#FEF3C7')
-                            : (darkMode ? '#1A1715' : '#FFF'),
-                          color: isSelected ? (darkMode ? '#FDE68A' : '#92400E') : (darkMode ? '#D4C5B5' : '#6B5E54'),
+                            ? 'var(--bg-subtle)'
+                            : 'var(--bg-card)',
+                          color: isSelected ? 'var(--accent-primary)' : 'var(--text-secondary)',
                           fontSize: '11px',
                           fontWeight: isSelected ? '800' : '600',
                           cursor: 'pointer',
                           transition: 'all 0.15s ease',
+                          boxShadow: isSelected ? 'var(--shadow-card)' : 'none'
                         }}
                       >
                         {isSelected && <Check size={12} />}
@@ -883,9 +887,9 @@ export default function OnboardingWizardModal({
                       flex: 1,
                       padding: '9px 12px',
                       borderRadius: '12px',
-                      border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
-                      backgroundColor: darkMode ? '#1A1715' : '#FFF',
-                      color: darkMode ? '#FAF7F2' : '#3D3530',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: 'var(--bg-subtle)',
+                      color: 'var(--text-main)',
                       fontSize: '12px',
                       outline: 'none',
                     }}
@@ -897,14 +901,15 @@ export default function OnboardingWizardModal({
                       border: 'none',
                       borderRadius: '12px',
                       padding: '0 14px',
-                      backgroundColor: '#D97706',
+                      backgroundColor: 'var(--accent-primary)',
                       color: '#FFF',
                       fontWeight: '800',
                       fontSize: '12px',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '4px'
+                      gap: '4px',
+                      boxShadow: 'var(--shadow-accent)'
                     }}
                   >
                     <Plus size={13} /> Ajouter
@@ -919,16 +924,16 @@ export default function OnboardingWizardModal({
           {/* ================================================================ */}
           {step === 4 && (
             <div>
-              <h2 className="font-editorial-heading" style={{ fontSize: '22px', fontWeight: '600', margin: '0 0 6px', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
+              <h2 className="font-editorial-heading" style={{ fontSize: '22px', fontWeight: '600', margin: '0 0 6px', color: 'var(--text-main)' }}>
                 Personnalisez votre biographie
               </h2>
-              <p style={{ fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54', margin: '0 0 16px' }}>
+              <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '0 0 16px' }}>
                 Présentez-vous en quelques mots à la communauté. Choisissez une suggestion rapide ou écrivez votre propre texte.
               </p>
 
               {/* Suggestions en 1 clic */}
               <div style={{ marginBottom: '14px' }}>
-                <div style={{ fontSize: '12px', fontWeight: '800', marginBottom: '8px', color: '#C67D5B' }}>
+                <div style={{ fontSize: '12px', fontWeight: '800', marginBottom: '8px', color: 'var(--accent-primary)' }}>
                   💡 Suggestions rapides selon votre profil ({accountType}) :
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -940,15 +945,16 @@ export default function OnboardingWizardModal({
                         textAlign: 'left',
                         padding: '10px 12px',
                         borderRadius: '12px',
-                        border: bio === sug ? '1.5px solid #C67D5B' : (darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3'),
+                        border: bio === sug ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-color)',
                         backgroundColor: bio === sug
-                          ? (darkMode ? 'rgba(198,125,91,0.25)' : '#F5EAE4')
-                          : (darkMode ? '#1A1715' : '#FFF'),
-                        color: darkMode ? '#FAF7F2' : '#3D3530',
+                          ? 'var(--bg-subtle)'
+                          : 'var(--bg-card)',
+                        color: 'var(--text-main)',
                         fontSize: '12px',
                         lineHeight: 1.5,
                         cursor: 'pointer',
                         transition: 'all 0.15s ease',
+                        boxShadow: bio === sug ? 'var(--shadow-accent)' : 'none'
                       }}
                     >
                       « {sug} »
@@ -959,7 +965,7 @@ export default function OnboardingWizardModal({
 
               {/* Zone de texte libre */}
               <div>
-                <label style={{ fontSize: '12px', fontWeight: '800', display: 'block', marginBottom: '6px', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
+                <label style={{ fontSize: '12px', fontWeight: '800', display: 'block', marginBottom: '6px', color: 'var(--text-main)' }}>
                   Votre texte personnalisé :
                 </label>
                 <textarea
@@ -971,9 +977,9 @@ export default function OnboardingWizardModal({
                     width: '100%',
                     padding: '12px 14px',
                     borderRadius: '16px',
-                    border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
-                    backgroundColor: darkMode ? '#1A1715' : '#FFF',
-                    color: darkMode ? '#FAF7F2' : '#3D3530',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: 'var(--bg-subtle)',
+                    color: 'var(--text-main)',
                     fontSize: '13px',
                     lineHeight: 1.6,
                     resize: 'vertical',
@@ -987,8 +993,8 @@ export default function OnboardingWizardModal({
                 marginTop: '16px',
                 padding: '14px',
                 borderRadius: '16px',
-                background: darkMode ? 'rgba(156,175,136,0.2)' : '#EBF0E6',
-                border: '1px solid #9CAF88',
+                background: 'var(--bg-subtle)',
+                border: '1px solid var(--border-color)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '12px',
@@ -997,7 +1003,7 @@ export default function OnboardingWizardModal({
                   width: '36px',
                   height: '36px',
                   borderRadius: '50%',
-                  backgroundColor: '#7A8F6A',
+                  backgroundColor: 'var(--accent-primary)',
                   color: '#FFF',
                   display: 'flex',
                   alignItems: 'center',
@@ -1006,10 +1012,10 @@ export default function OnboardingWizardModal({
                   <Sparkles size={18} />
                 </div>
                 <div>
-                  <div style={{ fontWeight: '800', fontSize: '13px', color: '#3D4A35' }}>
+                  <div style={{ fontWeight: '800', fontSize: '13px', color: 'var(--text-main)' }}>
                     🎁 Bonus de Bienvenue Débloqué !
                   </div>
-                  <div style={{ fontSize: '11px', color: '#3D4A35', marginTop: '2px' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
                     Votre compte sera immédiatement crédité de <strong>10 Jetons Troco</strong> et <strong>50 €</strong> pour débuter vos échanges en toute liberté.
                   </div>
                 </div>
@@ -1022,7 +1028,7 @@ export default function OnboardingWizardModal({
         {/* PIED DE PAGE AVEC BOUTONS PRÉCÉDENT / SUIVANT / TERMINER */}
         <div style={{
           padding: '18px 28px 24px',
-          borderTop: darkMode ? '1px solid rgba(232,221,211,0.1)' : '1px solid #E8DDD3',
+          borderTop: '1px solid var(--border-color)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -1031,11 +1037,11 @@ export default function OnboardingWizardModal({
             <button
               onClick={() => setStep(prev => prev - 1)}
               style={{
-                border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
+                border: '1px solid var(--border-color)',
                 borderRadius: '999px',
                 padding: '11px 20px',
                 backgroundColor: 'transparent',
-                color: darkMode ? '#D4C5B5' : '#6B5E54',
+                color: 'var(--text-secondary)',
                 fontWeight: '700',
                 fontSize: '13px',
                 cursor: 'pointer',
@@ -1058,8 +1064,8 @@ export default function OnboardingWizardModal({
                 borderRadius: '999px',
                 padding: '12px 24px',
                 background: (step === 1 && !canProceedStep1) || (step === 2 && !canProceedStep2)
-                  ? (darkMode ? '#3D3530' : '#D4C5B5')
-                  : 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)',
+                  ? 'var(--border-color)'
+                  : 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
                 color: '#FFF',
                 fontWeight: '800',
                 fontSize: '13px',
@@ -1068,7 +1074,7 @@ export default function OnboardingWizardModal({
                   : 'pointer',
                 boxShadow: (step === 1 && !canProceedStep1) || (step === 2 && !canProceedStep2)
                   ? 'none'
-                  : '0 10px 24px rgba(198,125,91,0.25)',
+                  : 'var(--shadow-accent)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
@@ -1085,12 +1091,12 @@ export default function OnboardingWizardModal({
                 border: 'none',
                 borderRadius: '999px',
                 padding: '12px 28px',
-                background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)',
+                background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
                 color: '#FFF',
                 fontWeight: '800',
                 fontSize: '14px',
                 cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                boxShadow: '0 12px 28px rgba(198,125,91,0.3)',
+                boxShadow: 'var(--shadow-accent)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',

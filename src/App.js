@@ -5738,7 +5738,7 @@ export default function App() {
   }
 
   return (
-    <div style={{ backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', color: darkMode ? '#FAF7F2' : '#3D3530', minHeight: '100vh', transition: 'background-color 0.3s ease, color 0.3s ease', paddingBottom: isMobile && activeTab === 'chat' ? '0' : '90px', WebkitFontSmoothing: 'antialiased', position: 'relative', overflowX: 'hidden' }}>
+    <div style={{ backgroundColor: 'var(--bg-global)', color: 'var(--text-main)', minHeight: '100vh', transition: 'background-color 0.3s ease, color 0.3s ease', paddingBottom: isMobile && activeTab === 'chat' ? '0' : '90px', WebkitFontSmoothing: 'antialiased', position: 'relative', overflowX: 'hidden' }}>
       {/* ORBES DE LUEUR AMBIANTE FLUIDES */}
       <div className="glow-orb glow-orb-primary" style={{ top: '8%', left: '-100px', width: '380px', height: '380px' }} />
       <div className="glow-orb glow-orb-secondary" style={{ top: '40%', right: '-120px', width: '420px', height: '420px' }} />
@@ -5747,49 +5747,49 @@ export default function App() {
       {isAuthenticated && !profile.cguAcceptedAt && (
         <div style={{
           position: 'fixed', inset: 0, zIndex: 99999,
-          backgroundColor: 'rgba(61, 53, 48, 0.75)',
+          backgroundColor: 'var(--overlay-bg)',
           backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px',
           animation: 'fadeSlideUp 0.3s ease both'
         }}>
           <div style={{
             maxWidth: '560px', width: '100%',
-            backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
+            backgroundColor: 'var(--bg-card)',
             borderRadius: '28px', padding: '28px',
-            border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
-            boxShadow: '0 25px 60px -15px rgba(0,0,0,0.5)',
-            color: darkMode ? '#FAF7F2' : '#3D3530',
+            border: '1px solid var(--border-color)',
+            boxShadow: 'var(--shadow-modal)',
+            color: 'var(--text-main)',
             maxHeight: '90vh', overflowY: 'auto'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
-              <div style={{ width: '42px', height: '42px', borderRadius: '50%', backgroundColor: darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#C67D5B' }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '50%', backgroundColor: 'var(--bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-primary)' }}>
                 <Scale size={22} />
               </div>
               <div>
-                <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '22px', fontWeight: '600' }}>Conditions Générales & RGPD</h3>
-                <p style={{ margin: 0, fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>Cadre juridique et engagement communautaire</p>
+                <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '22px', fontWeight: '600', color: 'var(--text-main)' }}>Conditions Générales & RGPD</h3>
+                <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>Cadre juridique et engagement communautaire</p>
               </div>
             </div>
 
             <div style={{
-              backgroundColor: darkMode ? '#1A1715' : '#F5F0E8',
+              backgroundColor: 'var(--bg-subtle)',
               borderRadius: '16px', padding: '16px', fontSize: '13px', lineHeight: 1.65,
-              color: darkMode ? '#D4C5B5' : '#6B5E54',
-              border: darkMode ? '1px solid rgba(232,221,211,0.1)' : '1px solid #E8DDD3',
+              color: 'var(--text-secondary)',
+              border: '1px solid var(--border-color)',
               marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '12px'
             }}>
               <div>
-                <strong style={{ color: darkMode ? '#FAF7F2' : '#3D3530' }}>1. Plateforme d'intermédiation technique</strong>
+                <strong style={{ color: 'var(--text-main)' }}>1. Plateforme d'intermédiation technique</strong>
                 <p style={{ margin: '4px 0 0' }}>Troco met à disposition une infrastructure logicielle permettant aux utilisateurs de publier des annonces, échanger des services et communiquer. Troco n'est pas partie prenante aux contrats conclus entre utilisateurs.</p>
               </div>
 
               <div>
-                <strong style={{ color: darkMode ? '#FAF7F2' : '#3D3530' }}>2. Clause de non-responsabilité (P2P)</strong>
+                <strong style={{ color: 'var(--text-main)' }}>2. Clause de non-responsabilité (P2P)</strong>
                 <p style={{ margin: '4px 0 0' }}>Les échanges, interventions physiques et prêts de matériel relèvent de la responsabilité exclusive des parties prenantes. Chaque membre s'engage à faire preuve de prudence et de diligence.</p>
               </div>
 
               <div>
-                <strong style={{ color: darkMode ? '#FAF7F2' : '#3D3530' }}>3. Protection des données & RGPD</strong>
+                <strong style={{ color: 'var(--text-main)' }}>3. Protection des données & RGPD</strong>
                 <p style={{ margin: '4px 0 0' }}>Vos données personnelles (nom, email, ville, compétences) sont strictement isolées sur votre espace sécurisé <code>users/{profile.uid || 'uid'}</code> et ne sont jamais revendues à des tiers.</p>
               </div>
             </div>
@@ -5798,9 +5798,9 @@ export default function App() {
               onClick={handleAcceptCgu}
               style={{
                 width: '100%', border: 'none', borderRadius: '16px', padding: '14px',
-                background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)', color: '#FFF',
+                background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)', color: '#FFF',
                 fontWeight: '800', fontSize: '14px', cursor: 'pointer',
-                boxShadow: '0 12px 24px -6px rgba(198, 125, 91, 0.35)',
+                boxShadow: 'var(--shadow-accent)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
               }}
             >
@@ -5818,14 +5818,14 @@ export default function App() {
         .premium-card { border-radius: 20px !important; }
         .premium-card:hover {
           transform: translateY(-4px) scale(1.02) !important;
-          box-shadow: 0 10px 30px rgba(61, 53, 48, 0.08) !important;
+          box-shadow: var(--shadow-card) !important;
         }
         .premium-nav-btn:hover, .premium-pill:hover, .premium-panel:hover, .premium-button:hover {
           transform: scale(1.02);
-          box-shadow: 0 10px 30px rgba(61, 53, 48, 0.08);
+          box-shadow: var(--shadow-card);
         }
         .glass-surface {
-          background: rgba(250,247,242,0.85);
+          background: var(--bg-glass);
           backdrop-filter: blur(20px) saturate(180%);
           -webkit-backdrop-filter: blur(20px) saturate(180%);
         }
@@ -5842,8 +5842,8 @@ export default function App() {
           100% { transform: scale(1); opacity: 1; }
         }
         @keyframes pulseGlow {
-          0%, 100% { box-shadow: 0 0 0 0 rgba(198,125,91,0.35); }
-          50% { box-shadow: 0 0 0 6px rgba(198,125,91,0); }
+          0%, 100% { box-shadow: 0 0 0 0 rgba(214,69,110,0.35); }
+          50% { box-shadow: 0 0 0 6px rgba(214,69,110,0); }
         }
         @keyframes pulseRing {
           0% { box-shadow: 0 0 0 0 rgba(255,255,255,0.35); }
@@ -5857,7 +5857,7 @@ export default function App() {
         .sponsored-badge { animation: pulseGlow 2s ease-in-out infinite; }
         .call-ring { animation: pulseRing 1.8s ease-out infinite; }
         .wave-bar {
-          width: 4px; border-radius: 999px; background: #C67D5B;
+          width: 4px; border-radius: 999px; background: var(--accent-primary);
           animation: soundWave 1.1s ease-in-out infinite;
         }
         input, select, textarea { font-family: inherit; }
@@ -5865,21 +5865,17 @@ export default function App() {
 
       {/* HEADER FIXE GLASSMORPHISM FLUIDE AVEC CONDENSATION AU SCROLL */}
       <header style={{
-        backgroundColor: darkMode
-          ? (isScrolled ? 'rgba(24,21,19,0.96)' : 'rgba(24,21,19,0.88)')
-          : (isScrolled ? 'rgba(245,240,232,0.95)' : 'rgba(250,247,242,0.85)'),
+        backgroundColor: 'var(--bg-glass)',
         backdropFilter: isScrolled ? 'blur(28px) saturate(200%)' : 'blur(20px) saturate(180%)',
         WebkitBackdropFilter: isScrolled ? 'blur(28px) saturate(200%)' : 'blur(20px) saturate(180%)',
-        borderBottom: darkMode
-          ? (isScrolled ? '1px solid rgba(232,221,211,0.18)' : '1px solid rgba(232,221,211,0.1)')
-          : (isScrolled ? '1px solid rgba(212,197,181,0.9)' : '1px solid rgba(232,221,211,0.75)'),
+        borderBottom: '1px solid var(--border-color)',
         padding: isScrolled ? '9px 16px' : '12px 16px',
         position: 'sticky',
         top: 0,
         zIndex: 40,
         boxShadow: isScrolled
-          ? (darkMode ? '0 12px 30px rgba(0,0,0,0.5)' : '0 10px 30px rgba(61,53,48,0.06)')
-          : '0 1px 24px rgba(61,53,48,0.03)',
+          ? 'var(--shadow-card)'
+          : '0 1px 24px rgba(0,0,0,0.03)',
         width: '100%',
         boxSizing: 'border-box',
         transition: 'padding 0.3s var(--ease-quiet), background-color 0.3s var(--ease-quiet), box-shadow 0.3s var(--ease-quiet), border-color 0.3s var(--ease-quiet)'
@@ -5887,21 +5883,21 @@ export default function App() {
         <div className="header-container" style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', width: '100%', boxSizing: 'border-box' }}>
           {/* PARTIE 3 : LOGO TROCO CLICKABLE -> RETOUR ACCUEIL */}
           <button onClick={() => { setActiveTab('feed'); setSelectedListing(null); setSelectedChat(null); if (callState.active) endCall(); }} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: '4px 6px', borderRadius: '12px', textAlign: 'left', flexShrink: 0 }}>
-            <h1 className="font-editorial-heading" style={{ fontSize: isScrolled ? '19px' : '22px', fontWeight: '700', color: darkMode ? '#E8DDD3' : '#3D3530', margin: 0, letterSpacing: '-0.02em', whiteSpace: 'nowrap', transition: 'font-size 0.3s var(--ease-quiet)' }}>Troco</h1>
-            <p className="logo-slogan font-editorial" style={{ fontSize: '11px', color: darkMode ? '#D4C5B5' : '#6B5E54', fontStyle: 'italic', margin: 0, whiteSpace: 'nowrap' }}>{t('slogan')}</p>
+            <h1 className="font-editorial-heading" style={{ fontSize: isScrolled ? '19px' : '22px', fontWeight: '700', color: 'var(--text-main)', margin: 0, letterSpacing: '-0.02em', whiteSpace: 'nowrap', transition: 'font-size 0.3s var(--ease-quiet)' }}>Troco</h1>
+            <p className="logo-slogan font-editorial" style={{ fontSize: '11px', color: 'var(--text-secondary)', fontStyle: 'italic', margin: 0, whiteSpace: 'nowrap' }}>{t('slogan')}</p>
           </button>
           <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'nowrap' }}>
-            <button onClick={() => handleOpenPayment('topup-cash')} title="Recharger mon solde Euros" className="premium-button balance-badge" style={{ border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid rgba(198,125,91,0.2)', borderRadius: '999px', padding: isScrolled ? '5px 10px' : '6px 12px', backgroundColor: darkMode ? 'rgba(168,100,74,0.25)' : 'rgba(198,125,91,0.12)', color: darkMode ? '#FDE68A' : '#A8644A', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', position: 'relative', overflow: 'visible', whiteSpace: 'nowrap', flexShrink: 0, transition: 'padding 0.3s var(--ease-quiet)' }}>
+            <button onClick={() => handleOpenPayment('topup-cash')} title="Recharger mon solde Euros" className="premium-button balance-badge" style={{ border: '1px solid var(--border-color)', borderRadius: '999px', padding: isScrolled ? '5px 10px' : '6px 12px', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', position: 'relative', overflow: 'visible', whiteSpace: 'nowrap', flexShrink: 0, transition: 'padding 0.3s var(--ease-quiet)' }}>
               <Coins size={13} style={{ flexShrink: 0 }} /> <AnimatedEuroBalance value={profile.euroBalance} prefix="€ " suffix="" style={{ fontSize: '11px', fontWeight: '700', whiteSpace: 'nowrap' }} />
             </button>
-            <button onClick={() => handleOpenPayment('troco-plus')} title="S'abonner à Troco Plus" className="premium-button balance-badge" style={{ border: '1px solid #F59E0B', borderRadius: '999px', padding: isScrolled ? '5px 10px' : '6px 12px', backgroundColor: darkMode ? 'rgba(217,119,6,0.25)' : '#FEF3C7', color: darkMode ? '#FCD34D' : '#92400E', fontWeight: '800', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', position: 'relative', overflow: 'visible', whiteSpace: 'nowrap', flexShrink: 0, transition: 'padding 0.3s var(--ease-quiet)' }}>
-              <Sparkles size={13} color="#F59E0B" style={{ flexShrink: 0 }} /> <AnimatedTokenBalance value={profile.trocoTokens} formatFn={(v) => formatTokenCount(v, currentLang)} style={{ fontSize: '11px', fontWeight: '800', whiteSpace: 'nowrap' }} />
+            <button onClick={() => handleOpenPayment('troco-plus')} title="S'abonner à Troco Plus" className="premium-button balance-badge" style={{ border: '1px solid var(--accent-warning)', borderRadius: '999px', padding: isScrolled ? '5px 10px' : '6px 12px', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-warning)', fontWeight: '800', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', position: 'relative', overflow: 'visible', whiteSpace: 'nowrap', flexShrink: 0, transition: 'padding 0.3s var(--ease-quiet)' }}>
+              <Sparkles size={13} color="var(--accent-warning)" style={{ flexShrink: 0 }} /> <AnimatedTokenBalance value={profile.trocoTokens} formatFn={(v) => formatTokenCount(v, currentLang)} style={{ fontSize: '11px', fontWeight: '800', whiteSpace: 'nowrap' }} />
             </button>
-            <button onClick={toggleDarkMode} title={darkMode ? "Activer le mode clair" : "Activer le mode sombre"} className="premium-button darkmode-btn" style={{ border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E8DDD3', borderRadius: '50%', width: isScrolled ? '32px' : '34px', height: isScrolled ? '32px' : '34px', backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : '#FAF7F2', color: darkMode ? '#F59E0B' : '#6B5E54', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.3s var(--ease-quiet)', flexShrink: 0 }}>
+            <button onClick={toggleDarkMode} title={darkMode ? "Activer le mode clair" : "Activer le mode sombre"} className="premium-button darkmode-btn" style={{ border: '1px solid var(--border-color)', borderRadius: '50%', width: isScrolled ? '32px' : '34px', height: isScrolled ? '32px' : '34px', backgroundColor: 'var(--bg-card)', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.3s var(--ease-quiet)', flexShrink: 0 }}>
               {darkMode ? <Sun size={15} /> : <Moon size={15} />}
             </button>
-            <button onClick={() => setIsLangModalOpen(true)} className="premium-button lang-btn" style={{ border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E8DDD3', borderRadius: '20px', padding: isScrolled ? '4px 9px' : '5px 10px', backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : '#FAF7F2', color: darkMode ? '#FFF' : '#3D3530', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', whiteSpace: 'nowrap', flexShrink: 0, transition: 'padding 0.3s var(--ease-quiet)' }}>
-              <Globe size={13} color={darkMode ? '#93C5FD' : '#C67D5B'} style={{ flexShrink: 0 }} />
+            <button onClick={() => setIsLangModalOpen(true)} className="premium-button lang-btn" style={{ border: '1px solid var(--border-color)', borderRadius: '20px', padding: isScrolled ? '4px 9px' : '5px 10px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', whiteSpace: 'nowrap', flexShrink: 0, transition: 'padding 0.3s var(--ease-quiet)' }}>
+              <Globe size={13} color="var(--accent-primary)" style={{ flexShrink: 0 }} />
               <span>{currentLang === 'FR' ? '🇫🇷 FR' : currentLang === 'EN' ? '🇬🇧 EN' : currentLang === 'ES' ? '🇪🇸 ES' : currentLang === 'IT' ? '🇮🇹 IT' : currentLang === 'DE' ? '🇩🇪 DE' : currentLang === 'JA' ? '🇯🇵 JA' : '🇨🇳 ZH'}</span>
             </button>
           </div>
@@ -7132,38 +7128,38 @@ export default function App() {
 
         {/* ONGLET 3 : DÉPOSER UNE ANNONCE */}
         {activeTab === 'post' && (
-          <div style={{ backgroundColor: darkMode ? '#231E1B' : '#FAF7F2', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', padding: '20px', borderRadius: '24px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', boxShadow: '0 10px 30px rgba(61,53,48,0.06)', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
+          <div style={{ backgroundColor: 'var(--bg-card)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', padding: '20px', borderRadius: '24px', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-card)', color: 'var(--text-main)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
               <div>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: '800', padding: '6px 10px', borderRadius: '999px', backgroundColor: darkMode ? 'rgba(198,125,91,0.25)' : '#F5EAE4', color: darkMode ? '#FAF7F2' : '#A8644A', marginBottom: '8px' }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: '800', padding: '6px 10px', borderRadius: '999px', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', marginBottom: '8px' }}>
                   <Sparkles size={12} /> {t('guidedPath')}
                 </div>
-                <h2 className="font-editorial-heading" style={{ fontSize: '24px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530', margin: 0 }}>{t('postTitle')}</h2>
+                <h2 className="font-editorial-heading" style={{ fontSize: '24px', fontWeight: '600', color: 'var(--text-main)', margin: 0 }}>{t('postTitle')}</h2>
               </div>
-              <div style={{ fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', fontWeight: '700' }}>{postStep}/4</div>
+              <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '700' }}>{postStep}/4</div>
             </div>
             {publishMessage && (
-              <div style={{ marginBottom: '14px', padding: '12px 14px', borderRadius: '14px', backgroundColor: darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4', color: darkMode ? '#FAF7F2' : '#A8644A', fontSize: '13px', fontWeight: '700', lineHeight: 1.5, border: '1px solid #E8DDD3' }}>
+              <div style={{ marginBottom: '14px', padding: '12px 14px', borderRadius: '14px', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', fontSize: '13px', fontWeight: '700', lineHeight: 1.5, border: '1px solid var(--border-color)' }}>
                 {publishMessage}
               </div>
             )}
 
             <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
               {[1, 2, 3, 4].map(step => (
-                <div key={step} style={{ flex: 1, height: '6px', borderRadius: '999px', backgroundColor: postStep >= step ? '#C67D5B' : (darkMode ? 'rgba(232,221,211,0.15)' : '#E8DDD3'), transition: 'all 0.3s ease' }} />
+                <div key={step} style={{ flex: 1, height: '6px', borderRadius: '999px', backgroundColor: postStep >= step ? 'var(--accent-primary)' : 'var(--border-color)', transition: 'all 0.3s ease' }} />
               ))}
             </div>
 
             {postStep === 1 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <div style={{ fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>{t('chooseAdTypePrompt')}</div>
-                <button onClick={() => setPostDraft(prev => ({ ...prev, type: 'offer' }))} style={{ border: '1px solid', borderColor: postDraft.type === 'offer' ? '#C67D5B' : (darkMode ? 'rgba(232,221,211,0.15)' : '#E8DDD3'), borderRadius: '16px', padding: '14px', backgroundColor: postDraft.type === 'offer' ? (darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4') : (darkMode ? '#1A1715' : '#FAF7F2'), textAlign: 'left', cursor: 'pointer', transition: 'all 0.2s ease' }}>
-                  <div style={{ fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{t('iOfferService')}</div>
-                  <div style={{ fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', marginTop: '4px' }}>{t('iOfferServiceSub')}</div>
+                <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{t('chooseAdTypePrompt')}</div>
+                <button onClick={() => setPostDraft(prev => ({ ...prev, type: 'offer' }))} style={{ border: '1.5px solid', borderColor: postDraft.type === 'offer' ? 'var(--accent-primary)' : 'var(--border-color)', borderRadius: '16px', padding: '14px', backgroundColor: postDraft.type === 'offer' ? 'var(--bg-subtle)' : 'var(--bg-card)', textAlign: 'left', cursor: 'pointer', transition: 'all 0.2s ease', boxShadow: postDraft.type === 'offer' ? 'var(--shadow-accent)' : 'none' }}>
+                  <div style={{ fontWeight: '800', color: postDraft.type === 'offer' ? 'var(--accent-primary)' : 'var(--text-main)' }}>{t('iOfferService')}</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>{t('iOfferServiceSub')}</div>
                 </button>
-                <button onClick={() => setPostDraft(prev => ({ ...prev, type: 'request' }))} style={{ border: '1px solid', borderColor: postDraft.type === 'request' ? '#C67D5B' : (darkMode ? 'rgba(232,221,211,0.15)' : '#E8DDD3'), borderRadius: '16px', padding: '14px', backgroundColor: postDraft.type === 'request' ? (darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4') : (darkMode ? '#1A1715' : '#FAF7F2'), textAlign: 'left', cursor: 'pointer', transition: 'all 0.2s ease' }}>
-                  <div style={{ fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{t('iRequestService')}</div>
-                  <div style={{ fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', marginTop: '4px' }}>{t('iRequestServiceSub')}</div>
+                <button onClick={() => setPostDraft(prev => ({ ...prev, type: 'request' }))} style={{ border: '1.5px solid', borderColor: postDraft.type === 'request' ? 'var(--accent-primary)' : 'var(--border-color)', borderRadius: '16px', padding: '14px', backgroundColor: postDraft.type === 'request' ? 'var(--bg-subtle)' : 'var(--bg-card)', textAlign: 'left', cursor: 'pointer', transition: 'all 0.2s ease', boxShadow: postDraft.type === 'request' ? 'var(--shadow-accent)' : 'none' }}>
+                  <div style={{ fontWeight: '800', color: postDraft.type === 'request' ? 'var(--accent-primary)' : 'var(--text-main)' }}>{t('iRequestService')}</div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>{t('iRequestServiceSub')}</div>
                 </button>
               </div>
             )}
@@ -7171,33 +7167,33 @@ export default function App() {
             {postStep === 2 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>{t('adTitleLabel')}</label>
-                  <input value={postDraft.title} onChange={(e) => setPostDraft(prev => ({ ...prev, title: e.target.value }))} type="text" placeholder={t('adTitlePlaceholder')} style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530', borderRadius: '12px' }} />
+                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-secondary)' }}>{t('adTitleLabel')}</label>
+                  <input value={postDraft.title} onChange={(e) => setPostDraft(prev => ({ ...prev, title: e.target.value }))} type="text" placeholder={t('adTitlePlaceholder')} style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-main)', borderRadius: '12px' }} />
                 </div>
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>{t('adCategoryLabel')}</label>
+                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-secondary)' }}>{t('adCategoryLabel')}</label>
                   <select
                     value={postDraft.category}
                     onChange={(e) => setPostDraft(prev => ({ ...prev, category: e.target.value }))}
-                    style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530', borderRadius: '12px', fontSize: '13px' }}
+                    style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-main)', borderRadius: '12px', fontSize: '13px' }}
                   >
-                    <option value="Cours & Compétences" style={{ backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>🎓 Cours, Langues & Compétences</option>
-                    <option value="Bricolage, Travaux & Jardin" style={{ backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>🛠️ Bricolage, Travaux & Jardin</option>
-                    <option value="Tech, Digital & Bureautique" style={{ backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>💻 Tech, Digital & Bureautique</option>
-                    <option value="Prêt d’Outillage & Équipements" style={{ backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>🔨 Prêt d’Outillage & Équipements</option>
-                    <option value="Véhicules & Mobilité" style={{ backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>🚗 Véhicules & Mobilité</option>
-                    <option value="Logement, Espaces & Stay Swap" style={{ backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>🏠 Logement, Espaces & Stay Swap</option>
-                    <option value="Audiovisuel, Photo & Son" style={{ backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>📷 Audiovisuel, Photo & Son</option>
-                    <option value="Services à la personne & Entraide" style={{ backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>🤝 Services à la personne & Entraide</option>
-                    <option value="Santé, Sport & Bien-être" style={{ backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>🧘 Santé, Sport & Bien-être</option>
-                    <option value="Événements & Fêtes" style={{ backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>🎉 Événements & Matériel de fête</option>
-                    <option value="Mode & Beauté" style={{ backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>✂️ Mode, Beauté & Accessoires</option>
-                    <option value="Autre" style={{ backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>✨ Autre / Domaine personnalisé</option>
+                    <option value="Cours & Compétences">🎓 Cours, Langues & Compétences</option>
+                    <option value="Bricolage, Travaux & Jardin">🛠️ Bricolage, Travaux & Jardin</option>
+                    <option value="Tech, Digital & Bureautique">💻 Tech, Digital & Bureautique</option>
+                    <option value="Prêt d’Outillage & Équipements">🔨 Prêt d’Outillage & Équipements</option>
+                    <option value="Véhicules & Mobilité">🚗 Véhicules & Mobilité</option>
+                    <option value="Logement, Espaces & Stay Swap">🏠 Logement, Espaces & Stay Swap</option>
+                    <option value="Audiovisuel, Photo & Son">📷 Audiovisuel, Photo & Son</option>
+                    <option value="Services à la personne & Entraide">🤝 Services à la personne & Entraide</option>
+                    <option value="Santé, Sport & Bien-être">🧘 Santé, Sport & Bien-être</option>
+                    <option value="Événements & Fêtes">🎉 Événements & Matériel de fête</option>
+                    <option value="Mode & Beauté">✂️ Mode, Beauté & Accessoires</option>
+                    <option value="Autre">✨ Autre / Domaine personnalisé</option>
                   </select>
 
                   {(postDraft.category === 'Autre' || postDraft.category === 'Autre / Domaine personnalisé') && (
                     <div style={{ marginTop: '8px', animation: 'fadeIn 0.25s ease' }}>
-                      <label style={{ fontSize: '11px', fontWeight: '800', color: '#C67D5B', display: 'block', marginBottom: '4px' }}>
+                      <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--accent-primary)', display: 'block', marginBottom: '4px' }}>
                         ✍️ Précisez votre catégorie personnalisée (optimisée SEO) :
                       </label>
                       <input
@@ -7208,9 +7204,9 @@ export default function App() {
                         style={{
                           width: '100%',
                           padding: '10px 12px',
-                          border: '1.5px solid #C67D5B',
-                          backgroundColor: darkMode ? 'rgba(198,125,91,0.1)' : '#F5EAE4',
-                          color: darkMode ? '#FAF7F2' : '#3D3530',
+                          border: '1.5px solid var(--accent-primary)',
+                          backgroundColor: 'var(--bg-subtle)',
+                          color: 'var(--text-main)',
                           borderRadius: '12px',
                           fontSize: '13px',
                         }}
@@ -7219,20 +7215,20 @@ export default function App() {
                   )}
                 </div>
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>{t('adFormatLabel')}</label>
-                  <select value={postDraft.format} onChange={(e) => setPostDraft(prev => ({ ...prev, format: e.target.value }))} style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530', borderRadius: '12px' }}>
-                    <option value="onsite" style={{ backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>{t('onsite')}</option>
-                    <option value="remote" style={{ backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>{t('remote')}</option>
+                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-secondary)' }}>{t('adFormatLabel')}</label>
+                  <select value={postDraft.format} onChange={(e) => setPostDraft(prev => ({ ...prev, format: e.target.value }))} style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-main)', borderRadius: '12px' }}>
+                    <option value="onsite">{t('onsite')}</option>
+                    <option value="remote">{t('remote')}</option>
                   </select>
                 </div>
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>{t('adDescriptionLabel')}</label>
-                  <textarea value={postDraft.description} onChange={(e) => setPostDraft(prev => ({ ...prev, description: e.target.value }))} rows={4} placeholder={t('adDescriptionPlaceholder')} style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530', borderRadius: '12px', resize: 'vertical' }} />
+                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-secondary)' }}>{t('adDescriptionLabel')}</label>
+                  <textarea value={postDraft.description} onChange={(e) => setPostDraft(prev => ({ ...prev, description: e.target.value }))} rows={4} placeholder={t('adDescriptionPlaceholder')} style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-main)', borderRadius: '12px', resize: 'vertical' }} />
                 </div>
 
                 {/* ---- MÉDIAS INTELLIGENTS (PHOTO & VIDÉO) ---- */}
-                <div style={{ padding: '16px', borderRadius: '18px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-                  <p style={{ margin: 0, fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', lineHeight: 1.5 }}>
+                <div style={{ padding: '16px', borderRadius: '18px', backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
                     {t('adMediaDesc')}
                   </p>
 
@@ -7250,13 +7246,13 @@ export default function App() {
 
                   {/* SECTION VIDÉO */}
                   <div>
-                    <div style={{ fontSize: '12px', fontWeight: '700', color: darkMode ? '#D4C5B5' : '#6B5E54', marginBottom: '6px' }}>{t('miniVideoLabel')}</div>
-                    <input value={postDraft.videoUrl} onChange={(e) => setPostDraft(prev => ({ ...prev, videoUrl: e.target.value }))} placeholder={t('videoUrlPlaceholder')} style={{ width: '100%', padding: '9px 12px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', backgroundColor: darkMode ? '#231E1B' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530', borderRadius: '10px', fontSize: '12px', marginBottom: '8px' }} />
+                    <div style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '6px' }}>{t('miniVideoLabel')}</div>
+                    <input value={postDraft.videoUrl} onChange={(e) => setPostDraft(prev => ({ ...prev, videoUrl: e.target.value }))} placeholder={t('videoUrlPlaceholder')} style={{ width: '100%', padding: '9px 12px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', borderRadius: '10px', fontSize: '12px', marginBottom: '8px' }} />
                     <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                      <div style={{ width: '90px', height: '65px', borderRadius: '10px', overflow: 'hidden', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', backgroundColor: '#1A1715' }}>
+                      <div style={{ width: '90px', height: '65px', borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)' }}>
                         <video src={getSuggestedMedia(postDraft.title, postDraft.description, postDraft.imageUrl, postDraft.videoUrl).video} autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       </div>
-                      <label style={{ flex: 1, border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', borderRadius: '10px', padding: '8px', backgroundColor: darkMode ? '#231E1B' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530', fontSize: '11px', fontWeight: '800', cursor: 'pointer', textAlign: 'center' }}>
+                      <label style={{ flex: 1, border: '1px solid var(--border-color)', borderRadius: '10px', padding: '8px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', fontSize: '11px', fontWeight: '800', cursor: 'pointer', textAlign: 'center' }}>
                         <Plus size={12} style={{ verticalAlign: 'middle', marginRight: '4px' }} /> {t('importVideo')}
                         <input type="file" accept="video/*" onChange={handleVideoFileUpload} style={{ display: 'none' }} />
                       </label>
@@ -7264,11 +7260,11 @@ export default function App() {
                   </div>
 
                   <div>
-                    <div style={{ fontSize: '11px', fontWeight: '800', color: darkMode ? '#D4C5B5' : '#6B5E54', marginBottom: '6px' }}>{currentLang === 'FR' ? 'Tags (Mots-clés)' : 'Tags (Keywords)'}</div>
+                    <div style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', marginBottom: '6px' }}>{currentLang === 'FR' ? 'Tags (Mots-clés)' : 'Tags (Keywords)'}</div>
 
                     <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '8px', alignItems: 'center' }}>
                       {(postDraft.tags || []).map(tag => (
-                        <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: '#C67D5B', color: '#FFF', borderRadius: '999px', padding: '4px 9px', fontSize: '10px', fontWeight: '800' }}>
+                        <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: 'var(--accent-primary)', color: '#FFF', borderRadius: '999px', padding: '4px 9px', fontSize: '10px', fontWeight: '800' }}>
                           <Tag size={10} /> {tag}
                           <button type="button" onClick={() => setPostDraft(prev => ({ ...prev, tags: (prev.tags || []).filter(t => t !== tag) }))} style={{ background: 'none', border: 'none', color: '#FFF', cursor: 'pointer', padding: 0, marginLeft: '2px', display: 'flex' }}><X size={10} /></button>
                         </span>
@@ -7288,18 +7284,18 @@ export default function App() {
                             setTagInputValue('');
                           }
                         }}
-                        style={{ border: 'none', outline: 'none', background: 'transparent', color: darkMode ? '#FFF' : '#111827', fontSize: '11px', width: '130px', padding: '4px' }}
+                        style={{ border: 'none', outline: 'none', background: 'transparent', color: 'var(--text-main)', fontSize: '11px', width: '130px', padding: '4px' }}
                       />
                     </div>
 
-                    <div style={{ fontSize: '10px', color: darkMode ? '#D4C5B5' : '#6B5E54', marginBottom: '6px' }}>{currentLang === 'FR' ? 'Suggestions (cliquez pour ajouter) :' : 'Suggestions (click to add):'}</div>
+                    <div style={{ fontSize: '10px', color: 'var(--text-secondary)', marginBottom: '6px' }}>{currentLang === 'FR' ? 'Suggestions (cliquez pour ajouter) :' : 'Suggestions (click to add):'}</div>
                     <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                       {generateTags(postDraft.title, postDraft.description).filter(t => !(postDraft.tags || []).includes(t)).map(tag => (
                         <button
                           key={tag}
                           type="button"
                           onClick={() => setPostDraft(prev => ({ ...prev, tags: [...(prev.tags || []), tag] }))}
-                          style={{ border: darkMode ? '1px dashed rgba(232,221,211,0.3)' : '1px dashed #D4C5B5', background: 'transparent', color: darkMode ? '#D4C5B5' : '#6B5E54', borderRadius: '999px', padding: '3px 9px', fontSize: '10px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                          style={{ border: '1px dashed var(--border-color)', background: 'transparent', color: 'var(--text-secondary)', borderRadius: '999px', padding: '3px 9px', fontSize: '10px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                         >
                           <Plus size={10} /> {tag}
                         </button>
@@ -7313,7 +7309,7 @@ export default function App() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 {/* PRESETS RAPIDES DE RÉTRIBUTION & DURÉE */}
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: '800', color: darkMode ? '#D4C5B5' : '#6B5E54', display: 'block', marginBottom: '8px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '8px' }}>
                     ⚡ Formules et Presets rapides :
                   </label>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '8px' }}>
@@ -7322,9 +7318,9 @@ export default function App() {
                       onClick={() => setPostDraft(prev => ({ ...prev, compensation: 'credits', durationType: 'hourly', durationValue: '1', trocoTokens: '1' }))}
                       style={{
                         padding: '9px 10px', borderRadius: '12px',
-                        border: (postDraft.compensation === 'credits' && postDraft.durationType === 'hourly') ? '2px solid #C67D5B' : (darkMode ? '1px solid rgba(232,221,211,0.1)' : '1px solid #E8DDD3'),
-                        backgroundColor: (postDraft.compensation === 'credits' && postDraft.durationType === 'hourly') ? (darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4') : (darkMode ? '#1A1715' : '#FFF'),
-                        color: (postDraft.compensation === 'credits' && postDraft.durationType === 'hourly') ? '#A8644A' : (darkMode ? '#D4C5B5' : '#6B5E54'), fontWeight: '800', fontSize: '11px', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s ease'
+                        border: (postDraft.compensation === 'credits' && postDraft.durationType === 'hourly') ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                        backgroundColor: (postDraft.compensation === 'credits' && postDraft.durationType === 'hourly') ? 'var(--bg-subtle)' : 'var(--bg-card)',
+                        color: (postDraft.compensation === 'credits' && postDraft.durationType === 'hourly') ? 'var(--accent-primary)' : 'var(--text-secondary)', fontWeight: '800', fontSize: '11px', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s ease'
                       }}
                     >
                       🪙 1h / 1 Jeton
@@ -7335,9 +7331,9 @@ export default function App() {
                       onClick={() => setPostDraft(prev => ({ ...prev, compensation: 'troc', durationType: 'daily', durationValue: '1' }))}
                       style={{
                         padding: '9px 10px', borderRadius: '12px',
-                        border: (postDraft.compensation === 'troc' && postDraft.durationType === 'daily') ? '2px solid #9CAF88' : (darkMode ? '1px solid rgba(232,221,211,0.1)' : '1px solid #E8DDD3'),
-                        backgroundColor: (postDraft.compensation === 'troc' && postDraft.durationType === 'daily') ? (darkMode ? 'rgba(156,175,136,0.2)' : '#EBF0E6') : (darkMode ? '#1A1715' : '#FFF'),
-                        color: (postDraft.compensation === 'troc' && postDraft.durationType === 'daily') ? '#3D4A35' : (darkMode ? '#D4C5B5' : '#6B5E54'), fontWeight: '800', fontSize: '11px', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s ease'
+                        border: (postDraft.compensation === 'troc' && postDraft.durationType === 'daily') ? '2px solid var(--accent-success)' : '1px solid var(--border-color)',
+                        backgroundColor: (postDraft.compensation === 'troc' && postDraft.durationType === 'daily') ? 'var(--bg-subtle)' : 'var(--bg-card)',
+                        color: (postDraft.compensation === 'troc' && postDraft.durationType === 'daily') ? 'var(--accent-success)' : 'var(--text-secondary)', fontWeight: '800', fontSize: '11px', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s ease'
                       }}
                     >
                       🔄 1 jour / Troc
@@ -7348,9 +7344,9 @@ export default function App() {
                       onClick={() => setPostDraft(prev => ({ ...prev, compensation: 'troc', durationType: 'fixed', durationValue: '1' }))}
                       style={{
                         padding: '9px 10px', borderRadius: '12px',
-                        border: (postDraft.compensation === 'troc' && postDraft.durationType === 'fixed') ? '2px solid #C67D5B' : (darkMode ? '1px solid rgba(232,221,211,0.1)' : '1px solid #E8DDD3'),
-                        backgroundColor: (postDraft.compensation === 'troc' && postDraft.durationType === 'fixed') ? (darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4') : (darkMode ? '#1A1715' : '#FFF'),
-                        color: (postDraft.compensation === 'troc' && postDraft.durationType === 'fixed') ? '#A8644A' : (darkMode ? '#D4C5B5' : '#6B5E54'), fontWeight: '800', fontSize: '11px', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s ease'
+                        border: (postDraft.compensation === 'troc' && postDraft.durationType === 'fixed') ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                        backgroundColor: (postDraft.compensation === 'troc' && postDraft.durationType === 'fixed') ? 'var(--bg-subtle)' : 'var(--bg-card)',
+                        color: (postDraft.compensation === 'troc' && postDraft.durationType === 'fixed') ? 'var(--accent-primary)' : 'var(--text-secondary)', fontWeight: '800', fontSize: '11px', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s ease'
                       }}
                     >
                       💎 Forfait libre
@@ -7361,9 +7357,9 @@ export default function App() {
                       onClick={() => setPostDraft(prev => ({ ...prev, compensation: 'cash', durationType: 'hourly', price: '25' }))}
                       style={{
                         padding: '9px 10px', borderRadius: '12px',
-                        border: (postDraft.compensation === 'cash') ? '2px solid #C67D5B' : (darkMode ? '1px solid rgba(232,221,211,0.1)' : '1px solid #E8DDD3'),
-                        backgroundColor: (postDraft.compensation === 'cash') ? (darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4') : (darkMode ? '#1A1715' : '#FFF'),
-                        color: (postDraft.compensation === 'cash') ? '#A8644A' : (darkMode ? '#D4C5B5' : '#6B5E54'), fontWeight: '800', fontSize: '11px', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s ease'
+                        border: (postDraft.compensation === 'cash') ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                        backgroundColor: (postDraft.compensation === 'cash') ? 'var(--bg-subtle)' : 'var(--bg-card)',
+                        color: (postDraft.compensation === 'cash') ? 'var(--accent-primary)' : 'var(--text-secondary)', fontWeight: '800', fontSize: '11px', cursor: 'pointer', textAlign: 'center', transition: 'all 0.2s ease'
                       }}
                     >
                       💶 Rémunéré (€)
@@ -7373,20 +7369,20 @@ export default function App() {
 
                 {/* SÉLECTEUR DE FORMAT DE DURÉE */}
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#D4C5B5' : '#6B5E54', display: 'block', marginBottom: '6px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
                     ⏱️ Format & Unité de durée :
                   </label>
                   <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '8px' }}>
                     <select
                       value={postDraft.durationType || 'hourly'}
                       onChange={(e) => setPostDraft(prev => ({ ...prev, durationType: e.target.value }))}
-                      style={{ width: '100%', padding: '10px 12px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530', borderRadius: '12px', fontSize: '13px' }}
+                      style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-main)', borderRadius: '12px', fontSize: '13px' }}
                     >
-                      <option value="hourly" style={{ backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>À l'heure (cours, visio, prestation)</option>
-                      <option value="daily" style={{ backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>À la journée (prêt, véhicule, chantier)</option>
-                      <option value="monthly" style={{ backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>Au mois (coworking, hébergement)</option>
-                      <option value="fixed" style={{ backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>Au forfait global (clé en main)</option>
-                      <option value="indefinite" style={{ backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>Indéfini / Libre négociation</option>
+                      <option value="hourly">À l'heure (cours, visio, prestation)</option>
+                      <option value="daily">À la journée (prêt, véhicule, chantier)</option>
+                      <option value="monthly">Au mois (coworking, hébergement)</option>
+                      <option value="fixed">Au forfait global (clé en main)</option>
+                      <option value="indefinite">Indéfini / Libre négociation</option>
                     </select>
 
                     {postDraft.durationType !== 'indefinite' && postDraft.durationType !== 'fixed' && (
@@ -7396,7 +7392,7 @@ export default function App() {
                         value={postDraft.durationValue || '1'}
                         onChange={(e) => setPostDraft(prev => ({ ...prev, durationValue: e.target.value }))}
                         placeholder="Qté (ex: 1)"
-                        style={{ width: '100%', padding: '10px 12px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530', borderRadius: '12px', fontSize: '13px' }}
+                        style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-main)', borderRadius: '12px', fontSize: '13px' }}
                       />
                     )}
                   </div>
@@ -7404,53 +7400,53 @@ export default function App() {
 
                 {/* SÉLECTEUR DU MODE DE RÉTRIBUTION */}
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>{t('retributionModeLabel')}</label>
-                  <select value={postDraft.compensation} onChange={(e) => setPostDraft(prev => ({ ...prev, compensation: e.target.value }))} style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530', borderRadius: '12px' }}>
-                    <option value="credits" style={{ backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>{t('timeCreditOption')}</option>
-                    <option value="cash" style={{ backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>{t('euroPaymentOption')}</option>
-                    <option value="troc" style={{ backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>{t('directSwapOption')}</option>
-                    <option value="hybrid" style={{ backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FFF' : '#000' }}>{t('hybridOption')}</option>
+                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-secondary)' }}>{t('retributionModeLabel')}</label>
+                  <select value={postDraft.compensation} onChange={(e) => setPostDraft(prev => ({ ...prev, compensation: e.target.value }))} style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-main)', borderRadius: '12px' }}>
+                    <option value="credits">{t('timeCreditOption')}</option>
+                    <option value="cash">{t('euroPaymentOption')}</option>
+                    <option value="troc">{t('directSwapOption')}</option>
+                    <option value="hybrid">{t('hybridOption')}</option>
                   </select>
                 </div>
 
                 {postDraft.compensation === 'credits' && (
                   <div>
-                    <label style={{ fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{t('trocoTokensAmountLabel')}</label>
-                    <input value={postDraft.trocoTokens || '1'} onChange={(e) => setPostDraft(prev => ({ ...prev, trocoTokens: e.target.value }))} type="number" min="1" placeholder="Ex : 1" style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530', borderRadius: '12px' }} />
+                    <label style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-main)' }}>{t('trocoTokensAmountLabel')}</label>
+                    <input value={postDraft.trocoTokens || '1'} onChange={(e) => setPostDraft(prev => ({ ...prev, trocoTokens: e.target.value }))} type="number" min="1" placeholder="Ex : 1" style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-main)', borderRadius: '12px' }} />
                   </div>
                 )}
 
                 {(postDraft.compensation === 'cash' || postDraft.compensation === 'hybrid') && (
                   <div>
-                    <label style={{ fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>{t('expectedAmountLabel')}</label>
-                    <input value={postDraft.compensation === 'hybrid' ? postDraft.euroAmount : postDraft.price} onChange={(e) => setPostDraft(prev => ({ ...prev, ...(prev.compensation === 'hybrid' ? { euroAmount: e.target.value } : { price: e.target.value }) }))} type="number" min="0" placeholder="Ex : 20" style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530', borderRadius: '12px' }} />
+                    <label style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-secondary)' }}>{t('expectedAmountLabel')}</label>
+                    <input value={postDraft.compensation === 'hybrid' ? postDraft.euroAmount : postDraft.price} onChange={(e) => setPostDraft(prev => ({ ...prev, ...(prev.compensation === 'hybrid' ? { euroAmount: e.target.value } : { price: e.target.value }) }))} type="number" min="0" placeholder="Ex : 20" style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-main)', borderRadius: '12px' }} />
                   </div>
                 )}
 
                 {postDraft.compensation === 'hybrid' && (
-                  <div style={{ padding: '12px', borderRadius: '14px', backgroundColor: darkMode ? 'rgba(198,125,91,0.15)' : '#F5EAE4', border: darkMode ? '1px solid rgba(198,125,91,0.3)' : '1px solid #E8DDD3', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <div style={{ padding: '12px', borderRadius: '14px', backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     <div>
-                      <label style={{ fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{t('trocoTokensAmountLabel')}</label>
-                      <input value={postDraft.trocoTokens} onChange={(e) => setPostDraft(prev => ({ ...prev, trocoTokens: e.target.value }))} type="number" min="1" placeholder="Ex : 2" style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530', borderRadius: '12px' }} />
+                      <label style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-main)' }}>{t('trocoTokensAmountLabel')}</label>
+                      <input value={postDraft.trocoTokens} onChange={(e) => setPostDraft(prev => ({ ...prev, trocoTokens: e.target.value }))} type="number" min="1" placeholder="Ex : 2" style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', borderRadius: '12px' }} />
                     </div>
                     <div>
-                      <label style={{ fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{t('expectedAmountLabel')}</label>
-                      <input value={postDraft.euroAmount} onChange={(e) => setPostDraft(prev => ({ ...prev, euroAmount: e.target.value }))} type="number" min="0" placeholder="Ex : 10" style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530', borderRadius: '12px' }} />
+                      <label style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-main)' }}>{t('expectedAmountLabel')}</label>
+                      <input value={postDraft.euroAmount} onChange={(e) => setPostDraft(prev => ({ ...prev, euroAmount: e.target.value }))} type="number" min="0" placeholder="Ex : 10" style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', borderRadius: '12px' }} />
                     </div>
                   </div>
                 )}
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>{t('locationZoneLabel')}</label>
-                  <input value={postDraft.location} onChange={(e) => setPostDraft(prev => ({ ...prev, location: e.target.value }))} type="text" placeholder="Paris, Lyon, à distance, etc." style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530', borderRadius: '12px' }} />
+                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-secondary)' }}>{t('locationZoneLabel')}</label>
+                  <input value={postDraft.location} onChange={(e) => setPostDraft(prev => ({ ...prev, location: e.target.value }))} type="text" placeholder="Paris, Lyon, à distance, etc." style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-main)', borderRadius: '12px' }} />
                 </div>
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>{t('availabilityLabel')}</label>
-                  <textarea value={postDraft.availability} onChange={(e) => setPostDraft(prev => ({ ...prev, availability: e.target.value }))} rows={2} placeholder="Ex : disponibilités ce week-end, en visio le soir" style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530', borderRadius: '12px', resize: 'vertical' }} />
+                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-secondary)' }}>{t('availabilityLabel')}</label>
+                  <textarea value={postDraft.availability} onChange={(e) => setPostDraft(prev => ({ ...prev, availability: e.target.value }))} rows={2} placeholder="Ex : disponibilités ce week-end, en visio le soir" style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-main)', borderRadius: '12px', resize: 'vertical' }} />
                 </div>
                 {postDraft.type === 'offer' && (
-                  <div style={{ padding: '12px', borderRadius: '14px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3' }}>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontWeight: 'bold', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>
-                      <input type="checkbox" checked={postDraft.requiresCaution} onChange={(e) => setPostDraft(prev => ({ ...prev, requiresCaution: e.target.checked, cautionAmount: e.target.checked ? prev.cautionAmount : '' }))} />
+                  <div style={{ padding: '14px', borderRadius: '16px', backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--border-color)' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '13px', fontWeight: '800', color: 'var(--text-main)' }}>
+                      <input type="checkbox" checked={postDraft.requiresCaution} onChange={(e) => setPostDraft(prev => ({ ...prev, requiresCaution: e.target.checked }))} style={{ accentColor: 'var(--accent-primary)', width: '16px', height: '16px' }} />
                       {t('requireCautionLabel')}
                     </label>
                     {postDraft.requiresCaution && (
@@ -7602,17 +7598,9 @@ export default function App() {
                       fontWeight: '800',
                       padding: '5px 10px',
                       borderRadius: '999px',
-                      backgroundColor: profile.accountType === 'professional'
-                        ? (darkMode ? 'rgba(217,119,6,0.25)' : '#FEF3C7')
-                        : profile.accountType === 'company'
-                          ? (darkMode ? 'rgba(156,175,136,0.25)' : '#EBF0E6')
-                          : (darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4'),
-                      color: profile.accountType === 'professional'
-                        ? (darkMode ? '#FDE68A' : '#92400E')
-                        : profile.accountType === 'company'
-                          ? (darkMode ? '#FAF7F2' : '#3D4A35')
-                          : (darkMode ? '#FAF7F2' : '#A8644A'),
-                      border: '1px solid #E8DDD3'
+                      backgroundColor: 'var(--bg-subtle)',
+                      color: 'var(--accent-primary)',
+                      border: '1px solid var(--border-color)'
                     }}>
                       {profile.accountType === 'professional' && '💼 Pro / Freelance'}
                       {profile.accountType === 'company' && '🏢 Organisation / Asso'}
@@ -7620,8 +7608,8 @@ export default function App() {
                     </span>
                   )}
                 </div>
-                <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '24px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530', letterSpacing: '-0.01em' }}>{isEditingProfile ? profileDraft.name : profile.name}</h3>
-                <div style={{ fontSize: '13px', fontWeight: '800', color: '#C67D5B', marginTop: '2px' }}>{isEditingProfile ? (profileDraft.username || '@user') : (profile.username || '@mateopolo')}</div>
+                <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '24px', fontWeight: '600', color: 'var(--text-main)', letterSpacing: '-0.01em' }}>{isEditingProfile ? profileDraft.name : profile.name}</h3>
+                <div style={{ fontSize: '13px', fontWeight: '800', color: 'var(--accent-primary)', marginTop: '2px' }}>{isEditingProfile ? (profileDraft.username || '@user') : (profile.username || '@mateopolo')}</div>
               </div>
               <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
                 {!isEditingProfile && !profile.kycVerified && (
@@ -7630,48 +7618,48 @@ export default function App() {
                     onClick={() => setIsKycModalOpen(true)}
                     className="premium-button"
                     style={{
-                      border: '1.5px solid #C67D5B',
+                      border: '1.5px solid var(--accent-primary)',
                       borderRadius: '999px',
                       padding: '10px 16px',
-                      backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
-                      color: '#C67D5B',
+                      backgroundColor: 'var(--bg-card)',
+                      color: 'var(--accent-primary)',
                       fontWeight: '800',
                       fontSize: '12px',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '6px',
-                      boxShadow: '0 4px 14px rgba(198,125,91,0.2)'
+                      boxShadow: 'var(--shadow-accent)'
                     }}
                   >
-                    <ShieldCheck size={14} color="#C67D5B" /> Vérifier mon profil
+                    <ShieldCheck size={14} color="var(--accent-primary)" /> Vérifier mon profil
                   </button>
                 )}
                 <button
                   onClick={() => setIsAdminPanelOpen(true)}
                   className="premium-button"
                   style={{
-                    border: darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #3D3530',
+                    border: '1px solid var(--border-color)',
                     borderRadius: '999px',
                     padding: '10px 14px',
-                    backgroundColor: darkMode ? '#231E1B' : '#3D3530',
-                    color: '#FAF7F2',
+                    backgroundColor: 'var(--bg-subtle)',
+                    color: 'var(--text-main)',
                     fontWeight: '800',
                     fontSize: '12px',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '6px',
-                    boxShadow: '0 4px 12px rgba(61,53,48,0.15)'
+                    boxShadow: 'var(--shadow-card)'
                   }}
                 >
-                  <ShieldAlert size={14} color="#C67D5B" /> Panel Modération
+                  <ShieldAlert size={14} color="var(--accent-primary)" /> Panel Modération
                 </button>
-                <button onClick={() => isEditingProfile ? handleSaveProfile() : handleStartEdit()} className="premium-button" style={{ border: '1px solid #E8DDD3', borderRadius: '999px', padding: '10px 14px', backgroundColor: isEditingProfile ? '#C67D5B' : (darkMode ? '#1A1715' : '#FAF7F2'), color: isEditingProfile ? '#FFF' : (darkMode ? '#FAF7F2' : '#3D3530'), fontWeight: '700', cursor: 'pointer', boxShadow: '0 4px 12px rgba(61,53,48,0.06)' }}>
+                <button onClick={() => isEditingProfile ? handleSaveProfile() : handleStartEdit()} className="premium-button" style={{ border: '1px solid var(--border-color)', borderRadius: '999px', padding: '10px 14px', backgroundColor: isEditingProfile ? 'var(--accent-primary)' : 'var(--bg-card)', color: isEditingProfile ? '#FFF' : 'var(--text-main)', fontWeight: '700', cursor: 'pointer', boxShadow: 'var(--shadow-card)' }}>
                   {isEditingProfile ? t('saveProfile') : t('editProfile')}
                 </button>
                 {!isEditingProfile && (
-                  <button onClick={handleSignOut} className="premium-button" style={{ border: darkMode ? '1px solid rgba(232,221,211,0.25)' : '1px solid #3D3530', borderRadius: '999px', padding: '10px 14px', backgroundColor: 'transparent', color: darkMode ? '#D4C5B5' : '#3D3530', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <button onClick={handleSignOut} className="premium-button" style={{ border: '1px solid var(--border-color)', borderRadius: '999px', padding: '10px 14px', backgroundColor: 'transparent', color: 'var(--text-secondary)', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <LogOut size={13} /> Se déconnecter
                   </button>
                 )}
@@ -7680,9 +7668,9 @@ export default function App() {
 
             <input type="file" ref={profileAvatarFileInputRef} onChange={handleAvatarFileUpload} accept="image/*" style={{ display: "none" }} />
             <div style={{ position: "relative", marginBottom: "18px", display: "inline-block", cursor: isEditingProfile ? "pointer" : "default" }} onClick={() => isEditingProfile && profileAvatarFileInputRef.current && profileAvatarFileInputRef.current.click()}>
-              <img src={isEditingProfile ? profileDraft.avatar : profile.avatar} alt={profile.name} style={{ width: "112px", height: "112px", borderRadius: "50%", objectFit: "cover", border: darkMode ? "3px solid #C67D5B" : "3px solid #E8DDD3", boxShadow: "0 14px 28px rgba(61,53,48,0.15)", transition: "all 0.3s ease" }} />
+              <img src={isEditingProfile ? profileDraft.avatar : profile.avatar} alt={profile.name} style={{ width: "112px", height: "112px", borderRadius: "50%", objectFit: "cover", border: "3px solid var(--accent-primary)", boxShadow: "var(--shadow-card)", transition: "all 0.3s ease" }} />
               {isEditingProfile && (
-                <button title={t("uploadProfilePhoto")} onClick={(e) => { e.stopPropagation(); profileAvatarFileInputRef.current && profileAvatarFileInputRef.current.click(); }} style={{ position: "absolute", right: "0", bottom: "0", width: "38px", height: "38px", borderRadius: "50%", border: "none", backgroundColor: "#C67D5B", color: "#FFF", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "0 8px 16px rgba(198,125,91,0.25)" }}>
+                <button title={t("uploadProfilePhoto")} onClick={(e) => { e.stopPropagation(); profileAvatarFileInputRef.current && profileAvatarFileInputRef.current.click(); }} style={{ position: "absolute", right: "0", bottom: "0", width: "38px", height: "38px", borderRadius: "50%", border: "none", backgroundColor: "var(--accent-primary)", color: "#FFF", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "var(--shadow-accent)" }}>
                   <Pencil size={16} />
                 </button>
               )}
@@ -7696,11 +7684,11 @@ export default function App() {
                     className="premium-button"
                     style={{
                       width: "100%",
-                      border: "1.5px dashed #C67D5B",
+                      border: "1.5px dashed var(--accent-primary)",
                       borderRadius: "14px",
                       padding: "12px 14px",
-                      backgroundColor: darkMode ? "rgba(198,125,91,0.2)" : "#F5EAE4",
-                      color: darkMode ? "#FAF7F2" : "#A8644A",
+                      backgroundColor: "var(--bg-subtle)",
+                      color: "var(--accent-primary)",
                       fontWeight: "800",
                       fontSize: "13px",
                       cursor: "pointer",
@@ -7708,7 +7696,7 @@ export default function App() {
                       alignItems: "center",
                       justifyContent: "center",
                       gap: "8px",
-                      boxShadow: "0 4px 14px rgba(198,125,91,0.1)"
+                      boxShadow: "var(--shadow-card)"
                     }}
                   >
                     <Upload size={16} /> {t("uploadProfilePhoto")}
@@ -7716,14 +7704,14 @@ export default function App() {
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(8, 1fr)", gap: "8px", maxHeight: "120px", overflowY: "auto", padding: "4px", marginBottom: "12px" }}>
                   {avatarOptions.map((avatar) => (
-                    <button key={avatar} onClick={() => setProfileDraft(prev => ({ ...prev, avatar }))} style={{ border: profileDraft.avatar === avatar ? "2.5px solid #C67D5B" : "2px solid transparent", borderRadius: "50%", padding: 0, background: "none", cursor: "pointer", transform: profileDraft.avatar === avatar ? "scale(1.08)" : "scale(1)", transition: "all 0.2s" }}>
+                    <button key={avatar} onClick={() => setProfileDraft(prev => ({ ...prev, avatar }))} style={{ border: profileDraft.avatar === avatar ? "2.5px solid var(--accent-primary)" : "2px solid transparent", borderRadius: "50%", padding: 0, background: "none", cursor: "pointer", transform: profileDraft.avatar === avatar ? "scale(1.08)" : "scale(1)", transition: "all 0.2s" }}>
                       <img src={avatar} alt="avatar option" style={{ width: "42px", height: "42px", borderRadius: "50%", objectFit: "cover" }} />
                     </button>
                   ))}
                 </div>
                 <div style={{ marginBottom: "14px" }}>
-                  <label style={{ fontSize: "12px", fontWeight: "800", color: darkMode ? "#D4C5B5" : "#6B5E54" }}>URL de ta photo de profil (aperçu instantané)</label>
-                  <input value={profileDraft.avatar} onChange={(e) => setProfileDraft(prev => ({ ...prev, avatar: e.target.value }))} placeholder="https://exemple.com/avatar.jpg" style={{ width: "100%", padding: "10px 12px", marginTop: "6px", border: darkMode ? "1px solid rgba(232,221,211,0.15)" : "1px solid #E8DDD3", backgroundColor: darkMode ? "#1A1715" : "#FFF", color: darkMode ? "#FAF7F2" : "#3D3530", borderRadius: "12px", fontSize: "13px" }} />
+                  <label style={{ fontSize: "12px", fontWeight: "800", color: "var(--text-secondary)" }}>URL de ta photo de profil (aperçu instantané)</label>
+                  <input value={profileDraft.avatar} onChange={(e) => setProfileDraft(prev => ({ ...prev, avatar: e.target.value }))} placeholder="https://exemple.com/avatar.jpg" style={{ width: "100%", padding: "10px 12px", marginTop: "6px", border: "1px solid var(--border-color)", backgroundColor: "var(--bg-subtle)", color: "var(--text-main)", borderRadius: "12px", fontSize: "13px" }} />
                 </div>
               </>
             )}
@@ -7733,41 +7721,41 @@ export default function App() {
                 <>
                   <div style={{ display: 'flex', gap: '10px' }}>
                     <div style={{ flex: 1 }}>
-                      <label style={{ fontSize: '11px', fontWeight: '700', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>Nom complet</label>
-                      <input value={profileDraft.name} onChange={(e) => setProfileDraft(prev => ({ ...prev, name: e.target.value }))} placeholder="Nom" style={{ width: '100%', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', backgroundColor: darkMode ? '#1A1715' : '#FFF', borderRadius: '12px', padding: '10px 12px', fontSize: '14px', fontWeight: '700', color: darkMode ? '#FAF7F2' : '#3D3530' }} />
+                      <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)' }}>Nom complet</label>
+                      <input value={profileDraft.name} onChange={(e) => setProfileDraft(prev => ({ ...prev, name: e.target.value }))} placeholder="Nom" style={{ width: '100%', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-subtle)', borderRadius: '12px', padding: '10px 12px', fontSize: '14px', fontWeight: '700', color: 'var(--text-main)' }} />
                     </div>
                     <div style={{ flex: 1 }}>
-                      <label style={{ fontSize: '11px', fontWeight: '700', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>Pseudo (@)</label>
-                      <input value={profileDraft.username || ''} onChange={(e) => setProfileDraft(prev => ({ ...prev, username: e.target.value }))} placeholder="@pseudo" style={{ width: '100%', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', backgroundColor: darkMode ? '#1A1715' : '#FFF', borderRadius: '12px', padding: '10px 12px', fontSize: '14px', fontWeight: '700', color: '#C67D5B' }} />
+                      <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)' }}>Pseudo (@)</label>
+                      <input value={profileDraft.username || ''} onChange={(e) => setProfileDraft(prev => ({ ...prev, username: e.target.value }))} placeholder="@pseudo" style={{ width: '100%', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-subtle)', borderRadius: '12px', padding: '10px 12px', fontSize: '14px', fontWeight: '700', color: 'var(--accent-primary)' }} />
                     </div>
                   </div>
-                  <textarea value={profileDraft.bio} onChange={(e) => setProfileDraft(prev => ({ ...prev, bio: e.target.value }))} rows={3} style={{ width: '100%', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', backgroundColor: darkMode ? '#1A1715' : '#FFF', borderRadius: '14px', padding: '12px 14px', resize: 'vertical', fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54' }} />
-                  <input value={profileDraft.location} onChange={(e) => setProfileDraft(prev => ({ ...prev, location: e.target.value }))} style={{ width: '100%', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', backgroundColor: darkMode ? '#1A1715' : '#FFF', borderRadius: '14px', padding: '12px 14px', fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54' }} />
+                  <textarea value={profileDraft.bio} onChange={(e) => setProfileDraft(prev => ({ ...prev, bio: e.target.value }))} rows={3} style={{ width: '100%', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-subtle)', borderRadius: '14px', padding: '12px 14px', resize: 'vertical', fontSize: '13px', color: 'var(--text-main)' }} />
+                  <input value={profileDraft.location} onChange={(e) => setProfileDraft(prev => ({ ...prev, location: e.target.value }))} style={{ width: '100%', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-subtle)', borderRadius: '14px', padding: '12px 14px', fontSize: '13px', color: 'var(--text-main)' }} />
                 </>
               ) : (
                 <>
-                  <div style={{ backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', padding: '14px 16px', borderRadius: '16px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3' }}>
-                    <div style={{ fontSize: '14px', lineHeight: 1.7, color: darkMode ? '#D4C5B5' : '#6B5E54' }}>
+                  <div style={{ backgroundColor: 'var(--bg-subtle)', padding: '14px 16px', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
+                    <div style={{ fontSize: '14px', lineHeight: 1.7, color: 'var(--text-main)' }}>
                       {getBioTranslation(profile.bio, currentLang, showingOriginalBio)}
                     </div>
                     {currentLang !== 'FR' && (
                       <button
                         onClick={() => setShowingOriginalBio(prev => !prev)}
                         className="premium-button"
-                        style={{ border: 'none', backgroundColor: 'transparent', color: '#C67D5B', fontSize: '11px', fontWeight: '800', cursor: 'pointer', marginTop: '6px', display: 'inline-flex', alignItems: 'center', gap: '4px', padding: 0 }}
+                        style={{ border: 'none', backgroundColor: 'transparent', color: 'var(--accent-primary)', fontSize: '11px', fontWeight: '800', cursor: 'pointer', marginTop: '6px', display: 'inline-flex', alignItems: 'center', gap: '4px', padding: 0 }}
                       >
-                        <Globe size={12} color="#C67D5B" />
+                        <Globe size={12} color="var(--accent-primary)" />
                         {showingOriginalBio ? t('showTranslation') : t('showOriginal')}
                       </button>
                     )}
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}><MapPin size={14} color="#C67D5B" /> {profile.location}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-secondary)' }}><MapPin size={14} color="var(--accent-primary)" /> {profile.location}</div>
                 </>
               )}
             </div>
 
             <div style={{ marginBottom: '18px' }}>
-              <div style={{ fontSize: '12px', fontWeight: '700', color: darkMode ? '#D4C5B5' : '#6B5E54', marginBottom: '8px' }}>{t('spokenLanguages')}</div>
+              <div style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '8px' }}>{t('spokenLanguages')}</div>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 {[
                   { code: 'FR', label: 'FR 🇫🇷' },
@@ -7789,15 +7777,16 @@ export default function App() {
                       key={code}
                       onClick={() => isEditingProfile ? toggleLanguage(code) : null}
                       style={{
-                        border: active ? '1px solid #C67D5B' : (darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3'),
-                        backgroundColor: active ? (darkMode ? 'rgba(198,125,91,0.25)' : '#F5EAE4') : (darkMode ? '#1A1715' : '#FAF7F2'),
-                        color: active ? (darkMode ? '#FAF7F2' : '#A8644A') : (darkMode ? '#D4C5B5' : '#6B5E54'),
+                        border: active ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                        backgroundColor: active ? 'var(--bg-subtle)' : 'var(--bg-card)',
+                        color: active ? 'var(--accent-primary)' : 'var(--text-secondary)',
                         padding: '7px 12px',
                         borderRadius: '999px',
                         fontSize: '12px',
                         fontWeight: '800',
                         cursor: isEditingProfile ? 'pointer' : 'default',
-                        transition: 'all 0.2s ease'
+                        transition: 'all 0.2s ease',
+                        boxShadow: active ? 'var(--shadow-card)' : 'none'
                       }}
                     >
                       {label}
@@ -7807,28 +7796,28 @@ export default function App() {
               </div>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px', borderRadius: '20px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3', marginBottom: '18px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px', borderRadius: '20px', backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--border-color)', marginBottom: '18px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
                 <div>
-                  <div style={{ fontSize: '11px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>{t('euroBalance')}</div>
-                  <div style={{ fontSize: '22px', fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530', position: 'relative', overflow: 'visible' }}>
-                    <AnimatedEuroBalance value={profile.euroBalance} suffix=" €" style={{ fontSize: '22px', fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530' }} />
+                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{t('euroBalance')}</div>
+                  <div style={{ fontSize: '22px', fontWeight: '800', color: 'var(--text-main)', position: 'relative', overflow: 'visible' }}>
+                    <AnimatedEuroBalance value={profile.euroBalance} suffix=" €" style={{ fontSize: '22px', fontWeight: '800', color: 'var(--text-main)' }} />
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  <button onClick={() => handleOpenPayment('topup-cash')} className="premium-button" style={{ border: 'none', borderRadius: '999px', padding: '9px 14px', background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)', color: '#FFF', fontWeight: '700', fontSize: '12px', cursor: 'pointer', boxShadow: '0 8px 16px rgba(198,125,91,0.25)' }}>
+                  <button onClick={() => handleOpenPayment('topup-cash')} className="premium-button" style={{ border: 'none', borderRadius: '999px', padding: '9px 16px', background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)', color: '#FFF', fontWeight: '800', fontSize: '12px', cursor: 'pointer', boxShadow: 'var(--shadow-accent)' }}>
                     + Recharger (€)
                   </button>
-                  <button onClick={() => setIsTransactionsModalOpen(true)} className="premium-button" style={{ border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', borderRadius: '999px', padding: '9px 14px', backgroundColor: 'transparent', color: darkMode ? '#D4C5B5' : '#6B5E54', fontWeight: '700', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                  <button onClick={() => setIsTransactionsModalOpen(true)} className="premium-button" style={{ border: '1px solid var(--border-color)', borderRadius: '999px', padding: '9px 14px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', fontWeight: '700', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
                     <FileText size={13} /> Factures
                   </button>
                 </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '12px', borderTop: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3', flexWrap: 'wrap', gap: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '12px', borderTop: '1px solid var(--border-color)', flexWrap: 'wrap', gap: '10px' }}>
                 <div>
-                  <div style={{ fontSize: '11px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>{t('trocoTokensLabel')}</div>
-                  <div style={{ fontSize: '19px', fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530', position: 'relative', overflow: 'visible' }}>
-                    <AnimatedTokenBalance value={profile.trocoTokens} formatFn={(v) => formatTokenCount(v, currentLang)} style={{ fontSize: '19px', fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530' }} />
+                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{t('trocoTokensLabel')}</div>
+                  <div style={{ fontSize: '19px', fontWeight: '800', color: 'var(--text-main)', position: 'relative', overflow: 'visible' }}>
+                    <AnimatedTokenBalance value={profile.trocoTokens} formatFn={(v) => formatTokenCount(v, currentLang)} style={{ fontSize: '19px', fontWeight: '800', color: 'var(--text-main)' }} />
                   </div>
                 </div>
                 <button onClick={() => handleOpenPayment('troco-plus')} className="premium-button" style={{ border: 'none', borderRadius: '999px', padding: '9px 16px', background: 'linear-gradient(135deg, #D97706 0%, #B45309 100%)', color: '#FFF', fontWeight: '800', fontSize: '12px', cursor: 'pointer', boxShadow: '0 8px 16px rgba(217,119,6,0.25)', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -7838,33 +7827,33 @@ export default function App() {
             </div>
 
             {saveMessage && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#7A8F6A', fontSize: '12px', fontWeight: '800', marginTop: '10px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--accent-success)', fontSize: '12px', fontWeight: '800', marginTop: '10px' }}>
                 <Check size={14} /> {saveMessage}
               </div>
             )}
 
             {/* ---- PORTFOLIO PHOTOS ---- */}
-            <div style={{ borderTop: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3', paddingTop: '20px', marginTop: '4px' }}>
+            <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '20px', marginTop: '4px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                <ImageIcon size={17} color="#C67D5B" />
-                <h4 className="font-editorial-heading" style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530' }}>📸 Mon Portfolio</h4>
-                <span style={{ marginLeft: 'auto', fontSize: '11px', color: darkMode ? '#D4C5B5' : '#6B5E54', fontWeight: '700' }}>{portfolioImages.length} photo{portfolioImages.length !== 1 ? 's' : ''}</span>
+                <ImageIcon size={17} color="var(--accent-primary)" />
+                <h4 className="font-editorial-heading" style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: 'var(--text-main)' }}>📸 Mon Portfolio</h4>
+                <span style={{ marginLeft: 'auto', fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '700' }}>{portfolioImages.length} photo{portfolioImages.length !== 1 ? 's' : ''}</span>
               </div>
-              <p style={{ fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', margin: '0 0 14px' }}>
+              <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '0 0 14px' }}>
                 Ajoute des photos authentiques pour mettre en valeur ton savoir-faire.
               </p>
 
               {portfolioImages.length > 0 ? (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '14px' }}>
                   {portfolioImages.map((src, idx) => (
-                    <div key={idx} style={{ position: 'relative', aspectRatio: '1', borderRadius: '12px', overflow: 'hidden', boxShadow: '0 4px 12px rgba(61,53,48,0.1)' }}>
+                    <div key={idx} style={{ position: 'relative', aspectRatio: '1', borderRadius: '12px', overflow: 'hidden', boxShadow: 'var(--shadow-card)' }}>
                       <img src={src} alt={`Portfolio ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={(e) => { e.target.style.display = 'none'; }} />
                       <button
                         onClick={() => handleRemovePortfolioImage(idx)}
                         style={{
                           position: 'absolute', top: '5px', right: '5px',
                           border: 'none', width: '24px', height: '24px', borderRadius: '50%',
-                          backgroundColor: 'rgba(61,53,48,0.75)', color: '#FFF', cursor: 'pointer',
+                          backgroundColor: 'var(--overlay-bg)', color: '#FFF', cursor: 'pointer',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           backdropFilter: 'blur(4px)', fontSize: '12px', fontWeight: '800'
                         }}
@@ -7877,8 +7866,9 @@ export default function App() {
                 <div style={{
                   textAlign: 'center', padding: '24px 16px', marginBottom: '14px',
                   borderRadius: '14px',
-                  border: darkMode ? '2px dashed rgba(232,221,211,0.2)' : '2px dashed #E8DDD3',
-                  color: darkMode ? '#D4C5B5' : '#6B5E54', fontSize: '13px', fontWeight: '600'
+                  border: '2px dashed var(--border-color)',
+                  backgroundColor: 'var(--bg-subtle)',
+                  color: 'var(--text-secondary)', fontSize: '13px', fontWeight: '600'
                 }}>
                   Aucune photo — ajoute des images pour te démarquer 📷
                 </div>
@@ -8763,7 +8753,7 @@ export default function App() {
             position: 'fixed',
             inset: 0,
             zIndex: 99999,
-            backgroundColor: '#14100E',
+            backgroundColor: 'var(--call-bg)',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -8814,7 +8804,7 @@ export default function App() {
             <audio ref={attachRemoteStream} autoPlay playsInline style={{ display: 'none' }} />
           )}
 
-          <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(circle at 50% 40%, rgba(198,125,91,0.18) 0%, transparent 60%)', zIndex: 1 }} />
+          <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(circle at 50% 40%, var(--accent-primary) 0%, transparent 60%)', opacity: 0.25, zIndex: 1 }} />
 
           {/* BANDEAU SUPÉRIEUR CENTRÉ & ÉQUILIBRÉ UNIFIÉ */}
           <div style={{
@@ -8839,13 +8829,13 @@ export default function App() {
               display: 'flex',
               alignItems: 'center',
               gap: '10px',
-              backgroundColor: isCallInactive ? 'transparent' : 'rgba(35,30,27,0.94)',
+              backgroundColor: isCallInactive ? 'transparent' : 'var(--call-card)',
               backdropFilter: isCallInactive ? 'none' : 'blur(20px)',
               WebkitBackdropFilter: isCallInactive ? 'none' : 'blur(20px)',
               padding: '6px 12px',
               borderRadius: '999px',
-              border: isCallInactive ? '1px solid transparent' : '1.5px solid rgba(232,221,211,0.2)',
-              boxShadow: isCallInactive ? 'none' : '0 12px 35px rgba(0,0,0,0.5), 0 0 20px rgba(198,125,91,0.2)',
+              border: isCallInactive ? '1px solid transparent' : '1.5px solid var(--border-color)',
+              boxShadow: isCallInactive ? 'none' : '0 12px 35px rgba(0,0,0,0.5), 0 0 20px rgba(214,69,110,0.2)',
               flex: '1',
               minWidth: 0,
               overflow: 'hidden'
@@ -8854,23 +8844,23 @@ export default function App() {
                 <img
                   src={getAuthorAvatar(selectedChat?.user || 'Thomas G.')}
                   alt={selectedChat?.user || 'Thomas G.'}
-                  style={{ width: '32px', height: '32px', borderRadius: '50%', border: '2px solid #C67D5B', objectFit: 'cover' }}
+                  style={{ width: '32px', height: '32px', borderRadius: '50%', border: '2px solid var(--accent-primary)', objectFit: 'cover' }}
                 />
                 <div style={{
                   position: 'absolute', bottom: '0', right: '0',
                   width: '9px', height: '9px', borderRadius: '50%',
-                  backgroundColor: '#C67D5B', border: '1.5px solid #14100E'
+                  backgroundColor: 'var(--accent-primary)', border: '1.5px solid var(--call-bg)'
                 }} />
               </div>
 
               <div style={{ minWidth: 0, flex: '1 1 auto', overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '1px' }}>
-                <div style={{ color: '#FAF7F2', fontSize: '12.5px', fontWeight: '800', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <div style={{ color: '#FFF', fontSize: '12.5px', fontWeight: '800', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {selectedChat?.user || 'Thomas G.'}
                 </div>
-                <div style={{ color: '#C67D5B', fontSize: '10.5px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '3px', whiteSpace: 'nowrap' }}>
-                  <Clock size={11} color="#C67D5B" />
+                <div style={{ color: 'var(--accent-primary)', fontSize: '10.5px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '3px', whiteSpace: 'nowrap' }}>
+                  <Clock size={11} color="var(--accent-primary)" />
                   <span>{formatCallTimer(callDuration)}</span>
-                  <span style={{ fontSize: '9px', color: '#D4C5B5', fontWeight: '600' }}>
+                  <span style={{ fontSize: '9px', color: 'rgba(255,255,255,0.7)', fontWeight: '600' }}>
                     (🪙 {(callDuration / 3600).toFixed(2)})
                   </span>
                 </div>
@@ -8924,9 +8914,9 @@ export default function App() {
                 onClick={() => setIsCallPip(true)}
                 title="Réduire en bulle flottante (PiP)"
                 style={{
-                  border: '1px solid rgba(232,221,211,0.25)', width: '36px', height: '36px', borderRadius: '50%',
-                  backgroundColor: 'rgba(35,30,27,0.92)', backdropFilter: 'blur(16px)',
-                  WebkitBackdropFilter: 'blur(16px)', color: '#FAF7F2',
+                  border: '1px solid var(--border-color)', width: '36px', height: '36px', borderRadius: '50%',
+                  backgroundColor: 'var(--call-card)', backdropFilter: 'blur(16px)',
+                  WebkitBackdropFilter: 'blur(16px)', color: '#FFF',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   cursor: 'pointer', transition: 'all 0.2s ease'
                 }}
@@ -8938,8 +8928,8 @@ export default function App() {
                 onClick={endCall}
                 title="Quitter l'appel"
                 style={{
-                  border: '1px solid rgba(232,221,211,0.25)', width: '36px', height: '36px', borderRadius: '50%',
-                  backgroundColor: '#2A1A14', color: '#FAF7F2',
+                  border: '1px solid var(--border-color)', width: '36px', height: '36px', borderRadius: '50%',
+                  backgroundColor: 'var(--call-card)', color: '#FFF',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   cursor: 'pointer', transition: 'all 0.2s ease',
                   boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
@@ -8971,7 +8961,8 @@ export default function App() {
                     width: `${130 + i * 44}px`,
                     height: `${130 + i * 44}px`,
                     borderRadius: '50%',
-                    border: '2px solid rgba(198,125,91,0.35)',
+                    border: '2px solid var(--accent-primary)',
+                    opacity: 0.35,
                     animation: `notifPulse ${1 + i * 0.3}s ease-in-out infinite`,
                     animationDelay: `${i * 0.2}s`,
                   }} />
@@ -8984,8 +8975,8 @@ export default function App() {
                     height: '110px',
                     borderRadius: '50%',
                     objectFit: 'cover',
-                    border: '3px solid #C67D5B',
-                    boxShadow: '0 0 30px rgba(198,125,91,0.4)',
+                    border: '3px solid var(--accent-primary)',
+                    boxShadow: '0 0 30px rgba(214,69,110,0.4)',
                     position: 'relative',
                     zIndex: 2,
                   }}
@@ -8993,11 +8984,11 @@ export default function App() {
               </div>
 
               <div style={{ textAlign: 'center' }}>
-                <h3 className="font-editorial-heading" style={{ color: '#FAF7F2', fontSize: '24px', fontWeight: '600', margin: '0 0 6px 0' }}>
+                <h3 className="font-editorial-heading" style={{ color: '#FFF', fontSize: '24px', fontWeight: '600', margin: '0 0 6px 0' }}>
                   {selectedChat?.user || 'Thomas G.'}
                 </h3>
-                <p style={{ color: '#D4C5B5', fontSize: '13px', margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                  <Sparkles size={14} color="#C67D5B" />
+                <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '13px', margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                  <Sparkles size={14} color="var(--accent-primary)" />
                   <span>{callState.type === 'video' ? 'Appel vidéo en cours...' : 'Appel vocal HD en cours...'}</span>
                 </p>
               </div>
@@ -9015,23 +9006,23 @@ export default function App() {
                     width: '120px',
                     height: '120px',
                     borderRadius: '50%',
-                    border: '4px solid #C67D5B',
-                    boxShadow: '0 0 40px rgba(198, 125, 91, 0.35)',
+                    border: '4px solid var(--accent-primary)',
+                    boxShadow: '0 0 40px rgba(214, 69, 110, 0.35)',
                     objectFit: 'cover'
                   }}
                 />
                 <div style={{
                   position: 'absolute', bottom: '6px', right: '6px',
                   width: '18px', height: '18px', borderRadius: '50%',
-                  backgroundColor: '#C67D5B', border: '3px solid #14100E',
-                  boxShadow: '0 0 10px rgba(198,125,91,0.6)'
+                  backgroundColor: 'var(--accent-primary)', border: '3px solid var(--call-bg)',
+                  boxShadow: '0 0 10px rgba(214,69,110,0.6)'
                 }} />
               </div>
               <div style={{ textAlign: 'center' }}>
-                <h2 className="font-editorial-heading" style={{ color: '#FAF7F2', fontSize: '26px', fontWeight: '600', margin: '0 0 4px 0' }}>
+                <h2 className="font-editorial-heading" style={{ color: '#FFF', fontSize: '26px', fontWeight: '600', margin: '0 0 4px 0' }}>
                   {selectedChat?.user || 'Thomas G.'}
                 </h2>
-                <span style={{ color: '#D4C5B5', fontSize: '13px', fontWeight: '600' }}>
+                <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '13px', fontWeight: '600' }}>
                   {callState.type === 'video' ? "Caméra distante désactivée" : "Appel audio sécurisé WebRTC"}
                 </span>
               </div>
@@ -9056,9 +9047,9 @@ export default function App() {
                   height: '150px',
                   borderRadius: '18px',
                   overflow: 'hidden',
-                  border: '2px solid rgba(198,125,91,0.6)',
+                  border: '2px solid var(--accent-primary)',
                   boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
-                  backgroundColor: '#231E1B',
+                  backgroundColor: 'var(--call-card)',
                   zIndex: 40,
                   cursor: 'grab',
                   userSelect: 'none',
@@ -9096,8 +9087,8 @@ export default function App() {
                 )}
                 <div style={{
                   position: 'absolute', bottom: '6px', left: '6px',
-                  backgroundColor: 'rgba(26,23,21,0.85)', padding: '2px 6px',
-                  borderRadius: '6px', color: '#FAF7F2', fontSize: '9px', fontWeight: '700',
+                  backgroundColor: 'rgba(0,0,0,0.75)', padding: '2px 6px',
+                  borderRadius: '6px', color: '#FFF', fontSize: '9px', fontWeight: '700',
                   pointerEvents: 'none'
                 }}>
                   {isSwapVideo ? (selectedChat?.user || 'Interlocuteur') : 'Moi'}
@@ -9116,25 +9107,25 @@ export default function App() {
                 left: 'max(16px, env(safe-area-inset-left, 16px))',
                 right: 'auto',
                 transform: 'none',
-                backgroundColor: 'rgba(35, 30, 27, 0.92)',
+                backgroundColor: 'var(--call-card)',
                 backdropFilter: 'blur(16px)',
                 WebkitBackdropFilter: 'blur(16px)',
-                border: '1px solid rgba(232, 221, 211, 0.25)',
+                border: '1px solid var(--border-color)',
                 borderRadius: '999px',
                 padding: '8px 18px',
-                color: '#FAF7F2',
+                color: '#FFF',
                 fontSize: '12px',
                 fontWeight: '800',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
-                boxShadow: '0 8px 24px rgba(0,0,0,0.5), 0 0 16px rgba(198,125,91,0.2)',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.5), 0 0 16px rgba(214,69,110,0.2)',
                 zIndex: 50,
                 animation: 'fadeSlideUp 0.25s ease both'
               }}
             >
-              <Eye size={14} color="#C67D5B" />
+              <Eye size={14} color="var(--accent-primary)" />
               <span>Afficher les commandes</span>
               <ChevronUp size={14} />
             </button>
@@ -9151,6 +9142,8 @@ export default function App() {
                 transform: `translate(${callControlsPos.x}px, ${callControlsPos.y}px)`,
                 opacity: isCallInactive ? 0.35 : 1,
                 cursor: isDraggingCallControls ? 'grabbing' : 'grab',
+                backgroundColor: 'var(--call-card)',
+                borderColor: 'var(--border-color)',
               }}
             >
               {/* LIGNE 1 : CONTRÔLES VITAUX (RACCROCHER, MICRO, CAMÉRA, PIP, POIGNÉE) */}
@@ -9158,7 +9151,7 @@ export default function App() {
                 <div
                   title="Glisser pour déplacer"
                   style={{
-                    color: 'rgba(232,221,211,0.4)',
+                    color: 'rgba(255,255,255,0.5)',
                     cursor: isDraggingCallControls ? 'grabbing' : 'grab',
                     paddingRight: '2px',
                     display: 'flex',
@@ -9173,9 +9166,9 @@ export default function App() {
                   onClick={endCall}
                   title="Raccrocher et quitter l'appel"
                   style={{
-                    backgroundColor: '#2A1A14',
-                    color: '#FAF7F2',
-                    border: '1.5px solid rgba(232,221,211,0.3)',
+                    backgroundColor: '#DC2626',
+                    color: '#FFF',
+                    border: '1.5px solid rgba(255,255,255,0.3)',
                     boxShadow: '0 4px 14px rgba(0,0,0,0.6)'
                   }}
                 >
@@ -9186,8 +9179,8 @@ export default function App() {
                   className="call-btn-circle"
                   onClick={toggleMic}
                   style={{
-                    backgroundColor: callState.micOn ? 'rgba(255,255,255,0.14)' : '#2A1A14',
-                    border: callState.micOn ? 'none' : '1.5px solid rgba(232,221,211,0.3)'
+                    backgroundColor: callState.micOn ? 'rgba(255,255,255,0.18)' : '#DC2626',
+                    border: callState.micOn ? 'none' : '1.5px solid rgba(255,255,255,0.3)'
                   }}
                   title={callState.micOn ? "Couper le micro" : "Activer le micro"}
                 >
@@ -9199,8 +9192,8 @@ export default function App() {
                     className="call-btn-circle"
                     onClick={toggleCam}
                     style={{
-                      backgroundColor: callState.camOn ? 'rgba(255,255,255,0.14)' : '#2A1A14',
-                      border: callState.camOn ? 'none' : '1.5px solid rgba(232,221,211,0.3)'
+                      backgroundColor: callState.camOn ? 'rgba(255,255,255,0.18)' : '#DC2626',
+                      border: callState.camOn ? 'none' : '1.5px solid rgba(255,255,255,0.3)'
                     }}
                     title={callState.camOn ? "Couper la caméra" : "Activer la caméra"}
                   >
@@ -9224,8 +9217,8 @@ export default function App() {
                     className="call-btn-circle"
                     onClick={toggleScreenShare}
                     style={{
-                      backgroundColor: callState.isScreenSharing ? '#C67D5B' : 'rgba(255,255,255,0.14)',
-                      boxShadow: callState.isScreenSharing ? '0 0 16px rgba(198,125,91,0.6)' : 'none'
+                      backgroundColor: callState.isScreenSharing ? 'var(--accent-primary)' : 'rgba(255,255,255,0.14)',
+                      boxShadow: callState.isScreenSharing ? '0 0 16px var(--accent-primary)' : 'none'
                     }}
                     title={callState.isScreenSharing ? "Arrêter le partage d'écran" : "Partager mon écran"}
                   >
@@ -9238,8 +9231,8 @@ export default function App() {
                     className="call-btn-circle"
                     onClick={switchCamera}
                     style={{
-                      backgroundColor: facingMode === 'environment' ? '#C67D5B' : 'rgba(255,255,255,0.14)',
-                      color: '#FAF7F2'
+                      backgroundColor: facingMode === 'environment' ? 'var(--accent-primary)' : 'rgba(255,255,255,0.14)',
+                      color: '#FFF'
                     }}
                     title={facingMode === 'user' ? "Caméra arrière" : "Caméra avant"}
                   >
@@ -9252,8 +9245,8 @@ export default function App() {
                     className="call-btn-circle"
                     onClick={() => setIsSwapVideo(s => !s)}
                     style={{
-                      backgroundColor: isSwapVideo ? '#C67D5B' : 'rgba(255,255,255,0.14)',
-                      color: '#FAF7F2'
+                      backgroundColor: isSwapVideo ? 'var(--accent-primary)' : 'rgba(255,255,255,0.14)',
+                      color: '#FFF'
                     }}
                     title="Inverser les caméras"
                   >
@@ -9273,7 +9266,7 @@ export default function App() {
                   className="call-btn-circle"
                   onClick={() => setShowCallControls(false)}
                   title="Mode Immersion (Masquer commandes)"
-                  style={{ color: '#D4C5B5' }}
+                  style={{ color: 'rgba(255,255,255,0.8)' }}
                 >
                   <EyeOff size={18} />
                 </button>
@@ -9287,7 +9280,7 @@ export default function App() {
                       style={{
                         backgroundColor: isTeacherMenuOpen ? '#D97706' : 'rgba(217,119,6,0.25)',
                         border: '1.5px solid #D97706',
-                        color: '#FAF7F2'
+                        color: '#FFF'
                       }}
                     >
                       <Crown size={18} />
@@ -9296,20 +9289,20 @@ export default function App() {
                     {isTeacherMenuOpen && (
                       <div style={{
                         position: 'absolute', bottom: '56px', left: '0',
-                        backgroundColor: 'rgba(35,30,27,0.96)', backdropFilter: 'blur(16px)',
-                        borderRadius: '16px', border: '1.5px solid rgba(198,125,91,0.4)',
+                        backgroundColor: 'var(--call-card)', backdropFilter: 'blur(16px)',
+                        borderRadius: '16px', border: '1.5px solid var(--border-color)',
                         boxShadow: '0 16px 40px rgba(0,0,0,0.6)', padding: '8px',
                         display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '230px', zIndex: 120
                       }}>
-                        <div style={{ padding: '6px 8px', fontSize: '11px', fontWeight: '800', color: '#FDE68A', borderBottom: '1px solid rgba(232,221,211,0.1)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <div style={{ padding: '6px 8px', fontSize: '11px', fontWeight: '800', color: '#FDE68A', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                           <Crown size={12} color="#D97706" /> Modération du cours
                         </div>
                         <button
                           onClick={() => { hostMuteParticipant(); setIsTeacherMenuOpen(false); }}
                           style={{
                             display: 'flex', alignItems: 'center', gap: '8px',
-                            padding: '8px 10px', borderRadius: '10px', border: '1px solid rgba(232,221,211,0.15)',
-                            backgroundColor: '#2A1A14', color: '#FAF7F2',
+                            padding: '8px 10px', borderRadius: '10px', border: '1px solid var(--border-color)',
+                            backgroundColor: 'rgba(0,0,0,0.3)', color: '#FFF',
                             fontSize: '12px', fontWeight: '700', cursor: 'pointer', textAlign: 'left',
                           }}
                         >
@@ -9320,7 +9313,7 @@ export default function App() {
                           style={{
                             display: 'flex', alignItems: 'center', gap: '8px',
                             padding: '8px 10px', borderRadius: '10px', border: 'none',
-                            backgroundColor: 'rgba(232,221,211,0.1)', color: '#FAF7F2',
+                            backgroundColor: 'rgba(255,255,255,0.1)', color: '#FFF',
                             fontSize: '12px', fontWeight: '700', cursor: 'pointer', textAlign: 'left',
                           }}
                         >

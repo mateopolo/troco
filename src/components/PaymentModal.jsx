@@ -330,7 +330,7 @@ export default function PaymentModal({
       position: 'fixed',
       inset: 0,
       zIndex: 4000,
-      backgroundColor: 'rgba(61, 53, 48, 0.72)',
+      backgroundColor: 'var(--overlay-bg)',
       backdropFilter: 'blur(10px)',
       WebkitBackdropFilter: 'blur(10px)',
       display: 'flex',
@@ -340,24 +340,24 @@ export default function PaymentModal({
       animation: 'fadeIn 0.2s ease',
     }}>
       <div style={{
-        backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
+        backgroundColor: 'var(--bg-card)',
         borderRadius: '24px',
         width: '100%',
         maxWidth: '560px',
         maxHeight: '92vh',
         overflowY: 'auto',
-        boxShadow: darkMode ? '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 35px rgba(198,125,91,0.2)' : '0 25px 50px -12px rgba(61, 53, 48, 0.25)',
-        border: darkMode ? '1px solid rgba(232, 221, 211, 0.15)' : '1px solid #E8DDD3',
-        color: darkMode ? '#FAF7F2' : '#3D3530',
+        boxShadow: 'var(--shadow-modal)',
+        border: '1px solid var(--border-color)',
+        color: 'var(--text-main)',
         position: 'relative',
         display: 'flex',
         flexDirection: 'column',
       }}>
 
-              {/* HEADER MODAL */}
+        {/* HEADER MODAL */}
         <div style={{
           padding: '20px 24px',
-          borderBottom: darkMode ? '1px solid rgba(232,221,211,0.08)' : '1px solid #E8DDD3',
+          borderBottom: '1px solid var(--border-color)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -367,25 +367,25 @@ export default function PaymentModal({
               width: '38px',
               height: '38px',
               borderRadius: '12px',
-              background: 'linear-gradient(135deg, #C67D5B, #A8644A)',
+              background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-primary-hover))',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               color: '#FFF',
-              boxShadow: '0 4px 12px rgba(198,125,91,0.3)',
+              boxShadow: 'var(--shadow-accent)',
             }}>
               {(mode === 'troco-plus' || mode === 'pack-tokens') ? <Sparkles size={20} /> : <CreditCard size={20} />}
             </div>
             <div>
-              <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '20px', fontWeight: '600', letterSpacing: '-0.01em', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
+              <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '20px', fontWeight: '600', letterSpacing: '-0.01em', color: 'var(--text-main)' }}>
                 {(mode === 'troco-plus' || mode === 'pack-tokens') && 'Abonnement Troco Plus'}
                 {mode === 'topup-cash' && 'Recharger mon Portefeuille'}
                 {mode === 'boost' && 'Booster une Annonce'}
                 {mode === 'caution' && 'Empreinte de Caution'}
                 {mode === 'deal' && 'Paiement Sécurisé du Deal'}
               </h3>
-              <p style={{ margin: '2px 0 0', fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <ShieldCheck size={13} color="#9CAF88" /> Paiement 100% chiffré & sécurisé SSL 256 bits
+              <p style={{ margin: '2px 0 0', fontSize: '12px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <ShieldCheck size={13} color="var(--accent-success)" /> Paiement 100% chiffré & sécurisé SSL 256 bits
               </p>
             </div>
           </div>
@@ -393,8 +393,8 @@ export default function PaymentModal({
             onClick={onClose}
             style={{
               border: 'none',
-              background: darkMode ? 'rgba(232,221,211,0.1)' : '#F5EAE4',
-              color: darkMode ? '#FAF7F2' : '#3D3530',
+              background: 'var(--bg-subtle)',
+              color: 'var(--text-main)',
               width: '32px',
               height: '32px',
               borderRadius: '50%',
@@ -408,126 +408,126 @@ export default function PaymentModal({
           </button>
         </div>
 
-          {/* CORPS DE LA MODAL */}
-          <div style={{ padding: '24px', overflowY: 'auto' }}>
+        {/* CORPS DE LA MODAL */}
+        <div style={{ padding: '24px', overflowY: 'auto' }}>
 
-            {/* SÉLECTEUR D'ONGLET DU PORTEFEUILLE (GÉRER MON SOLDE EURO / ABONNEMENT TROCO PLUS) */}
-            {(mode === 'troco-plus' || mode === 'pack-tokens' || mode === 'topup-cash') && (
-              <div style={{
-                display: 'flex',
-                backgroundColor: darkMode ? '#1A1715' : '#F5F0E8',
-                borderRadius: '16px',
-                padding: '5px',
-                marginBottom: '22px',
-                border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3',
-                boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.04)'
-              }}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMode('topup-cash');
-                    setPaymentMethod('applePay');
-                    setFormErrors({});
-                  }}
-                  style={{
-                    flex: 1,
-                    padding: '10px 14px',
-                    borderRadius: '12px',
-                    border: 'none',
-                    backgroundColor: mode === 'topup-cash' ? (darkMode ? '#C67D5B' : '#FAF7F2') : 'transparent',
-                    color: mode === 'topup-cash' ? (darkMode ? '#FAF7F2' : '#A8644A') : (darkMode ? '#D4C5B5' : '#6B5E54'),
-                    fontWeight: mode === 'topup-cash' ? '800' : '600',
-                    fontSize: '13px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px',
-                    boxShadow: mode === 'topup-cash' ? '0 4px 12px rgba(198,125,91,0.15)' : 'none',
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  <CreditCard size={15} /> Recharger mon solde (€)
-                </button>
+          {/* SÉLECTEUR D'ONGLET DU PORTEFEUILLE (GÉRER MON SOLDE EURO / ABONNEMENT TROCO PLUS) */}
+          {(mode === 'troco-plus' || mode === 'pack-tokens' || mode === 'topup-cash') && (
+            <div style={{
+              display: 'flex',
+              backgroundColor: 'var(--bg-subtle)',
+              borderRadius: '16px',
+              padding: '5px',
+              marginBottom: '22px',
+              border: '1px solid var(--border-color)',
+              boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.04)'
+            }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setMode('topup-cash');
+                  setPaymentMethod('applePay');
+                  setFormErrors({});
+                }}
+                style={{
+                  flex: 1,
+                  padding: '10px 14px',
+                  borderRadius: '12px',
+                  border: 'none',
+                  backgroundColor: mode === 'topup-cash' ? 'var(--accent-primary)' : 'transparent',
+                  color: mode === 'topup-cash' ? '#FFFFFF' : 'var(--text-secondary)',
+                  fontWeight: mode === 'topup-cash' ? '800' : '600',
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  boxShadow: mode === 'topup-cash' ? 'var(--shadow-accent)' : 'none',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <CreditCard size={15} /> Recharger mon solde (€)
+              </button>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMode('troco-plus');
-                    setPaymentMethod('applePay');
-                    setFormErrors({});
-                  }}
-                  style={{
-                    flex: 1,
-                    padding: '10px 14px',
-                    borderRadius: '12px',
-                    border: 'none',
-                    backgroundColor: (mode === 'troco-plus' || mode === 'pack-tokens') ? '#D97706' : 'transparent',
-                    color: (mode === 'troco-plus' || mode === 'pack-tokens') ? '#FFFFFF' : (darkMode ? '#D4C5B5' : '#6B5E54'),
-                    fontWeight: (mode === 'troco-plus' || mode === 'pack-tokens') ? '800' : '600',
-                    fontSize: '13px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px',
-                    boxShadow: (mode === 'troco-plus' || mode === 'pack-tokens') ? '0 4px 12px rgba(217,119,6,0.2)' : 'none',
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  <Sparkles size={15} /> Abonnement Troco Plus
-                </button>
-              </div>
-            )}
+              <button
+                type="button"
+                onClick={() => {
+                  setMode('troco-plus');
+                  setPaymentMethod('applePay');
+                  setFormErrors({});
+                }}
+                style={{
+                  flex: 1,
+                  padding: '10px 14px',
+                  borderRadius: '12px',
+                  border: 'none',
+                  backgroundColor: (mode === 'troco-plus' || mode === 'pack-tokens') ? '#D97706' : 'transparent',
+                  color: (mode === 'troco-plus' || mode === 'pack-tokens') ? '#FFFFFF' : 'var(--text-secondary)',
+                  fontWeight: (mode === 'troco-plus' || mode === 'pack-tokens') ? '800' : '600',
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  boxShadow: (mode === 'troco-plus' || mode === 'pack-tokens') ? '0 4px 12px rgba(217,119,6,0.2)' : 'none',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                <Sparkles size={15} /> Abonnement Troco Plus
+              </button>
+            </div>
+          )}
 
-            {/* ÉCRAN DE SUCCÈS */}
-            {isSuccess ? (
-              <div style={{ textAlign: 'center', padding: '20px 10px' }}>
+          {/* ÉCRAN DE SUCCÈS */}
+          {isSuccess ? (
+            <div style={{ textAlign: 'center', padding: '20px 10px' }}>
               <div style={{
                 width: '72px',
                 height: '72px',
                 borderRadius: '50%',
-                backgroundColor: darkMode ? 'rgba(156,175,136,0.25)' : '#EBF0E6',
-                color: '#3D4A35',
+                backgroundColor: 'var(--bg-subtle)',
+                color: 'var(--accent-success)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 margin: '0 auto 16px',
-                border: '4px solid #9CAF88',
+                border: '4px solid var(--accent-success)',
               }}>
                 <Check size={38} strokeWidth={3} />
               </div>
-              <h4 className="font-editorial-heading" style={{ margin: '0 0 6px', fontSize: '22px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
+              <h4 className="font-editorial-heading" style={{ margin: '0 0 6px', fontSize: '22px', fontWeight: '600', color: 'var(--text-main)' }}>
                 Paiement Validé avec Succès !
               </h4>
-              <p style={{ margin: '0 0 20px', fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>
+              <p style={{ margin: '0 0 20px', fontSize: '13px', color: 'var(--text-secondary)' }}>
                 Votre transaction a été enregistrée et votre compte mis à jour instantanément.
               </p>
 
               <div style={{
-                backgroundColor: darkMode ? '#1A1715' : '#FFF',
+                backgroundColor: 'var(--bg-subtle)',
                 borderRadius: '16px',
                 padding: '16px',
-                border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
+                border: '1px solid var(--border-color)',
                 textAlign: 'left',
                 marginBottom: '24px',
                 fontSize: '13px',
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ color: darkMode ? '#D4C5B5' : '#6B5E54' }}>Référence :</span>
-                  <strong style={{ fontFamily: 'monospace', color: '#C67D5B' }}>{successDetails?.transactionId}</strong>
+                  <span style={{ color: 'var(--text-secondary)' }}>Référence :</span>
+                  <strong style={{ fontFamily: 'monospace', color: 'var(--accent-primary)' }}>{successDetails?.transactionId}</strong>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ color: darkMode ? '#D4C5B5' : '#6B5E54' }}>Objet :</span>
+                  <span style={{ color: 'var(--text-secondary)' }}>Objet :</span>
                   <strong>{successDetails?.label}</strong>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ color: darkMode ? '#D4C5B5' : '#6B5E54' }}>Moyen utilisé :</span>
+                  <span style={{ color: 'var(--text-secondary)' }}>Moyen utilisé :</span>
                   <span>{successDetails?.paymentMethod}</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '8px', borderTop: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', fontSize: '15px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px solid var(--border-color)', fontSize: '15px' }}>
                   <span style={{ fontWeight: '800' }}>Total TTC débité :</span>
-                  <strong style={{ color: '#7A8F6A', fontWeight: '800' }}>{successDetails?.amountTtc.toFixed(2)} €</strong>
+                  <strong style={{ color: 'var(--accent-success)', fontWeight: '800' }}>{successDetails?.amountTtc.toFixed(2)} €</strong>
                 </div>
               </div>
 
@@ -539,12 +539,12 @@ export default function PaymentModal({
                   padding: '14px',
                   borderRadius: '14px',
                   border: 'none',
-                  background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)',
+                  background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
                   color: '#FFF',
                   fontWeight: '800',
                   fontSize: '14px',
                   cursor: 'pointer',
-                  boxShadow: '0 4px 14px rgba(198,125,91,0.25)'
+                  boxShadow: 'var(--shadow-accent)'
                 }}
               >
                 Terminer & Retourner à Troco
@@ -555,7 +555,7 @@ export default function PaymentModal({
               {/* ÉTAPE 1 : SÉLECTION DE L'OFFRE / DU MONTANT */}
               {(mode === 'troco-plus' || mode === 'pack-tokens') && (
                 <div style={{ marginBottom: '22px' }}>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '800', marginBottom: '10px', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '800', marginBottom: '10px', color: 'var(--text-main)' }}>
                     1. Choisissez votre abonnement mensuel Troco Plus
                   </label>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -568,11 +568,12 @@ export default function PaymentModal({
                           style={{
                             padding: '16px',
                             borderRadius: '18px',
-                            border: isSelected ? '2px solid #C67D5B' : (darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3'),
-                            backgroundColor: isSelected ? (darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4') : (darkMode ? '#1A1715' : '#FAF7F2'),
+                            border: isSelected ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                            backgroundColor: isSelected ? 'var(--bg-subtle)' : 'var(--bg-card)',
                             cursor: 'pointer',
                             position: 'relative',
                             transition: 'all 0.2s ease',
+                            boxShadow: isSelected ? 'var(--shadow-accent)' : 'none'
                           }}
                         >
                           {plan.popular && (
@@ -580,13 +581,13 @@ export default function PaymentModal({
                               position: 'absolute',
                               top: '-9px',
                               right: '16px',
-                              backgroundColor: '#C67D5B',
+                              backgroundColor: 'var(--accent-primary)',
                               color: '#FFF',
                               fontSize: '11px',
                               fontWeight: '800',
                               padding: '2px 8px',
                               borderRadius: '999px',
-                              boxShadow: '0 2px 6px rgba(198,125,91,0.35)'
+                              boxShadow: 'var(--shadow-accent)'
                             }}>
                               ⭐ Le plus populaire
                             </span>
@@ -595,33 +596,33 @@ export default function PaymentModal({
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
                             <div>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <strong className="font-editorial-heading" style={{ fontSize: '17px', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{plan.title}</strong>
+                                <strong className="font-editorial-heading" style={{ fontSize: '17px', color: 'var(--text-main)' }}>{plan.title}</strong>
                                 <span style={{
                                   fontSize: '11px', fontWeight: '800', padding: '3px 8px', borderRadius: '999px',
-                                  backgroundColor: darkMode ? 'rgba(198,125,91,0.25)' : '#F5EAE4',
-                                  color: darkMode ? '#FAF7F2' : '#A8644A'
+                                  backgroundColor: 'var(--bg-subtle)',
+                                  color: 'var(--accent-primary)'
                                 }}>
                                   {plan.badge}
                                 </span>
                               </div>
-                              <p style={{ margin: '4px 0 10px', fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>
+                              <p style={{ margin: '4px 0 10px', fontSize: '12px', color: 'var(--text-secondary)' }}>
                                 {plan.desc}
                               </p>
                             </div>
                             <div style={{ textAlign: 'right' }}>
-                              <div style={{ fontSize: '20px', fontWeight: '900', color: isSelected ? '#C67D5B' : (darkMode ? '#FAF7F2' : '#3D3530') }}>
+                              <div style={{ fontSize: '20px', fontWeight: '900', color: isSelected ? 'var(--accent-primary)' : 'var(--text-main)' }}>
                                 {plan.price.toFixed(2)} €
                               </div>
-                              <div style={{ fontSize: '11px', color: darkMode ? '#D4C5B5' : '#6B5E54', fontWeight: '600' }}>
+                              <div style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '600' }}>
                                 {plan.period}
                               </div>
                             </div>
                           </div>
 
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', borderTop: darkMode ? '1px solid rgba(232,221,211,0.08)' : '1px solid #E8DDD3', paddingTop: '10px' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', borderTop: '1px solid var(--border-color)', paddingTop: '10px' }}>
                             {plan.features.map((feat, idx) => (
-                              <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', fontWeight: '600' }}>
-                                <Check size={14} color="#9CAF88" />
+                              <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600' }}>
+                                <Check size={14} color="var(--accent-success)" />
                                 <span>{feat}</span>
                               </div>
                             ))}
@@ -630,7 +631,7 @@ export default function PaymentModal({
                       );
                     })}
                   </div>
-                  <div style={{ marginTop: '10px', padding: '8px 12px', borderRadius: '10px', backgroundColor: darkMode ? 'rgba(198,125,91,0.15)' : '#F5EAE4', color: darkMode ? '#FAF7F2' : '#A8644A', fontSize: '11px', fontWeight: '700', textAlign: 'center' }}>
+                  <div style={{ marginTop: '10px', padding: '8px 12px', borderRadius: '10px', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', fontSize: '11px', fontWeight: '700', textAlign: 'center' }}>
                     💡 Les abonnements Troco Plus sont renouvelés automatiquement chaque mois et résiliables à tout instant en un clic.
                   </div>
                 </div>
@@ -638,7 +639,7 @@ export default function PaymentModal({
 
               {mode === 'topup-cash' && (
                 <div style={{ marginBottom: '22px' }}>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '800', marginBottom: '10px', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '800', marginBottom: '10px', color: 'var(--text-main)' }}>
                     1. Choisissez le montant de votre recharge réelle (€)
                   </label>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginBottom: '12px' }}>
@@ -652,12 +653,13 @@ export default function PaymentModal({
                           style={{
                             padding: '14px 10px',
                             borderRadius: '14px',
-                            border: isSelected ? '2px solid #C67D5B' : (darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3'),
-                            backgroundColor: isSelected ? (darkMode ? 'rgba(198,125,91,0.25)' : '#F5EAE4') : (darkMode ? '#1A1715' : '#FAF7F2'),
-                            color: isSelected ? (darkMode ? '#FAF7F2' : '#A8644A') : (darkMode ? '#D4C5B5' : '#3D3530'),
+                            border: isSelected ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                            backgroundColor: isSelected ? 'var(--bg-subtle)' : 'var(--bg-card)',
+                            color: isSelected ? 'var(--accent-primary)' : 'var(--text-main)',
                             fontWeight: '800',
                             fontSize: '16px',
                             cursor: 'pointer',
+                            boxShadow: isSelected ? 'var(--shadow-card)' : 'none'
                           }}
                         >
                           +{amt} €
@@ -677,9 +679,9 @@ export default function PaymentModal({
                         width: '100%',
                         padding: '12px 14px',
                         borderRadius: '12px',
-                        border: customCashAmount ? '2px solid #C67D5B' : (darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3'),
-                        backgroundColor: darkMode ? '#1A1715' : '#FFF',
-                        color: darkMode ? '#FAF7F2' : '#3D3530',
+                        border: customCashAmount ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                        backgroundColor: 'var(--bg-subtle)',
+                        color: 'var(--text-main)',
                         fontSize: '14px',
                         outline: 'none',
                       }}
@@ -690,7 +692,7 @@ export default function PaymentModal({
 
               {mode === 'boost' && (
                 <div style={{ marginBottom: '22px' }}>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '800', marginBottom: '10px', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '800', marginBottom: '10px', color: 'var(--text-main)' }}>
                     1. Choisissez votre formule de visibilité
                   </label>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -704,12 +706,13 @@ export default function PaymentModal({
                           style={{
                             padding: '14px',
                             borderRadius: '16px',
-                            border: isSelected ? '2px solid #C67D5B' : (darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3'),
-                            backgroundColor: isSelected ? (darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4') : (darkMode ? '#1A1715' : '#FAF7F2'),
+                            border: isSelected ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                            backgroundColor: isSelected ? 'var(--bg-subtle)' : 'var(--bg-card)',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'space-between',
+                            boxShadow: isSelected ? 'var(--shadow-accent)' : 'none'
                           }}
                         >
                           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -717,8 +720,8 @@ export default function PaymentModal({
                               width: '36px',
                               height: '36px',
                               borderRadius: '10px',
-                              backgroundColor: isSelected ? '#C67D5B' : (darkMode ? '#3D3530' : '#E8DDD3'),
-                              color: isSelected ? '#FFF' : (darkMode ? '#D4C5B5' : '#6B5E54'),
+                              backgroundColor: isSelected ? 'var(--accent-primary)' : 'var(--bg-subtle)',
+                              color: isSelected ? '#FFF' : 'var(--text-secondary)',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
@@ -727,10 +730,10 @@ export default function PaymentModal({
                             </div>
                             <div>
                               <strong className="font-editorial-heading" style={{ fontSize: '15px' }}>{b.title}</strong>
-                              <div style={{ fontSize: '11px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>{b.desc}</div>
+                              <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{b.desc}</div>
                             </div>
                           </div>
-                          <div style={{ fontSize: '16px', fontWeight: '800', color: isSelected ? '#C67D5B' : (darkMode ? '#FAF7F2' : '#3D3530') }}>
+                          <div style={{ fontSize: '16px', fontWeight: '800', color: isSelected ? 'var(--accent-primary)' : 'var(--text-main)' }}>
                             {b.price.toFixed(2)} €
                           </div>
                         </div>
@@ -742,7 +745,7 @@ export default function PaymentModal({
 
               {/* ÉTAPE 2 : SÉLECTION DU MOYEN DE PAIEMENT */}
               <div style={{ marginBottom: '22px' }}>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '800', marginBottom: '10px', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '800', marginBottom: '10px', color: 'var(--text-main)' }}>
                   2. Moyen de Paiement Sécurisé
                 </label>
                 <div style={{ display: 'grid', gridTemplateColumns: (mode === 'troco-plus' || mode === 'pack-tokens' || mode === 'topup-cash') ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: '10px' }}>
@@ -753,9 +756,9 @@ export default function PaymentModal({
                     style={{
                       padding: '12px 8px',
                       borderRadius: '14px',
-                      border: paymentMethod === 'applePay' ? '2px solid #3D3530' : (darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3'),
-                      backgroundColor: paymentMethod === 'applePay' ? '#3D3530' : (darkMode ? '#1A1715' : '#FAF7F2'),
-                      color: paymentMethod === 'applePay' ? '#FFF' : (darkMode ? '#D4C5B5' : '#6B5E54'),
+                      border: paymentMethod === 'applePay' ? '2px solid var(--text-main)' : '1px solid var(--border-color)',
+                      backgroundColor: paymentMethod === 'applePay' ? 'var(--text-main)' : 'var(--bg-subtle)',
+                      color: paymentMethod === 'applePay' ? 'var(--bg-card)' : 'var(--text-secondary)',
                       fontWeight: '800',
                       fontSize: '13px',
                       cursor: 'pointer',
@@ -775,9 +778,9 @@ export default function PaymentModal({
                     style={{
                       padding: '12px 8px',
                       borderRadius: '14px',
-                      border: paymentMethod === 'card' ? '2px solid #C67D5B' : (darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3'),
-                      backgroundColor: paymentMethod === 'card' ? (darkMode ? 'rgba(198,125,91,0.25)' : '#F5EAE4') : (darkMode ? '#1A1715' : '#FAF7F2'),
-                      color: paymentMethod === 'card' ? (darkMode ? '#FAF7F2' : '#A8644A') : (darkMode ? '#D4C5B5' : '#6B5E54'),
+                      border: paymentMethod === 'card' ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                      backgroundColor: paymentMethod === 'card' ? 'var(--bg-subtle)' : 'var(--bg-card)',
+                      color: paymentMethod === 'card' ? 'var(--accent-primary)' : 'var(--text-secondary)',
                       fontWeight: '800',
                       fontSize: '13px',
                       cursor: 'pointer',
@@ -785,6 +788,7 @@ export default function PaymentModal({
                       alignItems: 'center',
                       justifyContent: 'center',
                       gap: '6px',
+                      boxShadow: paymentMethod === 'card' ? 'var(--shadow-card)' : 'none'
                     }}
                   >
                     <CreditCard size={16} /> Carte CB
@@ -799,9 +803,9 @@ export default function PaymentModal({
                       style={{
                         padding: '12px 8px',
                         borderRadius: '14px',
-                        border: paymentMethod === 'wallet' ? '2px solid #9CAF88' : (darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3'),
-                        backgroundColor: paymentMethod === 'wallet' ? (darkMode ? 'rgba(156,175,136,0.25)' : '#EBF0E6') : (darkMode ? '#1A1715' : '#FAF7F2'),
-                        color: paymentMethod === 'wallet' ? '#3D4A35' : (darkMode ? '#D4C5B5' : '#6B5E54'),
+                        border: paymentMethod === 'wallet' ? '2px solid var(--accent-success)' : '1px solid var(--border-color)',
+                        backgroundColor: paymentMethod === 'wallet' ? 'var(--bg-subtle)' : 'var(--bg-card)',
+                        color: paymentMethod === 'wallet' ? 'var(--accent-success)' : 'var(--text-secondary)',
                         fontWeight: '800',
                         fontSize: '13px',
                         cursor: (currentUser?.euroBalance || 0) < amountToPay ? 'not-allowed' : 'pointer',
@@ -821,10 +825,10 @@ export default function PaymentModal({
               {/* FORMULAIRE CARTE BANCAIRE INTERACTIF */}
               {paymentMethod === 'card' && (
                 <div style={{
-                  backgroundColor: darkMode ? '#1A1715' : '#FFF',
+                  backgroundColor: 'var(--bg-subtle)',
                   borderRadius: '18px',
                   padding: '18px',
-                  border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
+                  border: '1px solid var(--border-color)',
                   marginBottom: '22px',
                 }}>
                   {/* APERÇU VISUEL DE LA CARTE */}
@@ -835,9 +839,9 @@ export default function PaymentModal({
                       ? 'linear-gradient(135deg, #EB001B, #F79E1B)'
                       : cardBrand === 'amex'
                         ? 'linear-gradient(135deg, #0077A6, #00A3E0)'
-                        : 'linear-gradient(135deg, #C67D5B, #3D3530)',
+                        : 'linear-gradient(135deg, var(--accent-primary), var(--accent-primary-hover))',
                     color: '#FFF',
-                    boxShadow: '0 10px 20px -5px rgba(61,53,48,0.4)',
+                    boxShadow: 'var(--shadow-card)',
                     marginBottom: '16px',
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
@@ -867,7 +871,7 @@ export default function PaymentModal({
                   {/* CHAMPS DE SAISIE */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <div>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: darkMode ? '#D4C5B5' : '#6B5E54', marginBottom: '4px' }}>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '4px' }}>
                         Numéro de carte
                       </label>
                       <input
@@ -880,9 +884,9 @@ export default function PaymentModal({
                           width: '100%',
                           padding: '10px 12px',
                           borderRadius: '10px',
-                          border: formErrors.cardNumber ? '1px solid #EF4444' : (darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3'),
-                          backgroundColor: darkMode ? '#231E1B' : '#FFF',
-                          color: darkMode ? '#FAF7F2' : '#3D3530',
+                          border: formErrors.cardNumber ? '1px solid #EF4444' : '1px solid var(--border-color)',
+                          backgroundColor: 'var(--bg-card)',
+                          color: 'var(--text-main)',
                           fontSize: '14px',
                           outline: 'none',
                         }}
@@ -891,7 +895,7 @@ export default function PaymentModal({
                     </div>
 
                     <div>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: darkMode ? '#D4C5B5' : '#6B5E54', marginBottom: '4px' }}>
+                      <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '4px' }}>
                         Nom sur la carte
                       </label>
                       <input
@@ -903,9 +907,9 @@ export default function PaymentModal({
                           width: '100%',
                           padding: '10px 12px',
                           borderRadius: '10px',
-                          border: formErrors.cardHolder ? '1px solid #EF4444' : (darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3'),
-                          backgroundColor: darkMode ? '#231E1B' : '#FFF',
-                          color: darkMode ? '#FAF7F2' : '#3D3530',
+                          border: formErrors.cardHolder ? '1px solid #EF4444' : '1px solid var(--border-color)',
+                          backgroundColor: 'var(--bg-card)',
+                          color: 'var(--text-main)',
                           fontSize: '14px',
                           outline: 'none',
                         }}
@@ -914,7 +918,7 @@ export default function PaymentModal({
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                       <div>
-                        <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: darkMode ? '#D4C5B5' : '#6B5E54', marginBottom: '4px' }}>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '4px' }}>
                           Expiration (MM/AA)
                         </label>
                         <input
@@ -927,9 +931,9 @@ export default function PaymentModal({
                             width: '100%',
                             padding: '10px 12px',
                             borderRadius: '10px',
-                            border: formErrors.cardExpiry ? '1px solid #EF4444' : (darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3'),
-                            backgroundColor: darkMode ? '#231E1B' : '#FFF',
-                            color: darkMode ? '#FAF7F2' : '#3D3530',
+                            border: formErrors.cardExpiry ? '1px solid #EF4444' : '1px solid var(--border-color)',
+                            backgroundColor: 'var(--bg-card)',
+                            color: 'var(--text-main)',
                             fontSize: '14px',
                             outline: 'none',
                           }}
@@ -937,7 +941,7 @@ export default function PaymentModal({
                         {formErrors.cardExpiry && <span style={{ fontSize: '11px', color: '#EF4444' }}>{formErrors.cardExpiry}</span>}
                       </div>
                       <div>
-                        <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: darkMode ? '#D4C5B5' : '#6B5E54', marginBottom: '4px' }}>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '4px' }}>
                           CVC / CVV
                         </label>
                         <input
@@ -950,9 +954,9 @@ export default function PaymentModal({
                             width: '100%',
                             padding: '10px 12px',
                             borderRadius: '10px',
-                            border: formErrors.cardCvc ? '1px solid #EF4444' : (darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3'),
-                            backgroundColor: darkMode ? '#231E1B' : '#FFF',
-                            color: darkMode ? '#FAF7F2' : '#3D3530',
+                            border: formErrors.cardCvc ? '1px solid #EF4444' : '1px solid var(--border-color)',
+                            backgroundColor: 'var(--bg-card)',
+                            color: 'var(--text-main)',
                             fontSize: '14px',
                             outline: 'none',
                           }}
@@ -968,20 +972,20 @@ export default function PaymentModal({
               <div style={{
                 padding: '16px',
                 borderRadius: '16px',
-                backgroundColor: darkMode ? '#1A1715' : '#F5F0E8',
-                border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3',
+                backgroundColor: 'var(--bg-subtle)',
+                border: '1px solid var(--border-color)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 marginBottom: '16px',
               }}>
                 <div>
-                  <div style={{ fontSize: '11px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>Montant total TTC</div>
-                  <div style={{ fontSize: '22px', fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Montant total TTC</div>
+                  <div style={{ fontSize: '22px', fontWeight: '800', color: 'var(--text-main)' }}>
                     {amountToPay.toFixed(2)} €
                   </div>
                 </div>
-                <div style={{ fontSize: '11px', color: darkMode ? '#D4C5B5' : '#6B5E54', textAlign: 'right' }}>
+                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', textAlign: 'right' }}>
                   Dont TVA 20% : {(amountToPay * 0.20 / 1.20).toFixed(2)} €
                 </div>
               </div>
@@ -996,8 +1000,8 @@ export default function PaymentModal({
                   padding: '16px',
                   borderRadius: '16px',
                   border: 'none',
-                  background: paymentMethod === 'applePay' ? '#3D3530' : 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)',
-                  color: '#FFF',
+                  background: paymentMethod === 'applePay' ? 'var(--text-main)' : 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
+                  color: paymentMethod === 'applePay' ? 'var(--bg-card)' : '#FFF',
                   fontWeight: '800',
                   fontSize: '15px',
                   cursor: (isProcessing || amountToPay <= 0) ? 'not-allowed' : 'pointer',
@@ -1005,7 +1009,7 @@ export default function PaymentModal({
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '8px',
-                  boxShadow: '0 10px 25px -5px rgba(198,125,91,0.3)',
+                  boxShadow: 'var(--shadow-accent)',
                   transition: 'all 0.2s ease',
                   opacity: (isProcessing || amountToPay <= 0) ? 0.7 : 1,
                 }}
@@ -1033,7 +1037,7 @@ export default function PaymentModal({
             position: 'absolute',
             inset: 0,
             zIndex: 4100,
-            backgroundColor: 'rgba(61, 53, 48, 0.8)',
+            backgroundColor: 'var(--overlay-bg)',
             backdropFilter: 'blur(8px)',
             borderRadius: '24px',
             display: 'flex',
@@ -1043,21 +1047,21 @@ export default function PaymentModal({
             animation: 'fadeIn 0.2s ease-out',
           }}>
             <div style={{
-              backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
+              backgroundColor: 'var(--bg-card)',
               borderRadius: '20px',
               padding: '24px',
               width: '100%',
               maxWidth: '380px',
               textAlign: 'center',
-              border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
-              boxShadow: '0 20px 40px rgba(61,53,48,0.4)',
+              border: '1px solid var(--border-color)',
+              boxShadow: 'var(--shadow-modal)',
             }}>
               <div style={{
                 width: '48px',
                 height: '48px',
                 borderRadius: '50%',
-                backgroundColor: darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4',
-                color: '#C67D5B',
+                backgroundColor: 'var(--bg-subtle)',
+                color: 'var(--accent-primary)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -1065,10 +1069,10 @@ export default function PaymentModal({
               }}>
                 <ShieldCheck size={26} />
               </div>
-              <h4 className="font-editorial-heading" style={{ margin: '0 0 6px', fontSize: '19px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
+              <h4 className="font-editorial-heading" style={{ margin: '0 0 6px', fontSize: '19px', fontWeight: '600', color: 'var(--text-main)' }}>
                 Authentification 3D Secure
               </h4>
-              <p style={{ margin: '0 0 16px', fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', lineHeight: 1.5 }}>
+              <p style={{ margin: '0 0 16px', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
                 Votre banque demande une confirmation pour le paiement de <strong>{amountToPay.toFixed(2)} €</strong>.
               </p>
 
@@ -1087,9 +1091,9 @@ export default function PaymentModal({
                     fontSize: '20px',
                     letterSpacing: '8px',
                     borderRadius: '12px',
-                    border: otpError ? '2px solid #EF4444' : (darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #E8DDD3'),
-                    backgroundColor: darkMode ? '#1A1715' : '#FFF',
-                    color: darkMode ? '#FAF7F2' : '#3D3530',
+                    border: otpError ? '2px solid #EF4444' : '1px solid var(--border-color)',
+                    backgroundColor: 'var(--bg-subtle)',
+                    color: 'var(--text-main)',
                     outline: 'none',
                   }}
                 />
@@ -1104,9 +1108,9 @@ export default function PaymentModal({
                     flex: 1,
                     padding: '12px',
                     borderRadius: '12px',
-                    border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
+                    border: '1px solid var(--border-color)',
                     backgroundColor: 'transparent',
-                    color: darkMode ? '#D4C5B5' : '#6B5E54',
+                    color: 'var(--text-secondary)',
                     fontWeight: '700',
                     fontSize: '13px',
                     cursor: 'pointer',
@@ -1123,11 +1127,12 @@ export default function PaymentModal({
                     padding: '12px',
                     borderRadius: '12px',
                     border: 'none',
-                    background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)',
+                    background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
                     color: '#FFF',
                     fontWeight: '800',
                     fontSize: '13px',
                     cursor: 'pointer',
+                    boxShadow: 'var(--shadow-accent)'
                   }}
                 >
                   Confirmer
