@@ -765,10 +765,15 @@ header {
 
 @media (max-width: 768px) {
   .premium-main.chat-mode {
-    padding: 6px 8px 80px !important;
+    padding: 4px 6px 68px !important;
     margin: 0 auto !important;
     max-width: 100% !important;
+    width: 100% !important;
+    flex: 1 !important;
+    height: calc(100vh - 60px) !important;
+    height: calc(100dvh - 60px) !important;
     box-sizing: border-box !important;
+    overflow: hidden !important;
   }
 }
 

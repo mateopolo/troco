@@ -462,7 +462,7 @@ export default function PaymentModal({
                   padding: '10px 14px',
                   borderRadius: '12px',
                   border: 'none',
-                  backgroundColor: (mode === 'troco-plus' || mode === 'pack-tokens') ? '#D97706' : 'transparent',
+                  backgroundColor: (mode === 'troco-plus' || mode === 'pack-tokens') ? 'var(--accent-primary)' : 'transparent',
                   color: (mode === 'troco-plus' || mode === 'pack-tokens') ? '#FFFFFF' : 'var(--text-secondary)',
                   fontWeight: (mode === 'troco-plus' || mode === 'pack-tokens') ? '800' : '600',
                   fontSize: '13px',
@@ -471,7 +471,7 @@ export default function PaymentModal({
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '6px',
-                  boxShadow: (mode === 'troco-plus' || mode === 'pack-tokens') ? '0 4px 12px rgba(217,119,6,0.2)' : 'none',
+                  boxShadow: (mode === 'troco-plus' || mode === 'pack-tokens') ? 'var(--shadow-accent)' : 'none',
                   transition: 'all 0.2s ease'
                 }}
               >

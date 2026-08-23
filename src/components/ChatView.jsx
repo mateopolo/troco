@@ -1131,16 +1131,20 @@ function ChatView({
 
   return (
     <>
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        width: '100%',
-        height: isMobile ? 'calc(100dvh - 140px)' : 'calc(100vh - 160px)',
-        minHeight: isMobile ? '380px' : '560px',
-        maxHeight: isMobile ? 'calc(100dvh - 140px)' : '840px',
-        overflow: 'hidden',
-        position: 'relative'
-      }}>
+      <div
+        className="chat-main-view-wrapper"
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          width: '100%',
+          flex: 1,
+          height: isMobile ? '100%' : 'calc(100vh - 160px)',
+          minHeight: 0,
+          maxHeight: isMobile ? '100%' : '840px',
+          overflow: 'hidden',
+          position: 'relative'
+        }}
+      >
         <div style={{
           display: 'grid',
           gridTemplateColumns: isMobile ? '1fr' : '330px 1fr',

@@ -1132,6 +1132,15 @@ export default function App() {
 
   // ---- ÉCOUTE ET SYNCHRONISATION EN TEMPS RÉEL DU PROFIL FIREBASE USERS/{UID} ----
   useEffect(() => {
+    const sessionStartTime = Date.now();
+    const finishSessionLoading = () => {
+      const elapsed = Date.now() - sessionStartTime;
+      const remaining = Math.max(0, 2500 - elapsed);
+      setTimeout(() => {
+        setIsLoadingSession(false);
+      }, remaining);
+    };
+
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         const uid = firebaseUser.uid;
@@ -1184,14 +1193,14 @@ export default function App() {
 
         setIsAuthenticated(true);
         window.localStorage.setItem('troco_is_authenticated', 'true');
-        setIsLoadingSession(false);
+        finishSessionLoading();
         return () => unsubDoc();
       } else {
         const hasSession = window.localStorage.getItem('troco_is_authenticated') === 'true';
         if (!hasSession) {
           setIsAuthenticated(false);
         }
-        setIsLoadingSession(false);
+        finishSessionLoading();
       }
     });
 
@@ -6022,7 +6031,7 @@ export default function App() {
         padding: isScrolled ? '9px 16px' : '12px 16px',
         position: 'sticky',
         top: 0,
-        zIndex: 40,
+        zIndex: 50,
         boxShadow: isScrolled
           ? 'var(--shadow-card)'
           : '0 1px 24px rgba(0,0,0,0.03)',
@@ -6043,8 +6052,8 @@ export default function App() {
             <button onClick={() => handleOpenPayment('topup-cash')} title="Recharger mon solde Euros" className="premium-button balance-badge" style={{ border: '1px solid var(--border-color)', borderRadius: '999px', padding: isScrolled ? '5px 10px' : '6px 12px', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', position: 'relative', overflow: 'visible', whiteSpace: 'nowrap', flexShrink: 0, transition: 'padding 0.3s var(--ease-quiet)' }}>
               <Coins size={13} style={{ flexShrink: 0 }} /> <AnimatedEuroBalance value={profile.euroBalance} prefix="€ " suffix="" style={{ fontSize: '11px', fontWeight: '700', whiteSpace: 'nowrap' }} />
             </button>
-            <button onClick={() => handleOpenPayment('troco-plus')} title="S'abonner à Troco Plus" className="premium-button balance-badge" style={{ border: '1px solid var(--accent-warning)', borderRadius: '999px', padding: isScrolled ? '5px 10px' : '6px 12px', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-warning)', fontWeight: '800', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', position: 'relative', overflow: 'visible', whiteSpace: 'nowrap', flexShrink: 0, transition: 'padding 0.3s var(--ease-quiet)' }}>
-              <Sparkles size={13} color="var(--accent-warning)" style={{ flexShrink: 0 }} /> <AnimatedTokenBalance value={profile.trocoTokens} formatFn={(v) => formatTokenCount(v, currentLang)} style={{ fontSize: '11px', fontWeight: '800', whiteSpace: 'nowrap' }} />
+            <button onClick={() => handleOpenPayment('troco-plus')} title="S'abonner à Troco Plus" className="premium-button balance-badge" style={{ border: '1px solid var(--accent-primary)', borderRadius: '999px', padding: isScrolled ? '5px 10px' : '6px 12px', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', fontWeight: '800', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', position: 'relative', overflow: 'visible', whiteSpace: 'nowrap', flexShrink: 0, transition: 'padding 0.3s var(--ease-quiet)' }}>
+              <Sparkles size={13} color="var(--accent-primary)" style={{ flexShrink: 0 }} /> <AnimatedTokenBalance value={profile.trocoTokens} formatFn={(v) => formatTokenCount(v, currentLang)} style={{ fontSize: '11px', fontWeight: '800', whiteSpace: 'nowrap' }} />
             </button>
             <button onClick={toggleDarkMode} title={darkMode ? "Activer le mode clair" : "Activer le mode sombre"} className="premium-button darkmode-btn" style={{ border: '1px solid var(--border-color)', borderRadius: '50%', width: isScrolled ? '32px' : '34px', height: isScrolled ? '32px' : '34px', backgroundColor: 'var(--bg-card)', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.3s var(--ease-quiet)', flexShrink: 0 }}>
               {darkMode ? <Sun size={15} /> : <Moon size={15} />}
