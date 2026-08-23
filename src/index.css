@@ -546,6 +546,11 @@ input[type=range]::-moz-range-thumb:hover {
   animation: fadeSlideUpOrganic 700ms var(--ease-quiet) both;
 }
 
+.chat-mode {
+  transform: none !important;
+  animation: none !important;
+}
+
 /* EFFET ZOOM KEN BURNS AU SURVOL */
 .ken-burns {
   overflow: hidden;

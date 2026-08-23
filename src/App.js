@@ -6150,6 +6150,7 @@ export default function App() {
 
       {/* HEADER FIXE GLASSMORPHISM FLUIDE AVEC CONDENSATION AU SCROLL */}
       <header style={{
+        display: (isMobile && activeTab === 'chat' && selectedChat) ? 'none' : 'block',
         backgroundColor: 'var(--bg-glass)',
         backdropFilter: isScrolled ? 'blur(28px) saturate(200%)' : 'blur(20px) saturate(180%)',
         WebkitBackdropFilter: isScrolled ? 'blur(28px) saturate(200%)' : 'blur(20px) saturate(180%)',
@@ -6841,7 +6842,7 @@ export default function App() {
       {/* CONTENU DYNAMIQUE SELON L'ONGLET SÉLECTIONNÉ */}
       <main
         key={`${activeTab}-${viewMode}`}
-        className={`premium-main fade-up-in ${activeTab === 'chat' ? 'chat-mode' : ''}`}
+        className={`premium-main ${activeTab === 'chat' ? 'chat-mode' : 'fade-up-in'}`}
         style={{
           maxWidth: activeTab === 'feed' ? '1460px' : '1240px',
           margin: '0 auto',
@@ -6851,10 +6852,10 @@ export default function App() {
           flexDirection: activeTab === 'chat' ? 'column' : 'initial',
           overflow: activeTab === 'chat' ? 'hidden' : 'visible',
           height: activeTab === 'chat'
-            ? (isMobile ? (selectedChat ? 'calc(100dvh - 60px)' : 'calc(100dvh - 125px)') : 'calc(100dvh - 129px)')
+            ? (isMobile ? (selectedChat ? '100dvh' : 'calc(100dvh - 125px)') : 'calc(100dvh - 129px)')
             : 'auto',
           maxHeight: activeTab === 'chat'
-            ? (isMobile ? (selectedChat ? 'calc(100dvh - 60px)' : 'calc(100dvh - 125px)') : 'calc(100dvh - 129px)')
+            ? (isMobile ? (selectedChat ? '100dvh' : 'calc(100dvh - 125px)') : 'calc(100dvh - 129px)')
             : 'none',
           padding: activeTab === 'chat'
             ? (isMobile ? (selectedChat ? '0' : '0 6px') : '0 16px')
