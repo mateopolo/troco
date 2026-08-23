@@ -32,6 +32,9 @@ import PhotoGrid from './components/PhotoGrid';
 import InvoiceCalculator, { generateInvoiceRef, calculateListingInvoice } from './components/InvoiceCalculator';
 import CallOverlay from './components/CallOverlay';
 import TrocoLogo3D from './components/common/TrocoLogo3D';
+import { gsap } from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { useGSAP } from '@gsap/react';
 import {
   translations,
   calculateHaversineDistance,
@@ -41,6 +44,10 @@ import {
   knownTitles,
   knownMessageTranslations,
 } from './data/translationsData';
+
+if (typeof window !== 'undefined') {
+  gsap.registerPlugin(ScrollTrigger, useGSAP);
+}
 
 export default function App() {
   const {
@@ -3584,6 +3591,30 @@ export default function App() {
     allFirestoreUsers
   ]);
 
+  const listingsGridRef = useRef(null);
+
+  useGSAP(() => {
+    if (!listingsGridRef.current) return;
+    const cards = listingsGridRef.current.querySelectorAll('.gsap-card, .premium-card');
+    if (!cards || cards.length === 0) return;
+
+    gsap.fromTo(cards,
+      { opacity: 0, y: 40 },
+      {
+        opacity: 1,
+        y: 0,
+        duration: 0.6,
+        ease: 'power2.out',
+        stagger: 0.1,
+        scrollTrigger: {
+          trigger: listingsGridRef.current,
+          start: 'top 88%',
+          toggleActions: 'play none none none'
+        }
+      }
+    );
+  }, { dependencies: [filteredListings, selectedCategory, viewMode, formatFilter], scope: listingsGridRef });
+
   const getListingDetail = (listing) => {
     const media = getSuggestedMedia(listing.title, listing.description || '', listing.image, listing.video);
     const generic = {
@@ -5234,11 +5265,11 @@ export default function App() {
         fontFamily: 'var(--font-family-main)',
         zIndex: 999999
       }}>
-        {/* LIQUID IRIDESCENT MESH BACKGROUND */}
-        <div className="liquid-iridescence-container" style={{ opacity: 0.85 }}>
-          <div className="liquid-blob liquid-blob-1" style={{ width: '650px', height: '650px' }} />
-          <div className="liquid-blob liquid-blob-2" style={{ width: '700px', height: '700px' }} />
-          <div className="liquid-blob liquid-blob-3" style={{ width: '550px', height: '550px' }} />
+        {/* LIQUID IRIDESCENT MOLTEN LIGHT BACKGROUND */}
+        <div className="liquid-iridescence-container" style={{ opacity: 0.92, background: 'radial-gradient(circle at 50% 50%, var(--bg-subtle) 0%, var(--bg-global) 100%)' }}>
+          <div className="liquid-blob liquid-blob-1" style={{ width: '750px', height: '750px' }} />
+          <div className="liquid-blob liquid-blob-2" style={{ width: '800px', height: '800px' }} />
+          <div className="liquid-blob liquid-blob-3" style={{ width: '680px', height: '680px' }} />
         </div>
 
         <div style={{
@@ -5251,7 +5282,7 @@ export default function App() {
           padding: '30px',
           animation: 'modalSlideIn 0.8s var(--ease-monopo) both'
         }}>
-          <TrocoLogo3D size={84} animated={true} style={{ marginBottom: '24px' }} />
+          <TrocoLogo3D size={100} animated={true} style={{ marginBottom: '28px' }} />
           <div style={{
             fontSize: 'clamp(56px, 14vw, 92px)',
             fontFamily: 'var(--font-editorial)',
@@ -5927,18 +5958,21 @@ export default function App() {
       )}
       <style>{`
         * { box-sizing: border-box; }
-        .premium-main { animation: fadeSlideUp 0.45s cubic-bezier(0.22, 1, 0.36, 1) both; }
+        .premium-main { animation: fadeSlideUp 0.5s cubic-bezier(0.19, 1, 0.22, 1) both; }
         .premium-card, .premium-nav-btn, .premium-pill, .premium-panel, .premium-button {
-          transition: transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s ease, border-color 0.3s ease, background-color 0.3s ease;
+          transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1);
         }
         .premium-card { border-radius: 20px !important; }
         .premium-card:hover {
           transform: translateY(-4px) scale(1.02) !important;
-          box-shadow: var(--shadow-card) !important;
+          box-shadow: var(--shadow-card), 0 12px 28px rgba(0, 0, 0, 0.09) !important;
         }
-        .premium-nav-btn:hover, .premium-pill:hover, .premium-panel:hover, .premium-button:hover {
-          transform: scale(1.02);
-          box-shadow: var(--shadow-card);
+        .premium-button:hover, .premium-nav-btn:hover, .premium-pill:hover, .premium-panel:hover {
+          transform: translateY(-2px) scale(1.02);
+          box-shadow: var(--shadow-accent), 0 8px 20px rgba(0, 0, 0, 0.08);
+        }
+        .premium-button:active, .premium-nav-btn:active, .premium-pill:active {
+          transform: scale(0.98) translateY(0);
         }
         .glass-surface {
           background: var(--bg-glass);
@@ -7102,7 +7136,7 @@ export default function App() {
                   </div>
                 </div>
               ) : (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px' }}>
+                <div ref={listingsGridRef} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px' }}>
                   {filteredListings.map((item) => (
                     <FeedCardItem
                       key={item.id}
