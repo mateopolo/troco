@@ -7564,7 +7564,22 @@ export default function App() {
                 <button onClick={() => setPostStep(prev => prev - 1)} className="premium-button" style={{ border: darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #E8DDD3', borderRadius: '999px', padding: '10px 16px', backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530', fontWeight: '700', cursor: 'pointer' }}>{t('backButton')}</button>
               ) : <span />}
               {postStep < 4 ? (
-                <button onClick={() => setPostStep(prev => prev + 1)} className="premium-button" style={{ border: 'none', borderRadius: '999px', padding: '10px 16px', background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)', color: '#FFF', fontWeight: '800', cursor: 'pointer', boxShadow: '0 8px 18px rgba(198,125,91,0.3)' }}>{t('continueButton')}</button>
+                <button
+                  onClick={() => setPostStep(prev => prev + 1)}
+                  className="premium-button"
+                  style={{
+                    border: 'none',
+                    borderRadius: 'var(--border-radius-main, 999px)',
+                    padding: '10px 18px',
+                    background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
+                    color: 'var(--accent-contrast-text, #FFF)',
+                    fontWeight: '800',
+                    cursor: 'pointer',
+                    boxShadow: 'var(--shadow-accent)'
+                  }}
+                >
+                  {t('continueButton')}
+                </button>
               ) : (() => {
                 const currentPhotoList = postDraft.gallery && postDraft.gallery.length > 0
                   ? postDraft.gallery
@@ -7588,7 +7603,20 @@ export default function App() {
                     : t('publishAdButton'));
 
                 return (
-                  <button onClick={handlePublishAnnouncement} className="premium-button" style={{ border: 'none', borderRadius: '999px', padding: '10px 20px', background: quote.totalTTC > 0 ? '#F59E0B' : 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)', color: '#FFF', fontWeight: '800', cursor: 'pointer', boxShadow: '0 8px 18px rgba(198,125,91,0.3)' }}>
+                  <button
+                    onClick={handlePublishAnnouncement}
+                    className="premium-button"
+                    style={{
+                      border: 'none',
+                      borderRadius: 'var(--border-radius-main, 999px)',
+                      padding: '10px 20px',
+                      background: quote.totalTTC > 0 ? '#F59E0B' : 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
+                      color: 'var(--accent-contrast-text, #FFF)',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      boxShadow: 'var(--shadow-accent)'
+                    }}
+                  >
                     {buttonLabel}
                   </button>
                 );
@@ -7849,7 +7877,24 @@ export default function App() {
                     <AnimatedTokenBalance value={profile.trocoTokens} formatFn={(v) => formatTokenCount(v, currentLang)} style={{ fontSize: '19px', fontWeight: '800', color: 'var(--text-main)' }} />
                   </div>
                 </div>
-                <button onClick={() => handleOpenPayment('troco-plus')} className="premium-button" style={{ border: 'none', borderRadius: '999px', padding: '9px 16px', background: 'linear-gradient(135deg, #D97706 0%, #B45309 100%)', color: '#FFF', fontWeight: '800', fontSize: '12px', cursor: 'pointer', boxShadow: '0 8px 16px rgba(217,119,6,0.25)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <button
+                  onClick={() => handleOpenPayment('troco-plus')}
+                  className="premium-button"
+                  style={{
+                    border: 'none',
+                    borderRadius: 'var(--border-radius-main, 999px)',
+                    padding: '9px 16px',
+                    background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
+                    color: 'var(--accent-contrast-text, #FFF)',
+                    fontWeight: '800',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                    boxShadow: 'var(--shadow-accent)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
                   <Sparkles size={14} /> {profile.isTrocoPlus ? '⭐ Gérer Troco Plus' : '+ S\'abonner à Troco Plus'}
                 </button>
               </div>

@@ -188,7 +188,7 @@ export function generateCustomThemeVariables(primary = '#B98B73', bg = '#FAF7F2'
   const primarySecondary = isDark ? adjustBrightness(primary, 25) : adjustBrightness(primary, 15);
 
   const { r: br, g: bgCol, b: bb } = hexToRgb(bg);
-  const glassBg = `rgba(${br}, ${bgCol}, ${bb}, 0.88)`;
+  const glassBg = `rgba(${br}, ${bgCol}, ${bb}, 0.72)`;
 
   const { r: pr, g: pg, b: pb } = hexToRgb(primary);
   const { h } = rgbToHsl(pr, pg, pb);
@@ -259,7 +259,7 @@ export const THEMES_CONFIG = {
       '--bg-subtle': '#F5F0E8',
       '--bg-elevated': '#EFE8DE',
       '--bg-pill': '#DDBEA9',
-      '--bg-glass': 'rgba(250, 247, 242, 0.90)',
+      '--bg-glass': 'rgba(250, 247, 242, 0.72)',
       '--text-main': '#3F4238',
       '--text-secondary': '#6B705C',
       '--text-muted': '#A5A58D',
@@ -276,7 +276,7 @@ export const THEMES_CONFIG = {
       '--shadow-card': '0 10px 30px rgba(63, 66, 56, 0.08)',
       '--shadow-accent': '0 8px 24px rgba(185, 139, 115, 0.35)',
       '--shadow-modal': '0 24px 60px rgba(63, 66, 56, 0.18)',
-      '--glass-bg': 'rgba(250, 247, 242, 0.90)',
+      '--glass-bg': 'rgba(250, 247, 242, 0.72)',
       '--glass-border': 'rgba(212, 199, 176, 0.65)',
       '--overlay-bg': 'rgba(63, 66, 56, 0.65)',
       '--call-bg': '#1E1B18',
@@ -296,7 +296,7 @@ export const THEMES_CONFIG = {
       '--bg-subtle': '#28282C',
       '--bg-elevated': '#222226',
       '--bg-pill': '#333338',
-      '--bg-glass': 'rgba(28, 28, 31, 0.92)',
+      '--bg-glass': 'rgba(28, 28, 31, 0.75)',
       '--text-main': '#F5F5F7',
       '--text-secondary': '#A1A1A6',
       '--text-muted': '#636366',
@@ -313,7 +313,7 @@ export const THEMES_CONFIG = {
       '--shadow-card': '0 12px 36px rgba(0, 0, 0, 0.65)',
       '--shadow-accent': '0 8px 24px rgba(168, 159, 145, 0.35)',
       '--shadow-modal': '0 24px 70px rgba(0, 0, 0, 0.85)',
-      '--glass-bg': 'rgba(28, 28, 31, 0.92)',
+      '--glass-bg': 'rgba(28, 28, 31, 0.75)',
       '--glass-border': 'rgba(245, 245, 247, 0.12)',
       '--overlay-bg': 'rgba(0, 0, 0, 0.8)',
       '--call-bg': '#0A0A0C',
@@ -333,7 +333,7 @@ export const THEMES_CONFIG = {
       '--bg-subtle': '#EBEBEB',
       '--bg-elevated': '#E0E0E0',
       '--bg-pill': '#D6D6D6',
-      '--bg-glass': 'rgba(255, 255, 255, 0.94)',
+      '--bg-glass': 'rgba(255, 255, 255, 0.75)',
       '--text-main': '#000000',
       '--text-secondary': '#404040',
       '--text-muted': '#737373',
@@ -350,7 +350,7 @@ export const THEMES_CONFIG = {
       '--shadow-card': '0 8px 24px rgba(0, 0, 0, 0.06)',
       '--shadow-accent': '0 8px 24px rgba(0, 0, 0, 0.25)',
       '--shadow-modal': '0 20px 50px rgba(0, 0, 0, 0.12)',
-      '--glass-bg': 'rgba(255, 255, 255, 0.94)',
+      '--glass-bg': 'rgba(255, 255, 255, 0.75)',
       '--glass-border': 'rgba(0, 0, 0, 0.15)',
       '--overlay-bg': 'rgba(0, 0, 0, 0.65)',
       '--call-bg': '#111111',
@@ -370,7 +370,7 @@ export const THEMES_CONFIG = {
       '--bg-subtle': '#FDEAF0',
       '--bg-elevated': '#FAD9E2',
       '--bg-pill': '#F5C6D4',
-      '--bg-glass': 'rgba(255, 245, 248, 0.92)',
+      '--bg-glass': 'rgba(255, 245, 248, 0.72)',
       '--text-main': '#3A1822',
       '--text-secondary': '#754352',
       '--text-muted': '#A37382',

@@ -16,7 +16,7 @@
   --bg-subtle: #F5F0E8;
   --bg-elevated: #EFE8DE;
   --bg-pill: #DDBEA9;
-  --bg-glass: rgba(250, 247, 242, 0.90);
+  --bg-glass: rgba(250, 247, 242, 0.72);
   --text-main: #3F4238;
   --text-secondary: #6B705C;
   --text-muted: #A5A58D;
@@ -32,7 +32,7 @@
   --shadow-card: 0 10px 30px rgba(63, 66, 56, 0.08);
   --shadow-accent: 0 8px 24px rgba(185, 139, 115, 0.35);
   --shadow-modal: 0 24px 60px rgba(63, 66, 56, 0.18);
-  --glass-bg: rgba(250, 247, 242, 0.90);
+  --glass-bg: rgba(250, 247, 242, 0.72);
   --glass-border: rgba(212, 199, 176, 0.65);
   --overlay-bg: rgba(63, 66, 56, 0.65);
   --call-bg: #1E1B18;
