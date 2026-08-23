@@ -6843,7 +6843,7 @@ export default function App() {
         key={`${activeTab}-${viewMode}`}
         className={`premium-main fade-up-in ${activeTab === 'chat' ? 'chat-mode' : ''}`}
         style={{
-          maxWidth: activeTab === 'feed' ? '1320px' : '1240px',
+          maxWidth: activeTab === 'feed' ? '1460px' : '1240px',
           margin: '0 auto',
           width: '100%',
           boxSizing: 'border-box',
@@ -7288,7 +7288,7 @@ export default function App() {
                   ref={listingsGridRef}
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, minmax(0, 1fr))',
+                    gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(290px, 1fr))',
                     gap: isMobile ? '16px' : '24px',
                     width: '100%',
                     boxSizing: 'border-box'
