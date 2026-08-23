@@ -8172,12 +8172,12 @@ export default function App() {
       }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-around', alignItems: 'center' }}>
 
-          <button onClick={() => setActiveTab('feed')} className="premium-nav-btn" style={{ border: 'none', background: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', color: activeTab === 'feed' ? (darkMode ? '#E8DDD3' : '#C67D5B') : darkMode ? '#9A8E84' : '#6B5E54', cursor: 'pointer', padding: '6px 14px', borderRadius: '16px' }}>
+          <button onClick={() => { setActiveTab('feed'); setSelectedChat(null); }} className="premium-nav-btn" style={{ border: 'none', background: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', color: activeTab === 'feed' ? (darkMode ? '#E8DDD3' : '#C67D5B') : darkMode ? '#9A8E84' : '#6B5E54', cursor: 'pointer', padding: '6px 14px', borderRadius: '16px' }}>
             <Search size={20} />
             <span style={{ fontSize: '10.5px', fontWeight: '700' }}>{t('explorer')}</span>
           </button>
 
-          <button onClick={() => setActiveTab('chat')} className="premium-nav-btn" style={{ border: 'none', background: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', color: activeTab === 'chat' ? (darkMode ? '#E8DDD3' : '#C67D5B') : darkMode ? '#9A8E84' : '#6B5E54', cursor: 'pointer', padding: '6px 14px', borderRadius: '16px', position: 'relative' }}>
+          <button onClick={() => { setActiveTab('chat'); setSelectedChat(null); }} className="premium-nav-btn" style={{ border: 'none', background: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', color: activeTab === 'chat' ? (darkMode ? '#E8DDD3' : '#C67D5B') : darkMode ? '#9A8E84' : '#6B5E54', cursor: 'pointer', padding: '6px 14px', borderRadius: '16px', position: 'relative' }}>
             <span style={{ position: 'relative', display: 'inline-flex' }}>
               <MessageSquare size={20} />
               {unreadCount > 0 && (
@@ -8209,6 +8209,7 @@ export default function App() {
 
           <button
             onClick={() => {
+              setSelectedChat(null);
               if (activeTab === 'post') {
                 setPostStep(1);
                 setPostDraft(defaultPostDraft);
@@ -8224,7 +8225,7 @@ export default function App() {
             <span style={{ fontSize: '10.5px', fontWeight: '700' }}>{t('post')}</span>
           </button>
 
-          <button onClick={() => setActiveTab('profile')} className="premium-nav-btn" style={{ border: 'none', background: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', color: activeTab === 'profile' ? (darkMode ? '#E8DDD3' : '#C67D5B') : darkMode ? '#9A8E84' : '#6B5E54', cursor: 'pointer', padding: '6px 14px', borderRadius: '16px' }}>
+          <button onClick={() => { setActiveTab('profile'); setSelectedChat(null); }} className="premium-nav-btn" style={{ border: 'none', background: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', color: activeTab === 'profile' ? (darkMode ? '#E8DDD3' : '#C67D5B') : darkMode ? '#9A8E84' : '#6B5E54', cursor: 'pointer', padding: '6px 14px', borderRadius: '16px' }}>
             <User size={20} />
             <span style={{ fontSize: '10.5px', fontWeight: '700' }}>{t('profile')}</span>
           </button>
