@@ -436,13 +436,12 @@ function ChatView({
         position: 'relative',
         backgroundColor: 'transparent'
       }}>
-        {/* 1. EN-TÊTE FIXE DU CHAT (64px) */}
+        {/* 1. EN-TÊTE FIXE DU CHAT */}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: isMobile ? '0 12px' : '0 18px',
-          paddingTop: isMobile ? 'max(6px, env(safe-area-inset-top))' : '0',
-          height: isMobile ? '60px' : '64px',
-          minHeight: isMobile ? '60px' : '64px',
+          padding: isMobile ? '10px 12px' : '0 18px',
+          paddingTop: isMobile ? 'max(16px, env(safe-area-inset-top))' : '0',
+          minHeight: isMobile ? 'calc(58px + max(16px, env(safe-area-inset-top)))' : '64px',
           borderBottom: '1px solid var(--border-color)',
           backgroundColor: 'var(--bg-glass)',
           backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
@@ -1366,18 +1365,18 @@ function ChatView({
           {/* SALLE DE CONVERSATION (RENDUE UNIQUEMENT SI UN CHAT EST SÉLECTIONNÉ) */}
           {effectiveSelectedChat && (!isMobile || mobileSubView === 'room') && (
             <div style={{
-              backgroundColor: 'var(--bg-glass)',
-              backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
-              borderRadius: isMobile ? '18px' : '24px',
-              border: '1px solid var(--border-color)',
-              boxShadow: isMobile ? 'none' : 'var(--shadow-card)',
-              display: 'flex', flexDirection: 'column',
-              height: '100%',
-              minHeight: 0,
+              position: isMobile ? 'fixed' : 'relative',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: isMobile ? '100dvh' : '100%',
               width: '100%',
-              boxSizing: 'border-box',
-              overflow: 'hidden',
-              position: 'relative'
+              zIndex: isMobile ? 999999 : 1,
+              backgroundColor: 'var(--bg-global)',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden'
             }}>
               {renderChatRoom()}
             </div>

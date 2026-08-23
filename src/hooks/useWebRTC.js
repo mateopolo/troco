@@ -50,6 +50,9 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
   const activeChatIdRef = useRef(null);
   const screenTrackRef = useRef(null);
   const cameraTrackRef = useRef(null);
+  const ringtoneCtxRef = useRef(null);
+  const ringtoneIntervalRef = useRef(null);
+  const pendingCandidatesRef = useRef([]);
 
   // Détection des caméras disponibles sur l'appareil
   useEffect(() => {
@@ -72,40 +75,74 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
 
   useEffect(() => {
     if (localVideoRef.current && localStream) {
-      localVideoRef.current.srcObject = localStream;
+      if (localVideoRef.current.srcObject !== localStream) {
+        localVideoRef.current.srcObject = localStream;
+      }
       localVideoRef.current.play().catch(() => {});
     }
   }, [localStream]);
 
   useEffect(() => {
     if (remoteVideoRef.current && remoteStream) {
-      remoteVideoRef.current.srcObject = remoteStream;
+      if (remoteVideoRef.current.srcObject !== remoteStream) {
+        remoteVideoRef.current.srcObject = remoteStream;
+      }
       remoteVideoRef.current.play().catch(() => {});
     }
   }, [remoteStream]);
 
-  useEffect(() => { return () => { _cleanup(); }; }, []); // eslint-disable-line
+  const stopRingtone = useCallback(() => {
+    if (ringtoneIntervalRef.current) {
+      clearInterval(ringtoneIntervalRef.current);
+      ringtoneIntervalRef.current = null;
+    }
+    if (ringtoneCtxRef.current) {
+      try {
+        ringtoneCtxRef.current.close();
+      } catch (_) {}
+      ringtoneCtxRef.current = null;
+    }
+  }, []);
 
   const playRingtone = useCallback(() => {
+    stopRingtone();
     try {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
       if (!AudioCtx) return;
       const ctx = new AudioCtx();
-      const beep = (freq, start, dur) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain); gain.connect(ctx.destination);
-        osc.frequency.value = freq; osc.type = 'sine';
-        gain.gain.setValueAtTime(0, ctx.currentTime + start);
-        gain.gain.linearRampToValueAtTime(0.2, ctx.currentTime + start + 0.05);
-        gain.gain.linearRampToValueAtTime(0, ctx.currentTime + start + dur);
-        osc.start(ctx.currentTime + start);
-        osc.stop(ctx.currentTime + start + dur + 0.05);
+      ringtoneCtxRef.current = ctx;
+
+      const triggerPattern = () => {
+        if (!ringtoneCtxRef.current || ringtoneCtxRef.current.state === 'closed') return;
+        const cur = ringtoneCtxRef.current.currentTime;
+        const beep = (freq, start, dur) => {
+          if (!ringtoneCtxRef.current || ringtoneCtxRef.current.state === 'closed') return;
+          try {
+            const osc = ringtoneCtxRef.current.createOscillator();
+            const gain = ringtoneCtxRef.current.createGain();
+            osc.connect(gain);
+            gain.connect(ringtoneCtxRef.current.destination);
+            osc.frequency.value = freq;
+            osc.type = 'sine';
+            gain.gain.setValueAtTime(0, cur + start);
+            gain.gain.linearRampToValueAtTime(0.2, cur + start + 0.05);
+            gain.gain.linearRampToValueAtTime(0, cur + start + dur);
+            osc.start(cur + start);
+            osc.stop(cur + start + dur + 0.05);
+          } catch (_) {}
+        };
+        beep(440, 0, 0.35);
+        beep(880, 0.45, 0.35);
+        beep(440, 0.9, 0.35);
+        beep(880, 1.35, 0.35);
       };
-      beep(440, 0, 0.35); beep(880, 0.45, 0.35);
-      beep(440, 0.9, 0.35); beep(880, 1.35, 0.35);
+
+      triggerPattern();
+      ringtoneIntervalRef.current = setInterval(() => {
+        triggerPattern();
+      }, 3000);
     } catch (_) {}
-  }, []);
+  }, [stopRingtone]);
 
   // Gestion sécurisée des autorisations Caméra / Micro avec alertes claires
   const _getLocalStream = useCallback(async (type) => {
@@ -140,6 +177,8 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
 
   // Nettoyage complet des flux locaux et des écouteurs sans casser prématurément la salle
   const _cleanup = useCallback((skipDocDelete = false) => {
+    stopRingtone();
+    pendingCandidatesRef.current = [];
     unsubsRef.current.forEach(u => { try { u(); } catch (_) {} });
     unsubsRef.current = [];
     if (pcRef.current) {
@@ -180,7 +219,38 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
       }).catch(() => {});
     }
     activeChatIdRef.current = null;
-  }, [profileName]);
+  }, [profileName, stopRingtone]);
+
+  useEffect(() => { return () => { _cleanup(); }; }, [_cleanup]);
+
+  const addOrQueueCandidate = useCallback(async (candidateData) => {
+    if (!candidateData) return;
+    const pc = pcRef.current;
+    if (!pc) return;
+    try {
+      const candidate = new RTCIceCandidate(candidateData);
+      if (pc.remoteDescription && pc.remoteDescription.type) {
+        await pc.addIceCandidate(candidate);
+      } else {
+        pendingCandidatesRef.current.push(candidate);
+      }
+    } catch (err) {
+      console.warn('[WebRTC] addOrQueueCandidate error:', err);
+    }
+  }, []);
+
+  const flushPendingCandidates = useCallback(async () => {
+    const pc = pcRef.current;
+    if (!pc || !pc.remoteDescription) return;
+    while (pendingCandidatesRef.current.length > 0) {
+      const cand = pendingCandidatesRef.current.shift();
+      try {
+        await pc.addIceCandidate(cand);
+      } catch (err) {
+        console.warn('[WebRTC] flush pending candidate error:', err);
+      }
+    }
+  }, []);
 
   const _createPC = useCallback((chatId, role) => {
     const pc = new RTCPeerConnection(ICE_CONFIG);
@@ -325,7 +395,9 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
         try {
           await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
           isCallConnectedRef.current = true;
-          setCallState(prev => ({ ...prev, ringing: false }));
+          stopRingtone();
+          setCallState(prev => ({ ...prev, ringing: false, active: true }));
+          await flushPendingCandidates();
         } catch (e) {
           console.warn('[WebRTC] setRemoteDescription answer error:', e);
         }
@@ -344,25 +416,26 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
     const unsubCallee1 = onSnapshot(collection(db, 'calls', String(chatId), 'calleeCandidates'), (snap) => {
       snap.docChanges().forEach(ch => {
         if (ch.type === 'added') {
-          pc.addIceCandidate(new RTCIceCandidate(ch.doc.data())).catch(() => {});
+          addOrQueueCandidate(ch.doc.data());
         }
       });
     });
     const unsubCallee2 = onSnapshot(collection(db, 'calls', String(chatId), 'answerCandidates'), (snap) => {
       snap.docChanges().forEach(ch => {
         if (ch.type === 'added') {
-          pc.addIceCandidate(new RTCIceCandidate(ch.doc.data())).catch(() => {});
+          addOrQueueCandidate(ch.doc.data());
         }
       });
     });
 
     unsubsRef.current = [unsubAnswer, unsubCallee1, unsubCallee2];
-  }, [selectedChat, profileName, profileUid, playRingtone, _getLocalStream, _createPC, _cleanup]);
+  }, [selectedChat, profileName, profileUid, playRingtone, stopRingtone, _getLocalStream, _createPC, _cleanup, addOrQueueCandidate, flushPendingCandidates]);
 
   const acceptIncomingCall = useCallback(async () => {
     if (!incomingCall) return null;
     const { chatId, type, from } = incomingCall;
     setIncomingCall(null);
+    stopRingtone();
 
     callStartTimeRef.current = Date.now();
     activeCallChatIdRef.current = String(chatId);
@@ -380,13 +453,18 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
     setCallState({ type, active: true, ringing: false, micOn: true, camOn: type === 'video', isScreenSharing: false, isHost: false, inviteOpen: false, copied: false, remoteScreenSharing: false });
 
     const callSnap = await getDoc(doc(db, 'calls', String(chatId)));
-    if (!callSnap.exists()) return null;
+    if (!callSnap.exists()) {
+      stopRingtone();
+      return null;
+    }
     const callData = callSnap.data();
 
     const pc = _createPC(chatId, 'callee');
     stream.getTracks().forEach(t => pc.addTrack(t, stream));
 
     await pc.setRemoteDescription(new RTCSessionDescription(callData.offer));
+    await flushPendingCandidates();
+
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
 
@@ -450,21 +528,21 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
     const unsubCaller1 = onSnapshot(collection(db, 'calls', String(chatId), 'callerCandidates'), (snap) => {
       snap.docChanges().forEach(ch => {
         if (ch.type === 'added') {
-          pc.addIceCandidate(new RTCIceCandidate(ch.doc.data())).catch(() => {});
+          addOrQueueCandidate(ch.doc.data());
         }
       });
     });
     const unsubCaller2 = onSnapshot(collection(db, 'calls', String(chatId), 'offerCandidates'), (snap) => {
       snap.docChanges().forEach(ch => {
         if (ch.type === 'added') {
-          pc.addIceCandidate(new RTCIceCandidate(ch.doc.data())).catch(() => {});
+          addOrQueueCandidate(ch.doc.data());
         }
       });
     });
 
     unsubsRef.current = [unsubCallDoc, unsubCaller1, unsubCaller2];
     return { chatId, type, from };
-  }, [incomingCall, _getLocalStream, _createPC, _cleanup, profileName]);
+  }, [incomingCall, _getLocalStream, _createPC, _cleanup, profileName, stopRingtone, addOrQueueCandidate, flushPendingCandidates]);
 
   // Raccrochage avec gestion propre de la salle Teams et journalisation automatique
   const endCall = useCallback(() => {
@@ -524,11 +602,13 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
     }
 
     _cleanup(false);
+    stopRingtone();
     setCallState({ type: null, active: false, ringing: false, micOn: true, camOn: true, isScreenSharing: false, isHost: false, inviteOpen: false, copied: false, remoteScreenSharing: false });
-  }, [_cleanup, selectedChat?.id, callState.type, callState.ringing]);
+  }, [_cleanup, selectedChat?.id, callState.type, callState.ringing, stopRingtone]);
 
   // Refus d'appel avec suppression du signal et journal d'appel manqué
   const declineIncomingCall = useCallback(() => {
+    stopRingtone();
     if (!incomingCall) return;
     const { chatId } = incomingCall;
 
@@ -556,7 +636,7 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
 
     deleteDoc(doc(db, 'calls', String(chatId))).catch(() => {});
     setIncomingCall(null);
-  }, [incomingCall]);
+  }, [incomingCall, stopRingtone]);
 
   // Écoute universelle des appels entrants pour cet utilisateur (Multi-appareils PC ⇄ Mobile)
   useEffect(() => {
