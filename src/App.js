@@ -8,6 +8,7 @@ import { collection, addDoc, doc, updateDoc, serverTimestamp, onSnapshot, query,
 import { RecaptchaVerifier, signInWithPhoneNumber, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, GoogleAuthProvider, GithubAuthProvider, FacebookAuthProvider, OAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
 import ChatView from './components/ChatView';
 import { useWebRTC } from './hooks/useWebRTC';
+import { useTheme } from './contexts/ThemeContext';
 import AdminPanel from './components/AdminPanel';
 import ReportModal from './components/ReportModal';
 import PaymentModal from './components/PaymentModal';
@@ -41,7 +42,7 @@ import {
 } from './data/translationsData';
 
 export default function App() {
-  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('troco_dark_mode') === 'true');
+  const { themeId, theme, isDark: darkMode, setThemeId, toggleTheme: toggleDarkMode, allThemes } = useTheme();
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
 
   useEffect(() => {
@@ -49,27 +50,6 @@ export default function App() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-
-  const toggleDarkMode = () => {
-    setDarkMode(prev => {
-      const next = !prev;
-      localStorage.setItem('troco_dark_mode', String(next));
-      if (next) {
-        document.body.classList.add('dark-mode');
-      } else {
-        document.body.classList.remove('dark-mode');
-      }
-      return next;
-    });
-  };
-
-  useEffect(() => {
-    if (darkMode) {
-      document.body.classList.add('dark-mode');
-    } else {
-      document.body.classList.remove('dark-mode');
-    }
-  }, [darkMode]);
   const [currentLang, setCurrentLang] = useState('FR');
   const [isLangModalOpen, setIsLangModalOpen] = useState(false);
   const [userCoords, setUserCoords] = useState([48.8566, 2.3522]); // Paris par défaut
@@ -2696,9 +2676,9 @@ export default function App() {
     }, 0);
   }, [chatsList, mockChats, chatThreads, readChats, selectedChat, activeTab, profile?.name]);
 
-  const createModernMapIcon = (isDarkMode = false) => {
-    const primaryBg = isDarkMode ? 'rgba(198, 125, 91, 0.95)' : 'rgba(198, 125, 91, 0.95)';
-    const glowColor = 'rgba(198, 125, 91, 0.5)';
+  const createModernMapIcon = useCallback(() => {
+    const primaryBg = theme?.variables?.['--accent-primary'] || '#B98B73';
+    const innerDot = theme?.variables?.['--bg-global'] || '#FAF7F2';
 
     return L.divIcon({
       className: 'custom-modern-pin',
@@ -2710,7 +2690,7 @@ export default function App() {
           display: flex;
           align-items: center;
           justify-content: center;
-          filter: drop-shadow(0 6px 12px ${glowColor});
+          filter: drop-shadow(0 6px 12px rgba(0,0,0,0.25));
           cursor: pointer;
         ">
           <svg width="24" height="30" viewBox="0 0 24 30" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -2718,7 +2698,7 @@ export default function App() {
                   fill="${primaryBg}" 
                   stroke="#FFFFFF" 
                   stroke-width="1.8" />
-            <circle cx="12" cy="11" r="4.5" fill="#FAF7F2" />
+            <circle cx="12" cy="11" r="4.5" fill="${innerDot}" />
           </svg>
         </div>
       `,
@@ -2726,7 +2706,7 @@ export default function App() {
       iconAnchor: [12, 30],
       popupAnchor: [0, -28],
     });
-  };
+  }, [theme]);
 
   // eslint-disable-next-line no-unused-vars
   const groupParticipants = [
@@ -7895,10 +7875,10 @@ export default function App() {
                   placeholder="Colle une URL d'image..."
                   style={{
                     flex: 1, minWidth: '180px', padding: '10px 14px',
-                    border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
+                    border: '1px solid var(--border-color)',
                     borderRadius: '12px', fontSize: '13px',
-                    backgroundColor: darkMode ? '#1A1715' : '#FAF7F2',
-                    color: darkMode ? '#FAF7F2' : '#3D3530', outline: 'none'
+                    backgroundColor: 'var(--bg-card)',
+                    color: 'var(--text-main)', outline: 'none'
                   }}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && portfolioUrlInput.trim()) {
@@ -7917,8 +7897,8 @@ export default function App() {
                   className="premium-button"
                   style={{
                     border: 'none', borderRadius: '12px', padding: '10px 14px',
-                    background: portfolioUrlInput.trim() ? 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)' : (darkMode ? 'rgba(232,221,211,0.1)' : '#E8DDD3'),
-                    color: portfolioUrlInput.trim() ? '#FFF' : (darkMode ? '#6B5E54' : '#9A8E84'),
+                    background: portfolioUrlInput.trim() ? 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)' : 'var(--bg-subtle)',
+                    color: portfolioUrlInput.trim() ? '#FFF' : 'var(--text-muted)',
                     fontWeight: '800', cursor: portfolioUrlInput.trim() ? 'pointer' : 'not-allowed', fontSize: '13px',
                     display: 'flex', alignItems: 'center', gap: '6px'
                   }}
@@ -7928,10 +7908,10 @@ export default function App() {
                 <button
                   onClick={() => document.getElementById('portfolio-file-input')?.click()}
                   style={{
-                    border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
+                    border: '1px solid var(--border-color)',
                     borderRadius: '12px', padding: '10px 14px',
-                    backgroundColor: darkMode ? '#1A1715' : '#FFF',
-                    color: '#C67D5B',
+                    backgroundColor: 'var(--bg-card)',
+                    color: 'var(--accent-primary)',
                     fontWeight: '800', cursor: 'pointer', fontSize: '13px',
                     display: 'flex', alignItems: 'center', gap: '6px'
                   }}
@@ -7957,40 +7937,40 @@ export default function App() {
             </div>
 
             {/* ---- HISTORIQUE DES SWAPS & DEALS ---- */}
-            <div style={{ borderTop: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3', paddingTop: '20px' }}>
+            <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                <History size={17} color="#C67D5B" />
-                <h4 className="font-editorial-heading" style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{t('swapHistory')}</h4>
+                <History size={17} color="var(--accent-primary)" />
+                <h4 className="font-editorial-heading" style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: 'var(--text-main)' }}>{t('swapHistory')}</h4>
               </div>
-              <p style={{ fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', margin: '0 0 14px' }}>{t('swapHistorySub')}</p>
+              <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '0 0 14px' }}>{t('swapHistorySub')}</p>
 
               <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' }}>
-                <div style={{ flex: 1, minWidth: '130px', border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3', borderRadius: '16px', padding: '12px 14px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8' }}>
-                  <div style={{ fontSize: '11px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>{t('closedDeals')}</div>
-                  <div style={{ fontSize: '20px', fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{closedDealsCount}</div>
+                <div style={{ flex: 1, minWidth: '130px', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '12px 14px', backgroundColor: 'var(--bg-subtle)' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{t('closedDeals')}</div>
+                  <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-main)' }}>{closedDealsCount}</div>
                 </div>
-                <div style={{ flex: 1, minWidth: '130px', border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3', borderRadius: '16px', padding: '12px 14px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8' }}>
-                  <div style={{ fontSize: '11px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>{t('averageRating')}</div>
+                <div style={{ flex: 1, minWidth: '130px', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '12px 14px', backgroundColor: 'var(--bg-subtle)' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{t('averageRating')}</div>
                   <div style={{ fontSize: '20px', fontWeight: '800', color: '#F59E0B', display: 'flex', alignItems: 'center', gap: '4px' }}>
                     {averageRating} {averageRating !== '—' && <Star size={15} fill="#F59E0B" color="#F59E0B" />}
                   </div>
                 </div>
-                <div style={{ flex: 1, minWidth: '130px', border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3', borderRadius: '16px', padding: '12px 14px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8' }}>
-                  <div style={{ fontSize: '11px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>{t('inProgressPlanned')}</div>
-                  <div style={{ fontSize: '20px', fontWeight: '800', color: '#C67D5B' }}>{inProgressCount}</div>
+                <div style={{ flex: 1, minWidth: '130px', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '12px 14px', backgroundColor: 'var(--bg-subtle)' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{t('inProgressPlanned')}</div>
+                  <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--accent-primary)' }}>{inProgressCount}</div>
                 </div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {userSwapHistory.length === 0 ? (
-                  <div style={{ padding: '28px 20px', textAlign: 'center', borderRadius: '20px', backgroundColor: darkMode ? '#1A1715' : '#FAF7F2', border: darkMode ? '1px dashed rgba(232,221,211,0.2)' : '1px dashed #E8DDD3' }}>
-                    <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4', color: '#C67D5B', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+                  <div style={{ padding: '28px 20px', textAlign: 'center', borderRadius: '20px', backgroundColor: 'var(--bg-card)', border: '1px dashed var(--border-color)' }}>
+                    <div style={{ width: '48px', height: '48px', borderRadius: '50%', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
                       <Sparkles size={22} />
                     </div>
-                    <div className="font-editorial-heading" style={{ fontWeight: '600', fontSize: '16px', color: darkMode ? '#FAF7F2' : '#3D3530', marginBottom: '6px' }}>
+                    <div className="font-editorial-heading" style={{ fontWeight: '600', fontSize: '16px', color: 'var(--text-main)', marginBottom: '6px' }}>
                       Nouveau profil (0 deal clôturé)
                     </div>
-                    <p style={{ fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', maxWidth: '380px', margin: '0 auto 16px', lineHeight: 1.6 }}>
+                    <p style={{ fontSize: '12px', color: 'var(--text-secondary)', maxWidth: '380px', margin: '0 auto 16px', lineHeight: 1.6 }}>
                       Vous n'avez pas encore d'échange clôturé. Parcourez l'explorateur ou proposez un deal sur une annonce pour démarrer !
                     </p>
                     <button
@@ -8000,12 +7980,12 @@ export default function App() {
                         border: 'none',
                         borderRadius: '999px',
                         padding: '10px 20px',
-                        background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)',
+                        background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
                         color: '#FFF',
                         fontWeight: '800',
                         fontSize: '12px',
                         cursor: 'pointer',
-                        boxShadow: '0 8px 18px rgba(198,125,91,0.3)'
+                        boxShadow: 'var(--shadow-accent)'
                       }}
                     >
                       Explorer les annonces
@@ -8014,18 +7994,18 @@ export default function App() {
                 ) : (
                   userSwapHistory.map((entry) => {
                     const isClosed = entry.status === 'Clôturé';
-                    const statusStyle = statusStyles[entry.status] || { bg: '#F3F4F6', text: '#6B7280' };
+                    const statusStyle = statusStyles[entry.status] || { bg: 'var(--bg-subtle)', text: 'var(--text-secondary)' };
                     return (
-                      <div key={entry.id} className="premium-card" style={{ border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3', borderRadius: '18px', padding: '14px', backgroundColor: darkMode ? '#1A1715' : '#FAF7F2', boxShadow: '0 2px 10px rgba(61,53,48,0.04)' }}>
+                      <div key={entry.id} className="premium-card" style={{ border: '1px solid var(--border-color)', borderRadius: '18px', padding: '14px', backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-card)' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px', marginBottom: '6px' }}>
                           <div>
-                            <div className="font-editorial-heading" style={{ fontWeight: '600', fontSize: '14px', color: darkMode ? '#FAF7F2' : '#3D3530', lineHeight: 1.4 }}>{getListingTitleTranslation(entry.deal, currentLang)}</div>
-                            <div style={{ fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', marginTop: '3px' }}>{entry.counterparty} • {entry.date}</div>
+                            <div className="font-editorial-heading" style={{ fontWeight: '600', fontSize: '14px', color: 'var(--text-main)', lineHeight: 1.4 }}>{getListingTitleTranslation(entry.deal, currentLang)}</div>
+                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '3px' }}>{entry.counterparty} • {entry.date}</div>
                           </div>
                           <span style={{ fontSize: '10px', fontWeight: '800', padding: '5px 10px', borderRadius: '999px', backgroundColor: statusStyle.bg, color: statusStyle.text, whiteSpace: 'nowrap' }}>{formatStatus(entry.status)}</span>
                         </div>
-                        <div style={{ fontSize: '11px', color: '#C67D5B', fontWeight: '800', marginBottom: '8px' }}>{formatCompensation(entry.compensation)}</div>
-                        <div style={{ borderTop: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3', paddingTop: '10px' }}>
+                        <div style={{ fontSize: '11px', color: 'var(--accent-primary)', fontWeight: '800', marginBottom: '8px' }}>{formatCompensation(entry.compensation)}</div>
+                        <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '10px' }}>
                           {isClosed ? (() => {
                             const isRevOrig = !!showingOriginalReviews[entry.id];
                             const revTxt = entry.review ? getReviewTranslation(entry.review, currentLang, isRevOrig) : null;
@@ -8039,25 +8019,25 @@ export default function App() {
                                   </div>
                                 )}
                                 {revTxt && (
-                                  <div style={{ fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', lineHeight: 1.6, fontStyle: 'italic' }}>« {revTxt} »</div>
+                                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6, fontStyle: 'italic' }}>« {revTxt} »</div>
                                 )}
                                 {!entry.rating && !revTxt && (
-                                  <div style={{ fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', fontStyle: 'italic' }}>Deal clôturé — aucun avis laissé.</div>
+                                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontStyle: 'italic' }}>Deal clôturé — aucun avis laissé.</div>
                                 )}
                                 {currentLang !== 'FR' && revTxt && (
                                   <button
                                     onClick={() => toggleOriginalReview(entry.id)}
                                     className="premium-button"
-                                    style={{ border: 'none', backgroundColor: 'transparent', color: '#C67D5B', fontSize: '10px', fontWeight: '800', cursor: 'pointer', marginTop: '4px', display: 'inline-flex', alignItems: 'center', gap: '3px', padding: 0 }}
+                                    style={{ border: 'none', backgroundColor: 'transparent', color: 'var(--accent-primary)', fontSize: '10px', fontWeight: '800', cursor: 'pointer', marginTop: '4px', display: 'inline-flex', alignItems: 'center', gap: '3px', padding: 0 }}
                                   >
-                                    <Globe size={10} color="#C67D5B" />
+                                    <Globe size={10} color="var(--accent-primary)" />
                                     {showingOriginalReviews[entry.id] ? t('showTranslation') : t('showOriginal')}
                                   </button>
                                 )}
                               </>
                             );
                           })() : (
-                            <div style={{ fontSize: '12px', color: entry.status === 'En cours' ? '#C67D5B' : '#D97706', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <div style={{ fontSize: '12px', color: entry.status === 'En cours' ? 'var(--accent-primary)' : 'var(--accent-warning)', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px' }}>
                               {entry.status === 'En cours' ? '🔄' : '📅'} {entry.status === 'En cours' ? 'Échange en cours...' : 'Rendez-vous planifié'}
                             </div>
                           )}
@@ -8069,13 +8049,96 @@ export default function App() {
               </div>
             </div>
 
-            {/* ---- CADRE JURIDIQUE & RGPD ---- */}
-            <div style={{ borderTop: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3', paddingTop: '20px', marginTop: '20px' }}>
+            {/* ---- PERSONNALISATION DE L'ESPACE (THEME ENGINE) ---- */}
+            <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '20px', marginTop: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                <ShieldCheck size={17} color="#C67D5B" />
-                <h4 className="font-editorial-heading" style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530' }}>Sécurité, Juridique & RGPD</h4>
+                <Sparkles size={17} color="var(--accent-primary)" />
+                <h4 className="font-editorial-heading" style={{ margin: 0, fontSize: '17px', fontWeight: '600', color: 'var(--text-main)' }}>
+                  🎨 Personnalisation de l'espace
+                </h4>
               </div>
-              <p style={{ fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', margin: '0 0 14px' }}>
+              <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '0 0 16px' }}>
+                Choisis ton ambiance visuelle préférée. Toutes les couleurs de Troco s'adaptent instantanément.
+              </p>
+
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '12px', marginBottom: '20px' }}>
+                {allThemes.map((tItem) => {
+                  const isSelected = themeId === tItem.id;
+                  return (
+                    <button
+                      key={tItem.id}
+                      type="button"
+                      onClick={() => setThemeId(tItem.id)}
+                      className="premium-button"
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        padding: '14px 10px',
+                        borderRadius: '20px',
+                        border: isSelected ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                        backgroundColor: isSelected ? 'var(--bg-subtle)' : 'var(--bg-card)',
+                        cursor: 'pointer',
+                        boxShadow: isSelected ? 'var(--shadow-accent)' : 'var(--shadow-card)',
+                        transform: isSelected ? 'scale(1.02)' : 'scale(1)',
+                        transition: 'all 0.25s var(--ease-quiet)',
+                        position: 'relative'
+                      }}
+                    >
+                      <div style={{
+                        display: 'flex',
+                        width: '42px',
+                        height: '42px',
+                        borderRadius: '50%',
+                        overflow: 'hidden',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                        border: '2px solid rgba(255,255,255,0.6)',
+                        marginBottom: '8px'
+                      }}>
+                        {tItem.previewColors.map((col, idx) => (
+                          <div key={idx} style={{ flex: 1, backgroundColor: col, height: '100%' }} />
+                        ))}
+                      </div>
+
+                      <div style={{ fontSize: '12.5px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '2px', textAlign: 'center' }}>
+                        {tItem.name}
+                      </div>
+                      <div style={{ fontSize: '10px', color: 'var(--text-secondary)', textAlign: 'center', lineHeight: 1.25 }}>
+                        {tItem.description}
+                      </div>
+
+                      {isSelected && (
+                        <div style={{
+                          position: 'absolute',
+                          top: '6px',
+                          right: '6px',
+                          width: '18px',
+                          height: '18px',
+                          borderRadius: '50%',
+                          backgroundColor: 'var(--accent-primary)',
+                          color: '#FFFFFF',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '10px',
+                          fontWeight: '900'
+                        }}>
+                          ✓
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* ---- CADRE JURIDIQUE & RGPD ---- */}
+            <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '20px', marginTop: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                <ShieldCheck size={17} color="var(--accent-primary)" />
+                <h4 className="font-editorial-heading" style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: 'var(--text-main)' }}>Sécurité, Juridique & RGPD</h4>
+              </div>
+              <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '0 0 14px' }}>
                 Gérez vos données personnelles, exportez vos archives ou consultez les Conditions Générales de Troco.
               </p>
 
@@ -8084,72 +8147,72 @@ export default function App() {
                   onClick={() => setIsPrivacyCenterOpen(true)}
                   className="premium-button"
                   style={{
-                    border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3',
+                    border: '1px solid var(--border-color)',
                     borderRadius: '16px',
                     padding: '14px 16px',
-                    backgroundColor: darkMode ? '#1A1715' : '#FAF7F2',
-                    color: darkMode ? '#FAF7F2' : '#3D3530',
+                    backgroundColor: 'var(--bg-card)',
+                    color: 'var(--text-main)',
                     fontWeight: '700',
                     fontSize: '13px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     cursor: 'pointer',
-                    boxShadow: '0 2px 8px rgba(61,53,48,0.04)',
+                    boxShadow: 'var(--shadow-card)',
                   }}
                 >
                   <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <Lock size={16} color="#C67D5B" /> Centre de Confidentialité & Export RGPD (JSON)
+                    <Lock size={16} color="var(--accent-primary)" /> Centre de Confidentialité & Export RGPD (JSON)
                   </span>
-                  <ChevronRight size={16} color="#C67D5B" />
+                  <ChevronRight size={16} color="var(--accent-primary)" />
                 </button>
 
                 <button
                   onClick={() => setIsCguViewerOpen(true)}
                   className="premium-button"
                   style={{
-                    border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3',
+                    border: '1px solid var(--border-color)',
                     borderRadius: '16px',
                     padding: '14px 16px',
-                    backgroundColor: darkMode ? '#1A1715' : '#FAF7F2',
-                    color: darkMode ? '#FAF7F2' : '#3D3530',
+                    backgroundColor: 'var(--bg-card)',
+                    color: 'var(--text-main)',
                     fontWeight: '700',
                     fontSize: '13px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     cursor: 'pointer',
-                    boxShadow: '0 2px 8px rgba(61,53,48,0.04)',
+                    boxShadow: 'var(--shadow-card)',
                   }}
                 >
                   <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <Scale size={16} color="#C67D5B" /> Conditions Générales & Charte Communautaire (v2026.1)
+                    <Scale size={16} color="var(--accent-primary)" /> Conditions Générales & Charte Communautaire (v2026.1)
                   </span>
-                  <ChevronRight size={16} color="#C67D5B" />
+                  <ChevronRight size={16} color="var(--accent-primary)" />
                 </button>
 
                 <button
                   onClick={() => setIsAdminPanelOpen(true)}
                   className="premium-button"
                   style={{
-                    border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3',
+                    border: '1px solid var(--border-color)',
                     borderRadius: '16px',
                     padding: '14px 16px',
-                    backgroundColor: darkMode ? '#1A1715' : '#FAF7F2',
-                    color: darkMode ? '#FAF7F2' : '#3D3530',
+                    backgroundColor: 'var(--bg-card)',
+                    color: 'var(--text-main)',
                     fontWeight: '700',
                     fontSize: '13px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     cursor: 'pointer',
-                    boxShadow: '0 2px 8px rgba(61,53,48,0.04)',
+                    boxShadow: 'var(--shadow-card)',
                   }}
                 >
                   <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <ShieldAlert size={16} color="#9CAF88" /> Panel Administrateur & Modération
+                    <ShieldAlert size={16} color="var(--accent-success)" /> Panel Administrateur & Modération
                   </span>
-                  <ChevronRight size={16} color="#C67D5B" />
+                  <ChevronRight size={16} color="var(--accent-primary)" />
                 </button>
               </div>
             </div>
@@ -8159,25 +8222,25 @@ export default function App() {
 
       </main>
 
-      {/* BARRE DE NAVIGATION EN BAS (GLASSMORPHISM WARM STILLPOINT) */}
+      {/* BARRE DE NAVIGATION EN BAS (GLASSMORPHISM WARM THEMED) */}
       <nav style={{
         display: (isMobile && activeTab === 'chat' && selectedChat) ? 'none' : 'block',
         position: 'fixed', bottom: 0, left: 0, right: 0,
-        backgroundColor: darkMode ? 'rgba(24,21,19,0.92)' : 'rgba(250,247,242,0.90)',
+        backgroundColor: 'var(--bg-glass)',
         backdropFilter: 'blur(24px) saturate(180%)',
         WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-        borderTop: darkMode ? '1px solid rgba(232,221,211,0.14)' : '1px solid rgba(212,197,181,0.8)',
+        borderTop: '1px solid var(--border-color)',
         padding: '10px 0', zIndex: 40,
-        boxShadow: darkMode ? '0 -8px 32px rgba(0,0,0,0.5)' : '0 -6px 30px rgba(61,53,48,0.06)'
+        boxShadow: 'var(--shadow-card)'
       }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-around', alignItems: 'center' }}>
 
-          <button onClick={() => { setActiveTab('feed'); setSelectedChat(null); }} className="premium-nav-btn" style={{ border: 'none', background: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', color: activeTab === 'feed' ? (darkMode ? '#E8DDD3' : '#C67D5B') : darkMode ? '#9A8E84' : '#6B5E54', cursor: 'pointer', padding: '6px 14px', borderRadius: '16px' }}>
+          <button onClick={() => { setActiveTab('feed'); setSelectedChat(null); }} className="premium-nav-btn" style={{ border: 'none', background: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', color: activeTab === 'feed' ? 'var(--accent-primary)' : 'var(--text-secondary)', cursor: 'pointer', padding: '6px 14px', borderRadius: '16px' }}>
             <Search size={20} />
             <span style={{ fontSize: '10.5px', fontWeight: '700' }}>{t('explorer')}</span>
           </button>
 
-          <button onClick={() => { setActiveTab('chat'); setSelectedChat(null); }} className="premium-nav-btn" style={{ border: 'none', background: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', color: activeTab === 'chat' ? (darkMode ? '#E8DDD3' : '#C67D5B') : darkMode ? '#9A8E84' : '#6B5E54', cursor: 'pointer', padding: '6px 14px', borderRadius: '16px', position: 'relative' }}>
+          <button onClick={() => { setActiveTab('chat'); setSelectedChat(null); }} className="premium-nav-btn" style={{ border: 'none', background: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', color: activeTab === 'chat' ? 'var(--accent-primary)' : 'var(--text-secondary)', cursor: 'pointer', padding: '6px 14px', borderRadius: '16px', position: 'relative' }}>
             <span style={{ position: 'relative', display: 'inline-flex' }}>
               <MessageSquare size={20} />
               {unreadCount > 0 && (
@@ -8187,8 +8250,8 @@ export default function App() {
                   right: '-8px',
                   minWidth: '16px',
                   height: '16px',
-                  backgroundColor: '#3D3530',
-                  color: '#FAF7F2',
+                  backgroundColor: 'var(--text-main)',
+                  color: 'var(--bg-global)',
                   fontSize: '9px',
                   fontWeight: '900',
                   borderRadius: '999px',
@@ -8196,8 +8259,8 @@ export default function App() {
                   alignItems: 'center',
                   justifyContent: 'center',
                   padding: '0 3px',
-                  border: darkMode ? '1.5px solid rgba(24,21,19,0.9)' : '1.5px solid #FAF7F2',
-                  boxShadow: '0 2px 8px rgba(61,53,48,0.4)',
+                  border: '1.5px solid var(--bg-card)',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
                   letterSpacing: '-0.3px',
                 }}>
                   {unreadCount > 9 ? '9+' : unreadCount}
@@ -8219,13 +8282,13 @@ export default function App() {
                 setActiveTab('post');
               }
             }}
-            style={{ border: 'none', background: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', color: activeTab === 'post' ? (darkMode ? '#E8DDD3' : '#C67D5B') : darkMode ? '#9A8E84' : '#6B5E54', cursor: 'pointer', padding: '6px 14px', borderRadius: '16px' }}
+            style={{ border: 'none', background: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', color: activeTab === 'post' ? 'var(--accent-primary)' : 'var(--text-secondary)', cursor: 'pointer', padding: '6px 14px', borderRadius: '16px' }}
           >
-            <PlusCircle size={26} color={activeTab === 'post' ? (darkMode ? '#E8DDD3' : '#C67D5B') : (darkMode ? '#9A8E84' : '#6B5E54')} />
+            <PlusCircle size={26} color={activeTab === 'post' ? 'var(--accent-primary)' : 'var(--text-secondary)'} />
             <span style={{ fontSize: '10.5px', fontWeight: '700' }}>{t('post')}</span>
           </button>
 
-          <button onClick={() => { setActiveTab('profile'); setSelectedChat(null); }} className="premium-nav-btn" style={{ border: 'none', background: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', color: activeTab === 'profile' ? (darkMode ? '#E8DDD3' : '#C67D5B') : darkMode ? '#9A8E84' : '#6B5E54', cursor: 'pointer', padding: '6px 14px', borderRadius: '16px' }}>
+          <button onClick={() => { setActiveTab('profile'); setSelectedChat(null); }} className="premium-nav-btn" style={{ border: 'none', background: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', color: activeTab === 'profile' ? 'var(--accent-primary)' : 'var(--text-secondary)', cursor: 'pointer', padding: '6px 14px', borderRadius: '16px' }}>
             <User size={20} />
             <span style={{ fontSize: '10.5px', fontWeight: '700' }}>{t('profile')}</span>
           </button>
@@ -8236,7 +8299,7 @@ export default function App() {
       {/* POPUP CONFIRMATION PUBLICATION */}
       {showPublishedPopup && publishedListing && (
         <div
-          style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(61,53,48,0.7)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', zIndex: 9000 }}
+          style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', zIndex: 9000 }}
           onClick={() => {
             setShowPublishedPopup(false);
             setSelectedListing(publishedListing);
@@ -8245,13 +8308,13 @@ export default function App() {
         >
           <div
             onClick={e => e.stopPropagation()}
-            style={{ background: darkMode ? '#231E1B' : '#FAF7F2', backdropFilter: 'blur(24px)', borderRadius: '28px', padding: '32px 28px', maxWidth: '380px', width: '100%', boxShadow: '0 32px 80px rgba(61,53,48,0.3)', border: darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #E8DDD3', textAlign: 'center', animation: 'popupIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both' }}
+            style={{ background: 'var(--bg-card)', backdropFilter: 'blur(24px)', borderRadius: '28px', padding: '32px 28px', maxWidth: '380px', width: '100%', boxShadow: 'var(--shadow-modal)', border: '1px solid var(--border-color)', textAlign: 'center', animation: 'popupIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both' }}
           >
             {/* Icône checkmark animée */}
-            <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: 'linear-gradient(135deg, #9CAF88, #7A8F6A)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', boxShadow: '0 12px 32px rgba(156,175,136,0.4)', animation: 'checkPop 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.15s both' }}>
+            <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-success), var(--accent-success))', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', boxShadow: '0 12px 32px rgba(122,143,106,0.3)', animation: 'checkPop 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.15s both' }}>
               <CheckCircle size={38} color="#FFF" />
             </div>
-            <h2 className="font-editorial-heading" style={{ margin: '0 0 8px', fontSize: '24px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530', lineHeight: 1.2 }}>
+            <h2 className="font-editorial-heading" style={{ margin: '0 0 8px', fontSize: '24px', fontWeight: '600', color: 'var(--text-main)', lineHeight: 1.2 }}>
               {currentLang === 'FR' ? '🎉 Annonce publiée !' :
                 currentLang === 'EN' ? '🎉 Ad published!' :
                   currentLang === 'ES' ? '🎉 ¡Anuncio publicado!' :
@@ -8260,16 +8323,16 @@ export default function App() {
                         currentLang === 'JA' ? '🎉 広告を公開しました！' :
                           '🎉 广告已发布！'}
             </h2>
-            <p style={{ margin: '0 0 6px', fontSize: '14px', color: darkMode ? '#D4C5B5' : '#6B5E54', lineHeight: 1.6 }}>
+            <p style={{ margin: '0 0 6px', fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
               {currentLang === 'FR' ? 'Votre annonce est maintenant visible dans le flux, sur la carte et dans les résultats de recherche.' :
                 currentLang === 'EN' ? 'Your ad is now visible in the feed, on the map and in search results.' :
                   currentLang === 'ES' ? 'Tu anuncio ahora es visible en el feed, en el mapa y en los resultados de búsqueda.' :
-                    currentLang === 'IT' ? 'Il tuo annuncio è ora visibile nel feed, sulla mappa e nei risultati di ricerca.' :
+                    currentLang === 'IT' ? 'Il tuo annuncio è ora visibile nel feed, sulla mappa e nei risultati di recherche.' :
                       currentLang === 'DE' ? 'Ihre Anzeige ist jetzt im Feed, auf der Karte und in den Suchergebnissen sichtbar.' :
                         currentLang === 'JA' ? '広告はフィード、マップ、検索結果に表示されるようになりました。' :
                           '您的广告现在可以在动态、地图和搜索结果中看到。'}
             </p>
-            <p style={{ margin: '0 0 24px', fontSize: '13px', fontWeight: '700', color: '#C67D5B' }}>« {publishedListing.title} »</p>
+            <p style={{ margin: '0 0 24px', fontSize: '13px', fontWeight: '700', color: 'var(--accent-primary)' }}>« {publishedListing.title} »</p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <button
                 onClick={() => {
@@ -8278,7 +8341,7 @@ export default function App() {
                   setActiveTab('feed');
                 }}
                 className="premium-button"
-                style={{ width: '100%', border: 'none', borderRadius: '16px', padding: '14px', background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)', color: '#FFF', fontWeight: '800', fontSize: '15px', cursor: 'pointer', boxShadow: '0 8px 24px rgba(198,125,91,0.35)' }}
+                style={{ width: '100%', border: 'none', borderRadius: '16px', padding: '14px', background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)', color: '#FFF', fontWeight: '800', fontSize: '15px', cursor: 'pointer', boxShadow: 'var(--shadow-accent)' }}
               >
                 {currentLang === 'FR' ? 'Voir mon annonce →' :
                   currentLang === 'EN' ? 'View my listing →' :
@@ -8294,7 +8357,7 @@ export default function App() {
                   setPostStep(1);
                   setPostDraft(defaultPostDraft);
                 }}
-                style={{ width: '100%', border: darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #E8DDD3', borderRadius: '16px', padding: '13px', background: 'transparent', color: darkMode ? '#D4C5B5' : '#6B5E54', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}
+                style={{ width: '100%', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '13px', background: 'transparent', color: 'var(--text-secondary)', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}
               >
                 {currentLang === 'FR' ? '+ Déposer une autre annonce' :
                   currentLang === 'EN' ? '+ Post another listing' :

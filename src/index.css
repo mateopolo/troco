@@ -6,29 +6,53 @@
   --font-editorial: 'Cormorant Garamond', Georgia, serif;
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
-  /* STILLPOINT WARM BOUTIQUE PALETTE - HIGH CONTRAST */
-  --sand: #E8DDD3;
-  --sand-dark: #C9B8A7;
-  --sage: #C67D5B;
-  --sage-dark: #A8644A;
-  --sage-light: #F5EAE4;
-  --offwhite: #FAF7F2;
-  --terracotta: #C67D5B;
-  --terracotta-dark: #A8644A;
-  --terracotta-light: #F5EAE4;
-  --linen: #F5F0E8;
-  --td: #1A1512;       /* Text Dark / Ultra Deep Espresso */
-  --tm: #544940;       /* Text Mid / Rich Muted Brown */
-  --tl: #8C7F74;       /* Text Light / Warm Sand */
-  --card-bg: #FAF7F2;
-  --border-warm: #E8DDD3;
+  /* DYNAMIC THEME ENGINE DEFAULTS (EARTHY PASTEL) */
+  --bg-global: #FAF7F2;
+  --bg-card: #FFFFFF;
+  --bg-subtle: #F5F0E8;
+  --bg-elevated: #EFE8DE;
+  --bg-pill: #DDBEA9;
+  --text-main: #3F4238;
+  --text-secondary: #6B705C;
+  --text-muted: #A5A58D;
+  --border-color: #D4C7B0;
+  --border-dark: #A5A58D;
+  --accent-primary: #B98B73;
+  --accent-primary-hover: #A87A63;
+  --accent-secondary: #CB997E;
+  --accent-terracotta: #C29279;
+  --accent-success: #7A8F6A;
+  --accent-danger: #2A1A14;
+  --accent-warning: #D97706;
+  --shadow-card: 0 10px 30px rgba(63, 66, 56, 0.08);
+  --shadow-accent: 0 8px 24px rgba(185, 139, 115, 0.35);
+  --glass-bg: rgba(250, 247, 242, 0.88);
+  --glass-border: rgba(212, 199, 176, 0.45);
+  --overlay-bg: rgba(63, 66, 56, 0.55);
+
+  /* LEGACY ALIASES MAP TO DYNAMIC THEME ENGINE */
+  --sand: var(--border-color);
+  --sand-dark: var(--border-dark);
+  --sage: var(--accent-terracotta);
+  --sage-dark: var(--accent-primary-hover);
+  --sage-light: var(--bg-subtle);
+  --offwhite: var(--bg-global);
+  --terracotta: var(--accent-primary);
+  --terracotta-dark: var(--accent-primary-hover);
+  --terracotta-light: var(--bg-subtle);
+  --linen: var(--bg-global);
+  --td: var(--text-main);
+  --tm: var(--text-secondary);
+  --tl: var(--text-muted);
+  --card-bg: var(--bg-card);
+  --border-warm: var(--border-color);
 }
 
 /* TYPOGRAPHIE GLOBALE STRICTEMENT BOUTIQUE */
 h1, h2, h3, h4, .font-editorial, .font-editorial-heading, .font-serif {
   font-family: var(--font-editorial) !important;
   letter-spacing: -0.015em;
-  color: var(--td);
+  color: var(--text-main);
 }
 
 h1 {
@@ -88,30 +112,9 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: var(--linen);
-  background-image: 
-    radial-gradient(at 15% 15%, rgba(232, 221, 211, 0.45) 0px, transparent 65%),
-    radial-gradient(at 85% 85%, rgba(198, 125, 91, 0.08) 0px, transparent 60%);
-  background-attachment: fixed;
-  color: var(--td);
-  transition: background-color 0.4s var(--ease-quiet), color 0.4s var(--ease-quiet);
-}
-
-body.dark-mode {
-  background-color: #1A1715;
-  background-image: 
-    radial-gradient(at 20% 20%, rgba(41, 37, 36, 0.7) 0px, transparent 70%),
-    radial-gradient(at 80% 80%, rgba(168, 100, 74, 0.12) 0px, transparent 65%);
-  color: #FAF7F2;
-}
-
-body.dark-mode h1,
-body.dark-mode h2,
-body.dark-mode h3,
-body.dark-mode h4,
-body.dark-mode h5,
-body.dark-mode h6 {
-  color: #FAF7F2 !important;
+  background-color: var(--bg-global);
+  color: var(--text-main);
+  transition: background-color 0.3s var(--ease-quiet), color 0.3s var(--ease-quiet);
 }
 
 /* BLINDAGE ANTI-AUTO-ZOOM WEBKIT iOS */
