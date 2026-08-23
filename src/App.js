@@ -6638,38 +6638,38 @@ export default function App() {
             <div className="feed-main-content">
               {/* Ligne Recherche + Filtre Rayon + Bascule Vue Liste / Carte */}
               <div style={{ display: 'flex', gap: '8px', marginBottom: '14px', flexWrap: 'wrap', alignItems: 'center' }}>
-                <div style={{ flex: 1, minWidth: '220px', display: 'flex', alignItems: 'center', backgroundColor: darkMode ? '#231E1B' : '#FAF7F2', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', borderRadius: '16px', padding: '10px 14px', boxShadow: '0 4px 20px -4px rgba(61, 53, 48, 0.05)' }}>
-                  <Search size={18} color="#C67D5B" style={{ marginRight: '10px' }} />
-                  <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} type="text" placeholder={t('searchPlaceholder')} style={{ border: 'none', outline: 'none', width: '100%', fontSize: '14px', backgroundColor: 'transparent', color: darkMode ? '#FAF7F2' : '#3D3530' }} />
+                <div style={{ flex: 1, minWidth: '220px', display: 'flex', alignItems: 'center', backgroundColor: 'var(--bg-card)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '10px 14px', boxShadow: 'var(--shadow-card)' }}>
+                  <Search size={18} color="var(--accent-primary)" style={{ marginRight: '10px' }} />
+                  <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} type="text" placeholder={t('searchPlaceholder')} style={{ border: 'none', outline: 'none', width: '100%', fontSize: '14px', backgroundColor: 'transparent', color: 'var(--text-main)' }} />
                 </div>
                 <button
                   onClick={() => setIsFilterDrawerOpen(true)}
                   className="premium-button"
                   style={{
-                    backgroundColor: isInfiniteRadius || radiusKm >= 100 ? (darkMode ? 'rgba(198,125,91,0.25)' : '#F5EAE4') : (darkMode ? '#231E1B' : '#FAF7F2'),
+                    backgroundColor: isInfiniteRadius || radiusKm >= 100 ? 'var(--bg-subtle)' : 'var(--bg-card)',
                     backdropFilter: 'blur(16px)',
                     WebkitBackdropFilter: 'blur(16px)',
-                    border: isInfiniteRadius || radiusKm >= 100 ? '1px solid #C67D5B' : (darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3'),
+                    border: isInfiniteRadius || radiusKm >= 100 ? '1px solid var(--accent-primary)' : '1px solid var(--border-color)',
                     borderRadius: '16px',
                     padding: '10px 14px',
                     cursor: 'pointer',
-                    boxShadow: '0 4px 20px -4px rgba(61, 53, 48, 0.05)',
+                    boxShadow: 'var(--shadow-card)',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '6px',
-                    color: isInfiniteRadius || radiusKm >= 100 ? (darkMode ? '#FAF7F2' : '#A8644A') : (darkMode ? '#D4C5B5' : '#6B5E54'),
+                    color: isInfiniteRadius || radiusKm >= 100 ? 'var(--accent-primary)' : 'var(--text-secondary)',
                     fontWeight: '700',
                     fontSize: '13px'
                   }}
                 >
-                  <Filter size={18} color={isInfiniteRadius || radiusKm >= 100 ? '#C67D5B' : (darkMode ? '#D4C5B5' : '#6B5E54')} />
+                  <Filter size={18} color={isInfiniteRadius || radiusKm >= 100 ? 'var(--accent-primary)' : 'var(--text-secondary)'} />
                   <span>{isInfiniteRadius || radiusKm >= 100 ? `♾️ ${t('infinite')}` : `${radiusKm} km`}</span>
                 </button>
 
                 {/* Sélecteur de vue (Liste / Carte) dédié et étanche */}
-                <div className="premium-panel" style={{ display: 'inline-flex', flexShrink: 0, border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', borderRadius: '999px', padding: '3px', backgroundColor: darkMode ? '#231E1B' : '#FAF7F2', boxShadow: '0 4px 20px -4px rgba(61, 53, 48, 0.05)' }}>
-                  <button onClick={() => setViewMode('list')} className="premium-nav-btn" style={{ border: 'none', borderRadius: '999px', padding: '8px 14px', backgroundColor: viewMode === 'list' ? '#C67D5B' : 'transparent', color: viewMode === 'list' ? '#FFF' : (darkMode ? '#D4C5B5' : '#6B5E54'), fontWeight: '700', cursor: 'pointer', fontSize: '12px' }}>{t('viewList')}</button>
-                  <button onClick={() => { setViewMode('map'); setIsInfiniteRadius(true); }} className="premium-nav-btn" style={{ border: 'none', borderRadius: '999px', padding: '8px 14px', backgroundColor: viewMode === 'map' ? '#C67D5B' : 'transparent', color: viewMode === 'map' ? '#FFF' : (darkMode ? '#D4C5B5' : '#6B5E54'), fontWeight: '700', cursor: 'pointer', fontSize: '12px' }}>{t('viewMap')}</button>
+                <div className="premium-panel" style={{ display: 'inline-flex', flexShrink: 0, border: '1px solid var(--border-color)', borderRadius: '999px', padding: '3px', backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-card)' }}>
+                  <button onClick={() => setViewMode('list')} className="premium-nav-btn" style={{ border: 'none', borderRadius: '999px', padding: '8px 14px', backgroundColor: viewMode === 'list' ? 'var(--accent-primary)' : 'transparent', color: viewMode === 'list' ? '#FFF' : 'var(--text-secondary)', fontWeight: '700', cursor: 'pointer', fontSize: '12px' }}>{t('viewList')}</button>
+                  <button onClick={() => { setViewMode('map'); setIsInfiniteRadius(true); }} className="premium-nav-btn" style={{ border: 'none', borderRadius: '999px', padding: '8px 14px', backgroundColor: viewMode === 'map' ? 'var(--accent-primary)' : 'transparent', color: viewMode === 'map' ? '#FFF' : 'var(--text-secondary)', fontWeight: '700', cursor: 'pointer', fontSize: '12px' }}>{t('viewMap')}</button>
                 </div>
               </div>
 
@@ -6693,15 +6693,15 @@ export default function App() {
                     width: '32px',
                     height: '32px',
                     borderRadius: '50%',
-                    border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
-                    backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
-                    color: '#C67D5B',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: 'var(--bg-card)',
+                    color: 'var(--accent-primary)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     cursor: 'pointer',
                     flexShrink: 0,
-                    boxShadow: '0 2px 8px rgba(61,53,48,0.06)',
+                    boxShadow: 'var(--shadow-card)',
                     zIndex: 2,
                     transition: 'all 0.2s ease'
                   }}
@@ -6728,10 +6728,10 @@ export default function App() {
                         onClick={() => setSelectedCategory(category)}
                         className="premium-button category-pill"
                         style={{
-                          border: isSel ? '1px solid #C67D5B' : (darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3'),
-                          backgroundColor: isSel ? (darkMode ? 'rgba(198,125,91,0.25)' : '#F5EAE4') : (darkMode ? '#1A1715' : '#FAF7F2'),
-                          color: isSel ? (darkMode ? '#FAF7F2' : '#A8644A') : (darkMode ? '#D4C5B5' : '#6B5E54'),
-                          boxShadow: isSel ? '0 4px 14px rgba(198,125,91,0.2)' : '0 2px 8px rgba(61, 53, 48, 0.04)',
+                          border: isSel ? '1px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                          backgroundColor: isSel ? 'var(--bg-subtle)' : 'var(--bg-card)',
+                          color: isSel ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                          boxShadow: isSel ? 'var(--shadow-accent)' : 'var(--shadow-card)',
                           cursor: 'pointer'
                         }}
                       >
@@ -6743,9 +6743,9 @@ export default function App() {
                     onClick={() => setIsCategoryModalOpen(true)}
                     className="premium-button category-pill"
                     style={{
-                      border: '1px dashed #C67D5B',
-                      backgroundColor: darkMode ? 'rgba(198,125,91,0.15)' : '#F5EAE4',
-                      color: '#C67D5B',
+                      border: '1px dashed var(--accent-primary)',
+                      backgroundColor: 'var(--bg-subtle)',
+                      color: 'var(--accent-primary)',
                       cursor: 'pointer',
                       flexShrink: 0
                     }}
@@ -6764,15 +6764,15 @@ export default function App() {
                     width: '32px',
                     height: '32px',
                     borderRadius: '50%',
-                    border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
-                    backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
-                    color: '#C67D5B',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: 'var(--bg-card)',
+                    color: 'var(--accent-primary)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     cursor: 'pointer',
                     flexShrink: 0,
-                    boxShadow: '0 2px 8px rgba(61,53,48,0.06)',
+                    boxShadow: 'var(--shadow-card)',
                     zIndex: 2,
                     transition: 'all 0.2s ease'
                   }}
@@ -6790,11 +6790,11 @@ export default function App() {
                 margin: '0 auto 20px auto',
                 padding: '4px',
                 borderRadius: '16px',
-                backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
+                backgroundColor: 'var(--bg-card)',
                 backdropFilter: 'blur(16px)',
                 WebkitBackdropFilter: 'blur(16px)',
-                border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
-                boxShadow: '0 2px 10px rgba(61,53,48,0.04)',
+                border: '1px solid var(--border-color)',
+                boxShadow: 'var(--shadow-card)',
                 boxSizing: 'border-box',
                 gap: '4px'
               }}>
@@ -6808,11 +6808,11 @@ export default function App() {
                     borderRadius: '12px',
                     border: 'none',
                     backgroundColor: formatFilter === 'all'
-                      ? '#C67D5B'
+                      ? 'var(--accent-primary)'
                       : 'transparent',
                     color: formatFilter === 'all'
                       ? '#FFFFFF'
-                      : (darkMode ? '#D4C5B5' : '#6B5E54'),
+                      : 'var(--text-secondary)',
                     fontSize: '12px',
                     fontWeight: '700',
                     cursor: 'pointer',
@@ -6821,7 +6821,7 @@ export default function App() {
                     justifyContent: 'center',
                     gap: '6px',
                     boxShadow: formatFilter === 'all'
-                      ? '0 2px 8px rgba(198,125,91,0.3)'
+                      ? 'var(--shadow-accent)'
                       : 'none',
                     transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)'
                   }}
@@ -6840,11 +6840,11 @@ export default function App() {
                     borderRadius: '12px',
                     border: 'none',
                     backgroundColor: formatFilter === 'onsite'
-                      ? '#C67D5B'
+                      ? 'var(--accent-primary)'
                       : 'transparent',
                     color: formatFilter === 'onsite'
                       ? '#FFFFFF'
-                      : (darkMode ? '#D4C5B5' : '#6B5E54'),
+                      : 'var(--text-secondary)',
                     fontSize: '12px',
                     fontWeight: '700',
                     cursor: 'pointer',
@@ -6853,7 +6853,7 @@ export default function App() {
                     justifyContent: 'center',
                     gap: '6px',
                     boxShadow: formatFilter === 'onsite'
-                      ? '0 2px 8px rgba(198,125,91,0.3)'
+                      ? 'var(--shadow-accent)'
                       : 'none',
                     transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)'
                   }}
@@ -6872,11 +6872,11 @@ export default function App() {
                     borderRadius: '12px',
                     border: 'none',
                     backgroundColor: formatFilter === 'remote'
-                      ? '#C67D5B'
+                      ? 'var(--accent-primary)'
                       : 'transparent',
                     color: formatFilter === 'remote'
                       ? '#FFFFFF'
-                      : (darkMode ? '#D4C5B5' : '#6B5E54'),
+                      : 'var(--text-secondary)',
                     fontSize: '12px',
                     fontWeight: '700',
                     cursor: 'pointer',
@@ -6885,7 +6885,7 @@ export default function App() {
                     justifyContent: 'center',
                     gap: '6px',
                     boxShadow: formatFilter === 'remote'
-                      ? '0 2px 8px rgba(198,125,91,0.3)'
+                      ? 'var(--shadow-accent)'
                       : 'none',
                     transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)'
                   }}
@@ -6896,23 +6896,23 @@ export default function App() {
               </div>
 
               {filteredListings.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '60px 20px', backgroundColor: darkMode ? '#231E1B' : '#FAF7F2', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderRadius: '24px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', boxShadow: '0 10px 30px rgba(61,53,48,0.05)', animation: 'fadeSlideUp 0.3s ease both' }}>
-                  <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4', color: '#C67D5B', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', boxShadow: '0 8px 20px rgba(198,125,91,0.15)' }}>
+                <div style={{ textAlign: 'center', padding: '60px 20px', backgroundColor: 'var(--bg-card)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderRadius: '24px', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-card)', animation: 'fadeSlideUp 0.3s ease both' }}>
+                  <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', boxShadow: 'var(--shadow-accent)' }}>
                     <Search size={28} />
                   </div>
-                  <h3 className="font-editorial-heading" style={{ fontSize: '20px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530', margin: '0 0 8px' }}>Aucune annonce ne correspond à ta recherche</h3>
-                  <p style={{ fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54', margin: '0 0 20px', maxWidth: '420px', marginInline: 'auto', lineHeight: 1.6 }}>Essaie d'élargir ton rayon de recherche, de changer de catégorie ou de réinitialiser tes filtres pour découvrir les annonces des membres Troco.</p>
+                  <h3 className="font-editorial-heading" style={{ fontSize: '20px', fontWeight: '600', color: 'var(--text-main)', margin: '0 0 8px' }}>Aucune annonce ne correspond à ta recherche</h3>
+                  <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '0 0 20px', maxWidth: '420px', marginInline: 'auto', lineHeight: 1.6 }}>Essaie d'élargir ton rayon de recherche, de changer de catégorie ou de réinitialiser tes filtres pour découvrir les annonces des membres Troco.</p>
                   <button
                     onClick={() => { setSearchQuery(''); setSelectedCategory('all'); setRadiusKm(100); setIsInfiniteRadius(true); setSelectedLanguages([]); setSelectedPayment('all'); setFormatFilter('all'); }}
                     className="premium-button"
-                    style={{ border: 'none', borderRadius: '999px', padding: '10px 22px', background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)', color: '#FFF', fontWeight: '800', fontSize: '13px', cursor: 'pointer', boxShadow: '0 8px 18px rgba(198,125,91,0.3)' }}
+                    style={{ border: 'none', borderRadius: '999px', padding: '10px 22px', background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)', color: '#FFF', fontWeight: '800', fontSize: '13px', cursor: 'pointer', boxShadow: 'var(--shadow-accent)' }}
                   >
                     Réinitialiser tous les filtres
                   </button>
                 </div>
               ) : viewMode === 'map' ? (
-                <div className="premium-panel" style={{ backgroundColor: darkMode ? '#231E1B' : '#FAF7F2', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', borderRadius: '24px', padding: '10px', boxShadow: '0 10px 30px rgba(61,53,48,0.06)', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3' }}>
-                  <div style={{ position: 'relative', width: '100%', height: '550px', borderRadius: '18px', overflow: 'hidden', boxShadow: '0 14px 30px rgba(61,53,48,0.1)' }}>
+                <div className="premium-panel" style={{ backgroundColor: 'var(--bg-card)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', borderRadius: '24px', padding: '10px', boxShadow: 'var(--shadow-card)', border: '1px solid var(--border-color)' }}>
+                  <div style={{ position: 'relative', width: '100%', height: '550px', borderRadius: '18px', overflow: 'hidden', boxShadow: 'var(--shadow-card)' }}>
                     <MapContainer
                       center={mapCenter}
                       zoom={4}
@@ -6928,6 +6928,7 @@ export default function App() {
                         attribution='&copy; Google Maps'
                         url={`https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&hl=${currentLang.toLowerCase()}`}
                       />
+
                       {filteredListings.map(item => {
                         const coords = item.coordinates || getCoordinatesForLocation(item.location);
                         const media = getSuggestedMedia(item.title, item.description || '', item.image, item.video);

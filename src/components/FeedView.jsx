@@ -85,19 +85,19 @@ export default function FeedView({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', maxWidth: '1280px', margin: '0 auto' }}>
-      {/* BARRE DE RECHERCHE, FORMATS & FILTRES SOUVERAINS (UNIFIÉE AIRBNB / APPLE / NIKE) */}
+      {/* BARRE DE RECHERCHE, FORMATS & FILTRES SOUVERAINS */}
       <div style={{
-        backgroundColor: darkMode ? 'rgba(30, 41, 59, 0.88)' : 'rgba(255, 255, 255, 0.92)',
+        backgroundColor: 'var(--bg-card)',
         backdropFilter: 'blur(24px) saturate(180%)', WebkitBackdropFilter: 'blur(24px) saturate(180%)',
         borderRadius: '24px', padding: '16px 20px',
-        boxShadow: darkMode ? '0 12px 36px rgba(0, 0, 0, 0.35)' : '0 10px 30px rgba(15, 23, 42, 0.05)',
-        border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(226,232,240,0.8)',
+        boxShadow: 'var(--shadow-card)',
+        border: '1px solid var(--border-color)',
         display: 'flex', flexDirection: 'column', gap: '14px'
       }}>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap', justifyContent: 'space-between' }}>
           {/* CHAMP DE RECHERCHE PRINCIPAL */}
           <div style={{ flex: '1 1 300px', position: 'relative', minWidth: '240px' }}>
-            <Search size={18} color={darkMode ? '#94A3B8' : '#94A3B8'} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)' }} />
+            <Search size={18} color="var(--accent-primary)" style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)' }} />
             <input
               type="text"
               value={searchQuery}
@@ -105,24 +105,24 @@ export default function FeedView({
               placeholder={t('searchPlaceholder') || 'Rechercher une compétence, un outil ou un service...'}
               style={{
                 width: '100%', padding: '13px 16px 13px 44px',
-                border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #E2E8F0',
+                border: '1px solid var(--border-color)',
                 borderRadius: '16px', fontSize: '14px', fontWeight: '500',
-                backgroundColor: darkMode ? 'rgba(15, 23, 42, 0.6)' : '#F8FAFC',
-                color: darkMode ? '#FFF' : '#111827',
+                backgroundColor: 'var(--bg-subtle)',
+                color: 'var(--text-main)',
                 outline: 'none'
               }}
             />
           </div>
 
           {/* SÉLECTEUR FORMAT NATIF (SUR PLACE / VISIO / TOUS) */}
-          <div style={{ display: 'flex', backgroundColor: darkMode ? 'rgba(15, 23, 42, 0.6)' : '#F1F5F9', padding: '4px', borderRadius: '16px', border: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E2E8F0' }}>
+          <div style={{ display: 'flex', backgroundColor: 'var(--bg-subtle)', padding: '4px', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
             <button
               onClick={() => setFormatFilter('all')}
               className="premium-button"
               style={{
                 border: 'none', borderRadius: '12px', padding: '9px 14px', fontSize: '12px', fontWeight: '800', cursor: 'pointer',
-                backgroundColor: formatFilter === 'all' ? (darkMode ? '#60A5FA' : '#04265A') : 'transparent',
-                color: formatFilter === 'all' ? '#FFF' : (darkMode ? '#94A3B8' : '#64748B')
+                backgroundColor: formatFilter === 'all' ? 'var(--accent-primary)' : 'transparent',
+                color: formatFilter === 'all' ? '#FFF' : 'var(--text-secondary)'
               }}
             >
               {t('allFormats') || 'Tous'}
@@ -132,8 +132,8 @@ export default function FeedView({
               className="premium-button"
               style={{
                 border: 'none', borderRadius: '12px', padding: '9px 14px', fontSize: '12px', fontWeight: '800', cursor: 'pointer',
-                backgroundColor: formatFilter === 'onsite' ? (darkMode ? '#60A5FA' : '#04265A') : 'transparent',
-                color: formatFilter === 'onsite' ? '#FFF' : (darkMode ? '#94A3B8' : '#64748B'),
+                backgroundColor: formatFilter === 'onsite' ? 'var(--accent-primary)' : 'transparent',
+                color: formatFilter === 'onsite' ? '#FFF' : 'var(--text-secondary)',
                 display: 'flex', alignItems: 'center', gap: '5px'
               }}
             >
@@ -144,8 +144,8 @@ export default function FeedView({
               className="premium-button"
               style={{
                 border: 'none', borderRadius: '12px', padding: '9px 14px', fontSize: '12px', fontWeight: '800', cursor: 'pointer',
-                backgroundColor: formatFilter === 'remote' ? (darkMode ? '#60A5FA' : '#04265A') : 'transparent',
-                color: formatFilter === 'remote' ? '#FFF' : (darkMode ? '#94A3B8' : '#64748B'),
+                backgroundColor: formatFilter === 'remote' ? 'var(--accent-primary)' : 'transparent',
+                color: formatFilter === 'remote' ? '#FFF' : 'var(--text-secondary)',
                 display: 'flex', alignItems: 'center', gap: '5px'
               }}
             >
@@ -159,25 +159,25 @@ export default function FeedView({
               onClick={() => setIsFilterDrawerOpen(true)}
               className="premium-button"
               style={{
-                border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #CBD5E1',
+                border: '1px solid var(--border-color)',
                 borderRadius: '16px', padding: '10px 16px',
-                backgroundColor: darkMode ? 'rgba(30, 41, 59, 0.8)' : '#FFF',
-                color: darkMode ? '#FFF' : '#334155', fontWeight: '700', fontSize: '13px',
+                backgroundColor: 'var(--bg-card)',
+                color: 'var(--text-main)', fontWeight: '700', fontSize: '13px',
                 cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px'
               }}
             >
               <Filter size={15} /> {t('filtersButton') || 'Filtres'}
             </button>
 
-            <div style={{ display: 'flex', backgroundColor: darkMode ? 'rgba(15, 23, 42, 0.6)' : '#F1F5F9', padding: '4px', borderRadius: '16px', border: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E2E8F0' }}>
+            <div style={{ display: 'flex', backgroundColor: 'var(--bg-subtle)', padding: '4px', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
               <button
                 onClick={() => setViewMode('list')}
                 title="Vue Liste"
                 className="premium-button"
                 style={{
                   border: 'none', borderRadius: '12px', padding: '8px 12px', cursor: 'pointer',
-                  backgroundColor: viewMode === 'list' ? (darkMode ? '#60A5FA' : '#04265A') : 'transparent',
-                  color: viewMode === 'list' ? '#FFF' : (darkMode ? '#94A3B8' : '#64748B'),
+                  backgroundColor: viewMode === 'list' ? 'var(--accent-primary)' : 'transparent',
+                  color: viewMode === 'list' ? '#FFF' : 'var(--text-secondary)',
                   display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', fontWeight: '800'
                 }}
               >
@@ -189,8 +189,8 @@ export default function FeedView({
                 className="premium-button"
                 style={{
                   border: 'none', borderRadius: '12px', padding: '8px 12px', cursor: 'pointer',
-                  backgroundColor: viewMode === 'map' ? (darkMode ? '#60A5FA' : '#04265A') : 'transparent',
-                  color: viewMode === 'map' ? '#FFF' : (darkMode ? '#94A3B8' : '#64748B'),
+                  backgroundColor: viewMode === 'map' ? 'var(--accent-primary)' : 'transparent',
+                  color: viewMode === 'map' ? '#FFF' : 'var(--text-secondary)',
                   display: 'flex', alignItems: 'center', gap: '5px', fontSize: '12px', fontWeight: '800'
                 }}
               >
@@ -200,7 +200,7 @@ export default function FeedView({
           </div>
         </div>
 
-        {/* ALIGNEMENT PARFAIT DES CATÉGORIES (STYLE TAGS HARMONISÉ) */}
+        {/* ALIGNEMENT DES CATÉGORIES */}
         <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '2px', alignItems: 'center' }}>
           {categories.map(cat => {
             const isSelected = selectedCategory === cat;
@@ -220,19 +220,19 @@ export default function FeedView({
                   alignItems: 'center',
                   gap: '6px',
                   backgroundColor: isSelected 
-                    ? (darkMode ? '#60A5FA' : '#04265A') 
-                    : (darkMode ? 'rgba(15,23,42,0.6)' : '#EFF6FF'),
+                    ? 'var(--accent-primary)' 
+                    : 'var(--bg-subtle)',
                   color: isSelected 
                     ? '#FFFFFF' 
-                    : (darkMode ? '#93C5FD' : '#04265A'),
+                    : 'var(--text-secondary)',
                   border: isSelected
-                    ? 'none'
-                    : (darkMode ? '1.5px solid rgba(96,165,250,0.4)' : '1.5px solid #04265A'),
-                  boxShadow: isSelected ? '0 6px 18px rgba(4,38,90,0.3)' : 'none',
+                    ? '1px solid var(--accent-primary)'
+                    : '1px solid var(--border-color)',
+                  boxShadow: isSelected ? 'var(--shadow-accent)' : 'none',
                   transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)'
                 }}
               >
-                <Tag size={12} color={isSelected ? '#FFF' : (darkMode ? '#93C5FD' : '#04265A')} />
+                <Tag size={12} color={isSelected ? '#FFF' : 'var(--accent-primary)'} />
                 <span>{cat === 'all' || cat === 'Tous' ? (t('allCategories') || 'Toutes les catégories') : cat}</span>
               </button>
             );
@@ -242,13 +242,13 @@ export default function FeedView({
 
       {/* CONTENU COMPTEUR ET LISTE / CARTE */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 4px' }}>
-        <span style={{ fontSize: '14px', fontWeight: '800', color: darkMode ? '#94A3B8' : '#64748B' }}>
+        <span style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-secondary)' }}>
           {displayListings.length} {t('announcementsFound') || 'annonces trouvées'}
         </span>
       </div>
 
       {viewMode === 'list' ? (
-        /* GRILLE DE CARTES ANNONCES (4 COLONNES HARMONIEUSES ET UNIFIÉES SUR ÉCRANS PC) */
+        /* GRILLE DE CARTES ANNONCES */
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(285px, 1fr))', gap: '22px' }}>
           {displayListings.map(item => (
             <ListingCard
@@ -269,7 +269,7 @@ export default function FeedView({
         </div>
       ) : (
         /* VUE CARTE CARTE INTERACTIVE LEAFLET */
-        <div style={{ borderRadius: '24px', overflow: 'hidden', height: '620px', boxShadow: '0 20px 50px rgba(0,0,0,0.12)', border: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E2E8F0' }}>
+        <div style={{ borderRadius: '24px', overflow: 'hidden', height: '620px', boxShadow: 'var(--shadow-card)', border: '1px solid var(--border-color)' }}>
           <MapContainer center={userCoords || mapCenter} zoom={12} style={{ width: '100%', height: '100%' }}>
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -282,11 +282,11 @@ export default function FeedView({
                 <Marker key={item.id} position={coords} icon={modernIcon}>
                   <Popup>
                     <div style={{ padding: '6px', maxWidth: '200px' }}>
-                      <div style={{ fontWeight: '800', fontSize: '13px', marginBottom: '4px' }}>{item.title}</div>
-                      <div style={{ fontSize: '11px', color: '#059669', fontWeight: '700', marginBottom: '8px' }}>{formatCompensation(item.compensation)}</div>
+                      <div style={{ fontWeight: '800', fontSize: '13px', marginBottom: '4px', color: 'var(--text-main)' }}>{item.title}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--accent-primary)', fontWeight: '700', marginBottom: '8px' }}>{formatCompensation(item.compensation)}</div>
                       <button
                         onClick={() => handleOpenListing(item)}
-                        style={{ border: 'none', borderRadius: '8px', padding: '6px 10px', backgroundColor: '#04265A', color: '#FFF', fontSize: '11px', fontWeight: '800', width: '100%', cursor: 'pointer' }}
+                        style={{ border: 'none', borderRadius: '8px', padding: '6px 10px', background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)', color: '#FFF', fontSize: '11px', fontWeight: '800', width: '100%', cursor: 'pointer' }}
                       >
                         {t('viewDetail') || 'Voir détails'}
                       </button>
@@ -301,3 +301,4 @@ export default function FeedView({
     </div>
   );
 }
+

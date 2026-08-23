@@ -139,11 +139,11 @@ export default function ListingCard({
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
-        backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
-        border: item.isBoosted ? '2px solid #D97706' : (darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3'),
+        backgroundColor: 'var(--bg-card)',
+        border: item.isBoosted ? '2px solid var(--accent-warning)' : '1px solid var(--border-color)',
         borderRadius: '24px',
         overflow: 'hidden',
-        boxShadow: item.isBoosted ? '0 12px 34px rgba(217,119,6,0.2)' : (darkMode ? '0 10px 30px rgba(0,0,0,0.5)' : '0 10px 30px rgba(61,53,48,0.06)'),
+        boxShadow: item.isBoosted ? 'var(--shadow-accent)' : 'var(--shadow-card)',
         cursor: 'pointer',
         transform: isHovered ? 'translateY(-5px) scale(1.015)' : 'none',
         transition: 'transform 0.4s var(--ease-quiet), box-shadow 0.4s var(--ease-quiet)'
@@ -154,17 +154,16 @@ export default function ListingCard({
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        style={{ position: 'relative', height: '200px', width: '100%', backgroundColor: '#1A1715', overflow: 'hidden', touchAction: 'pan-y' }}
+        style={{ position: 'relative', height: '200px', width: '100%', backgroundColor: 'var(--bg-subtle)', overflow: 'hidden', touchAction: 'pan-y' }}
       >
         {/* SUPERPOSITION DES IMAGES DE LA GALERIE AVEC CROSSFADE & ZOOM SUBTIL */}
         {effectiveGallery.map((imgSrc, idx) => {
-          const isActive = idx === currentSlideIndex;
+          const isActive = currentSlideIndex === idx;
           return (
             <img
               key={idx}
               src={imgSrc}
-              alt={item.title}
-              draggable={false}
+              alt={`${displayContent.title} - ${idx + 1}`}
               onError={(e) => { e.target.src = safeGetFallbackImage(item.category, item.title); }}
               style={{
                 position: 'absolute',
@@ -173,28 +172,15 @@ export default function ListingCard({
                 height: '100%',
                 objectFit: 'cover',
                 opacity: isActive ? 1 : 0,
-                transition: 'opacity 0.4s ease, transform 1200ms var(--ease-quiet)',
-                transform: isHovered && isActive ? 'scale(1.04)' : (isActive ? 'scale(1)' : 'scale(1.02)'),
-                pointerEvents: 'none',
-                WebkitUserDrag: 'none',
-                userSelect: 'none',
-                WebkitUserSelect: 'none',
-                zIndex: isActive ? 2 : 1
+                transform: isActive && isHovered ? 'scale(1.06)' : 'scale(1)',
+                transition: 'opacity 0.45s ease, transform 0.6s cubic-bezier(0.22, 1, 0.36, 1)',
+                zIndex: isActive ? 1 : 0
               }}
             />
           );
         })}
 
-        {/* VOILE DE CONTRASTE PROGRESSIF */}
-        <div style={{
-          position: 'absolute',
-          inset: 0,
-          background: 'linear-gradient(to top, rgba(26, 23, 21, 0.45) 0%, rgba(26, 23, 21, 0) 50%)',
-          pointerEvents: 'none',
-          zIndex: 3
-        }} />
-
-        {/* FLÈCHES DE NAVIGATION MANUELLE AVEC CLIC DIRECT */}
+        {/* FLÈCHES MANUELLES DE NAVIGATION GALERIE AU SURVOL */}
         {galleryLength > 1 && (
           <>
             <button
@@ -203,15 +189,25 @@ export default function ListingCard({
                 setLocalImageIndex(prev => (prev - 1 + galleryLength) % galleryLength);
               }}
               style={{
-                position: 'absolute', top: '50%', left: '8px', transform: 'translateY(-50%)',
-                border: 'none', borderRadius: '50%', width: '28px', height: '28px',
-                backgroundColor: 'rgba(26,23,21,0.75)', color: '#FAF7F2',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', zIndex: 10, backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
-                pointerEvents: 'auto',
-                transition: 'transform 0.2s var(--ease-quiet), background-color 0.2s ease'
+                position: 'absolute',
+                left: '8px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                width: '28px',
+                height: '28px',
+                borderRadius: '50%',
+                backgroundColor: 'rgba(0,0,0,0.6)',
+                backdropFilter: 'blur(4px)',
+                border: 'none',
+                color: '#FFF',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                opacity: isHovered ? 1 : 0,
+                transition: 'opacity 0.2s ease',
+                zIndex: 4
               }}
-              title="Photo précédente"
             >
               <ChevronLeft size={16} />
             </button>
@@ -221,30 +217,46 @@ export default function ListingCard({
                 setLocalImageIndex(prev => (prev + 1) % galleryLength);
               }}
               style={{
-                position: 'absolute', top: '50%', right: '8px', transform: 'translateY(-50%)',
-                border: 'none', borderRadius: '50%', width: '28px', height: '28px',
-                backgroundColor: 'rgba(26,23,21,0.75)', color: '#FAF7F2',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', zIndex: 10, backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
-                pointerEvents: 'auto',
-                transition: 'transform 0.2s var(--ease-quiet), background-color 0.2s ease'
+                position: 'absolute',
+                right: '8px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                width: '28px',
+                height: '28px',
+                borderRadius: '50%',
+                backgroundColor: 'rgba(0,0,0,0.6)',
+                backdropFilter: 'blur(4px)',
+                border: 'none',
+                color: '#FFF',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                opacity: isHovered ? 1 : 0,
+                transition: 'opacity 0.2s ease',
+                zIndex: 4
               }}
-              title="Photo suivante"
             >
               <ChevronRight size={16} />
             </button>
           </>
         )}
 
-        {/* PUCES INDICATRICES DE DÉFILEMENT */}
+        {/* INDICATEURS DE SLIDES STYLE CARROUSEL SUBTIL */}
         {galleryLength > 1 && (
           <div
-            onClick={(e) => e.stopPropagation()}
             style={{
-              position: 'absolute', bottom: '8px', left: '50%', transform: 'translateX(-50%)',
-              display: 'flex', alignItems: 'center', gap: '4px', zIndex: 10,
-              backgroundColor: 'rgba(26,23,21,0.65)', padding: '3px 8px', borderRadius: '999px',
-              backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', pointerEvents: 'auto'
+              position: 'absolute',
+              bottom: '10px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              display: 'flex',
+              gap: '5px',
+              zIndex: 3,
+              backgroundColor: 'rgba(0,0,0,0.4)',
+              backdropFilter: 'blur(4px)',
+              padding: '3px 8px',
+              borderRadius: '999px'
             }}
           >
             {effectiveGallery.map((_, idx) => (
@@ -255,7 +267,7 @@ export default function ListingCard({
                   width: currentSlideIndex === idx ? '14px' : '5px',
                   height: '5px',
                   borderRadius: '999px',
-                  backgroundColor: currentSlideIndex === idx ? '#C67D5B' : 'rgba(255,255,255,0.6)',
+                  backgroundColor: currentSlideIndex === idx ? 'var(--accent-primary)' : 'rgba(255,255,255,0.6)',
                   cursor: 'pointer',
                   transition: 'all 0.25s var(--ease-quiet)'
                 }}
@@ -288,12 +300,12 @@ export default function ListingCard({
         )}
 
         {item.isBoosted && (
-          <span className="sponsored-badge" style={{ position: 'absolute', top: '12px', right: '12px', backgroundColor: '#D97706', color: '#FFF', fontSize: '11px', fontWeight: '800', padding: '5px 10px', borderRadius: '999px', boxShadow: '0 4px 14px rgba(217,119,6,0.4)', zIndex: 4 }}>
+          <span className="sponsored-badge" style={{ position: 'absolute', top: '12px', right: '12px', backgroundColor: 'var(--accent-warning)', color: '#FFF', fontSize: '11px', fontWeight: '800', padding: '5px 10px', borderRadius: '999px', boxShadow: '0 4px 14px rgba(217,119,6,0.4)', zIndex: 4 }}>
             🔥 Sponsorisé
           </span>
         )}
         {item.urgent && (
-          <span style={{ position: 'absolute', top: '12px', left: '12px', backgroundColor: '#2A1A14', color: '#FAF7F2', border: '1.5px solid #C67D5B', fontSize: '10px', fontWeight: '800', padding: '4px 10px', borderRadius: '999px', boxShadow: '0 4px 14px rgba(0,0,0,0.4)', zIndex: 4 }}>
+          <span style={{ position: 'absolute', top: '12px', left: '12px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', border: '1.5px solid var(--accent-primary)', fontSize: '10px', fontWeight: '800', padding: '4px 10px', borderRadius: '999px', boxShadow: 'var(--shadow-card)', zIndex: 4 }}>
             URGENT
           </span>
         )}
@@ -302,14 +314,14 @@ export default function ListingCard({
             position: 'absolute',
             top: item.urgent ? '42px' : '12px',
             left: '12px',
-            backgroundColor: darkMode ? '#1A1715' : '#F5EAE4',
-            color: darkMode ? '#FAF7F2' : '#A8644A',
-            border: '1px solid #E8DDD3',
+            backgroundColor: 'var(--bg-subtle)',
+            color: 'var(--accent-primary)',
+            border: '1px solid var(--border-color)',
             fontSize: '9.5px',
             fontWeight: '800',
             padding: '4px 10px',
             borderRadius: '999px',
-            boxShadow: '0 4px 12px rgba(61,53,48,0.15)',
+            boxShadow: 'var(--shadow-card)',
             zIndex: 4,
             display: 'flex',
             alignItems: 'center',
@@ -321,12 +333,12 @@ export default function ListingCard({
         )}
 
         {media.video && (
-          <span style={{ position: 'absolute', bottom: '12px', left: '12px', backgroundColor: 'rgba(26,23,21,0.85)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', color: '#C67D5B', fontSize: '10px', fontWeight: '800', padding: '5px 9px', borderRadius: '10px', zIndex: 4, display: 'flex', alignItems: 'center', gap: '4px', transition: 'all 0.3s ease' }}>
-            <Video size={12} color="#C67D5B" /> {isHovered ? (t('livePlayback') || 'Lecture') : (t('demoVideo') || 'Vidéo')}
+          <span style={{ position: 'absolute', bottom: '12px', left: '12px', backgroundColor: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', color: 'var(--accent-primary)', fontSize: '10px', fontWeight: '800', padding: '5px 9px', borderRadius: '10px', zIndex: 4, display: 'flex', alignItems: 'center', gap: '4px', transition: 'all 0.3s ease' }}>
+            <Video size={12} color="var(--accent-primary)" /> {isHovered ? (t('livePlayback') || 'Lecture') : (t('demoVideo') || 'Vidéo')}
           </span>
         )}
 
-        <span style={{ position: 'absolute', bottom: '12px', right: '12px', backgroundColor: 'rgba(26,23,21,0.92)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', border: '1px solid rgba(232,221,211,0.2)', color: '#FAF7F2', fontSize: '11px', fontWeight: '800', padding: '5px 10px', borderRadius: '999px', zIndex: 4 }}>
+        <span style={{ position: 'absolute', bottom: '12px', right: '12px', backgroundColor: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', border: '1px solid var(--border-color)', color: '#FAF7F2', fontSize: '11px', fontWeight: '800', padding: '5px 10px', borderRadius: '999px', zIndex: 4 }}>
           {safeFormatCompensation(item.compensation)}
         </span>
       </div>
@@ -334,7 +346,7 @@ export default function ListingCard({
       <div style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'space-between' }}>
         <div>
           <div>
-            <h3 className="font-sans" style={{ fontSize: '15.5px', fontWeight: '800', color: darkMode ? '#FAF7F2' : '#1A1512', margin: '0 0 4px 0', lineHeight: 1.35, letterSpacing: '-0.02em' }}>
+            <h3 className="font-sans" style={{ fontSize: '15.5px', fontWeight: '800', color: 'var(--text-main)', margin: '0 0 4px 0', lineHeight: 1.35, letterSpacing: '-0.02em' }}>
               {displayContent.title}
             </h3>
             {currentLang !== (item.nativeLang || 'FR') && (
@@ -344,7 +356,7 @@ export default function ListingCard({
                 style={{
                   border: 'none',
                   backgroundColor: 'transparent',
-                  color: '#C67D5B',
+                  color: 'var(--accent-primary)',
                   fontSize: '11px',
                   fontWeight: '800',
                   cursor: 'pointer',
@@ -354,15 +366,15 @@ export default function ListingCard({
                   padding: '2px 0 6px 0'
                 }}
               >
-                <Globe size={12} color="#C67D5B" />
+                <Globe size={12} color="var(--accent-primary)" />
                 {showingOriginalListings[item.id] ? t('showTranslation') : t('showOriginal')}
               </button>
             )}
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '12.5px', color: darkMode ? '#D4C5B5' : '#6B5E54', marginBottom: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '12.5px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
             <span className="font-editorial" style={{ display: 'flex', alignItems: 'center', gap: '4px', fontStyle: 'italic', fontSize: '14px' }}>
-              {item.type === 'remote' ? <Video size={13} color="#C67D5B" /> : <MapPin size={13} color="#C67D5B" />}
+              {item.type === 'remote' ? <Video size={13} color="var(--accent-primary)" /> : <MapPin size={13} color="var(--accent-primary)" />}
               {safeLocalizeLocation(item.location, currentLang)}
             </span>
           </div>
@@ -372,7 +384,7 @@ export default function ListingCard({
             <div
               style={{
                 fontSize: '11.5px',
-                color: darkMode ? '#D4C5B5' : '#544940',
+                color: 'var(--text-secondary)',
                 lineHeight: 1.45,
                 maxHeight: isHovered ? '48px' : '22px',
                 overflow: 'hidden',
@@ -390,23 +402,23 @@ export default function ListingCard({
 
           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }}>
             {safeLocalizeTags((item.tags || safeGenerateTags(item.title, item.description || '')), currentLang).slice(0, 3).map(tag => (
-              <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: darkMode ? '#1A1715' : '#F5EAE4', color: darkMode ? '#FAF7F2' : '#A8644A', borderRadius: '999px', border: '1px solid #E8DDD3', padding: '4px 10px', fontSize: '10px', fontWeight: '800' }}>
-                <Tag size={10} color="#C67D5B" /> {tag}
+              <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', borderRadius: '999px', border: '1px solid var(--border-color)', padding: '4px 10px', fontSize: '10px', fontWeight: '800' }}>
+                <Tag size={10} color="var(--accent-primary)" /> {tag}
               </span>
             ))}
           </div>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3', gap: '8px', flexWrap: 'wrap' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '7px', fontWeight: '800', fontSize: '13px', color: darkMode ? '#FAF7F2' : '#1A1512' }}>
-            <img src={item.author === safeProfile.name ? safeProfile.avatar : safeGetAuthorAvatar(item.author)} alt={item.author} style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid #C67D5B' }} />
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: '1px solid var(--border-color)', gap: '8px', flexWrap: 'wrap' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '7px', fontWeight: '800', fontSize: '13px', color: 'var(--text-main)' }}>
+            <img src={item.author === safeProfile.name ? safeProfile.avatar : safeGetAuthorAvatar(item.author)} alt={item.author} style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid var(--accent-primary)' }} />
             {item.author}
           </span>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             {item.author !== safeProfile.name ? (
-              <button onClick={(event) => { event.stopPropagation(); handleStartDiscussion(item); }} className="premium-button" style={{ background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)', color: '#FFF', border: 'none', padding: '8px 16px', borderRadius: '999px', fontSize: '12px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', boxShadow: '0 4px 14px rgba(198,125,91,0.25)' }}>{t('proposeDealButton')} <ArrowRight size={12} /></button>
+              <button onClick={(event) => { event.stopPropagation(); handleStartDiscussion(item); }} className="premium-button" style={{ background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)', color: '#FFF', border: 'none', padding: '8px 16px', borderRadius: '999px', fontSize: '12px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', boxShadow: 'var(--shadow-accent)' }}>{t('proposeDealButton')} <ArrowRight size={12} /></button>
             ) : (
-              <span style={{ backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', color: darkMode ? '#D4C5B5' : '#6B5E54', border: '1px solid #E8DDD3', padding: '6px 12px', borderRadius: '999px', fontSize: '11px', fontWeight: '700' }}>{t('authorAnnc')}</span>
+              <span style={{ backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)', border: '1px solid var(--border-color)', padding: '6px 12px', borderRadius: '999px', fontSize: '11px', fontWeight: '700' }}>{t('authorAnnc')}</span>
             )}
           </div>
         </div>

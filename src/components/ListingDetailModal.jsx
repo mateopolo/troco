@@ -80,17 +80,17 @@ export default function ListingDetailModal({
   return (
     <div style={{
       position: 'fixed', inset: 0,
-      backgroundColor: 'rgba(26, 23, 21, 0.75)',
+      backgroundColor: 'var(--overlay-bg)',
       backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       padding: '20px', zIndex: 1000, overflowY: 'auto'
     }}>
       <div style={{
-        backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
+        backgroundColor: 'var(--bg-card)',
         borderRadius: '28px', width: '100%', maxWidth: '780px',
         maxHeight: '90vh', overflowY: 'auto',
-        boxShadow: darkMode ? '0 30px 80px rgba(0, 0, 0, 0.6)' : '0 30px 80px rgba(61, 53, 48, 0.15)',
-        border: darkMode ? '1px solid rgba(232, 221, 211, 0.15)' : '1px solid #E8DDD3',
+        boxShadow: 'var(--shadow-modal)',
+        border: '1px solid var(--border-color)',
         position: 'relative', padding: '28px'
       }}>
         {/* BOUTON FERMER */}
@@ -99,9 +99,9 @@ export default function ListingDetailModal({
           className="premium-button"
           style={{
             position: 'absolute', top: '18px', right: '18px',
-            border: darkMode ? '1px solid rgba(232, 221, 211, 0.15)' : '1px solid #E8DDD3',
-            backgroundColor: darkMode ? '#1A1715' : '#F5F0E8',
-            color: darkMode ? '#FAF7F2' : '#3D3530', width: '36px', height: '36px',
+            border: '1px solid var(--border-color)',
+            backgroundColor: 'var(--bg-subtle)',
+            color: 'var(--text-main)', width: '36px', height: '36px',
             borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
             cursor: 'pointer', zIndex: 10
           }}
@@ -113,34 +113,34 @@ export default function ListingDetailModal({
         <div style={{ marginBottom: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
             <span style={{
-              backgroundColor: darkMode ? '#1A1715' : '#F5EAE4',
-              color: darkMode ? '#FAF7F2' : '#A8644A', fontSize: '12px', fontWeight: '800',
-              padding: '4px 12px', borderRadius: '999px', border: '1px solid #E8DDD3'
+              backgroundColor: 'var(--bg-subtle)',
+              color: 'var(--accent-primary)', fontSize: '12px', fontWeight: '800',
+              padding: '4px 12px', borderRadius: '999px', border: '1px solid var(--border-color)'
             }}>
               {selectedListing.category}
             </span>
             {selectedListing.type === 'remote' ? (
-              <span style={{ backgroundColor: darkMode ? '#1A1715' : '#FAF7F2', color: darkMode ? '#D4C5B5' : '#6B5E54', fontSize: '12px', fontWeight: '800', padding: '4px 12px', borderRadius: '999px', border: '1px solid #E8DDD3', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Globe size={13} color="#C67D5B" /> {t('remoteFormat') || 'À distance'}
+              <span style={{ backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)', fontSize: '12px', fontWeight: '800', padding: '4px 12px', borderRadius: '999px', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <Globe size={13} color="var(--accent-primary)" /> {t('remoteFormat') || 'À distance'}
               </span>
             ) : (
-              <span style={{ backgroundColor: darkMode ? '#1A1715' : '#FAF7F2', color: darkMode ? '#D4C5B5' : '#6B5E54', fontSize: '12px', fontWeight: '800', padding: '4px 12px', borderRadius: '999px', border: '1px solid #E8DDD3', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <MapPin size={13} color="#C67D5B" /> {selectedListing.location}
+              <span style={{ backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)', fontSize: '12px', fontWeight: '800', padding: '4px 12px', borderRadius: '999px', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <MapPin size={13} color="var(--accent-primary)" /> {selectedListing.location}
               </span>
             )}
             {selectedListing.urgent && (
-              <span style={{ backgroundColor: darkMode ? '#2A1A14' : '#F5EAE4', color: darkMode ? '#FAF7F2' : '#A8644A', fontSize: '12px', fontWeight: '900', padding: '4px 12px', borderRadius: '999px', border: '1.5px solid #C67D5B', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', fontSize: '12px', fontWeight: '900', padding: '4px 12px', borderRadius: '999px', border: '1.5px solid var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                 🚨 {t('urgentOption') || 'URGENT'}
               </span>
             )}
             {selectedListing.isBoosted && (
-              <span className="sponsored-badge" style={{ backgroundColor: darkMode ? 'rgba(217,119,6,0.2)' : '#FEF3C7', color: darkMode ? '#FDE68A' : '#D97706', fontSize: '12px', fontWeight: '800', padding: '4px 12px', borderRadius: '999px', border: '1px solid #D97706', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span className="sponsored-badge" style={{ backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-warning)', fontSize: '12px', fontWeight: '800', padding: '4px 12px', borderRadius: '999px', border: '1px solid var(--accent-warning)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <Flame size={13} /> Sponsoring Premium
               </span>
             )}
           </div>
 
-          <h2 className="font-editorial-heading" style={{ margin: '0 0 6px', fontSize: '28px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#1A1512', lineHeight: 1.25 }}>
+          <h2 className="font-editorial-heading" style={{ margin: '0 0 6px', fontSize: '28px', fontWeight: '600', color: 'var(--text-main)', lineHeight: 1.25 }}>
             {displayContent.title}
           </h2>
           {currentLang !== nativeLang && (
@@ -152,7 +152,7 @@ export default function ListingDetailModal({
                 backgroundColor: 'transparent',
                 boxShadow: 'none',
                 outline: 'none',
-                color: '#C67D5B',
+                color: 'var(--accent-primary)',
                 fontSize: '12px',
                 fontWeight: '800',
                 cursor: 'pointer',
@@ -162,18 +162,18 @@ export default function ListingDetailModal({
                 padding: '2px 0 10px 0'
               }}
             >
-              <Globe size={13} color="#C67D5B" style={{ flexShrink: 0 }} />
+              <Globe size={13} color="var(--accent-primary)" style={{ flexShrink: 0 }} />
               <span>{isDetailShowingOriginal ? t('showTranslation') : t('showOriginal')}</span>
             </button>
           )}
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '14px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>
-            <span style={{ fontWeight: '800', color: '#C67D5B', fontSize: '18px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '14px', color: 'var(--text-secondary)' }}>
+            <span style={{ fontWeight: '800', color: 'var(--accent-primary)', fontSize: '18px' }}>
               {formatCompensation ? formatCompensation(selectedListing.compensation) : selectedListing.compensation}
             </span>
             {selectedListing.rating && (
-              <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#D97706', fontWeight: '800' }}>
-                <Star size={16} fill="#D97706" color="#D97706" /> {selectedListing.rating} ({selectedListing.reviews || 0} avis)
+              <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--accent-warning)', fontWeight: '800' }}>
+                <Star size={16} fill="var(--accent-warning)" color="var(--accent-warning)" /> {selectedListing.rating} ({selectedListing.reviews || 0} avis)
               </span>
             )}
           </div>
@@ -187,9 +187,9 @@ export default function ListingDetailModal({
               className="premium-button"
               style={{
                 border: 'none', borderRadius: '12px', padding: '8px 16px', fontSize: '12px', fontWeight: '800', cursor: 'pointer',
-                backgroundColor: detailMediaTab === 'image' ? '#C67D5B' : (darkMode ? '#1A1715' : '#F5F0E8'),
-                color: detailMediaTab === 'image' ? '#FFF' : (darkMode ? '#D4C5B5' : '#6B5E54'),
-                boxShadow: detailMediaTab === 'image' ? '0 4px 12px rgba(198,125,91,0.25)' : 'none'
+                backgroundColor: detailMediaTab === 'image' ? 'var(--accent-primary)' : 'var(--bg-subtle)',
+                color: detailMediaTab === 'image' ? '#FFF' : 'var(--text-secondary)',
+                boxShadow: detailMediaTab === 'image' ? 'var(--shadow-accent)' : 'none'
               }}
             >
               🖼️ Photos ({gallery.length})
@@ -200,10 +200,10 @@ export default function ListingDetailModal({
                 className="premium-button"
                 style={{
                   border: 'none', borderRadius: '12px', padding: '8px 16px', fontSize: '12px', fontWeight: '800', cursor: 'pointer',
-                  backgroundColor: detailMediaTab === 'video' ? '#C67D5B' : (darkMode ? '#1A1715' : '#F5F0E8'),
-                  color: detailMediaTab === 'video' ? '#FFF' : (darkMode ? '#D4C5B5' : '#6B5E54'),
+                  backgroundColor: detailMediaTab === 'video' ? 'var(--accent-primary)' : 'var(--bg-subtle)',
+                  color: detailMediaTab === 'video' ? '#FFF' : 'var(--text-secondary)',
                   display: 'flex', alignItems: 'center', gap: '4px',
-                  boxShadow: detailMediaTab === 'video' ? '0 4px 12px rgba(198,125,91,0.25)' : 'none'
+                  boxShadow: detailMediaTab === 'video' ? 'var(--shadow-accent)' : 'none'
                 }}
               >
                 <Video size={14} /> Démo Vidéo
@@ -215,7 +215,7 @@ export default function ListingDetailModal({
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
-            style={{ borderRadius: '20px', overflow: 'hidden', height: '340px', backgroundColor: '#1A1715', position: 'relative', touchAction: 'pan-y', border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3' }}
+            style={{ borderRadius: '20px', overflow: 'hidden', height: '340px', backgroundColor: 'var(--bg-subtle)', position: 'relative', touchAction: 'pan-y', border: '1px solid var(--border-color)' }}
           >
             {detailMediaTab === 'video' && selectedListing.video ? (
               <video src={selectedListing.video} controls autoPlay style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
@@ -250,8 +250,8 @@ export default function ListingDetailModal({
                       style={{
                         position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)',
                         width: '36px', height: '36px', borderRadius: '50%', border: 'none',
-                        backgroundColor: 'rgba(26,23,21,0.75)', backdropFilter: 'blur(8px)',
-                        color: '#FAF7F2', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        backgroundColor: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)',
+                        color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center',
                         cursor: 'pointer', zIndex: 10
                       }}
                     >
@@ -262,8 +262,8 @@ export default function ListingDetailModal({
                       style={{
                         position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
                         width: '36px', height: '36px', borderRadius: '50%', border: 'none',
-                        backgroundColor: 'rgba(26,23,21,0.75)', backdropFilter: 'blur(8px)',
-                        color: '#FAF7F2', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        backgroundColor: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)',
+                        color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center',
                         cursor: 'pointer', zIndex: 10
                       }}
                     >
@@ -276,7 +276,7 @@ export default function ListingDetailModal({
                   style={{
                     position: 'absolute', bottom: '12px', left: '50%', transform: 'translateX(-50%)',
                     display: 'flex', alignItems: 'center', gap: '6px', zIndex: 10,
-                    backgroundColor: 'rgba(26,23,21,0.65)', padding: '4px 10px', borderRadius: '999px',
+                    backgroundColor: 'rgba(0,0,0,0.6)', padding: '4px 10px', borderRadius: '999px',
                     backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', pointerEvents: 'auto'
                   }}
                 >
@@ -288,7 +288,7 @@ export default function ListingDetailModal({
                         width: selectedImageIndex === idx ? '18px' : '6px',
                         height: '6px',
                         borderRadius: '999px',
-                        backgroundColor: selectedImageIndex === idx ? '#C67D5B' : 'rgba(255,255,255,0.6)',
+                        backgroundColor: selectedImageIndex === idx ? 'var(--accent-primary)' : 'rgba(255,255,255,0.6)',
                         cursor: 'pointer',
                         transition: 'all 0.25s var(--ease-quiet)'
                       }}
@@ -306,7 +306,7 @@ export default function ListingDetailModal({
                   key={idx}
                   onClick={() => setSelectedImageIndex(idx)}
                   style={{
-                    border: selectedImageIndex === idx ? '2px solid #C67D5B' : '1px solid rgba(232,221,211,0.2)',
+                    border: selectedImageIndex === idx ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
                     borderRadius: '12px', overflow: 'hidden', width: '64px', height: '64px', padding: 0, cursor: 'pointer', flexShrink: 0
                   }}
                 >
@@ -319,18 +319,18 @@ export default function ListingDetailModal({
 
         {/* DESCRIPTION ET TAGS */}
         <div style={{ marginBottom: '24px' }}>
-          <h4 style={{ margin: '0 0 8px', fontSize: '16px', fontWeight: '800', color: darkMode ? '#FAF7F2' : '#1A1512' }}>
+          <h4 style={{ margin: '0 0 8px', fontSize: '16px', fontWeight: '800', color: 'var(--text-main)' }}>
             {t('description') || 'Description'}
           </h4>
-          <p style={{ margin: '0 0 16px', fontSize: '14.5px', lineHeight: 1.7, color: darkMode ? '#D4C5B5' : '#544940' }}>
+          <p style={{ margin: '0 0 16px', fontSize: '14.5px', lineHeight: 1.7, color: 'var(--text-secondary)' }}>
             {displayContent.description}
           </p>
 
           {selectedListing.tags && selectedListing.tags.length > 0 && (
             <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
               {selectedListing.tags.map((tag, i) => (
-                <span key={i} style={{ fontSize: '12px', fontWeight: '700', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', color: darkMode ? '#D4C5B5' : '#6B5E54', padding: '4px 12px', borderRadius: '999px', border: '1px solid #E8DDD3', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                  <Tag size={12} color="#C67D5B" /> {tag}
+                <span key={i} style={{ fontSize: '12px', fontWeight: '700', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', padding: '4px 12px', borderRadius: '999px', border: '1px solid var(--border-color)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                  <Tag size={12} color="var(--accent-primary)" /> {tag}
                 </span>
               ))}
             </div>
@@ -341,17 +341,17 @@ export default function ListingDetailModal({
         {selectedListing.authorProfile && (
           <div style={{
             padding: '16px', borderRadius: '18px',
-            backgroundColor: darkMode ? '#1A1715' : '#F5F0E8',
-            border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3',
+            backgroundColor: 'var(--bg-subtle)',
+            border: '1px solid var(--border-color)',
             marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '14px'
           }}>
-            <img src={selectedListing.authorProfile.avatar} alt={selectedListing.author} style={{ width: '50px', height: '50px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #C67D5B' }} />
+            <img src={selectedListing.authorProfile.avatar} alt={selectedListing.author} style={{ width: '50px', height: '50px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--accent-primary)' }} />
             <div style={{ flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '800', fontSize: '15px', color: darkMode ? '#FAF7F2' : '#1A1512' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '800', fontSize: '15px', color: 'var(--text-main)' }}>
                 {selectedListing.author}
-                <ShieldCheck size={16} color="#C67D5B" />
+                <ShieldCheck size={16} color="var(--accent-primary)" />
               </div>
-              <div style={{ fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', marginTop: '2px' }}>
+              <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
                 {selectedListing.authorProfile.bio}
               </div>
             </div>
@@ -366,10 +366,10 @@ export default function ListingDetailModal({
               className="premium-button"
               style={{
                 flex: 1, minWidth: '200px', border: 'none', borderRadius: '999px', padding: '14px 24px',
-                background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)', color: '#FFF',
+                background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)', color: '#FFF',
                 fontWeight: '800', fontSize: '14px', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                boxShadow: '0 8px 24px rgba(198,125,91,0.35)'
+                boxShadow: 'var(--shadow-accent)'
               }}
             >
               <MessageSquare size={18} /> {t('startDiscussion') || 'Contacter le membre'}
@@ -379,28 +379,28 @@ export default function ListingDetailModal({
               <button
                 onClick={() => handleBoostListing(selectedListing)}
                 className="premium-button"
-                style={{ flex: 1, border: 'none', borderRadius: '999px', padding: '12px', backgroundColor: '#D97706', color: '#FFF', fontWeight: '800', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: '0 4px 14px rgba(217,119,6,0.3)' }}
+                style={{ flex: 1, border: 'none', borderRadius: '999px', padding: '12px', backgroundColor: 'var(--accent-warning)', color: '#FFF', fontWeight: '800', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: 'var(--shadow-card)' }}
               >
                 <Flame size={16} /> Booster (2,99€)
               </button>
               <button
                 onClick={() => handleStartEditListing(selectedListing)}
                 className="premium-button"
-                style={{ flex: 1, border: '1px solid #E8DDD3', borderRadius: '999px', padding: '12px', backgroundColor: darkMode ? '#1A1715' : '#FAF7F2', color: darkMode ? '#FAF7F2' : '#3D3530', fontWeight: '800', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                style={{ flex: 1, border: '1px solid var(--border-color)', borderRadius: '999px', padding: '12px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', fontWeight: '800', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
               >
                 <Pencil size={16} /> Éditer
               </button>
               <button
                 onClick={() => handleTogglePauseListing(selectedListing.id)}
                 className="premium-button"
-                style={{ border: '1px solid #E8DDD3', borderRadius: '999px', padding: '12px 16px', backgroundColor: darkMode ? '#1A1715' : '#FAF7F2', color: darkMode ? '#FAF7F2' : '#3D3530', fontWeight: '800', fontSize: '13px', cursor: 'pointer' }}
+                style={{ border: '1px solid var(--border-color)', borderRadius: '999px', padding: '12px 16px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', fontWeight: '800', fontSize: '13px', cursor: 'pointer' }}
               >
                 {selectedListing.status === 'paused' ? 'Reprendre' : 'Pauser'}
               </button>
               <button
                 onClick={() => { handleDeleteListing(selectedListing.id); onClose(); }}
                 className="premium-button"
-                style={{ border: '1px solid rgba(232,221,211,0.25)', borderRadius: '999px', padding: '12px 16px', backgroundColor: '#2A1A14', color: '#FAF7F2', fontWeight: '800', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                style={{ border: '1px solid var(--accent-danger)', borderRadius: '999px', padding: '12px 16px', backgroundColor: 'var(--accent-danger)', color: '#FFF', fontWeight: '800', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
                 <Trash2 size={16} />
               </button>
@@ -411,3 +411,4 @@ export default function ListingDetailModal({
     </div>
   );
 }
+

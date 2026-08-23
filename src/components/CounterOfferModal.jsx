@@ -59,7 +59,7 @@ export default function CounterOfferModal({
       style={{
         position: 'fixed',
         inset: 0,
-        backgroundColor: 'rgba(61, 53, 48, 0.72)',
+        backgroundColor: 'var(--overlay-bg)',
         backdropFilter: 'blur(16px)',
         WebkitBackdropFilter: 'blur(16px)',
         display: 'flex',
@@ -77,11 +77,11 @@ export default function CounterOfferModal({
           maxWidth: '480px',
           maxHeight: '90vh',
           overflowY: 'auto',
-          backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
+          backgroundColor: 'var(--bg-card)',
           borderRadius: '24px',
           padding: '24px',
-          boxShadow: '0 25px 60px rgba(0, 0, 0, 0.45)',
-          border: darkMode ? '1px solid rgba(232, 221, 211, 0.15)' : '1px solid #E8DDD3',
+          boxShadow: 'var(--shadow-modal)',
+          border: '1px solid var(--border-color)',
           display: 'flex',
           flexDirection: 'column',
           gap: '16px',
@@ -94,18 +94,18 @@ export default function CounterOfferModal({
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{
               width: '42px', height: '42px', borderRadius: '50%',
-              background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)',
+              background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
               color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 6px 16px rgba(198, 125, 91, 0.3)'
+              boxShadow: 'var(--shadow-accent)'
             }}>
               <Sparkles size={20} />
             </div>
             <div>
-              <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
+              <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: 'var(--text-main)' }}>
                 {isEditing ? 'Modifier ma proposition' : 'Proposer un Deal'}
               </h3>
-              <p style={{ margin: 0, fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', fontWeight: '600' }}>
-                Échange avec <span style={{ color: '#C67D5B', fontWeight: '800' }}>{partnerName}</span>
+              <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600' }}>
+                Échange avec <span style={{ color: 'var(--accent-primary)', fontWeight: '800' }}>{partnerName}</span>
               </p>
             </div>
           </div>
@@ -113,10 +113,10 @@ export default function CounterOfferModal({
             type="button"
             onClick={onClose}
             style={{
-              border: 'none', background: darkMode ? 'rgba(255,255,255,0.08)' : '#E8DDD3',
+              border: 'none', background: 'var(--bg-subtle)',
               width: '34px', height: '34px', borderRadius: '50%',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: darkMode ? '#FFF' : '#3D3530', cursor: 'pointer'
+              color: 'var(--text-main)', cursor: 'pointer'
             }}
           >
             <X size={16} />
@@ -126,8 +126,8 @@ export default function CounterOfferModal({
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
           {/* DURÉE DE L'ÉCHANGE */}
           <div>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '800', color: darkMode ? '#D4C5B5' : '#3D3530', marginBottom: '8px' }}>
-              <Clock size={14} color="#C67D5B" />
+            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '8px' }}>
+              <Clock size={14} color="var(--accent-primary)" />
               <span>Durée estimée de la prestation</span>
             </label>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
@@ -147,9 +147,9 @@ export default function CounterOfferModal({
                       setDurationValue(item.val);
                     }}
                     style={{
-                      border: isSel ? '2px solid #C67D5B' : (darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3'),
-                      backgroundColor: isSel ? (darkMode ? 'rgba(198,125,91,0.25)' : '#F5EAE4') : (darkMode ? '#1A1715' : '#F5F0E8'),
-                      color: isSel ? (darkMode ? '#FAF7F2' : '#A8644A') : (darkMode ? '#D4C5B5' : '#6B5E54'),
+                      border: isSel ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                      backgroundColor: isSel ? 'var(--bg-subtle)' : 'var(--bg-card)',
+                      color: isSel ? 'var(--accent-primary)' : 'var(--text-secondary)',
                       borderRadius: '12px',
                       padding: '8px 4px',
                       fontSize: '12px',
@@ -167,11 +167,11 @@ export default function CounterOfferModal({
 
           {/* RÉTRIBUTION : JETONS TROCO */}
           <div>
-            <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px', fontWeight: '800', color: darkMode ? '#D4C5B5' : '#3D3530', marginBottom: '8px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '8px' }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Coins size={14} color="#F59E0B" /> Jetons Troco proposés
+                <Coins size={14} color="var(--accent-warning)" /> Jetons Troco proposés
               </span>
-              <span style={{ fontSize: '11px', color: '#D97706', fontWeight: '700' }}>{trocoTokens || 0} Jeton(s)</span>
+              <span style={{ fontSize: '11px', color: 'var(--accent-warning)', fontWeight: '700' }}>{trocoTokens || 0} Jeton(s)</span>
             </label>
             <div style={{ display: 'flex', gap: '6px' }}>
               {['0', '1', '2', '3', '5'].map((num) => (
@@ -181,9 +181,9 @@ export default function CounterOfferModal({
                   onClick={() => setTrocoTokens(num)}
                   style={{
                     flex: 1,
-                    border: trocoTokens === num ? '2px solid #F59E0B' : (darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3'),
-                    backgroundColor: trocoTokens === num ? (darkMode ? 'rgba(245,158,11,0.25)' : '#FEF3C7') : (darkMode ? '#1A1715' : '#F5F0E8'),
-                    color: trocoTokens === num ? (darkMode ? '#FDE68A' : '#B45309') : (darkMode ? '#D4C5B5' : '#6B5E54'),
+                    border: trocoTokens === num ? '2px solid var(--accent-warning)' : '1px solid var(--border-color)',
+                    backgroundColor: trocoTokens === num ? 'var(--bg-subtle)' : 'var(--bg-card)',
+                    color: trocoTokens === num ? 'var(--accent-warning)' : 'var(--text-secondary)',
                     borderRadius: '12px',
                     padding: '8px 0',
                     fontSize: '12px',
@@ -199,11 +199,11 @@ export default function CounterOfferModal({
 
           {/* COMPLÉMENT FINANCIER EN EUROS (OPTIONNEL) */}
           <div>
-            <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px', fontWeight: '800', color: darkMode ? '#D4C5B5' : '#3D3530', marginBottom: '8px' }}>
+            <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '8px' }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Euro size={14} color="#C67D5B" /> Complément en Euros (€)
+                <Euro size={14} color="var(--accent-primary)" /> Complément en Euros (€)
               </span>
-              <span style={{ fontSize: '11px', color: '#A8644A', fontWeight: '700' }}>Optionnel</span>
+              <span style={{ fontSize: '11px', color: 'var(--accent-primary)', fontWeight: '700' }}>Optionnel</span>
             </label>
             <div style={{ position: 'relative' }}>
               <input
@@ -216,9 +216,9 @@ export default function CounterOfferModal({
                 style={{
                   width: '100%',
                   boxSizing: 'border-box',
-                  border: darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #E8DDD3',
-                  backgroundColor: darkMode ? '#1A1715' : '#FAF7F2',
-                  color: darkMode ? '#FAF7F2' : '#3D3530',
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: 'var(--bg-subtle)',
+                  color: 'var(--text-main)',
                   borderRadius: '14px',
                   padding: '10px 38px 10px 14px',
                   fontSize: '14px',
@@ -226,13 +226,13 @@ export default function CounterOfferModal({
                   outline: 'none'
                 }}
               />
-              <span style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', fontWeight: '800', color: '#C67D5B' }}>€</span>
+              <span style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', fontWeight: '800', color: 'var(--accent-primary)' }}>€</span>
             </div>
           </div>
 
           {/* CONDITIONS & TERMES DU DEAL */}
           <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: darkMode ? '#D4C5B5' : '#3D3530', marginBottom: '8px' }}>
+            <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '8px' }}>
               Conditions et détails de l'accord
             </label>
             <textarea
@@ -243,9 +243,9 @@ export default function CounterOfferModal({
               style={{
                 width: '100%',
                 boxSizing: 'border-box',
-                border: darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #E8DDD3',
-                backgroundColor: darkMode ? '#1A1715' : '#FAF7F2',
-                color: darkMode ? '#FAF7F2' : '#3D3530',
+                border: '1px solid var(--border-color)',
+                backgroundColor: 'var(--bg-subtle)',
+                color: 'var(--text-main)',
                 borderRadius: '14px',
                 padding: '12px 14px',
                 fontSize: '13px',
@@ -261,25 +261,25 @@ export default function CounterOfferModal({
           <div style={{
             display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap',
             padding: '10px 14px', borderRadius: '14px',
-            backgroundColor: darkMode ? '#1A1715' : '#F5F0E8',
-            border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3'
+            backgroundColor: 'var(--bg-subtle)',
+            border: '1px solid var(--border-color)'
           }}>
-            <span style={{ fontSize: '11px', fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530' }}>Récapitulatif :</span>
-            <span style={{ fontSize: '11px', fontWeight: '800', backgroundColor: darkMode ? '#231E1B' : '#FAF7F2', padding: '3px 8px', borderRadius: '999px', color: darkMode ? '#FAF7F2' : '#3D3530', border: '1px solid #E8DDD3' }}>
+            <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-main)' }}>Récapitulatif :</span>
+            <span style={{ fontSize: '11px', fontWeight: '800', backgroundColor: 'var(--bg-card)', padding: '3px 8px', borderRadius: '999px', color: 'var(--text-main)', border: '1px solid var(--border-color)' }}>
               ⏱️ {durationType === 'hourly' ? `${durationValue}h` : durationType === 'daily' ? `${durationValue}j` : 'Forfait'}
             </span>
             {Number(trocoTokens) > 0 && (
-              <span style={{ fontSize: '11px', fontWeight: '800', backgroundColor: darkMode ? '#231E1B' : '#FAF7F2', padding: '3px 8px', borderRadius: '999px', color: '#D97706', border: '1px solid #FDE68A' }}>
+              <span style={{ fontSize: '11px', fontWeight: '800', backgroundColor: 'var(--bg-card)', padding: '3px 8px', borderRadius: '999px', color: 'var(--accent-warning)', border: '1px solid var(--border-color)' }}>
                 🪙 {trocoTokens} Jeton(s)
               </span>
             )}
             {Number(euroAmount) > 0 && (
-              <span style={{ fontSize: '11px', fontWeight: '800', backgroundColor: darkMode ? '#231E1B' : '#FAF7F2', padding: '3px 8px', borderRadius: '999px', color: '#C67D5B', border: '1px solid #F5EAE4' }}>
+              <span style={{ fontSize: '11px', fontWeight: '800', backgroundColor: 'var(--bg-card)', padding: '3px 8px', borderRadius: '999px', color: 'var(--accent-primary)', border: '1px solid var(--border-color)' }}>
                 💶 {euroAmount}€
               </span>
             )}
             {Number(trocoTokens) === 0 && Number(euroAmount) === 0 && (
-              <span style={{ fontSize: '11px', fontWeight: '800', backgroundColor: darkMode ? '#231E1B' : '#FAF7F2', padding: '3px 8px', borderRadius: '999px', color: '#3D4A35', border: '1px solid #D4DFCE' }}>
+              <span style={{ fontSize: '11px', fontWeight: '800', backgroundColor: 'var(--bg-card)', padding: '3px 8px', borderRadius: '999px', color: 'var(--accent-success)', border: '1px solid var(--border-color)' }}>
                 🤝 Troc direct
               </span>
             )}
@@ -293,11 +293,11 @@ export default function CounterOfferModal({
               className="premium-button"
               style={{
                 flex: 1,
-                border: darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #E8DDD3',
+                border: '1px solid var(--border-color)',
                 borderRadius: '14px',
                 padding: '12px',
                 backgroundColor: 'transparent',
-                color: darkMode ? '#D4C5B5' : '#6B5E54',
+                color: 'var(--text-secondary)',
                 fontSize: '13px',
                 fontWeight: '700',
                 cursor: 'pointer'
@@ -313,7 +313,7 @@ export default function CounterOfferModal({
                 border: 'none',
                 borderRadius: '14px',
                 padding: '12px',
-                background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)',
+                background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
                 color: '#FFF',
                 fontSize: '13.5px',
                 fontWeight: '800',
@@ -322,7 +322,7 @@ export default function CounterOfferModal({
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '6px',
-                boxShadow: '0 6px 20px rgba(198,125,91,0.35)'
+                boxShadow: 'var(--shadow-accent)'
               }}
             >
               <span>{isEditing ? 'Mettre à jour' : 'Envoyer la proposition'}</span>
@@ -334,3 +334,4 @@ export default function CounterOfferModal({
     </div>
   );
 }
+

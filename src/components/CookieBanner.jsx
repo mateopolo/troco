@@ -57,14 +57,14 @@ export default function CookieBanner({
       maxWidth: '640px',
       margin: '0 auto',
       zIndex: 3800,
-      backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
+      backgroundColor: 'var(--bg-card)',
       backdropFilter: 'blur(16px)',
       WebkitBackdropFilter: 'blur(16px)',
       borderRadius: '24px',
       padding: '18px 22px',
-      boxShadow: darkMode ? '0 20px 40px rgba(0,0,0,0.8), 0 0 25px rgba(198,125,91,0.15)' : '0 20px 40px rgba(61,53,48,0.18)',
-      border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
-      color: darkMode ? '#FAF7F2' : '#3D3530',
+      boxShadow: 'var(--shadow-modal)',
+      border: '1px solid var(--border-color)',
+      color: 'var(--text-main)',
       animation: 'slideUp 0.3s ease-out',
     }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
@@ -72,8 +72,8 @@ export default function CookieBanner({
           width: '40px',
           height: '40px',
           borderRadius: '12px',
-          backgroundColor: darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4',
-          color: '#C67D5B',
+          backgroundColor: 'var(--bg-subtle)',
+          color: 'var(--accent-primary)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -83,10 +83,10 @@ export default function CookieBanner({
         </div>
 
         <div style={{ flex: 1 }}>
-          <div className="font-editorial-heading" style={{ fontSize: '17px', fontWeight: '600', marginBottom: '4px', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
+          <div className="font-editorial-heading" style={{ fontSize: '17px', fontWeight: '600', marginBottom: '4px', color: 'var(--text-main)' }}>
             🍪 Respect de votre vie privée & Cookies
           </div>
-          <p style={{ margin: 0, fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', lineHeight: 1.5 }}>
+          <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
             Troco utilise des traceurs nécessaires au bon fonctionnement de la plateforme et à la mesure d'audience anonyme. Vous pouvez personnaliser vos choix à tout moment.
           </p>
 
@@ -98,12 +98,12 @@ export default function CookieBanner({
                 border: 'none',
                 borderRadius: '999px',
                 padding: '8px 18px',
-                background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)',
+                background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
                 color: '#FFF',
                 fontWeight: '800',
                 fontSize: '12px',
                 cursor: 'pointer',
-                boxShadow: '0 4px 12px rgba(198,125,91,0.25)',
+                boxShadow: 'var(--shadow-accent)',
               }}
             >
               Tout accepter
@@ -113,11 +113,11 @@ export default function CookieBanner({
               onClick={handleDeclineAll}
               className="premium-button"
               style={{
-                border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
+                border: '1px solid var(--border-color)',
                 borderRadius: '999px',
                 padding: '8px 14px',
                 backgroundColor: 'transparent',
-                color: darkMode ? '#D4C5B5' : '#6B5E54',
+                color: 'var(--text-secondary)',
                 fontWeight: '700',
                 fontSize: '12px',
                 cursor: 'pointer',
@@ -137,8 +137,8 @@ export default function CookieBanner({
                   border: 'none',
                   borderRadius: '999px',
                   padding: '8px 12px',
-                  backgroundColor: darkMode ? 'rgba(232,221,211,0.1)' : '#F5EAE4',
-                  color: '#C67D5B',
+                  backgroundColor: 'var(--bg-subtle)',
+                  color: 'var(--accent-primary)',
                   fontWeight: '700',
                   fontSize: '12px',
                   cursor: 'pointer',
@@ -158,7 +158,7 @@ export default function CookieBanner({
           style={{
             border: 'none',
             background: 'transparent',
-            color: darkMode ? '#D4C5B5' : '#6B5E54',
+            color: 'var(--text-secondary)',
             cursor: 'pointer',
             padding: '4px',
           }}
@@ -169,3 +169,4 @@ export default function CookieBanner({
     </div>
   );
 }
+

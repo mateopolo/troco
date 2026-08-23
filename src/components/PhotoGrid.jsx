@@ -19,8 +19,8 @@ export default function PhotoGrid({
     <div style={{
       padding: '18px',
       borderRadius: '20px',
-      backgroundColor: darkMode ? '#1A1715' : '#FAF7F2',
-      border: darkMode ? '1px solid rgba(232, 221, 211, 0.12)' : '1px solid #E8DDD3',
+      backgroundColor: 'var(--bg-card)',
+      border: '1px solid var(--border-color)',
       display: 'flex',
       flexDirection: 'column',
       gap: '14px',
@@ -29,12 +29,12 @@ export default function PhotoGrid({
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <ImageIcon size={18} color="#C67D5B" />
-            <h4 className="font-editorial-heading" style={{ margin: 0, fontSize: '17px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
+            <ImageIcon size={18} color="var(--accent-primary)" />
+            <h4 className="font-editorial-heading" style={{ margin: 0, fontSize: '17px', fontWeight: '600', color: 'var(--text-main)' }}>
               {currentLang === 'FR' ? 'Photos de l’annonce' : 'Listing photos'} ({count}/{maxPhotos})
             </h4>
           </div>
-          <p style={{ margin: '4px 0 0', fontSize: '11px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>
+          <p style={{ margin: '4px 0 0', fontSize: '11px', color: 'var(--text-secondary)' }}>
             {currentLang === 'FR'
               ? '4 photos gratuites incluses • Jusqu’à 8 photos pour maximiser vos contacts'
               : '4 free photos included • Up to 8 photos to maximize your reach'}
@@ -50,8 +50,8 @@ export default function PhotoGrid({
               border: 'none',
               borderRadius: '12px',
               padding: '7px 12px',
-              backgroundColor: darkMode ? 'rgba(198, 125, 91, 0.25)' : '#F5EAE4',
-              color: darkMode ? '#FAF7F2' : '#A8644A',
+              backgroundColor: 'var(--bg-subtle)',
+              color: 'var(--accent-primary)',
               fontSize: '11px',
               fontWeight: '800',
               cursor: 'pointer',
@@ -73,9 +73,9 @@ export default function PhotoGrid({
           justifyContent: 'space-between',
           padding: '10px 14px',
           borderRadius: '14px',
-          backgroundColor: darkMode ? 'rgba(217, 119, 6, 0.15)' : '#FEF3C7',
-          border: darkMode ? '1px solid rgba(217, 119, 6, 0.4)' : '1px solid #FDE68A',
-          color: darkMode ? '#FDE68A' : '#92400E',
+          backgroundColor: 'var(--bg-subtle)',
+          border: '1px solid var(--accent-warning)',
+          color: 'var(--accent-warning)',
           fontSize: '12px',
           fontWeight: '700',
           animation: 'fadeSlideUp 0.3s ease both',
@@ -84,7 +84,7 @@ export default function PhotoGrid({
             📸 <strong>Pack Photos Supplémentaires</strong> ({count - 4} photo{count - 4 > 1 ? 's' : ''} au-delà du quota gratuit)
           </span>
           <span style={{
-            backgroundColor: '#D97706',
+            backgroundColor: 'var(--accent-warning)',
             color: '#FFFFFF',
             padding: '4px 10px',
             borderRadius: '999px',
@@ -112,10 +112,10 @@ export default function PhotoGrid({
               borderRadius: '16px',
               overflow: 'hidden',
               border: idx === 0
-                ? '2px solid #C67D5B'
-                : (darkMode ? '1px solid rgba(232, 221, 211, 0.15)' : '1px solid #E8DDD3'),
-              boxShadow: '0 4px 12px rgba(61, 53, 48, 0.08)',
-              backgroundColor: '#1A1715',
+                ? '2px solid var(--accent-primary)'
+                : '1px solid var(--border-color)',
+              boxShadow: 'var(--shadow-card)',
+              backgroundColor: 'var(--bg-subtle)',
             }}
           >
             <img
@@ -135,7 +135,7 @@ export default function PhotoGrid({
                 position: 'absolute',
                 bottom: '6px',
                 left: '6px',
-                backgroundColor: 'rgba(61, 53, 48, 0.92)',
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
                 backdropFilter: 'blur(4px)',
                 WebkitBackdropFilter: 'blur(4px)',
                 color: '#FFF',
@@ -154,7 +154,7 @@ export default function PhotoGrid({
               position: 'absolute',
               top: '6px',
               left: '6px',
-              backgroundColor: idx < 4 ? 'rgba(61, 53, 48, 0.75)' : 'rgba(217, 119, 6, 0.95)',
+              backgroundColor: idx < 4 ? 'rgba(0, 0, 0, 0.75)' : 'var(--accent-warning)',
               color: '#FFF',
               fontSize: '10px',
               fontWeight: '800',
@@ -181,7 +181,7 @@ export default function PhotoGrid({
                 width: '26px',
                 height: '26px',
                 borderRadius: '50%',
-                backgroundColor: '#EF4444',
+                backgroundColor: 'var(--accent-danger)',
                 color: '#FFF',
                 display: 'flex',
                 alignItems: 'center',
@@ -204,8 +204,8 @@ export default function PhotoGrid({
             width: '100%',
             aspectRatio: '1 / 1',
             borderRadius: '16px',
-            border: darkMode ? '2px dashed rgba(232, 221, 211, 0.25)' : '2px dashed #D4C5B5',
-            backgroundColor: darkMode ? '#231E1B' : '#F5F0E8',
+            border: '2px dashed var(--border-color)',
+            backgroundColor: 'var(--bg-subtle)',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -218,8 +218,8 @@ export default function PhotoGrid({
               width: '38px',
               height: '38px',
               borderRadius: '50%',
-              backgroundColor: darkMode ? 'rgba(198, 125, 91, 0.2)' : '#F5EAE4',
-              color: '#C67D5B',
+              backgroundColor: 'var(--bg-card)',
+              color: 'var(--accent-primary)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -229,13 +229,13 @@ export default function PhotoGrid({
             <span style={{
               fontSize: '11px',
               fontWeight: '800',
-              color: darkMode ? '#FAF7F2' : '#3D3530',
+              color: 'var(--text-main)',
             }}>
               Ajouter photo
             </span>
             <span style={{
               fontSize: '9px',
-              color: darkMode ? '#D4C5B5' : '#6B5E54',
+              color: 'var(--text-secondary)',
             }}>
               {count < 4 ? 'Inclus (gratuit)' : 'Pack (+1,99 €)'}
             </span>
@@ -257,3 +257,4 @@ export default function PhotoGrid({
     </div>
   );
 }
+
