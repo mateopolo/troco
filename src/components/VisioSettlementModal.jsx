@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  HeartHandshake, Coins, Clock, ArrowRight,
+  HeartHandshake, Coins, Clock,
   Sparkles, Check, X
 } from 'lucide-react';
 
@@ -22,13 +22,16 @@ export default function VisioSettlementModal({
 
   if (!isOpen) return null;
 
-  // Calcul du temps formaté (ex: 24m 12s)
-  const minutes = Math.floor(callDuration / 60);
+  // Calcul du temps formaté
+  const hours = Math.floor(callDuration / 3600);
+  const minutes = Math.floor((callDuration % 3600) / 60);
   const seconds = callDuration % 60;
-  const formattedTime = `${minutes}m ${seconds < 10 ? '0' : ''}${seconds}s`;
+  const formattedTime = hours > 0
+    ? `${hours}h ${minutes.toString().padStart(2, '0')}min`
+    : `${minutes}min ${seconds.toString().padStart(2, '0')}s`;
 
   // Équivalence recommandée en jetons (1h = 1 jeton)
-  const calculatedTokens = Math.max(1, Math.ceil(minutes / 60));
+  const calculatedTokens = Math.max(1, Math.ceil(callDuration / 3600) || 1);
 
   const handleConfirmTransfer = () => {
     if (onTransferTokens) {
@@ -62,17 +65,19 @@ export default function VisioSettlementModal({
     >
       <div
         style={{
+          width: '100%',
+          maxWidth: '480px',
           backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
           borderRadius: '28px',
           padding: '28px 24px',
-          maxWidth: '460px',
-          width: '100%',
-          boxShadow: darkMode ? '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 30px rgba(198,125,91,0.15)' : '0 25px 50px -12px rgba(61, 53, 48, 0.25)',
-          border: darkMode ? '1px solid rgba(232, 221, 211, 0.15)' : '1px solid #E8DDD3',
+          boxShadow: darkMode
+            ? '0 25px 60px rgba(0,0,0,0.8), 0 0 40px rgba(198,125,91,0.2)'
+            : '0 25px 60px rgba(61,53,48,0.25)',
+          border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
           color: darkMode ? '#FAF7F2' : '#3D3530',
           textAlign: 'center',
           position: 'relative',
-          animation: 'scaleUp 0.3s ease-out',
+          animation: 'popIn 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
         }}
       >
         {/* BOUTON FERMER */}
@@ -80,64 +85,64 @@ export default function VisioSettlementModal({
           onClick={onClose}
           style={{
             position: 'absolute',
-            top: '18px',
-            right: '18px',
+            top: '16px',
+            right: '16px',
             border: 'none',
-            background: darkMode ? 'rgba(232,221,211,0.1)' : '#F5EAE4',
+            backgroundColor: darkMode ? 'rgba(232,221,211,0.1)' : '#F5EAE4',
             width: '32px',
             height: '32px',
             borderRadius: '50%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
             color: darkMode ? '#FAF7F2' : '#3D3530',
             cursor: 'pointer',
-          }}
-        >
-          <X size={18} />
-        </button>
-
-        {/* ICONE D'EN-TÊTE */}
-        <div
-          style={{
-            width: '76px',
-            height: '76px',
-            borderRadius: '50%',
-            background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 10px 25px rgba(198,125,91,0.4)',
-            margin: '0 auto 16px',
-            border: '3px solid #E8DDD3',
           }}
         >
-          <HeartHandshake size={38} color="#FFF" />
+          <X size={16} />
+        </button>
+
+        {/* ICÔNE DE FIN DE SESSION */}
+        <div
+          style={{
+            width: '64px',
+            height: '64px',
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)',
+            color: '#FFFFFF',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 16px',
+            boxShadow: '0 8px 24px rgba(198,125,91,0.35)',
+          }}
+        >
+          <HeartHandshake size={32} />
         </div>
 
-        <h2 className="font-editorial-heading" style={{ fontSize: '24px', fontWeight: '600', margin: '0 0 6px', letterSpacing: '-0.02em', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
-          Bilan de la séance & Rétribution
-        </h2>
-        <p style={{ fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54', margin: '0 0 20px' }}>
-          Séance terminée avec <strong style={{ color: '#C67D5B' }}>{partnerName}</strong>
+        <h3 className="font-editorial-heading" style={{ margin: '0 0 6px', fontSize: '24px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
+          Session terminée avec succès !
+        </h3>
+        <p style={{ margin: '0 0 20px', fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54', lineHeight: 1.5 }}>
+          Rétribuez <strong>{partnerName}</strong> pour son temps et ses conseils en Jetons Troco.
         </p>
 
-        {/* CADRE RECAP DURÉE & JETONS */}
+        {/* BILAN DE TEMPS ET ÉQUIVALENCE JETONS */}
         <div
           style={{
             display: 'grid',
             gridTemplateColumns: '1fr 1fr',
             gap: '12px',
-            backgroundColor: darkMode ? '#1A1715' : '#FFF',
+            backgroundColor: darkMode ? '#1A1715' : '#F5EAE4',
             borderRadius: '20px',
-            padding: '14px',
-            border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3',
+            padding: '16px',
             marginBottom: '20px',
+            border: darkMode ? '1px solid rgba(232,221,211,0.1)' : '1px solid #E8DDD3',
           }}
         >
-          <div style={{ textAlign: 'center', borderRight: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3', paddingRight: '6px' }}>
+          <div style={{ textAlign: 'center', borderRight: darkMode ? '1px solid rgba(232,221,211,0.1)' : '1px solid #E8DDD3', paddingRight: '6px' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', fontSize: '11px', fontWeight: '700', color: darkMode ? '#D4C5B5' : '#6B5E54', textTransform: 'uppercase' }}>
-              <Clock size={12} color="#C67D5B" /> Durée de la visio
+              <Clock size={12} color="#C67D5B" /> Durée d'appel
             </div>
             <div style={{ fontSize: '19px', fontWeight: '900', color: darkMode ? '#FAF7F2' : '#3D3530', marginTop: '4px' }}>
               {formattedTime}
@@ -160,9 +165,10 @@ export default function VisioSettlementModal({
             Nombre de Jetons Troco à transférer :
           </label>
           <div style={{ display: 'flex', gap: '8px' }}>
-            {[1, 2, 3, 5].map(num => (
+            {[1, 2, 3, 4, 5].map(num => (
               <button
                 key={num}
+                type="button"
                 onClick={() => setSelectedTokens(num)}
                 style={{
                   flex: 1,
@@ -240,7 +246,7 @@ export default function VisioSettlementModal({
           </label>
         </div>
 
-        {/* BOUTON DE CONFIRMATION */}
+        {/* BOUTON D'ACTION PRINCIPAL */}
         <button
           onClick={handleConfirmTransfer}
           disabled={currentUserTokens < selectedTokens}
@@ -251,9 +257,9 @@ export default function VisioSettlementModal({
             color: '#FFFFFF',
             border: 'none',
             borderRadius: '16px',
-            padding: '14px 20px',
-            fontSize: '14px',
+            padding: '14px',
             fontWeight: '800',
+            fontSize: '14px',
             cursor: currentUserTokens < selectedTokens ? 'not-allowed' : 'pointer',
             display: 'flex',
             alignItems: 'center',
@@ -265,35 +271,33 @@ export default function VisioSettlementModal({
         >
           {isTransferred ? (
             <>
-              <Check size={18} />
-              <span>Jetons transférés avec succès !</span>
+              <Check size={18} /> Jetons transférés avec succès !
             </>
-          ) : currentUserTokens < selectedTokens ? (
-            <span>Solde insuffisant ({currentUserTokens} jetons disponibles)</span>
           ) : (
             <>
-              <Sparkles size={16} color="#FDE68A" />
-              <span>Transférer {selectedTokens} Jeton{selectedTokens > 1 ? 's' : ''} à {partnerName}</span>
-              <ArrowRight size={16} />
+              <Sparkles size={18} /> Transférer {selectedTokens} Jeton{selectedTokens > 1 ? 's' : ''} à {partnerName}
             </>
           )}
         </button>
 
-        <button
-          onClick={onClose}
-          style={{
-            marginTop: '10px',
-            background: 'none',
-            border: 'none',
-            color: darkMode ? '#D4C5B5' : '#6B5E54',
-            fontSize: '12px',
-            fontWeight: '700',
-            cursor: 'pointer',
-            padding: '6px',
-          }}
-        >
-          Fermer sans transfert
-        </button>
+        {/* LIEN PASSER */}
+        {!isTransferred && (
+          <button
+            onClick={onClose}
+            style={{
+              marginTop: '10px',
+              background: 'none',
+              border: 'none',
+              color: darkMode ? '#D4C5B5' : '#6B5E54',
+              fontSize: '12px',
+              fontWeight: '700',
+              cursor: 'pointer',
+              textDecoration: 'underline',
+            }}
+          >
+            Clôturer sans transférer de jetons
+          </button>
+        )}
       </div>
     </div>
   );
