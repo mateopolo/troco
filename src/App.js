@@ -6031,7 +6031,7 @@ export default function App() {
       display: 'block',
       overflowX: 'hidden',
       transition: 'background-color 0.3s ease, color 0.3s ease',
-      paddingBottom: isMobile && activeTab === 'chat' ? '0' : '90px',
+      paddingBottom: activeTab === 'chat' ? '0' : '90px',
       WebkitFontSmoothing: 'antialiased',
       position: 'relative',
       fontFamily: 'var(--font-family-main)'
@@ -6871,13 +6871,13 @@ export default function App() {
           flexDirection: activeTab === 'chat' ? 'column' : 'initial',
           overflow: activeTab === 'chat' ? 'hidden' : 'visible',
           height: activeTab === 'chat'
-            ? (isMobile ? (selectedChat ? '100dvh' : 'calc(100dvh - 125px)') : 'calc(100dvh - 129px)')
+            ? (isMobile ? (selectedChat ? '100dvh' : 'calc(100dvh - 125px)') : 'calc(100vh - 138px)')
             : 'auto',
           maxHeight: activeTab === 'chat'
-            ? (isMobile ? (selectedChat ? '100dvh' : 'calc(100dvh - 125px)') : 'calc(100dvh - 129px)')
+            ? (isMobile ? (selectedChat ? '100dvh' : 'calc(100dvh - 125px)') : 'calc(100vh - 138px)')
             : 'none',
           padding: activeTab === 'chat'
-            ? (isMobile ? (selectedChat ? '0' : '0 6px') : '0 16px')
+            ? (isMobile ? (selectedChat ? '0' : '0 6px') : '14px 16px 0 16px')
             : (isMobile ? '12px 12px 90px' : '20px 20px 90px'),
           transition: 'max-width 0.3s ease'
         }}
