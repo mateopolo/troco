@@ -31,6 +31,7 @@ import FeedCardItem from './components/FeedCardItem';
 import PhotoGrid from './components/PhotoGrid';
 import InvoiceCalculator, { generateInvoiceRef, calculateListingInvoice } from './components/InvoiceCalculator';
 import CallOverlay from './components/CallOverlay';
+import TrocoLogo3D from './components/common/TrocoLogo3D';
 import {
   translations,
   calculateHaversineDistance,
@@ -5250,6 +5251,7 @@ export default function App() {
           padding: '30px',
           animation: 'modalSlideIn 0.8s var(--ease-monopo) both'
         }}>
+          <TrocoLogo3D size={84} animated={true} style={{ marginBottom: '24px' }} />
           <div style={{
             fontSize: 'clamp(56px, 14vw, 92px)',
             fontFamily: 'var(--font-editorial)',
@@ -5996,9 +5998,12 @@ export default function App() {
       }}>
         <div className="header-container" style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', width: '100%', boxSizing: 'border-box' }}>
           {/* PARTIE 3 : LOGO TROCO CLICKABLE -> RETOUR ACCUEIL */}
-          <button onClick={() => { setActiveTab('feed'); setSelectedListing(null); setSelectedChat(null); if (callState.active) endCall(); }} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: '4px 6px', borderRadius: '12px', textAlign: 'left', flexShrink: 0 }}>
-            <h1 className="font-editorial-heading" style={{ fontSize: isScrolled ? '19px' : '22px', fontWeight: '700', color: 'var(--text-main)', margin: 0, letterSpacing: '-0.02em', whiteSpace: 'nowrap', transition: 'font-size 0.3s var(--ease-quiet)' }}>Troco</h1>
-            <p className="logo-slogan font-editorial" style={{ fontSize: '11px', color: 'var(--text-secondary)', fontStyle: 'italic', margin: 0, whiteSpace: 'nowrap' }}>{t('slogan')}</p>
+          <button onClick={() => { setActiveTab('feed'); setSelectedListing(null); setSelectedChat(null); if (callState.active) endCall(); }} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: '4px 6px', borderRadius: '12px', textAlign: 'left', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <TrocoLogo3D size={isScrolled ? 24 : 28} animated={false} />
+            <div>
+              <h1 className="font-editorial-heading" style={{ fontSize: isScrolled ? '19px' : '22px', fontWeight: '700', color: 'var(--text-main)', margin: 0, letterSpacing: '-0.02em', whiteSpace: 'nowrap', transition: 'font-size 0.3s var(--ease-quiet)' }}>Troco</h1>
+              <p className="logo-slogan font-editorial" style={{ fontSize: '11px', color: 'var(--text-secondary)', fontStyle: 'italic', margin: 0, whiteSpace: 'nowrap' }}>{t('slogan')}</p>
+            </div>
           </button>
           <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'nowrap' }}>
             <button onClick={() => handleOpenPayment('topup-cash')} title="Recharger mon solde Euros" className="premium-button balance-badge" style={{ border: '1px solid var(--border-color)', borderRadius: '999px', padding: isScrolled ? '5px 10px' : '6px 12px', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', position: 'relative', overflow: 'visible', whiteSpace: 'nowrap', flexShrink: 0, transition: 'padding 0.3s var(--ease-quiet)' }}>

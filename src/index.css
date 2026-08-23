@@ -231,6 +231,24 @@ body.dark-mode .liquid-blob,
   }
 }
 
+@keyframes troco3DFloat {
+  0%, 100% {
+    transform: translateY(0) rotateY(0deg) scale(1);
+  }
+  50% {
+    transform: translateY(-8px) rotateY(12deg) scale(1.04);
+  }
+}
+
+.troco-logo-3d-wrapper {
+  transition: transform 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+  perspective: 600px;
+}
+
+.troco-logo-3d-floating {
+  animation: troco3DFloat 4.5s cubic-bezier(0.19, 1, 0.22, 1) infinite;
+}
+
 * {
   box-sizing: border-box;
 }

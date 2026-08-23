@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Générateur d'Assets - Troco Logo 3D</title>
+    <!-- Import de JSZip pour générer le fichier .zip -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: #1A1715;
+            color: #FAF7F2;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        .preview-container {
+            width: 280px;
+            height: 280px;
+            background: radial-gradient(circle at 50% 50%, rgba(198, 125, 91, 0.22) 0%, transparent 70%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 40px;
+            margin-bottom: 36px;
+            animation: float 4s cubic-bezier(0.19, 1, 0.22, 1) infinite;
+        }
+        h1 {
+            font-size: 32px;
+            font-weight: 800;
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+            text-align: center;
+        }
+        p {
+            color: #D4C5B5;
+            margin-bottom: 32px;
+            font-size: 15px;
+            text-align: center;
+            max-width: 480px;
+            line-height: 1.5;
+        }
+        button {
+            background: linear-gradient(135deg, #C67D5B 0%, #A8644A 100%);
+            color: white;
+            border: none;
+            padding: 16px 36px;
+            border-radius: 999px;
+            font-size: 16px;
+            font-weight: 800;
+            cursor: pointer;
+            box-shadow: 0 10px 24px rgba(198, 125, 91, 0.35);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 14px 32px rgba(198, 125, 91, 0.45);
+        }
+        button:disabled {
+            background: #6B5E54;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Studio Design : Logo Troco 3D</h1>
+    <p>Aperçu en direct du prisme isométrique. Cliquez ci-dessous pour générer et télécharger le pack complet en 4K (SVG vectoriel, PNG transparent et JPEG).</p>
+
+    <div class="preview-container">
+        <!-- SVG Master 1024x1024 -->
+        <svg id="troco-logo" width="1024" height="1024" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 180px; height: 180px; filter: drop-shadow(0 12px 24px rgba(0,0,0,0.45));">
+            <defs>
+                <!-- Palette Earthy Pastel -->
+                <!-- Top Face : Sable clair -->
+                <linearGradient id="facetTop" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#DDBEA9" />
+                    <stop offset="100%" stop-color="#D4C7B0" />
+                </linearGradient>
+
+                <!-- Left Face : Terracotta (Accent Primary) -->
+                <linearGradient id="facetLeft" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stop-color="#C67D5B" />
+                    <stop offset="100%" stop-color="#A8644A" />
+                </linearGradient>
+
+                <!-- Right Face : Sage / Gris (Accent Secondary) -->
+                <linearGradient id="facetRight" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#A5A58D" />
+                    <stop offset="100%" stop-color="#6B705C" />
+                </linearGradient>
+
+                <!-- Stem Left : Darker Terracotta -->
+                <linearGradient id="stemLeft" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stop-color="#A8644A" />
+                    <stop offset="100%" stop-color="#3D3530" />
+                </linearGradient>
+
+                <!-- Stem Right : Obsidian / Darkest -->
+                <linearGradient id="stemRight" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#6B705C" />
+                    <stop offset="100%" stop-color="#3F4238" />
+                </linearGradient>
+            </defs>
+
+            <!-- T Top Bar - Top Face -->
+            <polygon points="20,30 50,15 80,30 50,45" fill="url(#facetTop)" />
+            <!-- T Top Bar - Left Ribbon -->
+            <polygon points="20,30 50,45 50,57 20,42" fill="url(#facetLeft)" />
+            <!-- T Top Bar - Right Ribbon -->
+            <polygon points="50,45 80,30 80,42 50,57" fill="url(#facetRight)" />
+            <!-- T Vertical Stem - Left Face -->
+            <polygon points="38,51 50,57 50,90 38,84" fill="url(#stemLeft)" />
+            <!-- T Vertical Stem - Right Face -->
+            <polygon points="50,57 62,51 62,84 50,90" fill="url(#stemRight)" />
+        </svg>
+    </div>
+
+    <button id="downloadBtn" onclick="generateZip()">📦 Télécharger le Pack 4K (SVG, PNG, JPG)</button>
+    <div id="status" style="margin-top: 16px; font-size: 13px; font-weight: 700; color: #9CAF88;"></div>
+
+    <script>
+        async function generateZip() {
+            const btn = document.getElementById('downloadBtn');
+            const status = document.getElementById('status');
+            btn.disabled = true;
+            btn.innerText = "Génération en cours (4K)...";
+            status.innerText = "";
+
+            try {
+                const svgElement = document.getElementById('troco-logo');
+                
+                // 1. Récupérer le code SVG
+                const svgData = new XMLSerializer().serializeToString(svgElement);
+                const cleanSvgData = svgData.replace(/style="[^"]*"/, ""); 
+                const svgBlob = new Blob([cleanSvgData], {type: 'image/svg+xml;charset=utf-8'});
+                const svgUrl = URL.createObjectURL(svgBlob);
+
+                const canvas = document.createElement('canvas');
+                canvas.width = 1024;
+                canvas.height = 1024;
+                const ctx = canvas.getContext('2d');
+
+                const img = new Image();
+                
+                img.onload = async () => {
+                    const zip = new JSZip();
+                    
+                    // Ajouter le SVG original
+                    zip.file("troco-logo-vectoriel.svg", svgBlob);
+
+                    // 2. Générer le PNG (Fond Transparent)
+                    ctx.clearRect(0, 0, 1024, 1024);
+                    ctx.drawImage(img, 0, 0, 1024, 1024);
+                    const pngBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+                    zip.file("troco-logo-transparent-4K.png", pngBlob);
+
+                    // 3. Générer le JPEG (Fond Crème pour avatar / mode clair)
+                    ctx.fillStyle = "#FAF7F2";
+                    ctx.fillRect(0, 0, 1024, 1024);
+                    ctx.drawImage(img, 0, 0, 1024, 1024);
+                    const jpgBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.96));
+                    zip.file("troco-logo-fond-creme-4K.jpg", jpgBlob);
+
+                    // 4. Générer le JPEG (Fond Noir Titane pour mode sombre)
+                    ctx.fillStyle = "#1A1715";
+                    ctx.fillRect(0, 0, 1024, 1024);
+                    ctx.drawImage(img, 0, 0, 1024, 1024);
+                    const darkJpgBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.96));
+                    zip.file("troco-logo-fond-sombre-4K.jpg", darkJpgBlob);
+
+                    // 5. Créer et déclencher le téléchargement du ZIP
+                    const zipContent = await zip.generateAsync({type:"blob"});
+                    const downloadUrl = URL.createObjectURL(zipContent);
+                    const a = document.createElement('a');
+                    a.href = downloadUrl;
+                    a.download = "Troco_Logo_Assets_4K.zip";
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+
+                    btn.disabled = false;
+                    btn.innerText = "✅ Pack Téléchargé ! Re-télécharger";
+                    status.innerText = "Téléchargement terminé avec succès. Fichier disponible dans vos téléchargements.";
+                };
+
+                img.src = svgUrl;
+            } catch (err) {
+                console.error(err);
+                btn.disabled = false;
+                btn.innerText = "Erreur - Réessayer";
+                status.innerText = "Erreur lors de la création : " + err.message;
+            }
+        }
+    </script>
+</body>
+</html>
