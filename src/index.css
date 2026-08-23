@@ -1372,6 +1372,7 @@ body.dark-mode .ad-card:hover {
   animation: tabFadeSlide 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+/* Apparition et élévation des cartes */
 .feed-card-item {
   animation: cardFadeUp 0.42s cubic-bezier(0.16, 1, 0.3, 1) both;
   transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
@@ -1385,10 +1386,36 @@ body.dark-mode .ad-card:hover {
 .feed-card-item:nth-child(6) { animation-delay: 0.17s; }
 .feed-card-item:nth-child(7) { animation-delay: 0.20s; }
 .feed-card-item:nth-child(8) { animation-delay: 0.23s; }
+.feed-card-item:nth-child(9) { animation-delay: 0.26s; }
+.feed-card-item:nth-child(10) { animation-delay: 0.29s; }
+.feed-card-item:nth-child(11) { animation-delay: 0.32s; }
+.feed-card-item:nth-child(12) { animation-delay: 0.35s; }
 
 .feed-card-item:hover {
   transform: translateY(-5px) scale(1.015);
   box-shadow: var(--shadow-card), 0 16px 36px rgba(0, 0, 0, 0.12) !important;
+}
+
+/* Modales et Pop-ups unifiées */
+.modal-pop-in {
+  animation: modalPopIn 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.modal-backdrop-in {
+  animation: fadeIn 0.25s ease both;
+}
+
+/* Micro-interactions boutons et badges */
+.premium-button {
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease, background-color 0.2s ease !important;
+}
+
+.premium-button:hover {
+  transform: translateY(-2px) scale(1.02);
+}
+
+.premium-button:active {
+  transform: scale(0.96) translateY(0);
 }
 
 .premium-card {
