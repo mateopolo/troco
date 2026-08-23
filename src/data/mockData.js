@@ -691,10 +691,10 @@ export const swapHistory = [
 ];
 
 export const statusStyles = {
-  'Clôturé': { bg: '#ECFDF5', text: '#059669' },
-  'En cours': { bg: '#EFF6FF', text: '#04265A' },
+  'Clôturé': { bg: '#F5EAE4', text: '#A8644A' },
+  'En cours': { bg: '#FAF7F2', text: '#C67D5B' },
   'Planifié': { bg: '#FFFBEB', text: '#D97706' },
-  'En attente': { bg: '#F3F4F6', text: '#6B7280' },
+  'En attente': { bg: '#F5F0E8', text: '#6B5E54' },
 };
 
 export const themeMedia = {
@@ -958,9 +958,9 @@ export const authorAvatars = {
 export const feminineFirstNames = ['sofia', 'elisa', 'amélie', 'amelie', 'laura', 'clara', 'giulia', 'mina', 'inès', 'ines', 'pauline', 'claire', 'julie', 'noémie', 'noemie', 'sabrina', 'léa', 'lea', 'hana', 'emma', 'chloé', 'chloe', 'lina', 'anna', 'maria', 'eva', 'nina', 'lucie', 'camille', 'sara', 'julia'];
 
 export const groupParticipants = [
-  { name: 'Sofia', role: 'Mentor', color: '#60A5FA' },
-  { name: 'Marc', role: 'Expert', color: '#93C5FD' },
-  { name: 'Lina', role: 'Apprenante', color: '#FDBA74' },
-  { name: 'Kai', role: 'Coach', color: '#F9A8D4' },
-  { name: 'Noa', role: 'Modérateur', color: '#A7F3D0' },
+  { name: 'Sofia', role: 'Mentor', color: '#C67D5B' },
+  { name: 'Marc', role: 'Expert', color: '#A8644A' },
+  { name: 'Lina', role: 'Apprenante', color: '#D97706' },
+  { name: 'Kai', role: 'Coach', color: '#8C4B33' },
+  { name: 'Noa', role: 'Modérateur', color: '#3D3530' },
 ];

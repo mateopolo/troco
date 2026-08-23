@@ -185,7 +185,7 @@ export const ACCOUNT_TYPES = [
     badge: '👤 Compte Particulier',
     desc: 'Échangez des services du quotidien, prêtez votre matériel et troquez vos compétences sans intermédiaire financier.',
     icon: 'User',
-    color: '#04265A',
+    color: '#C67D5B',
   },
   {
     id: 'professional',
@@ -201,7 +201,7 @@ export const ACCOUNT_TYPES = [
     badge: '🏢 Organisation / Asso',
     desc: 'Partagez des locaux, organisez des échanges de matériel ou proposez des services mutualisés au sein du réseau.',
     icon: 'Building2',
-    color: '#10B981',
+    color: '#A8644A',
   },
 ];
 

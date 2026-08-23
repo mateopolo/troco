@@ -139,11 +139,11 @@ export default function ListingCard({
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
-        backgroundColor: darkMode ? 'rgba(30,41,59,0.85)' : '#FFFFFF',
-        border: item.isBoosted ? '2px solid #F59E0B' : (darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(229,231,235,0.9)'),
-        borderRadius: '20px',
+        backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
+        border: item.isBoosted ? '2px solid #D97706' : (darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3'),
+        borderRadius: '24px',
         overflow: 'hidden',
-        boxShadow: item.isBoosted ? '0 12px 34px rgba(245,158,11,0.14)' : '0 2px 14px rgba(15, 23, 42, 0.05)',
+        boxShadow: item.isBoosted ? '0 12px 34px rgba(217,119,6,0.2)' : (darkMode ? '0 10px 30px rgba(0,0,0,0.5)' : '0 10px 30px rgba(61,53,48,0.06)'),
         cursor: 'pointer',
         transform: isHovered ? 'translateY(-5px) scale(1.015)' : 'none',
         transition: 'transform 0.4s var(--ease-quiet), box-shadow 0.4s var(--ease-quiet)'
@@ -154,7 +154,7 @@ export default function ListingCard({
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        style={{ position: 'relative', height: '200px', width: '100%', backgroundColor: '#F3F4F6', overflow: 'hidden', touchAction: 'pan-y' }}
+        style={{ position: 'relative', height: '200px', width: '100%', backgroundColor: '#1A1715', overflow: 'hidden', touchAction: 'pan-y' }}
       >
         {/* SUPERPOSITION DES IMAGES DE LA GALERIE AVEC CROSSFADE & ZOOM SUBTIL */}
         {effectiveGallery.map((imgSrc, idx) => {
@@ -189,7 +189,7 @@ export default function ListingCard({
         <div style={{
           position: 'absolute',
           inset: 0,
-          background: 'linear-gradient(to top, rgba(15, 23, 42, 0.45) 0%, rgba(15, 23, 42, 0) 50%)',
+          background: 'linear-gradient(to top, rgba(26, 23, 21, 0.45) 0%, rgba(26, 23, 21, 0) 50%)',
           pointerEvents: 'none',
           zIndex: 3
         }} />
@@ -205,7 +205,7 @@ export default function ListingCard({
               style={{
                 position: 'absolute', top: '50%', left: '8px', transform: 'translateY(-50%)',
                 border: 'none', borderRadius: '50%', width: '28px', height: '28px',
-                backgroundColor: 'rgba(15,23,42,0.65)', color: '#FFF',
+                backgroundColor: 'rgba(26,23,21,0.75)', color: '#FAF7F2',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer', zIndex: 10, backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
                 pointerEvents: 'auto',
@@ -223,7 +223,7 @@ export default function ListingCard({
               style={{
                 position: 'absolute', top: '50%', right: '8px', transform: 'translateY(-50%)',
                 border: 'none', borderRadius: '50%', width: '28px', height: '28px',
-                backgroundColor: 'rgba(15,23,42,0.65)', color: '#FFF',
+                backgroundColor: 'rgba(26,23,21,0.75)', color: '#FAF7F2',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer', zIndex: 10, backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
                 pointerEvents: 'auto',
@@ -243,7 +243,7 @@ export default function ListingCard({
             style={{
               position: 'absolute', bottom: '8px', left: '50%', transform: 'translateX(-50%)',
               display: 'flex', alignItems: 'center', gap: '4px', zIndex: 10,
-              backgroundColor: 'rgba(15,23,42,0.5)', padding: '3px 8px', borderRadius: '999px',
+              backgroundColor: 'rgba(26,23,21,0.65)', padding: '3px 8px', borderRadius: '999px',
               backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', pointerEvents: 'auto'
             }}
           >
@@ -255,7 +255,7 @@ export default function ListingCard({
                   width: currentSlideIndex === idx ? '14px' : '5px',
                   height: '5px',
                   borderRadius: '999px',
-                  backgroundColor: currentSlideIndex === idx ? '#60A5FA' : 'rgba(255,255,255,0.6)',
+                  backgroundColor: currentSlideIndex === idx ? '#C67D5B' : 'rgba(255,255,255,0.6)',
                   cursor: 'pointer',
                   transition: 'all 0.25s var(--ease-quiet)'
                 }}
@@ -288,12 +288,12 @@ export default function ListingCard({
         )}
 
         {item.isBoosted && (
-          <span className="sponsored-badge" style={{ position: 'absolute', top: '12px', right: '12px', backgroundColor: '#F59E0B', color: '#FFF', fontSize: '11px', fontWeight: '800', padding: '6px 10px', borderRadius: '10px', boxShadow: '0 6px 16px rgba(245,158,11,0.45)', zIndex: 4 }}>
+          <span className="sponsored-badge" style={{ position: 'absolute', top: '12px', right: '12px', backgroundColor: '#D97706', color: '#FFF', fontSize: '11px', fontWeight: '800', padding: '5px 10px', borderRadius: '999px', boxShadow: '0 4px 14px rgba(217,119,6,0.4)', zIndex: 4 }}>
             🔥 Sponsorisé
           </span>
         )}
         {item.urgent && (
-          <span style={{ position: 'absolute', top: '12px', left: '12px', backgroundColor: 'rgba(239,68,68,0.95)', color: '#FFF', fontSize: '10px', fontWeight: '800', padding: '5px 9px', borderRadius: '10px', boxShadow: '0 6px 16px rgba(239,68,68,0.35)', zIndex: 4 }}>
+          <span style={{ position: 'absolute', top: '12px', left: '12px', backgroundColor: '#2A1A14', color: '#FAF7F2', border: '1.5px solid #C67D5B', fontSize: '10px', fontWeight: '800', padding: '4px 10px', borderRadius: '999px', boxShadow: '0 4px 14px rgba(0,0,0,0.4)', zIndex: 4 }}>
             URGENT
           </span>
         )}
@@ -302,13 +302,14 @@ export default function ListingCard({
             position: 'absolute',
             top: item.urgent ? '42px' : '12px',
             left: '12px',
-            backgroundColor: darkMode ? 'rgba(126,34,206,0.9)' : '#7E22CE',
-            color: '#FFF',
+            backgroundColor: darkMode ? '#1A1715' : '#F5EAE4',
+            color: darkMode ? '#FAF7F2' : '#A8644A',
+            border: '1px solid #E8DDD3',
             fontSize: '9.5px',
             fontWeight: '800',
-            padding: '4px 8px',
-            borderRadius: '8px',
-            boxShadow: '0 4px 12px rgba(126,34,206,0.35)',
+            padding: '4px 10px',
+            borderRadius: '999px',
+            boxShadow: '0 4px 12px rgba(61,53,48,0.15)',
             zIndex: 4,
             display: 'flex',
             alignItems: 'center',
@@ -320,12 +321,12 @@ export default function ListingCard({
         )}
 
         {media.video && (
-          <span style={{ position: 'absolute', bottom: '12px', left: '12px', backgroundColor: isHovered ? '#04265A' : 'rgba(15,23,42,0.75)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', color: '#60A5FA', fontSize: '10px', fontWeight: '800', padding: '5px 9px', borderRadius: '10px', zIndex: 4, display: 'flex', alignItems: 'center', gap: '4px', transition: 'all 0.3s ease' }}>
-            <Video size={12} /> {isHovered ? (t('livePlayback') || 'Lecture') : (t('demoVideo') || 'Vidéo')}
+          <span style={{ position: 'absolute', bottom: '12px', left: '12px', backgroundColor: 'rgba(26,23,21,0.85)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', color: '#C67D5B', fontSize: '10px', fontWeight: '800', padding: '5px 9px', borderRadius: '10px', zIndex: 4, display: 'flex', alignItems: 'center', gap: '4px', transition: 'all 0.3s ease' }}>
+            <Video size={12} color="#C67D5B" /> {isHovered ? (t('livePlayback') || 'Lecture') : (t('demoVideo') || 'Vidéo')}
           </span>
         )}
 
-        <span style={{ position: 'absolute', bottom: '12px', right: '12px', backgroundColor: 'rgba(4,38,90,0.95)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', color: '#FFF', fontSize: '11px', fontWeight: 'bold', padding: '5px 9px', borderRadius: '10px', zIndex: 4 }}>
+        <span style={{ position: 'absolute', bottom: '12px', right: '12px', backgroundColor: 'rgba(26,23,21,0.92)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', border: '1px solid rgba(232,221,211,0.2)', color: '#FAF7F2', fontSize: '11px', fontWeight: '800', padding: '5px 10px', borderRadius: '999px', zIndex: 4 }}>
           {safeFormatCompensation(item.compensation)}
         </span>
       </div>
@@ -333,7 +334,7 @@ export default function ListingCard({
       <div style={{ padding: '16px 18px', display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'space-between' }}>
         <div>
           <div>
-            <h3 className="font-sans" style={{ fontSize: '15.5px', fontWeight: '800', color: darkMode ? '#FFFFFF' : '#111827', margin: '0 0 4px 0', lineHeight: 1.35, letterSpacing: '-0.02em' }}>
+            <h3 className="font-sans" style={{ fontSize: '15.5px', fontWeight: '800', color: darkMode ? '#FAF7F2' : '#1A1512', margin: '0 0 4px 0', lineHeight: 1.35, letterSpacing: '-0.02em' }}>
               {displayContent.title}
             </h3>
             {currentLang !== (item.nativeLang || 'FR') && (
@@ -343,7 +344,7 @@ export default function ListingCard({
                 style={{
                   border: 'none',
                   backgroundColor: 'transparent',
-                  color: darkMode ? '#60A5FA' : '#04265A',
+                  color: '#C67D5B',
                   fontSize: '11px',
                   fontWeight: '800',
                   cursor: 'pointer',
@@ -353,15 +354,15 @@ export default function ListingCard({
                   padding: '2px 0 6px 0'
                 }}
               >
-                <Globe size={12} />
+                <Globe size={12} color="#C67D5B" />
                 {showingOriginalListings[item.id] ? t('showTranslation') : t('showOriginal')}
               </button>
             )}
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '12.5px', color: darkMode ? '#CBD5E1' : '#6B7280', marginBottom: '8px' }}>
-            <span className="font-editorial" style={{ display: 'flex', alignItems: 'center', gap: '4px', fontStyle: 'italic' }}>
-              {item.type === 'remote' ? <Video size={13} color={darkMode ? '#60A5FA' : '#04265A'} /> : <MapPin size={13} color={darkMode ? '#60A5FA' : '#04265A'} />}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '12.5px', color: darkMode ? '#D4C5B5' : '#6B5E54', marginBottom: '8px' }}>
+            <span className="font-editorial" style={{ display: 'flex', alignItems: 'center', gap: '4px', fontStyle: 'italic', fontSize: '14px' }}>
+              {item.type === 'remote' ? <Video size={13} color="#C67D5B" /> : <MapPin size={13} color="#C67D5B" />}
               {safeLocalizeLocation(item.location, currentLang)}
             </span>
           </div>
@@ -371,7 +372,7 @@ export default function ListingCard({
             <div
               style={{
                 fontSize: '11.5px',
-                color: darkMode ? '#94A3B8' : '#64748B',
+                color: darkMode ? '#D4C5B5' : '#544940',
                 lineHeight: 1.45,
                 maxHeight: isHovered ? '48px' : '22px',
                 overflow: 'hidden',
@@ -389,23 +390,23 @@ export default function ListingCard({
 
           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }}>
             {safeLocalizeTags((item.tags || safeGenerateTags(item.title, item.description || '')), currentLang).slice(0, 3).map(tag => (
-              <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: darkMode ? 'rgba(4,38,90,0.45)' : '#EFF6FF', color: darkMode ? '#93C5FD' : '#04265A', borderRadius: '999px', padding: '4px 10px', fontSize: '10px', fontWeight: '800' }}>
-                <Tag size={10} /> {tag}
+              <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: darkMode ? '#1A1715' : '#F5EAE4', color: darkMode ? '#FAF7F2' : '#A8644A', borderRadius: '999px', border: '1px solid #E8DDD3', padding: '4px 10px', fontSize: '10px', fontWeight: '800' }}>
+                <Tag size={10} color="#C67D5B" /> {tag}
               </span>
             ))}
           </div>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #F3F4F6', gap: '8px', flexWrap: 'wrap' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '7px', fontWeight: '700', fontSize: '13px', color: darkMode ? '#F8FAFC' : '#374151' }}>
-            <img src={item.author === safeProfile.name ? safeProfile.avatar : safeGetAuthorAvatar(item.author)} alt={item.author} style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover', border: darkMode ? '1px solid #60A5FA' : '1px solid #E2E8F0' }} />
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3', gap: '8px', flexWrap: 'wrap' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '7px', fontWeight: '800', fontSize: '13px', color: darkMode ? '#FAF7F2' : '#1A1512' }}>
+            <img src={item.author === safeProfile.name ? safeProfile.avatar : safeGetAuthorAvatar(item.author)} alt={item.author} style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid #C67D5B' }} />
             {item.author}
           </span>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             {item.author !== safeProfile.name ? (
-              <button onClick={(event) => { event.stopPropagation(); handleStartDiscussion(item); }} className="premium-button" style={{ backgroundColor: '#04265A', color: '#FFF', border: 'none', padding: '8px 14px', borderRadius: '12px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', boxShadow: '0 6px 14px rgba(4,38,90,0.18)' }}>{t('proposeDealButton')} <ArrowRight size={12} /></button>
+              <button onClick={(event) => { event.stopPropagation(); handleStartDiscussion(item); }} className="premium-button" style={{ background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)', color: '#FFF', border: 'none', padding: '8px 16px', borderRadius: '999px', fontSize: '12px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', boxShadow: '0 4px 14px rgba(198,125,91,0.25)' }}>{t('proposeDealButton')} <ArrowRight size={12} /></button>
             ) : (
-              <span style={{ backgroundColor: '#F3F4F6', color: '#6B7280', border: '1px solid #E5E7EB', padding: '6px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '600' }}>{t('authorAnnc')}</span>
+              <span style={{ backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', color: darkMode ? '#D4C5B5' : '#6B5E54', border: '1px solid #E8DDD3', padding: '6px 12px', borderRadius: '999px', fontSize: '11px', fontWeight: '700' }}>{t('authorAnnc')}</span>
             )}
           </div>
         </div>

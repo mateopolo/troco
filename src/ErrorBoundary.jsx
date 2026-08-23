@@ -20,8 +20,8 @@ export class ErrorBoundary extends React.Component {
       return (
         <div style={{
           minHeight: '100vh',
-          backgroundColor: '#0F172A',
-          color: '#F8FAFC',
+          backgroundColor: '#14100E',
+          color: '#FAF7F2',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -31,31 +31,32 @@ export class ErrorBoundary extends React.Component {
           textAlign: 'center'
         }}>
           <div style={{
-            backgroundColor: 'rgba(30, 41, 59, 0.85)',
-            border: '1px solid rgba(239, 68, 68, 0.4)',
-            borderRadius: '24px',
-            padding: '32px',
+            backgroundColor: '#231E1B',
+            border: '1px solid rgba(232, 221, 211, 0.2)',
+            borderRadius: '28px',
+            padding: '36px',
             maxWidth: '520px',
-            boxShadow: '0 20px 50px rgba(0,0,0,0.5)'
+            boxShadow: '0 20px 50px rgba(0,0,0,0.6)'
           }}>
             <div style={{ fontSize: '48px', marginBottom: '16px' }}>⚠️</div>
-            <h2 style={{ fontSize: '22px', fontWeight: '800', margin: '0 0 12px', color: '#F87171' }}>
+            <h2 className="font-editorial-heading" style={{ fontSize: '26px', fontWeight: '600', margin: '0 0 12px', color: '#C67D5B' }}>
               Une erreur est survenue
             </h2>
-            <p style={{ fontSize: '14px', color: '#94A3B8', lineHeight: 1.6, margin: '0 0 20px' }}>
+            <p style={{ fontSize: '14px', color: '#D4C5B5', lineHeight: 1.6, margin: '0 0 20px' }}>
               L'application a rencontré un problème inattendu lors de l'affichage.
             </p>
             <div style={{
-              backgroundColor: '#020617',
+              backgroundColor: '#1A1715',
               padding: '12px 16px',
-              borderRadius: '12px',
+              borderRadius: '14px',
               textAlign: 'left',
               fontSize: '12px',
               fontFamily: 'monospace',
-              color: '#FCA5A5',
+              color: '#FDE68A',
               margin: '0 0 24px',
               maxHeight: '120px',
-              overflowY: 'auto'
+              overflowY: 'auto',
+              border: '1px solid rgba(232, 221, 211, 0.1)'
             }}>
               {this.state.error && this.state.error.toString()}
             </div>
@@ -65,11 +66,12 @@ export class ErrorBoundary extends React.Component {
                   localStorage.removeItem('troco_user_listings');
                   window.location.reload();
                 }}
+                className="premium-button"
                 style={{
-                  backgroundColor: '#EF4444',
-                  color: '#FFFFFF',
-                  border: 'none',
-                  borderRadius: '14px',
+                  backgroundColor: '#2A1A14',
+                  color: '#FAF7F2',
+                  border: '1px solid rgba(232,221,211,0.25)',
+                  borderRadius: '999px',
                   padding: '12px 20px',
                   fontWeight: '700',
                   fontSize: '13px',
@@ -80,19 +82,20 @@ export class ErrorBoundary extends React.Component {
               </button>
               <button
                 onClick={() => window.location.reload()}
+                className="premium-button"
                 style={{
                   background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)',
                   color: '#FFFFFF',
                   border: 'none',
-                  borderRadius: '14px',
+                  borderRadius: '999px',
                   padding: '12px 20px',
                   fontWeight: '800',
                   fontSize: '13px',
                   cursor: 'pointer',
-                  boxShadow: '0 6px 16px rgba(198,125,91,0.25)'
+                  boxShadow: '0 8px 24px rgba(198,125,91,0.35)'
                 }}
               >
-                Recharger
+                Rafraîchir la page
               </button>
             </div>
           </div>

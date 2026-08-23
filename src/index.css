@@ -6,20 +6,20 @@
   --font-editorial: 'Cormorant Garamond', Georgia, serif;
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 
-  /* STILLPOINT WARM BOUTIQUE PALETTE */
+  /* STILLPOINT WARM BOUTIQUE PALETTE - HIGH CONTRAST */
   --sand: #E8DDD3;
-  --sand-dark: #D4C5B5;
-  --sage: #9CAF88;
-  --sage-dark: #7A8F6A;
-  --sage-light: #EBF0E6;
+  --sand-dark: #C9B8A7;
+  --sage: #C67D5B;
+  --sage-dark: #A8644A;
+  --sage-light: #F5EAE4;
   --offwhite: #FAF7F2;
   --terracotta: #C67D5B;
   --terracotta-dark: #A8644A;
   --terracotta-light: #F5EAE4;
   --linen: #F5F0E8;
-  --td: #3D3530;       /* Text Dark / Espresso */
-  --tm: #6B5E54;       /* Text Mid / Muted Brown */
-  --tl: #9A8E84;       /* Text Light / Warm Sand */
+  --td: #1A1512;       /* Text Dark / Ultra Deep Espresso */
+  --tm: #544940;       /* Text Mid / Rich Muted Brown */
+  --tl: #8C7F74;       /* Text Light / Warm Sand */
   --card-bg: #FAF7F2;
   --border-warm: #E8DDD3;
 }
@@ -184,16 +184,16 @@ input[type=range]::-moz-range-thumb {
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: #04265A;
+  background: var(--terracotta);
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(4, 38, 90, 0.45);
+  box-shadow: 0 4px 12px rgba(198, 125, 91, 0.45);
   border: 2.5px solid #FFFFFF;
   transition: transform 0.2s var(--ease-quiet), background-color 0.2s var(--ease-quiet);
 }
 
 input[type=range]::-moz-range-thumb:hover {
   transform: scale(1.18);
-  background: #06377B;
+  background: var(--terracotta-dark);
 }
 
 /* Keyframe Animations & Easing Transition System */
@@ -226,10 +226,10 @@ input[type=range]::-moz-range-thumb:hover {
 
 @keyframes pulseGlow {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(4, 38, 90, 0.4);
+    box-shadow: 0 0 0 0 rgba(198, 125, 91, 0.4);
   }
   50% {
-    box-shadow: 0 0 0 10px rgba(4, 38, 90, 0);
+    box-shadow: 0 0 0 10px rgba(198, 125, 91, 0);
   }
 }
 
@@ -242,7 +242,7 @@ input[type=range]::-moz-range-thumb:hover {
   50% {
     transform: scale(1.25);
     opacity: 1;
-    box-shadow: 0 0 12px rgba(16, 185, 129, 0.55);
+    box-shadow: 0 0 12px rgba(198, 125, 91, 0.55);
   }
 }
 
@@ -314,15 +314,15 @@ input[type=range]::-moz-range-thumb:hover {
   transform: scale(1.05) !important;
 }
 
-/* RED ANIMATED NOTIFICATION BADGE KEYFRAME */
+/* NOTIFICATION BADGE KEYFRAME */
 @keyframes notifPulse {
   0%, 100% {
     transform: scale(1);
-    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.6);
+    box-shadow: 0 2px 8px rgba(61, 53, 48, 0.4);
   }
   50% {
     transform: scale(1.22);
-    box-shadow: 0 4px 14px rgba(239, 68, 68, 0.88);
+    box-shadow: 0 4px 14px rgba(61, 53, 48, 0.6);
   }
 }
 
@@ -338,7 +338,7 @@ input[type=range]::-moz-range-thumb:hover {
 
 .wave-bar {
   width: 3px;
-  background-color: #60A5FA;
+  background-color: var(--terracotta);
   border-radius: 999px;
   animation: waveBar 1.2s ease-in-out infinite;
 }

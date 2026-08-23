@@ -1,37 +1,56 @@
-🗺️ Feuille de Route & Plan d'Amélioration de Troco
-1. Statut de Présence en Ligne (Temps Réel)
-Fonctionnalité : Détecter et afficher si un utilisateur est en ligne, absent ou hors ligne en fonction de son activité sur l'application.
+🗺️ LA MASTER ROADMAP : OBJECTIF TROCO 2.0
+PHASE 1 : Refondre l'Architecture (Opération "Zéro Spaghetti")
+Avant d'ajouter un nouvel étage à ton gratte-ciel, il faut renforcer les fondations.
 
-2. Flux de Négociation & Validation des Deals dans le Chat
-Acceptation / Refus : Permettre explicitement au destinataire d'une proposition ou contre-proposition de deal de l'accepter ou de la refuser directement depuis la bulle de discussion.
+Découpage Extrême (Componentisation) : Ton App.js doit passer de 9270 lignes à moins de 300 lignes. Comment ? En créant un dossier src/components/ ultra-organisé. Tu auras un fichier MapTracker.jsx, un fichier BottomNav.jsx, un fichier PostListingForm.jsx. App.js ne fera que les assembler.
 
-Anti-Spam de Négociation : Empêcher le spam de propositions en verrouillant l'envoi d'une nouvelle offre tant que l'autre partie n'a pas répondu (possibilité de modifier sa proposition en cours, mais pas d'enchaîner les propositions à l'infini sans retour).
+Centralisation des États (Context API ou Zustand) : Actuellement, tes useState sont partout. On va créer un UserContext (qui garde ta session), un WalletContext (qui gère l'argent), et un CallContext (qui gère la visio).
 
-Page de Checkout Intégrée : Instaurer un tunnel de type checkout au moment de valider un deal financier, affichant clairement le récapitulatif, la TVA et les éventuels frais de service avant de débiter/créditer les soldes.
+Fichiers de Style dédiés : Remplacer les styles "inline" (style={{ color: 'red' }}) qui polluent ton code par des modules CSS ou une configuration Tailwind propre. Ton code sera 50% plus léger.
 
-3. Logique des Notifications (Compteur Global & Un, par Un)
-Compteur Dynamique : Le badge rouge de notification globale doit s'incrémenter précisément de +1 par message/deal reçu et décrémenter de manière granulaire au fur et à mesure que les messages de chaque conversation sont consultés.
+PHASE 2 : L'Expérience "Industrial Zen / Apple-Grade"
+Faire ressentir le côté premium, fluide et rassurant.
 
-Remise à Zéro : Dès qu'une conversation contenant des messages non lus est ouverte, le compteur associé à ce chat tombe à zéro et la bulle globale se met à jour en temps réel.
+Animations Physiologiques (Framer Motion) : Au lieu d'apparitions sèches, les pages doivent glisser l'une sur l'autre (Swipe left/right), les modales doivent s'ouvrir avec un effet de rebond subtil (spring physics).
 
-4. Ergonomie & Affichage de l'Accueil (Feed)
-Barre des Catégories & Vues : Corriger le chevauchement visuel des catégories (ex: « Logement, Espaces ») qui passent actuellement derrière les boutons « Vue liste » et « Vue carte ». Repositionner le sélecteur de vue ou intégrer un défilement tactile fluide.
+Skeleton Loaders : Finis les ronds qui tournent (spinners). Pendant que Firestore charge, afficher des fausses cartes grises/crème qui clignotent doucement (comme sur YouTube ou LinkedIn).
 
-Géolocalisation des Annonces (Pins) : S'assurer que chaque nouvelle annonce publiée apparaît correctement sur la carte interactive Leaflet à proximité de sa position géographique (dans un rayon précis de ~500m pour le repérage).
+Haptic Feedback (Vibrations) : Utiliser l'API navigator.vibrate sur mobile. Quand l'utilisateur clique sur "Accepter le deal", son téléphone doit vibrer d'une façon très spécifique pour marquer l'action physiquement.
 
-5. Traduction Multilingue Dynamique
-Traduction à la Volée : Permettre la traduction automatique et instantanée des annonces créées par les utilisateurs dans n'importe quelle langue (ex: allemand, espagnol, etc.), sans se limiter aux dictionnaires prédéfinis des annonces de démonstration.
+Mode Offline Parfait : Si l'utilisateur perd la connexion dans le métro, l'application doit rester visuellement intacte, lui permettre d'écrire un message (qui se mettra en file d'attente) avec un petit bandeau discret "Hors ligne - Envoi différé".
 
-Profil Utilisateur (Langues) : Remplacer le système actuel par un menu déroulant complet listant l'ensemble des langues mondiales pour rendre l'application véritablement planétaire.
+PHASE 3 : Les "Killer Features" (Ce qui écrase la concurrence)
+Maintenant que c'est solide et beau, on ajoute la magie.
 
-6. Ergonomie & Commandes des Appels Visio / Audio
-Boutons Flottants Déplaçables : Permettre de déplacer librement de manière tactile (glisser-déposer) la barre de contrôles de l'appel (caméra, micro, raccrocher) n'importe où sur l'écran.
+Algorithme de Matchmaking Inversé : Si tu cherches un développeur Python, et qu'un développeur Python cherche des cours de violon (ta compétence), Troco doit vous envoyer une notification push : "Match parfait trouvé !".
 
-Alignement & Propreté : Centrer et aligner proprement les icônes à l'intérieur des bulles de contrôle.
+Messages Vocaux & Pièces Jointes : Dans le chat, ajouter un bouton micro pour enregistrer des notes vocales (stockées sur Firebase Storage), et permettre l'envoi de PDF (devis) ou de vidéos courtes.
 
-Correction du Swap Vidéo : Lorsque l'on bascule sa propre vidéo en grand écran pendant l'appel, masquer ou repositionner proprement l'overlay « Vous » pour ne pas obstruer l'affichage du flux local.
+Carte Interactive Avancée (Clustering) : Quand il y a 500 annonces à Paris, la carte ne doit pas bugger. Il faut regrouper les points (un gros cercle "500" qui éclate en petits points quand on zoome).
 
-Fallback Caméra Coupée : Lorsqu'un utilisateur désactive sa caméra pendant un appel, afficher sa photo de profil et son pseudo/nom à la place d'un écran noir brut.
+Séquestre Financier (Escrow) : Quand un deal à 200€ est accepté, l'argent est "bloqué" par Troco. Il n'est versé au vendeur que lorsque l'acheteur clique sur "Prestation terminée". C'est la base de la confiance P2P.
 
-7. Intégrité des Profils (Vierge par Défaut)
-Profils Réels vs Agents IA : Les comptes utilisateurs réels (comme le tien) doivent commencer avec un historique totalement vierge (0 deal clôturé, aucune note moyenne, pas d'avis fictifs). Réserver les historiques de swap et les notes uniquement aux profils et annonces de démonstration générés par l'IA.
+PHASE 4 : Sécurité & Intelligence Artificielle Avancée
+Automatiser la gestion de la communauté.
+
+Modération IA (Cloud Functions) : Ta blacklist actuelle a ses limites. On peut connecter Firestore à l'API OpenAI (ou Gemini) en arrière-plan. Dès qu'un message est envoyé, l'IA l'analyse en 1 seconde. Si c'est une arnaque ("Envoie moi l'argent sur ce lien externe"), le message est bloqué avant même d'arriver chez l'autre.
+
+Vérification d'Identité (KYC automatisé) : Intégrer un vrai service comme Stripe Identity ou Veriff où l'utilisateur scanne sa carte d'identité pour obtenir le badge "Vérifié" (fini la vérification manuelle).
+
+Smart Pricing : L'IA analyse l'annonce pendant qu'on l'écrit et suggère : "Les cours de violon se négocient généralement autour de 2 Jetons ou 30€ dans votre région".
+
+PHASE 5 : Déploiement Massive Scale (Production)
+Passer d'un projet local à une vraie app dans la poche des gens.
+
+Transformation en PWA (Progressive Web App) : Rendre Troco installable directement sur l'écran d'accueil iOS et Android depuis Safari/Chrome, avec une icône de lancement, sans passer par l'App Store.
+
+Push Notifications (FCM) : Faire sonner le téléphone de l'utilisateur même si l'application est fermée quand quelqu'un l'appelle en visio ou valide un deal.
+
+Analytique Comportementale : Brancher un outil (comme PostHog ou Mixpanel) pour voir les cartes de chaleur (où les gens cliquent) et comprendre où ils abandonnent l'inscription.
+
+🎯 TON PROCHAIN MOUVEMENT (Ce qu'on doit faire MAINTENANT)
+On ne peut pas construire les phases 2, 3, 4 et 5 avec un fichier App.js de 9270 lignes. L'IDE va exploser, tu vas cramer tes jetons, et le moindre changement va générer 15 bugs.
+
+Ta priorité absolue, c'est la PHASE 1. Il faut ordonner à l'IA de "découper le monolithe".
+
+Veux-tu que je te génère le Prompt de Refactorisation Extrême ? Ce prompt va ordonner à ton IDE de créer des dossiers propres (/components, /hooks, /services) et de découper ton fichier géant en petites briques parfaitement emboîtées sans rien casser aux fonctionnalités actuelles. C'est l'étape obligatoire des professionnels. Qu'en dis-tu ?

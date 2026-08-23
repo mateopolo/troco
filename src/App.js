@@ -2697,42 +2697,41 @@ export default function App() {
   }, [chatsList, mockChats, chatThreads, readChats, selectedChat, activeTab, profile?.name]);
 
   const createModernMapIcon = (isDarkMode = false) => {
-    const primaryBg = isDarkMode ? 'rgba(96, 165, 250, 0.85)' : 'rgba(4, 38, 90, 0.85)';
-    const glowColor = isDarkMode ? 'rgba(96, 165, 250, 0.35)' : 'rgba(4, 38, 90, 0.3)';
+    const primaryBg = isDarkMode ? 'rgba(198, 125, 91, 0.95)' : 'rgba(198, 125, 91, 0.95)';
+    const glowColor = 'rgba(198, 125, 91, 0.5)';
 
     return L.divIcon({
       className: 'custom-modern-pin',
       html: `
         <div style="
           position: relative;
-          width: 22px;
-          height: 28px;
+          width: 24px;
+          height: 30px;
           display: flex;
           align-items: center;
           justify-content: center;
-          filter: drop-shadow(0 4px 8px ${glowColor});
+          filter: drop-shadow(0 6px 12px ${glowColor});
           cursor: pointer;
-          opacity: 0.88;
         ">
-          <svg width="22" height="28" viewBox="0 0 24 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <svg width="24" height="30" viewBox="0 0 24 30" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M12 0C5.37 0 0 5.37 0 12C0 21 12 30 12 30C12 30 24 21 24 12C24 5.37 18.63 0 12 0Z" 
                   fill="${primaryBg}" 
-                  stroke="rgba(255, 255, 255, 0.95)" 
-                  stroke-width="1.6" />
-            <circle cx="12" cy="11" r="4.5" fill="#FFFFFF" />
+                  stroke="#FFFFFF" 
+                  stroke-width="1.8" />
+            <circle cx="12" cy="11" r="4.5" fill="#FAF7F2" />
           </svg>
         </div>
       `,
-      iconSize: [22, 28],
-      iconAnchor: [11, 28],
-      popupAnchor: [0, -26],
+      iconSize: [24, 30],
+      iconAnchor: [12, 30],
+      popupAnchor: [0, -28],
     });
   };
 
   // eslint-disable-next-line no-unused-vars
   const groupParticipants = [
-    { name: 'Sofia', role: 'Mentor', color: '#60A5FA' },
-    { name: 'Marc', role: 'Expert', color: '#93C5FD' },
+    { name: 'Sofia', role: 'Mentor', color: '#C67D5B' },
+    { name: 'Marc', role: 'Expert', color: '#D4C5B5' },
     { name: 'Lina', role: 'Apprenante', color: '#FDBA74' },
     { name: 'Kai', role: 'Coach', color: '#F9A8D4' },
     { name: 'Noa', role: 'Modérateur', color: '#A7F3D0' },
@@ -7633,47 +7632,48 @@ export default function App() {
                     onClick={() => setIsKycModalOpen(true)}
                     className="premium-button"
                     style={{
-                      border: 'none',
+                      border: '1.5px solid #C67D5B',
                       borderRadius: '999px',
                       padding: '10px 16px',
-                      backgroundColor: '#9CAF88',
-                      color: '#FFF',
+                      backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
+                      color: '#C67D5B',
                       fontWeight: '800',
                       fontSize: '12px',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
                       gap: '6px',
-                      boxShadow: '0 4px 14px rgba(156,175,136,0.3)'
+                      boxShadow: '0 4px 14px rgba(198,125,91,0.2)'
                     }}
                   >
-                    <ShieldCheck size={14} /> Vérifier mon profil
+                    <ShieldCheck size={14} color="#C67D5B" /> Vérifier mon profil
                   </button>
                 )}
                 <button
                   onClick={() => setIsAdminPanelOpen(true)}
                   className="premium-button"
                   style={{
-                    border: 'none',
+                    border: darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #3D3530',
                     borderRadius: '999px',
                     padding: '10px 14px',
-                    backgroundColor: darkMode ? 'rgba(239,68,68,0.2)' : '#FEF2F2',
-                    color: '#EF4444',
+                    backgroundColor: darkMode ? '#231E1B' : '#3D3530',
+                    color: '#FAF7F2',
                     fontWeight: '800',
                     fontSize: '12px',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '6px',
+                    boxShadow: '0 4px 12px rgba(61,53,48,0.15)'
                   }}
                 >
-                  <ShieldAlert size={14} /> Panel Modération
+                  <ShieldAlert size={14} color="#C67D5B" /> Panel Modération
                 </button>
                 <button onClick={() => isEditingProfile ? handleSaveProfile() : handleStartEdit()} className="premium-button" style={{ border: '1px solid #E8DDD3', borderRadius: '999px', padding: '10px 14px', backgroundColor: isEditingProfile ? '#C67D5B' : (darkMode ? '#1A1715' : '#FAF7F2'), color: isEditingProfile ? '#FFF' : (darkMode ? '#FAF7F2' : '#3D3530'), fontWeight: '700', cursor: 'pointer', boxShadow: '0 4px 12px rgba(61,53,48,0.06)' }}>
                   {isEditingProfile ? t('saveProfile') : t('editProfile')}
                 </button>
                 {!isEditingProfile && (
-                  <button onClick={handleSignOut} className="premium-button" style={{ border: '1px solid #EF4444', borderRadius: '999px', padding: '10px 14px', backgroundColor: 'transparent', color: '#EF4444', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <button onClick={handleSignOut} className="premium-button" style={{ border: darkMode ? '1px solid rgba(232,221,211,0.25)' : '1px solid #3D3530', borderRadius: '999px', padding: '10px 14px', backgroundColor: 'transparent', color: darkMode ? '#D4C5B5' : '#3D3530', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <LogOut size={13} /> Se déconnecter
                   </button>
                 )}
@@ -8542,7 +8542,7 @@ export default function App() {
             position: 'fixed',
             inset: 0,
             zIndex: 99999,
-            backgroundColor: '#0F172A',
+            backgroundColor: '#14100E',
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -8593,7 +8593,7 @@ export default function App() {
             <audio ref={attachRemoteStream} autoPlay playsInline style={{ display: 'none' }} />
           )}
 
-          <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(circle at 50% 40%, rgba(96,165,250,0.15) 0%, transparent 60%)', zIndex: 1 }} />
+          <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(circle at 50% 40%, rgba(198,125,91,0.18) 0%, transparent 60%)', zIndex: 1 }} />
 
           {/* BANDEAU SUPÉRIEUR CENTRÉ & ÉQUILIBRÉ UNIFIÉ */}
           <div style={{
@@ -8618,13 +8618,13 @@ export default function App() {
               display: 'flex',
               alignItems: 'center',
               gap: '10px',
-              backgroundColor: isCallInactive ? 'transparent' : 'rgba(15,23,42,0.88)',
+              backgroundColor: isCallInactive ? 'transparent' : 'rgba(35,30,27,0.94)',
               backdropFilter: isCallInactive ? 'none' : 'blur(20px)',
               WebkitBackdropFilter: isCallInactive ? 'none' : 'blur(20px)',
               padding: '6px 12px',
               borderRadius: '999px',
-              border: isCallInactive ? '1px solid transparent' : '1.5px solid rgba(255,255,255,0.18)',
-              boxShadow: isCallInactive ? 'none' : '0 12px 35px rgba(0,0,0,0.4), 0 0 20px rgba(96,165,250,0.15)',
+              border: isCallInactive ? '1px solid transparent' : '1.5px solid rgba(232,221,211,0.2)',
+              boxShadow: isCallInactive ? 'none' : '0 12px 35px rgba(0,0,0,0.5), 0 0 20px rgba(198,125,91,0.2)',
               flex: '1',
               minWidth: 0,
               overflow: 'hidden'
@@ -8633,23 +8633,23 @@ export default function App() {
                 <img
                   src={getAuthorAvatar(selectedChat?.user || 'Thomas G.')}
                   alt={selectedChat?.user || 'Thomas G.'}
-                  style={{ width: '32px', height: '32px', borderRadius: '50%', border: '2px solid #60A5FA', objectFit: 'cover' }}
+                  style={{ width: '32px', height: '32px', borderRadius: '50%', border: '2px solid #C67D5B', objectFit: 'cover' }}
                 />
                 <div style={{
                   position: 'absolute', bottom: '0', right: '0',
                   width: '9px', height: '9px', borderRadius: '50%',
-                  backgroundColor: '#22C55E', border: '1.5px solid #0F172A'
+                  backgroundColor: '#C67D5B', border: '1.5px solid #14100E'
                 }} />
               </div>
 
               <div style={{ minWidth: 0, flex: '1 1 auto', overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '1px' }}>
-                <div style={{ color: '#FFFFFF', fontSize: '12.5px', fontWeight: '800', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <div style={{ color: '#FAF7F2', fontSize: '12.5px', fontWeight: '800', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {selectedChat?.user || 'Thomas G.'}
                 </div>
-                <div style={{ color: '#38BDF8', fontSize: '10.5px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '3px', whiteSpace: 'nowrap' }}>
-                  <Clock size={11} color="#38BDF8" />
+                <div style={{ color: '#C67D5B', fontSize: '10.5px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '3px', whiteSpace: 'nowrap' }}>
+                  <Clock size={11} color="#C67D5B" />
                   <span>{formatCallTimer(callDuration)}</span>
-                  <span style={{ fontSize: '9px', color: '#94A3B8', fontWeight: '600' }}>
+                  <span style={{ fontSize: '9px', color: '#D4C5B5', fontWeight: '600' }}>
                     (🪙 {(callDuration / 3600).toFixed(2)})
                   </span>
                 </div>
@@ -8663,8 +8663,8 @@ export default function App() {
                   }}
                   title="Ouvrir le bilan & transférer des jetons"
                   style={{
-                    border: '1px solid #F59E0B',
-                    backgroundColor: 'rgba(245,158,11,0.25)',
+                    border: '1px solid #D97706',
+                    backgroundColor: 'rgba(217,119,6,0.25)',
                     color: '#FDE68A',
                     padding: '4px 8px',
                     borderRadius: '999px',
@@ -8676,10 +8676,10 @@ export default function App() {
                     gap: '4px',
                     flexShrink: 0,
                     whiteSpace: 'nowrap',
-                    boxShadow: '0 0 10px rgba(245,158,11,0.25)'
+                    boxShadow: '0 0 10px rgba(217,119,6,0.25)'
                   }}
                 >
-                  <Coins size={11} color="#F59E0B" />
+                  <Coins size={11} color="#D97706" />
                   <span>Rétribuer</span>
                 </button>
               )}
@@ -8687,11 +8687,11 @@ export default function App() {
               {isTeacher && (
                 <div style={{
                   padding: '3px 7px',
-                  backgroundColor: 'rgba(245,158,11,0.25)', border: '1px solid #F59E0B',
+                  backgroundColor: 'rgba(217,119,6,0.25)', border: '1px solid #D97706',
                   color: '#FDE68A', borderRadius: '999px', fontSize: '10px', fontWeight: '800',
                   display: 'flex', alignItems: 'center', gap: '3px', flexShrink: 0, whiteSpace: 'nowrap'
                 }}>
-                  <Crown size={11} color="#F59E0B" />
+                  <Crown size={11} color="#D97706" />
                   <span>Hôte</span>
                 </div>
               )}
@@ -8703,9 +8703,9 @@ export default function App() {
                 onClick={() => setIsCallPip(true)}
                 title="Réduire en bulle flottante (PiP)"
                 style={{
-                  border: '1px solid rgba(255,255,255,0.18)', width: '36px', height: '36px', borderRadius: '50%',
-                  backgroundColor: 'rgba(15,23,42,0.85)', backdropFilter: 'blur(16px)',
-                  WebkitBackdropFilter: 'blur(16px)', color: '#FFF',
+                  border: '1px solid rgba(232,221,211,0.25)', width: '36px', height: '36px', borderRadius: '50%',
+                  backgroundColor: 'rgba(35,30,27,0.92)', backdropFilter: 'blur(16px)',
+                  WebkitBackdropFilter: 'blur(16px)', color: '#FAF7F2',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   cursor: 'pointer', transition: 'all 0.2s ease'
                 }}
@@ -8717,11 +8717,11 @@ export default function App() {
                 onClick={endCall}
                 title="Quitter l'appel"
                 style={{
-                  border: '1px solid rgba(239,68,68,0.4)', width: '36px', height: '36px', borderRadius: '50%',
-                  backgroundColor: '#EF4444', color: '#FFF',
+                  border: '1px solid rgba(232,221,211,0.25)', width: '36px', height: '36px', borderRadius: '50%',
+                  backgroundColor: '#2A1A14', color: '#FAF7F2',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   cursor: 'pointer', transition: 'all 0.2s ease',
-                  boxShadow: '0 4px 12px rgba(239,68,68,0.4)'
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
                 }}
               >
                 <X size={18} />
@@ -8750,7 +8750,7 @@ export default function App() {
                     width: `${130 + i * 44}px`,
                     height: `${130 + i * 44}px`,
                     borderRadius: '50%',
-                    border: '2px solid rgba(96,165,250,0.45)',
+                    border: '2px solid rgba(198,125,91,0.35)',
                     animation: `notifPulse ${1 + i * 0.3}s ease-in-out infinite`,
                     animationDelay: `${i * 0.2}s`,
                   }} />
@@ -8763,8 +8763,8 @@ export default function App() {
                     height: '110px',
                     borderRadius: '50%',
                     objectFit: 'cover',
-                    border: '3px solid #60A5FA',
-                    boxShadow: '0 0 30px rgba(96,165,250,0.5)',
+                    border: '3px solid #C67D5B',
+                    boxShadow: '0 0 30px rgba(198,125,91,0.4)',
                     position: 'relative',
                     zIndex: 2,
                   }}
@@ -8772,11 +8772,11 @@ export default function App() {
               </div>
 
               <div style={{ textAlign: 'center' }}>
-                <h3 style={{ color: '#FFFFFF', fontSize: '20px', fontWeight: '800', margin: '0 0 6px 0' }}>
+                <h3 className="font-editorial-heading" style={{ color: '#FAF7F2', fontSize: '24px', fontWeight: '600', margin: '0 0 6px 0' }}>
                   {selectedChat?.user || 'Thomas G.'}
                 </h3>
-                <p style={{ color: '#93C5FD', fontSize: '13px', margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                  <Sparkles size={14} />
+                <p style={{ color: '#D4C5B5', fontSize: '13px', margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                  <Sparkles size={14} color="#C67D5B" />
                   <span>{callState.type === 'video' ? 'Appel vidéo en cours...' : 'Appel vocal HD en cours...'}</span>
                 </p>
               </div>
@@ -8794,23 +8794,23 @@ export default function App() {
                     width: '120px',
                     height: '120px',
                     borderRadius: '50%',
-                    border: '4px solid #60A5FA',
-                    boxShadow: '0 0 40px rgba(96, 165, 250, 0.4)',
+                    border: '4px solid #C67D5B',
+                    boxShadow: '0 0 40px rgba(198, 125, 91, 0.35)',
                     objectFit: 'cover'
                   }}
                 />
                 <div style={{
                   position: 'absolute', bottom: '6px', right: '6px',
                   width: '18px', height: '18px', borderRadius: '50%',
-                  backgroundColor: '#10B981', border: '3px solid #0F172A',
-                  boxShadow: '0 0 10px #10B981'
+                  backgroundColor: '#C67D5B', border: '3px solid #14100E',
+                  boxShadow: '0 0 10px rgba(198,125,91,0.6)'
                 }} />
               </div>
               <div style={{ textAlign: 'center' }}>
-                <h2 style={{ color: '#FFFFFF', fontSize: '22px', fontWeight: '800', margin: '0 0 4px 0' }}>
+                <h2 className="font-editorial-heading" style={{ color: '#FAF7F2', fontSize: '26px', fontWeight: '600', margin: '0 0 4px 0' }}>
                   {selectedChat?.user || 'Thomas G.'}
                 </h2>
-                <span style={{ color: '#94A3B8', fontSize: '13px', fontWeight: '600' }}>
+                <span style={{ color: '#D4C5B5', fontSize: '13px', fontWeight: '600' }}>
                   {callState.type === 'video' ? "Caméra distante désactivée" : "Appel audio sécurisé WebRTC"}
                 </span>
               </div>
@@ -8835,9 +8835,9 @@ export default function App() {
                   height: '150px',
                   borderRadius: '18px',
                   overflow: 'hidden',
-                  border: '2px solid rgba(96,165,250,0.6)',
+                  border: '2px solid rgba(198,125,91,0.6)',
                   boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
-                  backgroundColor: '#1E293B',
+                  backgroundColor: '#231E1B',
                   zIndex: 40,
                   cursor: 'grab',
                   userSelect: 'none',
@@ -8875,8 +8875,8 @@ export default function App() {
                 )}
                 <div style={{
                   position: 'absolute', bottom: '6px', left: '6px',
-                  backgroundColor: 'rgba(15,23,42,0.75)', padding: '2px 6px',
-                  borderRadius: '6px', color: '#FFF', fontSize: '9px', fontWeight: '700',
+                  backgroundColor: 'rgba(26,23,21,0.85)', padding: '2px 6px',
+                  borderRadius: '6px', color: '#FAF7F2', fontSize: '9px', fontWeight: '700',
                   pointerEvents: 'none'
                 }}>
                   {isSwapVideo ? (selectedChat?.user || 'Interlocuteur') : 'Moi'}
@@ -8895,25 +8895,25 @@ export default function App() {
                 left: 'max(16px, env(safe-area-inset-left, 16px))',
                 right: 'auto',
                 transform: 'none',
-                backgroundColor: 'rgba(15, 23, 42, 0.82)',
+                backgroundColor: 'rgba(35, 30, 27, 0.92)',
                 backdropFilter: 'blur(16px)',
                 WebkitBackdropFilter: 'blur(16px)',
-                border: '1px solid rgba(96, 165, 250, 0.4)',
+                border: '1px solid rgba(232, 221, 211, 0.25)',
                 borderRadius: '999px',
                 padding: '8px 18px',
-                color: '#93C5FD',
+                color: '#FAF7F2',
                 fontSize: '12px',
                 fontWeight: '800',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
-                boxShadow: '0 8px 24px rgba(0,0,0,0.5), 0 0 16px rgba(96,165,250,0.25)',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.5), 0 0 16px rgba(198,125,91,0.2)',
                 zIndex: 50,
                 animation: 'fadeSlideUp 0.25s ease both'
               }}
             >
-              <Eye size={14} color="#38BDF8" />
+              <Eye size={14} color="#C67D5B" />
               <span>Afficher les commandes</span>
               <ChevronUp size={14} />
             </button>
@@ -8937,7 +8937,7 @@ export default function App() {
                 <div
                   title="Glisser pour déplacer"
                   style={{
-                    color: 'rgba(255,255,255,0.4)',
+                    color: 'rgba(232,221,211,0.4)',
                     cursor: isDraggingCallControls ? 'grabbing' : 'grab',
                     paddingRight: '2px',
                     display: 'flex',
@@ -8951,6 +8951,12 @@ export default function App() {
                   className="call-btn-circle call-btn-hangup"
                   onClick={endCall}
                   title="Raccrocher et quitter l'appel"
+                  style={{
+                    backgroundColor: '#2A1A14',
+                    color: '#FAF7F2',
+                    border: '1.5px solid rgba(232,221,211,0.3)',
+                    boxShadow: '0 4px 14px rgba(0,0,0,0.6)'
+                  }}
                 >
                   <PhoneOff size={18} />
                 </button>
@@ -8958,7 +8964,10 @@ export default function App() {
                 <button
                   className="call-btn-circle"
                   onClick={toggleMic}
-                  style={{ backgroundColor: callState.micOn ? 'rgba(255,255,255,0.14)' : '#EF4444' }}
+                  style={{
+                    backgroundColor: callState.micOn ? 'rgba(255,255,255,0.14)' : '#2A1A14',
+                    border: callState.micOn ? 'none' : '1.5px solid rgba(232,221,211,0.3)'
+                  }}
                   title={callState.micOn ? "Couper le micro" : "Activer le micro"}
                 >
                   {callState.micOn ? <Mic size={18} /> : <MicOff size={18} />}
@@ -8968,7 +8977,10 @@ export default function App() {
                   <button
                     className="call-btn-circle"
                     onClick={toggleCam}
-                    style={{ backgroundColor: callState.camOn ? 'rgba(255,255,255,0.14)' : '#EF4444' }}
+                    style={{
+                      backgroundColor: callState.camOn ? 'rgba(255,255,255,0.14)' : '#2A1A14',
+                      border: callState.camOn ? 'none' : '1.5px solid rgba(232,221,211,0.3)'
+                    }}
                     title={callState.camOn ? "Couper la caméra" : "Activer la caméra"}
                   >
                     {callState.camOn ? <Camera size={18} /> : <VideoOff size={18} />}
@@ -8991,8 +9003,8 @@ export default function App() {
                     className="call-btn-circle"
                     onClick={toggleScreenShare}
                     style={{
-                      backgroundColor: callState.isScreenSharing ? '#10B981' : 'rgba(255,255,255,0.14)',
-                      boxShadow: callState.isScreenSharing ? '0 0 16px rgba(16,185,129,0.6)' : 'none'
+                      backgroundColor: callState.isScreenSharing ? '#C67D5B' : 'rgba(255,255,255,0.14)',
+                      boxShadow: callState.isScreenSharing ? '0 0 16px rgba(198,125,91,0.6)' : 'none'
                     }}
                     title={callState.isScreenSharing ? "Arrêter le partage d'écran" : "Partager mon écran"}
                   >
@@ -9005,8 +9017,8 @@ export default function App() {
                     className="call-btn-circle"
                     onClick={switchCamera}
                     style={{
-                      backgroundColor: facingMode === 'environment' ? '#38BDF8' : 'rgba(255,255,255,0.14)',
-                      color: facingMode === 'environment' ? '#0F172A' : '#FFF'
+                      backgroundColor: facingMode === 'environment' ? '#C67D5B' : 'rgba(255,255,255,0.14)',
+                      color: '#FAF7F2'
                     }}
                     title={facingMode === 'user' ? "Caméra arrière" : "Caméra avant"}
                   >
@@ -9019,8 +9031,8 @@ export default function App() {
                     className="call-btn-circle"
                     onClick={() => setIsSwapVideo(s => !s)}
                     style={{
-                      backgroundColor: isSwapVideo ? '#60A5FA' : 'rgba(255,255,255,0.14)',
-                      color: isSwapVideo ? '#0F172A' : '#FFF'
+                      backgroundColor: isSwapVideo ? '#C67D5B' : 'rgba(255,255,255,0.14)',
+                      color: '#FAF7F2'
                     }}
                     title="Inverser les caméras"
                   >
@@ -9040,7 +9052,7 @@ export default function App() {
                   className="call-btn-circle"
                   onClick={() => setShowCallControls(false)}
                   title="Mode Immersion (Masquer commandes)"
-                  style={{ color: '#93C5FD' }}
+                  style={{ color: '#D4C5B5' }}
                 >
                   <EyeOff size={18} />
                 </button>
@@ -9052,9 +9064,9 @@ export default function App() {
                       onClick={() => setIsTeacherMenuOpen(o => !o)}
                       title="Outils Professeur / Modération"
                       style={{
-                        backgroundColor: isTeacherMenuOpen ? '#F59E0B' : 'rgba(245,158,11,0.25)',
-                        border: '1.5px solid #F59E0B',
-                        color: isTeacherMenuOpen ? '#0F172A' : '#FDE68A'
+                        backgroundColor: isTeacherMenuOpen ? '#D97706' : 'rgba(217,119,6,0.25)',
+                        border: '1.5px solid #D97706',
+                        color: '#FAF7F2'
                       }}
                     >
                       <Crown size={18} />
@@ -9063,20 +9075,20 @@ export default function App() {
                     {isTeacherMenuOpen && (
                       <div style={{
                         position: 'absolute', bottom: '56px', left: '0',
-                        backgroundColor: 'rgba(15,23,42,0.95)', backdropFilter: 'blur(16px)',
-                        borderRadius: '16px', border: '1.5px solid rgba(245,158,11,0.4)',
+                        backgroundColor: 'rgba(35,30,27,0.96)', backdropFilter: 'blur(16px)',
+                        borderRadius: '16px', border: '1.5px solid rgba(198,125,91,0.4)',
                         boxShadow: '0 16px 40px rgba(0,0,0,0.6)', padding: '8px',
                         display: 'flex', flexDirection: 'column', gap: '6px', minWidth: '230px', zIndex: 120
                       }}>
-                        <div style={{ padding: '6px 8px', fontSize: '11px', fontWeight: '800', color: '#FDE68A', borderBottom: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <Crown size={12} color="#F59E0B" /> Modération du cours
+                        <div style={{ padding: '6px 8px', fontSize: '11px', fontWeight: '800', color: '#FDE68A', borderBottom: '1px solid rgba(232,221,211,0.1)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <Crown size={12} color="#D97706" /> Modération du cours
                         </div>
                         <button
                           onClick={() => { hostMuteParticipant(); setIsTeacherMenuOpen(false); }}
                           style={{
                             display: 'flex', alignItems: 'center', gap: '8px',
-                            padding: '8px 10px', borderRadius: '10px', border: 'none',
-                            backgroundColor: 'rgba(239,68,68,0.15)', color: '#FCA5A5',
+                            padding: '8px 10px', borderRadius: '10px', border: '1px solid rgba(232,221,211,0.15)',
+                            backgroundColor: '#2A1A14', color: '#FAF7F2',
                             fontSize: '12px', fontWeight: '700', cursor: 'pointer', textAlign: 'left',
                           }}
                         >
@@ -9087,7 +9099,7 @@ export default function App() {
                           style={{
                             display: 'flex', alignItems: 'center', gap: '8px',
                             padding: '8px 10px', borderRadius: '10px', border: 'none',
-                            backgroundColor: 'rgba(255,255,255,0.08)', color: '#93C5FD',
+                            backgroundColor: 'rgba(232,221,211,0.1)', color: '#FAF7F2',
                             fontSize: '12px', fontWeight: '700', cursor: 'pointer', textAlign: 'left',
                           }}
                         >
