@@ -1313,7 +1313,6 @@ export default function App() {
   const [isInfiniteRadius, setIsInfiniteRadius] = useState(true);
   const [hoveredCardId, setHoveredCardId] = useState(null);
   const [hoverSlideIndex, setHoverSlideIndex] = useState(0);
-  const [gridColumns, setGridColumns] = useState(isMobile ? 1 : 3);
 
   // Verrouillage absolu du scroll global dans l'onglet Chat (comportement application native iOS)
   useEffect(() => {
@@ -6844,7 +6843,7 @@ export default function App() {
         key={`${activeTab}-${viewMode}`}
         className={`premium-main fade-up-in ${activeTab === 'chat' ? 'chat-mode' : ''}`}
         style={{
-          maxWidth: activeTab === 'feed' ? (gridColumns === 1 ? '760px' : '1320px') : '1240px',
+          maxWidth: activeTab === 'feed' ? '1320px' : '1240px',
           margin: '0 auto',
           width: '100%',
           boxSizing: 'border-box',
@@ -7099,23 +7098,20 @@ export default function App() {
                 </button>
               </div>
 
-              {/* SÉLECTEURS FORMAT & GRILLE (1, 2 ou 3 COLONNES) */}
+              {/* SÉLECTEUR FORMAT (Tous / Sur place / À distance) */}
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '10px',
-                maxWidth: isMobile ? '100%' : '640px',
+                maxWidth: isMobile ? '100%' : '480px',
                 width: '100%',
                 margin: '0 auto 20px auto',
-                flexWrap: isMobile ? 'wrap' : 'nowrap'
               }}>
                 {/* SÉLECTEUR SEGMENTÉ FORMAT */}
                 <div style={{
                   display: 'flex',
                   alignItems: 'center',
-                  flex: 1,
-                  minWidth: isMobile ? '100%' : '340px',
+                  width: '100%',
                   padding: '4px',
                   borderRadius: '16px',
                   backgroundColor: 'var(--bg-card)',
@@ -7222,72 +7218,6 @@ export default function App() {
                     <span>{t('remote')}</span>
                   </button>
                 </div>
-
-                {/* SÉLECTEUR DE COLONNES DE GRILLE (1, 2, 3) */}
-                <div
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    padding: '4px',
-                    borderRadius: '16px',
-                    backgroundColor: 'var(--bg-card)',
-                    backdropFilter: 'blur(16px)',
-                    WebkitBackdropFilter: 'blur(16px)',
-                    border: '1px solid var(--border-color)',
-                    boxShadow: 'var(--shadow-card)',
-                    gap: '4px',
-                    flexShrink: 0
-                  }}
-                  title="Affichage en 1, 2 ou 3 colonnes"
-                >
-                  {[1, 2, 3].map((num) => (
-                    <button
-                      key={num}
-                      type="button"
-                      onClick={() => setGridColumns(num)}
-                      className="premium-button"
-                      title={`${num} colonne${num > 1 ? 's' : ''}`}
-                      style={{
-                        padding: '7px 10px',
-                        borderRadius: '12px',
-                        border: 'none',
-                        backgroundColor: gridColumns === num
-                          ? 'var(--accent-primary)'
-                          : 'transparent',
-                        color: gridColumns === num
-                          ? '#FFFFFF'
-                          : 'var(--text-secondary)',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        minWidth: '32px',
-                        height: '32px',
-                        boxShadow: gridColumns === num
-                          ? 'var(--shadow-accent)'
-                          : 'none',
-                        transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)'
-                      }}
-                    >
-                      {num === 1 ? (
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                          <rect x="2" y="2" width="12" height="12" rx="2" />
-                        </svg>
-                      ) : num === 2 ? (
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                          <rect x="1.5" y="2" width="5.5" height="12" rx="1.5" />
-                          <rect x="9" y="2" width="5.5" height="12" rx="1.5" />
-                        </svg>
-                      ) : (
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                          <rect x="1" y="2" width="3.5" height="12" rx="1" />
-                          <rect x="6.25" y="2" width="3.5" height="12" rx="1" />
-                          <rect x="11.5" y="2" width="3.5" height="12" rx="1" />
-                        </svg>
-                      )}
-                    </button>
-                  ))}
-                </div>
               </div>
 
               {filteredListings.length === 0 ? (
@@ -7358,13 +7288,7 @@ export default function App() {
                   ref={listingsGridRef}
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: isMobile
-                      ? '1fr'
-                      : (gridColumns === 1
-                        ? '1fr'
-                        : gridColumns === 2
-                          ? 'repeat(2, minmax(0, 1fr))'
-                          : 'repeat(3, minmax(0, 1fr))'),
+                    gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, minmax(0, 1fr))',
                     gap: isMobile ? '16px' : '24px',
                     width: '100%',
                     boxSizing: 'border-box'
