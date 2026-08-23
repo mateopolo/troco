@@ -42,7 +42,7 @@ import {
 } from './data/translationsData';
 
 export default function App() {
-  const { themeId, theme, isDark: darkMode, setThemeId, toggleTheme: toggleDarkMode, allThemes } = useTheme();
+  const { themeId, theme, isDark: darkMode, setThemeId, toggleTheme: toggleDarkMode, allThemes, customColors, setCustomColors } = useTheme();
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
 
   useEffect(() => {
@@ -8078,7 +8078,7 @@ export default function App() {
                 Choisis ton ambiance visuelle préférée. Toutes les couleurs de Troco s'adaptent instantanément.
               </p>
 
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '12px', marginBottom: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)', gap: '12px', marginBottom: '16px' }}>
                 {allThemes.map((tItem) => {
                   const isSelected = themeId === tItem.id;
                   return (
@@ -8147,6 +8147,145 @@ export default function App() {
                   );
                 })}
               </div>
+
+              {/* CONSTRUCTEUR DE THÈME SUR-MESURE EN DIRECT */}
+              {themeId === 'custom' && (
+                <div style={{
+                  backgroundColor: 'var(--bg-card)',
+                  borderRadius: '20px',
+                  padding: '18px',
+                  border: '1.5px solid var(--accent-primary)',
+                  boxShadow: 'var(--shadow-card)',
+                  marginBottom: '20px',
+                  animation: 'fadeSlideUp 0.3s ease both'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '18px' }}>🎨</span>
+                      <div>
+                        <div style={{ fontSize: '13.5px', fontWeight: '800', color: 'var(--text-main)' }}>
+                          Palette Sur-Mesure
+                        </div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                          Ajustez les 3 teintes maîtresses pour recalculer tout le thème en temps réel
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setCustomColors && setCustomColors({ primary: '#B98B73', bg: '#FAF7F2', text: '#3F4238' })}
+                      className="premium-button"
+                      style={{
+                        border: '1px solid var(--border-color)',
+                        borderRadius: '999px',
+                        padding: '4px 12px',
+                        backgroundColor: 'var(--bg-subtle)',
+                        color: 'var(--text-secondary)',
+                        fontSize: '11px',
+                        fontWeight: '700',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Réinitialiser
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: '12px' }}>
+                    {/* 1. COULEUR PRINCIPALE / ACCENT */}
+                    <div style={{
+                      backgroundColor: 'var(--bg-subtle)',
+                      borderRadius: '16px',
+                      padding: '12px',
+                      border: '1px solid var(--border-color)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px'
+                    }}>
+                      <input
+                        type="color"
+                        value={customColors?.primary || '#B98B73'}
+                        onChange={(e) => setCustomColors && setCustomColors({ primary: e.target.value })}
+                        style={{
+                          width: '42px',
+                          height: '42px',
+                          borderRadius: '12px',
+                          border: '2px solid var(--border-color)',
+                          cursor: 'pointer',
+                          backgroundColor: 'transparent',
+                          padding: '0',
+                          flexShrink: 0
+                        }}
+                      />
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-main)' }}>Couleur d'accent</div>
+                        <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>{customColors?.primary || '#B98B73'}</div>
+                      </div>
+                    </div>
+
+                    {/* 2. COULEUR DE FOND */}
+                    <div style={{
+                      backgroundColor: 'var(--bg-subtle)',
+                      borderRadius: '16px',
+                      padding: '12px',
+                      border: '1px solid var(--border-color)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px'
+                    }}>
+                      <input
+                        type="color"
+                        value={customColors?.bg || '#FAF7F2'}
+                        onChange={(e) => setCustomColors && setCustomColors({ bg: e.target.value })}
+                        style={{
+                          width: '42px',
+                          height: '42px',
+                          borderRadius: '12px',
+                          border: '2px solid var(--border-color)',
+                          cursor: 'pointer',
+                          backgroundColor: 'transparent',
+                          padding: '0',
+                          flexShrink: 0
+                        }}
+                      />
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-main)' }}>Couleur de fond</div>
+                        <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>{customColors?.bg || '#FAF7F2'}</div>
+                      </div>
+                    </div>
+
+                    {/* 3. COULEUR DE TEXTE */}
+                    <div style={{
+                      backgroundColor: 'var(--bg-subtle)',
+                      borderRadius: '16px',
+                      padding: '12px',
+                      border: '1px solid var(--border-color)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px'
+                    }}>
+                      <input
+                        type="color"
+                        value={customColors?.text || '#3F4238'}
+                        onChange={(e) => setCustomColors && setCustomColors({ text: e.target.value })}
+                        style={{
+                          width: '42px',
+                          height: '42px',
+                          borderRadius: '12px',
+                          border: '2px solid var(--border-color)',
+                          cursor: 'pointer',
+                          backgroundColor: 'transparent',
+                          padding: '0',
+                          flexShrink: 0
+                        }}
+                      />
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-main)' }}>Couleur de texte</div>
+                        <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>{customColors?.text || '#3F4238'}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* ---- CADRE JURIDIQUE & RGPD ---- */}

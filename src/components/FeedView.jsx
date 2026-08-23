@@ -6,38 +6,35 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import ListingCard from './ListingCard';
 
-const createModernMapIcon = (isDarkMode = false) => {
-  const primaryBg = isDarkMode ? 'rgba(96, 165, 250, 0.85)' : 'rgba(4, 38, 90, 0.85)';
-  const glowColor = isDarkMode ? 'rgba(96, 165, 250, 0.35)' : 'rgba(4, 38, 90, 0.3)';
-
+const createModernMapIcon = () => {
   return L.divIcon({
     className: 'custom-modern-pin',
     html: `
       <div style="
         position: relative;
-        width: 22px;
-        height: 28px;
+        width: 24px;
+        height: 30px;
         display: flex;
         align-items: center;
         justify-content: center;
-        filter: drop-shadow(0 4px 8px ${glowColor});
+        filter: drop-shadow(0 4px 10px var(--shadow-accent));
         cursor: pointer;
-        opacity: 0.88;
       ">
-        <svg width="22" height="28" viewBox="0 0 24 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <svg width="24" height="30" viewBox="0 0 24 30" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M12 0C5.37 0 0 5.37 0 12C0 21 12 30 12 30C12 30 24 21 24 12C24 5.37 18.63 0 12 0Z" 
-                fill="${primaryBg}" 
-                stroke="rgba(255, 255, 255, 0.95)" 
-                stroke-width="1.6" />
-          <circle cx="12" cy="11" r="4.5" fill="#FFFFFF" />
+                fill="var(--accent-primary, #B98B73)" 
+                stroke="#FFFFFF" 
+                stroke-width="1.8" />
+          <circle cx="12" cy="11" r="4.5" fill="var(--bg-global, #FAF7F2)" />
         </svg>
       </div>
     `,
-    iconSize: [22, 28],
-    iconAnchor: [11, 28],
-    popupAnchor: [0, -26],
+    iconSize: [24, 30],
+    iconAnchor: [12, 30],
+    popupAnchor: [0, -28],
   });
 };
+
 
 export default function FeedView({
   activeTab = 'feed',

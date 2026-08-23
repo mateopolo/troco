@@ -110,10 +110,10 @@ export default function CallOverlay({
         borderRadius: '18px',
         overflow: 'hidden',
         boxShadow: isDocked
-          ? '0 8px 30px rgba(0,0,0,0.7), 0 0 20px rgba(198,125,91,0.35)'
-          : '0 16px 40px rgba(0,0,0,0.6), 0 0 20px rgba(198,125,91,0.25)',
-        border: '2px solid #C67D5B',
-        backgroundColor: '#1A1715',
+          ? '0 8px 30px rgba(0,0,0,0.7), var(--shadow-accent)'
+          : '0 16px 40px rgba(0,0,0,0.6), var(--shadow-accent)',
+        border: '2px solid var(--accent-primary)',
+        backgroundColor: 'var(--call-card)',
         display: 'flex',
         flexDirection: 'column',
         userSelect: 'none',
@@ -123,7 +123,7 @@ export default function CallOverlay({
         transition: isDocked ? 'left 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)' : 'none',
       }}
     >
-      {/* LANGUETTE / TIROIR RÉTRACTABLE SUR LE BORD (MODE DOCKED STYLE FACETIME) */}
+      {/* LANGUETTE / TIROIR RÉTRACTABLE SUR LE BORD */}
       {isDocked && (
         <div
           onClick={handleUndock}
@@ -131,7 +131,7 @@ export default function CallOverlay({
           style={{
             position: 'absolute',
             inset: 0,
-            backgroundColor: 'rgba(26, 23, 21, 0.95)',
+            backgroundColor: 'var(--call-card)',
             backdropFilter: 'blur(16px)',
             display: 'flex',
             alignItems: 'center',
@@ -146,9 +146,9 @@ export default function CallOverlay({
             flexDirection: 'column',
             alignItems: 'center',
             gap: '4px',
-            color: '#C67D5B',
+            color: 'var(--accent-primary)',
           }}>
-            <div className="breathing-dot" style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#C67D5B' }} />
+            <div className="breathing-dot" style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--accent-primary)' }} />
             {isDocked === 'left' ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
           </div>
         </div>
@@ -158,28 +158,28 @@ export default function CallOverlay({
       <div
         style={{
           padding: '6px 10px',
-          backgroundColor: 'rgba(26, 23, 21, 0.88)',
+          backgroundColor: 'var(--bg-glass)',
           backdropFilter: 'blur(10px)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
           zIndex: 10,
-          borderBottom: '1px solid rgba(232, 221, 211, 0.12)',
+          borderBottom: '1px solid var(--border-color)',
           pointerEvents: 'none',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
-          <div className="breathing-dot" style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#C67D5B' }} />
-          <span style={{ color: '#FAF7F2', fontSize: '11px', fontWeight: '800', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <div className="breathing-dot" style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--accent-primary)' }} />
+          <span style={{ color: 'var(--text-main)', fontSize: '11px', fontWeight: '800', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {selectedChat?.user || 'Appel'}
           </span>
         </div>
-        <span style={{ color: '#C67D5B', fontSize: '10px', fontWeight: '800' }}>
+        <span style={{ color: 'var(--accent-primary)', fontSize: '10px', fontWeight: '800' }}>
           {formatCallTimer ? formatCallTimer(callDuration) : `${callDuration}s`}
         </span>
       </div>
 
-      {/* CONTENU VIDÉO OU AVATAR DU PIP (AVEC DISTINCTION TAP VS DRAG) */}
+      {/* CONTENU VIDÉO OU AVATAR DU PIP */}
       <div
         onClick={handlePipContentClick}
         title="Cliquer pour agrandir en plein écran"
@@ -201,11 +201,11 @@ export default function CallOverlay({
             }}
           />
         ) : (
-          <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', background: '#1A1715' }}>
-            <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFF', fontWeight: '800', fontSize: '16px' }}>
+          <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '4px', background: 'var(--call-card)' }}>
+            <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFF', fontWeight: '800', fontSize: '16px' }}>
               {(selectedChat?.user || 'T')[0]}
             </div>
-            <span style={{ color: '#D4C5B5', fontSize: '10px', fontWeight: '600' }}>En direct</span>
+            <span style={{ color: 'var(--text-secondary)', fontSize: '10px', fontWeight: '600' }}>En direct</span>
           </div>
         )}
 
@@ -222,7 +222,7 @@ export default function CallOverlay({
             type="button"
             onClick={(e) => { e.stopPropagation(); setIsCallPip(false); }}
             title="Agrandir en plein écran"
-            style={{ border: 'none', width: '28px', height: '28px', borderRadius: '50%', backgroundColor: 'rgba(26, 23, 21, 0.85)', color: '#FAF7F2', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            style={{ border: 'none', width: '28px', height: '28px', borderRadius: '50%', backgroundColor: 'var(--bg-glass)', color: 'var(--text-main)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
             <Maximize2 size={13} />
           </button>
@@ -233,7 +233,7 @@ export default function CallOverlay({
               type="button"
               onClick={handleRequestNativePip}
               title="Activer le PiP natif du navigateur"
-              style={{ border: 'none', width: '28px', height: '28px', borderRadius: '50%', backgroundColor: 'rgba(26, 23, 21, 0.85)', color: '#C67D5B', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              style={{ border: 'none', width: '28px', height: '28px', borderRadius: '50%', backgroundColor: 'var(--bg-glass)', color: 'var(--accent-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >
               <PictureInPicture2 size={13} />
             </button>
@@ -244,7 +244,7 @@ export default function CallOverlay({
               type="button"
               onClick={(e) => { e.stopPropagation(); if (switchCamera) switchCamera(); }}
               title="Changer de caméra"
-              style={{ border: 'none', width: '28px', height: '28px', borderRadius: '50%', backgroundColor: 'rgba(26, 23, 21, 0.85)', color: '#C67D5B', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              style={{ border: 'none', width: '28px', height: '28px', borderRadius: '50%', backgroundColor: 'var(--bg-glass)', color: 'var(--accent-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
             >
               <SwitchCamera size={13} />
             </button>
@@ -254,7 +254,7 @@ export default function CallOverlay({
             type="button"
             onClick={(e) => { e.stopPropagation(); if (toggleMic) toggleMic(); }}
             title={callState.micOn ? "Couper micro" : "Activer micro"}
-            style={{ border: callState.micOn ? 'none' : '1px solid rgba(232,221,211,0.3)', width: '28px', height: '28px', borderRadius: '50%', backgroundColor: callState.micOn ? 'rgba(26, 23, 21, 0.85)' : '#2A1A14', color: '#FAF7F2', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            style={{ border: callState.micOn ? 'none' : '1px solid var(--border-color)', width: '28px', height: '28px', borderRadius: '50%', backgroundColor: callState.micOn ? 'var(--bg-glass)' : 'var(--accent-danger)', color: '#FFFFFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
             {callState.micOn ? <Mic size={13} /> : <MicOff size={13} />}
           </button>
@@ -263,7 +263,7 @@ export default function CallOverlay({
             type="button"
             onClick={(e) => { e.stopPropagation(); if (endCall) endCall(); }}
             title="Raccrocher"
-            style={{ border: '1px solid rgba(232,221,211,0.3)', width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#2A1A14', color: '#FAF7F2', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            style={{ border: '1px solid var(--border-color)', width: '28px', height: '28px', borderRadius: '50%', backgroundColor: 'var(--accent-danger)', color: '#FFFFFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
           >
             <PhoneOff size={13} />
           </button>
@@ -272,3 +272,4 @@ export default function CallOverlay({
     </div>
   );
 }
+

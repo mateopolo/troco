@@ -12,6 +12,7 @@
   --bg-subtle: #F5F0E8;
   --bg-elevated: #EFE8DE;
   --bg-pill: #DDBEA9;
+  --bg-glass: rgba(250, 247, 242, 0.90);
   --text-main: #3F4238;
   --text-secondary: #6B705C;
   --text-muted: #A5A58D;
@@ -22,13 +23,17 @@
   --accent-secondary: #CB997E;
   --accent-terracotta: #C29279;
   --accent-success: #7A8F6A;
-  --accent-danger: #2A1A14;
+  --accent-danger: #C25E5E;
   --accent-warning: #D97706;
   --shadow-card: 0 10px 30px rgba(63, 66, 56, 0.08);
   --shadow-accent: 0 8px 24px rgba(185, 139, 115, 0.35);
-  --glass-bg: rgba(250, 247, 242, 0.88);
-  --glass-border: rgba(212, 199, 176, 0.45);
-  --overlay-bg: rgba(63, 66, 56, 0.55);
+  --shadow-modal: 0 24px 60px rgba(63, 66, 56, 0.18);
+  --glass-bg: rgba(250, 247, 242, 0.90);
+  --glass-border: rgba(212, 199, 176, 0.65);
+  --overlay-bg: rgba(63, 66, 56, 0.65);
+  --call-bg: #1E1B18;
+  --call-card: #2B2622;
+  --call-button-bg: rgba(250, 247, 242, 0.12);
 
   /* LEGACY ALIASES MAP TO DYNAMIC THEME ENGINE */
   --sand: var(--border-color);
@@ -46,6 +51,7 @@
   --tl: var(--text-muted);
   --card-bg: var(--bg-card);
   --border-warm: var(--border-color);
+
 }
 
 /* TYPOGRAPHIE GLOBALE STRICTEMENT BOUTIQUE */

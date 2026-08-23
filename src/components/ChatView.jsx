@@ -30,7 +30,6 @@ function ChatView({
   profile,
   currentLang,
   t,
-  darkMode,
   getChatMessageDisplayContent,
   getListingTitleTranslation,
   formatStatus,
@@ -254,7 +253,7 @@ function ChatView({
       return "À l'instant";
     }
 
-    // Aujourd'hui : afficher l'heure exacte (ex: « 13:13 »)
+    // Aujourd'hui : afficher l'heure exacte
     const isToday = d.getDate() === now.getDate() &&
                     d.getMonth() === now.getMonth() &&
                     d.getFullYear() === now.getFullYear();
@@ -262,7 +261,7 @@ function ChatView({
       return d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
     }
 
-    // Hier : « Hier » (ou « Hier 15:22 »)
+    // Hier : « Hier »
     const yesterday = new Date(now);
     yesterday.setDate(now.getDate() - 1);
     const isYesterday = d.getDate() === yesterday.getDate() &&
@@ -272,14 +271,14 @@ function ChatView({
       return `Hier ${d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
     }
 
-    // Cette semaine : nom complet du jour en français (ex: « Samedi »)
+    // Cette semaine : nom complet du jour en français
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
     if (diffDays < 7 && diffDays > 0) {
       const dayName = d.toLocaleDateString('fr-FR', { weekday: 'long' });
       return dayName.charAt(0).toUpperCase() + dayName.slice(1);
     }
 
-    // Plus ancien : date courte en français (ex: « 18/08 »)
+    // Plus ancien : date courte en français
     return d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
   };
 
@@ -365,8 +364,8 @@ function ChatView({
             fontSize: '11px',
             fontWeight: '900',
             letterSpacing: '-1.5px',
-            color: '#C67D5B',
-            textShadow: '0 0 6px rgba(198,125,91,0.5)',
+            color: 'var(--text-main)',
+            opacity: 0.9,
           }}
         >
           ✓✓
@@ -384,7 +383,8 @@ function ChatView({
             fontSize: '11px',
             fontWeight: '900',
             letterSpacing: '-1.5px',
-            color: darkMode ? 'rgba(232,221,211,0.6)' : 'rgba(255,255,255,0.75)',
+            color: 'var(--text-main)',
+            opacity: 0.7,
           }}
         >
           ✓✓
@@ -400,7 +400,8 @@ function ChatView({
           alignItems: 'center',
           fontSize: '11px',
           fontWeight: '900',
-          color: darkMode ? 'rgba(232,221,211,0.6)' : 'rgba(255,255,255,0.75)',
+          color: 'var(--text-main)',
+          opacity: 0.7,
         }}
       >
         ✓
@@ -412,12 +413,12 @@ function ChatView({
     if (!activeChatObj) {
       return (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', padding: '40px 20px', textAlign: 'center' }}>
-          <div style={{ width: '72px', height: '72px', borderRadius: '50%', backgroundColor: darkMode ? '#231E1B' : '#FAF7F2', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #E8DDD3' }}>
+          <div style={{ width: '72px', height: '72px', borderRadius: '50%', backgroundColor: 'var(--bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border-color)' }}>
             <span style={{ fontSize: '32px' }}>💬</span>
           </div>
           <div>
-            <p className="font-editorial-heading" style={{ margin: '0 0 6px', fontWeight: '600', fontSize: '20px', color: darkMode ? '#FAF7F2' : '#3D3530' }}>Aucune discussion</p>
-            <p style={{ margin: 0, fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54', lineHeight: 1.5 }}>Sélectionnez une discussion ou contactez un membre pour démarrer un échange.</p>
+            <p className="font-editorial-heading" style={{ margin: '0 0 6px', fontWeight: '600', fontSize: '20px', color: 'var(--text-main)' }}>Aucune discussion</p>
+            <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>Sélectionnez une discussion ou contactez un membre pour démarrer un échange.</p>
           </div>
         </div>
       );
@@ -432,7 +433,7 @@ function ChatView({
         boxSizing: 'border-box',
         overflow: 'hidden',
         position: 'relative',
-        backgroundColor: darkMode ? '#1A1715' : '#F5F0E8'
+        backgroundColor: 'var(--bg-global)'
       }}>
         {/* 1. EN-TÊTE FIXE DU CHAT (60px) */}
         <div style={{
@@ -441,8 +442,8 @@ function ChatView({
           paddingTop: isMobile ? 'max(6px, env(safe-area-inset-top))' : '0',
           height: isMobile ? '60px' : '64px',
           minHeight: isMobile ? '60px' : '56px',
-          borderBottom: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
-          backgroundColor: darkMode ? 'rgba(35, 30, 27, 0.98)' : 'rgba(250, 247, 242, 0.98)',
+          borderBottom: '1px solid var(--border-color)',
+          backgroundColor: 'var(--bg-glass)',
           backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
           gap: '8px', flexShrink: 0, zIndex: 30, width: '100%', boxSizing: 'border-box'
         }}>
@@ -457,8 +458,8 @@ function ChatView({
                   borderRadius: '50%',
                   width: '36px',
                   height: '36px',
-                  backgroundColor: darkMode ? '#231E1B' : '#F5EAE4',
-                  color: darkMode ? '#FAF7F2' : '#1A1512',
+                  backgroundColor: 'var(--bg-subtle)',
+                  color: 'var(--text-main)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   cursor: 'pointer', flexShrink: 0
                 }}
@@ -468,7 +469,7 @@ function ChatView({
               </button>
             )}
             <div style={{ position: 'relative', width: '36px', height: '36px', flexShrink: 0 }}>
-              <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '14px', boxShadow: '0 4px 10px rgba(198,125,91,0.2)' }}>
+              <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '14px', boxShadow: 'var(--shadow-accent)' }}>
                 {activeChatObj?.user ? activeChatObj.user[0].toUpperCase() : 'T'}
               </div>
               {activeChatIsOnline && (
@@ -477,30 +478,30 @@ function ChatView({
                   style={{
                     position: 'absolute', bottom: '0', right: '0',
                     width: '9px', height: '9px', borderRadius: '50%',
-                    backgroundColor: '#C67D5B',
-                    border: darkMode ? '2px solid #231E1B' : '2px solid #FAF7F2',
-                    boxShadow: '0 0 6px rgba(198,125,91,0.8)'
+                    backgroundColor: 'var(--accent-success)',
+                    border: '2px solid var(--bg-card)',
+                    boxShadow: '0 0 6px var(--accent-success)'
                   }}
                 />
               )}
             </div>
             <div style={{ minWidth: 0, flex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ fontWeight: '800', fontSize: isMobile ? '14px' : '14.5px', color: darkMode ? '#FAF7F2' : '#1A1512', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                <span style={{ fontWeight: '800', fontSize: isMobile ? '14px' : '14.5px', color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                   {activeChatObj?.user}
                 </span>
                 {(activeChatObj?.isDemo || activeChatObj?.persona || (typeof activeChatObj?.id === 'number' && activeChatObj?.id < 300)) && (
-                  <span style={{ fontSize: '8px', fontWeight: '800', backgroundColor: darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4', color: darkMode ? '#E8DDD3' : '#A8644A', padding: '1px 4px', borderRadius: '4px', flexShrink: 0 }}>
+                  <span style={{ fontSize: '8px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', padding: '1px 4px', borderRadius: '4px', flexShrink: 0 }}>
                     IA
                   </span>
                 )}
                 {activeChatIsOnline && (
-                  <span style={{ fontSize: '8.5px', fontWeight: '800', backgroundColor: darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4', color: darkMode ? '#E8DDD3' : '#A8644A', padding: '1px 5px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                    <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#C67D5B' }} /> En ligne
+                  <span style={{ fontSize: '8.5px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-success)', padding: '1px 5px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                    <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: 'var(--accent-success)' }} /> En ligne
                   </span>
                 )}
               </div>
-              <div style={{ fontSize: '11px', color: darkMode ? '#D4C5B5' : '#C67D5B', fontWeight: '700', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.2 }}>
+              <div style={{ fontSize: '11px', color: 'var(--accent-primary)', fontWeight: '700', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.2 }}>
                 {getListingTitleTranslation ? getListingTitleTranslation(activeChatObj?.listing, currentLang) : activeChatObj?.listing}
               </div>
             </div>
@@ -513,8 +514,8 @@ function ChatView({
               className="premium-button"
               style={{
                 border: 'none', borderRadius: '50%', width: '34px', height: '34px',
-                backgroundColor: darkMode ? 'rgba(232,221,211,0.12)' : '#F5F0E8',
-                color: darkMode ? '#E8DDD3' : '#3D3530',
+                backgroundColor: 'var(--bg-subtle)',
+                color: 'var(--text-main)',
                 cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
               }}
               title={t('audioCall') || 'Appel audio HD'}
@@ -526,8 +527,8 @@ function ChatView({
               className="premium-button"
               style={{
                 border: 'none', borderRadius: '50%', width: '34px', height: '34px',
-                backgroundColor: darkMode ? 'rgba(232,221,211,0.12)' : '#F5F0E8',
-                color: darkMode ? '#E8DDD3' : '#3D3530',
+                backgroundColor: 'var(--bg-subtle)',
+                color: 'var(--text-main)',
                 cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
               }}
               title={t('videoCall') || 'Appel visio direct'}
@@ -549,11 +550,11 @@ function ChatView({
                 width: isMobile ? '34px' : 'auto',
                 height: '34px',
                 padding: isMobile ? '0' : '0 12px',
-                backgroundColor: '#C67D5B',
+                background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
                 color: '#FFF',
                 fontWeight: '700', fontSize: '11px', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
-                boxShadow: '0 4px 12px rgba(198,125,91,0.28)'
+                boxShadow: 'var(--shadow-accent)'
               }}
               title={pendingDealFromMe ? "Modifier ma proposition de deal en attente" : (t('counterOffer') || 'Proposer un deal / Contre-offre')}
             >
@@ -570,9 +571,9 @@ function ChatView({
             alignItems: 'center',
             justifyContent: 'space-between',
             padding: isMobile ? '8px 12px' : '10px 18px',
-            backgroundColor: darkMode ? 'rgba(122, 143, 106, 0.25)' : '#EBF0E6',
-            borderBottom: darkMode ? '1px solid rgba(122, 143, 106, 0.4)' : '1px solid #D4DFCE',
-            color: darkMode ? '#EBF0E6' : '#3D4A35',
+            backgroundColor: 'var(--bg-subtle)',
+            borderBottom: '1px solid var(--border-color)',
+            color: 'var(--text-main)',
             fontSize: isMobile ? '11px' : '12px',
             fontWeight: '800',
             animation: 'fadeSlideUp 0.3s ease both',
@@ -580,7 +581,7 @@ function ChatView({
             flexShrink: 0,
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, overflow: 'hidden' }}>
-              <span className="breathing-dot" style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#9CAF88', flexShrink: 0, boxShadow: '0 0 8px #9CAF88' }} />
+              <span className="breathing-dot" style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: 'var(--accent-success)', flexShrink: 0, boxShadow: '0 0 8px var(--accent-success)' }} />
               <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 🟢 {activeChatObj.activeCall.type === 'video' ? 'Appel vidéo' : 'Appel audio'} en cours (Salle active)
               </span>
@@ -592,12 +593,12 @@ function ChatView({
                 border: 'none',
                 borderRadius: '999px',
                 padding: '5px 14px',
-                backgroundColor: '#9CAF88',
+                backgroundColor: 'var(--accent-success)',
                 color: '#FFF',
                 fontSize: '11px',
                 fontWeight: '800',
                 cursor: 'pointer',
-                boxShadow: '0 2px 8px rgba(122, 143, 106, 0.4)',
+                boxShadow: 'var(--shadow-accent)',
                 flexShrink: 0,
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -616,7 +617,7 @@ function ChatView({
             flex: 1,
             overflowY: 'auto',
             padding: isMobile ? '12px 10px' : '18px 20px',
-            backgroundColor: darkMode ? '#1A1715' : '#F5F0E8',
+            backgroundColor: 'var(--bg-global)',
             display: 'flex',
             flexDirection: 'column',
             gap: '10px',
@@ -646,14 +647,15 @@ function ChatView({
                     <div style={{
                       fontSize: '11px',
                       fontWeight: '700',
-                      color: darkMode ? '#D4C5B5' : '#6B5E54',
-                      backgroundColor: darkMode ? 'rgba(35,30,27,0.7)' : '#E8DDD3',
+                      color: 'var(--text-secondary)',
+                      backgroundColor: 'var(--bg-subtle)',
+                      border: '1px solid var(--border-color)',
                       padding: '4px 12px',
                       borderRadius: '999px',
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '6px',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+                      boxShadow: 'var(--shadow-card)',
                     }}>
                       <span>{translatedText || msg.text}</span>
                     </div>
@@ -693,46 +695,44 @@ function ChatView({
                       width: isMobile ? '94%' : '80%',
                       maxWidth: '520px',
                       border: isMine
-                        ? (darkMode ? '1.5px solid rgba(198,125,91,0.5)' : '1.5px solid #C67D5B')
-                        : (darkMode ? '1.5px solid rgba(232,221,211,0.2)' : '1.5px solid #E8DDD3'),
+                        ? '1.5px solid var(--accent-primary)'
+                        : '1.5px solid var(--border-color)',
                       borderRadius: '20px',
                       borderBottomRightRadius: isMine ? '4px' : '20px',
                       borderBottomLeftRadius: isIncoming ? '4px' : '20px',
                       padding: isMobile ? '14px' : '18px',
-                      backgroundColor: isMine
-                        ? (darkMode ? 'rgba(41,37,36,0.92)' : '#FAF7F2')
-                        : (darkMode ? 'rgba(35,30,27,0.92)' : '#FAF7F2'),
-                      boxShadow: darkMode ? '0 10px 30px rgba(0,0,0,0.45)' : '0 8px 24px rgba(61,53,48,0.08)',
+                      backgroundColor: 'var(--bg-card)',
+                      boxShadow: 'var(--shadow-card)',
                       boxSizing: 'border-box'
                     }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', flexWrap: 'wrap', gap: '6px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13.5px', fontWeight: '800', color: isMine ? (darkMode ? '#E8DDD3' : '#C67D5B') : (darkMode ? '#E8DDD3' : '#3D3530') }}>
-                          <Sparkles size={15} color="#C67D5B" />
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13.5px', fontWeight: '800', color: 'var(--accent-primary)' }}>
+                          <Sparkles size={15} color="var(--accent-primary)" />
                           {isMine ? (t('myDealProposal') || 'Ma proposition de Deal') : `Proposition de Deal reçue de ${msg.senderName || partnerName}`}
                         </div>
                         {isDealPending && isIncoming && (
-                          <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: darkMode ? 'rgba(198,125,91,0.25)' : '#F5EAE4', color: darkMode ? '#E8DDD3' : '#A8644A', padding: '3px 8px', borderRadius: '999px', border: '1.5px solid #C67D5B' }}>
+                          <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', padding: '3px 8px', borderRadius: '999px', border: '1.5px solid var(--accent-primary)' }}>
                             ⚡ Réponse attendue
                           </span>
                         )}
                         {isDealPending && isMine && (
-                          <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: darkMode ? 'rgba(107,94,84,0.25)' : '#F5F0E8', color: darkMode ? '#D4C5B5' : '#6B5E54', padding: '3px 8px', borderRadius: '999px', border: '1px solid #E8DDD3' }}>
+                          <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)', padding: '3px 8px', borderRadius: '999px', border: '1px solid var(--border-color)' }}>
                             {t('waitingResponse') || 'En attente'}
                           </span>
                         )}
                         {(currentDealStatus === 'confirmed' || currentDealStatus === 'accepted') && (
-                          <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4', color: darkMode ? '#FAF7F2' : '#A8644A', padding: '3px 8px', borderRadius: '999px', border: '1.5px solid #C67D5B' }}>
+                          <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-success)', padding: '3px 8px', borderRadius: '999px', border: '1.5px solid var(--accent-success)' }}>
                             ✓ Validé & Scellé
                           </span>
                         )}
                         {currentDealStatus === 'declined' && (
-                          <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: darkMode ? 'rgba(42,26,20,0.4)' : '#F5F0E8', color: darkMode ? '#D4C5B5' : '#6B5E54', padding: '3px 8px', borderRadius: '999px', border: '1px solid rgba(232,221,211,0.2)' }}>
+                          <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-danger)', padding: '3px 8px', borderRadius: '999px', border: '1px solid var(--border-color)' }}>
                             ✕ Refusé
                           </span>
                         )}
                       </div>
 
-                      <div style={{ fontSize: '13px', color: darkMode ? '#FAF7F2' : '#3D3530', marginBottom: '8px', lineHeight: 1.5, fontWeight: '600' }}>
+                      <div style={{ fontSize: '13px', color: 'var(--text-main)', marginBottom: '8px', lineHeight: 1.5, fontWeight: '600' }}>
                         {dealConditionsText}
                       </div>
                       {currentLang !== 'FR' && (
@@ -741,7 +741,7 @@ function ChatView({
                           className="premium-button"
                           style={{
                             border: 'none', background: 'none', cursor: 'pointer',
-                            color: darkMode ? '#E8DDD3' : '#C67D5B', fontSize: '11px',
+                            color: 'var(--accent-primary)', fontSize: '11px',
                             fontWeight: '800', display: 'inline-flex', alignItems: 'center',
                             gap: '4px', marginBottom: '10px', padding: 0
                           }}
@@ -754,17 +754,17 @@ function ChatView({
                       <div style={{ display: 'flex', gap: '6px', marginBottom: '12px', flexWrap: 'wrap' }}>
                         {terms.durationType && (
                           <span style={{
-                            backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
-                            border: darkMode ? '1.5px solid rgba(232,221,211,0.2)' : '1.5px solid #E8DDD3',
-                            color: darkMode ? '#FAF7F2' : '#3D3530',
+                            backgroundColor: 'var(--bg-subtle)',
+                            border: '1.5px solid var(--border-color)',
+                            color: 'var(--text-main)',
                             borderRadius: '999px', padding: '3px 9px', fontSize: '11px', fontWeight: '800'
                           }}>
                             ⏱️ {terms.durationType === 'hourly' ? `${terms.durationValue || 1}h` : terms.durationType === 'daily' ? `${terms.durationValue || 1}j` : terms.durationType === 'monthly' ? `${terms.durationValue || 1} mois` : terms.durationType === 'fixed' ? 'Forfait' : 'Libre'}
                           </span>
                         )}
-                        {Number(terms.euroAmount) > 0 && <span style={{ backgroundColor: darkMode ? '#231E1B' : '#FAF7F2', border: darkMode ? '1.5px solid rgba(198,125,91,0.4)' : '1.5px solid #C67D5B', color: darkMode ? '#E8DDD3' : '#A8644A', borderRadius: '999px', padding: '3px 9px', fontSize: '11px', fontWeight: '800' }}>💶 {terms.euroAmount}€</span>}
-                        {Number(terms.trocoTokens) > 0 && <span style={{ backgroundColor: darkMode ? '#231E1B' : '#FAF7F2', border: darkMode ? '1.5px solid #D97706' : '1.5px solid #D97706', color: darkMode ? '#FDE68A' : '#92400E', borderRadius: '999px', padding: '3px 9px', fontSize: '11px', fontWeight: '800' }}>🪙 {terms.trocoTokens} Jetons</span>}
-                        {Number(terms.euroAmount) === 0 && Number(terms.trocoTokens) === 0 && <span style={{ backgroundColor: darkMode ? '#231E1B' : '#FAF7F2', border: darkMode ? '1.5px solid #C67D5B' : '1.5px solid #C67D5B', color: darkMode ? '#E8DDD3' : '#A8644A', borderRadius: '999px', padding: '3px 9px', fontSize: '11px', fontWeight: '800' }}>🤝 Troc direct</span>}
+                        {Number(terms.euroAmount) > 0 && <span style={{ backgroundColor: 'var(--bg-subtle)', border: '1.5px solid var(--accent-primary)', color: 'var(--accent-primary)', borderRadius: '999px', padding: '3px 9px', fontSize: '11px', fontWeight: '800' }}>💶 {terms.euroAmount}€</span>}
+                        {Number(terms.trocoTokens) > 0 && <span style={{ backgroundColor: 'var(--bg-subtle)', border: '1.5px solid var(--accent-warning)', color: 'var(--accent-warning)', borderRadius: '999px', padding: '3px 9px', fontSize: '11px', fontWeight: '800' }}>🪙 {terms.trocoTokens} Jetons</span>}
+                        {Number(terms.euroAmount) === 0 && Number(terms.trocoTokens) === 0 && <span style={{ backgroundColor: 'var(--bg-subtle)', border: '1.5px solid var(--accent-primary)', color: 'var(--accent-primary)', borderRadius: '999px', padding: '3px 9px', fontSize: '11px', fontWeight: '800' }}>🤝 Troc direct</span>}
                       </div>
 
                       {/* ACTIONS INTERACTIVES POUR LE DESTINATAIRE : ACCEPTER / REFUSER / CONTRE-PROPOSER */}
@@ -775,12 +775,12 @@ function ChatView({
                             onClick={() => handleAcceptDeal(currentChatId, msg.id, terms)}
                             className="premium-button"
                             style={{
-                              flex: '1 1 30%', border: '1.5px solid #C67D5B', borderRadius: '12px', padding: '10px 8px',
-                              backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
-                              color: '#C67D5B',
+                              flex: '1 1 30%', border: '1.5px solid var(--accent-primary)', borderRadius: '12px', padding: '10px 8px',
+                              backgroundColor: 'var(--bg-card)',
+                              color: 'var(--accent-primary)',
                               fontSize: '12px', fontWeight: '800', cursor: 'pointer',
                               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
-                              boxShadow: '0 4px 12px rgba(198,125,91,0.2)'
+                              boxShadow: 'var(--shadow-accent)'
                             }}
                           >
                             ✓ Accepter
@@ -791,11 +791,11 @@ function ChatView({
                             className="premium-button"
                             style={{
                               flex: '1 1 30%', border: 'none', borderRadius: '12px', padding: '10px 8px',
-                              background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)',
+                              background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
                               color: '#FFF',
                               fontSize: '12px', fontWeight: '800', cursor: 'pointer',
                               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
-                              boxShadow: '0 4px 12px rgba(198,125,91,0.35)'
+                              boxShadow: 'var(--shadow-accent)'
                             }}
                           >
                             ⚡ Contre-proposer
@@ -805,10 +805,10 @@ function ChatView({
                             onClick={() => handleDeclineDeal(currentChatId, msg.id)}
                             className="premium-button"
                             style={{
-                              flex: '1 1 25%', border: darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #3D3530',
+                              flex: '1 1 25%', border: '1px solid var(--border-color)',
                               borderRadius: '12px', padding: '10px 8px',
-                              backgroundColor: darkMode ? '#231E1B' : '#3D3530',
-                              color: '#FAF7F2',
+                              backgroundColor: 'var(--bg-subtle)',
+                              color: 'var(--text-main)',
                               fontSize: '12px', fontWeight: '800', cursor: 'pointer'
                             }}
                           >
@@ -819,14 +819,14 @@ function ChatView({
 
                       {/* STATUT EN ATTENTE POUR L'EXPÉDITEUR AVEC BOUTON DE MODIFICATION */}
                       {isDealPending && isMine && (
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', backgroundColor: darkMode ? 'rgba(35,30,27,0.6)' : '#F5F0E8', border: darkMode ? '1px dashed rgba(232,221,211,0.2)' : '1px dashed #D4C5B5', color: darkMode ? '#D4C5B5' : '#6B5E54', borderRadius: '12px', padding: '8px 12px', fontSize: '11.5px', fontWeight: '700', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', backgroundColor: 'var(--bg-subtle)', border: '1px dashed var(--border-color)', color: 'var(--text-secondary)', borderRadius: '12px', padding: '8px 12px', fontSize: '11.5px', fontWeight: '700', flexWrap: 'wrap' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                             <Clock size={13} /> <span>En attente de la réponse de {partnerName}...</span>
                           </div>
                           <button
                             type="button"
                             onClick={() => openCounterOffer(terms, msg.id)}
-                            style={{ border: 'none', background: 'none', color: '#C67D5B', fontWeight: '800', fontSize: '11px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
+                            style={{ border: 'none', background: 'none', color: 'var(--accent-primary)', fontWeight: '800', fontSize: '11px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
                           >
                             <Edit2 size={11} /> Modifier
                           </button>
@@ -834,13 +834,13 @@ function ChatView({
                       )}
 
                       {(currentDealStatus === 'confirmed' || currentDealStatus === 'accepted') && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4', color: darkMode ? '#FAF7F2' : '#A8644A', borderRadius: '12px', padding: '8px 12px', fontSize: '11.5px', fontWeight: '800' }}>
-                          <CheckCircle size={14} color="#C67D5B" /> <span>Deal validé et scellé avec {partnerName}.</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-success)', borderRadius: '12px', padding: '8px 12px', fontSize: '11.5px', fontWeight: '800' }}>
+                          <CheckCircle size={14} color="var(--accent-success)" /> <span>Deal validé et scellé avec {partnerName}.</span>
                         </div>
                       )}
 
                       {currentDealStatus === 'declined' && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: darkMode ? 'rgba(42,26,20,0.3)' : '#F5F0E8', color: darkMode ? '#D4C5B5' : '#6B5E54', borderRadius: '12px', padding: '8px 12px', fontSize: '11.5px', fontWeight: '800' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)', borderRadius: '12px', padding: '8px 12px', fontSize: '11.5px', fontWeight: '800' }}>
                           <AlertTriangle size={14} /> <span>Proposition déclinée. Vous pouvez faire une nouvelle offre.</span>
                         </div>
                       )}
@@ -879,20 +879,20 @@ function ChatView({
                         padding: '10px 14px',
                         borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
                         backgroundColor: isMe
-                          ? '#C67D5B'
-                          : (darkMode ? '#231E1B' : '#FAF7F2'),
+                          ? 'var(--accent-primary)'
+                          : 'var(--bg-card)',
                         backgroundImage: isMe
-                          ? 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)'
+                          ? 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)'
                           : 'none',
                         color: isMe
                           ? '#FFFFFF'
-                          : (darkMode ? '#FAF7F2' : '#3D3530'),
+                          : 'var(--text-main)',
                         border: isMe
                           ? 'none'
-                          : (darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3'),
+                          : '1px solid var(--border-color)',
                         boxShadow: isMe
-                          ? '0 4px 14px rgba(198,125,91,0.25)'
-                          : '0 2px 8px rgba(61,53,48,0.04)',
+                          ? 'var(--shadow-accent)'
+                          : 'var(--shadow-card)',
                         wordBreak: 'break-word',
                         position: 'relative',
                         display: 'flex',
@@ -913,7 +913,7 @@ function ChatView({
                       }}>
                         <span style={{
                           fontSize: '9.5px',
-                          color: isMe ? 'rgba(255,255,255,0.75)' : (darkMode ? '#D4C5B5' : '#6B5E54'),
+                          color: isMe ? 'rgba(255,255,255,0.85)' : 'var(--text-secondary)',
                           fontWeight: '600'
                         }}>
                           {timeString}
@@ -933,7 +933,7 @@ function ChatView({
                         style={{
                           border: 'none', background: 'none', cursor: 'pointer',
                           padding: '4px', borderRadius: '50%',
-                          color: darkMode ? '#D4C5B5' : '#6B5E54',
+                          color: 'var(--text-secondary)',
                           display: 'flex', alignItems: 'center', justifyContent: 'center'
                         }}
                       >
@@ -946,11 +946,11 @@ function ChatView({
                             position: 'absolute',
                             top: '100%',
                             [isMe ? 'right' : 'left']: 0,
-                            backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
+                            backgroundColor: 'var(--bg-card)',
                             borderRadius: '14px',
                             padding: '6px',
-                            boxShadow: '0 12px 30px rgba(0,0,0,0.35)',
-                            border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
+                            boxShadow: 'var(--shadow-modal)',
+                            border: '1px solid var(--border-color)',
                             zIndex: 50,
                             display: 'flex',
                             flexDirection: 'column',
@@ -962,11 +962,11 @@ function ChatView({
                             style={{
                               border: 'none', background: 'none', padding: '7px 10px',
                               display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px',
-                              color: darkMode ? '#FAF7F2' : '#3D3530', cursor: 'pointer', borderRadius: '8px',
+                              color: 'var(--text-main)', cursor: 'pointer', borderRadius: '8px',
                               textAlign: 'left', fontWeight: '600'
                             }}
                           >
-                            {copiedMsgId === msg.id ? <Check size={12} color="#C67D5B" /> : <Copy size={12} />}
+                            {copiedMsgId === msg.id ? <Check size={12} color="var(--accent-primary)" /> : <Copy size={12} />}
                             <span>{copiedMsgId === msg.id ? 'Copié !' : 'Copier'}</span>
                           </button>
 
@@ -980,7 +980,7 @@ function ChatView({
                               style={{
                                 border: 'none', background: 'none', padding: '7px 10px',
                                 display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px',
-                                color: darkMode ? '#FAF7F2' : '#3D3530', cursor: 'pointer', borderRadius: '8px',
+                                color: 'var(--text-main)', cursor: 'pointer', borderRadius: '8px',
                                 textAlign: 'left', fontWeight: '600'
                               }}
                             >
@@ -998,7 +998,7 @@ function ChatView({
                               style={{
                                 border: 'none', background: 'none', padding: '7px 10px',
                                 display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px',
-                                color: darkMode ? '#D4C5B5' : '#3D3530', cursor: 'pointer', borderRadius: '8px',
+                                color: 'var(--accent-danger)', cursor: 'pointer', borderRadius: '8px',
                                 textAlign: 'left', fontWeight: '600'
                               }}
                             >
@@ -1021,20 +1021,20 @@ function ChatView({
                 gap: '6px',
                 padding: '6px 12px',
                 borderRadius: '16px',
-                backgroundColor: darkMode ? '#231E1B' : '#F5EAE4',
-                border: '1.5px solid #C67D5B',
-                boxShadow: '0 4px 12px rgba(198,125,91,0.2)',
+                backgroundColor: 'var(--bg-subtle)',
+                border: '1.5px solid var(--accent-primary)',
+                boxShadow: 'var(--shadow-card)',
                 alignSelf: 'flex-start',
                 marginBottom: '4px',
                 animation: 'typingFadeIn 0.25s ease-out'
               }}>
-                <span style={{ fontSize: '11.5px', fontWeight: '800', color: darkMode ? '#FAF7F2' : '#1A1512' }}>
+                <span style={{ fontSize: '11.5px', fontWeight: '800', color: 'var(--text-main)' }}>
                   {activeChatObj?.user} écrit
                 </span>
                 <div style={{ display: 'flex', gap: '3px', alignItems: 'center' }}>
-                  <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#C67D5B', display: 'inline-block', animation: 'bounceDot 1.4s infinite ease-in-out', animationDelay: '0s' }} />
-                  <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#C67D5B', display: 'inline-block', animation: 'bounceDot 1.4s infinite ease-in-out', animationDelay: '0.2s' }} />
-                  <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#C67D5B', display: 'inline-block', animation: 'bounceDot 1.4s infinite ease-in-out', animationDelay: '0.4s' }} />
+                  <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: 'var(--accent-primary)', display: 'inline-block', animation: 'bounceDot 1.4s infinite ease-in-out', animationDelay: '0s' }} />
+                  <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: 'var(--accent-primary)', display: 'inline-block', animation: 'bounceDot 1.4s infinite ease-in-out', animationDelay: '0.2s' }} />
+                  <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: 'var(--accent-primary)', display: 'inline-block', animation: 'bounceDot 1.4s infinite ease-in-out', animationDelay: '0.4s' }} />
                 </div>
               </div>
             )}
@@ -1043,13 +1043,13 @@ function ChatView({
           </div>
         </div>
 
-        {/* 3. BARRE DE SAISIE FIXE EN BAS (FONT-SIZE 16PX POUR BLOQUER L'AUTO-ZOOM SAFARI IOS) */}
+        {/* 3. BARRE DE SAISIE FIXE EN BAS */}
         <div style={{
           display: 'flex', flexDirection: 'column', gap: '6px',
           padding: isMobile ? '8px 12px' : '10px 18px 14px',
           paddingBottom: isMobile ? 'max(10px, env(safe-area-inset-bottom))' : '14px',
-          borderTop: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3',
-          backgroundColor: darkMode ? 'rgba(26, 23, 21, 0.98)' : 'rgba(250, 247, 242, 0.98)',
+          borderTop: '1px solid var(--border-color)',
+          backgroundColor: 'var(--bg-glass)',
           backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
           flexShrink: 0, zIndex: 30, width: '100%', boxSizing: 'border-box'
         }}>
@@ -1067,17 +1067,17 @@ function ChatView({
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 padding: '6px 12px',
-                backgroundColor: darkMode ? '#231E1B' : '#F5EAE4',
+                backgroundColor: 'var(--bg-subtle)',
                 borderRadius: '10px',
-                borderLeft: '3px solid #C67D5B',
+                borderLeft: '3px solid var(--accent-primary)',
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', color: darkMode ? '#E8DDD3' : '#A8644A', fontWeight: '700' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', color: 'var(--accent-primary)', fontWeight: '700' }}>
                   <Edit2 size={12} />
                   <span>Modification du message</span>
                 </div>
                 <button
                   onClick={() => { setEditingMsg(null); setChatInputText(''); }}
-                  style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#C67D5B', display: 'flex', alignItems: 'center' }}
+                  style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center' }}
                 >
                   <X size={14} />
                 </button>
@@ -1099,9 +1099,9 @@ function ChatView({
                 placeholder={editingMsg ? 'Modifie ton message...' : (t('typeYourMessage') || t('writeToInterlocutor') || 'Écris ton message...')}
                 style={{
                   flex: 1, padding: '11px 16px', borderRadius: '24px',
-                  border: darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #E8DDD3',
-                  backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
-                  color: darkMode ? '#FAF7F2' : '#3D3530',
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: 'var(--bg-card)',
+                  color: 'var(--text-main)',
                   fontSize: isMobile ? '16px' : '14px',
                   WebkitTextSizeAdjust: '100%',
                   outline: 'none',
@@ -1113,10 +1113,10 @@ function ChatView({
                 className="premium-button"
                 style={{
                   border: 'none', borderRadius: '50%', width: '42px', height: '42px',
-                  backgroundColor: '#C67D5B',
+                  background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
                   color: '#FFF', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  boxShadow: '0 4px 14px rgba(198,125,91,0.28)', flexShrink: 0
+                  boxShadow: 'var(--shadow-accent)', flexShrink: 0
                 }}
                 title="Envoyer"
               >
@@ -1151,24 +1151,24 @@ function ChatView({
         flex: 1,
         overflow: 'hidden'
       }}>
-        {/* LISTE DES DISCUSSIONS (Visible sur Desktop ou sur Mobile en sous-vue 'list') */}
+        {/* LISTE DES DISCUSSIONS */}
         {(!isMobile || mobileSubView === 'list') && (
           <div style={{
-            backgroundColor: darkMode ? 'rgba(35, 30, 27, 0.95)' : 'rgba(250, 247, 242, 0.95)',
+            backgroundColor: 'var(--bg-glass)',
             backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
             borderRadius: isMobile ? '0' : '24px',
             padding: isMobile ? '12px 14px' : '18px',
-            border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3',
-            boxShadow: isMobile ? 'none' : '0 10px 30px rgba(61,53,48,0.05)',
+            border: '1px solid var(--border-color)',
+            boxShadow: isMobile ? 'none' : 'var(--shadow-card)',
             display: 'flex', flexDirection: 'column', gap: '10px',
             height: '100%',
             overflow: 'hidden'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2px', flexShrink: 0 }}>
-              <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
+              <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: 'var(--text-main)' }}>
                 {t('discussions') || 'Discussions'}
               </h3>
-              <span style={{ fontSize: '11px', fontWeight: '800', backgroundColor: darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4', color: darkMode ? '#E8DDD3' : '#A8644A', padding: '4px 10px', borderRadius: '999px' }}>
+              <span style={{ fontSize: '11px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', padding: '4px 10px', borderRadius: '999px', border: '1px solid var(--border-color)' }}>
                 {visibleChats.length} conv.
               </span>
             </div>
@@ -1185,7 +1185,7 @@ function ChatView({
               touchAction: 'pan-y'
             }}>
               {visibleChats.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '40px 10px', color: darkMode ? '#9A8E84' : '#6B5E54', fontSize: '13px' }}>
+                <div style={{ textAlign: 'center', padding: '40px 10px', color: 'var(--text-secondary)', fontSize: '13px' }}>
                   Aucune discussion active
                 </div>
               ) : (
@@ -1209,7 +1209,6 @@ function ChatView({
                   const lastMsgSender = lastMsgObjInThread?.sender || null;
                   const lastSenderIsMe = lastMsgSender === 'me';
                   const lastSenderIsThem = lastMsgSender === 'them';
-                  // Badge visible uniquement quand c'est à l'utilisateur de répondre
                   const showReplyBadge = isUnread && lastSenderIsThem;
                   const showWaitingBadge = !isUnread && lastSenderIsMe;
 
@@ -1226,16 +1225,16 @@ function ChatView({
                           borderRadius: '16px', border: 'none', cursor: 'pointer', textAlign: 'left',
                           width: '100%',
                           backgroundColor: isSelected
-                            ? (darkMode ? 'rgba(198,125,91,0.22)' : '#F5EAE4')
-                            : (isUnread ? (darkMode ? 'rgba(41,37,36,0.75)' : '#FAF7F2') : (darkMode ? 'rgba(35,30,27,0.5)' : '#FAF7F2')),
+                            ? 'var(--bg-subtle)'
+                            : (isUnread ? 'var(--bg-card)' : 'var(--bg-card)'),
                           borderLeft: isSelected
-                            ? '4px solid #C67D5B'
-                            : (isUnread ? '4px solid #D4C5B5' : '4px solid transparent'),
-                          boxShadow: isSelected ? '0 4px 14px rgba(198,125,91,0.15)' : 'none',
+                            ? '4px solid var(--accent-primary)'
+                            : (isUnread ? '4px solid var(--border-dark)' : '4px solid transparent'),
+                          boxShadow: isSelected ? 'var(--shadow-accent)' : 'none',
                           transition: 'all 0.2s ease'
                         }}
                       >
-                        <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'linear-gradient(135deg, #3D3530 0%, #6B5E54 100%)', color: '#FAF7F2', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '15px', flexShrink: 0, boxShadow: '0 4px 10px rgba(61,53,48,0.15)', position: 'relative' }}>
+                        <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--text-main) 0%, var(--text-secondary) 100%)', color: 'var(--bg-global)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '15px', flexShrink: 0, boxShadow: 'var(--shadow-card)', position: 'relative' }}>
                           {chat.user[0]}
                           {isUserOnline(chat.user, chat.authorUid || chat.userId) && (
                             <span
@@ -1243,9 +1242,9 @@ function ChatView({
                               style={{
                                 position: 'absolute', bottom: '0', right: '0',
                                 width: '10px', height: '10px',
-                                backgroundColor: '#9CAF88',
-                                borderRadius: '50%', border: darkMode ? '2px solid #231E1B' : '2px solid #FFF',
-                                boxShadow: '0 0 6px rgba(156,175,136,0.8)'
+                                backgroundColor: 'var(--accent-success)',
+                                borderRadius: '50%', border: '2px solid var(--bg-card)',
+                                boxShadow: '0 0 6px var(--accent-success)'
                               }}
                             />
                           )}
@@ -1253,11 +1252,11 @@ function ChatView({
                             <span style={{
                               position: 'absolute', top: '-4px', right: '-4px',
                               minWidth: '18px', height: '18px', padding: '0 5px',
-                              backgroundColor: '#3D3530', color: '#FAF7F2',
-                              borderRadius: '999px', border: '1.8px solid #F5F0E8',
+                              backgroundColor: 'var(--accent-primary)', color: '#FFFFFF',
+                              borderRadius: '999px', border: '1.8px solid var(--bg-card)',
                               fontSize: '10px', fontWeight: '900',
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              boxShadow: '0 2px 8px rgba(61,53,48,0.4)'
+                              boxShadow: 'var(--shadow-card)'
                             }}>
                               {unreadCount > 9 ? '+9' : `+${unreadCount}`}
                             </span>
@@ -1265,33 +1264,33 @@ function ChatView({
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: isUnread ? '800' : '600', fontSize: isUnread ? '14.5px' : '14px', color: isUnread ? (darkMode ? '#FFFFFF' : '#3D3530') : (darkMode ? '#D4C5B5' : '#6B5E54') }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: isUnread ? '800' : '600', fontSize: isUnread ? '14.5px' : '14px', color: 'var(--text-main)' }}>
                               {chat.user}
                               {(chat.isDemo || chat.persona || (typeof chat.id === 'number' && chat.id < 300)) && (
-                                <span style={{ fontSize: '9px', fontWeight: '800', backgroundColor: darkMode ? '#231E1B' : '#E8DDD3', color: darkMode ? '#D4C5B5' : '#6B5E54', padding: '1px 6px', borderRadius: '6px' }}>
+                                <span style={{ fontSize: '9px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)', padding: '1px 6px', borderRadius: '6px' }}>
                                   🤖 IA
                                 </span>
                               )}
                             </span>
-                            <span style={{ fontSize: '10px', color: isUnread ? '#C67D5B' : (darkMode ? '#9A8E84' : '#6B5E54'), fontWeight: isUnread ? '800' : '500', flexShrink: 0, marginLeft: '6px' }}>
+                            <span style={{ fontSize: '10px', color: isUnread ? 'var(--accent-primary)' : 'var(--text-secondary)', fontWeight: isUnread ? '800' : '500', flexShrink: 0, marginLeft: '6px' }}>
                               {chatTimestampLabel || statusText}
                             </span>
                           </div>
-                          <div style={{ fontSize: '12px', fontWeight: isUnread ? '800' : '500', color: isUnread ? '#C67D5B' : (darkMode ? '#D4C5B5' : '#6B5E54'), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: '2px' }}>
+                          <div style={{ fontSize: '12px', fontWeight: isUnread ? '800' : '500', color: isUnread ? 'var(--accent-primary)' : 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: '2px' }}>
                             {listingTitleText}
                           </div>
                           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
-                            <div style={{ fontSize: '11px', fontWeight: isUnread ? '800' : '400', color: isUnread ? (darkMode ? '#FAF7F2' : '#3D3530') : (darkMode ? '#9A8E84' : '#6B5E54'), whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: '11px', fontWeight: isUnread ? '800' : '400', color: isUnread ? 'var(--text-main)' : 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, minWidth: 0 }}>
                               {lastMsgText}
                             </div>
                             {showReplyBadge && (
                               <span style={{
                                 flexShrink: 0,
                                 fontSize: '10px', fontWeight: '800',
-                                backgroundColor: darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4',
-                                color: darkMode ? '#E8DDD3' : '#A8644A',
+                                backgroundColor: 'var(--bg-subtle)',
+                                color: 'var(--accent-primary)',
                                 padding: '2px 7px', borderRadius: '999px',
-                                border: '1px solid #E8DDD3',
+                                border: '1px solid var(--border-color)',
                                 whiteSpace: 'nowrap',
                                 animation: 'pulse 2s infinite'
                               }}>
@@ -1302,7 +1301,7 @@ function ChatView({
                               <span style={{
                                 flexShrink: 0,
                                 fontSize: '10px', fontWeight: '600',
-                                color: darkMode ? '#9A8E84' : '#6B5E54',
+                                color: 'var(--text-secondary)',
                                 whiteSpace: 'nowrap'
                               }}>
                                 ⏳
@@ -1324,8 +1323,8 @@ function ChatView({
                           transform: 'translateY(-50%)',
                           width: '28px', height: '28px', borderRadius: '50%',
                           border: 'none',
-                          backgroundColor: darkMode ? 'rgba(198,125,91,0.15)' : 'rgba(198,125,91,0.1)',
-                          color: '#C67D5B',
+                          backgroundColor: 'var(--bg-subtle)',
+                          color: 'var(--accent-primary)',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           cursor: 'pointer', opacity: 0, transition: 'opacity 0.2s ease',
                           zIndex: 2, flexShrink: 0
@@ -1341,14 +1340,14 @@ function ChatView({
           </div>
         )}
 
-        {/* SALLE DE CONVERSATION DESKTOP (Visible dans la grille uniquement sur Desktop) */}
+        {/* SALLE DE CONVERSATION DESKTOP */}
         {!isMobile && (
           <div style={{
-            backgroundColor: darkMode ? 'rgba(35, 30, 27, 0.95)' : 'rgba(250,247,242,0.95)',
+            backgroundColor: 'var(--bg-glass)',
             backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
             borderRadius: '24px',
-            border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3',
-            boxShadow: '0 10px 30px rgba(61,53,48,0.05)',
+            border: '1px solid var(--border-color)',
+            boxShadow: 'var(--shadow-card)',
             display: 'flex', flexDirection: 'column',
             height: '100%',
             width: '100%',
@@ -1362,7 +1361,7 @@ function ChatView({
         </div>
       </div>
 
-      {/* SALLE DE CONVERSATION MOBILE : PORTAL TOP-LEVEL EN PLEIN ÉCRAN TOTAL (100dvh, z-index 9999) */}
+      {/* SALLE DE CONVERSATION MOBILE */}
       {isMobile && mobileSubView === 'room' && typeof document !== 'undefined' && createPortal(
         <div
           id="mobile-chat-portal-root"
@@ -1377,7 +1376,7 @@ function ChatView({
             zIndex: 9999,
             display: 'flex',
             flexDirection: 'column',
-            backgroundColor: darkMode ? '#1A1715' : '#F5F0E8',
+            backgroundColor: 'var(--bg-global)',
             overflow: 'hidden',
             overscrollBehavior: 'none'
           }}
@@ -1397,7 +1396,7 @@ function ChatView({
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: 'rgba(61, 53, 48, 0.75)',
+            backgroundColor: 'var(--overlay-bg)',
             backdropFilter: 'blur(8px)',
             WebkitBackdropFilter: 'blur(8px)',
             display: 'flex',
@@ -1410,14 +1409,14 @@ function ChatView({
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
-              color: darkMode ? '#FAF7F2' : '#3D3530',
+              backgroundColor: 'var(--bg-card)',
+              color: 'var(--text-main)',
               borderRadius: '24px',
               padding: '28px 24px',
               maxWidth: '420px',
               width: '100%',
-              boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.35)',
-              border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3',
+              boxShadow: 'var(--shadow-modal)',
+              border: '1px solid var(--border-color)',
               textAlign: 'center',
               display: 'flex',
               flexDirection: 'column',
@@ -1430,12 +1429,12 @@ function ChatView({
               width: '56px',
               height: '56px',
               borderRadius: '50%',
-              backgroundColor: darkMode ? 'rgba(198, 125, 91, 0.2)' : '#F5EAE4',
-              color: '#C67D5B',
+              backgroundColor: 'var(--bg-subtle)',
+              color: 'var(--accent-primary)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 8px 20px rgba(198, 125, 91, 0.2)'
+              boxShadow: 'var(--shadow-accent)'
             }}>
               <AlertTriangle size={28} />
             </div>
@@ -1445,7 +1444,7 @@ function ChatView({
                 margin: '0 0 8px 0',
                 fontSize: '20px',
                 fontWeight: '600',
-                color: darkMode ? '#FAF7F2' : '#1A1512'
+                color: 'var(--text-main)'
               }}>
                 Supprimer cette discussion ?
               </h3>
@@ -1453,9 +1452,9 @@ function ChatView({
                 margin: 0,
                 fontSize: '13px',
                 lineHeight: 1.5,
-                color: darkMode ? '#D4C5B5' : '#6B5E54'
+                color: 'var(--text-secondary)'
               }}>
-                Es-tu sûr de vouloir supprimer la conversation avec <strong style={{ color: darkMode ? '#FAF7F2' : '#1A1512' }}>{confirmDeleteChat.user}</strong> ? Cette action est irréversible.
+                Es-tu sûr de vouloir supprimer la conversation avec <strong style={{ color: 'var(--text-main)' }}>{confirmDeleteChat.user}</strong> ? Cette action est irréversible.
               </p>
             </div>
 
@@ -1473,9 +1472,9 @@ function ChatView({
                   flex: 1,
                   padding: '12px 16px',
                   borderRadius: '999px',
-                  border: darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #E8DDD3',
-                  backgroundColor: darkMode ? '#1A1715' : '#F5F0E8',
-                  color: darkMode ? '#FAF7F2' : '#3D3530',
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: 'var(--bg-subtle)',
+                  color: 'var(--text-main)',
                   fontSize: '13px',
                   fontWeight: '700',
                   cursor: 'pointer',
@@ -1492,13 +1491,13 @@ function ChatView({
                   flex: 1,
                   padding: '12px 16px',
                   borderRadius: '999px',
-                  border: '1px solid rgba(232,221,211,0.25)',
-                  backgroundColor: '#2A1A14',
-                  color: '#FAF7F2',
+                  border: '1px solid var(--accent-danger)',
+                  backgroundColor: 'var(--accent-danger)',
+                  color: '#FFFFFF',
                   fontSize: '13px',
                   fontWeight: '800',
                   cursor: 'pointer',
-                  boxShadow: '0 6px 18px rgba(0, 0, 0, 0.4)',
+                  boxShadow: 'var(--shadow-accent)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -1516,3 +1515,4 @@ function ChatView({
 }
 
 export default React.memo(ChatView);
+
