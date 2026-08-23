@@ -885,7 +885,7 @@ function ChatView({
                           ? 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)'
                           : 'none',
                         color: isMe
-                          ? '#FFFFFF'
+                          ? 'var(--accent-contrast-text, #FFFFFF)'
                           : 'var(--text-main)',
                         border: isMe
                           ? 'none'
@@ -913,7 +913,8 @@ function ChatView({
                       }}>
                         <span style={{
                           fontSize: '9.5px',
-                          color: isMe ? 'rgba(255,255,255,0.85)' : 'var(--text-secondary)',
+                          color: isMe ? 'var(--accent-contrast-text, #FFFFFF)' : 'var(--text-secondary)',
+                          opacity: isMe ? 0.85 : 1,
                           fontWeight: '600'
                         }}>
                           {timeString}

@@ -1,10 +1,14 @@
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,600&family=Inter:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,600&family=Inter:wght@300;400;500;600;700;800&family=Roboto+Mono:wght@400;500;600;700&display=swap');
 
 :root {
   --ease-quiet: cubic-bezier(.22, 1, .36, 1);
   --ease-emphasis: cubic-bezier(.16, 1, .3, 1);
   --font-editorial: 'Cormorant Garamond', Georgia, serif;
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-family-main: 'Cormorant Garamond', Georgia, serif;
+  --border-radius-main: 14px;
+  --base-zoom: 1;
+  --accent-contrast-text: #FFFFFF;
 
   /* DYNAMIC THEME ENGINE DEFAULTS (EARTHY PASTEL) */
   --bg-global: #FAF7F2;
@@ -51,12 +55,11 @@
   --tl: var(--text-muted);
   --card-bg: var(--bg-card);
   --border-warm: var(--border-color);
-
 }
 
-/* TYPOGRAPHIE GLOBALE STRICTEMENT BOUTIQUE */
+/* TYPOGRAPHIE GLOBALE STRICTEMENT RELIÉE AU DESIGN STUDIO */
 h1, h2, h3, h4, .font-editorial, .font-editorial-heading, .font-serif {
-  font-family: var(--font-editorial) !important;
+  font-family: var(--font-family-main) !important;
   letter-spacing: -0.015em;
   color: var(--text-main);
 }
@@ -79,23 +82,23 @@ h3 {
 }
 
 body, p, span, button, input, select, textarea, div, a, label {
-  font-family: var(--font-sans);
+  font-family: var(--font-family-main);
 }
 
 .font-editorial {
-  font-family: var(--font-editorial) !important;
+  font-family: var(--font-family-main) !important;
   font-style: italic;
   font-weight: 400;
 }
 
 .font-editorial-heading {
-  font-family: var(--font-editorial) !important;
+  font-family: var(--font-family-main) !important;
   font-style: normal;
   font-weight: 600;
 }
 
 .font-sans {
-  font-family: var(--font-sans) !important;
+  font-family: var(--font-family-main) !important;
 }
 
 * {
@@ -115,7 +118,7 @@ body, p, span, button, input, select, textarea, div, a, label {
 body {
   margin: 0;
   padding: 0;
-  font-family: var(--font-sans);
+  font-family: var(--font-family-main);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   background-color: var(--bg-global);

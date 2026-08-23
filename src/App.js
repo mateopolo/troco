@@ -2,13 +2,13 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Search, MapPin, Video, Star, Globe, Filter, MessageSquare, PlusCircle, User, ShieldCheck, Clock, CheckCircle, X, Sparkles, Coins, Plus, Trash2, Camera, Pencil, Mic, PhoneOff, Flame, History, Check, Lock, CreditCard, Tag, Phone, UserPlus, ChevronLeft, ChevronRight, ChevronUp, Eye, EyeOff, Minimize2, MicOff, VideoOff, Sun, Moon, Upload, Repeat, SwitchCamera, LogOut, Scale, ShieldAlert, FileText, Monitor, MonitorOff, Crown, GripHorizontal, Mail, Image as ImageIcon } from 'lucide-react';
+import { Search, MapPin, Video, Star, Globe, Filter, MessageSquare, PlusCircle, User, ShieldCheck, Clock, CheckCircle, X, Sparkles, Coins, Plus, Trash2, Camera, Pencil, Mic, PhoneOff, Flame, History, Check, Lock, CreditCard, Tag, Phone, UserPlus, ChevronLeft, ChevronRight, ChevronUp, Eye, EyeOff, Minimize2, MicOff, VideoOff, Sun, Moon, Upload, Repeat, SwitchCamera, LogOut, Scale, ShieldAlert, FileText, Monitor, MonitorOff, Crown, GripHorizontal, Mail, Image as ImageIcon, Sliders } from 'lucide-react';
 import { auth, db } from './firebase';
 import { collection, addDoc, doc, updateDoc, serverTimestamp, onSnapshot, query, orderBy, setDoc, deleteDoc, getDoc, getDocs, where, increment, runTransaction } from 'firebase/firestore';
 import { RecaptchaVerifier, signInWithPhoneNumber, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, GoogleAuthProvider, GithubAuthProvider, FacebookAuthProvider, OAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
 import ChatView from './components/ChatView';
 import { useWebRTC } from './hooks/useWebRTC';
-import { useTheme } from './contexts/ThemeContext';
+import { useTheme, TYPOGRAPHY_OPTIONS, getContrastColor } from './contexts/ThemeContext';
 import AdminPanel from './components/AdminPanel';
 import ReportModal from './components/ReportModal';
 import PaymentModal from './components/PaymentModal';
@@ -42,7 +42,26 @@ import {
 } from './data/translationsData';
 
 export default function App() {
-  const { themeId, theme, isDark: darkMode, setThemeId, toggleTheme: toggleDarkMode, allThemes, customColors, setCustomColors } = useTheme();
+  const {
+    themeId,
+    theme,
+    isDark: darkMode,
+    setThemeId,
+    toggleTheme: toggleDarkMode,
+    allThemes,
+    customColors,
+    setCustomColors,
+    typography,
+    setTypography,
+    borderRadius,
+    setBorderRadius,
+    baseZoom,
+    setBaseZoom,
+    brandColor,
+    applyBrandColor,
+    resetDesignStudio,
+    typographyOptions
+  } = useTheme();
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
 
   useEffect(() => {
@@ -5738,7 +5757,19 @@ export default function App() {
   }
 
   return (
-    <div style={{ backgroundColor: 'var(--bg-global)', color: 'var(--text-main)', minHeight: '100vh', transition: 'background-color 0.3s ease, color 0.3s ease', paddingBottom: isMobile && activeTab === 'chat' ? '0' : '90px', WebkitFontSmoothing: 'antialiased', position: 'relative', overflowX: 'hidden' }}>
+    <div style={{
+      backgroundColor: 'var(--bg-global)',
+      color: 'var(--text-main)',
+      minHeight: '100vh',
+      transition: 'background-color 0.3s ease, color 0.3s ease, transform 0.2s ease',
+      paddingBottom: isMobile && activeTab === 'chat' ? '0' : '90px',
+      WebkitFontSmoothing: 'antialiased',
+      position: 'relative',
+      overflowX: 'hidden',
+      transform: 'scale(var(--base-zoom, 1))',
+      transformOrigin: 'top center',
+      fontFamily: 'var(--font-family-main)'
+    }}>
       {/* ORBES DE LUEUR AMBIANTE FLUIDES */}
       <div className="glow-orb glow-orb-primary" style={{ top: '8%', left: '-100px', width: '380px', height: '380px' }} />
       <div className="glow-orb glow-orb-secondary" style={{ top: '40%', right: '-120px', width: '420px', height: '420px' }} />
@@ -8057,226 +8088,577 @@ export default function App() {
               </div>
             </div>
 
-            {/* ---- PERSONNALISATION DE L'ESPACE (THEME ENGINE) ---- */}
-            <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '20px', marginTop: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                <Sparkles size={17} color="var(--accent-primary)" />
-                <h4 className="font-editorial-heading" style={{ margin: 0, fontSize: '17px', fontWeight: '600', color: 'var(--text-main)' }}>
-                  🎨 Personnalisation de l'espace
-                </h4>
+            {/* ========================================================================= */}
+            {/* ---- STUDIO DE DESIGN INTÉGRÉ & ACCESSIBILITÉ (THEME & STYLE ENGINE) ---- */}
+            {/* ========================================================================= */}
+            <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '22px', marginTop: '22px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px', flexWrap: 'wrap', gap: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <Sparkles size={18} color="var(--accent-primary)" />
+                  <h4 className="font-editorial-heading" style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: 'var(--text-main)' }}>
+                    🎨 Studio de Design & Accessibilité
+                  </h4>
+                </div>
+                <button
+                  type="button"
+                  onClick={resetDesignStudio}
+                  className="premium-button"
+                  style={{
+                    border: '1px solid var(--border-color)',
+                    borderRadius: 'var(--border-radius-main, 14px)',
+                    padding: '6px 14px',
+                    backgroundColor: 'var(--bg-subtle)',
+                    color: 'var(--text-secondary)',
+                    fontSize: '11.5px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px'
+                  }}
+                  title="Réinitialiser l'ensemble des personnalisations du studio"
+                >
+                  <Repeat size={13} /> Réinitialiser
+                </button>
               </div>
-              <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '0 0 16px' }}>
-                Choisis ton ambiance visuelle préférée. Toutes les couleurs de Troco s'adaptent instantanément.
+
+              <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '0 0 16px', lineHeight: 1.5 }}>
+                Personnalisation profonde de Troco : génération chromatique HSL intelligente, typographies Google Fonts, rayon de courbure et échelle de zoom avec garde-fous de contraste WCAG.
               </p>
 
-              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)', gap: '12px', marginBottom: '16px' }}>
-                {allThemes.map((tItem) => {
-                  const isSelected = themeId === tItem.id;
-                  return (
-                    <button
-                      key={tItem.id}
-                      type="button"
-                      onClick={() => setThemeId(tItem.id)}
-                      className="premium-button"
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        padding: '14px 10px',
-                        borderRadius: '20px',
-                        border: isSelected ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
-                        backgroundColor: isSelected ? 'var(--bg-subtle)' : 'var(--bg-card)',
-                        cursor: 'pointer',
-                        boxShadow: isSelected ? 'var(--shadow-accent)' : 'var(--shadow-card)',
-                        transform: isSelected ? 'scale(1.02)' : 'scale(1)',
-                        transition: 'all 0.25s var(--ease-quiet)',
-                        position: 'relative'
-                      }}
-                    >
-                      <div style={{
-                        display: 'flex',
-                        width: '42px',
-                        height: '42px',
-                        borderRadius: '50%',
-                        overflow: 'hidden',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                        border: '2px solid rgba(255,255,255,0.6)',
-                        marginBottom: '8px'
-                      }}>
-                        {tItem.previewColors.map((col, idx) => (
-                          <div key={idx} style={{ flex: 1, backgroundColor: col, height: '100%' }} />
-                        ))}
-                      </div>
+              {/* ---- 1. CARTE DE PRÉVISUALISATION EN DIRECT (LIVE PREVIEW MINI ANNONCE) ---- */}
+              <div style={{
+                backgroundColor: 'var(--bg-card)',
+                borderRadius: 'var(--border-radius-main, 14px)',
+                border: '1.5px solid var(--border-color)',
+                padding: '16px',
+                boxShadow: 'var(--shadow-card)',
+                marginBottom: '18px',
+                transition: 'all 0.25s ease',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                  <span style={{
+                    fontSize: '11px',
+                    fontWeight: '800',
+                    padding: '4px 10px',
+                    borderRadius: 'var(--border-radius-main, 14px)',
+                    backgroundColor: 'var(--bg-subtle)',
+                    color: 'var(--accent-primary)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px'
+                  }}>
+                    <Sparkles size={12} /> Aperçu Live
+                  </span>
+                  <span style={{
+                    fontSize: '10.5px',
+                    fontWeight: '700',
+                    color: 'var(--accent-success)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}>
+                    <ShieldCheck size={13} /> Contraste Garanti (WCAG AA)
+                  </span>
+                </div>
 
-                      <div style={{ fontSize: '12.5px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '2px', textAlign: 'center' }}>
-                        {tItem.name}
-                      </div>
-                      <div style={{ fontSize: '10px', color: 'var(--text-secondary)', textAlign: 'center', lineHeight: 1.25 }}>
-                        {tItem.description}
-                      </div>
+                <div style={{ display: 'flex', gap: '14px', alignItems: 'center', marginBottom: '10px' }}>
+                  <div style={{
+                    width: '46px',
+                    height: '46px',
+                    borderRadius: 'var(--border-radius-main, 14px)',
+                    backgroundColor: 'var(--accent-primary)',
+                    color: 'var(--accent-contrast-text, #FFF)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: '900',
+                    fontSize: '20px',
+                    boxShadow: 'var(--shadow-accent)',
+                    flexShrink: 0
+                  }}>
+                    🎸
+                  </div>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <h5 className="font-editorial-heading" style={{
+                      margin: 0,
+                      fontSize: '15px',
+                      fontWeight: '600',
+                      color: 'var(--text-main)',
+                      fontFamily: 'var(--font-family-main)'
+                    }}>
+                      Cours Particulier de Guitare & MAO
+                    </h5>
+                    <div style={{ fontSize: '11.5px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                      Par Mateo Polo • Paris 11e • 1 Jeton Troco
+                    </div>
+                  </div>
+                </div>
 
-                      {isSelected && (
-                        <div style={{
-                          position: 'absolute',
-                          top: '6px',
-                          right: '6px',
-                          width: '18px',
-                          height: '18px',
-                          borderRadius: '50%',
-                          backgroundColor: 'var(--accent-primary)',
-                          color: '#FFFFFF',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: '10px',
-                          fontWeight: '900'
-                        }}>
-                          ✓
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
+                <p style={{
+                  fontSize: '12px',
+                  color: 'var(--text-secondary)',
+                  margin: '0 0 12px',
+                  lineHeight: 1.45,
+                  fontFamily: 'var(--font-family-main)'
+                }}>
+                  Session d'apprentissage et de mixage studio. Échange contre dépannage informatique ou bricolage.
+                </p>
+
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+                  <div style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 12px',
+                    borderRadius: 'var(--border-radius-main, 14px)',
+                    backgroundColor: 'var(--bg-subtle)',
+                    color: 'var(--text-main)',
+                    fontSize: '11.5px',
+                    fontWeight: '800'
+                  }}>
+                    <Coins size={13} color="var(--accent-primary)" /> 1 Jeton Troco
+                  </div>
+
+                  <button
+                    type="button"
+                    className="premium-button"
+                    style={{
+                      border: 'none',
+                      borderRadius: 'var(--border-radius-main, 14px)',
+                      padding: '8px 16px',
+                      background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
+                      color: 'var(--accent-contrast-text, #FFF)',
+                      fontWeight: '800',
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      boxShadow: 'var(--shadow-accent)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    Proposer un Troco <ChevronRight size={13} />
+                  </button>
+                </div>
               </div>
 
-              {/* CONSTRUCTEUR DE THÈME SUR-MESURE EN DIRECT */}
-              {themeId === 'custom' && (
-                <div style={{
-                  backgroundColor: 'var(--bg-card)',
-                  borderRadius: '20px',
-                  padding: '18px',
-                  border: '1.5px solid var(--accent-primary)',
-                  boxShadow: 'var(--shadow-card)',
-                  marginBottom: '20px',
-                  animation: 'fadeSlideUp 0.3s ease both'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '18px' }}>🎨</span>
-                      <div>
-                        <div style={{ fontSize: '13.5px', fontWeight: '800', color: 'var(--text-main)' }}>
-                          Palette Sur-Mesure
+              {/* ---- 2. SÉLECTION RAPIDE DES AMBIANCES (PRESETS) ---- */}
+              <div style={{ marginBottom: '18px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '8px' }}>
+                  Thèmes & Ambiances Prédéfinies
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)', gap: '10px' }}>
+                  {allThemes.map((tItem) => {
+                    const isSelected = themeId === tItem.id;
+                    return (
+                      <button
+                        key={tItem.id}
+                        type="button"
+                        onClick={() => setThemeId(tItem.id)}
+                        className="premium-button"
+                        style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          padding: '12px 8px',
+                          borderRadius: 'var(--border-radius-main, 14px)',
+                          border: isSelected ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                          backgroundColor: isSelected ? 'var(--bg-subtle)' : 'var(--bg-card)',
+                          cursor: 'pointer',
+                          boxShadow: isSelected ? 'var(--shadow-accent)' : 'var(--shadow-card)',
+                          transform: isSelected ? 'scale(1.02)' : 'scale(1)',
+                          transition: 'all 0.2s ease',
+                          position: 'relative'
+                        }}
+                      >
+                        <div style={{
+                          display: 'flex',
+                          width: '38px',
+                          height: '38px',
+                          borderRadius: '50%',
+                          overflow: 'hidden',
+                          boxShadow: '0 3px 8px rgba(0,0,0,0.15)',
+                          border: '2px solid rgba(255,255,255,0.7)',
+                          marginBottom: '6px'
+                        }}>
+                          {tItem.previewColors.map((col, idx) => (
+                            <div key={idx} style={{ flex: 1, backgroundColor: col, height: '100%' }} />
+                          ))}
                         </div>
-                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                          Ajustez les 3 teintes maîtresses pour recalculer tout le thème en temps réel
+
+                        <div style={{ fontSize: '11.5px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '2px', textAlign: 'center' }}>
+                          {tItem.name}
                         </div>
-                      </div>
+                        <div style={{ fontSize: '9.5px', color: 'var(--text-secondary)', textAlign: 'center', lineHeight: 1.2 }}>
+                          {tItem.description}
+                        </div>
+
+                        {isSelected && (
+                          <div style={{
+                            position: 'absolute',
+                            top: '5px',
+                            right: '5px',
+                            width: '16px',
+                            height: '16px',
+                            borderRadius: '50%',
+                            backgroundColor: 'var(--accent-primary)',
+                            color: 'var(--accent-contrast-text, #FFFFFF)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '9px',
+                            fontWeight: '900'
+                          }}>
+                            ✓
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* ---- 3. GÉNÉRATEUR MAGIQUE EN 1 CLIC (COULEUR DE MARQUE) ---- */}
+              <div style={{
+                backgroundColor: 'var(--bg-card)',
+                borderRadius: 'var(--border-radius-main, 14px)',
+                padding: '16px',
+                border: '1px solid var(--border-color)',
+                boxShadow: 'var(--shadow-card)',
+                marginBottom: '18px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                  <Sparkles size={16} color="var(--accent-primary)" />
+                  <strong style={{ fontSize: '13px', color: 'var(--text-main)' }}>Générateur Magique (1 Clic)</strong>
+                </div>
+                <p style={{ fontSize: '11.5px', color: 'var(--text-secondary)', margin: '0 0 12px' }}>
+                  Choisissez une couleur primaire : le moteur HSL calcule automatiquement l'ensemble des teintes harmoniques, contrastes et ombres.
+                </p>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    padding: '8px 14px',
+                    borderRadius: 'var(--border-radius-main, 14px)',
+                    backgroundColor: 'var(--bg-subtle)',
+                    border: '1px solid var(--border-color)'
+                  }}>
+                    <input
+                      type="color"
+                      value={brandColor || '#B98B73'}
+                      onChange={(e) => applyBrandColor(e.target.value)}
+                      style={{
+                        width: '36px',
+                        height: '36px',
+                        borderRadius: '8px',
+                        border: '2px solid var(--border-color)',
+                        cursor: 'pointer',
+                        backgroundColor: 'transparent',
+                        padding: 0
+                      }}
+                    />
+                    <div>
+                      <div style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-main)' }}>Couleur de Marque</div>
+                      <div style={{ fontSize: '10px', fontFamily: 'monospace', color: 'var(--text-secondary)' }}>{brandColor || '#B98B73'}</div>
                     </div>
+                  </div>
+
+                  {/* Nuances pré-calibrées */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    {[
+                      { hex: '#B98B73', label: 'Terracotta' },
+                      { hex: '#D6456E', label: 'Sakura' },
+                      { hex: '#0D9488', label: 'Émeraude' },
+                      { hex: '#2563EB', label: 'Cobalt' },
+                      { hex: '#D97706', label: 'Ambre' },
+                      { hex: '#7C3AED', label: 'Violet' },
+                      { hex: '#111827', label: 'Titanium' },
+                    ].map((swatch) => (
+                      <button
+                        key={swatch.hex}
+                        type="button"
+                        onClick={() => applyBrandColor(swatch.hex)}
+                        title={swatch.label}
+                        style={{
+                          width: '28px',
+                          height: '28px',
+                          borderRadius: '50%',
+                          backgroundColor: swatch.hex,
+                          border: brandColor === swatch.hex ? '2.5px solid var(--text-main)' : '2px solid rgba(255,255,255,0.8)',
+                          cursor: 'pointer',
+                          boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+                          transform: brandColor === swatch.hex ? 'scale(1.15)' : 'scale(1)',
+                          transition: 'transform 0.15s ease'
+                        }}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* ---- 4. CONTRÔLES AVANCÉS (MODE EXPERT & FORME / TYPO / ZOOM) ---- */}
+              <div style={{
+                backgroundColor: 'var(--bg-card)',
+                borderRadius: 'var(--border-radius-main, 14px)',
+                padding: '16px',
+                border: '1px solid var(--border-color)',
+                boxShadow: 'var(--shadow-card)',
+                marginBottom: '20px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+                  <Sliders size={16} color="var(--accent-primary)" />
+                  <strong style={{ fontSize: '13px', color: 'var(--text-main)' }}>Contrôles Avancés & Typographie</strong>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: '16px', marginBottom: '16px' }}>
+                  {/* A) SÉLECTEUR DE TYPOGRAPHIE */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '6px' }}>
+                      Police de Caractères
+                    </label>
+                    <select
+                      value={typography || 'editorial'}
+                      onChange={(e) => setTypography(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        borderRadius: 'var(--border-radius-main, 14px)',
+                        border: '1px solid var(--border-color)',
+                        backgroundColor: 'var(--bg-subtle)',
+                        color: 'var(--text-main)',
+                        fontSize: '12.5px',
+                        fontWeight: '700',
+                        outline: 'none',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {Object.values(typographyOptions || TYPOGRAPHY_OPTIONS).map((opt) => (
+                        <option key={opt.id} value={opt.id}>
+                          {opt.name}
+                        </option>
+                      ))}
+                    </select>
+                    <div style={{ fontSize: '10px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                      {typographyOptions?.[typography]?.description || 'Rendu visuel haute précision'}
+                    </div>
+                  </div>
+
+                  {/* B) CURSEUR DE ZOOM GLOBAL (ÉCHELLE) */}
+                  <div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <label style={{ fontSize: '11.5px', fontWeight: '800', color: 'var(--text-main)' }}>
+                        Échelle & Zoom d'Affichage
+                      </label>
+                      <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--accent-primary)', fontFamily: 'monospace' }}>
+                        {Math.round((baseZoom || 1.0) * 100)}%
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0.90"
+                      max="1.10"
+                      step="0.02"
+                      value={baseZoom || 1.0}
+                      onChange={(e) => setBaseZoom(Number(e.target.value))}
+                      style={{ width: '100%' }}
+                    />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9.5px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                      <span>Compact (90%)</span>
+                      <span>Standard (100%)</span>
+                      <span>Grand (110%)</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* C) CURSEUR DE FORME (RAYON DE BORDURE) */}
+                <div style={{ marginBottom: '16px', borderTop: '1px solid var(--border-color)', paddingTop: '14px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <label style={{ fontSize: '11.5px', fontWeight: '800', color: 'var(--text-main)' }}>
+                      Forme des Boutons & Cartes
+                    </label>
+                    <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--accent-primary)', fontFamily: 'monospace' }}>
+                      {borderRadius >= 900 ? 'Pilule (999px)' : `${borderRadius || 14}px`}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="32"
+                    step="2"
+                    value={borderRadius > 32 ? 32 : (borderRadius ?? 14)}
+                    onChange={(e) => setBorderRadius(Number(e.target.value))}
+                    style={{ width: '100%', marginBottom: '8px' }}
+                  />
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                     <button
                       type="button"
-                      onClick={() => setCustomColors && setCustomColors({ primary: '#B98B73', bg: '#FAF7F2', text: '#3F4238' })}
+                      onClick={() => setBorderRadius(0)}
                       className="premium-button"
                       style={{
+                        padding: '4px 10px',
+                        borderRadius: '0px',
                         border: '1px solid var(--border-color)',
-                        borderRadius: '999px',
-                        padding: '4px 12px',
-                        backgroundColor: 'var(--bg-subtle)',
-                        color: 'var(--text-secondary)',
-                        fontSize: '11px',
+                        backgroundColor: borderRadius === 0 ? 'var(--accent-primary)' : 'var(--bg-subtle)',
+                        color: borderRadius === 0 ? 'var(--accent-contrast-text, #FFF)' : 'var(--text-secondary)',
+                        fontSize: '10.5px',
                         fontWeight: '700',
                         cursor: 'pointer'
                       }}
                     >
-                      Réinitialiser
+                      Carré (0px)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBorderRadius(14)}
+                      className="premium-button"
+                      style={{
+                        padding: '4px 10px',
+                        borderRadius: '14px',
+                        border: '1px solid var(--border-color)',
+                        backgroundColor: borderRadius === 14 ? 'var(--accent-primary)' : 'var(--bg-subtle)',
+                        color: borderRadius === 14 ? 'var(--accent-contrast-text, #FFF)' : 'var(--text-secondary)',
+                        fontSize: '10.5px',
+                        fontWeight: '700',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Doux (14px)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBorderRadius(999)}
+                      className="premium-button"
+                      style={{
+                        padding: '4px 10px',
+                        borderRadius: '999px',
+                        border: '1px solid var(--border-color)',
+                        backgroundColor: borderRadius >= 900 ? 'var(--accent-primary)' : 'var(--bg-subtle)',
+                        color: borderRadius >= 900 ? 'var(--accent-contrast-text, #FFF)' : 'var(--text-secondary)',
+                        fontSize: '10.5px',
+                        fontWeight: '700',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Pilule (999px)
                     </button>
                   </div>
+                </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: '12px' }}>
-                    {/* 1. COULEUR PRINCIPALE / ACCENT */}
+                {/* D) SÉLECTEURS DE COULEURS INDIVIDUELS AVEC GARDE-FOUS DE CONTRASTE */}
+                <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '14px' }}>
+                  <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '8px' }}>
+                    Ajustement Précis des Couleurs
+                  </label>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)', gap: '10px' }}>
+                    {/* Fond Global */}
                     <div style={{
                       backgroundColor: 'var(--bg-subtle)',
-                      borderRadius: '16px',
-                      padding: '12px',
+                      borderRadius: 'var(--border-radius-main, 14px)',
+                      padding: '10px',
                       border: '1px solid var(--border-color)',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '12px'
-                    }}>
-                      <input
-                        type="color"
-                        value={customColors?.primary || '#B98B73'}
-                        onChange={(e) => setCustomColors && setCustomColors({ primary: e.target.value })}
-                        style={{
-                          width: '42px',
-                          height: '42px',
-                          borderRadius: '12px',
-                          border: '2px solid var(--border-color)',
-                          cursor: 'pointer',
-                          backgroundColor: 'transparent',
-                          padding: '0',
-                          flexShrink: 0
-                        }}
-                      />
-                      <div style={{ minWidth: 0, flex: 1 }}>
-                        <div style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-main)' }}>Couleur d'accent</div>
-                        <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>{customColors?.primary || '#B98B73'}</div>
-                      </div>
-                    </div>
-
-                    {/* 2. COULEUR DE FOND */}
-                    <div style={{
-                      backgroundColor: 'var(--bg-subtle)',
-                      borderRadius: '16px',
-                      padding: '12px',
-                      border: '1px solid var(--border-color)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '12px'
+                      gap: '8px'
                     }}>
                       <input
                         type="color"
                         value={customColors?.bg || '#FAF7F2'}
-                        onChange={(e) => setCustomColors && setCustomColors({ bg: e.target.value })}
-                        style={{
-                          width: '42px',
-                          height: '42px',
-                          borderRadius: '12px',
-                          border: '2px solid var(--border-color)',
-                          cursor: 'pointer',
-                          backgroundColor: 'transparent',
-                          padding: '0',
-                          flexShrink: 0
+                        onChange={(e) => {
+                          setCustomColors({ bg: e.target.value });
+                          if (themeId !== 'custom') setThemeId('custom');
                         }}
+                        style={{ width: '32px', height: '32px', borderRadius: '6px', border: '1.5px solid var(--border-color)', cursor: 'pointer', padding: 0, backgroundColor: 'transparent' }}
                       />
-                      <div style={{ minWidth: 0, flex: 1 }}>
-                        <div style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-main)' }}>Couleur de fond</div>
-                        <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>{customColors?.bg || '#FAF7F2'}</div>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-main)' }}>Fond</div>
+                        <div style={{ fontSize: '9.5px', fontFamily: 'monospace', color: 'var(--text-secondary)' }}>{customColors?.bg || '#FAF7F2'}</div>
                       </div>
                     </div>
 
-                    {/* 3. COULEUR DE TEXTE */}
+                    {/* Cartes */}
                     <div style={{
                       backgroundColor: 'var(--bg-subtle)',
-                      borderRadius: '16px',
-                      padding: '12px',
+                      borderRadius: 'var(--border-radius-main, 14px)',
+                      padding: '10px',
                       border: '1px solid var(--border-color)',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '12px'
+                      gap: '8px'
+                    }}>
+                      <input
+                        type="color"
+                        value={customColors?.card || '#FFFFFF'}
+                        onChange={(e) => {
+                          setCustomColors({ card: e.target.value });
+                          if (themeId !== 'custom') setThemeId('custom');
+                        }}
+                        style={{ width: '32px', height: '32px', borderRadius: '6px', border: '1.5px solid var(--border-color)', cursor: 'pointer', padding: 0, backgroundColor: 'transparent' }}
+                      />
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-main)' }}>Cartes</div>
+                        <div style={{ fontSize: '9.5px', fontFamily: 'monospace', color: 'var(--text-secondary)' }}>{customColors?.card || '#FFFFFF'}</div>
+                      </div>
+                    </div>
+
+                    {/* Texte */}
+                    <div style={{
+                      backgroundColor: 'var(--bg-subtle)',
+                      borderRadius: 'var(--border-radius-main, 14px)',
+                      padding: '10px',
+                      border: '1px solid var(--border-color)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
                     }}>
                       <input
                         type="color"
                         value={customColors?.text || '#3F4238'}
-                        onChange={(e) => setCustomColors && setCustomColors({ text: e.target.value })}
-                        style={{
-                          width: '42px',
-                          height: '42px',
-                          borderRadius: '12px',
-                          border: '2px solid var(--border-color)',
-                          cursor: 'pointer',
-                          backgroundColor: 'transparent',
-                          padding: '0',
-                          flexShrink: 0
+                        onChange={(e) => {
+                          setCustomColors({ text: e.target.value });
+                          if (themeId !== 'custom') setThemeId('custom');
                         }}
+                        style={{ width: '32px', height: '32px', borderRadius: '6px', border: '1.5px solid var(--border-color)', cursor: 'pointer', padding: 0, backgroundColor: 'transparent' }}
                       />
-                      <div style={{ minWidth: 0, flex: 1 }}>
-                        <div style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-main)' }}>Couleur de texte</div>
-                        <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>{customColors?.text || '#3F4238'}</div>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-main)' }}>Texte</div>
+                        <div style={{ fontSize: '9.5px', fontFamily: 'monospace', color: 'var(--text-secondary)' }}>{customColors?.text || '#3F4238'}</div>
+                      </div>
+                    </div>
+
+                    {/* Boutons / Accent */}
+                    <div style={{
+                      backgroundColor: 'var(--bg-subtle)',
+                      borderRadius: 'var(--border-radius-main, 14px)',
+                      padding: '10px',
+                      border: '1px solid var(--border-color)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}>
+                      <input
+                        type="color"
+                        value={customColors?.primary || '#B98B73'}
+                        onChange={(e) => {
+                          setCustomColors({ primary: e.target.value });
+                          if (themeId !== 'custom') setThemeId('custom');
+                        }}
+                        style={{ width: '32px', height: '32px', borderRadius: '6px', border: '1.5px solid var(--border-color)', cursor: 'pointer', padding: 0, backgroundColor: 'transparent' }}
+                      />
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-main)' }}>Boutons</div>
+                        <div style={{ fontSize: '9.5px', fontFamily: 'monospace', color: 'var(--text-secondary)' }}>{customColors?.primary || '#B98B73'}</div>
                       </div>
                     </div>
                   </div>
                 </div>
-              )}
+              </div>
             </div>
 
             {/* ---- CADRE JURIDIQUE & RGPD ---- */}
