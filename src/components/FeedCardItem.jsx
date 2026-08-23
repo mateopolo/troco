@@ -130,6 +130,7 @@ function FeedCardItem({
         }
       }, 500);
     }
+    isSwipingRef.current = false;
   };
 
   const handleTouchMove = (e) => {
@@ -145,8 +146,8 @@ function FeedCardItem({
     if (Math.abs(deltaX) > 8 || Math.abs(deltaY) > 8) {
       if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
     }
-    // Si le mouvement horizontal dépasse nettement le mouvement vertical
-    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 12) {
+    // Si le mouvement horizontal est franc sur une galerie
+    if (galleryLength > 1 && Math.abs(deltaX) > Math.abs(deltaY) * 1.4 && Math.abs(deltaX) > 24) {
       isSwipingRef.current = true;
     }
   };
@@ -154,12 +155,15 @@ function FeedCardItem({
   const handleTouchEnd = () => {
     if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
     const deltaX = touchDeltaXRef.current;
-    if (isSwipingRef.current && Math.abs(deltaX) > 22 && galleryLength > 1) {
+    if (isSwipingRef.current && Math.abs(deltaX) > 28 && galleryLength > 1) {
       if (deltaX > 0) {
         setLocalImageIndex(prev => (prev + 1) % galleryLength);
       } else {
         setLocalImageIndex(prev => (prev - 1 + galleryLength) % galleryLength);
       }
+      setTimeout(() => { isSwipingRef.current = false; }, 80);
+    } else {
+      isSwipingRef.current = false;
     }
     touchStartRef.current = null;
     touchDeltaXRef.current = 0;
@@ -173,7 +177,9 @@ function FeedCardItem({
       isSwipingRef.current = false;
       return;
     }
-    handleOpenListing(item);
+    if (handleOpenListing) {
+      handleOpenListing(item);
+    }
   };
 
   return (

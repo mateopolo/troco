@@ -104,13 +104,11 @@ export default function ListingCard({
 
   const handleTouchStart = (e) => {
     if (!e.touches || e.touches.length === 0) return;
-    if (setHoveredCardId) setHoveredCardId(item.id);
     touchStartRef.current = {
       x: e.touches[0].clientX,
       y: e.touches[0].clientY,
+      time: Date.now()
     };
-    touchDeltaXRef.current = 0;
-    touchDeltaYRef.current = 0;
     isSwipingRef.current = false;
   };
 
@@ -124,19 +122,22 @@ export default function ListingCard({
     touchDeltaXRef.current = deltaX;
     touchDeltaYRef.current = deltaY;
 
-    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 12) {
+    if (galleryLength > 1 && Math.abs(deltaX) > Math.abs(deltaY) * 1.4 && Math.abs(deltaX) > 24) {
       isSwipingRef.current = true;
     }
   };
 
   const handleTouchEnd = () => {
     const deltaX = touchDeltaXRef.current;
-    if (isSwipingRef.current && Math.abs(deltaX) > 22 && galleryLength > 1) {
+    if (isSwipingRef.current && Math.abs(deltaX) > 28 && galleryLength > 1) {
       if (deltaX > 0) {
         setLocalImageIndex(prev => (prev + 1) % galleryLength);
       } else {
         setLocalImageIndex(prev => (prev - 1 + galleryLength) % galleryLength);
       }
+      setTimeout(() => { isSwipingRef.current = false; }, 80);
+    } else {
+      isSwipingRef.current = false;
     }
     touchStartRef.current = null;
     touchDeltaXRef.current = 0;
@@ -150,7 +151,9 @@ export default function ListingCard({
       isSwipingRef.current = false;
       return;
     }
-    handleOpenListing(item);
+    if (handleOpenListing) {
+      handleOpenListing(item);
+    }
   };
 
   return (

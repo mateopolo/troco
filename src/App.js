@@ -5216,10 +5216,87 @@ export default function App() {
 
   if (isLoadingSession) {
     return (
-      <div style={{ minHeight: '100vh', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif" }}>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
-          <div style={{ width: '40px', height: '40px', border: '3px solid rgba(198,125,91,0.15)', borderTop: '3px solid #C67D5B', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }}></div>
-          <div style={{ color: darkMode ? '#D4C5B5' : '#6B5E54', fontSize: '13px', fontWeight: '600' }}>Vérification de la session...</div>
+      <div style={{
+        minHeight: '100vh',
+        backgroundColor: 'var(--bg-global)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'relative',
+        overflow: 'hidden',
+        fontFamily: 'var(--font-family-main)',
+        zIndex: 999999
+      }}>
+        {/* LIQUID IRIDESCENT MESH BACKGROUND */}
+        <div className="liquid-iridescence-container" style={{ opacity: 0.85 }}>
+          <div className="liquid-blob liquid-blob-1" style={{ width: '650px', height: '650px' }} />
+          <div className="liquid-blob liquid-blob-2" style={{ width: '700px', height: '700px' }} />
+          <div className="liquid-blob liquid-blob-3" style={{ width: '550px', height: '550px' }} />
+        </div>
+
+        <div style={{
+          position: 'relative',
+          zIndex: 10,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          textAlign: 'center',
+          padding: '30px',
+          animation: 'modalSlideIn 0.8s var(--ease-monopo) both'
+        }}>
+          <div style={{
+            fontSize: 'clamp(56px, 14vw, 92px)',
+            fontFamily: 'var(--font-editorial)',
+            fontWeight: 300,
+            letterSpacing: '0.22em',
+            color: 'var(--text-main)',
+            lineHeight: 1,
+            textTransform: 'uppercase',
+            marginBottom: '16px',
+            textShadow: '0 10px 40px rgba(0,0,0,0.06)'
+          }}>
+            Troco
+          </div>
+
+          <div style={{
+            fontSize: '12px',
+            letterSpacing: '0.28em',
+            textTransform: 'uppercase',
+            fontWeight: '700',
+            color: 'var(--accent-primary)',
+            marginBottom: '36px'
+          }}>
+            Liberté d'Échange & Savoir-Faire
+          </div>
+
+          {/* INDICATEUR DE CHARGEMENT HAUTE-COUTURE */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            padding: '9px 20px',
+            borderRadius: '999px',
+            backgroundColor: 'var(--bg-glass)',
+            backdropFilter: 'blur(24px)',
+            WebkitBackdropFilter: 'blur(24px)',
+            border: '1px solid var(--border-color)',
+            color: 'var(--text-secondary)',
+            fontSize: '11px',
+            fontWeight: '700',
+            letterSpacing: '0.06em',
+            boxShadow: 'var(--shadow-card)'
+          }}>
+            <div style={{
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              backgroundColor: 'var(--accent-primary)',
+              boxShadow: '0 0 12px var(--accent-primary)',
+              animation: 'pulse 1.2s infinite ease-in-out'
+            }} />
+            <span style={{ textTransform: 'uppercase' }}>Vérification de la session...</span>
+          </div>
         </div>
       </div>
     );
@@ -5768,9 +5845,12 @@ export default function App() {
       overflowX: 'hidden',
       fontFamily: 'var(--font-family-main)'
     }}>
-      {/* ORBES DE LUEUR AMBIANTE FLUIDES */}
-      <div className="glow-orb glow-orb-primary" style={{ top: '8%', left: '-100px', width: '380px', height: '380px' }} />
-      <div className="glow-orb glow-orb-secondary" style={{ top: '40%', right: '-120px', width: '420px', height: '420px' }} />
+      {/* FOND LIQUIDE IRIDESCENT (PASTEL EDITION) */}
+      <div className="liquid-iridescence-container">
+        <div className="liquid-blob liquid-blob-1" />
+        <div className="liquid-blob liquid-blob-2" />
+        <div className="liquid-blob liquid-blob-3" />
+      </div>
 
       {/* MODALE BLOQUANTE CGU & RGPD OBLIGATOIRE */}
       {isAuthenticated && !profile.cguAcceptedAt && (
@@ -6230,21 +6310,43 @@ export default function App() {
       )}
 
       {isCategoryModalOpen && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(61,53,48,0.65)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', zIndex: 60 }}>
-          <div style={{ backgroundColor: darkMode ? '#231E1B' : '#FAF7F2', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', borderRadius: '20px', width: '100%', maxWidth: '360px', padding: '20px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-              <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '18px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{t('addCategory')}</h3>
-              <button onClick={() => setIsCategoryModalOpen(false)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: darkMode ? '#FFF' : '#3D3530' }}><X size={16} /></button>
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(61,53,48,0.65)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', zIndex: 100005 }}>
+          <div style={{ backgroundColor: darkMode ? '#231E1B' : '#FAF7F2', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', borderRadius: '24px', width: '100%', maxWidth: '360px', padding: '24px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', boxShadow: 'var(--shadow-modal)', animation: 'modalSlideIn 0.4s var(--ease-monopo) both' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '14px', alignItems: 'center' }}>
+              <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '20px', fontWeight: '400', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{t('addCategory')}</h3>
+              <button onClick={() => setIsCategoryModalOpen(false)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: darkMode ? '#FFF' : '#3D3530', display: 'flex', padding: '4px' }}><X size={18} /></button>
             </div>
-            <input value={categoryInput} onChange={(e) => setCategoryInput(e.target.value)} placeholder={t('categoryPlaceholder')} style={{ width: '100%', border: '1px solid #E8DDD3', borderRadius: '12px', padding: '10px 12px', marginBottom: '10px', backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530', outline: 'none' }} />
-            <button onClick={handleAddCategory} style={{ width: '100%', border: 'none', borderRadius: '12px', padding: '10px 12px', background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)', color: '#FFF', fontWeight: '700', cursor: 'pointer' }}>{t('addButton')}</button>
+            <input value={categoryInput} onChange={(e) => setCategoryInput(e.target.value)} placeholder={t('categoryPlaceholder')} style={{ width: '100%', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '12px 14px', marginBottom: '14px', backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530', outline: 'none', fontSize: '14px' }} />
+            <button onClick={handleAddCategory} className="premium-button" style={{ width: '100%', border: 'none', borderRadius: '12px', padding: '12px 14px', background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)', color: 'var(--accent-contrast-text, #FFF)', fontWeight: '800', cursor: 'pointer', boxShadow: 'var(--shadow-accent)' }}>{t('addButton')}</button>
           </div>
         </div>
       )}
 
       {selectedListing && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(61, 53, 48, 0.72)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', zIndex: 80, overflowY: 'auto', padding: '16px' }}>
-          <div style={{ maxWidth: '760px', margin: '0 auto', backgroundColor: darkMode ? '#231E1B' : '#FAF7F2', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', borderRadius: '28px', overflow: 'hidden', boxShadow: darkMode ? '0 30px 90px rgba(0,0,0,0.65)' : '0 30px 90px rgba(61,53,48,0.2)', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(28, 24, 22, 0.72)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          zIndex: 100005,
+          overflowY: 'auto',
+          WebkitOverflowScrolling: 'touch',
+          padding: isMobile ? '12px 8px 90px' : '24px 16px 60px'
+        }}>
+          <div style={{
+            maxWidth: '760px',
+            margin: '0 auto',
+            backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
+            backdropFilter: 'blur(28px)',
+            WebkitBackdropFilter: 'blur(28px)',
+            borderRadius: '28px',
+            overflow: 'hidden',
+            boxShadow: darkMode ? '0 30px 90px rgba(0,0,0,0.75)' : '0 30px 90px rgba(61,53,48,0.25)',
+            border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
+            color: darkMode ? '#FAF7F2' : '#3D3530',
+            animation: 'modalSlideIn 0.55s var(--ease-monopo) both'
+          }}>
 
             {/* CARROUSEL HÉRO INTERACTIF */}
             <div
@@ -8796,7 +8898,7 @@ export default function App() {
 
       {/* BARRE DE NAVIGATION EN BAS (ULTRA-GLASSMORPHISM THEMED & DOCKED) */}
       <nav style={{
-        display: (isMobile && activeTab === 'chat' && selectedChat) ? 'none' : 'block',
+        display: ((isMobile && activeTab === 'chat' && selectedChat) || selectedListing) ? 'none' : 'block',
         position: 'fixed',
         bottom: 0,
         left: 0,
