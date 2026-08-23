@@ -2592,65 +2592,132 @@ export default function App() {
   // État des discussions (fusionne mockChats et Firestore chats filtrés par utilisateur)
   const [chatsList, setChatsList] = useState(mockChats);
 
-  // Synchronisation temps réel des discussions depuis Firestore (CONFIDENTIALITÉ STRICTE : filtrage par participant)
+  // Synthèse sonore douce d'arrivée de message en temps réel (API Web Audio sans dépendance externe)
+  const playNotificationSound = useCallback(() => {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      if (ctx.state === 'suspended') {
+        ctx.resume().catch(() => {});
+      }
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+
+      const now = ctx.currentTime;
+      // Doux carillon 2 tons (Sol 783Hz -> Do 1046Hz)
+      osc.frequency.setValueAtTime(783.99, now);
+      osc.frequency.setValueAtTime(1046.50, now + 0.08);
+
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(0.18, now + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+      osc.start(now);
+      osc.stop(now + 0.35);
+    } catch (_) {}
+  }, []);
+
+  // Synchronisation temps réel des discussions depuis Firestore (CONFIDENTIALITÉ STRICTE : filtrage multi-clés par nom, UID et username)
   useEffect(() => {
-    if (!profile?.name) return;
-    const q = query(
-      collection(db, 'chats'),
-      where('participants', 'array-contains', profile.name)
-    );
-    const unsub = onSnapshot(q, (snapshot) => {
-      // Détection des nouveaux messages entrants en temps réel pour incrémenter le badge (+1)
-      snapshot.docChanges().forEach(change => {
-        if (change.type === 'modified' || change.type === 'added') {
-          const d = change.doc.data();
-          const fChatId = d.id || change.doc.id;
-          const isFromThem = d.lastSenderName && d.lastSenderName.trim().toLowerCase() !== profile.name.trim().toLowerCase();
+    if (!profile?.name && !profile?.uid && !auth.currentUser?.uid) return;
 
-          // Seulement si c'est un nouveau message entrant et qu'on n'a pas cette conversation activement ouverte
-          if (isFromThem && change.type === 'modified') {
-            setReadChats(prev => {
-              const next = new Set(prev);
-              next.delete(fChatId);
-              next.delete(String(fChatId));
-              next.delete(Number(fChatId));
-              return next;
-            });
-          }
-        }
-      });
+    const myName = (profile?.name || '').trim();
+    const myUid = profile?.uid || (auth.currentUser && auth.currentUser.uid) || null;
+    const myUsername = (profile?.username || '').trim();
 
-      const firestoreChats = snapshot.docs.map(docSnap => {
-        const data = docSnap.data();
-        // Identifier le nom de l'interlocuteur (l'autre participant)
-        const otherUser = Array.isArray(data.participants)
-          ? data.participants.find(p => p && p.trim().toLowerCase() !== profile.name.trim().toLowerCase()) || data.user || 'Interlocuteur'
-          : data.user || 'Interlocuteur';
+    const targets = Array.from(new Set([myName, myUid, myUsername].filter(Boolean)));
+    const unsubs = [];
+    const allDocsMap = new Map();
+    let isInitialLoad = true;
 
-        const fChatId = data.id || docSnap.id;
+    targets.forEach(targetVal => {
+      try {
+        const q = query(
+          collection(db, 'chats'),
+          where('participants', 'array-contains', targetVal)
+        );
 
-        return {
-          id: fChatId,
-          firestoreId: docSnap.id,
-          ...data,
-          user: otherUser,
-        };
-      });
-      const merged = [...mockChats];
-      firestoreChats.forEach(fChat => {
-        const idx = merged.findIndex(m => String(m.id) === String(fChat.id));
-        if (idx >= 0) {
-          merged[idx] = { ...merged[idx], ...fChat };
-        } else {
-          merged.unshift(fChat);
-        }
-      });
-      setChatsList(merged);
-    }, (err) => {
-      console.warn('[Firestore] chats onSnapshot error:', err);
+        const unsub = onSnapshot(q, (snapshot) => {
+          snapshot.docChanges().forEach(change => {
+            const d = change.doc.data();
+            if (!d) return;
+            const fChatId = d.id || change.doc.id;
+            const lastSender = (d.lastSenderName || d.lastSender || '').trim().toLowerCase();
+            const isMe = (myName && lastSender === myName.toLowerCase()) ||
+                         (myUsername && lastSender === myUsername.toLowerCase()) ||
+                         (d.lastSenderUid && myUid && String(d.lastSenderUid) === String(myUid));
+            const isFromThem = !isMe && (lastSender.length > 0 || (d.unreadCount && d.unreadCount > 0));
+
+            // Détection en temps réel d'un nouveau message entrant non lu (PC ⇄ Mobile)
+            if (isFromThem && (change.type === 'modified' || (change.type === 'added' && !isInitialLoad))) {
+              const isCurrentlyActive = selectedChat && String(selectedChat.id) === String(fChatId) && activeTab === 'chat';
+              if (!isCurrentlyActive) {
+                // Forcer la suppression du cache de lecture pour réactiver le badge rouge immédiatement
+                setReadChats(prev => {
+                  const next = new Set(prev);
+                  next.delete(fChatId);
+                  next.delete(String(fChatId));
+                  next.delete(Number(fChatId));
+                  return next;
+                });
+                // Déclencher le son de notification et vibration
+                playNotificationSound();
+                if (navigator.vibrate) navigator.vibrate([120, 60, 120]);
+              }
+            }
+          });
+
+          // Enregistrer ou mettre à jour les docs dans notre Map
+          snapshot.docs.forEach(docSnap => {
+            allDocsMap.set(docSnap.id, docSnap.data());
+          });
+
+          // Reconstruire la liste fusionnée des chats
+          const firestoreChats = Array.from(allDocsMap.entries()).map(([docId, data]) => {
+            const otherUser = Array.isArray(data.participants)
+              ? data.participants.find(p => p && p.trim().toLowerCase() !== myName.toLowerCase() && p !== myUid) || data.user || 'Interlocuteur'
+              : data.user || 'Interlocuteur';
+
+            const fChatId = data.id || docId;
+
+            return {
+              id: fChatId,
+              firestoreId: docId,
+              ...data,
+              user: otherUser,
+            };
+          });
+
+          const merged = [...mockChats];
+          firestoreChats.forEach(fChat => {
+            const idx = merged.findIndex(m => String(m.id) === String(fChat.id));
+            if (idx >= 0) {
+              merged[idx] = { ...merged[idx], ...fChat };
+            } else {
+              merged.unshift(fChat);
+            }
+          });
+
+          setChatsList(merged);
+          isInitialLoad = false;
+        }, (err) => {
+          console.warn('[Firestore] chats onSnapshot error for target:', targetVal, err);
+        });
+
+        unsubs.push(unsub);
+      } catch (err) {
+        console.warn('[Firestore] query setup error:', err);
+      }
     });
-    return () => unsub();
-  }, [profile?.name]);
+
+    return () => {
+      unsubs.forEach(u => { try { u(); } catch (_) {} });
+    };
+  }, [profile?.name, profile?.uid, profile?.username, selectedChat, activeTab, playNotificationSound]);
 
   const handleSelectChat = async (chat) => {
     setSelectedChat(chat);
@@ -2682,6 +2749,10 @@ export default function App() {
   // ---- COMPTEUR NON-LUS GLOBAL (Total exact et persistant des messages non lus) ----
   const unreadCount = useMemo(() => {
     const allChats = chatsList && chatsList.length > 0 ? chatsList : mockChats;
+    const myNameNorm = (profile?.name || '').trim().toLowerCase();
+    const myUsernameNorm = (profile?.username || '').trim().toLowerCase();
+    const myUidStr = profile?.uid || (auth.currentUser && auth.currentUser.uid);
+
     return allChats.reduce((total, chat) => {
       const cidStr = String(chat.id);
       const isCurrentlyViewing = selectedChat && String(selectedChat.id) === cidStr && activeTab === 'chat';
@@ -2692,20 +2763,28 @@ export default function App() {
 
       const thread = chatThreads[chat.id] || chatThreads[cidStr];
       if (thread && thread.length > 0) {
-        const unreadInThread = thread.filter(m =>
-          !m.read &&
-          m.status !== 'read' &&
-          (m.sender === 'them' || m.kind === 'deal' || (m.senderName && m.senderName !== profile?.name))
-        );
+        const unreadInThread = thread.filter(m => {
+          if (m.read || m.status === 'read') return false;
+          if (m.sender === 'me') return false;
+          if (m.senderName && (m.senderName.trim().toLowerCase() === myNameNorm || m.senderName.trim().toLowerCase() === myUsernameNorm)) return false;
+          if (m.senderUid && myUidStr && String(m.senderUid) === String(myUidStr)) return false;
+          return true;
+        });
         return total + unreadInThread.length;
       }
 
-      if (chat.lastSenderName && chat.lastSenderName.trim().toLowerCase() !== profile?.name?.trim().toLowerCase()) {
-        return total + (chat.unreadCount || 1);
+      if (chat.lastSenderName) {
+        const lastSenderNorm = chat.lastSenderName.trim().toLowerCase();
+        const isMe = lastSenderNorm === myNameNorm || lastSenderNorm === myUsernameNorm;
+        if (!isMe) {
+          return total + (chat.unreadCount && chat.unreadCount > 0 ? chat.unreadCount : 1);
+        }
+      } else if (chat.unreadCount && chat.unreadCount > 0) {
+        return total + chat.unreadCount;
       }
       return total;
     }, 0);
-  }, [chatsList, mockChats, chatThreads, readChats, selectedChat, activeTab, profile?.name]);
+  }, [chatsList, mockChats, chatThreads, readChats, selectedChat, activeTab, profile?.name, profile?.username, profile?.uid]);
 
   const createModernMapIcon = useCallback(() => {
     const primaryBg = theme?.variables?.['--accent-primary'] || '#B98B73';

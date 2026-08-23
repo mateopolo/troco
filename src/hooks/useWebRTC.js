@@ -13,7 +13,7 @@ import {
   doc, collection, addDoc, setDoc, updateDoc, deleteDoc,
   onSnapshot, getDoc, serverTimestamp,
 } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db, auth } from '../firebase';
 
 // Configuration STUN globale robuste (Google STUN pour traversée NAT, 4G, 5G et Wi-Fi)
 const ICE_CONFIG = {
@@ -277,13 +277,18 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
 
+    const partnerUid = selectedChat.partnerUid || selectedChat.uid || selectedChat.authorUid || selectedChat.userId || null;
+    const partnerName = selectedChat.user || selectedChat.name || selectedChat.partnerName || 'Interlocuteur';
+    const myUid = profileUid || (auth.currentUser && auth.currentUser.uid) || null;
+
     await setDoc(doc(db, 'calls', String(chatId)), {
       type,
       from: profileName,
-      fromUid: profileUid || null,
-      to: selectedChat.user,
-      toUid: selectedChat.partnerUid || selectedChat.uid || null,
+      fromUid: myUid,
+      to: partnerName,
+      toUid: partnerUid,
       participants: [profileName],
+      targetParticipants: [partnerName, partnerUid].filter(Boolean),
       status: 'ringing',
       offer: { type: offer.type, sdp: offer.sdp },
       isScreenSharing: false,
@@ -553,22 +558,51 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
     setIncomingCall(null);
   }, [incomingCall]);
 
-  // Écoute universelle des appels entrants pour cet utilisateur
+  // Écoute universelle des appels entrants pour cet utilisateur (Multi-appareils PC ⇄ Mobile)
   useEffect(() => {
-    if (!profileName && !profileUid) return;
+    if (!profileName && !profileUid && !auth.currentUser?.uid) return;
     const normalizedProfile = (profileName || '').trim().toLowerCase();
+    const currentUid = profileUid || (auth.currentUser && auth.currentUser.uid);
+
     const unsub = onSnapshot(collection(db, 'calls'), (snap) => {
       snap.docChanges().forEach(change => {
         const data = change.doc.data();
+        if (!data) return;
+
+        // Ne pas sonner sur son propre appareil si on est l'appelant
+        const fromName = (data.from || '').trim().toLowerCase();
+        if (fromName && normalizedProfile && fromName === normalizedProfile) return;
+        if (data.fromUid && currentUid && String(data.fromUid) === String(currentUid)) return;
+
         const targetTo = (data?.to || '').trim().toLowerCase();
+        const targetToUid = data?.toUid ? String(data.toUid) : null;
+        const currentUidStr = currentUid ? String(currentUid) : null;
+
         const isMatch = (normalizedProfile && targetTo === normalizedProfile) ||
-                        (profileUid && data?.toUid === profileUid);
+                        (currentUidStr && targetToUid && targetToUid === currentUidStr) ||
+                        (Array.isArray(data?.targetParticipants) && (
+                          data.targetParticipants.map(p => String(p).trim().toLowerCase()).includes(normalizedProfile) ||
+                          (currentUidStr && data.targetParticipants.includes(currentUidStr))
+                        )) ||
+                        (Array.isArray(data?.participants) && (
+                          data.participants.map(p => String(p).trim().toLowerCase()).includes(normalizedProfile) ||
+                          (currentUidStr && data.participants.includes(currentUidStr))
+                        ));
+
         if ((change.type === 'added' || change.type === 'modified') && isMatch && data.status === 'ringing') {
-          setIncomingCall({ chatId: change.doc.id, type: data.type, from: data.from, fromUid: data.fromUid });
+          setIncomingCall({
+            chatId: change.doc.id,
+            type: data.type || 'video',
+            from: data.from || 'Interlocuteur',
+            fromUid: data.fromUid || null
+          });
           playRingtone();
           if (navigator.vibrate) navigator.vibrate([400, 150, 400, 150, 400]);
         }
         if (change.type === 'removed') {
+          setIncomingCall(prev => prev?.chatId === change.doc.id ? null : prev);
+        }
+        if (change.type === 'modified' && (data.status === 'connected' || data.status === 'ended' || data.status === 'declined' || data.status === 'canceled')) {
           setIncomingCall(prev => prev?.chatId === change.doc.id ? null : prev);
         }
       });
