@@ -28,11 +28,19 @@ const ICE_CONFIG = {
       urls: [
         'stun:stun.l.google.com:19302',
         'stun:stun1.l.google.com:19302',
-        'stun:stun2.l.google.com:19302',
-        'stun:stun3.l.google.com:19302',
-        'stun:stun4.l.google.com:19302',
       ],
     },
+    {
+      // Serveur TURN public de secours pour contourner les pare-feu 4G / Wi-Fi stricts
+      urls: 'turn:openrelay.metered.ca:80',
+      username: 'openrelayproject',
+      credential: 'openrelayproject',
+    },
+    {
+      urls: 'turns:openrelay.metered.ca:443',
+      username: 'openrelayproject',
+      credential: 'openrelayproject',
+    }
   ],
   iceCandidatePoolSize: 10,
 };
