@@ -1671,7 +1671,7 @@ export default function App() {
         setDoc(doc(db, 'presence', String(uid)), {
           online: false,
           lastSeenMs: Date.now() - 60000,
-        }, { merge: true }).catch(() => {});
+        }, { merge: true }).catch(() => { });
       } catch (_) { }
     };
 
@@ -2702,9 +2702,9 @@ export default function App() {
 
       const thread = chatThreads[chat.id] || chatThreads[cidStr];
       if (thread && thread.length > 0) {
-        const unreadInThread = thread.filter(m => 
-          !m.read && 
-          m.status !== 'read' && 
+        const unreadInThread = thread.filter(m =>
+          !m.read &&
+          m.status !== 'read' &&
           (m.sender === 'them' || m.kind === 'deal' || (m.senderName && m.senderName !== profile?.name))
         );
         return total + unreadInThread.length;

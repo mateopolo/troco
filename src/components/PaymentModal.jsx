@@ -329,22 +329,27 @@ export default function PaymentModal({
     <div style={{
       position: 'fixed',
       inset: 0,
-      zIndex: 4000,
+      zIndex: 99999,
       backgroundColor: 'var(--overlay-bg)',
-      backdropFilter: 'blur(10px)',
-      WebkitBackdropFilter: 'blur(10px)',
+      backdropFilter: 'blur(14px)',
+      WebkitBackdropFilter: 'blur(14px)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '16px',
+      padding: '12px',
+      paddingTop: 'max(16px, env(safe-area-inset-top, 16px))',
+      paddingBottom: 'max(16px, env(safe-area-inset-bottom, 16px))',
+      overflowY: 'auto',
+      WebkitOverflowScrolling: 'touch',
       animation: 'fadeIn 0.2s ease',
+      boxSizing: 'border-box'
     }}>
       <div style={{
         backgroundColor: 'var(--bg-card)',
         borderRadius: '24px',
         width: '100%',
         maxWidth: '560px',
-        maxHeight: '92vh',
+        maxHeight: 'calc(100dvh - 32px)',
         overflowY: 'auto',
         boxShadow: 'var(--shadow-modal)',
         border: '1px solid var(--border-color)',
@@ -352,6 +357,7 @@ export default function PaymentModal({
         position: 'relative',
         display: 'flex',
         flexDirection: 'column',
+        boxSizing: 'border-box'
       }}>
 
         {/* HEADER MODAL */}
