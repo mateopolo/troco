@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { createPortal } from 'react-dom';
 import {
   Send, Phone, Video, Sparkles, Clock, CheckCircle,
   ChevronLeft, Globe, Edit2, Trash2, Copy, Check, X,
@@ -1136,269 +1135,243 @@ function ChatView({
         display: 'flex',
         flexDirection: 'column',
         width: '100%',
-        height: '100%',
-        flex: 1,
-        minHeight: isMobile ? '0' : '560px',
-        maxHeight: isMobile ? '100%' : 'calc(100vh - 170px)',
+        height: isMobile ? 'calc(100dvh - 140px)' : 'calc(100vh - 160px)',
+        minHeight: isMobile ? '380px' : '560px',
+        maxHeight: isMobile ? 'calc(100dvh - 140px)' : '840px',
         overflow: 'hidden',
         position: 'relative'
       }}>
         <div style={{
           display: 'grid',
-          gridTemplateColumns: isMobile ? '1fr' : '320px 1fr',
-        gap: isMobile ? '0' : '16px',
-        width: '100%',
-        height: '100%',
-        flex: 1,
-        overflow: 'hidden'
-      }}>
-        {/* LISTE DES DISCUSSIONS */}
-        {(!isMobile || mobileSubView === 'list') && (
-          <div style={{
-            backgroundColor: 'var(--bg-glass)',
-            backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-            borderRadius: isMobile ? '0' : '24px',
-            border: '1px solid var(--border-color)',
-            boxShadow: isMobile ? 'none' : 'var(--shadow-card)',
-            display: 'flex', flexDirection: 'column',
-            height: '100%',
-            overflow: 'hidden'
-          }}>
-            {/* EN-TÊTE SYMÉTRIQUE DU VOLET DISCUSSIONS (64px) */}
+          gridTemplateColumns: isMobile ? '1fr' : '330px 1fr',
+          gap: isMobile ? '0' : '16px',
+          width: '100%',
+          height: '100%',
+          flex: 1,
+          overflow: 'hidden'
+        }}>
+          {/* LISTE DES DISCUSSIONS */}
+          {(!isMobile || mobileSubView === 'list') && (
             <div style={{
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '0 18px',
-              height: isMobile ? '60px' : '64px',
-              minHeight: isMobile ? '60px' : '64px',
-              borderBottom: '1px solid var(--border-color)',
               backgroundColor: 'var(--bg-glass)',
-              flexShrink: 0,
-              boxSizing: 'border-box'
+              backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
+              borderRadius: isMobile ? '18px' : '24px',
+              border: '1px solid var(--border-color)',
+              boxShadow: isMobile ? 'none' : 'var(--shadow-card)',
+              display: 'flex', flexDirection: 'column',
+              height: '100%',
+              overflow: 'hidden'
             }}>
-              <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: 'var(--text-main)' }}>
-                {t('discussions') || 'Discussions'}
-              </h3>
-              <span style={{ fontSize: '11px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', padding: '4px 10px', borderRadius: '999px', border: '1px solid var(--border-color)' }}>
-                {visibleChats.length} conv.
-              </span>
-            </div>
+              {/* EN-TÊTE SYMÉTRIQUE DU VOLET DISCUSSIONS (64px) */}
+              <div style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '0 18px',
+                height: isMobile ? '60px' : '64px',
+                minHeight: isMobile ? '60px' : '64px',
+                borderBottom: '1px solid var(--border-color)',
+                backgroundColor: 'var(--bg-glass)',
+                flexShrink: 0,
+                boxSizing: 'border-box'
+              }}>
+                <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: 'var(--text-main)' }}>
+                  {t('discussions') || 'Discussions'}
+                </h3>
+                <span style={{ fontSize: '11px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', padding: '4px 10px', borderRadius: '999px', border: '1px solid var(--border-color)' }}>
+                  {visibleChats.length} conv.
+                </span>
+              </div>
 
-            <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '6px',
-              overflowY: 'auto',
-              flex: 1,
-              padding: '12px',
-              overscrollBehavior: 'contain',
-              WebkitOverflowScrolling: 'touch',
-              touchAction: 'pan-y'
-            }}>
-              {visibleChats.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '40px 10px', color: 'var(--text-secondary)', fontSize: '13px' }}>
-                  Aucune discussion active
-                </div>
-              ) : (
-                visibleChats.map(chat => {
-                  const isSelected = activeChatObj?.id === chat.id;
-                  const unreadCount = getChatUnreadCount(chat);
-                  const isUnread = unreadCount > 0;
-                  const statusText = formatStatus ? formatStatus(chat.status) : chat.status;
-                  const listingTitleText = getListingTitleTranslation ? getListingTitleTranslation(chat.listing, currentLang) : chat.listing;
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '6px',
+                overflowY: 'auto',
+                flex: 1,
+                padding: '12px',
+                overscrollBehavior: 'contain',
+                WebkitOverflowScrolling: 'touch',
+                touchAction: 'pan-y'
+              }}>
+                {visibleChats.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '40px 10px', color: 'var(--text-secondary)', fontSize: '13px' }}>
+                    Aucune discussion active
+                  </div>
+                ) : (
+                  visibleChats.map(chat => {
+                    const isSelected = activeChatObj?.id === chat.id;
+                    const unreadCount = getChatUnreadCount(chat);
+                    const isUnread = unreadCount > 0;
+                    const statusText = formatStatus ? formatStatus(chat.status) : chat.status;
+                    const listingTitleText = getListingTitleTranslation ? getListingTitleTranslation(chat.listing, currentLang) : chat.listing;
 
-                  const thread = chatThreads && chatThreads[chat.id];
-                  const lastMsgObjInThread = (thread && thread.length > 0) ? thread[thread.length - 1] : null;
-                  const rawLastMsg = getChatPreviewText(chat);
-                  const lastMsgText = getChatMessageDisplayContent
-                    ? getChatMessageDisplayContent(lastMsgObjInThread || { text: rawLastMsg }, currentLang, false)
-                    : rawLastMsg;
+                    const thread = chatThreads && chatThreads[chat.id];
+                    const lastMsgObjInThread = (thread && thread.length > 0) ? thread[thread.length - 1] : null;
+                    const rawLastMsg = getChatPreviewText(chat);
+                    const lastMsgText = getChatMessageDisplayContent
+                      ? getChatMessageDisplayContent(lastMsgObjInThread || { text: rawLastMsg }, currentLang, false)
+                      : rawLastMsg;
 
-                  const lastMsgTimestamp = lastMsgObjInThread?.timestamp || lastMsgObjInThread?.createdAt || chat.lastMessageAt || chat.updatedAt || null;
-                  const chatTimestampLabel = formatChatTimestamp(lastMsgTimestamp, chat, thread);
+                    const lastMsgTimestamp = lastMsgObjInThread?.timestamp || lastMsgObjInThread?.createdAt || chat.lastMessageAt || chat.updatedAt || null;
+                    const chatTimestampLabel = formatChatTimestamp(lastMsgTimestamp, chat, thread);
 
-                  const lastMsgSender = lastMsgObjInThread?.sender || null;
-                  const lastSenderIsMe = lastMsgSender === 'me';
-                  const lastSenderIsThem = lastMsgSender === 'them';
-                  const showReplyBadge = isUnread && lastSenderIsThem;
-                  const showWaitingBadge = !isUnread && lastSenderIsMe;
+                    const lastMsgSender = lastMsgObjInThread?.sender || null;
+                    const lastSenderIsMe = lastMsgSender === 'me';
+                    const lastSenderIsThem = lastMsgSender === 'them';
+                    const showReplyBadge = isUnread && lastSenderIsThem;
+                    const showWaitingBadge = !isUnread && lastSenderIsMe;
 
-                  return (
-                    <div
-                      key={chat.id}
-                      style={{ position: 'relative' }}
-                      className="chat-row-container"
-                    >
-                      <button
-                        onClick={() => handleSelectChatMobile(chat)}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px',
-                          borderRadius: '16px', cursor: 'pointer', textAlign: 'left',
-                          width: '100%',
-                          backgroundColor: isSelected
-                            ? 'var(--bg-subtle)'
-                            : (isUnread ? 'var(--bg-subtle)' : 'transparent'),
-                          border: isSelected
-                            ? '1px solid var(--border-color)'
-                            : '1px solid transparent',
-                          borderLeft: isSelected
-                            ? '4px solid var(--accent-primary)'
-                            : (isUnread ? '4px solid var(--accent-terracotta)' : '4px solid transparent'),
-                          boxShadow: isSelected ? 'var(--shadow-card)' : 'none',
-                          transition: 'all 0.2s ease'
-                        }}
+                    return (
+                      <div
+                        key={chat.id}
+                        style={{ position: 'relative' }}
+                        className="chat-row-container"
                       >
-                        <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--text-main) 0%, var(--text-secondary) 100%)', color: 'var(--bg-card)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '15px', flexShrink: 0, boxShadow: 'var(--shadow-card)', position: 'relative' }}>
-                          {chat.user[0]}
-                          {isUserOnline(chat.user, chat.authorUid || chat.userId) && (
-                            <span
-                              title="En ligne"
-                              style={{
-                                position: 'absolute', bottom: '0', right: '0',
-                                width: '10px', height: '10px',
-                                backgroundColor: 'var(--accent-success)',
-                                borderRadius: '50%', border: '2px solid var(--bg-card)',
-                                boxShadow: '0 0 6px var(--accent-success)'
-                              }}
-                            />
-                          )}
+                        <button
+                          onClick={() => handleSelectChatMobile(chat)}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px',
+                            borderRadius: '16px', cursor: 'pointer', textAlign: 'left',
+                            width: '100%',
+                            backgroundColor: isSelected
+                              ? 'var(--bg-subtle)'
+                              : (isUnread ? 'var(--bg-subtle)' : 'transparent'),
+                            border: isSelected
+                              ? '1px solid var(--border-color)'
+                              : '1px solid transparent',
+                            borderLeft: isSelected
+                              ? '4px solid var(--accent-primary)'
+                              : (isUnread ? '4px solid var(--accent-terracotta)' : '4px solid transparent'),
+                            boxShadow: isSelected ? 'var(--shadow-card)' : 'none',
+                            transition: 'all 0.2s ease'
+                          }}
+                        >
+                          <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--text-main) 0%, var(--text-secondary) 100%)', color: 'var(--bg-card)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '15px', flexShrink: 0, boxShadow: 'var(--shadow-card)', position: 'relative' }}>
+                            {chat.user[0]}
+                            {isUserOnline(chat.user, chat.authorUid || chat.userId) && (
+                              <span
+                                title="En ligne"
+                                style={{
+                                  position: 'absolute', bottom: '0', right: '0',
+                                  width: '10px', height: '10px',
+                                  backgroundColor: 'var(--accent-success)',
+                                  borderRadius: '50%', border: '2px solid var(--bg-card)',
+                                  boxShadow: '0 0 6px var(--accent-success)'
+                                }}
+                              />
+                            )}
 
-                          {unreadCount > 0 && (
-                            <span style={{
-                              position: 'absolute', top: '-4px', right: '-4px',
-                              minWidth: '18px', height: '18px', padding: '0 5px',
-                              backgroundColor: 'var(--accent-primary)', color: '#FFFFFF',
-                              borderRadius: '999px', border: '1.8px solid var(--bg-card)',
-                              fontSize: '10px', fontWeight: '900',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center',
-                              boxShadow: 'var(--shadow-card)'
-                            }}>
-                              {unreadCount > 9 ? '+9' : `+${unreadCount}`}
-                            </span>
-                          )}
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: isUnread ? '800' : '600', fontSize: isUnread ? '14.5px' : '14px', color: 'var(--text-main)' }}>
-                              {chat.user}
-                              {(chat.isDemo || chat.persona || (typeof chat.id === 'number' && chat.id < 300)) && (
-                                <span style={{ fontSize: '9px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)', padding: '1px 6px', borderRadius: '6px' }}>
-                                  🤖 IA
+                            {unreadCount > 0 && (
+                              <span style={{
+                                position: 'absolute', top: '-4px', right: '-4px',
+                                minWidth: '18px', height: '18px', padding: '0 5px',
+                                backgroundColor: 'var(--accent-primary)', color: '#FFFFFF',
+                                borderRadius: '999px', border: '1.8px solid var(--bg-card)',
+                                fontSize: '10px', fontWeight: '900',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                boxShadow: 'var(--shadow-card)'
+                              }}>
+                                {unreadCount > 9 ? '+9' : `+${unreadCount}`}
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: isUnread ? '800' : '600', fontSize: isUnread ? '14.5px' : '14px', color: 'var(--text-main)' }}>
+                                {chat.user}
+                                {(chat.isDemo || chat.persona || (typeof chat.id === 'number' && chat.id < 300)) && (
+                                  <span style={{ fontSize: '9px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)', padding: '1px 6px', borderRadius: '6px' }}>
+                                    🤖 IA
+                                  </span>
+                                )}
+                              </span>
+                              <span style={{ fontSize: '10px', color: isUnread ? 'var(--accent-primary)' : 'var(--text-secondary)', fontWeight: isUnread ? '800' : '500', flexShrink: 0, marginLeft: '6px' }}>
+                                {chatTimestampLabel || statusText}
+                              </span>
+                            </div>
+                            <div style={{ fontSize: '12px', fontWeight: isUnread ? '800' : '500', color: isUnread ? 'var(--accent-primary)' : 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: '2px' }}>
+                              {listingTitleText}
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+                              <div style={{ fontSize: '11px', fontWeight: isUnread ? '800' : '400', color: isUnread ? 'var(--text-main)' : 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, minWidth: 0 }}>
+                                {lastMsgText}
+                              </div>
+                              {showReplyBadge && (
+                                <span style={{
+                                  flexShrink: 0,
+                                  fontSize: '10px', fontWeight: '800',
+                                  backgroundColor: 'var(--bg-subtle)',
+                                  color: 'var(--accent-primary)',
+                                  padding: '2px 7px', borderRadius: '999px',
+                                  border: '1px solid var(--border-color)',
+                                  whiteSpace: 'nowrap',
+                                  animation: 'pulse 2s infinite'
+                                }}>
+                                  💬 À toi !
                                 </span>
                               )}
-                            </span>
-                            <span style={{ fontSize: '10px', color: isUnread ? 'var(--accent-primary)' : 'var(--text-secondary)', fontWeight: isUnread ? '800' : '500', flexShrink: 0, marginLeft: '6px' }}>
-                              {chatTimestampLabel || statusText}
-                            </span>
-                          </div>
-                          <div style={{ fontSize: '12px', fontWeight: isUnread ? '800' : '500', color: isUnread ? 'var(--accent-primary)' : 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: '2px' }}>
-                            {listingTitleText}
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
-                            <div style={{ fontSize: '11px', fontWeight: isUnread ? '800' : '400', color: isUnread ? 'var(--text-main)' : 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, minWidth: 0 }}>
-                              {lastMsgText}
+                              {showWaitingBadge && !isUnread && (
+                                <span style={{
+                                  flexShrink: 0,
+                                  fontSize: '10px', fontWeight: '600',
+                                  color: 'var(--text-secondary)',
+                                  whiteSpace: 'nowrap'
+                                }}>
+                                  ⏳
+                                </span>
+                              )}
                             </div>
-                            {showReplyBadge && (
-                              <span style={{
-                                flexShrink: 0,
-                                fontSize: '10px', fontWeight: '800',
-                                backgroundColor: 'var(--bg-subtle)',
-                                color: 'var(--accent-primary)',
-                                padding: '2px 7px', borderRadius: '999px',
-                                border: '1px solid var(--border-color)',
-                                whiteSpace: 'nowrap',
-                                animation: 'pulse 2s infinite'
-                              }}>
-                                💬 À toi !
-                              </span>
-                            )}
-                            {showWaitingBadge && !isUnread && (
-                              <span style={{
-                                flexShrink: 0,
-                                fontSize: '10px', fontWeight: '600',
-                                color: 'var(--text-secondary)',
-                                whiteSpace: 'nowrap'
-                              }}>
-                                ⏳
-                              </span>
-                            )}
                           </div>
-                        </div>
-                      </button>
+                        </button>
 
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setConfirmDeleteChat(chat);
-                        }}
-                        title="Supprimer cette conversation"
-                        className="chat-delete-btn"
-                        style={{
-                          position: 'absolute', top: '50%', right: '10px',
-                          transform: 'translateY(-50%)',
-                          width: '28px', height: '28px', borderRadius: '50%',
-                          border: 'none',
-                          backgroundColor: 'var(--bg-subtle)',
-                          color: 'var(--accent-primary)',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          cursor: 'pointer', opacity: 0, transition: 'opacity 0.2s ease',
-                          zIndex: 2, flexShrink: 0
-                        }}
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
-                  );
-                })
-              )}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setConfirmDeleteChat(chat);
+                          }}
+                          title="Supprimer cette conversation"
+                          className="chat-delete-btn"
+                          style={{
+                            position: 'absolute', top: '50%', right: '10px',
+                            transform: 'translateY(-50%)',
+                            width: '28px', height: '28px', borderRadius: '50%',
+                            border: 'none',
+                            backgroundColor: 'var(--bg-subtle)',
+                            color: 'var(--accent-primary)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            cursor: 'pointer', opacity: 0, transition: 'opacity 0.2s ease',
+                            zIndex: 2, flexShrink: 0
+                          }}
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* SALLE DE CONVERSATION DESKTOP */}
-        {!isMobile && (
-          <div style={{
-            backgroundColor: 'var(--bg-glass)',
-            backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
-            borderRadius: '24px',
-            border: '1px solid var(--border-color)',
-            boxShadow: 'var(--shadow-card)',
-            display: 'flex', flexDirection: 'column',
-            height: '100%',
-            width: '100%',
-            boxSizing: 'border-box',
-            overflow: 'hidden',
-            position: 'relative'
-          }}>
-            {renderChatRoom()}
-          </div>
-        )}
+          {/* SALLE DE CONVERSATION (DESKTOP OU MOBILE SUBVIEW ROOM) */}
+          {(!isMobile || mobileSubView === 'room') && (
+            <div style={{
+              backgroundColor: 'var(--bg-glass)',
+              backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
+              borderRadius: isMobile ? '18px' : '24px',
+              border: '1px solid var(--border-color)',
+              boxShadow: isMobile ? 'none' : 'var(--shadow-card)',
+              display: 'flex', flexDirection: 'column',
+              height: '100%',
+              width: '100%',
+              boxSizing: 'border-box',
+              overflow: 'hidden',
+              position: 'relative'
+            }}>
+              {renderChatRoom()}
+            </div>
+          )}
         </div>
       </div>
-
-      {/* SALLE DE CONVERSATION MOBILE */}
-      {isMobile && mobileSubView === 'room' && typeof document !== 'undefined' && createPortal(
-        <div
-          id="mobile-chat-portal-root"
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            width: '100vw',
-            height: '100dvh',
-            zIndex: 9999,
-            display: 'flex',
-            flexDirection: 'column',
-            backgroundColor: 'var(--bg-global)',
-            overflow: 'hidden',
-            overscrollBehavior: 'none'
-          }}
-        >
-          {renderChatRoom()}
-        </div>,
-        document.body
-      )}
 
       {/* MODALE DE CONFIRMATION DE SUPPRESSION DE DISCUSSION */}
       {confirmDeleteChat && (

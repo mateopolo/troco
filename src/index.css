@@ -709,17 +709,18 @@ header {
   box-sizing: border-box;
 }
 
-/* ADAPTATION DU CONTENEUR DE CHAT MOBILE SANS PADDING ÉCRASANT */
+/* ADAPTATION DU CONTENEUR DE CHAT */
+.premium-main.chat-mode {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
 @media (max-width: 768px) {
   .premium-main.chat-mode {
-    padding: 0 !important;
-    margin: 0 !important;
+    padding: 6px 8px 80px !important;
+    margin: 0 auto !important;
     max-width: 100% !important;
-    height: calc(100dvh - 58px - 64px) !important;
-    height: calc(100svh - 58px - 64px) !important;
-    display: flex !important;
-    flex-direction: column !important;
-    overflow: hidden !important;
+    box-sizing: border-box !important;
   }
 }
 

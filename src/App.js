@@ -626,7 +626,12 @@ export default function App() {
       { enableHighAccuracy: false, timeout: 6000 }
     );
   };
+
   const [activeTab, setActiveTab] = useState('feed');
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, [activeTab]);
   const [profile, setProfile] = useState(() => {
     const saved = window.localStorage.getItem('troco_user_profile');
     if (saved) {
@@ -6663,11 +6668,13 @@ export default function App() {
         key={`${activeTab}-${viewMode}`}
         className={`premium-main fade-up-in ${activeTab === 'chat' ? 'chat-mode' : ''}`}
         style={{
-          maxWidth: activeTab === 'feed' ? '1460px' : '1200px',
+          maxWidth: activeTab === 'feed' ? '1460px' : '1240px',
           margin: '0 auto',
           width: '100%',
           boxSizing: 'border-box',
-          padding: isMobile ? '12px' : '20px 20px 90px',
+          padding: activeTab === 'chat'
+            ? (isMobile ? '6px 8px 80px' : '14px 20px 40px')
+            : (isMobile ? '12px 12px 90px' : '20px 20px 90px'),
           display: 'block',
           overflow: 'visible',
           transition: 'max-width 0.3s ease'
