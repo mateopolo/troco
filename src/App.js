@@ -1313,33 +1313,7 @@ export default function App() {
   const [isInfiniteRadius, setIsInfiniteRadius] = useState(true);
   const [hoveredCardId, setHoveredCardId] = useState(null);
   const [hoverSlideIndex, setHoverSlideIndex] = useState(0);
-  const [gridColumns, setGridColumns] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const isMob = window.innerWidth < 768;
-      const saved = window.localStorage.getItem(isMob ? 'troco_grid_columns_mob' : 'troco_grid_columns_desk');
-      if (saved) {
-        const num = Number(saved);
-        if (isMob ? [1, 2].includes(num) : [2, 3, 4].includes(num)) return num;
-      }
-      return isMob ? 1 : 3;
-    }
-    return 3;
-  });
-
-  useEffect(() => {
-    setGridColumns(prev => {
-      if (isMobile && ![1, 2].includes(prev)) return 1;
-      if (!isMobile && ![2, 3, 4].includes(prev)) return 3;
-      return prev;
-    });
-  }, [isMobile]);
-
-  const handleSelectGridColumns = (num) => {
-    setGridColumns(num);
-    try {
-      window.localStorage.setItem(isMobile ? 'troco_grid_columns_mob' : 'troco_grid_columns_desk', String(num));
-    } catch (_) {}
-  };
+  const [gridColumns, setGridColumns] = useState(isMobile ? 1 : 3);
 
   // Verrouillage absolu du scroll global dans l'onglet Chat (comportement application native iOS)
   useEffect(() => {
@@ -3713,24 +3687,6 @@ export default function App() {
   ]);
 
   const listingsGridRef = useRef(null);
-
-  useGSAP(() => {
-    if (!listingsGridRef.current) return;
-    const cards = listingsGridRef.current.querySelectorAll('.premium-card');
-    if (!cards || cards.length === 0) return;
-
-    gsap.fromTo(cards,
-      { opacity: 0, y: 15 },
-      {
-        opacity: 1,
-        y: 0,
-        duration: 0.35,
-        ease: 'power2.out',
-        stagger: 0.03,
-        clearProps: 'all'
-      }
-    );
-  }, { dependencies: [selectedCategory, viewMode, formatFilter], scope: listingsGridRef });
 
   const getListingDetail = (listing) => {
     const media = getSuggestedMedia(listing.title, listing.description || '', listing.image, listing.video);
@@ -6888,7 +6844,7 @@ export default function App() {
         key={`${activeTab}-${viewMode}`}
         className={`premium-main fade-up-in ${activeTab === 'chat' ? 'chat-mode' : ''}`}
         style={{
-          maxWidth: activeTab === 'feed' ? (gridColumns === 4 ? '1640px' : '1460px') : '1240px',
+          maxWidth: activeTab === 'feed' ? (gridColumns === 1 ? '760px' : '1320px') : '1240px',
           margin: '0 auto',
           width: '100%',
           boxSizing: 'border-box',
@@ -7267,7 +7223,7 @@ export default function App() {
                   </button>
                 </div>
 
-                {/* SÉLECTEUR DE COLONNES DE GRILLE (MOBILE: 1, 2 | DESKTOP: 2, 3, 4) */}
+                {/* SÉLECTEUR DE COLONNES DE GRILLE (1, 2, 3) */}
                 <div
                   style={{
                     display: 'flex',
@@ -7282,13 +7238,13 @@ export default function App() {
                     gap: '4px',
                     flexShrink: 0
                   }}
-                  title={isMobile ? "Affichage en 1 ou 2 colonnes" : "Affichage en 2, 3 ou 4 colonnes"}
+                  title="Affichage en 1, 2 ou 3 colonnes"
                 >
-                  {(isMobile ? [1, 2] : [2, 3, 4]).map((num) => (
+                  {[1, 2, 3].map((num) => (
                     <button
                       key={num}
                       type="button"
-                      onClick={() => handleSelectGridColumns(num)}
+                      onClick={() => setGridColumns(num)}
                       className="premium-button"
                       title={`${num} colonne${num > 1 ? 's' : ''}`}
                       style={{
@@ -7322,18 +7278,11 @@ export default function App() {
                           <rect x="1.5" y="2" width="5.5" height="12" rx="1.5" />
                           <rect x="9" y="2" width="5.5" height="12" rx="1.5" />
                         </svg>
-                      ) : num === 3 ? (
+                      ) : (
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                           <rect x="1" y="2" width="3.5" height="12" rx="1" />
                           <rect x="6.25" y="2" width="3.5" height="12" rx="1" />
                           <rect x="11.5" y="2" width="3.5" height="12" rx="1" />
-                        </svg>
-                      ) : (
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                          <rect x="0.75" y="2" width="2.6" height="12" rx="0.75" />
-                          <rect x="4.6" y="2" width="2.6" height="12" rx="0.75" />
-                          <rect x="8.45" y="2" width="2.6" height="12" rx="0.75" />
-                          <rect x="12.3" y="2" width="2.6" height="12" rx="0.75" />
                         </svg>
                       )}
                     </button>
@@ -7409,8 +7358,14 @@ export default function App() {
                   ref={listingsGridRef}
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: gridColumns === 1 ? '1fr' : `repeat(${gridColumns}, minmax(0, 1fr))`,
-                    gap: gridColumns === 4 ? (isMobile ? '10px' : '16px') : (isMobile ? '12px' : '24px'),
+                    gridTemplateColumns: isMobile
+                      ? '1fr'
+                      : (gridColumns === 1
+                        ? '1fr'
+                        : gridColumns === 2
+                          ? 'repeat(2, minmax(0, 1fr))'
+                          : 'repeat(3, minmax(0, 1fr))'),
+                    gap: isMobile ? '16px' : '24px',
                     width: '100%',
                     boxSizing: 'border-box'
                   }}
