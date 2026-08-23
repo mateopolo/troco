@@ -66,7 +66,7 @@ export default function CounterOfferModal({
         alignItems: 'center',
         justifyContent: 'center',
         padding: '16px',
-        zIndex: 9999,
+        zIndex: 99999,
         animation: 'fadeIn 0.2s ease-out both',
       }}
     >
@@ -75,7 +75,7 @@ export default function CounterOfferModal({
         style={{
           width: '100%',
           maxWidth: '480px',
-          maxHeight: '90vh',
+          maxHeight: 'calc(100dvh - 32px)',
           overflowY: 'auto',
           backgroundColor: 'var(--bg-card)',
           borderRadius: '24px',

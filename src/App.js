@@ -886,40 +886,29 @@ export default function App() {
       if (txData.boostDetails?.listingId) {
         setListings(prev => prev.map(item => item.id === txData.boostDetails.listingId ? { ...item, isBoosted: true } : item));
       }
-    } else if (txData.mode === 'deal') {
-      if (txData.paymentMethod?.includes('Solde')) {
-        updatedEuro = Math.max(0, Number((updatedEuro - (txData.amountTtc || 0)).toFixed(2)));
-      }
-      if (txData.payload?.chatId && txData.payload?.dealId) {
-        const { chatId, dealId, terms, partnerName, partnerUid } = txData.payload;
-        const tokensAmount = Number(terms?.trocoTokens) || 0;
-        const euroAmount = Number(terms?.euroAmount) || 0;
-        if (tokensAmount > 0) {
-          updatedTokens = Math.max(0, updatedTokens - tokensAmount);
-        }
-        // Crédit du partenaire si montant euro spécifié
-        if (euroAmount > 0 && partnerUid) {
-          try {
-            const partnerRef = doc(db, 'users', String(partnerUid));
-            const partnerSnap = await getDoc(partnerRef);
-            if (partnerSnap.exists()) {
-              const currentPartnerBal = Number(partnerSnap.data().euroBalance) || 0;
-              await updateDoc(partnerRef, {
-                euroBalance: Number((currentPartnerBal + euroAmount).toFixed(2)),
-                updatedAt: serverTimestamp(),
-              });
-            }
-          } catch (e) {
-            console.warn('[Firestore] Credit partner error:', e);
-          }
-        }
-        setChatThreads(prev => ({
-          ...prev,
-          [chatId]: (prev[chatId] || []).map(m => m.id === dealId ? { ...m, status: 'confirmed' } : m),
-        }));
-        setChatStatusOverrides(prev => ({ ...prev, [chatId]: 'Deal Validé' }));
-        setSaveMessage(`🤝 Deal validé et réglé avec succès avec ${partnerName || 'votre partenaire'} !`);
-        setTimeout(() => setSaveMessage(''), 5000);
+    } else if (txData.mode === 'deal' || txData.mode === 'pay-deal') {
+      const payload = txData.dealDetails || txData.payload || {};
+      const chatId = payload.chatId || selectedChat?.id;
+      const dealId = payload.dealId;
+      const terms = payload.terms || {};
+      const partnerName = payload.partnerName || selectedChat?.user;
+      const partnerUid = payload.partnerUid || selectedChat?.authorUid;
+      const euroAmount = Number(txData.amountTtc ?? payload.euroRequired ?? payload.amount ?? 0);
+      const tokensAmount = Number(txData.tokensDeducted ?? payload.tokensRequired ?? payload.tokens ?? 0);
+
+      if (chatId && dealId) {
+        await executeDealTransaction({
+          chatId,
+          dealId,
+          terms,
+          buyerUid: uid,
+          partnerUid,
+          partnerName,
+          euroAmount,
+          tokensAmount,
+          paymentMethod: txData.paymentMethod || 'Paiement Sécurisé',
+        });
+        return;
       }
     }
 
@@ -4392,7 +4381,7 @@ export default function App() {
     }
   };
 
-  // ---- CONTRE-PROPOSITION / GESTION DE DEAL (AVEC ANTI-SPAM ET ÉDITION D'OFFRE EN ATTENTE) ----
+  // ---- CONTRE-PROPOSITION / GESTION DE DEAL (AVEC ATOMICITÉ FIRESTORE & CYCLE INFINI) ----
   const [editingDealId, setEditingDealId] = useState(null);
 
   const openCounterOffer = (existingTerms = null, dealMsgId = null) => {
@@ -4419,6 +4408,7 @@ export default function App() {
     setIsCounterOfferOpen(true);
   };
 
+  // ---- CRÉATION ATOMIQUE D'UNE CONTRE-OFFRE (BOUCLE INFINIE DE NÉGOCIATION TRAÇABLE) ----
   const handleCounterOfferSubmit = async (terms) => {
     if (!selectedChat) return;
     const chatId = selectedChat.id;
@@ -4429,33 +4419,32 @@ export default function App() {
     const conditions = (terms.conditions && terms.conditions.trim()) || `${durationValue}h d'échange pour ${trocoTokens > 0 ? `${trocoTokens} Jeton(s)` : ''} ${euroAmount > 0 ? `${euroAmount}€` : ''}`.trim() || 'Échange convenu.';
     const fullTerms = { euroAmount, trocoTokens, durationType, durationValue, conditions };
 
+    // 1. Si on répond à une offre précédente (ou modification), on marque l'ancienne comme "superseded" (remplacée)
     if (editingDealId) {
-      // Modification de la proposition existante
       setChatThreads(prev => ({
         ...prev,
-        [chatId]: (prev[chatId] || []).map(m => String(m.id) === String(editingDealId) ? { ...m, terms: fullTerms, updatedAt: new Date().toISOString() } : m)
+        [chatId]: (prev[chatId] || []).map(m => String(m.id) === String(editingDealId) ? { ...m, status: 'superseded', updatedAt: new Date().toISOString() } : m)
       }));
-      setIsCounterOfferOpen(false);
-      setEditingDealId(null);
 
       try {
         await updateDoc(doc(db, 'chats', String(chatId), 'messages', String(editingDealId)), {
-          terms: fullTerms,
+          status: 'superseded',
           updatedAt: serverTimestamp(),
         });
       } catch (e) {
-        console.warn('[Firestore] deal update failed:', e);
+        console.warn('[Firestore] previous deal supersede failed:', e);
       }
-      return;
     }
 
+    // 2. Création d'une NOUVELLE proposition de deal (status: 'pending') envoyée par l'utilisateur courant
+    const newDealMsgId = `deal_${Date.now()}`;
     const dealMessage = {
-      id: Date.now(),
+      id: newDealMsgId,
       sender: 'me',
       senderName: profile.name,
       senderUid: profile.uid || auth.currentUser?.uid,
       kind: 'deal',
-      dealId: `deal-${Date.now()}`,
+      dealId: newDealMsgId,
       status: 'pending',
       terms: fullTerms,
       createdAt: Date.now(),
@@ -4471,7 +4460,7 @@ export default function App() {
         senderName: profile.name,
         senderUid: profile.uid || auth.currentUser?.uid,
         kind: 'deal',
-        dealId: dealMessage.dealId,
+        dealId: newDealMsgId,
         status: 'pending',
         terms: fullTerms,
         createdAt: serverTimestamp(),
@@ -4480,58 +4469,41 @@ export default function App() {
         id: chatId,
         user: selectedChat.user,
         listing: selectedChat.listing,
-        lastMessage: `Proposition de deal : ${conditions}`,
+        lastMessage: `Contre-offre de ${profile.name} : ${conditions}`,
         lastSenderName: profile.name,
+        lastDealStatus: 'pending',
         updatedAt: serverTimestamp(),
       }, { merge: true });
     } catch (e) {
-      console.warn('[Firestore] deal message write failed:', e);
+      console.warn('[Firestore] new counter-deal message write failed:', e);
     }
   };
 
-  const handleAcceptDeal = async (chatId, dealId, terms) => {
-    // Règle métier : un utilisateur ne peut PAS accepter sa propre contre-proposition.
-    const dealMessage = (chatThreads[chatId] || []).find(m => String(m.id) === String(dealId));
-    const isMe = dealMessage && (
-      (dealMessage.senderName && profile?.name && dealMessage.senderName.trim().toLowerCase() === profile.name.trim().toLowerCase()) ||
-      (dealMessage.senderUid && profile?.uid && dealMessage.senderUid === profile.uid) ||
-      dealMessage.sender === 'me'
-    );
-    if (isMe) return;
+  // ---- FONCTION PRINCIPALE : EXÉCUTION DE TRANSACTION FIRESTORE ATOMIQUE (FINTECH ENGINE) ----
+  const executeDealTransaction = async ({
+    chatId,
+    dealId,
+    terms,
+    buyerUid,
+    partnerUid,
+    partnerName,
+    euroAmount = 0,
+    tokensAmount = 0,
+    paymentMethod = 'Solde Portefeuille Troco',
+  }) => {
+    const finalEuro = Number(euroAmount) || 0;
+    const finalTokens = Number(tokensAmount) || 0;
+    const myUid = buyerUid || profile?.uid || auth.currentUser?.uid;
 
-    const chat = (selectedChat && String(selectedChat.id) === String(chatId)) ? selectedChat : (chatsList.find(c => String(c.id) === String(chatId)) || mockChats.find(c => String(c.id) === String(chatId)));
-    const partnerName = chat?.user || 'Interlocuteur';
-    const tokensAmount = Number(terms?.trocoTokens) || 0;
-    const euroAmount = Number(terms?.euroAmount) || 0;
-
-    // 1. Vérification stricte du solde de jetons Troco
-    if (tokensAmount > 0 && (profile.trocoTokens || 0) < tokensAmount) {
-      alert(`Solde de Jetons Troco insuffisant (${profile.trocoTokens || 0} disponibles sur ${tokensAmount} requis). Veuillez recharger des jetons ou opter pour Troco Plus.`);
-      return;
-    }
-
-    // 2. Si montant en euros > 0 et solde euro insuffisant, déclencher la passerelle de paiement
-    if (euroAmount > 0 && (profile.euroBalance || 0) < euroAmount) {
-      handleOpenPayment('deal', {
-        chatId,
-        dealId,
-        terms,
-        amount: euroAmount,
-        partnerName,
-        label: `Paiement du deal avec ${partnerName}`
-      });
-      return;
-    }
-
-    // 3. Débit / Crédit dynamique des jetons et/ou euros
+    // 1. Mise à jour optimiste de l'état local
     let newEuroBalance = profile.euroBalance || 0;
     let newTokensBalance = profile.trocoTokens || 0;
 
-    if (euroAmount > 0) {
-      newEuroBalance = Number(Math.max(0, newEuroBalance - euroAmount).toFixed(2));
+    if (paymentMethod?.includes('Solde') || paymentMethod === 'wallet') {
+      newEuroBalance = Number(Math.max(0, newEuroBalance - finalEuro).toFixed(2));
     }
-    if (tokensAmount > 0) {
-      newTokensBalance = Math.max(0, newTokensBalance - tokensAmount);
+    if (finalTokens > 0) {
+      newTokensBalance = Math.max(0, newTokensBalance - finalTokens);
     }
 
     const updatedProfile = {
@@ -4545,50 +4517,48 @@ export default function App() {
       localStorage.setItem('troco_user_profile', JSON.stringify(updatedProfile));
     } catch (_) { }
 
-    // Mise à jour de l'état du message et du chat
     setChatThreads(prev => ({
       ...prev,
       [chatId]: (prev[chatId] || []).map(m => String(m.id) === String(dealId) ? { ...m, status: 'confirmed' } : m),
     }));
     setChatStatusOverrides(prev => ({ ...prev, [chatId]: 'Deal Validé' }));
 
-    // Sons de succès
+    // Effets sonores
     playBetclicBalanceSound(true);
     playApplePaySound();
 
-    // Enregistrement de la transaction
+    const transactionId = `TRK-DEAL-${Date.now().toString().slice(-6)}`;
     const newTx = {
       id: `tx-deal-${Date.now()}`,
-      transactionId: `TRK-DEAL-${Date.now().toString().slice(-6)}`,
-      label: `Deal avec ${partnerName} (${terms?.conditions || 'Prestation/Troc'})`,
-      amountTtc: euroAmount,
-      tokens: tokensAmount,
+      transactionId,
+      label: `Deal avec ${partnerName || 'Partenaire'} (${terms?.conditions || 'Prestation/Troc'})`,
+      amountTtc: finalEuro,
+      tokens: finalTokens,
       mode: 'deal',
       status: 'completed',
       date: new Date().toISOString(),
-      partner: partnerName,
+      partner: partnerName || 'Partenaire',
+      paymentMethod: paymentMethod,
       createdAt: new Date().toISOString(),
     };
     setUserTransactions(prev => [newTx, ...prev]);
 
-    // 4. PERSISTANCE TRANSACTIONNELLE ATOMIQUE FIRESTORE (runTransaction)
-    const myUid = profile?.uid || auth.currentUser?.uid;
+    // 2. TRANSACTION ATOMIQUE SUR FIRESTORE (runTransaction)
     if (myUid) {
       try {
-        // Résoudre la référence du partenaire
-        let partnerUid = chat?.authorUid || chat?.partnerUid;
-        if (!partnerUid && partnerName) {
+        let resolvedPartnerUid = partnerUid;
+        if (!resolvedPartnerUid && partnerName) {
           try {
             const userQuery = query(collection(db, 'users'), where('name', '==', partnerName));
             const uSnap = await getDocs(userQuery);
             if (!uSnap.empty) {
-              partnerUid = uSnap.docs[0].id;
+              resolvedPartnerUid = uSnap.docs[0].id;
             }
           } catch (_) { }
         }
 
         await runTransaction(db, async (transaction) => {
-          // Lecture atomique 1 : Compte de l'acheteur / payeur
+          // Lecture 1 : Compte de l'acheteur / payeur
           const buyerRef = doc(db, 'users', myUid);
           const buyerSnap = await transaction.get(buyerRef);
 
@@ -4603,22 +4573,27 @@ export default function App() {
             currentBuyerDeals = bData.dealsCompleted !== undefined ? bData.dealsCompleted : currentBuyerDeals;
           }
 
-          // Lecture atomique 2 : Compte du vendeur / bénéficiaire
+          // Lecture 2 : Compte du vendeur / bénéficiaire
           let sellerSnap = null;
           let sellerRef = null;
-          if (partnerUid) {
-            sellerRef = doc(db, 'users', partnerUid);
+          if (resolvedPartnerUid) {
+            sellerRef = doc(db, 'users', resolvedPartnerUid);
             sellerSnap = await transaction.get(sellerRef);
           }
 
+          // Lecture 3 : Message de deal
+          const msgRef = doc(db, 'chats', String(chatId), 'messages', String(dealId));
+          const msgSnap = await transaction.get(msgRef);
+
           // Calculs atomiques
-          const finalBuyerEuro = euroAmount > 0 ? Number(Math.max(0, currentBuyerEuro - euroAmount).toFixed(2)) : currentBuyerEuro;
-          const finalBuyerTokens = tokensAmount > 0 ? Math.max(0, currentBuyerTokens - tokensAmount) : currentBuyerTokens;
+          const shouldDebitWallet = paymentMethod?.includes('Solde') || paymentMethod === 'wallet';
+          const calculatedBuyerEuro = shouldDebitWallet ? Number(Math.max(0, currentBuyerEuro - finalEuro).toFixed(2)) : currentBuyerEuro;
+          const calculatedBuyerTokens = finalTokens > 0 ? Math.max(0, currentBuyerTokens - finalTokens) : currentBuyerTokens;
 
           // Écriture 1 : Débit de l'acheteur
           transaction.set(buyerRef, {
-            euroBalance: finalBuyerEuro,
-            trocoTokens: finalBuyerTokens,
+            euroBalance: calculatedBuyerEuro,
+            trocoTokens: calculatedBuyerTokens,
             dealsCompleted: currentBuyerDeals + 1,
             updatedAt: serverTimestamp(),
           }, { merge: true });
@@ -4631,8 +4606,8 @@ export default function App() {
             const currentSellerDeals = sData.dealsCompleted || 0;
 
             transaction.update(sellerRef, {
-              euroBalance: Number((currentSellerEuro + euroAmount).toFixed(2)),
-              trocoTokens: currentSellerTokens + tokensAmount,
+              euroBalance: Number((currentSellerEuro + finalEuro).toFixed(2)),
+              trocoTokens: currentSellerTokens + finalTokens,
               dealsCompleted: currentSellerDeals + 1,
               updatedAt: serverTimestamp(),
             });
@@ -4644,21 +4619,38 @@ export default function App() {
             ...newTx,
             userId: myUid,
             userName: profile.name,
-            partnerUid: partnerUid || null,
+            partnerUid: resolvedPartnerUid || null,
+            dealId: String(dealId),
+            chatId: String(chatId),
             createdAt: serverTimestamp(),
           });
 
           // Écriture 4 : Mise à jour du message de deal dans le chat
-          const msgRef = doc(db, 'chats', String(chatId), 'messages', String(dealId));
-          transaction.set(msgRef, {
-            status: 'confirmed',
-            updatedAt: serverTimestamp(),
-          }, { merge: true });
+          if (msgSnap.exists()) {
+            transaction.update(msgRef, {
+              status: 'confirmed',
+              paidBy: myUid,
+              paidByName: profile.name,
+              paymentMethod: paymentMethod,
+              confirmedAt: serverTimestamp(),
+              updatedAt: serverTimestamp(),
+            });
+          } else {
+            transaction.set(msgRef, {
+              status: 'confirmed',
+              paidBy: myUid,
+              paidByName: profile.name,
+              paymentMethod: paymentMethod,
+              confirmedAt: serverTimestamp(),
+              updatedAt: serverTimestamp(),
+            }, { merge: true });
+          }
 
           // Écriture 5 : Mise à jour du document parent chat
           const chatDocRef = doc(db, 'chats', String(chatId));
           transaction.set(chatDocRef, {
             lastDealStatus: 'confirmed',
+            lastMessage: `🤝 Deal scellé et validé (${partnerName || 'Partenaire'})`,
             updatedAt: serverTimestamp(),
           }, { merge: true });
         });
@@ -4667,10 +4659,62 @@ export default function App() {
       }
     }
 
-    setSaveMessage(`🤝 Deal validé avec succès ! ${tokensAmount > 0 ? `${tokensAmount} Jeton(s) transféré(s). ` : ''}${euroAmount > 0 ? `${euroAmount}€ réglé(s).` : ''}`);
+    setSaveMessage(`🤝 Deal validé avec succès ! ${finalTokens > 0 ? `${finalTokens} Jeton(s) transféré(s). ` : ''}${finalEuro > 0 ? `${finalEuro}€ réglé(s).` : ''}`);
     setTimeout(() => setSaveMessage(''), 5000);
   };
 
+  // ---- DÉCLENCHEMENT DE L'ACCEPTATION D'UN DEAL ----
+  const handleAcceptDeal = async (chatId, dealId, terms) => {
+    // Règle métier stricte : un utilisateur ne peut PAS accepter sa propre offre.
+    const dealMessage = (chatThreads[chatId] || []).find(m => String(m.id) === String(dealId));
+    const isMe = dealMessage && (
+      (dealMessage.senderName && profile?.name && dealMessage.senderName.trim().toLowerCase() === profile.name.trim().toLowerCase()) ||
+      (dealMessage.senderUid && profile?.uid && dealMessage.senderUid === profile.uid) ||
+      dealMessage.sender === 'me'
+    );
+    if (isMe) return;
+
+    const chat = (selectedChat && String(selectedChat.id) === String(chatId))
+      ? selectedChat
+      : (chatsList.find(c => String(c.id) === String(chatId)) || mockChats.find(c => String(c.id) === String(chatId)));
+    const partnerName = chat?.user || 'Interlocuteur';
+    const partnerUid = chat?.authorUid || chat?.partnerUid || null;
+    const tokensAmount = Number(terms?.trocoTokens) || 0;
+    const euroAmount = Number(terms?.euroAmount) || 0;
+
+    // 1. Troc direct (0€ et 0 jeton) : validation instantanée
+    if (euroAmount === 0 && tokensAmount === 0) {
+      await executeDealTransaction({
+        chatId,
+        dealId,
+        terms,
+        buyerUid: profile.uid,
+        partnerUid,
+        partnerName,
+        euroAmount: 0,
+        tokensAmount: 0,
+        paymentMethod: 'Troc Direct',
+      });
+      return;
+    }
+
+    // 2. Si euros > 0 ou jetons > 0 : ouverture du tunnel de paiement intelligent PaymentModal
+    handleOpenPayment('pay-deal', {
+      chatId,
+      dealId,
+      terms,
+      tokensRequired: tokensAmount,
+      euroRequired: euroAmount,
+      amount: euroAmount,
+      tokens: tokensAmount,
+      partnerName,
+      partnerUid,
+      buyerUid: profile.uid,
+      label: `Règlement du deal avec ${partnerName}`
+    });
+  };
+
+  // ---- REFUS D'UN DEAL PAR LE DESTINATAIRE ----
   const handleDeclineDeal = async (chatId, dealId) => {
     // Règle métier : seul le destinataire peut refuser.
     const dealMessage = (chatThreads[chatId] || []).find(m => String(m.id) === String(dealId));
@@ -4705,58 +4749,58 @@ export default function App() {
     const isMine = sender === 'me';
     const isIncoming = sender === 'them';
     return (
-      <div style={{ width: '100%', border: '1px solid #E8DDD3', borderRadius: '16px', padding: '12px', backgroundColor: darkMode ? '#231E1B' : '#FAF7F2', boxShadow: '0 8px 20px rgba(61,53,48,0.06)', animation: 'fadeSlideUp 0.35s ease both' }}>
+      <div style={{ width: '100%', border: '1px solid var(--border-color)', borderRadius: '18px', padding: '14px', backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', animation: 'fadeSlideUp 0.35s ease both' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', gap: '8px', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '800', color: '#C67D5B' }}>
-            <Sparkles size={14} /> {isMine ? 'Ma contre-proposition' : 'Contre-proposition reçue'}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '800', color: 'var(--accent-primary)' }}>
+            <Sparkles size={14} /> {isMine ? 'Ma proposition de deal' : 'Proposition de deal reçue'}
           </div>
           {status === 'pending' && isMine && (
-            <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', color: darkMode ? '#D4C5B5' : '#6B5E54', padding: '4px 9px', borderRadius: '999px' }}>
+            <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)', padding: '4px 9px', borderRadius: '999px' }}>
               En attente de la réponse de {otherName}
             </span>
           )}
           {status === 'pending' && isIncoming && (
-            <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: '#FEF3C7', color: '#92400E', padding: '4px 9px', borderRadius: '999px' }}>En attente de ta réponse</span>
-          )}
-          {status === 'accepted' && <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: '#F5EAE4', color: '#A8644A', padding: '4px 9px', borderRadius: '999px' }}>Acceptée • Paiement en cours</span>}
-          {status === 'confirmed' && <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: '#EBF0E6', color: '#3D4A35', padding: '4px 9px', borderRadius: '999px' }}>Deal validé ✓</span>}
-          {status === 'declined' && <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', color: '#EF4444', padding: '4px 9px', borderRadius: '999px' }}>{isMine ? 'Refusée par l\'autre partie' : 'Refusée'}</span>}
-        </div>
-        <div style={{ fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54', lineHeight: 1.5, marginBottom: '10px' }}>{terms.conditions}</div>
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '10px' }}>
-          {terms.durationType && (
-            <span style={{ backgroundColor: darkMode ? '#1A1715' : '#FFFFFF', border: '1px solid #E8DDD3', color: '#C67D5B', borderRadius: '999px', padding: '5px 11px', fontSize: '12px', fontWeight: '800' }}>
-              ⏱️ {terms.durationType === 'hourly' ? `${terms.durationValue || 1} heure(s)` : terms.durationType === 'daily' ? `${terms.durationValue || 1} jour(s)` : terms.durationType === 'monthly' ? `${terms.durationValue || 1} mois` : terms.durationType === 'fixed' ? 'Forfait global' : 'Durée libre'}
+            <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-warning)', padding: '4px 9px', borderRadius: '999px' }}>
+              ⚡ Action requise
             </span>
           )}
-          {terms.euroAmount > 0 && <span style={{ backgroundColor: darkMode ? '#1A1715' : '#FFFFFF', border: '1px solid #E8DDD3', color: '#C67D5B', borderRadius: '999px', padding: '5px 11px', fontSize: '12px', fontWeight: '800' }}>💶 {terms.euroAmount}€</span>}
-          {terms.trocoTokens > 0 && <span style={{ backgroundColor: darkMode ? '#1A1715' : '#FFFFFF', border: '1px solid #E8DDD3', color: '#C67D5B', borderRadius: '999px', padding: '5px 11px', fontSize: '12px', fontWeight: '800' }}>🪙 {terms.trocoTokens} Jeton{terms.trocoTokens > 1 ? 's' : ''}</span>}
-          {terms.euroAmount === 0 && terms.trocoTokens === 0 && <span style={{ backgroundColor: darkMode ? '#1A1715' : '#FFFFFF', border: '1px solid #E8DDD3', color: '#C67D5B', borderRadius: '999px', padding: '5px 11px', fontSize: '12px', fontWeight: '800' }}>🤝 Troc direct</span>}
+          {(status === 'confirmed' || status === 'accepted') && (
+            <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', padding: '4px 9px', borderRadius: '999px' }}>
+              Deal validé ✓
+            </span>
+          )}
+          {(status === 'declined' || status === 'superseded') && (
+            <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)', padding: '4px 9px', borderRadius: '999px' }}>
+              {status === 'superseded' ? 'Remplacée' : 'Refusée'}
+            </span>
+          )}
+        </div>
+        <div style={{ fontSize: '13px', color: 'var(--text-main)', lineHeight: 1.5, marginBottom: '10px' }}>{terms.conditions}</div>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '10px' }}>
+          {terms.durationType && (
+            <span style={{ backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--border-color)', color: 'var(--accent-primary)', borderRadius: '999px', padding: '4px 10px', fontSize: '11px', fontWeight: '800' }}>
+              ⏱️ {terms.durationType === 'hourly' ? `${terms.durationValue || 1}h` : terms.durationType === 'daily' ? `${terms.durationValue || 1}j` : terms.durationType === 'monthly' ? `${terms.durationValue || 1} mois` : terms.durationType === 'fixed' ? 'Forfait' : 'Libre'}
+            </span>
+          )}
+          {terms.euroAmount > 0 && <span style={{ backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--border-color)', color: 'var(--accent-primary)', borderRadius: '999px', padding: '4px 10px', fontSize: '11px', fontWeight: '800' }}>💶 {terms.euroAmount}€</span>}
+          {terms.trocoTokens > 0 && <span style={{ backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--border-color)', color: 'var(--accent-warning)', borderRadius: '999px', padding: '4px 10px', fontSize: '11px', fontWeight: '800' }}>🪙 {terms.trocoTokens} Jeton{terms.trocoTokens > 1 ? 's' : ''}</span>}
+          {terms.euroAmount === 0 && terms.trocoTokens === 0 && <span style={{ backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--border-color)', color: 'var(--accent-primary)', borderRadius: '999px', padding: '4px 10px', fontSize: '11px', fontWeight: '800' }}>🤝 Troc direct</span>}
         </div>
         {status === 'pending' && isIncoming && (
-          <div style={{ display: 'flex', gap: '8px' }}>
-            <button onClick={() => handleAcceptDeal(chatId, message.id, terms)} className="premium-button" style={{ flex: 1, border: 'none', borderRadius: '12px', padding: '9px', background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)', color: '#FFF', fontSize: '12px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 12px rgba(198,125,91,0.25)' }}>✓ Accepter</button>
-            <button onClick={() => handleDeclineDeal(chatId, message.id)} className="premium-button" style={{ flex: 1, border: '1px solid #E8DDD3', borderRadius: '12px', padding: '9px', backgroundColor: darkMode ? '#1A1715' : '#FFFFFF', color: darkMode ? '#D4C5B5' : '#6B5E54', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}>✕ Refuser</button>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px' }}>
+            <button onClick={() => handleAcceptDeal(chatId, message.id, terms)} className="premium-button" style={{ border: '1.5px solid var(--accent-primary)', borderRadius: '12px', padding: '8px 4px', backgroundColor: 'var(--bg-card)', color: 'var(--accent-primary)', fontSize: '11.5px', fontWeight: '800', cursor: 'pointer', boxShadow: 'var(--shadow-accent)', whiteSpace: 'nowrap' }}>✓ Accepter</button>
+            <button onClick={() => openCounterOffer(terms, message.id)} className="premium-button" style={{ border: 'none', borderRadius: '12px', padding: '8px 4px', background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)', color: '#FFF', fontSize: '11.5px', fontWeight: '800', cursor: 'pointer', boxShadow: 'var(--shadow-accent)', whiteSpace: 'nowrap' }}>🔄 Contre-offre</button>
+            <button onClick={() => handleDeclineDeal(chatId, message.id)} className="premium-button" style={{ border: '1px solid var(--border-color)', borderRadius: '12px', padding: '8px 4px', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-main)', fontSize: '11.5px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap' }}>✕ Refuser</button>
           </div>
         )}
         {status === 'pending' && isMine && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', border: '1px dashed #E8DDD3', color: darkMode ? '#D4C5B5' : '#6B5E54', borderRadius: '12px', padding: '9px 12px', fontSize: '12px', fontWeight: '700' }}>
-            <Clock size={13} /> En attente de la réponse de {otherName} — tu ne peux pas accepter ta propre proposition.
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: 'var(--bg-subtle)', border: '1px dashed var(--border-color)', color: 'var(--text-secondary)', borderRadius: '12px', padding: '9px 12px', fontSize: '11.5px', fontWeight: '700' }}>
+            <Clock size={13} color="var(--accent-primary)" /> En attente de la réponse de <strong>{otherName}</strong>
           </div>
         )}
-        {status === 'confirmed' && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: '#EBF0E6', color: '#3D4A35', borderRadius: '12px', padding: '9px 12px', fontSize: '12px', fontWeight: '800' }}>
-            <CheckCircle size={15} /> Deal confirmé — conditions verrouillées.
-          </div>
-        )}
-        {status === 'declined' && isIncoming && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', color: '#EF4444', borderRadius: '12px', padding: '9px 12px', fontSize: '12px', fontWeight: '700' }}>
-            Proposition refusée. Tu peux en proposer une nouvelle.
-          </div>
-        )}
-        {status === 'declined' && isMine && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', color: '#EF4444', borderRadius: '12px', padding: '9px 12px', fontSize: '12px', fontWeight: '700' }}>
-            {otherName} a refusé cette proposition. Tu peux en proposer une nouvelle.
+        {(status === 'confirmed' || status === 'accepted') && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', borderRadius: '12px', padding: '9px 12px', fontSize: '12px', fontWeight: '800' }}>
+            <CheckCircle size={15} color="var(--accent-primary)" /> Deal confirmé et scellé avec {otherName} ✓
           </div>
         )}
       </div>

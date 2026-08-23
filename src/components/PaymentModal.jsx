@@ -119,7 +119,11 @@ export default function PaymentModal({
   // Réinitialisation lors de l'ouverture
   useEffect(() => {
     if (isOpen) {
-      const normalizedMode = (initialMode === 'pack-tokens' || initialMode === 'troco-plus') ? 'troco-plus' : initialMode;
+      const normalizedMode = (initialMode === 'pack-tokens' || initialMode === 'troco-plus')
+        ? 'troco-plus'
+        : (initialMode === 'pay-deal' || initialMode === 'deal')
+          ? 'deal'
+          : initialMode;
       setMode(normalizedMode || 'troco-plus');
       setIsProcessing(false);
       setShow3DSecure(false);
@@ -127,18 +131,37 @@ export default function PaymentModal({
       setOtpCode('');
       setOtpError('');
       setFormErrors({});
+
+      const euroRequired = Number(initialPayload?.euroRequired ?? initialPayload?.amount ?? initialPayload?.terms?.euroAmount ?? 0);
+      const userEuro = Number(currentUser?.euroBalance || 0);
+
       // Si rechargement ou abonnement, le mode doit être bancaire
       if (normalizedMode === 'troco-plus' || normalizedMode === 'topup-cash') {
         setPaymentMethod('applePay');
+      } else if (normalizedMode === 'deal') {
+        if (euroRequired > 0 && userEuro >= euroRequired) {
+          setPaymentMethod('wallet');
+        } else {
+          setPaymentMethod('applePay');
+        }
       }
       if (currentUser?.name && !cardHolder) {
         setCardHolder(currentUser.name);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, initialMode, currentUser]);
+  }, [isOpen, initialMode, currentUser, initialPayload]);
 
   if (!isOpen) return null;
+
+  // Données du deal
+  const isDealMode = mode === 'deal' || mode === 'pay-deal';
+  const dealTokensRequired = isDealMode ? Number(initialPayload?.tokensRequired ?? initialPayload?.tokens ?? initialPayload?.terms?.trocoTokens ?? 0) : 0;
+  const dealEuroRequired = isDealMode ? Number(initialPayload?.euroRequired ?? initialPayload?.amount ?? initialPayload?.terms?.euroAmount ?? 0) : 0;
+  const userTokens = Number(currentUser?.trocoTokens || 0);
+  const userEuro = Number(currentUser?.euroBalance || 0);
+  const hasEnoughTokens = userTokens >= dealTokensRequired;
+  const hasEnoughEuro = userEuro >= dealEuroRequired;
 
   // Calcul du montant total
   const getAmountToPay = () => {
@@ -154,8 +177,8 @@ export default function PaymentModal({
     if (mode === 'caution') {
       return initialPayload?.amount || 50.00;
     }
-    if (mode === 'deal') {
-      return initialPayload?.amount || 0.00;
+    if (mode === 'deal' || mode === 'pay-deal') {
+      return dealEuroRequired;
     }
     return 0.00;
   };
@@ -219,6 +242,23 @@ export default function PaymentModal({
 
   // Traitement du paiement
   const handleInitiatePayment = () => {
+    if (isDealMode) {
+      if (dealTokensRequired > 0 && !hasEnoughTokens) {
+        alert('Solde de Jetons Troco insuffisant pour finaliser ce deal.');
+        return;
+      }
+      if (amountToPay <= 0) {
+        setIsProcessing(true);
+        setTimeout(() => {
+          finalizePayment({
+            method: 'Jetons Troco',
+            authRef: 'TKN-' + Math.random().toString(36).substring(2, 9).toUpperCase(),
+          });
+        }, 600);
+        return;
+      }
+    }
+
     if (amountToPay <= 0) return;
 
     if (paymentMethod === 'card') {
@@ -749,84 +789,209 @@ export default function PaymentModal({
                 </div>
               )}
 
+              {/* ÉTAPE 1 SPÉCIFIQUE AU DEAL */}
+              {isDealMode && (
+                <div style={{ marginBottom: '22px' }}>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '800', marginBottom: '10px', color: 'var(--text-main)' }}>
+                    1. Récapitulatif et conditions du Deal
+                  </label>
+
+                  <div style={{
+                    padding: '16px',
+                    borderRadius: '18px',
+                    backgroundColor: 'var(--bg-subtle)',
+                    border: '1px solid var(--border-color)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '12px',
+                    marginBottom: '12px'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{
+                          width: '32px', height: '32px', borderRadius: '50%',
+                          background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-primary-hover))',
+                          color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontWeight: '800', fontSize: '12px'
+                        }}>
+                          {(initialPayload?.partnerName || 'P').charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <strong style={{ fontSize: '14px', color: 'var(--text-main)' }}>
+                            {initialPayload?.partnerName || 'Partenaire de troc'}
+                          </strong>
+                          <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                            {initialPayload?.terms?.conditions || initialPayload?.label || 'Accord convenu'}
+                          </div>
+                        </div>
+                      </div>
+                      <span style={{
+                        backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)',
+                        padding: '4px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '800', color: 'var(--accent-primary)'
+                      }}>
+                        🤝 Deal en cours
+                      </span>
+                    </div>
+
+                    {/* VÉRIFICATION DU SOLDE DE JETONS */}
+                    {dealTokensRequired > 0 && (
+                      <div style={{
+                        padding: '12px',
+                        borderRadius: '14px',
+                        border: hasEnoughTokens ? '1px solid var(--border-color)' : '1.5px solid var(--accent-warning)',
+                        backgroundColor: hasEnoughTokens ? 'var(--bg-card)' : 'rgba(245, 158, 11, 0.08)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '8px'
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', fontWeight: '800', color: 'var(--text-main)' }}>
+                            <Coins size={16} color="var(--accent-warning)" />
+                            <span>Jetons requis : <strong>{dealTokensRequired} Jeton(s)</strong></span>
+                          </div>
+                          <span style={{ fontSize: '11.5px', fontWeight: '700', color: hasEnoughTokens ? 'var(--accent-primary)' : 'var(--accent-warning)' }}>
+                            Solde actuel : {userTokens} Jeton(s)
+                          </span>
+                        </div>
+
+                        {!hasEnoughTokens && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
+                            <div style={{ fontSize: '11.5px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                              ⚠️ Votre solde de jetons est insuffisant pour finaliser cet accord. Vous pouvez vous abonner à <strong>Troco Plus</strong> pour obtenir instantanément des jetons mensuels.
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setMode('troco-plus');
+                                setPaymentMethod('applePay');
+                              }}
+                              className="premium-button"
+                              style={{
+                                padding: '8px 12px',
+                                borderRadius: '10px',
+                                border: 'none',
+                                background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
+                                color: '#FFF',
+                                fontSize: '11.5px',
+                                fontWeight: '800',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px'
+                              }}
+                            >
+                              <Sparkles size={13} /> S'abonner à Troco Plus (+5 Jetons)
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* VÉRIFICATION DU MONTANT EN EUROS */}
+                    {dealEuroRequired > 0 && (
+                      <div style={{
+                        padding: '12px',
+                        borderRadius: '14px',
+                        border: '1px solid var(--border-color)',
+                        backgroundColor: 'var(--bg-card)',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', fontWeight: '800', color: 'var(--text-main)' }}>
+                          <CreditCard size={16} color="var(--accent-primary)" />
+                          <span>Montant à régler : <strong>{dealEuroRequired.toFixed(2)} €</strong></span>
+                        </div>
+                        <span style={{ fontSize: '11.5px', fontWeight: '700', color: hasEnoughEuro ? 'var(--accent-primary)' : 'var(--text-secondary)' }}>
+                          Solde dispo : {userEuro.toFixed(2)} € {hasEnoughEuro ? '✓' : '(complément CB requis)'}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* ÉTAPE 2 : SÉLECTION DU MOYEN DE PAIEMENT */}
-              <div style={{ marginBottom: '22px' }}>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '800', marginBottom: '10px', color: 'var(--text-main)' }}>
-                  2. Moyen de Paiement Sécurisé
-                </label>
-                <div style={{ display: 'grid', gridTemplateColumns: (mode === 'troco-plus' || mode === 'pack-tokens' || mode === 'topup-cash') ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: '10px' }}>
-                  {/* Option Apple Pay */}
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('applePay')}
-                    style={{
-                      padding: '12px 8px',
-                      borderRadius: '14px',
-                      border: paymentMethod === 'applePay' ? '2px solid var(--text-main)' : '1px solid var(--border-color)',
-                      backgroundColor: paymentMethod === 'applePay' ? 'var(--text-main)' : 'var(--bg-subtle)',
-                      color: paymentMethod === 'applePay' ? 'var(--bg-card)' : 'var(--text-secondary)',
-                      fontWeight: '800',
-                      fontSize: '13px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px',
-                    }}
-                  >
-                    <Smartphone size={16} /> Apple Pay
-                  </button>
-
-                  {/* Option Carte Bancaire */}
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('card')}
-                    style={{
-                      padding: '12px 8px',
-                      borderRadius: '14px',
-                      border: paymentMethod === 'card' ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
-                      backgroundColor: paymentMethod === 'card' ? 'var(--bg-subtle)' : 'var(--bg-card)',
-                      color: paymentMethod === 'card' ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                      fontWeight: '800',
-                      fontSize: '13px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px',
-                      boxShadow: paymentMethod === 'card' ? 'var(--shadow-card)' : 'none'
-                    }}
-                  >
-                    <CreditCard size={16} /> Carte CB
-                  </button>
-
-                  {/* Option Solde Portefeuille (uniquement pour deal, caution, boost) */}
-                  {mode !== 'troco-plus' && mode !== 'pack-tokens' && mode !== 'topup-cash' && (
+              {amountToPay > 0 && (
+                <div style={{ marginBottom: '22px' }}>
+                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '800', marginBottom: '10px', color: 'var(--text-main)' }}>
+                    2. Moyen de Paiement Sécurisé
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: (mode === 'troco-plus' || mode === 'pack-tokens' || mode === 'topup-cash') ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: '10px' }}>
+                    {/* Option Apple Pay */}
                     <button
                       type="button"
-                      disabled={(currentUser?.euroBalance || 0) < amountToPay}
-                      onClick={() => setPaymentMethod('wallet')}
+                      onClick={() => setPaymentMethod('applePay')}
                       style={{
                         padding: '12px 8px',
                         borderRadius: '14px',
-                        border: paymentMethod === 'wallet' ? '2px solid var(--accent-success)' : '1px solid var(--border-color)',
-                        backgroundColor: paymentMethod === 'wallet' ? 'var(--bg-subtle)' : 'var(--bg-card)',
-                        color: paymentMethod === 'wallet' ? 'var(--accent-success)' : 'var(--text-secondary)',
+                        border: paymentMethod === 'applePay' ? '2px solid var(--text-main)' : '1px solid var(--border-color)',
+                        backgroundColor: paymentMethod === 'applePay' ? 'var(--text-main)' : 'var(--bg-subtle)',
+                        color: paymentMethod === 'applePay' ? 'var(--bg-card)' : 'var(--text-secondary)',
                         fontWeight: '800',
                         fontSize: '13px',
-                        cursor: (currentUser?.euroBalance || 0) < amountToPay ? 'not-allowed' : 'pointer',
-                        opacity: (currentUser?.euroBalance || 0) < amountToPay ? 0.5 : 1,
+                        cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                         gap: '6px',
                       }}
                     >
-                      <Coins size={16} /> Solde ({currentUser?.euroBalance || 0}€)
+                      <Smartphone size={16} /> Apple Pay
                     </button>
-                  )}
+
+                    {/* Option Carte Bancaire */}
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('card')}
+                      style={{
+                        padding: '12px 8px',
+                        borderRadius: '14px',
+                        border: paymentMethod === 'card' ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                        backgroundColor: paymentMethod === 'card' ? 'var(--bg-subtle)' : 'var(--bg-card)',
+                        color: paymentMethod === 'card' ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                        fontWeight: '800',
+                        fontSize: '13px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        boxShadow: paymentMethod === 'card' ? 'var(--shadow-card)' : 'none'
+                      }}
+                    >
+                      <CreditCard size={16} /> Carte CB
+                    </button>
+
+                    {/* Option Solde Portefeuille (uniquement pour deal, caution, boost) */}
+                    {mode !== 'troco-plus' && mode !== 'pack-tokens' && mode !== 'topup-cash' && (
+                      <button
+                        type="button"
+                        disabled={(currentUser?.euroBalance || 0) < amountToPay}
+                        onClick={() => setPaymentMethod('wallet')}
+                        style={{
+                          padding: '12px 8px',
+                          borderRadius: '14px',
+                          border: paymentMethod === 'wallet' ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                          backgroundColor: paymentMethod === 'wallet' ? 'var(--bg-subtle)' : 'var(--bg-card)',
+                          color: paymentMethod === 'wallet' ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                          fontWeight: '800',
+                          fontSize: '13px',
+                          cursor: (currentUser?.euroBalance || 0) < amountToPay ? 'not-allowed' : 'pointer',
+                          opacity: (currentUser?.euroBalance || 0) < amountToPay ? 0.5 : 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                        }}
+                      >
+                        <Coins size={16} /> Solde ({currentUser?.euroBalance || 0}€)
+                      </button>
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* FORMULAIRE CARTE BANCAIRE INTERACTIF */}
               {paymentMethod === 'card' && (
@@ -986,38 +1151,55 @@ export default function PaymentModal({
                 marginBottom: '16px',
               }}>
                 <div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Montant total TTC</div>
-                  <div style={{ fontSize: '22px', fontWeight: '800', color: 'var(--text-main)' }}>
-                    {amountToPay.toFixed(2)} €
+                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                    {isDealMode ? 'Total du deal' : 'Montant total TTC'}
+                  </div>
+                  <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span>{amountToPay.toFixed(2)} €</span>
+                    {isDealMode && dealTokensRequired > 0 && (
+                      <span style={{ fontSize: '14px', color: 'var(--accent-warning)', fontWeight: '800' }}>
+                        + {dealTokensRequired} Jeton(s)
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div style={{ fontSize: '11px', color: 'var(--text-secondary)', textAlign: 'right' }}>
-                  Dont TVA 20% : {(amountToPay * 0.20 / 1.20).toFixed(2)} €
+                  {isDealMode
+                    ? (dealTokensRequired > 0 ? `${dealTokensRequired} Jeton(s) débité(s)` : 'Troc direct')
+                    : `Dont TVA 20% : ${(amountToPay * 0.20 / 1.20).toFixed(2)} €`}
                 </div>
               </div>
 
               <button
                 type="button"
                 onClick={handleInitiatePayment}
-                disabled={isProcessing || amountToPay <= 0}
+                disabled={isProcessing || (isDealMode ? (dealTokensRequired > 0 && !hasEnoughTokens) : amountToPay <= 0)}
                 className="premium-button"
                 style={{
                   width: '100%',
                   padding: '16px',
                   borderRadius: '16px',
                   border: 'none',
-                  background: paymentMethod === 'applePay' ? 'var(--text-main)' : 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
-                  color: paymentMethod === 'applePay' ? 'var(--bg-card)' : '#FFF',
+                  background: (isDealMode && dealTokensRequired > 0 && !hasEnoughTokens)
+                    ? 'var(--bg-subtle)'
+                    : (paymentMethod === 'applePay' && amountToPay > 0)
+                      ? 'var(--text-main)'
+                      : 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
+                  color: (isDealMode && dealTokensRequired > 0 && !hasEnoughTokens)
+                    ? 'var(--text-secondary)'
+                    : (paymentMethod === 'applePay' && amountToPay > 0)
+                      ? 'var(--bg-card)'
+                      : '#FFF',
                   fontWeight: '800',
                   fontSize: '15px',
-                  cursor: (isProcessing || amountToPay <= 0) ? 'not-allowed' : 'pointer',
+                  cursor: (isProcessing || (isDealMode ? (dealTokensRequired > 0 && !hasEnoughTokens) : amountToPay <= 0)) ? 'not-allowed' : 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '8px',
-                  boxShadow: 'var(--shadow-accent)',
+                  boxShadow: (isDealMode && dealTokensRequired > 0 && !hasEnoughTokens) ? 'none' : 'var(--shadow-accent)',
                   transition: 'all 0.2s ease',
-                  opacity: (isProcessing || amountToPay <= 0) ? 0.7 : 1,
+                  opacity: (isProcessing || (isDealMode ? (dealTokensRequired > 0 && !hasEnoughTokens) : amountToPay <= 0)) ? 0.7 : 1,
                 }}
               >
                 {isProcessing ? (
@@ -1025,6 +1207,23 @@ export default function PaymentModal({
                     <Loader2 size={18} className="spin-animation" />
                     Traitement sécurisé en cours...
                   </>
+                ) : isDealMode ? (
+                  dealTokensRequired > 0 && !hasEnoughTokens ? (
+                    <>
+                      <Coins size={16} />
+                      Solde Jetons Insuffisant ({userTokens}/{dealTokensRequired})
+                    </>
+                  ) : amountToPay <= 0 ? (
+                    <>
+                      <Lock size={16} />
+                      Valider et Sceller le Deal ({dealTokensRequired > 0 ? `${dealTokensRequired} Jeton(s)` : 'Troc Direct'})
+                    </>
+                  ) : (
+                    <>
+                      <Lock size={16} />
+                      Régler {amountToPay.toFixed(2)} € & Sceller le Deal
+                    </>
+                  )
                 ) : (
                   <>
                     <Lock size={16} />

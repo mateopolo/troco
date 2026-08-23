@@ -766,20 +766,21 @@ function ChatView({
                         {Number(terms.euroAmount) === 0 && Number(terms.trocoTokens) === 0 && <span style={{ backgroundColor: 'var(--bg-subtle)', border: '1.5px solid var(--accent-primary)', color: 'var(--accent-primary)', borderRadius: '999px', padding: '3px 9px', fontSize: '11px', fontWeight: '800' }}>🤝 Troc direct</span>}
                       </div>
 
-                      {/* ACTIONS INTERACTIVES POUR LE DESTINATAIRE : ACCEPTER / REFUSER / CONTRE-PROPOSER */}
+                      {/* ACTIONS INTERACTIVES POUR LE DESTINATAIRE : ACCEPTER / REFUSER / CONTRE-OFFRE */}
                       {isDealPending && isIncoming && (
-                        <div style={{ display: 'flex', gap: '8px', marginTop: '10px', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', marginTop: '10px' }}>
                           <button
                             type="button"
                             onClick={() => handleAcceptDeal(currentChatId, msg.id, terms)}
                             className="premium-button"
                             style={{
-                              flex: '1 1 30%', border: '1.5px solid var(--accent-primary)', borderRadius: '12px', padding: '10px 8px',
+                              border: '1.5px solid var(--accent-primary)', borderRadius: '12px', padding: '9px 4px',
                               backgroundColor: 'var(--bg-card)',
                               color: 'var(--accent-primary)',
-                              fontSize: '12px', fontWeight: '800', cursor: 'pointer',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
-                              boxShadow: 'var(--shadow-accent)'
+                              fontSize: '11.5px', fontWeight: '800', cursor: 'pointer',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px',
+                              boxShadow: 'var(--shadow-accent)',
+                              whiteSpace: 'nowrap'
                             }}
                           >
                             ✓ Accepter
@@ -789,26 +790,29 @@ function ChatView({
                             onClick={() => openCounterOffer(terms, msg.id)}
                             className="premium-button"
                             style={{
-                              flex: '1 1 30%', border: 'none', borderRadius: '12px', padding: '10px 8px',
+                              border: 'none', borderRadius: '12px', padding: '9px 4px',
                               background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
                               color: '#FFF',
-                              fontSize: '12px', fontWeight: '800', cursor: 'pointer',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
-                              boxShadow: 'var(--shadow-accent)'
+                              fontSize: '11.5px', fontWeight: '800', cursor: 'pointer',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px',
+                              boxShadow: 'var(--shadow-accent)',
+                              whiteSpace: 'nowrap'
                             }}
                           >
-                            ⚡ Contre-proposer
+                            🔄 Contre-offre
                           </button>
                           <button
                             type="button"
                             onClick={() => handleDeclineDeal(currentChatId, msg.id)}
                             className="premium-button"
                             style={{
-                              flex: '1 1 25%', border: '1px solid var(--border-color)',
-                              borderRadius: '12px', padding: '10px 8px',
+                              border: '1px solid var(--border-color)',
+                              borderRadius: '12px', padding: '9px 4px',
                               backgroundColor: 'var(--bg-subtle)',
                               color: 'var(--text-main)',
-                              fontSize: '12px', fontWeight: '800', cursor: 'pointer'
+                              fontSize: '11.5px', fontWeight: '800', cursor: 'pointer',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px',
+                              whiteSpace: 'nowrap'
                             }}
                           >
                             ✕ Refuser
@@ -816,31 +820,23 @@ function ChatView({
                         </div>
                       )}
 
-                      {/* STATUT EN ATTENTE POUR L'EXPÉDITEUR AVEC BOUTON DE MODIFICATION */}
+                      {/* STATUT EN ATTENTE POUR L'EXPÉDITEUR (NE PEUT NI ACCEPTER NI REFUSER SA PROPRE OFFRE) */}
                       {isDealPending && isMine && (
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', backgroundColor: 'var(--bg-subtle)', border: '1px dashed var(--border-color)', color: 'var(--text-secondary)', borderRadius: '12px', padding: '8px 12px', fontSize: '11.5px', fontWeight: '700', flexWrap: 'wrap' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            <Clock size={13} /> <span>En attente de la réponse de {partnerName}...</span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => openCounterOffer(terms, msg.id)}
-                            style={{ border: 'none', background: 'none', color: 'var(--accent-primary)', fontWeight: '800', fontSize: '11px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
-                          >
-                            <Edit2 size={11} /> Modifier
-                          </button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'var(--bg-subtle)', border: '1px dashed var(--border-color)', color: 'var(--text-secondary)', borderRadius: '12px', padding: '9px 12px', fontSize: '11.5px', fontWeight: '700' }}>
+                          <Clock size={13} color="var(--accent-primary)" />
+                          <span>En attente de la réponse de <strong>{partnerName}</strong></span>
                         </div>
                       )}
 
                       {(currentDealStatus === 'confirmed' || currentDealStatus === 'accepted') && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-success)', borderRadius: '12px', padding: '8px 12px', fontSize: '11.5px', fontWeight: '800' }}>
-                          <CheckCircle size={14} color="var(--accent-success)" /> <span>Deal validé et scellé avec {partnerName}.</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', borderRadius: '12px', padding: '8px 12px', fontSize: '11.5px', fontWeight: '800' }}>
+                          <CheckCircle size={14} color="var(--accent-primary)" /> <span>Deal validé et scellé avec {partnerName} ✓</span>
                         </div>
                       )}
 
-                      {currentDealStatus === 'declined' && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)', borderRadius: '12px', padding: '8px 12px', fontSize: '11.5px', fontWeight: '800' }}>
-                          <AlertTriangle size={14} /> <span>Proposition déclinée. Vous pouvez faire une nouvelle offre.</span>
+                      {(currentDealStatus === 'declined' || currentDealStatus === 'superseded') && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)', borderRadius: '12px', padding: '8px 12px', fontSize: '11.5px', fontWeight: '700' }}>
+                          <AlertTriangle size={14} /> <span>{currentDealStatus === 'superseded' ? 'Offre précédente remplacée par une contre-proposition.' : 'Proposition refusée.'}</span>
                         </div>
                       )}
                     </div>
