@@ -500,6 +500,7 @@ export default function App() {
   const [showingOriginalMessages, setShowingOriginalMessages] = useState({});
   const [showingOriginalBio, setShowingOriginalBio] = useState(false);
   const profileAvatarFileInputRef = useRef(null);
+  const mainContainerRef = useRef(null);
 
   const compressImage = (file, maxWidth = 300, maxHeight = 300, quality = 0.75) => {
     return new Promise((resolve) => {
@@ -696,6 +697,23 @@ export default function App() {
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState('list');
+
+  // Animation GSAP fluide pour les transitions d'onglets (Smooth Fade & Slide avec clearProps)
+  useGSAP(() => {
+    if (activeTab !== 'chat' && mainContainerRef.current) {
+      gsap.fromTo(
+        mainContainerRef.current,
+        { opacity: 0, y: 16 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 0.42,
+          ease: 'power2.out',
+          clearProps: 'transform,opacity',
+        }
+      );
+    }
+  }, { dependencies: [activeTab, viewMode], scope: mainContainerRef });
   // eslint-disable-next-line no-unused-vars
   const [selectedMapItem, setSelectedMapItem] = useState(null);
   const [isBoostModalOpen, setIsBoostModalOpen] = useState(false);
@@ -6841,6 +6859,7 @@ export default function App() {
 
       {/* CONTENU DYNAMIQUE SELON L'ONGLET SÉLECTIONNÉ */}
       <main
+        ref={mainContainerRef}
         key={`${activeTab}-${viewMode}`}
         className={`premium-main ${activeTab === 'chat' ? 'chat-mode' : 'fade-up-in'}`}
         style={{

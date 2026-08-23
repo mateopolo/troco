@@ -116,8 +116,8 @@ export default function AdminPanel({
         position: 'fixed',
         inset: 0,
         zIndex: 99990,
-        backgroundColor: darkMode ? '#0B1120' : '#F8FAFC',
-        color: darkMode ? '#F8FAFC' : '#0F172A',
+        backgroundColor: 'var(--bg-global)',
+        color: 'var(--text-main)',
         overflowY: 'auto',
         fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif",
       }}
@@ -129,12 +129,14 @@ export default function AdminPanel({
             style={{
               width: '100%',
               maxWidth: '420px',
-              backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
+              backgroundColor: 'var(--bg-card)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
               borderRadius: '24px',
               padding: '32px 24px',
               textAlign: 'center',
-              boxShadow: '0 20px 50px rgba(61,53,48,0.15)',
-              border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
+              boxShadow: 'var(--shadow-card)',
+              border: '1px solid var(--border-color)',
             }}
           >
             <div
@@ -142,8 +144,8 @@ export default function AdminPanel({
                 width: '56px',
                 height: '56px',
                 borderRadius: '50%',
-                backgroundColor: darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4',
-                color: '#C67D5B',
+                backgroundColor: 'var(--bg-subtle)',
+                color: 'var(--accent-primary)',
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -152,8 +154,8 @@ export default function AdminPanel({
             >
               <Lock size={28} />
             </div>
-            <h2 className="font-editorial-heading" style={{ fontSize: '24px', fontWeight: '600', margin: '0 0 8px', color: darkMode ? '#FAF7F2' : '#3D3530' }}>Espace Administrateur</h2>
-            <p style={{ fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54', margin: '0 0 20px', lineHeight: 1.6 }}>
+            <h2 className="font-editorial-heading" style={{ fontSize: '24px', fontWeight: '600', margin: '0 0 8px', color: 'var(--text-main)' }}>Espace Administrateur</h2>
+            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '0 0 20px', lineHeight: 1.6 }}>
               Veuillez saisir votre code d'accès administrateur pour gérer les signalements et la modération de la plateforme Troco.
             </p>
 
@@ -173,33 +175,36 @@ export default function AdminPanel({
                   textAlign: 'center',
                   fontWeight: '800',
                   outline: 'none',
-                  backgroundColor: darkMode ? '#1A1715' : '#FFF',
-                  color: darkMode ? '#FAF7F2' : '#3D3530',
-                  border: pinError ? '2px solid #EF4444' : (darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3'),
+                  backgroundColor: 'var(--bg-subtle)',
+                  color: 'var(--text-main)',
+                  border: pinError ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                  boxSizing: 'border-box'
                 }}
               />
 
               {pinError && (
-                <div style={{ fontSize: '12px', fontWeight: '700', color: '#EF4444' }}>{pinError}</div>
+                <div style={{ fontSize: '12px', fontWeight: '700', color: 'var(--accent-primary)' }}>{pinError}</div>
               )}
 
               <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
                 <button
                   type="button"
                   onClick={onClose}
+                  className="premium-button"
                   style={{
-                    flex: 1, padding: '12px', borderRadius: '14px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
-                    background: 'transparent', color: darkMode ? '#D4C5B5' : '#6B5E54', fontWeight: '700', cursor: 'pointer'
+                    flex: 1, padding: '12px', borderRadius: '14px', border: '1px solid var(--border-color)',
+                    backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)', fontWeight: '700', cursor: 'pointer'
                   }}
                 >
                   Retour
                 </button>
                 <button
                   type="submit"
+                  className="premium-button"
                   style={{
                     flex: 2, padding: '12px', borderRadius: '14px', border: 'none',
-                    background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)', color: '#FFF',
-                    fontWeight: '800', cursor: 'pointer', boxShadow: '0 8px 20px rgba(198,125,91,0.25)'
+                    background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)', color: '#FFF',
+                    fontWeight: '800', cursor: 'pointer', boxShadow: 'var(--shadow-accent)'
                   }}
                 >
                   Déverrouiller
@@ -217,12 +222,13 @@ export default function AdminPanel({
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <button
                 onClick={onClose}
+                className="premium-button"
                 style={{
-                  border: 'none',
+                  border: '1px solid var(--border-color)',
                   borderRadius: '12px',
                   padding: '10px 14px',
-                  backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : '#E2E8F0',
-                  color: darkMode ? '#FFFFFF' : '#0F172A',
+                  backgroundColor: 'var(--bg-card)',
+                  color: 'var(--text-main)',
                   fontWeight: '700',
                   fontSize: '13px',
                   cursor: 'pointer',
@@ -234,10 +240,10 @@ export default function AdminPanel({
                 <ArrowLeft size={16} /> Quitter le Panel
               </button>
               <div>
-                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: '800', color: '#10B981', padding: '3px 8px', borderRadius: '999px', backgroundColor: darkMode ? 'rgba(16,185,129,0.15)' : '#ECFDF5', marginBottom: '4px' }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: '800', color: 'var(--accent-primary)', padding: '3px 8px', borderRadius: '999px', backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--border-color)', marginBottom: '4px' }}>
                   <Shield size={12} /> MODÉRATION & SUPER-ADMIN
                 </div>
-                <h1 style={{ fontSize: '24px', fontWeight: '800', margin: 0, letterSpacing: '-0.02em' }}>
+                <h1 className="font-editorial-heading" style={{ fontSize: '24px', fontWeight: '600', margin: 0, letterSpacing: '-0.02em', color: 'var(--text-main)' }}>
                   Console d'Administration Troco
                 </h1>
               </div>
@@ -246,12 +252,13 @@ export default function AdminPanel({
             <div style={{ display: 'flex', gap: '8px' }}>
               <button
                 onClick={() => setIsUnlocked(false)}
+                className="premium-button"
                 style={{
-                  border: 'none',
+                  border: '1px solid var(--border-color)',
                   borderRadius: '12px',
                   padding: '8px 12px',
-                  backgroundColor: darkMode ? 'rgba(239,68,68,0.2)' : '#FEF2F2',
-                  color: '#EF4444',
+                  backgroundColor: 'var(--bg-card)',
+                  color: 'var(--text-secondary)',
                   fontSize: '12px',
                   fontWeight: '700',
                   cursor: 'pointer',
@@ -267,71 +274,73 @@ export default function AdminPanel({
 
           {/* KPIS ET STATISTIQUES GLOBALES */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '24px' }}>
-            <div style={{ padding: '16px', borderRadius: '18px', backgroundColor: darkMode ? 'rgba(30,41,59,0.7)' : '#FFFFFF', border: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid #E2E8F0', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
-              <div style={{ fontSize: '12px', fontWeight: '700', color: darkMode ? '#94A3B8' : '#64748B', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ padding: '16px', borderRadius: '18px', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-card)' }}>
+              <div style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <Users size={14} /> Utilisateurs
               </div>
-              <div style={{ fontSize: '24px', fontWeight: '800', marginTop: '6px', color: darkMode ? '#FFFFFF' : '#0F172A' }}>
+              <div style={{ fontSize: '24px', fontWeight: '800', marginTop: '6px', color: 'var(--text-main)' }}>
                 {kpis.totalUsers}
               </div>
-              <div style={{ fontSize: '11px', color: '#10B981', marginTop: '4px' }}>
+              <div style={{ fontSize: '11px', color: 'var(--accent-primary)', marginTop: '4px', fontWeight: '700' }}>
                 {kpis.shadowBannedCount} shadow-bans • {kpis.bannedCount} bannis
               </div>
             </div>
 
-            <div style={{ padding: '16px', borderRadius: '18px', backgroundColor: darkMode ? 'rgba(30,41,59,0.7)' : '#FFFFFF', border: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid #E2E8F0', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
-              <div style={{ fontSize: '12px', fontWeight: '700', color: darkMode ? '#94A3B8' : '#64748B', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ padding: '16px', borderRadius: '18px', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-card)' }}>
+              <div style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <FileText size={14} /> Annonces Actives
               </div>
-              <div style={{ fontSize: '24px', fontWeight: '800', marginTop: '6px', color: darkMode ? '#FFFFFF' : '#0F172A' }}>
+              <div style={{ fontSize: '24px', fontWeight: '800', marginTop: '6px', color: 'var(--text-main)' }}>
                 {kpis.totalListings}
               </div>
-              <div style={{ fontSize: '11px', color: darkMode ? '#94A3B8' : '#64748B', marginTop: '4px' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>
                 Catalogue mondial
               </div>
             </div>
 
-            <div style={{ padding: '16px', borderRadius: '18px', backgroundColor: darkMode ? 'rgba(239,68,68,0.15)' : '#FEF2F2', border: darkMode ? '1px solid rgba(239,68,68,0.3)' : '1px solid #FCA5A5' }}>
-              <div style={{ fontSize: '12px', fontWeight: '800', color: '#EF4444', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ padding: '16px', borderRadius: '18px', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-card)' }}>
+              <div style={{ fontSize: '12px', fontWeight: '800', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <ShieldAlert size={14} /> Signalements
               </div>
-              <div style={{ fontSize: '24px', fontWeight: '800', marginTop: '6px', color: '#EF4444' }}>
+              <div style={{ fontSize: '24px', fontWeight: '800', marginTop: '6px', color: 'var(--accent-primary)' }}>
                 {kpis.pendingReports}
               </div>
-              <div style={{ fontSize: '11px', color: '#EF4444', marginTop: '4px', fontWeight: '700' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px', fontWeight: '700' }}>
                 En attente d'action
               </div>
             </div>
 
-            <div style={{ padding: '16px', borderRadius: '18px', backgroundColor: darkMode ? '#1A1715' : '#FAF7F2', border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3' }}>
-              <div style={{ fontSize: '12px', fontWeight: '700', color: darkMode ? '#D4C5B5' : '#6B5E54', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Coins size={14} color="#C67D5B" /> Masse Monétaire
+            <div style={{ padding: '16px', borderRadius: '18px', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-card)' }}>
+              <div style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Coins size={14} color="var(--accent-primary)" /> Masse Monétaire
               </div>
-              <div style={{ fontSize: '18px', fontWeight: '800', marginTop: '6px', color: '#C67D5B' }}>
+              <div style={{ fontSize: '18px', fontWeight: '800', marginTop: '6px', color: 'var(--accent-primary)' }}>
                 {kpis.totalEurosInSystem}€ • {kpis.totalTokensInSystem} 🪙
               </div>
-              <div style={{ fontSize: '11px', color: darkMode ? '#9A8E84' : '#6B5E54', marginTop: '4px' }}>
+              <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '4px' }}>
                 Soldes cumulés
               </div>
             </div>
           </div>
 
           {/* SÉLECTEUR D'ONGLETS */}
-          <div style={{ display: 'flex', gap: '8px', borderBottom: darkMode ? '1px solid rgba(232,221,211,0.08)' : '1px solid #E8DDD3', paddingBottom: '12px', marginBottom: '20px', overflowX: 'auto' }}>
+          <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid var(--border-color)', paddingBottom: '12px', marginBottom: '20px', overflowX: 'auto' }}>
             <button
               onClick={() => setActiveTab('reports')}
+              className="premium-button"
               style={{
-                border: 'none',
+                border: activeTab === 'reports' ? '1.5px solid var(--accent-primary)' : '1px solid transparent',
                 borderRadius: '12px',
                 padding: '10px 16px',
-                backgroundColor: activeTab === 'reports' ? '#DC2626' : 'transparent',
-                color: activeTab === 'reports' ? '#FFFFFF' : (darkMode ? '#D4C5B5' : '#6B5E54'),
+                backgroundColor: activeTab === 'reports' ? 'var(--bg-subtle)' : 'transparent',
+                color: activeTab === 'reports' ? 'var(--accent-primary)' : 'var(--text-secondary)',
                 fontWeight: '800',
                 fontSize: '13px',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
+                boxShadow: activeTab === 'reports' ? 'var(--shadow-accent)' : 'none'
               }}
             >
               <ShieldAlert size={16} /> Signalements ({kpis.pendingReports})
@@ -339,18 +348,20 @@ export default function AdminPanel({
 
             <button
               onClick={() => setActiveTab('users')}
+              className="premium-button"
               style={{
-                border: 'none',
+                border: activeTab === 'users' ? '1.5px solid var(--accent-primary)' : '1px solid transparent',
                 borderRadius: '12px',
                 padding: '10px 16px',
-                backgroundColor: activeTab === 'users' ? '#C67D5B' : 'transparent',
-                color: activeTab === 'users' ? '#FFFFFF' : (darkMode ? '#D4C5B5' : '#6B5E54'),
+                backgroundColor: activeTab === 'users' ? 'var(--bg-subtle)' : 'transparent',
+                color: activeTab === 'users' ? 'var(--accent-primary)' : 'var(--text-secondary)',
                 fontWeight: '800',
                 fontSize: '13px',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
+                boxShadow: activeTab === 'users' ? 'var(--shadow-accent)' : 'none'
               }}
             >
               <Users size={16} /> Utilisateurs & Shadow-Ban
@@ -358,18 +369,20 @@ export default function AdminPanel({
 
             <button
               onClick={() => setActiveTab('listings')}
+              className="premium-button"
               style={{
-                border: 'none',
+                border: activeTab === 'listings' ? '1.5px solid var(--accent-primary)' : '1px solid transparent',
                 borderRadius: '12px',
                 padding: '10px 16px',
-                backgroundColor: activeTab === 'listings' ? '#C67D5B' : 'transparent',
-                color: activeTab === 'listings' ? '#FFFFFF' : (darkMode ? '#D4C5B5' : '#6B5E54'),
+                backgroundColor: activeTab === 'listings' ? 'var(--bg-subtle)' : 'transparent',
+                color: activeTab === 'listings' ? 'var(--accent-primary)' : 'var(--text-secondary)',
                 fontWeight: '800',
                 fontSize: '13px',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
+                boxShadow: activeTab === 'listings' ? 'var(--shadow-accent)' : 'none'
               }}
             >
               <FileText size={16} /> Annonces ({kpis.totalListings})
@@ -377,18 +390,20 @@ export default function AdminPanel({
 
             <button
               onClick={() => setActiveTab('moderator')}
+              className="premium-button"
               style={{
-                border: 'none',
+                border: activeTab === 'moderator' ? '1.5px solid var(--accent-primary)' : '1px solid transparent',
                 borderRadius: '12px',
                 padding: '10px 16px',
-                backgroundColor: activeTab === 'moderator' ? '#C67D5B' : 'transparent',
-                color: activeTab === 'moderator' ? '#FFFFFF' : (darkMode ? '#D4C5B5' : '#6B5E54'),
+                backgroundColor: activeTab === 'moderator' ? 'var(--bg-subtle)' : 'transparent',
+                color: activeTab === 'moderator' ? 'var(--accent-primary)' : 'var(--text-secondary)',
                 fontWeight: '800',
                 fontSize: '13px',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
+                boxShadow: activeTab === 'moderator' ? 'var(--shadow-accent)' : 'none'
               }}
             >
               <Sparkles size={16} /> Testeur Modération IA
@@ -409,12 +424,13 @@ export default function AdminPanel({
                   <button
                     key={f.key}
                     onClick={() => setReportFilter(f.key)}
+                    className="premium-button"
                     style={{
-                      border: reportFilter === f.key ? (darkMode ? '1px solid #EF4444' : '1px solid #DC2626') : (darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E2E8F0'),
+                      border: reportFilter === f.key ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-color)',
                       borderRadius: '999px',
                       padding: '6px 14px',
-                      backgroundColor: reportFilter === f.key ? (darkMode ? 'rgba(239,68,68,0.2)' : '#FEF2F2') : 'transparent',
-                      color: reportFilter === f.key ? (darkMode ? '#FCA5A5' : '#991B1B') : (darkMode ? '#CBD5E1' : '#64748B'),
+                      backgroundColor: reportFilter === f.key ? 'var(--bg-subtle)' : 'var(--bg-card)',
+                      color: reportFilter === f.key ? 'var(--accent-primary)' : 'var(--text-secondary)',
                       fontSize: '12px',
                       fontWeight: '800',
                       cursor: 'pointer',
@@ -426,10 +442,10 @@ export default function AdminPanel({
               </div>
 
               {filteredReports.length === 0 ? (
-                <div style={{ padding: '40px 20px', textAlign: 'center', backgroundColor: darkMode ? 'rgba(30,41,59,0.5)' : '#FFFFFF', borderRadius: '20px', border: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid #E2E8F0' }}>
-                  <CheckCircle size={36} color="#10B981" style={{ marginBottom: '10px' }} />
-                  <h3 style={{ margin: '0 0 6px', fontSize: '16px', fontWeight: '800' }}>Aucun signalement</h3>
-                  <p style={{ margin: 0, fontSize: '13px', color: darkMode ? '#94A3B8' : '#64748B' }}>
+                <div style={{ padding: '40px 20px', textAlign: 'center', backgroundColor: 'var(--bg-card)', borderRadius: '20px', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-card)' }}>
+                  <CheckCircle size={36} color="var(--accent-primary)" style={{ marginBottom: '10px' }} />
+                  <h3 className="font-editorial-heading" style={{ margin: '0 0 6px', fontSize: '18px', fontWeight: '600', color: 'var(--text-main)' }}>Aucun signalement</h3>
+                  <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)' }}>
                     Tous les signalements pour ce filtre ont été traités avec succès.
                   </p>
                 </div>
@@ -443,9 +459,9 @@ export default function AdminPanel({
                         style={{
                           padding: '18px',
                           borderRadius: '20px',
-                          backgroundColor: darkMode ? 'rgba(30,41,59,0.8)' : '#FFFFFF',
-                          border: isPending ? (darkMode ? '1px solid #EF4444' : '1px solid #FCA5A5') : (darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid #E2E8F0'),
-                          boxShadow: '0 6px 16px rgba(0,0,0,0.04)',
+                          backgroundColor: 'var(--bg-card)',
+                          border: isPending ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                          boxShadow: 'var(--shadow-card)',
                         }}
                       >
                         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '14px', flexWrap: 'wrap' }}>
@@ -457,29 +473,29 @@ export default function AdminPanel({
                                   fontWeight: '800',
                                   padding: '4px 10px',
                                   borderRadius: '999px',
-                                  backgroundColor: isPending ? '#FEF2F2' : '#EFF6FF',
-                                  color: isPending ? '#DC2626' : '#04265A',
-                                  border: isPending ? '1px solid #FCA5A5' : '1px solid #BFDBFE',
+                                  backgroundColor: 'var(--bg-subtle)',
+                                  color: 'var(--accent-primary)',
+                                  border: '1px solid var(--border-color)',
                                 }}
                               >
                                 {report.reasonLabel || report.reasonKey || 'Signalement'}
                               </span>
-                              <span style={{ fontSize: '11px', color: darkMode ? '#94A3B8' : '#64748B' }}>
+                              <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
                                 Signalé par <strong>{report.reporterName || 'Utilisateur'}</strong>
                               </span>
                             </div>
 
-                            <h4 style={{ margin: '0 0 6px', fontSize: '15px', fontWeight: '800' }}>
+                            <h4 style={{ margin: '0 0 6px', fontSize: '15px', fontWeight: '800', color: 'var(--text-main)' }}>
                               Cible : {report.listingTitle || `Utilisateur ${report.reportedUserName}`}
                             </h4>
 
                             {report.details && (
-                              <p style={{ margin: '0 0 10px', fontSize: '13px', color: darkMode ? '#CBD5E1' : '#475569', lineHeight: 1.5, backgroundColor: darkMode ? 'rgba(15,23,42,0.4)' : '#F8FAFC', padding: '10px 12px', borderRadius: '12px' }}>
+                              <p style={{ margin: '0 0 10px', fontSize: '13px', color: 'var(--text-main)', lineHeight: 1.5, backgroundColor: 'var(--bg-subtle)', padding: '10px 12px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
                                 « {report.details} »
                               </p>
                             )}
 
-                            <div style={{ fontSize: '11px', color: darkMode ? '#94A3B8' : '#64748B' }}>
+                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
                               Auteur du contenu : <strong>{report.reportedUserName}</strong>
                             </div>
                           </div>
@@ -494,9 +510,10 @@ export default function AdminPanel({
                                     if (onResolveReport) onResolveReport(report.id, 'resolved');
                                   }
                                 }}
+                                className="premium-button"
                                 style={{
-                                  border: 'none', borderRadius: '10px', padding: '8px 12px',
-                                  backgroundColor: '#DC2626', color: '#FFF', fontWeight: '700', fontSize: '12px', cursor: 'pointer',
+                                  border: '1px solid var(--border-color)', borderRadius: '10px', padding: '8px 12px',
+                                  backgroundColor: 'var(--bg-subtle)', color: 'var(--text-main)', fontWeight: '700', fontSize: '12px', cursor: 'pointer',
                                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
                                 }}
                               >
@@ -512,9 +529,10 @@ export default function AdminPanel({
                                     if (onResolveReport) onResolveReport(report.id, 'resolved');
                                   }
                                 }}
+                                className="premium-button"
                                 style={{
-                                  border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #CBD5E1', borderRadius: '10px', padding: '8px 12px',
-                                  backgroundColor: darkMode ? 'rgba(15,23,42,0.6)' : '#F8FAFC', color: darkMode ? '#CBD5E1' : '#334155', fontWeight: '700', fontSize: '12px', cursor: 'pointer',
+                                  border: '1px solid var(--border-color)', borderRadius: '10px', padding: '8px 12px',
+                                  backgroundColor: 'var(--bg-subtle)', color: 'var(--text-main)', fontWeight: '700', fontSize: '12px', cursor: 'pointer',
                                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
                                 }}
                               >
@@ -526,19 +544,22 @@ export default function AdminPanel({
                               <div style={{ display: 'flex', gap: '6px' }}>
                                 <button
                                   onClick={() => onResolveReport(report.id, 'resolved')}
+                                  className="premium-button"
                                   style={{
                                     flex: 1, border: 'none', borderRadius: '10px', padding: '8px',
-                                    backgroundColor: '#10B981', color: '#FFF', fontWeight: '700', fontSize: '12px', cursor: 'pointer',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'
+                                    background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)', color: '#FFF', fontWeight: '700', fontSize: '12px', cursor: 'pointer',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
+                                    boxShadow: 'var(--shadow-accent)'
                                   }}
                                 >
                                   <Check size={13} /> Résolu
                                 </button>
                                 <button
                                   onClick={() => onResolveReport(report.id, 'dismissed')}
+                                  className="premium-button"
                                   style={{
-                                    flex: 1, border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #D1D5DB', borderRadius: '10px', padding: '8px',
-                                    backgroundColor: 'transparent', color: darkMode ? '#94A3B8' : '#64748B', fontWeight: '700', fontSize: '12px', cursor: 'pointer'
+                                    flex: 1, border: '1px solid var(--border-color)', borderRadius: '10px', padding: '8px',
+                                    backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)', fontWeight: '700', fontSize: '12px', cursor: 'pointer'
                                   }}
                                 >
                                   Classer
@@ -560,7 +581,7 @@ export default function AdminPanel({
             <div>
               {/* RECHERCHE UTILISATEUR */}
               <div style={{ position: 'relative', marginBottom: '16px' }}>
-                <Search size={16} style={{ position: 'absolute', left: '14px', top: '14px', color: darkMode ? '#94A3B8' : '#64748B' }} />
+                <Search size={16} style={{ position: 'absolute', left: '14px', top: '14px', color: 'var(--text-secondary)' }} />
                 <input
                   type="text"
                   placeholder="Rechercher un utilisateur (nom, pseudo, email, ville)..."
@@ -572,9 +593,10 @@ export default function AdminPanel({
                     borderRadius: '14px',
                     fontSize: '13px',
                     outline: 'none',
-                    backgroundColor: darkMode ? 'rgba(30,41,59,0.8)' : '#FFFFFF',
-                    color: darkMode ? '#F8FAFC' : '#0F172A',
-                    border: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E2E8F0',
+                    backgroundColor: 'var(--bg-card)',
+                    color: 'var(--text-main)',
+                    border: '1px solid var(--border-color)',
+                    boxSizing: 'border-box'
                   }}
                 />
               </div>
@@ -592,13 +614,9 @@ export default function AdminPanel({
                       style={{
                         padding: '16px',
                         borderRadius: '20px',
-                        backgroundColor: darkMode ? 'rgba(30,41,59,0.8)' : '#FFFFFF',
-                        border: isBanned
-                          ? '1.5px solid #EF4444'
-                          : isShadow
-                            ? '1.5px solid #F59E0B'
-                            : (darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid #E2E8F0'),
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.03)',
+                        backgroundColor: 'var(--bg-card)',
+                        border: (isBanned || isShadow) ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                        boxShadow: 'var(--shadow-card)',
                         display: 'flex',
                         flexDirection: 'column',
                         justifyContent: 'space-between',
@@ -612,13 +630,13 @@ export default function AdminPanel({
                             style={{ width: '46px', height: '46px', borderRadius: '50%', objectFit: 'cover' }}
                           />
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontSize: '14px', fontWeight: '800', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            <div style={{ fontSize: '14px', fontWeight: '800', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--text-main)' }}>
                               {u.name || 'Utilisateur'}
                             </div>
-                            <div style={{ fontSize: '12px', fontWeight: '700', color: '#C67D5B' }}>
+                            <div style={{ fontSize: '12px', fontWeight: '700', color: 'var(--accent-primary)' }}>
                               {u.username || '@user'}
                             </div>
-                            <div style={{ fontSize: '11px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>
+                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
                               {u.email || u.phoneNumber || u.location || 'Membre Troco'}
                             </div>
                           </div>
@@ -627,24 +645,24 @@ export default function AdminPanel({
                         {/* BADGES D'ÉTAT */}
                         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }}>
                           {isAdmin && (
-                            <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: darkMode ? 'rgba(198,125,91,0.25)' : '#F5EAE4', color: '#A8644A', padding: '2px 8px', borderRadius: '12px' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', padding: '2px 8px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
                               🛡️ Admin
                             </span>
                           )}
                           {isShadow && (
-                            <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: '#FFFBEB', color: '#D97706', padding: '2px 8px', borderRadius: '12px' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', padding: '2px 8px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
                               👻 Shadow-Banni
                             </span>
                           )}
                           {isBanned && (
-                            <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: '#FEF2F2', color: '#DC2626', padding: '2px 8px', borderRadius: '12px' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', padding: '2px 8px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
                               🚫 Banni
                             </span>
                           )}
                         </div>
 
                         {/* SOLDES */}
-                        <div style={{ padding: '8px 10px', borderRadius: '12px', backgroundColor: darkMode ? 'rgba(15,23,42,0.5)' : '#F8FAFC', marginBottom: '12px', fontSize: '12px', display: 'flex', justifyContent: 'space-between' }}>
+                        <div style={{ padding: '8px 10px', borderRadius: '12px', backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--border-color)', marginBottom: '12px', fontSize: '12px', display: 'flex', justifyContent: 'space-between', color: 'var(--text-main)' }}>
                           <span>Solde : <strong>{(Number(u.euroBalance) || 0).toFixed(2)}€</strong></span>
                           <span>Jetons : <strong>{u.trocoTokens || 0} 🪙</strong></span>
                         </div>
@@ -655,20 +673,22 @@ export default function AdminPanel({
                         <div style={{ display: 'flex', gap: '6px' }}>
                           <button
                             onClick={() => onUpdateUser && onUpdateUser(uid, { isShadowBanned: !isShadow })}
+                            className="premium-button"
                             style={{
-                              flex: 1, padding: '7px 10px', borderRadius: '10px', border: 'none',
-                              backgroundColor: isShadow ? '#10B981' : (darkMode ? 'rgba(245,158,11,0.2)' : '#FEF3C7'),
-                              color: isShadow ? '#FFF' : '#D97706', fontSize: '11px', fontWeight: '700', cursor: 'pointer'
+                              flex: 1, padding: '7px 10px', borderRadius: '10px', border: '1px solid var(--border-color)',
+                              backgroundColor: isShadow ? 'var(--accent-primary)' : 'var(--bg-subtle)',
+                              color: isShadow ? '#FFF' : 'var(--text-main)', fontSize: '11px', fontWeight: '700', cursor: 'pointer'
                             }}
                           >
                             {isShadow ? '✓ Lever Shadow-ban' : '👻 Shadow-Ban'}
                           </button>
                           <button
                             onClick={() => onUpdateUser && onUpdateUser(uid, { isBanned: !isBanned })}
+                            className="premium-button"
                             style={{
-                              flex: 1, padding: '7px 10px', borderRadius: '10px', border: 'none',
-                              backgroundColor: isBanned ? '#10B981' : (darkMode ? 'rgba(239,68,68,0.2)' : '#FEE2E2'),
-                              color: isBanned ? '#FFF' : '#DC2626', fontSize: '11px', fontWeight: '700', cursor: 'pointer'
+                              flex: 1, padding: '7px 10px', borderRadius: '10px', border: '1px solid var(--border-color)',
+                              backgroundColor: isBanned ? 'var(--accent-primary)' : 'var(--bg-subtle)',
+                              color: isBanned ? '#FFF' : 'var(--text-main)', fontSize: '11px', fontWeight: '700', cursor: 'pointer'
                             }}
                           >
                             {isBanned ? '✓ Débannir' : '🚫 Bannir'}
@@ -681,9 +701,10 @@ export default function AdminPanel({
                             setBalanceDeltaEuro('');
                             setBalanceDeltaTokens('');
                           }}
+                          className="premium-button"
                           style={{
-                            padding: '7px 10px', borderRadius: '10px', border: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E2E8F0',
-                            background: 'transparent', color: darkMode ? '#CBD5E1' : '#475569', fontSize: '11px', fontWeight: '700', cursor: 'pointer'
+                            padding: '7px 10px', borderRadius: '10px', border: '1px solid var(--border-color)',
+                            backgroundColor: 'var(--bg-subtle)', color: 'var(--text-main)', fontSize: '11px', fontWeight: '700', cursor: 'pointer'
                           }}
                         >
                           💳 Ajuster les soldes (€ / 🪙)
@@ -697,12 +718,13 @@ export default function AdminPanel({
                                 onResetUser(uid, u);
                               }
                             }}
+                            className="premium-button"
                             style={{
                               padding: '8px 10px',
                               borderRadius: '10px',
-                              border: darkMode ? '1px solid rgba(239,68,68,0.3)' : '1px solid #FCA5A5',
-                              backgroundColor: darkMode ? 'rgba(239,68,68,0.15)' : '#FEF2F2',
-                              color: darkMode ? '#FCA5A5' : '#DC2626',
+                              border: '1px solid var(--border-color)',
+                              backgroundColor: 'var(--bg-subtle)',
+                              color: 'var(--text-main)',
                               fontSize: '11px',
                               fontWeight: '800',
                               cursor: 'pointer',
@@ -729,7 +751,7 @@ export default function AdminPanel({
             <div>
               {/* RECHERCHE ANNONCE */}
               <div style={{ position: 'relative', marginBottom: '16px' }}>
-                <Search size={16} style={{ position: 'absolute', left: '14px', top: '14px', color: darkMode ? '#94A3B8' : '#64748B' }} />
+                <Search size={16} style={{ position: 'absolute', left: '14px', top: '14px', color: 'var(--text-secondary)' }} />
                 <input
                   type="text"
                   placeholder="Rechercher une annonce par titre, auteur ou catégorie..."
@@ -741,9 +763,10 @@ export default function AdminPanel({
                     borderRadius: '14px',
                     fontSize: '13px',
                     outline: 'none',
-                    backgroundColor: darkMode ? 'rgba(30,41,59,0.8)' : '#FFFFFF',
-                    color: darkMode ? '#F8FAFC' : '#0F172A',
-                    border: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E2E8F0',
+                    backgroundColor: 'var(--bg-card)',
+                    color: 'var(--text-main)',
+                    border: '1px solid var(--border-color)',
+                    boxSizing: 'border-box'
                   }}
                 />
               </div>
@@ -755,8 +778,9 @@ export default function AdminPanel({
                     style={{
                       padding: '14px',
                       borderRadius: '20px',
-                      backgroundColor: darkMode ? 'rgba(30,41,59,0.8)' : '#FFFFFF',
-                      border: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid #E2E8F0',
+                      backgroundColor: 'var(--bg-card)',
+                      border: '1px solid var(--border-color)',
+                      boxShadow: 'var(--shadow-card)',
                       display: 'flex',
                       flexDirection: 'column',
                       justifyContent: 'space-between',
@@ -768,16 +792,16 @@ export default function AdminPanel({
                         alt={listing.title}
                         style={{ width: '100%', height: '120px', objectFit: 'cover', borderRadius: '12px', marginBottom: '10px' }}
                       />
-                      <div style={{ fontSize: '11px', fontWeight: '700', color: '#C67D5B', marginBottom: '4px' }}>
+                      <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--accent-primary)', marginBottom: '4px' }}>
                         {listing.category}
                       </div>
-                      <h4 className="font-editorial-heading" style={{ margin: '0 0 6px', fontSize: '16px', fontWeight: '600', lineHeight: 1.3 }}>
+                      <h4 className="font-editorial-heading" style={{ margin: '0 0 6px', fontSize: '16px', fontWeight: '600', lineHeight: 1.3, color: 'var(--text-main)' }}>
                         {listing.title}
                       </h4>
-                      <p style={{ margin: '0 0 8px', fontSize: '11px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>
+                      <p style={{ margin: '0 0 8px', fontSize: '11px', color: 'var(--text-secondary)' }}>
                         Par <strong>{listing.author}</strong> • {listing.location || 'France'}
                       </p>
-                      <div style={{ fontSize: '12px', fontWeight: '800', color: '#7A8F6A', marginBottom: '12px' }}>
+                      <div style={{ fontSize: '12px', fontWeight: '800', color: 'var(--accent-primary)', marginBottom: '12px' }}>
                         {listing.compensation}
                       </div>
                     </div>
@@ -786,10 +810,12 @@ export default function AdminPanel({
                       {onEditListing && (
                         <button
                           onClick={() => onEditListing(listing)}
+                          className="premium-button"
                           style={{
                             flex: 1, padding: '8px', borderRadius: '10px', border: 'none',
-                            background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)', color: '#FFF', fontWeight: '700', fontSize: '12px', cursor: 'pointer',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'
+                            background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)', color: '#FFF', fontWeight: '700', fontSize: '12px', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
+                            boxShadow: 'var(--shadow-accent)'
                           }}
                         >
                           <Pencil size={13} /> Modifier
@@ -802,9 +828,10 @@ export default function AdminPanel({
                               onDeleteListing(listing.id);
                             }
                           }}
+                          className="premium-button"
                           style={{
-                            flex: 1, padding: '8px', borderRadius: '10px', border: 'none',
-                            backgroundColor: '#DC2626', color: '#FFF', fontWeight: '700', fontSize: '12px', cursor: 'pointer',
+                            flex: 1, padding: '8px', borderRadius: '10px', border: '1px solid var(--border-color)',
+                            backgroundColor: 'var(--bg-subtle)', color: 'var(--text-main)', fontWeight: '700', fontSize: '12px', cursor: 'pointer',
                             display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'
                           }}
                         >
@@ -821,9 +848,9 @@ export default function AdminPanel({
           {/* ONGLET 4 : TESTEUR MODÉRATEUR IA */}
           {activeTab === 'moderator' && (
             <div style={{ maxWidth: '700px' }}>
-              <div style={{ padding: '20px', borderRadius: '20px', backgroundColor: darkMode ? '#1A1715' : '#FFFFFF', border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3', marginBottom: '20px' }}>
-                <h3 className="font-editorial-heading" style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: '600' }}>Bac à sable de modération heuristique</h3>
-                <p style={{ margin: '0 0 14px', fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>
+              <div style={{ padding: '20px', borderRadius: '20px', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-card)', marginBottom: '20px' }}>
+                <h3 className="font-editorial-heading" style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: '600', color: 'var(--text-main)' }}>Bac à sable de modération heuristique</h3>
+                <p style={{ margin: '0 0 14px', fontSize: '12px', color: 'var(--text-secondary)' }}>
                   Testez en direct l'algorithme de détection des fraudes, mots-clés interdits et coordonnées sensibles.
                 </p>
 
@@ -838,25 +865,26 @@ export default function AdminPanel({
                     borderRadius: '12px',
                     fontSize: '13px',
                     outline: 'none',
-                    backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
-                    color: darkMode ? '#FAF7F2' : '#3D3530',
-                    border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
+                    backgroundColor: 'var(--bg-subtle)',
+                    color: 'var(--text-main)',
+                    border: '1px solid var(--border-color)',
                     marginBottom: '16px',
+                    boxSizing: 'border-box'
                   }}
                 />
 
-                <div style={{ padding: '14px', borderRadius: '14px', backgroundColor: sandboxAnalysis.isClean ? (darkMode ? 'rgba(156,175,136,0.2)' : '#EBF0E6') : (darkMode ? 'rgba(239,68,68,0.15)' : '#FEF2F2'), border: sandboxAnalysis.isClean ? '1px solid #9CAF88' : '1px solid #EF4444' }}>
+                <div style={{ padding: '14px', borderRadius: '14px', backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--border-color)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                    <span style={{ fontSize: '13px', fontWeight: '800', color: sandboxAnalysis.isClean ? '#3D4A35' : '#DC2626' }}>
+                    <span style={{ fontSize: '13px', fontWeight: '800', color: 'var(--accent-primary)' }}>
                       {sandboxAnalysis.isClean ? '✓ Contenu Conforme' : '⚠️ Risque Détecté'}
                     </span>
-                    <span style={{ fontSize: '12px', fontWeight: '800', color: sandboxAnalysis.isClean ? '#3D4A35' : '#DC2626' }}>
+                    <span style={{ fontSize: '12px', fontWeight: '800', color: 'var(--accent-primary)' }}>
                       Score de risque : {sandboxAnalysis.score}/100
                     </span>
                   </div>
 
                   {sandboxAnalysis.reasons.length > 0 && (
-                    <ul style={{ margin: '6px 0 0', paddingLeft: '18px', fontSize: '12px', color: darkMode ? '#FCA5A5' : '#991B1B' }}>
+                    <ul style={{ margin: '6px 0 0', paddingLeft: '18px', fontSize: '12px', color: 'var(--text-secondary)' }}>
                       {sandboxAnalysis.reasons.map((r, i) => (
                         <li key={i}>{r}</li>
                       ))}
@@ -874,8 +902,9 @@ export default function AdminPanel({
                 position: 'fixed',
                 inset: 0,
                 zIndex: 99999,
-                backgroundColor: 'rgba(61, 53, 48, 0.72)',
+                backgroundColor: 'var(--overlay-bg)',
                 backdropFilter: 'blur(10px)',
+                WebkitBackdropFilter: 'blur(10px)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -887,22 +916,25 @@ export default function AdminPanel({
                 style={{
                   width: '100%',
                   maxWidth: '440px',
-                  backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
+                  backgroundColor: 'var(--bg-card)',
+                  backdropFilter: 'blur(20px)',
+                  WebkitBackdropFilter: 'blur(20px)',
                   borderRadius: '24px',
                   padding: '24px',
-                  color: darkMode ? '#FAF7F2' : '#3D3530',
-                  border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
+                  color: 'var(--text-main)',
+                  border: '1px solid var(--border-color)',
+                  boxShadow: 'var(--shadow-card)',
                 }}
                 onClick={(e) => e.stopPropagation()}
               >
-                <h3 className="font-editorial-heading" style={{ margin: '0 0 4px', fontSize: '20px', fontWeight: '600' }}>Ajuster les soldes</h3>
-                <p style={{ margin: '0 0 16px', fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>
+                <h3 className="font-editorial-heading" style={{ margin: '0 0 4px', fontSize: '20px', fontWeight: '600', color: 'var(--text-main)' }}>Ajuster les soldes</h3>
+                <p style={{ margin: '0 0 16px', fontSize: '12px', color: 'var(--text-secondary)' }}>
                   Utilisateur : <strong>{balanceModalUser.name}</strong> ({balanceModalUser.username})
                 </p>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px' }}>
                   <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px', color: 'var(--text-secondary)' }}>
                       Solde Euros actuel : {(Number(balanceModalUser.euroBalance) || 0).toFixed(2)}€
                     </label>
                     <input
@@ -912,14 +944,15 @@ export default function AdminPanel({
                       onChange={(e) => setBalanceDeltaEuro(e.target.value)}
                       style={{
                         width: '100%', padding: '10px', borderRadius: '10px', fontSize: '13px',
-                        backgroundColor: darkMode ? '#1A1715' : '#FFFFFF', color: darkMode ? '#FFF' : '#000',
-                        border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', outline: 'none'
+                        backgroundColor: 'var(--bg-subtle)', color: 'var(--text-main)',
+                        border: '1px solid var(--border-color)', outline: 'none',
+                        boxSizing: 'border-box'
                       }}
                     />
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px' }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', marginBottom: '4px', color: 'var(--text-secondary)' }}>
                       Jetons Troco actuels : {balanceModalUser.trocoTokens || 0} 🪙
                     </label>
                     <input
@@ -929,8 +962,9 @@ export default function AdminPanel({
                       onChange={(e) => setBalanceDeltaTokens(e.target.value)}
                       style={{
                         width: '100%', padding: '10px', borderRadius: '10px', fontSize: '13px',
-                        backgroundColor: darkMode ? '#1A1715' : '#FFFFFF', color: darkMode ? '#FFF' : '#000',
-                        border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', outline: 'none'
+                        backgroundColor: 'var(--bg-subtle)', color: 'var(--text-main)',
+                        border: '1px solid var(--border-color)', outline: 'none',
+                        boxSizing: 'border-box'
                       }}
                     />
                   </div>
@@ -939,7 +973,8 @@ export default function AdminPanel({
                 <div style={{ display: 'flex', gap: '10px' }}>
                   <button
                     onClick={() => setBalanceModalUser(null)}
-                    style={{ flex: 1, padding: '10px', borderRadius: '12px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', background: 'transparent', color: darkMode ? '#D4C5B5' : '#6B5E54', fontWeight: '700', cursor: 'pointer' }}
+                    className="premium-button"
+                    style={{ flex: 1, padding: '10px', borderRadius: '12px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)', fontWeight: '700', cursor: 'pointer' }}
                   >
                     Annuler
                   </button>
@@ -958,7 +993,8 @@ export default function AdminPanel({
                       }
                       setBalanceModalUser(null);
                     }}
-                    style={{ flex: 2, padding: '10px', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)', color: '#FFF', fontWeight: '800', cursor: 'pointer' }}
+                    className="premium-button"
+                    style={{ flex: 2, padding: '10px', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)', color: '#FFF', fontWeight: '800', cursor: 'pointer', boxShadow: 'var(--shadow-accent)' }}
                   >
                     Appliquer la modification
                   </button>
