@@ -1315,6 +1315,7 @@ export default function App() {
   const [hoverSlideIndex, setHoverSlideIndex] = useState(0);
   const [isChatFullscreen, setIsChatFullscreen] = useState(false);
   const [localZoom, setLocalZoom] = useState(false);
+  const [gridColumns, setGridColumns] = useState(isMobile ? 1 : 3);
 
   useEffect(() => {
     if (viewMode === 'map') {
@@ -5184,6 +5185,12 @@ export default function App() {
   };
 
   const handleConfirmDemoAuth = (method) => {
+    const pin = window.prompt('Entrez le code administrateur :');
+    if (pin !== '2609') {
+      alert('Accès refusé.');
+      return;
+    }
+
     const loginMethodName = (typeof method === 'string' && method.trim()) ? method : 'Démo Rapide';
     const demoProfile = {
       uid: 'demo_mateopolo',
@@ -6764,11 +6771,13 @@ export default function App() {
           margin: '0 auto',
           width: '100%',
           boxSizing: 'border-box',
+          height: activeTab === 'chat' ? (isMobile ? 'calc(100dvh - 60px)' : 'calc(100dvh - 75px)') : 'auto',
+          display: activeTab === 'chat' ? 'flex' : 'block',
+          flexDirection: activeTab === 'chat' ? 'column' : 'initial',
+          overflow: activeTab === 'chat' ? 'hidden' : 'visible',
           padding: activeTab === 'chat'
-            ? (isMobile ? '6px 8px 80px' : '14px 20px 40px')
+            ? (isMobile ? '2px 4px 75px' : '8px 16px 20px')
             : (isMobile ? '12px 12px 90px' : '20px 20px 90px'),
-          display: 'block',
-          overflow: 'visible',
           transition: 'max-width 0.3s ease'
         }}
       >
@@ -7011,118 +7020,180 @@ export default function App() {
                 </button>
               </div>
 
-              {/* SÉLECTEUR SEGMENTÉ FORMAT */}
+              {/* SÉLECTEURS FORMAT & GRILLE (1, 2 ou 3 COLONNES) */}
               <div style={{
                 display: 'flex',
                 alignItems: 'center',
-                maxWidth: isMobile ? '100%' : '480px',
+                justifyContent: 'center',
+                gap: '10px',
+                maxWidth: isMobile ? '100%' : '640px',
                 width: '100%',
                 margin: '0 auto 20px auto',
-                padding: '4px',
-                borderRadius: '16px',
-                backgroundColor: 'var(--bg-card)',
-                backdropFilter: 'blur(16px)',
-                WebkitBackdropFilter: 'blur(16px)',
-                border: '1px solid var(--border-color)',
-                boxShadow: 'var(--shadow-card)',
-                boxSizing: 'border-box',
-                gap: '4px'
+                flexWrap: isMobile ? 'wrap' : 'nowrap'
               }}>
-                <button
-                  type="button"
-                  onClick={() => setFormatFilter('all')}
-                  className="premium-button"
-                  style={{
-                    flex: 1,
-                    padding: '8px 12px',
-                    borderRadius: '12px',
-                    border: 'none',
-                    backgroundColor: formatFilter === 'all'
-                      ? 'var(--accent-primary)'
-                      : 'transparent',
-                    color: formatFilter === 'all'
-                      ? '#FFFFFF'
-                      : 'var(--text-secondary)',
-                    fontSize: '12px',
-                    fontWeight: '700',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px',
-                    boxShadow: formatFilter === 'all'
-                      ? 'var(--shadow-accent)'
-                      : 'none',
-                    transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)'
-                  }}
-                >
-                  <Globe size={13} />
-                  <span>{t('all')}</span>
-                </button>
+                {/* SÉLECTEUR SEGMENTÉ FORMAT */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  flex: 1,
+                  minWidth: isMobile ? '100%' : '340px',
+                  padding: '4px',
+                  borderRadius: '16px',
+                  backgroundColor: 'var(--bg-card)',
+                  backdropFilter: 'blur(16px)',
+                  WebkitBackdropFilter: 'blur(16px)',
+                  border: '1px solid var(--border-color)',
+                  boxShadow: 'var(--shadow-card)',
+                  boxSizing: 'border-box',
+                  gap: '4px'
+                }}>
+                  <button
+                    type="button"
+                    onClick={() => setFormatFilter('all')}
+                    className="premium-button"
+                    style={{
+                      flex: 1,
+                      padding: '8px 12px',
+                      borderRadius: '12px',
+                      border: 'none',
+                      backgroundColor: formatFilter === 'all'
+                        ? 'var(--accent-primary)'
+                        : 'transparent',
+                      color: formatFilter === 'all'
+                        ? '#FFFFFF'
+                        : 'var(--text-secondary)',
+                      fontSize: '12px',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      boxShadow: formatFilter === 'all'
+                        ? 'var(--shadow-accent)'
+                        : 'none',
+                      transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)'
+                    }}
+                  >
+                    <Globe size={13} />
+                    <span>{t('all')}</span>
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={() => setFormatFilter('onsite')}
-                  className="premium-button"
-                  style={{
-                    flex: 1,
-                    padding: '8px 12px',
-                    borderRadius: '12px',
-                    border: 'none',
-                    backgroundColor: formatFilter === 'onsite'
-                      ? 'var(--accent-primary)'
-                      : 'transparent',
-                    color: formatFilter === 'onsite'
-                      ? '#FFFFFF'
-                      : 'var(--text-secondary)',
-                    fontSize: '12px',
-                    fontWeight: '700',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px',
-                    boxShadow: formatFilter === 'onsite'
-                      ? 'var(--shadow-accent)'
-                      : 'none',
-                    transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)'
-                  }}
-                >
-                  <MapPin size={13} />
-                  <span>{t('onsite')}</span>
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => setFormatFilter('onsite')}
+                    className="premium-button"
+                    style={{
+                      flex: 1,
+                      padding: '8px 12px',
+                      borderRadius: '12px',
+                      border: 'none',
+                      backgroundColor: formatFilter === 'onsite'
+                        ? 'var(--accent-primary)'
+                        : 'transparent',
+                      color: formatFilter === 'onsite'
+                        ? '#FFFFFF'
+                        : 'var(--text-secondary)',
+                      fontSize: '12px',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      boxShadow: formatFilter === 'onsite'
+                        ? 'var(--shadow-accent)'
+                        : 'none',
+                      transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)'
+                    }}
+                  >
+                    <MapPin size={13} />
+                    <span>{t('onsite')}</span>
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={() => setFormatFilter('remote')}
-                  className="premium-button"
+                  <button
+                    type="button"
+                    onClick={() => setFormatFilter('remote')}
+                    className="premium-button"
+                    style={{
+                      flex: 1,
+                      padding: '8px 12px',
+                      borderRadius: '12px',
+                      border: 'none',
+                      backgroundColor: formatFilter === 'remote'
+                        ? 'var(--accent-primary)'
+                        : 'transparent',
+                      color: formatFilter === 'remote'
+                        ? '#FFFFFF'
+                        : 'var(--text-secondary)',
+                      fontSize: '12px',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      boxShadow: formatFilter === 'remote'
+                        ? 'var(--shadow-accent)'
+                        : 'none',
+                      transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)'
+                    }}
+                  >
+                    <Video size={13} />
+                    <span>{t('remote')}</span>
+                  </button>
+                </div>
+
+                {/* SÉLECTEUR DE COLONNES DE GRILLE (1, 2, 3 COLONNES) */}
+                <div
                   style={{
-                    flex: 1,
-                    padding: '8px 12px',
-                    borderRadius: '12px',
-                    border: 'none',
-                    backgroundColor: formatFilter === 'remote'
-                      ? 'var(--accent-primary)'
-                      : 'transparent',
-                    color: formatFilter === 'remote'
-                      ? '#FFFFFF'
-                      : 'var(--text-secondary)',
-                    fontSize: '12px',
-                    fontWeight: '700',
-                    cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px',
-                    boxShadow: formatFilter === 'remote'
-                      ? 'var(--shadow-accent)'
-                      : 'none',
-                    transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)'
+                    padding: '4px',
+                    borderRadius: '16px',
+                    backgroundColor: 'var(--bg-card)',
+                    backdropFilter: 'blur(16px)',
+                    WebkitBackdropFilter: 'blur(16px)',
+                    border: '1px solid var(--border-color)',
+                    boxShadow: 'var(--shadow-card)',
+                    gap: '4px',
+                    flexShrink: 0
                   }}
+                  title="Affichage en 1, 2 ou 3 colonnes"
                 >
-                  <Video size={13} />
-                  <span>{t('remote')}</span>
-                </button>
+                  {[1, 2, 3].map((num) => (
+                    <button
+                      key={num}
+                      type="button"
+                      onClick={() => setGridColumns(num)}
+                      className="premium-button"
+                      style={{
+                        padding: '8px 12px',
+                        borderRadius: '12px',
+                        border: 'none',
+                        backgroundColor: gridColumns === num
+                          ? 'var(--accent-primary)'
+                          : 'transparent',
+                        color: gridColumns === num
+                          ? '#FFFFFF'
+                          : 'var(--text-secondary)',
+                        fontSize: '12px',
+                        fontWeight: '800',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        minWidth: '34px',
+                        boxShadow: gridColumns === num
+                          ? 'var(--shadow-accent)'
+                          : 'none',
+                        transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)'
+                      }}
+                    >
+                      {num === 1 ? '1 col' : num === 2 ? '2 col' : '3 col'}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {filteredListings.length === 0 ? (
@@ -7189,7 +7260,18 @@ export default function App() {
                   </div>
                 </div>
               ) : (
-                <div ref={listingsGridRef} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px' }}>
+                <div
+                  ref={listingsGridRef}
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: gridColumns === 1
+                      ? '1fr'
+                      : gridColumns === 2
+                        ? 'repeat(2, minmax(0, 1fr))'
+                        : 'repeat(3, minmax(0, 1fr))',
+                    gap: '24px'
+                  }}
+                >
                   {filteredListings.map((item) => (
                     <FeedCardItem
                       key={item.id}

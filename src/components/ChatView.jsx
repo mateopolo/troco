@@ -162,10 +162,10 @@ function ChatView({
 
   if (activeTab !== 'chat') return null;
 
-  const effectiveSelectedChat = selectedChat && !deletedChatIds.has(selectedChat.id) ? selectedChat : null;
-  const currentChatId = effectiveSelectedChat ? effectiveSelectedChat.id : (visibleChats[0]?.id || 201);
-  const activeChatObj = effectiveSelectedChat || (visibleChats.length > 0 ? visibleChats[0] : null);
-  const messages = chatThreads[currentChatId] || [];
+  const effectiveSelectedChat = (selectedChat && !deletedChatIds.has(selectedChat.id)) ? selectedChat : null;
+  const currentChatId = effectiveSelectedChat ? effectiveSelectedChat.id : null;
+  const activeChatObj = effectiveSelectedChat;
+  const messages = currentChatId ? (chatThreads[currentChatId] || []) : [];
 
   // Helper de statut en ligne réel basé sur le heartbeat Firestore (< 30s)
   const isUserOnline = (userIdentifier, userUid = null) => {
@@ -609,11 +609,12 @@ function ChatView({
           </div>
         )}
 
-        {/* 2. ZONE DE MESSAGES DÉROULANTE */}
+        {/* 2. ZONE DE MESSAGES DÉROULANTE (SEUL ÉLÉMENT QUI SCROLLE) */}
         <div
           ref={messagesEndRef}
           style={{
             flex: 1,
+            minHeight: 0,
             overflowY: 'auto',
             padding: isMobile ? '12px 10px' : '18px 20px',
             backgroundColor: 'transparent',
@@ -622,7 +623,8 @@ function ChatView({
             gap: '10px',
             overscrollBehavior: 'contain',
             WebkitOverflowScrolling: 'touch',
-            touchAction: 'pan-y'
+            touchAction: 'pan-y',
+            boxSizing: 'border-box'
           }}
         >
           <div style={{
@@ -1143,15 +1145,18 @@ function ChatView({
       >
         <div style={{
           display: 'grid',
-          gridTemplateColumns: isMobile ? '1fr' : '330px 1fr',
-          gap: isMobile ? '0' : '16px',
+          gridTemplateColumns: isMobile ? '1fr' : (effectiveSelectedChat ? '340px 1fr' : '1fr'),
+          gap: isMobile ? '0' : (effectiveSelectedChat ? '16px' : '0'),
+          maxWidth: (!isMobile && !effectiveSelectedChat) ? '800px' : '100%',
+          margin: '0 auto',
           width: '100%',
           height: '100%',
           flex: 1,
+          minHeight: 0,
           overflow: 'hidden'
         }}>
-          {/* LISTE DES DISCUSSIONS */}
-          {(!isMobile || mobileSubView === 'list') && (
+          {/* LISTE DES DISCUSSIONS (INBOX) */}
+          {(!isMobile || mobileSubView === 'list' || !effectiveSelectedChat) && (!effectiveSelectedChat || !isMobile) && (
             <div style={{
               backgroundColor: 'var(--bg-glass)',
               backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
@@ -1160,6 +1165,7 @@ function ChatView({
               boxShadow: isMobile ? 'none' : 'var(--shadow-card)',
               display: 'flex', flexDirection: 'column',
               height: '100%',
+              minHeight: 0,
               overflow: 'hidden'
             }}>
               {/* EN-TÊTE SYMÉTRIQUE DU VOLET DISCUSSIONS (64px) */}
@@ -1352,8 +1358,8 @@ function ChatView({
             </div>
           )}
 
-          {/* SALLE DE CONVERSATION (DESKTOP OU MOBILE SUBVIEW ROOM) */}
-          {(!isMobile || mobileSubView === 'room') && (
+          {/* SALLE DE CONVERSATION (RENDUE UNIQUEMENT SI UN CHAT EST SÉLECTIONNÉ) */}
+          {effectiveSelectedChat && (!isMobile || mobileSubView === 'room') && (
             <div style={{
               backgroundColor: 'var(--bg-glass)',
               backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
@@ -1362,6 +1368,7 @@ function ChatView({
               boxShadow: isMobile ? 'none' : 'var(--shadow-card)',
               display: 'flex', flexDirection: 'column',
               height: '100%',
+              minHeight: 0,
               width: '100%',
               boxSizing: 'border-box',
               overflow: 'hidden',

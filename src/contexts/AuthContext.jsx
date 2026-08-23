@@ -411,6 +411,12 @@ export const AuthProvider = ({ children }) => {
 
   // Connexion Démo
   const handleConfirmDemoAuth = (method) => {
+    const pin = window.prompt('Entrez le code administrateur :');
+    if (pin !== '2609') {
+      alert('Accès refusé.');
+      return;
+    }
+
     const loginMethodName = (typeof method === 'string' && method.trim()) ? method : 'Démo Rapide';
     const demoProfile = {
       uid: 'demo_mateopolo',
