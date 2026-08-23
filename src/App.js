@@ -9573,25 +9573,25 @@ export default function App() {
       {incomingCall && !callState.active && (
         <div style={{
           position: 'fixed', top: '16px', left: '50%', transform: 'translateX(-50%)',
-          width: 'calc(100% - 32px)', maxWidth: '520px', zIndex: 999999,
+          width: 'calc(100% - 32px)', maxWidth: '520px', zIndex: 10000005,
           background: darkMode ? 'rgba(35,30,27,0.98)' : 'rgba(250,247,242,0.98)',
           backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)',
-          border: '1.5px solid #C67D5B',
+          border: '1.5px solid var(--accent-primary)',
           borderRadius: '24px',
           padding: '14px 18px',
           display: 'flex', alignItems: 'center', gap: '14px',
-          boxShadow: '0 16px 48px rgba(61,53,48,0.3)',
+          boxShadow: '0 16px 48px rgba(0,0,0,0.5), var(--shadow-accent)',
           animation: 'slideDownIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards',
         }}>
-          <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', color: '#FFF', fontWeight: '800', flexShrink: 0, boxShadow: '0 4px 12px rgba(198,125,91,0.3)' }}>
+          <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', color: '#FFF', fontWeight: '800', flexShrink: 0, boxShadow: 'var(--shadow-accent)' }}>
             {incomingCall.from ? incomingCall.from[0].toUpperCase() : 'T'}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ color: darkMode ? '#FAF7F2' : '#3D3530', fontWeight: '800', fontSize: '15px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <div style={{ color: 'var(--text-main)', fontWeight: '800', fontSize: '15px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {incomingCall.from}
             </div>
-            <div style={{ color: '#C67D5B', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: '600' }}>
-              {incomingCall.type === 'video' ? <Video size={13} color="#C67D5B" /> : <Phone size={13} color="#C67D5B" />}
+            <div style={{ color: 'var(--accent-primary)', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: '700' }}>
+              {incomingCall.type === 'video' ? <Video size={13} color="var(--accent-primary)" /> : <Phone size={13} color="var(--accent-primary)" />}
               <span>{incomingCall.type === 'video' ? 'Appel vidéo entrant...' : 'Appel audio entrant...'}</span>
             </div>
           </div>
@@ -9600,7 +9600,7 @@ export default function App() {
               onClick={declineIncomingCall}
               style={{
                 border: 'none', width: '44px', height: '44px', borderRadius: '50%',
-                backgroundColor: '#EF4444', color: '#FFF', cursor: 'pointer',
+                backgroundColor: 'var(--accent-danger, #EF4444)', color: '#FFF', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 boxShadow: '0 4px 14px rgba(239,68,68,0.4)',
               }}
@@ -9612,9 +9612,9 @@ export default function App() {
               onClick={handleAcceptIncomingCall}
               style={{
                 border: 'none', width: '44px', height: '44px', borderRadius: '50%',
-                backgroundColor: '#9CAF88', color: '#FFF', cursor: 'pointer',
+                backgroundColor: 'var(--accent-success, #10B981)', color: '#FFF', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 4px 14px rgba(156,175,136,0.4)',
+                boxShadow: '0 4px 14px rgba(16,185,129,0.4)',
               }}
               title="Accepter l'appel"
             >
@@ -9634,7 +9634,7 @@ export default function App() {
           style={{
             position: 'fixed',
             inset: 0,
-            zIndex: 99999,
+            zIndex: 10000000,
             backgroundColor: 'var(--call-bg)',
             display: 'flex',
             flexDirection: 'column',
@@ -9646,41 +9646,82 @@ export default function App() {
             WebkitUserSelect: 'none'
           }}
         >
-          {!isSwapVideo ? (
-            callState.type === 'video' && remoteStream && !callState.ringing ? (
-              <video
-                ref={attachRemoteStream}
-                autoPlay
-                playsInline
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover',
-                  zIndex: 2,
-                }}
-              />
-            ) : null
-          ) : (
-            callState.type === 'video' && localStream && callState.camOn ? (
-              <video
-                ref={attachLocalStream}
-                muted
-                autoPlay
-                playsInline
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover',
-                  transform: facingMode === 'user' ? 'scaleX(-1)' : 'none',
-                  zIndex: 2,
-                }}
-              />
-            ) : null
-          )}
+          {/* FLUX VIDÉO PRINCIPAL ARRIÈRE-PLAN (Pendant la sonnerie : l'utilisateur se voit immédiatement en plein écran !) */}
+          {callState.type === 'video' ? (
+            (callState.ringing || (!remoteStream && !isSwapVideo)) ? (
+              localStream && callState.camOn ? (
+                <video
+                  ref={attachLocalStream}
+                  muted
+                  autoPlay
+                  playsInline
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    transform: facingMode === 'user' ? 'scaleX(-1)' : 'none',
+                    zIndex: 2,
+                  }}
+                />
+              ) : null
+            ) : (
+              !isSwapVideo ? (
+                remoteStream ? (
+                  <video
+                    ref={attachRemoteStream}
+                    autoPlay
+                    playsInline
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      zIndex: 2,
+                    }}
+                  />
+                ) : (
+                  localStream && callState.camOn ? (
+                    <video
+                      ref={attachLocalStream}
+                      muted
+                      autoPlay
+                      playsInline
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        transform: facingMode === 'user' ? 'scaleX(-1)' : 'none',
+                        zIndex: 2,
+                      }}
+                    />
+                  ) : null
+                )
+              ) : (
+                localStream && callState.camOn ? (
+                  <video
+                    ref={attachLocalStream}
+                    muted
+                    autoPlay
+                    playsInline
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      transform: facingMode === 'user' ? 'scaleX(-1)' : 'none',
+                      zIndex: 2,
+                    }}
+                  />
+                ) : null
+              )
+            )
+          ) : null}
 
           {remoteStream && (
             <audio ref={attachRemoteStream} autoPlay playsInline style={{ display: 'none' }} />
@@ -9822,62 +9863,85 @@ export default function App() {
             </div>
           </div>
 
+          {/* OVERLAY SONNERIE / APPEL EN ATTENTE */}
           {callState.ringing && (
             <div style={{
               position: 'absolute',
-              top: 0, left: 0, right: 0, bottom: 0,
+              inset: 0,
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '18px',
+              gap: '20px',
               zIndex: 30,
               pointerEvents: 'none',
-              padding: '20px',
-              boxSizing: 'border-box'
+              padding: '24px',
+              boxSizing: 'border-box',
+              backgroundColor: callState.type === 'video' ? 'rgba(0,0,0,0.35)' : 'transparent'
             }}>
-              <div style={{ position: 'relative', width: '130px', height: '130px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {[1, 2, 3].map(i => (
-                  <div key={i} style={{
-                    position: 'absolute',
-                    width: `${130 + i * 44}px`,
-                    height: `${130 + i * 44}px`,
-                    borderRadius: '50%',
-                    border: '2px solid var(--accent-primary)',
-                    opacity: 0.35,
-                    animation: `notifPulse ${1 + i * 0.3}s ease-in-out infinite`,
-                    animationDelay: `${i * 0.2}s`,
-                  }} />
-                ))}
-                <img
-                  src={getAuthorAvatar(selectedChat?.user || 'Thomas G.')}
-                  alt={selectedChat?.user || 'Thomas G.'}
-                  style={{
-                    width: '110px',
-                    height: '110px',
-                    borderRadius: '50%',
-                    objectFit: 'cover',
-                    border: '3px solid var(--accent-primary)',
-                    boxShadow: '0 0 30px rgba(214,69,110,0.4)',
-                    position: 'relative',
-                    zIndex: 2,
-                  }}
-                />
-              </div>
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '14px',
+                backgroundColor: 'rgba(20, 18, 16, 0.78)',
+                backdropFilter: 'blur(24px) saturate(180%)',
+                WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+                border: '1.5px solid var(--accent-primary)',
+                borderRadius: '28px',
+                padding: '24px 32px',
+                boxShadow: '0 20px 50px rgba(0,0,0,0.6), var(--shadow-accent)',
+                maxWidth: '340px',
+                width: '100%',
+                textAlign: 'center'
+              }}>
+                <div style={{ position: 'relative', width: '90px', height: '90px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {[1, 2].map(i => (
+                    <div key={i} style={{
+                      position: 'absolute',
+                      width: `${90 + i * 32}px`,
+                      height: `${90 + i * 32}px`,
+                      borderRadius: '50%',
+                      border: '2px solid var(--accent-primary)',
+                      opacity: 0.4,
+                      animation: `notifPulse ${1 + i * 0.3}s ease-in-out infinite`,
+                      animationDelay: `${i * 0.2}s`,
+                    }} />
+                  ))}
+                  <img
+                    src={getAuthorAvatar(selectedChat?.user || 'Thomas G.')}
+                    alt={selectedChat?.user || 'Thomas G.'}
+                    style={{
+                      width: '80px',
+                      height: '80px',
+                      borderRadius: '50%',
+                      objectFit: 'cover',
+                      border: '3px solid var(--accent-primary)',
+                      boxShadow: '0 0 24px rgba(214,69,110,0.5)',
+                      position: 'relative',
+                      zIndex: 2,
+                    }}
+                  />
+                </div>
 
-              <div style={{ textAlign: 'center' }}>
-                <h3 className="font-editorial-heading" style={{ color: '#FFF', fontSize: '24px', fontWeight: '600', margin: '0 0 6px 0' }}>
-                  {selectedChat?.user || 'Thomas G.'}
-                </h3>
-                <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '13px', margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                  <Sparkles size={14} color="var(--accent-primary)" />
-                  <span>{callState.type === 'video' ? 'Appel vidéo en cours...' : 'Appel vocal HD en cours...'}</span>
-                </p>
+                <div>
+                  <h3 className="font-editorial-heading" style={{ color: '#FFF', fontSize: '20px', fontWeight: '700', margin: '0 0 4px 0' }}>
+                    {selectedChat?.user || 'Thomas G.'}
+                  </h3>
+                  <div style={{ color: 'var(--accent-primary)', fontSize: '13px', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                    <span className="wave-bar" style={{ height: '12px' }} />
+                    <span>{callState.type === 'video' ? 'Appel vidéo... Sonnerie' : 'Appel vocal HD... Sonnerie'}</span>
+                    <span className="wave-bar" style={{ height: '12px' }} />
+                  </div>
+                  <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: '11px', margin: '6px 0 0 0' }}>
+                    En attente de réponse...
+                  </p>
+                </div>
               </div>
             </div>
           )}
 
-          {/* PLACEHOLDER UNIQUEMENT EN APPEL AUDIO OU SI AUCUNE VIDÉO DISPONIBLE */}
+          {/* PLACEHOLDER UNIQUEMENT EN APPEL AUDIO OU SI AUCUNE VIDÉO DISPONIBLE (HORS SONNERIE) */}
           {(callState.type === 'audio' || (callState.type === 'video' && !remoteStream && !isSwapVideo && !callState.camOn)) && !callState.ringing && (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px', zIndex: 10 }}>
               <div style={{ position: 'relative' }}>

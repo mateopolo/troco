@@ -52,7 +52,7 @@ export default function VisioSettlementModal({
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: 5000,
+        zIndex: 10000010,
         backgroundColor: 'var(--overlay-bg)',
         backdropFilter: 'blur(10px)',
         WebkitBackdropFilter: 'blur(10px)',

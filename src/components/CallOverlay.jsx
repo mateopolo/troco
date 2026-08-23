@@ -106,7 +106,7 @@ export default function CallOverlay({
         top: `${pipPosition.y}px`,
         width: '210px',
         height: '145px',
-        zIndex: 3500,
+        zIndex: 10000000,
         borderRadius: '18px',
         overflow: 'hidden',
         boxShadow: isDocked
