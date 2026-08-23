@@ -5883,20 +5883,20 @@ export default function App() {
       {/* HEADER FIXE GLASSMORPHISM FLUIDE AVEC CONDENSATION AU SCROLL */}
       <header style={{
         backgroundColor: darkMode
-          ? (isScrolled ? 'rgba(15,23,42,0.95)' : 'rgba(15,23,42,0.85)')
-          : (isScrolled ? 'rgba(255,255,255,0.94)' : 'rgba(255,255,255,0.72)'),
+          ? (isScrolled ? 'rgba(24,21,19,0.96)' : 'rgba(24,21,19,0.88)')
+          : (isScrolled ? 'rgba(245,240,232,0.95)' : 'rgba(250,247,242,0.85)'),
         backdropFilter: isScrolled ? 'blur(28px) saturate(200%)' : 'blur(20px) saturate(180%)',
         WebkitBackdropFilter: isScrolled ? 'blur(28px) saturate(200%)' : 'blur(20px) saturate(180%)',
         borderBottom: darkMode
-          ? (isScrolled ? '1px solid rgba(255,255,255,0.18)' : '1px solid rgba(255,255,255,0.1)')
-          : (isScrolled ? '1px solid rgba(203,213,225,0.9)' : '1px solid rgba(226,232,240,0.7)'),
+          ? (isScrolled ? '1px solid rgba(232,221,211,0.18)' : '1px solid rgba(232,221,211,0.1)')
+          : (isScrolled ? '1px solid rgba(212,197,181,0.9)' : '1px solid rgba(232,221,211,0.75)'),
         padding: isScrolled ? '9px 16px' : '12px 16px',
         position: 'sticky',
         top: 0,
         zIndex: 40,
         boxShadow: isScrolled
-          ? (darkMode ? '0 12px 30px rgba(0,0,0,0.5)' : '0 10px 30px rgba(15,23,42,0.08)')
-          : '0 1px 24px rgba(15,23,42,0.04)',
+          ? (darkMode ? '0 12px 30px rgba(0,0,0,0.5)' : '0 10px 30px rgba(61,53,48,0.06)')
+          : '0 1px 24px rgba(61,53,48,0.03)',
         width: '100%',
         boxSizing: 'border-box',
         transition: 'padding 0.3s var(--ease-quiet), background-color 0.3s var(--ease-quiet), box-shadow 0.3s var(--ease-quiet), border-color 0.3s var(--ease-quiet)'
@@ -5904,21 +5904,21 @@ export default function App() {
         <div className="header-container" style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', width: '100%', boxSizing: 'border-box' }}>
           {/* PARTIE 3 : LOGO TROCO CLICKABLE -> RETOUR ACCUEIL */}
           <button onClick={() => { setActiveTab('feed'); setSelectedListing(null); setSelectedChat(null); if (callState.active) endCall(); }} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: '4px 6px', borderRadius: '12px', textAlign: 'left', flexShrink: 0 }}>
-            <h1 style={{ fontSize: isScrolled ? '17px' : '18px', fontWeight: '800', color: darkMode ? '#60A5FA' : '#04265A', margin: 0, letterSpacing: '-0.02em', whiteSpace: 'nowrap', transition: 'font-size 0.3s var(--ease-quiet)' }}>Troco</h1>
-            <p className="logo-slogan" style={{ fontSize: '10px', color: darkMode ? '#94A3B8' : '#6B7280', margin: 0, whiteSpace: 'nowrap' }}>{t('slogan')}</p>
+            <h1 className="font-editorial-heading" style={{ fontSize: isScrolled ? '19px' : '22px', fontWeight: '700', color: darkMode ? '#E8DDD3' : '#3D3530', margin: 0, letterSpacing: '-0.02em', whiteSpace: 'nowrap', transition: 'font-size 0.3s var(--ease-quiet)' }}>Troco</h1>
+            <p className="logo-slogan font-editorial" style={{ fontSize: '11px', color: darkMode ? '#D4C5B5' : '#6B5E54', fontStyle: 'italic', margin: 0, whiteSpace: 'nowrap' }}>{t('slogan')}</p>
           </button>
           <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'nowrap' }}>
-            <button onClick={() => handleOpenPayment('topup-cash')} title="Recharger mon solde Euros" className="premium-button balance-badge" style={{ border: 'none', borderRadius: '999px', padding: isScrolled ? '5px 9px' : '6px 10px', backgroundColor: darkMode ? 'rgba(4,38,90,0.45)' : 'rgba(4,38,90,0.08)', color: darkMode ? '#93C5FD' : '#04265A', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', position: 'relative', overflow: 'visible', whiteSpace: 'nowrap', flexShrink: 0, transition: 'padding 0.3s var(--ease-quiet)' }}>
+            <button onClick={() => handleOpenPayment('topup-cash')} title="Recharger mon solde Euros" className="premium-button balance-badge" style={{ border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid rgba(198,125,91,0.2)', borderRadius: '999px', padding: isScrolled ? '5px 10px' : '6px 12px', backgroundColor: darkMode ? 'rgba(168,100,74,0.25)' : 'rgba(198,125,91,0.12)', color: darkMode ? '#FDE68A' : '#A8644A', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', position: 'relative', overflow: 'visible', whiteSpace: 'nowrap', flexShrink: 0, transition: 'padding 0.3s var(--ease-quiet)' }}>
               <Coins size={13} style={{ flexShrink: 0 }} /> <AnimatedEuroBalance value={profile.euroBalance} prefix="€ " suffix="" style={{ fontSize: '11px', fontWeight: '700', whiteSpace: 'nowrap' }} />
             </button>
-            <button onClick={() => handleOpenPayment('troco-plus')} title="S'abonner à Troco Plus" className="premium-button balance-badge" style={{ border: 'none', borderRadius: '999px', padding: isScrolled ? '5px 9px' : '6px 10px', backgroundColor: darkMode ? 'rgba(217,119,6,0.25)' : '#FEF3C7', color: darkMode ? '#FCD34D' : '#92400E', fontWeight: '800', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', position: 'relative', overflow: 'visible', whiteSpace: 'nowrap', flexShrink: 0, transition: 'padding 0.3s var(--ease-quiet)' }}>
+            <button onClick={() => handleOpenPayment('troco-plus')} title="S'abonner à Troco Plus" className="premium-button balance-badge" style={{ border: '1px solid #F59E0B', borderRadius: '999px', padding: isScrolled ? '5px 10px' : '6px 12px', backgroundColor: darkMode ? 'rgba(217,119,6,0.25)' : '#FEF3C7', color: darkMode ? '#FCD34D' : '#92400E', fontWeight: '800', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', position: 'relative', overflow: 'visible', whiteSpace: 'nowrap', flexShrink: 0, transition: 'padding 0.3s var(--ease-quiet)' }}>
               <Sparkles size={13} color="#F59E0B" style={{ flexShrink: 0 }} /> <AnimatedTokenBalance value={profile.trocoTokens} formatFn={(v) => formatTokenCount(v, currentLang)} style={{ fontSize: '11px', fontWeight: '800', whiteSpace: 'nowrap' }} />
             </button>
-            <button onClick={toggleDarkMode} title={darkMode ? "Activer le mode clair" : "Activer le mode sombre"} className="premium-button darkmode-btn" style={{ border: 'none', borderRadius: '50%', width: isScrolled ? '32px' : '34px', height: isScrolled ? '32px' : '34px', backgroundColor: darkMode ? 'rgba(255,255,255,0.12)' : '#F3F4F6', color: darkMode ? '#F59E0B' : '#04265A', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.3s var(--ease-quiet)', flexShrink: 0 }}>
+            <button onClick={toggleDarkMode} title={darkMode ? "Activer le mode clair" : "Activer le mode sombre"} className="premium-button darkmode-btn" style={{ border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E8DDD3', borderRadius: '50%', width: isScrolled ? '32px' : '34px', height: isScrolled ? '32px' : '34px', backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : '#FAF7F2', color: darkMode ? '#F59E0B' : '#6B5E54', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.3s var(--ease-quiet)', flexShrink: 0 }}>
               {darkMode ? <Sun size={15} /> : <Moon size={15} />}
             </button>
-            <button onClick={() => setIsLangModalOpen(true)} className="premium-button lang-btn" style={{ border: 'none', borderRadius: '20px', padding: isScrolled ? '4px 9px' : '5px 10px', backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : '#F3F4F6', color: darkMode ? '#FFF' : '#111827', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', whiteSpace: 'nowrap', flexShrink: 0, transition: 'padding 0.3s var(--ease-quiet)' }}>
-              <Globe size={13} color={darkMode ? '#93C5FD' : '#04265A'} style={{ flexShrink: 0 }} />
+            <button onClick={() => setIsLangModalOpen(true)} className="premium-button lang-btn" style={{ border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E8DDD3', borderRadius: '20px', padding: isScrolled ? '4px 9px' : '5px 10px', backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : '#FAF7F2', color: darkMode ? '#FFF' : '#3D3530', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', whiteSpace: 'nowrap', flexShrink: 0, transition: 'padding 0.3s var(--ease-quiet)' }}>
+              <Globe size={13} color={darkMode ? '#93C5FD' : '#C67D5B'} style={{ flexShrink: 0 }} />
               <span>{currentLang === 'FR' ? '🇫🇷 FR' : currentLang === 'EN' ? '🇬🇧 EN' : currentLang === 'ES' ? '🇪🇸 ES' : currentLang === 'IT' ? '🇮🇹 IT' : currentLang === 'DE' ? '🇩🇪 DE' : currentLang === 'JA' ? '🇯🇵 JA' : '🇨🇳 ZH'}</span>
             </button>
           </div>
@@ -8279,24 +8279,25 @@ export default function App() {
 
       </main>
 
-      {/* BARRE DE NAVIGATION EN BAS (GLASSMORPHISM) */}
+      {/* BARRE DE NAVIGATION EN BAS (GLASSMORPHISM WARM STILLPOINT) */}
       <nav style={{
         display: (isMobile && activeTab === 'chat' && selectedChat) ? 'none' : 'block',
         position: 'fixed', bottom: 0, left: 0, right: 0,
-        backgroundColor: darkMode ? 'rgba(15,23,42,0.88)' : 'rgba(255,255,255,0.78)',
-        backdropFilter: 'blur(20px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-        borderTop: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(226,232,240,0.7)',
-        padding: '10px 0', zIndex: 40, boxShadow: '0 -6px 30px rgba(15,23,42,0.05)'
+        backgroundColor: darkMode ? 'rgba(24,21,19,0.92)' : 'rgba(250,247,242,0.90)',
+        backdropFilter: 'blur(24px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+        borderTop: darkMode ? '1px solid rgba(232,221,211,0.14)' : '1px solid rgba(212,197,181,0.8)',
+        padding: '10px 0', zIndex: 40,
+        boxShadow: darkMode ? '0 -8px 32px rgba(0,0,0,0.5)' : '0 -6px 30px rgba(61,53,48,0.06)'
       }}>
         <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-around', alignItems: 'center' }}>
 
-          <button onClick={() => setActiveTab('feed')} className="premium-nav-btn" style={{ border: 'none', background: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', color: activeTab === 'feed' ? (darkMode ? '#60A5FA' : '#04265A') : darkMode ? '#64748B' : '#9CA3AF', cursor: 'pointer', padding: '6px 14px', borderRadius: '16px' }}>
+          <button onClick={() => setActiveTab('feed')} className="premium-nav-btn" style={{ border: 'none', background: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', color: activeTab === 'feed' ? (darkMode ? '#E8DDD3' : '#C67D5B') : darkMode ? '#9A8E84' : '#6B5E54', cursor: 'pointer', padding: '6px 14px', borderRadius: '16px' }}>
             <Search size={20} />
-            <span style={{ fontSize: '10px', fontWeight: '700' }}>{t('explorer')}</span>
+            <span style={{ fontSize: '10.5px', fontWeight: '700' }}>{t('explorer')}</span>
           </button>
 
-          <button onClick={() => setActiveTab('chat')} className="premium-nav-btn" style={{ border: 'none', background: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', color: activeTab === 'chat' ? (darkMode ? '#60A5FA' : '#04265A') : darkMode ? '#64748B' : '#9CA3AF', cursor: 'pointer', padding: '6px 14px', borderRadius: '16px', position: 'relative' }}>
+          <button onClick={() => setActiveTab('chat')} className="premium-nav-btn" style={{ border: 'none', background: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', color: activeTab === 'chat' ? (darkMode ? '#E8DDD3' : '#C67D5B') : darkMode ? '#9A8E84' : '#6B5E54', cursor: 'pointer', padding: '6px 14px', borderRadius: '16px', position: 'relative' }}>
             <span style={{ position: 'relative', display: 'inline-flex' }}>
               <MessageSquare size={20} />
               {unreadCount > 0 && (
@@ -8315,7 +8316,7 @@ export default function App() {
                   alignItems: 'center',
                   justifyContent: 'center',
                   padding: '0 3px',
-                  border: darkMode ? '1.5px solid rgba(15,23,42,0.9)' : '1.5px solid #fff',
+                  border: darkMode ? '1.5px solid rgba(24,21,19,0.9)' : '1.5px solid #fff',
                   boxShadow: '0 2px 8px rgba(239,68,68,0.5)',
                   animation: 'notifPulse 2s ease-in-out infinite',
                   letterSpacing: '-0.3px',
@@ -8324,7 +8325,7 @@ export default function App() {
                 </span>
               )}
             </span>
-            <span style={{ fontSize: '10px', fontWeight: '700' }}>{t('messages')}</span>
+            <span style={{ fontSize: '10.5px', fontWeight: '700' }}>{t('messages')}</span>
           </button>
 
           <button
@@ -8339,15 +8340,15 @@ export default function App() {
                 setActiveTab('post');
               }
             }}
-            style={{ border: 'none', background: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', color: activeTab === 'post' ? (darkMode ? '#60A5FA' : '#04265A') : darkMode ? '#64748B' : '#9CA3AF', cursor: 'pointer', padding: '6px 14px', borderRadius: '16px' }}
+            style={{ border: 'none', background: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', color: activeTab === 'post' ? (darkMode ? '#E8DDD3' : '#C67D5B') : darkMode ? '#9A8E84' : '#6B5E54', cursor: 'pointer', padding: '6px 14px', borderRadius: '16px' }}
           >
-            <PlusCircle size={26} color={darkMode ? '#60A5FA' : '#04265A'} />
-            <span style={{ fontSize: '10px', fontWeight: '700' }}>{t('post')}</span>
+            <PlusCircle size={26} color={activeTab === 'post' ? (darkMode ? '#E8DDD3' : '#C67D5B') : (darkMode ? '#9A8E84' : '#6B5E54')} />
+            <span style={{ fontSize: '10.5px', fontWeight: '700' }}>{t('post')}</span>
           </button>
 
-          <button onClick={() => setActiveTab('profile')} className="premium-nav-btn" style={{ border: 'none', background: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', color: activeTab === 'profile' ? (darkMode ? '#60A5FA' : '#04265A') : darkMode ? '#64748B' : '#9CA3AF', cursor: 'pointer', padding: '6px 14px', borderRadius: '16px' }}>
+          <button onClick={() => setActiveTab('profile')} className="premium-nav-btn" style={{ border: 'none', background: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '3px', color: activeTab === 'profile' ? (darkMode ? '#E8DDD3' : '#C67D5B') : darkMode ? '#9A8E84' : '#6B5E54', cursor: 'pointer', padding: '6px 14px', borderRadius: '16px' }}>
             <User size={20} />
-            <span style={{ fontSize: '10px', fontWeight: '700' }}>{t('profile')}</span>
+            <span style={{ fontSize: '10.5px', fontWeight: '700' }}>{t('profile')}</span>
           </button>
 
         </div>

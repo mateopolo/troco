@@ -1,10 +1,23 @@
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Fraunces:ital,opsz,wght@0,9..144,300..600;1,9..144,300..600&family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
 :root {
   --ease-quiet: cubic-bezier(.22, 1, .36, 1);
   --ease-emphasis: cubic-bezier(.16, 1, .3, 1);
-  --font-editorial: 'Fraunces', Georgia, serif;
-  --font-sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-editorial: 'Cormorant Garamond', 'Fraunces', Georgia, serif;
+  --font-sans: 'Inter', 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  /* STILLPOINT WARM BOUTIQUE PALETTE */
+  --sand: #E8DDD3;
+  --sand-dark: #D4C5B5;
+  --sage: #9CAF88;
+  --sage-dark: #7A8F6A;
+  --offwhite: #FAF7F2;
+  --terracotta: #C67D5B;
+  --terracotta-dark: #A8644A;
+  --linen: #F5F0E8;
+  --td: #3D3530;
+  --tm: #6B5E54;
+  --tl: #9A8E84;
 }
 
 /* TYPOGRAPHIE ÉDITORIALE HAUT DE GAMME */
@@ -18,13 +31,17 @@
 .font-editorial-heading {
   font-family: var(--font-editorial) !important;
   font-style: normal;
-  font-weight: 500;
+  font-weight: 600;
   letter-spacing: -0.02em;
+}
+
+.font-serif {
+  font-family: var(--font-editorial) !important;
 }
 
 .font-sans {
   font-family: var(--font-sans) !important;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.015em;
 }
 
 * {
@@ -44,17 +61,24 @@
 body {
   margin: 0;
   padding: 0;
-  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #F8FAFC;
-  color: #0F172A;
+  background-color: var(--linen);
+  background-image: 
+    radial-gradient(at 15% 15%, rgba(232, 221, 211, 0.45) 0px, transparent 65%),
+    radial-gradient(at 85% 85%, rgba(198, 125, 91, 0.08) 0px, transparent 60%);
+  background-attachment: fixed;
+  color: var(--td);
   transition: background-color 0.4s var(--ease-quiet), color 0.4s var(--ease-quiet);
 }
 
 body.dark-mode {
-  background-color: #0B1120;
-  color: #F8FAFC;
+  background-color: #181513;
+  background-image: 
+    radial-gradient(at 20% 20%, rgba(41, 37, 36, 0.7) 0px, transparent 70%),
+    radial-gradient(at 80% 80%, rgba(168, 100, 74, 0.12) 0px, transparent 65%);
+  color: #FAF7F2;
 }
 
 /* BLINDAGE ANTI-AUTO-ZOOM WEBKIT iOS (Interdiction du zoom agressif sur input < 16px) */
@@ -196,12 +220,25 @@ input[type=range]::-moz-range-thumb:hover {
 /* SYSTÈME D'APPARITION AU DÉFILEMENT (INTERSECTION OBSERVER SCROLL REVEAL) */
 .reveal-card {
   opacity: 0;
-  transform: translateY(24px);
+  transform: translateY(28px);
   transition: opacity 800ms var(--ease-quiet), transform 800ms var(--ease-quiet) !important;
   will-change: opacity, transform;
 }
 
 .reveal-card.is-revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.fade-up-scroll {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 750ms var(--ease-quiet), transform 750ms var(--ease-quiet);
+  will-change: opacity, transform;
+}
+
+.fade-up-scroll.is-visible,
+.fade-up-scroll.is-revealed {
   opacity: 1;
   transform: translateY(0);
 }
@@ -214,7 +251,7 @@ input[type=range]::-moz-range-thumb:hover {
 /* UTILITAIRES D'APPARITION PROGRESSIVE FADE-UP */
 .fade-up {
   opacity: 0;
-  transform: translateY(18px);
+  transform: translateY(20px);
   transition: opacity 700ms var(--ease-quiet), transform 700ms var(--ease-quiet);
 }
 
@@ -222,6 +259,26 @@ input[type=range]::-moz-range-thumb:hover {
   opacity: 1;
   transform: translateY(0);
   animation: fadeSlideUpOrganic 700ms var(--ease-quiet) both;
+}
+
+/* EFFET ZOOM KEN BURNS AU SURVOL */
+.ken-burns {
+  overflow: hidden;
+  position: relative;
+}
+
+.ken-burns img,
+.ken-burns video,
+.ken-burns-img {
+  transition: transform 0.75s cubic-bezier(.22, 1, .36, 1), filter 0.5s ease !important;
+  will-change: transform;
+}
+
+.ken-burns:hover img,
+.ken-burns:hover video,
+.premium-card:hover .ken-burns-img,
+.feed-card-item:hover .ken-burns-img {
+  transform: scale(1.05) !important;
 }
 
 /* RED ANIMATED NOTIFICATION BADGE KEYFRAME */
@@ -253,28 +310,109 @@ input[type=range]::-moz-range-thumb:hover {
   animation: waveBar 1.2s ease-in-out infinite;
 }
 
-/* Apple-Grade Glassmorphism Utility Classes */
+/* Apple-Grade Glassmorphism & Stillpoint Warm Glass */
 .glass-card {
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(250, 247, 242, 0.88);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.7);
-  box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.05), 0 2px 8px -2px rgba(15, 23, 42, 0.03);
-  transition: transform 0.35s var(--ease-quiet), box-shadow 0.35s var(--ease-quiet);
+  border: 1px solid rgba(232, 221, 211, 0.85);
+  box-shadow: 0 10px 30px -5px rgba(61, 53, 48, 0.06), 0 2px 8px -2px rgba(61, 53, 48, 0.03);
+  transition: transform 0.35s var(--ease-quiet), box-shadow 0.35s var(--ease-quiet), border-color 0.3s ease;
 }
 
 body.dark-mode .glass-card {
-  background: rgba(30, 41, 59, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.4);
+  background: rgba(35, 30, 27, 0.88);
+  border: 1px solid rgba(232, 221, 211, 0.12);
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.45);
 }
 
 .glass-dark {
-  background: rgba(15, 23, 42, 0.85);
+  background: rgba(24, 21, 19, 0.88);
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(232, 221, 211, 0.12);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+}
+
+.warm-card {
+  background: rgba(250, 247, 242, 0.92);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgba(232, 221, 211, 0.9);
+  border-radius: 24px;
+  box-shadow: 0 10px 30px rgba(61, 53, 48, 0.05), 0 2px 8px rgba(61, 53, 48, 0.03);
+  color: var(--td);
+  transition: transform 0.35s var(--ease-quiet), box-shadow 0.35s var(--ease-quiet), border-color 0.3s ease;
+}
+
+body.dark-mode .warm-card {
+  background: rgba(35, 30, 27, 0.92);
+  border: 1px solid rgba(232, 221, 211, 0.12);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5);
+  color: var(--offwhite);
+}
+
+.warm-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 45px rgba(61, 53, 48, 0.1), 0 4px 14px rgba(61, 53, 48, 0.05);
+  border-color: var(--sand-dark);
+}
+
+body.dark-mode .warm-card:hover {
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.65);
+  border-color: rgba(232, 221, 211, 0.25);
+}
+
+/* Boutons Chaleureux Stillpoint */
+.btn-warm {
+  background: linear-gradient(135deg, var(--terracotta) 0%, var(--terracotta-dark) 100%);
+  color: #FFFFFF !important;
+  border: none;
+  border-radius: 999px;
+  padding: 10px 22px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(198, 125, 91, 0.28);
+  transition: transform 0.3s var(--ease-quiet), box-shadow 0.3s var(--ease-quiet), filter 0.25s var(--ease-quiet) !important;
+}
+
+.btn-warm:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 26px rgba(198, 125, 91, 0.4);
+  filter: brightness(1.03);
+}
+
+.btn-sage {
+  background: linear-gradient(135deg, var(--sage) 0%, var(--sage-dark) 100%);
+  color: #FFFFFF !important;
+  border: none;
+  border-radius: 999px;
+  padding: 10px 22px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(122, 143, 106, 0.28);
+  transition: transform 0.3s var(--ease-quiet), box-shadow 0.3s var(--ease-quiet);
+}
+
+.btn-sage:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 26px rgba(122, 143, 106, 0.4);
+}
+
+.btn-sand {
+  background: var(--sand);
+  color: var(--td) !important;
+  border: 1px solid var(--sand-dark);
+  border-radius: 999px;
+  padding: 10px 22px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.3s var(--ease-quiet), background-color 0.25s var(--ease-quiet);
+}
+
+.btn-sand:hover {
+  transform: translateY(-2px);
+  background-color: var(--sand-dark);
 }
 
 /* Micro-interactions & Buttons */

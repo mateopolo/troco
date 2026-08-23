@@ -183,7 +183,8 @@ function FeedCardItem({
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        style={{ position: 'relative', height: '200px', width: '100%', backgroundColor: '#F3F4F6', overflow: 'hidden', touchAction: 'pan-y' }}
+        className="ken-burns"
+        style={{ position: 'relative', height: '200px', width: '100%', backgroundColor: darkMode ? '#231E1B' : '#F5F0E8', overflow: 'hidden', touchAction: 'pan-y' }}
       >
         {gallery.map((imgSrc, idx) => {
           const isActive = idx === currentSlideIndex;
@@ -193,6 +194,7 @@ function FeedCardItem({
               src={imgSrc}
               alt={item.title}
               draggable={false}
+              className="ken-burns-img"
               onError={(e) => { e.target.src = getFallbackImage(item.category, item.title); }}
               style={{
                 position: 'absolute',
@@ -201,8 +203,8 @@ function FeedCardItem({
                 height: '100%',
                 objectFit: 'cover',
                 opacity: isActive ? 1 : 0,
-                transition: 'opacity 0.4s ease, transform 1200ms var(--ease-quiet)',
-                transform: isHovered && isActive ? 'scale(1.04)' : (isActive ? 'scale(1)' : 'scale(1.02)'),
+                transition: 'opacity 0.4s ease, transform 900ms var(--ease-quiet)',
+                transform: isHovered && isActive ? 'scale(1.05)' : (isActive ? 'scale(1)' : 'scale(1.02)'),
                 pointerEvents: 'none',
                 WebkitUserDrag: 'none',
                 userSelect: 'none',
