@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronLeft, ChevronRight, Video, Globe, MapPin, Tag, Trash2, ArrowRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Video, Globe, MapPin, Tag, Trash2, ArrowRight, Sparkles } from 'lucide-react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useGSAP } from '@gsap/react';
@@ -365,21 +365,25 @@ function FeedCardItem({
             top: '12px',
             left: item.urgent ? 'auto' : '12px',
             right: item.urgent ? '12px' : 'auto',
-            backgroundColor: 'var(--overlay-bg)',
-            color: 'var(--text-main)',
+            backgroundColor: 'rgba(20, 18, 16, 0.75)',
+            color: '#FAF7F2',
             fontSize: '10px',
-            fontWeight: '800',
-            padding: '4px 8px',
-            borderRadius: '8px',
-            boxShadow: 'var(--shadow-card)',
+            fontWeight: '750',
+            letterSpacing: '0.06em',
+            padding: '5px 10px',
+            borderRadius: '999px',
+            boxShadow: '0 4px 14px rgba(0,0,0,0.3)',
             zIndex: 4,
-            display: 'flex',
+            display: 'inline-flex',
             alignItems: 'center',
-            gap: '3px',
-            backdropFilter: 'blur(4px)',
-            border: '1px solid var(--border-color)'
+            gap: '5px',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            textTransform: 'uppercase'
           }}>
-            🤖 Annonce IA
+            <Sparkles size={11} color="var(--accent-primary)" />
+            <span>Exemple</span>
           </span>
         )}
 

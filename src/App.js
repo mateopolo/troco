@@ -6501,17 +6501,21 @@ export default function App() {
                           </div>
                           {(selectedListing.isDemo || (typeof selectedListing.id === 'number' && selectedListing.id <= 20)) && (
                             <span style={{
-                              fontSize: '11px',
-                              fontWeight: '800',
-                              padding: '5px 10px',
+                              fontSize: '10.5px',
+                              fontWeight: '750',
+                              letterSpacing: '0.04em',
+                              padding: '5px 11px',
                               borderRadius: '999px',
-                              backgroundColor: darkMode ? 'rgba(107,94,84,0.4)' : '#EDE6DF',
-                              color: darkMode ? '#D4C5B5' : '#6B5E54',
+                              backgroundColor: 'var(--bg-subtle)',
+                              color: 'var(--accent-primary)',
+                              border: '1px solid var(--border-color)',
                               display: 'inline-flex',
                               alignItems: 'center',
-                              gap: '4px'
+                              gap: '5px',
+                              textTransform: 'uppercase'
                             }}>
-                              🤖 Annonce IA (Démo)
+                              <Sparkles size={12} color="var(--accent-primary)" />
+                              Exemple Démo
                             </span>
                           )}
                         </div>
@@ -7068,8 +7072,8 @@ export default function App() {
                                 <div style={{ position: 'relative' }}>
                                   <img src={media.image} alt={displayContent.title} style={{ width: '100%', height: '80px', objectFit: 'cover', borderRadius: '10px' }} />
                                   {(item.isDemo || (typeof item.id === 'number' && item.id <= 20)) && (
-                                    <span style={{ position: 'absolute', top: '6px', left: '6px', backgroundColor: '#C67D5B', color: '#FFF', fontSize: '9px', fontWeight: '800', padding: '2px 6px', borderRadius: '6px' }}>
-                                      🤖 Annonce IA
+                                    <span style={{ position: 'absolute', top: '6px', left: '6px', backgroundColor: 'rgba(20,18,16,0.75)', color: '#FAF7F2', fontSize: '9px', fontWeight: '750', padding: '3px 7px', borderRadius: '999px', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.2)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                                      Exemple
                                     </span>
                                   )}
                                 </div>
