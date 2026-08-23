@@ -240,13 +240,43 @@ body.dark-mode .liquid-blob,
   }
 }
 
-.troco-logo-3d-wrapper {
-  transition: transform 0.3s cubic-bezier(0.19, 1, 0.22, 1);
-  perspective: 600px;
+@keyframes liquidInfinityFloat {
+  0% {
+    transform: perspective(700px) translateY(0px) rotateX(12deg) rotateY(0deg) rotateZ(0deg) scale(1);
+    filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.25));
+  }
+  25% {
+    transform: perspective(700px) translateY(-8px) rotateX(18deg) rotateY(-8deg) rotateZ(3deg) scale(1.03);
+    filter: drop-shadow(0 14px 28px rgba(0, 0, 0, 0.32));
+  }
+  50% {
+    transform: perspective(700px) translateY(-14px) rotateX(8deg) rotateY(10deg) rotateZ(-4deg) scale(1.06);
+    filter: drop-shadow(0 20px 36px rgba(0, 0, 0, 0.36));
+  }
+  75% {
+    transform: perspective(700px) translateY(-6px) rotateX(-4deg) rotateY(6deg) rotateZ(2deg) scale(1.02);
+    filter: drop-shadow(0 12px 22px rgba(0, 0, 0, 0.28));
+  }
+  100% {
+    transform: perspective(700px) translateY(0px) rotateX(12deg) rotateY(0deg) rotateZ(0deg) scale(1);
+    filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.25));
+  }
+}
+
+.troco-logo-3d-wrapper,
+.troco-infinity-wrapper {
+  transition: transform 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+  perspective: 700px;
+  transform-style: preserve-3d;
 }
 
 .troco-logo-3d-floating {
   animation: troco3DFloat 4.5s cubic-bezier(0.19, 1, 0.22, 1) infinite;
+}
+
+.troco-infinity-animated {
+  animation: liquidInfinityFloat 6s cubic-bezier(0.19, 1, 0.22, 1) infinite;
+  will-change: transform, filter;
 }
 
 * {

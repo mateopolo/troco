@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Générateur d'Assets - Troco Logo 3D</title>
+    <title>Générateur d'Assets - Troco Liquid Infinity 3D</title>
     <!-- Import de JSZip pour générer le fichier .zip -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
@@ -23,15 +23,15 @@
             min-height: 100vh;
         }
         .preview-container {
-            width: 280px;
-            height: 280px;
-            background: radial-gradient(circle at 50% 50%, rgba(198, 125, 91, 0.22) 0%, transparent 70%);
+            width: 320px;
+            height: 240px;
+            background: radial-gradient(circle at 50% 50%, rgba(198, 125, 91, 0.25) 0%, transparent 70%);
             display: flex;
             align-items: center;
             justify-content: center;
             border-radius: 40px;
             margin-bottom: 36px;
-            animation: float 4s cubic-bezier(0.19, 1, 0.22, 1) infinite;
+            animation: float 5s cubic-bezier(0.19, 1, 0.22, 1) infinite;
         }
         h1 {
             font-size: 32px;
@@ -45,7 +45,7 @@
             margin-bottom: 32px;
             font-size: 15px;
             text-align: center;
-            max-width: 480px;
+            max-width: 520px;
             line-height: 1.5;
         }
         button {
@@ -71,62 +71,134 @@
             box-shadow: none;
         }
         @keyframes float {
-            0%, 100% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
+            0%, 100% {
+                transform: perspective(600px) translateY(0px) rotateX(10deg) rotateY(0deg);
+            }
+            50% {
+                transform: perspective(600px) translateY(-12px) rotateX(15deg) rotateY(8deg);
+            }
         }
     </style>
 </head>
 <body>
 
-    <h1>Studio Design : Logo Troco 3D</h1>
-    <p>Aperçu en direct du prisme isométrique. Cliquez ci-dessous pour générer et télécharger le pack complet en 4K (SVG vectoriel, PNG transparent et JPEG).</p>
+    <h1>Studio Design : Logo Troco (Liquid Infinity)</h1>
+    <p>Aperçu du Ruban de Möbius en verre irisé. Cliquez ci-dessous pour générer et télécharger le pack complet en 4K (SVG vectoriel, PNG transparent et JPEG haute résolution).</p>
 
     <div class="preview-container">
-        <!-- SVG Master 1024x1024 -->
-        <svg id="troco-logo" width="1024" height="1024" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 180px; height: 180px; filter: drop-shadow(0 12px 24px rgba(0,0,0,0.45));">
+        <!-- SVG Master 1024x640 -->
+        <svg id="troco-logo" width="1024" height="640" viewBox="0 0 240 150" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 220px; height: 140px; filter: drop-shadow(0 14px 28px rgba(0,0,0,0.5)) drop-shadow(0 0 24px rgba(198,125,91,0.45));">
             <defs>
-                <!-- Palette Earthy Pastel -->
-                <!-- Top Face : Sable clair -->
-                <linearGradient id="facetTop" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="#DDBEA9" />
-                    <stop offset="100%" stop-color="#D4C7B0" />
+                <!-- 1. Réfraction de fond gauche -->
+                <linearGradient id="backLoopLeft" x1="20%" y1="10%" x2="90%" y2="90%">
+                    <stop offset="0%" stop-color="#A5A58D" stop-opacity="0.5" />
+                    <stop offset="50%" stop-color="#C67D5B" stop-opacity="0.75" />
+                    <stop offset="100%" stop-color="#3D3530" stop-opacity="0.9" />
                 </linearGradient>
 
-                <!-- Left Face : Terracotta (Accent Primary) -->
-                <linearGradient id="facetLeft" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stop-color="#C67D5B" />
-                    <stop offset="100%" stop-color="#A8644A" />
+                <!-- 2. Réfraction de fond droite -->
+                <linearGradient id="backLoopRight" x1="80%" y1="10%" x2="10%" y2="90%">
+                    <stop offset="0%" stop-color="#DDBEA9" stop-opacity="0.85" />
+                    <stop offset="45%" stop-color="#C67D5B" stop-opacity="0.75" />
+                    <stop offset="100%" stop-color="#6B705C" stop-opacity="0.5" />
                 </linearGradient>
 
-                <!-- Right Face : Sage / Gris (Accent Secondary) -->
-                <linearGradient id="facetRight" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="#A5A58D" />
-                    <stop offset="100%" stop-color="#6B705C" />
+                <!-- 3. Ruban avant (Torsion Möbius centrale) -->
+                <linearGradient id="frontRibbon" x1="0%" y1="20%" x2="100%" y2="80%">
+                    <stop offset="0%" stop-color="#C67D5B" stop-opacity="0.95" />
+                    <stop offset="35%" stop-color="#DDBEA9" stop-opacity="0.85" />
+                    <stop offset="70%" stop-color="#A8644A" stop-opacity="0.9" />
+                    <stop offset="100%" stop-color="#FAF7F2" stop-opacity="0.95" />
                 </linearGradient>
 
-                <!-- Stem Left : Darker Terracotta -->
-                <linearGradient id="stemLeft" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stop-color="#A8644A" />
-                    <stop offset="100%" stop-color="#3D3530" />
+                <!-- 4. Coeur Iridescent / Prisme chromatique -->
+                <linearGradient id="iridescentCore" x1="15%" y1="0%" x2="85%" y2="100%">
+                    <stop offset="0%" stop-color="#9CAF88" stop-opacity="0.8" />
+                    <stop offset="30%" stop-color="#C67D5B" stop-opacity="0.92" />
+                    <stop offset="60%" stop-color="#E8DDD3" stop-opacity="0.88" />
+                    <stop offset="100%" stop-color="#6B705C" stop-opacity="0.65" />
                 </linearGradient>
 
-                <!-- Stem Right : Obsidian / Darkest -->
-                <linearGradient id="stemRight" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stop-color="#6B705C" />
-                    <stop offset="100%" stop-color="#3F4238" />
+                <!-- 5. Éclat spéculaire de surface -->
+                <linearGradient id="glassSpecular" x1="0%" y1="50%" x2="100%" y2="50%">
+                    <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.98" />
+                    <stop offset="40%" stop-color="#FFFFFF" stop-opacity="0.35" />
+                    <stop offset="70%" stop-color="#FFFFFF" stop-opacity="0.88" />
+                    <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0.15" />
+                </linearGradient>
+
+                <!-- 6. Liseré sombre -->
+                <linearGradient id="innerShadow" x1="50%" y1="0%" x2="50%" y2="100%">
+                    <stop offset="0%" stop-color="transparent" />
+                    <stop offset="100%" stop-color="#1A1715" stop-opacity="0.65" />
                 </linearGradient>
             </defs>
 
-            <!-- T Top Bar - Top Face -->
-            <polygon points="20,30 50,15 80,30 50,45" fill="url(#facetTop)" />
-            <!-- T Top Bar - Left Ribbon -->
-            <polygon points="20,30 50,45 50,57 20,42" fill="url(#facetLeft)" />
-            <!-- T Top Bar - Right Ribbon -->
-            <polygon points="50,45 80,30 80,42 50,57" fill="url(#facetRight)" />
-            <!-- T Vertical Stem - Left Face -->
-            <polygon points="38,51 50,57 50,90 38,84" fill="url(#stemLeft)" />
-            <!-- T Vertical Stem - Right Face -->
-            <polygon points="50,57 62,51 62,84 50,90" fill="url(#stemRight)" />
+            <!-- ═══ COUCHE 1 : BOUCLES ARRIÈRE (PROFONDEUR & TRANSPARENCE) ═══ -->
+            <path
+              d="M 120 75 C 95 45, 60 25, 35 45 C 10 65, 12 110, 42 122 C 72 134, 102 105, 120 75 Z"
+              fill="url(#backLoopLeft)"
+              opacity="0.75"
+            />
+
+            <path
+              d="M 120 75 C 145 105, 175 134, 205 122 C 235 110, 237 65, 212 45 C 187 25, 152 45, 120 75 Z"
+              fill="url(#backLoopRight)"
+              opacity="0.8"
+            />
+
+            <!-- ═══ COUCHE 2 : VOLUME DU RUBAN DE MÖBIUS PRINCIPAL ═══ -->
+            <path
+              d="M 38 42 C 65 22, 100 48, 120 75 C 140 102, 175 128, 202 108 C 229 88, 225 52, 198 38 C 171 24, 138 52, 120 75 C 102 98, 69 126, 42 112 C 15 98, 11 62, 38 42 Z"
+              fill="url(#iridescentCore)"
+              stroke="url(#frontRibbon)"
+              stroke-width="11"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            />
+
+            <!-- ═══ COUCHE 3 : FACE SUPÉRIEURE ÉCLAIRÉE ═══ -->
+            <path
+              d="M 45 40 C 72 26, 102 52, 120 75 C 138 98, 168 124, 195 110 C 222 96, 218 64, 198 48 C 178 32, 142 54, 120 75"
+              fill="none"
+              stroke="url(#frontRibbon)"
+              stroke-width="7.5"
+              stroke-linecap="round"
+              opacity="0.92"
+            />
+
+            <!-- ═══ COUCHE 4 : REFLETS SPÉCULAIRES ═══ -->
+            <path
+              d="M 52 35 C 75 24, 104 48, 120 70 C 136 92, 165 116, 188 105"
+              fill="none"
+              stroke="url(#glassSpecular)"
+              stroke-width="2.8"
+              stroke-linecap="round"
+            />
+
+            <path
+              d="M 180 40 C 205 32, 222 55, 212 85 C 202 115, 175 120, 155 105"
+              fill="none"
+              stroke="#FFFFFF"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              opacity="0.65"
+            />
+
+            <path
+              d="M 28 85 C 18 55, 35 32, 60 40"
+              fill="none"
+              stroke="#FFFFFF"
+              stroke-width="1.6"
+              stroke-linecap="round"
+              opacity="0.55"
+            />
+
+            <path
+              d="M 105 85 C 115 95, 125 95, 135 85 C 125 75, 115 75, 105 85 Z"
+              fill="url(#innerShadow)"
+              opacity="0.45"
+            />
         </svg>
     </div>
 
@@ -151,8 +223,8 @@
                 const svgUrl = URL.createObjectURL(svgBlob);
 
                 const canvas = document.createElement('canvas');
-                canvas.width = 1024;
-                canvas.height = 1024;
+                canvas.width = 1920;
+                canvas.height = 1200;
                 const ctx = canvas.getContext('2d');
 
                 const img = new Image();
@@ -161,34 +233,34 @@
                     const zip = new JSZip();
                     
                     // Ajouter le SVG original
-                    zip.file("troco-logo-vectoriel.svg", svgBlob);
+                    zip.file("troco-liquid-infinity.svg", svgBlob);
 
                     // 2. Générer le PNG (Fond Transparent)
-                    ctx.clearRect(0, 0, 1024, 1024);
-                    ctx.drawImage(img, 0, 0, 1024, 1024);
+                    ctx.clearRect(0, 0, 1920, 1200);
+                    ctx.drawImage(img, 0, 0, 1920, 1200);
                     const pngBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
-                    zip.file("troco-logo-transparent-4K.png", pngBlob);
+                    zip.file("troco-liquid-infinity-transparent-4K.png", pngBlob);
 
                     // 3. Générer le JPEG (Fond Crème pour avatar / mode clair)
                     ctx.fillStyle = "#FAF7F2";
-                    ctx.fillRect(0, 0, 1024, 1024);
-                    ctx.drawImage(img, 0, 0, 1024, 1024);
+                    ctx.fillRect(0, 0, 1920, 1200);
+                    ctx.drawImage(img, 0, 0, 1920, 1200);
                     const jpgBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.96));
-                    zip.file("troco-logo-fond-creme-4K.jpg", jpgBlob);
+                    zip.file("troco-liquid-infinity-fond-creme-4K.jpg", jpgBlob);
 
                     // 4. Générer le JPEG (Fond Noir Titane pour mode sombre)
                     ctx.fillStyle = "#1A1715";
-                    ctx.fillRect(0, 0, 1024, 1024);
-                    ctx.drawImage(img, 0, 0, 1024, 1024);
+                    ctx.fillRect(0, 0, 1920, 1200);
+                    ctx.drawImage(img, 0, 0, 1920, 1200);
                     const darkJpgBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.96));
-                    zip.file("troco-logo-fond-sombre-4K.jpg", darkJpgBlob);
+                    zip.file("troco-liquid-infinity-fond-sombre-4K.jpg", darkJpgBlob);
 
                     // 5. Créer et déclencher le téléchargement du ZIP
                     const zipContent = await zip.generateAsync({type:"blob"});
                     const downloadUrl = URL.createObjectURL(zipContent);
                     const a = document.createElement('a');
                     a.href = downloadUrl;
-                    a.download = "Troco_Logo_Assets_4K.zip";
+                    a.download = "Troco_Liquid_Infinity_4K.zip";
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
