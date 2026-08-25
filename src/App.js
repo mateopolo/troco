@@ -4183,6 +4183,21 @@ export default function App() {
     }));
   };
 
+  const handlePhotoGridUpdate = (index, newPhotoDataUrl) => {
+    const currentGallery = postDraft.gallery && postDraft.gallery.length > 0
+      ? [...postDraft.gallery]
+      : (postDraft.imageUrl ? [postDraft.imageUrl] : []);
+    if (index >= 0 && index < currentGallery.length) {
+      const updated = [...currentGallery];
+      updated[index] = newPhotoDataUrl;
+      setPostDraft(prev => ({
+        ...prev,
+        gallery: updated,
+        imageUrl: updated[0] || prev.imageUrl,
+      }));
+    }
+  };
+
   const handlePhotoGridAutoGenerate = () => {
     const suggested = getSuggestedMedia(postDraft.title, postDraft.description);
     const updatedGallery = suggested.gallery && suggested.gallery.length > 0 ? suggested.gallery : [suggested.image];
@@ -7739,11 +7754,12 @@ export default function App() {
                     {t('adMediaDesc')}
                   </p>
 
-                  {/* GRILLE VISUELLE DE PHOTOS */}
+                  {/* GRILLE VISUELLE DE PHOTOS AVEC ÉDITION & RECADRAGE */}
                   <PhotoGrid
                     photos={postDraft.gallery && postDraft.gallery.length > 0 ? postDraft.gallery : (postDraft.imageUrl ? [postDraft.imageUrl] : [])}
                     onAddPhoto={handlePhotoGridAdd}
                     onRemovePhoto={handlePhotoGridRemove}
+                    onUpdatePhoto={handlePhotoGridUpdate}
                     onAutoGenerate={handlePhotoGridAutoGenerate}
                     maxPhotos={8}
                     darkMode={darkMode}

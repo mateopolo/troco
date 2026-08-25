@@ -1,16 +1,19 @@
-import React from 'react';
-import { Plus, X, Image as ImageIcon, Sparkles } from 'lucide-react';
+import React, { useState } from 'react';
+import { Plus, X, Image as ImageIcon, Sparkles, Crop } from 'lucide-react';
+import ImageEditorModal from './ImageEditorModal';
 
 export default function PhotoGrid({
   photos = [],
   onAddPhoto,
   onRemovePhoto,
+  onUpdatePhoto,
   onAutoGenerate,
   maxPhotos = 8,
   darkMode = false,
   t = (k) => k,
   currentLang = 'FR',
 }) {
+  const [editingPhotoIndex, setEditingPhotoIndex] = useState(null);
   const photoList = Array.isArray(photos) ? photos : [];
   const count = photoList.length;
   const isPaidPackActive = count > 4;
@@ -165,35 +168,67 @@ export default function PhotoGrid({
               {idx < 4 ? `Gratuite` : `Pack +1,99€`}
             </span>
 
-            {/* BOUTON SUPPRIMER CROIX ROUGE */}
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (onRemovePhoto) onRemovePhoto(idx);
-              }}
-              title="Supprimer cette photo"
-              style={{
-                position: 'absolute',
-                top: '6px',
-                right: '6px',
-                border: 'none',
-                width: '26px',
-                height: '26px',
-                borderRadius: '50%',
-                backgroundColor: 'var(--accent-danger)',
-                color: '#FFF',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                boxShadow: '0 2px 8px rgba(239, 68, 68, 0.5)',
-                zIndex: 3,
-                transition: 'transform 0.2s ease',
-              }}
-            >
-              <X size={14} strokeWidth={2.5} />
-            </button>
+            {/* ACTIONS : BOUTON EDITER ET SUPPRIMER */}
+            <div style={{
+              position: 'absolute',
+              top: '6px',
+              right: '6px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '5px',
+              zIndex: 3,
+            }}>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setEditingPhotoIndex(idx);
+                }}
+                title="Recadrer / Ajuster cette photo"
+                className="premium-button"
+                style={{
+                  border: 'none',
+                  width: '26px',
+                  height: '26px',
+                  borderRadius: '50%',
+                  backgroundColor: 'rgba(0, 0, 0, 0.75)',
+                  color: '#FFF',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  backdropFilter: 'blur(4px)',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.4)',
+                }}
+              >
+                <Crop size={13} />
+              </button>
+
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (onRemovePhoto) onRemovePhoto(idx);
+                }}
+                title="Supprimer cette photo"
+                style={{
+                  border: 'none',
+                  width: '26px',
+                  height: '26px',
+                  borderRadius: '50%',
+                  backgroundColor: 'var(--accent-danger)',
+                  color: '#FFF',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 8px rgba(239, 68, 68, 0.5)',
+                  transition: 'transform 0.2s ease',
+                }}
+              >
+                <X size={14} strokeWidth={2.5} />
+              </button>
+            </div>
           </div>
         ))}
 
@@ -254,6 +289,23 @@ export default function PhotoGrid({
           </label>
         )}
       </div>
+
+      {/* MODALE D'ÉDITION & RECADRAGE */}
+      {editingPhotoIndex !== null && photoList[editingPhotoIndex] && (
+        <ImageEditorModal
+          isOpen={true}
+          imageSrc={photoList[editingPhotoIndex]}
+          onClose={() => setEditingPhotoIndex(null)}
+          onSave={(editedDataUrl) => {
+            if (onUpdatePhoto) {
+              onUpdatePhoto(editingPhotoIndex, editedDataUrl);
+            }
+          }}
+          darkMode={darkMode}
+          t={t}
+          currentLang={currentLang}
+        />
+      )}
     </div>
   );
 }
