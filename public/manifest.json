@@ -1,6 +1,17 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "Troco",
+  "name": "Troco — Échange de Compétences & Troc Sécurisé",
+  "description": "La première plateforme d'échange de compétences, troc de services, matériel et mise en relation collaborative sans intermédiaire financier obligatoire.",
+  "id": "/",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0E0C0A",
+  "theme_color": "#C67D5B",
+  "lang": "fr",
+  "dir": "ltr",
+  "categories": ["lifestyle", "finance", "productivity", "social"],
   "icons": [
     {
       "src": "favicon.ico",
@@ -10,16 +21,49 @@
     {
       "src": "logo192.png",
       "type": "image/png",
-      "sizes": "192x192"
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "logo192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "maskable"
     },
     {
       "src": "logo512.png",
       "type": "image/png",
-      "sizes": "512x512"
+      "sizes": "512x512",
+      "purpose": "any"
+    },
+    {
+      "src": "logo512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
     }
   ],
-  "start_url": ".",
-  "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "shortcuts": [
+    {
+      "name": "Explorer les annonces",
+      "short_name": "Explorer",
+      "description": "Consulter les compétences et offres de troc à proximité",
+      "url": "/?tab=feed",
+      "icons": [{ "src": "logo192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Déposer une annonce",
+      "short_name": "Publier",
+      "description": "Proposer une compétence ou demander un service",
+      "url": "/?tab=post",
+      "icons": [{ "src": "logo192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Messagerie & Deals",
+      "short_name": "Messages",
+      "description": "Accéder à vos conversations et deals sécurisés",
+      "url": "/?tab=chats",
+      "icons": [{ "src": "logo192.png", "sizes": "192x192" }]
+    }
+  ]
 }

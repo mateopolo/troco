@@ -35,6 +35,7 @@ import CallOverlay from './components/CallOverlay';
 import TrocoLogo3D from './components/common/TrocoLogo3D';
 import MapClusterTracker from './components/MapClusterTracker';
 import LiveCallSubtitles from './components/LiveCallSubtitles';
+import PWAInstallBanner from './components/PWAInstallBanner';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useGSAP } from '@gsap/react';
@@ -5100,34 +5101,44 @@ export default function App() {
     const finalEuro = Number(euroAmount) || 0;
     const finalTokens = Number(tokensAmount) || 0;
     const myUid = buyerUid || profile?.uid || auth.currentUser?.uid;
+    const isPaidDeal = finalEuro > 0 || finalTokens > 0;
+    const targetStatus = isPaidDeal ? 'escrow_locked' : 'confirmed';
 
-    // 1. Mise à jour optimiste de l'état local
-    let newEuroBalance = profile.euroBalance || 0;
-    let newTokensBalance = profile.trocoTokens || 0;
-
-    if (paymentMethod?.includes('Solde') || paymentMethod === 'wallet') {
-      newEuroBalance = Number(Math.max(0, newEuroBalance - finalEuro).toFixed(2));
-    }
-    if (finalTokens > 0) {
-      newTokensBalance = Math.max(0, newTokensBalance - finalTokens);
-    }
-
+    // 1. Mise à jour immédiate locale de l'acheteur (fonds débités et sécurisés sous séquestre)
     const updatedProfile = {
       ...profile,
-      euroBalance: newEuroBalance,
-      trocoTokens: newTokensBalance,
-      dealsCompleted: (profile.dealsCompleted || 0) + 1,
+      trocoTokens: finalTokens > 0 ? Math.max(0, (profile.trocoTokens || 0) - finalTokens) : profile.trocoTokens,
+      euroBalance: (paymentMethod?.includes('Solde') || paymentMethod === 'wallet') ? Number(Math.max(0, (profile.euroBalance || 0) - finalEuro).toFixed(2)) : (profile.euroBalance || 0),
+      dealsCompleted: !isPaidDeal ? (profile.dealsCompleted || 0) + 1 : (profile.dealsCompleted || 0)
     };
     setProfile(updatedProfile);
     try {
       localStorage.setItem('troco_user_profile', JSON.stringify(updatedProfile));
     } catch (_) { }
 
+    const escrowData = isPaidDeal ? {
+      status: 'locked',
+      euroAmount: finalEuro,
+      tokensAmount: finalTokens,
+      buyerUid: myUid,
+      buyerName: profile?.name,
+      sellerUid: partnerUid || null,
+      sellerName: partnerName,
+      fundedAt: new Date().toISOString(),
+    } : null;
+
     setChatThreads(prev => ({
       ...prev,
-      [chatId]: (prev[chatId] || []).map(m => String(m.id) === String(dealId) ? { ...m, status: 'confirmed' } : m),
+      [chatId]: (prev[chatId] || []).map(m => String(m.id) === String(dealId) ? {
+        ...m,
+        status: targetStatus,
+        escrow: escrowData,
+        paidBy: myUid,
+        paidByName: profile?.name,
+        paymentMethod,
+      } : m),
     }));
-    setChatStatusOverrides(prev => ({ ...prev, [chatId]: 'Deal Validé' }));
+    setChatStatusOverrides(prev => ({ ...prev, [chatId]: isPaidDeal ? 'Fonds sous Séquestre' : 'Deal Validé' }));
 
     // Effets sonores
     playBetclicBalanceSound(true);
@@ -5137,11 +5148,11 @@ export default function App() {
     const newTx = {
       id: `tx-deal-${Date.now()}`,
       transactionId,
-      label: `Deal avec ${partnerName || 'Partenaire'} (${terms?.conditions || 'Prestation/Troc'})`,
+      label: isPaidDeal ? `Séquestre Deal avec ${partnerName || 'Partenaire'} (${terms?.conditions || 'Prestation'})` : `Troc Direct avec ${partnerName || 'Partenaire'}`,
       amountTtc: finalEuro,
       tokens: finalTokens,
-      mode: 'deal',
-      status: 'completed',
+      mode: isPaidDeal ? 'escrow_deposit' : 'deal',
+      status: isPaidDeal ? 'held_in_escrow' : 'completed',
       date: new Date().toISOString(),
       partner: partnerName || 'Partenaire',
       paymentMethod: paymentMethod,
@@ -5179,15 +5190,7 @@ export default function App() {
             currentBuyerDeals = bData.dealsCompleted !== undefined ? bData.dealsCompleted : currentBuyerDeals;
           }
 
-          // Lecture 2 : Compte du vendeur / bénéficiaire
-          let sellerSnap = null;
-          let sellerRef = null;
-          if (resolvedPartnerUid) {
-            sellerRef = doc(db, 'users', resolvedPartnerUid);
-            sellerSnap = await transaction.get(sellerRef);
-          }
-
-          // Lecture 3 : Message de deal
+          // Lecture 2 : Message de deal
           const msgRef = doc(db, 'chats', String(chatId), 'messages', String(dealId));
           const msgSnap = await transaction.get(msgRef);
 
@@ -5200,26 +5203,24 @@ export default function App() {
           transaction.set(buyerRef, {
             euroBalance: calculatedBuyerEuro,
             trocoTokens: calculatedBuyerTokens,
-            dealsCompleted: currentBuyerDeals + 1,
+            dealsCompleted: !isPaidDeal ? currentBuyerDeals + 1 : currentBuyerDeals,
             updatedAt: serverTimestamp(),
           }, { merge: true });
 
-          // Écriture 2 : Crédit du vendeur
-          if (sellerRef && sellerSnap && sellerSnap.exists()) {
-            const sData = sellerSnap.data();
-            const currentSellerEuro = sData.euroBalance || 0;
-            const currentSellerTokens = sData.trocoTokens || 0;
-            const currentSellerDeals = sData.dealsCompleted || 0;
-
-            transaction.update(sellerRef, {
-              euroBalance: Number((currentSellerEuro + finalEuro).toFixed(2)),
-              trocoTokens: currentSellerTokens + finalTokens,
-              dealsCompleted: currentSellerDeals + 1,
-              updatedAt: serverTimestamp(),
-            });
+          // Si troc direct sans fonds : validation immédiate du vendeur
+          if (!isPaidDeal && resolvedPartnerUid) {
+            const sellerRef = doc(db, 'users', resolvedPartnerUid);
+            const sellerSnap = await transaction.get(sellerRef);
+            if (sellerSnap && sellerSnap.exists()) {
+              const currentSellerDeals = sellerSnap.data().dealsCompleted || 0;
+              transaction.update(sellerRef, {
+                dealsCompleted: currentSellerDeals + 1,
+                updatedAt: serverTimestamp(),
+              });
+            }
           }
 
-          // Écriture 3 : Enregistrement de la trace transactionnelle
+          // Écriture 2 : Enregistrement de la trace transactionnelle
           const txDocRef = doc(collection(db, 'transactions'));
           transaction.set(txDocRef, {
             ...newTx,
@@ -5231,41 +5232,173 @@ export default function App() {
             createdAt: serverTimestamp(),
           });
 
-          // Écriture 4 : Mise à jour du message de deal dans le chat
+          // Écriture 3 : Mise à jour du message de deal dans le chat
+          const messagePayload = {
+            status: targetStatus,
+            paidBy: myUid,
+            paidByName: profile.name,
+            paymentMethod: paymentMethod,
+            escrow: isPaidDeal ? {
+              status: 'locked',
+              euroAmount: finalEuro,
+              tokensAmount: finalTokens,
+              buyerUid: myUid,
+              buyerName: profile.name,
+              sellerUid: resolvedPartnerUid || null,
+              sellerName: partnerName,
+              fundedAt: new Date().toISOString(),
+            } : null,
+            confirmedAt: !isPaidDeal ? serverTimestamp() : null,
+            fundedAt: isPaidDeal ? serverTimestamp() : null,
+            updatedAt: serverTimestamp(),
+          };
+
           if (msgSnap.exists()) {
-            transaction.update(msgRef, {
-              status: 'confirmed',
-              paidBy: myUid,
-              paidByName: profile.name,
-              paymentMethod: paymentMethod,
-              confirmedAt: serverTimestamp(),
-              updatedAt: serverTimestamp(),
-            });
+            transaction.update(msgRef, messagePayload);
           } else {
-            transaction.set(msgRef, {
-              status: 'confirmed',
-              paidBy: myUid,
-              paidByName: profile.name,
-              paymentMethod: paymentMethod,
-              confirmedAt: serverTimestamp(),
-              updatedAt: serverTimestamp(),
-            }, { merge: true });
+            transaction.set(msgRef, messagePayload, { merge: true });
           }
 
-          // Écriture 5 : Mise à jour du document parent chat
+          // Écriture 4 : Mise à jour du document parent chat
           const chatDocRef = doc(db, 'chats', String(chatId));
           transaction.set(chatDocRef, {
-            lastDealStatus: 'confirmed',
-            lastMessage: `🤝 Deal scellé et validé (${partnerName || 'Partenaire'})`,
+            lastDealStatus: targetStatus,
+            lastMessage: isPaidDeal ? `🛡️ Fonds sécurisés sous séquestre Troco (${partnerName || 'Partenaire'})` : `🤝 Deal scellé et validé (${partnerName || 'Partenaire'})`,
             updatedAt: serverTimestamp(),
           }, { merge: true });
         });
       } catch (err) {
-        console.warn('[Firestore] Atomic runTransaction deal error:', err);
+        console.warn('[Firestore] Atomic runTransaction deal escrow error:', err);
       }
     }
 
-    setSaveMessage(`🤝 Deal validé avec succès ! ${finalTokens > 0 ? `${finalTokens} Jeton(s) transféré(s). ` : ''}${finalEuro > 0 ? `${finalEuro}€ réglé(s).` : ''}`);
+    if (isPaidDeal) {
+      setSaveMessage(`🛡️ Deal sécurisé ! Les fonds (${finalEuro > 0 ? `${finalEuro}€ ` : ''}${finalTokens > 0 ? `${finalTokens} Jeton(s)` : ''}) sont sous séquestre Troco.`);
+    } else {
+      setSaveMessage(`🤝 Deal validé avec succès ! Troc direct scellé.`);
+    }
+    setTimeout(() => setSaveMessage(''), 5000);
+  };
+
+  // ---- LIBÉRATION DU SÉQUESTRE FINANCIER (CONFIRMATION FIN DE PRESTATION PAR L'ACHETEUR) ----
+  const handleReleaseEscrow = async (chatId, dealId, escrowData) => {
+    const cid = String(chatId);
+    const mid = String(dealId);
+    const dealMsg = (chatThreads[cid] || []).find(m => String(m.id) === mid);
+    const escrow = escrowData || dealMsg?.escrow || dealMsg?.terms || {};
+    const finalEuro = Number(escrow.euroAmount) || 0;
+    const finalTokens = Number(escrow.tokensAmount || escrow.trocoTokens) || 0;
+    const partnerName = escrow.sellerName || dealMsg?.senderName || selectedChat?.user || 'Prestataire';
+    let sellerUid = escrow.sellerUid || null;
+
+    // 1. Mise à jour immédiate locale
+    setChatThreads(prev => ({
+      ...prev,
+      [cid]: (prev[cid] || []).map(m => String(m.id) === mid ? {
+        ...m,
+        status: 'confirmed',
+        escrow: { ...(m.escrow || {}), status: 'released', releasedAt: new Date().toISOString() },
+      } : m),
+    }));
+    setChatStatusOverrides(prev => ({ ...prev, [cid]: 'Deal Scellé' }));
+
+    // Effets sonores
+    try {
+      playBetclicBalanceSound(true);
+      playApplePaySound();
+    } catch (_) {}
+
+    // 2. Transaction Firestore Atomique pour créditer le prestataire et clore le deal
+    if (profile?.uid) {
+      try {
+        if (!sellerUid && partnerName) {
+          try {
+            const userQuery = query(collection(db, 'users'), where('name', '==', partnerName));
+            const uSnap = await getDocs(userQuery);
+            if (!uSnap.empty) {
+              sellerUid = uSnap.docs[0].id;
+            }
+          } catch (_) {}
+        }
+
+        await runTransaction(db, async (transaction) => {
+          // Lecture compte vendeur / prestataire
+          let sellerRef = null;
+          let sellerSnap = null;
+          if (sellerUid) {
+            sellerRef = doc(db, 'users', sellerUid);
+            sellerSnap = await transaction.get(sellerRef);
+          }
+
+          // Lecture compte acheteur
+          const buyerRef = doc(db, 'users', profile.uid);
+          const buyerSnap = await transaction.get(buyerRef);
+          let buyerDeals = profile.dealsCompleted || 0;
+          if (buyerSnap.exists()) {
+            buyerDeals = buyerSnap.data().dealsCompleted !== undefined ? buyerSnap.data().dealsCompleted : buyerDeals;
+          }
+
+          // Crédit du vendeur / prestataire
+          if (sellerRef && sellerSnap && sellerSnap.exists()) {
+            const sData = sellerSnap.data();
+            const currentEuro = sData.euroBalance || 0;
+            const currentTokens = sData.trocoTokens || 0;
+            const currentDeals = sData.dealsCompleted || 0;
+
+            transaction.update(sellerRef, {
+              euroBalance: Number((currentEuro + finalEuro).toFixed(2)),
+              trocoTokens: currentTokens + finalTokens,
+              dealsCompleted: currentDeals + 1,
+              updatedAt: serverTimestamp(),
+            });
+          }
+
+          // Incrémentation pour l'acheteur
+          transaction.set(buyerRef, {
+            dealsCompleted: buyerDeals + 1,
+            updatedAt: serverTimestamp(),
+          }, { merge: true });
+
+          // Message du deal
+          const msgRef = doc(db, 'chats', cid, 'messages', mid);
+          transaction.update(msgRef, {
+            status: 'confirmed',
+            'escrow.status': 'released',
+            releasedAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          });
+
+          // Document Chat
+          const chatDocRef = doc(db, 'chats', cid);
+          transaction.set(chatDocRef, {
+            lastDealStatus: 'confirmed',
+            lastMessage: `🤝 Prestation validée et fonds débloqués (${partnerName})`,
+            updatedAt: serverTimestamp(),
+          }, { merge: true });
+
+          // Trace de libération de séquestre
+          const txDocRef = doc(collection(db, 'transactions'));
+          transaction.set(txDocRef, {
+            type: 'escrow_release',
+            userId: profile.uid,
+            userName: profile.name,
+            partnerUid: sellerUid || null,
+            dealId: mid,
+            chatId: cid,
+            amountTtc: finalEuro,
+            tokens: finalTokens,
+            mode: 'escrow_release',
+            status: 'completed',
+            label: `Libération du séquestre - Prestation validée avec ${partnerName}`,
+            createdAt: serverTimestamp(),
+          });
+        });
+      } catch (err) {
+        console.warn('[Firestore] Escrow release transaction error:', err);
+      }
+    }
+
+    setSaveMessage(`🎉 Prestation confirmée ! ${finalEuro > 0 ? `${finalEuro}€ ` : ''}${finalTokens > 0 ? `${finalTokens} Jeton(s) ` : ''}versé(s) à ${partnerName}.`);
     setTimeout(() => setSaveMessage(''), 5000);
   };
 
@@ -5354,6 +5487,10 @@ export default function App() {
     const { terms, status, sender } = message;
     const isMine = sender === 'me';
     const isIncoming = sender === 'them';
+    const isBuyer = (message.paidBy && profile?.uid && message.paidBy === profile.uid) ||
+      (message.escrow?.buyerUid && profile?.uid && message.escrow.buyerUid === profile.uid) ||
+      (!message.paidBy && isIncoming);
+
     return (
       <div style={{ width: '100%', border: '1px solid var(--border-color)', borderRadius: '18px', padding: '14px', backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', animation: 'fadeSlideUp 0.35s ease both' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', gap: '8px', flexWrap: 'wrap' }}>
@@ -5368,6 +5505,11 @@ export default function App() {
           {status === 'pending' && isIncoming && (
             <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-warning)', padding: '4px 9px', borderRadius: '999px' }}>
               ⚡ Action requise
+            </span>
+          )}
+          {status === 'escrow_locked' && (
+            <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'rgba(16, 185, 129, 0.15)', color: 'var(--accent-success, #10B981)', padding: '4px 9px', borderRadius: '999px', border: '1px solid var(--accent-success, #10B981)' }}>
+              🛡️ Fonds sous Séquestre
             </span>
           )}
           {(status === 'confirmed' || status === 'accepted') && (
@@ -5402,6 +5544,29 @@ export default function App() {
         {status === 'pending' && isMine && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: 'var(--bg-subtle)', border: '1px dashed var(--border-color)', color: 'var(--text-secondary)', borderRadius: '12px', padding: '9px 12px', fontSize: '11.5px', fontWeight: '700' }}>
             <Clock size={13} color="var(--accent-primary)" /> En attente de la réponse de <strong>{otherName}</strong>
+          </div>
+        )}
+        {status === 'escrow_locked' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', backgroundColor: 'var(--bg-subtle)', border: '1.5px solid var(--accent-primary)', borderRadius: '14px', padding: '12px 14px', marginTop: '6px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '800', color: 'var(--accent-primary)' }}>
+              <ShieldCheck size={16} color="var(--accent-success, #10B981)" />
+              <span>Fonds sous Séquestre Troco</span>
+            </div>
+            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+              {isBuyer
+                ? `Fonds sécurisés sous séquestre. Cliquez ci-dessous dès que la prestation est terminée.`
+                : `Paiement garanti sous séquestre. Versement effectué dès validation de l'acheteur.`}
+            </div>
+            {isBuyer && (
+              <button
+                type="button"
+                onClick={() => handleReleaseEscrow(chatId, message.id, message.escrow || { terms })}
+                className="premium-button"
+                style={{ border: 'none', borderRadius: '10px', padding: '8px 12px', backgroundColor: 'var(--accent-success, #10B981)', color: '#FFF', fontSize: '11.5px', fontWeight: '800', cursor: 'pointer' }}
+              >
+                Prestation terminée — Libérer les fonds ✓
+              </button>
+            )}
           </div>
         )}
         {(status === 'confirmed' || status === 'accepted') && (
@@ -8030,6 +8195,7 @@ export default function App() {
               joinActiveCall={joinActiveCall}
               handleAcceptDeal={handleAcceptDeal}
               handleDeclineDeal={handleDeclineDeal}
+              handleReleaseEscrow={handleReleaseEscrow}
               onCreateProjectGroup={handleCreateProjectGroup}
               onProposeReward={handleProposeReward}
               onAcceptReward={handleAcceptReward}
@@ -11107,6 +11273,9 @@ export default function App() {
         darkMode={darkMode}
         onOpenPrivacyCenter={() => setIsPrivacyCenterOpen(true)}
       />
+
+      {/* BANNIÈRE D'INSTALLATION PWA MOBILE 1-CLIC */}
+      <PWAInstallBanner />
 
     </div>
   );

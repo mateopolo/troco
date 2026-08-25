@@ -5,6 +5,7 @@ import App from './App';
 import { AuthProvider } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ErrorBoundary } from './ErrorBoundary';
+import * as serviceWorkerRegistration from './serviceWorkerRegistration';
 import reportWebVitals from './reportWebVitals';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
@@ -19,5 +20,8 @@ root.render(
     </ErrorBoundary>
   </React.StrictMode>
 );
+
+// Enregistrement PWA du Service Worker pour support offline et installation mobile
+serviceWorkerRegistration.register();
 
 reportWebVitals();

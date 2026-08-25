@@ -230,6 +230,60 @@ export const executeDealTransaction = async ({
   }
 };
 
+/**
+ * Libère les fonds sous séquestre au profit du prestataire
+ */
+export const releaseEscrowTransaction = async ({
+  chatId,
+  dealId,
+  buyerUid,
+  sellerUid,
+  euroAmount = 0,
+  trocoTokens = 0,
+}) => {
+  try {
+    await runTransaction(db, async (transaction) => {
+      const msgRef = doc(db, 'chats', String(chatId), 'messages', String(dealId));
+      transaction.update(msgRef, {
+        status: 'confirmed',
+        'escrow.status': 'released',
+        releasedAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+
+      if (sellerUid) {
+        const sellerRef = doc(db, 'users', String(sellerUid));
+        const sellerDoc = await transaction.get(sellerRef);
+        if (sellerDoc.exists()) {
+          const sellerData = sellerDoc.data();
+          transaction.update(sellerRef, {
+            trocoTokens: (sellerData.trocoTokens || 0) + trocoTokens,
+            euroBalance: Number(((sellerData.euroBalance || 0) + euroAmount).toFixed(2)),
+            dealsCompleted: (sellerData.dealsCompleted || 0) + 1,
+            updatedAt: serverTimestamp(),
+          });
+        }
+      }
+
+      if (buyerUid) {
+        const buyerRef = doc(db, 'users', String(buyerUid));
+        const buyerDoc = await transaction.get(buyerRef);
+        if (buyerDoc.exists()) {
+          transaction.update(buyerRef, {
+            dealsCompleted: (buyerDoc.data().dealsCompleted || 0) + 1,
+            updatedAt: serverTimestamp(),
+          });
+        }
+      }
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('[FirestoreService] releaseEscrowTransaction error:', error);
+    return { success: false, error };
+  }
+};
+
 // ------------------------------------------------------------------------------
 // 4. STATUT EN LIGNE (PRESENCE) & FRAPPE (TYPING)
 // ------------------------------------------------------------------------------

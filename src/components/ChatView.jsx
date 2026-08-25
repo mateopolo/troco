@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import {
   Send, Phone, Video, Sparkles, Clock, CheckCircle,
   ChevronLeft, Globe, Edit2, Trash2, Copy, Check, X,
-  AlertTriangle, Users, Coins, Mic, ShieldAlert
+  AlertTriangle, Users, Coins, Mic, ShieldAlert, ShieldCheck
 } from 'lucide-react';
 import { doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -32,6 +32,7 @@ function ChatView({
   joinActiveCall,
   handleAcceptDeal,
   handleDeclineDeal,
+  handleReleaseEscrow,
   onCreateProjectGroup,
   onProposeReward,
   onAcceptReward,
@@ -791,6 +792,11 @@ function ChatView({
                             {t('waitingResponse') || 'En attente'}
                           </span>
                         )}
+                        {currentDealStatus === 'escrow_locked' && (
+                          <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'rgba(16, 185, 129, 0.15)', color: 'var(--accent-success, #10B981)', padding: '3px 8px', borderRadius: '999px', border: '1.5px solid var(--accent-success, #10B981)', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                            🛡️ Fonds sous Séquestre
+                          </span>
+                        )}
                         {(currentDealStatus === 'confirmed' || currentDealStatus === 'accepted') && (
                           <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-success)', padding: '3px 8px', borderRadius: '999px', border: '1.5px solid var(--accent-success)' }}>
                             ✓ Validé & Scellé
@@ -897,6 +903,65 @@ function ChatView({
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'var(--bg-subtle)', border: '1px dashed var(--border-color)', color: 'var(--text-secondary)', borderRadius: '12px', padding: '9px 12px', fontSize: '11.5px', fontWeight: '700' }}>
                           <Clock size={13} color="var(--accent-primary)" />
                           <span>En attente de la réponse de <strong>{partnerName}</strong></span>
+                        </div>
+                      )}
+
+                      {/* BLOC SÉQUESTRE FINANCIER & LIBÉRATION DES FONDS */}
+                      {currentDealStatus === 'escrow_locked' && (
+                        <div style={{
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '8px',
+                          backgroundColor: 'var(--bg-subtle)',
+                          border: '1.5px solid var(--accent-primary)',
+                          borderRadius: '14px',
+                          padding: '12px 14px',
+                          boxShadow: 'var(--shadow-card)',
+                          marginTop: '6px',
+                          animation: 'fadeSlideUp 0.3s ease'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', fontWeight: '800', color: 'var(--accent-primary)' }}>
+                            <ShieldCheck size={16} color="var(--accent-success, #10B981)" />
+                            <span>Séquestre Financier Troco Sécurisé</span>
+                          </div>
+
+                          <div style={{ fontSize: '11.5px', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
+                            {((msg.paidBy && profile?.uid && msg.paidBy === profile.uid) ||
+                              (msg.escrow?.buyerUid && profile?.uid && msg.escrow.buyerUid === profile.uid) ||
+                              (!msg.paidBy && isIncoming))
+                              ? `Vos fonds (${Number(terms.euroAmount) > 0 ? `${terms.euroAmount}€` : ''} ${Number(terms.trocoTokens) > 0 ? `${terms.trocoTokens} Jetons` : ''}) sont bloqués en toute sécurité sous séquestre. Cliquez ci-dessous une fois la prestation terminée pour débloquer le versement au prestataire.`
+                              : `Le règlement (${Number(terms.euroAmount) > 0 ? `${terms.euroAmount}€` : ''} ${Number(terms.trocoTokens) > 0 ? `${terms.trocoTokens} Jetons` : ''}) est garanti sous séquestre Troco. Les fonds vous seront versés dès confirmation de l'acheteur.`
+                            }
+                          </div>
+
+                          {((msg.paidBy && profile?.uid && msg.paidBy === profile.uid) ||
+                            (msg.escrow?.buyerUid && profile?.uid && msg.escrow.buyerUid === profile.uid) ||
+                            (!msg.paidBy && isIncoming)) && (
+                            <button
+                              type="button"
+                              onClick={() => handleReleaseEscrow && handleReleaseEscrow(currentChatId, msg.id, msg.escrow || { terms })}
+                              className="premium-button"
+                              style={{
+                                border: 'none',
+                                borderRadius: '12px',
+                                padding: '10px 14px',
+                                background: 'linear-gradient(135deg, var(--accent-success, #10B981) 0%, #059669 100%)',
+                                color: '#FFFFFF',
+                                fontSize: '12px',
+                                fontWeight: '800',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px',
+                                boxShadow: '0 4px 14px rgba(16, 185, 129, 0.4)',
+                                marginTop: '4px'
+                              }}
+                            >
+                              <CheckCircle size={15} />
+                              <span>Prestation terminée — Libérer les fonds ✓</span>
+                            </button>
+                          )}
                         </div>
                       )}
 
