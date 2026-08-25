@@ -3798,7 +3798,7 @@ export default function App() {
 
     const timer = setTimeout(() => {
       if (!listingsGridRef.current) return;
-      const cards = listingsGridRef.current.querySelectorAll('.feed-card-item');
+      const cards = listingsGridRef.current.querySelectorAll('.feed-card-item, .sponsored-feed-card, .ad-card');
       if (!cards || cards.length === 0) return;
 
       // 1. Cascade d'entrée immédiate pour les premières cartes visibles à l'écran
@@ -3825,7 +3825,7 @@ export default function App() {
       // 2. Cascade au défilement pour les cartes suivantes
       ScrollTrigger.batch(cards, {
         start: 'top 92%',
-        interval: 0.1,
+        interval: 0.08,
         batchMax: 6,
         onEnter: (batch) => {
           gsap.fromTo(
@@ -3841,7 +3841,7 @@ export default function App() {
               scale: 1,
               duration: 0.48,
               ease: 'power3.out',
-              stagger: 0.06,
+              stagger: 0.05,
               overwrite: 'auto',
               clearProps: 'transform,opacity',
             }
@@ -3851,13 +3851,13 @@ export default function App() {
       });
 
       ScrollTrigger.refresh();
-    }, 60);
+    }, 40);
 
     return () => {
       clearTimeout(timer);
       ScrollTrigger.getAll().forEach(t => t.kill());
     };
-  }, { dependencies: [activeTab, filteredListings.length, viewMode, selectedCategory], scope: listingsGridRef });
+  }, { dependencies: [activeTab, filteredListings.length, viewMode, selectedCategory, formatFilter, searchQuery, selectedPayment], scope: listingsGridRef });
 
   const getListingDetail = (listing) => {
     const media = getSuggestedMedia(listing.title, listing.description || '', listing.image, listing.video);
