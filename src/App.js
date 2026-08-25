@@ -34,6 +34,7 @@ import InvoiceCalculator, { generateInvoiceRef, calculateListingInvoice } from '
 import CallOverlay from './components/CallOverlay';
 import TrocoLogo3D from './components/common/TrocoLogo3D';
 import MapClusterTracker from './components/MapClusterTracker';
+import LiveCallSubtitles from './components/LiveCallSubtitles';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useGSAP } from '@gsap/react';
@@ -1635,6 +1636,7 @@ export default function App() {
   // ---- ÉTATS APPEL WEBRTC AVANCÉ (PIP, DRAG POINTER EVENTS, SWAP, PROFESSEUR & PARTAGE D'ÉCRAN) ----
   const [isCallPip, setIsCallPip] = useState(false);
   const [isSwapVideo, setIsSwapVideo] = useState(false);
+  const [showCallSubtitles, setShowCallSubtitles] = useState(true);
   const [callDuration, setCallDuration] = useState(0);
   const [showCallControls, setShowCallControls] = useState(true);
   const [isTeacherMenuOpen, setIsTeacherMenuOpen] = useState(false);
@@ -10722,6 +10724,14 @@ export default function App() {
             </button>
           )}
 
+          {/* SOUS-TITRES ET TRADUCTION VOCALE EN DIRECT (IA) */}
+          <LiveCallSubtitles
+            isActive={showCallSubtitles}
+            currentLang={currentLang}
+            speakerName={selectedChat?.user || 'Interlocuteur'}
+            isCompact={false}
+          />
+
           {showCallControls && (
             <div
               className="call-controls-dock"
@@ -10791,6 +10801,22 @@ export default function App() {
                     {callState.camOn ? <Camera size={18} /> : <VideoOff size={18} />}
                   </button>
                 )}
+
+                {/* BOUTON SOUS-TITRAGE EN DIRECT (IA) */}
+                <button
+                  className="call-btn-circle"
+                  onClick={() => setShowCallSubtitles(s => !s)}
+                  style={{
+                    backgroundColor: showCallSubtitles ? 'var(--accent-primary)' : 'rgba(255,255,255,0.14)',
+                    color: '#FFF',
+                    fontWeight: '900',
+                    fontSize: '12px',
+                    boxShadow: showCallSubtitles ? '0 0 16px var(--accent-primary)' : 'none'
+                  }}
+                  title={showCallSubtitles ? "Désactiver les sous-titres en direct" : "Activer les sous-titres et traduction en direct"}
+                >
+                  CC
+                </button>
 
                 <button
                   className="call-btn-circle"
@@ -10944,6 +10970,7 @@ export default function App() {
         switchCamera={switchCamera}
         toggleMic={toggleMic}
         endCall={endCall}
+        currentLang={currentLang}
       />
 
       {/* PANEL ADMINISTRATEUR & MODÉRATION (/admin) */}

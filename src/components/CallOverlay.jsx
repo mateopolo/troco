@@ -3,6 +3,7 @@ import {
   Maximize2, SwitchCamera, Mic, MicOff, PhoneOff,
   ChevronLeft, ChevronRight, PictureInPicture2
 } from 'lucide-react';
+import LiveCallSubtitles from './LiveCallSubtitles';
 
 export default function CallOverlay({
   callState,
@@ -27,7 +28,9 @@ export default function CallOverlay({
   switchCamera,
   toggleMic,
   endCall,
+  currentLang = 'FR',
 }) {
+  const [showSubtitles, setShowSubtitles] = useState(true);
   const [isDocked, setIsDocked] = useState(null); // 'left' | 'right' | null
   const videoRef = useRef(null);
 
@@ -250,26 +253,57 @@ export default function CallOverlay({
             </button>
           )}
 
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); if (toggleMic) toggleMic(); }}
-            title={callState.micOn ? "Couper micro" : "Activer micro"}
-            style={{ border: callState.micOn ? 'none' : '1px solid var(--border-color)', width: '28px', height: '28px', borderRadius: '50%', backgroundColor: callState.micOn ? 'var(--bg-glass)' : 'var(--accent-danger)', color: '#FFFFFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          >
-            {callState.micOn ? <Mic size={13} /> : <MicOff size={13} />}
-          </button>
+            {/* BOUTON SOUS-TITRES EN DIRECT (IA) */}
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setShowSubtitles(s => !s); }}
+              title={showSubtitles ? "Désactiver les sous-titres en direct" : "Activer les sous-titres et traduction en direct"}
+              style={{
+                border: showSubtitles ? '1px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                width: '28px',
+                height: '28px',
+                borderRadius: '50%',
+                backgroundColor: showSubtitles ? 'var(--accent-primary)' : 'var(--bg-glass)',
+                color: '#FFFFFF',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '10px',
+                fontWeight: '900',
+              }}
+            >
+              CC
+            </button>
 
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); if (endCall) endCall(); }}
-            title="Raccrocher"
-            style={{ border: '1px solid var(--border-color)', width: '28px', height: '28px', borderRadius: '50%', backgroundColor: 'var(--accent-danger)', color: '#FFFFFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-          >
-            <PhoneOff size={13} />
-          </button>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); if (toggleMic) toggleMic(); }}
+              title={callState.micOn ? "Couper micro" : "Activer micro"}
+              style={{ border: callState.micOn ? 'none' : '1px solid var(--border-color)', width: '28px', height: '28px', borderRadius: '50%', backgroundColor: callState.micOn ? 'var(--bg-glass)' : 'var(--accent-danger)', color: '#FFFFFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              {callState.micOn ? <Mic size={13} /> : <MicOff size={13} />}
+            </button>
+
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); if (endCall) endCall(); }}
+              title="Raccrocher"
+              style={{ border: '1px solid var(--border-color)', width: '28px', height: '28px', borderRadius: '50%', backgroundColor: 'var(--accent-danger)', color: '#FFFFFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              <PhoneOff size={13} />
+            </button>
+          </div>
+
+          {/* SOUS-TITRES FLOTTANTS COMPACTS EN MODE PIP */}
+          <LiveCallSubtitles
+            isActive={showSubtitles}
+            currentLang={currentLang}
+            speakerName={selectedChat?.user || 'Interlocuteur'}
+            isCompact={true}
+          />
         </div>
       </div>
-    </div>
-  );
+    );
 }
 

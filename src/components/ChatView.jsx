@@ -2,11 +2,12 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import {
   Send, Phone, Video, Sparkles, Clock, CheckCircle,
   ChevronLeft, Globe, Edit2, Trash2, Copy, Check, X,
-  AlertTriangle, Users, Coins, Mic
+  AlertTriangle, Users, Coins, Mic, ShieldAlert
 } from 'lucide-react';
 import { doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { subscribeTranslations } from '../utils/translator';
+import { analyzeContent } from '../utils/contentModeration';
 import CreateProjectGroupModal from './CreateProjectGroupModal';
 import ProjectRewardsModal from './ProjectRewardsModal';
 import VoiceNotePlayer from './VoiceNotePlayer';
@@ -1107,6 +1108,36 @@ function ChatView({
                         />
                       ) : (
                         <>
+                          {!isMe && msg.text && (() => {
+                            const analysis = analyzeContent(msg.text);
+                            if (analysis.alertLevel === 'high' || analysis.score >= 35) {
+                              return (
+                                <div style={{
+                                  backgroundColor: 'rgba(239, 68, 68, 0.12)',
+                                  border: '1px solid rgba(239, 68, 68, 0.4)',
+                                  borderRadius: '8px',
+                                  padding: '6px 8px',
+                                  marginBottom: '6px',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  gap: '2px',
+                                  fontSize: '11px',
+                                  color: 'var(--accent-danger, #EF4444)',
+                                  textAlign: 'left',
+                                }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontWeight: '800' }}>
+                                    <ShieldAlert size={12} />
+                                    <span>Alerte Sécurité IA Anti-Arnaque</span>
+                                  </div>
+                                  <span style={{ fontSize: '10px', opacity: 0.9 }}>
+                                    {analysis.reasons[0] || 'Lien ou méthode de paiement suspecte détectée. Ne communiquez jamais vos coordonnées bancaires hors de Troco.'}
+                                  </span>
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
+
                           <div style={{ fontSize: '13.5px', lineHeight: 1.45, fontWeight: '500' }}>
                             {translatedText}
                           </div>

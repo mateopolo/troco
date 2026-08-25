@@ -1,6 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { Video, Phone, X, ZoomIn, ZoomOut, Mic, MicOff, Camera, VideoOff, UserPlus, PhoneOff, GripHorizontal } from 'lucide-react';
 import { getAuthorAvatar } from '../data/mockData';
+import LiveCallSubtitles from './LiveCallSubtitles';
 
 export default function CallModal({
   callState,
@@ -12,8 +13,10 @@ export default function CallModal({
   localStream,
   localVideoRef,
   localZoom,
-  setLocalZoom
+  setLocalZoom,
+  currentLang = 'FR'
 }) {
+  const [showSubtitles, setShowSubtitles] = useState(true);
   const [controlsPos, setControlsPos] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef({ startX: 0, startY: 0, initialX: 0, initialY: 0 });
@@ -182,6 +185,14 @@ export default function CallModal({
         )}
       </div>
 
+      {/* SOUS-TITRES EN DIRECT ET TRADUCTION VOCALE TEMPS RÉEL (IA) */}
+      <LiveCallSubtitles
+        isActive={showSubtitles}
+        currentLang={currentLang}
+        speakerName={chatUser}
+        isCompact={false}
+      />
+
       {/* NOTIFICATION D'INVITATION COPIÉE */}
       {callState.copied && (
         <div style={{ position: 'absolute', bottom: '104px', left: '50%', transform: 'translateX(-50%)', backgroundColor: 'var(--bg-glass)', color: 'var(--text-main)', padding: '8px 18px', borderRadius: '999px', fontSize: '12px', fontWeight: '700', boxShadow: 'var(--shadow-modal)', border: '1px solid var(--border-color)', zIndex: 60 }}>
@@ -218,6 +229,32 @@ export default function CallModal({
         <div title="Glisser pour déplacer" style={{ display: 'flex', alignItems: 'center', color: 'var(--text-muted)', paddingRight: '4px', cursor: 'grab' }}>
           <GripHorizontal size={16} />
         </div>
+
+        {/* BOUTON SOUS-TITRAGE EN DIRECT (IA) */}
+        <button
+          type="button"
+          onClick={() => setShowSubtitles(s => !s)}
+          title={showSubtitles ? "Désactiver les sous-titres en direct" : "Activer les sous-titres et la traduction en direct"}
+          style={{
+            border: showSubtitles ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-color)',
+            width: '46px',
+            height: '46px',
+            borderRadius: '50%',
+            backgroundColor: showSubtitles ? 'var(--accent-primary)' : 'var(--call-button-bg)',
+            color: '#FFF',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '13px',
+            fontWeight: '900',
+            transition: 'all 0.2s ease',
+            flexShrink: 0,
+            boxShadow: showSubtitles ? 'var(--shadow-accent)' : 'none'
+          }}
+        >
+          CC
+        </button>
 
         <button
           onClick={toggleMic}

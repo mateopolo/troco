@@ -5,6 +5,8 @@
  * S'applique à : Titres/Descriptions d'annonces, Tags, Messages privés de chat, Profils utilisateurs (Nom, Bio, Pseudo).
  */
 
+import { analyzeContent } from './contentModeration.js';
+
 // Utilitaire d'échappement regex
 const escapeRegex = (str) => (str ? str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') : '');
 
@@ -405,6 +407,17 @@ export const validateContentText = (text) => {
         errorMessage: `⚠️ Action bloquée : Le terme « ${term} » est interdit sur Troco. ${reason}`
       };
     }
+  }
+
+  // Analyse sémantique & heuristique renforcée anti-phishing et arnaques
+  const semanticAnalysis = analyzeContent(text);
+  if (!semanticAnalysis.isClean && semanticAnalysis.score >= 35) {
+    return {
+      isValid: false,
+      forbiddenWord: 'motif frauduleux / phishing',
+      reason: semanticAnalysis.reasons.join(' '),
+      errorMessage: `🛡️ Alerte Sécurité Anti-Arnaque Troco :\n${semanticAnalysis.reasons.map(r => `• ${r}`).join('\n')}`,
+    };
   }
 
   return { isValid: true };
