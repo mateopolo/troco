@@ -5,20 +5,54 @@
  * S'applique à : Titres/Descriptions d'annonces, Tags, Messages privés de chat, Profils utilisateurs (Nom, Bio, Pseudo).
  */
 
-// Normalisation rigoureuse du texte pour contrer le leetspeak, la dissimulation et les caractères spéciaux
+// Utilitaire d'échappement regex
+const escapeRegex = (str) => (str ? str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') : '');
+
+// Liste blanche explicite des mots et locutions courantes du français
+export const FRENCH_COMMON_WORDS_WHITELIST = [
+  'ca', 'ça', 'çà', 'ce', 'ci', 'ces', 'cet', 'cette', 'celui', 'celle', 'ceux', 'celles',
+  'est', 'c est', 'c\'est', 'c est ca', 'c\'est ça', 'comme ca', 'comme ça', 'comment ca', 'comment ça',
+  'pour ca', 'pour ça', 'avec ca', 'avec ça', 'sans ca', 'sans ça', 'tout ca', 'tout ça',
+  'ca va', 'ça va', 'comment ca va', 'comment ça va', 'ca marche', 'ça marche', 'ca roule', 'ça roule',
+  'ca te va', 'ça te va', 'ca me va', 'ça me va', 'ca convient', 'ça convient', 'ca depend', 'ça dépend',
+  'ca fait', 'ça fait', 'ca donne', 'ça donne', 'ca peut', 'ça peut', 'ca pourrait', 'ça pourrait',
+  'ca arrive', 'ça arrive', 'ca serait', 'ça serait', 'ca coute', 'ça coûte', 'ca vaut', 'ça vaut',
+  'ca interesse', 'ça intéresse', 'ca se passe', 'ça se passe', 'ca existe', 'ça existe',
+  'ca fonctionne', 'ça fonctionne', 'ca ira', 'ça ira', 'ca va aller', 'ça va aller',
+  'ca a ete', 'ça a été', 'ca alors', 'ça alors', 'ca y est', 'ça y est',
+  'salut', 'bonjour', 'bonsoir', 'merci', 'svp', 'stp', 'oui', 'non', 'ok', 'd accord',
+  'super', 'parfait', 'cool', 'disponible', 'dispo', 'echange', 'troc', 'don', 'paris',
+  'france', 'lyon', 'marseille', 'bordeaux', 'toulouse', 'nantes', 'lille', 'strasbourg',
+  'cadeau', 'carte', 'casque', 'cafe', 'camping', 'camion', 'canape', 'chargeur', 'cable', 'camera', 'cahier',
+  'occasion', 'location', 'vocation', 'local', 'bocal', 'amical', 'avocat', 'chocolat', 'sac'
+];
+
+// Normalisation rigoureuse du texte (suppression accents, ponctuation, casse)
 export const normalizeTextForModeration = (rawText) => {
   if (!rawText || typeof rawText !== 'string') return '';
   return rawText
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // Supprime tous les accents (é -> e, à -> a, ô -> o, etc.)
-    .replace(/[@4]/g, 'a')
+    .replace(/[\u0300-\u036f]/g, '') // Supprime tous les accents (é -> e, à -> a, ô -> o, ç -> c, etc.)
+    .replace(/[^a-z0-9\s]/g, ' ') // Remplace tout symbole ou ponctuation par des espaces
+    .replace(/\s+/g, ' ')
+    .trim();
+};
+
+// Normalisation leetspeak pour déceler les tentatives de dissimulation avancées
+export const normalizeLeetspeakForModeration = (rawText) => {
+  if (!rawText || typeof rawText !== 'string') return '';
+  return rawText
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[@]/g, 'a')
     .replace(/[3€]/g, 'e')
     .replace(/[1!|]/g, 'i')
     .replace(/[0]/g, 'o')
-    .replace(/[5$]/g, 's')
+    .replace(/[$]/g, 's')
     .replace(/[7]/g, 't')
-    .replace(/[^a-z0-9\s]/g, ' ') // Remplace tout symbole ou ponctuation par des espaces
+    .replace(/[^a-z0-9\s]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 };
@@ -47,7 +81,7 @@ export const WEAPONS_FIREARMS_TERMS = [
   'bombe lacrymogene 500ml', 'taser interdit', 'shocker electrique',
 
   // Explosifs & pyrotechnie illégale
-  'explosif', 'detonateur', 'dynamite', 'c4', 'cordeau detonant', 'grenade a main',
+  'explosif', 'detonateur', 'dynamite', 'explosif c4', 'pain de c4', 'bombe c4', 'charge c4', 'cordeau detonant', 'grenade a main',
   'bombe artisanale', 'mortier d artifice vente', 'marron d air interdit'
 ];
 
@@ -303,11 +337,23 @@ export const validateContentText = (text) => {
   }
 
   const normalized = normalizeTextForModeration(text);
+  if (!normalized) return { isValid: true };
+
+  const leetNormalized = normalizeLeetspeakForModeration(text);
 
   for (const term of ALL_FORBIDDEN_TERMS) {
     const normalizedTerm = normalizeTextForModeration(term);
-    const regex = new RegExp(`\\b${normalizedTerm}\\b`, 'i');
-    if (regex.test(normalized) || normalized.includes(normalizedTerm)) {
+    if (!normalizedTerm) continue;
+
+    // Détection stricte par délimiteurs de mots pour éviter les faux positifs sur les sous-chaînes
+    const regex = new RegExp(`(^|\\s)${escapeRegex(normalizedTerm)}($|\\s)`, 'i');
+    const bRegex = new RegExp(`\\b${escapeRegex(normalizedTerm)}\\b`, 'i');
+
+    const matchesStandard = regex.test(normalized) || bRegex.test(normalized);
+    // Vérification leetspeak ciblée sur les termes de plus de 3 caractères
+    const matchesLeet = (normalizedTerm.length > 3) && (regex.test(leetNormalized) || bRegex.test(leetNormalized));
+
+    if (matchesStandard || matchesLeet) {
       let reason = 'Contenu strictement interdit sur la plateforme Troco.';
 
       if (WEAPONS_FIREARMS_TERMS.includes(term)) {

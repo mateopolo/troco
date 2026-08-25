@@ -94,13 +94,6 @@ export function getLuminance(hex) {
   }
 }
 
-/**
- * 1. getContrastColor(hexColor):
- * Calcule la luminance YIQ d'une couleur HEX.
- * Si sombre -> retourne #FFFFFF (blanc).
- * Si claire -> retourne #111827 (noir profond).
- * Garantit la conformité d'accessibilité WCAG sur tous les boutons d'action.
- */
 export function getContrastColor(hexColor) {
   if (!hexColor || typeof hexColor !== 'string') return '#FFFFFF';
   try {
@@ -113,13 +106,7 @@ export function getContrastColor(hexColor) {
 }
 
 /**
- * 2. generateHarmonicPalette(baseHex):
- * Génère une palette harmonieuse instantanée à partir d'une unique couleur de marque :
- * - Fond global très clair (Lightness 96%)
- * - Fond de carte blanc / doux (Lightness 92% ou #FFFFFF)
- * - Fond de container / subtil (Lightness 92%)
- * - Texte de base très sombre (Lightness 15%)
- * - Couleur de bordure douce (Lightness 85%)
+ * Génère une palette harmonieuse claire (Light Mode) à partir d'une unique couleur HEX
  */
 export function generateHarmonicPalette(baseHex) {
   try {
@@ -163,6 +150,71 @@ export function generateHarmonicPalette(baseHex) {
       primaryHover: '#A87A63',
       contrastText: '#FFFFFF',
     };
+  }
+}
+
+/**
+ * Génère une palette harmonieuse sombre (Dark Mode Chromatique) à partir d'une couleur HEX
+ * Conserve la teinte choisie mais dans des nuances profondes, veloutées et immersives.
+ */
+export function generateHarmonicDarkPalette(baseHex) {
+  try {
+    const { r, g, b } = hexToRgb(baseHex);
+    const { h, s } = rgbToHsl(r, g, b);
+
+    const bg = hslToHex(h, Math.min(s, 26), 9);
+    const card = hslToHex(h, Math.min(s, 28), 14);
+    const subtle = hslToHex(h, Math.min(s, 30), 19);
+    const elevated = hslToHex(h, Math.min(s, 32), 24);
+    const pill = hslToHex(h, Math.min(s, 35), 29);
+
+    const text = hslToHex(h, Math.min(s, 15), 96);
+    const textSecondary = hslToHex(h, Math.min(s, 25), 78);
+    const textMuted = hslToHex(h, Math.min(s, 20), 58);
+
+    const primary = hslToHex(h, Math.max(s, 55), 65);
+    const primaryHover = hslToHex(h, Math.max(s, 60), 72);
+    const primarySecondary = hslToHex(h, Math.max(s, 45), 55);
+
+    const { r: pr, g: pg, b: pb } = hexToRgb(primary);
+    const borderColor = `rgba(${pr}, ${pg}, ${pb}, 0.22)`;
+    const borderDark = `rgba(${pr}, ${pg}, ${pb}, 0.45)`;
+
+    const { r: br, g: bgCol, b: bb } = hexToRgb(card);
+    const glassBg = `rgba(${br}, ${bgCol}, ${bb}, 0.85)`;
+
+    return {
+      '--bg-global': bg,
+      '--bg-card': card,
+      '--bg-subtle': subtle,
+      '--bg-elevated': elevated,
+      '--bg-pill': pill,
+      '--bg-glass': glassBg,
+      '--text-main': text,
+      '--text-secondary': textSecondary,
+      '--text-muted': textMuted,
+      '--border-color': borderColor,
+      '--border-dark': borderDark,
+      '--accent-primary': primary,
+      '--accent-primary-hover': primaryHover,
+      '--accent-secondary': primarySecondary,
+      '--accent-contrast-text': getContrastColor(primary),
+      '--accent-terracotta': primary,
+      '--accent-success': '#86EFAC',
+      '--accent-danger': '#FCA5A5',
+      '--accent-warning': '#FDE047',
+      '--shadow-card': '0 12px 36px rgba(0, 0, 0, 0.65)',
+      '--shadow-accent': `0 8px 24px rgba(${pr}, ${pg}, ${pb}, 0.4)`,
+      '--shadow-modal': '0 24px 70px rgba(0, 0, 0, 0.85)',
+      '--glass-bg': glassBg,
+      '--glass-border': borderColor,
+      '--overlay-bg': 'rgba(0, 0, 0, 0.82)',
+      '--call-bg': hslToHex(h, Math.min(s, 26), 6),
+      '--call-card': hslToHex(h, Math.min(s, 28), 11),
+      '--call-button-bg': `rgba(${pr}, ${pg}, ${pb}, 0.16)`,
+    };
+  } catch (e) {
+    return generateCustomThemeVariables(baseHex, '#111113', '#1C1C1F', '#F5F5F7');
   }
 }
 
@@ -246,14 +298,17 @@ export const TYPOGRAPHY_OPTIONS = {
   },
 };
 
+// ============================================================================
+// CONFIGURATION DES THÈMES PRÉDÉFINIS (AVEC VERSIONS JOUR ET NUIT CHROMATIQUES)
+// ============================================================================
+
 export const THEMES_CONFIG = {
   earthy: {
     id: 'earthy',
     name: 'Earthy Pastel',
     description: 'Fonds crème & sable, accents terracotta, textes marron',
-    isDark: false,
     previewColors: ['#FAF7F2', '#DDBEA9', '#B98B73', '#3F4238'],
-    variables: {
+    lightVariables: {
       '--bg-global': '#FAF7F2',
       '--bg-card': '#FFFFFF',
       '--bg-subtle': '#F5F0E8',
@@ -282,15 +337,272 @@ export const THEMES_CONFIG = {
       '--call-bg': '#1E1B18',
       '--call-card': '#2B2622',
       '--call-button-bg': 'rgba(250, 247, 242, 0.12)',
+    },
+    darkVariables: {
+      '--bg-global': '#1C1714',
+      '--bg-card': '#28211C',
+      '--bg-subtle': '#342B25',
+      '--bg-elevated': '#3D332C',
+      '--bg-pill': '#4A3E36',
+      '--bg-glass': 'rgba(40, 33, 28, 0.85)',
+      '--text-main': '#FAF7F2',
+      '--text-secondary': '#C5B8AB',
+      '--text-muted': '#8E8276',
+      '--border-color': 'rgba(212, 157, 126, 0.22)',
+      '--border-dark': 'rgba(212, 157, 126, 0.45)',
+      '--accent-primary': '#D49D7E',
+      '--accent-primary-hover': '#E2AF92',
+      '--accent-secondary': '#C58C6E',
+      '--accent-contrast-text': '#1C1714',
+      '--accent-terracotta': '#D49D7E',
+      '--accent-success': '#86EFAC',
+      '--accent-danger': '#FCA5A5',
+      '--accent-warning': '#FDE047',
+      '--shadow-card': '0 12px 36px rgba(0, 0, 0, 0.65)',
+      '--shadow-accent': '0 8px 24px rgba(212, 157, 126, 0.4)',
+      '--shadow-modal': '0 24px 70px rgba(0, 0, 0, 0.85)',
+      '--glass-bg': 'rgba(40, 33, 28, 0.85)',
+      '--glass-border': 'rgba(212, 157, 126, 0.22)',
+      '--overlay-bg': 'rgba(0, 0, 0, 0.82)',
+      '--call-bg': '#120F0D',
+      '--call-card': '#1C1714',
+      '--call-button-bg': 'rgba(212, 157, 126, 0.16)',
     }
   },
-  dark: {
-    id: 'dark',
-    name: 'Dark Titanium',
-    description: 'Noir titane, cartes graphite, accents acier brossé',
-    isDark: true,
-    previewColors: ['#111113', '#1C1C1F', '#8E8E93', '#F5F5F7'],
-    variables: {
+  sakura: {
+    id: 'sakura',
+    name: 'Soft Sakura',
+    description: 'Blanc rosé panna cotta, rose poudré, bordeaux velours',
+    previewColors: ['#FFF5F8', '#F5C6D4', '#D6456E', '#3A1822'],
+    lightVariables: {
+      '--bg-global': '#FFF5F8',
+      '--bg-card': '#FFFFFF',
+      '--bg-subtle': '#FDEAF0',
+      '--bg-elevated': '#FAD9E2',
+      '--bg-pill': '#F5C6D4',
+      '--bg-glass': 'rgba(255, 245, 248, 0.72)',
+      '--text-main': '#3A1822',
+      '--text-secondary': '#754352',
+      '--text-muted': '#A37382',
+      '--border-color': '#F2CAD6',
+      '--border-dark': '#D6456E',
+      '--accent-primary': '#D6456E',
+      '--accent-primary-hover': '#BF325A',
+      '--accent-secondary': '#E87093',
+      '--accent-contrast-text': '#FFFFFF',
+      '--accent-terracotta': '#D6456E',
+      '--accent-success': '#689F63',
+      '--accent-danger': '#E11D48',
+      '--accent-warning': '#D97706',
+      '--shadow-card': '0 10px 30px rgba(58, 24, 34, 0.07)',
+      '--shadow-accent': '0 8px 24px rgba(214, 69, 110, 0.35)',
+      '--shadow-modal': '0 24px 60px rgba(58, 24, 34, 0.18)',
+      '--glass-bg': 'rgba(255, 245, 248, 0.92)',
+      '--glass-border': 'rgba(242, 202, 214, 0.75)',
+      '--overlay-bg': 'rgba(58, 24, 34, 0.65)',
+      '--call-bg': '#261017',
+      '--call-card': '#3A1823',
+      '--call-button-bg': 'rgba(255, 245, 248, 0.16)',
+    },
+    darkVariables: {
+      '--bg-global': '#1F1116',
+      '--bg-card': '#2B1720',
+      '--bg-subtle': '#391E2B',
+      '--bg-elevated': '#442333',
+      '--bg-pill': '#4C2739',
+      '--bg-glass': 'rgba(43, 23, 32, 0.85)',
+      '--text-main': '#FFF0F5',
+      '--text-secondary': '#E0A8BA',
+      '--text-muted': '#9C6F7E',
+      '--border-color': 'rgba(244, 114, 155, 0.25)',
+      '--border-dark': 'rgba(244, 114, 155, 0.5)',
+      '--accent-primary': '#F4729B',
+      '--accent-primary-hover': '#FB7185',
+      '--accent-secondary': '#FDA4AF',
+      '--accent-contrast-text': '#1F1116',
+      '--accent-terracotta': '#F4729B',
+      '--accent-success': '#86EFAC',
+      '--accent-danger': '#FDA4AF',
+      '--accent-warning': '#FDE047',
+      '--shadow-card': '0 12px 36px rgba(0, 0, 0, 0.65)',
+      '--shadow-accent': '0 8px 24px rgba(244, 114, 155, 0.4)',
+      '--shadow-modal': '0 24px 70px rgba(0, 0, 0, 0.85)',
+      '--glass-bg': 'rgba(43, 23, 32, 0.85)',
+      '--glass-border': 'rgba(244, 114, 155, 0.25)',
+      '--overlay-bg': 'rgba(0, 0, 0, 0.82)',
+      '--call-bg': '#140A0E',
+      '--call-card': '#1F1116',
+      '--call-button-bg': 'rgba(244, 114, 155, 0.16)',
+    }
+  },
+  emerald: {
+    id: 'emerald',
+    name: 'Botanical Sage',
+    description: 'Sauge pastel, vert sous-bois, nuit émeraude profonde',
+    previewColors: ['#F4F8F5', '#C7DBCF', '#2D6A4F', '#1B4332'],
+    lightVariables: {
+      '--bg-global': '#F4F8F5',
+      '--bg-card': '#FFFFFF',
+      '--bg-subtle': '#E8F1EB',
+      '--bg-elevated': '#DAE6DE',
+      '--bg-pill': '#C7DBCF',
+      '--bg-glass': 'rgba(244, 248, 245, 0.72)',
+      '--text-main': '#1B4332',
+      '--text-secondary': '#406A56',
+      '--text-muted': '#729884',
+      '--border-color': '#CDE0D4',
+      '--border-dark': '#2D6A4F',
+      '--accent-primary': '#2D6A4F',
+      '--accent-primary-hover': '#1B4332',
+      '--accent-secondary': '#40916C',
+      '--accent-contrast-text': '#FFFFFF',
+      '--accent-terracotta': '#2D6A4F',
+      '--accent-success': '#52B788',
+      '--accent-danger': '#E63946',
+      '--accent-warning': '#D97706',
+      '--shadow-card': '0 10px 30px rgba(27, 67, 50, 0.07)',
+      '--shadow-accent': '0 8px 24px rgba(45, 106, 79, 0.35)',
+      '--shadow-modal': '0 24px 60px rgba(27, 67, 50, 0.18)',
+      '--glass-bg': 'rgba(244, 248, 245, 0.92)',
+      '--glass-border': 'rgba(205, 224, 212, 0.75)',
+      '--overlay-bg': 'rgba(27, 67, 50, 0.65)',
+      '--call-bg': '#0F1A14',
+      '--call-card': '#17271E',
+      '--call-button-bg': 'rgba(244, 248, 245, 0.16)',
+    },
+    darkVariables: {
+      '--bg-global': '#0F1A14',
+      '--bg-card': '#17271E',
+      '--bg-subtle': '#203429',
+      '--bg-elevated': '#284032',
+      '--bg-pill': '#2D4839',
+      '--bg-glass': 'rgba(23, 39, 30, 0.85)',
+      '--text-main': '#EDF7F2',
+      '--text-secondary': '#A3CBB6',
+      '--text-muted': '#6B9480',
+      '--border-color': 'rgba(82, 183, 136, 0.22)',
+      '--border-dark': 'rgba(82, 183, 136, 0.45)',
+      '--accent-primary': '#52B788',
+      '--accent-primary-hover': '#74C69D',
+      '--accent-secondary': '#95D5B2',
+      '--accent-contrast-text': '#0F1A14',
+      '--accent-terracotta': '#52B788',
+      '--accent-success': '#74C69D',
+      '--accent-danger': '#FCA5A5',
+      '--accent-warning': '#FDE047',
+      '--shadow-card': '0 12px 36px rgba(0, 0, 0, 0.65)',
+      '--shadow-accent': '0 8px 24px rgba(82, 183, 136, 0.4)',
+      '--shadow-modal': '0 24px 70px rgba(0, 0, 0, 0.85)',
+      '--glass-bg': 'rgba(23, 39, 30, 0.85)',
+      '--glass-border': 'rgba(82, 183, 136, 0.22)',
+      '--overlay-bg': 'rgba(0, 0, 0, 0.82)',
+      '--call-bg': '#0A120E',
+      '--call-card': '#0F1A14',
+      '--call-button-bg': 'rgba(82, 183, 136, 0.16)',
+    }
+  },
+  lavender: {
+    id: 'lavender',
+    name: 'Pastel Lavender',
+    description: 'Brumes de lavande, lilas pastel, nuit pourpre améthyste',
+    previewColors: ['#F8F6FD', '#DDD6FE', '#7C3AED', '#2E1065'],
+    lightVariables: {
+      '--bg-global': '#F8F6FD',
+      '--bg-card': '#FFFFFF',
+      '--bg-subtle': '#F0EBFC',
+      '--bg-elevated': '#E5DCFA',
+      '--bg-pill': '#DDD6FE',
+      '--bg-glass': 'rgba(248, 246, 253, 0.72)',
+      '--text-main': '#2E1065',
+      '--text-secondary': '#5B21B6',
+      '--text-muted': '#8B5CF6',
+      '--border-color': '#DDD6FE',
+      '--border-dark': '#7C3AED',
+      '--accent-primary': '#7C3AED',
+      '--accent-primary-hover': '#6D28D9',
+      '--accent-secondary': '#8B5CF6',
+      '--accent-contrast-text': '#FFFFFF',
+      '--accent-terracotta': '#7C3AED',
+      '--accent-success': '#10B981',
+      '--accent-danger': '#EF4444',
+      '--accent-warning': '#D97706',
+      '--shadow-card': '0 10px 30px rgba(46, 16, 101, 0.07)',
+      '--shadow-accent': '0 8px 24px rgba(124, 58, 237, 0.35)',
+      '--shadow-modal': '0 24px 60px rgba(46, 16, 101, 0.18)',
+      '--glass-bg': 'rgba(248, 246, 253, 0.92)',
+      '--glass-border': 'rgba(221, 214, 254, 0.75)',
+      '--overlay-bg': 'rgba(46, 16, 101, 0.65)',
+      '--call-bg': '#161124',
+      '--call-card': '#201833',
+      '--call-button-bg': 'rgba(248, 246, 253, 0.16)',
+    },
+    darkVariables: {
+      '--bg-global': '#161124',
+      '--bg-card': '#201833',
+      '--bg-subtle': '#2B2044',
+      '--bg-elevated': '#342752',
+      '--bg-pill': '#3A2C5C',
+      '--bg-glass': 'rgba(32, 24, 51, 0.85)',
+      '--text-main': '#F5F3FF',
+      '--text-secondary': '#C4B5FD',
+      '--text-muted': '#8B5CF6',
+      '--border-color': 'rgba(167, 139, 250, 0.22)',
+      '--border-dark': 'rgba(167, 139, 250, 0.45)',
+      '--accent-primary': '#A78BFA',
+      '--accent-primary-hover': '#C4B5FD',
+      '--accent-secondary': '#DDD6FE',
+      '--accent-contrast-text': '#161124',
+      '--accent-terracotta': '#A78BFA',
+      '--accent-success': '#86EFAC',
+      '--accent-danger': '#FCA5A5',
+      '--accent-warning': '#FDE047',
+      '--shadow-card': '0 12px 36px rgba(0, 0, 0, 0.65)',
+      '--shadow-accent': '0 8px 24px rgba(167, 139, 250, 0.4)',
+      '--shadow-modal': '0 24px 70px rgba(0, 0, 0, 0.85)',
+      '--glass-bg': 'rgba(32, 24, 51, 0.85)',
+      '--glass-border': 'rgba(167, 139, 250, 0.22)',
+      '--overlay-bg': 'rgba(0, 0, 0, 0.82)',
+      '--call-bg': '#0F0B18',
+      '--call-card': '#161124',
+      '--call-button-bg': 'rgba(167, 139, 250, 0.16)',
+    }
+  },
+  monochrome: {
+    id: 'monochrome',
+    name: 'Minimalist Titanium',
+    description: 'Blanc pur & noir pur en jour, titane carbone en nuit',
+    previewColors: ['#FFFFFF', '#E0E0E0', '#1C1C1F', '#000000'],
+    lightVariables: {
+      '--bg-global': '#FFFFFF',
+      '--bg-card': '#F5F5F5',
+      '--bg-subtle': '#EBEBEB',
+      '--bg-elevated': '#E0E0E0',
+      '--bg-pill': '#D6D6D6',
+      '--bg-glass': 'rgba(255, 255, 255, 0.75)',
+      '--text-main': '#000000',
+      '--text-secondary': '#404040',
+      '--text-muted': '#737373',
+      '--border-color': '#E0E0E0',
+      '--border-dark': '#000000',
+      '--accent-primary': '#000000',
+      '--accent-primary-hover': '#262626',
+      '--accent-secondary': '#525252',
+      '--accent-contrast-text': '#FFFFFF',
+      '--accent-terracotta': '#171717',
+      '--accent-success': '#16A34A',
+      '--accent-danger': '#DC2626',
+      '--accent-warning': '#CA8A04',
+      '--shadow-card': '0 8px 24px rgba(0, 0, 0, 0.06)',
+      '--shadow-accent': '0 8px 24px rgba(0, 0, 0, 0.25)',
+      '--shadow-modal': '0 20px 50px rgba(0, 0, 0, 0.12)',
+      '--glass-bg': 'rgba(255, 255, 255, 0.75)',
+      '--glass-border': 'rgba(0, 0, 0, 0.15)',
+      '--overlay-bg': 'rgba(0, 0, 0, 0.65)',
+      '--call-bg': '#111111',
+      '--call-card': '#222222',
+      '--call-button-bg': 'rgba(255, 255, 255, 0.15)',
+    },
+    darkVariables: {
       '--bg-global': '#111113',
       '--bg-card': '#1C1C1F',
       '--bg-subtle': '#28282C',
@@ -320,80 +632,6 @@ export const THEMES_CONFIG = {
       '--call-card': '#1C1C1F',
       '--call-button-bg': 'rgba(245, 245, 247, 0.12)',
     }
-  },
-  monochrome: {
-    id: 'monochrome',
-    name: 'Minimalist Mono',
-    description: 'Blanc pur, cartes gris clair, accents & textes noir pur',
-    isDark: false,
-    previewColors: ['#FFFFFF', '#F5F5F5', '#000000', '#000000'],
-    variables: {
-      '--bg-global': '#FFFFFF',
-      '--bg-card': '#F5F5F5',
-      '--bg-subtle': '#EBEBEB',
-      '--bg-elevated': '#E0E0E0',
-      '--bg-pill': '#D6D6D6',
-      '--bg-glass': 'rgba(255, 255, 255, 0.75)',
-      '--text-main': '#000000',
-      '--text-secondary': '#404040',
-      '--text-muted': '#737373',
-      '--border-color': '#E0E0E0',
-      '--border-dark': '#000000',
-      '--accent-primary': '#000000',
-      '--accent-primary-hover': '#262626',
-      '--accent-secondary': '#525252',
-      '--accent-contrast-text': '#FFFFFF',
-      '--accent-terracotta': '#171717',
-      '--accent-success': '#16A34A',
-      '--accent-danger': '#DC2626',
-      '--accent-warning': '#CA8A04',
-      '--shadow-card': '0 8px 24px rgba(0, 0, 0, 0.06)',
-      '--shadow-accent': '0 8px 24px rgba(0, 0, 0, 0.25)',
-      '--shadow-modal': '0 20px 50px rgba(0, 0, 0, 0.12)',
-      '--glass-bg': 'rgba(255, 255, 255, 0.75)',
-      '--glass-border': 'rgba(0, 0, 0, 0.15)',
-      '--overlay-bg': 'rgba(0, 0, 0, 0.65)',
-      '--call-bg': '#111111',
-      '--call-card': '#222222',
-      '--call-button-bg': 'rgba(255, 255, 255, 0.15)',
-    }
-  },
-  sakura: {
-    id: 'sakura',
-    name: 'Soft Sakura',
-    description: 'Blanc rosé DMC 24, rose punchy DMC 223, textes cerise DMC 838',
-    isDark: false,
-    previewColors: ['#FFF5F8', '#FFFFFF', '#D6456E', '#3A1822'],
-    variables: {
-      '--bg-global': '#FFF5F8',
-      '--bg-card': '#FFFFFF',
-      '--bg-subtle': '#FDEAF0',
-      '--bg-elevated': '#FAD9E2',
-      '--bg-pill': '#F5C6D4',
-      '--bg-glass': 'rgba(255, 245, 248, 0.72)',
-      '--text-main': '#3A1822',
-      '--text-secondary': '#754352',
-      '--text-muted': '#A37382',
-      '--border-color': '#F2CAD6',
-      '--border-dark': '#D6456E',
-      '--accent-primary': '#D6456E',
-      '--accent-primary-hover': '#BF325A',
-      '--accent-secondary': '#E87093',
-      '--accent-contrast-text': '#FFFFFF',
-      '--accent-terracotta': '#D6456E',
-      '--accent-success': '#689F63',
-      '--accent-danger': '#E11D48',
-      '--accent-warning': '#D97706',
-      '--shadow-card': '0 10px 30px rgba(58, 24, 34, 0.07)',
-      '--shadow-accent': '0 8px 24px rgba(214, 69, 110, 0.35)',
-      '--shadow-modal': '0 24px 60px rgba(58, 24, 34, 0.18)',
-      '--glass-bg': 'rgba(255, 245, 248, 0.92)',
-      '--glass-border': 'rgba(242, 202, 214, 0.75)',
-      '--overlay-bg': 'rgba(58, 24, 34, 0.65)',
-      '--call-bg': '#261017',
-      '--call-card': '#3A1823',
-      '--call-button-bg': 'rgba(255, 245, 248, 0.16)',
-    }
   }
 };
 
@@ -415,32 +653,44 @@ const ThemeContext = createContext({
   themeId: 'earthy',
   theme: THEMES_CONFIG.earthy,
   isDark: false,
-  setThemeId: () => {},
-  toggleTheme: () => {},
+  setThemeId: () => { },
+  toggleTheme: () => { },
   customColors: DEFAULT_CUSTOM_COLORS,
-  setCustomColors: () => {},
+  setCustomColors: () => { },
   typography: 'editorial',
-  setTypography: () => {},
+  setTypography: () => { },
   borderRadius: 14,
-  setBorderRadius: () => {},
+  setBorderRadius: () => { },
   baseZoom: 1.0,
-  setBaseZoom: () => {},
+  setBaseZoom: () => { },
   brandColor: '#B98B73',
-  applyBrandColor: () => {},
-  resetDesignStudio: () => {},
+  applyBrandColor: () => { },
+  resetDesignStudio: () => { },
   allThemes: Object.values(THEMES_CONFIG),
   typographyOptions: TYPOGRAPHY_OPTIONS,
 });
 
 export function ThemeProvider({ children }) {
+  // Thème de base sauvegardé (ex: 'earthy', 'sakura', 'emerald', 'lavender', 'monochrome', 'custom')
   const [themeId, setThemeIdState] = useState(() => {
     try {
-      const saved = localStorage.getItem('troco_theme');
+      const saved = localStorage.getItem('troco_theme_base') || localStorage.getItem('troco_theme');
       if (saved && (THEMES_CONFIG[saved] || saved === 'custom')) return saved;
     } catch (e) {
       console.warn('Could not read theme from localStorage', e);
     }
     return 'earthy';
+  });
+
+  // État Mode Sombre indépendant et persistant
+  const [isDark, setIsDarkState] = useState(() => {
+    try {
+      const saved = localStorage.getItem('troco_is_dark');
+      if (saved !== null) return saved === 'true';
+      const legacyTheme = localStorage.getItem('troco_theme');
+      if (legacyTheme === 'dark') return true;
+    } catch (e) { }
+    return false;
   });
 
   const [customColors, setCustomColorsState] = useState(() => {
@@ -459,7 +709,7 @@ export function ThemeProvider({ children }) {
     try {
       const saved = localStorage.getItem('troco_studio_typography');
       if (saved && TYPOGRAPHY_OPTIONS[saved]) return saved;
-    } catch (e) {}
+    } catch (e) { }
     return DEFAULT_STUDIO_SETTINGS.typography;
   });
 
@@ -467,7 +717,7 @@ export function ThemeProvider({ children }) {
     try {
       const saved = localStorage.getItem('troco_studio_radius');
       if (saved != null) return Number(saved);
-    } catch (e) {}
+    } catch (e) { }
     return DEFAULT_STUDIO_SETTINGS.borderRadius;
   });
 
@@ -475,7 +725,7 @@ export function ThemeProvider({ children }) {
     try {
       const saved = localStorage.getItem('troco_studio_zoom');
       if (saved != null) return Number(saved);
-    } catch (e) {}
+    } catch (e) { }
     return DEFAULT_STUDIO_SETTINGS.baseZoom;
   });
 
@@ -483,7 +733,7 @@ export function ThemeProvider({ children }) {
     try {
       const saved = localStorage.getItem('troco_studio_brand_color');
       if (saved) return saved;
-    } catch (e) {}
+    } catch (e) { }
     return DEFAULT_STUDIO_SETTINGS.brandColor;
   });
 
@@ -504,7 +754,7 @@ export function ThemeProvider({ children }) {
     setTypographyState(newTypo);
     try {
       localStorage.setItem('troco_studio_typography', newTypo);
-    } catch (e) {}
+    } catch (e) { }
   }, []);
 
   const setBorderRadius = useCallback((newRadius) => {
@@ -512,7 +762,7 @@ export function ThemeProvider({ children }) {
     setBorderRadiusState(val);
     try {
       localStorage.setItem('troco_studio_radius', String(val));
-    } catch (e) {}
+    } catch (e) { }
   }, []);
 
   const setBaseZoom = useCallback((newZoom) => {
@@ -520,19 +770,15 @@ export function ThemeProvider({ children }) {
     setBaseZoomState(val);
     try {
       localStorage.setItem('troco_studio_zoom', String(val));
-    } catch (e) {}
+    } catch (e) { }
   }, []);
 
-  /**
-   * 1-Clic Magic Generator :
-   * Repeint instantanément tout le site de manière cohérente à partir de la couleur de marque.
-   */
   const applyBrandColor = useCallback((hex) => {
     if (!hex) return;
     setBrandColorState(hex);
     try {
       localStorage.setItem('troco_studio_brand_color', hex);
-    } catch (e) {}
+    } catch (e) { }
 
     const palette = generateHarmonicPalette(hex);
     const newColors = {
@@ -544,19 +790,18 @@ export function ThemeProvider({ children }) {
     setCustomColorsState(newColors);
     try {
       localStorage.setItem('troco_custom_colors', JSON.stringify(newColors));
-    } catch (e) {}
+    } catch (e) { }
 
     setThemeIdState('custom');
     try {
+      localStorage.setItem('troco_theme_base', 'custom');
       localStorage.setItem('troco_theme', 'custom');
-    } catch (e) {}
+    } catch (e) { }
   }, []);
 
-  /**
-   * Réinitialisation complète du Design Studio
-   */
   const resetDesignStudio = useCallback(() => {
     setThemeIdState('earthy');
+    setIsDarkState(false);
     setCustomColorsState(DEFAULT_CUSTOM_COLORS);
     setTypographyState(DEFAULT_STUDIO_SETTINGS.typography);
     setBorderRadiusState(DEFAULT_STUDIO_SETTINGS.borderRadius);
@@ -564,63 +809,89 @@ export function ThemeProvider({ children }) {
     setBrandColorState(DEFAULT_STUDIO_SETTINGS.brandColor);
 
     try {
+      localStorage.removeItem('troco_theme_base');
       localStorage.removeItem('troco_theme');
+      localStorage.removeItem('troco_is_dark');
       localStorage.removeItem('troco_custom_colors');
       localStorage.removeItem('troco_studio_typography');
       localStorage.removeItem('troco_studio_radius');
       localStorage.removeItem('troco_studio_zoom');
       localStorage.removeItem('troco_studio_brand_color');
-    } catch (e) {}
+    } catch (e) { }
   }, []);
 
+  // CALCUL DE LA PALETTE CHROMATIQUE ACTIVE (ADAPTEE AU MODE JOUR / NUIT DU THEME SELECTIONNE)
   const theme = useMemo(() => {
     if (themeId === 'custom') {
-      const generatedVars = generateCustomThemeVariables(
-        customColors.primary,
-        customColors.bg,
-        customColors.card,
-        customColors.text
-      );
-      const isDark = getLuminance(customColors.bg) < 0.5;
+      const generatedVars = isDark
+        ? generateHarmonicDarkPalette(customColors.primary || '#B98B73')
+        : generateCustomThemeVariables(
+          customColors.primary,
+          customColors.bg,
+          customColors.card,
+          customColors.text
+        );
       return {
         id: 'custom',
         name: 'Sur-Mesure (Studio)',
         description: 'Palette chromatique intelligente et personnalisée',
         isDark,
-        previewColors: [customColors.bg, customColors.card || '#FFFFFF', customColors.primary, customColors.text],
+        previewColors: isDark
+          ? [generatedVars['--bg-global'], generatedVars['--bg-card'], generatedVars['--accent-primary'], generatedVars['--text-main']]
+          : [customColors.bg, customColors.card || '#FFFFFF', customColors.primary, customColors.text],
         variables: generatedVars,
       };
     }
-    return THEMES_CONFIG[themeId] || THEMES_CONFIG.earthy;
-  }, [themeId, customColors]);
+    const currentConfig = THEMES_CONFIG[themeId] || THEMES_CONFIG.earthy;
+    const activeVariables = isDark ? currentConfig.darkVariables : currentConfig.lightVariables;
+    return {
+      id: currentConfig.id,
+      name: currentConfig.name,
+      description: currentConfig.description,
+      isDark,
+      previewColors: isDark
+        ? [activeVariables['--bg-global'], activeVariables['--bg-card'], activeVariables['--accent-primary'], activeVariables['--text-main']]
+        : currentConfig.previewColors,
+      variables: activeVariables,
+    };
+  }, [themeId, isDark, customColors]);
 
   const setThemeId = useCallback((newId) => {
     if (newId !== 'custom' && !THEMES_CONFIG[newId]) return;
     setThemeIdState(newId);
     try {
+      localStorage.setItem('troco_theme_base', newId);
       localStorage.setItem('troco_theme', newId);
     } catch (e) {
       console.warn('Could not persist theme to localStorage', e);
     }
   }, []);
 
+  // BASCULE DU MODE SOMBRE SANS MODIFIER LE THEME CHOISI
   const toggleTheme = useCallback(() => {
-    const nextId = theme.isDark ? 'earthy' : 'dark';
-    setThemeId(nextId);
-  }, [theme.isDark, setThemeId]);
+    setIsDarkState((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('troco_is_dark', String(next));
+      } catch (e) { }
+      return next;
+    });
+  }, []);
 
-  // Inject CSS variables onto document.documentElement
+  // INJECTION DYNAMIQUE DES VARIABLES CSS SUR DOCUMENT ET BODY
   useEffect(() => {
     const root = document.documentElement;
     const vars = theme.variables;
 
     root.setAttribute('data-theme', theme.id);
-    if (theme.isDark) {
-      root.classList.add('dark-theme');
+    if (isDark) {
+      root.classList.add('dark-theme', 'dark-mode');
       root.classList.remove('light-theme');
+      document.body.classList.add('dark-mode');
     } else {
       root.classList.add('light-theme');
-      root.classList.remove('dark-theme');
+      root.classList.remove('dark-theme', 'dark-mode');
+      document.body.classList.remove('dark-mode');
     }
 
     // Palette variables
@@ -648,24 +919,40 @@ export function ThemeProvider({ children }) {
     // Contrast text on primary button
     const contrastOnPrimary = getContrastColor(vars['--accent-primary'] || customColors.primary);
     root.style.setProperty('--accent-contrast-text', contrastOnPrimary);
-  }, [theme, typography, borderRadius, baseZoom, customColors]);
+  }, [theme, isDark, typography, borderRadius, baseZoom, customColors]);
 
   const allThemes = useMemo(() => {
-    const presets = Object.values(THEMES_CONFIG);
+    const presets = Object.values(THEMES_CONFIG).map((cfg) => ({
+      id: cfg.id,
+      name: cfg.name,
+      description: cfg.description,
+      previewColors: isDark
+        ? [cfg.darkVariables['--bg-global'], cfg.darkVariables['--bg-card'], cfg.darkVariables['--accent-primary'], cfg.darkVariables['--text-main']]
+        : cfg.previewColors,
+    }));
+    const customColorsHex = customColors.primary || '#B98B73';
+    const { r, g, b } = hexToRgb(customColorsHex);
+    const { h } = rgbToHsl(r, g, b);
     const customOption = {
       id: 'custom',
       name: 'Sur-Mesure',
       description: 'Studio de design personnalisé en direct',
-      isDark: getLuminance(customColors.bg) < 0.5,
-      previewColors: [customColors.bg, customColors.card || '#FFFFFF', customColors.primary, customColors.text],
+      previewColors: isDark
+        ? [
+          hslToHex(h, 26, 9),
+          hslToHex(h, 28, 14),
+          hslToHex(h, 60, 65),
+          '#FAF7F2'
+        ]
+        : [customColors.bg, customColors.card || '#FFFFFF', customColors.primary, customColors.text],
     };
     return [...presets, customOption];
-  }, [customColors]);
+  }, [isDark, customColors]);
 
   const value = useMemo(() => ({
     themeId,
     theme,
-    isDark: theme.isDark,
+    isDark,
     setThemeId,
     toggleTheme,
     customColors,
@@ -684,6 +971,7 @@ export function ThemeProvider({ children }) {
   }), [
     themeId,
     theme,
+    isDark,
     setThemeId,
     toggleTheme,
     customColors,
