@@ -440,8 +440,11 @@ function ChatView({
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: isMobile ? '10px 12px' : '0 18px',
-          paddingTop: isMobile ? 'max(46px, env(safe-area-inset-top, 46px))' : '0',
-          minHeight: isMobile ? 'calc(54px + max(46px, env(safe-area-inset-top, 46px)))' : '64px',
+          paddingTop: isMobile ? 'max(58px, calc(env(safe-area-inset-top, 44px) + 14px))' : '0',
+          paddingBottom: isMobile ? '12px' : '0',
+          paddingLeft: isMobile ? 'max(12px, env(safe-area-inset-left, 12px))' : '18px',
+          paddingRight: isMobile ? 'max(12px, env(safe-area-inset-right, 12px))' : '18px',
+          minHeight: isMobile ? 'calc(54px + max(58px, calc(env(safe-area-inset-top, 44px) + 14px)))' : '64px',
           borderBottom: '1px solid var(--border-color)',
           backgroundColor: 'var(--bg-glass)',
           backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
