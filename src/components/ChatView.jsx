@@ -2,11 +2,13 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import {
   Send, Phone, Video, Sparkles, Clock, CheckCircle,
   ChevronLeft, Globe, Edit2, Trash2, Copy, Check, X,
-  AlertTriangle
+  AlertTriangle, Users, Coins
 } from 'lucide-react';
 import { doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { subscribeTranslations } from '../utils/translator';
+import CreateProjectGroupModal from './CreateProjectGroupModal';
+import ProjectRewardsModal from './ProjectRewardsModal';
 
 function ChatView({
   activeTab,
@@ -27,6 +29,9 @@ function ChatView({
   joinActiveCall,
   handleAcceptDeal,
   handleDeclineDeal,
+  onCreateProjectGroup,
+  onProposeReward,
+  onAcceptReward,
   profile,
   currentLang,
   t,
@@ -38,6 +43,8 @@ function ChatView({
   isMobile: isMobileProp = undefined,
   presenceMap = {}
 }) {
+  const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
+  const [isProjectRewardsModalOpen, setIsProjectRewardsModalOpen] = useState(false);
   const [deletedChatIds, setDeletedChatIds] = useState(() => {
     try {
       const saved = localStorage.getItem('troco_deleted_chats');
@@ -473,8 +480,8 @@ function ChatView({
               </button>
             )}
             <div style={{ position: 'relative', width: '36px', height: '36px', flexShrink: 0 }}>
-              <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '14px', boxShadow: 'var(--shadow-accent)' }}>
-                {activeChatObj?.user ? activeChatObj.user[0].toUpperCase() : 'T'}
+              <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: activeChatObj?.isGroup ? 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%)' : 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: activeChatObj?.isGroup ? '17px' : '14px', boxShadow: 'var(--shadow-accent)' }}>
+                {activeChatObj?.isGroup ? '👥' : (activeChatObj?.user ? activeChatObj.user[0].toUpperCase() : 'T')}
               </div>
               {activeChatIsOnline ? (
                 <div
@@ -503,14 +510,18 @@ function ChatView({
             <div style={{ minWidth: 0, flex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                 <span style={{ fontWeight: '800', fontSize: isMobile ? '14px' : '14.5px', color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {activeChatObj?.user}
+                  {activeChatObj?.isGroup ? (activeChatObj.projectTitle || activeChatObj.user) : activeChatObj?.user}
                 </span>
-                {(activeChatObj?.isDemo || activeChatObj?.persona || (typeof activeChatObj?.id === 'number' && activeChatObj?.id < 300)) && (
+                {activeChatObj?.isGroup ? (
+                  <span style={{ fontSize: '9px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', padding: '1px 6px', borderRadius: '6px', border: '1px solid var(--border-color)', flexShrink: 0 }}>
+                    🚀 Projet ({activeChatObj.participants?.length || activeChatObj.members?.length || 2}m)
+                  </span>
+                ) : (activeChatObj?.isDemo || activeChatObj?.persona || (typeof activeChatObj?.id === 'number' && activeChatObj?.id < 300)) ? (
                   <span style={{ fontSize: '8px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', padding: '1px 4px', borderRadius: '4px', flexShrink: 0 }}>
                     IA
                   </span>
-                )}
-                {activeChatIsOnline ? (
+                ) : null}
+                {!activeChatObj?.isGroup && (activeChatIsOnline ? (
                   <span style={{ fontSize: '8.5px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-success)', padding: '1px 5px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
                     <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: 'var(--accent-success)' }} /> En ligne
                   </span>
@@ -518,68 +529,96 @@ function ChatView({
                   <span style={{ fontSize: '8.5px', fontWeight: '700', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)', padding: '1px 5px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
                     <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: 'var(--text-secondary)', opacity: 0.45 }} /> Hors ligne
                   </span>
-                )}
+                ))}
               </div>
               <div style={{ fontSize: '11px', color: 'var(--accent-primary)', fontWeight: '700', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.2 }}>
-                {getListingTitleTranslation ? getListingTitleTranslation(activeChatObj?.listing, currentLang) : activeChatObj?.listing}
+                {activeChatObj?.isGroup
+                  ? `${activeChatObj.rewardPool || 15} Jetons Troco alloués • ${activeChatObj.category || 'Collectif'}`
+                  : (getListingTitleTranslation ? getListingTitleTranslation(activeChatObj?.listing, currentLang) : activeChatObj?.listing)}
               </div>
             </div>
           </div>
 
-          {/* Partie Droite : Actions Appel Audio / Vidéo / Deal */}
+          {/* Partie Droite : Actions Appel Audio / Vidéo / Deal ou Rétribution Projet */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-            <button
-              onClick={() => startCall('audio')}
-              className="premium-button"
-              style={{
-                border: 'none', borderRadius: '50%', width: '34px', height: '34px',
-                backgroundColor: 'var(--bg-subtle)',
-                color: 'var(--text-main)',
-                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
-              }}
-              title={t('audioCall') || 'Appel audio HD'}
-            >
-              <Phone size={15} />
-            </button>
-            <button
-              onClick={() => startCall('video')}
-              className="premium-button"
-              style={{
-                border: 'none', borderRadius: '50%', width: '34px', height: '34px',
-                backgroundColor: 'var(--bg-subtle)',
-                color: 'var(--text-main)',
-                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
-              }}
-              title={t('videoCall') || 'Appel visio direct'}
-            >
-              <Video size={15} />
-            </button>
-            <button
-              onClick={() => {
-                if (pendingDealFromMe) {
-                  openCounterOffer(pendingDealFromMe.terms, pendingDealFromMe.id);
-                } else {
-                  openCounterOffer();
-                }
-              }}
-              className="premium-button"
-              style={{
-                border: 'none',
-                borderRadius: isMobile ? '50%' : '999px',
-                width: isMobile ? '34px' : 'auto',
-                height: '34px',
-                padding: isMobile ? '0' : '0 12px',
-                background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
-                color: '#FFF',
-                fontWeight: '700', fontSize: '11px', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
-                boxShadow: 'var(--shadow-accent)'
-              }}
-              title={pendingDealFromMe ? "Modifier ma proposition de deal en attente" : (t('counterOffer') || 'Proposer un deal / Contre-offre')}
-            >
-              <Sparkles size={14} />
-              {!isMobile && <span>{pendingDealFromMe ? 'Modifier Deal' : 'Proposer Deal'}</span>}
-            </button>
+            {activeChatObj?.isGroup ? (
+              <button
+                type="button"
+                onClick={() => setIsProjectRewardsModalOpen(true)}
+                className="premium-button"
+                style={{
+                  border: 'none',
+                  borderRadius: isMobile ? '50%' : '999px',
+                  width: isMobile ? '34px' : 'auto',
+                  height: '34px',
+                  padding: isMobile ? '0' : '0 12px',
+                  background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
+                  color: '#FFF',
+                  fontWeight: '800', fontSize: '11px', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
+                  boxShadow: 'var(--shadow-accent)'
+                }}
+                title="Gérer l'équipe et rétribuer les membres en jetons"
+              >
+                <Coins size={14} />
+                {!isMobile && <span>💎 Rétributions & Équipe</span>}
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={() => startCall('audio')}
+                  className="premium-button"
+                  style={{
+                    border: 'none', borderRadius: '50%', width: '34px', height: '34px',
+                    backgroundColor: 'var(--bg-subtle)',
+                    color: 'var(--text-main)',
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  }}
+                  title={t('audioCall') || 'Appel audio HD'}
+                >
+                  <Phone size={15} />
+                </button>
+                <button
+                  onClick={() => startCall('video')}
+                  className="premium-button"
+                  style={{
+                    border: 'none', borderRadius: '50%', width: '34px', height: '34px',
+                    backgroundColor: 'var(--bg-subtle)',
+                    color: 'var(--text-main)',
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  }}
+                  title={t('videoCall') || 'Appel visio direct'}
+                >
+                  <Video size={15} />
+                </button>
+                <button
+                  onClick={() => {
+                    if (pendingDealFromMe) {
+                      openCounterOffer(pendingDealFromMe.terms, pendingDealFromMe.id);
+                    } else {
+                      openCounterOffer();
+                    }
+                  }}
+                  className="premium-button"
+                  style={{
+                    border: 'none',
+                    borderRadius: isMobile ? '50%' : '999px',
+                    width: isMobile ? '34px' : 'auto',
+                    height: '34px',
+                    padding: isMobile ? '0' : '0 12px',
+                    background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
+                    color: '#FFF',
+                    fontWeight: '700', fontSize: '11px', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
+                    boxShadow: 'var(--shadow-accent)'
+                  }}
+                  title={pendingDealFromMe ? "Modifier ma proposition de deal en attente" : (t('counterOffer') || 'Proposer un deal / Contre-offre')}
+                >
+                  <Sparkles size={14} />
+                  {!isMobile && <span>{pendingDealFromMe ? 'Modifier Deal' : 'Proposer Deal'}</span>}
+                </button>
+              </>
+            )}
           </div>
         </div>
 
@@ -872,6 +911,129 @@ function ChatView({
                 );
               }
 
+              // RENDU DES PROPOSITIONS DE RÉTRIBUTION EN JETONS (HUB DE COLLABORATION)
+              if (msg.type === 'reward' || msg.kind === 'reward-proposal') {
+                const reward = msg.reward || {};
+                const isMine = (msg.senderName && profile?.name)
+                  ? (msg.senderName.trim().toLowerCase() === profile.name.trim().toLowerCase())
+                  : (msg.sender === 'me');
+                const isRewardPending = !reward.status || reward.status === 'pending';
+                const isConfirmed = reward.status === 'confirmed' || reward.status === 'validated';
+
+                return (
+                  <div
+                    key={msg.id}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: isMine ? 'flex-end' : 'flex-start',
+                      width: '100%',
+                      margin: '10px 0',
+                      boxSizing: 'border-box'
+                    }}
+                  >
+                    <div style={{
+                      width: isMobile ? '94%' : '80%',
+                      maxWidth: '520px',
+                      border: isConfirmed ? '1.5px solid var(--accent-success)' : '1.5px solid var(--accent-primary)',
+                      borderRadius: '20px',
+                      padding: isMobile ? '14px' : '18px',
+                      backgroundColor: 'var(--bg-card)',
+                      boxShadow: 'var(--shadow-card)',
+                      boxSizing: 'border-box',
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', flexWrap: 'wrap', gap: '6px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13.5px', fontWeight: '800', color: 'var(--accent-primary)' }}>
+                          <Coins size={16} color="var(--accent-primary)" />
+                          💎 Rétribution de Projet Collectif
+                        </div>
+                        {isRewardPending ? (
+                          <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-warning)', padding: '3px 8px', borderRadius: '999px', border: '1px solid var(--accent-warning)' }}>
+                            ⏳ En attente de validation
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-success)', padding: '3px 8px', borderRadius: '999px', border: '1.5px solid var(--accent-success)' }}>
+                            ✓ Rétribution Validée & Créditée
+                          </span>
+                        )}
+                      </div>
+
+                      <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-main)', marginBottom: '6px' }}>
+                        {reward.title || 'Mission de projet'}
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '6px', marginBottom: '12px', flexWrap: 'wrap' }}>
+                        <span style={{
+                          backgroundColor: 'var(--bg-subtle)',
+                          border: '1px solid var(--border-color)',
+                          color: 'var(--text-main)',
+                          borderRadius: '999px', padding: '3px 9px', fontSize: '11px', fontWeight: '800'
+                        }}>
+                          👤 Bénéficiaire : <strong>{reward.beneficiary}</strong>
+                        </span>
+
+                        <span style={{
+                          backgroundColor: 'var(--bg-subtle)',
+                          border: '1.5px solid var(--accent-primary)',
+                          color: 'var(--accent-primary)',
+                          borderRadius: '999px', padding: '3px 9px', fontSize: '11px', fontWeight: '900'
+                        }}>
+                          🪙 {reward.amount} Jetons Troco
+                        </span>
+
+                        <span style={{
+                          backgroundColor: 'var(--bg-subtle)',
+                          border: '1px solid var(--border-color)',
+                          color: 'var(--text-secondary)',
+                          borderRadius: '999px', padding: '3px 9px', fontSize: '11px', fontWeight: '700'
+                        }}>
+                          {reward.type === 'hourly' ? `⏱️ ${reward.hours || 1}h de prestation` : reward.type === 'fixed' ? '💼 Forfait global' : '📌 Tâche validée'}
+                        </span>
+                      </div>
+
+                      {/* ACTION DE VALIDATION */}
+                      {isRewardPending && (
+                        <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (onAcceptReward) {
+                                onAcceptReward(currentChatId, msg.id, reward);
+                              }
+                            }}
+                            className="premium-button"
+                            style={{
+                              flex: 1,
+                              border: 'none',
+                              background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
+                              color: '#FFF',
+                              borderRadius: '12px',
+                              padding: '10px 14px',
+                              fontSize: '12px',
+                              fontWeight: '800',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px',
+                              boxShadow: 'var(--shadow-accent)',
+                            }}
+                          >
+                            <Check size={14} strokeWidth={3} /> Valider & Débloquer les jetons ({reward.amount} 💎)
+                          </button>
+                        </div>
+                      )}
+
+                      {isConfirmed && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-success)', borderRadius: '12px', padding: '8px 12px', fontSize: '11.5px', fontWeight: '800' }}>
+                          <CheckCircle size={14} /> Les {reward.amount} jetons ont été validés et alloués à {reward.beneficiary}.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              }
+
               const isMe = msg.sender === 'me';
               const isMenuOpen = activeMenuMsgId === msg.id;
               const timeString = formatMsgTime(msg.timestamp || msg.createdAt || msg.id);
@@ -926,6 +1088,11 @@ function ChatView({
                         gap: '4px'
                       }}
                     >
+                      {activeChatObj?.isGroup && !isMe && msg.senderName && (
+                        <div style={{ fontSize: '10.5px', fontWeight: '800', color: 'var(--accent-primary)', marginBottom: '2px' }}>
+                          {msg.senderName}
+                        </div>
+                      )}
                       <div style={{ fontSize: '13.5px', lineHeight: 1.45, fontWeight: '500' }}>
                         {translatedText}
                       </div>
@@ -1208,12 +1375,36 @@ function ChatView({
                 flexShrink: 0,
                 boxSizing: 'border-box'
               }}>
-                <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: 'var(--text-main)' }}>
-                  {t('discussions') || 'Discussions'}
-                </h3>
-                <span style={{ fontSize: '11px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', padding: '4px 10px', borderRadius: '999px', border: '1px solid var(--border-color)' }}>
-                  {visibleChats.length} conv.
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: 'var(--text-main)' }}>
+                    {t('discussions') || 'Discussions'}
+                  </h3>
+                  <span style={{ fontSize: '11px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', padding: '3px 8px', borderRadius: '999px', border: '1px solid var(--border-color)' }}>
+                    {visibleChats.length}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsCreateGroupModalOpen(true)}
+                  className="premium-button"
+                  style={{
+                    border: 'none',
+                    background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
+                    color: '#FFFFFF',
+                    borderRadius: '12px',
+                    padding: '6px 12px',
+                    fontSize: '11px',
+                    fontWeight: '800',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    boxShadow: 'var(--shadow-accent)'
+                  }}
+                  title="Lancer un projet collaboratif multi-membres"
+                >
+                  <Users size={13} /> + Projet
+                </button>
               </div>
 
               <div style={{
@@ -1280,8 +1471,8 @@ function ChatView({
                             transition: 'all 0.2s ease'
                           }}
                         >
-                          <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--text-main) 0%, var(--text-secondary) 100%)', color: 'var(--bg-card)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '15px', flexShrink: 0, boxShadow: 'var(--shadow-card)', position: 'relative' }}>
-                            {chat.user[0]}
+                          <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: chat.isGroup ? 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%)' : 'linear-gradient(135deg, var(--text-main) 0%, var(--text-secondary) 100%)', color: 'var(--bg-card)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: chat.isGroup ? '18px' : '15px', flexShrink: 0, boxShadow: 'var(--shadow-card)', position: 'relative' }}>
+                            {chat.isGroup ? '👥' : (chat.user ? chat.user[0].toUpperCase() : 'T')}
                             {isUserOnline(chat.user, chat.authorUid || chat.userId) ? (
                               <span
                                 title="En ligne"
@@ -1323,12 +1514,16 @@ function ChatView({
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
                               <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: isUnread ? '800' : '600', fontSize: isUnread ? '14.5px' : '14px', color: 'var(--text-main)' }}>
-                                {chat.user}
-                                {(chat.isDemo || chat.persona || (typeof chat.id === 'number' && chat.id < 300)) && (
+                                {chat.isGroup ? (chat.projectTitle || chat.user) : chat.user}
+                                {chat.isGroup ? (
+                                  <span style={{ fontSize: '9px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', padding: '1px 6px', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                                    🚀 Hub ({chat.participants?.length || chat.members?.length || 2}m)
+                                  </span>
+                                ) : (chat.isDemo || chat.persona || (typeof chat.id === 'number' && chat.id < 300)) ? (
                                   <span style={{ fontSize: '9px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)', padding: '1px 6px', borderRadius: '6px' }}>
                                     🤖 IA
                                   </span>
-                                )}
+                                ) : null}
                               </span>
                               <span style={{ fontSize: '10px', color: isUnread ? 'var(--accent-primary)' : 'var(--text-secondary)', fontWeight: isUnread ? '800' : '500', flexShrink: 0, marginLeft: '6px' }}>
                                 {chatTimestampLabel || statusText}
@@ -1419,6 +1614,35 @@ function ChatView({
           )}
         </div>
       </div>
+
+      {/* MODALE CRÉATION GROUPE / HUB DE PROJET */}
+      <CreateProjectGroupModal
+        isOpen={isCreateGroupModalOpen}
+        onClose={() => setIsCreateGroupModalOpen(false)}
+        onCreateGroup={(groupData) => {
+          if (onCreateProjectGroup) {
+            onCreateProjectGroup(groupData);
+          }
+        }}
+        profile={profile}
+        currentLang={currentLang}
+      />
+
+      {/* MODALE GESTION ÉQUIPE & RÉTRIBUTION EN JETONS */}
+      {activeChatObj && activeChatObj.isGroup && (
+        <ProjectRewardsModal
+          isOpen={isProjectRewardsModalOpen}
+          onClose={() => setIsProjectRewardsModalOpen(false)}
+          activeChat={activeChatObj}
+          onProposeReward={(rewardData) => {
+            if (onProposeReward) {
+              onProposeReward(activeChatObj.id, rewardData);
+            }
+          }}
+          profile={profile}
+          currentLang={currentLang}
+        />
+      )}
 
       {/* MODALE DE CONFIRMATION DE SUPPRESSION DE DISCUSSION */}
       {confirmDeleteChat && (

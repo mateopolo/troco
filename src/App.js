@@ -2732,10 +2732,38 @@ export default function App() {
         availability: 'week-ends prolongés',
         negotiation: 'échange réciproque de studio sans frais',
       },
+    },
+    {
+      id: 301,
+      isGroup: true,
+      user: "Collectif Rénovation Tiers-Lieu",
+      projectTitle: "Collectif Rénovation Tiers-Lieu",
+      category: "Atelier & Chantier Solidaire",
+      description: "Aménagement d'un espace collaboratif avec menuiserie, mobilier recyclé et électricité.",
+      rewardPool: 25,
+      rewardStrategy: "task",
+      participants: ["Mateo", "Marie D.", "Lucas M.", "Alex K."],
+      members: [
+        { name: "Mateo", role: "Leader / Initiateur", tokensEarned: 0 },
+        { name: "Marie D.", role: "Architecture d'intérieur", tokensEarned: 5 },
+        { name: "Lucas M.", role: "Coordination Chantier", tokensEarned: 0 },
+        { name: "Alex K.", role: "Menuiserie & Recyclage", tokensEarned: 0 },
+      ],
+      rewardAllocations: [
+        { id: "rew-301-1", beneficiary: "Marie D.", title: "Conception & Plans d’aménagement 3D", type: "task", amount: 5, status: "pending" }
+      ],
+      lastMessage: "💎 Proposition de rétribution : 5 Jetons Troco pour Marie D. (Plans 3D)",
+      status: "En cours",
     }
   ];
 
   const [chatThreads, setChatThreads] = useState({
+    301: [
+      { id: 1, sender: 'system', text: '🚀 Hub de collaboration initialisé pour "Collectif Rénovation Tiers-Lieu". Réserve allouée : 25 Jetons Troco. Membres : Mateo, Marie D., Lucas M., Alex K.' },
+      { id: 2, sender: 'them', senderName: 'Marie D.', text: 'Bonjour l’équipe ! J’ai terminé les plans d’implantation 3D pour l’espace atelier et la terrasse.' },
+      { id: 3, sender: 'them', senderName: 'Alex K.', text: 'Super travail Marie ! De mon côté le bois de récup est poncé et prêt pour l’assemblage des bancs.' },
+      { id: 4, sender: 'them', senderName: 'Lucas M.', kind: 'reward-proposal', type: 'reward', reward: { id: 'rew-301-1', beneficiary: 'Marie D.', title: 'Conception & Plans d’aménagement 3D', type: 'task', amount: 5, status: 'pending' }, text: '💎 Proposition de rétribution : 5 Jetons Troco pour Marie D. (Conception & Plans d’aménagement 3D)' },
+    ],
     201: [
       { id: 1, sender: 'them', text: 'Bonjour Mateo ! J’ai vu ton annonce d’initiation UI/UX sur Figma, elle m’intéresse énormément pour mon projet d’application mobile !' },
       { id: 2, sender: 'me', text: 'Salut Emma ! Avec grand plaisir, on peut voir les bases des composants, autolayout et prototypes interactifs.' },
@@ -4710,6 +4738,176 @@ export default function App() {
       await deleteDoc(doc(db, 'chats', cid, 'messages', String(messageId)));
     } catch (e) {
       console.warn('[Firestore] delete message failed:', e);
+    }
+  };
+
+  // ---- CRÉATION D'UN HUB DE PROJET MULTI-MEMBRES (MESSAGERIE DE GROUPE) ----
+  const handleCreateProjectGroup = async (groupData) => {
+    const newChatId = `group-${Date.now()}`;
+    const initialPool = Number(groupData.rewardPool) || 15;
+    const newGroupChat = {
+      id: newChatId,
+      isGroup: true,
+      user: groupData.projectTitle,
+      projectTitle: groupData.projectTitle,
+      category: groupData.category || 'Projet Collaboratif',
+      description: groupData.description || '',
+      rewardPool: initialPool,
+      rewardStrategy: groupData.rewardStrategy || 'task',
+      participants: groupData.participants,
+      members: groupData.members,
+      rewardAllocations: [],
+      lastMessage: `🚀 Hub de projet créé (${groupData.participants.length} membres, ${initialPool} jetons alloués)`,
+      lastSenderName: profile?.name || 'Initiateur',
+      unreadCount: 0,
+      updatedAt: new Date(),
+      createdAt: new Date(),
+    };
+
+    const welcomeMsg = {
+      id: Date.now(),
+      sender: 'system',
+      senderName: 'Système',
+      text: `🚀 Hub de collaboration initialisé pour "${groupData.projectTitle}". Réserve allouée : ${initialPool} Jetons Troco. Membres : ${groupData.participants.join(', ')}.`,
+      createdAt: new Date(),
+    };
+
+    setChatThreads(prev => ({ ...prev, [newChatId]: [welcomeMsg] }));
+    setChatsList(prev => [newGroupChat, ...prev]);
+    setSelectedChat(newGroupChat);
+
+    try {
+      await setDoc(doc(db, 'chats', newChatId), {
+        ...newGroupChat,
+        updatedAt: serverTimestamp(),
+        createdAt: serverTimestamp(),
+      });
+      await addDoc(collection(db, 'chats', newChatId, 'messages'), {
+        sender: 'system',
+        senderName: 'Système',
+        text: welcomeMsg.text,
+        createdAt: serverTimestamp(),
+      });
+    } catch (e) {
+      console.warn('[Firestore] group chat create error:', e);
+    }
+  };
+
+  // ---- PROPOSITION D'UNE RÉTRIBUTION EN JETONS DANS UN GROUPE ----
+  const handleProposeReward = async (chatId, rewardData) => {
+    if (!chatId || !rewardData) return;
+    const cid = String(chatId);
+    const newMsg = {
+      id: rewardData.id || `reward-${Date.now()}`,
+      sender: 'me',
+      senderName: profile?.name || 'Initiateur',
+      kind: 'reward-proposal',
+      type: 'reward',
+      reward: rewardData,
+      createdAt: new Date(),
+      text: `💎 Proposition de rétribution : ${rewardData.amount} Jetons Troco pour ${rewardData.beneficiary} (${rewardData.title})`,
+    };
+
+    setChatThreads(prev => ({
+      ...prev,
+      [chatId]: [...(prev[chatId] || []), newMsg],
+    }));
+
+    setChatsList(prev => prev.map(c => String(c.id) === cid ? {
+      ...c,
+      lastMessage: newMsg.text,
+      lastSenderName: profile?.name || 'Initiateur',
+    } : c));
+
+    try {
+      await addDoc(collection(db, 'chats', cid, 'messages'), {
+        sender: 'me',
+        senderName: profile?.name || 'Initiateur',
+        kind: 'reward-proposal',
+        type: 'reward',
+        reward: rewardData,
+        text: newMsg.text,
+        createdAt: serverTimestamp(),
+      });
+      await setDoc(doc(db, 'chats', cid), {
+        lastMessage: newMsg.text,
+        lastSenderName: profile?.name || 'Initiateur',
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+    } catch (e) {
+      console.warn('[Firestore] reward proposal write error:', e);
+    }
+  };
+
+  // ---- VALIDATION ET RÈGLEMENT D'UNE RÉTRIBUTION EN JETONS ----
+  const handleAcceptReward = async (chatId, messageId, rewardData) => {
+    if (!chatId || !messageId || !rewardData) return;
+    const cid = String(chatId);
+    const mid = String(messageId);
+    const amount = Number(rewardData.amount) || 0;
+    const beneficiary = rewardData.beneficiary;
+
+    // 1. Mettre à jour l'état du message localement
+    setChatThreads(prev => ({
+      ...prev,
+      [chatId]: (prev[chatId] || []).map(m => {
+        if (String(m.id) === mid) {
+          return {
+            ...m,
+            reward: {
+              ...m.reward,
+              status: 'confirmed',
+              confirmedAt: new Date(),
+              confirmedBy: profile?.name || 'Membre',
+            }
+          };
+        }
+        return m;
+      })
+    }));
+
+    // 2. Si le profil connecté est le bénéficiaire, créditer son solde de jetons
+    if (beneficiary && profile?.name && beneficiary.trim().toLowerCase() === profile.name.trim().toLowerCase()) {
+      setProfile(prev => ({
+        ...prev,
+        trocoTokens: (prev.trocoTokens || 0) + amount,
+      }));
+    }
+
+    // 3. Mettre à jour les membres et allocations dans le chat du groupe
+    setChatsList(prev => prev.map(c => {
+      if (String(c.id) === cid) {
+        const updatedMembers = (c.members || []).map(mem => {
+          if (mem.name === beneficiary) {
+            return { ...mem, tokensEarned: (mem.tokensEarned || 0) + amount };
+          }
+          return mem;
+        });
+        const updatedAllocations = [...(c.rewardAllocations || []), { ...rewardData, status: 'confirmed' }];
+        return {
+          ...c,
+          members: updatedMembers,
+          rewardAllocations: updatedAllocations,
+        };
+      }
+      return c;
+    }));
+
+    // 4. Synchroniser avec Firestore
+    try {
+      await updateDoc(doc(db, 'chats', cid, 'messages', mid), {
+        'reward.status': 'confirmed',
+        'reward.confirmedAt': serverTimestamp(),
+        'reward.confirmedBy': profile?.name || 'Membre',
+      });
+      await addDoc(collection(db, 'chats', cid, 'messages'), {
+        sender: 'system',
+        senderName: 'Système',
+        text: `✓ Rétribution validée : ${amount} Jetons Troco ont été alloués avec succès à ${beneficiary}.`,
+        createdAt: serverTimestamp(),
+      });
+    } catch (e) {
+      console.warn('[Firestore] reward confirmation sync error:', e);
     }
   };
 
@@ -7723,6 +7921,9 @@ export default function App() {
               joinActiveCall={joinActiveCall}
               handleAcceptDeal={handleAcceptDeal}
               handleDeclineDeal={handleDeclineDeal}
+              onCreateProjectGroup={handleCreateProjectGroup}
+              onProposeReward={handleProposeReward}
+              onAcceptReward={handleAcceptReward}
               profile={profile}
               currentLang={currentLang}
               t={t}
