@@ -1487,6 +1487,7 @@ export default function App() {
     hasMultipleCameras,
     switchCamera,
     startCall,
+    joinActiveCall,
     acceptIncomingCall,
     declineIncomingCall,
     endCall,
@@ -7572,6 +7573,7 @@ export default function App() {
               handleDeleteMessage={handleDeleteMessage}
               openCounterOffer={openCounterOffer}
               startCall={startCall}
+              joinActiveCall={joinActiveCall}
               handleAcceptDeal={handleAcceptDeal}
               handleDeclineDeal={handleDeclineDeal}
               profile={profile}

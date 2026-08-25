@@ -24,6 +24,7 @@ function ChatView({
   handleDeleteMessage,
   openCounterOffer,
   startCall,
+  joinActiveCall,
   handleAcceptDeal,
   handleDeclineDeal,
   profile,
@@ -590,7 +591,13 @@ function ChatView({
               </span>
             </div>
             <button
-              onClick={() => startCall(activeChatObj.activeCall.type || 'video')}
+              onClick={() => {
+                if (typeof joinActiveCall === 'function') {
+                  joinActiveCall(activeChatObj.id, activeChatObj.activeCall.type || 'video');
+                } else if (typeof startCall === 'function') {
+                  startCall(activeChatObj.activeCall.type || 'video');
+                }
+              }}
               className="premium-button"
               style={{
                 border: 'none',
