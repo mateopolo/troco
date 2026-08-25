@@ -1521,7 +1521,7 @@ function ChatView({
       >
         <div style={{
           display: 'grid',
-          gridTemplateColumns: isMobile ? '1fr' : (effectiveSelectedChat ? '340px 1fr' : '1fr'),
+          gridTemplateColumns: isMobile ? '1fr' : (effectiveSelectedChat ? '320px minmax(0, 1fr)' : '1fr'),
           gap: isMobile ? '0' : (effectiveSelectedChat ? '16px' : '0'),
           maxWidth: (!isMobile && !effectiveSelectedChat) ? '800px' : '100%',
           margin: '0 auto',
@@ -1529,7 +1529,8 @@ function ChatView({
           height: '100%',
           flex: 1,
           minHeight: 0,
-          overflow: 'hidden'
+          overflow: 'hidden',
+          boxSizing: 'border-box'
         }}>
           {/* LISTE DES DISCUSSIONS (INBOX) */}
           {(!isMobile || mobileSubView === 'list' || !effectiveSelectedChat) && (!effectiveSelectedChat || !isMobile) && (
@@ -1784,10 +1785,15 @@ function ChatView({
               height: isMobile ? '100dvh' : '100%',
               width: '100%',
               zIndex: isMobile ? 999999 : 1,
-              backgroundColor: 'var(--bg-global)',
+              backgroundColor: isMobile ? 'var(--bg-global)' : 'var(--bg-card)',
+              borderRadius: isMobile ? '0' : '24px',
+              border: isMobile ? 'none' : '1px solid var(--border-color)',
+              boxShadow: isMobile ? 'none' : 'var(--shadow-card)',
               display: 'flex',
               flexDirection: 'column',
-              overflow: 'hidden'
+              overflow: 'hidden',
+              minWidth: 0,
+              boxSizing: 'border-box'
             }}>
               {renderChatRoom()}
             </div>
