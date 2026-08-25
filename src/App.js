@@ -36,6 +36,7 @@ import TrocoLogo3D from './components/common/TrocoLogo3D';
 import MapClusterTracker from './components/MapClusterTracker';
 import LiveCallSubtitles from './components/LiveCallSubtitles';
 import PWAInstallBanner from './components/PWAInstallBanner';
+import SponsoredFeedCard from './components/SponsoredFeedCard';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useGSAP } from '@gsap/react';
@@ -805,6 +806,8 @@ export default function App() {
   const [isKycModalOpen, setIsKycModalOpen] = useState(false);
   // ---- ÉTAT DU PARCOURS D'ONBOARDING INTERACTIF (CHANTIER 1) ----
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
+  // ---- ÉTAT ANIMATION CÉLÉBRATION TOP-UP & JETONS ----
+  const [topUpCelebration, setTopUpCelebration] = useState(null);
 
   const handleKycComplete = async () => {
     const updatedProfile = {
@@ -912,12 +915,24 @@ export default function App() {
       updatedTokens += (txData.tokensPurchased || 0);
       updatedTrocoPlus = true;
       updatedTrocoPlusPlan = txData.subscriptionPlan?.planKey || 'essential';
+      setTopUpCelebration({
+        title: `+${txData.tokensPurchased} Jetons Troco !`,
+        subtitle: `Abonnement ${txData.subscriptionPlan?.title || 'Troco Plus'} activé`,
+        isTokens: true
+      });
+      setTimeout(() => setTopUpCelebration(null), 4500);
       setSaveMessage(`⭐ Abonnement ${txData.subscriptionPlan?.title || 'Troco Plus'} activé avec succès ! +${txData.tokensPurchased} jetons crédités.`);
       setTimeout(() => setSaveMessage(''), 6000);
     } else if (txData.mode === 'topup-cash') {
       const topUpAmount = Number(txData.cashTopUp) || 0;
       if (topUpAmount > 0) {
         updatedEuro = Number((updatedEuro + topUpAmount).toFixed(2));
+        setTopUpCelebration({
+          title: `+${topUpAmount.toFixed(2)} € Rechargés !`,
+          subtitle: `Nouveau solde : ${updatedEuro.toFixed(2)} €`,
+          isEuro: true
+        });
+        setTimeout(() => setTopUpCelebration(null), 4500);
         setSaveMessage(`💳 Solde rechargé avec succès (+${topUpAmount.toFixed(2)} € via ${txData.paymentMethod}).`);
         setTimeout(() => setSaveMessage(''), 5000);
       }
@@ -1437,10 +1452,9 @@ export default function App() {
   const [publishMessage, setPublishMessage] = useState('');
   const [tagInputValue, setTagInputValue] = useState('');
 
-  // NAVIGATION FLUIDE & GESTES SWIPE MOBILES
+  // NAVIGATION FLUIDE ENTRE ONGLETS
   const NAV_TABS = useMemo(() => ['feed', 'chat', 'post', 'profile'], []);
   const [tabSlideDirection, setTabSlideDirection] = useState('forward');
-  const navTouchStartRef = useRef(null);
 
   const switchTab = useCallback((tabName) => {
     const currentIndex = NAV_TABS.indexOf(activeTab);
@@ -1451,77 +1465,6 @@ export default function App() {
     setActiveTab(tabName);
     setSelectedChat(null);
   }, [activeTab, NAV_TABS]);
-
-  const handleGlobalTouchStart = useCallback((e) => {
-    if (!e.touches || e.touches.length === 0) return;
-    const touch = e.touches[0];
-    const target = e.target;
-    // Ne pas intercepter les inputs, textareas, sliders, canvas ou éléments avec défilement horizontal dédié
-    const isInteractive = target && target.closest && target.closest('input, textarea, select, button, [role="slider"], .horizontal-scroll-container, canvas, [data-prevent-swipe="true"]');
-    if (isInteractive) {
-      navTouchStartRef.current = null;
-      return;
-    }
-    navTouchStartRef.current = {
-      x: touch.clientX,
-      y: touch.clientY,
-      time: Date.now(),
-    };
-  }, []);
-
-  const handleGlobalTouchEnd = useCallback((e) => {
-    if (!navTouchStartRef.current) return;
-    const touch = e.changedTouches && e.changedTouches.length > 0 ? e.changedTouches[0] : null;
-    if (!touch) {
-      navTouchStartRef.current = null;
-      return;
-    }
-
-    const deltaX = touch.clientX - navTouchStartRef.current.x;
-    const deltaY = touch.clientY - navTouchStartRef.current.y;
-    const elapsed = Date.now() - navTouchStartRef.current.time;
-    navTouchStartRef.current = null;
-
-    if (elapsed > 650) return;
-    if (Math.abs(deltaX) < 48) return;
-    if (Math.abs(deltaX) <= 1.4 * Math.abs(deltaY)) return; // Geste vertical dominant
-
-    // 1. Retour en arrière depuis une annonce ouverte (swipe droite)
-    if (selectedListing) {
-      if (deltaX > 48) {
-        setSelectedListing(null);
-      }
-      return;
-    }
-
-    // 2. Retour en arrière depuis une conversation active sur mobile
-    if (activeTab === 'chat' && selectedChat && isMobile) {
-      if (deltaX > 48) {
-        setSelectedChat(null);
-      }
-      return;
-    }
-
-    // 3. Navigation par balayage horizontal entre les onglets de la barre de navigation
-    const currentIndex = NAV_TABS.indexOf(activeTab);
-    if (currentIndex === -1) return;
-
-    if (deltaX < -48) {
-      // Balayage vers la gauche -> Onglet suivant
-      if (currentIndex < NAV_TABS.length - 1) {
-        const nextTab = NAV_TABS[currentIndex + 1];
-        setTabSlideDirection('forward');
-        setActiveTab(nextTab);
-      }
-    } else if (deltaX > 48) {
-      // Balayage vers la droite -> Onglet précédent
-      if (currentIndex > 0) {
-        const prevTab = NAV_TABS[currentIndex - 1];
-        setTabSlideDirection('backward');
-        setActiveTab(prevTab);
-      }
-    }
-  }, [activeTab, selectedListing, selectedChat, isMobile, NAV_TABS]);
   const defaultPostDraft = {
     type: 'offer',
     status: 'active',
@@ -3889,22 +3832,47 @@ export default function App() {
 
   const listingsGridRef = useRef(null);
 
-  // GSAP SCROLLTRIGGER : CASCADE FLUIDE DES ANNONCES AU DÉFILEMENT (OPTION 1)
+  // GSAP SCROLLTRIGGER : CASCADE FLUIDE DES ANNONCES AU DÉFILEMENT (ORGANIC SPRING)
   useGSAP(() => {
     if (activeTab !== 'feed' || viewMode !== 'list') return;
 
     const timer = setTimeout(() => {
-      const cards = gsap.utils.toArray('.feed-card-item');
-      if (!cards.length) return;
+      if (!listingsGridRef.current) return;
+      const cards = listingsGridRef.current.querySelectorAll('.feed-card-item');
+      if (!cards || cards.length === 0) return;
 
+      // 1. Cascade d'entrée immédiate pour les premières cartes visibles à l'écran
+      const initialCards = Array.from(cards).slice(0, 8);
+      gsap.fromTo(
+        initialCards,
+        {
+          opacity: 0,
+          y: 28,
+          scale: 0.97,
+        },
+        {
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          duration: 0.52,
+          ease: 'power3.out',
+          stagger: 0.05,
+          overwrite: 'auto',
+          clearProps: 'transform,opacity',
+        }
+      );
+
+      // 2. Cascade au défilement pour les cartes suivantes
       ScrollTrigger.batch(cards, {
         start: 'top 92%',
+        interval: 0.1,
+        batchMax: 6,
         onEnter: (batch) => {
           gsap.fromTo(
             batch,
             {
               opacity: 0,
-              y: 28,
+              y: 26,
               scale: 0.98,
             },
             {
@@ -3912,7 +3880,7 @@ export default function App() {
               y: 0,
               scale: 1,
               duration: 0.48,
-              ease: 'back.out(1.18)',
+              ease: 'power3.out',
               stagger: 0.06,
               overwrite: 'auto',
               clearProps: 'transform,opacity',
@@ -3921,13 +3889,15 @@ export default function App() {
         },
         once: true,
       });
+
+      ScrollTrigger.refresh();
     }, 60);
 
     return () => {
       clearTimeout(timer);
       ScrollTrigger.getAll().forEach(t => t.kill());
     };
-  }, { dependencies: [activeTab, filteredListings.length, viewMode], scope: listingsGridRef });
+  }, { dependencies: [activeTab, filteredListings.length, viewMode, selectedCategory], scope: listingsGridRef });
 
   const getListingDetail = (listing) => {
     const media = getSuggestedMedia(listing.title, listing.description || '', listing.image, listing.video);
@@ -7590,8 +7560,6 @@ export default function App() {
       <main
         ref={mainContainerRef}
         key={`${activeTab}-${viewMode}`}
-        onTouchStart={handleGlobalTouchStart}
-        onTouchEnd={handleGlobalTouchEnd}
         className={`premium-main ${activeTab === 'chat' ? 'chat-mode' : ''} ${
           tabSlideDirection === 'forward' ? 'page-tab-transition-left' : 'page-tab-transition-right'
         }`}
@@ -8039,34 +8007,51 @@ export default function App() {
                     boxSizing: 'border-box'
                   }}
                 >
-                  {filteredListings.map((item) => (
-                    <FeedCardItem
-                      key={item.id}
-                      item={item}
-                      darkMode={darkMode}
-                      hoveredCardId={hoveredCardId}
-                      setHoveredCardId={setHoveredCardId}
-                      hoverSlideIndex={hoverSlideIndex}
-                      handleOpenListing={handleOpenListing}
-                      getSuggestedMedia={getSuggestedMedia}
-                      getFallbackImage={getFallbackImage}
-                      formatCompensation={formatCompensation}
-                      getListingDisplayContent={getListingDisplayContent}
-                      currentLang={currentLang}
-                      showingOriginalListings={showingOriginalListings}
-                      toggleOriginalListing={toggleOriginalListing}
-                      localizeLocation={localizeLocation}
-                      localizeTags={localizeTags}
-                      generateTags={generateTags}
-                      getAuthorAvatar={getAuthorAvatar}
-                      profile={profile}
-                      handleStartDiscussion={handleStartDiscussion}
-                      isAdmin={isAdmin}
-                      onAdminDeleteListing={handleAdminDeleteListing}
-                      onOpenMobileActions={setMobileListingActionTarget}
-                      t={t}
-                    />
-                  ))}
+                  {filteredListings.map((item, idx) => {
+                    const shouldRenderSponsor = (idx + 1) % 5 === 0;
+                    const sponsorIndex = Math.floor(idx / 5);
+
+                    return (
+                      <React.Fragment key={item.id}>
+                        <FeedCardItem
+                          item={item}
+                          darkMode={darkMode}
+                          hoveredCardId={hoveredCardId}
+                          setHoveredCardId={setHoveredCardId}
+                          hoverSlideIndex={hoverSlideIndex}
+                          handleOpenListing={handleOpenListing}
+                          getSuggestedMedia={getSuggestedMedia}
+                          getFallbackImage={getFallbackImage}
+                          formatCompensation={formatCompensation}
+                          getListingDisplayContent={getListingDisplayContent}
+                          currentLang={currentLang}
+                          showingOriginalListings={showingOriginalListings}
+                          toggleOriginalListing={toggleOriginalListing}
+                          localizeLocation={localizeLocation}
+                          localizeTags={localizeTags}
+                          generateTags={generateTags}
+                          getAuthorAvatar={getAuthorAvatar}
+                          profile={profile}
+                          handleStartDiscussion={handleStartDiscussion}
+                          isAdmin={isAdmin}
+                          onAdminDeleteListing={handleAdminDeleteListing}
+                          onOpenMobileActions={setMobileListingActionTarget}
+                          t={t}
+                        />
+                        {shouldRenderSponsor && (
+                          <SponsoredFeedCard
+                            key={`sponsor-slot-${idx}`}
+                            index={sponsorIndex}
+                            darkMode={darkMode}
+                            onOpenNotification={(msg) => {
+                              setSaveMessage(msg);
+                              setTimeout(() => setSaveMessage(''), 6000);
+                            }}
+                          />
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -11276,6 +11261,54 @@ export default function App() {
 
       {/* BANNIÈRE D'INSTALLATION PWA MOBILE 1-CLIC */}
       <PWAInstallBanner />
+
+      {/* OVERLAY CÉLÉBRATION TOP-UP SOLDE & JETONS AU PREMIER PLAN */}
+      {topUpCelebration && (
+        <div
+          style={{
+            position: 'fixed',
+            top: '85px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 999999,
+            backgroundColor: 'var(--bg-card)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            border: '2px solid var(--accent-success)',
+            borderRadius: '999px',
+            padding: '12px 24px',
+            boxShadow: '0 12px 36px rgba(16, 185, 129, 0.4), 0 0 20px rgba(16, 185, 129, 0.2)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            animation: 'fadeSlideDown 0.4s cubic-bezier(0.22, 1, 0.36, 1) both',
+            color: 'var(--text-main)',
+          }}
+        >
+          <div style={{
+            width: '38px',
+            height: '38px',
+            borderRadius: '50%',
+            backgroundColor: 'var(--accent-success)',
+            color: '#FFF',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.5)',
+            flexShrink: 0,
+          }}>
+            <Sparkles size={20} />
+          </div>
+          <div>
+            <div style={{ fontSize: '15px', fontWeight: '900', color: 'var(--accent-success)', letterSpacing: '-0.01em' }}>
+              {topUpCelebration.title}
+            </div>
+            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600' }}>
+              {topUpCelebration.subtitle}
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

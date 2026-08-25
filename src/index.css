@@ -961,6 +961,15 @@ header {
   box-sizing: border-box;
 }
 
+.sponsored-card:hover {
+  transform: translateY(-6px) scale(1.018);
+  box-shadow: 0 16px 36px rgba(198, 125, 91, 0.25);
+}
+
+.sponsored-card:hover img {
+  transform: scale(1.04);
+}
+
 /* ADAPTATION DU CONTENEUR DE CHAT */
 .premium-main.chat-mode {
   display: flex !important;

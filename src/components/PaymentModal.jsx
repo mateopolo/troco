@@ -359,10 +359,13 @@ export default function PaymentModal({
 
     setSuccessDetails(resultPayload);
     setIsSuccess(true);
+  };
 
-    if (onSuccess) {
-      onSuccess(resultPayload);
+  const handleCloseModal = () => {
+    if (isSuccess && successDetails && onSuccess) {
+      onSuccess(successDetails);
     }
+    onClose();
   };
 
   return (
@@ -436,7 +439,7 @@ export default function PaymentModal({
             </div>
           </div>
           <button
-            onClick={onClose}
+            onClick={handleCloseModal}
             style={{
               border: 'none',
               background: 'var(--bg-subtle)',
@@ -578,7 +581,7 @@ export default function PaymentModal({
               </div>
 
               <button
-                onClick={onClose}
+                onClick={handleCloseModal}
                 className="premium-button"
                 style={{
                   width: '100%',

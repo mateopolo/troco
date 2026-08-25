@@ -453,12 +453,13 @@ function ChatView({
         {/* 1. EN-TÊTE FIXE DU CHAT */}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: isMobile ? '10px 12px' : '0 18px',
-          paddingTop: isMobile ? 'max(58px, calc(env(safe-area-inset-top, 44px) + 14px))' : '0',
-          paddingBottom: isMobile ? '12px' : '0',
+          padding: isMobile ? '8px 12px' : '0 18px',
+          paddingTop: isMobile ? 'max(10px, env(safe-area-inset-top, 10px))' : '0',
+          paddingBottom: isMobile ? '8px' : '0',
           paddingLeft: isMobile ? 'max(12px, env(safe-area-inset-left, 12px))' : '18px',
           paddingRight: isMobile ? 'max(12px, env(safe-area-inset-right, 12px))' : '18px',
-          minHeight: isMobile ? 'calc(54px + max(58px, calc(env(safe-area-inset-top, 44px) + 14px)))' : '64px',
+          minHeight: isMobile ? '56px' : '64px',
+          height: isMobile ? 'auto' : '64px',
           borderBottom: '1px solid var(--border-color)',
           backgroundColor: 'var(--bg-glass)',
           backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
@@ -1379,8 +1380,8 @@ function ChatView({
         {/* 3. BARRE DE SAISIE FIXE EN BAS (SANS GAP SUPERFLU) */}
         <div style={{
           display: 'flex', flexDirection: 'column', gap: '6px',
-          padding: isMobile ? '10px 12px' : '8px 16px',
-          paddingBottom: isMobile ? 'max(24px, env(safe-area-inset-bottom, 24px))' : '10px',
+          padding: isMobile ? '8px 12px' : '8px 16px',
+          paddingBottom: isMobile ? 'max(8px, env(safe-area-inset-bottom, 8px))' : '10px',
           borderTop: '1px solid var(--border-color)',
           backgroundColor: 'var(--bg-glass)',
           backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',

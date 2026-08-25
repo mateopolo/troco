@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Star, ShieldCheck, Camera, Pencil, Check, Plus, Trash2, History, Image as ImageIcon, X, Upload } from 'lucide-react';
 import KycModal from './KycModal';
+import { PWAInstallProfileCard } from './PWAInstallBanner';
 
 export default function ProfileView({
   activeTab,
@@ -308,6 +309,9 @@ export default function ProfileView({
           </button>
         </div>
       </div>
+
+      {/* CARTE D'INSTALLATION PWA MOBILE & DESKTOP */}
+      <PWAInstallProfileCard />
 
       {/* SKILLS ET MATÉRIEL */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
