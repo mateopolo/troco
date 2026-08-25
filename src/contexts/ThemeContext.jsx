@@ -162,19 +162,19 @@ export function generateHarmonicDarkPalette(baseHex) {
     const { r, g, b } = hexToRgb(baseHex);
     const { h, s } = rgbToHsl(r, g, b);
 
-    const bg = hslToHex(h, Math.min(s, 26), 9);
-    const card = hslToHex(h, Math.min(s, 28), 14);
-    const subtle = hslToHex(h, Math.min(s, 30), 19);
-    const elevated = hslToHex(h, Math.min(s, 32), 24);
-    const pill = hslToHex(h, Math.min(s, 35), 29);
+    const bg = hslToHex(h, Math.min(s, 30), 9);
+    const card = hslToHex(h, Math.min(s, 32), 14);
+    const subtle = hslToHex(h, Math.min(s, 34), 19);
+    const elevated = hslToHex(h, Math.min(s, 36), 24);
+    const pill = hslToHex(h, Math.min(s, 38), 29);
 
     const text = hslToHex(h, Math.min(s, 15), 96);
     const textSecondary = hslToHex(h, Math.min(s, 25), 78);
     const textMuted = hslToHex(h, Math.min(s, 20), 58);
 
-    const primary = hslToHex(h, Math.max(s, 55), 65);
-    const primaryHover = hslToHex(h, Math.max(s, 60), 72);
-    const primarySecondary = hslToHex(h, Math.max(s, 45), 55);
+    const primary = hslToHex(h, Math.max(s, 60), 66);
+    const primaryHover = hslToHex(h, Math.max(s, 65), 74);
+    const primarySecondary = hslToHex(h, Math.max(s, 50), 56);
 
     const { r: pr, g: pg, b: pb } = hexToRgb(primary);
     const borderColor = `rgba(${pr}, ${pg}, ${pb}, 0.22)`;
@@ -209,9 +209,24 @@ export function generateHarmonicDarkPalette(baseHex) {
       '--glass-bg': glassBg,
       '--glass-border': borderColor,
       '--overlay-bg': 'rgba(0, 0, 0, 0.82)',
-      '--call-bg': hslToHex(h, Math.min(s, 26), 6),
-      '--call-card': hslToHex(h, Math.min(s, 28), 11),
+      '--call-bg': hslToHex(h, Math.min(s, 30), 6),
+      '--call-card': hslToHex(h, Math.min(s, 32), 11),
       '--call-button-bg': `rgba(${pr}, ${pg}, ${pb}, 0.16)`,
+      '--sand': borderColor,
+      '--sand-dark': borderDark,
+      '--sage': primarySecondary,
+      '--sage-dark': primaryHover,
+      '--sage-light': subtle,
+      '--offwhite': bg,
+      '--terracotta': primary,
+      '--terracotta-dark': primaryHover,
+      '--terracotta-light': subtle,
+      '--linen': bg,
+      '--td': text,
+      '--tm': textSecondary,
+      '--tl': textMuted,
+      '--card-bg': card,
+      '--border-warm': borderColor,
     };
   } catch (e) {
     return generateCustomThemeVariables(baseHex, '#111113', '#1C1C1F', '#F5F5F7');
@@ -274,6 +289,21 @@ export function generateCustomThemeVariables(primary = '#B98B73', bg = '#FAF7F2'
     '--call-bg': isDark ? adjustBrightness(bg, -5) : hslToHex(h, 35, 10),
     '--call-card': isDark ? bgCard : hslToHex(h, 25, 16),
     '--call-button-bg': isDark ? bgSubtle : 'rgba(255,255,255,0.14)',
+    '--sand': borderColor,
+    '--sand-dark': borderDark,
+    '--sage': primarySecondary,
+    '--sage-dark': primaryHover,
+    '--sage-light': bgSubtle,
+    '--offwhite': bg,
+    '--terracotta': primary,
+    '--terracotta-dark': primaryHover,
+    '--terracotta-light': bgSubtle,
+    '--linen': bg,
+    '--td': text,
+    '--tm': textSecondary,
+    '--tl': textMuted,
+    '--card-bg': bgCard,
+    '--border-warm': borderColor,
   };
 }
 
@@ -565,6 +595,72 @@ export const THEMES_CONFIG = {
       '--call-bg': '#0F0B18',
       '--call-card': '#161124',
       '--call-button-bg': 'rgba(167, 139, 250, 0.16)',
+    }
+  },
+  cobalt: {
+    id: 'cobalt',
+    name: 'Royal Cobalt',
+    description: 'Bleu cobalt majestueux, écume argentée, nuit saphir profond',
+    previewColors: ['#F0F6FF', '#BFDBFE', '#2563EB', '#1E3A8A'],
+    lightVariables: {
+      '--bg-global': '#F0F6FF',
+      '--bg-card': '#FFFFFF',
+      '--bg-subtle': '#E2EFFF',
+      '--bg-elevated': '#D0E4FF',
+      '--bg-pill': '#BFDBFE',
+      '--bg-glass': 'rgba(240, 246, 255, 0.72)',
+      '--text-main': '#1E3A8A',
+      '--text-secondary': '#2563EB',
+      '--text-muted': '#60A5FA',
+      '--border-color': '#BFDBFE',
+      '--border-dark': '#2563EB',
+      '--accent-primary': '#2563EB',
+      '--accent-primary-hover': '#1D4ED8',
+      '--accent-secondary': '#3B82F6',
+      '--accent-contrast-text': '#FFFFFF',
+      '--accent-terracotta': '#2563EB',
+      '--accent-success': '#10B981',
+      '--accent-danger': '#EF4444',
+      '--accent-warning': '#F59E0B',
+      '--shadow-card': '0 10px 30px rgba(30, 58, 138, 0.08)',
+      '--shadow-accent': '0 8px 24px rgba(37, 99, 235, 0.35)',
+      '--shadow-modal': '0 24px 60px rgba(30, 58, 138, 0.18)',
+      '--glass-bg': 'rgba(240, 246, 255, 0.92)',
+      '--glass-border': 'rgba(191, 219, 254, 0.75)',
+      '--overlay-bg': 'rgba(30, 58, 138, 0.65)',
+      '--call-bg': '#0B132B',
+      '--call-card': '#142142',
+      '--call-button-bg': 'rgba(240, 246, 255, 0.16)',
+    },
+    darkVariables: {
+      '--bg-global': '#0B132B',
+      '--bg-card': '#142142',
+      '--bg-subtle': '#1C2D5A',
+      '--bg-elevated': '#243A73',
+      '--bg-pill': '#2E498D',
+      '--bg-glass': 'rgba(20, 33, 66, 0.85)',
+      '--text-main': '#EFF6FF',
+      '--text-secondary': '#93C5FD',
+      '--text-muted': '#60A5FA',
+      '--border-color': 'rgba(96, 165, 250, 0.22)',
+      '--border-dark': 'rgba(96, 165, 250, 0.45)',
+      '--accent-primary': '#60A5FA',
+      '--accent-primary-hover': '#93C5FD',
+      '--accent-secondary': '#BFDBFE',
+      '--accent-contrast-text': '#0B132B',
+      '--accent-terracotta': '#60A5FA',
+      '--accent-success': '#86EFAC',
+      '--accent-danger': '#FCA5A5',
+      '--accent-warning': '#FDE047',
+      '--shadow-card': '0 12px 36px rgba(0, 0, 0, 0.65)',
+      '--shadow-accent': '0 8px 24px rgba(96, 165, 250, 0.4)',
+      '--shadow-modal': '0 24px 70px rgba(0, 0, 0, 0.85)',
+      '--glass-bg': 'rgba(20, 33, 66, 0.85)',
+      '--glass-border': 'rgba(96, 165, 250, 0.22)',
+      '--overlay-bg': 'rgba(0, 0, 0, 0.82)',
+      '--call-bg': '#070C1C',
+      '--call-card': '#0B132B',
+      '--call-button-bg': 'rgba(96, 165, 250, 0.16)',
     }
   },
   monochrome: {
