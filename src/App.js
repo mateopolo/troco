@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback, Suspense } from 'react';
 import { MapContainer, TileLayer } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -9,18 +9,8 @@ import { RecaptchaVerifier, signInWithPhoneNumber, sendSignInLinkToEmail, isSign
 import ChatView from './components/ChatView';
 import { useWebRTC } from './hooks/useWebRTC';
 import { useTheme, TYPOGRAPHY_OPTIONS, getContrastColor } from './contexts/ThemeContext';
-import AdminPanel from './components/AdminPanel';
-import ReportModal from './components/ReportModal';
-import PaymentModal from './components/PaymentModal';
-import TransactionsHistoryModal from './components/TransactionsHistoryModal';
-import CguModal from './components/CguModal';
-import PrivacyCenterModal from './components/PrivacyCenterModal';
+import { SkeletonModalFallback } from './components/SkeletonLoader';
 import CookieBanner from './components/CookieBanner';
-import OnboardingWizardModal from './components/OnboardingWizardModal';
-import WelcomeGiftCelebrationModal from './components/WelcomeGiftCelebrationModal';
-import VisioSettlementModal from './components/VisioSettlementModal';
-import KycModal from './components/KycModal';
-import CounterOfferModal from './components/CounterOfferModal';
 import { analyzeContent } from './utils/contentModeration';
 import { validateListingContent, validateChatMessage, validateProfileContent } from './utils/moderationBlacklist';
 import { DIVERSE_AVATARS, TROCO_CATEGORIES } from './data/categoriesData';
@@ -33,7 +23,6 @@ import PhotoGrid from './components/PhotoGrid';
 import InvoiceCalculator, { generateInvoiceRef, calculateListingInvoice } from './components/InvoiceCalculator';
 import CallOverlay from './components/CallOverlay';
 import TrocoLogo3D from './components/common/TrocoLogo3D';
-import MapClusterTracker from './components/MapClusterTracker';
 import LiveCallSubtitles from './components/LiveCallSubtitles';
 import PWAInstallBanner from './components/PWAInstallBanner';
 import SponsoredFeedCard from './components/SponsoredFeedCard';
@@ -50,6 +39,20 @@ import {
   knownTitles,
   knownMessageTranslations,
 } from './data/translationsData';
+
+// Lazy-loaded heavy components & modals (Code-Splitting)
+const AdminPanel = React.lazy(() => import('./components/AdminPanel'));
+const ReportModal = React.lazy(() => import('./components/ReportModal'));
+const PaymentModal = React.lazy(() => import('./components/PaymentModal'));
+const TransactionsHistoryModal = React.lazy(() => import('./components/TransactionsHistoryModal'));
+const CguModal = React.lazy(() => import('./components/CguModal'));
+const PrivacyCenterModal = React.lazy(() => import('./components/PrivacyCenterModal'));
+const OnboardingWizardModal = React.lazy(() => import('./components/OnboardingWizardModal'));
+const WelcomeGiftCelebrationModal = React.lazy(() => import('./components/WelcomeGiftCelebrationModal'));
+const VisioSettlementModal = React.lazy(() => import('./components/VisioSettlementModal'));
+const KycModal = React.lazy(() => import('./components/KycModal'));
+const CounterOfferModal = React.lazy(() => import('./components/CounterOfferModal'));
+const MapClusterTracker = React.lazy(() => import('./components/MapClusterTracker'));
 
 if (typeof window !== 'undefined') {
   gsap.registerPlugin(ScrollTrigger, useGSAP);
@@ -7942,21 +7945,23 @@ export default function App() {
                           url={`https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&hl=${currentLang.toLowerCase()}`}
                         />
 
-                        <MapClusterTracker
-                          listings={filteredListings}
-                          mapCenter={mapCenter}
-                          mapZoom={mapZoom}
-                          darkMode={darkMode}
-                          currentLang={currentLang}
-                          t={t}
-                          primaryColor={theme?.variables?.['--accent-primary'] || '#C67D5B'}
-                          getCoordinatesForLocation={getCoordinatesForLocation}
-                          getSuggestedMedia={getSuggestedMedia}
-                          getListingDisplayContent={getListingDisplayContent}
-                          localizeLocation={localizeLocation}
-                          handleOpenListing={handleOpenListing}
-                          createModernMapIcon={createModernMapIcon}
-                        />
+                        <Suspense fallback={null}>
+                          <MapClusterTracker
+                            listings={filteredListings}
+                            mapCenter={mapCenter}
+                            mapZoom={mapZoom}
+                            darkMode={darkMode}
+                            currentLang={currentLang}
+                            t={t}
+                            primaryColor={theme?.variables?.['--accent-primary'] || '#C67D5B'}
+                            getCoordinatesForLocation={getCoordinatesForLocation}
+                            getSuggestedMedia={getSuggestedMedia}
+                            getListingDisplayContent={getListingDisplayContent}
+                            localizeLocation={localizeLocation}
+                            handleOpenListing={handleOpenListing}
+                            createModernMapIcon={createModernMapIcon}
+                          />
+                        </Suspense>
                       </MapContainer>
                     </div>
                   </div>
@@ -11094,133 +11099,177 @@ export default function App() {
       </SectoralErrorBoundary>
 
       {/* PANEL ADMINISTRATEUR & MODÉRATION (/admin) */}
-      <AdminPanel
-        isOpen={isAdminPanelOpen}
-        onClose={() => setIsAdminPanelOpen(false)}
-        darkMode={darkMode}
-        currentUser={profile}
-        allUsers={allFirestoreUsers}
-        allListings={listings}
-        allReports={allReports}
-        onUpdateUser={handleAdminUpdateUser}
-        onDeleteListing={handleAdminDeleteListing}
-        onResolveReport={handleAdminResolveReport}
-        onResetUser={handleAdminResetUser}
-        onEditListing={handleAdminEditListing}
-      />
+      {isAdminPanelOpen && (
+        <Suspense fallback={<SkeletonModalFallback title="Chargement du panel d'administration..." />}>
+          <AdminPanel
+            isOpen={isAdminPanelOpen}
+            onClose={() => setIsAdminPanelOpen(false)}
+            darkMode={darkMode}
+            currentUser={profile}
+            allUsers={allFirestoreUsers}
+            allListings={listings}
+            allReports={allReports}
+            onUpdateUser={handleAdminUpdateUser}
+            onDeleteListing={handleAdminDeleteListing}
+            onResolveReport={handleAdminResolveReport}
+            onResetUser={handleAdminResetUser}
+            onEditListing={handleAdminEditListing}
+          />
+        </Suspense>
+      )}
 
       {/* MODALE DE SIGNALEMENT COMMUNAUTAIRE */}
-      <ReportModal
-        isOpen={isReportModalOpen}
-        onClose={() => {
-          setIsReportModalOpen(false);
-          setReportTarget({ listing: null, user: null });
-        }}
-        targetListing={reportTarget.listing}
-        targetUser={reportTarget.user}
-        currentUser={profile}
-        darkMode={darkMode}
-      />
+      {isReportModalOpen && (
+        <Suspense fallback={<SkeletonModalFallback title="Chargement du formulaire de signalement..." />}>
+          <ReportModal
+            isOpen={isReportModalOpen}
+            onClose={() => {
+              setIsReportModalOpen(false);
+              setReportTarget({ listing: null, user: null });
+            }}
+            targetListing={reportTarget.listing}
+            targetUser={reportTarget.user}
+            currentUser={profile}
+            darkMode={darkMode}
+          />
+        </Suspense>
+      )}
 
       {/* MODALE DE PROPOSITION DE DEAL & CONTRE-OFFRE */}
-      <CounterOfferModal
-        isOpen={isCounterOfferOpen}
-        onClose={() => {
-          setIsCounterOfferOpen(false);
-          setEditingDealId(null);
-        }}
-        onSubmit={handleCounterOfferSubmit}
-        initialTerms={editingDealId ? (chatThreads[selectedChat?.id] || []).find(m => String(m.id) === String(editingDealId))?.terms : counterOfferDraft}
-        isEditing={Boolean(editingDealId)}
-        partnerName={selectedChat?.user || 'Interlocuteur'}
-        listingTitle={selectedChat?.listing || ''}
-        darkMode={darkMode}
-        t={t}
-      />
+      {isCounterOfferOpen && (
+        <Suspense fallback={<SkeletonModalFallback title="Chargement de la négociation de deal..." />}>
+          <CounterOfferModal
+            isOpen={isCounterOfferOpen}
+            onClose={() => {
+              setIsCounterOfferOpen(false);
+              setEditingDealId(null);
+            }}
+            onSubmit={handleCounterOfferSubmit}
+            initialTerms={editingDealId ? (chatThreads[selectedChat?.id] || []).find(m => String(m.id) === String(editingDealId))?.terms : counterOfferDraft}
+            isEditing={Boolean(editingDealId)}
+            partnerName={selectedChat?.user || 'Interlocuteur'}
+            listingTitle={selectedChat?.listing || ''}
+            darkMode={darkMode}
+            t={t}
+          />
+        </Suspense>
+      )}
 
       {/* PASSERELLE DE PAIEMENT SÉCURISÉE (BLOC 5) */}
-      <PaymentModal
-        isOpen={isPaymentModalOpen}
-        onClose={() => setIsPaymentModalOpen(false)}
-        darkMode={darkMode}
-        currentUser={profile}
-        initialMode={paymentModalConfig.mode}
-        initialPayload={paymentModalConfig.payload}
-        onSuccess={handlePaymentSuccess}
-        playBetclicSound={playBetclicBalanceSound}
-        playApplePaySound={playApplePaySound}
-      />
+      {isPaymentModalOpen && (
+        <Suspense fallback={<SkeletonModalFallback title="Chargement du paiement sécurisé..." />}>
+          <PaymentModal
+            isOpen={isPaymentModalOpen}
+            onClose={() => setIsPaymentModalOpen(false)}
+            darkMode={darkMode}
+            currentUser={profile}
+            initialMode={paymentModalConfig.mode}
+            initialPayload={paymentModalConfig.payload}
+            onSuccess={handlePaymentSuccess}
+            playBetclicSound={playBetclicBalanceSound}
+            playApplePaySound={playApplePaySound}
+          />
+        </Suspense>
+      )}
 
       {/* HISTORIQUE DES TRANSACTIONS & FACTURES (BLOC 5) */}
-      <TransactionsHistoryModal
-        isOpen={isTransactionsModalOpen}
-        onClose={() => setIsTransactionsModalOpen(false)}
-        darkMode={darkMode}
-        currentUser={profile}
-        transactions={userTransactions}
-        onOpenPaymentModal={(mode) => {
-          setIsTransactionsModalOpen(false);
-          handleOpenPayment(mode);
-        }}
-      />
+      {isTransactionsModalOpen && (
+        <Suspense fallback={<SkeletonModalFallback title="Chargement de l'historique des transactions..." />}>
+          <TransactionsHistoryModal
+            isOpen={isTransactionsModalOpen}
+            onClose={() => setIsTransactionsModalOpen(false)}
+            darkMode={darkMode}
+            currentUser={profile}
+            transactions={userTransactions}
+            onOpenPaymentModal={(mode) => {
+              setIsTransactionsModalOpen(false);
+              handleOpenPayment(mode);
+            }}
+          />
+        </Suspense>
+      )}
 
       {/* PARCOURS D'ONBOARDING INTERACTIF POUR NOUVEAUX COMPTES (CHANTIER 1) */}
-      <OnboardingWizardModal
-        isOpen={isOnboardingOpen}
-        darkMode={darkMode}
-        currentUser={profile}
-        onComplete={handleCompleteOnboarding}
-      />
+      {isOnboardingOpen && (
+        <Suspense fallback={<SkeletonModalFallback title="Bienvenue sur Troco..." />}>
+          <OnboardingWizardModal
+            isOpen={isOnboardingOpen}
+            darkMode={darkMode}
+            currentUser={profile}
+            onComplete={handleCompleteOnboarding}
+          />
+        </Suspense>
+      )}
 
       {/* CÉLÉBRATION CADEAU DE BIENVENUE (+10 JETONS ET 0.00€ INITIALISÉ) */}
-      <WelcomeGiftCelebrationModal
-        isOpen={isWelcomeGiftModalOpen}
-        onClose={() => setIsWelcomeGiftModalOpen(false)}
-        darkMode={darkMode}
-        trocoTokens={10}
-        euroBalance={0}
-      />
+      {isWelcomeGiftModalOpen && (
+        <Suspense fallback={<SkeletonModalFallback title="Cadeau de bienvenue..." />}>
+          <WelcomeGiftCelebrationModal
+            isOpen={isWelcomeGiftModalOpen}
+            onClose={() => setIsWelcomeGiftModalOpen(false)}
+            darkMode={darkMode}
+            trocoTokens={10}
+            euroBalance={0}
+          />
+        </Suspense>
+      )}
 
       {/* BILAN DE SÉANCE VISIO & RÉTRIBUTION EN JETONS (CHANTIER 5) */}
-      <VisioSettlementModal
-        isOpen={isSettlementModalOpen}
-        onClose={() => setIsSettlementModalOpen(false)}
-        callDuration={settlementCallDuration || callDuration}
-        partnerName={selectedChat?.user || 'Interlocuteur'}
-        onTransferTokens={handleTransferCallTokens}
-        darkMode={darkMode}
-        currentUserTokens={profile?.trocoTokens ?? 10}
-      />
+      {isSettlementModalOpen && (
+        <Suspense fallback={<SkeletonModalFallback title="Bilan d'appel..." />}>
+          <VisioSettlementModal
+            isOpen={isSettlementModalOpen}
+            onClose={() => setIsSettlementModalOpen(false)}
+            callDuration={settlementCallDuration || callDuration}
+            partnerName={selectedChat?.user || 'Interlocuteur'}
+            onTransferTokens={handleTransferCallTokens}
+            darkMode={darkMode}
+            currentUserTokens={profile?.trocoTokens ?? 10}
+          />
+        </Suspense>
+      )}
 
       {/* MODULE DE VÉRIFICATION D'IDENTITÉ (KYC) */}
-      <KycModal
-        isOpen={isKycModalOpen}
-        onClose={() => setIsKycModalOpen(false)}
-        onComplete={handleKycComplete}
-        profile={profile}
-        darkMode={darkMode}
-      />
+      {isKycModalOpen && (
+        <Suspense fallback={<SkeletonModalFallback title="Vérification d'identité sécurisée..." />}>
+          <KycModal
+            isOpen={isKycModalOpen}
+            onClose={() => setIsKycModalOpen(false)}
+            onComplete={handleKycComplete}
+            profile={profile}
+            darkMode={darkMode}
+          />
+        </Suspense>
+      )}
 
       {/* MODALE D'ACCEPTATION & CONSULTATION DES CGU (BLOC 6) */}
-      <CguModal
-        isOpen={isCguViewerOpen || (Boolean(profile?.name) && !profile?.cguAcceptedAt && profile?.onboardingCompleted)}
-        isMandatory={Boolean(profile?.name) && !profile?.cguAcceptedAt && profile?.onboardingCompleted}
-        onClose={() => setIsCguViewerOpen(false)}
-        onAccept={handleAcceptCgu}
-        darkMode={darkMode}
-        currentUser={profile}
-      />
+      {(isCguViewerOpen || (Boolean(profile?.name) && !profile?.cguAcceptedAt && profile?.onboardingCompleted)) && (
+        <Suspense fallback={<SkeletonModalFallback title="Conditions Générales d'Utilisation..." />}>
+          <CguModal
+            isOpen={isCguViewerOpen || (Boolean(profile?.name) && !profile?.cguAcceptedAt && profile?.onboardingCompleted)}
+            isMandatory={Boolean(profile?.name) && !profile?.cguAcceptedAt && profile?.onboardingCompleted}
+            onClose={() => setIsCguViewerOpen(false)}
+            onAccept={handleAcceptCgu}
+            darkMode={darkMode}
+            currentUser={profile}
+          />
+        </Suspense>
+      )}
 
       {/* CENTRE DE CONFIDENTIALITÉ & GESTION DES DROITS RGPD (BLOC 6) */}
-      <PrivacyCenterModal
-        isOpen={isPrivacyCenterOpen}
-        onClose={() => setIsPrivacyCenterOpen(false)}
-        darkMode={darkMode}
-        currentUser={profile}
-        userListings={listings}
-        userTransactions={userTransactions}
-        onDeleteAccount={handleDeleteAccount}
-      />
+      {isPrivacyCenterOpen && (
+        <Suspense fallback={<SkeletonModalFallback title="Centre de confidentialité..." />}>
+          <PrivacyCenterModal
+            isOpen={isPrivacyCenterOpen}
+            onClose={() => setIsPrivacyCenterOpen(false)}
+            darkMode={darkMode}
+            currentUser={profile}
+            userListings={listings}
+            userTransactions={userTransactions}
+            onDeleteAccount={handleDeleteAccount}
+          />
+        </Suspense>
+      )}
 
       {/* BANNIÈRE COOKIES & TRACEURS CONFORME CNIL / RGPD (BLOC 6) */}
       <CookieBanner

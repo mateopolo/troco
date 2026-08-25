@@ -115,4 +115,61 @@ export function SkeletonChatList({ count = 5 }) {
   );
 }
 
+/**
+ * SkeletonModalFallback — Skeleton pour les modales en chargement lazy
+ */
+export function SkeletonModalFallback({ title = "Chargement en cours..." }) {
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.65)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 10000000,
+        padding: '16px',
+        animation: 'fadeIn 0.2s ease',
+      }}
+    >
+      <div
+        style={{
+          width: '100%',
+          maxWidth: '480px',
+          backgroundColor: 'var(--bg-card)',
+          borderRadius: '24px',
+          border: '1px solid var(--border-color)',
+          padding: '24px',
+          boxShadow: 'var(--shadow-modal)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '16px',
+          textAlign: 'center',
+        }}
+      >
+        <div
+          className="skeleton-shimmer"
+          style={{ width: '48px', height: '48px', borderRadius: '50%' }}
+        />
+        <div
+          className="skeleton-shimmer"
+          style={{ width: '60%', height: '18px', borderRadius: '8px' }}
+        />
+        <div
+          className="skeleton-shimmer"
+          style={{ width: '85%', height: '12px', borderRadius: '6px' }}
+        />
+        <div
+          className="skeleton-shimmer"
+          style={{ width: '100%', height: '42px', borderRadius: '14px', marginTop: '8px' }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export default SkeletonCard;
