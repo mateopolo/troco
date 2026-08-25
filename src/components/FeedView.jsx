@@ -5,6 +5,7 @@ import { Search, MapPin, Filter, Grid, Map, Globe, Tag } from 'lucide-react';
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
 import ListingCard from './ListingCard';
+import { SkeletonCard } from './SkeletonLoader';
 
 const createModernMapIcon = () => {
   return L.divIcon({
@@ -64,11 +65,15 @@ export default function FeedView({
   profile = { name: 'MATEO POLO', avatar: '' }
 }) {
   const [realtimeListings, setRealtimeListings] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'listings'), (snapshot) => {
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setRealtimeListings(data);
+      setIsLoading(false);
+    }, () => {
+      setIsLoading(false);
     });
     return () => unsub();
   }, []);
@@ -250,22 +255,26 @@ export default function FeedView({
       {viewMode === 'list' ? (
         /* GRILLE DE CARTES ANNONCES */
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(285px, 1fr))', gap: '22px' }}>
-          {displayListings.map(item => (
-            <ListingCard
-              key={item.id}
-              item={item}
-              handleOpenListing={handleOpenListing}
-              handleStartDiscussion={handleStartDiscussion}
-              currentLang={currentLang}
-              t={t}
-              darkMode={darkMode}
-              formatCompensation={formatCompensation}
-              getListingDisplayContent={getListingDisplayContent}
-              showingOriginalListings={showingOriginalListings}
-              toggleOriginalListing={toggleOriginalListing}
-              profile={profile}
-            />
-          ))}
+          {isLoading && realtimeListings.length === 0 ? (
+            <SkeletonCard count={6} />
+          ) : (
+            displayListings.map(item => (
+              <ListingCard
+                key={item.id}
+                item={item}
+                handleOpenListing={handleOpenListing}
+                handleStartDiscussion={handleStartDiscussion}
+                currentLang={currentLang}
+                t={t}
+                darkMode={darkMode}
+                formatCompensation={formatCompensation}
+                getListingDisplayContent={getListingDisplayContent}
+                showingOriginalListings={showingOriginalListings}
+                toggleOriginalListing={toggleOriginalListing}
+                profile={profile}
+              />
+            ))
+          )}
         </div>
       ) : (
         /* VUE CARTE CARTE INTERACTIVE LEAFLET */
