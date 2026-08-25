@@ -27,6 +27,8 @@ import LiveCallSubtitles from './components/LiveCallSubtitles';
 import PWAInstallBanner from './components/PWAInstallBanner';
 import SponsoredFeedCard from './components/SponsoredFeedCard';
 import SectoralErrorBoundary from './components/SectoralErrorBoundary';
+import { useWalletStore, useChatStore, useFeedStore } from './stores';
+import { FeedSection, ChatSection, MapSection, CallFeature, PaymentFeature } from './features';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useGSAP } from '@gsap/react';
