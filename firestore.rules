@@ -1,0 +1,92 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.email == 'mateopolo91@gmail.com' ||
+        request.auth.uid == 'mateopolo91' ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+      );
+    }
+
+    // Profils Utilisateurs
+    match /users/{userId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow update: if isOwner(userId) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Annonces (Listings)
+    match /listings/{listingId} {
+      allow read: if true;
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated() && (
+        request.auth.uid == resource.data.authorUid ||
+        request.auth.uid == resource.data.userId ||
+        request.auth.token.email == resource.data.authorEmail ||
+        isAdmin()
+      );
+    }
+
+    // Conversations & Messages
+    match /chats/{chatId} {
+      allow read, write: if isAuthenticated();
+      
+      match /messages/{messageId} {
+        allow read, write: if isAuthenticated();
+      }
+    }
+
+    // Signalisation WebRTC & Appels en direct
+    match /calls/{callId} {
+      allow read, write: if isAuthenticated();
+      
+      match /callerCandidates/{candId} {
+        allow read, write: if isAuthenticated();
+      }
+      
+      match /calleeCandidates/{candId} {
+        allow read, write: if isAuthenticated();
+      }
+    }
+
+    // Deals & Séquestre Financier (Escrow)
+    match /deals/{dealId} {
+      allow read: if isAuthenticated() && (
+        resource.data.buyerUid == request.auth.uid ||
+        resource.data.sellerUid == request.auth.uid ||
+        isAdmin()
+      );
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && (
+        resource.data.buyerUid == request.auth.uid ||
+        resource.data.sellerUid == request.auth.uid ||
+        isAdmin()
+      );
+      allow delete: if isAdmin();
+    }
+
+    // Signalements communautaires
+    match /reports/{reportId} {
+      allow create: if isAuthenticated();
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Présence en temps réel (Heartbeat)
+    match /presence/{userId} {
+      allow read: if true;
+      allow write: if isOwner(userId) || isAuthenticated();
+    }
+  }
+}

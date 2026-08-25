@@ -37,6 +37,7 @@ import MapClusterTracker from './components/MapClusterTracker';
 import LiveCallSubtitles from './components/LiveCallSubtitles';
 import PWAInstallBanner from './components/PWAInstallBanner';
 import SponsoredFeedCard from './components/SponsoredFeedCard';
+import SectoralErrorBoundary from './components/SectoralErrorBoundary';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useGSAP } from '@gsap/react';
@@ -7922,42 +7923,44 @@ export default function App() {
                   </button>
                 </div>
               ) : viewMode === 'map' ? (
-                <div className="premium-panel" style={{ backgroundColor: 'var(--bg-card)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', borderRadius: '24px', padding: '10px', boxShadow: 'var(--shadow-card)', border: '1px solid var(--border-color)' }}>
-                  <div style={{ position: 'relative', width: '100%', height: '550px', borderRadius: '18px', overflow: 'hidden', boxShadow: 'var(--shadow-card)' }}>
-                    <MapContainer
-                      center={mapCenter}
-                      zoom={4}
-                      minZoom={2}
-                      maxBounds={[[-85, -180], [85, 180]]}
-                      maxBoundsViscosity={1.0}
-                      worldCopyJump={true}
-                      style={{ width: '100%', height: '100%' }}
-                    >
-                      <TileLayer
-                        noWrap={true}
-                        bounds={[[-85, -180], [85, 180]]}
-                        attribution='&copy; Google Maps'
-                        url={`https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&hl=${currentLang.toLowerCase()}`}
-                      />
+                <SectoralErrorBoundary moduleName="Carte Interactive & Géolocalisation">
+                  <div className="premium-panel" style={{ backgroundColor: 'var(--bg-card)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', borderRadius: '24px', padding: '10px', boxShadow: 'var(--shadow-card)', border: '1px solid var(--border-color)' }}>
+                    <div style={{ position: 'relative', width: '100%', height: '550px', borderRadius: '18px', overflow: 'hidden', boxShadow: 'var(--shadow-card)' }}>
+                      <MapContainer
+                        center={mapCenter}
+                        zoom={4}
+                        minZoom={2}
+                        maxBounds={[[-85, -180], [85, 180]]}
+                        maxBoundsViscosity={1.0}
+                        worldCopyJump={true}
+                        style={{ width: '100%', height: '100%' }}
+                      >
+                        <TileLayer
+                          noWrap={true}
+                          bounds={[[-85, -180], [85, 180]]}
+                          attribution='&copy; Google Maps'
+                          url={`https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&hl=${currentLang.toLowerCase()}`}
+                        />
 
-                      <MapClusterTracker
-                        listings={filteredListings}
-                        mapCenter={mapCenter}
-                        mapZoom={mapZoom}
-                        darkMode={darkMode}
-                        currentLang={currentLang}
-                        t={t}
-                        primaryColor={theme?.variables?.['--accent-primary'] || '#C67D5B'}
-                        getCoordinatesForLocation={getCoordinatesForLocation}
-                        getSuggestedMedia={getSuggestedMedia}
-                        getListingDisplayContent={getListingDisplayContent}
-                        localizeLocation={localizeLocation}
-                        handleOpenListing={handleOpenListing}
-                        createModernMapIcon={createModernMapIcon}
-                      />
-                    </MapContainer>
+                        <MapClusterTracker
+                          listings={filteredListings}
+                          mapCenter={mapCenter}
+                          mapZoom={mapZoom}
+                          darkMode={darkMode}
+                          currentLang={currentLang}
+                          t={t}
+                          primaryColor={theme?.variables?.['--accent-primary'] || '#C67D5B'}
+                          getCoordinatesForLocation={getCoordinatesForLocation}
+                          getSuggestedMedia={getSuggestedMedia}
+                          getListingDisplayContent={getListingDisplayContent}
+                          localizeLocation={localizeLocation}
+                          handleOpenListing={handleOpenListing}
+                          createModernMapIcon={createModernMapIcon}
+                        />
+                      </MapContainer>
+                    </div>
                   </div>
-                </div>
+                </SectoralErrorBoundary>
               ) : (
                 <div
                   ref={listingsGridRef}
@@ -8123,42 +8126,44 @@ export default function App() {
           const isThemTyping = !!(activeChatData?.typing && otherUserName && activeChatData.typing[otherUserName]);
 
           return (
-            <ChatView
-              activeTab={activeTab}
-              mockChats={chatsList}
-              selectedChat={selectedChat}
-              setSelectedChat={handleSelectChat}
-              chatThreads={chatThreads}
-              readChats={readChats}
-              chatInputText={messageDraft}
-              setChatInputText={setMessageDraft}
-              onTypingChange={handleTypingChange}
-              isThemTyping={isThemTyping}
-              handleSendMessage={handleSendMessage}
-              handleEditMessage={handleEditMessage}
-              handleDeleteMessage={handleDeleteMessage}
-              openCounterOffer={openCounterOffer}
-              startCall={startCall}
-              joinActiveCall={joinActiveCall}
-              handleAcceptDeal={handleAcceptDeal}
-              handleDeclineDeal={handleDeclineDeal}
-              handleReleaseEscrow={handleReleaseEscrow}
-              onCreateProjectGroup={handleCreateProjectGroup}
-              onProposeReward={handleProposeReward}
-              onAcceptReward={handleAcceptReward}
-              onSendAudioMessage={handleSendAudioMessage}
-              profile={profile}
-              currentLang={currentLang}
-              t={t}
-              darkMode={darkMode}
-              getChatMessageDisplayContent={getChatMessageDisplayContent}
-              getListingTitleTranslation={getListingTitleTranslation}
-              formatStatus={formatStatus}
-              showingOriginalMessages={showingOriginalMessages}
-              toggleOriginalMessage={toggleOriginalMessage}
-              isMobile={isMobile}
-              presenceMap={presenceMap}
-            />
+            <SectoralErrorBoundary moduleName="Messagerie & Hub Collaboratif">
+              <ChatView
+                activeTab={activeTab}
+                mockChats={chatsList}
+                selectedChat={selectedChat}
+                setSelectedChat={handleSelectChat}
+                chatThreads={chatThreads}
+                readChats={readChats}
+                chatInputText={messageDraft}
+                setChatInputText={setMessageDraft}
+                onTypingChange={handleTypingChange}
+                isThemTyping={isThemTyping}
+                handleSendMessage={handleSendMessage}
+                handleEditMessage={handleEditMessage}
+                handleDeleteMessage={handleDeleteMessage}
+                openCounterOffer={openCounterOffer}
+                startCall={startCall}
+                joinActiveCall={joinActiveCall}
+                handleAcceptDeal={handleAcceptDeal}
+                handleDeclineDeal={handleDeclineDeal}
+                handleReleaseEscrow={handleReleaseEscrow}
+                onCreateProjectGroup={handleCreateProjectGroup}
+                onProposeReward={handleProposeReward}
+                onAcceptReward={handleAcceptReward}
+                onSendAudioMessage={handleSendAudioMessage}
+                profile={profile}
+                currentLang={currentLang}
+                t={t}
+                darkMode={darkMode}
+                getChatMessageDisplayContent={getChatMessageDisplayContent}
+                getListingTitleTranslation={getListingTitleTranslation}
+                formatStatus={formatStatus}
+                showingOriginalMessages={showingOriginalMessages}
+                toggleOriginalMessage={toggleOriginalMessage}
+                isMobile={isMobile}
+                presenceMap={presenceMap}
+              />
+            </SectoralErrorBoundary>
           );
         })()}
 
@@ -11060,31 +11065,33 @@ export default function App() {
       )}
 
       {/* ---- BULLE FLOTTANTE PIP (PICTURE-IN-PICTURE & DRAG-AND-DROP AVEC POINTER EVENTS) ---- */}
-      <CallOverlay
-        callState={callState}
-        isCallPip={isCallPip}
-        setIsCallPip={setIsCallPip}
-        pipPosition={pipPosition}
-        setPipPosition={setPipPosition}
-        handlePipPointerDown={handlePipPointerDown}
-        handlePipPointerMove={handlePipPointerMove}
-        handlePipPointerUp={handlePipPointerUp}
-        handlePipPointerCancel={handlePipPointerCancel}
-        handlePipContentClick={handlePipContentClick}
-        selectedChat={selectedChat}
-        callDuration={callDuration}
-        formatCallTimer={formatCallTimer}
-        remoteStream={remoteStream}
-        localStream={localStream}
-        facingMode={facingMode}
-        attachRemoteStream={attachRemoteStream}
-        attachLocalStream={attachLocalStream}
-        hasMultipleCameras={hasMultipleCameras}
-        switchCamera={switchCamera}
-        toggleMic={toggleMic}
-        endCall={endCall}
-        currentLang={currentLang}
-      />
+      <SectoralErrorBoundary moduleName="Module d'Appel WebRTC HD">
+        <CallOverlay
+          callState={callState}
+          isCallPip={isCallPip}
+          setIsCallPip={setIsCallPip}
+          pipPosition={pipPosition}
+          setPipPosition={setPipPosition}
+          handlePipPointerDown={handlePipPointerDown}
+          handlePipPointerMove={handlePipPointerMove}
+          handlePipPointerUp={handlePipPointerUp}
+          handlePipPointerCancel={handlePipPointerCancel}
+          handlePipContentClick={handlePipContentClick}
+          selectedChat={selectedChat}
+          callDuration={callDuration}
+          formatCallTimer={formatCallTimer}
+          remoteStream={remoteStream}
+          localStream={localStream}
+          facingMode={facingMode}
+          attachRemoteStream={attachRemoteStream}
+          attachLocalStream={attachLocalStream}
+          hasMultipleCameras={hasMultipleCameras}
+          switchCamera={switchCamera}
+          toggleMic={toggleMic}
+          endCall={endCall}
+          currentLang={currentLang}
+        />
+      </SectoralErrorBoundary>
 
       {/* PANEL ADMINISTRATEUR & MODÉRATION (/admin) */}
       <AdminPanel

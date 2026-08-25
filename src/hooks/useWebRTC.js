@@ -14,6 +14,7 @@ import {
   onSnapshot, getDoc, serverTimestamp,
 } from 'firebase/firestore';
 import { db, auth } from '../firebase';
+import { liveTranscriptionService } from '../services/liveTranscriptionService';
 
 // Configuration STUN globale robuste (Google STUN pour traversée NAT, 4G, 5G et Wi-Fi)
 const ICE_CONFIG = {
@@ -208,6 +209,7 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
   // Nettoyage complet et forcé de tous les flux médias (caméra, micro, écran) et écouteurs
   const _cleanup = useCallback((skipDocDelete = false) => {
     stopRingtone();
+    try { liveTranscriptionService.stopListening(); } catch (_) { }
     pendingCandidatesRef.current = [];
     unsubsRef.current.forEach(u => { try { u(); } catch (_) { } });
     unsubsRef.current = [];
