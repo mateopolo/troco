@@ -1537,3 +1537,61 @@ body.dark-mode .ad-card:hover {
   opacity: 1 !important;
   visibility: visible !important;
 }
+
+/* ==========================================================================
+   PAGE & TAB TRANSITIONS FLUIDES & MODERNES (SWIPE & FADE)
+   ========================================================================== */
+
+@keyframes pageFadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pageSwipeLeftIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pageSwipeRightIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.page-tab-transition {
+  animation: pageFadeSlideIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: transform, opacity;
+}
+
+.page-tab-transition-left {
+  animation: pageSwipeLeftIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: transform, opacity;
+}
+
+.page-tab-transition-right {
+  animation: pageSwipeRightIn 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: transform, opacity;
+}
+
+/* Geste de glissement naturel pour le conteneur principal */
+.premium-main {
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
+}

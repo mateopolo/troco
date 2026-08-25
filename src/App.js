@@ -1431,6 +1431,92 @@ export default function App() {
   const [postStep, setPostStep] = useState(1);
   const [publishMessage, setPublishMessage] = useState('');
   const [tagInputValue, setTagInputValue] = useState('');
+
+  // NAVIGATION FLUIDE & GESTES SWIPE MOBILES
+  const NAV_TABS = useMemo(() => ['feed', 'chat', 'post', 'profile'], []);
+  const [tabSlideDirection, setTabSlideDirection] = useState('forward');
+  const navTouchStartRef = useRef(null);
+
+  const switchTab = useCallback((tabName) => {
+    const currentIndex = NAV_TABS.indexOf(activeTab);
+    const newIndex = NAV_TABS.indexOf(tabName);
+    if (newIndex !== -1 && currentIndex !== -1 && newIndex !== currentIndex) {
+      setTabSlideDirection(newIndex > currentIndex ? 'forward' : 'backward');
+    }
+    setActiveTab(tabName);
+    setSelectedChat(null);
+  }, [activeTab, NAV_TABS]);
+
+  const handleGlobalTouchStart = useCallback((e) => {
+    if (!e.touches || e.touches.length === 0) return;
+    const touch = e.touches[0];
+    const target = e.target;
+    // Ne pas intercepter les inputs, textareas, sliders, canvas ou éléments avec défilement horizontal dédié
+    const isInteractive = target && target.closest && target.closest('input, textarea, select, button, [role="slider"], .horizontal-scroll-container, canvas, [data-prevent-swipe="true"]');
+    if (isInteractive) {
+      navTouchStartRef.current = null;
+      return;
+    }
+    navTouchStartRef.current = {
+      x: touch.clientX,
+      y: touch.clientY,
+      time: Date.now(),
+    };
+  }, []);
+
+  const handleGlobalTouchEnd = useCallback((e) => {
+    if (!navTouchStartRef.current) return;
+    const touch = e.changedTouches && e.changedTouches.length > 0 ? e.changedTouches[0] : null;
+    if (!touch) {
+      navTouchStartRef.current = null;
+      return;
+    }
+
+    const deltaX = touch.clientX - navTouchStartRef.current.x;
+    const deltaY = touch.clientY - navTouchStartRef.current.y;
+    const elapsed = Date.now() - navTouchStartRef.current.time;
+    navTouchStartRef.current = null;
+
+    if (elapsed > 650) return;
+    if (Math.abs(deltaX) < 48) return;
+    if (Math.abs(deltaX) <= 1.4 * Math.abs(deltaY)) return; // Geste vertical dominant
+
+    // 1. Retour en arrière depuis une annonce ouverte (swipe droite)
+    if (selectedListing) {
+      if (deltaX > 48) {
+        setSelectedListing(null);
+      }
+      return;
+    }
+
+    // 2. Retour en arrière depuis une conversation active sur mobile
+    if (activeTab === 'chat' && selectedChat && isMobile) {
+      if (deltaX > 48) {
+        setSelectedChat(null);
+      }
+      return;
+    }
+
+    // 3. Navigation par balayage horizontal entre les onglets de la barre de navigation
+    const currentIndex = NAV_TABS.indexOf(activeTab);
+    if (currentIndex === -1) return;
+
+    if (deltaX < -48) {
+      // Balayage vers la gauche -> Onglet suivant
+      if (currentIndex < NAV_TABS.length - 1) {
+        const nextTab = NAV_TABS[currentIndex + 1];
+        setTabSlideDirection('forward');
+        setActiveTab(nextTab);
+      }
+    } else if (deltaX > 48) {
+      // Balayage vers la droite -> Onglet précédent
+      if (currentIndex > 0) {
+        const prevTab = NAV_TABS[currentIndex - 1];
+        setTabSlideDirection('backward');
+        setActiveTab(prevTab);
+      }
+    }
+  }, [activeTab, selectedListing, selectedChat, isMobile, NAV_TABS]);
   const defaultPostDraft = {
     type: 'offer',
     status: 'active',
@@ -7021,7 +7107,11 @@ export default function App() {
       <main
         ref={mainContainerRef}
         key={`${activeTab}-${viewMode}`}
-        className={`premium-main ${activeTab === 'chat' ? 'chat-mode' : 'fade-up-in'}`}
+        onTouchStart={handleGlobalTouchStart}
+        onTouchEnd={handleGlobalTouchEnd}
+        className={`premium-main ${activeTab === 'chat' ? 'chat-mode' : ''} ${
+          tabSlideDirection === 'forward' ? 'page-tab-transition-left' : 'page-tab-transition-right'
+        }`}
         style={{
           maxWidth: activeTab === 'feed' ? '1460px' : '1240px',
           margin: '0 auto',
@@ -9316,7 +9406,7 @@ export default function App() {
           {/* 1. EXPLORER */}
           <button
             type="button"
-            onClick={() => { setActiveTab('feed'); setSelectedChat(null); }}
+            onClick={() => switchTab('feed')}
             style={{
               border: 'none',
               background: 'transparent',
@@ -9350,7 +9440,7 @@ export default function App() {
           {/* 2. MESSAGES */}
           <button
             type="button"
-            onClick={() => { setActiveTab('chat'); setSelectedChat(null); }}
+            onClick={() => switchTab('chat')}
             style={{
               border: 'none',
               background: 'transparent',
@@ -9417,7 +9507,7 @@ export default function App() {
                 setPublishMessage('');
                 setIsEditingListing(false);
               } else {
-                setActiveTab('post');
+                switchTab('post');
               }
             }}
             style={{
@@ -9453,7 +9543,7 @@ export default function App() {
           {/* 4. PROFIL */}
           <button
             type="button"
-            onClick={() => { setActiveTab('profile'); setSelectedChat(null); }}
+            onClick={() => switchTab('profile')}
             style={{
               border: 'none',
               background: 'transparent',
