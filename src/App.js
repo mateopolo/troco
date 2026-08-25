@@ -25,6 +25,7 @@ import { analyzeContent } from './utils/contentModeration';
 import { validateListingContent, validateChatMessage, validateProfileContent } from './utils/moderationBlacklist';
 import { DIVERSE_AVATARS, TROCO_CATEGORIES } from './data/categoriesData';
 import { getInstantOrQueueTranslation, subscribeTranslations } from './utils/translator';
+import { uploadVoiceNote } from './services/voiceStorageService';
 import { playApplePaySound, playBetclicBalanceSound, playWelcomeGiftFanfare } from './utils/audioService';
 import { AnimatedEuroBalance, AnimatedTokenBalance } from './components/AnimatedBalances';
 import FeedCardItem from './components/FeedCardItem';
@@ -4741,6 +4742,58 @@ export default function App() {
     }
   };
 
+  // ---- ENVOI DE MESSAGE VOCAL (AUDIO NOTE AVEC STOCKAGE FIREBASE) ----
+  const handleSendAudioMessage = async (audioBlob, duration) => {
+    if (!selectedChat) return;
+    const chatId = selectedChat.id;
+    const uploadRes = await uploadVoiceNote(audioBlob, chatId);
+    const audioUrl = uploadRes?.audioUrl;
+    if (!audioUrl) return;
+
+    const formattedDuration = Math.round(duration || 0);
+    const newAudioMessage = {
+      id: Date.now(),
+      sender: 'me',
+      senderName: profile?.name || 'Moi',
+      kind: 'audio',
+      type: 'audio',
+      audioUrl,
+      duration: formattedDuration,
+      status: 'sent',
+      createdAt: new Date(),
+      text: `🎤 Note vocale (${formattedDuration}s)`,
+    };
+
+    setChatThreads(prev => ({ ...prev, [chatId]: [...(prev[chatId] || []), newAudioMessage] }));
+
+    setChatsList(prev => prev.map(c => String(c.id) === String(chatId) ? {
+      ...c,
+      lastMessage: newAudioMessage.text,
+      lastSenderName: profile?.name || 'Moi',
+    } : c));
+
+    try {
+      await addDoc(collection(db, 'chats', String(chatId), 'messages'), {
+        senderName: profile?.name || 'Moi',
+        kind: 'audio',
+        type: 'audio',
+        audioUrl,
+        duration: formattedDuration,
+        text: newAudioMessage.text,
+        read: false,
+        status: 'sent',
+        createdAt: serverTimestamp(),
+      });
+      await setDoc(doc(db, 'chats', String(chatId)), {
+        lastMessage: newAudioMessage.text,
+        lastSenderName: profile?.name || 'Moi',
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+    } catch (e) {
+      console.warn('[Firestore] audio message write failed:', e);
+    }
+  };
+
   // ---- CRÉATION D'UN HUB DE PROJET MULTI-MEMBRES (MESSAGERIE DE GROUPE) ----
   const handleCreateProjectGroup = async (groupData) => {
     const newChatId = `group-${Date.now()}`;
@@ -7924,6 +7977,7 @@ export default function App() {
               onCreateProjectGroup={handleCreateProjectGroup}
               onProposeReward={handleProposeReward}
               onAcceptReward={handleAcceptReward}
+              onSendAudioMessage={handleSendAudioMessage}
               profile={profile}
               currentLang={currentLang}
               t={t}

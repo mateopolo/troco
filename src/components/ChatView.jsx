@@ -2,13 +2,15 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import {
   Send, Phone, Video, Sparkles, Clock, CheckCircle,
   ChevronLeft, Globe, Edit2, Trash2, Copy, Check, X,
-  AlertTriangle, Users, Coins
+  AlertTriangle, Users, Coins, Mic
 } from 'lucide-react';
 import { doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { subscribeTranslations } from '../utils/translator';
 import CreateProjectGroupModal from './CreateProjectGroupModal';
 import ProjectRewardsModal from './ProjectRewardsModal';
+import VoiceNotePlayer from './VoiceNotePlayer';
+import VoiceNoteRecorder from './VoiceNoteRecorder';
 
 function ChatView({
   activeTab,
@@ -32,6 +34,7 @@ function ChatView({
   onCreateProjectGroup,
   onProposeReward,
   onAcceptReward,
+  onSendAudioMessage,
   profile,
   currentLang,
   t,
@@ -43,6 +46,7 @@ function ChatView({
   isMobile: isMobileProp = undefined,
   presenceMap = {}
 }) {
+  const [isRecordingAudio, setIsRecordingAudio] = useState(false);
   const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
   const [isProjectRewardsModalOpen, setIsProjectRewardsModalOpen] = useState(false);
   const [deletedChatIds, setDeletedChatIds] = useState(() => {
@@ -1093,9 +1097,48 @@ function ChatView({
                           {msg.senderName}
                         </div>
                       )}
-                      <div style={{ fontSize: '13.5px', lineHeight: 1.45, fontWeight: '500' }}>
-                        {translatedText}
-                      </div>
+
+                      {/* MESSAGE VOCAL OU MESSAGE TEXTE */}
+                      {(msg.type === 'audio' || msg.kind === 'audio' || msg.audioUrl) ? (
+                        <VoiceNotePlayer
+                          audioUrl={msg.audioUrl}
+                          duration={msg.duration}
+                          isMe={isMe}
+                        />
+                      ) : (
+                        <>
+                          <div style={{ fontSize: '13.5px', lineHeight: 1.45, fontWeight: '500' }}>
+                            {translatedText}
+                          </div>
+
+                          {/* BASCULE DE TRADUCTION INSTANTANÉE */}
+                          {currentLang !== 'FR' && (
+                            <button
+                              type="button"
+                              onClick={() => toggleOriginalMessage(msg.id)}
+                              style={{
+                                alignSelf: isMe ? 'flex-end' : 'flex-start',
+                                border: 'none',
+                                background: isMe ? 'rgba(255, 255, 255, 0.15)' : 'var(--bg-subtle)',
+                                color: isMe ? '#FFFFFF' : 'var(--accent-primary)',
+                                fontSize: '9.5px',
+                                fontWeight: '800',
+                                padding: '2px 6px',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '3px',
+                                marginTop: '2px',
+                              }}
+                              title="Basculer entre la traduction et le texte original"
+                            >
+                              <Globe size={10} />
+                              <span>{isMsgOriginal ? 'Afficher traduction' : `Traduit (${currentLang}) • Original`}</span>
+                            </button>
+                          )}
+                        </>
+                      )}
 
                       <div style={{
                         display: 'flex',
@@ -1278,45 +1321,85 @@ function ChatView({
               </div>
             )}
 
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <input
-                type="text"
-                value={chatInputText}
-                onChange={(e) => {
-                  if (onTypingChange) {
-                    onTypingChange(e.target.value);
-                  } else {
-                    setChatInputText(e.target.value);
+            {isRecordingAudio ? (
+              <VoiceNoteRecorder
+                isRecording={isRecordingAudio}
+                onCancel={() => setIsRecordingAudio(false)}
+                onSendVoiceNote={async (blob, dur) => {
+                  if (onSendAudioMessage) {
+                    await onSendAudioMessage(blob, dur);
                   }
-                }}
-                onKeyDown={(e) => e.key === 'Enter' && onSubmitMessage()}
-                placeholder={editingMsg ? 'Modifie ton message...' : (t('typeYourMessage') || t('writeToInterlocutor') || 'Écris ton message...')}
-                style={{
-                  flex: 1, padding: '11px 16px', borderRadius: '24px',
-                  border: '1px solid var(--border-color)',
-                  backgroundColor: 'var(--bg-card)',
-                  color: 'var(--text-main)',
-                  fontSize: isMobile ? '16px' : '14px',
-                  WebkitTextSizeAdjust: '100%',
-                  outline: 'none',
-                  boxSizing: 'border-box'
+                  setIsRecordingAudio(false);
                 }}
               />
-              <button
-                onClick={onSubmitMessage}
-                className="premium-button"
-                style={{
-                  border: 'none', borderRadius: '50%', width: '42px', height: '42px',
-                  background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
-                  color: '#FFF', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  boxShadow: 'var(--shadow-accent)', flexShrink: 0
-                }}
-                title="Envoyer"
-              >
-                {editingMsg ? <Check size={18} /> : <Send size={18} />}
-              </button>
-            </div>
+            ) : (
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <input
+                  type="text"
+                  value={chatInputText}
+                  onChange={(e) => {
+                    if (onTypingChange) {
+                      onTypingChange(e.target.value);
+                    } else {
+                      setChatInputText(e.target.value);
+                    }
+                  }}
+                  onKeyDown={(e) => e.key === 'Enter' && onSubmitMessage()}
+                  placeholder={editingMsg ? 'Modifie ton message...' : (t('typeYourMessage') || t('writeToInterlocutor') || 'Écris ton message...')}
+                  style={{
+                    flex: 1, padding: '11px 16px', borderRadius: '24px',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: 'var(--bg-card)',
+                    color: 'var(--text-main)',
+                    fontSize: isMobile ? '16px' : '14px',
+                    WebkitTextSizeAdjust: '100%',
+                    outline: 'none',
+                    boxSizing: 'border-box'
+                  }}
+                />
+
+                {/* BOUTON MICROPHONE / MESSAGE VOCAL */}
+                {!editingMsg && (
+                  <button
+                    type="button"
+                    onClick={() => setIsRecordingAudio(true)}
+                    className="premium-button"
+                    style={{
+                      border: '1px solid var(--border-color)',
+                      borderRadius: '50%',
+                      width: '42px',
+                      height: '42px',
+                      backgroundColor: 'var(--bg-card)',
+                      color: 'var(--accent-primary)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: 'var(--shadow-card)',
+                      flexShrink: 0,
+                    }}
+                    title="Enregistrer une note vocale"
+                  >
+                    <Mic size={18} />
+                  </button>
+                )}
+
+                <button
+                  onClick={onSubmitMessage}
+                  className="premium-button"
+                  style={{
+                    border: 'none', borderRadius: '50%', width: '42px', height: '42px',
+                    background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
+                    color: '#FFF', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    boxShadow: 'var(--shadow-accent)', flexShrink: 0
+                  }}
+                  title="Envoyer"
+                >
+                  {editingMsg ? <Check size={18} /> : <Send size={18} />}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
