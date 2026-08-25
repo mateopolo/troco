@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Send, Phone, Video, Sparkles, Clock, CheckCircle,
   ChevronLeft, Globe, Edit2, Trash2, Copy, Check, X,
@@ -63,7 +64,20 @@ function ChatView({
   const [isMobileLocal, setIsMobileLocal] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
   const isMobile = isMobileProp !== undefined ? isMobileProp : isMobileLocal;
 
+  const effectiveSelectedChat = (selectedChat && !deletedChatIds.has(selectedChat.id)) ? selectedChat : null;
   const [mobileSubView, setMobileSubView] = useState(() => (selectedChat && !deletedChatIds.has(selectedChat.id)) ? 'room' : 'list');
+
+  // Verrouillage du défilement global de la page sur mobile quand la salle de discussion est ouverte
+  useEffect(() => {
+    if (isMobile && effectiveSelectedChat && mobileSubView === 'room') {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [isMobile, effectiveSelectedChat, mobileSubView]);
+
   const [activeMenuMsgId, setActiveMenuMsgId] = useState(null);
   const [editingMsg, setEditingMsg] = useState(null); // { id, text }
   const [copiedMsgId, setCopiedMsgId] = useState(null);
@@ -169,7 +183,6 @@ function ChatView({
     });
   }, [mockChats, deletedChatIds, getChatLatestTimestamp]);
 
-  const effectiveSelectedChat = (selectedChat && !deletedChatIds.has(selectedChat.id)) ? selectedChat : null;
   const currentChatId = effectiveSelectedChat ? effectiveSelectedChat.id : null;
   const activeChatObj = effectiveSelectedChat;
   const messages = useMemo(() => {
@@ -450,7 +463,7 @@ function ChatView({
         position: 'relative',
         backgroundColor: 'transparent'
       }}>
-        {/* 1. EN-TÊTE FIXE DU CHAT */}
+        {/* 1. EN-TÊTE FIXE DU CHAT (RIGIDE & NON-SCROLLABLE) */}
         <div style={{
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: isMobile ? '8px 12px' : '0 18px',
@@ -459,7 +472,8 @@ function ChatView({
           paddingLeft: isMobile ? 'max(12px, env(safe-area-inset-left, 12px))' : '18px',
           paddingRight: isMobile ? 'max(12px, env(safe-area-inset-right, 12px))' : '18px',
           minHeight: isMobile ? '56px' : '64px',
-          height: isMobile ? 'auto' : '64px',
+          height: isMobile ? '56px' : '64px',
+          maxHeight: isMobile ? '56px' : '64px',
           borderBottom: '1px solid var(--border-color)',
           backgroundColor: 'var(--bg-glass)',
           backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
@@ -1377,11 +1391,11 @@ function ChatView({
           </div>
         </div>
 
-        {/* 3. BARRE DE SAISIE FIXE EN BAS (SANS GAP SUPERFLU) */}
+        {/* 3. BARRE DE SAISIE FIXE EN BAS (ANCRÉE AU-DESSUS DE LA ZONE DE GESTES) */}
         <div style={{
           display: 'flex', flexDirection: 'column', gap: '6px',
           padding: isMobile ? '8px 12px' : '8px 16px',
-          paddingBottom: isMobile ? 'max(8px, env(safe-area-inset-bottom, 8px))' : '10px',
+          paddingBottom: isMobile ? 'max(10px, env(safe-area-inset-bottom, 10px))' : '10px',
           borderTop: '1px solid var(--border-color)',
           backgroundColor: 'var(--bg-glass)',
           backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
@@ -1774,21 +1788,21 @@ function ChatView({
             </div>
           )}
 
-          {/* SALLE DE CONVERSATION (RENDUE UNIQUEMENT SI UN CHAT EST SÉLECTIONNÉ) */}
-          {effectiveSelectedChat && (!isMobile || mobileSubView === 'room') && (
+          {/* SALLE DE CONVERSATION (DESKTOP DANS LA GRILLE) */}
+          {!isMobile && effectiveSelectedChat && (
             <div style={{
-              position: isMobile ? 'fixed' : 'relative',
+              position: 'relative',
               top: 0,
               left: 0,
               right: 0,
               bottom: 0,
-              height: isMobile ? '100dvh' : '100%',
+              height: '100%',
               width: '100%',
-              zIndex: isMobile ? 999999 : 1,
-              backgroundColor: isMobile ? 'var(--bg-global)' : 'var(--bg-card)',
-              borderRadius: isMobile ? '0' : '24px',
-              border: isMobile ? 'none' : '1px solid var(--border-color)',
-              boxShadow: isMobile ? 'none' : 'var(--shadow-card)',
+              zIndex: 1,
+              backgroundColor: 'var(--bg-card)',
+              borderRadius: '24px',
+              border: '1px solid var(--border-color)',
+              boxShadow: 'var(--shadow-card)',
               display: 'flex',
               flexDirection: 'column',
               overflow: 'hidden',
@@ -1800,6 +1814,33 @@ function ChatView({
           )}
         </div>
       </div>
+
+      {/* SALLE DE CONVERSATION MOBILE (PORTAL DÉTACHÉ DIRECTEMENT SUR BODY 100dvh) */}
+      {isMobile && effectiveSelectedChat && mobileSubView === 'room' && createPortal(
+        <div
+          className="mobile-chat-fullscreen-room"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100vw',
+            height: '100dvh',
+            maxHeight: '100dvh',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            zIndex: 999999,
+            backgroundColor: 'var(--bg-global)',
+            boxSizing: 'border-box',
+          }}
+        >
+          {renderChatRoom()}
+        </div>,
+        document.body
+      )}
 
       {/* MODALE CRÉATION GROUPE / HUB DE PROJET */}
       <CreateProjectGroupModal

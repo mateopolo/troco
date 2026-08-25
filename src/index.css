@@ -990,6 +990,25 @@ header {
   }
 }
 
+/* SALLE DE CONVERSATION MOBILE PLEIN ÉCRAN PORTAL STABLE */
+.mobile-chat-fullscreen-room {
+  position: fixed !important;
+  inset: 0 !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100dvh !important;
+  max-height: 100dvh !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  z-index: 999999 !important;
+  background-color: var(--bg-global) !important;
+  box-sizing: border-box !important;
+}
+
 /* ORBES DE LUEUR AMBIANTE CHAUDE (GLOW ORBS) */
 @keyframes orbBreathe {
 
