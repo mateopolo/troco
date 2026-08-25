@@ -476,7 +476,7 @@ function ChatView({
               <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '14px', boxShadow: 'var(--shadow-accent)' }}>
                 {activeChatObj?.user ? activeChatObj.user[0].toUpperCase() : 'T'}
               </div>
-              {activeChatIsOnline && (
+              {activeChatIsOnline ? (
                 <div
                   title="En ligne"
                   style={{
@@ -485,6 +485,17 @@ function ChatView({
                     backgroundColor: 'var(--accent-success)',
                     border: '2px solid var(--bg-card)',
                     boxShadow: '0 0 6px var(--accent-success)'
+                  }}
+                />
+              ) : (
+                <div
+                  title="Hors ligne"
+                  style={{
+                    position: 'absolute', bottom: '0', right: '0',
+                    width: '9px', height: '9px', borderRadius: '50%',
+                    backgroundColor: 'var(--text-secondary)',
+                    opacity: 0.45,
+                    border: '2px solid var(--bg-card)'
                   }}
                 />
               )}
@@ -499,9 +510,13 @@ function ChatView({
                     IA
                   </span>
                 )}
-                {activeChatIsOnline && (
+                {activeChatIsOnline ? (
                   <span style={{ fontSize: '8.5px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-success)', padding: '1px 5px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
                     <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: 'var(--accent-success)' }} /> En ligne
+                  </span>
+                ) : (
+                  <span style={{ fontSize: '8.5px', fontWeight: '700', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)', padding: '1px 5px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                    <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: 'var(--text-secondary)', opacity: 0.45 }} /> Hors ligne
                   </span>
                 )}
               </div>
@@ -1267,7 +1282,7 @@ function ChatView({
                         >
                           <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--text-main) 0%, var(--text-secondary) 100%)', color: 'var(--bg-card)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '15px', flexShrink: 0, boxShadow: 'var(--shadow-card)', position: 'relative' }}>
                             {chat.user[0]}
-                            {isUserOnline(chat.user, chat.authorUid || chat.userId) && (
+                            {isUserOnline(chat.user, chat.authorUid || chat.userId) ? (
                               <span
                                 title="En ligne"
                                 style={{
@@ -1276,6 +1291,17 @@ function ChatView({
                                   backgroundColor: 'var(--accent-success)',
                                   borderRadius: '50%', border: '2px solid var(--bg-card)',
                                   boxShadow: '0 0 6px var(--accent-success)'
+                                }}
+                              />
+                            ) : (
+                              <span
+                                title="Hors ligne"
+                                style={{
+                                  position: 'absolute', bottom: '0', right: '0',
+                                  width: '10px', height: '10px',
+                                  backgroundColor: 'var(--text-secondary)',
+                                  opacity: 0.4,
+                                  borderRadius: '50%', border: '2px solid var(--bg-card)'
                                 }}
                               />
                             )}

@@ -1688,18 +1688,21 @@ export default function App() {
     }
   };
 
-  // ---- GESTION DU STATUT EN LIGNE RÉEL (HEARTBEAT FIRESTORE < 30S) ----
+  // ---- GESTION DU STATUT EN LIGNE RÉEL (HEARTBEAT OPTIMISÉ & DÉTECTION HORS LIGNE INSTANTANÉE) ----
   const [presenceMap, setPresenceMap] = useState({});
 
   useEffect(() => {
     const uid = profile?.uid || (auth.currentUser && auth.currentUser.uid);
     if (!uid) return;
 
+    let isUnloaded = false;
+
     const sendHeartbeat = async () => {
+      if (isUnloaded) return;
       try {
         await setDoc(doc(db, 'presence', String(uid)), {
           uid: String(uid),
-          name: profile.name || 'Membre',
+          name: profile?.name || 'Membre',
           lastSeenMs: Date.now(),
           lastSeen: serverTimestamp(),
           online: true,
@@ -1707,45 +1710,84 @@ export default function App() {
       } catch (_) { }
     };
 
-    sendHeartbeat();
-    const interval = setInterval(sendHeartbeat, 15000); // Heartbeat toutes les 15s
-
-    const handleBeforeUnload = () => {
+    const markOffline = () => {
+      isUnloaded = true;
       try {
         setDoc(doc(db, 'presence', String(uid)), {
+          uid: String(uid),
+          name: profile?.name || 'Membre',
           online: false,
           lastSeenMs: Date.now() - 60000,
+          updatedAt: serverTimestamp(),
         }, { merge: true }).catch(() => { });
       } catch (_) { }
     };
 
-    window.addEventListener('beforeunload', handleBeforeUnload);
+    sendHeartbeat();
+    const interval = setInterval(sendHeartbeat, 12000);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        isUnloaded = false;
+        sendHeartbeat();
+      }
+    };
+
+    const handleWindowFocus = () => {
+      isUnloaded = false;
+      sendHeartbeat();
+    };
+
+    window.addEventListener('beforeunload', markOffline);
+    window.addEventListener('pagehide', markOffline);
+    window.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleWindowFocus);
+
     return () => {
       clearInterval(interval);
-      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('beforeunload', markOffline);
+      window.removeEventListener('pagehide', markOffline);
+      window.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleWindowFocus);
+      markOffline();
     };
   }, [profile?.uid, profile?.name]);
 
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'presence'), (snapshot) => {
+    let cachedDocs = [];
+    const updateMap = () => {
       const map = {};
       const now = Date.now();
-      snapshot.forEach(docSnap => {
-        const data = docSnap.data();
+      cachedDocs.forEach(data => {
         const lastSeenMs = data.lastSeenMs || (data.lastSeen?.toMillis ? data.lastSeen.toMillis() : (data.lastSeen?.seconds ? data.lastSeen.seconds * 1000 : 0));
-        // Seuil strict de 30 secondes pour le battement de coeur
-        const isOnline = data.online !== false && (now - lastSeenMs < 30000);
-        map[docSnap.id] = isOnline;
+        // Seuil de 25s : passage automatique en hors ligne si inactif ou déconnecté
+        const isOnline = data.online === true && (now - lastSeenMs < 25000);
+        if (data.uid) {
+          map[String(data.uid)] = isOnline;
+        }
         if (data.name) {
           map[data.name.trim().toLowerCase()] = isOnline;
         }
       });
       setPresenceMap(map);
+    };
+
+    const unsub = onSnapshot(collection(db, 'presence'), (snapshot) => {
+      cachedDocs = [];
+      snapshot.forEach(docSnap => {
+        cachedDocs.push({ ...docSnap.data(), uid: docSnap.id });
+      });
+      updateMap();
     }, (err) => {
       console.debug('[Firestore] presence subscription error:', err);
     });
 
-    return () => unsub();
+    const periodicCheck = setInterval(updateMap, 4000);
+
+    return () => {
+      unsub();
+      clearInterval(periodicCheck);
+    };
   }, []);
 
   // Gestion Pointer Events API unifiée pour le Drag-and-Drop (toucher/souris à 60fps)
