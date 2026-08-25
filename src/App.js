@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Search, MapPin, Video, Star, Globe, Filter, MessageSquare, PlusCircle, User, ShieldCheck, Clock, CheckCircle, X, Sparkles, Coins, Plus, Trash2, Camera, Pencil, Mic, PhoneOff, Flame, History, Check, Lock, CreditCard, Tag, Phone, UserPlus, ChevronLeft, ChevronRight, ChevronUp, Eye, EyeOff, Minimize2, MicOff, VideoOff, Sun, Moon, Upload, Repeat, SwitchCamera, LogOut, Scale, ShieldAlert, FileText, Monitor, MonitorOff, Crown, GripHorizontal, Mail, Image as ImageIcon, Sliders } from 'lucide-react';
@@ -33,6 +33,7 @@ import PhotoGrid from './components/PhotoGrid';
 import InvoiceCalculator, { generateInvoiceRef, calculateListingInvoice } from './components/InvoiceCalculator';
 import CallOverlay from './components/CallOverlay';
 import TrocoLogo3D from './components/common/TrocoLogo3D';
+import MapClusterTracker from './components/MapClusterTracker';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useGSAP } from '@gsap/react';
@@ -742,7 +743,8 @@ export default function App() {
   const [editingOriginalListing, setEditingOriginalListing] = useState(null);
   const [boostingListing, setBoostingListing] = useState(null);
   const [boostMessage, setBoostMessage] = useState('');
-  const [mapCenter] = useState([48.8566, 2.3522]);
+  const [mapCenter, setMapCenter] = useState([48.8566, 2.3522]);
+  const [mapZoom, setMapZoom] = useState(4);
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     return window.localStorage.getItem('troco_is_authenticated') === 'true';
   });
@@ -1538,6 +1540,8 @@ export default function App() {
     trocoTokens: '1',
     euroAmount: '',
     isUrgent: false,
+    locationPrivacy: 'exact',
+    coordinates: null,
     image: 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=800&q=80',
     imageUrl: '',
     videoUrl: '',
@@ -4042,6 +4046,20 @@ export default function App() {
     setSelectedListing(getListingDetail(listing));
   };
 
+  const handleViewOnMap = (listing) => {
+    if (!listing) return;
+    const coords = listing.coordinates || getCoordinatesForLocation(listing.location);
+    if (!coords || !Array.isArray(coords) || coords.length !== 2 || isNaN(coords[0]) || isNaN(coords[1])) return;
+    setMapCenter(coords);
+    setMapZoom(15);
+    setViewMode('map');
+    setActiveTab('feed');
+    setSelectedListing(null);
+    setTimeout(() => {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 80);
+  };
+
   const handleDeleteListing = async (id) => {
     if (window.confirm(t('confirmDeleteText') || 'Voulez-vous vraiment supprimer cette annonce ?')) {
       const targetListing = listings.find(item => item.id === id);
@@ -4420,10 +4438,12 @@ export default function App() {
       setCustomCategories(prev => [...prev, postDraft.customCategoryName.trim()]);
     }
 
-    // Calcul précis des coordonnées géographiques (~300-500m autour de la position)
-    const jitterLat = (Math.random() - 0.5) * 0.007;
-    const jitterLng = (Math.random() - 0.5) * 0.007;
-    const resolvedCoords = postDraft.coordinates || (userCoords ? [userCoords[0] + jitterLat, userCoords[1] + jitterLng] : [48.8566 + jitterLat, 2.3522 + jitterLng]);
+    // Calcul précis des coordonnées géographiques (exacte ou floutée selon la confidentialité)
+    const isBlurred = postDraft.locationPrivacy === 'blurred';
+    const blurOffsetLat = isBlurred ? (Math.random() - 0.5) * 0.009 : 0;
+    const blurOffsetLng = isBlurred ? (Math.random() - 0.5) * 0.009 : 0;
+    const baseCoords = postDraft.coordinates || getCoordinatesForLocation(postDraft.location) || (userCoords ? userCoords : [48.8566, 2.3522]);
+    const resolvedCoords = [baseCoords[0] + blurOffsetLat, baseCoords[1] + blurOffsetLng];
 
     const newListing = {
       ...(isEditingListing ? editingOriginalListing : {}),
@@ -4438,6 +4458,7 @@ export default function App() {
       reviews: isEditingListing ? (editingOriginalListing.reviews || 0) : 0,
       status: postDraft.status || 'active',
       location: (postDraft.location || '').trim() || (postDraft.format === 'remote' ? 'À distance' : 'Sur place'),
+      locationPrivacy: postDraft.locationPrivacy || 'exact',
       coordinates: isEditingListing && editingOriginalListing.coordinates ? editingOriginalListing.coordinates : resolvedCoords,
       type: postDraft.format,
       languages: profile.languages ? profile.languages.slice(0, 2) : ['FR'],
@@ -7233,7 +7254,28 @@ export default function App() {
                         )}
                       </div>
                       {selectedListing.authorProfile.name !== profile.name ? (
-                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                          <button
+                            type="button"
+                            onClick={() => handleViewOnMap(selectedListing)}
+                            className="premium-button"
+                            title="Centrer la carte interactive sur cette annonce"
+                            style={{
+                              border: darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #E8DDD3',
+                              borderRadius: '999px',
+                              padding: '11px 14px',
+                              backgroundColor: darkMode ? '#1A1715' : '#FFF',
+                              color: darkMode ? '#FAF7F2' : '#3D3530',
+                              fontWeight: '700',
+                              fontSize: '12px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                            }}
+                          >
+                            <MapPin size={14} color="#C67D5B" /> {t('viewOnMap') || 'Voir sur la carte'}
+                          </button>
                           <button
                             onClick={() => {
                               setReportTarget({
@@ -7263,7 +7305,30 @@ export default function App() {
                           <button onClick={() => handleStartDiscussion({ id: selectedListing.id, title: selectedListing.title, author: selectedListing.authorProfile.name, compensation: selectedListing.compensation })} className="premium-button" style={{ border: 'none', borderRadius: '999px', padding: '11px 16px', background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)', color: '#FFF', fontWeight: '800', cursor: 'pointer', boxShadow: '0 8px 20px rgba(198,125,91,0.35)' }}>{t('startDiscussion')}</button>
                         </div>
                       ) : (
-                        <div style={{ backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', color: darkMode ? '#D4C5B5' : '#6B5E54', padding: '10px 16px', borderRadius: '999px', fontSize: '13px', fontWeight: '700', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3' }}>{t('authorAnnc')}</div>
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                          <button
+                            type="button"
+                            onClick={() => handleViewOnMap(selectedListing)}
+                            className="premium-button"
+                            title="Centrer la carte interactive sur cette annonce"
+                            style={{
+                              border: darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #E8DDD3',
+                              borderRadius: '999px',
+                              padding: '10px 14px',
+                              backgroundColor: darkMode ? '#1A1715' : '#FFF',
+                              color: darkMode ? '#FAF7F2' : '#3D3530',
+                              fontWeight: '700',
+                              fontSize: '12px',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                            }}
+                          >
+                            <MapPin size={14} color="#C67D5B" /> {t('viewOnMap') || 'Voir sur la carte'}
+                          </button>
+                          <div style={{ backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', color: darkMode ? '#D4C5B5' : '#6B5E54', padding: '10px 16px', borderRadius: '999px', fontSize: '13px', fontWeight: '700', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3' }}>{t('authorAnnc')}</div>
+                        </div>
                       )}
                     </div>
                     <p style={{ margin: '0 0 14px', lineHeight: 1.7, color: darkMode ? '#D4C5B5' : '#6B5E54', fontSize: '14px' }}>{detailDisplayContent.description}</p>
@@ -7778,32 +7843,21 @@ export default function App() {
                         url={`https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&hl=${currentLang.toLowerCase()}`}
                       />
 
-                      {filteredListings.map(item => {
-                        const coords = item.coordinates || getCoordinatesForLocation(item.location);
-                        const media = getSuggestedMedia(item.title, item.description || '', item.image, item.video);
-                        const displayContent = getListingDisplayContent(item, currentLang, !!showingOriginalListings[item.id]);
-                        const localizedLoc = localizeLocation(item.location, currentLang);
-                        return (
-                          <Marker key={item.id} position={coords} icon={createModernMapIcon(darkMode)}>
-                            <Popup>
-                              <div style={{ minWidth: '190px', maxWidth: '280px', display: 'flex', flexDirection: 'column', gap: '6px', padding: '2px' }}>
-                                <div style={{ position: 'relative' }}>
-                                  <img src={media.image} alt={displayContent.title} style={{ width: '100%', height: '80px', objectFit: 'cover', borderRadius: '10px' }} />
-                                  {(item.isDemo || (typeof item.id === 'number' && item.id <= 20)) && (
-                                    <span style={{ position: 'absolute', top: '6px', left: '6px', backgroundColor: 'rgba(20,18,16,0.75)', color: '#FAF7F2', fontSize: '9px', fontWeight: '750', padding: '3px 7px', borderRadius: '999px', backdropFilter: 'blur(8px)', border: '1px solid rgba(255,255,255,0.2)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                                      Exemple
-                                    </span>
-                                  )}
-                                </div>
-                                <div style={{ fontWeight: '800', fontSize: '12px', color: '#3D3530', lineHeight: 1.3 }}>{displayContent.title}</div>
-                                <div style={{ fontSize: '11px', color: '#6B5E54', lineHeight: 1.4 }}>📍 {localizedLoc}</div>
-                                <div style={{ fontSize: '11px', color: '#C67D5B', fontWeight: '800' }}>{item.compensation}</div>
-                                <button onClick={(event) => { event.stopPropagation(); handleOpenListing(item); }} className="premium-button" style={{ border: 'none', borderRadius: '10px', padding: '7px 10px', background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)', color: '#FFF', fontWeight: '700', cursor: 'pointer', marginTop: '2px', fontSize: '11px' }}>{t('viewListingButton')}</button>
-                              </div>
-                            </Popup>
-                          </Marker>
-                        );
-                      })}
+                      <MapClusterTracker
+                        listings={filteredListings}
+                        mapCenter={mapCenter}
+                        mapZoom={mapZoom}
+                        darkMode={darkMode}
+                        currentLang={currentLang}
+                        t={t}
+                        primaryColor={theme?.variables?.['--accent-primary'] || '#C67D5B'}
+                        getCoordinatesForLocation={getCoordinatesForLocation}
+                        getSuggestedMedia={getSuggestedMedia}
+                        getListingDisplayContent={getListingDisplayContent}
+                        localizeLocation={localizeLocation}
+                        handleOpenListing={handleOpenListing}
+                        createModernMapIcon={createModernMapIcon}
+                      />
                     </MapContainer>
                   </div>
                 </div>
@@ -8304,8 +8358,92 @@ export default function App() {
                   </div>
                 )}
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-secondary)' }}>{t('locationZoneLabel')}</label>
-                  <input value={postDraft.location} onChange={(e) => setPostDraft(prev => ({ ...prev, location: e.target.value }))} type="text" placeholder="Paris, Lyon, à distance, etc." style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-main)', borderRadius: '12px' }} />
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                    <label style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-secondary)' }}>{t('locationZoneLabel')}</label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (navigator.geolocation) {
+                          navigator.geolocation.getCurrentPosition(
+                            pos => {
+                              const lat = pos.coords.latitude;
+                              const lng = pos.coords.longitude;
+                              setPostDraft(prev => ({
+                                ...prev,
+                                location: prev.location || 'Position actuelle',
+                                coordinates: [lat, lng],
+                              }));
+                            },
+                            err => {
+                              console.warn('Geolocation error:', err);
+                              alert('Impossible de récupérer automatiquement votre position GPS. Veuillez saisir votre ville manuellement.');
+                            }
+                          );
+                        }
+                      }}
+                      className="premium-button"
+                      style={{
+                        border: 'none', background: 'none', color: 'var(--accent-primary)',
+                        fontSize: '11px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px'
+                      }}
+                    >
+                      <MapPin size={12} /> {currentLang === 'FR' ? '📍 Me géolocaliser' : '📍 Use my location'}
+                    </button>
+                  </div>
+                  <input
+                    value={postDraft.location}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const resolvedCoords = getCoordinatesForLocation(val);
+                      setPostDraft(prev => ({ ...prev, location: val, coordinates: resolvedCoords }));
+                    }}
+                    type="text"
+                    placeholder="Paris, Lyon, Marseille, etc."
+                    style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-main)', borderRadius: '12px' }}
+                  />
+
+                  {/* OPTION DE CONFIDENTIALITÉ DE LA LOCALISATION */}
+                  <div style={{ marginTop: '8px', padding: '10px 12px', borderRadius: '12px', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>
+                    <div style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                      🛡️ Confidentialité de la géolocalisation sur la carte :
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                      <button
+                        type="button"
+                        onClick={() => setPostDraft(prev => ({ ...prev, locationPrivacy: 'exact' }))}
+                        className="premium-button"
+                        style={{
+                          padding: '7px 10px',
+                          borderRadius: '10px',
+                          border: (postDraft.locationPrivacy !== 'blurred') ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                          backgroundColor: (postDraft.locationPrivacy !== 'blurred') ? 'var(--bg-subtle)' : 'transparent',
+                          color: (postDraft.locationPrivacy !== 'blurred') ? 'var(--accent-primary)' : 'var(--text-main)',
+                          fontSize: '11px',
+                          fontWeight: '800',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        🟢 Position exacte
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPostDraft(prev => ({ ...prev, locationPrivacy: 'blurred' }))}
+                        className="premium-button"
+                        style={{
+                          padding: '7px 10px',
+                          borderRadius: '10px',
+                          border: postDraft.locationPrivacy === 'blurred' ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                          backgroundColor: postDraft.locationPrivacy === 'blurred' ? 'var(--bg-subtle)' : 'transparent',
+                          color: postDraft.locationPrivacy === 'blurred' ? 'var(--accent-primary)' : 'var(--text-main)',
+                          fontSize: '11px',
+                          fontWeight: '800',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        🛡️ Flou ~500m
+                      </button>
+                    </div>
+                  </div>
                 </div>
                 <div>
                   <label style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-secondary)' }}>{t('availabilityLabel')}</label>

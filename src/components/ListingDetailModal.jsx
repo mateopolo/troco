@@ -10,6 +10,7 @@ export default function ListingDetailModal({
   handleStartEditListing,
   handleDeleteListing,
   handleTogglePauseListing,
+  handleViewOnMap,
   profile,
   currentLang,
   t,
@@ -384,13 +385,43 @@ export default function ListingDetailModal({
         )}
 
         {/* ACTIONS */}
-        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+          {handleViewOnMap && (
+            <button
+              type="button"
+              onClick={() => {
+                handleViewOnMap(selectedListing);
+                onClose();
+              }}
+              className="premium-button"
+              style={{
+                border: '1.5px solid var(--border-color)',
+                borderRadius: '999px',
+                padding: '13px 18px',
+                backgroundColor: 'var(--bg-card)',
+                color: 'var(--text-main)',
+                fontWeight: '800',
+                fontSize: '13px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '7px',
+                boxShadow: 'var(--shadow-card)',
+              }}
+              title="Centrer la carte interactive sur cette annonce"
+            >
+              <MapPin size={16} color="var(--accent-primary)" />
+              <span>{t('viewOnMap') || 'Voir sur la carte'}</span>
+            </button>
+          )}
+
           {!isOwner ? (
             <button
               onClick={() => handleStartDiscussion(selectedListing)}
               className="premium-button"
               style={{
-                flex: 1, minWidth: '200px', border: 'none', borderRadius: '999px', padding: '14px 24px',
+                flex: 1, minWidth: '180px', border: 'none', borderRadius: '999px', padding: '14px 24px',
                 background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)', color: '#FFF',
                 fontWeight: '800', fontSize: '14px', cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
@@ -400,7 +431,7 @@ export default function ListingDetailModal({
               <MessageSquare size={18} /> {t('startDiscussion') || 'Contacter le membre'}
             </button>
           ) : (
-            <div style={{ display: 'flex', gap: '8px', width: '100%', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '8px', flex: 1, minWidth: '220px', flexWrap: 'wrap' }}>
               <button
                 onClick={() => handleBoostListing(selectedListing)}
                 className="premium-button"

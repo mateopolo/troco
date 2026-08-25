@@ -17,6 +17,7 @@ export const translations = {
 
     uploadProfilePhoto: "📁 Importer une photo depuis mon appareil",
     viewListingButton: "Voir l'annonce",
+    viewOnMap: "Voir sur la carte",
     boostButtonLabel: "🔥 Booster",
     editButtonLabel: "✏️ Modifier",
     filtersTitle: "Filtres avancés",

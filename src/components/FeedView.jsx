@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Search, MapPin, Filter, Grid, Map, Globe, Tag } from 'lucide-react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import { MapContainer, TileLayer } from 'react-leaflet';
 import L from 'leaflet';
 import ListingCard from './ListingCard';
 import { SkeletonCard } from './SkeletonLoader';
+import MapClusterTracker from './MapClusterTracker';
 
 const createModernMapIcon = () => {
   return L.divIcon({
@@ -284,26 +285,23 @@ export default function FeedView({
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
               url={darkMode ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"}
             />
-            {displayListings.map(item => {
-              const coords = item.coordinates || (userCoords ? [userCoords[0] + (Math.random() - 0.5) * 0.05, userCoords[1] + (Math.random() - 0.5) * 0.05] : [48.8566, 2.3522]);
-              const modernIcon = createModernMapIcon(darkMode);
-              return (
-                <Marker key={item.id} position={coords} icon={modernIcon}>
-                  <Popup>
-                    <div style={{ padding: '6px', maxWidth: '200px' }}>
-                      <div style={{ fontWeight: '800', fontSize: '13px', marginBottom: '4px', color: 'var(--text-main)' }}>{item.title}</div>
-                      <div style={{ fontSize: '11px', color: 'var(--accent-primary)', fontWeight: '700', marginBottom: '8px' }}>{formatCompensation(item.compensation)}</div>
-                      <button
-                        onClick={() => handleOpenListing(item)}
-                        style={{ border: 'none', borderRadius: '8px', padding: '6px 10px', background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)', color: '#FFF', fontSize: '11px', fontWeight: '800', width: '100%', cursor: 'pointer' }}
-                      >
-                        {t('viewDetail') || 'Voir détails'}
-                      </button>
-                    </div>
-                  </Popup>
-                </Marker>
-              );
-            })}
+            <MapClusterTracker
+              listings={displayListings}
+              mapCenter={userCoords || mapCenter}
+              mapZoom={12}
+              darkMode={darkMode}
+              currentLang={currentLang}
+              t={t}
+              primaryColor="var(--accent-primary, #C67D5B)"
+              getCoordinatesForLocation={(loc) => {
+                return (userCoords ? [userCoords[0] + (Math.random() - 0.5) * 0.05, userCoords[1] + (Math.random() - 0.5) * 0.05] : [48.8566, 2.3522]);
+              }}
+              getSuggestedMedia={(title, desc, img, vid) => ({ image: img || 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=800&q=80', video: vid })}
+              getListingDisplayContent={(item) => ({ title: item.title, description: item.description })}
+              localizeLocation={(loc) => loc}
+              handleOpenListing={handleOpenListing}
+              createModernMapIcon={createModernMapIcon}
+            />
           </MapContainer>
         </div>
       )}
