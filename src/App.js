@@ -3766,6 +3766,50 @@ export default function App() {
 
   const getListingDetail = (listing) => {
     const media = getSuggestedMedia(listing.title, listing.description || '', listing.image, listing.video);
+    const isCurrentUser = listing.author === profile.name;
+
+    // Détermination stricte des avis légitimes (zéro avis artificiel si 0 transaction complétée)
+    let authorReviews = [];
+    if (isCurrentUser) {
+      const closedDealsWithReviews = (isDemoProfile ? swapHistory : (profile?.swapHistory || []))
+        .filter(entry => entry.status === 'Clôturé' && (entry.review || entry.rating != null));
+      if (closedDealsWithReviews.length > 0) {
+        authorReviews = closedDealsWithReviews.map(d => ({
+          rating: d.rating || 5,
+          text: d.review || 'Transaction complétée avec succès.'
+        }));
+      }
+    } else if (Array.isArray(listing.authorReviews) && listing.authorReviews.length > 0) {
+      authorReviews = listing.authorReviews;
+    } else if (listing.author === 'Sofia M.' && (listing.isDemo || (typeof listing.id === 'number' && listing.id <= 20))) {
+      authorReviews = [
+        { rating: 5, text: 'Très pédagogique et hyper réactif, j’ai eu un échange de qualité dès le premier message.' },
+        { rating: 4, text: 'Un vrai plaisir de travailler avec elle, le format visio est simple et agréable.' },
+      ];
+    } else if (listing.author === 'Marc L.' && (listing.isDemo || (typeof listing.id === 'number' && listing.id <= 20))) {
+      authorReviews = [
+        { rating: 5, text: 'Très fiable pour les prêts et les dépannages rapides, j’ai apprécié la transparence.' },
+        { rating: 5, text: 'Parfait pour les échanges de proximité, le service est simple et rassurant.' },
+      ];
+    } else if ((listing.isDemo || (typeof listing.id === 'number' && listing.id <= 20)) && listing.reviews > 0) {
+      // Mock initial demo items with verified reviews > 0
+      authorReviews = [
+        { rating: 5, text: 'Très clair sur les conditions, super communication et qualité de service.' },
+        { rating: 5, text: 'J’ai trouvé un vrai partenaire de confiance, avec un échange fluide et premium.' },
+      ];
+    } else {
+      // Utilisateur réel ou annonce sans transaction complétée : STRICTEMENT ZÉRO AVIS FACTICES
+      authorReviews = [];
+    }
+
+    const hasRealReviews = authorReviews.length > 0;
+    const computedRating = hasRealReviews
+      ? (listing.rating || (isCurrentUser && averageRating !== '—' ? Number(averageRating) : 5.0))
+      : null;
+    const computedReviewsCount = hasRealReviews
+      ? (isCurrentUser ? authorReviews.length : (listing.reviews || authorReviews.length))
+      : 0;
+
     const generic = {
       id: listing.id,
       isBoosted: listing.isBoosted || false,
@@ -3779,24 +3823,23 @@ export default function App() {
       compensation: listing.compensation,
       nativeLang: listing.nativeLang || 'FR',
       translations: listing.translations || {},
+      rating: computedRating,
+      reviews: computedReviewsCount,
       authorProfile: {
         name: listing.author,
-        avatar: listing.author === profile.name ? profile.avatar : getAuthorAvatar(listing.author),
-        bio: listing.author === profile.name ? profile.bio : 'Créateur de contenus, expert en échange de services et passionné de communautés locales.',
-        socials: listing.author === profile.name ? (profile.socials || []) : ['LinkedIn', 'Instagram'],
-        portfolio: listing.author === profile.name ? (profile.portfolio || []) : [
+        avatar: isCurrentUser ? profile.avatar : getAuthorAvatar(listing.author),
+        bio: isCurrentUser ? profile.bio : 'Créateur de contenus, expert en échange de services et passionné de communautés locales.',
+        socials: isCurrentUser ? (profile.socials || []) : ['LinkedIn', 'Instagram'],
+        portfolio: isCurrentUser ? (profile.portfolio || []) : [
           'https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=600&q=80',
           'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=600&q=80',
           'https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=600&q=80',
         ],
-        reviews: listing.author === profile.name ? (profile.reviews || []) : [
-          { rating: 5, text: 'Très clair sur les conditions, super communication et qualité de service.' },
-          { rating: 5, text: 'J’ai trouvé un vrai partenaire de confiance, avec un échange fluide et premium.' },
-        ],
+        reviews: authorReviews,
       },
     };
 
-    if (listing.author === 'Sofia M.') {
+    if (listing.author === 'Sofia M.' && (listing.isDemo || (typeof listing.id === 'number' && listing.id <= 20))) {
       return {
         ...generic,
         description: listing.description || 'Cours de piano et accompagnement musical pensé pour les débutants et les profils en reconversion. Le cadre est très structuré, chaleureux et adapté à un usage flexible.',
@@ -3810,15 +3853,12 @@ export default function App() {
             'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=600&q=80',
             'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=600&q=80',
           ],
-          reviews: [
-            { rating: 5, text: 'Très pédagogique et hyper réactif, j’ai eu un échange de qualité dès le premier message.' },
-            { rating: 4, text: 'Un vrai plaisir de travailler avec elle, le format visio est simple et agréable.' },
-          ],
+          reviews: authorReviews,
         },
       };
     }
 
-    if (listing.author === 'Marc L.') {
+    if (listing.author === 'Marc L.' && (listing.isDemo || (typeof listing.id === 'number' && listing.id <= 20))) {
       return {
         ...generic,
         description: listing.description || 'Prêt d’outillage et service de dépannage local. Tout est pensé pour qu’un échange soit rapide, concret et sécurisé.',
@@ -3832,10 +3872,7 @@ export default function App() {
             'https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=600&q=80',
             'https://images.unsplash.com/photo-1487958449943-2429e8be8625?auto=format&fit=crop&w=600&q=80',
           ],
-          reviews: [
-            { rating: 5, text: 'Très fiable pour les prêts et les dépannages rapides, j’ai apprécié la transparence.' },
-            { rating: 5, text: 'Parfait pour les échanges de proximité, le service est simple et rassurant.' },
-          ],
+          reviews: authorReviews,
         },
       };
     }
@@ -6871,12 +6908,18 @@ export default function App() {
               <div>
                 <div style={{ fontWeight: '800', fontSize: '13px', color: darkMode ? '#FAF7F2' : '#3D3530', marginBottom: '8px' }}>{t('reviews')}</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {selectedListing.authorProfile.reviews.map((review, index) => (
-                    <div key={review.text + index} style={{ border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3', borderRadius: '14px', padding: '12px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8' }}>
-                      <div style={{ color: '#F59E0B', marginBottom: '4px' }}>{'⭐'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)}</div>
-                      <div style={{ fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>{localizeReview(review.text, currentLang)}</div>
+                  {selectedListing.authorProfile?.reviews && selectedListing.authorProfile.reviews.length > 0 ? (
+                    selectedListing.authorProfile.reviews.map((review, index) => (
+                      <div key={review.text + index} style={{ border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3', borderRadius: '14px', padding: '12px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8' }}>
+                        <div style={{ color: '#F59E0B', marginBottom: '4px' }}>{'⭐'.repeat(review.rating)}{'☆'.repeat(Math.max(0, 5 - review.rating))}</div>
+                        <div style={{ fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>{localizeReview(review.text, currentLang)}</div>
+                      </div>
+                    ))
+                  ) : (
+                    <div style={{ fontSize: '12.5px', color: darkMode ? '#D4C5B5' : '#6B5E54', fontStyle: 'italic', padding: '12px 14px', borderRadius: '14px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3' }}>
+                      🤝 Nouveau membre • Aucun avis pour le moment (0 transaction clôturée)
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
 

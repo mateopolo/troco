@@ -171,9 +171,13 @@ export default function ListingDetailModal({
             <span style={{ fontWeight: '800', color: 'var(--accent-primary)', fontSize: '18px' }}>
               {formatCompensation ? formatCompensation(selectedListing.compensation) : selectedListing.compensation}
             </span>
-            {selectedListing.rating && (
+            {selectedListing.rating && selectedListing.reviews > 0 ? (
               <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--accent-warning)', fontWeight: '800' }}>
-                <Star size={16} fill="var(--accent-warning)" color="var(--accent-warning)" /> {selectedListing.rating} ({selectedListing.reviews || 0} avis)
+                <Star size={16} fill="var(--accent-warning)" color="var(--accent-warning)" /> {selectedListing.rating} ({selectedListing.reviews} avis)
+              </span>
+            ) : (
+              <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-secondary)', fontSize: '13px', fontWeight: '600' }}>
+                Nouveau membre (0 avis)
               </span>
             )}
           </div>
@@ -343,18 +347,39 @@ export default function ListingDetailModal({
             padding: '16px', borderRadius: '18px',
             backgroundColor: 'var(--bg-subtle)',
             border: '1px solid var(--border-color)',
-            marginBottom: '24px', display: 'flex', alignItems: 'center', gap: '14px'
+            marginBottom: '24px', display: 'flex', flexDirection: 'column', gap: '12px'
           }}>
-            <img src={selectedListing.authorProfile.avatar} alt={selectedListing.author} style={{ width: '50px', height: '50px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--accent-primary)' }} />
-            <div style={{ flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '800', fontSize: '15px', color: 'var(--text-main)' }}>
-                {selectedListing.author}
-                <ShieldCheck size={16} color="var(--accent-primary)" />
-              </div>
-              <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                {selectedListing.authorProfile.bio}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+              <img src={selectedListing.authorProfile.avatar} alt={selectedListing.author} style={{ width: '50px', height: '50px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--accent-primary)' }} />
+              <div style={{ flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '800', fontSize: '15px', color: 'var(--text-main)' }}>
+                  {selectedListing.author}
+                  <ShieldCheck size={16} color="var(--accent-primary)" />
+                </div>
+                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                  {selectedListing.authorProfile.bio}
+                </div>
               </div>
             </div>
+
+            {/* AVIS DÉTAILLÉS DE L'AUTEUR */}
+            {selectedListing.authorProfile.reviews && selectedListing.authorProfile.reviews.length > 0 ? (
+              <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '10px' }}>
+                <div style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '6px' }}>Avis récents :</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {selectedListing.authorProfile.reviews.map((rev, i) => (
+                    <div key={i} style={{ fontSize: '12px', color: 'var(--text-secondary)', fontStyle: 'italic', padding: '8px 12px', backgroundColor: 'var(--bg-card)', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
+                      <span style={{ color: 'var(--accent-warning)', marginRight: '6px' }}>{'⭐'.repeat(rev.rating)}</span>
+                      « {rev.text} »
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '8px', fontSize: '11.5px', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                🤝 Nouveau membre • Aucun avis pour le moment (0 transaction clôturée)
+              </div>
+            )}
           </div>
         )}
 
