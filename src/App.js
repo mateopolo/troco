@@ -3371,58 +3371,14 @@ export default function App() {
     'En attente': { bg: '#F5F0E8', text: '#6B5E54' },
   };
 
-  const swapHistory = [
-    {
-      id: 1,
-      counterparty: 'Sofia M.',
-      deal: "Cours de Piano & Solfège (3 séances en visio)",
-      date: '12 mars 2025',
-      status: 'Clôturé',
-      rating: 5,
-      review: "Échange ultra fluide, Sofia est pédagogue et très à l'écoute. Les 3 séances se sont parfaitement déroulées, je recommande à 100%.",
-      compensation: '3 Crédits temps',
-    },
-    {
-      id: 2,
-      counterparty: 'Marc L.',
-      deal: 'Prêt Perceuse à percussion + coffret forets',
-      date: '28 février 2025',
-      status: 'Clôturé',
-      rating: 4,
-      review: "Prêt rapide et propre, caution virtuelle bien gérée. Matériel en parfait état, rendu sans accroc dans les délais.",
-      compensation: 'Troc direct + Caution 30€',
-    },
-    {
-      id: 3,
-      counterparty: 'Karim B.',
-      deal: 'Dépannage iPhone 13 (écran)',
-      date: 'Prévu cette semaine',
-      status: 'En cours',
-      rating: null,
-      review: 'Intervention programmée cette semaine, créneau confirmé par Karim. Échange de modèle et de devis en cours dans le chat.',
-      compensation: '30€ ou 2 Crédits',
-    },
-    {
-      id: 4,
-      counterparty: 'Elisa V.',
-      deal: "Cours d'Italien conversationnel (1h)",
-      date: 'Vendredi 18h00',
-      status: 'Planifié',
-      rating: null,
-      review: 'Séance visio planifiée vendredi à 18h00. Conditions validées : 1 Crédit + 10€.',
-      compensation: '1 Crédit + 10€',
-    },
-  ];
-
-  const isDemoProfile = Boolean(profile?.isDemo || (profile?.uid && profile.uid.startsWith('demo_')));
   const isAdmin = profile?.email === 'mateopolo91@gmail.com' || auth.currentUser?.email === 'mateopolo91@gmail.com' || profile?.role === 'admin';
-  const closedDealsCount = isDemoProfile ? swapHistory.filter(entry => entry.status === 'Clôturé').length : (profile?.dealsCompleted ?? 0);
-  const inProgressCount = isDemoProfile ? swapHistory.filter(entry => entry.status === 'En cours' || entry.status === 'Planifié').length : (profile?.dealsInProgress ?? 0);
-  const ratedEntries = isDemoProfile ? swapHistory.filter(entry => entry.rating) : [];
-  const averageRating = isDemoProfile
-    ? (ratedEntries.length ? (ratedEntries.reduce((sum, entry) => sum + entry.rating, 0) / ratedEntries.length).toFixed(1) : '—')
+  const userSwapHistory = Array.isArray(profile?.swapHistory) ? profile.swapHistory : [];
+  const closedDealsCount = userSwapHistory.filter(entry => entry.status === 'Clôturé').length || (profile?.dealsCompleted ?? 0);
+  const inProgressCount = userSwapHistory.filter(entry => entry.status === 'En cours' || entry.status === 'Planifié').length || (profile?.dealsInProgress ?? 0);
+  const ratedEntries = userSwapHistory.filter(entry => entry.rating);
+  const averageRating = ratedEntries.length
+    ? (ratedEntries.reduce((sum, entry) => sum + entry.rating, 0) / ratedEntries.length).toFixed(1)
     : (profile?.rating ? Number(profile.rating).toFixed(1) : '—');
-  const userSwapHistory = isDemoProfile ? swapHistory : (profile?.swapHistory || []);
 
   const baseCategories = ['Tous', ...TROCO_CATEGORIES.filter(c => c.id !== 'all').map(c => c.label)];
   const allCategories = [...baseCategories, ...customCategories];
@@ -3901,12 +3857,15 @@ export default function App() {
 
   const getListingDetail = (listing) => {
     const media = getSuggestedMedia(listing.title, listing.description || '', listing.image, listing.video);
-    const isCurrentUser = listing.author === profile.name;
+    const isCurrentUser = Boolean(
+      listing.author === profile?.name ||
+      (listing.authorUid && (listing.authorUid === profile?.uid || listing.authorUid === auth.currentUser?.uid))
+    );
 
     // Détermination stricte des avis légitimes (zéro avis artificiel si 0 transaction complétée)
     let authorReviews = [];
     if (isCurrentUser) {
-      const closedDealsWithReviews = (isDemoProfile ? swapHistory : (profile?.swapHistory || []))
+      const closedDealsWithReviews = (profile?.swapHistory || [])
         .filter(entry => entry.status === 'Clôturé' && (entry.review || entry.rating != null));
       if (closedDealsWithReviews.length > 0) {
         authorReviews = closedDealsWithReviews.map(d => ({
@@ -3926,14 +3885,7 @@ export default function App() {
         { rating: 5, text: 'Très fiable pour les prêts et les dépannages rapides, j’ai apprécié la transparence.' },
         { rating: 5, text: 'Parfait pour les échanges de proximité, le service est simple et rassurant.' },
       ];
-    } else if ((listing.isDemo || (typeof listing.id === 'number' && listing.id <= 20)) && listing.reviews > 0) {
-      // Mock initial demo items with verified reviews > 0
-      authorReviews = [
-        { rating: 5, text: 'Très clair sur les conditions, super communication et qualité de service.' },
-        { rating: 5, text: 'J’ai trouvé un vrai partenaire de confiance, avec un échange fluide et premium.' },
-      ];
     } else {
-      // Utilisateur réel ou annonce sans transaction complétée : STRICTEMENT ZÉRO AVIS FACTICES
       authorReviews = [];
     }
 
@@ -3944,6 +3896,16 @@ export default function App() {
     const computedReviewsCount = hasRealReviews
       ? (isCurrentUser ? authorReviews.length : (listing.reviews || authorReviews.length))
       : 0;
+
+    const authorPortfolio = isCurrentUser
+      ? (portfolioImages && portfolioImages.length > 0 ? portfolioImages : (profile?.portfolioImages || profile?.portfolio || []))
+      : (listing.portfolio || listing.authorProfile?.portfolio || (listing.isDemo && listing.author === 'Sofia M.' ? [
+          'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=600&q=80',
+          'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=600&q=80',
+        ] : listing.isDemo && listing.author === 'Marc L.' ? [
+          'https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=600&q=80',
+          'https://images.unsplash.com/photo-1487958449943-2429e8be8625?auto=format&fit=crop&w=600&q=80',
+        ] : []));
 
     const generic = {
       id: listing.id,
@@ -3965,11 +3927,7 @@ export default function App() {
         avatar: isCurrentUser ? profile.avatar : getAuthorAvatar(listing.author),
         bio: isCurrentUser ? profile.bio : 'Créateur de contenus, expert en échange de services et passionné de communautés locales.',
         socials: isCurrentUser ? (profile.socials || []) : ['LinkedIn', 'Instagram'],
-        portfolio: isCurrentUser ? (profile.portfolio || []) : [
-          'https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=600&q=80',
-          'https://images.unsplash.com/photo-1497366754035-f200968a6e72?auto=format&fit=crop&w=600&q=80',
-          'https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=600&q=80',
-        ],
+        portfolio: authorPortfolio,
         reviews: authorReviews,
       },
     };
@@ -7496,12 +7454,16 @@ export default function App() {
                   {selectedListing.authorProfile.socials.map(link => <span key={link} style={{ border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', borderRadius: '999px', padding: '6px 10px', fontSize: '12px', color: '#C67D5B', fontWeight: '700', backgroundColor: darkMode ? '#1A1715' : '#FAF7F2' }}>{link}</span>)}
                 </div>
               </div>
-              <div style={{ marginBottom: '14px' }}>
-                <div style={{ fontWeight: '800', fontSize: '13px', color: darkMode ? '#FAF7F2' : '#3D3530', marginBottom: '8px' }}>{t('portfolio')}</div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '8px' }}>
-                  {selectedListing.authorProfile.portfolio.map((image, index) => <img key={image + index} src={image} alt="portfolio" style={{ width: '100%', height: '80px', objectFit: 'cover', borderRadius: '14px' }} />)}
+              {selectedListing.authorProfile?.portfolio && selectedListing.authorProfile.portfolio.length > 0 && (
+                <div style={{ marginBottom: '14px' }}>
+                  <div style={{ fontWeight: '800', fontSize: '13px', color: darkMode ? '#FAF7F2' : '#3D3530', marginBottom: '8px' }}>{t('portfolio')}</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '8px' }}>
+                    {selectedListing.authorProfile.portfolio.map((image, index) => (
+                      <img key={image + index} src={image} alt="portfolio" style={{ width: '100%', height: '80px', objectFit: 'cover', borderRadius: '14px' }} />
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
               <div>
                 <div style={{ fontWeight: '800', fontSize: '13px', color: darkMode ? '#FAF7F2' : '#3D3530', marginBottom: '8px' }}>{t('reviews')}</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>

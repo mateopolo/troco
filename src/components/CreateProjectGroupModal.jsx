@@ -10,6 +10,22 @@ const SUGGESTED_MEMBERS = [
   { name: 'Elena V.', role: 'Traduction & Rédaction', avatar: 'E' },
 ];
 
+const PROJECT_CATEGORIES = [
+  { value: 'Projet Collaboratif Général', label: '🤝 Projet Collaboratif Général' },
+  { value: 'Rénovation & Chantier Solidaire', label: '🛠️ Rénovation, Chantier & Bricolage' },
+  { value: 'Développement Web & Tech', label: '💻 Développement Web, Mobile & Tech' },
+  { value: 'Design Graphique & 3D', label: '🎨 Design Graphique, Branding & 3D' },
+  { value: 'Production Audiovisuelle & Cinéma', label: '🎥 Production Audiovisuelle & Vidéo' },
+  { value: 'Studio Podcast & Musique', label: '🎙️ Studio Podcast, Son & Musique' },
+  { value: 'Permaculture & Écologie', label: '🌱 Permaculture, Jardin & Écologie' },
+  { value: 'Formation & Ateliers', label: '🎓 Formation, Cours & Ateliers Collectifs' },
+  { value: 'Événementiel & Culture', label: '🎭 Événementiel, Spectacle & Scénographie' },
+  { value: 'Tiers-Lieu & Espace Partagé', label: '🏢 Tiers-Lieu, Coworking & Espace Partagé' },
+  { value: 'FabLab & Prototypage', label: '🪚 FabLab, Menuiserie & Prototypage' },
+  { value: 'Studio Photo & Création', label: '📸 Studio Photo & Création de Contenu' },
+  { value: 'Autre', label: '✨ Autre (Personnalisé)...' },
+];
+
 export default function CreateProjectGroupModal({
   isOpen,
   onClose,
@@ -18,7 +34,8 @@ export default function CreateProjectGroupModal({
   currentLang = 'FR',
 }) {
   const [projectTitle, setProjectTitle] = useState('');
-  const [projectCategory, setProjectCategory] = useState('Projet Collaboratif');
+  const [projectCategory, setProjectCategory] = useState('Projet Collaboratif Général');
+  const [customCategoryName, setCustomCategoryName] = useState('');
   const [description, setDescription] = useState('');
   const [rewardPool, setRewardPool] = useState('15');
   const [selectedMembers, setSelectedMembers] = useState(['Marie D.', 'Lucas M.']);
@@ -48,9 +65,13 @@ export default function CreateProjectGroupModal({
     const myName = profile?.name || 'Moi';
     const allParticipants = Array.from(new Set([myName, ...selectedMembers]));
 
+    const finalCategory = projectCategory === 'Autre'
+      ? (customCategoryName.trim() || 'Projet Collaboratif Sur-Mesure')
+      : projectCategory;
+
     onCreateGroup({
       projectTitle: title,
-      category: projectCategory,
+      category: finalCategory,
       description: description.trim(),
       rewardPool: parseFloat(rewardPool) || 0,
       rewardStrategy,
@@ -82,29 +103,52 @@ export default function CreateProjectGroupModal({
       <div style={{
         backgroundColor: 'var(--bg-card)',
         borderRadius: '24px',
-        border: '1px solid var(--border-color)',
+        border: '1.5px solid var(--border-color)',
         boxShadow: 'var(--shadow-modal)',
         width: '100%',
         maxWidth: '540px',
-        maxHeight: '92vh',
+        maxHeight: 'min(90vh, 740px)',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
+        position: 'relative',
+        zIndex: 10,
+        margin: 'auto',
       }}>
-        {/* HEADER */}
+        {/* HEADER FIXE */}
         <div style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '18px 22px',
+          padding: '16px 20px',
           borderBottom: '1px solid var(--border-color)',
           backgroundColor: 'var(--bg-glass)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          flexShrink: 0,
+          zIndex: 20,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Users size={20} color="var(--accent-primary)" />
-            <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '19px', fontWeight: '700', color: 'var(--text-main)' }}>
-              {currentLang === 'FR' ? 'Créer un Hub de Projet' : 'Create Project Hub'}
-            </h3>
+            <div style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '10px',
+              backgroundColor: 'var(--bg-subtle)',
+              color: 'var(--accent-primary)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <Users size={18} />
+            </div>
+            <div>
+              <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: 'var(--text-main)' }}>
+                {currentLang === 'FR' ? 'Créer un Hub de Projet' : 'Create Project Hub'}
+              </h3>
+              <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-secondary)' }}>
+                Collaboration & rétribution d'équipe
+              </p>
+            </div>
           </div>
           <button
             type="button"
@@ -121,18 +165,23 @@ export default function CreateProjectGroupModal({
               cursor: 'pointer',
               color: 'var(--text-main)',
             }}
+            title="Fermer"
           >
             <X size={16} />
           </button>
         </div>
 
-        {/* BODY */}
+        {/* BODY AVEC DÉFILEMENT ISOLÉ */}
         <form onSubmit={handleCreate} style={{
-          padding: '20px 22px',
+          padding: '20px',
           overflowY: 'auto',
           display: 'flex',
           flexDirection: 'column',
           gap: '16px',
+          flex: 1,
+          minHeight: 0,
+          overscrollBehavior: 'contain',
+          WebkitOverflowScrolling: 'touch',
         }}>
           {/* TITRE DU PROJET */}
           <div>
@@ -162,30 +211,59 @@ export default function CreateProjectGroupModal({
           {/* CATÉGORIE DU PROJET */}
           <div>
             <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>
-              Catégorie / Thématique
+              Catégorie / Thématique du Projet
             </label>
             <select
               value={projectCategory}
               onChange={(e) => setProjectCategory(e.target.value)}
               style={{
                 width: '100%',
-                padding: '10px 14px',
+                padding: '11px 14px',
                 borderRadius: '12px',
                 border: '1px solid var(--border-color)',
                 backgroundColor: 'var(--bg-subtle)',
                 color: 'var(--text-main)',
-                fontSize: '12px',
+                fontSize: '12.5px',
                 fontWeight: '700',
                 outline: 'none',
+                boxSizing: 'border-box',
+                cursor: 'pointer',
               }}
             >
-              <option value="Projet Collaboratif">🤝 Projet Collaboratif Général</option>
-              <option value="Atelier & Chantier Solidaire">🛠️ Atelier & Chantier Solidaire</option>
-              <option value="Création Numérique & Web">💻 Création Numérique & Web</option>
-              <option value="Design & Identité Visuelle">🎨 Design & Identité Visuelle</option>
-              <option value="Événementiel & Culture">🎭 Événementiel & Culture</option>
-              <option value="Écologie & Jardin Partagé">🌱 Écologie & Jardin Partagé</option>
+              {PROJECT_CATEGORIES.map(cat => (
+                <option key={cat.value} value={cat.value}>
+                  {cat.label}
+                </option>
+              ))}
             </select>
+
+            {/* OPTION DE CATÉGORIE PERSONNALISÉE SI "AUTRE" */}
+            {projectCategory === 'Autre' && (
+              <div style={{ marginTop: '10px' }}>
+                <label style={{ fontSize: '11.5px', fontWeight: '800', color: 'var(--accent-primary)', display: 'block', marginBottom: '4px' }}>
+                  ✨ Précisez le type de projet personnalisé *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ex: Micro-brasserie partagée, Jeu vidéo indie, Tiers-lieu rural..."
+                  value={customCategoryName}
+                  onChange={(e) => setCustomCategoryName(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px',
+                    borderRadius: '12px',
+                    border: '1.5px solid var(--accent-primary)',
+                    backgroundColor: 'var(--bg-card)',
+                    color: 'var(--text-main)',
+                    fontSize: '12.5px',
+                    fontWeight: '700',
+                    boxSizing: 'border-box',
+                    outline: 'none',
+                  }}
+                />
+              </div>
+            )}
           </div>
 
           {/* OBJECTIF / DESCRIPTION */}
@@ -377,8 +455,9 @@ export default function CreateProjectGroupModal({
             alignItems: 'center',
             justifyContent: 'flex-end',
             gap: '10px',
-            paddingTop: '8px',
+            paddingTop: '12px',
             borderTop: '1px solid var(--border-color)',
+            marginTop: '4px',
           }}>
             <button
               type="button"
