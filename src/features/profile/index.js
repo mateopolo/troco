@@ -1,2 +1,2 @@
-export { default as ProfileSection } from '../../components/ProfileView';
-export { default } from '../../components/ProfileView';
+export { default as ProfileFeature } from './ProfileFeature';
+export { default } from './ProfileFeature';
