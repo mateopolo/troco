@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Send, Flame, Zap,
-  TrendingUp, AtSign, ChevronDown
+  TrendingUp, AtSign, ChevronDown, Trash2
 } from 'lucide-react';
 import {
   collection, addDoc, query, orderBy, limit,
-  onSnapshot, serverTimestamp
+  onSnapshot, serverTimestamp, deleteDoc, doc
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { validateChatMessage } from '../utils/moderationBlacklist';
@@ -74,6 +74,7 @@ export default function GlobalLiveChat({
   const myUsername = currentUser?.username || '@moi';
   const myAvatar = currentUser?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80';
   const myBadge = currentUser?.kycVerified ? 'VÉRIFIÉ' : 'MEMBRE';
+  const isAdmin = currentUser?.email === 'mateopolo91@gmail.com' || currentUser?.role === 'admin';
 
   // Fluctuation naturelle du nombre de membres en ligne
   useEffect(() => {
@@ -98,22 +99,24 @@ export default function GlobalLiveChat({
     setHasNewMessagesBelow(false);
   };
 
-  // Écouteur Firestore temps réel avec limite stricte à 50 documents
+  // Écoute en temps réel des messages dans Firestore
   useEffect(() => {
+    if (!db) return;
+
     try {
       const q = query(
         collection(db, 'global_chat'),
-        orderBy('timestamp', 'desc'),
+        orderBy('createdAt', 'desc'),
         limit(50)
       );
 
       const unsubscribe = onSnapshot(q, (snapshot) => {
         if (!snapshot.empty) {
           const fetched = [];
-          snapshot.forEach((doc) => {
-            const data = doc.data();
+          snapshot.forEach((docSnap) => {
+            const data = docSnap.data();
             fetched.push({
-              id: doc.id,
+              id: docSnap.id,
               author: data.author || 'Membre Troco',
               authorUsername: data.authorUsername || '@membre',
               avatar: data.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
@@ -159,7 +162,7 @@ export default function GlobalLiveChat({
     }
   };
 
-  // Envoi de message avec mise à jour optimiste instantanée
+  // Envoi de message avec mise à jour optimiste instantanée & filtre de modération
   const handleSendMessage = async (e) => {
     e?.preventDefault();
     const text = inputText.trim();
@@ -206,6 +209,19 @@ export default function GlobalLiveChat({
     }
   };
 
+  // Suppression d'un message par l'administrateur
+  const handleDeleteMessage = async (messageId) => {
+    if (!window.confirm("Supprimer ce message public ?")) return;
+    try {
+      setMessages(prev => prev.filter(m => m.id !== messageId));
+      if (db && messageId && typeof messageId === 'string' && !messageId.startsWith('m-init-') && !messageId.startsWith('local-')) {
+        await deleteDoc(doc(db, 'global_chat', messageId));
+      }
+    } catch (err) {
+      console.warn('[GlobalChat] Erreur suppression message admin:', err);
+    }
+  };
+
   // Mentionner un utilisateur en cliquant dessus
   const handleMentionUser = (username) => {
     const cleanHandle = username.startsWith('@') ? username : `@${username}`;
@@ -218,78 +234,81 @@ export default function GlobalLiveChat({
       style={{
         display: 'flex',
         flexDirection: 'column',
-        height: '100%',
+        height: isCompact ? 'calc(100dvh - env(safe-area-inset-bottom, 0px) - 75px)' : '100%',
+        maxHeight: isCompact ? 'calc(100dvh - env(safe-area-inset-bottom, 0px) - 75px)' : '100%',
         backgroundColor: darkMode ? '#151210' : '#FAF8F5',
         borderRadius: isCompact ? '18px' : '24px',
         border: '1px solid var(--border-color)',
         overflow: 'hidden',
         boxShadow: '0 12px 36px rgba(0, 0, 0, 0.06)',
         position: 'relative',
+        boxSizing: 'border-box',
       }}
     >
-      {/* 1. TICKER / EN-TÊTE TWITCH-STYLE */}
+      {/* 1. EN-TÊTE COMPACT TWITCH-STYLE */}
       <div
         style={{
-          padding: '12px 18px',
+          padding: isCompact ? '8px 12px' : '10px 16px',
           borderBottom: '1px solid var(--border-color)',
           backgroundColor: darkMode ? 'rgba(24, 20, 18, 0.98)' : 'rgba(255, 255, 255, 0.98)',
           backdropFilter: 'blur(12px)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: '10px',
+          gap: '8px',
           flexShrink: 0,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div
             style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '10px',
+              width: '28px',
+              height: '28px',
+              borderRadius: '8px',
               backgroundColor: '#EF4444',
               color: '#FFF',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 0 14px rgba(239, 68, 68, 0.4)',
+              boxShadow: '0 0 10px rgba(239, 68, 68, 0.4)',
               animation: 'pulse 2s infinite',
+              flexShrink: 0,
             }}
           >
-            <Zap size={16} />
+            <Zap size={14} />
           </div>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontWeight: '800', fontSize: '13.5px', color: 'var(--text-main)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <span style={{ fontWeight: '800', fontSize: '13px', color: 'var(--text-main)' }}>
                 Troco Live Chat
               </span>
-              <span style={{ fontSize: '9px', fontWeight: '900', backgroundColor: '#EF4444', color: '#FFF', padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <span style={{ fontSize: '8.5px', fontWeight: '900', backgroundColor: '#EF4444', color: '#FFF', padding: '1px 5px', borderRadius: '4px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
                 DIRECT
               </span>
             </div>
-            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '5px', marginTop: '1px' }}>
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10B981', display: 'inline-block' }} />
-              <span>{onlineCount.toLocaleString()} membres connectés</span>
+            <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '1px' }}>
+              <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#10B981', display: 'inline-block' }} />
+              <span>{onlineCount.toLocaleString()} connectés</span>
             </div>
           </div>
         </div>
 
-        {/* BADGES TICKER BOURSE / STATUS */}
+        {/* BADGES TICKER STATUS */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '5px',
-              fontSize: '11px',
+              gap: '4px',
+              fontSize: '10.5px',
               fontWeight: '700',
               backgroundColor: darkMode ? 'rgba(198, 125, 91, 0.15)' : '#F5EAE4',
               color: 'var(--accent-primary)',
-              padding: '4px 10px',
+              padding: '3px 8px',
               borderRadius: '999px',
             }}
           >
-            <TrendingUp size={13} />
+            <TrendingUp size={12} />
             <span>Flux 50 ms</span>
           </div>
         </div>
@@ -303,10 +322,10 @@ export default function GlobalLiveChat({
           flex: '1 1 0%',
           minHeight: 0,
           overflowY: 'auto',
-          padding: isCompact ? '12px 10px' : '16px',
+          padding: isCompact ? '10px 8px' : '14px',
           display: 'flex',
           flexDirection: 'column',
-          gap: '10px',
+          gap: '8px',
           scrollBehavior: 'smooth',
           overscrollBehaviorY: 'contain',
           WebkitOverflowScrolling: 'touch',
@@ -317,18 +336,18 @@ export default function GlobalLiveChat({
         {/* BANNIÈRE DE BIENVENUE DU CHAT GLOBAL */}
         <div
           style={{
-            padding: '10px 14px',
-            borderRadius: '14px',
+            padding: '8px 12px',
+            borderRadius: '12px',
             backgroundColor: darkMode ? 'rgba(198, 125, 91, 0.08)' : 'rgba(198, 125, 91, 0.06)',
             border: '1px dashed var(--accent-primary)',
-            fontSize: '11.5px',
+            fontSize: '11px',
             color: 'var(--text-secondary)',
             textAlign: 'center',
-            marginBottom: '4px',
-            lineHeight: 1.5,
+            marginBottom: '2px',
+            lineHeight: 1.4,
           }}
         >
-          💡 <strong>Astuce :</strong> Cliquez sur un pseudo pour le mentionner avec <code>@</code>. Activez le mode <strong>⚡ Alerte</strong> pour les demandes urgentes.
+          💡 <strong>Astuce :</strong> Cliquez sur un pseudo pour mentionner avec <code>@</code>. Activez <strong>⚡ Alerte</strong> pour les demandes urgentes.
         </div>
 
         {messages.map((msg) => {
@@ -341,9 +360,9 @@ export default function GlobalLiveChat({
               style={{
                 display: 'flex',
                 alignItems: 'flex-start',
-                gap: '10px',
-                padding: '10px 12px',
-                borderRadius: '16px',
+                gap: '8px',
+                padding: '8px 10px',
+                borderRadius: '14px',
                 backgroundColor: isUrgent
                   ? (darkMode ? 'rgba(239, 68, 68, 0.16)' : 'rgba(254, 226, 226, 0.7)')
                   : (darkMode ? '#1E1A17' : '#FFFFFF'),
@@ -351,8 +370,8 @@ export default function GlobalLiveChat({
                   ? '1.5px solid #EF4444'
                   : '1px solid var(--border-color)',
                 boxShadow: isUrgent
-                  ? '0 4px 16px rgba(239, 68, 68, 0.15)'
-                  : '0 2px 8px rgba(0, 0, 0, 0.02)',
+                  ? '0 4px 14px rgba(239, 68, 68, 0.15)'
+                  : '0 2px 6px rgba(0, 0, 0, 0.02)',
                 transition: 'all 0.15s ease',
                 animation: 'fadeSlideUp 0.15s ease both',
               }}
@@ -363,8 +382,8 @@ export default function GlobalLiveChat({
                 alt={msg.author}
                 onClick={() => onOpenProfile?.(msg)}
                 style={{
-                  width: '34px',
-                  height: '34px',
+                  width: '32px',
+                  height: '32px',
                   borderRadius: '50%',
                   objectFit: 'cover',
                   cursor: 'pointer',
@@ -375,9 +394,9 @@ export default function GlobalLiveChat({
               />
 
               {/* CORPS DU MESSAGE */}
-              <div style={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: '3px' }}>
+              <div style={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: '2px' }}>
                 {/* LIGNE D'EN-TÊTE DU MESSAGE */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
                   {/* PSEUDO CLIQUABLE */}
                   <button
                     type="button"
@@ -389,7 +408,7 @@ export default function GlobalLiveChat({
                       fontWeight: '800',
                       color: isUrgent ? '#EF4444' : 'var(--text-main)',
                       cursor: 'pointer',
-                      fontSize: '12.5px',
+                      fontSize: '12px',
                     }}
                     title="Cliquer pour mentionner"
                   >
@@ -400,14 +419,14 @@ export default function GlobalLiveChat({
                   {msg.badge && (
                     <span
                       style={{
-                        fontSize: '9px',
+                        fontSize: '8.5px',
                         fontWeight: '800',
-                        padding: '1px 6px',
-                        borderRadius: '6px',
+                        padding: '1px 5px',
+                        borderRadius: '5px',
                         backgroundColor: msg.badge === 'FONDATEUR' ? '#F59E0B' : msg.badge === 'VIP' ? '#8B5CF6' : msg.badge === 'PRO' ? '#3B82F6' : 'rgba(16, 185, 129, 0.15)',
                         color: msg.badge === 'MEMBRE' ? '#10B981' : '#FFFFFF',
                         textTransform: 'uppercase',
-                        letterSpacing: '0.4px',
+                        letterSpacing: '0.3px',
                       }}
                     >
                       {msg.badge}
@@ -417,10 +436,10 @@ export default function GlobalLiveChat({
                   {isUrgent && (
                     <span
                       style={{
-                        fontSize: '9px',
+                        fontSize: '8.5px',
                         fontWeight: '900',
-                        padding: '1px 6px',
-                        borderRadius: '6px',
+                        padding: '1px 5px',
+                        borderRadius: '5px',
                         backgroundColor: '#EF4444',
                         color: '#FFFFFF',
                         textTransform: 'uppercase',
@@ -431,18 +450,44 @@ export default function GlobalLiveChat({
                     </span>
                   )}
 
-                  {/* HEURE */}
-                  <span style={{ fontSize: '10.5px', color: 'var(--text-secondary)', marginLeft: 'auto', opacity: 0.8 }}>
-                    {formattedTime}
-                  </span>
+                  {/* HEURE & BOUTON SUPPRESSION ADMIN */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: 'auto' }}>
+                    <span style={{ fontSize: '10px', color: 'var(--text-secondary)', opacity: 0.8 }}>
+                      {formattedTime}
+                    </span>
+                    {isAdmin && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteMessage(msg.id);
+                        }}
+                        style={{
+                          border: 'none',
+                          background: 'transparent',
+                          color: '#EF4444',
+                          cursor: 'pointer',
+                          padding: '2px',
+                          borderRadius: '4px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          opacity: 0.75,
+                          transition: 'opacity 0.15s ease',
+                        }}
+                        title="Supprimer ce message (Admin)"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {/* TEXTE DU MESSAGE */}
-                <div style={{ color: 'var(--text-main)', fontSize: '13px', lineHeight: 1.45, wordBreak: 'break-word', fontWeight: isUrgent ? '600' : '400' }}>
+                <div style={{ color: 'var(--text-main)', fontSize: '12.5px', lineHeight: 1.4, wordBreak: 'break-word', fontWeight: isUrgent ? '600' : '400' }}>
                   {msg.text.split(' ').map((word, i) => {
                     if (word.startsWith('@')) {
                       return (
-                        <span key={i} style={{ color: '#3B82F6', fontWeight: '800', backgroundColor: 'rgba(59, 130, 246, 0.12)', padding: '1px 5px', borderRadius: '5px', marginRight: '2px' }}>
+                        <span key={i} style={{ color: '#3B82F6', fontWeight: '800', backgroundColor: 'rgba(59, 130, 246, 0.12)', padding: '1px 4px', borderRadius: '4px', marginRight: '2px' }}>
                           {word}{' '}
                         </span>
                       );
@@ -464,51 +509,52 @@ export default function GlobalLiveChat({
           className="premium-button"
           style={{
             position: 'absolute',
-            bottom: '80px',
+            bottom: '70px',
             left: '50%',
             transform: 'translateX(-50%)',
             border: 'none',
             borderRadius: '999px',
-            padding: '7px 16px',
+            padding: '6px 14px',
             backgroundColor: 'var(--accent-primary)',
             color: '#FFF',
-            fontSize: '11.5px',
+            fontSize: '11px',
             fontWeight: '800',
             cursor: 'pointer',
             boxShadow: '0 4px 16px rgba(0, 0, 0, 0.25)',
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
+            gap: '5px',
             zIndex: 10,
           }}
         >
-          <ChevronDown size={14} />
+          <ChevronDown size={13} />
           <span>Nouveaux messages</span>
         </button>
       )}
 
-      {/* 3. ZONE DE SAISIE & BARRE D'ACTIONS (FIXÉE FLUIDEMENT AU-DESSUS DU CLAVIER MOBILE) */}
+      {/* 3. ZONE DE SAISIE FIXÉE DIRECTEMENT SANS MARGE INFÉRIEURE */}
       <div
         style={{
           position: 'sticky',
           bottom: 0,
-          padding: '10px 14px',
-          paddingBottom: isCompact ? 'max(12px, env(safe-area-inset-bottom, 12px))' : '14px',
+          padding: '8px 12px',
+          paddingBottom: '8px',
           borderTop: '1px solid var(--border-color)',
           backgroundColor: darkMode ? '#181412' : '#FFFFFF',
           backdropFilter: 'blur(16px)',
           WebkitBackdropFilter: 'blur(16px)',
           display: 'flex',
           flexDirection: 'column',
-          gap: '8px',
+          gap: '6px',
           flexShrink: 0,
           zIndex: 30,
           boxSizing: 'border-box',
+          margin: 0,
         }}
       >
         {/* BARRE D'ÉMOJIS RAPIDES & MODE ALERTE */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', overflowX: 'auto', paddingBottom: '2px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', overflowX: 'auto', paddingBottom: '1px' }}>
             {['🔥', '🚀', '👏', '💎', '❤️', '⚡', '💡', '🎉'].map(emoji => (
               <button
                 key={emoji}
@@ -521,9 +567,9 @@ export default function GlobalLiveChat({
                   border: 'none',
                   background: 'transparent',
                   cursor: 'pointer',
-                  fontSize: '15px',
-                  padding: '2px 4px',
-                  borderRadius: '6px',
+                  fontSize: '14px',
+                  padding: '1px 3px',
+                  borderRadius: '5px',
                   transition: 'transform 0.1s ease',
                 }}
                 className="premium-button"
@@ -544,8 +590,8 @@ export default function GlobalLiveChat({
               backgroundColor: isUrgentMode ? '#EF4444' : 'transparent',
               color: isUrgentMode ? '#FFFFFF' : 'var(--text-secondary)',
               borderRadius: '999px',
-              padding: '4px 10px',
-              fontSize: '11px',
+              padding: '3px 8px',
+              fontSize: '10.5px',
               fontWeight: '800',
               display: 'flex',
               alignItems: 'center',
@@ -555,13 +601,13 @@ export default function GlobalLiveChat({
               transition: 'all 0.15s ease',
             }}
           >
-            <Flame size={12} color={isUrgentMode ? '#FFFFFF' : '#EF4444'} />
+            <Flame size={11} color={isUrgentMode ? '#FFFFFF' : '#EF4444'} />
             <span>Mode Alerte</span>
           </button>
         </div>
 
         {/* CHAMP DE SAISIE */}
-        <form onSubmit={handleSendMessage} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <form onSubmit={handleSendMessage} style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
           <div
             style={{
               flex: 1,
@@ -569,26 +615,26 @@ export default function GlobalLiveChat({
               alignItems: 'center',
               backgroundColor: darkMode ? '#221D1A' : '#F5F0E8',
               borderRadius: '999px',
-              padding: '0 14px',
+              padding: '0 12px',
               border: isUrgentMode ? '1.5px solid #EF4444' : '1px solid var(--border-color)',
               transition: 'border-color 0.2s ease',
             }}
           >
-            <AtSign size={14} color="var(--text-secondary)" style={{ marginRight: '6px', opacity: 0.6 }} />
+            <AtSign size={13} color="var(--text-secondary)" style={{ marginRight: '5px', opacity: 0.6 }} />
             <input
               ref={inputRef}
               type="text"
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
-              placeholder={isUrgentMode ? "Écrivez votre demande urgente (ex: Cherche dev ce soir...)" : "Envoyer un message à la communauté..."}
+              placeholder={isUrgentMode ? "Demande urgente (ex: Cherche dev ce soir...)" : "Envoyer un message à la communauté..."}
               maxLength={300}
               style={{
                 flex: 1,
                 border: 'none',
                 backgroundColor: 'transparent',
                 color: 'var(--text-main)',
-                fontSize: '13px',
-                padding: '10px 0',
+                fontSize: '12.5px',
+                padding: '8px 0',
                 outline: 'none',
               }}
             />
@@ -599,8 +645,8 @@ export default function GlobalLiveChat({
             disabled={!inputText.trim()}
             className="premium-button"
             style={{
-              width: '40px',
-              height: '40px',
+              width: '36px',
+              height: '36px',
               borderRadius: '50%',
               backgroundColor: isUrgentMode ? '#EF4444' : 'var(--accent-primary)',
               color: '#FFFFFF',
@@ -616,7 +662,7 @@ export default function GlobalLiveChat({
             }}
             title="Envoyer (Entrée)"
           >
-            <Send size={15} />
+            <Send size={14} />
           </button>
         </form>
       </div>

@@ -708,10 +708,6 @@ export default function App() {
   const [viewMode, setViewMode] = useState('list');
 
   const bottomNavRef = useRef(null);
-  const bottomNavTouchStartRef = useRef(null);
-  const [bottomNavSwipeOffset, setBottomNavSwipeOffset] = useState(0);
-  const [scrubbingTab, setScrubbingTab] = useState(null);
-  const BOTTOM_NAV_TABS = useMemo(() => ['feed', 'community', 'chat', 'post', 'profile'], []);
 
   const switchTab = useCallback((newTab) => {
     setActiveTab(newTab);
@@ -723,63 +719,60 @@ export default function App() {
     }
   }, []);
 
-  const handleBottomNavTouchStart = useCallback((e) => {
-    if (!e.touches || e.touches.length === 0) return;
-    const touch = e.touches[0];
-    bottomNavTouchStartRef.current = {
-      startX: touch.clientX,
-      startY: touch.clientY,
-      startTime: Date.now()
+  // Navigation "Scrubbing" iOS stricte sur la barre de navigation inférieure
+  useEffect(() => {
+    const navEl = bottomNavRef.current;
+    if (!navEl) return;
+
+    let isTouchingNav = false;
+
+    const handleTouchStart = (e) => {
+      if (!e.touches || e.touches.length === 0) return;
+      isTouchingNav = true;
+      const touch = e.touches[0];
+      const targetEl = document.elementFromPoint(touch.clientX, touch.clientY);
+      const tabBtn = targetEl?.closest?.('[data-tab]');
+      if (tabBtn) {
+        const targetTab = tabBtn.getAttribute('data-tab');
+        if (targetTab && targetTab !== activeTab) {
+          switchTab(targetTab);
+        }
+      }
     };
-    if (bottomNavRef.current) {
-      const rect = bottomNavRef.current.getBoundingClientRect();
-      const relativeX = touch.clientX - rect.left;
-      const tabWidth = rect.width / BOTTOM_NAV_TABS.length;
-      const idx = Math.min(Math.max(0, Math.floor(relativeX / tabWidth)), BOTTOM_NAV_TABS.length - 1);
-      setScrubbingTab(BOTTOM_NAV_TABS[idx]);
-    }
-    if (typeof navigator !== 'undefined' && navigator.vibrate) {
-      try { navigator.vibrate(10); } catch (_) { }
-    }
-  }, [BOTTOM_NAV_TABS]);
 
-  const handleBottomNavTouchMove = useCallback((e) => {
-    if (!bottomNavTouchStartRef.current || !e.touches || e.touches.length === 0) return;
-    const touch = e.touches[0];
-    const diffX = touch.clientX - bottomNavTouchStartRef.current.startX;
-    const diffY = touch.clientY - bottomNavTouchStartRef.current.startY;
-
-    // Si le geste est horizontal (iOS scrubbing fluide le long de la barre de navigation)
-    if (Math.abs(diffX) > Math.abs(diffY)) {
-      if (bottomNavRef.current) {
-        const rect = bottomNavRef.current.getBoundingClientRect();
-        const relativeX = Math.min(Math.max(0, touch.clientX - rect.left), rect.width);
-        const tabWidth = rect.width / BOTTOM_NAV_TABS.length;
-        const idx = Math.min(Math.max(0, Math.floor(relativeX / tabWidth)), BOTTOM_NAV_TABS.length - 1);
-        const targetTab = BOTTOM_NAV_TABS[idx];
-        setScrubbingTab(targetTab);
-
-        if (targetTab !== activeTab) {
+    const handleTouchMove = (e) => {
+      if (!isTouchingNav || !e.touches || e.touches.length === 0) return;
+      if (e.cancelable) e.preventDefault();
+      const touch = e.touches[0];
+      const targetEl = document.elementFromPoint(touch.clientX, touch.clientY);
+      const tabBtn = targetEl?.closest?.('[data-tab]');
+      if (tabBtn) {
+        const targetTab = tabBtn.getAttribute('data-tab');
+        if (targetTab && targetTab !== activeTab) {
           switchTab(targetTab);
           if (typeof navigator !== 'undefined' && navigator.vibrate) {
-            try { navigator.vibrate(12); } catch (_) { }
+            try { navigator.vibrate(10); } catch (_) { }
           }
         }
       }
-      // Damping élastique subtil
-      const dampedOffset = diffX * 0.12;
-      setBottomNavSwipeOffset(Math.max(-16, Math.min(16, dampedOffset)));
-    }
-  }, [activeTab, switchTab, BOTTOM_NAV_TABS]);
+    };
 
-  const handleBottomNavTouchEnd = useCallback(() => {
-    if (scrubbingTab && scrubbingTab !== activeTab) {
-      switchTab(scrubbingTab);
-    }
-    bottomNavTouchStartRef.current = null;
-    setScrubbingTab(null);
-    setBottomNavSwipeOffset(0);
-  }, [scrubbingTab, activeTab, switchTab]);
+    const handleTouchEnd = () => {
+      isTouchingNav = false;
+    };
+
+    navEl.addEventListener('touchstart', handleTouchStart, { passive: true });
+    navEl.addEventListener('touchmove', handleTouchMove, { passive: false });
+    navEl.addEventListener('touchend', handleTouchEnd, { passive: true });
+    navEl.addEventListener('touchcancel', handleTouchEnd, { passive: true });
+
+    return () => {
+      navEl.removeEventListener('touchstart', handleTouchStart);
+      navEl.removeEventListener('touchmove', handleTouchMove);
+      navEl.removeEventListener('touchend', handleTouchEnd);
+      navEl.removeEventListener('touchcancel', handleTouchEnd);
+    };
+  }, [activeTab, switchTab]);
 
   const TAB_ORDER = useMemo(() => ({ feed: 0, community: 1, chat: 2, post: 3, profile: 4, admin: 5 }), []);
   const prevTabRef = useRef(activeTab);
@@ -8830,32 +8823,42 @@ export default function App() {
         {/* ONGLET 4 : PROFIL UTILISATEUR */}
         {activeTab === 'profile' && (
           <div style={{ backgroundColor: darkMode ? '#231E1B' : '#FAF7F2', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', padding: '22px', borderRadius: '28px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', boxShadow: '0 10px 30px rgba(61,53,48,0.06)', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '8px' }}>
+            {/* EN-TÊTE DU PROFIL (AVATAR + INFORMATIONS ALIGNÉES) */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px', flexWrap: 'wrap' }}>
+              <input type="file" ref={profileAvatarFileInputRef} onChange={handleAvatarFileUpload} accept="image/*" style={{ display: "none" }} />
+              <div
+                style={{ position: "relative", display: "inline-block", cursor: isEditingProfile ? "pointer" : "default", flexShrink: 0 }}
+                onClick={() => isEditingProfile && profileAvatarFileInputRef.current && profileAvatarFileInputRef.current.click()}
+              >
+                <img
+                  src={isEditingProfile ? profileDraft.avatar : profile.avatar}
+                  alt={profile.name}
+                  style={{ width: "88px", height: "88px", borderRadius: "50%", objectFit: "cover", border: "3px solid var(--accent-primary)", boxShadow: "var(--shadow-card)", transition: "all 0.3s ease" }}
+                />
+                {isEditingProfile && (
+                  <button
+                    type="button"
+                    title={t("uploadProfilePhoto")}
+                    onClick={(e) => { e.stopPropagation(); profileAvatarFileInputRef.current && profileAvatarFileInputRef.current.click(); }}
+                    style={{ position: "absolute", right: "0", bottom: "0", width: "30px", height: "30px", borderRadius: "50%", border: "none", backgroundColor: "var(--accent-primary)", color: "#FFF", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "var(--shadow-accent)" }}
+                  >
+                    <Pencil size={14} />
+                  </button>
+                )}
+              </div>
+
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '4px' }}>
                   {profile.kycVerified ? (
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: '800', padding: '6px 12px', borderRadius: '999px', backgroundColor: darkMode ? 'rgba(156,175,136,0.25)' : '#EBF0E6', color: '#3D4A35', border: '1px solid #D4DFCE' }}>
-                      <ShieldCheck size={13} /> {t('verifiedProfile') || 'Identité Vérifiée'} ✅
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setIsKycModalOpen(true)}
-                      className="premium-button"
-                      style={{
-                        display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: '800', padding: '6px 12px', borderRadius: '999px',
-                        backgroundColor: darkMode ? 'rgba(156,175,136,0.15)' : '#EBF0E6', color: '#3D4A35',
-                        border: '1px solid #D4DFCE', cursor: 'pointer'
-                      }}
-                    >
-                      <ShieldCheck size={13} /> Vérifier mon identité (+ Badge ✅)
-                    </button>
-                  )}
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '10.5px', fontWeight: '800', padding: '4px 10px', borderRadius: '999px', backgroundColor: darkMode ? 'rgba(156,175,136,0.25)' : '#EBF0E6', color: '#3D4A35', border: '1px solid #D4DFCE' }}>
+                      <ShieldCheck size={12} /> {t('verifiedProfile') || 'Identité Vérifiée'} ✅
+                    </span>
+                  ) : null}
                   {profile.accountType && (
                     <span style={{
-                      fontSize: '11px',
+                      fontSize: '10.5px',
                       fontWeight: '800',
-                      padding: '5px 10px',
+                      padding: '4px 10px',
                       borderRadius: '999px',
                       backgroundColor: 'var(--bg-subtle)',
                       color: 'var(--accent-primary)',
@@ -8867,70 +8870,105 @@ export default function App() {
                     </span>
                   )}
                 </div>
-                <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '24px', fontWeight: '600', color: 'var(--text-main)', letterSpacing: '-0.01em' }}>{isEditingProfile ? profileDraft.name : profile.name}</h3>
-                <div style={{ fontSize: '13px', fontWeight: '800', color: 'var(--accent-primary)', marginTop: '2px' }}>{isEditingProfile ? (profileDraft.username || '@user') : (profile.username || '@mateopolo')}</div>
+                <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '22px', fontWeight: '700', color: 'var(--text-main)', letterSpacing: '-0.01em', wordBreak: 'break-word' }}>
+                  {isEditingProfile ? profileDraft.name : profile.name}
+                </h3>
+                <div style={{ fontSize: '13px', fontWeight: '800', color: 'var(--accent-primary)', marginTop: '2px' }}>
+                  {isEditingProfile ? (profileDraft.username || '@user') : (profile.username || '@mateopolo')}
+                </div>
               </div>
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-                {!isEditingProfile && !profile.kycVerified && (
-                  <button
-                    type="button"
-                    onClick={() => setIsKycModalOpen(true)}
-                    className="premium-button"
-                    style={{
-                      border: '1.5px solid var(--accent-primary)',
-                      borderRadius: '999px',
-                      padding: '10px 16px',
-                      backgroundColor: 'var(--bg-card)',
-                      color: 'var(--accent-primary)',
-                      fontWeight: '800',
-                      fontSize: '12px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      boxShadow: 'var(--shadow-accent)'
-                    }}
-                  >
-                    <ShieldCheck size={14} color="var(--accent-primary)" /> Vérifier mon profil
-                  </button>
-                )}
+            </div>
+
+            {/* GRILLE DE BOUTONS D'ACTION DU PROFIL (PARFAITEMENT FLUIDE & SANS CHEVAUCHEMENT) */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'flex-start', marginBottom: '16px' }}>
+              {!isEditingProfile && !profile.kycVerified && (
                 <button
-                  onClick={() => setIsAdminPanelOpen(true)}
+                  type="button"
+                  onClick={() => setIsKycModalOpen(true)}
+                  className="premium-button"
+                  style={{
+                    border: '1.5px solid var(--accent-primary)',
+                    borderRadius: '999px',
+                    padding: '8px 14px',
+                    backgroundColor: 'var(--bg-card)',
+                    color: 'var(--accent-primary)',
+                    fontWeight: '800',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: 'var(--shadow-accent)'
+                  }}
+                >
+                  <ShieldCheck size={14} color="var(--accent-primary)" /> Vérifier mon identité (+ Badge ✅)
+                </button>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setIsAdminPanelOpen(true)}
+                className="premium-button"
+                style={{
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '999px',
+                  padding: '8px 14px',
+                  backgroundColor: 'var(--bg-subtle)',
+                  color: 'var(--text-main)',
+                  fontWeight: '800',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: 'var(--shadow-card)'
+                }}
+              >
+                <ShieldAlert size={14} color="var(--accent-primary)" /> Panel Modération
+              </button>
+
+              <button
+                type="button"
+                onClick={() => isEditingProfile ? handleSaveProfile() : handleStartEdit()}
+                className="premium-button"
+                style={{
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '999px',
+                  padding: '8px 14px',
+                  backgroundColor: isEditingProfile ? 'var(--accent-primary)' : 'var(--bg-card)',
+                  color: isEditingProfile ? '#FFF' : 'var(--text-main)',
+                  fontWeight: '700',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: 'var(--shadow-card)'
+                }}
+              >
+                {isEditingProfile ? t('saveProfile') : t('editProfile')}
+              </button>
+
+              {!isEditingProfile && (
+                <button
+                  type="button"
+                  onClick={handleSignOut}
                   className="premium-button"
                   style={{
                     border: '1px solid var(--border-color)',
                     borderRadius: '999px',
-                    padding: '10px 14px',
-                    backgroundColor: 'var(--bg-subtle)',
-                    color: 'var(--text-main)',
-                    fontWeight: '800',
+                    padding: '8px 14px',
+                    backgroundColor: 'transparent',
+                    color: 'var(--text-secondary)',
+                    fontWeight: '700',
                     fontSize: '12px',
                     cursor: 'pointer',
-                    display: 'flex',
+                    display: 'inline-flex',
                     alignItems: 'center',
-                    gap: '6px',
-                    boxShadow: 'var(--shadow-card)'
+                    gap: '6px'
                   }}
                 >
-                  <ShieldAlert size={14} color="var(--accent-primary)" /> Panel Modération
-                </button>
-                <button onClick={() => isEditingProfile ? handleSaveProfile() : handleStartEdit()} className="premium-button" style={{ border: '1px solid var(--border-color)', borderRadius: '999px', padding: '10px 14px', backgroundColor: isEditingProfile ? 'var(--accent-primary)' : 'var(--bg-card)', color: isEditingProfile ? '#FFF' : 'var(--text-main)', fontWeight: '700', cursor: 'pointer', boxShadow: 'var(--shadow-card)' }}>
-                  {isEditingProfile ? t('saveProfile') : t('editProfile')}
-                </button>
-                {!isEditingProfile && (
-                  <button onClick={handleSignOut} className="premium-button" style={{ border: '1px solid var(--border-color)', borderRadius: '999px', padding: '10px 14px', backgroundColor: 'transparent', color: 'var(--text-secondary)', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <LogOut size={13} /> Se déconnecter
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <input type="file" ref={profileAvatarFileInputRef} onChange={handleAvatarFileUpload} accept="image/*" style={{ display: "none" }} />
-            <div style={{ position: "relative", marginBottom: "18px", display: "inline-block", cursor: isEditingProfile ? "pointer" : "default" }} onClick={() => isEditingProfile && profileAvatarFileInputRef.current && profileAvatarFileInputRef.current.click()}>
-              <img src={isEditingProfile ? profileDraft.avatar : profile.avatar} alt={profile.name} style={{ width: "112px", height: "112px", borderRadius: "50%", objectFit: "cover", border: "3px solid var(--accent-primary)", boxShadow: "var(--shadow-card)", transition: "all 0.3s ease" }} />
-              {isEditingProfile && (
-                <button title={t("uploadProfilePhoto")} onClick={(e) => { e.stopPropagation(); profileAvatarFileInputRef.current && profileAvatarFileInputRef.current.click(); }} style={{ position: "absolute", right: "0", bottom: "0", width: "38px", height: "38px", borderRadius: "50%", border: "none", backgroundColor: "var(--accent-primary)", color: "#FFF", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", boxShadow: "var(--shadow-accent)" }}>
-                  <Pencil size={16} />
+                  <LogOut size={13} /> Se déconnecter
                 </button>
               )}
             </div>
@@ -10000,13 +10038,6 @@ export default function App() {
       <nav
         ref={bottomNavRef}
         aria-label="Navigation principale mobile"
-        onTouchStart={handleBottomNavTouchStart}
-        onTouchMove={handleBottomNavTouchMove}
-        onTouchEnd={handleBottomNavTouchEnd}
-        onTouchCancel={() => {
-          bottomNavTouchStartRef.current = null;
-          setBottomNavSwipeOffset(0);
-        }}
         style={{
           display: ((isMobile && activeTab === 'chat' && selectedChat) || selectedListing) ? 'none' : 'block',
           position: 'fixed',
@@ -10022,7 +10053,7 @@ export default function App() {
           zIndex: 99999,
           boxShadow: 'none',
           transition: 'background-color 0.3s ease',
-          touchAction: 'pan-y',
+          touchAction: 'none',
           userSelect: 'none',
           WebkitUserSelect: 'none',
         }}
@@ -10033,14 +10064,13 @@ export default function App() {
           display: 'flex',
           justifyContent: 'space-around',
           alignItems: 'center',
-          transform: bottomNavSwipeOffset ? `translate3d(${bottomNavSwipeOffset}px, 0, 0)` : 'translate3d(0, 0, 0)',
-          transition: bottomNavSwipeOffset ? 'none' : 'transform 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
           willChange: 'transform',
         }}>
 
           {/* 1. EXPLORER */}
           <button
             type="button"
+            data-tab="feed"
             onClick={() => switchTab('feed')}
             style={{
               border: 'none',
@@ -10075,6 +10105,7 @@ export default function App() {
           {/* 2. COMMUNAUTÉ & TROCO LIVE */}
           <button
             type="button"
+            data-tab="community"
             onClick={() => switchTab('community')}
             style={{
               border: 'none',
@@ -10123,6 +10154,7 @@ export default function App() {
           {/* 3. MESSAGES */}
           <button
             type="button"
+            data-tab="chat"
             onClick={() => switchTab('chat')}
             style={{
               border: 'none',
@@ -10182,6 +10214,7 @@ export default function App() {
           {/* 3. DÉPOSER */}
           <button
             type="button"
+            data-tab="post"
             onClick={() => {
               setSelectedChat(null);
               if (activeTab === 'post') {
@@ -10226,6 +10259,7 @@ export default function App() {
           {/* 4. PROFIL */}
           <button
             type="button"
+            data-tab="profile"
             onClick={() => switchTab('profile')}
             style={{
               border: 'none',
