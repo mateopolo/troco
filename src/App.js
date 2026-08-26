@@ -707,8 +707,83 @@ export default function App() {
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState('list');
 
+  const bottomNavRef = useRef(null);
+  const bottomNavTouchStartRef = useRef(null);
+  const [bottomNavSwipeOffset, setBottomNavSwipeOffset] = useState(0);
+  const [scrubbingTab, setScrubbingTab] = useState(null);
+  const BOTTOM_NAV_TABS = useMemo(() => ['feed', 'community', 'chat', 'post', 'profile'], []);
+
+  const switchTab = useCallback((newTab) => {
+    setActiveTab(newTab);
+    if (newTab !== 'chat') {
+      setSelectedChat(null);
+    }
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      try { navigator.vibrate(10); } catch (_) { }
+    }
+  }, []);
+
+  const handleBottomNavTouchStart = useCallback((e) => {
+    if (!e.touches || e.touches.length === 0) return;
+    const touch = e.touches[0];
+    bottomNavTouchStartRef.current = {
+      startX: touch.clientX,
+      startY: touch.clientY,
+      startTime: Date.now()
+    };
+    if (bottomNavRef.current) {
+      const rect = bottomNavRef.current.getBoundingClientRect();
+      const relativeX = touch.clientX - rect.left;
+      const tabWidth = rect.width / BOTTOM_NAV_TABS.length;
+      const idx = Math.min(Math.max(0, Math.floor(relativeX / tabWidth)), BOTTOM_NAV_TABS.length - 1);
+      setScrubbingTab(BOTTOM_NAV_TABS[idx]);
+    }
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      try { navigator.vibrate(10); } catch (_) { }
+    }
+  }, [BOTTOM_NAV_TABS]);
+
+  const handleBottomNavTouchMove = useCallback((e) => {
+    if (!bottomNavTouchStartRef.current || !e.touches || e.touches.length === 0) return;
+    const touch = e.touches[0];
+    const diffX = touch.clientX - bottomNavTouchStartRef.current.startX;
+    const diffY = touch.clientY - bottomNavTouchStartRef.current.startY;
+
+    // Si le geste est horizontal (iOS scrubbing fluide le long de la barre de navigation)
+    if (Math.abs(diffX) > Math.abs(diffY)) {
+      if (bottomNavRef.current) {
+        const rect = bottomNavRef.current.getBoundingClientRect();
+        const relativeX = Math.min(Math.max(0, touch.clientX - rect.left), rect.width);
+        const tabWidth = rect.width / BOTTOM_NAV_TABS.length;
+        const idx = Math.min(Math.max(0, Math.floor(relativeX / tabWidth)), BOTTOM_NAV_TABS.length - 1);
+        const targetTab = BOTTOM_NAV_TABS[idx];
+        setScrubbingTab(targetTab);
+
+        if (targetTab !== activeTab) {
+          switchTab(targetTab);
+          if (typeof navigator !== 'undefined' && navigator.vibrate) {
+            try { navigator.vibrate(12); } catch (_) { }
+          }
+        }
+      }
+      // Damping élastique subtil
+      const dampedOffset = diffX * 0.12;
+      setBottomNavSwipeOffset(Math.max(-16, Math.min(16, dampedOffset)));
+    }
+  }, [activeTab, switchTab, BOTTOM_NAV_TABS]);
+
+  const handleBottomNavTouchEnd = useCallback(() => {
+    if (scrubbingTab && scrubbingTab !== activeTab) {
+      switchTab(scrubbingTab);
+    }
+    bottomNavTouchStartRef.current = null;
+    setScrubbingTab(null);
+    setBottomNavSwipeOffset(0);
+  }, [scrubbingTab, activeTab, switchTab]);
+
   const TAB_ORDER = useMemo(() => ({ feed: 0, community: 1, chat: 2, post: 3, profile: 4, admin: 5 }), []);
   const prevTabRef = useRef(activeTab);
+  const tabSlideDirection = (TAB_ORDER[activeTab] ?? 0) >= (TAB_ORDER[prevTabRef.current] ?? 0) ? 'forward' : 'backward';
 
   // Transition d'onglets & écrans GSAP (Organic Spring Glide + Back Ease)
   useGSAP(() => {
@@ -1464,79 +1539,6 @@ export default function App() {
   const [publishMessage, setPublishMessage] = useState('');
   const [tagInputValue, setTagInputValue] = useState('');
 
-  // NAVIGATION FLUIDE ENTRE ONGLETS
-  const NAV_TABS = useMemo(() => ['feed', 'community', 'chat', 'post', 'profile'], []);
-  const [tabSlideDirection, setTabSlideDirection] = useState('forward');
-
-  const switchTab = useCallback((tabName) => {
-    const currentIndex = NAV_TABS.indexOf(activeTab);
-    const newIndex = NAV_TABS.indexOf(tabName);
-    if (newIndex !== -1 && currentIndex !== -1 && newIndex !== currentIndex) {
-      setTabSlideDirection(newIndex > currentIndex ? 'forward' : 'backward');
-    }
-    setActiveTab(tabName);
-    setSelectedChat(null);
-  }, [activeTab, NAV_TABS]);
-
-  // GESTES TACTILES FLUIDES DE SWIPE SUR LA BARRE DE NAVIGATION INFÉRIEURE (STYLE iOS)
-  const bottomNavTouchStartRef = useRef(null);
-  const [bottomNavSwipeOffset, setBottomNavSwipeOffset] = useState(0);
-
-  const handleBottomNavTouchStart = useCallback((e) => {
-    if (!e.touches || e.touches.length === 0) return;
-    bottomNavTouchStartRef.current = {
-      startX: e.touches[0].clientX,
-      startY: e.touches[0].clientY,
-      startTime: Date.now(),
-    };
-    setBottomNavSwipeOffset(0);
-  }, []);
-
-  const handleBottomNavTouchMove = useCallback((e) => {
-    if (!bottomNavTouchStartRef.current || !e.touches || e.touches.length === 0) return;
-    const deltaX = e.touches[0].clientX - bottomNavTouchStartRef.current.startX;
-    const deltaY = e.touches[0].clientY - bottomNavTouchStartRef.current.startY;
-
-    // Déplacement horizontal prédominant avec amorti élastique
-    if (Math.abs(deltaX) > Math.abs(deltaY)) {
-      const damped = Math.sign(deltaX) * Math.min(28, Math.pow(Math.abs(deltaX), 0.75) * 1.6);
-      setBottomNavSwipeOffset(damped);
-    }
-  }, []);
-
-  const handleBottomNavTouchEnd = useCallback((e) => {
-    if (!bottomNavTouchStartRef.current) return;
-    const touch = e.changedTouches && e.changedTouches.length > 0 ? e.changedTouches[0] : null;
-    if (touch) {
-      const deltaX = touch.clientX - bottomNavTouchStartRef.current.startX;
-      const deltaY = touch.clientY - bottomNavTouchStartRef.current.startY;
-      const elapsed = Date.now() - bottomNavTouchStartRef.current.startTime;
-
-      // Détection de geste de balayage fluide (> 30px, horizontal dominant, < 600ms)
-      if (Math.abs(deltaX) > 30 && Math.abs(deltaX) > Math.abs(deltaY) * 1.15 && elapsed < 600) {
-        const currentIndex = NAV_TABS.indexOf(activeTab);
-        if (currentIndex !== -1) {
-          if (deltaX < 0 && currentIndex < NAV_TABS.length - 1) {
-            // Glissement doigt vers la gauche -> Onglet suivant
-            const nextTab = NAV_TABS[currentIndex + 1];
-            switchTab(nextTab);
-            if (typeof navigator !== 'undefined' && navigator.vibrate) {
-              try { navigator.vibrate(15); } catch (_) { }
-            }
-          } else if (deltaX > 0 && currentIndex > 0) {
-            // Glissement doigt vers la droite -> Onglet précédent
-            const prevTab = NAV_TABS[currentIndex - 1];
-            switchTab(prevTab);
-            if (typeof navigator !== 'undefined' && navigator.vibrate) {
-              try { navigator.vibrate(15); } catch (_) { }
-            }
-          }
-        }
-      }
-    }
-    bottomNavTouchStartRef.current = null;
-    setBottomNavSwipeOffset(0);
-  }, [activeTab, NAV_TABS, switchTab]);
   const defaultPostDraft = {
     type: 'offer',
     status: 'active',
@@ -9990,6 +9992,7 @@ export default function App() {
 
       {/* BARRE DE NAVIGATION EN BAS (CLEAN, TRANSPARENTE, AVEC GESTES DE SWIPE iOS) */}
       <nav
+        ref={bottomNavRef}
         aria-label="Navigation principale mobile"
         onTouchStart={handleBottomNavTouchStart}
         onTouchMove={handleBottomNavTouchMove}

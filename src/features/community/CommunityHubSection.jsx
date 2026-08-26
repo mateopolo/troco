@@ -16,19 +16,23 @@ export default function CommunityHubSection({
       style={{
         display: 'flex',
         flexDirection: 'column',
-        gap: '16px',
+        gap: isMobile ? '8px' : '16px',
         width: '100%',
         maxWidth: '920px',
         margin: '0 auto',
-        paddingBottom: isMobile ? '80px' : '30px',
+        height: isMobile ? 'calc(100dvh - 150px)' : 'auto',
+        minHeight: isMobile ? '0' : 'auto',
+        paddingBottom: 0,
+        boxSizing: 'border-box',
+        overflow: isMobile ? 'hidden' : 'visible',
         animation: 'fadeIn 0.25s ease both',
       }}
     >
       {/* 1. EN-TÊTE DU HUB COMMUNAUTÉ */}
       <div
         style={{
-          padding: isMobile ? '16px 18px' : '22px 26px',
-          borderRadius: '24px',
+          padding: isMobile ? '10px 14px' : '22px 26px',
+          borderRadius: isMobile ? '18px' : '24px',
           backgroundColor: darkMode ? '#1F1B18' : '#FAF8F5',
           border: '1px solid var(--border-color)',
           boxShadow: '0 10px 30px rgba(0, 0, 0, 0.05)',
@@ -36,14 +40,15 @@ export default function CommunityHubSection({
           flexDirection: isMobile ? 'column' : 'row',
           alignItems: isMobile ? 'flex-start' : 'center',
           justifyContent: 'space-between',
-          gap: '14px',
+          gap: isMobile ? '8px' : '14px',
+          flexShrink: 0,
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div
             style={{
-              width: '44px',
-              height: '44px',
+              width: isMobile ? '36px' : '44px',
+              height: isMobile ? '36px' : '44px',
               borderRadius: '14px',
               background: 'linear-gradient(135deg, var(--accent-primary) 0%, #EF4444 100%)',
               color: '#FFF',
@@ -51,22 +56,25 @@ export default function CommunityHubSection({
               alignItems: 'center',
               justifyContent: 'center',
               boxShadow: '0 6px 20px rgba(239, 68, 68, 0.3)',
+              flexShrink: 0,
             }}
           >
-            <Globe size={22} />
+            <Globe size={isMobile ? 18 : 22} />
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <h2 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: 'var(--text-main)' }}>
+              <h2 style={{ margin: 0, fontSize: isMobile ? '15px' : '18px', fontWeight: '800', color: 'var(--text-main)' }}>
                 Communauté & Troco Live
               </h2>
-              <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: '#10B981', color: '#FFF', padding: '2px 8px', borderRadius: '999px' }}>
+              <span style={{ fontSize: '9px', fontWeight: '800', backgroundColor: '#10B981', color: '#FFF', padding: '2px 7px', borderRadius: '999px' }}>
                 1,428 EN LIGNE
               </span>
             </div>
-            <p style={{ margin: '2px 0 0', fontSize: '12.5px', color: 'var(--text-secondary)' }}>
-              Événements en direct, entraide instantanée et salle de discussion mondiale.
-            </p>
+            {!isMobile && (
+              <p style={{ margin: '2px 0 0', fontSize: '12.5px', color: 'var(--text-secondary)' }}>
+                Événements en direct, entraide instantanée et salle de discussion mondiale.
+              </p>
+            )}
           </div>
         </div>
 
@@ -75,7 +83,7 @@ export default function CommunityHubSection({
           style={{
             display: 'flex',
             backgroundColor: 'var(--bg-subtle)',
-            padding: '4px',
+            padding: '3px',
             borderRadius: '999px',
             border: '1px solid var(--border-color)',
             alignSelf: isMobile ? 'stretch' : 'auto',
@@ -90,9 +98,9 @@ export default function CommunityHubSection({
               border: 'none',
               backgroundColor: subView === 'chat' ? 'var(--accent-primary)' : 'transparent',
               color: subView === 'chat' ? '#FFFFFF' : 'var(--text-secondary)',
-              padding: '8px 16px',
+              padding: isMobile ? '6px 12px' : '8px 16px',
               borderRadius: '999px',
-              fontSize: '12px',
+              fontSize: '11.5px',
               fontWeight: '800',
               cursor: 'pointer',
               display: 'flex',
@@ -103,8 +111,8 @@ export default function CommunityHubSection({
               boxShadow: subView === 'chat' ? 'var(--shadow-accent)' : 'none',
             }}
           >
-            <Zap size={14} />
-            <span>Chat Mondial (Live)</span>
+            <Zap size={13} />
+            <span>Chat Mondial</span>
           </button>
 
           <button
@@ -116,9 +124,9 @@ export default function CommunityHubSection({
               border: 'none',
               backgroundColor: subView === 'activity' ? 'var(--accent-primary)' : 'transparent',
               color: subView === 'activity' ? '#FFFFFF' : 'var(--text-secondary)',
-              padding: '8px 16px',
+              padding: isMobile ? '6px 12px' : '8px 16px',
               borderRadius: '999px',
-              fontSize: '12px',
+              fontSize: '11.5px',
               fontWeight: '800',
               cursor: 'pointer',
               display: 'flex',
@@ -129,7 +137,7 @@ export default function CommunityHubSection({
               boxShadow: subView === 'activity' ? 'var(--shadow-accent)' : 'none',
             }}
           >
-            <Activity size={14} />
+            <Activity size={13} />
             <span>Fil d'Activité</span>
           </button>
         </div>
@@ -137,7 +145,7 @@ export default function CommunityHubSection({
 
       {/* 2. CONTENU PRINCIPAL SELON LA VUE */}
       {subView === 'chat' ? (
-        <div style={{ height: isMobile ? 'calc(100dvh - 270px)' : 'calc(100vh - 250px)', minHeight: '460px', maxHeight: '720px' }}>
+        <div style={{ flex: 1, minHeight: 0, height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <GlobalLiveChat
             currentUser={currentUser}
             onOpenProfile={onOpenProfile}
@@ -146,11 +154,13 @@ export default function CommunityHubSection({
           />
         </div>
       ) : (
-        <CommunityActivityFeed
-          currentUser={currentUser}
-          onOpenProfile={onOpenProfile}
-          darkMode={darkMode}
-        />
+        <div style={{ flex: isMobile ? 1 : 'initial', minHeight: 0, overflowY: isMobile ? 'auto' : 'visible' }}>
+          <CommunityActivityFeed
+            currentUser={currentUser}
+            onOpenProfile={onOpenProfile}
+            darkMode={darkMode}
+          />
+        </div>
       )}
     </div>
   );
