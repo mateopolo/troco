@@ -22,6 +22,10 @@ import SponsoredFeedCard from './components/SponsoredFeedCard';
 import SectoralErrorBoundary from './components/SectoralErrorBoundary';
 import { AuthScreen } from './features';
 import { useWalletStore, useChatStore } from './stores';
+import { getCategoryLabel as getCategoryLabelUtil, formatStatus as formatStatusUtil, formatTokenCount as formatTokenCountUtil, formatCompensation as formatCompensationUtil } from './utils/formatters';
+import { generateTags } from './utils/tagGenerator';
+import FilterDrawer from './components/modals/FilterDrawer';
+import LanguageSelectModal from './components/modals/LanguageSelectModal';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useGSAP } from '@gsap/react';
@@ -102,14 +106,7 @@ export default function App() {
 
   const t = (key) => (translations[currentLang] && translations[currentLang][key]) || translations['FR'][key] || key;
 
-  const getCategoryLabel = (categoryKey) => {
-    if (categoryKey === 'Tous' || categoryKey === 'all') return t('all');
-    if (categoryKey === 'Cours/Compétences' || categoryKey === 'Cours & Compétences') return t('catSkills');
-    if (categoryKey === 'Outillage' || categoryKey === 'Prêt de Matériel') return t('catTools');
-    if (categoryKey === 'Services/Dépannage' || categoryKey === 'Services & Dépannage') return t('catServices');
-    if (categoryKey === 'Logement/Swap' || categoryKey === 'Logement & Stay Swap') return t('catHousing');
-    return categoryKey;
-  };
+  const getCategoryLabel = (categoryKey) => getCategoryLabelUtil(categoryKey, t);
 
   const getListingTitleTranslation = (title, targetLang) => {
     if (!title) return '';
@@ -120,16 +117,7 @@ export default function App() {
     return title;
   };
 
-  const formatStatus = (st) => {
-    if (st === 'Négociation en cours') return t('negotiationInProgress');
-    if (st === 'Deal Validé') return t('dealValidated');
-    if (st === 'À confirmer') return t('toConfirm');
-    if (st === 'Nouvelle discussion') return t('newDiscussion');
-    if (st === 'Clôturé' || st === 'Terminé' || st === 'Cloture' || st === 'Closed') return t('closed');
-    if (st === 'En cours' || st === 'In progress') return t('inProgress');
-    if (st === 'Planifié' || st === 'Planned') return t('planned');
-    return st;
-  };
+  const formatStatus = (st) => formatStatusUtil(st, t);
 
   const getChatMessageDisplayContent = (message, targetLang, forceOriginal = false) => {
     if (!message) return '';
@@ -256,17 +244,7 @@ export default function App() {
     return getInstantOrQueueTranslation(rawText, targetLang, 'auto');
   };
 
-  const formatTokenCount = (count, lang) => {
-    const c = Number(count) || 0;
-    if (lang === 'FR') return c <= 1 ? `${c} Jeton` : `${c} Jetons`;
-    if (lang === 'EN') return c <= 1 ? `${c} Token` : `${c} Tokens`;
-    if (lang === 'ES') return c <= 1 ? `${c} Ficha` : `${c} Fichas`;
-    if (lang === 'IT') return c <= 1 ? `${c} Gettone` : `${c} Gettoni`;
-    if (lang === 'DE') return c <= 1 ? `${c} Token` : `${c} Tokens`;
-    if (lang === 'JA') return `${c} トークン`;
-    if (lang === 'ZH') return `${c} 个代币`;
-    return c <= 1 ? `${c} Token` : `${c} Tokens`;
-  };
+  const formatTokenCount = (count, lang = currentLang) => formatTokenCountUtil(count, lang);
 
   const getBioTranslation = (bioText, targetLang, forceOriginal = false) => {
     if (!bioText || forceOriginal || targetLang === 'FR') return bioText;
@@ -343,174 +321,7 @@ export default function App() {
     return reviewMap[reviewText]?.[targetLang] || getInstantOrQueueTranslation(reviewText, targetLang, 'auto');
   };
 
-  const formatCompensation = (comp) => {
-    if (!comp) return '';
-
-    const knownCompMap = {
-      "15€ séance ou 1 Crédit": {
-        FR: "15€ / séance ou 1 Jeton",
-        EN: "€15 / session or 1 Token",
-        ES: "15€ / sesión o 1 Ficha",
-        IT: "15€ / sessione o 1 Gettone",
-        DE: "15€ / Sitzung oder 1 Token",
-        JA: "1セッション15ユーロまたは1トークン",
-        ZH: "每节15欧或1个代币"
-      },
-      "15€ séance ou 1 Jeton": {
-        FR: "15€ / séance ou 1 Jeton",
-        EN: "€15 / session or 1 Token",
-        ES: "15€ / sesión o 1 Ficha",
-        IT: "15€ / sessione o 1 Gettone",
-        DE: "15€ / Sitzung oder 1 Token",
-        JA: "1セッション15ユーロまたは1トークン",
-        ZH: "每节15欧或1个代币"
-      },
-      "15€ séance ou 1 Tokens": {
-        FR: "15€ / séance ou 1 Jeton",
-        EN: "€15 / session or 1 Token",
-        ES: "15€ / sesión o 1 Ficha",
-        IT: "15€ / sessione o 1 Gettone",
-        DE: "15€ / Sitzung oder 1 Token",
-        JA: "1セッション15ユーロまたは1トークン",
-        ZH: "每节15欧或1个代币"
-      },
-      "15€ séance ou 1 Fichas": {
-        FR: "15€ / séance ou 1 Jeton",
-        EN: "€15 / session or 1 Token",
-        ES: "15€ / sesión o 1 Ficha",
-        IT: "15€ / sessione o 1 Gettone",
-        DE: "15€ / Sitzung oder 1 Token",
-        JA: "1セッション15ユーロまたは1トークン",
-        ZH: "每节15欧或1个代币"
-      },
-      "Troc ou 5€ consommables": {
-        FR: "Troc ou 5€ consommables",
-        EN: "Swap or €5 consumables",
-        ES: "Trueque o 5€ consumibles",
-        IT: "Baratto o 5€ consumabili",
-        DE: "Tausch oder 5€ Verbrauchsmaterial",
-        JA: "物物交換または5ユーロ消耗品",
-        ZH: "易货或 5 欧易耗品"
-      },
-      "30€ ou 2 Jetons": {
-        FR: "30€ ou 2 Jetons",
-        EN: "€30 or 2 Tokens",
-        ES: "30€ o 2 Fichas",
-        IT: "30€ o 2 Gettoni",
-        DE: "30€ oder 2 Tokens",
-        JA: "30ユーロまたは2トークン",
-        ZH: "30欧或2个代币"
-      },
-      "1h = 1 Crédit temps (Visio)": {
-        FR: "1h = 1 Jeton temps (Visio)",
-        EN: "1h = 1 Time Token (Video)",
-        ES: "1h = 1 Ficha de tiempo (Visio)",
-        IT: "1ora = 1 Gettone tempo (Video)",
-        DE: "1 Std = 1 Zeit-Token (Video)",
-        JA: "1時間＝1タイムトークン（ビデオ）",
-        ZH: "1小时 = 1 时间代币（视频）"
-      },
-      "3 Crédits temps": {
-        FR: "3 Jetons temps",
-        EN: "3 Time Tokens",
-        ES: "3 Fichas de tiempo",
-        IT: "3 Gettoni tempo",
-        DE: "3 Zeit-Tokens",
-        JA: "3 タイムトークン",
-        ZH: "3 时间代币"
-      },
-      "3 Jetons temps": {
-        FR: "3 Jetons temps",
-        EN: "3 Time Tokens",
-        ES: "3 Fichas de tiempo",
-        IT: "3 Gettoni tempo",
-        DE: "3 Zeit-Tokens",
-        JA: "3 タイムトークン",
-        ZH: "3 时间代币"
-      },
-      "Troc direct + Caution 30€": {
-        FR: "Troc direct + Caution 30€",
-        EN: "Direct swap + €30 deposit",
-        ES: "Trueque directo + Fianza 30€",
-        IT: "Baratto diretto + Deposito 30€",
-        DE: "Direkter Tausch + 30€ Kaution",
-        JA: "直接交換＋30ユーロ保証金",
-        ZH: "直接易货 + 30欧押金"
-      },
-      "Intervention locale / batterie ou écran": {
-        FR: "Intervention locale / batterie ou écran",
-        EN: "Local repair / battery or screen",
-        ES: "Intervención local / batería o pantalla",
-        IT: "Intervento locale / batteria o schermo",
-        DE: "Reparatur vor Ort / Akku oder Display",
-        JA: "現地サポート／バッテリーまたは画面",
-        ZH: "现场服务 / 电池或屏幕"
-      },
-      "2 séances de 45 min en visio contre 2 Crédits temps (remboursables si indisponibilité).": {
-        FR: "2 séances de 45 min en visio contre 2 Jetons temps (remboursables si indisponibilité).",
-        EN: "2 x 45 min video sessions for 2 Time Tokens (refundable if unavailable).",
-        ES: "2 sesiones de 45 min en visio por 2 Fichas de tiempo (reembolsables si hay indisponibilidad).",
-        IT: "2 sessioni da 45 min in video per 2 Gettoni tempo (rimborsabili in caso di indisponibilità).",
-        DE: "2 x 45 Min. Video-Sitzungen für 2 Zeit-Tokens (rückerstattbar bei Verfügbarkeitsproblemen).",
-        JA: "45分間のビデオセッション2回（2タイムトークン、利用不可の場合は返金可）。",
-        ZH: "2次45分钟视频课程，兑换2个时间代币（不可用时可退款）。"
-      },
-      "2h = 2 Jetons": {
-        FR: "2h = 2 Jetons",
-        EN: "2h = 2 Tokens",
-        ES: "2h = 2 Fichas",
-        IT: "2h = 2 Gettoni",
-        DE: "2 Std = 2 Tokens",
-        JA: "2時間＝2トークン",
-        ZH: "2小时 = 2 代币"
-      },
-      "1 session = 1 Jeton": {
-        FR: "1 session = 1 Jeton",
-        EN: "1 session = 1 Token",
-        ES: "1 sesión = 1 Ficha",
-        IT: "1 sessione = 1 Gettone",
-        DE: "1 Sitzung = 1 Token",
-        JA: "1セッション＝1トークン",
-        ZH: "1次课程 = 1 代币"
-      },
-      "2 Jetons ou 35$": {
-        FR: "2 Jetons ou 35$",
-        EN: "2 Tokens or $35",
-        ES: "2 Fichas o 35$",
-        IT: "2 Gettoni o 35$",
-        DE: "2 Tokens oder 35$",
-        JA: "2トークンまたは35ドル",
-        ZH: "2个代币或35美元"
-      },
-      "Échange direct / Swap": {
-        FR: "Échange direct / Swap",
-        EN: "Direct Exchange / Swap",
-        ES: "Intercambio directo / Trueque",
-        IT: "Scambio diretto / Baratto",
-        DE: "Direkttausch",
-        JA: "直接交換／スワップ",
-        ZH: "直接交换 / 互换"
-      }
-    };
-
-    if (knownCompMap[comp] && knownCompMap[comp][currentLang]) {
-      return knownCompMap[comp][currentLang];
-    }
-
-    let res = comp;
-    const tokenWord = t('tokens');
-    res = res.replace(/\b(Jetons?|Crédits?|Tokens?|Fichas?|Gettoni?)\b/gi, tokenWord);
-    if (res.includes('Échange direct') || res.includes('Swap')) {
-      res = res.replace(/Échange direct \/ Swap|Échange direct|Swap/gi, t('exchange'));
-    }
-    if (currentLang === 'ES') res = res.replace(/\btemps\b/gi, 'de tiempo');
-    else if (currentLang === 'EN') res = res.replace(/\btemps\b/gi, 'time');
-    else if (currentLang === 'IT') res = res.replace(/\btemps\b/gi, 'tempo');
-    else if (currentLang === 'DE') res = res.replace(/\btemps\b/gi, 'Zeit');
-    else if (currentLang === 'JA') res = res.replace(/\btemps\b/gi, '時間');
-    else if (currentLang === 'ZH') res = res.replace(/\btemps\b/gi, '时间');
-    return res;
-  };
+  const formatCompensation = (comp) => formatCompensationUtil(comp, currentLang, t);
   const [showingOriginalListings, setShowingOriginalListings] = useState({});
   const [showingOriginalMessages, setShowingOriginalMessages] = useState({});
   const [showingOriginalBio, setShowingOriginalBio] = useState(false);
@@ -2692,30 +2503,6 @@ export default function App() {
     return getSuggestedImage(title, category) || fallbackCategoryImages.default;
   };
 
-  // ---- TAGS AUTOMATIQUES ----
-  const generateTags = (title = '', description = '') => {
-    const text = `${title} ${description}`.toLowerCase();
-    const tags = [];
-    const rules = [
-      { re: /(cours|leçon|lecon|coaching|formation|apprendre|séance|seance|niveau)/, tag: 'Cours' },
-      { re: /(piano|guitare|musique|beatmaking|ableton|solfège|production|chant)/, tag: 'Musique' },
-      { re: /(cuisine|pâtisserie|patisserie|pizza|recette|robot pâtissier)/, tag: 'Cuisine' },
-      { re: /(perceuse|outil|outillage|bricolage|forets|nettoyeur|jardinage|tondeuse)/, tag: 'Bricolage' },
-      { re: /(iphone|smartphone|écran|ecran|réparation|reparation|panne|dépannage)/, tag: 'Dépannage' },
-      { re: /(appartement|maison|logement|échange|echange|swap|chalet|studio|séjour|sejour)/, tag: 'Logement' },
-      { re: /(python|code|informatique|développement|developpement|script|données|data)/, tag: 'Tech' },
-      { re: /(vélo|velo|sport|musculation|yoga|posture|fitness)/, tag: 'Sport & Bien-être' },
-      { re: /(chien|animal|garde)/, tag: 'Animaux' },
-      { re: /(photo|camera|vidéo|video|montage|objectif)/, tag: 'Photo & Vidéo' },
-      { re: /(visio|distance|en ligne|monde)/, tag: 'À distance' },
-      { re: /(urgence|urgent|ce soir|aujourd|rapide|problème|probleme)/, tag: 'Urgent' },
-    ];
-    rules.forEach(rule => {
-      if (rule.re.test(text) && !tags.includes(rule.tag)) tags.push(rule.tag);
-    });
-    if (tags.length === 0) tags.push('Échange');
-    return tags.slice(0, 4);
-  };
 
   // ---- HISTORIQUE DES SWAPS & DEALS ----
   const statusStyles = {
@@ -5022,208 +4809,38 @@ export default function App() {
 
 
 
-      {isLangModalOpen && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(61,53,48,0.7)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', zIndex: 65 }}>
-          <div style={{ backgroundColor: darkMode ? '#231E1B' : '#FAF7F2', backdropFilter: 'blur(24px) saturate(180%)', WebkitBackdropFilter: 'blur(24px) saturate(180%)', borderRadius: '24px', width: '100%', maxWidth: '380px', padding: '24px', boxShadow: '0 24px 60px rgba(61,53,48,0.25)', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', position: 'relative' }}>
-            <button onClick={() => setIsLangModalOpen(false)} style={{ position: 'absolute', top: '16px', right: '16px', border: 'none', backgroundColor: darkMode ? 'rgba(232,221,211,0.1)' : '#F5EAE4', width: '34px', height: '34px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
-              <X size={16} />
-            </button>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', color: '#C67D5B' }}>
-              <Globe size={20} />
-              <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{t('selectLanguage')}</h3>
-            </div>
-            <p style={{ fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', margin: '0 0 16px', lineHeight: 1.5 }}>
-              L'interface et les annonces seront instantanément traduites dans la langue choisie.
-            </p>
+      <LanguageSelectModal
+        isOpen={isLangModalOpen}
+        onClose={() => setIsLangModalOpen(false)}
+        currentLang={currentLang}
+        onSelectLanguage={(code) => {
+          setCurrentLang(code);
+          setIsLangModalOpen(false);
+        }}
+        darkMode={darkMode}
+        t={t}
+      />
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {[
-                { code: 'FR', label: 'Français', flag: '🇫🇷' },
-                { code: 'EN', label: 'English', flag: '🇬🇧' },
-                { code: 'ES', label: 'Español', flag: '🇪🇸' },
-                { code: 'IT', label: 'Italiano', flag: '🇮🇹' },
-                { code: 'DE', label: 'Deutsch', flag: '🇩🇪' },
-                { code: 'JA', label: '日本語', flag: '🇯🇵' },
-                { code: 'ZH', label: '中文', flag: '🇨🇳' },
-              ].map(lang => (
-                <button
-                  key={lang.code}
-                  onClick={() => { setCurrentLang(lang.code); setIsLangModalOpen(false); }}
-                  className="premium-button"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '12px 16px',
-                    borderRadius: '14px',
-                    border: currentLang === lang.code ? '2px solid #C67D5B' : (darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3'),
-                    backgroundColor: currentLang === lang.code ? (darkMode ? 'rgba(198,125,91,0.25)' : '#F5EAE4') : (darkMode ? '#1A1715' : '#FAF7F2'),
-                    cursor: 'pointer',
-                    color: currentLang === lang.code ? (darkMode ? '#FAF7F2' : '#A8644A') : (darkMode ? '#D4C5B5' : '#3D3530'),
-                    fontWeight: currentLang === lang.code ? '800' : '600',
-                    fontSize: '13px'
-                  }}
-                >
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ fontSize: '18px' }}>{lang.flag}</span>
-                    <span>{lang.label}</span>
-                  </span>
-                  {currentLang === lang.code && <CheckCircle size={16} color="#C67D5B" />}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {isFilterDrawerOpen && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(61,53,48,0.6)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', zIndex: 55, display: 'flex', justifyContent: 'flex-end' }}>
-          <div style={{ width: '100%', maxWidth: '360px', height: '100%', backgroundColor: darkMode ? '#231E1B' : '#FAF7F2', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', padding: '20px', boxShadow: '-12px 0 40px rgba(0,0,0,0.25)', overflowY: 'auto', borderLeft: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{t('filtersTitle')}</h3>
-              <button onClick={() => setIsFilterDrawerOpen(false)} style={{ border: 'none', background: darkMode ? 'rgba(255,255,255,0.08)' : '#E8DDD3', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: darkMode ? '#FFF' : '#3D3530' }}><X size={16} /></button>
-            </div>
-            <div style={{ padding: '10px 14px', borderRadius: '14px', backgroundColor: darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', color: darkMode ? '#FAF7F2' : '#A8644A', fontSize: '12px', fontWeight: '800', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Sparkles size={16} />
-              <span>
-                {isInfiniteRadius || radiusKm >= 100
-                  ? `🎉 ${filteredListings.length} annonces au total (Mode Infini & Visio)`
-                  : `📍 ${filteredListings.length} annonce${filteredListings.length > 1 ? 's' : ''} disponible${filteredListings.length > 1 ? 's' : ''} dans ${radiusKm} km`}
-              </span>
-            </div>
-            {/* GEOLOCALISATION SILENCIEUSE GEOPRIVACY BOUTON */}
-            <div style={{ marginBottom: '14px' }}>
-              <button
-                onClick={handleRequestGeolocation}
-                disabled={isGeolocating}
-                className="premium-button"
-                style={{
-                  width: '100%',
-                  border: isGeolocated ? '1px solid #9CAF88' : (darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #E8DDD3'),
-                  backgroundColor: isGeolocated ? (darkMode ? 'rgba(156,175,136,0.25)' : '#EBF0E6') : (darkMode ? '#1A1715' : '#F5F0E8'),
-                  color: isGeolocated ? '#3D4A35' : (darkMode ? '#FAF7F2' : '#3D3530'),
-                  padding: '10px 14px',
-                  borderRadius: '14px',
-                  fontSize: '12px',
-                  fontWeight: '800',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px'
-                }}
-              >
-                <MapPin size={15} color={isGeolocated ? '#9CAF88' : '#C67D5B'} />
-                {isGeolocating ? 'Localisation...' : isGeolocated ? '📍 Position sécurisée active' : t('useMyLocation')}
-              </button>
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-              <label style={{ fontSize: '12px', fontWeight: '700', color: darkMode ? '#D4C5B5' : '#3D3530' }}>{t('searchRadius')}</label>
-              <button
-                onClick={() => setIsInfiniteRadius(prev => !prev)}
-                style={{
-                  border: isInfiniteRadius || radiusKm >= 2000 ? '1px solid #C67D5B' : (darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #E8DDD3'),
-                  backgroundColor: isInfiniteRadius || radiusKm >= 2000 ? (darkMode ? 'rgba(198,125,91,0.25)' : '#F5EAE4') : (darkMode ? '#1A1715' : '#FAF7F2'),
-                  color: isInfiniteRadius || radiusKm >= 2000 ? (darkMode ? '#FAF7F2' : '#A8644A') : (darkMode ? '#D4C5B5' : '#6B5E54'),
-                  borderRadius: '999px',
-                  padding: '4px 10px',
-                  fontSize: '11px',
-                  fontWeight: '800',
-                  cursor: 'pointer'
-                }}
-              >
-                {t('infiniteWorld')}
-              </button>
-            </div>
-            <input
-              type="range"
-              min="5"
-              max="2000"
-              step="5"
-              value={isInfiniteRadius ? 2000 : radiusKm}
-              onChange={(e) => {
-                const val = Number(e.target.value);
-                setRadiusKm(val);
-                if (val >= 2000) {
-                  setIsInfiniteRadius(true);
-                } else {
-                  setIsInfiniteRadius(false);
-                }
-              }}
-              style={{
-                width: '100%',
-                marginTop: '4px',
-                accentColor: '#C67D5B',
-                background: `linear-gradient(to right, #C67D5B 0%, #C67D5B ${(isInfiniteRadius ? 2000 : radiusKm) / 2000 * 100}%, ${darkMode ? '#3D3530' : '#E8DDD3'} ${(isInfiniteRadius ? 2000 : radiusKm) / 2000 * 100}%, ${darkMode ? '#3D3530' : '#E8DDD3'} 100%)`
-              }}
-            />
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-              <div style={{ fontSize: '12px', color: darkMode ? '#FAF7F2' : '#3D3530', fontWeight: '800' }}>
-                {isInfiniteRadius || radiusKm >= 2000 ? '♾️ Infini (Monde entier)' : `📍 Jusqu'à ${radiusKm} km`}
-              </div>
-              <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                {[5, 25, 100, 500, 2000].map(preset => (
-                  <button
-                    key={preset}
-                    onClick={() => { setRadiusKm(preset); setIsInfiniteRadius(preset >= 2000); }}
-                    style={{
-                      border: !isInfiniteRadius && radiusKm === preset ? '1px solid #C67D5B' : (darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3'),
-                      backgroundColor: !isInfiniteRadius && radiusKm === preset ? (darkMode ? 'rgba(198,125,91,0.25)' : '#F5EAE4') : (darkMode ? '#1A1715' : '#FAF7F2'),
-                      color: !isInfiniteRadius && radiusKm === preset ? (darkMode ? '#FAF7F2' : '#A8644A') : (darkMode ? '#D4C5B5' : '#6B5E54'),
-                      borderRadius: '8px',
-                      padding: '3px 7px',
-                      fontSize: '10px',
-                      fontWeight: '700',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    {preset >= 2000 ? 'Monde' : `${preset}km`}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <label style={{ fontSize: '12px', fontWeight: '700', color: darkMode ? '#D4C5B5' : '#3D3530' }}>{t('languages') || 'Langues'}</label>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px', marginBottom: '12px' }}>
-              {[
-                { code: 'FR', label: '🇫🇷 FR' },
-                { code: 'EN', label: '🇬🇧 EN' },
-                { code: 'ES', label: '🇪🇸 ES' },
-                { code: 'IT', label: '🇮🇹 IT' },
-                { code: 'DE', label: '🇩🇪 DE' },
-                { code: 'JA', label: '🇯🇵 JA' },
-                { code: 'ZH', label: '🇨🇳 ZH' }
-              ].map(({ code, label }) => (
-                <button
-                  key={code}
-                  onClick={() => toggleLanguageFilter(code)}
-                  style={{
-                    border: selectedLanguages.includes(code) ? '1px solid #C67D5B' : (darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3'),
-                    backgroundColor: selectedLanguages.includes(code) ? (darkMode ? 'rgba(198,125,91,0.25)' : '#F5EAE4') : (darkMode ? '#1A1715' : '#FAF7F2'),
-                    color: selectedLanguages.includes(code) ? (darkMode ? '#FAF7F2' : '#A8644A') : (darkMode ? '#D4C5B5' : '#6B5E54'),
-                    borderRadius: '999px',
-                    padding: '6px 12px',
-                    fontSize: '12px',
-                    fontWeight: '700',
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px'
-                  }}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-            <label style={{ fontSize: '12px', fontWeight: '700', color: darkMode ? '#D4C5B5' : '#3D3530' }}>Rétribution</label>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
-              {paymentOptions.map(option => (
-                <button key={option} onClick={() => setSelectedPayment(option)} style={{ border: selectedPayment === option ? '1px solid #C67D5B' : (darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3'), backgroundColor: selectedPayment === option ? (darkMode ? 'rgba(198,125,91,0.25)' : '#F5EAE4') : (darkMode ? '#1A1715' : '#FAF7F2'), color: selectedPayment === option ? (darkMode ? '#FAF7F2' : '#A8644A') : (darkMode ? '#D4C5B5' : '#6B5E54'), borderRadius: '999px', padding: '6px 10px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>{paymentLabels[option]}</button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+      <FilterDrawer
+        isOpen={isFilterDrawerOpen}
+        onClose={() => setIsFilterDrawerOpen(false)}
+        filteredListingsCount={filteredListings.length}
+        isInfiniteRadius={isInfiniteRadius}
+        setIsInfiniteRadius={setIsInfiniteRadius}
+        radiusKm={radiusKm}
+        setRadiusKm={setRadiusKm}
+        handleRequestGeolocation={handleRequestGeolocation}
+        isGeolocating={isGeolocating}
+        isGeolocated={isGeolocated}
+        selectedLanguages={selectedLanguages}
+        toggleLanguageFilter={toggleLanguageFilter}
+        selectedPayment={selectedPayment}
+        setSelectedPayment={setSelectedPayment}
+        paymentOptions={paymentOptions}
+        paymentLabels={paymentLabels}
+        darkMode={darkMode}
+        t={t}
+      />
 
       {isCategoryModalOpen && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(61,53,48,0.65)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', zIndex: 100005 }}>
