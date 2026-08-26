@@ -12,7 +12,8 @@ import { mockListings } from './data/mockData';
 import { subscribeTranslations } from './utils/translator';
 import { playApplePaySound, playBetclicBalanceSound, playWelcomeGiftFanfare } from './utils/audioService';
 import { useChatManager } from './hooks/useChatManager';
-import { AnimatedEuroBalance, AnimatedTokenBalance } from './components/AnimatedBalances';
+import { AppHeader, AppBottomNav } from './components/layout';
+import { themeMedia, fallbackCategoryImages, getSuggestedMedia, getSuggestedImage, getFallbackImage } from './utils/mediaHelpers';
 import FeedCardItem from './components/FeedCardItem';
 import { generateInvoiceRef } from './components/InvoiceCalculator';
 import TrocoLogo3D from './components/common/TrocoLogo3D';
@@ -182,8 +183,6 @@ export default function App() {
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState('list');
 
-  const bottomNavRef = useRef(null);
-
   const switchTab = useCallback((newTab) => {
     setActiveTab(newTab);
     if (newTab !== 'chat') {
@@ -192,62 +191,7 @@ export default function App() {
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
       try { navigator.vibrate(10); } catch (_) { }
     }
-  }, []);
-
-  // Navigation "Scrubbing" iOS stricte sur la barre de navigation inférieure
-  useEffect(() => {
-    const navEl = bottomNavRef.current;
-    if (!navEl) return;
-
-    let isTouchingNav = false;
-
-    const handleTouchStart = (e) => {
-      if (!e.touches || e.touches.length === 0) return;
-      isTouchingNav = true;
-      const touch = e.touches[0];
-      const targetEl = document.elementFromPoint(touch.clientX, touch.clientY);
-      const tabBtn = targetEl?.closest?.('[data-tab]');
-      if (tabBtn) {
-        const targetTab = tabBtn.getAttribute('data-tab');
-        if (targetTab && targetTab !== activeTab) {
-          switchTab(targetTab);
-        }
-      }
-    };
-
-    const handleTouchMove = (e) => {
-      if (!isTouchingNav || !e.touches || e.touches.length === 0) return;
-      if (e.cancelable) e.preventDefault();
-      const touch = e.touches[0];
-      const targetEl = document.elementFromPoint(touch.clientX, touch.clientY);
-      const tabBtn = targetEl?.closest?.('[data-tab]');
-      if (tabBtn) {
-        const targetTab = tabBtn.getAttribute('data-tab');
-        if (targetTab && targetTab !== activeTab) {
-          switchTab(targetTab);
-          if (typeof navigator !== 'undefined' && navigator.vibrate) {
-            try { navigator.vibrate(10); } catch (_) { }
-          }
-        }
-      }
-    };
-
-    const handleTouchEnd = () => {
-      isTouchingNav = false;
-    };
-
-    navEl.addEventListener('touchstart', handleTouchStart, { passive: true });
-    navEl.addEventListener('touchmove', handleTouchMove, { passive: false });
-    navEl.addEventListener('touchend', handleTouchEnd, { passive: true });
-    navEl.addEventListener('touchcancel', handleTouchEnd, { passive: true });
-
-    return () => {
-      navEl.removeEventListener('touchstart', handleTouchStart);
-      navEl.removeEventListener('touchmove', handleTouchMove);
-      navEl.removeEventListener('touchend', handleTouchEnd);
-      navEl.removeEventListener('touchcancel', handleTouchEnd);
-    };
-  }, [activeTab, switchTab]);
+  }, [setActiveTab, setSelectedChat]);
 
   const TAB_ORDER = useMemo(() => ({ feed: 0, community: 1, chat: 2, post: 3, profile: 4, admin: 5 }), []);
   const prevTabRef = useRef(activeTab);
@@ -1172,17 +1116,6 @@ export default function App() {
     movedDistance: 0,
   });
 
-  // Condensation et élévation du header supérieur au défilement (Micro-interactions)
-  const [isScrolled, setIsScrolled] = useState(false);
-  useEffect(() => {
-    const handleScroll = () => {
-      const scrolled = window.scrollY > 40;
-      setIsScrolled(prev => prev !== scrolled ? scrolled : prev);
-    };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
   const [isSettlementModalOpen, setIsSettlementModalOpen] = useState(false);
   const [settlementCallDuration, setSettlementCallDuration] = useState(0);
   const prevActiveRef = useRef(false);
@@ -1476,264 +1409,6 @@ export default function App() {
     const lngOffset = (dist / (111 * Math.cos(48.8566 * Math.PI / 180))) * Math.sin(angle);
     return [48.8566 + latOffset, 2.3522 + lngOffset];
   };
-
-  // ---- BIBLIOTHÈQUE DE MÉDIAS INTELLIGENTS & GARANTIS (PHOTOS & VIDÉOS MP4 SANS DOUBLONS) ----
-  const themeMedia = {
-    camping: {
-      images: [
-        'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1510312305653-8ed496efae75?auto=format&fit=crop&w=800&q=80',
-      ],
-      videos: ['https://assets.mixkit.co/videos/preview/mixkit-drone-view-of-a-harbor-41588-large.mp4'],
-    },
-    surf: {
-      images: [
-        'https://images.unsplash.com/photo-1502680390469-be75c86b636f?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1455729552865-3ef5885ab656?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1509114397022-ed747cca3f65?auto=format&fit=crop&w=800&q=80',
-      ],
-      videos: ['https://assets.mixkit.co/videos/preview/mixkit-man-riding-a-bicycle-in-the-city-41376-large.mp4'],
-    },
-    piano: {
-      images: [
-        'https://images.unsplash.com/photo-1520523839897-bd0b52f945a0?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1516280440614-37939bbacd81?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1552422535-c45813c61732?auto=format&fit=crop&w=800&q=80',
-      ],
-      videos: ['https://assets.mixkit.co/videos/preview/mixkit-playing-a-grand-piano-close-up-41589-large.mp4'],
-    },
-    guitare: {
-      images: [
-        'https://images.unsplash.com/photo-1510915361894-db8b60106cb1?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1525201548942-d8732f6617a0?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1564186763535-ebb21ef5277f?auto=format&fit=crop&w=800&q=80',
-      ],
-      videos: ['https://assets.mixkit.co/videos/preview/mixkit-playing-a-grand-piano-close-up-41589-large.mp4'],
-    },
-    ikea: {
-      images: [
-        'https://images.unsplash.com/photo-1538688525198-9b88f6f53126?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=800&q=80',
-      ],
-      videos: ['https://assets.mixkit.co/videos/preview/mixkit-man-working-with-a-drill-in-a-workshop-43285-large.mp4'],
-    },
-    drone: {
-      images: [
-        'https://images.unsplash.com/photo-1508614589041-895b88991e3e?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1527977966376-1c8408f9f108?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1507582020474-9a35b7d455d9?auto=format&fit=crop&w=800&q=80',
-      ],
-      videos: ['https://assets.mixkit.co/videos/preview/mixkit-drone-view-of-a-harbor-41588-large.mp4'],
-    },
-    iphone: {
-      images: [
-        'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1580910051074-3eb694886505?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1565849904461-04a58ad377e0?auto=format&fit=crop&w=800&q=80',
-      ],
-      videos: ['https://assets.mixkit.co/videos/preview/mixkit-hands-typing-on-a-laptop-keyboard-41380-large.mp4'],
-    },
-    cuisine: {
-      images: [
-        'https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=800&q=80',
-      ],
-      videos: ['https://assets.mixkit.co/videos/preview/mixkit-chef-preparing-a-dish-in-a-restaurant-kitchen-42795-large.mp4'],
-    },
-    musique: {
-      images: [
-        'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1526142684086-7ebd69df27a5?auto=format&fit=crop&w=800&q=80',
-      ],
-      videos: ['https://assets.mixkit.co/videos/preview/mixkit-playing-a-grand-piano-close-up-41589-large.mp4'],
-    },
-    photo: {
-      images: [
-        'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1452696193712-6cabf5103b63?auto=format&fit=crop&w=800&q=80',
-      ],
-      videos: ['https://assets.mixkit.co/videos/preview/mixkit-camera-lens-zooming-in-and-out-41381-large.mp4'],
-    },
-    bricolage: {
-      images: [
-        'https://images.unsplash.com/photo-1581092160562-40aa08e78837?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1530124566582-a618bc2615dc?auto=format&fit=crop&w=800&q=80',
-      ],
-      videos: ['https://assets.mixkit.co/videos/preview/mixkit-man-working-with-a-drill-in-a-workshop-43285-large.mp4'],
-    },
-    tech: {
-      images: [
-        'https://images.unsplash.com/photo-1515879218367-8466d910aaa4?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=800&q=80',
-      ],
-      videos: ['https://assets.mixkit.co/videos/preview/mixkit-hands-typing-on-a-laptop-keyboard-41380-large.mp4'],
-    },
-    logement: {
-      images: [
-        'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=800&q=80',
-      ],
-      videos: ['https://assets.mixkit.co/videos/preview/mixkit-cozy-living-room-with-a-fireplace-41385-large.mp4'],
-    },
-    montagne: {
-      images: [
-        'https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=800&q=80',
-      ],
-      videos: ['https://assets.mixkit.co/videos/preview/mixkit-cozy-living-room-with-a-fireplace-41385-large.mp4'],
-    },
-    sport: {
-      images: [
-        'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1526506118085-60ce8714f8c5?auto=format&fit=crop&w=800&q=80',
-      ],
-      videos: ['https://assets.mixkit.co/videos/preview/mixkit-man-training-in-a-gym-41372-large.mp4'],
-    },
-    yoga: {
-      images: [
-        'https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1545205597-3d9d02c29597?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1575052814086-f385e2e2ad1b?auto=format&fit=crop&w=800&q=80',
-      ],
-      videos: ['https://assets.mixkit.co/videos/preview/mixkit-woman-doing-yoga-on-a-mat-41595-large.mp4'],
-    },
-    animaux: {
-      images: [
-        'https://images.unsplash.com/photo-1517849845537-4d257902454a?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1477884213360-7e9d7dcc1e48?auto=format&fit=crop&w=800&q=80',
-      ],
-      videos: ['https://assets.mixkit.co/videos/preview/mixkit-dog-running-in-a-park-41370-large.mp4'],
-    },
-    velo: {
-      images: [
-        'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1571068316344-75bc76f77890?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1507035895480-2b3156c31fc8?auto=format&fit=crop&w=800&q=80',
-      ],
-      videos: ['https://assets.mixkit.co/videos/preview/mixkit-man-riding-a-bicycle-in-the-city-41376-large.mp4'],
-    },
-    jardin: {
-      images: [
-        'https://images.unsplash.com/photo-1466692476868-aef1dfb1e735?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1561215186-f8d5f62c23c5?auto=format&fit=crop&w=800&q=80',
-      ],
-      videos: ['https://assets.mixkit.co/videos/preview/mixkit-gardener-watering-plants-in-a-greenhouse-41390-large.mp4'],
-    },
-    langue: {
-      images: [
-        'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=800&q=80',
-      ],
-      videos: ['https://assets.mixkit.co/videos/preview/mixkit-hands-typing-on-a-laptop-keyboard-41380-large.mp4'],
-    },
-    etude: {
-      images: [
-        'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=800&q=80',
-      ],
-      videos: ['https://assets.mixkit.co/videos/preview/mixkit-hands-typing-on-a-laptop-keyboard-41380-large.mp4'],
-    },
-    remorque: {
-      images: [
-        'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=800&q=80',
-      ],
-      videos: ['https://assets.mixkit.co/videos/preview/mixkit-man-working-with-a-drill-in-a-workshop-43285-large.mp4'],
-    },
-    default: {
-      images: [
-        'https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=800&q=80',
-        'https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?auto=format&fit=crop&w=800&q=80',
-      ],
-      videos: ['https://assets.mixkit.co/videos/preview/mixkit-hands-typing-on-a-laptop-keyboard-41380-large.mp4'],
-    },
-  };
-
-  const getSuggestedMedia = (title = '', description = '', userImage = '', userVideo = '') => {
-    const text = `${title} ${description}`.toLowerCase();
-    let themeKey = 'default';
-
-    if (/(camping|tente|sac de couchage|bivouac)/.test(text)) themeKey = 'camping';
-    else if (/(surf|planche de surf|vague|océan|ocean)/.test(text)) themeKey = 'surf';
-    else if (/(piano|solfège|solfege|partition|piano à queue)/.test(text)) themeKey = 'piano';
-    else if (/(guitare|guitare acoustique|rock|chanson|guitare électrique)/.test(text)) themeKey = 'guitare';
-    else if (/(ikea|montage meuble|étagère|etagere|armoire|meuble flat)/.test(text)) themeKey = 'ikea';
-    else if (/(drone|quadcopter|dji|vol aérien|vol aerien)/.test(text)) themeKey = 'drone';
-    else if (/(iphone|réparation iphone|reparation iphone|écran iphone|ecran iphone)/.test(text)) themeKey = 'iphone';
-    else if (/(pizza|cuisine|pâtisserie|patisserie|pâte|pate|recette|robot pâtissier|robot patissier|chef|bière|biere|brassage)/.test(text)) themeKey = 'cuisine';
-    else if (/(musique|beatmaking|ableton|production musicale|chant|violon|batterie|studio)/.test(text)) themeKey = 'musique';
-    else if (/(photo|camera|appareil photo|objectif|montage vidéo|cinéma)/.test(text)) themeKey = 'photo';
-    else if (/(plomberie|perceuse|marteau|bricolage|électrique|electricite|nettoyeur|kärcher|karcher|ponceuse|escabeau)/.test(text)) themeKey = 'bricolage';
-    else if (/(smartphone|écran cassé|ecran casse|electronique|ordinateur|macbook|pc|python|code|informatique|développement|developpement|script|data|ux|ui|figma|seo|wordpress)/.test(text)) themeKey = 'tech';
-    else if (/(appartement|maison|logement|échange|echange|swap|chalet|studio|vacances|weekend|soho|villa|sejour|séjour)/.test(text)) themeKey = /(chalet|montagne|savoie|alpes)/.test(text) ? 'montagne' : 'logement';
-    else if (/(musculation|coaching sportif|fitness|cardio|entraînement|entrainement|remise en forme|marathon|boxe|running)/.test(text)) themeKey = 'sport';
-    else if (/(yoga|posture|mobilité|mobilite|méditation|meditation|souplesse|pilates)/.test(text)) themeKey = 'yoga';
-    else if (/(chien|animal|garde de chien|chat|pets)/.test(text)) themeKey = 'animaux';
-    else if (/(vélo|velo|cyclisme|bicyclette|piste cyclable|vélos)/.test(text)) themeKey = 'velo';
-    else if (/(jardin|jardinage|tondeuse|haie|plantes|pelouse)/.test(text)) themeKey = 'jardin';
-    else if (/(anglais|espagnol|japonais|allemand|chinois|arabe|fle|langue étrangère|cours de langues|conversationnel)/.test(text)) themeKey = 'langue';
-    else if (/(math|maths|révision|revision|examen|scolaire|lycée|lycee|étudiant|etudiant|bac|brevet)/.test(text)) themeKey = 'etude';
-    else if (/(remorque|déménagement|demenagement|transport|utilitaire)/.test(text)) themeKey = 'remorque';
-
-    const itemTheme = themeMedia[themeKey] || themeMedia.default;
-
-    // RÈGLE : si l'utilisateur a fourni sa propre image, galerie = ses images UNIQUEMENT.
-    // Les Unsplash ne servent que de fallback unique quand aucune image n'est fournie.
-    const hasUserImage = userImage && typeof userImage === 'string' && userImage.trim() !== '';
-
-    let uniqueImages;
-    if (hasUserImage) {
-      uniqueImages = [userImage];
-    } else {
-      const fallbackImg = (itemTheme.images && itemTheme.images[0]) || defaultPostDraft.image;
-      uniqueImages = [fallbackImg];
-    }
-
-    const mainImage = uniqueImages[0] || defaultPostDraft.image;
-    const chosenVideo = userVideo && userVideo.trim() ? userVideo : (itemTheme.videos?.[0] || '');
-
-    return {
-      image: mainImage,
-      video: chosenVideo,
-      gallery: uniqueImages,
-    };
-  };
-
-  const getSuggestedImage = (title = '', description = '', fallback = defaultPostDraft.image) => {
-    return getSuggestedMedia(title, description, fallback).image;
-  };
-
-  const fallbackCategoryImages = {
-    'Cours & Compétences': 'https://images.unsplash.com/photo-1516280440614-37939bbacd81?auto=format&fit=crop&w=800&q=80',
-    'Prêt de Matériel': 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?auto=format&fit=crop&w=800&q=80',
-    'Services & Dépannage': 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=800&q=80',
-    'Logement & Stay Swap': 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=800&q=80',
-    'Tech': 'https://images.unsplash.com/photo-1515879218367-8466d910aaa4?auto=format&fit=crop&w=800&q=80',
-    'Bien-être': 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=800&q=80',
-    default: 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=800&q=80',
-  };
-
-  const getFallbackImage = (category = '', title = '') => {
-    if (fallbackCategoryImages[category]) return fallbackCategoryImages[category];
-    return getSuggestedImage(title, category) || fallbackCategoryImages.default;
-  };
-
 
   const isAdmin = profile?.email === 'mateopolo91@gmail.com' || auth.currentUser?.email === 'mateopolo91@gmail.com' || profile?.role === 'admin';
   const userSwapHistory = Array.isArray(profile?.swapHistory) ? profile.swapHistory : [];
@@ -2625,50 +2300,24 @@ export default function App() {
       `}</style>
 
       {/* HEADER FIXE GLASSMORPHISM FLUIDE AVEC CONDENSATION AU SCROLL */}
-      <header style={{
-        display: (isMobile && activeTab === 'chat' && selectedChat) ? 'none' : 'block',
-        backgroundColor: 'var(--bg-glass)',
-        backdropFilter: isScrolled ? 'blur(28px) saturate(200%)' : 'blur(20px) saturate(180%)',
-        WebkitBackdropFilter: isScrolled ? 'blur(28px) saturate(200%)' : 'blur(20px) saturate(180%)',
-        borderBottom: '1px solid var(--border-color)',
-        padding: isScrolled ? '9px 16px' : '12px 16px',
-        position: 'sticky',
-        top: 0,
-        zIndex: 50,
-        flexShrink: 0,
-        boxShadow: isScrolled
-          ? 'var(--shadow-card)'
-          : '0 1px 24px rgba(0,0,0,0.03)',
-        width: '100%',
-        boxSizing: 'border-box',
-        transition: 'padding 0.3s var(--ease-quiet), background-color 0.3s var(--ease-quiet), box-shadow 0.3s var(--ease-quiet), border-color 0.3s var(--ease-quiet)'
-      }}>
-        <div className="header-container" style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', width: '100%', boxSizing: 'border-box' }}>
-          {/* PARTIE 3 : LOGO TROCO CLICKABLE -> RETOUR ACCUEIL */}
-          <button onClick={() => { setActiveTab('feed'); setSelectedListing(null); setSelectedChat(null); if (callState.active) endCall(); }} style={{ border: 'none', background: 'none', cursor: 'pointer', padding: '4px 6px', borderRadius: '12px', textAlign: 'left', flexShrink: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <TrocoLogo3D size={isScrolled ? 24 : 28} animated={false} />
-            <div>
-              <h1 className="font-editorial-heading" style={{ fontSize: isScrolled ? '19px' : '22px', fontWeight: '700', color: 'var(--text-main)', margin: 0, letterSpacing: '-0.02em', whiteSpace: 'nowrap', transition: 'font-size 0.3s var(--ease-quiet)' }}>Troco</h1>
-              <p className="logo-slogan font-editorial" style={{ fontSize: '11px', color: 'var(--text-secondary)', fontStyle: 'italic', margin: 0, whiteSpace: 'nowrap' }}>{t('slogan')}</p>
-            </div>
-          </button>
-          <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'nowrap' }}>
-            <button onClick={() => handleOpenPayment('topup-cash')} title="Recharger mon solde Euros" className="premium-button balance-badge" style={{ border: '1px solid var(--border-color)', borderRadius: '999px', padding: isScrolled ? '5px 10px' : '6px 12px', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', position: 'relative', overflow: 'visible', whiteSpace: 'nowrap', flexShrink: 0, transition: 'padding 0.3s var(--ease-quiet)' }}>
-              <Coins size={13} style={{ flexShrink: 0 }} /> <AnimatedEuroBalance value={profile.euroBalance} prefix="€ " suffix="" style={{ fontSize: '11px', fontWeight: '700', whiteSpace: 'nowrap' }} />
-            </button>
-            <button onClick={() => handleOpenPayment('troco-plus')} title="S'abonner à Troco Plus" className="premium-button balance-badge" style={{ border: '1px solid var(--accent-primary)', borderRadius: '999px', padding: isScrolled ? '5px 10px' : '6px 12px', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', fontWeight: '800', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', position: 'relative', overflow: 'visible', whiteSpace: 'nowrap', flexShrink: 0, transition: 'padding 0.3s var(--ease-quiet)' }}>
-              <Sparkles size={13} color="var(--accent-primary)" style={{ flexShrink: 0 }} /> <AnimatedTokenBalance value={profile.trocoTokens} formatFn={(v) => formatTokenCount(v, currentLang)} style={{ fontSize: '11px', fontWeight: '800', whiteSpace: 'nowrap' }} />
-            </button>
-            <button onClick={toggleDarkMode} title={darkMode ? "Activer le mode clair" : "Activer le mode sombre"} className="premium-button darkmode-btn" style={{ border: '1px solid var(--border-color)', borderRadius: '50%', width: isScrolled ? '32px' : '34px', height: isScrolled ? '32px' : '34px', backgroundColor: 'var(--bg-card)', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.3s var(--ease-quiet)', flexShrink: 0 }}>
-              {darkMode ? <Sun size={15} /> : <Moon size={15} />}
-            </button>
-            <button onClick={() => setIsLangModalOpen(true)} className="premium-button lang-btn" style={{ border: '1px solid var(--border-color)', borderRadius: '20px', padding: isScrolled ? '4px 9px' : '5px 10px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', whiteSpace: 'nowrap', flexShrink: 0, transition: 'padding 0.3s var(--ease-quiet)' }}>
-              <Globe size={13} color="var(--accent-primary)" style={{ flexShrink: 0 }} />
-              <span>{currentLang === 'FR' ? '🇫🇷 FR' : currentLang === 'EN' ? '🇬🇧 EN' : currentLang === 'ES' ? '🇪🇸 ES' : currentLang === 'IT' ? '🇮🇹 IT' : currentLang === 'DE' ? '🇩🇪 DE' : currentLang === 'JA' ? '🇯🇵 JA' : '🇨🇳 ZH'}</span>
-            </button>
-          </div>
-        </div>
-      </header>
+      <AppHeader
+        isMobile={isMobile}
+        activeTab={activeTab}
+        selectedChat={selectedChat}
+        callState={callState}
+        endCall={endCall}
+        setActiveTab={setActiveTab}
+        setSelectedListing={setSelectedListing}
+        setSelectedChat={setSelectedChat}
+        handleOpenPayment={handleOpenPayment}
+        profile={profile}
+        toggleDarkMode={toggleDarkMode}
+        darkMode={darkMode}
+        setIsLangModalOpen={setIsLangModalOpen}
+        currentLang={currentLang}
+        t={t}
+        formatTokenCount={formatTokenCount}
+      />
 
       {isBoostModalOpen && boostingListing && (
         <Suspense fallback={null}>
@@ -3940,264 +3589,23 @@ export default function App() {
       </main>
 
       {/* BARRE DE NAVIGATION EN BAS (CLEAN, TRANSPARENTE, AVEC GESTES DE SWIPE iOS) */}
-      <nav
-        ref={bottomNavRef}
-        aria-label="Navigation principale mobile"
-        style={{
-          display: ((isMobile && activeTab === 'chat' && selectedChat) || selectedListing) ? 'none' : 'block',
-          position: 'fixed',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          backgroundColor: darkMode ? 'rgba(24, 21, 19, 0.65)' : 'rgba(250, 247, 242, 0.55)',
-          backdropFilter: 'blur(24px) saturate(190%)',
-          WebkitBackdropFilter: 'blur(24px) saturate(190%)',
-          border: 'none',
-          borderTop: 'none',
-          padding: '10px 16px max(10px, env(safe-area-inset-bottom, 10px))',
-          zIndex: 99999,
-          boxShadow: 'none',
-          transition: 'background-color 0.3s ease',
-          touchAction: 'none',
-          userSelect: 'none',
-          WebkitUserSelect: 'none',
-        }}
-      >
-        <div style={{
-          maxWidth: '680px',
-          margin: '0 auto',
-          display: 'flex',
-          justifyContent: 'space-around',
-          alignItems: 'center',
-          willChange: 'transform',
-        }}>
-
-          {/* 1. EXPLORER */}
-          <button
-            type="button"
-            data-tab="feed"
-            onClick={() => switchTab('feed')}
-            style={{
-              border: 'none',
-              background: 'transparent',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '4px',
-              color: activeTab === 'feed' ? 'var(--accent-primary)' : 'var(--text-secondary)',
-              cursor: 'pointer',
-              padding: '6px 14px',
-              transition: 'transform 0.3s var(--ease-monopo), color 0.2s ease',
-              transform: activeTab === 'feed' ? 'scale(1.06)' : 'scale(1)',
-              outline: 'none'
-            }}
-          >
-            <Search
-              size={22}
-              color={activeTab === 'feed' ? 'var(--accent-primary)' : 'var(--text-secondary)'}
-              strokeWidth={activeTab === 'feed' ? 2.3 : 1.8}
-            />
-            <span style={{
-              fontSize: '11px',
-              fontWeight: activeTab === 'feed' ? '700' : '500',
-              letterSpacing: '0.01em',
-              color: activeTab === 'feed' ? 'var(--accent-primary)' : 'var(--text-secondary)'
-            }}>
-              {t('explorer')}
-            </span>
-          </button>
-
-          {/* 2. COMMUNAUTÉ & TROCO LIVE */}
-          <button
-            type="button"
-            data-tab="community"
-            onClick={() => switchTab('community')}
-            style={{
-              border: 'none',
-              background: 'transparent',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '4px',
-              color: activeTab === 'community' ? 'var(--accent-primary)' : 'var(--text-secondary)',
-              cursor: 'pointer',
-              padding: '6px 14px',
-              position: 'relative',
-              transition: 'transform 0.3s var(--ease-monopo), color 0.2s ease',
-              transform: activeTab === 'community' ? 'scale(1.06)' : 'scale(1)',
-              outline: 'none'
-            }}
-          >
-            <span style={{ position: 'relative', display: 'inline-flex' }}>
-              <Globe
-                size={22}
-                color={activeTab === 'community' ? 'var(--accent-primary)' : 'var(--text-secondary)'}
-                strokeWidth={activeTab === 'community' ? 2.3 : 1.8}
-              />
-              <span style={{
-                position: 'absolute',
-                top: '-2px',
-                right: '-4px',
-                width: '7px',
-                height: '7px',
-                backgroundColor: '#EF4444',
-                borderRadius: '50%',
-                boxShadow: '0 0 6px #EF4444',
-                animation: 'pulse 1.8s infinite',
-              }} />
-            </span>
-            <span style={{
-              fontSize: '11px',
-              fontWeight: activeTab === 'community' ? '700' : '500',
-              letterSpacing: '0.01em',
-              color: activeTab === 'community' ? 'var(--accent-primary)' : 'var(--text-secondary)'
-            }}>
-              Communauté
-            </span>
-          </button>
-
-          {/* 3. MESSAGES */}
-          <button
-            type="button"
-            data-tab="chat"
-            onClick={() => switchTab('chat')}
-            style={{
-              border: 'none',
-              background: 'transparent',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '4px',
-              color: activeTab === 'chat' ? 'var(--accent-primary)' : 'var(--text-secondary)',
-              cursor: 'pointer',
-              padding: '6px 14px',
-              position: 'relative',
-              transition: 'transform 0.3s var(--ease-monopo), color 0.2s ease',
-              transform: activeTab === 'chat' ? 'scale(1.06)' : 'scale(1)',
-              outline: 'none'
-            }}
-          >
-            <span style={{ position: 'relative', display: 'inline-flex' }}>
-              <MessageSquare
-                size={22}
-                color={activeTab === 'chat' ? 'var(--accent-primary)' : 'var(--text-secondary)'}
-                strokeWidth={activeTab === 'chat' ? 2.3 : 1.8}
-              />
-              {unreadCount > 0 && (
-                <span style={{
-                  position: 'absolute',
-                  top: '-7px',
-                  right: '-11px',
-                  minWidth: '17px',
-                  height: '17px',
-                  backgroundColor: darkMode ? '#FAF7F2' : '#2D2825',
-                  color: darkMode ? '#1A1715' : '#FFFFFF',
-                  fontSize: '9px',
-                  fontWeight: '900',
-                  borderRadius: '999px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '0 4px',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
-                  letterSpacing: '-0.3px',
-                }}>
-                  {unreadCount > 9 ? '9+' : unreadCount}
-                </span>
-              )}
-            </span>
-            <span style={{
-              fontSize: '11px',
-              fontWeight: activeTab === 'chat' ? '700' : '500',
-              letterSpacing: '0.01em',
-              color: activeTab === 'chat' ? 'var(--accent-primary)' : 'var(--text-secondary)'
-            }}>
-              {t('messages')}
-            </span>
-          </button>
-
-          {/* 3. DÉPOSER */}
-          <button
-            type="button"
-            data-tab="post"
-            onClick={() => {
-              setSelectedChat(null);
-              if (activeTab === 'post') {
-                setPostStep(1);
-                setPostDraft(defaultPostDraft);
-                setPublishMessage('');
-                setIsEditingListing(false);
-              } else {
-                switchTab('post');
-              }
-            }}
-            style={{
-              border: 'none',
-              background: 'transparent',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '4px',
-              color: activeTab === 'post' ? 'var(--accent-primary)' : 'var(--text-secondary)',
-              cursor: 'pointer',
-              padding: '6px 14px',
-              transition: 'transform 0.3s var(--ease-monopo), color 0.2s ease',
-              transform: activeTab === 'post' ? 'scale(1.06)' : 'scale(1)',
-              outline: 'none'
-            }}
-          >
-            <PlusCircle
-              size={23}
-              color={activeTab === 'post' ? 'var(--accent-primary)' : 'var(--text-secondary)'}
-              strokeWidth={activeTab === 'post' ? 2.3 : 1.8}
-            />
-            <span style={{
-              fontSize: '11px',
-              fontWeight: activeTab === 'post' ? '700' : '500',
-              letterSpacing: '0.01em',
-              color: activeTab === 'post' ? 'var(--accent-primary)' : 'var(--text-secondary)'
-            }}>
-              {currentLang === 'FR' ? 'Déposer' : t('post')}
-            </span>
-          </button>
-
-          {/* 4. PROFIL */}
-          <button
-            type="button"
-            data-tab="profile"
-            onClick={() => switchTab('profile')}
-            style={{
-              border: 'none',
-              background: 'transparent',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: '4px',
-              color: activeTab === 'profile' ? 'var(--accent-primary)' : 'var(--text-secondary)',
-              cursor: 'pointer',
-              padding: '6px 14px',
-              transition: 'transform 0.3s var(--ease-monopo), color 0.2s ease',
-              transform: activeTab === 'profile' ? 'scale(1.06)' : 'scale(1)',
-              outline: 'none'
-            }}
-          >
-            <User
-              size={22}
-              color={activeTab === 'profile' ? 'var(--accent-primary)' : 'var(--text-secondary)'}
-              strokeWidth={activeTab === 'profile' ? 2.3 : 1.8}
-            />
-            <span style={{
-              fontSize: '11px',
-              fontWeight: activeTab === 'profile' ? '700' : '500',
-              letterSpacing: '0.01em',
-              color: activeTab === 'profile' ? 'var(--accent-primary)' : 'var(--text-secondary)'
-            }}>
-              {t('profile')}
-            </span>
-          </button>
-
-        </div>
-      </nav>
+      <AppBottomNav
+        isMobile={isMobile}
+        activeTab={activeTab}
+        selectedChat={selectedChat}
+        selectedListing={selectedListing}
+        darkMode={darkMode}
+        switchTab={switchTab}
+        t={t}
+        unreadCount={unreadCount}
+        currentLang={currentLang}
+        setSelectedChat={setSelectedChat}
+        setPostStep={setPostStep}
+        setPostDraft={setPostDraft}
+        defaultPostDraft={defaultPostDraft}
+        setPublishMessage={setPublishMessage}
+        setIsEditingListing={setIsEditingListing}
+      />
 
       {/* POPUP CONFIRMATION PUBLICATION */}
       {showPublishedPopup && publishedListing && (

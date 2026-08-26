@@ -34,3 +34,22 @@ Refonte du Scroll Reveal : Abandon de la logique GSAP actuelle (qui provoque la 
 Synchronisation des Jetons : Correction du bouton de transfert mobile inactif et application du débit en temps réel sur le solde lors d'un envoi manuel.
 
 Matchmaking IA (Idée Bonus) : Un algorithme en arrière-plan qui analyse les compétences offertes/recherchées pour pousser des notifications de "Troc Parfait" entre utilisateurs géographiquement proches.
+
+
+📍 1. Géolocalisation : Bouton "Me localiser" sur la carte + recalibrage des annonces de test (Roissy-en-France).
+
+🛡️ 2. Modération "God Mode" : Bouton d'accès rapide aux profils depuis le panel + Navigation Fantôme pour modérer directement sur le site public.
+
+🎨 3. Whiteboard Pro : Sélecteur de couleur exact (color picker HEX/RGB) + résolution de la latence de frappe.
+
+☁️ 4. Troco Workspace / Cloud : Support et exports des formats natifs (.pdf, .docx, .xlsx, .pptx), édition de slides type PowerPoint, et historique des versions partagées.
+
+🤝 5. Moteur de Troc / Négociation : Boutons natifs "Accepter/Refuser/Contre-proposer" dans le chat, validation bilatérale pour le troc pur, et animation de célébration "Deal Clôturé".
+
+💸 6. Solde Jetons : Réparation du débit de jetons lors des transferts manuels et fix du bouton sur mobile.
+
+🎭 7. Fix GSAP : Réparation complète de l'animation des annonces au scroll.
+
+🌍 8. Traduction Globale (Nouveau) : Brancher le véritable moteur de traduction en temps réel sur les annonces du Feed (titres et descriptions) pour remplacer les faux préfixes [ES], [EN], etc.
+
+💬 9. UI du Chat Desktop (Nouveau) : Élargir la largeur maximale des bulles de messages (plus de 50% de l'écran sur PC) et corriger l'alignement du texte pour éviter les retours à la ligne illogiques.
