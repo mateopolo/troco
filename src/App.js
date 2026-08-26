@@ -10,7 +10,7 @@ import CookieBanner from './components/CookieBanner';
 import { validateChatMessage, validateProfileContent } from './utils/moderationBlacklist';
 import { DIVERSE_AVATARS, TROCO_CATEGORIES } from './data/categoriesData';
 import { mockListings, mockChats, initialChatThreads } from './data/mockData';
-import { getInstantOrQueueTranslation, subscribeTranslations } from './utils/translator';
+import { subscribeTranslations } from './utils/translator';
 import { uploadVoiceNote } from './services/voiceStorageService';
 import { playApplePaySound, playBetclicBalanceSound, playWelcomeGiftFanfare } from './utils/audioService';
 import { AnimatedEuroBalance, AnimatedTokenBalance } from './components/AnimatedBalances';
@@ -24,6 +24,13 @@ import { AuthScreen } from './features';
 import { useWalletStore, useChatStore } from './stores';
 import { getCategoryLabel as getCategoryLabelUtil, formatStatus as formatStatusUtil, formatTokenCount as formatTokenCountUtil, formatCompensation as formatCompensationUtil } from './utils/formatters';
 import { generateTags } from './utils/tagGenerator';
+import {
+  getChatMessageDisplayContent,
+  getBioTranslation,
+  getReviewTranslation,
+  getListingDisplayContent,
+  getListingTitleTranslation,
+} from './utils/translationHelpers';
 import FilterDrawer from './components/modals/FilterDrawer';
 import LanguageSelectModal from './components/modals/LanguageSelectModal';
 import { gsap } from 'gsap';
@@ -34,8 +41,6 @@ import {
   localizeLocation,
   localizeTags,
   localizeReview,
-  knownTitles,
-  knownMessageTranslations,
 } from './data/translationsData';
 import {
   calculateHaversineDistance,
@@ -56,6 +61,9 @@ const VisioSettlementModal = React.lazy(() => import('./components/VisioSettleme
 const KycModal = React.lazy(() => import('./components/KycModal'));
 const CounterOfferModal = React.lazy(() => import('./components/CounterOfferModal'));
 const PublicProfileModal = React.lazy(() => import('./components/PublicProfileModal'));
+const CategoryPickerModal = React.lazy(() => import('./components/modals/CategoryPickerModal'));
+const BoostListingModal = React.lazy(() => import('./components/modals/BoostListingModal'));
+const CguConsentModal = React.lazy(() => import('./components/modals/CguConsentModal'));
 const MapSection = React.lazy(() => import('./features/map/MapSection'));
 const ChatSection = React.lazy(() => import('./features/chat/ChatSection'));
 const CommunityHubSection = React.lazy(() => import('./features/community/CommunityHubSection'));
@@ -107,219 +115,8 @@ export default function App() {
   const t = (key) => (translations[currentLang] && translations[currentLang][key]) || translations['FR'][key] || key;
 
   const getCategoryLabel = (categoryKey) => getCategoryLabelUtil(categoryKey, t);
-
-  const getListingTitleTranslation = (title, targetLang) => {
-    if (!title) return '';
-    if (targetLang === 'FR') return title;
-    if (knownTitles[title] && knownTitles[title][targetLang]) {
-      return knownTitles[title][targetLang];
-    }
-    return title;
-  };
-
   const formatStatus = (st) => formatStatusUtil(st, t);
-
-  const getChatMessageDisplayContent = (message, targetLang, forceOriginal = false) => {
-    if (!message) return '';
-    const rawText = (typeof message === 'string' ? message : (message.text || message.conditions || '')).trim();
-
-    if (forceOriginal || targetLang === 'FR' || !targetLang) {
-      return (typeof message === 'object' && message.originalText) ? message.originalText : rawText;
-    }
-
-    if (typeof message === 'object' && message.translations && message.translations[targetLang]) {
-      return message.translations[targetLang];
-    }
-
-    if (rawText.includes("Bonne contre-proposition")) {
-      const summaryMatch = rawText.match(/\(([^)]+)\)/);
-      const summaryText = summaryMatch ? summaryMatch[1] : '';
-      let translatedSummary = '';
-      if (summaryText) {
-        let sumTrans = summaryText;
-        if (targetLang === 'EN') sumTrans = sumTrans.replace(/Jetons?/g, 'Token').replace(/Crédits?/g, 'Token');
-        else if (targetLang === 'ES') sumTrans = sumTrans.replace(/Jetons?/g, 'Ficha').replace(/Crédits?/g, 'Ficha');
-        else if (targetLang === 'IT') sumTrans = sumTrans.replace(/Jetons?/g, 'Gettone').replace(/Crédits?/g, 'Gettone');
-        else if (targetLang === 'DE') sumTrans = sumTrans.replace(/Jetons?/g, 'Token').replace(/Crédits?/g, 'Token');
-        else if (targetLang === 'JA') sumTrans = sumTrans.replace(/Jetons?/g, 'トークン').replace(/Crédits?/g, 'トークン');
-        else if (targetLang === 'ZH') sumTrans = sumTrans.replace(/Jetons?/g, '个代币').replace(/Crédits?/g, '个代币');
-        translatedSummary = ` (${sumTrans})`;
-      }
-
-      const templates = {
-        FR: `Bonne contre-proposition${translatedSummary}. Le cadre me convient — j'attends ta confirmation pour valider le deal.`,
-        EN: `Good counter-proposal${translatedSummary}. The terms look good to me — I'm waiting for your confirmation to validate the deal.`,
-        ES: `Buena contrapropuesta${translatedSummary}. Las condiciones me parecen bien — espero tu confirmación para validar el trato.`,
-        IT: `Buona controproposta${translatedSummary}. Le condizioni mi stanno bene — aspetto la tua conferma per convalidare l'accordo.`,
-        DE: `Guter Gegenvorschlag${translatedSummary}. Die Bedingungen passen mir — ich warte auf deine Bestätigung, um den Deal zu validieren.`,
-        JA: `良いカウンターオファー${translatedSummary}ですね。条件に同意します。取引を確定するために確認をお待ちしています。`,
-        ZH: `不错的反向提议${translatedSummary}。条件符合我的要求 — 我等待你的确认以验证此交易。`
-      };
-      return templates[targetLang] || rawText;
-    }
-
-    if (rawText.includes("Contre 20€ + 1 Jeton Troco")) {
-      const transMap = {
-        EN: "Session de 2h Initiation Figma (UI/UX) ce samedi à 14h. For €20 + 1 Troco Token.",
-        ES: "Sesión de 2h de Figma (UI/UX) este sábado a las 14h. Por 20€ + 1 Ficha Troco.",
-        IT: "Sessione di 2h di Figma (UI/UX) questo sabato alle 14:00. Per 20€ + 1 Gettone Troco.",
-        DE: "2 Std. Figma UI/UX Sitzung diesen Samstag um 14 Uhr. Für 20€ + 1 Troco-Token.",
-        JA: "今週土曜14時〜 Figma UI/UX 2時間セッション。20ユーロ＋1 Trocoトークン。",
-        ZH: "本周六下午2点 2小时 Figma UI/UX 课程。对价为 20欧元 + 1个 Troco 代币。"
-      };
-      return transMap[targetLang] || rawText;
-    }
-
-    if (rawText.includes("Contre 3 Jetons Troco")) {
-      const transMap = {
-        EN: "Pro Photo Studio booking (3h) this Friday 2pm-5pm with equipment included. For 3 Troco Tokens.",
-        ES: "Reserva Estudio Foto Pro (3h) este viernes 14h-17h con equipo incluido. Por 3 Fichas Troco.",
-        IT: "Prenotazione Studio Fotografico (3h) venerdì 14:00-17:00 con materiale incluso. Per 3 Gettoni Troco.",
-        DE: "Pro-Fotostudio Buchung (3 Std) diesen Freitag 14-17 Uhr inkl. Equipment. Für 3 Troco-Tokens.",
-        JA: "プロフォトスタジオ予約（3時間）金曜14時〜17時 機材込み。3 Trocoトークン。",
-        ZH: "专业摄影棚预订（3小时）本周五14:00-17:00，包含设备。对价为 3个 Troco 代币。"
-      };
-      return transMap[targetLang] || rawText;
-    }
-
-    if (rawText.includes("Contre 2 Jetons Troco")) {
-      const transMap = {
-        EN: "Bosch Hammer Drill Loan this weekend (Saturday - Sunday). For 2 Troco Tokens.",
-        ES: "Préstamo de Taladro percutor Bosch este fin de semana. Por 2 Fichas Troco.",
-        IT: "Prestito Trapano a percussione Bosch questo fine settimana. Per 2 Gettoni Troco.",
-        DE: "Bosch Schlagbohrmaschinen-Verleih dieses Wochenende. Für 2 Troco-Tokens.",
-        JA: "今週末ボッシュ振動ドリル貸出（土・日）。2 Trocoトークン。",
-        ZH: "本周末博世冲击钻租借（周六-周日）。对价为 2个 Troco 代币。"
-      };
-      return transMap[targetLang] || rawText;
-    }
-    if (knownMessageTranslations[rawText] && knownMessageTranslations[rawText][targetLang]) {
-      return knownMessageTranslations[rawText][targetLang];
-    }
-
-    const normalizedRaw = rawText.replace(/[’']/g, "'").trim();
-    for (const [k, v] of Object.entries(knownMessageTranslations)) {
-      if (k.replace(/[’']/g, "'").trim() === normalizedRaw && v[targetLang]) {
-        return v[targetLang];
-      }
-    }
-
-    if (rawText.includes("Début de discussion pour")) {
-      const listingTitle = rawText.replace("Début de discussion pour", "").trim();
-      const localizedTitle = getListingTitleTranslation(listingTitle, targetLang);
-      const startTemplates = {
-        FR: `Début de discussion pour ${localizedTitle}`,
-        EN: `Start of discussion for ${localizedTitle}`,
-        ES: `Inicio de conversación para ${localizedTitle}`,
-        IT: `Inizio discussione per ${localizedTitle}`,
-        DE: `Beginn der Diskussion für ${localizedTitle}`,
-        JA: `「${localizedTitle}」の会話の開始`,
-        ZH: `关于“${localizedTitle}”的讨论开始`
-      };
-      if (startTemplates[targetLang]) return startTemplates[targetLang];
-    }
-
-    if (rawText.includes("Je peux te proposer un échange fluide sur")) {
-      const titleMatch = rawText.match(/«\s*(.*?)\s*»/) || rawText.match(/"\s*(.*?)\s*"/) || rawText.match(/“\s*(.*?)\s*”/);
-      const listingTitle = titleMatch ? titleMatch[1] : '';
-      const localizedTitle = getListingTitleTranslation(listingTitle, targetLang);
-      const propTemplates = {
-        FR: `Bonjour ! Je peux te proposer un échange fluide sur « ${localizedTitle} ».`,
-        EN: `Hello! I can offer a smooth exchange regarding "${localizedTitle}".`,
-        ES: `¡Hola! Puedo ofrecerte un intercambio fluido en "${localizedTitle}".`,
-        IT: `Ciao! Posso proporti uno scambio fluido per "${localizedTitle}".`,
-        DE: `Hallo! Ich kann einen reibungslosen Tausch für "${localizedTitle}" anbieten.`,
-        JA: `こんにちは！「${localizedTitle}」に関するスムーズな交換を提案できます。`,
-        ZH: `你好！我可以就“${localizedTitle}”为你提供顺畅的交换。`
-      };
-      if (propTemplates[targetLang]) return propTemplates[targetLang];
-    }
-
-    const knownMatch = knownMessageTranslations[rawText];
-    if (knownMatch && knownMatch[targetLang]) {
-      return knownMatch[targetLang];
-    }
-
-    // Traduction automatique dynamique en temps réel
-    return getInstantOrQueueTranslation(rawText, targetLang, 'auto');
-  };
-
   const formatTokenCount = (count, lang = currentLang) => formatTokenCountUtil(count, lang);
-
-  const getBioTranslation = (bioText, targetLang, forceOriginal = false) => {
-    if (!bioText || forceOriginal || targetLang === 'FR') return bioText;
-    const bioMap = {
-      FR: "Créateur de contenus, développeur Python et passionné de musique. Je propose des services flexibles et des échanges de qualité.",
-      EN: "Content creator, Python developer, and music enthusiast. I offer flexible services and high-quality exchanges.",
-      ES: "Creador de contenido, desarrollador de Python y apasionado de la música. Ofrezco servicios flexibles e intercambios de calidad.",
-      IT: "Creatore di contenuti, sviluppatore Python e appassionato di musica. Offro servizi flessibili e scambi di qualità.",
-      DE: "Content Creator, Python-Entwickler und Musikliebhaber. Ich biete flexible Dienstleistungen und hochwertige Tausche.",
-      JA: "コンテンツクリエイター、Pythonデベロッパー、音楽愛好家。柔軟なサービスと高品質な交換を提供しています。",
-      ZH: "内容创作者、Python 开发者及音乐爱好者。我提供灵活的服务与高质量的互换。"
-    };
-    return bioMap[targetLang] || getInstantOrQueueTranslation(bioText, targetLang, 'auto');
-  };
-
-  const getReviewTranslation = (reviewText, targetLang, forceOriginal = false) => {
-    if (!reviewText || forceOriginal || targetLang === 'FR') return reviewText;
-    const reviewMap = {
-      "Super session de cours ! Explications très claires et très sympa.": {
-        FR: "Super session de cours ! Explications très claires et très sympa.",
-        EN: "Great lesson session! Very clear explanations and super friendly.",
-        ES: "¡Gran sesión de clase! Explicaciones muy claras y muy amable.",
-        IT: "Ottima lezione! Spiegazioni molto chiare e molto simpatico.",
-        DE: "Tolle Unterrichtsstunde! Sehr klare Erklärungen und sehr nett.",
-        JA: "素晴らしいレッスンでした！説明がとても明確で親切でした。",
-        ZH: "非常棒的课程！解释非常清晰，非常友善。"
-      },
-      "Matériel en parfait état. Rendu comme prévu. Impeccable.": {
-        FR: "Matériel en parfait état. Rendu comme prévu. Impeccable.",
-        EN: "Equipment in perfect condition. Returned on time. Impeccable.",
-        ES: "Equipo en perfecto estado. Devuelto a tiempo. Impecable.",
-        IT: "Attrezzatura in perfette condizioni. Restituita nei tempi. Impeccabile.",
-        DE: "Gerät in einwandfreiem Zustand. Pünktlich zurückgegeben. Makellos.",
-        JA: "完璧な状態の機材でした。予定通り返却されました。素晴らしい。",
-        ZH: "设备完好无损。按时归还。无可挑剔。"
-      },
-      "Échange ultra fluide, Sofia est pédagogue et très à l'écoute. Les 3 séances se sont parfaitement déroulées, je recommande à 100%.": {
-        FR: "Échange ultra fluide, Sofia est pédagogue et très à l'écoute. Les 3 séances se sont parfaitement déroulées, je recommande à 100%.",
-        EN: "Ultra-smooth exchange, Sofia is a great teacher and very attentive. All 3 sessions went perfectly, 100% recommended.",
-        ES: "Intercambio súper fluido, Sofia es muy pedagógica y atenta. Las 3 sesiones salieron perfectas, recomiendo al 100%.",
-        IT: "Scambio ultra fluido, Sofia è pedagogica e molto attenta. Le 3 sessioni sono andate perfettamente, raccomando al 100%.",
-        DE: "Super reibungsloser Tausch, Sofia ist sehr pädagogisch und aufmerksam. Alle 3 Sitzungen liefen perfekt, 100% Empfehlung.",
-        JA: "非常にスムーズな交換でした。ソフィアさんはとても教え方が上手で親切です。3回のセッション全てが完璧で、100%おすすめします。",
-        ZH: "极其顺畅的交流，索菲亚教学水平高且非常细心。3次课程都非常顺利，100%推荐。"
-      },
-      "Prêt rapide et propre, caution virtuelle bien gérée. Matériel en parfait état, rendu sans accroc dans les délais.": {
-        FR: "Prêt rapide et propre, caution virtuelle bien gérée. Matériel en parfait état, rendu sans accroc dans les délais.",
-        EN: "Fast and clean loan, virtual deposit handled smoothly. Equipment in perfect condition, returned on time without issues.",
-        ES: "Préstamo rápido y limpio, fianza virtual bien gestionada. Equipo en perfecto estado, devuelto a tiempo sin problemas.",
-        IT: "Prestito veloce e pulito, deposito virtuale ben gestito. Attrezzatura in perfette condizioni, restituita in tempo senza intoppi.",
-        DE: "Schneller und sauberer Verleih, virtuelle Kaution gut verwaltet. Gerät in einwandfreiem Zustand, pünktlich zurückgegeben.",
-        JA: "迅速で綺麗な貸出、バーチャル保証金の管理もスムーズでした。機材も完璧な状態で期限内に返却されました。",
-        ZH: "快捷清洁的租借，虚拟押金管理妥当。设备完好无损，按时顺利归还。"
-      },
-      "Intervention programmée cette semaine, créneau confirmé par Karim. Échange de modèle et de devis en cours dans le chat.": {
-        FR: "Intervention programmée cette semaine, créneau confirmé par Karim. Échange de modèle et de devis en cours dans le chat.",
-        EN: "Service scheduled this week, time slot confirmed by Karim. Model details and quote being discussed in chat.",
-        ES: "Intervención programada esta semana, franja confirmada por Karim. Intercambio de modelo y presupuesto en curso en el chat.",
-        IT: "Intervento programmato questa settimana, orario confermato da Karim. Scambio di modello e preventivo in corso nella chat.",
-        DE: "Einsatz diese Woche geplant, Zeitfenster von Karim bestätigt. Austausch von Modell und Angebot im Chat im Gange.",
-        JA: "今週作業予定、カリムさんとの日時確認済み。モデルと見積もりの話し合いがチャットで進行中。",
-        ZH: "本周已安排服务，Karim 已确认时间段。型号和报价正在聊天中沟通。"
-      },
-      "Séance visio planifiée vendredi à 18h00. Conditions validées : 1 Crédit + 10€.": {
-        FR: "Séance visio planifiée vendredi à 18h00. Conditions validées : 1 Jeton + 10€.",
-        EN: "Video session scheduled Friday at 6:00 PM. Confirmed terms: 1 Token + €10.",
-        ES: "Sesión en visio planificada el viernes a las 18:00. Condiciones validadas: 1 Ficha + 10€.",
-        IT: "Sessione video pianificata venerdì alle 18:00. Condizioni verificate: 1 Gettone + 10€.",
-        DE: "Video-Sitzung für Freitag um 18:00 Uhr geplant. Bedingungen bestätigt: 1 Token + 10€.",
-        JA: "金曜日18:00にビデオセッションが予定されています。確認済み条件：1トークン＋10€。",
-        ZH: "已预约周五 18:00 视频课程。已确认条件：1个代币 + 10欧。"
-      }
-    };
-    return reviewMap[reviewText]?.[targetLang] || getInstantOrQueueTranslation(reviewText, targetLang, 'auto');
-  };
 
   const formatCompensation = (comp) => formatCompensationUtil(comp, currentLang, t);
   const [showingOriginalListings, setShowingOriginalListings] = useState({});
@@ -394,48 +191,6 @@ export default function App() {
     }));
   };
 
-  // ---- LOGIQUE DE TRADUCTION UNIVERSELLE ----
-  // Règle appliquée à 100% des annonces :
-  //   1. forceOriginal = true → renvoie TOUJOURS le titre/description natif
-  //   2. item.translations[targetLang] disponible → traduction exacte dans la langue de l'interface
-  //   3. targetLang === nativeLang → contenu natif
-  //   4. fallback item.translations['EN'] si présent
-  //   5. dernier recours → contenu natif
-  const getListingDisplayContent = (item, targetLang, forceOriginal = false) => {
-    if (!item) return { title: '', description: '', compensation: '' };
-    const nativeLang = item.nativeLang || 'FR';
-
-    // Mode "voir l'original" forcé -> renvoyer immédiatement les textes natifs
-    if (forceOriginal) {
-      return { title: item.title, description: item.description || '', compensation: item.compensation || '' };
-    }
-
-    const trans = item.translations;
-    // Si une traduction existe pour la langue actuelle de l'interface -> l'utiliser
-    if (trans && trans[targetLang] && trans[targetLang].title) {
-      return {
-        title: trans[targetLang].title,
-        description: trans[targetLang].description || item.description || '',
-        compensation: trans[targetLang].compensation || item.compensation || ''
-      };
-    }
-
-    // Si la langue de l'interface est la langue native de l'annonce -> texte natif
-    if (targetLang === nativeLang) {
-      return { title: item.title, description: item.description || '', compensation: item.compensation || '' };
-    }
-
-    // Traduction automatique dynamique en temps réel pour toute annonce
-    const dynamicTitle = getInstantOrQueueTranslation(item.title, targetLang, nativeLang);
-    const dynamicDesc = item.description ? getInstantOrQueueTranslation(item.description, targetLang, nativeLang) : '';
-    const dynamicComp = item.compensation ? getInstantOrQueueTranslation(item.compensation, targetLang, nativeLang) : '';
-
-    return {
-      title: dynamicTitle || item.title,
-      description: dynamicDesc || item.description || '',
-      compensation: dynamicComp || item.compensation || ''
-    };
-  };
 
   // ---- GEOPRIVACY : FLOUTAGE ET TRONCATURE DE SÉCURITÉ DE LA POSITION GPS ----
   const fuzzCoordinates = (lat, lng) => {
@@ -4549,69 +4304,15 @@ export default function App() {
 
       {/* MODALE BLOQUANTE CGU & RGPD OBLIGATOIRE */}
       {isAuthenticated && !profile.cguAcceptedAt && (
-        <div style={{
-          position: 'fixed', inset: 0, zIndex: 99999,
-          backgroundColor: 'var(--overlay-bg)',
-          backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px',
-          animation: 'fadeSlideUp 0.3s ease both'
-        }}>
-          <div style={{
-            maxWidth: '560px', width: '100%',
-            backgroundColor: 'var(--bg-card)',
-            borderRadius: '28px', padding: '28px',
-            border: '1px solid var(--border-color)',
-            boxShadow: 'var(--shadow-modal)',
-            color: 'var(--text-main)',
-            maxHeight: '90vh', overflowY: 'auto'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
-              <div style={{ width: '42px', height: '42px', borderRadius: '50%', backgroundColor: 'var(--bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent-primary)' }}>
-                <Scale size={22} />
-              </div>
-              <div>
-                <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '22px', fontWeight: '600', color: 'var(--text-main)' }}>Conditions Générales & RGPD</h3>
-                <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>Cadre juridique et engagement communautaire</p>
-              </div>
-            </div>
-
-            <div style={{
-              backgroundColor: 'var(--bg-subtle)',
-              borderRadius: '16px', padding: '16px', fontSize: '13px', lineHeight: 1.65,
-              color: 'var(--text-secondary)',
-              border: '1px solid var(--border-color)',
-              marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '12px'
-            }}>
-              <div>
-                <strong style={{ color: 'var(--text-main)' }}>1. Plateforme d'intermédiation technique</strong>
-                <p style={{ margin: '4px 0 0' }}>Troco met à disposition une infrastructure logicielle permettant aux utilisateurs de publier des annonces, échanger des services et communiquer. Troco n'est pas partie prenante aux contrats conclus entre utilisateurs.</p>
-              </div>
-
-              <div>
-                <strong style={{ color: 'var(--text-main)' }}>2. Clause de non-responsabilité (P2P)</strong>
-                <p style={{ margin: '4px 0 0' }}>Les échanges, interventions physiques et prêts de matériel relèvent de la responsabilité exclusive des parties prenantes. Chaque membre s'engage à faire preuve de prudence et de diligence.</p>
-              </div>
-
-              <div>
-                <strong style={{ color: 'var(--text-main)' }}>3. Protection des données & RGPD</strong>
-                <p style={{ margin: '4px 0 0' }}>Vos données personnelles (nom, email, ville, compétences) sont strictement isolées sur votre espace sécurisé <code>users/{profile.uid || 'uid'}</code> et ne sont jamais revendues à des tiers.</p>
-              </div>
-            </div>
-
-            <button
-              onClick={handleAcceptCgu}
-              style={{
-                width: '100%', border: 'none', borderRadius: '16px', padding: '14px',
-                background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)', color: '#FFF',
-                fontWeight: '800', fontSize: '14px', cursor: 'pointer',
-                boxShadow: 'var(--shadow-accent)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
-              }}
-            >
-              <CheckCircle size={18} /> J'accepte les CGU et la Politique RGPD
-            </button>
-          </div>
-        </div>
+        <Suspense fallback={null}>
+          <CguConsentModal
+            isOpen={isAuthenticated && !profile.cguAcceptedAt}
+            onAccept={handleAcceptCgu}
+            profile={profile}
+            darkMode={darkMode}
+            t={t}
+          />
+        </Suspense>
       )}
       <style>{`
         * { box-sizing: border-box; }
@@ -4717,17 +4418,17 @@ export default function App() {
       </header>
 
       {isBoostModalOpen && boostingListing && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(61,53,48,0.72)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', zIndex: 80 }}>
-          <div style={{ width: '100%', maxWidth: '440px', backgroundColor: darkMode ? '#231E1B' : '#FAF7F2', borderRadius: '24px', padding: '24px', boxShadow: darkMode ? '0 25px 60px rgba(0,0,0,0.8)' : '0 25px 60px rgba(61,53,48,0.25)', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', position: 'relative' }}>
-            <button onClick={() => setIsBoostModalOpen(false)} style={{ position: 'absolute', top: '14px', right: '14px', border: 'none', backgroundColor: darkMode ? 'rgba(232,221,211,0.1)' : '#F5EAE4', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
-              <X size={16} />
-            </button>
-            <div className="font-editorial-heading" style={{ fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530', marginBottom: '8px', fontSize: '20px' }}>🔥 Booster cette annonce</div>
-            <div style={{ fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54', lineHeight: 1.6, marginBottom: '16px' }}>Mets en avant <strong>{boostingListing.title}</strong> pendant 7 jours pour <strong>2,99€</strong>.</div>
-            <button onClick={confirmBoostListing} className="premium-button" style={{ width: '100%', border: 'none', borderRadius: '14px', padding: '12px', background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)', color: '#FFFFFF', fontWeight: '800', cursor: 'pointer', boxShadow: '0 10px 20px rgba(198,125,91,0.25)' }}>Valider le boost — procéder au paiement</button>
-            {boostMessage && <div style={{ marginTop: '10px', fontSize: '12px', color: '#C67D5B', fontWeight: '700' }}>{boostMessage}</div>}
-          </div>
-        </div>
+        <Suspense fallback={null}>
+          <BoostListingModal
+            isOpen={isBoostModalOpen}
+            onClose={() => setIsBoostModalOpen(false)}
+            boostingListing={boostingListing}
+            confirmBoostListing={confirmBoostListing}
+            boostMessage={boostMessage}
+            darkMode={darkMode}
+            profile={profile}
+          />
+        </Suspense>
       )}
 
       {/* ---- CHECKOUT / TUNNEL DE PAIEMENT SIMULÉ ---- */}
@@ -4843,16 +4544,17 @@ export default function App() {
       />
 
       {isCategoryModalOpen && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(61,53,48,0.65)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', zIndex: 100005 }}>
-          <div style={{ backgroundColor: darkMode ? '#231E1B' : '#FAF7F2', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', borderRadius: '24px', width: '100%', maxWidth: '360px', padding: '24px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', boxShadow: 'var(--shadow-modal)', animation: 'modalSlideIn 0.4s var(--ease-monopo) both' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '14px', alignItems: 'center' }}>
-              <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '20px', fontWeight: '400', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{t('addCategory')}</h3>
-              <button onClick={() => setIsCategoryModalOpen(false)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: darkMode ? '#FFF' : '#3D3530', display: 'flex', padding: '4px' }}><X size={18} /></button>
-            </div>
-            <input value={categoryInput} onChange={(e) => setCategoryInput(e.target.value)} placeholder={t('categoryPlaceholder')} style={{ width: '100%', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '12px 14px', marginBottom: '14px', backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530', outline: 'none', fontSize: '14px' }} />
-            <button onClick={handleAddCategory} className="premium-button" style={{ width: '100%', border: 'none', borderRadius: '12px', padding: '12px 14px', background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)', color: 'var(--accent-contrast-text, #FFF)', fontWeight: '800', cursor: 'pointer', boxShadow: 'var(--shadow-accent)' }}>{t('addButton')}</button>
-          </div>
-        </div>
+        <Suspense fallback={null}>
+          <CategoryPickerModal
+            isOpen={isCategoryModalOpen}
+            onClose={() => setIsCategoryModalOpen(false)}
+            categoryInput={categoryInput}
+            setCategoryInput={setCategoryInput}
+            handleAddCategory={handleAddCategory}
+            darkMode={darkMode}
+            t={t}
+          />
+        </Suspense>
       )}
 
       {selectedListing && (
