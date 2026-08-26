@@ -1,0 +1,165 @@
+// Conversations de démo enrichies (intelligentes & réalistes)
+export const mockChats = [
+  {
+    id: 201,
+    isDemo: true,
+    user: "Emma Roche",
+    listing: "Initiation au Design UI/UX (Figma)",
+    lastMessage: "Je te propose 20€ + 1 Jeton pour 2h de cours ce samedi !",
+    status: "Proposition reçue",
+    terms: "2h de cours • 20€ + 1 Jeton",
+    persona: {
+      role: 'Designer Junior',
+      skills: ['Figma', 'UI/UX', 'Mobile'],
+      style: 'enthousiaste',
+      availability: 'samedi',
+      negotiation: 'souhaite une formation express contre paiement hybride',
+    },
+  },
+  {
+    id: 202,
+    isDemo: true,
+    user: "Thomas V.",
+    listing: "Studio Photo Pro Paris",
+    lastMessage: "Disponible ce vendredi pour un shooting contre 3 jetons ?",
+    status: "Proposition reçue",
+    terms: "3h Studio Photo • 3 Jetons",
+    persona: {
+      role: 'Photographe Mode',
+      skills: ['shooting', 'studio', 'éclairage'],
+      style: 'professionnel',
+      availability: 'vendredi après-midi',
+      negotiation: 'propose un échange de 3 jetons pour 3h de réservation',
+    },
+  },
+  {
+    id: 101,
+    isDemo: true,
+    user: "Sofia M.",
+    listing: "Cours de Piano",
+    lastMessage: "D'accord pour 1 crédit l'heure ! Tu es libre samedi ?",
+    status: "Négociation en cours",
+    terms: "2 cours 45 min • 2 Jetons",
+    persona: {
+      role: 'Professeure de piano',
+      skills: ['débutant', 'avancé', 'visio'],
+      style: 'chaleureuse et structurée',
+      availability: 'soirées et week-ends',
+      negotiation: 'propose une heure d’essai contre 1 crédit',
+    },
+  },
+  {
+    id: 102,
+    isDemo: true,
+    user: "Marc L.",
+    listing: "Prêt Perceuse Bosch",
+    lastMessage: "Perceuse et coffret forets béton prêts. Prêt gratuit avec caution 30€.",
+    status: "Deal Validé",
+    terms: "Troc direct + Caution 30€",
+    persona: {
+      role: 'Bricoleur local',
+      skills: ['perceuse', 'forets', 'caution virtuelle'],
+      style: 'direct et fiable',
+      availability: 'week-end',
+      negotiation: 'parle de la caution virtuelle et du prêt des forets',
+    },
+  },
+  {
+    id: 103,
+    isDemo: true,
+    user: "Karim B.",
+    listing: "Réparation iPhone 13",
+    lastMessage: "D'accord pour 25€ avec changement d'écran d'origine.",
+    status: "Négociation en cours",
+    terms: "Réparation Écran • 25€",
+    persona: {
+      role: 'Technicien dépannage',
+      skills: ['iPhone', 'batterie', 'écran', 'local'],
+      style: 'pragmatique et rassurant',
+      availability: 'matin et fin de journée',
+      negotiation: 'propose un tarif préférentiel à 25€ sur place',
+    },
+  },
+  {
+    id: 104,
+    isDemo: true,
+    user: "Camille & Lucas",
+    listing: "Stay Swap Marseille Vieux-Port",
+    lastMessage: "Super ! Échange d'appartement confirmé pour le week-end du 20 mai !",
+    status: "Deal Validé",
+    terms: "Échange de logement • 0€",
+    persona: {
+      role: 'Voyageurs Troco',
+      skills: ['Stay Swap', 'Marseille', 'Paris'],
+      style: 'accueillants',
+      availability: 'week-ends prolongés',
+      negotiation: 'échange réciproque de studio sans frais',
+    },
+  },
+  {
+    id: 301,
+    isGroup: true,
+    user: "Collectif Rénovation Tiers-Lieu",
+    projectTitle: "Collectif Rénovation Tiers-Lieu",
+    category: "Atelier & Chantier Solidaire",
+    description: "Aménagement d'un espace collaboratif avec menuiserie, mobilier recyclé et électricité.",
+    rewardPool: 25,
+    rewardStrategy: "task",
+    participants: ["Mateo", "Marie D.", "Lucas M.", "Alex K."],
+    members: [
+      { name: "Mateo", role: "Leader / Initiateur", tokensEarned: 0 },
+      { name: "Marie D.", role: "Architecture d'intérieur", tokensEarned: 5 },
+      { name: "Lucas M.", role: "Coordination Chantier", tokensEarned: 0 },
+      { name: "Alex K.", role: "Menuiserie & Recyclage", tokensEarned: 0 },
+    ],
+    rewardAllocations: [
+      { id: "rew-301-1", beneficiary: "Marie D.", title: "Conception & Plans d’aménagement 3D", type: "task", amount: 5, status: "pending" }
+    ],
+    lastMessage: "💎 Proposition de rétribution : 5 Jetons Troco pour Marie D. (Plans 3D)",
+    status: "En cours",
+  }
+];
+
+export const initialChatThreads = {
+  301: [
+    { id: 1, sender: 'system', text: '🚀 Hub de collaboration initialisé pour "Collectif Rénovation Tiers-Lieu". Réserve allouée : 25 Jetons Troco. Membres : Mateo, Marie D., Lucas M., Alex K.' },
+    { id: 2, sender: 'them', senderName: 'Marie D.', text: 'Bonjour l’équipe ! J’ai terminé les plans d’implantation 3D pour l’espace atelier et la terrasse.' },
+    { id: 3, sender: 'them', senderName: 'Alex K.', text: 'Super travail Marie ! De mon côté le bois de récup est poncé et prêt pour l’assemblage des bancs.' },
+    { id: 4, sender: 'them', senderName: 'Lucas M.', kind: 'reward-proposal', type: 'reward', reward: { id: 'rew-301-1', beneficiary: 'Marie D.', title: 'Conception & Plans d’aménagement 3D', type: 'task', amount: 5, status: 'pending' }, text: '💎 Proposition de rétribution : 5 Jetons Troco pour Marie D. (Conception & Plans d’aménagement 3D)' },
+  ],
+  201: [
+    { id: 1, sender: 'them', text: 'Bonjour Mateo ! J’ai vu ton annonce d’initiation UI/UX sur Figma, elle m’intéresse énormément pour mon projet d’application mobile !' },
+    { id: 2, sender: 'me', text: 'Salut Emma ! Avec grand plaisir, on peut voir les bases des composants, autolayout et prototypes interactifs.' },
+    { id: 3, sender: 'them', text: 'Super ! Est-ce que tu serais disponible pour 2h de formation ce samedi en visio ?' },
+    { id: 4, sender: 'them', kind: 'deal', dealId: 'deal-201-1', status: 'pending', terms: { euroAmount: 20, trocoTokens: 1, conditions: 'Session de 2h Initiation Figma (UI/UX) ce samedi à 14h. Contre 20€ + 1 Jeton Troco.' } },
+  ],
+  202: [
+    { id: 1, sender: 'them', text: 'Hello Mateo ! Je cherche un studio photo bien équipé à Paris pour un shoot produit. Ton annonce est toujours disponible ?' },
+    { id: 2, sender: 'me', text: 'Oui Thomas ! Il y a tout le matos : flashs Bowens, softbox, déclencheurs et fonds papier.' },
+    { id: 3, sender: 'them', text: 'Parfait ! Je peux te proposer un échange contre 3 jetons Troco pour 3h de réservation ce vendredi.' },
+    { id: 4, sender: 'them', kind: 'deal', dealId: 'deal-202-1', status: 'pending', terms: { euroAmount: 0, trocoTokens: 3, conditions: 'Réservation Studio Photo Pro (3h) ce vendredi 14h-17h avec matériel inclus. Contre 3 Jetons Troco.' } },
+  ],
+  101: [
+    { id: 1, sender: 'them', text: 'Bonjour ! Je propose des cours de piano flexibles pour tous niveaux avec accompagnement sur mesure.' },
+    { id: 2, sender: 'me', text: 'Parfait, je cherche à retravailler mes enchaînements d’accords en visio.' },
+    { id: 3, sender: 'them', kind: 'deal', dealId: 'deal-101-1', status: 'pending', terms: { euroAmount: 0, trocoTokens: 2, conditions: '2 séances de piano de 45 min en visio avec partitions fournies. Échange contre 2 Jetons Troco.' } },
+  ],
+  102: [
+    { id: 1, sender: 'them', text: 'Bonjour ! Tu as besoin d’une perceuse avec forets béton ou bois ?' },
+    { id: 2, sender: 'me', text: 'Plutôt béton pour poser des étagères murales.' },
+    { id: 3, sender: 'them', text: 'Parfait, je te prépare le coffret complet avec la poignée de sécurité.' },
+    { id: 4, sender: 'them', kind: 'deal', dealId: 'deal-102-1', status: 'confirmed', terms: { euroAmount: 0, trocoTokens: 0, conditions: 'Prêt gratuit 48h de la perceuse Bosch + coffret forets. Caution virtuelle de 30€ activée pendant la durée du prêt.' } },
+  ],
+  103: [
+    { id: 1, sender: 'them', text: 'Salut ! Je peux réparer ton écran d’iPhone 13 dans la journée si tu veux.' },
+    { id: 2, sender: 'me', text: 'Top ! C’est un écran d’origine garanti ?' },
+    { id: 3, sender: 'them', kind: 'deal', dealId: 'deal-103-1', status: 'pending', terms: { euroAmount: 25, trocoTokens: 0, conditions: 'Remplacement écran d’origine iPhone 13 + test d’étanchéité Paris 11ème. Échange contre 25€.' } },
+  ],
+  104: [
+    { id: 1, sender: 'them', text: 'Bonjour ! On adorerait échanger notre studio au Vieux-Port de Marseille contre ton appartement à Paris le temps d’un long week-end !' },
+    { id: 2, sender: 'me', text: 'Excellente idée ! Les dates du 20 mai fonctionnent très bien.' },
+    { id: 3, sender: 'them', kind: 'deal', dealId: 'deal-104-1', status: 'confirmed', terms: { euroAmount: 0, trocoTokens: 0, conditions: 'Échange réciproque 3 nuitées (Studio Marseille Vieux-Port vs Studio Paris Marais). Sans aucun frais.' } },
+  ],
+};
+
+export default mockChats;

@@ -1,0 +1,36 @@
+C'est noté. L'architecture s'assainit, c'est le moment idéal pour compiler notre Master Backlog. Dès que l'extraction de l'application sera terminée, nous pourrons injecter ces briques de manière modulaire sans risquer de surcharger le système.
+
+Voici la feuille de route exhaustive pour hisser la plateforme au rang de leader mondial.
+
+🗺️ 1. Géolocalisation & Carte
+Bouton "Me localiser" : Bouton flottant sur la carte pour un recentrage GPS instantané sur l'utilisateur.
+
+Correction des Mock Datas : Recalibrage définitif des annonces de test (actuellement bloquées à Paris/Le Marais) vers Roissy-en-France avec des coordonnées GPS précises pour refléter la réalité de tes tests locaux.
+
+🛡️ 2. Modération "God Mode"
+Panel Admin enrichi : Redirection immédiate vers la vue détaillée d'un utilisateur au clic depuis le tableau de bord.
+
+Mode "Navigation Fantôme" : Un toggle global activant des surcouches d'administration directement sur l'interface publique (boutons rouges pour censurer, masquer ou modifier n'importe quelle annonce ou message en direct).
+
+☁️ 3. Troco Workspace & Whiteboard
+Moteur d'exportation pro : Conversion et téléchargement direct des documents collaboratifs en formats natifs (.pdf, .docx, .xlsx, .pptx).
+
+Support Présentation : Ajout d'un module de type PowerPoint pour l'édition de slides en temps réel.
+
+Time Machine (Versionning) : Historique des modifications avec possibilité de nommer les versions et de restaurer un état précédent.
+
+Sélecteur chromatique absolu : Ajout d'un color picker complet (HEX/RGB) pour les pinceaux et textes du tableau blanc.
+
+🤝 4. Moteur de Deal "Cinématique"
+Workflow conversationnel : Intégration de vrais boutons "Accepter", "Refuser" ou "Contre-proposer" greffés aux bulles de chat.
+
+Double validation de Troc : Pour les échanges sans devise, obligation pour les deux parties de cliquer sur "Prestation terminée" pour sceller l'accord.
+
+Gamification de clôture : Animation festive (confettis/motion design) à la résolution du deal, suivie immédiatement de la modale de notation pour booster la récolte d'avis.
+
+✨ 5. Motion Design & Fixes Résiduels
+Refonte du Scroll Reveal : Abandon de la logique GSAP actuelle (qui provoque la disparition ou la duplication des cartes) au profit d'une implémentation robuste via IntersectionObserver natif ou Framer Motion.
+
+Synchronisation des Jetons : Correction du bouton de transfert mobile inactif et application du débit en temps réel sur le solde lors d'un envoi manuel.
+
+Matchmaking IA (Idée Bonus) : Un algorithme en arrière-plan qui analyse les compétences offertes/recherchées pour pousser des notifications de "Troc Parfait" entre utilisateurs géographiquement proches.
