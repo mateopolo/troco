@@ -25,7 +25,7 @@ import PWAInstallBanner from './components/PWAInstallBanner';
 import SponsoredFeedCard from './components/SponsoredFeedCard';
 import SectoralErrorBoundary from './components/SectoralErrorBoundary';
 import { useWalletStore } from './stores';
-import { ChatSection, MapSection, CallFeature, PaymentFeature } from './features';
+import { ChatSection, MapSection, CallFeature, PaymentFeature, CommunityHubSection } from './features';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useGSAP } from '@gsap/react';
@@ -49,6 +49,7 @@ const WelcomeGiftCelebrationModal = React.lazy(() => import('./components/Welcom
 const VisioSettlementModal = React.lazy(() => import('./components/VisioSettlementModal'));
 const KycModal = React.lazy(() => import('./components/KycModal'));
 const CounterOfferModal = React.lazy(() => import('./components/CounterOfferModal'));
+const PublicProfileModal = React.lazy(() => import('./components/PublicProfileModal'));
 
 if (typeof window !== 'undefined') {
   gsap.registerPlugin(ScrollTrigger, useGSAP);
@@ -1463,7 +1464,7 @@ export default function App() {
   const [tagInputValue, setTagInputValue] = useState('');
 
   // NAVIGATION FLUIDE ENTRE ONGLETS
-  const NAV_TABS = useMemo(() => ['feed', 'chat', 'post', 'profile'], []);
+  const NAV_TABS = useMemo(() => ['feed', 'community', 'chat', 'post', 'profile'], []);
   const [tabSlideDirection, setTabSlideDirection] = useState('forward');
 
   const switchTab = useCallback((tabName) => {
@@ -1519,6 +1520,8 @@ export default function App() {
   // ---- CONTRE-PROPOSITION ----
   const [isCounterOfferOpen, setIsCounterOfferOpen] = useState(false);
   const [counterOfferDraft, setCounterOfferDraft] = useState({ euroAmount: '', trocoTokens: '', conditions: '' });
+  const [communityProfileUser, setCommunityProfileUser] = useState(null);
+  const [isCommunityProfileOpen, setIsCommunityProfileOpen] = useState(false);
   const [chatStatusOverrides, setChatStatusOverrides] = useState({});
 
   // ---- GESTION WEBRTC AUDIO/VIDÉO & APPELS TEMPS RÉEL (SIGNALISATION FIRESTORE) ----
@@ -8107,6 +8110,30 @@ export default function App() {
           </div>
         )}
 
+        {/* ONGLET COMMUNAUTÉ : TROCO LIVE & FIL D'ACTIVITÉ */}
+        {activeTab === 'community' && (
+          <SectoralErrorBoundary moduleName="Communauté & Troco Live">
+            <CommunityHubSection
+              currentUser={profile}
+              onOpenProfile={(targetUser) => {
+                const targetObj = {
+                  id: targetUser.id || targetUser.uid || `user-${Date.now()}`,
+                  user: targetUser.name || targetUser.author || 'Membre Troco',
+                  avatar: targetUser.avatar,
+                  verified: targetUser.verified || false,
+                  author: targetUser.name || targetUser.author || 'Membre Troco',
+                  authorUsername: targetUser.username || targetUser.authorUsername || '@membre',
+                  authorProfile: targetUser,
+                };
+                setCommunityProfileUser(targetObj);
+                setIsCommunityProfileOpen(true);
+              }}
+              darkMode={darkMode}
+              isMobile={isMobile}
+            />
+          </SectoralErrorBoundary>
+        )}
+
         {/* ONGLET 2 : MESSAGERIE & NÉGOCIATIONS */}
         {activeTab === 'chat' && (() => {
           const activeChatData = chatsList.find(c => String(c.id) === String(selectedChat?.id));
@@ -9983,7 +10010,55 @@ export default function App() {
             </span>
           </button>
 
-          {/* 2. MESSAGES */}
+          {/* 2. COMMUNAUTÉ & TROCO LIVE */}
+          <button
+            type="button"
+            onClick={() => switchTab('community')}
+            style={{
+              border: 'none',
+              background: 'transparent',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '4px',
+              color: activeTab === 'community' ? 'var(--accent-primary)' : 'var(--text-secondary)',
+              cursor: 'pointer',
+              padding: '6px 14px',
+              position: 'relative',
+              transition: 'transform 0.3s var(--ease-monopo), color 0.2s ease',
+              transform: activeTab === 'community' ? 'scale(1.06)' : 'scale(1)',
+              outline: 'none'
+            }}
+          >
+            <span style={{ position: 'relative', display: 'inline-flex' }}>
+              <Globe
+                size={22}
+                color={activeTab === 'community' ? 'var(--accent-primary)' : 'var(--text-secondary)'}
+                strokeWidth={activeTab === 'community' ? 2.3 : 1.8}
+              />
+              <span style={{
+                position: 'absolute',
+                top: '-2px',
+                right: '-4px',
+                width: '7px',
+                height: '7px',
+                backgroundColor: '#EF4444',
+                borderRadius: '50%',
+                boxShadow: '0 0 6px #EF4444',
+                animation: 'pulse 1.8s infinite',
+              }} />
+            </span>
+            <span style={{
+              fontSize: '11px',
+              fontWeight: activeTab === 'community' ? '700' : '500',
+              letterSpacing: '0.01em',
+              color: activeTab === 'community' ? 'var(--accent-primary)' : 'var(--text-secondary)'
+            }}>
+              Communauté
+            </span>
+          </button>
+
+          {/* 3. MESSAGES */}
           <button
             type="button"
             onClick={() => switchTab('chat')}
@@ -11260,6 +11335,22 @@ export default function App() {
             onAccept={handleAcceptCgu}
             darkMode={darkMode}
             currentUser={profile}
+          />
+        </Suspense>
+      )}
+
+      {/* MODALE PROFIL PUBLIC POUR LA COMMUNAUTÉ ET LE CHAT */}
+      {isCommunityProfileOpen && communityProfileUser && (
+        <Suspense fallback={<SkeletonModalFallback title="Profil public..." />}>
+          <PublicProfileModal
+            isOpen={isCommunityProfileOpen}
+            onClose={() => setIsCommunityProfileOpen(false)}
+            targetUser={communityProfileUser}
+            allListings={listings}
+            onOpenListing={handleOpenListing}
+            currentLang={currentLang}
+            darkMode={darkMode}
+            t={t}
           />
         </Suspense>
       )}
