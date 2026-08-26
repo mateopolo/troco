@@ -64,6 +64,7 @@ function ChatView({
   const [isProjectRewardsModalOpen, setIsProjectRewardsModalOpen] = useState(false);
   const [isWhiteboardOpen, setIsWhiteboardOpen] = useState(false);
   const [whiteboardInitialView, setWhiteboardInitialView] = useState('canvas');
+  const [activeWhiteboardBoardId, setActiveWhiteboardBoardId] = useState(null);
   const [isWorkspaceToolsOpen, setIsWorkspaceToolsOpen] = useState(false);
   const [isCloudOfficeOpen, setIsCloudOfficeOpen] = useState(false);
   const [officeInitialTab, setOfficeInitialTab] = useState('docs');
@@ -88,7 +89,10 @@ function ChatView({
   const handleOpenWorkspaceTool = async (toolType) => {
     setIsWorkspaceMenuOpen(false);
 
+    const currentBoardId = effectiveSelectedChat?.id ? `board-${effectiveSelectedChat.id}` : 'default_board';
+
     if (toolType === 'whiteboard') {
+      setActiveWhiteboardBoardId(currentBoardId);
       setWhiteboardInitialView('canvas');
       setIsWhiteboardOpen(true);
     } else if (toolType === 'notes') {
@@ -1395,6 +1399,7 @@ function ChatView({
                             setOfficeInitialTab('sheets');
                             setIsCloudOfficeOpen(true);
                           } else {
+                            setActiveWhiteboardBoardId(msg.boardId || (effectiveSelectedChat?.id ? `board-${effectiveSelectedChat.id}` : 'default_board'));
                             setWhiteboardInitialView('canvas');
                             setIsWhiteboardOpen(true);
                           }
@@ -2541,11 +2546,12 @@ function ChatView({
             isOpen={isWhiteboardOpen}
             onClose={() => setIsWhiteboardOpen(false)}
             groupId={activeChatObj.id || activeChatObj.firestoreId || 'group_whiteboard'}
+            boardId={activeWhiteboardBoardId || (activeChatObj.id ? `board-${activeChatObj.id}` : 'default_board')}
             projectTitle={activeChatObj.projectTitle || activeChatObj.user || 'Workspace Collaboratif'}
             currentUser={profile}
             darkMode={darkMode}
             initialView={whiteboardInitialView}
-            onSendToChat={(imageDataUrl) => {
+            onSendToChat={(sentBoardId) => {
               if (setChatInputText) setChatInputText('');
             }}
           />

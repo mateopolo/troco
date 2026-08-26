@@ -3881,26 +3881,28 @@ export default function App() {
         }
       );
 
-      // 2. Cascade au défilement pour les cartes suivantes
+      // 2. Cascade au défilement pour les cartes suivantes (optimisé smartphone & desktop)
       ScrollTrigger.batch(cards, {
-        start: 'top 92%',
-        interval: 0.08,
+        start: 'top 90%',
+        interval: 0.06,
         batchMax: 6,
+        fastScrollEnd: true,
+        preventOverlaps: true,
         onEnter: (batch) => {
           gsap.fromTo(
             batch,
             {
               opacity: 0,
-              y: 26,
+              y: 24,
               scale: 0.98,
             },
             {
               opacity: 1,
               y: 0,
               scale: 1,
-              duration: 0.48,
+              duration: 0.46,
               ease: 'power3.out',
-              stagger: 0.05,
+              stagger: 0.04,
               overwrite: 'auto',
               clearProps: 'transform,opacity',
             }
@@ -3910,7 +3912,7 @@ export default function App() {
       });
 
       ScrollTrigger.refresh();
-    }, 40);
+    }, 60);
 
     return () => {
       clearTimeout(timer);

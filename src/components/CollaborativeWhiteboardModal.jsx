@@ -43,7 +43,7 @@ const FONT_FAMILIES = [
   { id: 'mono', name: 'Code (Mono)', font: 'Roboto Mono, monospace' },
 ];
 
-const FONT_SIZES = [14, 18, 24, 32, 44];
+const FONT_SIZES = [14, 18, 24, 32, 44, 56];
 
 const DEFAULT_SHARED_NOTE = `# 📝 Notes de Session & Objectifs Collaboratifs\n\n` +
   `### Points d'action du projet\n` +
@@ -58,13 +58,16 @@ export default function CollaborativeWhiteboardModal({
   isOpen,
   onClose,
   groupId = 'demo_group_whiteboard',
+  boardId = null,
   projectTitle = 'Tableau Blanc Collaboratif',
   currentUser = null,
   darkMode = false,
   onSendToChat = null,
   initialView = 'canvas', // 'canvas' | 'notes'
 }) {
-  // Onglet supérieur : 'canvas' (Tableau blanc) ou 'notes' (Notes Partagées Apple-Style)
+  const effectiveBoardId = boardId || groupId || 'default_board';
+
+  // Onglet supérieur : 'canvas' (Tableau blanc 0ms) ou 'notes' (Notes Partagées Apple-Style)
   const [activeTab, setActiveTab] = useState(initialView);
 
   const canvasRef = useRef(null);
@@ -77,7 +80,7 @@ export default function CollaborativeWhiteboardModal({
   const [lineWidth, setLineWidth] = useState(4);
   const [showGrid, setShowGrid] = useState(true);
 
-  // État des objets du tableau
+  // État des objets du tableau (PERSISTANCE FIRESTORE VECTORIELLE)
   const [paths, setPaths] = useState([]);
   const [stickyNotes, setStickyNotes] = useState([]);
   const [textElements, setTextElements] = useState([]);
@@ -112,8 +115,8 @@ export default function CollaborativeWhiteboardModal({
   const touchStartZoomRef = useRef(1);
   const draggingStickyRef = useRef(null);
   const draggingTextRef = useRef(null);
+  const isDraggingTextBBoxRef = useRef(false);
 
-  // Mise à jour de l'onglet actif si la prop initiale change
   useEffect(() => {
     if (initialView) setActiveTab(initialView);
   }, [initialView]);
@@ -265,15 +268,15 @@ export default function CollaborativeWhiteboardModal({
     }
   }, [isOpen, activeTab, updateCanvasSize]);
 
-  // Synchronisation Multi-joueurs en temps réel avec Firestore pour le Tableau Blanc
+  // ÉTAPE 4 : SYNCHRONISATION & MÉMOIRE PERSISTANTE FIRESTORE DU WHITEBOARD
   useEffect(() => {
-    if (!isOpen || !groupId || !db) return;
+    if (!isOpen || !effectiveBoardId || !db) return;
 
     const myName = currentUser?.name || 'Moi';
     setActiveUsers([myName, 'Collaborateur en direct']);
 
     try {
-      const docRef = doc(db, 'project_whiteboards', String(groupId));
+      const docRef = doc(db, 'project_whiteboards', String(effectiveBoardId));
       const unsubscribe = onSnapshot(docRef, (snapshot) => {
         if (snapshot.exists()) {
           const data = snapshot.data();
@@ -290,7 +293,7 @@ export default function CollaborativeWhiteboardModal({
           if (data.activeUsers && Array.isArray(data.activeUsers)) {
             setActiveUsers(data.activeUsers);
           }
-          setSaveStatus('Synchronisé en direct 🟢');
+          setSaveStatus('Mémoire persistante synchronisée 🟢');
         }
       }, (err) => {
         console.warn('[Firestore Whiteboard] snapshot notice:', err);
@@ -298,7 +301,7 @@ export default function CollaborativeWhiteboardModal({
 
       return () => unsubscribe();
     } catch (_) {}
-  }, [isOpen, groupId, redrawCanvas, currentUser]);
+  }, [isOpen, effectiveBoardId, redrawCanvas, currentUser]);
 
   // Synchronisation Multi-joueurs en temps réel pour la Note Partagée (Apple Notes)
   useEffect(() => {
@@ -323,31 +326,45 @@ export default function CollaborativeWhiteboardModal({
     } catch (_) {}
   }, [isOpen, groupId, currentUser]);
 
-  // Sauvegarde des vecteurs du Whiteboard sur Firestore
+  // Sauvegarde des vecteurs du Whiteboard sur Firestore (Mémoire Persistante)
   const syncToFirestore = useCallback(async (
     newPaths = paths,
     newStickyNotes = stickyNotes,
     newTextElements = textElements
   ) => {
-    if (!groupId || !db) return;
+    if (!effectiveBoardId || !db) return;
     try {
       setSaveStatus('Diffusion en direct...');
       const myName = currentUser?.name || 'Moi';
-      const docRef = doc(db, 'project_whiteboards', String(groupId));
-      await setDoc(docRef, {
-        paths: newPaths.slice(-250),
+
+      // 1. Sauvegarde sur project_whiteboards
+      const docRef = doc(db, 'project_whiteboards', String(effectiveBoardId));
+      const payload = {
+        boardId: effectiveBoardId,
+        groupId: groupId,
+        title: projectTitle,
+        paths: newPaths.slice(-300),
         stickyNotes: newStickyNotes,
         textElements: newTextElements,
         updatedAt: serverTimestamp(),
         lastEditor: myName,
         activeUsers: [myName, 'Collaborateur en direct'],
-      }, { merge: true });
-      setSaveStatus('Synchronisé en direct 🟢');
+      };
+
+      await setDoc(docRef, payload, { merge: true });
+
+      // 2. Sauvegarde miroir dans la sous-collection du chat pour persistance locale
+      if (groupId && groupId !== 'demo_group_whiteboard') {
+        const chatBoardRef = doc(db, 'chats', String(groupId), 'whiteboards', String(effectiveBoardId));
+        await setDoc(chatBoardRef, payload, { merge: true }).catch(() => {});
+      }
+
+      setSaveStatus('Mémoire persistante synchronisée 🟢');
     } catch (e) {
       console.warn('[Firestore Whiteboard] write notice:', e);
       setSaveStatus('Mode local');
     }
-  }, [groupId, currentUser?.name, paths, stickyNotes, textElements]);
+  }, [effectiveBoardId, groupId, projectTitle, currentUser?.name, paths, stickyNotes, textElements]);
 
   // Sauvegarde de la Note Partagée sur Firestore
   const saveNoteToFirestore = useCallback(async (newContent, newTitle = noteTitle) => {
@@ -369,7 +386,7 @@ export default function CollaborativeWhiteboardModal({
     }
   }, [groupId, currentUser, noteTitle]);
 
-  // 1. POINTER DOWN : Traçage direct 0ms sur le contexte 2D (SANS setState)
+  // 1. POINTER DOWN : Traçage direct 0ms sur le contexte 2D + Détection Bounding Box Texte
   const handlePointerDown = (e) => {
     if (tool === 'hand' || e.button === 1) {
       isPanningRef.current = true;
@@ -401,26 +418,11 @@ export default function CollaborativeWhiteboardModal({
       return;
     }
 
-    // Dépôt d'un bloc de texte Rich Text
+    // ÉTAPE 5 : TEXTE AVEC BOUNDING BOX ÉTIRABLE
     if (tool === 'text') {
-      const newText = {
-        id: `text-${Date.now()}`,
-        x: coords.x,
-        y: coords.y,
-        text: 'Nouveau texte',
-        fontFamily: 'Inter, sans-serif',
-        fontSize: 20,
-        color: color,
-        isBold: false,
-        isItalic: false,
-        isUnderline: false,
-        author: currentUser?.name || 'Moi',
-      };
-      const updated = [...textElements, newText];
-      setTextElements(updated);
-      setEditingTextId(newText.id);
-      syncToFirestore(paths, stickyNotes, updated);
-      setTool('pencil');
+      isDrawingRef.current = true;
+      isDraggingTextBBoxRef.current = true;
+      startPosRef.current = coords;
       return;
     }
 
@@ -478,6 +480,44 @@ export default function CollaborativeWhiteboardModal({
 
     if (!isDrawingRef.current) return;
     const coords = getCanvasCoords(e);
+
+    // ÉTAPE 5 : Prévisualisation de la Bounding Box de texte en étirement
+    if (isDraggingTextBBoxRef.current) {
+      redrawCanvas();
+      const canvas = canvasRef.current;
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.save();
+          const dpr = window.devicePixelRatio || 1;
+          ctx.setTransform(1, 0, 0, 1, 0, 0);
+          ctx.scale(dpr, dpr);
+          ctx.translate(pan.x, pan.y);
+          ctx.scale(zoom, zoom);
+
+          const sx = Math.min(startPosRef.current.x, coords.x);
+          const sy = Math.min(startPosRef.current.y, coords.y);
+          const w = Math.abs(coords.x - startPosRef.current.x);
+          const h = Math.abs(coords.y - startPosRef.current.y);
+
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 1.5;
+          ctx.setLineDash([5, 4]);
+          ctx.strokeRect(sx, sy, w, h);
+
+          ctx.fillStyle = 'rgba(198, 125, 91, 0.08)';
+          ctx.fillRect(sx, sy, w, h);
+
+          const estFontSize = Math.min(72, Math.max(14, Math.round(h * 0.7)));
+          ctx.fillStyle = color;
+          ctx.font = `${estFontSize}px Inter, sans-serif`;
+          ctx.fillText('Aa', sx + 8, sy + estFontSize);
+
+          ctx.restore();
+        }
+      }
+      return;
+    }
 
     if (tool === 'pencil' || tool === 'pen' || tool === 'brush' || tool === 'highlighter' || tool === 'eraser') {
       if (!currentPathRef.current) return;
@@ -563,6 +603,46 @@ export default function CollaborativeWhiteboardModal({
     isDrawingRef.current = false;
     const coords = getCanvasCoords(e);
 
+    // ÉTAPE 5 : Validation Bounding Box Texte Étiré
+    if (isDraggingTextBBoxRef.current) {
+      isDraggingTextBBoxRef.current = false;
+      const boxW = Math.abs(coords.x - startPosRef.current.x);
+      const boxH = Math.abs(coords.y - startPosRef.current.y);
+      const startX = Math.min(coords.x, startPosRef.current.x);
+      const startY = Math.min(coords.y, startPosRef.current.y);
+
+      let calcFontSize = 20;
+      let finalW = Math.max(140, boxW);
+
+      if (boxW > 25 && boxH > 15) {
+        calcFontSize = Math.min(72, Math.max(14, Math.round(boxH * 0.7)));
+      }
+
+      const newText = {
+        id: `text-${Date.now()}`,
+        x: startX,
+        y: startY,
+        width: finalW,
+        height: Math.max(30, boxH),
+        text: 'Nouveau texte',
+        fontFamily: 'Inter, sans-serif',
+        fontSize: calcFontSize,
+        color: color,
+        isBold: false,
+        isItalic: false,
+        isUnderline: false,
+        author: currentUser?.name || 'Moi',
+      };
+
+      const updated = [...textElements, newText];
+      setTextElements(updated);
+      setEditingTextId(newText.id);
+      syncToFirestore(paths, stickyNotes, updated);
+      setTool('pencil');
+      redrawCanvas();
+      return;
+    }
+
     let newPath = null;
     if (tool === 'pencil' || tool === 'pen' || tool === 'brush' || tool === 'highlighter' || tool === 'eraser') {
       if (currentPathRef.current && currentPathRef.current.points.length > 0) {
@@ -618,6 +698,7 @@ export default function CollaborativeWhiteboardModal({
   const handleTouchStart = (e) => {
     if (e.touches.length === 2) {
       isDrawingRef.current = false;
+      isDraggingTextBBoxRef.current = false;
       isPanningRef.current = true;
       const t1 = e.touches[0];
       const t2 = e.touches[1];
@@ -682,7 +763,7 @@ export default function CollaborativeWhiteboardModal({
 
   // Réinitialiser tout
   const handleClearAll = () => {
-    if (window.confirm("Voulez-vous réinitialiser l'ensemble du tableau blanc, des textes et des post-its ?")) {
+    if (window.confirm("Voulez-vous réinitialiser l'ensemble du tableau blanc persistant, des textes et des post-its ?")) {
       setPaths([]);
       setRedoStack([]);
       setStickyNotes([]);
@@ -812,7 +893,6 @@ export default function CollaborativeWhiteboardModal({
     let maxX = -Infinity;
     let maxY = -Infinity;
 
-    // 1. Bornes des traits
     paths.forEach(p => {
       if (p.points) {
         p.points.forEach(pt => {
@@ -834,7 +914,6 @@ export default function CollaborativeWhiteboardModal({
       }
     });
 
-    // 2. Bornes des Post-its
     stickyNotes.forEach(s => {
       minX = Math.min(minX, s.x);
       minY = Math.min(minY, s.y);
@@ -842,12 +921,11 @@ export default function CollaborativeWhiteboardModal({
       maxY = Math.max(maxY, s.y + 140);
     });
 
-    // 3. Bornes des Textes
     textElements.forEach(t => {
       minX = Math.min(minX, t.x);
       minY = Math.min(minY, t.y);
-      maxX = Math.max(maxX, t.x + 240);
-      maxY = Math.max(maxY, t.y + 80);
+      maxX = Math.max(maxX, t.x + (t.width || 240));
+      maxY = Math.max(maxY, t.y + (t.height || 80));
     });
 
     if (minX === Infinity) {
@@ -874,7 +952,6 @@ export default function CollaborativeWhiteboardModal({
     if (!ctx) return null;
 
     ctx.scale(dpr, dpr);
-
     ctx.fillStyle = darkMode ? '#181513' : '#FAF8F5';
     ctx.fillRect(0, 0, cropWidth, cropHeight);
 
@@ -1024,24 +1101,28 @@ export default function CollaborativeWhiteboardModal({
     }
   };
 
-  // Envoi de la capture intelligente dans la conversation
+  // ÉTAPE 4 : ENVOI DE CARTE INTERACTIVE PERSISTANTE DANS LA CONVERSATION
   const handleSendToChatAction = async () => {
     setIsSendingToChat(true);
     try {
       if (activeTab === 'canvas') {
-        const dataUrl = generateCompositeSnapshotDataUrl();
-        if (!dataUrl) return;
+        // 1. Sauvegarde explicite de l'état persistant dans Firestore
+        await syncToFirestore(paths, stickyNotes, textElements);
 
         if (db && groupId) {
-          const timeLabel = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          const caption = `🎨 Tableau blanc partagé (${timeLabel})`;
+          const authorName = currentUser?.name || 'Moi';
+          const caption = `🎨 ${authorName} a partagé un Tableau Blanc Collaboratif`;
 
           await addDoc(collection(db, 'chats', String(groupId), 'messages'), {
             text: caption,
-            imageUrl: dataUrl,
-            type: 'image',
-            sender: currentUser?.id || currentUser?.name || 'Moi',
-            senderName: currentUser?.name || 'Moi',
+            type: 'workspace_invite',
+            kind: 'workspace_invite',
+            workspaceType: 'whiteboard',
+            boardId: effectiveBoardId,
+            workspaceTitle: projectTitle,
+            sender: currentUser?.id || currentUser?.name || 'me',
+            senderName: authorName,
+            senderAvatar: currentUser?.avatar || '',
             timestamp: serverTimestamp(),
             createdAt: Date.now(),
           });
@@ -1053,9 +1134,10 @@ export default function CollaborativeWhiteboardModal({
           }, { merge: true });
         }
 
-        if (onSendToChat) onSendToChat(dataUrl);
+        if (onSendToChat) onSendToChat(effectiveBoardId);
       } else {
         if (db && groupId) {
+          const authorName = currentUser?.name || 'Moi';
           const caption = `📝 Note partagée : ${noteTitle}`;
           await addDoc(collection(db, 'chats', String(groupId), 'messages'), {
             text: caption,
@@ -1063,8 +1145,9 @@ export default function CollaborativeWhiteboardModal({
             kind: 'workspace_invite',
             workspaceType: 'notes',
             workspaceTitle: noteTitle,
-            sender: currentUser?.id || currentUser?.name || 'Moi',
-            senderName: currentUser?.name || 'Moi',
+            sender: currentUser?.id || currentUser?.name || 'me',
+            senderName: authorName,
+            senderAvatar: currentUser?.avatar || '',
             timestamp: serverTimestamp(),
             createdAt: Date.now(),
           });
@@ -1262,10 +1345,10 @@ export default function CollaborativeWhiteboardModal({
                 gap: '5px',
                 boxShadow: 'var(--shadow-accent)',
               }}
-              title="Envoyer le résultat dans la discussion"
+              title="Partager et sauvegarder dans la conversation"
             >
               <Send size={13} />
-              <span>{isSendingToChat ? 'Envoi...' : 'Envoyer au chat'}</span>
+              <span>{isSendingToChat ? 'Envoi...' : 'Partager au chat'}</span>
             </button>
 
             <button
@@ -1360,7 +1443,7 @@ export default function CollaborativeWhiteboardModal({
                   { id: 'rect', icon: Square, title: 'Rectangle' },
                   { id: 'circle', icon: Circle, title: 'Cercle' },
                   { id: 'arrow', icon: ArrowRight, title: 'Flèche' },
-                  { id: 'text', icon: Type, title: 'Texte Rich Text' },
+                  { id: 'text', icon: Type, title: 'Texte étirable (Bounding Box dynamique)' },
                   { id: 'sticky', icon: StickyNote, title: 'Post-it' },
                   { id: 'hand', icon: Hand, title: 'Déplacement (Pan)' },
                 ].map(t => {
@@ -1538,7 +1621,7 @@ export default function CollaborativeWhiteboardModal({
               </div>
             </div>
 
-            {/* ZONE PRINCIPALE DU CANVAS */}
+            {/* ZONE PRINCIPALE DU CANVAS AVEC DÉPLACEMENT FLUIDE 2 DOIGTS */}
             <div
               ref={containerRef}
               onTouchStart={handleTouchStart}
@@ -1553,7 +1636,7 @@ export default function CollaborativeWhiteboardModal({
                 backgroundSize: bgGridSize,
                 backgroundPosition: bgGridPos,
                 touchAction: 'none',
-                cursor: tool === 'hand' ? (isPanningRef.current ? 'grabbing' : 'grab') : tool === 'text' ? 'text' : tool === 'sticky' ? 'copy' : tool === 'eraser' ? 'cell' : 'crosshair',
+                cursor: tool === 'hand' ? (isPanningRef.current ? 'grabbing' : 'grab') : tool === 'text' ? 'crosshair' : tool === 'sticky' ? 'copy' : tool === 'eraser' ? 'cell' : 'crosshair',
               }}
             >
               <canvas
@@ -1570,11 +1653,12 @@ export default function CollaborativeWhiteboardModal({
                 }}
               />
 
-              {/* TEXTES RICH TEXT */}
+              {/* TEXTES BOUNDING BOX ÉTIRABLES */}
               {textElements.map((txt) => {
                 const isEditing = editingTextId === txt.id;
                 const screenPosX = txt.x * zoom + pan.x;
                 const screenPosY = txt.y * zoom + pan.y;
+                const screenW = (txt.width || 180) * zoom;
 
                 return (
                   <div
@@ -1583,9 +1667,10 @@ export default function CollaborativeWhiteboardModal({
                       position: 'absolute',
                       left: `${screenPosX}px`,
                       top: `${screenPosY}px`,
+                      width: `${screenW}px`,
                       transformOrigin: 'top left',
                       zIndex: isEditing ? 25 : 15,
-                      minWidth: '120px',
+                      minWidth: '100px',
                     }}
                     onClick={(e) => e.stopPropagation()}
                   >
@@ -1686,9 +1771,11 @@ export default function CollaborativeWhiteboardModal({
                         display: 'flex',
                         alignItems: 'center',
                         gap: '4px',
+                        width: '100%',
+                        boxSizing: 'border-box',
                       }}
                     >
-                      <GripVertical size={12} style={{ opacity: isEditing ? 0.7 : 0.2 }} />
+                      <GripVertical size={12} style={{ opacity: isEditing ? 0.7 : 0.2, flexShrink: 0 }} />
                       {isEditing ? (
                         <input
                           type="text"
@@ -1697,6 +1784,7 @@ export default function CollaborativeWhiteboardModal({
                           onChange={(e) => updateTextStyle(txt.id, { text: e.target.value })}
                           onKeyDown={(e) => e.key === 'Enter' && setEditingTextId(null)}
                           style={{
+                            width: '100%',
                             border: 'none',
                             backgroundColor: 'transparent',
                             color: txt.color || color,
@@ -1718,7 +1806,9 @@ export default function CollaborativeWhiteboardModal({
                             fontWeight: txt.isBold ? 'bold' : 'normal',
                             fontStyle: txt.isItalic ? 'italic' : 'normal',
                             textDecoration: txt.isUnderline ? 'underline' : 'none',
-                            whiteSpace: 'pre',
+                            whiteSpace: 'pre-wrap',
+                            wordBreak: 'break-word',
+                            width: '100%',
                           }}
                         >
                           {txt.text || 'Texte vide'}

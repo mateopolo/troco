@@ -1,11 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
-import {
   Send, Flame, Zap,
-  TrendingUp, AtSign, ChevronDown, Trash2
+  TrendingUp, ChevronDown, Trash2, Edit2, AlertTriangle
 } from 'lucide-react';
 import {
   collection, addDoc, query, orderBy, limit,
-  onSnapshot, serverTimestamp, deleteDoc, doc
+  onSnapshot, serverTimestamp, deleteDoc, doc, updateDoc
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { validateChatMessage } from '../utils/moderationBlacklist';
@@ -67,6 +65,10 @@ export default function GlobalLiveChat({
   const [hasNewMessagesBelow, setHasNewMessagesBelow] = useState(false);
   const [isAutoScrollEnabled, setIsAutoScrollEnabled] = useState(true);
 
+  // État Modération Administrateur In-App (Discord Style)
+  const [editingAdminMsg, setEditingAdminMsg] = useState(null); // { id, text }
+  const [confirmDeleteMsgId, setConfirmDeleteMsgId] = useState(null);
+
   const scrollContainerRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -84,7 +86,7 @@ export default function GlobalLiveChat({
     return () => clearInterval(interval);
   }, []);
 
-  // Défilement automatique vers le bas ISOLÉ AU CONTENEUR INTERNE (ne scrolle JAMAIS la page globale)
+  // Défilement automatique vers le bas ISOLÉ AU CONTENEUR INTERNE
   const scrollToBottom = (behavior = 'smooth') => {
     if (scrollContainerRef.current) {
       if (behavior === 'smooth') {
@@ -107,7 +109,7 @@ export default function GlobalLiveChat({
       const q = query(
         collection(db, 'global_chat'),
         orderBy('createdAt', 'desc'),
-        limit(50)
+        limit(60)
       );
 
       const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -123,12 +125,12 @@ export default function GlobalLiveChat({
               text: data.text || '',
               badge: data.badge || (data.verified ? 'VÉRIFIÉ' : 'MEMBRE'),
               isUrgent: !!data.isUrgent,
+              isEditedByAdmin: !!data.isEditedByAdmin,
               timestamp: data.timestamp?.toMillis ? data.timestamp.toMillis() : (data.createdAt || Date.now()),
             });
           });
           fetched.reverse();
 
-          // Si la base contient moins de 3 messages, on fusionne les messages initiaux de démo
           if (fetched.length < 3) {
             const existingIds = new Set(fetched.map(m => m.id));
             const baseList = INITIAL_GLOBAL_MESSAGES.filter(m => !existingIds.has(m.id));
@@ -168,7 +170,7 @@ export default function GlobalLiveChat({
     const text = inputText.trim();
     if (!text) return;
 
-    // ---- MODÉRATION DE SÉCURITÉ (LISTE NOIRE & ANTI-ARNAQUE) ----
+    // Modération de sécurité (liste noire)
     const messageCheck = validateChatMessage(text);
     if (!messageCheck.isValid) {
       alert(messageCheck.errorMessage);
@@ -210,19 +212,44 @@ export default function GlobalLiveChat({
   };
 
   // Suppression d'un message par l'administrateur
-  const handleDeleteMessage = async (messageId) => {
-    if (!window.confirm("Supprimer ce message public ?")) return;
+  const handleConfirmDeleteMessage = async () => {
+    if (!confirmDeleteMsgId) return;
+    const targetId = confirmDeleteMsgId;
+    setConfirmDeleteMsgId(null);
+
     try {
-      setMessages(prev => prev.filter(m => m.id !== messageId));
-      if (db && messageId && typeof messageId === 'string' && !messageId.startsWith('m-init-') && !messageId.startsWith('local-')) {
-        await deleteDoc(doc(db, 'global_chat', messageId));
+      setMessages(prev => prev.filter(m => m.id !== targetId));
+      if (db && targetId && typeof targetId === 'string' && !targetId.startsWith('m-init-') && !targetId.startsWith('local-')) {
+        await deleteDoc(doc(db, 'global_chat', targetId));
       }
     } catch (err) {
       console.warn('[GlobalChat] Erreur suppression message admin:', err);
     }
   };
 
-  // Mentionner un utilisateur en cliquant dessus
+  // Édition d'un message par l'administrateur (In-App Discord Style)
+  const handleSaveAdminEdit = async () => {
+    if (!editingAdminMsg) return;
+    const { id, text } = editingAdminMsg;
+    if (!text.trim()) return;
+
+    setMessages(prev => prev.map(m => m.id === id ? { ...m, text: text.trim(), isEditedByAdmin: true } : m));
+    setEditingAdminMsg(null);
+
+    try {
+      if (db && id && typeof id === 'string' && !id.startsWith('m-init-') && !id.startsWith('local-')) {
+        await updateDoc(doc(db, 'global_chat', id), {
+          text: text.trim(),
+          editedAt: serverTimestamp(),
+          isEditedByAdmin: true,
+        });
+      }
+    } catch (err) {
+      console.warn('[GlobalChat] Erreur update message admin:', err);
+    }
+  };
+
+  // Mentionner un utilisateur
   const handleMentionUser = (username) => {
     const cleanHandle = username.startsWith('@') ? username : `@${username}`;
     setInputText(prev => `${prev.trim()} ${cleanHandle} `.trimStart());
@@ -234,8 +261,8 @@ export default function GlobalLiveChat({
       style={{
         display: 'flex',
         flexDirection: 'column',
-        height: isCompact ? 'calc(100dvh - env(safe-area-inset-bottom, 0px) - 75px)' : '100%',
-        maxHeight: isCompact ? 'calc(100dvh - env(safe-area-inset-bottom, 0px) - 75px)' : '100%',
+        height: '100%',
+        width: '100%',
         backgroundColor: darkMode ? '#151210' : '#FAF8F5',
         borderRadius: isCompact ? '18px' : '24px',
         border: '1px solid var(--border-color)',
@@ -245,10 +272,11 @@ export default function GlobalLiveChat({
         boxSizing: 'border-box',
       }}
     >
-      {/* 1. EN-TÊTE COMPACT TWITCH-STYLE */}
+      {/* 1. EN-TÊTE COMPACT TROCO LIVE */}
       <div
         style={{
           padding: isCompact ? '8px 12px' : '10px 16px',
+          paddingTop: isCompact ? 'max(8px, env(safe-area-inset-top, 8px))' : '10px',
           borderBottom: '1px solid var(--border-color)',
           backgroundColor: darkMode ? 'rgba(24, 20, 18, 0.98)' : 'rgba(255, 255, 255, 0.98)',
           backdropFilter: 'blur(12px)',
@@ -285,6 +313,11 @@ export default function GlobalLiveChat({
               <span style={{ fontSize: '8.5px', fontWeight: '900', backgroundColor: '#EF4444', color: '#FFF', padding: '1px 5px', borderRadius: '4px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
                 DIRECT
               </span>
+              {isAdmin && (
+                <span style={{ fontSize: '8px', fontWeight: '900', backgroundColor: '#F59E0B', color: '#FFF', padding: '1px 4px', borderRadius: '4px' }}>
+                  ADMIN
+                </span>
+              )}
             </div>
             <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '1px' }}>
               <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#10B981', display: 'inline-block' }} />
@@ -353,6 +386,7 @@ export default function GlobalLiveChat({
         {messages.map((msg) => {
           const isUrgent = msg.isUrgent;
           const formattedTime = new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          const isCurrentlyEditing = editingAdminMsg?.id === msg.id;
 
           return (
             <div
@@ -374,6 +408,7 @@ export default function GlobalLiveChat({
                   : '0 2px 6px rgba(0, 0, 0, 0.02)',
                 transition: 'all 0.15s ease',
                 animation: 'fadeSlideUp 0.15s ease both',
+                position: 'relative',
               }}
             >
               {/* AVATAR CLIQUABLE */}
@@ -450,56 +485,193 @@ export default function GlobalLiveChat({
                     </span>
                   )}
 
-                  {/* HEURE & BOUTON SUPPRESSION ADMIN */}
+                  {msg.isEditedByAdmin && (
+                    <span style={{ fontSize: '9px', fontStyle: 'italic', color: 'var(--text-secondary)' }}>
+                      (modifié par admin)
+                    </span>
+                  )}
+
+                  {/* HEURE & ACTIONS DE MODÉRATION ADMIN DISCORD-STYLE */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: 'auto' }}>
                     <span style={{ fontSize: '10px', color: 'var(--text-secondary)', opacity: 0.8 }}>
                       {formattedTime}
                     </span>
+
                     {isAdmin && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteMessage(msg.id);
-                        }}
-                        style={{
-                          border: 'none',
-                          background: 'transparent',
-                          color: '#EF4444',
-                          cursor: 'pointer',
-                          padding: '2px',
-                          borderRadius: '4px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          opacity: 0.75,
-                          transition: 'opacity 0.15s ease',
-                        }}
-                        title="Supprimer ce message (Admin)"
-                      >
-                        <Trash2 size={12} />
-                      </button>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '2px', marginLeft: '4px' }}>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingAdminMsg({ id: msg.id, text: msg.text });
+                          }}
+                          style={{
+                            border: 'none',
+                            background: 'rgba(59, 130, 246, 0.12)',
+                            color: '#3B82F6',
+                            cursor: 'pointer',
+                            padding: '3px 5px',
+                            borderRadius: '5px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '2px',
+                            fontSize: '10px',
+                            fontWeight: '700',
+                          }}
+                          title="Éditer ce message (Modération Admin)"
+                        >
+                          <Edit2 size={11} />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setConfirmDeleteMsgId(msg.id);
+                          }}
+                          style={{
+                            border: 'none',
+                            background: 'rgba(239, 68, 68, 0.12)',
+                            color: '#EF4444',
+                            cursor: 'pointer',
+                            padding: '3px 5px',
+                            borderRadius: '5px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '2px',
+                            fontSize: '10px',
+                            fontWeight: '700',
+                          }}
+                          title="Supprimer ce message (Modération Admin)"
+                        >
+                          <Trash2 size={11} />
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
 
-                {/* TEXTE DU MESSAGE */}
-                <div style={{ color: 'var(--text-main)', fontSize: '12.5px', lineHeight: 1.4, wordBreak: 'break-word', fontWeight: isUrgent ? '600' : '400' }}>
-                  {msg.text.split(' ').map((word, i) => {
-                    if (word.startsWith('@')) {
-                      return (
-                        <span key={i} style={{ color: '#3B82F6', fontWeight: '800', backgroundColor: 'rgba(59, 130, 246, 0.12)', padding: '1px 4px', borderRadius: '4px', marginRight: '2px' }}>
-                          {word}{' '}
-                        </span>
-                      );
-                    }
-                    return word + ' ';
-                  })}
-                </div>
+                {/* TEXTE DU MESSAGE OU FORMULAIRE D'ÉDITION IN-PLACE ADMIN */}
+                {isCurrentlyEditing ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
+                    <input
+                      type="text"
+                      value={editingAdminMsg.text}
+                      autoFocus
+                      onChange={(e) => setEditingAdminMsg(prev => ({ ...prev, text: e.target.value }))}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleSaveAdminEdit();
+                        if (e.key === 'Escape') setEditingAdminMsg(null);
+                      }}
+                      style={{
+                        padding: '6px 10px',
+                        borderRadius: '8px',
+                        border: '1.5px solid #3B82F6',
+                        backgroundColor: darkMode ? '#151210' : '#FFFFFF',
+                        color: 'var(--text-main)',
+                        fontSize: '12.5px',
+                        outline: 'none',
+                      }}
+                    />
+                    <div style={{ display: 'flex', gap: '4px', justifyContent: 'flex-end' }}>
+                      <button
+                        type="button"
+                        onClick={() => setEditingAdminMsg(null)}
+                        style={{ border: '1px solid var(--border-color)', backgroundColor: 'transparent', color: 'var(--text-secondary)', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}
+                      >
+                        Annuler
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSaveAdminEdit}
+                        style={{ border: 'none', backgroundColor: '#3B82F6', color: '#FFF', padding: '3px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: '800', cursor: 'pointer' }}
+                      >
+                        Enregistrer
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ color: 'var(--text-main)', fontSize: '12.5px', lineHeight: 1.4, wordBreak: 'break-word', fontWeight: isUrgent ? '600' : '400' }}>
+                    {msg.text.split(' ').map((word, i) => {
+                      if (word.startsWith('@')) {
+                        return (
+                          <span key={i} style={{ color: '#3B82F6', fontWeight: '800', backgroundColor: 'rgba(59, 130, 246, 0.12)', padding: '1px 4px', borderRadius: '4px', marginRight: '2px' }}>
+                            {word}{' '}
+                          </span>
+                        );
+                      }
+                      return word + ' ';
+                    })}
+                  </div>
+                )}
               </div>
             </div>
           );
         })}
       </div>
+
+      {/* MODALE RAPIDE DE SUPPRESSION MESSAGE ADMIN */}
+      {confirmDeleteMsgId && (
+        <div
+          onClick={() => setConfirmDeleteMsgId(null)}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.65)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 100,
+            padding: '16px',
+            animation: 'fadeIn 0.15s ease',
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: 'var(--bg-card)',
+              color: 'var(--text-main)',
+              borderRadius: '20px',
+              padding: '20px',
+              maxWidth: '340px',
+              width: '100%',
+              border: '1px solid var(--border-color)',
+              boxShadow: '0 16px 36px rgba(0,0,0,0.4)',
+              textAlign: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '12px',
+            }}
+          >
+            <div style={{ width: '44px', height: '44px', borderRadius: '50%', backgroundColor: 'rgba(239, 68, 68, 0.15)', color: '#EF4444', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto' }}>
+              <AlertTriangle size={22} />
+            </div>
+            <div>
+              <h4 style={{ margin: '0 0 4px', fontSize: '15px', fontWeight: '800' }}>Supprimer ce message public ?</h4>
+              <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                Action de modération administrateur. Le message sera définitivement effacé de la communauté.
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+              <button
+                type="button"
+                onClick={() => setConfirmDeleteMsgId(null)}
+                style={{ flex: 1, padding: '9px 12px', borderRadius: '10px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-main)', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteMessage}
+                style={{ flex: 1, padding: '9px 12px', borderRadius: '10px', border: 'none', backgroundColor: '#EF4444', color: '#FFFFFF', fontSize: '12px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)' }}
+              >
+                Supprimer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* BOUTON FLOTTANT : NOUVEAUX MESSAGES EN BAS */}
       {hasNewMessagesBelow && (
@@ -532,13 +704,13 @@ export default function GlobalLiveChat({
         </button>
       )}
 
-      {/* 3. ZONE DE SAISIE FIXÉE DIRECTEMENT SANS MARGE INFÉRIEURE */}
+      {/* 3. ZONE DE SAISIE ANCRÉE PROPREMENT AU-DESSUS DU CLAVIER & SAFE AREA */}
       <div
         style={{
           position: 'sticky',
           bottom: 0,
           padding: '8px 12px',
-          paddingBottom: '8px',
+          paddingBottom: 'max(10px, env(safe-area-inset-bottom, 10px))',
           borderTop: '1px solid var(--border-color)',
           backgroundColor: darkMode ? '#181412' : '#FFFFFF',
           backdropFilter: 'blur(16px)',
@@ -548,121 +720,81 @@ export default function GlobalLiveChat({
           gap: '6px',
           flexShrink: 0,
           zIndex: 30,
-          boxSizing: 'border-box',
-          margin: 0,
         }}
       >
-        {/* BARRE D'ÉMOJIS RAPIDES & MODE ALERTE */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', overflowX: 'auto', paddingBottom: '1px' }}>
-            {['🔥', '🚀', '👏', '💎', '❤️', '⚡', '💡', '🎉'].map(emoji => (
-              <button
-                key={emoji}
-                type="button"
-                onClick={() => {
-                  setInputText(prev => `${prev} ${emoji}`.trimStart());
-                  inputRef.current?.focus();
-                }}
-                style={{
-                  border: 'none',
-                  background: 'transparent',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  padding: '1px 3px',
-                  borderRadius: '5px',
-                  transition: 'transform 0.1s ease',
-                }}
-                className="premium-button"
-                title={`Insérer ${emoji}`}
-              >
-                {emoji}
-              </button>
-            ))}
-          </div>
-
-          {/* BOUTON BASCULE : MODE ALERTE URGENTE ⚡ */}
+        <form onSubmit={handleSendMessage} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* BOUTON TOGGLE MODE URGENT */}
           <button
             type="button"
             onClick={() => setIsUrgentMode(!isUrgentMode)}
-            className="premium-button"
             style={{
-              border: isUrgentMode ? '1px solid #EF4444' : '1px solid var(--border-color)',
-              backgroundColor: isUrgentMode ? '#EF4444' : 'transparent',
-              color: isUrgentMode ? '#FFFFFF' : 'var(--text-secondary)',
-              borderRadius: '999px',
-              padding: '3px 8px',
-              fontSize: '10.5px',
+              border: isUrgentMode ? '1.5px solid #EF4444' : '1px solid var(--border-color)',
+              backgroundColor: isUrgentMode ? 'rgba(239, 68, 68, 0.15)' : 'var(--bg-subtle)',
+              color: isUrgentMode ? '#EF4444' : 'var(--text-secondary)',
+              padding: '6px 10px',
+              borderRadius: '10px',
+              fontSize: '11.5px',
               fontWeight: '800',
+              cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               gap: '4px',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
+              flexShrink: 0,
               transition: 'all 0.15s ease',
             }}
+            title="Activer l'alerte rouge pour les besoins critiques"
           >
-            <Flame size={11} color={isUrgentMode ? '#FFFFFF' : '#EF4444'} />
-            <span>Mode Alerte</span>
+            <Flame size={14} color={isUrgentMode ? '#EF4444' : 'currentColor'} />
+            <span style={{ display: isCompact ? 'none' : 'inline' }}>Alerte</span>
           </button>
-        </div>
 
-        {/* CHAMP DE SAISIE */}
-        <form onSubmit={handleSendMessage} style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
-          <div
-            style={{
-              flex: 1,
-              display: 'flex',
-              alignItems: 'center',
-              backgroundColor: darkMode ? '#221D1A' : '#F5F0E8',
-              borderRadius: '999px',
-              padding: '0 12px',
-              border: isUrgentMode ? '1.5px solid #EF4444' : '1px solid var(--border-color)',
-              transition: 'border-color 0.2s ease',
-            }}
-          >
-            <AtSign size={13} color="var(--text-secondary)" style={{ marginRight: '5px', opacity: 0.6 }} />
+          {/* CHAMP INPUT DE MESSAGE */}
+          <div style={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center' }}>
             <input
               ref={inputRef}
               type="text"
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
-              placeholder={isUrgentMode ? "Demande urgente (ex: Cherche dev ce soir...)" : "Envoyer un message à la communauté..."}
-              maxLength={300}
+              placeholder={isUrgentMode ? "Décrivez votre besoin urgent (visio, dépannage)..." : "Envoyer un message au chat mondial..."}
+              maxLength={280}
               style={{
-                flex: 1,
-                border: 'none',
-                backgroundColor: 'transparent',
+                width: '100%',
+                padding: '9px 12px',
+                paddingRight: '36px',
+                borderRadius: '12px',
+                border: isUrgentMode ? '1.5px solid #EF4444' : '1px solid var(--border-color)',
+                backgroundColor: darkMode ? '#1E1A17' : '#F9F8F6',
                 color: 'var(--text-main)',
-                fontSize: '12.5px',
-                padding: '8px 0',
+                fontSize: '13px',
                 outline: 'none',
+                boxSizing: 'border-box',
+                transition: 'border-color 0.15s ease',
               }}
             />
           </div>
 
+          {/* BOUTON ENVOI */}
           <button
             type="submit"
             disabled={!inputText.trim()}
             className="premium-button"
             style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '50%',
-              backgroundColor: isUrgentMode ? '#EF4444' : 'var(--accent-primary)',
-              color: '#FFFFFF',
               border: 'none',
+              borderRadius: '12px',
+              width: '38px',
+              height: '38px',
+              backgroundColor: inputText.trim() ? (isUrgentMode ? '#EF4444' : 'var(--accent-primary)') : 'var(--bg-subtle)',
+              color: inputText.trim() ? '#FFFFFF' : 'var(--text-secondary)',
+              cursor: inputText.trim() ? 'pointer' : 'default',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              cursor: inputText.trim() ? 'pointer' : 'not-allowed',
-              opacity: inputText.trim() ? 1 : 0.5,
-              transition: 'all 0.15s ease',
               flexShrink: 0,
-              boxShadow: inputText.trim() ? 'var(--shadow-accent)' : 'none',
+              boxShadow: inputText.trim() ? (isUrgentMode ? '0 4px 14px rgba(239, 68, 68, 0.4)' : 'var(--shadow-accent)') : 'none',
+              transition: 'all 0.15s ease',
             }}
-            title="Envoyer (Entrée)"
           >
-            <Send size={14} />
+            <Send size={15} />
           </button>
         </form>
       </div>
