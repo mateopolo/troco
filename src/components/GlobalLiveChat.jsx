@@ -8,6 +8,7 @@ import {
   onSnapshot, serverTimestamp
 } from 'firebase/firestore';
 import { db } from '../firebase';
+import { validateChatMessage } from '../utils/moderationBlacklist';
 
 // Messages initiaux riches
 const INITIAL_GLOBAL_MESSAGES = [
@@ -163,6 +164,13 @@ export default function GlobalLiveChat({
     e?.preventDefault();
     const text = inputText.trim();
     if (!text) return;
+
+    // ---- MODÉRATION DE SÉCURITÉ (LISTE NOIRE & ANTI-ARNAQUE) ----
+    const messageCheck = validateChatMessage(text);
+    if (!messageCheck.isValid) {
+      alert(messageCheck.errorMessage);
+      return;
+    }
 
     const optimisticMsg = {
       id: `local-${Date.now()}`,
