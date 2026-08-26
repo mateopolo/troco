@@ -5,4 +5,5 @@ export * from './call';
 export * from './profile';
 export * from './payment';
 export * from './community';
+export * from './post';
 export { default as AuthScreen } from './auth/AuthScreen';
