@@ -5,6 +5,7 @@ import {
   Check, CheckCircle, Loader2, Award, Globe
 } from 'lucide-react';
 import { getLocalizedTrocoPlusPlans, detectUserCountry, PPP_COUNTRY_MATRIX } from '../utils/pricingEngine';
+import { outboxService } from '../services/outboxService';
 
 // Algorithme de Luhn pour la validation des numéros de carte bancaire
 function isValidLuhn(numStr) {
@@ -357,6 +358,16 @@ export default function PaymentModal({
               ? `Empreinte de caution (${amountToPay.toFixed(2)} €)`
               : `Paiement Deal (${amountToPay.toFixed(2)} €)`,
     };
+
+    // Moteur Outbox IndexedDB : persistance immédiate et réconciliation garantie
+    try {
+      outboxService.queueTransaction({
+        ...resultPayload,
+        userId: currentUser?.uid || currentUser?.id || 'demo_user',
+        authorUid: currentUser?.uid || currentUser?.id || 'demo_user',
+        type: isSubscriptionMode ? 'subscription' : mode === 'topup-cash' ? 'topup' : mode === 'boost' ? 'boost' : 'deal_payout',
+      });
+    } catch (_) {}
 
     setSuccessDetails(resultPayload);
     setIsSuccess(true);

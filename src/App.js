@@ -729,40 +729,39 @@ export default function App() {
     }
   }, []);
 
-  // Navigation "Scrubbing" iOS stricte sur la barre de navigation inférieure
+  // Navigation "Scrubbing" iOS native 120 FPS via calcul mathématique pur (zéro reflow DOM)
   useEffect(() => {
     const navEl = bottomNavRef.current;
     if (!navEl) return;
 
     let isTouchingNav = false;
+    const tabList = ['feed', 'post', 'chat', 'deals', 'community', 'profile'];
+
+    const resolveTabFromTouch = (clientX) => {
+      const rect = navEl.getBoundingClientRect();
+      if (!rect.width) return null;
+      const relativeX = Math.max(0, Math.min(rect.width - 1, clientX - rect.left));
+      const tabIndex = Math.floor((relativeX / rect.width) * tabList.length);
+      return tabList[tabIndex] || null;
+    };
 
     const handleTouchStart = (e) => {
       if (!e.touches || e.touches.length === 0) return;
       isTouchingNav = true;
-      const touch = e.touches[0];
-      const targetEl = document.elementFromPoint(touch.clientX, touch.clientY);
-      const tabBtn = targetEl?.closest?.('[data-tab]');
-      if (tabBtn) {
-        const targetTab = tabBtn.getAttribute('data-tab');
-        if (targetTab && targetTab !== activeTab) {
-          switchTab(targetTab);
-        }
+      const targetTab = resolveTabFromTouch(e.touches[0].clientX);
+      if (targetTab && targetTab !== activeTab) {
+        switchTab(targetTab);
       }
     };
 
     const handleTouchMove = (e) => {
       if (!isTouchingNav || !e.touches || e.touches.length === 0) return;
       if (e.cancelable) e.preventDefault();
-      const touch = e.touches[0];
-      const targetEl = document.elementFromPoint(touch.clientX, touch.clientY);
-      const tabBtn = targetEl?.closest?.('[data-tab]');
-      if (tabBtn) {
-        const targetTab = tabBtn.getAttribute('data-tab');
-        if (targetTab && targetTab !== activeTab) {
-          switchTab(targetTab);
-          if (typeof navigator !== 'undefined' && navigator.vibrate) {
-            try { navigator.vibrate(10); } catch (_) { }
-          }
+      const targetTab = resolveTabFromTouch(e.touches[0].clientX);
+      if (targetTab && targetTab !== activeTab) {
+        switchTab(targetTab);
+        if (typeof navigator !== 'undefined' && navigator.vibrate) {
+          try { navigator.vibrate(8); } catch (_) { }
         }
       }
     };

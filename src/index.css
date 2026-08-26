@@ -43,6 +43,12 @@
   --call-card: #2B2622;
   --call-button-bg: rgba(250, 247, 242, 0.12);
 
+  /* SAFE AREA INSETS FOR IOS (DYNAMIC ISLAND / NOTCH / HOME BAR) */
+  --safe-area-top: env(safe-area-inset-top, 0px);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-left: env(safe-area-inset-left, 0px);
+  --safe-area-right: env(safe-area-inset-right, 0px);
+
   /* LEGACY ALIASES MAP TO DYNAMIC THEME ENGINE */
   --sand: var(--border-color);
   --sand-dark: var(--border-dark);
@@ -59,6 +65,21 @@
   --tl: var(--text-muted);
   --card-bg: var(--bg-card);
   --border-warm: var(--border-color);
+}
+
+html,
+body,
+#root {
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding-top: var(--safe-area-top);
+  box-sizing: border-box;
+}
+
+/* FIXE AUTOMATIQUE POUR LES BARRES INFERIEURES AVEC HOME INDICATOR */
+nav[data-bottom-nav],
+.bottom-nav-container {
+  padding-bottom: calc(10px + var(--safe-area-bottom)) !important;
 }
 
 /* TYPOGRAPHIE GLOBALE HAUTE-COUTURE (AWWWARDS / EDITORIAL) */

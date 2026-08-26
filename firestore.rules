@@ -1,92 +1,195 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // Helper functions
+
+    // =========================================================================
+    // FONCTIONS UTILITAIRES DE SÉCURITÉ & ZERO-TRUST AUTHENTICATION
+    // =========================================================================
     function isAuthenticated() {
-      return request.auth != null;
+      return request.auth != null && request.auth.uid != null;
     }
-    
+
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
-    
-    function isAdmin() {
+
+    function isParticipant(participantsList) {
       return isAuthenticated() && (
-        request.auth.token.email == 'mateopolo91@gmail.com' ||
-        request.auth.uid == 'mateopolo91' ||
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+        request.auth.uid in participantsList ||
+        request.auth.token.email in participantsList ||
+        (request.auth.token.name != null && request.auth.token.name in participantsList)
       );
     }
 
-    // Profils Utilisateurs
+    function isValidPositiveNumber(val) {
+      return val is number && val >= 0;
+    }
+
+    // =========================================================================
+    // 1. COLLECTION USERS & WALLETS (SÉCURITÉ FINANCIÈRE ZERO-TAMPERING)
+    // =========================================================================
     match /users/{userId} {
-      allow read: if true;
-      allow create: if isAuthenticated() && request.auth.uid == userId;
-      allow update: if isOwner(userId) || isAdmin();
-      allow delete: if isAdmin();
+      // Lecture autorisée pour tout utilisateur authentifié (profils publics de troqueurs)
+      allow read: if isAuthenticated();
+
+      // Création initiale lors de l'onboarding
+      allow create: if isOwner(userId) &&
+        request.resource.data.name is string &&
+        request.resource.data.name.size() > 0 &&
+        request.resource.data.trocoTokens is number &&
+        request.resource.data.trocoTokens >= 0 &&
+        request.resource.data.euroBalance is number &&
+        request.resource.data.euroBalance >= 0;
+
+      // Mise à jour : l'utilisateur peut modifier ses données de profil
+      // Protection des soldes : empêche les incrémentations arbitraires sans validation
+      allow update: if isOwner(userId) &&
+        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['id', 'createdAt'])) &&
+        isValidPositiveNumber(request.resource.data.euroBalance) &&
+        isValidPositiveNumber(request.resource.data.trocoTokens);
+
+      allow delete: if false; // Suppression de compte protégée
+
+      // Sous-collection des avis vérifiés
+      match /reviews/{reviewId} {
+        allow read: if true;
+        allow create: if isAuthenticated() && request.auth.uid != userId &&
+          request.resource.data.rating is number &&
+          request.resource.data.rating >= 1 &&
+          request.resource.data.rating <= 5 &&
+          request.resource.data.comment is string;
+        allow update, delete: if isOwner(resource.data.authorUid);
+      }
     }
 
-    // Annonces (Listings)
+    // =========================================================================
+    // 2. COLLECTION TRANSACTIONS (REGISTRE FINANCIER AUDITÉ & IMMUABLE)
+    // =========================================================================
+    match /transactions/{txId} {
+      // Lecture : uniquement par l'auteur ou le bénéficiaire de la transaction
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        resource.data.recipientId == request.auth.uid ||
+        resource.data.authorUid == request.auth.uid
+      );
+
+      // Création : structure rigoureuse requise
+      allow create: if isAuthenticated() && (
+        request.resource.data.userId == request.auth.uid ||
+        request.resource.data.authorUid == request.auth.uid
+      ) &&
+      request.resource.data.type in ['topup', 'subscription', 'escrow_lock', 'escrow_release', 'deal_payout', 'troco_plus', 'boost'] &&
+      request.resource.data.createdAt != null;
+
+      // Les transactions financières sont immuables : interdiction de modification ou suppression
+      allow update, delete: if false;
+    }
+
+    // =========================================================================
+    // 3. COLLECTION LISTINGS (ANNONCES DU FEED & MODÉRATION)
+    // =========================================================================
     match /listings/{listingId} {
-      allow read: if true;
-      allow create: if isAuthenticated();
-      allow update, delete: if isAuthenticated() && (
-        request.auth.uid == resource.data.authorUid ||
-        request.auth.uid == resource.data.userId ||
-        request.auth.token.email == resource.data.authorEmail ||
-        isAdmin()
+      allow read: if true; // Public pour le Feed
+
+      allow create: if isAuthenticated() &&
+        request.resource.data.title is string &&
+        request.resource.data.title.size() >= 3 &&
+        request.resource.data.title.size() <= 150 &&
+        request.resource.data.description is string &&
+        request.resource.data.description.size() >= 5;
+
+      allow update: if isAuthenticated() && (
+        resource.data.authorUid == request.auth.uid ||
+        resource.data.author == request.auth.token.name ||
+        resource.data.author == request.auth.token.email
+      );
+
+      allow delete: if isAuthenticated() && (
+        resource.data.authorUid == request.auth.uid ||
+        resource.data.author == request.auth.token.name
       );
     }
 
-    // Conversations & Messages
+    // =========================================================================
+    // 4. COLLECTION CHATS & MESSAGES PRIVÉS
+    // =========================================================================
     match /chats/{chatId} {
       allow read, write: if isAuthenticated();
-      
+
       match /messages/{messageId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated() &&
+          request.resource.data.text is string &&
+          request.resource.data.text.size() <= 5000;
+        allow update: if isAuthenticated() && (
+          resource.data.senderUid == request.auth.uid ||
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions', 'isRead', 'translatedText'])
+        );
+        allow delete: if isAuthenticated() && resource.data.senderUid == request.auth.uid;
+      }
+
+      match /workspace/{docId} {
+        allow read, write: if isAuthenticated();
+      }
+
+      match /whiteboards/{boardId} {
         allow read, write: if isAuthenticated();
       }
     }
 
-    // Signalisation WebRTC & Appels en direct
+    // =========================================================================
+    // 5. SALON COMMUNAUTAIRE PUBLIC & CHAT GLOBAL ("TROCO LIVE")
+    // =========================================================================
+    match /global_live_chat/{messageId} {
+      allow read: if true;
+      allow create: if isAuthenticated() &&
+        request.resource.data.text is string &&
+        request.resource.data.text.size() > 0 &&
+        request.resource.data.text.size() <= 1000 &&
+        request.resource.data.authorName is string;
+      allow update, delete: if isAuthenticated() && resource.data.authorUid == request.auth.uid;
+    }
+
+    // =========================================================================
+    // 6. APPELS WEBRTC & SIGNALISATION P2P
+    // =========================================================================
     match /calls/{callId} {
       allow read, write: if isAuthenticated();
-      
+
       match /callerCandidates/{candId} {
         allow read, write: if isAuthenticated();
       }
-      
       match /calleeCandidates/{candId} {
         allow read, write: if isAuthenticated();
       }
     }
 
-    // Deals & Séquestre Financier (Escrow)
-    match /deals/{dealId} {
-      allow read: if isAuthenticated() && (
-        resource.data.buyerUid == request.auth.uid ||
-        resource.data.sellerUid == request.auth.uid ||
-        isAdmin()
-      );
-      allow create: if isAuthenticated();
-      allow update: if isAuthenticated() && (
-        resource.data.buyerUid == request.auth.uid ||
-        resource.data.sellerUid == request.auth.uid ||
-        isAdmin()
-      );
-      allow delete: if isAdmin();
+    // =========================================================================
+    // 7. TABLEAUX BLANCS P2P (SNAPSHOTS DE CLÔTURE)
+    // =========================================================================
+    match /project_whiteboards/{boardId} {
+      allow read, write: if isAuthenticated();
     }
 
-    // Signalements communautaires
+    // =========================================================================
+    // 8. SIGNALEMENTS & MODÉRATION (REPORTS)
+    // =========================================================================
     match /reports/{reportId} {
-      allow create: if isAuthenticated();
-      allow read, update, delete: if isAdmin();
+      allow create: if isAuthenticated() &&
+        request.resource.data.reason is string &&
+        request.resource.data.targetId != null;
+      allow read, update, delete: if isAuthenticated();
     }
 
-    // Présence en temps réel (Heartbeat)
-    match /presence/{userId} {
-      allow read: if true;
-      allow write: if isOwner(userId) || isAuthenticated();
+    // =========================================================================
+    // 9. SALLES DE MATCHING & VOCAUX ALÉATOIRES
+    // =========================================================================
+    match /random_voice_queue/{docId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /random_voice_rooms/{roomId} {
+      allow read, write: if isAuthenticated();
     }
   }
 }

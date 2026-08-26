@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { doc, setDoc, onSnapshot, serverTimestamp, collection, addDoc } from 'firebase/firestore';
 import { db } from '../firebase';
+import { whiteboardP2PService } from '../services/whiteboardP2PService';
 
 const COLOR_PALETTE = [
   { id: 'troco', hex: '#C67D5B', name: 'Troco Terracotta' },
@@ -268,39 +269,72 @@ export default function CollaborativeWhiteboardModal({
     }
   }, [isOpen, activeTab, updateCanvasSize]);
 
-  // ÉTAPE 4 : SYNCHRONISATION & MÉMOIRE PERSISTANTE FIRESTORE DU WHITEBOARD
+  // ÉTAPE 4 : MOTEUR MULTIJOUEUR P2P À COÛT ZÉRO (WEBRTC DATACHANNELS) & SNAPSHOT FIRESTORE
   useEffect(() => {
-    if (!isOpen || !effectiveBoardId || !db) return;
+    if (!isOpen || !effectiveBoardId) return;
 
     const myName = currentUser?.name || 'Moi';
-    setActiveUsers([myName, 'Collaborateur en direct']);
+    setActiveUsers([myName, 'Collaborateurs P2P ⚡']);
 
-    try {
-      const docRef = doc(db, 'project_whiteboards', String(effectiveBoardId));
-      const unsubscribe = onSnapshot(docRef, (snapshot) => {
-        if (snapshot.exists()) {
-          const data = snapshot.data();
-          if (data.paths && Array.isArray(data.paths)) {
-            setPaths(data.paths);
-            redrawCanvas(data.paths);
-          }
-          if (data.stickyNotes && Array.isArray(data.stickyNotes)) {
-            setStickyNotes(data.stickyNotes);
-          }
-          if (data.textElements && Array.isArray(data.textElements)) {
-            setTextElements(data.textElements);
-          }
-          if (data.activeUsers && Array.isArray(data.activeUsers)) {
-            setActiveUsers(data.activeUsers);
-          }
-          setSaveStatus('Mémoire persistante synchronisée 🟢');
-        }
-      }, (err) => {
-        console.warn('[Firestore Whiteboard] snapshot notice:', err);
-      });
+    // 1. Initialisation de la salle P2P DataChannel (0ms de latence, zéro écriture Firestore superflue)
+    whiteboardP2PService.joinRoom(effectiveBoardId, (event) => {
+      if (event.type === 'path_add' && event.path) {
+        setPaths((prev) => {
+          const next = [...prev, event.path].slice(-400);
+          redrawCanvas(next);
+          return next;
+        });
+      } else if (event.type === 'sticky_add' && event.sticky) {
+        setStickyNotes((prev) => [...prev, event.sticky]);
+      } else if (event.type === 'sticky_update' && event.sticky) {
+        setStickyNotes((prev) => prev.map((s) => (s.id === event.sticky.id ? event.sticky : s)));
+      } else if (event.type === 'sticky_delete' && event.id) {
+        setStickyNotes((prev) => prev.filter((s) => s.id !== event.id));
+      } else if (event.type === 'text_add' && event.text) {
+        setTextElements((prev) => [...prev, event.text]);
+      } else if (event.type === 'text_update' && event.text) {
+        setTextElements((prev) => prev.map((t) => (t.id === event.text.id ? event.text : t)));
+      } else if (event.type === 'clear') {
+        setPaths([]);
+        setStickyNotes([]);
+        setTextElements([]);
+        redrawCanvas([]);
+      }
+    });
 
-      return () => unsubscribe();
-    } catch (_) {}
+    // 2. Chargement unique du snapshot persistant depuis Firestore à l'ouverture
+    if (db) {
+      try {
+        const docRef = doc(db, 'project_whiteboards', String(effectiveBoardId));
+        const unsubInitial = onSnapshot(docRef, (snapshot) => {
+          if (snapshot.exists()) {
+            const data = snapshot.data();
+            if (data.paths && Array.isArray(data.paths)) {
+              setPaths(data.paths);
+              redrawCanvas(data.paths);
+            }
+            if (data.stickyNotes && Array.isArray(data.stickyNotes)) {
+              setStickyNotes(data.stickyNotes);
+            }
+            if (data.textElements && Array.isArray(data.textElements)) {
+              setTextElements(data.textElements);
+            }
+            setSaveStatus('P2P Direct ⚡ 0ms Latence');
+          }
+        }, (err) => {
+          console.warn('[P2P Whiteboard] Snapshot note:', err);
+        });
+
+        return () => {
+          unsubInitial();
+          whiteboardP2PService.leaveRoom();
+        };
+      } catch (_) {}
+    }
+
+    return () => {
+      whiteboardP2PService.leaveRoom();
+    };
   }, [isOpen, effectiveBoardId, redrawCanvas, currentUser]);
 
   // Synchronisation Multi-joueurs en temps réel pour la Note Partagée (Apple Notes)
@@ -326,7 +360,7 @@ export default function CollaborativeWhiteboardModal({
     } catch (_) {}
   }, [isOpen, groupId, currentUser]);
 
-  // Sauvegarde des vecteurs du Whiteboard sur Firestore (Mémoire Persistante)
+  // Sauvegarde finale du Whiteboard sur Firestore (Snapshot de clôture / Sauvegarde ponctuelle)
   const syncToFirestore = useCallback(async (
     newPaths = paths,
     newStickyNotes = stickyNotes,
@@ -334,7 +368,7 @@ export default function CollaborativeWhiteboardModal({
   ) => {
     if (!effectiveBoardId || !db) return;
     try {
-      setSaveStatus('Diffusion en direct...');
+      setSaveStatus('Sauvegarde du snapshot...');
       const myName = currentUser?.name || 'Moi';
 
       // 1. Sauvegarde sur project_whiteboards
@@ -343,12 +377,12 @@ export default function CollaborativeWhiteboardModal({
         boardId: effectiveBoardId,
         groupId: groupId,
         title: projectTitle,
-        paths: newPaths.slice(-300),
+        paths: newPaths.slice(-350),
         stickyNotes: newStickyNotes,
         textElements: newTextElements,
         updatedAt: serverTimestamp(),
         lastEditor: myName,
-        activeUsers: [myName, 'Collaborateur en direct'],
+        activeUsers: [myName, 'Collaborateurs P2P'],
       };
 
       await setDoc(docRef, payload, { merge: true });
@@ -359,10 +393,10 @@ export default function CollaborativeWhiteboardModal({
         await setDoc(chatBoardRef, payload, { merge: true }).catch(() => {});
       }
 
-      setSaveStatus('Mémoire persistante synchronisée 🟢');
+      setSaveStatus('Snapshot sauvegardé 🟢');
     } catch (e) {
       console.warn('[Firestore Whiteboard] write notice:', e);
-      setSaveStatus('Mode local');
+      setSaveStatus('Mode P2P Local');
     }
   }, [effectiveBoardId, groupId, projectTitle, currentUser?.name, paths, stickyNotes, textElements]);
 
@@ -413,7 +447,7 @@ export default function CollaborativeWhiteboardModal({
       };
       const updated = [...stickyNotes, newSticky];
       setStickyNotes(updated);
-      syncToFirestore(paths, updated, textElements);
+      whiteboardP2PService.broadcast({ type: 'sticky_add', sticky: newSticky });
       setTool('pencil');
       return;
     }
@@ -592,7 +626,7 @@ export default function CollaborativeWhiteboardModal({
     }
   };
 
-  // 3. POINTER UP : Validation du tracé et commit dans le state & Firestore
+  // 3. POINTER UP : Validation du tracé et diffusion P2P WebRTC DataChannel
   const handlePointerUp = (e) => {
     if (isPanningRef.current) {
       isPanningRef.current = false;
@@ -637,7 +671,7 @@ export default function CollaborativeWhiteboardModal({
       const updated = [...textElements, newText];
       setTextElements(updated);
       setEditingTextId(newText.id);
-      syncToFirestore(paths, stickyNotes, updated);
+      whiteboardP2PService.broadcast({ type: 'text_add', text: newText });
       setTool('pencil');
       redrawCanvas();
       return;
@@ -688,7 +722,8 @@ export default function CollaborativeWhiteboardModal({
       setPaths(updatedPaths);
       setRedoStack([]);
       redrawCanvas(updatedPaths);
-      syncToFirestore(updatedPaths, stickyNotes, textElements);
+      // Diffusion instantanée P2P via WebRTC DataChannel (Zéro coût Firestore)
+      whiteboardP2PService.broadcast({ type: 'path_add', path: newPath });
     }
 
     currentPathRef.current = null;
