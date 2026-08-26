@@ -292,13 +292,18 @@ export default function GlobalLiveChat({
         ref={scrollContainerRef}
         onScroll={handleScroll}
         style={{
-          flex: 1,
+          flex: '1 1 0%',
+          minHeight: 0,
           overflowY: 'auto',
-          padding: '16px',
+          padding: isCompact ? '12px 10px' : '16px',
           display: 'flex',
           flexDirection: 'column',
           gap: '10px',
           scrollBehavior: 'smooth',
+          overscrollBehaviorY: 'contain',
+          WebkitOverflowScrolling: 'touch',
+          touchAction: 'pan-y',
+          boxSizing: 'border-box',
         }}
       >
         {/* BANNIÈRE DE BIENVENUE DU CHAT GLOBAL */}

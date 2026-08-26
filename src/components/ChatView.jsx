@@ -826,7 +826,7 @@ function ChatView({
         {/* 2. ZONE DE MESSAGES DÉROULANTE (SEUL ÉLÉMENT QUI SCROLLE) */}
         <div
           style={{
-            flex: 1,
+            flex: '1 1 0%',
             minHeight: 0,
             overflowY: 'auto',
             padding: isMobile ? '12px 10px' : '16px 20px',
