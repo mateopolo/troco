@@ -20,7 +20,7 @@ import TrocoLogo3D from './components/common/TrocoLogo3D';
 import PWAInstallBanner from './components/PWAInstallBanner';
 import SponsoredFeedCard from './components/SponsoredFeedCard';
 import SectoralErrorBoundary from './components/SectoralErrorBoundary';
-import { useWalletStore } from './stores';
+import { useWalletStore, useChatStore } from './stores';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useGSAP } from '@gsap/react';
@@ -2851,18 +2851,67 @@ export default function App() {
     } catch (_) { }
   }, []);
 
-  // Synchronisation temps réel des discussions depuis Firestore (CONFIDENTIALITÉ STRICTE : filtrage multi-clés par nom, UID et username)
+  // Synchronisation temps réel des discussions depuis Firestore (CONFIDENTIALITÉ STRICTE : filtrage multi-clés par nom, UID, email et username + préservation des mockChats)
   useEffect(() => {
-    if (!profile?.name && !profile?.uid && !auth.currentUser?.uid) return;
-
     const myName = (profile?.name || '').trim();
     const myUid = profile?.uid || (auth.currentUser && auth.currentUser.uid) || null;
     const myUsername = (profile?.username || '').trim();
+    const myEmail = (profile?.email || auth.currentUser?.email || '').trim();
 
-    const targets = Array.from(new Set([myName, myUid, myUsername].filter(Boolean)));
+    // Tous les identifiants possibles de l'utilisateur
+    const targetSet = new Set([
+      myName,
+      myName.toLowerCase(),
+      myUid,
+      myUsername,
+      myUsername.toLowerCase(),
+      myEmail,
+      myEmail.toLowerCase(),
+    ].filter(Boolean));
+
+    const targets = Array.from(targetSet);
+
+    // Initialisation immédiate des discussions (avec mockChats complets)
+    if (targets.length === 0) {
+      setChatsList(mockChats);
+      try { useChatStore.getState().setChatsList(mockChats); } catch (_) {}
+      return;
+    }
+
     const unsubs = [];
     const allDocsMap = new Map();
     let isInitialLoad = true;
+
+    // Helper pour fusionner et mettre à jour la liste des chats
+    const updateMergedChats = () => {
+      const firestoreChats = Array.from(allDocsMap.entries()).map(([docId, data]) => {
+        const otherUser = Array.isArray(data.participants)
+          ? data.participants.find(p => p && p.trim().toLowerCase() !== myName.toLowerCase() && p !== myUid && p.trim().toLowerCase() !== myEmail.toLowerCase()) || data.user || 'Interlocuteur'
+          : data.user || 'Interlocuteur';
+
+        const fChatId = data.id || docId;
+
+        return {
+          id: fChatId,
+          firestoreId: docId,
+          ...data,
+          user: otherUser,
+        };
+      });
+
+      const merged = [...mockChats];
+      firestoreChats.forEach(fChat => {
+        const idx = merged.findIndex(m => String(m.id) === String(fChat.id));
+        if (idx >= 0) {
+          merged[idx] = { ...merged[idx], ...fChat };
+        } else {
+          merged.unshift(fChat);
+        }
+      });
+
+      setChatsList(merged);
+      try { useChatStore.getState().setChatsList(merged); } catch (_) {}
+    };
 
     targets.forEach(targetVal => {
       try {
@@ -2879,6 +2928,7 @@ export default function App() {
             const lastSender = (d.lastSenderName || d.lastSender || '').trim().toLowerCase();
             const isMe = (myName && lastSender === myName.toLowerCase()) ||
               (myUsername && lastSender === myUsername.toLowerCase()) ||
+              (myEmail && lastSender === myEmail.toLowerCase()) ||
               (d.lastSenderUid && myUid && String(d.lastSenderUid) === String(myUid));
             const isFromThem = !isMe && (lastSender.length > 0 || (d.unreadCount && d.unreadCount > 0));
 
@@ -2906,36 +2956,11 @@ export default function App() {
             allDocsMap.set(docSnap.id, docSnap.data());
           });
 
-          // Reconstruire la liste fusionnée des chats
-          const firestoreChats = Array.from(allDocsMap.entries()).map(([docId, data]) => {
-            const otherUser = Array.isArray(data.participants)
-              ? data.participants.find(p => p && p.trim().toLowerCase() !== myName.toLowerCase() && p !== myUid) || data.user || 'Interlocuteur'
-              : data.user || 'Interlocuteur';
-
-            const fChatId = data.id || docId;
-
-            return {
-              id: fChatId,
-              firestoreId: docId,
-              ...data,
-              user: otherUser,
-            };
-          });
-
-          const merged = [...mockChats];
-          firestoreChats.forEach(fChat => {
-            const idx = merged.findIndex(m => String(m.id) === String(fChat.id));
-            if (idx >= 0) {
-              merged[idx] = { ...merged[idx], ...fChat };
-            } else {
-              merged.unshift(fChat);
-            }
-          });
-
-          setChatsList(merged);
+          updateMergedChats();
           isInitialLoad = false;
         }, (err) => {
           console.warn('[Firestore] chats onSnapshot error for target:', targetVal, err);
+          updateMergedChats();
         });
 
         unsubs.push(unsub);
@@ -2947,10 +2972,11 @@ export default function App() {
     return () => {
       unsubs.forEach(u => { try { u(); } catch (_) { } });
     };
-  }, [profile?.name, profile?.uid, profile?.username, selectedChat, activeTab, playNotificationSound]);
+  }, [profile?.name, profile?.uid, profile?.username, profile?.email, selectedChat, activeTab, playNotificationSound]);
 
   const handleSelectChat = async (chat) => {
     setSelectedChat(chat);
+    try { useChatStore.getState().setSelectedChat(chat); } catch (_) {}
     if (chat?.id) {
       const cidStr = String(chat.id);
       setReadChats(prev => new Set([...prev, chat.id, cidStr, Number(chat.id)]));

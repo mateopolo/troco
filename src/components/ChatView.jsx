@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback, lazy, Suspens
 import { createPortal } from 'react-dom';
 import {
   Send, Phone, Video, Sparkles, Clock, CheckCircle,
-  ChevronLeft, Globe, Edit2, Trash2, Copy, Check, X,
+  ChevronLeft, Globe, Edit2, Edit3, Trash2, Copy, Check, X,
   AlertTriangle, Users, Coins, Mic, ShieldAlert, ShieldCheck,
   Palette, Briefcase, Plus, FileText, Calendar, Table
 } from 'lucide-react';
@@ -63,6 +63,7 @@ function ChatView({
   const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
   const [isProjectRewardsModalOpen, setIsProjectRewardsModalOpen] = useState(false);
   const [isWhiteboardOpen, setIsWhiteboardOpen] = useState(false);
+  const [whiteboardInitialView, setWhiteboardInitialView] = useState('canvas');
   const [isWorkspaceToolsOpen, setIsWorkspaceToolsOpen] = useState(false);
   const [isCloudOfficeOpen, setIsCloudOfficeOpen] = useState(false);
   const [officeInitialTab, setOfficeInitialTab] = useState('docs');
@@ -88,6 +89,10 @@ function ChatView({
     setIsWorkspaceMenuOpen(false);
 
     if (toolType === 'whiteboard') {
+      setWhiteboardInitialView('canvas');
+      setIsWhiteboardOpen(true);
+    } else if (toolType === 'notes') {
+      setWhiteboardInitialView('notes');
       setIsWhiteboardOpen(true);
     } else if (toolType === 'docs') {
       setOfficeInitialTab('docs');
@@ -100,11 +105,13 @@ function ChatView({
     if (effectiveSelectedChat?.id && db) {
       const toolIcons = {
         whiteboard: '🎨',
-        docs: '📝',
+        notes: '📝',
+        docs: '📄',
         sheets: '📊',
       };
       const toolLabels = {
-        whiteboard: 'Tableau Blanc Collaboratif',
+        whiteboard: 'Tableau Blanc Collaboratif (0ms)',
+        notes: 'Notes Partagées (Apple-Style)',
         docs: 'Document Partagé (Troco Docs)',
         sheets: 'Tableur Collaboratif (Troco Sheets)',
       };
@@ -1304,6 +1311,120 @@ function ChatView({
                 );
               }
 
+              // RENDU DES CARTES D'INVITATION WORKSPACE (TABLEAU BLANC / NOTES / DOCS / SHEETS)
+              if (msg.type === 'workspace_invite' || msg.kind === 'workspace_invite') {
+                const isMine = (msg.senderName && profile?.name)
+                  ? (msg.senderName.trim().toLowerCase() === profile.name.trim().toLowerCase())
+                  : (msg.sender === 'me');
+                const wType = msg.workspaceType || 'whiteboard';
+                const isNotes = wType === 'notes';
+                const isDocs = wType === 'docs';
+                const isSheets = wType === 'sheets';
+
+                const badgeColor = isNotes ? '#F59E0B' : isDocs ? '#3B82F6' : isSheets ? '#10B981' : 'var(--accent-primary)';
+                const icon = isNotes ? <Edit3 size={18} /> : isDocs ? <FileText size={18} /> : isSheets ? <Table size={18} /> : <Palette size={18} />;
+
+                return (
+                  <div
+                    key={msg.id}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: isMine ? 'flex-end' : 'flex-start',
+                      width: '100%',
+                      margin: '8px 0',
+                      boxSizing: 'border-box'
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: isMobile ? '92%' : '75%',
+                        maxWidth: '460px',
+                        border: `1.5px solid ${badgeColor}`,
+                        borderRadius: '18px',
+                        padding: '14px',
+                        backgroundColor: 'var(--bg-card)',
+                        boxShadow: 'var(--shadow-card)',
+                        boxSizing: 'border-box',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                        <div style={{
+                          width: '38px',
+                          height: '38px',
+                          borderRadius: '12px',
+                          backgroundColor: `${badgeColor}22`,
+                          color: badgeColor,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0
+                        }}>
+                          {icon}
+                        </div>
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <div style={{ fontSize: '13.5px', fontWeight: '800', color: 'var(--text-main)' }}>
+                            {msg.workspaceTitle || (isNotes ? 'Notes Partagées (Apple-Style)' : isDocs ? 'Document Troco Docs' : isSheets ? 'Tableur Troco Sheets' : 'Tableau Blanc Collaboratif')}
+                          </div>
+                          <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                            Lancé par {msg.senderName || (isMine ? 'Vous' : 'Collaborateur')}
+                          </div>
+                        </div>
+                      </div>
+
+                      <p style={{ margin: '0 0 12px 0', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                        {isNotes
+                          ? 'Session de notes synchronisées en direct. Cliquez pour co-rédiger vos comptes-rendus et checklists.'
+                          : isDocs
+                            ? 'Document Markdown collaboratif en temps réel.'
+                            : isSheets
+                              ? 'Tableur multijoueur avec calculs et formules instantanées.'
+                              : 'Espace de dessin et schémas multijoueur 0ms sans latence.'}
+                      </p>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (isNotes) {
+                            setWhiteboardInitialView('notes');
+                            setIsWhiteboardOpen(true);
+                          } else if (isDocs) {
+                            setOfficeInitialTab('docs');
+                            setIsCloudOfficeOpen(true);
+                          } else if (isSheets) {
+                            setOfficeInitialTab('sheets');
+                            setIsCloudOfficeOpen(true);
+                          } else {
+                            setWhiteboardInitialView('canvas');
+                            setIsWhiteboardOpen(true);
+                          }
+                        }}
+                        className="premium-button"
+                        style={{
+                          width: '100%',
+                          border: 'none',
+                          borderRadius: '10px',
+                          padding: '10px 14px',
+                          backgroundColor: badgeColor,
+                          color: '#FFFFFF',
+                          fontSize: '12px',
+                          fontWeight: '800',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                          boxShadow: 'var(--shadow-accent)',
+                        }}
+                      >
+                        <Sparkles size={14} />
+                        <span>Rejoindre {isNotes ? 'la Note' : isDocs ? 'le Document' : isSheets ? 'le Tableur' : 'le Tableau Blanc'} en direct</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              }
+
               const isMe = msg.sender === 'me';
               const isMenuOpen = activeMenuMsgId === msg.id;
               const timeString = formatMsgTime(msg.timestamp || msg.createdAt || msg.id);
@@ -1814,13 +1935,44 @@ function ChatView({
                           <div style={{ minWidth: 0, flex: 1 }}>
                             <div style={{ fontSize: '12.5px', fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                               <span>Tableau Blanc</span>
-                              <span style={{ fontSize: '9px', fontWeight: '800', color: '#10B981', backgroundColor: 'rgba(16, 185, 129, 0.15)', padding: '1px 5px', borderRadius: '4px' }}>LIVE</span>
+                              <span style={{ fontSize: '9px', fontWeight: '800', color: '#10B981', backgroundColor: 'rgba(16, 185, 129, 0.15)', padding: '1px 5px', borderRadius: '4px' }}>0ms</span>
                             </div>
-                            <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>Dessin & schémas multijoueur</div>
+                            <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>Moteur de brosses Apple & dessin direct</div>
                           </div>
                         </button>
 
-                        {/* 2. TROCO DOCS (ALTERNATIVE NOTION / WORD OPEN-SOURCE) */}
+                        {/* 2. NOTES PARTAGÉES (RICH TEXT STYLE APPLE NOTES) */}
+                        <button
+                          type="button"
+                          onClick={() => handleOpenWorkspaceTool('notes')}
+                          className="hover-subtle"
+                          style={{
+                            border: 'none',
+                            backgroundColor: 'transparent',
+                            borderRadius: '12px',
+                            padding: '8px 10px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            width: '100%',
+                            transition: 'background-color 0.15s ease',
+                          }}
+                        >
+                          <div style={{ width: '32px', height: '32px', borderRadius: '10px', backgroundColor: 'rgba(245, 158, 11, 0.15)', color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <Edit3 size={16} />
+                          </div>
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <div style={{ fontSize: '12.5px', fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <span>Notes Partagées</span>
+                              <span style={{ fontSize: '9px', fontWeight: '800', color: '#F59E0B', backgroundColor: 'rgba(245, 158, 11, 0.15)', padding: '1px 5px', borderRadius: '4px' }}>NOTES</span>
+                            </div>
+                            <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>Notes de session & checklist Apple-Style</div>
+                          </div>
+                        </button>
+
+                        {/* 3. TROCO DOCS (ALTERNATIVE NOTION / WORD OPEN-SOURCE) */}
                         <button
                           type="button"
                           onClick={() => handleOpenWorkspaceTool('docs')}
@@ -2382,16 +2534,17 @@ function ChatView({
         </Suspense>
       )}
 
-      {/* MODALE TABLEAU BLANC COLLABORATIF (LAZY LOADED) */}
+      {/* MODALE TABLEAU BLANC COLLABORATIF & NOTES PARTAGÉES (LAZY LOADED) */}
       {isWhiteboardOpen && activeChatObj && (
         <Suspense fallback={null}>
           <CollaborativeWhiteboardModal
             isOpen={isWhiteboardOpen}
             onClose={() => setIsWhiteboardOpen(false)}
             groupId={activeChatObj.id || activeChatObj.firestoreId || 'group_whiteboard'}
-            projectTitle={activeChatObj.projectTitle || activeChatObj.user || 'Tableau Blanc Collaboratif'}
+            projectTitle={activeChatObj.projectTitle || activeChatObj.user || 'Workspace Collaboratif'}
             currentUser={profile}
             darkMode={darkMode}
+            initialView={whiteboardInitialView}
             onSendToChat={(imageDataUrl) => {
               if (setChatInputText) setChatInputText('');
             }}
