@@ -1,3 +1,5 @@
+import React, { useState, useEffect, useRef } from 'react';
+import {
   Send, Flame, Zap,
   TrendingUp, ChevronDown, Trash2, Edit2, AlertTriangle
 } from 'lucide-react';
