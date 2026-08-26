@@ -173,8 +173,8 @@ export default function ProjectWorkspaceToolsModal({
           }}
         >
           {[
-            { id: 'drive', label: 'Google Drive & Docs', icon: HardDrive },
-            { id: 'calendar', label: 'Google Calendar & Meets', icon: Calendar },
+            { id: 'drive', label: 'Fichiers & Drive Projet', icon: HardDrive },
+            { id: 'calendar', label: 'Planning & Visios HD', icon: Calendar },
             { id: 'remote', label: 'Contrôle à Distance (Remote)', icon: Monitor },
           ].map((tab) => {
             const Icon = tab.icon;

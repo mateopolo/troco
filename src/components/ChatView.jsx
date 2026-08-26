@@ -4,9 +4,9 @@ import {
   Send, Phone, Video, Sparkles, Clock, CheckCircle,
   ChevronLeft, Globe, Edit2, Trash2, Copy, Check, X,
   AlertTriangle, Users, Coins, Mic, ShieldAlert, ShieldCheck,
-  Palette, Briefcase, Plus, FileText, Calendar, HardDrive
+  Palette, Briefcase, Plus, FileText, Calendar, Table
 } from 'lucide-react';
-import { doc, deleteDoc } from 'firebase/firestore';
+import { doc, deleteDoc, addDoc, collection, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { subscribeTranslations } from '../utils/translator';
 import { analyzeContent } from '../utils/contentModeration';
@@ -46,7 +46,7 @@ function ChatView({
   onAcceptReward,
   onSendAudioMessage,
   profile,
-  currentLang,
+  currentLang = 'FR',
   t,
   darkMode = false,
   getChatMessageDisplayContent,
@@ -65,6 +65,7 @@ function ChatView({
   const [isWhiteboardOpen, setIsWhiteboardOpen] = useState(false);
   const [isWorkspaceToolsOpen, setIsWorkspaceToolsOpen] = useState(false);
   const [isCloudOfficeOpen, setIsCloudOfficeOpen] = useState(false);
+  const [officeInitialTab, setOfficeInitialTab] = useState('docs');
   const [isWorkspaceMenuOpen, setIsWorkspaceMenuOpen] = useState(false);
   const [isPublicProfileOpen, setIsPublicProfileOpen] = useState(false);
   const [deletedChatIds, setDeletedChatIds] = useState(() => {
@@ -81,6 +82,62 @@ function ChatView({
 
   const effectiveSelectedChat = (selectedChat && !deletedChatIds.has(selectedChat.id)) ? selectedChat : null;
   const [mobileSubView, setMobileSubView] = useState(() => (selectedChat && !deletedChatIds.has(selectedChat.id)) ? 'room' : 'list');
+
+  // Gestion de l'ouverture d'un outil workspace avec invitation automatique dans la conversation
+  const handleOpenWorkspaceTool = async (toolType) => {
+    setIsWorkspaceMenuOpen(false);
+
+    if (toolType === 'whiteboard') {
+      setIsWhiteboardOpen(true);
+    } else if (toolType === 'docs') {
+      setOfficeInitialTab('docs');
+      setIsCloudOfficeOpen(true);
+    } else if (toolType === 'sheets') {
+      setOfficeInitialTab('sheets');
+      setIsCloudOfficeOpen(true);
+    }
+
+    if (effectiveSelectedChat?.id && db) {
+      const toolIcons = {
+        whiteboard: '🎨',
+        docs: '📝',
+        sheets: '📊',
+      };
+      const toolLabels = {
+        whiteboard: 'Tableau Blanc Collaboratif',
+        docs: 'Document Partagé (Troco Docs)',
+        sheets: 'Tableur Collaboratif (Troco Sheets)',
+      };
+      const authorName = profile?.name || 'Moi';
+      const text = `${toolIcons[toolType] || '🚀'} ${authorName} a démarré une session ${toolLabels[toolType] || 'Workspace'}`;
+
+      try {
+        const chatDocId = String(effectiveSelectedChat.id);
+        const msgPayload = {
+          text,
+          sender: profile?.id || profile?.name || 'me',
+          senderName: authorName,
+          senderAvatar: profile?.avatar || '',
+          timestamp: serverTimestamp(),
+          createdAt: Date.now(),
+          type: 'workspace_invite',
+          kind: 'workspace_invite',
+          workspaceType: toolType,
+          workspaceTitle: toolLabels[toolType],
+        };
+
+        await addDoc(collection(db, 'chats', chatDocId, 'messages'), msgPayload);
+        await updateDoc(doc(db, 'chats', chatDocId), {
+          lastMessage: text,
+          lastMessageTimestamp: serverTimestamp(),
+          lastMessageSender: profile?.id || profile?.name || 'me',
+          updatedAt: serverTimestamp(),
+        });
+      } catch (err) {
+        console.warn('[ChatView] Send workspace invite notice:', err);
+      }
+    }
+  };
 
   // Verrouillage du défilement global de la page sur mobile quand la salle de discussion est ouverte
   useEffect(() => {
@@ -1322,8 +1379,89 @@ function ChatView({
                         </div>
                       )}
 
-                      {/* MESSAGE VOCAL OU MESSAGE TEXTE (PARFAITEMENT CONTENU) */}
-                      {(msg.type === 'audio' || msg.kind === 'audio' || msg.audioUrl) ? (
+                      {/* INVITATION SESSION WORKSPACE TEMPS RÉEL (WHITEBOARD, DOCS, SHEETS) */}
+                      {(msg.type === 'workspace_invite' || msg.kind === 'workspace_invite') ? (
+                        <div
+                          style={{
+                            borderRadius: '16px',
+                            padding: '12px 14px',
+                            backgroundColor: isMe ? 'rgba(255, 255, 255, 0.15)' : 'var(--bg-subtle)',
+                            border: isMe ? '1px solid rgba(255, 255, 255, 0.3)' : '1.5px solid var(--accent-primary)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '10px',
+                            maxWidth: '300px',
+                            boxSizing: 'border-box',
+                            marginBottom: '4px',
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div
+                              style={{
+                                width: '36px',
+                                height: '36px',
+                                borderRadius: '10px',
+                                backgroundColor: msg.workspaceType === 'sheets' ? 'rgba(16, 185, 129, 0.2)' : msg.workspaceType === 'docs' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(198, 125, 91, 0.2)',
+                                color: msg.workspaceType === 'sheets' ? '#10B981' : msg.workspaceType === 'docs' ? '#3B82F6' : 'var(--accent-primary)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                flexShrink: 0,
+                              }}
+                            >
+                              {msg.workspaceType === 'sheets' ? <Table size={18} /> : msg.workspaceType === 'docs' ? <FileText size={18} /> : <Palette size={18} />}
+                            </div>
+
+                            <div style={{ minWidth: 0, flex: 1 }}>
+                              <div style={{ fontSize: '13px', fontWeight: '800', color: isMe ? '#FFFFFF' : 'var(--text-main)' }}>
+                                {msg.workspaceTitle || (msg.workspaceType === 'sheets' ? 'Troco Sheets' : msg.workspaceType === 'docs' ? 'Troco Docs' : 'Tableau Blanc Collaboratif')}
+                              </div>
+                              <div style={{ fontSize: '10.5px', color: isMe ? 'rgba(255, 255, 255, 0.85)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '1px' }}>
+                                <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10B981', display: 'inline-block', animation: 'pulse 1.8s infinite' }} />
+                                <span>Session active en direct</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div style={{ fontSize: '12px', color: isMe ? '#FFFFFF' : 'var(--text-main)', lineHeight: 1.4 }}>
+                            {msg.text}
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (msg.workspaceType === 'whiteboard') {
+                                setIsWhiteboardOpen(true);
+                              } else {
+                                setOfficeInitialTab(msg.workspaceType === 'sheets' ? 'sheets' : 'docs');
+                                setIsCloudOfficeOpen(true);
+                              }
+                            }}
+                            className="premium-button"
+                            style={{
+                              border: 'none',
+                              background: isMe
+                                ? '#FFFFFF'
+                                : 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
+                              color: isMe ? 'var(--accent-primary)' : '#FFFFFF',
+                              borderRadius: '10px',
+                              padding: '8px 12px',
+                              fontSize: '12px',
+                              fontWeight: '800',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px',
+                              boxShadow: 'var(--shadow-card)',
+                              transition: 'transform 0.15s ease',
+                            }}
+                          >
+                            <Users size={14} />
+                            <span>Rejoindre la session en direct</span>
+                          </button>
+                        </div>
+                      ) : (msg.type === 'audio' || msg.kind === 'audio' || msg.audioUrl) ? (
                         <div style={{ width: '100%', maxWidth: '260px', minWidth: 0, boxSizing: 'border-box', overflow: 'hidden' }}>
                           <VoiceNotePlayer
                             audioUrl={msg.audioUrl}
@@ -1651,13 +1789,10 @@ function ChatView({
                           </span>
                         </div>
 
-                        {/* 1. TABLEAU BLANC COLLABORATIF */}
+                        {/* 1. TABLEAU BLANC COLLABORATIF MULTIJOUEUR */}
                         <button
                           type="button"
-                          onClick={() => {
-                            setIsWorkspaceMenuOpen(false);
-                            setIsWhiteboardOpen(true);
-                          }}
+                          onClick={() => handleOpenWorkspaceTool('whiteboard')}
                           className="hover-subtle"
                           style={{
                             border: 'none',
@@ -1681,17 +1816,14 @@ function ChatView({
                               <span>Tableau Blanc</span>
                               <span style={{ fontSize: '9px', fontWeight: '800', color: '#10B981', backgroundColor: 'rgba(16, 185, 129, 0.15)', padding: '1px 5px', borderRadius: '4px' }}>LIVE</span>
                             </div>
-                            <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>Dessin & schémas en direct</div>
+                            <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>Dessin & schémas multijoueur</div>
                           </div>
                         </button>
 
-                        {/* 2. SUITE OFFICE CLOUD & DOCS */}
+                        {/* 2. TROCO DOCS (ALTERNATIVE NOTION / WORD OPEN-SOURCE) */}
                         <button
                           type="button"
-                          onClick={() => {
-                            setIsWorkspaceMenuOpen(false);
-                            setIsCloudOfficeOpen(true);
-                          }}
+                          onClick={() => handleOpenWorkspaceTool('docs')}
                           className="hover-subtle"
                           style={{
                             border: 'none',
@@ -1712,14 +1844,45 @@ function ChatView({
                           </div>
                           <div style={{ minWidth: 0, flex: 1 }}>
                             <div style={{ fontSize: '12.5px', fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <span>Suite Office Cloud</span>
+                              <span>Troco Docs</span>
                               <span style={{ fontSize: '9px', fontWeight: '800', color: '#3B82F6', backgroundColor: 'rgba(59, 130, 246, 0.15)', padding: '1px 5px', borderRadius: '4px' }}>DOCS</span>
                             </div>
-                            <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>LibreOffice & Google Docs</div>
+                            <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>Éditeur texte Markdown collaboratif</div>
                           </div>
                         </button>
 
-                        {/* 3. CALENDRIER & RÉUNIONS */}
+                        {/* 3. TROCO SHEETS (ALTERNATIVE EXCEL OPEN-SOURCE) */}
+                        <button
+                          type="button"
+                          onClick={() => handleOpenWorkspaceTool('sheets')}
+                          className="hover-subtle"
+                          style={{
+                            border: 'none',
+                            backgroundColor: 'transparent',
+                            borderRadius: '12px',
+                            padding: '8px 10px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            width: '100%',
+                            transition: 'background-color 0.15s ease',
+                          }}
+                        >
+                          <div style={{ width: '32px', height: '32px', borderRadius: '10px', backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <Table size={16} />
+                          </div>
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <div style={{ fontSize: '12.5px', fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <span>Troco Sheets</span>
+                              <span style={{ fontSize: '9px', fontWeight: '800', color: '#10B981', backgroundColor: 'rgba(16, 185, 129, 0.15)', padding: '1px 5px', borderRadius: '4px' }}>SHEETS</span>
+                            </div>
+                            <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>Tableur & formules en temps réel</div>
+                          </div>
+                        </button>
+
+                        {/* 4. CALENDRIER & RÉUNIONS */}
                         <button
                           type="button"
                           onClick={() => {
@@ -1745,39 +1908,8 @@ function ChatView({
                             <Calendar size={16} />
                           </div>
                           <div style={{ minWidth: 0, flex: 1 }}>
-                            <div style={{ fontSize: '12.5px', fontWeight: '700', color: 'var(--text-main)' }}>Calendrier & Meets HD</div>
-                            <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>Planning & visios planifiées</div>
-                          </div>
-                        </button>
-
-                        {/* 4. GOOGLE DRIVE & CLOUD */}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsWorkspaceMenuOpen(false);
-                            setIsWorkspaceToolsOpen(true);
-                          }}
-                          className="hover-subtle"
-                          style={{
-                            border: 'none',
-                            backgroundColor: 'transparent',
-                            borderRadius: '12px',
-                            padding: '8px 10px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '10px',
-                            cursor: 'pointer',
-                            textAlign: 'left',
-                            width: '100%',
-                            transition: 'background-color 0.15s ease',
-                          }}
-                        >
-                          <div style={{ width: '32px', height: '32px', borderRadius: '10px', backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <HardDrive size={16} />
-                          </div>
-                          <div style={{ minWidth: 0, flex: 1 }}>
-                            <div style={{ fontSize: '12.5px', fontWeight: '700', color: 'var(--text-main)' }}>Drive Collaboratif</div>
-                            <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>Fichiers partagés & documents</div>
+                            <div style={{ fontSize: '12.5px', fontWeight: '700', color: 'var(--text-main)' }}>Planning & Visios HD</div>
+                            <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>Calendrier de projet & réunions</div>
                           </div>
                         </button>
 
@@ -2277,6 +2409,7 @@ function ChatView({
             projectTitle={activeChatObj.projectTitle || activeChatObj.user || 'Suite Office Cloud'}
             currentUser={profile}
             darkMode={darkMode}
+            initialTab={officeInitialTab}
           />
         </Suspense>
       )}
