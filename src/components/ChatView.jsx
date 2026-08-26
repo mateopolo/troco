@@ -1,22 +1,25 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback, lazy, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import {
   Send, Phone, Video, Sparkles, Clock, CheckCircle,
   ChevronLeft, Globe, Edit2, Trash2, Copy, Check, X,
   AlertTriangle, Users, Coins, Mic, ShieldAlert, ShieldCheck,
-  Palette, Briefcase
+  Palette, Briefcase, Plus, FileText, Calendar, HardDrive
 } from 'lucide-react';
 import { doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { subscribeTranslations } from '../utils/translator';
 import { analyzeContent } from '../utils/contentModeration';
-import CreateProjectGroupModal from './CreateProjectGroupModal';
-import ProjectRewardsModal from './ProjectRewardsModal';
-import CollaborativeWhiteboardModal from './CollaborativeWhiteboardModal';
-import ProjectWorkspaceToolsModal from './ProjectWorkspaceToolsModal';
 import VoiceNotePlayer from './VoiceNotePlayer';
 import VoiceNoteRecorder from './VoiceNoteRecorder';
 import PublicProfileModal from './PublicProfileModal';
+
+// Lazy loading des outils collaboratifs & suites vectorielles lourdes pour préserver les performances et la rapidité du build
+const CreateProjectGroupModal = lazy(() => import('./CreateProjectGroupModal'));
+const ProjectRewardsModal = lazy(() => import('./ProjectRewardsModal'));
+const CollaborativeWhiteboardModal = lazy(() => import('./CollaborativeWhiteboardModal'));
+const ProjectWorkspaceToolsModal = lazy(() => import('./ProjectWorkspaceToolsModal'));
+const CloudOfficeSuiteModal = lazy(() => import('./CloudOfficeSuiteModal'));
 
 function ChatView({
   activeTab,
@@ -61,6 +64,8 @@ function ChatView({
   const [isProjectRewardsModalOpen, setIsProjectRewardsModalOpen] = useState(false);
   const [isWhiteboardOpen, setIsWhiteboardOpen] = useState(false);
   const [isWorkspaceToolsOpen, setIsWorkspaceToolsOpen] = useState(false);
+  const [isCloudOfficeOpen, setIsCloudOfficeOpen] = useState(false);
+  const [isWorkspaceMenuOpen, setIsWorkspaceMenuOpen] = useState(false);
   const [isPublicProfileOpen, setIsPublicProfileOpen] = useState(false);
   const [deletedChatIds, setDeletedChatIds] = useState(() => {
     try {
@@ -1573,7 +1578,233 @@ function ChatView({
                 }}
               />
             ) : (
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', position: 'relative' }}>
+                {/* BOUTON "➕" MENU PREMIUM WORKSPACE */}
+                {!editingMsg && (
+                  <div style={{ position: 'relative', flexShrink: 0 }}>
+                    <button
+                      type="button"
+                      onClick={() => setIsWorkspaceMenuOpen(prev => !prev)}
+                      className="premium-button"
+                      style={{
+                        border: '1px solid var(--border-color)',
+                        borderRadius: '50%',
+                        width: '42px',
+                        height: '42px',
+                        backgroundColor: isWorkspaceMenuOpen ? 'var(--accent-primary)' : 'var(--bg-card)',
+                        color: isWorkspaceMenuOpen ? '#FFFFFF' : 'var(--accent-primary)',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: 'var(--shadow-card)',
+                        flexShrink: 0,
+                        transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+                        transform: isWorkspaceMenuOpen ? 'rotate(45deg)' : 'none',
+                      }}
+                      title="Outils Collaboratifs & Workspace Premium"
+                    >
+                      <Plus size={20} />
+                    </button>
+
+                    {/* POPOVER MENU WORKSPACE PREMIUM */}
+                    {isWorkspaceMenuOpen && (
+                      <div
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                          position: 'absolute',
+                          bottom: '52px',
+                          left: 0,
+                          backgroundColor: 'var(--bg-card)',
+                          borderRadius: '20px',
+                          padding: '12px',
+                          boxShadow: 'var(--shadow-modal)',
+                          border: '1px solid var(--border-color)',
+                          width: '280px',
+                          zIndex: 100,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '6px',
+                          animation: 'fadeSlideUp 0.2s ease-out both',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 8px', borderBottom: '1px solid var(--border-color)', marginBottom: '4px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: '800', color: 'var(--accent-primary)' }}>
+                            <Sparkles size={13} />
+                            <span>WORKSPACE PREMIUM</span>
+                          </div>
+                          <span style={{ fontSize: '9px', fontWeight: '800', backgroundColor: 'rgba(198, 125, 91, 0.15)', color: 'var(--accent-primary)', padding: '2px 6px', borderRadius: '999px' }}>
+                            PRO
+                          </span>
+                        </div>
+
+                        {/* 1. TABLEAU BLANC COLLABORATIF */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsWorkspaceMenuOpen(false);
+                            setIsWhiteboardOpen(true);
+                          }}
+                          className="hover-subtle"
+                          style={{
+                            border: 'none',
+                            backgroundColor: 'transparent',
+                            borderRadius: '12px',
+                            padding: '8px 10px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            width: '100%',
+                            transition: 'background-color 0.15s ease',
+                          }}
+                        >
+                          <div style={{ width: '32px', height: '32px', borderRadius: '10px', backgroundColor: 'rgba(198, 125, 91, 0.15)', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <Palette size={16} />
+                          </div>
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <div style={{ fontSize: '12.5px', fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <span>Tableau Blanc</span>
+                              <span style={{ fontSize: '9px', fontWeight: '800', color: '#10B981', backgroundColor: 'rgba(16, 185, 129, 0.15)', padding: '1px 5px', borderRadius: '4px' }}>LIVE</span>
+                            </div>
+                            <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>Dessin & schémas en direct</div>
+                          </div>
+                        </button>
+
+                        {/* 2. SUITE OFFICE CLOUD & DOCS */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsWorkspaceMenuOpen(false);
+                            setIsCloudOfficeOpen(true);
+                          }}
+                          className="hover-subtle"
+                          style={{
+                            border: 'none',
+                            backgroundColor: 'transparent',
+                            borderRadius: '12px',
+                            padding: '8px 10px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            width: '100%',
+                            transition: 'background-color 0.15s ease',
+                          }}
+                        >
+                          <div style={{ width: '32px', height: '32px', borderRadius: '10px', backgroundColor: 'rgba(59, 130, 246, 0.15)', color: '#3B82F6', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <FileText size={16} />
+                          </div>
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <div style={{ fontSize: '12.5px', fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <span>Suite Office Cloud</span>
+                              <span style={{ fontSize: '9px', fontWeight: '800', color: '#3B82F6', backgroundColor: 'rgba(59, 130, 246, 0.15)', padding: '1px 5px', borderRadius: '4px' }}>DOCS</span>
+                            </div>
+                            <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>LibreOffice & Google Docs</div>
+                          </div>
+                        </button>
+
+                        {/* 3. CALENDRIER & RÉUNIONS */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsWorkspaceMenuOpen(false);
+                            setIsWorkspaceToolsOpen(true);
+                          }}
+                          className="hover-subtle"
+                          style={{
+                            border: 'none',
+                            backgroundColor: 'transparent',
+                            borderRadius: '12px',
+                            padding: '8px 10px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            width: '100%',
+                            transition: 'background-color 0.15s ease',
+                          }}
+                        >
+                          <div style={{ width: '32px', height: '32px', borderRadius: '10px', backgroundColor: 'rgba(234, 67, 53, 0.15)', color: '#EA4335', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <Calendar size={16} />
+                          </div>
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <div style={{ fontSize: '12.5px', fontWeight: '700', color: 'var(--text-main)' }}>Calendrier & Meets HD</div>
+                            <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>Planning & visios planifiées</div>
+                          </div>
+                        </button>
+
+                        {/* 4. GOOGLE DRIVE & CLOUD */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsWorkspaceMenuOpen(false);
+                            setIsWorkspaceToolsOpen(true);
+                          }}
+                          className="hover-subtle"
+                          style={{
+                            border: 'none',
+                            backgroundColor: 'transparent',
+                            borderRadius: '12px',
+                            padding: '8px 10px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            cursor: 'pointer',
+                            textAlign: 'left',
+                            width: '100%',
+                            transition: 'background-color 0.15s ease',
+                          }}
+                        >
+                          <div style={{ width: '32px', height: '32px', borderRadius: '10px', backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <HardDrive size={16} />
+                          </div>
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <div style={{ fontSize: '12.5px', fontWeight: '700', color: 'var(--text-main)' }}>Drive Collaboratif</div>
+                            <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>Fichiers partagés & documents</div>
+                          </div>
+                        </button>
+
+                        {/* 5. GESTION DES RÉCOMPENSES JETONS (SI GROUPE PROJET) */}
+                        {activeChatObj?.isGroup && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsWorkspaceMenuOpen(false);
+                              setIsProjectRewardsModalOpen(true);
+                            }}
+                            className="hover-subtle"
+                            style={{
+                              border: 'none',
+                              backgroundColor: 'transparent',
+                              borderRadius: '12px',
+                              padding: '8px 10px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '10px',
+                              cursor: 'pointer',
+                              textAlign: 'left',
+                              width: '100%',
+                              transition: 'background-color 0.15s ease',
+                            }}
+                          >
+                            <div style={{ width: '32px', height: '32px', borderRadius: '10px', backgroundColor: 'rgba(245, 158, 11, 0.15)', color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                              <Coins size={16} />
+                            </div>
+                            <div style={{ minWidth: 0, flex: 1 }}>
+                              <div style={{ fontSize: '12.5px', fontWeight: '700', color: 'var(--text-main)' }}>Rétribution en Jetons</div>
+                              <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>Attribuer les gains du projet</div>
+                            </div>
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <input
                   type="text"
                   value={chatInputText}
@@ -1971,33 +2202,82 @@ function ChatView({
         document.body
       )}
 
-      {/* MODALE CRÉATION GROUPE / HUB DE PROJET */}
-      <CreateProjectGroupModal
-        isOpen={isCreateGroupModalOpen}
-        onClose={() => setIsCreateGroupModalOpen(false)}
-        onCreateGroup={(groupData) => {
-          if (onCreateProjectGroup) {
-            onCreateProjectGroup(groupData);
-          }
-        }}
-        profile={profile}
-        currentLang={currentLang}
-      />
+      {/* MODALE CRÉATION GROUPE / HUB DE PROJET (LAZY LOADED) */}
+      {isCreateGroupModalOpen && (
+        <Suspense fallback={null}>
+          <CreateProjectGroupModal
+            isOpen={isCreateGroupModalOpen}
+            onClose={() => setIsCreateGroupModalOpen(false)}
+            onCreateGroup={(groupData) => {
+              if (onCreateProjectGroup) {
+                onCreateProjectGroup(groupData);
+              }
+            }}
+            profile={profile}
+            currentLang={currentLang}
+          />
+        </Suspense>
+      )}
 
-      {/* MODALE GESTION ÉQUIPE & RÉTRIBUTION EN JETONS */}
-      {activeChatObj && activeChatObj.isGroup && (
-        <ProjectRewardsModal
-          isOpen={isProjectRewardsModalOpen}
-          onClose={() => setIsProjectRewardsModalOpen(false)}
-          activeChat={activeChatObj}
-          onProposeReward={(rewardData) => {
-            if (onProposeReward) {
-              onProposeReward(activeChatObj.id, rewardData);
-            }
-          }}
-          profile={profile}
-          currentLang={currentLang}
-        />
+      {/* MODALE GESTION ÉQUIPE & RÉTRIBUTION EN JETONS (LAZY LOADED) */}
+      {isProjectRewardsModalOpen && activeChatObj && activeChatObj.isGroup && (
+        <Suspense fallback={null}>
+          <ProjectRewardsModal
+            isOpen={isProjectRewardsModalOpen}
+            onClose={() => setIsProjectRewardsModalOpen(false)}
+            activeChat={activeChatObj}
+            onProposeReward={(rewardData) => {
+              if (onProposeReward) {
+                onProposeReward(activeChatObj.id, rewardData);
+              }
+            }}
+            profile={profile}
+            currentLang={currentLang}
+          />
+        </Suspense>
+      )}
+
+      {/* MODALE TABLEAU BLANC COLLABORATIF (LAZY LOADED) */}
+      {isWhiteboardOpen && activeChatObj && (
+        <Suspense fallback={null}>
+          <CollaborativeWhiteboardModal
+            isOpen={isWhiteboardOpen}
+            onClose={() => setIsWhiteboardOpen(false)}
+            groupId={activeChatObj.id || activeChatObj.firestoreId || 'group_whiteboard'}
+            projectTitle={activeChatObj.projectTitle || activeChatObj.user || 'Tableau Blanc Collaboratif'}
+            currentUser={profile}
+            darkMode={darkMode}
+          />
+        </Suspense>
+      )}
+
+      {/* MODALE SUITE OFFICE CLOUD & DOCS (LAZY LOADED) */}
+      {isCloudOfficeOpen && activeChatObj && (
+        <Suspense fallback={null}>
+          <CloudOfficeSuiteModal
+            isOpen={isCloudOfficeOpen}
+            onClose={() => setIsCloudOfficeOpen(false)}
+            groupId={activeChatObj.id || activeChatObj.firestoreId || 'group_office'}
+            projectTitle={activeChatObj.projectTitle || activeChatObj.user || 'Suite Office Cloud'}
+            currentUser={profile}
+            darkMode={darkMode}
+          />
+        </Suspense>
+      )}
+
+      {/* MODALE OUTILS PRO WORKSPACE (DRIVE, CALENDAR, REMOTE) (LAZY LOADED) */}
+      {isWorkspaceToolsOpen && activeChatObj && (
+        <Suspense fallback={null}>
+          <ProjectWorkspaceToolsModal
+            isOpen={isWorkspaceToolsOpen}
+            onClose={() => setIsWorkspaceToolsOpen(false)}
+            projectTitle={activeChatObj.projectTitle || activeChatObj.user || 'Projet Collaboratif'}
+            groupId={activeChatObj.id || activeChatObj.firestoreId || 'group_workspace'}
+            onStartVideoCall={() => startCall('video')}
+            onStartScreenShare={() => startCall('video')}
+            darkMode={darkMode}
+          />
+        </Suspense>
       )}
 
       {/* MODALE DE CONFIRMATION DE SUPPRESSION DE DISCUSSION */}
@@ -2136,31 +2416,6 @@ function ChatView({
           currentLang={currentLang}
           darkMode={darkMode}
           t={t}
-        />
-      )}
-
-      {/* MODALE TABLEAU BLANC COLLABORATIF */}
-      {isWhiteboardOpen && activeChatObj && (
-        <CollaborativeWhiteboardModal
-          isOpen={isWhiteboardOpen}
-          onClose={() => setIsWhiteboardOpen(false)}
-          groupId={activeChatObj.id || activeChatObj.firestoreId || 'group_whiteboard'}
-          projectTitle={activeChatObj.projectTitle || activeChatObj.user || 'Tableau Blanc Collaboratif'}
-          currentUser={profile}
-          darkMode={darkMode}
-        />
-      )}
-
-      {/* MODALE OUTILS PRO WORKSPACE (DRIVE, CALENDAR, REMOTE) */}
-      {isWorkspaceToolsOpen && activeChatObj && (
-        <ProjectWorkspaceToolsModal
-          isOpen={isWorkspaceToolsOpen}
-          onClose={() => setIsWorkspaceToolsOpen(false)}
-          projectTitle={activeChatObj.projectTitle || activeChatObj.user || 'Projet Collaboratif'}
-          groupId={activeChatObj.id || activeChatObj.firestoreId || 'group_workspace'}
-          onStartVideoCall={() => startCall('video')}
-          onStartScreenShare={() => startCall('video')}
-          darkMode={darkMode}
         />
       )}
     </>
