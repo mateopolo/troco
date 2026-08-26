@@ -1,6 +1,4 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback, Suspense } from 'react';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
 import { Search, MapPin, Video, Star, Globe, Filter, MessageSquare, PlusCircle, User, ShieldCheck, Clock, CheckCircle, X, Sparkles, Coins, Plus, Trash2, Camera, Pencil, Mic, PhoneOff, Flame, History, Check, Lock, CreditCard, Tag, Phone, UserPlus, ChevronLeft, ChevronRight, ChevronUp, Eye, EyeOff, Minimize2, MicOff, VideoOff, Sun, Moon, Upload, Repeat, SwitchCamera, LogOut, Scale, ShieldAlert, FileText, Monitor, MonitorOff, Crown, GripHorizontal, Mail, Image as ImageIcon, Sliders } from 'lucide-react';
 import { auth, db } from './firebase';
 import { collection, addDoc, doc, updateDoc, serverTimestamp, onSnapshot, query, orderBy, setDoc, deleteDoc, getDoc, getDocs, where, increment, runTransaction } from 'firebase/firestore';
@@ -17,15 +15,12 @@ import { uploadVoiceNote } from './services/voiceStorageService';
 import { playApplePaySound, playBetclicBalanceSound, playWelcomeGiftFanfare } from './utils/audioService';
 import { AnimatedEuroBalance, AnimatedTokenBalance } from './components/AnimatedBalances';
 import FeedCardItem from './components/FeedCardItem';
-import PhotoGrid from './components/PhotoGrid';
-import InvoiceCalculator, { generateInvoiceRef, calculateListingInvoice } from './components/InvoiceCalculator';
+import { generateInvoiceRef, calculateListingInvoice } from './components/InvoiceCalculator';
 import TrocoLogo3D from './components/common/TrocoLogo3D';
-import LiveCallSubtitles from './components/LiveCallSubtitles';
 import PWAInstallBanner from './components/PWAInstallBanner';
 import SponsoredFeedCard from './components/SponsoredFeedCard';
 import SectoralErrorBoundary from './components/SectoralErrorBoundary';
 import { useWalletStore } from './stores';
-import { ChatSection, MapSection, CallFeature, PaymentFeature, CommunityHubSection } from './features';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useGSAP } from '@gsap/react';
@@ -39,7 +34,7 @@ import {
   knownMessageTranslations,
 } from './data/translationsData';
 
-// Lazy-loaded heavy components & modals (Code-Splitting)
+// Lazy-loaded heavy components & modals (Strict Code-Splitting)
 const AdminPanel = React.lazy(() => import('./components/AdminPanel'));
 const ReportModal = React.lazy(() => import('./components/ReportModal'));
 const CguModal = React.lazy(() => import('./components/CguModal'));
@@ -50,6 +45,14 @@ const VisioSettlementModal = React.lazy(() => import('./components/VisioSettleme
 const KycModal = React.lazy(() => import('./components/KycModal'));
 const CounterOfferModal = React.lazy(() => import('./components/CounterOfferModal'));
 const PublicProfileModal = React.lazy(() => import('./components/PublicProfileModal'));
+const MapSection = React.lazy(() => import('./features/map/MapSection'));
+const ChatSection = React.lazy(() => import('./features/chat/ChatSection'));
+const CommunityHubSection = React.lazy(() => import('./features/community/CommunityHubSection'));
+const PaymentFeature = React.lazy(() => import('./features/payment'));
+const CallFeature = React.lazy(() => import('./features/call'));
+const LiveCallSubtitles = React.lazy(() => import('./components/LiveCallSubtitles'));
+const PhotoGrid = React.lazy(() => import('./components/PhotoGrid'));
+const InvoiceCalculator = React.lazy(() => import('./components/InvoiceCalculator'));
 
 if (typeof window !== 'undefined') {
   gsap.registerPlugin(ScrollTrigger, useGSAP);
@@ -3017,38 +3020,6 @@ export default function App() {
       return total;
     }, 0);
   }, [chatsList, mockChats, chatThreads, readChats, selectedChat, activeTab, profile?.name, profile?.username, profile?.uid]);
-
-  const createModernMapIcon = useCallback(() => {
-    const primaryBg = theme?.variables?.['--accent-primary'] || '#B98B73';
-    const innerDot = theme?.variables?.['--bg-global'] || '#FAF7F2';
-
-    return L.divIcon({
-      className: 'custom-modern-pin',
-      html: `
-        <div style="
-          position: relative;
-          width: 24px;
-          height: 30px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          filter: drop-shadow(0 6px 12px rgba(0,0,0,0.25));
-          cursor: pointer;
-        ">
-          <svg width="24" height="30" viewBox="0 0 24 30" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 0C5.37 0 0 5.37 0 12C0 21 12 30 12 30C12 30 24 21 24 12C24 5.37 18.63 0 12 0Z" 
-                  fill="${primaryBg}" 
-                  stroke="#FFFFFF" 
-                  stroke-width="1.8" />
-            <circle cx="12" cy="11" r="4.5" fill="${innerDot}" />
-          </svg>
-        </div>
-      `,
-      iconSize: [24, 30],
-      iconAnchor: [12, 30],
-      popupAnchor: [0, -28],
-    });
-  }, [theme]);
 
   // eslint-disable-next-line no-unused-vars
   const groupParticipants = [
@@ -7994,21 +7965,22 @@ export default function App() {
                   </button>
                 </div>
               ) : viewMode === 'map' ? (
-                <MapSection
-                  filteredListings={filteredListings}
-                  mapCenter={mapCenter}
-                  mapZoom={mapZoom}
-                  darkMode={darkMode}
-                  currentLang={currentLang}
-                  t={t}
-                  theme={theme}
-                  getCoordinatesForLocation={getCoordinatesForLocation}
-                  getSuggestedMedia={getSuggestedMedia}
-                  getListingDisplayContent={getListingDisplayContent}
-                  localizeLocation={localizeLocation}
-                  handleOpenListing={handleOpenListing}
-                  createModernMapIcon={createModernMapIcon}
-                />
+                <Suspense fallback={<SkeletonModalFallback title="Chargement de la carte interactive..." />}>
+                  <MapSection
+                    filteredListings={filteredListings}
+                    mapCenter={mapCenter}
+                    mapZoom={mapZoom}
+                    darkMode={darkMode}
+                    currentLang={currentLang}
+                    t={t}
+                    theme={theme}
+                    getCoordinatesForLocation={getCoordinatesForLocation}
+                    getSuggestedMedia={getSuggestedMedia}
+                    getListingDisplayContent={getListingDisplayContent}
+                    localizeLocation={localizeLocation}
+                    handleOpenListing={handleOpenListing}
+                  />
+                </Suspense>
               ) : (
                 <div
                   ref={listingsGridRef}
@@ -8170,24 +8142,26 @@ export default function App() {
         {/* ONGLET COMMUNAUTÉ : TROCO LIVE & FIL D'ACTIVITÉ */}
         {activeTab === 'community' && (
           <SectoralErrorBoundary moduleName="Communauté & Troco Live">
-            <CommunityHubSection
-              currentUser={profile}
-              onOpenProfile={(targetUser) => {
-                const targetObj = {
-                  id: targetUser.id || targetUser.uid || `user-${Date.now()}`,
-                  user: targetUser.name || targetUser.author || 'Membre Troco',
-                  avatar: targetUser.avatar,
-                  verified: targetUser.verified || false,
-                  author: targetUser.name || targetUser.author || 'Membre Troco',
-                  authorUsername: targetUser.username || targetUser.authorUsername || '@membre',
-                  authorProfile: targetUser,
-                };
-                setCommunityProfileUser(targetObj);
-                setIsCommunityProfileOpen(true);
-              }}
-              darkMode={darkMode}
-              isMobile={isMobile}
-            />
+            <Suspense fallback={<SkeletonModalFallback title="Chargement de Troco Live & Communauté..." />}>
+              <CommunityHubSection
+                currentUser={profile}
+                onOpenProfile={(targetUser) => {
+                  const targetObj = {
+                    id: targetUser.id || targetUser.uid || `user-${Date.now()}`,
+                    user: targetUser.name || targetUser.author || 'Membre Troco',
+                    avatar: targetUser.avatar,
+                    verified: targetUser.verified || false,
+                    author: targetUser.name || targetUser.author || 'Membre Troco',
+                    authorUsername: targetUser.username || targetUser.authorUsername || '@membre',
+                    authorProfile: targetUser,
+                  };
+                  setCommunityProfileUser(targetObj);
+                  setIsCommunityProfileOpen(true);
+                }}
+                darkMode={darkMode}
+                isMobile={isMobile}
+              />
+            </Suspense>
           </SectoralErrorBoundary>
         )}
 
@@ -8199,44 +8173,46 @@ export default function App() {
 
           return (
             <SectoralErrorBoundary moduleName="Messagerie & Hub Collaboratif">
-              <ChatSection
-                activeTab={activeTab}
-                mockChats={chatsList}
-                selectedChat={selectedChat}
-                setSelectedChat={handleSelectChat}
-                chatThreads={chatThreads}
-                readChats={readChats}
-                chatInputText={messageDraft}
-                setChatInputText={setMessageDraft}
-                onTypingChange={handleTypingChange}
-                isThemTyping={isThemTyping}
-                handleSendMessage={handleSendMessage}
-                handleEditMessage={handleEditMessage}
-                handleDeleteMessage={handleDeleteMessage}
-                openCounterOffer={openCounterOffer}
-                startCall={startCall}
-                joinActiveCall={joinActiveCall}
-                handleAcceptDeal={handleAcceptDeal}
-                handleDeclineDeal={handleDeclineDeal}
-                handleReleaseEscrow={handleReleaseEscrow}
-                onCreateProjectGroup={handleCreateProjectGroup}
-                onProposeReward={handleProposeReward}
-                onAcceptReward={handleAcceptReward}
-                onSendAudioMessage={handleSendAudioMessage}
-                profile={profile}
-                currentLang={currentLang}
-                t={t}
-                darkMode={darkMode}
-                getChatMessageDisplayContent={getChatMessageDisplayContent}
-                getListingTitleTranslation={getListingTitleTranslation}
-                formatStatus={formatStatus}
-                showingOriginalMessages={showingOriginalMessages}
-                toggleOriginalMessage={toggleOriginalMessage}
-                isMobile={isMobile}
-                presenceMap={presenceMap}
-                allListings={listings}
-                onOpenListing={handleOpenListing}
-              />
+              <Suspense fallback={<SkeletonModalFallback title="Chargement de la messagerie..." />}>
+                <ChatSection
+                  activeTab={activeTab}
+                  mockChats={chatsList}
+                  selectedChat={selectedChat}
+                  setSelectedChat={handleSelectChat}
+                  chatThreads={chatThreads}
+                  readChats={readChats}
+                  chatInputText={messageDraft}
+                  setChatInputText={setMessageDraft}
+                  onTypingChange={handleTypingChange}
+                  isThemTyping={isThemTyping}
+                  handleSendMessage={handleSendMessage}
+                  handleEditMessage={handleEditMessage}
+                  handleDeleteMessage={handleDeleteMessage}
+                  openCounterOffer={openCounterOffer}
+                  startCall={startCall}
+                  joinActiveCall={joinActiveCall}
+                  handleAcceptDeal={handleAcceptDeal}
+                  handleDeclineDeal={handleDeclineDeal}
+                  handleReleaseEscrow={handleReleaseEscrow}
+                  onCreateProjectGroup={handleCreateProjectGroup}
+                  onProposeReward={handleProposeReward}
+                  onAcceptReward={handleAcceptReward}
+                  onSendAudioMessage={handleSendAudioMessage}
+                  profile={profile}
+                  currentLang={currentLang}
+                  t={t}
+                  darkMode={darkMode}
+                  getChatMessageDisplayContent={getChatMessageDisplayContent}
+                  getListingTitleTranslation={getListingTitleTranslation}
+                  formatStatus={formatStatus}
+                  showingOriginalMessages={showingOriginalMessages}
+                  toggleOriginalMessage={toggleOriginalMessage}
+                  isMobile={isMobile}
+                  presenceMap={presenceMap}
+                  allListings={listings}
+                  onOpenListing={handleOpenListing}
+                />
+              </Suspense>
             </SectoralErrorBoundary>
           );
         })()}
@@ -8391,17 +8367,19 @@ export default function App() {
                   </p>
 
                   {/* GRILLE VISUELLE DE PHOTOS AVEC ÉDITION & RECADRAGE */}
-                  <PhotoGrid
-                    photos={postDraft.gallery && postDraft.gallery.length > 0 ? postDraft.gallery : (postDraft.imageUrl ? [postDraft.imageUrl] : [])}
-                    onAddPhoto={handlePhotoGridAdd}
-                    onRemovePhoto={handlePhotoGridRemove}
-                    onUpdatePhoto={handlePhotoGridUpdate}
-                    onAutoGenerate={handlePhotoGridAutoGenerate}
-                    maxPhotos={8}
-                    darkMode={darkMode}
-                    t={t}
-                    currentLang={currentLang}
-                  />
+                  <Suspense fallback={null}>
+                    <PhotoGrid
+                      photos={postDraft.gallery && postDraft.gallery.length > 0 ? postDraft.gallery : (postDraft.imageUrl ? [postDraft.imageUrl] : [])}
+                      onAddPhoto={handlePhotoGridAdd}
+                      onRemovePhoto={handlePhotoGridRemove}
+                      onUpdatePhoto={handlePhotoGridUpdate}
+                      onAutoGenerate={handlePhotoGridAutoGenerate}
+                      maxPhotos={8}
+                      darkMode={darkMode}
+                      t={t}
+                      currentLang={currentLang}
+                    />
+                  </Suspense>
 
                   {/* SECTION VIDÉO */}
                   <div>
@@ -8758,15 +8736,17 @@ export default function App() {
                   </div>
 
                   {/* CALCULATEUR DE DEVIS & FACTURATION TVA */}
-                  <InvoiceCalculator
-                    isUrgent={!!postDraft.isUrgent}
-                    photoCount={currentPhotoList.length}
-                    isEditing={isEditingListing}
-                    isEditingContentChanged={isEditingContentChanged}
-                    darkMode={darkMode}
-                    t={t}
-                    currentLang={currentLang}
-                  />
+                  <Suspense fallback={null}>
+                    <InvoiceCalculator
+                      isUrgent={!!postDraft.isUrgent}
+                      photoCount={currentPhotoList.length}
+                      isEditing={isEditingListing}
+                      isEditingContentChanged={isEditingContentChanged}
+                      darkMode={darkMode}
+                      t={t}
+                      currentLang={currentLang}
+                    />
+                  </Suspense>
 
                   <div style={{ fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>{t('publishVisibilityNotice')}</div>
                 </div>
@@ -11024,12 +11004,14 @@ export default function App() {
           )}
 
           {/* SOUS-TITRES ET TRADUCTION VOCALE EN DIRECT (IA) */}
-          <LiveCallSubtitles
-            isActive={showCallSubtitles}
-            currentLang={currentLang}
-            speakerName={selectedChat?.user || 'Interlocuteur'}
-            isCompact={false}
-          />
+          <Suspense fallback={null}>
+            <LiveCallSubtitles
+              isActive={showCallSubtitles}
+              currentLang={currentLang}
+              speakerName={selectedChat?.user || 'Interlocuteur'}
+              isCompact={false}
+            />
+          </Suspense>
 
           {showCallControls && (
             <div
@@ -11246,31 +11228,33 @@ export default function App() {
       )}
 
       {/* ---- BULLE FLOTTANTE PIP (PICTURE-IN-PICTURE & DRAG-AND-DROP AVEC POINTER EVENTS) ---- */}
-      <CallFeature
-        callState={callState}
-        isCallPip={isCallPip}
-        setIsCallPip={setIsCallPip}
-        pipPosition={pipPosition}
-        setPipPosition={setPipPosition}
-        handlePipPointerDown={handlePipPointerDown}
-        handlePipPointerMove={handlePipPointerMove}
-        handlePipPointerUp={handlePipPointerUp}
-        handlePipPointerCancel={handlePipPointerCancel}
-        handlePipContentClick={handlePipContentClick}
-        selectedChat={selectedChat}
-        callDuration={callDuration}
-        formatCallTimer={formatCallTimer}
-        remoteStream={remoteStream}
-        localStream={localStream}
-        facingMode={facingMode}
-        attachRemoteStream={attachRemoteStream}
-        attachLocalStream={attachLocalStream}
-        hasMultipleCameras={hasMultipleCameras}
-        switchCamera={switchCamera}
-        toggleMic={toggleMic}
-        endCall={endCall}
-        currentLang={currentLang}
-      />
+      <Suspense fallback={null}>
+        <CallFeature
+          callState={callState}
+          isCallPip={isCallPip}
+          setIsCallPip={setIsCallPip}
+          pipPosition={pipPosition}
+          setPipPosition={setPipPosition}
+          handlePipPointerDown={handlePipPointerDown}
+          handlePipPointerMove={handlePipPointerMove}
+          handlePipPointerUp={handlePipPointerUp}
+          handlePipPointerCancel={handlePipPointerCancel}
+          handlePipContentClick={handlePipContentClick}
+          selectedChat={selectedChat}
+          callDuration={callDuration}
+          formatCallTimer={formatCallTimer}
+          remoteStream={remoteStream}
+          localStream={localStream}
+          facingMode={facingMode}
+          attachRemoteStream={attachRemoteStream}
+          attachLocalStream={attachLocalStream}
+          hasMultipleCameras={hasMultipleCameras}
+          switchCamera={switchCamera}
+          toggleMic={toggleMic}
+          endCall={endCall}
+          currentLang={currentLang}
+        />
+      </Suspense>
 
       {/* PANEL ADMINISTRATEUR & MODÉRATION (/admin) */}
       {isAdminPanelOpen && (
@@ -11330,20 +11314,22 @@ export default function App() {
       )}
 
       {/* PASSERELLE DE PAIEMENT & HISTORIQUE MODULAIRE (BLOC 5) */}
-      <PaymentFeature
-        isPaymentModalOpen={isPaymentModalOpen}
-        setIsPaymentModalOpen={setIsPaymentModalOpen}
-        paymentModalConfig={paymentModalConfig}
-        handlePaymentSuccess={handlePaymentSuccess}
-        playBetclicBalanceSound={playBetclicBalanceSound}
-        playApplePaySound={playApplePaySound}
-        isTransactionsModalOpen={isTransactionsModalOpen}
-        setIsTransactionsModalOpen={setIsTransactionsModalOpen}
-        userTransactions={userTransactions}
-        handleOpenPayment={handleOpenPayment}
-        profile={profile}
-        darkMode={darkMode}
-      />
+      <Suspense fallback={null}>
+        <PaymentFeature
+          isPaymentModalOpen={isPaymentModalOpen}
+          setIsPaymentModalOpen={setIsPaymentModalOpen}
+          paymentModalConfig={paymentModalConfig}
+          handlePaymentSuccess={handlePaymentSuccess}
+          playBetclicBalanceSound={playBetclicBalanceSound}
+          playApplePaySound={playApplePaySound}
+          isTransactionsModalOpen={isTransactionsModalOpen}
+          setIsTransactionsModalOpen={setIsTransactionsModalOpen}
+          userTransactions={userTransactions}
+          handleOpenPayment={handleOpenPayment}
+          profile={profile}
+          darkMode={darkMode}
+        />
+      </Suspense>
 
       {/* PARCOURS D'ONBOARDING INTERACTIF POUR NOUVEAUX COMPTES (CHANTIER 1) */}
       {isOnboardingOpen && (
