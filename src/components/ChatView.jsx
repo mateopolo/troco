@@ -1329,6 +1329,8 @@ function ChatView({
                             audioUrl={msg.audioUrl}
                             duration={msg.duration}
                             isMe={isMe}
+                            currentLang={currentLang}
+                            transcription={msg.transcription || null}
                           />
                         </div>
                       ) : (
