@@ -1311,6 +1311,17 @@ function ChatView({
                         </div>
                       )}
 
+                      {/* IMAGE OU CAPTURE DE TABLEAU BLANC */}
+                      {(msg.imageUrl || msg.type === 'image' || msg.kind === 'image') && (
+                        <div style={{ borderRadius: '12px', overflow: 'hidden', marginBottom: '6px', maxWidth: '280px' }}>
+                          <img
+                            src={msg.imageUrl}
+                            alt="Capture tableau blanc"
+                            style={{ width: '100%', height: 'auto', display: 'block', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.1)' }}
+                          />
+                        </div>
+                      )}
+
                       {/* MESSAGE VOCAL OU MESSAGE TEXTE (PARFAITEMENT CONTENU) */}
                       {(msg.type === 'audio' || msg.kind === 'audio' || msg.audioUrl) ? (
                         <div style={{ width: '100%', maxWidth: '260px', minWidth: 0, boxSizing: 'border-box', overflow: 'hidden' }}>
@@ -2247,6 +2258,9 @@ function ChatView({
             projectTitle={activeChatObj.projectTitle || activeChatObj.user || 'Tableau Blanc Collaboratif'}
             currentUser={profile}
             darkMode={darkMode}
+            onSendToChat={(imageDataUrl) => {
+              if (setChatInputText) setChatInputText('');
+            }}
           />
         </Suspense>
       )}
