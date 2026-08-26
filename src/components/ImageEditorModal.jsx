@@ -47,15 +47,98 @@ export default function ImageEditorModal({
   }, [imageSrc]);
 
   // Rendu interactif du canvas de prévisualisation
+  // Helper pour tester si ctx.filter est supporté par le moteur de rendu
+  const isCanvasFilterSupported = useCallback(() => {
+    try {
+      const testCanvas = document.createElement('canvas');
+      const testCtx = testCanvas.getContext('2d');
+      if (!testCtx || typeof testCtx.filter !== 'string') return false;
+      testCtx.filter = 'brightness(150%)';
+      return testCtx.filter.includes('brightness');
+    } catch (_) {
+      return false;
+    }
+  }, []);
+
+  // Helper pour appliquer la luminosité et le contraste au niveau des pixels (Garantie 100% universelle)
+  const applyPixelAdjustments = useCallback((ctx, width, height, brightVal, contVal) => {
+    if (brightVal === 0 && contVal === 0) return;
+    try {
+      const imgData = ctx.getImageData(0, 0, width, height);
+      const d = imgData.data;
+      // Formule standard de contraste : factor = (259 * (contrast + 255)) / (255 * (259 - contrast))
+      // On ramène contVal (-50..+50) à une plage normalisée (-128..+128)
+      const contrastNorm = contVal * 2.55;
+      const factor = (259 * (contrastNorm + 255)) / (255 * (259 - contrastNorm));
+      const brightOffset = brightVal * 2.55;
+
+      for (let i = 0; i < d.length; i += 4) {
+        // Rouge
+        let r = d[i] + brightOffset;
+        r = factor * (r - 128) + 128;
+        d[i] = r < 0 ? 0 : r > 255 ? 255 : r;
+
+        // Vert
+        let g = d[i + 1] + brightOffset;
+        g = factor * (g - 128) + 128;
+        d[i + 1] = g < 0 ? 0 : g > 255 ? 255 : g;
+
+        // Bleu
+        let b = d[i + 2] + brightOffset;
+        b = factor * (b - 128) + 128;
+        d[i + 2] = b < 0 ? 0 : b > 255 ? 255 : b;
+      }
+      ctx.putImageData(imgData, 0, 0);
+    } catch (err) {
+      console.warn('[ImageEditor] Pixel adjustments fallback note:', err);
+    }
+  }, []);
+
+  // Fonction de dessin réutilisable pour la prévisualisation et l'exportation
+  const drawImageToCanvas = useCallback((targetCanvas, width, height) => {
+    const img = imageRef.current;
+    if (!targetCanvas || !img || !imageLoaded) return;
+
+    const ctx = targetCanvas.getContext('2d');
+    if (!ctx) return;
+
+    targetCanvas.width = width;
+    targetCanvas.height = height;
+
+    ctx.clearRect(0, 0, width, height);
+
+    // 1. Définir les filtres CSS natifs du canvas
+    const bPercent = 100 + brightness;
+    const cPercent = 100 + contrast;
+    const nativeFilterStr = `brightness(${bPercent}%) contrast(${cPercent}%)`;
+    ctx.filter = nativeFilterStr;
+
+    ctx.save();
+    // Centrer la transformation
+    ctx.translate(width / 2 + pan.x, height / 2 + pan.y);
+    ctx.rotate((rotation * Math.PI) / 180);
+    ctx.scale(isFlippedH ? -zoom : zoom, zoom);
+
+    // Dessiner l'image centrée avec conservation du ratio
+    const scaleToFit = Math.max(width / img.naturalWidth, height / img.naturalHeight);
+    const drawW = img.naturalWidth * scaleToFit;
+    const drawH = img.naturalHeight * scaleToFit;
+
+    ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
+    ctx.restore();
+
+    // 2. Si le moteur ne supporte pas ctx.filter nativement, appliquer le fallback par manipulation directe de pixels
+    if (!isCanvasFilterSupported()) {
+      applyPixelAdjustments(ctx, width, height, brightness, contrast);
+    }
+  }, [imageLoaded, zoom, rotation, isFlippedH, brightness, contrast, pan, isCanvasFilterSupported, applyPixelAdjustments]);
+
+  // Rendu interactif du canvas de prévisualisation
   const renderPreview = useCallback(() => {
     const canvas = canvasRef.current;
     const img = imageRef.current;
     if (!canvas || !img || !imageLoaded) return;
 
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    // Définir la dimension du canvas selon le ratio sélectionné
     let targetWidth = 600;
     let targetHeight = 600;
 
@@ -73,30 +156,8 @@ export default function ImageEditorModal({
       targetHeight = Math.round(600 * (img.naturalHeight / img.naturalWidth)) || 600;
     }
 
-    canvas.width = targetWidth;
-    canvas.height = targetHeight;
-
-    ctx.clearRect(0, 0, targetWidth, targetHeight);
-
-    // Appliquer les filtres de luminosité et contraste
-    const bPercent = 100 + brightness;
-    const cPercent = 100 + contrast;
-    ctx.filter = `brightness(${bPercent}%) contrast(${cPercent}%)`;
-
-    ctx.save();
-    // Centrer la transformation
-    ctx.translate(targetWidth / 2 + pan.x, targetHeight / 2 + pan.y);
-    ctx.rotate((rotation * Math.PI) / 180);
-    ctx.scale(isFlippedH ? -zoom : zoom, zoom);
-
-    // Dessiner l'image centrée
-    const scaleToFit = Math.max(targetWidth / img.naturalWidth, targetHeight / img.naturalHeight);
-    const drawW = img.naturalWidth * scaleToFit;
-    const drawH = img.naturalHeight * scaleToFit;
-
-    ctx.drawImage(img, -drawW / 2, -drawH / 2, drawW, drawH);
-    ctx.restore();
-  }, [imageLoaded, zoom, rotation, isFlippedH, aspectRatio, brightness, contrast, pan]);
+    drawImageToCanvas(canvas, targetWidth, targetHeight);
+  }, [aspectRatio, drawImageToCanvas, imageLoaded]);
 
   useEffect(() => {
     renderPreview();
@@ -118,7 +179,6 @@ export default function ImageEditorModal({
     if (!isDragging) return;
     const newX = e.clientX - dragStartRef.current.x;
     const newY = e.clientY - dragStartRef.current.y;
-    // Limiter le déplacement à des valeurs raisonnables
     setPan({
       x: Math.max(-250, Math.min(250, newX)),
       y: Math.max(-250, Math.min(250, newY)),
@@ -132,16 +192,49 @@ export default function ImageEditorModal({
     }
   };
 
-  // Exporter le résultat final haute fidélité
+  // Exporter le résultat final haute fidélité avec filtres intégrés dans le DataURL
   const handleConfirmSave = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+    const img = imageRef.current;
+    if (!img || !imageLoaded) {
+      onClose();
+      return;
+    }
+
     try {
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.88);
+      // Création d'un canvas d'exportation haute résolution (1000px max)
+      const exportCanvas = document.createElement('canvas');
+      let targetWidth = 1000;
+      let targetHeight = 1000;
+
+      if (aspectRatio === '1:1') {
+        targetWidth = 1000;
+        targetHeight = 1000;
+      } else if (aspectRatio === '4:3') {
+        targetWidth = 1000;
+        targetHeight = 750;
+      } else if (aspectRatio === '16:9') {
+        targetWidth = 1000;
+        targetHeight = 562;
+      } else {
+        targetWidth = 1000;
+        targetHeight = Math.round(1000 * (img.naturalHeight / img.naturalWidth)) || 1000;
+      }
+
+      drawImageToCanvas(exportCanvas, targetWidth, targetHeight);
+
+      const dataUrl = exportCanvas.toDataURL('image/jpeg', 0.92);
       onSave(dataUrl);
       onClose();
     } catch (e) {
       console.warn('Image export error:', e);
+      // Fallback sur le canvas de prévisualisation en cas de sécurité CORS
+      if (canvasRef.current) {
+        try {
+          const fallbackDataUrl = canvasRef.current.toDataURL('image/jpeg', 0.88);
+          onSave(fallbackDataUrl);
+        } catch (_) {}
+      }
+      onClose();
     }
   };
 

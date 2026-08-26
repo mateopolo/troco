@@ -29,6 +29,7 @@ function FeedCardItem({
   const [localImageIndex, setLocalImageIndex] = useState(0);
   const [typedText, setTypedText] = useState('');
   const cardElementRef = useRef(null);
+  const videoRef = useRef(null);
   const touchStartRef = useRef(null);
   const touchDeltaXRef = useRef(0);
   const touchDeltaYRef = useRef(0);
@@ -38,6 +39,26 @@ function FeedCardItem({
   const media = getSuggestedMedia ? getSuggestedMedia(item.title, item.description || '', item.image, item.video) : {};
   const isHovered = hoveredCardId === item.id;
   const displayContent = getListingDisplayContent ? getListingDisplayContent(item, currentLang, !!showingOriginalListings[item.id]) : { title: item.title, description: item.description };
+
+  const trimStart = Number(item.videoTrimStart || item.videoMetadata?.trimStart || 0);
+  const trimEnd = Number(item.videoTrimEnd || item.videoMetadata?.trimEnd || 0);
+  const cropRatio = item.cropRatio || item.videoMetadata?.cropRatio || '16:9';
+
+  const handleTimeUpdate = () => {
+    if (!videoRef.current) return;
+    const v = videoRef.current;
+    if (trimEnd > 0 && v.currentTime >= trimEnd) {
+      v.currentTime = trimStart > 0 ? trimStart : 0;
+      v.play().catch(() => {});
+    }
+  };
+
+  const handleLoadedMetadata = () => {
+    if (!videoRef.current) return;
+    if (trimStart > 0) {
+      videoRef.current.currentTime = trimStart;
+    }
+  };
 
   // EFFET MACHINE À ÉCRIRE (TYPEWRITER) EXCLUSIF AU SURVOL DE CETTE CARTE
   useEffect(() => {
@@ -294,12 +315,15 @@ function FeedCardItem({
 
         {media.video && (
           <video
+            ref={videoRef}
             src={media.video}
             poster={media.image}
             autoPlay
             loop
             muted
             playsInline
+            onLoadedMetadata={handleLoadedMetadata}
+            onTimeUpdate={handleTimeUpdate}
             onError={(e) => { e.target.style.display = 'none'; }}
             style={{
               position: 'absolute',
@@ -307,6 +331,8 @@ function FeedCardItem({
               width: '100%',
               height: '100%',
               objectFit: 'cover',
+              transform: cropRatio === '9:16' ? 'scale(1.15)' : cropRatio === '1:1' ? 'scale(1.08)' : 'scale(1)',
+              transition: 'transform 0.3s ease',
               zIndex: 2,
               pointerEvents: 'none'
             }}

@@ -62,6 +62,7 @@ const CallFeature = React.lazy(() => import('./features/call'));
 const LiveCallSubtitles = React.lazy(() => import('./components/LiveCallSubtitles'));
 const PhotoGrid = React.lazy(() => import('./components/PhotoGrid'));
 const InvoiceCalculator = React.lazy(() => import('./components/InvoiceCalculator'));
+const VideoEditorModal = React.lazy(() => import('./components/VideoEditorModal'));
 
 if (typeof window !== 'undefined') {
   gsap.registerPlugin(ScrollTrigger, useGSAP);
@@ -887,6 +888,9 @@ export default function App() {
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   // ---- ÉTAT ANIMATION CÉLÉBRATION TOP-UP & JETONS ----
   const [topUpCelebration, setTopUpCelebration] = useState(null);
+  // ---- ÉTAT ÉDITEUR VIDÉO INTÉGRÉ (TRIM & CROP) ----
+  const [isVideoEditorOpen, setIsVideoEditorOpen] = useState(false);
+  const [editingVideoData, setEditingVideoData] = useState(null);
 
   const handleKycComplete = async () => {
     const updatedProfile = {
@@ -988,12 +992,16 @@ export default function App() {
     let updatedEuro = profile.euroBalance;
     let updatedTokens = profile.trocoTokens;
     let updatedTrocoPlus = profile.isTrocoPlus || false;
-    let updatedTrocoPlusPlan = profile.trocoPlusPlan || null;
+    let updatedSubscriptionPlan = profile.subscriptionPlan || profile.trocoPlusPlan || null;
+    let updatedSubscriptionStartDate = profile.subscriptionStartDate || null;
+    let updatedSubscriptionRenewalDate = profile.subscriptionRenewalDate || null;
 
     if (txData.mode === 'troco-plus' || txData.mode === 'pack-tokens') {
       updatedTokens += (txData.tokensPurchased || 0);
       updatedTrocoPlus = true;
-      updatedTrocoPlusPlan = txData.subscriptionPlan?.planKey || 'essential';
+      updatedSubscriptionPlan = txData.subscriptionPlan?.planKey || 'essential';
+      updatedSubscriptionStartDate = txData.subscriptionStartDate || new Date().toISOString();
+      updatedSubscriptionRenewalDate = txData.subscriptionRenewalDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
       setTopUpCelebration({
         title: `+${txData.tokensPurchased} Jetons Troco !`,
         subtitle: `Abonnement ${txData.subscriptionPlan?.title || 'Troco Plus'} activé`,
@@ -1053,9 +1061,15 @@ export default function App() {
       euroBalance: Number(updatedEuro.toFixed(2)),
       trocoTokens: updatedTokens,
       isTrocoPlus: updatedTrocoPlus,
-      trocoPlusPlan: updatedTrocoPlusPlan,
+      subscriptionPlan: updatedSubscriptionPlan,
+      trocoPlusPlan: updatedSubscriptionPlan,
+      subscriptionStartDate: updatedSubscriptionStartDate,
+      subscriptionRenewalDate: updatedSubscriptionRenewalDate,
     };
     setProfile(updatedProfile);
+    try {
+      localStorage.setItem('troco_user_profile', JSON.stringify(updatedProfile));
+    } catch (_) { }
 
     // 2. Sauvegarde de la transaction dans le state local
     const newTxRecord = {
@@ -1076,6 +1090,10 @@ export default function App() {
         await updateDoc(doc(db, 'users', uid), {
           euroBalance: updatedProfile.euroBalance,
           trocoTokens: updatedProfile.trocoTokens,
+          isTrocoPlus: updatedProfile.isTrocoPlus,
+          subscriptionPlan: updatedProfile.subscriptionPlan,
+          subscriptionStartDate: updatedProfile.subscriptionStartDate,
+          subscriptionRenewalDate: updatedProfile.subscriptionRenewalDate,
           updatedAt: serverTimestamp(),
         });
         await addDoc(collection(db, 'transactions'), {
@@ -4048,6 +4066,10 @@ export default function App() {
       location: listing.location || '',
       imageUrl: listing.image || listing.imageUrl || '',
       videoUrl: listing.video || listing.videoUrl || '',
+      videoTrimStart: Number(listing.videoTrimStart || listing.videoMetadata?.trimStart || 0),
+      videoTrimEnd: Number(listing.videoTrimEnd || listing.videoMetadata?.trimEnd || 0),
+      cropRatio: listing.cropRatio || listing.videoMetadata?.cropRatio || '16:9',
+      videoMetadata: listing.videoMetadata || null,
       status: listing.status || 'active',
       caution: listing.caution || '',
       cautionAmount: listing.cautionAmount || '',
@@ -4313,14 +4335,51 @@ export default function App() {
     }
   };
 
+  const handleOpenVideoEditor = (videoSourceUrl = null) => {
+    const targetUrl = videoSourceUrl || postDraft.videoUrl || getSuggestedMedia(postDraft.title, postDraft.description, postDraft.imageUrl, postDraft.videoUrl).video;
+    setEditingVideoData({
+      url: targetUrl,
+      trimStart: Number(postDraft.videoTrimStart || 0),
+      trimEnd: Number(postDraft.videoTrimEnd || 0),
+      cropRatio: postDraft.cropRatio || '16:9'
+    });
+    setIsVideoEditorOpen(true);
+  };
+
+  const handleSaveVideoEdits = (videoData) => {
+    setPostDraft(prev => ({
+      ...prev,
+      videoUrl: videoData.videoUrl,
+      videoTrimStart: videoData.trimStart,
+      videoTrimEnd: videoData.trimEnd,
+      cropRatio: videoData.cropRatio,
+      videoMetadata: videoData
+    }));
+    setIsVideoEditorOpen(false);
+  };
+
   const handleVideoFileUpload = (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
-      setPostDraft(prev => ({ ...prev, videoUrl: reader.result }));
+      setPostDraft(prev => ({
+        ...prev,
+        videoUrl: reader.result,
+        videoTrimStart: 0,
+        videoTrimEnd: 0,
+        cropRatio: '16:9'
+      }));
+      setEditingVideoData({
+        url: reader.result,
+        trimStart: 0,
+        trimEnd: 0,
+        cropRatio: '16:9'
+      });
+      setIsVideoEditorOpen(true);
     };
     reader.readAsDataURL(file);
+    event.target.value = '';
   };
 
   const handlePublishAnnouncement = async () => {
@@ -4419,7 +4478,16 @@ export default function App() {
       languages: profile.languages ? profile.languages.slice(0, 2) : ['FR'],
       compensation: compensationText,
       image: finalGallery[0] || media.image,
-      video: media.video,
+      video: postDraft.videoUrl || media.video,
+      videoUrl: postDraft.videoUrl || media.video,
+      videoTrimStart: Number(postDraft.videoTrimStart || 0),
+      videoTrimEnd: Number(postDraft.videoTrimEnd || 0),
+      cropRatio: postDraft.cropRatio || '16:9',
+      videoMetadata: postDraft.videoMetadata || {
+        trimStart: Number(postDraft.videoTrimStart || 0),
+        trimEnd: Number(postDraft.videoTrimEnd || 0),
+        cropRatio: postDraft.cropRatio || '16:9'
+      },
       gallery: finalGallery,
       urgent: wantsUrgent,
       caution: cautionText,
@@ -8369,18 +8437,46 @@ export default function App() {
                     />
                   </Suspense>
 
-                  {/* SECTION VIDÉO */}
+                  {/* SECTION VIDÉO AVEC TRIMMER & CROP */}
                   <div>
-                    <div style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '6px' }}>{t('miniVideoLabel')}</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <div style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)' }}>{t('miniVideoLabel')}</div>
+                      {postDraft.cropRatio && (
+                        <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--accent-primary)', backgroundColor: 'var(--bg-card)', padding: '2px 8px', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                          Format: {postDraft.cropRatio}
+                          {postDraft.videoTrimEnd > 0 ? ` • ${postDraft.videoTrimStart?.toFixed(1) || 0}s-${postDraft.videoTrimEnd?.toFixed(1)}s` : ''}
+                        </span>
+                      )}
+                    </div>
                     <input value={postDraft.videoUrl} onChange={(e) => setPostDraft(prev => ({ ...prev, videoUrl: e.target.value }))} placeholder={t('videoUrlPlaceholder')} style={{ width: '100%', padding: '9px 12px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', borderRadius: '10px', fontSize: '12px', marginBottom: '8px' }} />
-                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                      <div style={{ width: '90px', height: '65px', borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)' }}>
+                    <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                      <div style={{ width: '90px', height: '65px', borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', position: 'relative' }}>
                         <video src={getSuggestedMedia(postDraft.title, postDraft.description, postDraft.imageUrl, postDraft.videoUrl).video} autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       </div>
-                      <label style={{ flex: 1, border: '1px solid var(--border-color)', borderRadius: '10px', padding: '8px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', fontSize: '11px', fontWeight: '800', cursor: 'pointer', textAlign: 'center' }}>
+                      <label style={{ flex: 1, minWidth: '120px', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '8px 12px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', fontSize: '11px', fontWeight: '800', cursor: 'pointer', textAlign: 'center' }}>
                         <Plus size={12} style={{ verticalAlign: 'middle', marginRight: '4px' }} /> {t('importVideo')}
                         <input type="file" accept="video/*" onChange={handleVideoFileUpload} style={{ display: 'none' }} />
                       </label>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenVideoEditor()}
+                        className="premium-button"
+                        style={{
+                          border: '1px solid var(--accent-primary)',
+                          borderRadius: '10px',
+                          padding: '8px 14px',
+                          backgroundColor: 'rgba(198, 125, 91, 0.12)',
+                          color: 'var(--accent-primary)',
+                          fontSize: '11.5px',
+                          fontWeight: '800',
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px'
+                        }}
+                      >
+                        <Sliders size={13} /> ✂️ Éditer (Trim & Crop)
+                      </button>
                     </div>
                   </div>
 
@@ -9214,6 +9310,92 @@ export default function App() {
                 </button>
               </div>
             </div>
+
+            {/* ---- SECTION MON ABONNEMENT (VISIBLE UNIQUEMENT SI ABONNÉ) ---- */}
+            {profile.isTrocoPlus && (
+              <div style={{
+                borderRadius: '20px',
+                padding: '20px',
+                backgroundColor: 'var(--bg-subtle)',
+                border: '1.5px solid var(--accent-primary)',
+                boxShadow: 'var(--shadow-card)',
+                marginBottom: '18px',
+                position: 'relative',
+                overflow: 'hidden'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <div style={{
+                      width: '42px', height: '42px', borderRadius: '12px',
+                      background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFF'
+                    }}>
+                      <Crown size={22} />
+                    </div>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <h4 className="font-editorial-heading" style={{ margin: 0, fontSize: '17px', fontWeight: '700', color: 'var(--text-main)' }}>
+                          Mon Abonnement : {profile.subscriptionPlan === 'pro' || profile.subscriptionPlan === 'premium' ? 'Troco Plus Illimité & Pro' : 'Troco Plus Essentiel'}
+                        </h4>
+                        <span style={{
+                          backgroundColor: '#10B981', color: '#FFF', fontSize: '10.5px', fontWeight: '900',
+                          padding: '2px 8px', borderRadius: '999px'
+                        }}>
+                          ✓ ACTIF
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px', fontWeight: '600' }}>
+                        📅 Renouvellement le {(() => {
+                          try {
+                            const d = profile.subscriptionRenewalDate ? new Date(profile.subscriptionRenewalDate) : new Date(Date.now() + 30 * 86400000);
+                            return d.toLocaleDateString(currentLang === 'FR' ? 'fr-FR' : 'en-US', { day: 'numeric', month: 'long' });
+                          } catch (_) {
+                            return '26 Septembre';
+                          }
+                        })()} • Sans engagement
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    {(profile.subscriptionPlan === 'essential' || profile.subscriptionPlan === 'basic' || !profile.subscriptionPlan) && (
+                      <button
+                        onClick={() => handleOpenPayment('troco-plus')}
+                        className="premium-button"
+                        style={{
+                          border: 'none', borderRadius: '999px', padding: '8px 14px',
+                          background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
+                          color: '#FFF', fontWeight: '800', fontSize: '11.5px', cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', gap: '5px', boxShadow: 'var(--shadow-accent)'
+                        }}
+                      >
+                        <Sparkles size={13} /> ⚡ Upgrade vers Pro
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* LISTE DES AVANTAGES INCLUS */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px', paddingTop: '12px', borderTop: '1px solid var(--border-color)' }}>
+                  {(profile.subscriptionPlan === 'pro' || profile.subscriptionPlan === 'premium' ? [
+                    '15 Jetons crédités par mois',
+                    '3 Boosts d\'annonces inclus',
+                    'Badge 👑 Membre Pro vérifié',
+                    'Support prioritaire VIP 7j/7'
+                  ] : [
+                    '5 Jetons crédités par mois',
+                    '1 Boost d\'annonce inclus',
+                    'Badge ⭐ Membre Plus',
+                    'Priorité de contact sur les deals'
+                  ]).map((advantage, aIdx) => (
+                    <div key={aIdx} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-main)', fontWeight: '600' }}>
+                      <CheckCircle size={14} color="#10B981" />
+                      <span>{advantage}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {saveMessage && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--accent-success)', fontSize: '12px', fontWeight: '800', marginTop: '10px' }}>
@@ -11448,6 +11630,22 @@ export default function App() {
           darkMode={darkMode}
         />
       </Suspense>
+
+      {/* ÉDITEUR VIDÉO INTÉGRÉ (TRIMMER & CROPPING FORMAT) */}
+      {isVideoEditorOpen && (
+        <Suspense fallback={<SkeletonModalFallback title="Édition vidéo..." />}>
+          <VideoEditorModal
+            isOpen={isVideoEditorOpen}
+            videoUrl={editingVideoData?.url || postDraft.videoUrl || getSuggestedMedia(postDraft.title, postDraft.description, postDraft.imageUrl, postDraft.videoUrl).video}
+            initialTrimStart={editingVideoData?.trimStart || Number(postDraft.videoTrimStart || 0)}
+            initialTrimEnd={editingVideoData?.trimEnd || Number(postDraft.videoTrimEnd || 0)}
+            initialCropRatio={editingVideoData?.cropRatio || postDraft.cropRatio || '16:9'}
+            onClose={() => setIsVideoEditorOpen(false)}
+            onSave={handleSaveVideoEdits}
+            darkMode={darkMode}
+          />
+        </Suspense>
+      )}
 
       {/* PARCOURS D'ONBOARDING INTERACTIF POUR NOUVEAUX COMPTES (CHANTIER 1) */}
       {isOnboardingOpen && (

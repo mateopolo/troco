@@ -26,6 +26,7 @@ export default function ListingDetailModal({
   const touchStartRef = useRef(null);
   const touchDeltaXRef = useRef(0);
   const isSwipingRef = useRef(false);
+  const detailVideoRef = useRef(null);
 
   if (!selectedListing) return null;
 
@@ -222,8 +223,32 @@ export default function ListingDetailModal({
             onTouchEnd={handleTouchEnd}
             style={{ borderRadius: '20px', overflow: 'hidden', height: '340px', backgroundColor: 'var(--bg-subtle)', position: 'relative', touchAction: 'pan-y', border: '1px solid var(--border-color)' }}
           >
-            {detailMediaTab === 'video' && selectedListing.video ? (
-              <video src={selectedListing.video} controls autoPlay style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+            {detailMediaTab === 'video' && (selectedListing.video || selectedListing.videoUrl || media.video) ? (
+              <video
+                ref={detailVideoRef}
+                src={selectedListing.video || selectedListing.videoUrl || media.video}
+                controls
+                autoPlay
+                onLoadedMetadata={() => {
+                  const start = Number(selectedListing.videoTrimStart || selectedListing.videoMetadata?.trimStart || 0);
+                  if (detailVideoRef.current && start > 0) {
+                    detailVideoRef.current.currentTime = start;
+                  }
+                }}
+                onTimeUpdate={() => {
+                  const end = Number(selectedListing.videoTrimEnd || selectedListing.videoMetadata?.trimEnd || 0);
+                  const start = Number(selectedListing.videoTrimStart || selectedListing.videoMetadata?.trimStart || 0);
+                  if (detailVideoRef.current && end > 0 && detailVideoRef.current.currentTime >= end) {
+                    detailVideoRef.current.currentTime = start;
+                    detailVideoRef.current.play().catch(() => {});
+                  }
+                }}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: (selectedListing.cropRatio === '9:16' || selectedListing.cropRatio === '1:1') ? 'cover' : 'contain'
+                }}
+              />
             ) : (
               <div style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
                 {gallery.map((imgSrc, idx) => {

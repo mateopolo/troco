@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   CreditCard, ShieldCheck, Lock, X,
   Sparkles, Coins, Zap, Smartphone,
-  Check, Loader2, Award, Globe
+  Check, CheckCircle, Loader2, Award, Globe
 } from 'lucide-react';
 import { getLocalizedTrocoPlusPlans, detectUserCountry, PPP_COUNTRY_MATRIX } from '../utils/pricingEngine';
 
@@ -131,9 +131,29 @@ export default function PaymentModal({
   const hasEnoughTokens = userTokens >= dealTokensRequired;
   const hasEnoughEuro = userEuro >= dealEuroRequired;
 
+  // Détection du statut d'abonnement existant de l'utilisateur
+  const userHasSubscription = Boolean(currentUser?.isTrocoPlus);
+  const userPlanKey = currentUser?.subscriptionPlan || (userHasSubscription ? 'essential' : null);
+  const isUserPro = userHasSubscription && (userPlanKey === 'pro' || userPlanKey === 'premium');
+  const isUserEssential = userHasSubscription && (userPlanKey === 'essential' || userPlanKey === 'basic');
+
+  // Statut pour le plan sélectionné
+  const isSelectedPlanCurrent = (isUserPro && selectedTrocoPlusPlan.planKey === 'pro') || (isUserEssential && selectedTrocoPlusPlan.planKey === 'essential');
+  const isSelectedPlanDowngrade = isUserPro && selectedTrocoPlusPlan.planKey === 'essential';
+  const isUpgradeAction = isUserEssential && selectedTrocoPlusPlan.planKey === 'pro';
+  const isSubscriptionDisabled = (mode === 'troco-plus' || mode === 'pack-tokens') && (isSelectedPlanCurrent || isSelectedPlanDowngrade);
+
+  // Calcul du montant d'upgrade (différence de prix entre pro et essential)
+  const essentialPlanPrice = trocoPlusPlans.find(p => p.planKey === 'essential')?.price || 9.99;
+  const upgradePrice = Math.max(0, Number((selectedTrocoPlusPlan.price - essentialPlanPrice).toFixed(2)));
+
   // Calcul du montant total
   const getAmountToPay = () => {
     if (mode === 'troco-plus' || mode === 'pack-tokens') {
+      if (isSubscriptionDisabled) return 0;
+      if (isUpgradeAction) {
+        return upgradePrice > 0 ? upgradePrice : selectedTrocoPlusPlan.price;
+      }
       return selectedTrocoPlusPlan.price;
     }
     if (mode === 'topup-cash') {
@@ -298,9 +318,16 @@ export default function PaymentModal({
     const totalHt = Number((totalTtc / (1 + taxRate)).toFixed(2));
     const tva = Number((totalTtc - totalHt).toFixed(2));
 
+    const isSubscriptionMode = (mode === 'pack-tokens' || mode === 'troco-plus');
+    const tokensCredited = isSubscriptionMode
+      ? (isUpgradeAction ? Math.max(0, selectedTrocoPlusPlan.tokensMonthly - 5) : selectedTrocoPlusPlan.tokensMonthly)
+      : 0;
+    const subscriptionStartDate = currentUser?.subscriptionStartDate || new Date().toISOString();
+    const subscriptionRenewalDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
     const resultPayload = {
       transactionId,
-      mode: (mode === 'pack-tokens' || mode === 'troco-plus') ? 'troco-plus' : mode,
+      mode: isSubscriptionMode ? 'troco-plus' : mode,
       amountTtc: totalTtc,
       amountHt: totalHt,
       tva,
@@ -308,14 +335,20 @@ export default function PaymentModal({
       paymentMethod: paymentMeta.method,
       authRef: paymentMeta.authRef,
       date: new Date().toISOString(),
-      tokensPurchased: (mode === 'pack-tokens' || mode === 'troco-plus') ? selectedTrocoPlusPlan.tokensMonthly : 0,
-      subscriptionPlan: (mode === 'pack-tokens' || mode === 'troco-plus') ? selectedTrocoPlusPlan : null,
+      tokensPurchased: tokensCredited,
+      subscriptionPlan: isSubscriptionMode ? selectedTrocoPlusPlan : null,
+      isTrocoPlus: isSubscriptionMode ? true : (currentUser?.isTrocoPlus || false),
+      subscriptionStartDate: isSubscriptionMode ? subscriptionStartDate : (currentUser?.subscriptionStartDate || null),
+      subscriptionRenewalDate: isSubscriptionMode ? subscriptionRenewalDate : (currentUser?.subscriptionRenewalDate || null),
+      isUpgrade: isUpgradeAction,
       cashTopUp: mode === 'topup-cash' ? amountToPay : 0,
       boostDetails: mode === 'boost' ? (initialPayload || selectedBoost) : null,
       cautionDetails: mode === 'caution' ? initialPayload : null,
       dealDetails: mode === 'deal' ? initialPayload : null,
-      label: (mode === 'pack-tokens' || mode === 'troco-plus')
-        ? `Abonnement Mensuel ${selectedTrocoPlusPlan.title} (${selectedTrocoPlusPlan.price.toFixed(2)} €/mois)`
+      label: isSubscriptionMode
+        ? (isUpgradeAction
+          ? `Mise à niveau vers ${selectedTrocoPlusPlan.title} (${amountToPay.toFixed(2)} €)`
+          : `Abonnement Mensuel ${selectedTrocoPlusPlan.title} (${selectedTrocoPlusPlan.price.toFixed(2)} €/mois)`)
         : mode === 'topup-cash'
           ? `Recharge Portefeuille Troco (${amountToPay.toFixed(2)} €)`
           : mode === 'boost'
@@ -615,9 +648,39 @@ export default function PaymentModal({
                     )}
                   </div>
 
+                  {/* BANNIÈRE DE STATUT D'ABONNEMENT SI DÉJÀ ACTIF */}
+                  {userHasSubscription && (
+                    <div style={{
+                      padding: '10px 14px',
+                      borderRadius: '14px',
+                      backgroundColor: isUserPro ? 'rgba(16, 185, 129, 0.12)' : 'rgba(198, 125, 91, 0.12)',
+                      border: isUserPro ? '1.5px solid #10B981' : '1.5px solid var(--accent-primary)',
+                      marginBottom: '14px',
+                      fontSize: '12px',
+                      color: 'var(--text-main)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}>
+                      <CheckCircle size={16} color={isUserPro ? '#10B981' : 'var(--accent-primary)'} />
+                      <div>
+                        <strong>{isUserPro ? '👑 Offre Troco Plus Pro Active' : '⭐ Offre Troco Plus Essentielle Active'}</strong>
+                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                          {isUserPro
+                            ? 'Vous bénéficiez déjà du palier maximal (15 jetons/mois, 3 boosts). Le réachat en boucle est verrouillé.'
+                            : 'Passez à l\'offre Pro pour débloquer +10 jetons supplémentaires et des boosts exclusifs.'}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     {trocoPlusPlans.map(plan => {
                       const isSelected = selectedTrocoPlusPlan.id === plan.id;
+                      const isThisPlanCurrent = (isUserPro && plan.planKey === 'pro') || (isUserEssential && plan.planKey === 'essential');
+                      const isThisPlanIncluded = isUserPro && plan.planKey === 'essential';
+                      const isThisPlanUpgrade = isUserEssential && plan.planKey === 'pro';
+
                       return (
                         <div
                           key={plan.id}
@@ -626,14 +689,65 @@ export default function PaymentModal({
                             padding: '16px',
                             borderRadius: '18px',
                             border: isSelected ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
-                            backgroundColor: isSelected ? 'var(--bg-subtle)' : 'var(--bg-card)',
+                            backgroundColor: isThisPlanCurrent ? 'rgba(16, 185, 129, 0.06)' : isSelected ? 'var(--bg-subtle)' : 'var(--bg-card)',
                             cursor: 'pointer',
                             position: 'relative',
                             transition: 'all 0.2s ease',
                             boxShadow: isSelected ? 'var(--shadow-accent)' : 'none'
                           }}
                         >
-                          {plan.popular && (
+                          {/* BADGES EN HAUT À DROITE */}
+                          {isThisPlanCurrent && (
+                            <span style={{
+                              position: 'absolute',
+                              top: '-9px',
+                              right: '16px',
+                              backgroundColor: '#10B981',
+                              color: '#FFF',
+                              fontSize: '11px',
+                              fontWeight: '800',
+                              padding: '2px 8px',
+                              borderRadius: '999px',
+                              boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)'
+                            }}>
+                              ✓ Abonnement Actif
+                            </span>
+                          )}
+
+                          {!isThisPlanCurrent && isThisPlanUpgrade && (
+                            <span style={{
+                              position: 'absolute',
+                              top: '-9px',
+                              right: '16px',
+                              backgroundColor: 'var(--accent-primary)',
+                              color: '#FFF',
+                              fontSize: '11px',
+                              fontWeight: '800',
+                              padding: '2px 8px',
+                              borderRadius: '999px',
+                              boxShadow: 'var(--shadow-accent)'
+                            }}>
+                              ⚡ Mise à niveau (Upgrade)
+                            </span>
+                          )}
+
+                          {!isThisPlanCurrent && !isThisPlanUpgrade && isThisPlanIncluded && (
+                            <span style={{
+                              position: 'absolute',
+                              top: '-9px',
+                              right: '16px',
+                              backgroundColor: 'var(--text-secondary)',
+                              color: '#FFF',
+                              fontSize: '10.5px',
+                              fontWeight: '800',
+                              padding: '2px 8px',
+                              borderRadius: '999px',
+                            }}>
+                              Inclus dans votre offre
+                            </span>
+                          )}
+
+                          {!userHasSubscription && plan.popular && (
                             <span style={{
                               position: 'absolute',
                               top: '-9px',
@@ -656,10 +770,10 @@ export default function PaymentModal({
                                 <strong className="font-editorial-heading" style={{ fontSize: '17px', color: 'var(--text-main)' }}>{plan.title}</strong>
                                 <span style={{
                                   fontSize: '11px', fontWeight: '800', padding: '3px 8px', borderRadius: '999px',
-                                  backgroundColor: 'var(--bg-subtle)',
-                                  color: 'var(--accent-primary)'
+                                  backgroundColor: isThisPlanCurrent ? '#EBF0E6' : 'var(--bg-subtle)',
+                                  color: isThisPlanCurrent ? '#3D4A35' : 'var(--accent-primary)'
                                 }}>
-                                  {plan.badge}
+                                  {isThisPlanCurrent ? 'Actuel' : plan.badge}
                                 </span>
                               </div>
                               <p style={{ margin: '4px 0 10px', fontSize: '12px', color: 'var(--text-secondary)' }}>
@@ -668,10 +782,12 @@ export default function PaymentModal({
                             </div>
                             <div style={{ textAlign: 'right' }}>
                               <div style={{ fontSize: '20px', fontWeight: '900', color: isSelected ? 'var(--accent-primary)' : 'var(--text-main)' }}>
-                                {plan.formattedPrice || `${plan.price.toFixed(2)} €`}
+                                {isThisPlanUpgrade && upgradePrice > 0
+                                  ? `${upgradePrice.toFixed(2)} €`
+                                  : (plan.formattedPrice || `${plan.price.toFixed(2)} €`)}
                               </div>
                               <div style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '600' }}>
-                                {plan.period}
+                                {isThisPlanUpgrade ? 'différence/mois' : plan.period}
                               </div>
                             </div>
                           </div>
@@ -1184,39 +1300,49 @@ export default function PaymentModal({
               <button
                 type="button"
                 onClick={handleInitiatePayment}
-                disabled={isProcessing || (isDealMode ? (dealTokensRequired > 0 && !hasEnoughTokens) : amountToPay <= 0)}
+                disabled={isProcessing || isSubscriptionDisabled || (isDealMode ? (dealTokensRequired > 0 && !hasEnoughTokens) : amountToPay <= 0)}
                 className="premium-button"
                 style={{
                   width: '100%',
                   padding: '16px',
                   borderRadius: '16px',
                   border: 'none',
-                  background: (isDealMode && dealTokensRequired > 0 && !hasEnoughTokens)
+                  background: (isSubscriptionDisabled || (isDealMode && dealTokensRequired > 0 && !hasEnoughTokens))
                     ? 'var(--bg-subtle)'
                     : (paymentMethod === 'applePay' && amountToPay > 0)
                       ? 'var(--text-main)'
                       : 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
-                  color: (isDealMode && dealTokensRequired > 0 && !hasEnoughTokens)
+                  color: (isSubscriptionDisabled || (isDealMode && dealTokensRequired > 0 && !hasEnoughTokens))
                     ? 'var(--text-secondary)'
                     : (paymentMethod === 'applePay' && amountToPay > 0)
                       ? 'var(--bg-card)'
                       : '#FFF',
                   fontWeight: '800',
                   fontSize: '15px',
-                  cursor: (isProcessing || (isDealMode ? (dealTokensRequired > 0 && !hasEnoughTokens) : amountToPay <= 0)) ? 'not-allowed' : 'pointer',
+                  cursor: (isProcessing || isSubscriptionDisabled || (isDealMode ? (dealTokensRequired > 0 && !hasEnoughTokens) : amountToPay <= 0)) ? 'not-allowed' : 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '8px',
-                  boxShadow: (isDealMode && dealTokensRequired > 0 && !hasEnoughTokens) ? 'none' : 'var(--shadow-accent)',
+                  boxShadow: (isSubscriptionDisabled || (isDealMode && dealTokensRequired > 0 && !hasEnoughTokens)) ? 'none' : 'var(--shadow-accent)',
                   transition: 'all 0.2s ease',
-                  opacity: (isProcessing || (isDealMode ? (dealTokensRequired > 0 && !hasEnoughTokens) : amountToPay <= 0)) ? 0.7 : 1,
+                  opacity: (isProcessing || isSubscriptionDisabled || (isDealMode ? (dealTokensRequired > 0 && !hasEnoughTokens) : amountToPay <= 0)) ? 0.7 : 1,
                 }}
               >
                 {isProcessing ? (
                   <>
                     <Loader2 size={18} className="spin-animation" />
                     Traitement sécurisé en cours...
+                  </>
+                ) : isSubscriptionDisabled ? (
+                  <>
+                    <CheckCircle size={16} color="#10B981" />
+                    Abonnement Déjà Actif ({isSelectedPlanCurrent ? 'Votre Formule' : 'Inclus dans votre offre Pro'})
+                  </>
+                ) : isUpgradeAction ? (
+                  <>
+                    <Sparkles size={16} />
+                    ⚡ Mettre à niveau vers Troco Plus Pro ({amountToPay.toFixed(2)} €)
                   </>
                 ) : isDealMode ? (
                   dealTokensRequired > 0 && !hasEnoughTokens ? (
