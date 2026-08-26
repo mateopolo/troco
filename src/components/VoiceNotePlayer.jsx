@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Play, Pause, Mic } from 'lucide-react';
 
 export default function VoiceNotePlayer({
@@ -42,7 +42,7 @@ export default function VoiceNotePlayer({
     };
   }, [audioUrl]);
 
-  const togglePlay = () => {
+  const togglePlay = useCallback(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
@@ -57,14 +57,14 @@ export default function VoiceNotePlayer({
         console.warn('[VoiceNotePlayer] play error:', err);
       });
     }
-  };
+  }, [isPlaying, playbackRate]);
 
   const handleSeek = (e) => {
     const audio = audioRef.current;
     if (!audio || !totalDuration) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
-    const newRatio = Math.max(0, Math.min(1, clickX / rect.width));
+    const newRatio = Math.max(0, Math.min(1, clickX / Math.max(1, rect.width)));
     const newTime = newRatio * totalDuration;
     audio.currentTime = newTime;
     setCurrentTime(newTime);
@@ -89,30 +89,39 @@ export default function VoiceNotePlayer({
   const progressPercent = totalDuration > 0 ? (currentTime / totalDuration) * 100 : 0;
 
   return (
-    <div style={{
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '6px',
-      width: '100%',
-      minWidth: '210px',
-      maxWidth: '280px',
-      padding: '4px 0',
-      userSelect: 'none',
-    }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '6px',
+        width: '100%',
+        maxWidth: '100%',
+        minWidth: '0',
+        padding: '2px 0',
+        userSelect: 'none',
+        boxSizing: 'border-box',
+        overflow: 'hidden',
+      }}
+    >
       <audio ref={audioRef} src={audioUrl} preload="metadata" />
 
       {/* HEADER AVEC TITRE ET VITESSE */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        fontSize: '11px',
-        fontWeight: '700',
-        color: isMe ? 'rgba(255, 255, 255, 0.9)' : 'var(--accent-primary)',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <Mic size={13} />
-          <span>Note vocale</span>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          fontSize: '11px',
+          fontWeight: '700',
+          color: isMe ? 'rgba(255, 255, 255, 0.9)' : 'var(--accent-primary)',
+          gap: '8px',
+          width: '100%',
+          boxSizing: 'border-box',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0, overflow: 'hidden' }}>
+          <Mic size={13} style={{ flexShrink: 0 }} />
+          <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Note vocale</span>
         </div>
 
         <button
@@ -120,13 +129,15 @@ export default function VoiceNotePlayer({
           onClick={toggleSpeed}
           style={{
             border: 'none',
-            background: isMe ? 'rgba(255, 255, 255, 0.2)' : 'var(--bg-subtle)',
+            background: isMe ? 'rgba(255, 255, 255, 0.22)' : 'var(--bg-subtle)',
             color: isMe ? '#FFFFFF' : 'var(--text-main)',
             fontSize: '10px',
             fontWeight: '800',
-            padding: '2px 6px',
+            padding: '2px 7px',
             borderRadius: '6px',
             cursor: 'pointer',
+            flexShrink: 0,
+            transition: 'background-color 0.15s ease',
           }}
           title="Vitesse de lecture"
         >
@@ -135,11 +146,16 @@ export default function VoiceNotePlayer({
       </div>
 
       {/* COMMANDES DE LECTURE & ONDE DE PROGRESSION */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '10px',
-      }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          width: '100%',
+          minWidth: 0,
+          boxSizing: 'border-box',
+        }}
+      >
         {/* BOUTON PLAY / PAUSE */}
         <button
           type="button"
@@ -164,8 +180,17 @@ export default function VoiceNotePlayer({
           {isPlaying ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" style={{ marginLeft: '2px' }} />}
         </button>
 
-        {/* BARRE DE PROGRESSION CLICQUABLE */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        {/* BARRE DE PROGRESSION CLICQUABLE FLUIDE */}
+        <div
+          style={{
+            flex: 1,
+            minWidth: 0,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '4px',
+            boxSizing: 'border-box',
+          }}
+        >
           <div
             onClick={handleSeek}
             style={{
@@ -175,25 +200,34 @@ export default function VoiceNotePlayer({
               position: 'relative',
               cursor: 'pointer',
               overflow: 'hidden',
+              width: '100%',
             }}
           >
-            <div style={{
-              height: '100%',
-              width: `${progressPercent}%`,
-              backgroundColor: isMe ? '#FFFFFF' : 'var(--accent-primary)',
-              borderRadius: '999px',
-              transition: 'width 0.1s linear',
-            }} />
+            <div
+              style={{
+                height: '100%',
+                width: `${progressPercent}%`,
+                backgroundColor: isMe ? '#FFFFFF' : 'var(--accent-primary)',
+                borderRadius: '999px',
+                transition: 'width 0.1s linear',
+              }}
+            />
           </div>
 
           {/* TIMERS */}
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            fontSize: '10px',
-            fontWeight: '700',
-            color: isMe ? 'rgba(255, 255, 255, 0.85)' : 'var(--text-secondary)',
-          }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              fontSize: '10px',
+              fontWeight: '700',
+              fontVariantNumeric: 'tabular-nums',
+              color: isMe ? 'rgba(255, 255, 255, 0.85)' : 'var(--text-secondary)',
+              width: '100%',
+              boxSizing: 'border-box',
+            }}
+          >
             <span>{formatSeconds(currentTime)}</span>
             <span>{formatSeconds(totalDuration)}</span>
           </div>

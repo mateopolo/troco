@@ -36,6 +36,8 @@ export default function ChatSection({
   toggleOriginalMessage,
   isMobile,
   presenceMap,
+  allListings,
+  onOpenListing,
 }) {
   return (
     <ChatView
@@ -73,6 +75,8 @@ export default function ChatSection({
       toggleOriginalMessage={toggleOriginalMessage}
       isMobile={isMobile}
       presenceMap={presenceMap}
+      allListings={allListings}
+      onOpenListing={onOpenListing}
     />
   );
 }

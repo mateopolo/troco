@@ -8148,6 +8148,8 @@ export default function App() {
                 toggleOriginalMessage={toggleOriginalMessage}
                 isMobile={isMobile}
                 presenceMap={presenceMap}
+                allListings={listings}
+                onOpenListing={handleOpenListing}
               />
             </SectoralErrorBoundary>
           );

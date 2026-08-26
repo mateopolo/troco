@@ -13,6 +13,7 @@ import CreateProjectGroupModal from './CreateProjectGroupModal';
 import ProjectRewardsModal from './ProjectRewardsModal';
 import VoiceNotePlayer from './VoiceNotePlayer';
 import VoiceNoteRecorder from './VoiceNoteRecorder';
+import PublicProfileModal from './PublicProfileModal';
 
 function ChatView({
   activeTab,
@@ -41,17 +42,21 @@ function ChatView({
   profile,
   currentLang,
   t,
+  darkMode = false,
   getChatMessageDisplayContent,
   getListingTitleTranslation,
   formatStatus,
   showingOriginalMessages = {},
   toggleOriginalMessage = () => {},
   isMobile: isMobileProp = undefined,
-  presenceMap = {}
+  presenceMap = {},
+  allListings = [],
+  onOpenListing = () => {}
 }) {
   const [isRecordingAudio, setIsRecordingAudio] = useState(false);
   const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
   const [isProjectRewardsModalOpen, setIsProjectRewardsModalOpen] = useState(false);
+  const [isPublicProfileOpen, setIsPublicProfileOpen] = useState(false);
   const [deletedChatIds, setDeletedChatIds] = useState(() => {
     try {
       const saved = localStorage.getItem('troco_deleted_chats');
@@ -479,7 +484,7 @@ function ChatView({
           backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
           gap: '8px', flexShrink: 0, zIndex: 50, width: '100%', boxSizing: 'border-box'
         }}>
-          {/* Partie Gauche : Retour (Mobile) + Avatar + Nom + Annonce */}
+          {/* Partie Gauche : Retour (Mobile) + Avatar + Nom + Annonce (Cliquable vers Profil Public) */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
             {isMobile && (
               <button
@@ -500,62 +505,100 @@ function ChatView({
                 <ChevronLeft size={22} />
               </button>
             )}
-            <div style={{ position: 'relative', width: '36px', height: '36px', flexShrink: 0 }}>
-              <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: activeChatObj?.isGroup ? 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%)' : 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: activeChatObj?.isGroup ? '17px' : '14px', boxShadow: 'var(--shadow-accent)' }}>
-                {activeChatObj?.isGroup ? '👥' : (activeChatObj?.user ? activeChatObj.user[0].toUpperCase() : 'T')}
-              </div>
-              {activeChatIsOnline ? (
-                <div
-                  title="En ligne"
-                  style={{
-                    position: 'absolute', bottom: '0', right: '0',
-                    width: '9px', height: '9px', borderRadius: '50%',
-                    backgroundColor: 'var(--accent-success)',
-                    border: '2px solid var(--bg-card)',
-                    boxShadow: '0 0 6px var(--accent-success)'
-                  }}
-                />
-              ) : (
-                <div
-                  title="Hors ligne"
-                  style={{
-                    position: 'absolute', bottom: '0', right: '0',
-                    width: '9px', height: '9px', borderRadius: '50%',
-                    backgroundColor: 'var(--text-secondary)',
-                    opacity: 0.45,
-                    border: '2px solid var(--bg-card)'
-                  }}
-                />
-              )}
-            </div>
-            <div style={{ minWidth: 0, flex: 1 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <span style={{ fontWeight: '800', fontSize: isMobile ? '14px' : '14.5px', color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                  {activeChatObj?.isGroup ? (activeChatObj.projectTitle || activeChatObj.user) : activeChatObj?.user}
-                </span>
-                {activeChatObj?.isGroup ? (
-                  <span style={{ fontSize: '9px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', padding: '1px 6px', borderRadius: '6px', border: '1px solid var(--border-color)', flexShrink: 0 }}>
-                    🚀 Projet ({activeChatObj.participants?.length || activeChatObj.members?.length || 2}m)
-                  </span>
-                ) : (activeChatObj?.isDemo || activeChatObj?.persona || (typeof activeChatObj?.id === 'number' && activeChatObj?.id < 300)) ? (
-                  <span style={{ fontSize: '8px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', padding: '1px 4px', borderRadius: '4px', flexShrink: 0 }}>
-                    IA
-                  </span>
-                ) : null}
-                {!activeChatObj?.isGroup && (activeChatIsOnline ? (
-                  <span style={{ fontSize: '8.5px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-success)', padding: '1px 5px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                    <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: 'var(--accent-success)' }} /> En ligne
-                  </span>
+
+            {/* CONTENEUR CONTACT CLIQUABLE */}
+            <div
+              onClick={() => {
+                if (!activeChatObj?.isGroup) {
+                  setIsPublicProfileOpen(true);
+                }
+              }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                minWidth: 0,
+                flex: 1,
+                cursor: !activeChatObj?.isGroup ? 'pointer' : 'default',
+                padding: '2px 4px',
+                borderRadius: '12px',
+                transition: 'background-color 0.15s ease',
+              }}
+              className={!activeChatObj?.isGroup ? 'hover-subtle' : ''}
+              title={!activeChatObj?.isGroup ? `Voir le profil public de ${activeChatObj?.user}` : undefined}
+            >
+              <div style={{ position: 'relative', width: '36px', height: '36px', flexShrink: 0 }}>
+                {activeChatObj?.avatar ? (
+                  <img
+                    src={activeChatObj.avatar}
+                    alt={activeChatObj?.user || 'Avatar'}
+                    style={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '50%',
+                      objectFit: 'cover',
+                      border: '2px solid var(--accent-primary)',
+                      boxShadow: 'var(--shadow-accent)'
+                    }}
+                  />
                 ) : (
-                  <span style={{ fontSize: '8.5px', fontWeight: '700', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)', padding: '1px 5px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                    <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: 'var(--text-secondary)', opacity: 0.45 }} /> Hors ligne
-                  </span>
-                ))}
+                  <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: activeChatObj?.isGroup ? 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%)' : 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: activeChatObj?.isGroup ? '17px' : '14px', boxShadow: 'var(--shadow-accent)' }}>
+                    {activeChatObj?.isGroup ? '👥' : (activeChatObj?.user ? activeChatObj.user[0].toUpperCase() : 'T')}
+                  </div>
+                )}
+                {activeChatIsOnline ? (
+                  <div
+                    title="En ligne"
+                    style={{
+                      position: 'absolute', bottom: '0', right: '0',
+                      width: '9px', height: '9px', borderRadius: '50%',
+                      backgroundColor: 'var(--accent-success)',
+                      border: '2px solid var(--bg-card)',
+                      boxShadow: '0 0 6px var(--accent-success)'
+                    }}
+                  />
+                ) : (
+                  <div
+                    title="Hors ligne"
+                    style={{
+                      position: 'absolute', bottom: '0', right: '0',
+                      width: '9px', height: '9px', borderRadius: '50%',
+                      backgroundColor: 'var(--text-secondary)',
+                      opacity: 0.45,
+                      border: '2px solid var(--bg-card)'
+                    }}
+                  />
+                )}
               </div>
-              <div style={{ fontSize: '11px', color: 'var(--accent-primary)', fontWeight: '700', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.2 }}>
-                {activeChatObj?.isGroup
-                  ? `${activeChatObj.rewardPool || 15} Jetons Troco alloués • ${activeChatObj.category || 'Collectif'}`
-                  : (getListingTitleTranslation ? getListingTitleTranslation(activeChatObj?.listing, currentLang) : activeChatObj?.listing)}
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <span style={{ fontWeight: '800', fontSize: isMobile ? '14px' : '14.5px', color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {activeChatObj?.isGroup ? (activeChatObj.projectTitle || activeChatObj.user) : activeChatObj?.user}
+                  </span>
+                  {activeChatObj?.isGroup ? (
+                    <span style={{ fontSize: '9px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', padding: '1px 6px', borderRadius: '6px', border: '1px solid var(--border-color)', flexShrink: 0 }}>
+                      🚀 Projet ({activeChatObj.participants?.length || activeChatObj.members?.length || 2}m)
+                    </span>
+                  ) : (activeChatObj?.isDemo || activeChatObj?.persona || (typeof activeChatObj?.id === 'number' && activeChatObj?.id < 300)) ? (
+                    <span style={{ fontSize: '8px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', padding: '1px 4px', borderRadius: '4px', flexShrink: 0 }}>
+                      IA
+                    </span>
+                  ) : null}
+                  {!activeChatObj?.isGroup && (activeChatIsOnline ? (
+                    <span style={{ fontSize: '8.5px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-success)', padding: '1px 5px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                      <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: 'var(--accent-success)' }} /> En ligne
+                    </span>
+                  ) : (
+                    <span style={{ fontSize: '8.5px', fontWeight: '700', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)', padding: '1px 5px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                      <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: 'var(--text-secondary)', opacity: 0.45 }} /> Hors ligne
+                    </span>
+                  ))}
+                </div>
+                <div style={{ fontSize: '11px', color: 'var(--accent-primary)', fontWeight: '700', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.2 }}>
+                  {activeChatObj?.isGroup
+                    ? `${activeChatObj.rewardPool || 15} Jetons Troco alloués • ${activeChatObj.category || 'Collectif'}`
+                    : (getListingTitleTranslation ? getListingTitleTranslation(activeChatObj?.listing, currentLang) : activeChatObj?.listing)}
+                </div>
               </div>
             </div>
           </div>
@@ -1179,13 +1222,15 @@ function ChatView({
                         </div>
                       )}
 
-                      {/* MESSAGE VOCAL OU MESSAGE TEXTE */}
+                      {/* MESSAGE VOCAL OU MESSAGE TEXTE (PARFAITEMENT CONTENU) */}
                       {(msg.type === 'audio' || msg.kind === 'audio' || msg.audioUrl) ? (
-                        <VoiceNotePlayer
-                          audioUrl={msg.audioUrl}
-                          duration={msg.duration}
-                          isMe={isMe}
-                        />
+                        <div style={{ width: '100%', minWidth: '170px', maxWidth: '260px', boxSizing: 'border-box' }}>
+                          <VoiceNotePlayer
+                            audioUrl={msg.audioUrl}
+                            duration={msg.duration}
+                            isMe={isMe}
+                          />
+                        </div>
                       ) : (
                         <>
                           {!isMe && msg.text && (() => {
@@ -1994,6 +2039,20 @@ function ChatView({
             </div>
           </div>
         </div>
+      )}
+
+      {/* MODALE PROFIL PUBLIC ACCESSIBLE DEPUIS LE CHAT */}
+      {isPublicProfileOpen && activeChatObj && (
+        <PublicProfileModal
+          isOpen={isPublicProfileOpen}
+          onClose={() => setIsPublicProfileOpen(false)}
+          targetUser={activeChatObj}
+          allListings={allListings}
+          onOpenListing={onOpenListing}
+          currentLang={currentLang}
+          darkMode={darkMode}
+          t={t}
+        />
       )}
     </>
   );
