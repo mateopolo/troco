@@ -1,14 +1,12 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback, Suspense } from 'react';
-import { MapContainer, TileLayer } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { Search, MapPin, Video, Star, Globe, Filter, MessageSquare, PlusCircle, User, ShieldCheck, Clock, CheckCircle, X, Sparkles, Coins, Plus, Trash2, Camera, Pencil, Mic, PhoneOff, Flame, History, Check, Lock, CreditCard, Tag, Phone, UserPlus, ChevronLeft, ChevronRight, ChevronUp, Eye, EyeOff, Minimize2, MicOff, VideoOff, Sun, Moon, Upload, Repeat, SwitchCamera, LogOut, Scale, ShieldAlert, FileText, Monitor, MonitorOff, Crown, GripHorizontal, Mail, Image as ImageIcon, Sliders } from 'lucide-react';
 import { auth, db } from './firebase';
 import { collection, addDoc, doc, updateDoc, serverTimestamp, onSnapshot, query, orderBy, setDoc, deleteDoc, getDoc, getDocs, where, increment, runTransaction } from 'firebase/firestore';
 import { RecaptchaVerifier, signInWithPhoneNumber, sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, GoogleAuthProvider, GithubAuthProvider, FacebookAuthProvider, OAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged } from 'firebase/auth';
-import ChatView from './components/ChatView';
 import { useWebRTC } from './hooks/useWebRTC';
-import { useTheme, TYPOGRAPHY_OPTIONS, getContrastColor } from './contexts/ThemeContext';
+import { useTheme, TYPOGRAPHY_OPTIONS } from './contexts/ThemeContext';
 import { SkeletonModalFallback } from './components/SkeletonLoader';
 import CookieBanner from './components/CookieBanner';
 import { analyzeContent } from './utils/contentModeration';
@@ -21,14 +19,13 @@ import { AnimatedEuroBalance, AnimatedTokenBalance } from './components/Animated
 import FeedCardItem from './components/FeedCardItem';
 import PhotoGrid from './components/PhotoGrid';
 import InvoiceCalculator, { generateInvoiceRef, calculateListingInvoice } from './components/InvoiceCalculator';
-import CallOverlay from './components/CallOverlay';
 import TrocoLogo3D from './components/common/TrocoLogo3D';
 import LiveCallSubtitles from './components/LiveCallSubtitles';
 import PWAInstallBanner from './components/PWAInstallBanner';
 import SponsoredFeedCard from './components/SponsoredFeedCard';
 import SectoralErrorBoundary from './components/SectoralErrorBoundary';
-import { useWalletStore, useChatStore, useFeedStore } from './stores';
-import { FeedSection, ChatSection, MapSection, CallFeature, PaymentFeature } from './features';
+import { useWalletStore } from './stores';
+import { ChatSection, MapSection, CallFeature, PaymentFeature } from './features';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useGSAP } from '@gsap/react';
@@ -45,8 +42,6 @@ import {
 // Lazy-loaded heavy components & modals (Code-Splitting)
 const AdminPanel = React.lazy(() => import('./components/AdminPanel'));
 const ReportModal = React.lazy(() => import('./components/ReportModal'));
-const PaymentModal = React.lazy(() => import('./components/PaymentModal'));
-const TransactionsHistoryModal = React.lazy(() => import('./components/TransactionsHistoryModal'));
 const CguModal = React.lazy(() => import('./components/CguModal'));
 const PrivacyCenterModal = React.lazy(() => import('./components/PrivacyCenterModal'));
 const OnboardingWizardModal = React.lazy(() => import('./components/OnboardingWizardModal'));
@@ -54,7 +49,6 @@ const WelcomeGiftCelebrationModal = React.lazy(() => import('./components/Welcom
 const VisioSettlementModal = React.lazy(() => import('./components/VisioSettlementModal'));
 const KycModal = React.lazy(() => import('./components/KycModal'));
 const CounterOfferModal = React.lazy(() => import('./components/CounterOfferModal'));
-const MapClusterTracker = React.lazy(() => import('./components/MapClusterTracker'));
 
 if (typeof window !== 'undefined') {
   gsap.registerPlugin(ScrollTrigger, useGSAP);
@@ -1277,6 +1271,16 @@ export default function App() {
       }
     }
   }, [isAuthenticated, profile?.onboardingCompleted, profile?.uid]);
+
+  // Synchronisation réactive globale avec le store Zustand useWalletStore (élimine le prop drilling)
+  useEffect(() => {
+    if (profile) {
+      useWalletStore.getState().setEuroBalance(profile.euroBalance ?? 0);
+      useWalletStore.getState().setTrocoTokens(profile.trocoTokens ?? 10);
+      useWalletStore.getState().setKycVerified(profile.kycVerified ?? false);
+      useWalletStore.getState().setTrocoPlus(profile.isTrocoPlus ?? false, profile.trocoPlusPlan);
+    }
+  }, [profile?.euroBalance, profile?.trocoTokens, profile?.kycVerified, profile?.isTrocoPlus, profile?.trocoPlusPlan]);
 
   const [isWelcomeGiftModalOpen, setIsWelcomeGiftModalOpen] = useState(false);
 
@@ -7928,46 +7932,21 @@ export default function App() {
                   </button>
                 </div>
               ) : viewMode === 'map' ? (
-                <SectoralErrorBoundary moduleName="Carte Interactive & Géolocalisation">
-                  <div className="premium-panel" style={{ backgroundColor: 'var(--bg-card)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', borderRadius: '24px', padding: '10px', boxShadow: 'var(--shadow-card)', border: '1px solid var(--border-color)' }}>
-                    <div style={{ position: 'relative', width: '100%', height: '550px', borderRadius: '18px', overflow: 'hidden', boxShadow: 'var(--shadow-card)' }}>
-                      <MapContainer
-                        center={mapCenter}
-                        zoom={4}
-                        minZoom={2}
-                        maxBounds={[[-85, -180], [85, 180]]}
-                        maxBoundsViscosity={1.0}
-                        worldCopyJump={true}
-                        style={{ width: '100%', height: '100%' }}
-                      >
-                        <TileLayer
-                          noWrap={true}
-                          bounds={[[-85, -180], [85, 180]]}
-                          attribution='&copy; Google Maps'
-                          url={`https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&hl=${currentLang.toLowerCase()}`}
-                        />
-
-                        <Suspense fallback={null}>
-                          <MapClusterTracker
-                            listings={filteredListings}
-                            mapCenter={mapCenter}
-                            mapZoom={mapZoom}
-                            darkMode={darkMode}
-                            currentLang={currentLang}
-                            t={t}
-                            primaryColor={theme?.variables?.['--accent-primary'] || '#C67D5B'}
-                            getCoordinatesForLocation={getCoordinatesForLocation}
-                            getSuggestedMedia={getSuggestedMedia}
-                            getListingDisplayContent={getListingDisplayContent}
-                            localizeLocation={localizeLocation}
-                            handleOpenListing={handleOpenListing}
-                            createModernMapIcon={createModernMapIcon}
-                          />
-                        </Suspense>
-                      </MapContainer>
-                    </div>
-                  </div>
-                </SectoralErrorBoundary>
+                <MapSection
+                  filteredListings={filteredListings}
+                  mapCenter={mapCenter}
+                  mapZoom={mapZoom}
+                  darkMode={darkMode}
+                  currentLang={currentLang}
+                  t={t}
+                  theme={theme}
+                  getCoordinatesForLocation={getCoordinatesForLocation}
+                  getSuggestedMedia={getSuggestedMedia}
+                  getListingDisplayContent={getListingDisplayContent}
+                  localizeLocation={localizeLocation}
+                  handleOpenListing={handleOpenListing}
+                  createModernMapIcon={createModernMapIcon}
+                />
               ) : (
                 <div
                   ref={listingsGridRef}
@@ -8134,7 +8113,7 @@ export default function App() {
 
           return (
             <SectoralErrorBoundary moduleName="Messagerie & Hub Collaboratif">
-              <ChatView
+              <ChatSection
                 activeTab={activeTab}
                 mockChats={chatsList}
                 selectedChat={selectedChat}
@@ -11072,33 +11051,31 @@ export default function App() {
       )}
 
       {/* ---- BULLE FLOTTANTE PIP (PICTURE-IN-PICTURE & DRAG-AND-DROP AVEC POINTER EVENTS) ---- */}
-      <SectoralErrorBoundary moduleName="Module d'Appel WebRTC HD">
-        <CallOverlay
-          callState={callState}
-          isCallPip={isCallPip}
-          setIsCallPip={setIsCallPip}
-          pipPosition={pipPosition}
-          setPipPosition={setPipPosition}
-          handlePipPointerDown={handlePipPointerDown}
-          handlePipPointerMove={handlePipPointerMove}
-          handlePipPointerUp={handlePipPointerUp}
-          handlePipPointerCancel={handlePipPointerCancel}
-          handlePipContentClick={handlePipContentClick}
-          selectedChat={selectedChat}
-          callDuration={callDuration}
-          formatCallTimer={formatCallTimer}
-          remoteStream={remoteStream}
-          localStream={localStream}
-          facingMode={facingMode}
-          attachRemoteStream={attachRemoteStream}
-          attachLocalStream={attachLocalStream}
-          hasMultipleCameras={hasMultipleCameras}
-          switchCamera={switchCamera}
-          toggleMic={toggleMic}
-          endCall={endCall}
-          currentLang={currentLang}
-        />
-      </SectoralErrorBoundary>
+      <CallFeature
+        callState={callState}
+        isCallPip={isCallPip}
+        setIsCallPip={setIsCallPip}
+        pipPosition={pipPosition}
+        setPipPosition={setPipPosition}
+        handlePipPointerDown={handlePipPointerDown}
+        handlePipPointerMove={handlePipPointerMove}
+        handlePipPointerUp={handlePipPointerUp}
+        handlePipPointerCancel={handlePipPointerCancel}
+        handlePipContentClick={handlePipContentClick}
+        selectedChat={selectedChat}
+        callDuration={callDuration}
+        formatCallTimer={formatCallTimer}
+        remoteStream={remoteStream}
+        localStream={localStream}
+        facingMode={facingMode}
+        attachRemoteStream={attachRemoteStream}
+        attachLocalStream={attachLocalStream}
+        hasMultipleCameras={hasMultipleCameras}
+        switchCamera={switchCamera}
+        toggleMic={toggleMic}
+        endCall={endCall}
+        currentLang={currentLang}
+      />
 
       {/* PANEL ADMINISTRATEUR & MODÉRATION (/admin) */}
       {isAdminPanelOpen && (
@@ -11157,39 +11134,21 @@ export default function App() {
         </Suspense>
       )}
 
-      {/* PASSERELLE DE PAIEMENT SÉCURISÉE (BLOC 5) */}
-      {isPaymentModalOpen && (
-        <Suspense fallback={<SkeletonModalFallback title="Chargement du paiement sécurisé..." />}>
-          <PaymentModal
-            isOpen={isPaymentModalOpen}
-            onClose={() => setIsPaymentModalOpen(false)}
-            darkMode={darkMode}
-            currentUser={profile}
-            initialMode={paymentModalConfig.mode}
-            initialPayload={paymentModalConfig.payload}
-            onSuccess={handlePaymentSuccess}
-            playBetclicSound={playBetclicBalanceSound}
-            playApplePaySound={playApplePaySound}
-          />
-        </Suspense>
-      )}
-
-      {/* HISTORIQUE DES TRANSACTIONS & FACTURES (BLOC 5) */}
-      {isTransactionsModalOpen && (
-        <Suspense fallback={<SkeletonModalFallback title="Chargement de l'historique des transactions..." />}>
-          <TransactionsHistoryModal
-            isOpen={isTransactionsModalOpen}
-            onClose={() => setIsTransactionsModalOpen(false)}
-            darkMode={darkMode}
-            currentUser={profile}
-            transactions={userTransactions}
-            onOpenPaymentModal={(mode) => {
-              setIsTransactionsModalOpen(false);
-              handleOpenPayment(mode);
-            }}
-          />
-        </Suspense>
-      )}
+      {/* PASSERELLE DE PAIEMENT & HISTORIQUE MODULAIRE (BLOC 5) */}
+      <PaymentFeature
+        isPaymentModalOpen={isPaymentModalOpen}
+        setIsPaymentModalOpen={setIsPaymentModalOpen}
+        paymentModalConfig={paymentModalConfig}
+        handlePaymentSuccess={handlePaymentSuccess}
+        playBetclicBalanceSound={playBetclicBalanceSound}
+        playApplePaySound={playApplePaySound}
+        isTransactionsModalOpen={isTransactionsModalOpen}
+        setIsTransactionsModalOpen={setIsTransactionsModalOpen}
+        userTransactions={userTransactions}
+        handleOpenPayment={handleOpenPayment}
+        profile={profile}
+        darkMode={darkMode}
+      />
 
       {/* PARCOURS D'ONBOARDING INTERACTIF POUR NOUVEAUX COMPTES (CHANTIER 1) */}
       {isOnboardingOpen && (

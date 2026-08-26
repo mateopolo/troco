@@ -1,7 +1,5 @@
 import React from 'react';
 import ChatView from '../../components/ChatView';
-import { useChatStore } from '../../stores/useChatStore';
-import { useWalletStore } from '../../stores/useWalletStore';
 
 export default function ChatSection({
   activeTab,
