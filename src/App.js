@@ -39,6 +39,10 @@ import {
   applyPrivacyBlur,
 } from './utils/geocodingNominatim';
 
+if (typeof window !== 'undefined') {
+  gsap.registerPlugin(ScrollTrigger, useGSAP);
+}
+
 // Lazy-loaded heavy components & modals (Strict Code-Splitting)
 const AdminPanel = React.lazy(() => import('./components/AdminPanel'));
 const ReportModal = React.lazy(() => import('./components/ReportModal'));
@@ -3851,74 +3855,29 @@ export default function App() {
 
   const listingsGridRef = useRef(null);
 
-  // GSAP SCROLLTRIGGER : CASCADE FLUIDE DES ANNONCES AU DÉFILEMENT (ORGANIC SPRING)
+  // GSAP SCROLLTRIGGER : MOTION DES ANNONCES (PREMIUM REVEAL DU COMMIT 2193D77)
   useGSAP(() => {
-    if (activeTab !== 'feed' || viewMode !== 'list') return;
+    if (!listingsGridRef.current) return;
+    const cards = listingsGridRef.current.querySelectorAll('.gsap-card, .premium-card, .feed-card-item, .sponsored-feed-card, .ad-card');
+    if (!cards || cards.length === 0) return;
 
-    const timer = setTimeout(() => {
-      if (!listingsGridRef.current) return;
-      const cards = listingsGridRef.current.querySelectorAll('.feed-card-item, .sponsored-feed-card, .ad-card');
-      if (!cards || cards.length === 0) return;
-
-      // 1. Cascade d'entrée immédiate pour les premières cartes visibles à l'écran
-      const initialCards = Array.from(cards).slice(0, 8);
-      gsap.fromTo(
-        initialCards,
-        {
-          opacity: 0,
-          y: 28,
-          scale: 0.97,
-        },
-        {
-          opacity: 1,
-          y: 0,
-          scale: 1,
-          duration: 0.52,
-          ease: 'power3.out',
-          stagger: 0.05,
-          overwrite: 'auto',
-          clearProps: 'all',
+    gsap.fromTo(cards,
+      { opacity: 0, y: 40 },
+      {
+        opacity: 1,
+        y: 0,
+        duration: 0.6,
+        ease: 'power2.out',
+        stagger: 0.1,
+        clearProps: 'all',
+        scrollTrigger: {
+          trigger: listingsGridRef.current,
+          start: 'top 88%',
+          toggleActions: 'play none none none'
         }
-      );
-
-      // 2. Cascade au défilement pour les cartes suivantes (optimisé smartphone & desktop)
-      ScrollTrigger.batch(cards, {
-        start: 'top 90%',
-        interval: 0.06,
-        batchMax: 6,
-        fastScrollEnd: true,
-        preventOverlaps: true,
-        onEnter: (batch) => {
-          gsap.fromTo(
-            batch,
-            {
-              opacity: 0,
-              y: 24,
-              scale: 0.98,
-            },
-            {
-              opacity: 1,
-              y: 0,
-              scale: 1,
-              duration: 0.46,
-              ease: 'power3.out',
-              stagger: 0.04,
-              overwrite: 'auto',
-              clearProps: 'all',
-            }
-          );
-        },
-        once: true,
-      });
-
-      ScrollTrigger.refresh();
-    }, 60);
-
-    return () => {
-      clearTimeout(timer);
-      ScrollTrigger.getAll().forEach(t => t.kill());
-    };
-  }, { dependencies: [activeTab, filteredListings.length, viewMode, selectedCategory, formatFilter, searchQuery, selectedPayment], scope: listingsGridRef });
+      }
+    );
+  }, { dependencies: [filteredListings, selectedCategory, viewMode, formatFilter, activeTab, searchQuery], scope: listingsGridRef });
 
   const getListingDetail = (listing) => {
     const media = getSuggestedMedia(listing.title, listing.description || '', listing.image, listing.video);
