@@ -7575,18 +7575,24 @@ export default function App() {
           margin: '0 auto',
           width: '100%',
           boxSizing: 'border-box',
-          display: activeTab === 'chat' ? 'flex' : 'block',
-          flexDirection: activeTab === 'chat' ? 'column' : 'initial',
-          overflow: activeTab === 'chat' ? 'hidden' : 'visible',
+          display: (activeTab === 'chat' || activeTab === 'community') ? 'flex' : 'block',
+          flexDirection: (activeTab === 'chat' || activeTab === 'community') ? 'column' : 'initial',
+          overflow: (activeTab === 'chat' || activeTab === 'community') ? 'hidden' : 'visible',
           height: activeTab === 'chat'
             ? (isMobile ? (selectedChat ? '100dvh' : 'calc(100dvh - 125px)') : 'calc(100vh - 138px)')
-            : 'auto',
+            : (activeTab === 'community'
+              ? (isMobile ? 'calc(100dvh - 56px - 65px - env(safe-area-inset-bottom, 0px))' : 'calc(100vh - 138px)')
+              : 'auto'),
           maxHeight: activeTab === 'chat'
             ? (isMobile ? (selectedChat ? '100dvh' : 'calc(100dvh - 125px)') : 'calc(100vh - 138px)')
-            : 'none',
+            : (activeTab === 'community'
+              ? (isMobile ? 'calc(100dvh - 56px - 65px - env(safe-area-inset-bottom, 0px))' : 'calc(100vh - 138px)')
+              : 'none'),
           padding: activeTab === 'chat'
             ? (isMobile ? (selectedChat ? '0' : '0 6px') : '14px 16px 0 16px')
-            : (isMobile ? '12px 12px 90px' : '20px 20px 90px'),
+            : (activeTab === 'community'
+              ? (isMobile ? '8px 10px 0 10px' : '14px 16px 0 16px')
+              : (isMobile ? '12px 12px 90px' : '20px 20px 90px')),
           transition: 'max-width 0.3s ease'
         }}
       >
