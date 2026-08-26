@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom';
 import {
   Send, Phone, Video, Sparkles, Clock, CheckCircle,
   ChevronLeft, Globe, Edit2, Trash2, Copy, Check, X,
-  AlertTriangle, Users, Coins, Mic, ShieldAlert, ShieldCheck
+  AlertTriangle, Users, Coins, Mic, ShieldAlert, ShieldCheck,
+  Palette, Briefcase
 } from 'lucide-react';
 import { doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -11,6 +12,8 @@ import { subscribeTranslations } from '../utils/translator';
 import { analyzeContent } from '../utils/contentModeration';
 import CreateProjectGroupModal from './CreateProjectGroupModal';
 import ProjectRewardsModal from './ProjectRewardsModal';
+import CollaborativeWhiteboardModal from './CollaborativeWhiteboardModal';
+import ProjectWorkspaceToolsModal from './ProjectWorkspaceToolsModal';
 import VoiceNotePlayer from './VoiceNotePlayer';
 import VoiceNoteRecorder from './VoiceNoteRecorder';
 import PublicProfileModal from './PublicProfileModal';
@@ -56,6 +59,8 @@ function ChatView({
   const [isRecordingAudio, setIsRecordingAudio] = useState(false);
   const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
   const [isProjectRewardsModalOpen, setIsProjectRewardsModalOpen] = useState(false);
+  const [isWhiteboardOpen, setIsWhiteboardOpen] = useState(false);
+  const [isWorkspaceToolsOpen, setIsWorkspaceToolsOpen] = useState(false);
   const [isPublicProfileOpen, setIsPublicProfileOpen] = useState(false);
   const [deletedChatIds, setDeletedChatIds] = useState(() => {
     try {
@@ -606,27 +611,102 @@ function ChatView({
           {/* Partie Droite : Actions Appel Audio / Vidéo / Deal ou Rétribution Projet */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
             {activeChatObj?.isGroup ? (
-              <button
-                type="button"
-                onClick={() => setIsProjectRewardsModalOpen(true)}
-                className="premium-button"
-                style={{
-                  border: 'none',
-                  borderRadius: isMobile ? '50%' : '999px',
-                  width: isMobile ? '34px' : 'auto',
-                  height: '34px',
-                  padding: isMobile ? '0' : '0 12px',
-                  background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
-                  color: '#FFF',
-                  fontWeight: '800', fontSize: '11px', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
-                  boxShadow: 'var(--shadow-accent)'
-                }}
-                title="Gérer l'équipe et rétribuer les membres en jetons"
-              >
-                <Coins size={14} />
-                {!isMobile && <span>💎 Rétributions & Équipe</span>}
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                {/* BOUTON TABLEAU BLANC COLLABORATIF */}
+                <button
+                  type="button"
+                  onClick={() => setIsWhiteboardOpen(true)}
+                  className="premium-button"
+                  style={{
+                    border: '1px solid var(--border-color)',
+                    borderRadius: isMobile ? '50%' : '999px',
+                    width: isMobile ? '34px' : 'auto',
+                    height: '34px',
+                    padding: isMobile ? '0' : '0 11px',
+                    backgroundColor: 'var(--bg-subtle)',
+                    color: 'var(--text-main)',
+                    fontWeight: '700', fontSize: '11px', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
+                  }}
+                  title="Ouvrir le Tableau Blanc Collaboratif"
+                >
+                  <Palette size={14} color="var(--accent-primary)" />
+                  {!isMobile && <span>Whiteboard</span>}
+                </button>
+
+                {/* BOUTON OUTILS PRO WORKSPACE */}
+                <button
+                  type="button"
+                  onClick={() => setIsWorkspaceToolsOpen(true)}
+                  className="premium-button"
+                  style={{
+                    border: '1px solid var(--border-color)',
+                    borderRadius: isMobile ? '50%' : '999px',
+                    width: isMobile ? '34px' : 'auto',
+                    height: '34px',
+                    padding: isMobile ? '0' : '0 11px',
+                    backgroundColor: 'var(--bg-subtle)',
+                    color: 'var(--text-main)',
+                    fontWeight: '700', fontSize: '11px', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
+                  }}
+                  title="Outils Pro (Google Drive, Calendar, Remote)"
+                >
+                  <Briefcase size={14} color="var(--accent-primary)" />
+                  {!isMobile && <span>Outils Pro</span>}
+                </button>
+
+                {/* BOUTON RÉTRIBUTIONS JETONS */}
+                <button
+                  type="button"
+                  onClick={() => setIsProjectRewardsModalOpen(true)}
+                  className="premium-button"
+                  style={{
+                    border: 'none',
+                    borderRadius: isMobile ? '50%' : '999px',
+                    width: isMobile ? '34px' : 'auto',
+                    height: '34px',
+                    padding: isMobile ? '0' : '0 11px',
+                    background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
+                    color: '#FFF',
+                    fontWeight: '800', fontSize: '11px', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
+                    boxShadow: 'var(--shadow-accent)'
+                  }}
+                  title="Gérer l'équipe et rétribuer les membres en jetons"
+                >
+                  <Coins size={14} />
+                  {!isMobile && <span>💎 Rétributions</span>}
+                </button>
+
+                {/* APPELS AUDIO & VISIO DE GROUPE */}
+                <button
+                  onClick={() => startCall('audio')}
+                  className="premium-button"
+                  style={{
+                    border: 'none', borderRadius: '50%', width: '34px', height: '34px',
+                    backgroundColor: 'var(--bg-subtle)',
+                    color: 'var(--text-main)',
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  }}
+                  title={t('audioCall') || 'Appel audio HD'}
+                >
+                  <Phone size={15} />
+                </button>
+                <button
+                  onClick={() => startCall('video')}
+                  className="premium-button"
+                  style={{
+                    border: 'none', borderRadius: '50%', width: '34px', height: '34px',
+                    backgroundColor: 'var(--bg-subtle)',
+                    color: 'var(--text-main)',
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                  }}
+                  title={t('videoCall') || 'Appel visio direct'}
+                >
+                  <Video size={15} />
+                </button>
+              </div>
             ) : (
               <>
                 <button
@@ -2052,6 +2132,31 @@ function ChatView({
           currentLang={currentLang}
           darkMode={darkMode}
           t={t}
+        />
+      )}
+
+      {/* MODALE TABLEAU BLANC COLLABORATIF */}
+      {isWhiteboardOpen && activeChatObj && (
+        <CollaborativeWhiteboardModal
+          isOpen={isWhiteboardOpen}
+          onClose={() => setIsWhiteboardOpen(false)}
+          groupId={activeChatObj.id || activeChatObj.firestoreId || 'group_whiteboard'}
+          projectTitle={activeChatObj.projectTitle || activeChatObj.user || 'Tableau Blanc Collaboratif'}
+          currentUser={profile}
+          darkMode={darkMode}
+        />
+      )}
+
+      {/* MODALE OUTILS PRO WORKSPACE (DRIVE, CALENDAR, REMOTE) */}
+      {isWorkspaceToolsOpen && activeChatObj && (
+        <ProjectWorkspaceToolsModal
+          isOpen={isWorkspaceToolsOpen}
+          onClose={() => setIsWorkspaceToolsOpen(false)}
+          projectTitle={activeChatObj.projectTitle || activeChatObj.user || 'Projet Collaboratif'}
+          groupId={activeChatObj.id || activeChatObj.firestoreId || 'group_workspace'}
+          onStartVideoCall={() => startCall('video')}
+          onStartScreenShare={() => startCall('video')}
+          darkMode={darkMode}
         />
       )}
     </>
