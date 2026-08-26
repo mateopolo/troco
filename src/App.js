@@ -704,7 +704,7 @@ export default function App() {
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState('list');
 
-  const TAB_ORDER = { feed: 0, chat: 1, post: 2, profile: 3, admin: 4 };
+  const TAB_ORDER = useMemo(() => ({ feed: 0, community: 1, chat: 2, post: 3, profile: 4, admin: 5 }), []);
   const prevTabRef = useRef(activeTab);
 
   // Transition d'onglets & écrans GSAP (Organic Spring Glide + Back Ease)
@@ -723,18 +723,16 @@ export default function App() {
     gsap.fromTo(
       mainContainerRef.current,
       {
-        opacity: 0,
+        opacity: 0.15,
         x: direction * 28,
-        y: 12,
         scale: 0.985,
       },
       {
         opacity: 1,
         x: 0,
-        y: 0,
         scale: 1,
-        duration: 0.42,
-        ease: 'back.out(1.15)',
+        duration: 0.36,
+        ease: 'power3.out',
         clearProps: 'transform,opacity',
       }
     );
@@ -1476,6 +1474,66 @@ export default function App() {
     setActiveTab(tabName);
     setSelectedChat(null);
   }, [activeTab, NAV_TABS]);
+
+  // GESTES TACTILES FLUIDES DE SWIPE SUR LA BARRE DE NAVIGATION INFÉRIEURE (STYLE iOS)
+  const bottomNavTouchStartRef = useRef(null);
+  const [bottomNavSwipeOffset, setBottomNavSwipeOffset] = useState(0);
+
+  const handleBottomNavTouchStart = useCallback((e) => {
+    if (!e.touches || e.touches.length === 0) return;
+    bottomNavTouchStartRef.current = {
+      startX: e.touches[0].clientX,
+      startY: e.touches[0].clientY,
+      startTime: Date.now(),
+    };
+    setBottomNavSwipeOffset(0);
+  }, []);
+
+  const handleBottomNavTouchMove = useCallback((e) => {
+    if (!bottomNavTouchStartRef.current || !e.touches || e.touches.length === 0) return;
+    const deltaX = e.touches[0].clientX - bottomNavTouchStartRef.current.startX;
+    const deltaY = e.touches[0].clientY - bottomNavTouchStartRef.current.startY;
+
+    // Déplacement horizontal prédominant avec amorti élastique
+    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+      const damped = Math.sign(deltaX) * Math.min(28, Math.pow(Math.abs(deltaX), 0.75) * 1.6);
+      setBottomNavSwipeOffset(damped);
+    }
+  }, []);
+
+  const handleBottomNavTouchEnd = useCallback((e) => {
+    if (!bottomNavTouchStartRef.current) return;
+    const touch = e.changedTouches && e.changedTouches.length > 0 ? e.changedTouches[0] : null;
+    if (touch) {
+      const deltaX = touch.clientX - bottomNavTouchStartRef.current.startX;
+      const deltaY = touch.clientY - bottomNavTouchStartRef.current.startY;
+      const elapsed = Date.now() - bottomNavTouchStartRef.current.startTime;
+
+      // Détection de geste de balayage fluide (> 30px, horizontal dominant, < 600ms)
+      if (Math.abs(deltaX) > 30 && Math.abs(deltaX) > Math.abs(deltaY) * 1.15 && elapsed < 600) {
+        const currentIndex = NAV_TABS.indexOf(activeTab);
+        if (currentIndex !== -1) {
+          if (deltaX < 0 && currentIndex < NAV_TABS.length - 1) {
+            // Glissement doigt vers la gauche -> Onglet suivant
+            const nextTab = NAV_TABS[currentIndex + 1];
+            switchTab(nextTab);
+            if (typeof navigator !== 'undefined' && navigator.vibrate) {
+              try { navigator.vibrate(15); } catch (_) { }
+            }
+          } else if (deltaX > 0 && currentIndex > 0) {
+            // Glissement doigt vers la droite -> Onglet précédent
+            const prevTab = NAV_TABS[currentIndex - 1];
+            switchTab(prevTab);
+            if (typeof navigator !== 'undefined' && navigator.vibrate) {
+              try { navigator.vibrate(15); } catch (_) { }
+            }
+          }
+        }
+      }
+    }
+    bottomNavTouchStartRef.current = null;
+    setBottomNavSwipeOffset(0);
+  }, [activeTab, NAV_TABS, switchTab]);
   const defaultPostDraft = {
     type: 'offer',
     status: 'active',
@@ -9950,29 +10008,45 @@ export default function App() {
 
       </main>
 
-      {/* BARRE DE NAVIGATION EN BAS (CLEAN, TRANSPARENTE, SANS CONTOUR) */}
-      <nav style={{
-        display: ((isMobile && activeTab === 'chat' && selectedChat) || selectedListing) ? 'none' : 'block',
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        backgroundColor: darkMode ? 'rgba(24, 21, 19, 0.65)' : 'rgba(250, 247, 242, 0.55)',
-        backdropFilter: 'blur(24px) saturate(190%)',
-        WebkitBackdropFilter: 'blur(24px) saturate(190%)',
-        border: 'none',
-        borderTop: 'none',
-        padding: '10px 16px max(10px, env(safe-area-inset-bottom, 10px))',
-        zIndex: 99999,
-        boxShadow: 'none',
-        transition: 'background-color 0.3s ease'
-      }}>
+      {/* BARRE DE NAVIGATION EN BAS (CLEAN, TRANSPARENTE, AVEC GESTES DE SWIPE iOS) */}
+      <nav
+        aria-label="Navigation principale mobile"
+        onTouchStart={handleBottomNavTouchStart}
+        onTouchMove={handleBottomNavTouchMove}
+        onTouchEnd={handleBottomNavTouchEnd}
+        onTouchCancel={() => {
+          bottomNavTouchStartRef.current = null;
+          setBottomNavSwipeOffset(0);
+        }}
+        style={{
+          display: ((isMobile && activeTab === 'chat' && selectedChat) || selectedListing) ? 'none' : 'block',
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          backgroundColor: darkMode ? 'rgba(24, 21, 19, 0.65)' : 'rgba(250, 247, 242, 0.55)',
+          backdropFilter: 'blur(24px) saturate(190%)',
+          WebkitBackdropFilter: 'blur(24px) saturate(190%)',
+          border: 'none',
+          borderTop: 'none',
+          padding: '10px 16px max(10px, env(safe-area-inset-bottom, 10px))',
+          zIndex: 99999,
+          boxShadow: 'none',
+          transition: 'background-color 0.3s ease',
+          touchAction: 'pan-y',
+          userSelect: 'none',
+          WebkitUserSelect: 'none',
+        }}
+      >
         <div style={{
           maxWidth: '680px',
           margin: '0 auto',
           display: 'flex',
           justifyContent: 'space-around',
-          alignItems: 'center'
+          alignItems: 'center',
+          transform: bottomNavSwipeOffset ? `translate3d(${bottomNavSwipeOffset}px, 0, 0)` : 'translate3d(0, 0, 0)',
+          transition: bottomNavSwipeOffset ? 'none' : 'transform 0.35s cubic-bezier(0.16, 1, 0.3, 1)',
+          willChange: 'transform',
         }}>
 
           {/* 1. EXPLORER */}
