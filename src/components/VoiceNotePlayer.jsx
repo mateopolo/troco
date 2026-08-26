@@ -86,17 +86,17 @@ export default function VoiceNotePlayer({
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
-  const progressPercent = totalDuration > 0 ? (currentTime / totalDuration) * 100 : 0;
+  const progressPercent = totalDuration > 0 ? Math.min(100, (currentTime / totalDuration) * 100) : 0;
 
   return (
     <div
       style={{
         display: 'flex',
         flexDirection: 'column',
-        gap: '6px',
+        gap: '4px',
         width: '100%',
         maxWidth: '100%',
-        minWidth: '0',
+        minWidth: 0,
         padding: '2px 0',
         userSelect: 'none',
         boxSizing: 'border-box',
@@ -113,15 +113,17 @@ export default function VoiceNotePlayer({
           justifyContent: 'space-between',
           fontSize: '11px',
           fontWeight: '700',
-          color: isMe ? 'rgba(255, 255, 255, 0.9)' : 'var(--accent-primary)',
-          gap: '8px',
+          color: isMe ? 'rgba(255, 255, 255, 0.95)' : 'var(--accent-primary)',
+          gap: '6px',
           width: '100%',
+          minWidth: 0,
           boxSizing: 'border-box',
+          overflow: 'hidden',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0, overflow: 'hidden' }}>
-          <Mic size={13} style={{ flexShrink: 0 }} />
-          <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Note vocale</span>
+          <Mic size={12} style={{ flexShrink: 0 }} />
+          <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: '11px' }}>Note vocale</span>
         </div>
 
         <button
@@ -129,12 +131,12 @@ export default function VoiceNotePlayer({
           onClick={toggleSpeed}
           style={{
             border: 'none',
-            background: isMe ? 'rgba(255, 255, 255, 0.22)' : 'var(--bg-subtle)',
+            background: isMe ? 'rgba(255, 255, 255, 0.25)' : 'var(--bg-subtle)',
             color: isMe ? '#FFFFFF' : 'var(--text-main)',
-            fontSize: '10px',
+            fontSize: '9.5px',
             fontWeight: '800',
-            padding: '2px 7px',
-            borderRadius: '6px',
+            padding: '1px 6px',
+            borderRadius: '5px',
             cursor: 'pointer',
             flexShrink: 0,
             transition: 'background-color 0.15s ease',
@@ -150,13 +152,14 @@ export default function VoiceNotePlayer({
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '10px',
+          gap: '8px',
           width: '100%',
           minWidth: 0,
           boxSizing: 'border-box',
+          overflow: 'hidden',
         }}
       >
-        {/* BOUTON PLAY / PAUSE */}
+        {/* BOUTON PLAY / PAUSE COMPACT */}
         <button
           type="button"
           onClick={togglePlay}
@@ -164,8 +167,8 @@ export default function VoiceNotePlayer({
           style={{
             border: 'none',
             borderRadius: '50%',
-            width: '36px',
-            height: '36px',
+            width: '30px',
+            height: '30px',
             backgroundColor: isMe ? '#FFFFFF' : 'var(--accent-primary)',
             color: isMe ? 'var(--accent-primary)' : '#FFFFFF',
             display: 'flex',
@@ -173,34 +176,37 @@ export default function VoiceNotePlayer({
             justifyContent: 'center',
             cursor: 'pointer',
             flexShrink: 0,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
             transition: 'transform 0.15s ease',
           }}
         >
-          {isPlaying ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" style={{ marginLeft: '2px' }} />}
+          {isPlaying ? <Pause size={13} fill="currentColor" /> : <Play size={13} fill="currentColor" style={{ marginLeft: '1.5px' }} />}
         </button>
 
-        {/* BARRE DE PROGRESSION CLICQUABLE FLUIDE */}
+        {/* BARRE DE PROGRESSION CLIQUABLE ET MINUTERIE */}
         <div
           style={{
             flex: 1,
             minWidth: 0,
             display: 'flex',
             flexDirection: 'column',
-            gap: '4px',
+            gap: '3px',
             boxSizing: 'border-box',
+            overflow: 'hidden',
           }}
         >
           <div
             onClick={handleSeek}
             style={{
-              height: '8px',
+              height: '6px',
               backgroundColor: isMe ? 'rgba(255, 255, 255, 0.3)' : 'var(--bg-subtle)',
               borderRadius: '999px',
               position: 'relative',
               cursor: 'pointer',
               overflow: 'hidden',
               width: '100%',
+              minWidth: 0,
+              boxSizing: 'border-box',
             }}
           >
             <div
@@ -220,11 +226,12 @@ export default function VoiceNotePlayer({
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              fontSize: '10px',
+              fontSize: '9.5px',
               fontWeight: '700',
               fontVariantNumeric: 'tabular-nums',
-              color: isMe ? 'rgba(255, 255, 255, 0.85)' : 'var(--text-secondary)',
+              color: isMe ? 'rgba(255, 255, 255, 0.9)' : 'var(--text-secondary)',
               width: '100%',
+              minWidth: 0,
               boxSizing: 'border-box',
             }}
           >

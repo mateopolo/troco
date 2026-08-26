@@ -137,7 +137,7 @@ export default function CommunityHubSection({
 
       {/* 2. CONTENU PRINCIPAL SELON LA VUE */}
       {subView === 'chat' ? (
-        <div style={{ height: isMobile ? 'calc(100dvh - 280px)' : '620px', minHeight: '480px' }}>
+        <div style={{ height: isMobile ? 'calc(100dvh - 270px)' : 'calc(100vh - 250px)', minHeight: '460px', maxHeight: '720px' }}>
           <GlobalLiveChat
             currentUser={currentUser}
             onOpenProfile={onOpenProfile}

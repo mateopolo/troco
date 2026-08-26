@@ -1271,6 +1271,10 @@ function ChatView({
                       className="message-bubble"
                       style={{
                         padding: '10px 14px',
+                        maxWidth: '85%',
+                        minWidth: 0,
+                        boxSizing: 'border-box',
+                        overflow: 'hidden',
                         borderRadius: isMe
                           ? 'min(var(--border-radius-card, 18px), 24px) min(var(--border-radius-card, 18px), 24px) 4px min(var(--border-radius-card, 18px), 24px)'
                           : 'min(var(--border-radius-card, 18px), 24px) min(var(--border-radius-card, 18px), 24px) min(var(--border-radius-card, 18px), 24px) 4px',
@@ -1304,7 +1308,7 @@ function ChatView({
 
                       {/* MESSAGE VOCAL OU MESSAGE TEXTE (PARFAITEMENT CONTENU) */}
                       {(msg.type === 'audio' || msg.kind === 'audio' || msg.audioUrl) ? (
-                        <div style={{ width: '100%', minWidth: '170px', maxWidth: '260px', boxSizing: 'border-box' }}>
+                        <div style={{ width: '100%', maxWidth: '260px', minWidth: 0, boxSizing: 'border-box', overflow: 'hidden' }}>
                           <VoiceNotePlayer
                             audioUrl={msg.audioUrl}
                             duration={msg.duration}
@@ -1957,7 +1961,7 @@ function ChatView({
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
-            zIndex: 999999,
+            zIndex: 1000,
             backgroundColor: 'var(--bg-global)',
             boxSizing: 'border-box',
           }}

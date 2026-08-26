@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X, Pen, Highlighter, Eraser, Square, Circle, ArrowRight,
   RotateCcw, Trash2, Download, Users, StickyNote,
@@ -374,19 +375,19 @@ export default function CollaborativeWhiteboardModal({
 
   if (!isOpen) return null;
 
-  return (
+  const modalElement = (
     <div
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: 9999,
+        zIndex: 2000000,
         backgroundColor: 'rgba(0, 0, 0, 0.75)',
         backdropFilter: 'blur(16px)',
         WebkitBackdropFilter: 'blur(16px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: isFullscreen ? '0' : '16px',
+        padding: isFullscreen ? '0' : '12px 12px max(80px, env(safe-area-inset-bottom, 24px)) 12px',
         animation: 'fadeIn 0.2s ease both',
         boxSizing: 'border-box'
       }}
@@ -757,4 +758,7 @@ export default function CollaborativeWhiteboardModal({
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalElement, document.body) : modalElement;
 }
+

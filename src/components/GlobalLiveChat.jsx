@@ -9,9 +9,8 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 
-const QUICK_EMOJIS = ['🔥', '🚀', '👏', '💎', '❤️', '⚡', '💡', '🎉'];
-
-const MOCK_LIVE_MESSAGES = [
+// Messages initiaux riches
+const INITIAL_GLOBAL_MESSAGES = [
   {
     id: 'm-init-1',
     author: 'Mateo P.',
@@ -60,18 +59,45 @@ export default function GlobalLiveChat({
   darkMode = false,
   isCompact = false,
 }) {
-  const [messages, setMessages] = useState(MOCK_LIVE_MESSAGES);
+  const [messages, setMessages] = useState(INITIAL_GLOBAL_MESSAGES);
   const [inputText, setInputText] = useState('');
   const [isUrgentMode, setIsUrgentMode] = useState(false);
-  const [isAutoScrollEnabled, setIsAutoScrollEnabled] = useState(true);
+  const [onlineCount, setOnlineCount] = useState(1428);
   const [hasNewMessagesBelow, setHasNewMessagesBelow] = useState(false);
-  const [onlineCount] = useState(1428);
+  const [isAutoScrollEnabled, setIsAutoScrollEnabled] = useState(true);
 
-  const messagesEndRef = useRef(null);
   const scrollContainerRef = useRef(null);
   const inputRef = useRef(null);
 
-  // 1. Écoute Firestore temps réel OPTIMISÉE (strictement 50 derniers messages)
+  const myName = currentUser?.name || 'Moi';
+  const myUsername = currentUser?.username || '@moi';
+  const myAvatar = currentUser?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80';
+  const myBadge = currentUser?.kycVerified ? 'VÉRIFIÉ' : 'MEMBRE';
+
+  // Fluctuation naturelle du nombre de membres en ligne
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setOnlineCount(prev => Math.max(1200, prev + Math.floor(Math.random() * 7) - 3));
+    }, 6000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Défilement automatique vers le bas ISOLÉ AU CONTENEUR INTERNE (ne scrolle JAMAIS la page globale)
+  const scrollToBottom = (behavior = 'smooth') => {
+    if (scrollContainerRef.current) {
+      if (behavior === 'smooth') {
+        scrollContainerRef.current.scrollTo({
+          top: scrollContainerRef.current.scrollHeight,
+          behavior: 'smooth',
+        });
+      } else {
+        scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+      }
+    }
+    setHasNewMessagesBelow(false);
+  };
+
+  // Écouteur Firestore temps réel avec limite stricte à 50 documents
   useEffect(() => {
     try {
       const q = query(
@@ -96,11 +122,20 @@ export default function GlobalLiveChat({
               timestamp: data.timestamp?.toMillis ? data.timestamp.toMillis() : (data.createdAt || Date.now()),
             });
           });
-          // On remet dans l'ordre chronologique croissant
           fetched.reverse();
-          setMessages(fetched);
 
-          if (!isAutoScrollEnabled) {
+          // Si la base contient moins de 3 messages, on fusionne les messages initiaux de démo
+          if (fetched.length < 3) {
+            const existingIds = new Set(fetched.map(m => m.id));
+            const baseList = INITIAL_GLOBAL_MESSAGES.filter(m => !existingIds.has(m.id));
+            setMessages([...baseList, ...fetched]);
+          } else {
+            setMessages(fetched);
+          }
+
+          if (isAutoScrollEnabled) {
+            setTimeout(() => scrollToBottom('smooth'), 50);
+          } else {
             setHasNewMessagesBelow(true);
           }
         }
@@ -112,39 +147,24 @@ export default function GlobalLiveChat({
     } catch (_) {}
   }, [isAutoScrollEnabled]);
 
-  // Défilement automatique vers le bas
-  const scrollToBottom = (behavior = 'smooth') => {
-    messagesEndRef.current?.scrollIntoView({ behavior });
-    setHasNewMessagesBelow(false);
-  };
-
-  useEffect(() => {
-    if (isAutoScrollEnabled) {
-      scrollToBottom('smooth');
-    }
-  }, [messages, isAutoScrollEnabled]);
-
-  // Détection du scroll utilisateur (désactivation auto-scroll si on remonte)
+  // Détection du défilement manuel
   const handleScroll = () => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-    const isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 120;
+    if (!scrollContainerRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
+    const isNearBottom = scrollHeight - scrollTop - clientHeight < 60;
     setIsAutoScrollEnabled(isNearBottom);
-    if (isNearBottom) setHasNewMessagesBelow(false);
+    if (isNearBottom) {
+      setHasNewMessagesBelow(false);
+    }
   };
 
-  // Envoi d'un message
+  // Envoi de message avec mise à jour optimiste instantanée
   const handleSendMessage = async (e) => {
-    if (e) e.preventDefault();
+    e?.preventDefault();
     const text = inputText.trim();
     if (!text) return;
 
-    const myName = currentUser?.name || 'Mateo P.';
-    const myUsername = currentUser?.username || '@mateopolo';
-    const myAvatar = currentUser?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80';
-    const myBadge = currentUser?.kycVerified ? 'VÉRIFIÉ' : currentUser?.trocoTokens > 20 ? 'VIP' : 'MEMBRE';
-
-    const newMsg = {
+    const optimisticMsg = {
       id: `local-${Date.now()}`,
       author: myName,
       authorUsername: myUsername,
@@ -155,12 +175,11 @@ export default function GlobalLiveChat({
       timestamp: Date.now(),
     };
 
-    // Optimistic local UI update
-    setMessages(prev => [...prev.slice(-49), newMsg]);
+    setMessages(prev => [...prev, optimisticMsg]);
     setInputText('');
     setIsUrgentMode(false);
     setIsAutoScrollEnabled(true);
-    scrollToBottom('smooth');
+    setTimeout(() => scrollToBottom('smooth'), 20);
 
     // Sauvegarde Firestore
     try {
@@ -193,19 +212,19 @@ export default function GlobalLiveChat({
         flexDirection: 'column',
         height: '100%',
         backgroundColor: darkMode ? '#151210' : '#FAF8F5',
-        borderRadius: isCompact ? '16px' : '24px',
+        borderRadius: isCompact ? '18px' : '24px',
         border: '1px solid var(--border-color)',
         overflow: 'hidden',
-        boxShadow: '0 12px 36px rgba(0, 0, 0, 0.08)',
+        boxShadow: '0 12px 36px rgba(0, 0, 0, 0.06)',
         position: 'relative',
       }}
     >
       {/* 1. TICKER / EN-TÊTE TWITCH-STYLE */}
       <div
         style={{
-          padding: '12px 16px',
+          padding: '12px 18px',
           borderBottom: '1px solid var(--border-color)',
-          backgroundColor: darkMode ? 'rgba(24, 20, 18, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+          backgroundColor: darkMode ? 'rgba(24, 20, 18, 0.98)' : 'rgba(255, 255, 255, 0.98)',
           backdropFilter: 'blur(12px)',
           display: 'flex',
           alignItems: 'center',
@@ -214,33 +233,33 @@ export default function GlobalLiveChat({
           flexShrink: 0,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div
             style={{
-              width: '28px',
-              height: '28px',
-              borderRadius: '8px',
+              width: '32px',
+              height: '32px',
+              borderRadius: '10px',
               backgroundColor: '#EF4444',
               color: '#FFF',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 0 12px rgba(239, 68, 68, 0.4)',
+              boxShadow: '0 0 14px rgba(239, 68, 68, 0.4)',
               animation: 'pulse 2s infinite',
             }}
           >
-            <Zap size={15} />
+            <Zap size={16} />
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontWeight: '800', fontSize: '13px', color: 'var(--text-main)' }}>
+              <span style={{ fontWeight: '800', fontSize: '13.5px', color: 'var(--text-main)' }}>
                 Troco Live Chat
               </span>
-              <span style={{ fontSize: '9px', fontWeight: '800', backgroundColor: '#EF4444', color: '#FFF', padding: '1px 5px', borderRadius: '4px', textTransform: 'uppercase' }}>
+              <span style={{ fontSize: '9px', fontWeight: '900', backgroundColor: '#EF4444', color: '#FFF', padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 DIRECT
               </span>
             </div>
-            <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '5px', marginTop: '1px' }}>
               <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10B981', display: 'inline-block' }} />
               <span>{onlineCount.toLocaleString()} membres connectés</span>
             </div>
@@ -253,16 +272,16 @@ export default function GlobalLiveChat({
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '4px',
+              gap: '5px',
               fontSize: '11px',
               fontWeight: '700',
               backgroundColor: darkMode ? 'rgba(198, 125, 91, 0.15)' : '#F5EAE4',
               color: 'var(--accent-primary)',
-              padding: '4px 8px',
+              padding: '4px 10px',
               borderRadius: '999px',
             }}
           >
-            <TrendingUp size={12} />
+            <TrendingUp size={13} />
             <span>Flux 50 ms</span>
           </div>
         </div>
@@ -275,10 +294,10 @@ export default function GlobalLiveChat({
         style={{
           flex: 1,
           overflowY: 'auto',
-          padding: '14px 16px',
+          padding: '16px',
           display: 'flex',
           flexDirection: 'column',
-          gap: '8px',
+          gap: '10px',
           scrollBehavior: 'smooth',
         }}
       >
@@ -289,10 +308,11 @@ export default function GlobalLiveChat({
             borderRadius: '14px',
             backgroundColor: darkMode ? 'rgba(198, 125, 91, 0.08)' : 'rgba(198, 125, 91, 0.06)',
             border: '1px dashed var(--accent-primary)',
-            fontSize: '11px',
+            fontSize: '11.5px',
             color: 'var(--text-secondary)',
             textAlign: 'center',
-            marginBottom: '6px',
+            marginBottom: '4px',
+            lineHeight: 1.5,
           }}
         >
           💡 <strong>Astuce :</strong> Cliquez sur un pseudo pour le mentionner avec <code>@</code>. Activez le mode <strong>⚡ Alerte</strong> pour les demandes urgentes.
@@ -308,14 +328,19 @@ export default function GlobalLiveChat({
               style={{
                 display: 'flex',
                 alignItems: 'flex-start',
-                gap: '8px',
-                padding: isUrgent ? '8px 10px' : '4px 6px',
-                borderRadius: '12px',
+                gap: '10px',
+                padding: '10px 12px',
+                borderRadius: '16px',
                 backgroundColor: isUrgent
-                  ? (darkMode ? 'rgba(239, 68, 68, 0.15)' : 'rgba(254, 226, 226, 0.6)')
-                  : 'transparent',
-                border: isUrgent ? '1px solid #EF4444' : '1px solid transparent',
-                transition: 'background-color 0.15s ease',
+                  ? (darkMode ? 'rgba(239, 68, 68, 0.16)' : 'rgba(254, 226, 226, 0.7)')
+                  : (darkMode ? '#1E1A17' : '#FFFFFF'),
+                border: isUrgent
+                  ? '1.5px solid #EF4444'
+                  : '1px solid var(--border-color)',
+                boxShadow: isUrgent
+                  ? '0 4px 16px rgba(239, 68, 68, 0.15)'
+                  : '0 2px 8px rgba(0, 0, 0, 0.02)',
+                transition: 'all 0.15s ease',
                 animation: 'fadeSlideUp 0.15s ease both',
               }}
             >
@@ -325,80 +350,97 @@ export default function GlobalLiveChat({
                 alt={msg.author}
                 onClick={() => onOpenProfile?.(msg)}
                 style={{
-                  width: '26px',
-                  height: '26px',
+                  width: '34px',
+                  height: '34px',
                   borderRadius: '50%',
                   objectFit: 'cover',
                   cursor: 'pointer',
                   flexShrink: 0,
-                  marginTop: '2px',
-                  border: isUrgent ? '1.5px solid #EF4444' : '1px solid var(--border-color)',
+                  border: isUrgent ? '2px solid #EF4444' : '1.5px solid var(--border-color)',
                 }}
                 title={`Voir le profil de ${msg.author}`}
               />
 
               {/* CORPS DU MESSAGE */}
-              <div style={{ minWidth: 0, flex: 1, fontSize: '12.5px', lineHeight: 1.4 }}>
-                {/* LIGNE D'EN-TÊTE : HEURE, NOM, BADGE */}
-                <span style={{ fontSize: '10px', color: 'var(--text-secondary)', marginRight: '6px', opacity: 0.7 }}>
-                  {formattedTime}
-                </span>
-
-                {/* BADGE SPÉCIAL */}
-                {msg.badge && (
-                  <span
+              <div style={{ minWidth: 0, flex: 1, display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                {/* LIGNE D'EN-TÊTE DU MESSAGE */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                  {/* PSEUDO CLIQUABLE */}
+                  <button
+                    type="button"
+                    onClick={() => handleMentionUser(msg.authorUsername || msg.author)}
                     style={{
-                      fontSize: '8.5px',
+                      border: 'none',
+                      background: 'transparent',
+                      padding: 0,
                       fontWeight: '800',
-                      padding: '1px 5px',
-                      borderRadius: '4px',
-                      marginRight: '6px',
-                      backgroundColor: msg.badge === 'FONDATEUR' ? '#F59E0B' : msg.badge === 'VIP' ? '#8B5CF6' : msg.badge === 'PRO' ? '#3B82F6' : '#10B981',
-                      color: '#FFFFFF',
-                      textTransform: 'uppercase',
+                      color: isUrgent ? '#EF4444' : 'var(--text-main)',
+                      cursor: 'pointer',
+                      fontSize: '12.5px',
                     }}
+                    title="Cliquer pour mentionner"
                   >
-                    {msg.badge}
+                    {msg.author}
+                  </button>
+
+                  {/* BADGE RÔLE */}
+                  {msg.badge && (
+                    <span
+                      style={{
+                        fontSize: '9px',
+                        fontWeight: '800',
+                        padding: '1px 6px',
+                        borderRadius: '6px',
+                        backgroundColor: msg.badge === 'FONDATEUR' ? '#F59E0B' : msg.badge === 'VIP' ? '#8B5CF6' : msg.badge === 'PRO' ? '#3B82F6' : 'rgba(16, 185, 129, 0.15)',
+                        color: msg.badge === 'MEMBRE' ? '#10B981' : '#FFFFFF',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.4px',
+                      }}
+                    >
+                      {msg.badge}
+                    </span>
+                  )}
+
+                  {isUrgent && (
+                    <span
+                      style={{
+                        fontSize: '9px',
+                        fontWeight: '900',
+                        padding: '1px 6px',
+                        borderRadius: '6px',
+                        backgroundColor: '#EF4444',
+                        color: '#FFFFFF',
+                        textTransform: 'uppercase',
+                        animation: 'pulse 1.8s infinite',
+                      }}
+                    >
+                      ⚡ URGENT
+                    </span>
+                  )}
+
+                  {/* HEURE */}
+                  <span style={{ fontSize: '10.5px', color: 'var(--text-secondary)', marginLeft: 'auto', opacity: 0.8 }}>
+                    {formattedTime}
                   </span>
-                )}
+                </div>
 
-                {/* PSEUDO CLIQUABLE POUR MENTIONNER */}
-                <button
-                  type="button"
-                  onClick={() => handleMentionUser(msg.authorUsername || msg.author)}
-                  style={{
-                    border: 'none',
-                    background: 'transparent',
-                    padding: 0,
-                    fontWeight: '800',
-                    color: isUrgent ? '#EF4444' : 'var(--accent-primary)',
-                    cursor: 'pointer',
-                    fontSize: '12px',
-                    marginRight: '6px',
-                  }}
-                  title="Cliquer pour mentionner"
-                >
-                  {msg.author}
-                </button>
-
-                {/* TEXTE DU MESSAGE AVEC HIGHLIGHT DES MENTIONS */}
-                <span style={{ color: 'var(--text-main)', wordBreak: 'break-word', fontWeight: isUrgent ? '600' : '400' }}>
+                {/* TEXTE DU MESSAGE */}
+                <div style={{ color: 'var(--text-main)', fontSize: '13px', lineHeight: 1.45, wordBreak: 'break-word', fontWeight: isUrgent ? '600' : '400' }}>
                   {msg.text.split(' ').map((word, i) => {
                     if (word.startsWith('@')) {
                       return (
-                        <span key={i} style={{ color: '#3B82F6', fontWeight: '700', backgroundColor: 'rgba(59, 130, 246, 0.12)', padding: '1px 4px', borderRadius: '4px', marginRight: '2px' }}>
+                        <span key={i} style={{ color: '#3B82F6', fontWeight: '800', backgroundColor: 'rgba(59, 130, 246, 0.12)', padding: '1px 5px', borderRadius: '5px', marginRight: '2px' }}>
                           {word}{' '}
                         </span>
                       );
                     }
                     return word + ' ';
                   })}
-                </span>
+                </div>
               </div>
             </div>
           );
         })}
-        <div ref={messagesEndRef} />
       </div>
 
       {/* BOUTON FLOTTANT : NOUVEAUX MESSAGES EN BAS */}
@@ -409,59 +451,69 @@ export default function GlobalLiveChat({
           className="premium-button"
           style={{
             position: 'absolute',
-            bottom: '75px',
+            bottom: '80px',
             left: '50%',
             transform: 'translateX(-50%)',
             border: 'none',
             borderRadius: '999px',
-            padding: '6px 14px',
+            padding: '7px 16px',
             backgroundColor: 'var(--accent-primary)',
             color: '#FFF',
-            fontSize: '11px',
+            fontSize: '11.5px',
             fontWeight: '800',
-            boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+            cursor: 'pointer',
+            boxShadow: '0 4px 16px rgba(0, 0, 0, 0.25)',
             display: 'flex',
             alignItems: 'center',
-            gap: '4px',
-            cursor: 'pointer',
+            gap: '6px',
             zIndex: 10,
-            animation: 'fadeIn 0.2s ease',
           }}
         >
+          <ChevronDown size={14} />
           <span>Nouveaux messages</span>
-          <ChevronDown size={13} />
         </button>
       )}
 
-      {/* 3. BARRE DE SAISIE & EMOJIS RAPIDES */}
+      {/* 3. ZONE DE SAISIE & BARRE D'ACTIONS (FIXÉE FLUIDEMENT AU-DESSUS DU CLAVIER MOBILE) */}
       <div
         style={{
-          borderTop: '1px solid var(--border-color)',
-          backgroundColor: darkMode ? 'rgba(24, 20, 18, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+          position: 'sticky',
+          bottom: 0,
           padding: '10px 14px',
+          paddingBottom: isCompact ? 'max(12px, env(safe-area-inset-bottom, 12px))' : '14px',
+          borderTop: '1px solid var(--border-color)',
+          backgroundColor: darkMode ? '#181412' : '#FFFFFF',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
           display: 'flex',
           flexDirection: 'column',
           gap: '8px',
           flexShrink: 0,
+          zIndex: 30,
+          boxSizing: 'border-box',
         }}
       >
-        {/* BARRE D'EMOJIS RAPIDES */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', overflowX: 'auto' }}>
-            {QUICK_EMOJIS.map((emoji) => (
+        {/* BARRE D'ÉMOJIS RAPIDES & MODE ALERTE */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', overflowX: 'auto', paddingBottom: '2px' }}>
+            {['🔥', '🚀', '👏', '💎', '❤️', '⚡', '💡', '🎉'].map(emoji => (
               <button
                 key={emoji}
                 type="button"
-                onClick={() => setInputText(prev => `${prev}${emoji}`)}
+                onClick={() => {
+                  setInputText(prev => `${prev} ${emoji}`.trimStart());
+                  inputRef.current?.focus();
+                }}
                 style={{
                   border: 'none',
-                  backgroundColor: 'transparent',
+                  background: 'transparent',
                   cursor: 'pointer',
-                  fontSize: '14px',
+                  fontSize: '15px',
                   padding: '2px 4px',
                   borderRadius: '6px',
                   transition: 'transform 0.1s ease',
                 }}
+                className="premium-button"
                 title={`Insérer ${emoji}`}
               >
                 {emoji}
@@ -469,60 +521,61 @@ export default function GlobalLiveChat({
             ))}
           </div>
 
-          {/* TOGGLE MODE ALERTE URGENTE */}
+          {/* BOUTON BASCULE : MODE ALERTE URGENTE ⚡ */}
           <button
             type="button"
-            onClick={() => setIsUrgentMode(u => !u)}
+            onClick={() => setIsUrgentMode(!isUrgentMode)}
+            className="premium-button"
             style={{
               border: isUrgentMode ? '1px solid #EF4444' : '1px solid var(--border-color)',
               backgroundColor: isUrgentMode ? '#EF4444' : 'transparent',
               color: isUrgentMode ? '#FFFFFF' : 'var(--text-secondary)',
               borderRadius: '999px',
-              padding: '2px 8px',
-              fontSize: '10px',
+              padding: '4px 10px',
+              fontSize: '11px',
               fontWeight: '800',
-              cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               gap: '4px',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              transition: 'all 0.15s ease',
             }}
-            title="Mettre en avant une demande urgente"
           >
-            <Flame size={11} color={isUrgentMode ? '#FFFFFF' : '#EF4444'} />
-            <span>{isUrgentMode ? 'Alerte Active' : 'Mode Alerte'}</span>
+            <Flame size={12} color={isUrgentMode ? '#FFFFFF' : '#EF4444'} />
+            <span>Mode Alerte</span>
           </button>
         </div>
 
-        {/* FORMULAIRE DE SAISIE */}
+        {/* CHAMP DE SAISIE */}
         <form onSubmit={handleSendMessage} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div
             style={{
               flex: 1,
               display: 'flex',
               alignItems: 'center',
-              backgroundColor: isUrgentMode
-                ? (darkMode ? 'rgba(239, 68, 68, 0.15)' : '#FEF2F2')
-                : 'var(--bg-subtle)',
-              border: isUrgentMode ? '1.5px solid #EF4444' : '1px solid var(--border-color)',
+              backgroundColor: darkMode ? '#221D1A' : '#F5F0E8',
               borderRadius: '999px',
               padding: '0 14px',
-              height: '38px',
+              border: isUrgentMode ? '1.5px solid #EF4444' : '1px solid var(--border-color)',
+              transition: 'border-color 0.2s ease',
             }}
           >
-            <AtSign size={14} color="var(--text-secondary)" style={{ marginRight: '6px' }} />
+            <AtSign size={14} color="var(--text-secondary)" style={{ marginRight: '6px', opacity: 0.6 }} />
             <input
               ref={inputRef}
               type="text"
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
-              placeholder={isUrgentMode ? "Écrivez votre alerte urgente en direct..." : "Envoyer un message à la communauté..."}
-              maxLength={280}
+              placeholder={isUrgentMode ? "Écrivez votre demande urgente (ex: Cherche dev ce soir...)" : "Envoyer un message à la communauté..."}
+              maxLength={300}
               style={{
                 flex: 1,
                 border: 'none',
                 backgroundColor: 'transparent',
                 color: 'var(--text-main)',
                 fontSize: '13px',
+                padding: '10px 0',
                 outline: 'none',
               }}
             />
@@ -533,20 +586,22 @@ export default function GlobalLiveChat({
             disabled={!inputText.trim()}
             className="premium-button"
             style={{
-              border: 'none',
+              width: '40px',
+              height: '40px',
               borderRadius: '50%',
-              width: '38px',
-              height: '38px',
               backgroundColor: isUrgentMode ? '#EF4444' : 'var(--accent-primary)',
               color: '#FFFFFF',
+              border: 'none',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               cursor: inputText.trim() ? 'pointer' : 'not-allowed',
-              opacity: inputText.trim() ? 1 : 0.45,
-              boxShadow: isUrgentMode ? '0 0 12px rgba(239, 68, 68, 0.4)' : 'var(--shadow-accent)',
+              opacity: inputText.trim() ? 1 : 0.5,
+              transition: 'all 0.15s ease',
               flexShrink: 0,
+              boxShadow: inputText.trim() ? 'var(--shadow-accent)' : 'none',
             }}
+            title="Envoyer (Entrée)"
           >
             <Send size={15} />
           </button>

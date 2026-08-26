@@ -126,14 +126,14 @@ export default function PublicProfileModal({
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: 9999,
+        zIndex: 10050,
         backgroundColor: 'rgba(0, 0, 0, 0.65)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
+        backdropFilter: 'blur(14px)',
+        WebkitBackdropFilter: 'blur(14px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '16px',
+        padding: '12px 12px max(80px, env(safe-area-inset-bottom, 24px)) 12px',
         animation: 'fadeIn 0.2s ease both',
         boxSizing: 'border-box'
       }}
@@ -148,7 +148,7 @@ export default function PublicProfileModal({
           boxShadow: 'var(--shadow-card)',
           width: '100%',
           maxWidth: '680px',
-          maxHeight: '92dvh',
+          maxHeight: 'min(780px, calc(100dvh - 100px))',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X, Calendar, Monitor, FileText,
   ExternalLink, Sparkles, Plus, Clock, ShieldCheck,
@@ -48,35 +49,35 @@ export default function ProjectWorkspaceToolsModal({
     e.preventDefault();
     if (!newMeetingTitle.trim()) return;
     const newMeet = {
-      id: `m-${Date.now()}`,
+      id: `meet-${Date.now()}`,
       title: newMeetingTitle.trim(),
-      date: newMeetingDate || 'Lundi prochain à 11h00',
+      date: newMeetingDate.trim() || 'Date à convenir',
       duration: '30 min',
-      participants: 3,
+      participants: 1,
       link: 'Troco Meets HD',
     };
-    setMeetings(prev => [newMeet, ...prev]);
+    setMeetings([...meetings, newMeet]);
     setNewMeetingTitle('');
     setNewMeetingDate('');
   };
 
   if (!isOpen) return null;
 
-  return (
+  const modalElement = (
     <div
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: 9999,
+        zIndex: 2000000,
         backgroundColor: 'rgba(0, 0, 0, 0.75)',
         backdropFilter: 'blur(16px)',
         WebkitBackdropFilter: 'blur(16px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '16px',
+        padding: '12px 12px max(80px, env(safe-area-inset-bottom, 24px)) 12px',
         animation: 'fadeIn 0.2s ease both',
-        boxSizing: 'border-box'
+        boxSizing: 'border-box',
       }}
       onClick={onClose}
     >
@@ -84,7 +85,7 @@ export default function ProjectWorkspaceToolsModal({
         style={{
           width: '100%',
           maxWidth: '720px',
-          maxHeight: '90dvh',
+          maxHeight: 'min(calc(100dvh - 100px), 760px)',
           backgroundColor: darkMode ? '#1F1B18' : '#FAF8F5',
           borderRadius: '28px',
           border: '1px solid var(--border-color)',
@@ -669,4 +670,7 @@ export default function ProjectWorkspaceToolsModal({
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalElement, document.body) : modalElement;
 }
+

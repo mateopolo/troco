@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Users, Sparkles, Plus, Check, Coins } from 'lucide-react';
 
 const SUGGESTED_MEMBERS = [
@@ -86,7 +87,7 @@ export default function CreateProjectGroupModal({
     onClose();
   };
 
-  return (
+  const modalElement = (
     <div style={{
       position: 'fixed',
       inset: 0,
@@ -96,9 +97,10 @@ export default function CreateProjectGroupModal({
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '16px',
-      zIndex: 10000030,
+      padding: '16px 16px max(80px, env(safe-area-inset-bottom, 24px)) 16px',
+      zIndex: 2000000,
       animation: 'fadeIn 0.25s ease',
+      boxSizing: 'border-box'
     }}>
       <div style={{
         backgroundColor: 'var(--bg-card)',
@@ -107,13 +109,14 @@ export default function CreateProjectGroupModal({
         boxShadow: 'var(--shadow-modal)',
         width: '100%',
         maxWidth: '540px',
-        maxHeight: 'min(90vh, 740px)',
+        maxHeight: 'min(calc(100dvh - 100px), 740px)',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
         position: 'relative',
         zIndex: 10,
         margin: 'auto',
+        boxSizing: 'border-box'
       }}>
         {/* HEADER FIXE */}
         <div style={{
@@ -502,4 +505,7 @@ export default function CreateProjectGroupModal({
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalElement, document.body) : modalElement;
 }
+

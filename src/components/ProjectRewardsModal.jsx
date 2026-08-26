@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Coins, Sparkles, Plus, Award } from 'lucide-react';
 
 export default function ProjectRewardsModal({
@@ -39,13 +40,12 @@ export default function ProjectRewardsModal({
 
   const handleSendProposal = (e) => {
     e.preventDefault();
-    const targetMember = beneficiary || members[0]?.name || 'Membre';
     const amount = calculateAmount();
-    if (amount <= 0) return;
+    if (!beneficiary || amount <= 0) return;
 
     onProposeReward({
       id: `reward-${Date.now()}`,
-      beneficiary: targetMember,
+      beneficiary,
       title: rewardTitle.trim() || (rewardType === 'hourly' ? `Prestation horaire (${hoursCount}h)` : 'Rétribution de tâche'),
       type: rewardType,
       hours: rewardType === 'hourly' ? parseFloat(hoursCount) : null,
@@ -60,7 +60,7 @@ export default function ProjectRewardsModal({
     onClose();
   };
 
-  return (
+  const modalElement = (
     <div style={{
       position: 'fixed',
       inset: 0,
@@ -70,9 +70,10 @@ export default function ProjectRewardsModal({
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '16px',
-      zIndex: 10000030,
+      padding: '16px 16px max(80px, env(safe-area-inset-bottom, 24px)) 16px',
+      zIndex: 2000000,
       animation: 'fadeIn 0.25s ease',
+      boxSizing: 'border-box'
     }}>
       <div style={{
         backgroundColor: 'var(--bg-card)',
@@ -81,10 +82,11 @@ export default function ProjectRewardsModal({
         boxShadow: 'var(--shadow-modal)',
         width: '100%',
         maxWidth: '560px',
-        maxHeight: '92vh',
+        maxHeight: 'min(calc(100dvh - 100px), 740px)',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
+        boxSizing: 'border-box'
       }}>
         {/* HEADER */}
         <div style={{
@@ -491,4 +493,7 @@ export default function ProjectRewardsModal({
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalElement, document.body) : modalElement;
 }
+

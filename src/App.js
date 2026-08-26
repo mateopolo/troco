@@ -710,7 +710,7 @@ export default function App() {
   // Transition d'onglets & écrans GSAP (Organic Spring Glide + Back Ease)
   useGSAP(() => {
     if (!mainContainerRef.current) return;
-    
+
     // Sur mobile avec chat ouvert en plein écran, isolation totale
     if (isMobile && activeTab === 'chat' && selectedChat) return;
 
@@ -2773,7 +2773,7 @@ export default function App() {
       if (!AudioCtx) return;
       const ctx = new AudioCtx();
       if (ctx.state === 'suspended') {
-        ctx.resume().catch(() => {});
+        ctx.resume().catch(() => { });
       }
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
@@ -2792,7 +2792,7 @@ export default function App() {
 
       osc.start(now);
       osc.stop(now + 0.35);
-    } catch (_) {}
+    } catch (_) { }
   }, []);
 
   // Synchronisation temps réel des discussions depuis Firestore (CONFIDENTIALITÉ STRICTE : filtrage multi-clés par nom, UID et username)
@@ -2822,8 +2822,8 @@ export default function App() {
             const fChatId = d.id || change.doc.id;
             const lastSender = (d.lastSenderName || d.lastSender || '').trim().toLowerCase();
             const isMe = (myName && lastSender === myName.toLowerCase()) ||
-                         (myUsername && lastSender === myUsername.toLowerCase()) ||
-                         (d.lastSenderUid && myUid && String(d.lastSenderUid) === String(myUid));
+              (myUsername && lastSender === myUsername.toLowerCase()) ||
+              (d.lastSenderUid && myUid && String(d.lastSenderUid) === String(myUid));
             const isFromThem = !isMe && (lastSender.length > 0 || (d.unreadCount && d.unreadCount > 0));
 
             // Détection en temps réel d'un nouveau message entrant non lu (PC ⇄ Mobile)
@@ -2889,7 +2889,7 @@ export default function App() {
     });
 
     return () => {
-      unsubs.forEach(u => { try { u(); } catch (_) {} });
+      unsubs.forEach(u => { try { u(); } catch (_) { } });
     };
   }, [profile?.name, profile?.uid, profile?.username, selectedChat, activeTab, playNotificationSound]);
 
@@ -3913,12 +3913,12 @@ export default function App() {
     const authorPortfolio = isCurrentUser
       ? (portfolioImages && portfolioImages.length > 0 ? portfolioImages : (profile?.portfolioImages || profile?.portfolio || []))
       : (listing.portfolio || listing.authorProfile?.portfolio || (listing.isDemo && listing.author === 'Sofia M.' ? [
-          'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=600&q=80',
-          'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=600&q=80',
-        ] : listing.isDemo && listing.author === 'Marc L.' ? [
-          'https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=600&q=80',
-          'https://images.unsplash.com/photo-1487958449943-2429e8be8625?auto=format&fit=crop&w=600&q=80',
-        ] : []));
+        'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=600&q=80',
+        'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=600&q=80',
+      ] : listing.isDemo && listing.author === 'Marc L.' ? [
+        'https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=600&q=80',
+        'https://images.unsplash.com/photo-1487958449943-2429e8be8625?auto=format&fit=crop&w=600&q=80',
+      ] : []));
 
     const generic = {
       id: listing.id,
@@ -5249,7 +5249,7 @@ export default function App() {
     try {
       playBetclicBalanceSound(true);
       playApplePaySound();
-    } catch (_) {}
+    } catch (_) { }
 
     // 2. Transaction Firestore Atomique pour créditer le prestataire et clore le deal
     if (profile?.uid) {
@@ -5261,7 +5261,7 @@ export default function App() {
             if (!uSnap.empty) {
               sellerUid = uSnap.docs[0].id;
             }
-          } catch (_) {}
+          } catch (_) { }
         }
 
         await runTransaction(db, async (transaction) => {
@@ -7537,9 +7537,8 @@ export default function App() {
       <main
         ref={mainContainerRef}
         key={`${activeTab}-${viewMode}`}
-        className={`premium-main ${activeTab === 'chat' ? 'chat-mode' : ''} ${
-          tabSlideDirection === 'forward' ? 'page-tab-transition-left' : 'page-tab-transition-right'
-        }`}
+        className={`premium-main ${activeTab === 'chat' ? 'chat-mode' : ''} ${tabSlideDirection === 'forward' ? 'page-tab-transition-left' : 'page-tab-transition-right'
+          }`}
         style={{
           maxWidth: activeTab === 'feed' ? '1460px' : '1240px',
           margin: '0 auto',
@@ -8221,11 +8220,11 @@ export default function App() {
                 </button>
                 <button onClick={() => setPostDraft(prev => ({ ...prev, type: 'collaborative_project', isCollaborative: true }))} style={{ border: '1.5px solid', borderColor: postDraft.type === 'collaborative_project' ? 'var(--accent-primary)' : 'var(--border-color)', borderRadius: '16px', padding: '14px', backgroundColor: postDraft.type === 'collaborative_project' ? 'var(--bg-subtle)' : 'var(--bg-card)', textAlign: 'left', cursor: 'pointer', transition: 'all 0.2s ease', boxShadow: postDraft.type === 'collaborative_project' ? 'var(--shadow-accent)' : 'none' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '800', color: postDraft.type === 'collaborative_project' ? 'var(--accent-primary)' : 'var(--text-main)' }}>
-                    <span>🚀 {t('collaborativeProjectTitle') || 'Projet Collaboratif'}</span>
+                    <span>🚀 {t('collaborativeProjectTitle') && t('collaborativeProjectTitle') !== 'collaborativeProjectTitle' ? t('collaborativeProjectTitle') : 'Projet Collaboratif'}</span>
                     <span style={{ fontSize: '10px', backgroundColor: 'var(--accent-primary)', color: '#FFF', padding: '2px 8px', borderRadius: '999px', fontWeight: '800' }}>Nouveau</span>
                   </div>
                   <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                    {t('collaborativeProjectSub') || 'Monter une équipe, un collectif ou un projet à plusieurs avec rétribution en Jetons Troco et groupe dédié.'}
+                    {t('collaborativeProjectSub') && t('collaborativeProjectSub') !== 'collaborativeProjectSub' ? t('collaborativeProjectSub') : 'Monter une équipe, un collectif ou un projet à plusieurs avec rétribution en Jetons Troco et groupe dédié.'}
                   </div>
                 </button>
               </div>
