@@ -26,13 +26,18 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useGSAP } from '@gsap/react';
 import {
   translations,
-  calculateHaversineDistance,
   localizeLocation,
   localizeTags,
   localizeReview,
   knownTitles,
   knownMessageTranslations,
 } from './data/translationsData';
+import {
+  searchNominatim,
+  reverseGeocodeNominatim,
+  calculateHaversineDistance,
+  applyPrivacyBlur,
+} from './utils/geocodingNominatim';
 
 // Lazy-loaded heavy components & modals (Strict Code-Splitting)
 const AdminPanel = React.lazy(() => import('./components/AdminPanel'));
@@ -1561,6 +1566,11 @@ export default function App() {
   const [postDraft, setPostDraft] = useState(defaultPostDraft);
   const [showPublishedPopup, setShowPublishedPopup] = useState(false);
   const [publishedListing, setPublishedListing] = useState(null);
+
+  // ---- AUTOCOMPLÉTION GÉOLOCALISATION NOMINATIM (OPENSTREETMAP) ----
+  const [nominatimSuggestions, setNominatimSuggestions] = useState([]);
+  const [isSearchingLocation, setIsSearchingLocation] = useState(false);
+  const nominatimTimeoutRef = useRef(null);
 
   // ---- CHECKOUT (PAIEMENT SIMULÉ) ----
   const [checkout, setCheckout] = useState({
@@ -3105,26 +3115,9 @@ export default function App() {
     return maleAvatars[firstName.length % maleAvatars.length];
   };
 
-  // ---- COORDONNÉES GPS RÉELLES ET RÉSOLUTION MONDIALE ----
-  const locationCoordinatesMap = {
-    'Florence (Italie)': [43.7696, 11.2558],
-    'New York (USA)': [40.7128, -74.0060],
-    'Londres (UK)': [51.5074, -0.1278],
-    'Tokyo (Japon)': [35.6762, 139.6503],
-    'Montréal (Canada)': [45.5017, -73.5673],
-    'Barcelone (Espagne)': [41.3851, 2.1734],
-    'Rome (Italie)': [41.9028, 12.4964],
-    'Nice / Barcelone': [43.7102, 7.2620],
-    'Alpes (France)': [45.5646, 6.3900],
-    'Savoie (France)': [45.5646, 6.3900],
-    'Paris 15e (À 1.1 km)': [48.8412, 2.2985],
-    'Biarritz (France)': [43.4832, -1.5586],
-    'Strasbourg (France)': [48.5734, 7.7521],
-  };
-
+  // ---- COORDONNÉES GPS RÉELLES ET RÉSOLUTION MONDIALE (GÉOLOCALISATION DYNAMIQUE) ----
   const getCoordinatesForLocation = (location = '') => {
     if (!location) return [48.8566, 2.3522];
-    if (locationCoordinatesMap[location]) return locationCoordinatesMap[location];
 
     const locLower = String(location).toLowerCase();
     if (locLower.includes('tokyo') || locLower.includes('shibuya') || locLower.includes('japon')) return [35.6580, 139.7016];
@@ -3135,6 +3128,13 @@ export default function App() {
     if (locLower.includes('florence') || locLower.includes('italie') || locLower.includes('rome')) return [43.7696, 11.2558];
     if (locLower.includes('biarritz')) return [43.4832, -1.5586];
     if (locLower.includes('strasbourg')) return [48.5734, 7.7521];
+    if (locLower.includes('lyon')) return [45.7640, 4.8357];
+    if (locLower.includes('marseille')) return [43.2965, 5.3698];
+    if (locLower.includes('bordeaux')) return [44.8378, -0.5792];
+    if (locLower.includes('toulouse')) return [43.6047, 1.4442];
+    if (locLower.includes('lille')) return [50.6292, 3.0573];
+    if (locLower.includes('nice')) return [43.7102, 7.2620];
+    if (locLower.includes('nantes')) return [47.2184, -1.5536];
 
     const match = String(location).match(/(\d+(?:\.\d+)?)\s*km/i);
     const dist = match ? parseFloat(match[1]) : 3.0;
@@ -3877,7 +3877,7 @@ export default function App() {
           ease: 'power3.out',
           stagger: 0.05,
           overwrite: 'auto',
-          clearProps: 'transform,opacity',
+          clearProps: 'all',
         }
       );
 
@@ -3904,7 +3904,7 @@ export default function App() {
               ease: 'power3.out',
               stagger: 0.04,
               overwrite: 'auto',
-              clearProps: 'transform,opacity',
+              clearProps: 'all',
             }
           );
         },
@@ -8609,13 +8609,19 @@ export default function App() {
                       onClick={() => {
                         if (navigator.geolocation) {
                           navigator.geolocation.getCurrentPosition(
-                            pos => {
+                            async pos => {
                               const lat = pos.coords.latitude;
                               const lng = pos.coords.longitude;
+                              const rev = await reverseGeocodeNominatim(lat, lng);
+                              const locName = rev?.shortDisplay || rev?.displayName || 'Position actuelle';
+                              let finalCoords = [lat, lng];
+                              if (postDraft.locationPrivacy === 'blurred') {
+                                finalCoords = applyPrivacyBlur(lat, lng, 500);
+                              }
                               setPostDraft(prev => ({
                                 ...prev,
-                                location: prev.location || 'Position actuelle',
-                                coordinates: [lat, lng],
+                                location: locName,
+                                coordinates: finalCoords,
                               }));
                             },
                             err => {
@@ -8634,17 +8640,99 @@ export default function App() {
                       <MapPin size={12} /> {currentLang === 'FR' ? '📍 Me géolocaliser' : '📍 Use my location'}
                     </button>
                   </div>
-                  <input
-                    value={postDraft.location}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      const resolvedCoords = getCoordinatesForLocation(val);
-                      setPostDraft(prev => ({ ...prev, location: val, coordinates: resolvedCoords }));
-                    }}
-                    type="text"
-                    placeholder="Paris, Lyon, Marseille, etc."
-                    style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-main)', borderRadius: '12px' }}
-                  />
+
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      value={postDraft.location}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const fallbackCoords = getCoordinatesForLocation(val);
+                        setPostDraft(prev => ({ ...prev, location: val, coordinates: fallbackCoords }));
+
+                        if (nominatimTimeoutRef.current) clearTimeout(nominatimTimeoutRef.current);
+                        if (val.trim().length >= 2) {
+                          setIsSearchingLocation(true);
+                          nominatimTimeoutRef.current = setTimeout(async () => {
+                            const results = await searchNominatim(val);
+                            setNominatimSuggestions(results);
+                            setIsSearchingLocation(false);
+                          }, 300);
+                        } else {
+                          setNominatimSuggestions([]);
+                          setIsSearchingLocation(false);
+                        }
+                      }}
+                      type="text"
+                      placeholder="Tapez une ville ou un code postal dans le monde..."
+                      style={{ width: '100%', padding: '10px 12px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-main)', borderRadius: '12px' }}
+                    />
+
+                    {isSearchingLocation && (
+                      <div style={{ position: 'absolute', right: '12px', top: '12px', fontSize: '11px', color: 'var(--text-secondary)' }}>
+                        Recherche OpenStreetMap...
+                      </div>
+                    )}
+
+                    {/* MENU DÉROULANT DES SUGGESTIONS NOMINATIM */}
+                    {nominatimSuggestions.length > 0 && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        right: 0,
+                        backgroundColor: 'var(--bg-card)',
+                        border: '1.5px solid var(--border-color)',
+                        borderRadius: '14px',
+                        marginTop: '4px',
+                        boxShadow: '0 12px 32px rgba(0,0,0,0.25)',
+                        zIndex: 100,
+                        overflow: 'hidden',
+                      }}>
+                        {nominatimSuggestions.map((sug) => (
+                          <div
+                            key={sug.id}
+                            onClick={() => {
+                              let finalCoords = [sug.lat, sug.lon];
+                              if (postDraft.locationPrivacy === 'blurred') {
+                                finalCoords = applyPrivacyBlur(sug.lat, sug.lon, 500);
+                              }
+                              setPostDraft(prev => ({
+                                ...prev,
+                                location: sug.shortDisplay || sug.displayName,
+                                coordinates: finalCoords,
+                              }));
+                              setNominatimSuggestions([]);
+                            }}
+                            className="hover-subtle"
+                            style={{
+                              padding: '10px 14px',
+                              borderBottom: '1px solid var(--border-color)',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              gap: '8px',
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                              <MapPin size={14} color="var(--accent-primary)" style={{ flexShrink: 0 }} />
+                              <div style={{ minWidth: 0 }}>
+                                <div style={{ fontSize: '12.5px', fontWeight: '800', color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  {sug.shortDisplay}
+                                </div>
+                                <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  {sug.displayName}
+                                </div>
+                              </div>
+                            </div>
+                            <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', padding: '2px 6px', borderRadius: '6px', flexShrink: 0 }}>
+                              {sug.countryCode || 'GPS'}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
 
                   {/* OPTION DE CONFIDENTIALITÉ DE LA LOCALISATION */}
                   <div style={{ marginTop: '8px', padding: '10px 12px', borderRadius: '12px', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)' }}>

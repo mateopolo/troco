@@ -7,7 +7,7 @@ import {
   Palette, Briefcase, Plus, FileText, Calendar, Table
 } from 'lucide-react';
 import { doc, deleteDoc, addDoc, collection, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db, auth } from '../firebase';
 import { subscribeTranslations } from '../utils/translator';
 import { analyzeContent } from '../utils/contentModeration';
 import VoiceNotePlayer from './VoiceNotePlayer';
@@ -79,6 +79,8 @@ function ChatView({
     }
   });
   const [confirmDeleteChat, setConfirmDeleteChat] = useState(null);
+  const [isDirectTransferOpen, setIsDirectTransferOpen] = useState(false);
+  const [directTokensCount, setDirectTokensCount] = useState(1);
   const [isMobileLocal, setIsMobileLocal] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
   const isMobile = isMobileProp !== undefined ? isMobileProp : isMobileLocal;
 
@@ -946,17 +948,64 @@ function ChatView({
                 );
               }
 
+              // RENDU DES TRANSFERTS DE JETONS INSTANTANÉS (CARD STYLE GOLD TROCO)
+              if (msg.type === 'token_transfer' || msg.kind === 'token_transfer') {
+                const count = msg.tokenAmount || 1;
+                const isMine = Boolean(
+                  (msg.senderUid && profile?.uid && msg.senderUid === profile.uid) ||
+                  (msg.senderName && profile?.name && msg.senderName.trim().toLowerCase() === profile.name.trim().toLowerCase()) ||
+                  (msg.sender === 'me')
+                );
+
+                return (
+                  <div
+                    key={msg.id}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: isMine ? 'flex-end' : 'flex-start',
+                      width: '100%',
+                      margin: '8px 0',
+                    }}
+                  >
+                    <div style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      padding: '12px 18px',
+                      borderRadius: '20px',
+                      backgroundColor: 'var(--bg-card)',
+                      border: '1.5px solid #F59E0B',
+                      boxShadow: '0 8px 24px rgba(245, 158, 11, 0.2)',
+                      animation: 'fadeSlideUp 0.25s ease',
+                    }}>
+                      <div style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: 'rgba(245, 158, 11, 0.2)', color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <Coins size={20} />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-main)' }}>
+                          🪙 Transfert de {count} Jeton{count > 1 ? 's' : ''} Troco
+                        </div>
+                        <div style={{ fontSize: '11px', color: '#F59E0B', fontWeight: '700' }}>
+                          {isMine ? `Transféré avec succès à ${activeChatObj?.user || 'votre contact'}` : `Reçu de ${msg.senderName || 'votre contact'} !`} ✓
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
               // RENDU DES PROPOSITIONS DE DEAL (ALIGNEMENT BILATÉRAL STRICT DROITE / GAUCHE)
               if (msg.type === 'deal' || msg.kind === 'deal') {
                 const { terms = {} } = msg;
-                const isMine = (msg.senderName && profile?.name)
-                  ? (msg.senderName.trim().toLowerCase() === profile.name.trim().toLowerCase())
-                  : (msg.senderUid && profile?.uid)
-                    ? (msg.senderUid === profile.uid)
-                    : (msg.sender === 'me');
+                const isMine = Boolean(
+                  (msg.senderUid && profile?.uid && msg.senderUid === profile.uid) ||
+                  (msg.senderName && profile?.name && msg.senderName.trim().toLowerCase() === profile.name.trim().toLowerCase()) ||
+                  (msg.sender === 'me')
+                );
                 const isIncoming = !isMine;
                 const currentDealStatus = msg.status || 'pending';
-                const isDealPending = currentDealStatus === 'pending' || currentDealStatus === 'proposed' || currentDealStatus === 'en_attente';
+                const isDealPending = (!msg.status || currentDealStatus === 'pending' || currentDealStatus === 'proposed' || currentDealStatus === 'en_attente' || currentDealStatus === 'sent');
                 const partnerName = activeChatObj?.user || 'l’interlocuteur';
                 const dealConditionsText = getChatMessageDisplayContent
                   ? getChatMessageDisplayContent({ text: terms.conditions }, currentLang, isMsgOriginal)
@@ -2131,6 +2180,33 @@ function ChatView({
                   }}
                 />
 
+                {/* BOUTON TRANSFERT DIRECT DE JETONS (🪙) */}
+                {!editingMsg && (
+                  <button
+                    type="button"
+                    onClick={() => setIsDirectTransferOpen(true)}
+                    className="premium-button"
+                    style={{
+                      border: '1.5px solid #F59E0B',
+                      borderRadius: '50%',
+                      width: '42px',
+                      height: '42px',
+                      backgroundColor: 'rgba(245, 158, 11, 0.12)',
+                      color: '#F59E0B',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      boxShadow: '0 4px 12px rgba(245, 158, 11, 0.2)',
+                      flexShrink: 0,
+                      transition: 'transform 0.15s ease',
+                    }}
+                    title="Transférer des Jetons Troco instantanément"
+                  >
+                    <Coins size={18} />
+                  </button>
+                )}
+
                 {/* BOUTON MICROPHONE / MESSAGE VOCAL */}
                 {!editingMsg && (
                   <button
@@ -2707,6 +2783,180 @@ function ChatView({
                 }}
               >
                 <Trash2 size={15} /> Supprimer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODALE DE TRANSFERT DIRECT DE JETONS (🪙) */}
+      {isDirectTransferOpen && activeChatObj && (
+        <div
+          onClick={() => setIsDirectTransferOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.65)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 99999,
+            padding: '16px',
+            animation: 'fadeIn 0.2s ease',
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: 'var(--bg-card)',
+              color: 'var(--text-main)',
+              borderRadius: '24px',
+              padding: '24px',
+              maxWidth: '380px',
+              width: '100%',
+              boxShadow: 'var(--shadow-modal)',
+              border: '1px solid var(--border-color)',
+              textAlign: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px',
+              animation: 'scaleUp 0.2s ease',
+            }}
+          >
+            <div style={{ width: '52px', height: '52px', borderRadius: '50%', backgroundColor: 'rgba(245, 158, 11, 0.15)', color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', boxShadow: '0 8px 24px rgba(245, 158, 11, 0.25)' }}>
+              <Coins size={28} />
+            </div>
+
+            <div>
+              <h3 style={{ margin: '0 0 6px 0', fontSize: '18px', fontWeight: '800' }}>
+                Transférer des Jetons Troco
+              </h3>
+              <p style={{ margin: 0, fontSize: '12.5px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                Envoyez instantanément des Jetons Troco à <strong>{activeChatObj.user || 'votre contact'}</strong>.
+              </p>
+            </div>
+
+            {/* SÉLECTEUR RAPIDE DE JETONS */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+              {[1, 2, 5, 10].map(amt => (
+                <button
+                  key={amt}
+                  type="button"
+                  onClick={() => setDirectTokensCount(amt)}
+                  style={{
+                    padding: '10px 4px',
+                    borderRadius: '12px',
+                    border: directTokensCount === amt ? '2px solid #F59E0B' : '1px solid var(--border-color)',
+                    backgroundColor: directTokensCount === amt ? 'rgba(245, 158, 11, 0.15)' : 'var(--bg-subtle)',
+                    color: directTokensCount === amt ? '#F59E0B' : 'var(--text-main)',
+                    fontSize: '13px',
+                    fontWeight: '800',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  +{amt} 🪙
+                </button>
+              ))}
+            </div>
+
+            {/* INPUT MONTANT PERSONNALISÉ */}
+            <div>
+              <input
+                type="number"
+                min="1"
+                max="100"
+                value={directTokensCount}
+                onChange={(e) => setDirectTokensCount(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                style={{
+                  width: '100%',
+                  padding: '10px 14px',
+                  borderRadius: '12px',
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: 'var(--bg-subtle)',
+                  color: 'var(--text-main)',
+                  fontSize: '15px',
+                  fontWeight: '800',
+                  textAlign: 'center',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                }}
+              />
+            </div>
+
+            {/* BOUTONS D'ACTION */}
+            <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+              <button
+                type="button"
+                onClick={() => setIsDirectTransferOpen(false)}
+                style={{
+                  flex: 1,
+                  padding: '10px 14px',
+                  borderRadius: '12px',
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: 'var(--bg-subtle)',
+                  color: 'var(--text-main)',
+                  fontSize: '12.5px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                }}
+              >
+                Annuler
+              </button>
+
+              <button
+                type="button"
+                onClick={async () => {
+                  const count = parseInt(directTokensCount, 10) || 1;
+                  setIsDirectTransferOpen(false);
+
+                  try {
+                    const chatId = activeChatObj.id || currentChatId;
+                    if (db && chatId) {
+                      const authorName = profile?.name || 'Moi';
+                      const partnerName = activeChatObj.user || 'l’interlocuteur';
+                      const text = `🪙 Transfert direct : ${authorName} a envoyé ${count} Jeton${count > 1 ? 's' : ''} Troco à ${partnerName} ! 🎉`;
+
+                      await addDoc(collection(db, 'chats', String(chatId), 'messages'), {
+                        text,
+                        type: 'token_transfer',
+                        kind: 'token_transfer',
+                        tokenAmount: count,
+                        sender: profile?.uid || profile?.id || 'me',
+                        senderUid: profile?.uid || (auth.currentUser && auth.currentUser.uid) || 'me',
+                        senderName: authorName,
+                        senderAvatar: profile?.avatar || '',
+                        timestamp: serverTimestamp(),
+                        createdAt: Date.now(),
+                      });
+
+                      await setDoc(doc(db, 'chats', String(chatId)), {
+                        lastMessage: text,
+                        lastMessageTimestamp: serverTimestamp(),
+                        updatedAt: serverTimestamp(),
+                      }, { merge: true });
+                    }
+                  } catch (err) {
+                    console.warn('[Direct Token Transfer] error:', err);
+                  }
+                }}
+                className="premium-button"
+                style={{
+                  flex: 1,
+                  padding: '10px 14px',
+                  borderRadius: '12px',
+                  border: 'none',
+                  background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
+                  color: '#FFFFFF',
+                  fontSize: '12.5px',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 14px rgba(245, 158, 11, 0.4)',
+                }}
+              >
+                Envoyer {directTokensCount} 🪙
               </button>
             </div>
           </div>

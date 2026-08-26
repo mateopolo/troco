@@ -894,21 +894,7 @@ export const fallbackCategoryImages = {
   default: 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=800&q=80',
 };
 
-export const locationCoordinatesMap = {
-  'Florence (Italie)': [43.7696, 11.2558],
-  'New York (USA)': [40.7128, -74.0060],
-  'Londres (UK)': [51.5074, -0.1278],
-  'Tokyo (Japon)': [35.6762, 139.6503],
-  'Montréal (Canada)': [45.5017, -73.5673],
-  'Barcelone (Espagne)': [41.3851, 2.1734],
-  'Rome (Italie)': [41.9028, 12.4964],
-  'Nice / Barcelone': [43.7102, 7.2620],
-  'Alpes (France)': [45.5646, 6.3900],
-  'Savoie (France)': [45.5646, 6.3900],
-  'Paris 15e (À 1.1 km)': [48.8412, 2.2985],
-  'Biarritz (France)': [43.4832, -1.5586],
-  'Strasbourg (France)': [48.5734, 7.7521],
-};
+
 
 export const femaleAvatars = [
   'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80',
