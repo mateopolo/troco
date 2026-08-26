@@ -1,7 +1,15 @@
-// ---- BASE DE DONNÉES MONDIALE — ANNONCES & CHATS MOCK (100% SÉCURISÉ) ----
+/**
+ * mockData.js — Base de données de démonstration mondiale et conversations initiales
+ * Extrait pour alléger App.js tout en conservant 100% des données, traductions et personas.
+ */
 
+// ---- BASE DE DONNÉES MONDIALE — TRADUCTIONS 100% INLINE (item.translations) ----
+// Chaque annonce intègre ses propres traductions. Aucune dépendance externe.
 export const mockListings = [
+
+  // ═══════════════════════════════════════
   // 🇫🇷 PARIS, FRANCE (nativeLang: FR)
+  // ═══════════════════════════════════════
   {
     id: 1,
     title: "Prêt Perceuse à percussion + coffret forets",
@@ -120,7 +128,9 @@ export const mockListings = [
     },
   },
 
+  // ═══════════════════════════════════════
   // 🇯🇵 TOKYO, JAPON (nativeLang: JA)
+  // ═══════════════════════════════════════
   {
     id: 6,
     title: "日本語会話 & スキル交換レッスン",
@@ -168,7 +178,9 @@ export const mockListings = [
     },
   },
 
+  // ═══════════════════════════════════════
   // 🇺🇸 NEW YORK, USA (nativeLang: EN)
+  // ═══════════════════════════════════════
   {
     id: 8,
     title: "Professional Portrait Photography Session",
@@ -216,7 +228,9 @@ export const mockListings = [
     },
   },
 
+  // ═══════════════════════════════════════
   // 🇩🇪 BERLIN, ALLEMAGNE (nativeLang: DE)
+  // ═══════════════════════════════════════
   {
     id: 10,
     title: "UI/UX Design Workshop & Figma Advanced",
@@ -264,7 +278,9 @@ export const mockListings = [
     },
   },
 
+  // ═══════════════════════════════════════
   // 🇪🇸 BARCELONE & MADRID, ESPAGNE (nativeLang: ES)
+  // ═══════════════════════════════════════
   {
     id: 12,
     title: "Clases de Guitarra Flamenca y Ritmo",
@@ -312,7 +328,9 @@ export const mockListings = [
     },
   },
 
+  // ═══════════════════════════════════════
   // 🇮🇹 FLORENCE & ROME, ITALIE (nativeLang: IT)
+  // ═══════════════════════════════════════
   {
     id: 14,
     title: "Scambio Appartamento centro Firenze ↔ Parigi",
@@ -360,7 +378,9 @@ export const mockListings = [
     },
   },
 
+  // ═══════════════════════════════════════
   // 🇨🇳 PÉKIN & SHANGHAI, CHINE (nativeLang: ZH)
+  // ═══════════════════════════════════════
   {
     id: 15,
     title: "中文与书法艺术线上交流",
@@ -371,10 +391,6 @@ export const mockListings = [
     location: "Pékin (Chine - 8200 km)",
     coordinates: [39.9042, 116.4074],
     type: "remote", nativeLang: "ZH",
-    languages: ["ZH", "EN"],
-    compensation: "1h = 1 Jeton",
-    image: "https://images.unsplash.com/photo-1517842645767-c639042777db?auto=format&fit=crop&w=600&q=80",
-    urgent: false, caution: null,
     translations: {
       FR: { title: "Cours de Mandarin & Art de la Calligraphie Chinoise", description: "Échanges conversationnels en mandarin authentique et initiation à la calligraphie traditionnelle au pinceau." },
       EN: { title: "Mandarin Conversation & Chinese Calligraphy Art", description: "Authentic Mandarin conversation exchange and traditional Chinese brush calligraphy coaching." },
@@ -382,6 +398,7 @@ export const mockListings = [
       IT: { title: "Conversazione Mandarino & Arte della Calligrafia Cinese", description: "Scambio di conversazione autentica in mandarino e lezioni di calligrafia cinese tradizionale." },
       DE: { title: "Mandarin-Konversation & Chinesische Kalligraphie-Kunst", description: "Authentischer Mandarin-Gesprächsaustausch und traditionelles chinesisches Pinsel-Kalligraphie-Coaching." },
       JA: { title: "中国語会話＆伝統書道アートオンライン交流", description: "本物の普通話会話交流と伝統的な毛筆書道体験。動画教材付き。" },
+      ZH: { title: "中文与书法艺术线上交流", description: "地道中文普通话交流与传统软笔书法体验，含视频课件与汉字艺术辅导。" },
     },
   },
   {
@@ -408,7 +425,9 @@ export const mockListings = [
     },
   },
 
+  // ═══════════════════════════════════════
   // 🇧🇷 SÃO PAULO, BRÉSIL (nativeLang: PT)
+  // ═══════════════════════════════════════
   {
     id: 19,
     title: "Aulas de Capoeira & Cultura Afro-Brasileira",
@@ -434,7 +453,9 @@ export const mockListings = [
     },
   },
 
+  // ═══════════════════════════════════════
   // 🇬🇧 LONDRES, ROYAUME-UNI (nativeLang: EN)
+  // ═══════════════════════════════════════
   {
     id: 20,
     title: "London Rooftop Yoga & Mindfulness Sessions",
@@ -459,7 +480,9 @@ export const mockListings = [
     },
   },
 
+  // ═══════════════════════════════════════
   // 🇰🇷 SÉOUL, CORÉE DU SUD (nativeLang: KO)
+  // ═══════════════════════════════════════
   {
     id: 21,
     title: "K-Pop 댄스 레슨 & 한국어 회화 교환",
@@ -485,7 +508,9 @@ export const mockListings = [
     },
   },
 
+  // ═══════════════════════════════════════
   // 🇦🇺 SYDNEY, AUSTRALIE (nativeLang: EN)
+  // ═══════════════════════════════════════
   {
     id: 16,
     title: "Surfing Lessons & Board Rental",
@@ -608,10 +633,38 @@ export const mockChats = [
       availability: 'week-ends prolongés',
       negotiation: 'échange réciproque de studio sans frais',
     },
+  },
+  {
+    id: 301,
+    isGroup: true,
+    user: "Collectif Rénovation Tiers-Lieu",
+    projectTitle: "Collectif Rénovation Tiers-Lieu",
+    category: "Atelier & Chantier Solidaire",
+    description: "Aménagement d'un espace collaboratif avec menuiserie, mobilier recyclé et électricité.",
+    rewardPool: 25,
+    rewardStrategy: "task",
+    participants: ["Mateo", "Marie D.", "Lucas M.", "Alex K."],
+    members: [
+      { name: "Mateo", role: "Leader / Initiateur", tokensEarned: 0 },
+      { name: "Marie D.", role: "Architecture d'intérieur", tokensEarned: 5 },
+      { name: "Lucas M.", role: "Coordination Chantier", tokensEarned: 0 },
+      { name: "Alex K.", role: "Menuiserie & Recyclage", tokensEarned: 0 },
+    ],
+    rewardAllocations: [
+      { id: "rew-301-1", beneficiary: "Marie D.", title: "Conception & Plans d’aménagement 3D", type: "task", amount: 5, status: "pending" }
+    ],
+    lastMessage: "💎 Proposition de rétribution : 5 Jetons Troco pour Marie D. (Plans 3D)",
+    status: "En cours",
   }
 ];
 
 export const initialChatThreads = {
+  301: [
+    { id: 1, sender: 'system', text: '🚀 Hub de collaboration initialisé pour "Collectif Rénovation Tiers-Lieu". Réserve allouée : 25 Jetons Troco. Membres : Mateo, Marie D., Lucas M., Alex K.' },
+    { id: 2, sender: 'them', senderName: 'Marie D.', text: 'Bonjour l’équipe ! J’ai terminé les plans d’implantation 3D pour l’espace atelier et la terrasse.' },
+    { id: 3, sender: 'them', senderName: 'Alex K.', text: 'Super travail Marie ! De mon côté le bois de récup est poncé et prêt pour l’assemblage des bancs.' },
+    { id: 4, sender: 'them', senderName: 'Lucas M.', kind: 'reward-proposal', type: 'reward', reward: { id: 'rew-301-1', beneficiary: 'Marie D.', title: 'Conception & Plans d’aménagement 3D', type: 'task', amount: 5, status: 'pending' }, text: '💎 Proposition de rétribution : 5 Jetons Troco pour Marie D. (Conception & Plans d’aménagement 3D)' },
+  ],
   201: [
     { id: 1, sender: 'them', text: 'Bonjour Mateo ! J’ai vu ton annonce d’initiation UI/UX sur Figma, elle m’intéresse énormément pour mon projet d’application mobile !' },
     { id: 2, sender: 'me', text: 'Salut Emma ! Avec grand plaisir, on peut voir les bases des composants, autolayout et prototypes interactifs.' },
@@ -646,307 +699,3 @@ export const initialChatThreads = {
     { id: 3, sender: 'them', kind: 'deal', dealId: 'deal-104-1', status: 'confirmed', terms: { euroAmount: 0, trocoTokens: 0, conditions: 'Échange réciproque 3 nuitées (Studio Marseille Vieux-Port vs Studio Paris Marais). Sans aucun frais.' } },
   ],
 };
-
-export const swapHistory = [
-  {
-    id: 1,
-    counterparty: 'Sofia M.',
-    deal: "Cours de Piano & Solfège (3 séances en visio)",
-    date: '12 mars 2025',
-    status: 'Clôturé',
-    rating: 5,
-    review: "Échange ultra fluide, Sofia est pédagogue et très à l'écoute. Les 3 séances se sont parfaitement déroulées, je recommande à 100%.",
-    compensation: '3 Crédits temps',
-  },
-  {
-    id: 2,
-    counterparty: 'Marc L.',
-    deal: 'Prêt Perceuse à percussion + coffret forets',
-    date: '28 février 2025',
-    status: 'Clôturé',
-    rating: 4,
-    review: "Prêt rapide et propre, caution virtuelle bien gérée. Matériel en parfait état, rendu sans accroc dans les délais.",
-    compensation: 'Troc direct + Caution 30€',
-  },
-  {
-    id: 3,
-    counterparty: 'Karim B.',
-    deal: 'Dépannage iPhone 13 (écran)',
-    date: 'Prévu cette semaine',
-    status: 'En cours',
-    rating: null,
-    review: 'Intervention programmée cette semaine, créneau confirmé par Karim. Échange de modèle et de devis en cours dans le chat.',
-    compensation: '30€ ou 2 Crédits',
-  },
-  {
-    id: 4,
-    counterparty: 'Elisa V.',
-    deal: "Cours d'Italien conversationnel (1h)",
-    date: 'Vendredi 18h00',
-    status: 'Planifié',
-    rating: null,
-    review: 'Séance visio planifiée vendredi à 18h00. Conditions validées : 1 Crédit + 10€.',
-    compensation: '1 Crédit + 10€',
-  },
-];
-
-export const statusStyles = {
-  'Clôturé': { bg: '#F5EAE4', text: '#A8644A' },
-  'En cours': { bg: '#FAF7F2', text: '#C67D5B' },
-  'Planifié': { bg: '#FFFBEB', text: '#D97706' },
-  'En attente': { bg: '#F5F0E8', text: '#6B5E54' },
-};
-
-export const themeMedia = {
-  camping: {
-    images: [
-      'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1478131143081-80f7f84ca84d?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1510312305653-8ed496efae75?auto=format&fit=crop&w=800&q=80',
-    ],
-    videos: ['https://assets.mixkit.co/videos/preview/mixkit-drone-view-of-a-harbor-41588-large.mp4'],
-  },
-  surf: {
-    images: [
-      'https://images.unsplash.com/photo-1502680390469-be75c86b636f?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1455729552865-3ef5885ab656?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1509114397022-ed747cca3f65?auto=format&fit=crop&w=800&q=80',
-    ],
-    videos: ['https://assets.mixkit.co/videos/preview/mixkit-man-riding-a-bicycle-in-the-city-41376-large.mp4'],
-  },
-  piano: {
-    images: [
-      'https://images.unsplash.com/photo-1520523839897-bd0b52f945a0?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1516280440614-37939bbacd81?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1552422535-c45813c61732?auto=format&fit=crop&w=800&q=80',
-    ],
-    videos: ['https://assets.mixkit.co/videos/preview/mixkit-playing-a-grand-piano-close-up-41589-large.mp4'],
-  },
-  guitare: {
-    images: [
-      'https://images.unsplash.com/photo-1510915361894-db8b60106cb1?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1525201548942-d8732f6617a0?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1564186763535-ebb21ef5277f?auto=format&fit=crop&w=800&q=80',
-    ],
-    videos: ['https://assets.mixkit.co/videos/preview/mixkit-playing-a-grand-piano-close-up-41589-large.mp4'],
-  },
-  ikea: {
-    images: [
-      'https://images.unsplash.com/photo-1538688525198-9b88f6f53126?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=800&q=80',
-    ],
-    videos: ['https://assets.mixkit.co/videos/preview/mixkit-man-working-with-a-drill-in-a-workshop-43285-large.mp4'],
-  },
-  drone: {
-    images: [
-      'https://images.unsplash.com/photo-1508614589041-895b88991e3e?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1527977966376-1c8408f9f108?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1507582020474-9a35b7d455d9?auto=format&fit=crop&w=800&q=80',
-    ],
-    videos: ['https://assets.mixkit.co/videos/preview/mixkit-drone-view-of-a-harbor-41588-large.mp4'],
-  },
-  iphone: {
-    images: [
-      'https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1580910051074-3eb694886505?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1565849904461-04a58ad377e0?auto=format&fit=crop&w=800&q=80',
-    ],
-    videos: ['https://assets.mixkit.co/videos/preview/mixkit-hands-typing-on-a-laptop-keyboard-41380-large.mp4'],
-  },
-  cuisine: {
-    images: [
-      'https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?auto=format&fit=crop&w=800&q=80',
-    ],
-    videos: ['https://assets.mixkit.co/videos/preview/mixkit-chef-preparing-a-dish-in-a-restaurant-kitchen-42795-large.mp4'],
-  },
-  musique: {
-    images: [
-      'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1526142684086-7ebd69df27a5?auto=format&fit=crop&w=800&q=80',
-    ],
-    videos: ['https://assets.mixkit.co/videos/preview/mixkit-playing-a-grand-piano-close-up-41589-large.mp4'],
-  },
-  photo: {
-    images: [
-      'https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1452696193712-6cabf5103b63?auto=format&fit=crop&w=800&q=80',
-    ],
-    videos: ['https://assets.mixkit.co/videos/preview/mixkit-camera-lens-zooming-in-and-out-41381-large.mp4'],
-  },
-  bricolage: {
-    images: [
-      'https://images.unsplash.com/photo-1581092160562-40aa08e78837?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1530124566582-a618bc2615dc?auto=format&fit=crop&w=800&q=80',
-    ],
-    videos: ['https://assets.mixkit.co/videos/preview/mixkit-man-working-with-a-drill-in-a-workshop-43285-large.mp4'],
-  },
-  tech: {
-    images: [
-      'https://images.unsplash.com/photo-1515879218367-8466d910aaa4?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=800&q=80',
-    ],
-    videos: ['https://assets.mixkit.co/videos/preview/mixkit-hands-typing-on-a-laptop-keyboard-41380-large.mp4'],
-  },
-  logement: {
-    images: [
-      'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1513694203232-719a280e022f?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=800&q=80',
-    ],
-    videos: ['https://assets.mixkit.co/videos/preview/mixkit-cozy-living-room-with-a-fireplace-41385-large.mp4'],
-  },
-  montagne: {
-    images: [
-      'https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?auto=format&fit=crop&w=800&q=80',
-    ],
-    videos: ['https://assets.mixkit.co/videos/preview/mixkit-cozy-living-room-with-a-fireplace-41385-large.mp4'],
-  },
-  sport: {
-    images: [
-      'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1526506118085-60ce8714f8c5?auto=format&fit=crop&w=800&q=80',
-    ],
-    videos: ['https://assets.mixkit.co/videos/preview/mixkit-man-training-in-a-gym-41372-large.mp4'],
-  },
-  yoga: {
-    images: [
-      'https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1545205597-3d9d02c29597?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1575052814086-f385e2e2ad1b?auto=format&fit=crop&w=800&q=80',
-    ],
-    videos: ['https://assets.mixkit.co/videos/preview/mixkit-woman-doing-yoga-on-a-mat-41595-large.mp4'],
-  },
-  animaux: {
-    images: [
-      'https://images.unsplash.com/photo-1517849845537-4d257902454a?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1477884213360-7e9d7dcc1e48?auto=format&fit=crop&w=800&q=80',
-    ],
-    videos: ['https://assets.mixkit.co/videos/preview/mixkit-dog-running-in-a-park-41370-large.mp4'],
-  },
-  velo: {
-    images: [
-      'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1571068316344-75bc76f77890?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1507035895480-2b3156c31fc8?auto=format&fit=crop&w=800&q=80',
-    ],
-    videos: ['https://assets.mixkit.co/videos/preview/mixkit-man-riding-a-bicycle-in-the-city-41376-large.mp4'],
-  },
-  jardin: {
-    images: [
-      'https://images.unsplash.com/photo-1466692476868-aef1dfb1e735?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1561215186-f8d5f62c23c5?auto=format&fit=crop&w=800&q=80',
-    ],
-    videos: ['https://assets.mixkit.co/videos/preview/mixkit-gardener-watering-plants-in-a-greenhouse-41390-large.mp4'],
-  },
-  langue: {
-    images: [
-      'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=800&q=80',
-    ],
-    videos: ['https://assets.mixkit.co/videos/preview/mixkit-hands-typing-on-a-laptop-keyboard-41380-large.mp4'],
-  },
-  etude: {
-    images: [
-      'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=800&q=80',
-    ],
-    videos: ['https://assets.mixkit.co/videos/preview/mixkit-hands-typing-on-a-laptop-keyboard-41380-large.mp4'],
-  },
-  remorque: {
-    images: [
-      'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=800&q=80',
-    ],
-    videos: ['https://assets.mixkit.co/videos/preview/mixkit-man-working-with-a-drill-in-a-workshop-43285-large.mp4'],
-  },
-  default: {
-    images: [
-      'https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1507238691740-187a5b1d37b8?auto=format&fit=crop&w=800&q=80',
-    ],
-    videos: ['https://assets.mixkit.co/videos/preview/mixkit-hands-typing-on-a-laptop-keyboard-41380-large.mp4'],
-  },
-};
-
-export const fallbackCategoryImages = {
-  'Cours & Compétences': 'https://images.unsplash.com/photo-1516280440614-37939bbacd81?auto=format&fit=crop&w=800&q=80',
-  'Prêt de Matériel': 'https://images.unsplash.com/photo-1581092160562-40aa08e78837?auto=format&fit=crop&w=800&q=80',
-  'Services & Dépannage': 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=800&q=80',
-  'Logement & Stay Swap': 'https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?auto=format&fit=crop&w=800&q=80',
-  'Tech': 'https://images.unsplash.com/photo-1515879218367-8466d910aaa4?auto=format&fit=crop&w=800&q=80',
-  'Bien-être': 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&w=800&q=80',
-  default: 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=800&q=80',
-};
-
-
-
-export const femaleAvatars = [
-  'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80',
-  'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=200&q=80',
-  'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=200&q=80',
-];
-
-export const maleAvatars = [
-  'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80',
-  'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=200&q=80',
-  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
-];
-
-export const authorAvatars = {
-  'Sofia M.': femaleAvatars[0],
-  'Marc L.': maleAvatars[0],
-  'Matteo R.': maleAvatars[1],
-  'Karim B.': maleAvatars[2],
-  'Elisa V.': femaleAvatars[1],
-  'Nico D.': maleAvatars[0],
-  'Amélie P.': femaleAvatars[2],
-  'Jules T.': maleAvatars[1],
-  'Laura B.': femaleAvatars[1],
-  'Rayan K.': maleAvatars[2],
-  'Hugo L.': maleAvatars[0],
-  'Clara N.': femaleAvatars[2],
-  'Giulia S.': femaleAvatars[0],
-  'Mina C.': femaleAvatars[1],
-  'Theo R.': maleAvatars[1],
-  'David H.': maleAvatars[2],
-  'Inès W.': femaleAvatars[0],
-  'Romain P.': maleAvatars[1],
-  'Pauline M.': femaleAvatars[2],
-  'Claire R.': femaleAvatars[1],
-  'Sacha B.': maleAvatars[0],
-  'Martin J.': maleAvatars[2],
-  'Julie C.': femaleAvatars[0],
-  'Baptiste F.': maleAvatars[1],
-  'Noémie A.': femaleAvatars[2],
-  'Sabrina M.': femaleAvatars[0],
-  'Léa D.': femaleAvatars[1],
-  'Hana T.': femaleAvatars[2],
-  'Noa K.': maleAvatars[0],
-  'Samir M.': maleAvatars[1],
-};
-
-export const feminineFirstNames = ['sofia', 'elisa', 'amélie', 'amelie', 'laura', 'clara', 'giulia', 'mina', 'inès', 'ines', 'pauline', 'claire', 'julie', 'noémie', 'noemie', 'sabrina', 'léa', 'lea', 'hana', 'emma', 'chloé', 'chloe', 'lina', 'anna', 'maria', 'eva', 'nina', 'lucie', 'camille', 'sara', 'julia'];
-
-export const groupParticipants = [
-  { name: 'Sofia', role: 'Mentor', color: '#C67D5B' },
-  { name: 'Marc', role: 'Expert', color: '#A8644A' },
-  { name: 'Lina', role: 'Apprenante', color: '#D97706' },
-  { name: 'Kai', role: 'Coach', color: '#8C4B33' },
-  { name: 'Noa', role: 'Modérateur', color: '#3D3530' },
-];
