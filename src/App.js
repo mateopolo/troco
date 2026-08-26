@@ -1342,10 +1342,11 @@ export default function App() {
   // Synchronisation réactive globale avec le store Zustand useWalletStore (élimine le prop drilling)
   useEffect(() => {
     if (profile) {
-      useWalletStore.getState().setEuroBalance(profile.euroBalance ?? 0);
-      useWalletStore.getState().setTrocoTokens(profile.trocoTokens ?? 10);
-      useWalletStore.getState().setKycVerified(profile.kycVerified ?? false);
-      useWalletStore.getState().setTrocoPlus(profile.isTrocoPlus ?? false, profile.trocoPlusPlan);
+      const state = useWalletStore.getState();
+      if (typeof state?.setEuroBalance === 'function') state.setEuroBalance(profile.euroBalance ?? 0);
+      if (typeof state?.setTrocoTokens === 'function') state.setTrocoTokens(profile.trocoTokens ?? 10);
+      if (typeof state?.setKycVerified === 'function') state.setKycVerified(profile.kycVerified ?? false);
+      if (typeof state?.setTrocoPlus === 'function') state.setTrocoPlus(profile.isTrocoPlus ?? false, profile.trocoPlusPlan);
     }
   }, [profile?.euroBalance, profile?.trocoTokens, profile?.kycVerified, profile?.isTrocoPlus, profile?.trocoPlusPlan]);
 

@@ -10,6 +10,7 @@ export const useWalletStore = create(
       subscriptionPlan: null,
       subscriptionStartDate: null,
       subscriptionRenewalDate: null,
+      kycVerified: false,
       transactions: [],
       topUpCelebration: null,
       isPaymentModalOpen: false,
@@ -18,6 +19,8 @@ export const useWalletStore = create(
 
       setEuroBalance: (euroBalance) => set({ euroBalance: Number(Number(euroBalance).toFixed(2)) }),
       setTrocoTokens: (trocoTokens) => set({ trocoTokens: Number(trocoTokens) }),
+      setKycVerified: (kycVerified) => set({ kycVerified: Boolean(kycVerified) }),
+      setTrocoPlus: (isTrocoPlus, planKey = null) => set({ isTrocoPlus: Boolean(isTrocoPlus), subscriptionPlan: planKey || null }),
       setTransactions: (transactions) => set({ transactions }),
       addTransaction: (tx) => set((state) => ({ transactions: [tx, ...state.transactions] })),
 
