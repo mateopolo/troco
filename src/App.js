@@ -4411,6 +4411,8 @@ export default function App() {
       caution: cautionText,
       description: rawDescription,
       tags: generatedTags,
+      isCollaborative: postDraft.type === 'collaborative_project' || Boolean(postDraft.isCollaborative),
+      postType: postDraft.type || 'offer',
       nativeLang: 'FR',
       translations: baseTranslations,
     };
@@ -8182,22 +8184,57 @@ export default function App() {
             {postStep === 1 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>{t('chooseAdTypePrompt')}</div>
-                <button onClick={() => setPostDraft(prev => ({ ...prev, type: 'offer' }))} style={{ border: '1.5px solid', borderColor: postDraft.type === 'offer' ? 'var(--accent-primary)' : 'var(--border-color)', borderRadius: '16px', padding: '14px', backgroundColor: postDraft.type === 'offer' ? 'var(--bg-subtle)' : 'var(--bg-card)', textAlign: 'left', cursor: 'pointer', transition: 'all 0.2s ease', boxShadow: postDraft.type === 'offer' ? 'var(--shadow-accent)' : 'none' }}>
+                <button onClick={() => setPostDraft(prev => ({ ...prev, type: 'offer', isCollaborative: false }))} style={{ border: '1.5px solid', borderColor: postDraft.type === 'offer' ? 'var(--accent-primary)' : 'var(--border-color)', borderRadius: '16px', padding: '14px', backgroundColor: postDraft.type === 'offer' ? 'var(--bg-subtle)' : 'var(--bg-card)', textAlign: 'left', cursor: 'pointer', transition: 'all 0.2s ease', boxShadow: postDraft.type === 'offer' ? 'var(--shadow-accent)' : 'none' }}>
                   <div style={{ fontWeight: '800', color: postDraft.type === 'offer' ? 'var(--accent-primary)' : 'var(--text-main)' }}>{t('iOfferService')}</div>
                   <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>{t('iOfferServiceSub')}</div>
                 </button>
-                <button onClick={() => setPostDraft(prev => ({ ...prev, type: 'request' }))} style={{ border: '1.5px solid', borderColor: postDraft.type === 'request' ? 'var(--accent-primary)' : 'var(--border-color)', borderRadius: '16px', padding: '14px', backgroundColor: postDraft.type === 'request' ? 'var(--bg-subtle)' : 'var(--bg-card)', textAlign: 'left', cursor: 'pointer', transition: 'all 0.2s ease', boxShadow: postDraft.type === 'request' ? 'var(--shadow-accent)' : 'none' }}>
+                <button onClick={() => setPostDraft(prev => ({ ...prev, type: 'request', isCollaborative: false }))} style={{ border: '1.5px solid', borderColor: postDraft.type === 'request' ? 'var(--accent-primary)' : 'var(--border-color)', borderRadius: '16px', padding: '14px', backgroundColor: postDraft.type === 'request' ? 'var(--bg-subtle)' : 'var(--bg-card)', textAlign: 'left', cursor: 'pointer', transition: 'all 0.2s ease', boxShadow: postDraft.type === 'request' ? 'var(--shadow-accent)' : 'none' }}>
                   <div style={{ fontWeight: '800', color: postDraft.type === 'request' ? 'var(--accent-primary)' : 'var(--text-main)' }}>{t('iRequestService')}</div>
                   <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>{t('iRequestServiceSub')}</div>
+                </button>
+                <button onClick={() => setPostDraft(prev => ({ ...prev, type: 'collaborative_project', isCollaborative: true }))} style={{ border: '1.5px solid', borderColor: postDraft.type === 'collaborative_project' ? 'var(--accent-primary)' : 'var(--border-color)', borderRadius: '16px', padding: '14px', backgroundColor: postDraft.type === 'collaborative_project' ? 'var(--bg-subtle)' : 'var(--bg-card)', textAlign: 'left', cursor: 'pointer', transition: 'all 0.2s ease', boxShadow: postDraft.type === 'collaborative_project' ? 'var(--shadow-accent)' : 'none' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '800', color: postDraft.type === 'collaborative_project' ? 'var(--accent-primary)' : 'var(--text-main)' }}>
+                    <span>🚀 {t('collaborativeProjectTitle') || 'Projet Collaboratif'}</span>
+                    <span style={{ fontSize: '10px', backgroundColor: 'var(--accent-primary)', color: '#FFF', padding: '2px 8px', borderRadius: '999px', fontWeight: '800' }}>Nouveau</span>
+                  </div>
+                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                    {t('collaborativeProjectSub') || 'Monter une équipe, un collectif ou un projet à plusieurs avec rétribution en Jetons Troco et groupe dédié.'}
+                  </div>
                 </button>
               </div>
             )}
 
             {postStep === 2 && (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                {postDraft.type === 'collaborative_project' && (
+                  <div style={{
+                    padding: '12px 14px',
+                    borderRadius: '14px',
+                    backgroundColor: 'rgba(198, 125, 91, 0.12)',
+                    border: '1px solid var(--accent-primary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    color: 'var(--accent-primary)',
+                    animation: 'fadeSlideUp 0.2s ease'
+                  }}>
+                    <span>🚀 Mode Projet Collaboratif : définissez les talents recherchés, les rôles et l\'organisation collective.</span>
+                  </div>
+                )}
+
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-secondary)' }}>{t('adTitleLabel')}</label>
-                  <input value={postDraft.title} onChange={(e) => setPostDraft(prev => ({ ...prev, title: e.target.value }))} type="text" placeholder={t('adTitlePlaceholder')} style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-main)', borderRadius: '12px' }} />
+                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-secondary)' }}>
+                    {postDraft.type === 'collaborative_project' ? 'Titre du projet collectif' : t('adTitleLabel')}
+                  </label>
+                  <input
+                    value={postDraft.title}
+                    onChange={(e) => setPostDraft(prev => ({ ...prev, title: e.target.value }))}
+                    type="text"
+                    placeholder={postDraft.type === 'collaborative_project' ? "Ex : Création d'une application mobile, Rénovation d'un studio, Tournage..." : t('adTitlePlaceholder')}
+                    style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-main)', borderRadius: '12px' }}
+                  />
                 </div>
                 <div>
                   <label style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-secondary)' }}>{t('adCategoryLabel')}</label>
@@ -8251,8 +8288,16 @@ export default function App() {
                   </select>
                 </div>
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-secondary)' }}>{t('adDescriptionLabel')}</label>
-                  <textarea value={postDraft.description} onChange={(e) => setPostDraft(prev => ({ ...prev, description: e.target.value }))} rows={4} placeholder={t('adDescriptionPlaceholder')} style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-main)', borderRadius: '12px', resize: 'vertical' }} />
+                  <label style={{ fontSize: '12px', fontWeight: 'bold', color: 'var(--text-secondary)' }}>
+                    {postDraft.type === 'collaborative_project' ? 'Quels profils recherchez-vous pour ce projet ?' : t('adDescriptionLabel')}
+                  </label>
+                  <textarea
+                    value={postDraft.description}
+                    onChange={(e) => setPostDraft(prev => ({ ...prev, description: e.target.value }))}
+                    rows={4}
+                    placeholder={postDraft.type === 'collaborative_project' ? "Précisez les profils recherchés (ex: 1 dev React, 1 photographe, 1 menuisier...), les objectifs du projet et le planning." : t('adDescriptionPlaceholder')}
+                    style={{ width: '100%', padding: '10px 12px', marginTop: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-main)', borderRadius: '12px', resize: 'vertical' }}
+                  />
                 </div>
 
                 {/* ---- MÉDIAS INTELLIGENTS (PHOTO & VIDÉO) ---- */}

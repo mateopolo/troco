@@ -130,12 +130,14 @@ export default function PublishWizard({
               </div>
 
               <div>
-                <label style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-main)' }}>{t('descriptionLabel')}</label>
+                <label style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-main)' }}>
+                  {postDraft.type === 'collaborative_project' ? 'Quels profils recherchez-vous pour ce projet ?' : t('descriptionLabel')}
+                </label>
                 <textarea
                   rows={4}
                   value={postDraft.description}
                   onChange={(e) => setPostDraft(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Décrivez précisément votre offre ou demande..."
+                  placeholder={postDraft.type === 'collaborative_project' ? "Précisez les profils recherchés, l'organisation et le rôle de chacun..." : "Décrivez précisément votre offre ou demande..."}
                   style={{ width: '100%', marginTop: '6px', padding: '11px 14px', border: '1px solid var(--border-color)', borderRadius: '14px', fontSize: '13px', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-main)', resize: 'vertical', outline: 'none' }}
                 />
               </div>
