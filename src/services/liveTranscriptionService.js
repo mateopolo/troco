@@ -5,13 +5,27 @@
 
 import { translateText } from '../utils/translator';
 
+const BCP47_MAP = {
+  FR: 'fr-FR',
+  EN: 'en-US',
+  ES: 'es-ES',
+  IT: 'it-IT',
+  DE: 'de-DE',
+  JA: 'ja-JP',
+  ZH: 'zh-CN',
+  PT: 'pt-PT',
+  AR: 'ar-SA',
+  RU: 'ru-RU',
+};
+
 class LiveTranscriptionService {
   constructor() {
     this.recognition = null;
     this.isListening = false;
     this.subscribers = new Set();
-    this.currentLanguage = 'fr-FR';
+    this.sourceLanguage = 'fr-FR';
     this.targetLanguage = 'FR';
+    this.speakerName = 'Interlocuteur';
     this.simulationTimer = null;
   }
 
@@ -22,16 +36,20 @@ class LiveTranscriptionService {
       : null;
 
     if (!SpeechRecognition) {
-      console.info('[LiveTranscription] SpeechRecognition API native non disponible. Mode simulé intelligent prêt.');
+      console.info('[LiveTranscription] SpeechRecognition API native non disponible. Mode simulé intelligent activé.');
       return false;
     }
 
     try {
+      if (this.recognition) {
+        try { this.recognition.abort(); } catch (_) {}
+      }
+
       this.recognition = new SpeechRecognition();
       this.recognition.continuous = true;
       this.recognition.interimResults = true;
       this.recognition.maxAlternatives = 1;
-      this.recognition.lang = this.currentLanguage;
+      this.recognition.lang = this.sourceLanguage;
 
       this.recognition.onresult = async (event) => {
         let interimTranscript = '';
@@ -46,11 +64,11 @@ class LiveTranscriptionService {
           }
         }
 
-        const textToProcess = finalTranscript || interimTranscript;
-        if (!textToProcess || !textToProcess.trim()) return;
+        const textToProcess = (finalTranscript || interimTranscript).trim();
+        if (!textToProcess) return;
 
         const isFinal = Boolean(finalTranscript);
-        await this.handleTranscript(textToProcess.trim(), isFinal);
+        await this.handleTranscript(textToProcess, isFinal);
       };
 
       this.recognition.onerror = (event) => {
@@ -75,46 +93,66 @@ class LiveTranscriptionService {
   }
 
   async handleTranscript(rawText, isFinal) {
-    if (!rawText) return;
+    if (!rawText || !rawText.trim()) return;
 
-    let translated = rawText;
-    if (this.targetLanguage && this.targetLanguage !== 'FR') {
+    const trimmed = rawText.trim();
+    const sourceCode = (this.sourceLanguage || 'fr-FR').split('-')[0].toUpperCase();
+    const targetCode = (this.targetLanguage || 'FR').toUpperCase();
+
+    let translated = trimmed;
+
+    // Si la langue source et la langue cible diffèrent, on effectue la traduction instantanée
+    if (sourceCode !== targetCode) {
       try {
-        translated = await translateText(rawText, this.targetLanguage);
-      } catch (_) {
-        translated = rawText;
+        translated = await translateText(trimmed, targetCode, sourceCode.toLowerCase());
+      } catch (err) {
+        console.warn('[LiveTranscription] Erreur traduction:', err);
+        translated = trimmed;
       }
     }
 
     const payload = {
       id: Date.now(),
-      originalText: rawText,
-      translatedText: translated,
+      originalText: trimmed,
+      translatedText: translated || trimmed,
       isFinal,
-      targetLang: this.targetLanguage,
+      sourceLang: sourceCode,
+      targetLang: targetCode,
+      speaker: this.speakerName,
       timestamp: new Date(),
     };
 
     this.notifySubscribers(payload);
   }
 
-  startListening(sourceLang = 'fr-FR', targetLang = 'FR') {
-    this.currentLanguage = sourceLang;
-    this.targetLanguage = targetLang;
+  startListening(sourceLang = 'fr-FR', targetLang = 'FR', speakerName = 'Interlocuteur') {
+    // Résolution BCP47
+    const resolvedSourceBcp = BCP47_MAP[sourceLang?.toUpperCase()] || sourceLang || 'fr-FR';
+    const resolvedTargetCode = (targetLang || 'FR').toUpperCase();
+
+    this.sourceLanguage = resolvedSourceBcp;
+    this.targetLanguage = resolvedTargetCode;
+    this.speakerName = speakerName;
     this.isListening = true;
 
-    if (!this.recognition) {
-      this.initRecognition();
+    // Arrêter la simulation précédente s'il y en a une
+    if (this.simulationTimer) {
+      clearInterval(this.simulationTimer);
+      this.simulationTimer = null;
     }
 
-    if (this.recognition) {
+    const hasNativeSupport = this.initRecognition();
+
+    if (hasNativeSupport && this.recognition) {
       try {
-        this.recognition.lang = this.currentLanguage;
+        this.recognition.lang = this.sourceLanguage;
         this.recognition.start();
-      } catch (_) {}
+      } catch (err) {
+        console.debug('[LiveTranscription] SpeechRecognition start warning:', err);
+      }
     } else {
-      // Simulation pour démo/tests si le micro ou le navigateur ne supporte pas l'API
-      this.startSimulatedDemo(targetLang);
+      // Démarrage de la simulation contextuelle bilingue
+      this.startSimulatedDemo(resolvedSourceBcp, resolvedTargetCode);
     }
   }
 
@@ -146,43 +184,73 @@ class LiveTranscriptionService {
     });
   }
 
-  // Simulation de dialogue fluide pour les environnements de test / navigateurs sans support vocal natif
-  startSimulatedDemo(targetLang) {
-    if (this.simulationTimer) clearInterval(this.simulationTimer);
-    const demoPhrases = [
-      "Bonjour ! Je suis ravi de faire cet échange de compétences avec toi.",
-      "Est-ce que tu m'entends bien et est-ce que la vidéo est nette de ton côté ?",
-      "Parfait ! On peut commencer la session de cours et tester les fonctionnalités.",
-      "N'hésite pas si tu as des questions sur le projet ou le partage d'écran !",
-    ];
+  // Simulation intelligente multi-langues pour démo et navigateurs sans micro
+  startSimulatedDemo(sourceBcp = 'fr-FR', targetLang = 'FR') {
+    const sourceCode = (sourceBcp || 'fr').split('-')[0].toLowerCase();
+    const targetCode = (targetLang || 'fr').toLowerCase();
 
-    let phraseIndex = 0;
+    const sampleDialogs = {
+      fr: [
+        "Bonjour ! Ravi de te retrouver pour cet échange de compétences sur Troco.",
+        "Je te propose qu'on commence par définir les étapes de notre session d'apprentissage.",
+        "Parfait, tout me paraît très clair. Nous pouvons valider les termes du deal.",
+        "Merci beaucoup pour ton aide précieuse, je te valide la rétribution immédiatement !",
+      ],
+      en: [
+        "Hello! Great to connect with you for this skill exchange on Troco.",
+        "I suggest we start by going over the main goals of our collaborative session.",
+        "Everything looks crystal clear. We can proceed with the smart escrow deal.",
+        "Thank you so much for your time and expertise, releasing the token reward now!",
+      ],
+      es: [
+        "¡Hola! Un placer conectar contigo para este intercambio en Troco.",
+        "Te propongo empezar repasando los objetivos de nuestra sesión de trabajo.",
+        "Perfecto, todo queda muy claro. Podemos confirmar el acuerdo de intercambio.",
+        "¡Muchísimas gracias por tu ayuda! Te transfiero los tokens ahora mismo.",
+      ],
+      de: [
+        "Hallo! Freut mich sehr, mich mit dir für diesen Kompetenzaustausch auf Troco zu treffen.",
+        "Ich schlage vor, dass wir mit den Hauptschritten unserer Sitzung beginnen.",
+        "Alles ist sehr klar. Wir können die Vereinbarung jetzt bestätigen.",
+        "Vielen Dank für deine Unterstützung, ich übertrage die Tokens sofort!",
+      ],
+      it: [
+        "Ciao! È un piacere fare questo scambio di competenze su Troco.",
+        "Propongo di iniziare definendo i punti chiave della nostra collaborazione.",
+        "Perfetto, tutto è chiarissimo. Possiamo confermare i termini dell'accordo.",
+        "Grazie mille per il tuo aiuto, confermo il rilascio dei gettoni subito!",
+      ],
+    };
+
+    const phrases = sampleDialogs[sourceCode] || sampleDialogs.fr;
+    let step = 0;
+
     this.simulationTimer = setInterval(async () => {
       if (!this.isListening) return;
-      const phrase = demoPhrases[phraseIndex % demoPhrases.length];
-      phraseIndex++;
+      const currentPhrase = phrases[step % phrases.length];
+      step++;
 
-      let translated = phrase;
-      if (targetLang && targetLang !== 'FR') {
+      let translated = currentPhrase;
+      if (sourceCode.toUpperCase() !== targetCode.toUpperCase()) {
         try {
-          translated = await translateText(phrase, targetLang);
+          translated = await translateText(currentPhrase, targetCode.toUpperCase(), sourceCode);
         } catch (_) {
-          translated = phrase;
+          translated = currentPhrase;
         }
       }
 
       this.notifySubscribers({
         id: Date.now(),
-        originalText: phrase,
-        translatedText: translated,
+        originalText: currentPhrase,
+        translatedText: translated || currentPhrase,
         isFinal: true,
-        targetLang: targetLang || 'FR',
-        speaker: 'Interlocuteur',
+        sourceLang: sourceCode.toUpperCase(),
+        targetLang: targetCode.toUpperCase(),
+        speaker: this.speakerName,
         timestamp: new Date(),
       });
-    }, 6000);
+    }, 5500);
   }
 }
 
 export const liveTranscriptionService = new LiveTranscriptionService();
-export default liveTranscriptionService;
