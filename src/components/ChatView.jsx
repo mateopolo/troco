@@ -7,7 +7,8 @@ import {
   Palette, Briefcase, Plus, FileText, Calendar, Table
 } from 'lucide-react';
 import { doc, deleteDoc, addDoc, collection, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db, auth } from '../firebase';
+import { executeDirectTokenTransfer } from '../services/firestoreService';
 import { subscribeTranslations } from '../utils/translator';
 import { analyzeContent } from '../utils/contentModeration';
 import VoiceNotePlayer from './VoiceNotePlayer';
@@ -90,6 +91,7 @@ function ChatView({
   const isMobile = isMobileProp !== undefined ? isMobileProp : isMobileLocal;
 
   const effectiveSelectedChat = (selectedChat && !deletedChatIds.has(selectedChat.id)) ? selectedChat : null;
+  const activeChatObj = effectiveSelectedChat;
   const [mobileSubView, setMobileSubView] = useState(() => (selectedChat && !deletedChatIds.has(selectedChat.id)) ? 'room' : 'list');
 
   // Transfert direct de Jetons Troco avec débit immédiat et confettis
@@ -105,8 +107,10 @@ function ChatView({
 
     setIsTransferringTokens(true);
     try {
+      const myUid = profile?.uid || auth?.currentUser?.uid || 'me';
       const myName = profile?.name || 'Moi';
-      const partnerName = effectiveSelectedChat?.user || effectiveSelectedChat?.projectTitle || 'Interlocuteur';
+      const partnerName = activeChatObj?.user || activeChatObj?.projectTitle || 'Interlocuteur';
+      const partnerUid = activeChatObj?.partnerUid || activeChatObj?.userId || activeChatObj?.authorUid || activeChatObj?.sellerUid || activeChatObj?.buyerUid || activeChatObj?.recipientUid || null;
       const updatedTokens = Math.max(0, currentBalance - tokens);
 
       // 1. Débit immédiat du solde utilisateur dans l'application
@@ -119,39 +123,16 @@ function ChatView({
         localStorage.setItem('troco_user_profile', JSON.stringify(saved));
       } catch (_) {}
 
-      // 2. Écriture du message de transfert et de la transaction dans Firestore
-      if (db && effectiveSelectedChat?.id) {
-        const transferText = `🪙 ${myName} a envoyé ${tokens} Jeton${tokens > 1 ? 's' : ''} Troco à ${partnerName}${transferComment ? ` (« ${transferComment} »)` : ''} !`;
-        const chatDocId = String(effectiveSelectedChat.id);
-
-        await addDoc(collection(db, 'chats', chatDocId, 'messages'), {
-          text: transferText,
-          type: 'token_transfer',
-          tokenAmount: tokens,
-          transferComment: transferComment || '',
-          sender: 'me',
-          senderName: myName,
-          senderAvatar: profile?.avatar || '',
-          timestamp: serverTimestamp(),
-          createdAt: Date.now(),
-        });
-
-        await setDoc(doc(db, 'chats', chatDocId), {
-          lastMessage: transferText,
-          lastMessageTimestamp: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        }, { merge: true });
-
-        await addDoc(collection(db, 'transactions'), {
-          type: 'token_transfer',
-          userId: profile?.uid || 'me',
-          userName: myName,
-          partnerName: partnerName,
-          tokens: tokens,
-          comment: transferComment || '',
-          createdAt: serverTimestamp(),
-        });
-      }
+      // 2. Exécution atomique Firestore (débit expéditeur + crédit destinataire)
+      await executeDirectTokenTransfer({
+        senderUid: myUid,
+        senderName: myName,
+        recipientUid: partnerUid,
+        recipientName: partnerName,
+        chatId: activeChatObj?.id ? String(activeChatObj.id) : null,
+        tokenAmount: tokens,
+        comment: transferComment || '',
+      });
 
       // 3. Déclenchement de l'animation festive
       setShowConfetti(true);
@@ -346,7 +327,6 @@ function ChatView({
   }, [mockChats, deletedChatIds, getChatLatestTimestamp]);
 
   const currentChatId = effectiveSelectedChat ? effectiveSelectedChat.id : null;
-  const activeChatObj = effectiveSelectedChat;
   const messages = useMemo(() => {
     return currentChatId ? (chatThreads[currentChatId] || []) : [];
   }, [currentChatId, chatThreads]);
@@ -861,7 +841,30 @@ function ChatView({
               </div>
             ) : (
               <>
+                {/* BOUTON TABLEAU BLANC COLLABORATIF 1-TO-1 */}
                 <button
+                  type="button"
+                  onClick={() => setIsWhiteboardOpen(true)}
+                  className="premium-button"
+                  style={{
+                    border: '1px solid var(--border-color)',
+                    borderRadius: isMobile ? '50%' : '999px',
+                    width: isMobile ? '34px' : 'auto',
+                    height: '34px',
+                    padding: isMobile ? '0' : '0 11px',
+                    backgroundColor: 'var(--bg-subtle)',
+                    color: 'var(--text-main)',
+                    fontWeight: '700', fontSize: '11px', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
+                  }}
+                  title="Ouvrir le Tableau Blanc Collaboratif"
+                >
+                  <Palette size={14} color="var(--accent-primary)" />
+                  {!isMobile && <span>Whiteboard</span>}
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => startCall('audio')}
                   className="premium-button"
                   style={{
@@ -2791,6 +2794,7 @@ function ChatView({
             projectTitle={activeChatObj.projectTitle || activeChatObj.user || 'Tableau Blanc Collaboratif'}
             currentUser={profile}
             darkMode={darkMode}
+            handleSendMessage={handleSendMessage}
             onSendToChat={(sentBoardId, version) => {
               if (setChatInputText) setChatInputText('');
             }}

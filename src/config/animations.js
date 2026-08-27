@@ -5,9 +5,9 @@
  * (pages, cartes du feed, modales) en modifiant simplement ACTIVE_ANIMATION_INDEX.
  */
 
-// Index du preset actif (0 à 5)
-// 0: "Smooth Fade" | 1: "Spring Bounce" | 2: "3D Flip" | 3: "Scale & Blur" | 4: "Slide Strike" | 5: "Liquid Elastic"
-export const ACTIVE_ANIMATION_INDEX = 0;
+// Index du preset actif (0 à 6)
+// 0: "Smooth Fade" | 1: "Spring Bounce" | 2: "3D Flip" | 3: "Scale & Blur" | 4: "Slide Strike" | 5: "Liquid Elastic" | 6: "Premium Float Wave"
+export const ACTIVE_ANIMATION_INDEX = 6;
 
 export const ANIMATION_PRESETS = [
   // 0: "Smooth Fade" (Fondu classique, fluide et élégant)
@@ -121,6 +121,27 @@ export const ANIMATION_PRESETS = [
       initial: { opacity: 0, scale: 0.8, y: 25 },
       animate: { opacity: 1, scale: 1, y: 0, transition: { duration: 0.32, ease: [0.34, 1.56, 0.64, 1] } },
       exit: { opacity: 0, scale: 0.88, y: 15, transition: { duration: 0.18 } },
+    },
+  },
+
+  // 6: "Premium Float Wave" (Vague flottante ultra-premium et rebond organique)
+  {
+    name: 'Premium Float Wave',
+    page: {
+      initial: { opacity: 0, y: 35, scale: 0.98 },
+      animate: { opacity: 1, y: 0, scale: 1, transition: { type: 'spring', stiffness: 260, damping: 25, mass: 1, duration: 0.5 } },
+      exit: { opacity: 0, y: -20, scale: 0.98, transition: { duration: 0.18, ease: 'easeOut' } },
+    },
+    card: {
+      initial: { opacity: 0, y: 60, scale: 0.98 },
+      animate: { opacity: 1, y: 0, scale: 1, transition: { type: 'spring', stiffness: 260, damping: 25, mass: 1, duration: 0.6 } },
+      whileInView: { opacity: 1, y: 0, scale: 1 },
+      transition: { type: 'spring', stiffness: 260, damping: 25, mass: 1, duration: 0.6 },
+    },
+    modal: {
+      initial: { opacity: 0, y: 45, scale: 0.92 },
+      animate: { opacity: 1, y: 0, scale: 1, transition: { type: 'spring', stiffness: 280, damping: 25, mass: 1, duration: 0.45 } },
+      exit: { opacity: 0, y: 25, scale: 0.94, transition: { duration: 0.18 } },
     },
   },
 ];

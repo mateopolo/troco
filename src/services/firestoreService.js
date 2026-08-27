@@ -1,11 +1,9 @@
 import {
   collection,
   doc,
-  getDoc,
   getDocs,
   setDoc,
   addDoc,
-  updateDoc,
   deleteDoc,
   query,
   where,
@@ -322,3 +320,117 @@ export const subscribeToTyping = (chatId, currentUserName, onTypingChange) => {
     return () => {};
   }
 };
+
+// ------------------------------------------------------------------------------
+// 5. TRANSFERTS DIRECTS DE JETONS TROCO
+// ------------------------------------------------------------------------------
+
+/**
+ * Exécute un transfert direct de jetons de façon atomique (débit expéditeur + crédit destinataire)
+ */
+export const executeDirectTokenTransfer = async ({
+  senderUid,
+  senderName,
+  recipientUid,
+  recipientName,
+  chatId,
+  tokenAmount = 1,
+  comment = '',
+}) => {
+  if (!senderUid || tokenAmount <= 0) {
+    return { success: false, error: 'Paramètres invalides pour le transfert.' };
+  }
+
+  try {
+    let targetRecipientUid = recipientUid;
+
+    // Si recipientUid n'est pas fourni mais qu'on a le nom, recherche dans la collection 'users'
+    if (!targetRecipientUid && recipientName && db) {
+      try {
+        const uQuery = query(collection(db, 'users'), where('name', '==', recipientName), limit(1));
+        const uSnap = await getDocs(uQuery);
+        if (!uSnap.empty) {
+          targetRecipientUid = uSnap.docs[0].id;
+        }
+      } catch (_) {}
+    }
+
+    await runTransaction(db, async (transaction) => {
+      // 1. Débit Expéditeur
+      const senderRef = doc(db, 'users', String(senderUid));
+      const senderDoc = await transaction.get(senderRef);
+      if (senderDoc.exists()) {
+        const senderData = senderDoc.data();
+        const currentSenderTokens = Number(senderData.trocoTokens || 0);
+        const newSenderTokens = Math.max(0, currentSenderTokens - tokenAmount);
+        transaction.update(senderRef, {
+          trocoTokens: newSenderTokens,
+          updatedAt: serverTimestamp(),
+        });
+      }
+
+      // 2. Crédit Destinataire
+      if (targetRecipientUid) {
+        const recipientRef = doc(db, 'users', String(targetRecipientUid));
+        const recipientDoc = await transaction.get(recipientRef);
+        if (recipientDoc.exists()) {
+          const recipientData = recipientDoc.data();
+          const currentRecipientTokens = Number(recipientData.trocoTokens || 0);
+          transaction.update(recipientRef, {
+            trocoTokens: currentRecipientTokens + tokenAmount,
+            updatedAt: serverTimestamp(),
+          });
+        } else {
+          transaction.set(recipientRef, {
+            name: recipientName || 'Utilisateur Troco',
+            trocoTokens: tokenAmount,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          }, { merge: true });
+        }
+      }
+    });
+
+    // 3. Messages et enregistrement de transaction
+    if (chatId && db) {
+      const transferText = `🪙 ${senderName || 'Moi'} a envoyé ${tokenAmount} Jeton${tokenAmount > 1 ? 's' : ''} Troco à ${recipientName || 'Interlocuteur'}${comment ? ` (« ${comment} »)` : ''} !`;
+      await addDoc(collection(db, 'chats', String(chatId), 'messages'), {
+        text: transferText,
+        type: 'token_transfer',
+        tokenAmount: tokenAmount,
+        transferComment: comment || '',
+        sender: senderUid,
+        senderName: senderName || 'Moi',
+        recipientUid: targetRecipientUid || '',
+        recipientName: recipientName || '',
+        timestamp: serverTimestamp(),
+        createdAt: Date.now(),
+      });
+
+      await setDoc(doc(db, 'chats', String(chatId)), {
+        lastMessage: transferText,
+        lastMessageTimestamp: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+    }
+
+    if (db) {
+      await addDoc(collection(db, 'transactions'), {
+        type: 'token_transfer',
+        senderUid: senderUid,
+        senderName: senderName,
+        recipientUid: targetRecipientUid || '',
+        recipientName: recipientName || '',
+        tokens: tokenAmount,
+        comment: comment || '',
+        createdAt: serverTimestamp(),
+      });
+    }
+
+    return { success: true, targetRecipientUid };
+  } catch (error) {
+    console.error('[FirestoreService] executeDirectTokenTransfer error:', error);
+    return { success: false, error };
+  }
+};
+

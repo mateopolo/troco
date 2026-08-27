@@ -67,6 +67,7 @@ export default function CollaborativeWhiteboardModal({
   currentUser = null,
   darkMode = false,
   onSendToChat = null,
+  handleSendMessage = null,
 }) {
   const effectiveBoardId = boardId || groupId || 'default_board';
   const myUid = currentUser?.uid || currentUser?.id || 'local_user';
@@ -705,25 +706,25 @@ export default function CollaborativeWhiteboardModal({
         }, { merge: true });
 
         // 2. Publication du message structuré dans le chat actif
-        if (groupId !== 'demo_group_whiteboard') {
-          const msgPayload = {
-            text: `🎨 ${myName} a partagé une nouvelle version du Whiteboard : "${finalTitle}" (V${nextVer})`,
-            sender: myUid,
-            senderName: myName,
-            senderAvatar: currentUser?.avatar || '',
-            timestamp: serverTimestamp(),
-            createdAt: Date.now(),
-            type: 'workspace_invite',
-            kind: 'workspace_invite',
-            workspaceType: 'whiteboard',
-            workspaceTitle: finalTitle,
-            boardId: effectiveBoardId,
-            version: `V${nextVer}`,
-            versionNumber: nextVer,
-            previewUrl: snapshotUrl,
-            summary: publishChangelog.trim() || `Mise à jour V${nextVer} avec ${paths.length} vecteurs et ${stickyNotes.length} notes`,
-          };
+        const msgPayload = {
+          text: `Nouvelle version du tableau blanc disponible (${finalTitle} - V${nextVer})`,
+          sender: myUid,
+          senderName: myName,
+          senderAvatar: currentUser?.avatar || '',
+          timestamp: serverTimestamp(),
+          createdAt: Date.now(),
+          type: 'workspace_invite',
+          kind: 'workspace_invite',
+          workspaceType: 'whiteboard',
+          workspaceTitle: finalTitle,
+          boardId: effectiveBoardId,
+          version: `V${nextVer}`,
+          versionNumber: nextVer,
+          previewUrl: snapshotUrl,
+          summary: publishChangelog.trim() || `Mise à jour V${nextVer} avec ${paths.length} vecteurs et ${stickyNotes.length} notes`,
+        };
 
+        if (groupId && groupId !== 'demo_group_whiteboard') {
           await addDoc(collection(db, 'chats', String(groupId), 'messages'), msgPayload);
 
           await setDoc(doc(db, 'chats', String(groupId)), {
@@ -731,6 +732,10 @@ export default function CollaborativeWhiteboardModal({
             lastSenderName: myName,
             updatedAt: serverTimestamp(),
           }, { merge: true });
+        }
+
+        if (typeof handleSendMessage === 'function') {
+          handleSendMessage(msgPayload);
         }
       }
 
