@@ -19,7 +19,7 @@ import TrocoLogo3D from './components/common/TrocoLogo3D';
 import PWAInstallBanner from './components/PWAInstallBanner';
 import SponsoredFeedCard from './components/SponsoredFeedCard';
 import SectoralErrorBoundary from './components/SectoralErrorBoundary';
-import { AuthScreen } from './features';
+import AuthScreen from './features/auth/AuthScreen';
 import { useWalletStore } from './stores';
 import { getCategoryLabel as getCategoryLabelUtil, formatStatus as formatStatusUtil, formatTokenCount as formatTokenCountUtil, formatCompensation as formatCompensationUtil } from './utils/formatters';
 import { generateTags } from './utils/tagGenerator';
@@ -93,7 +93,7 @@ export default function App() {
   }, [currentLang]);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const t = useCallback((key) => (translations[currentLang] && translations[currentLang][key]) || translations['FR'][key] || key, [currentLang]);
+  const t = useCallback((key) => (translations?.[currentLang]?.[key]) || (translations?.['FR']?.[key]) || key, [currentLang]);
 
   const getCategoryLabel = useCallback((categoryKey) => getCategoryLabelUtil(categoryKey, t), [t]);
   const formatStatus = useCallback((st) => formatStatusUtil(st, t), [t]);
@@ -1509,7 +1509,10 @@ export default function App() {
             status: docSnap.data().status || 'active',
             isDemo: false,
           }));
-          setListings([...demoBase, ...firestoreListings]);
+          setListings(prev => {
+            const customLocalListings = prev.filter(p => !p.isDemo && !firestoreListings.some(f => f.id === p.id));
+            return [...demoBase, ...firestoreListings, ...customLocalListings];
+          });
         },
         (error) => {
           console.warn('[Firestore] onSnapshot error:', error);
@@ -1635,7 +1638,8 @@ export default function App() {
 
       const itemLangs = item.languages ? [...item.languages, ...(item.translations ? Object.keys(item.translations) : []), item.nativeLang || 'FR'] : [item.nativeLang || 'FR', ...(item.translations ? Object.keys(item.translations) : [])];
       const matchesLanguage = selectedLanguages.length === 0 || itemLangs.some(lang => selectedLanguages.includes(lang));
-      const matchesPayment = selectedPayment === 'all' || (selectedPayment === 'credits' && item.compensation.includes('Crédit')) || (selectedPayment === 'cash' && item.compensation.includes('€')) || (selectedPayment === 'troc' && item.compensation.includes('Troc')) || (selectedPayment === 'hybrid' && item.compensation.includes('+'));
+      const compStr = String(item.compensation || '');
+      const matchesPayment = selectedPayment === 'all' || (selectedPayment === 'credits' && compStr.includes('Crédit')) || (selectedPayment === 'cash' && compStr.includes('€')) || (selectedPayment === 'troc' && compStr.includes('Troc')) || (selectedPayment === 'hybrid' && compStr.includes('+'));
 
       const distance = getListingDistance(item);
       const matchesDistance = (() => {
