@@ -32,7 +32,7 @@ import {
 } from './utils/translationHelpers';
 import FilterDrawer from './components/modals/FilterDrawer';
 import LanguageSelectModal from './components/modals/LanguageSelectModal';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { getActiveAnimation } from './config/animations';
 import {
   translations,
@@ -2819,42 +2819,44 @@ export default function App() {
         </div>
       )}
 
-      {/* CONTENU DYNAMIQUE SELON L'ONGLET SÉLECTIONNÉ (FRAMER MOTION ANIMATEPRESENCE) */}
-      <AnimatePresence mode="wait">
-        <motion.main
-          ref={mainContainerRef}
-          key={`${activeTab}-${viewMode}`}
-          {...getActiveAnimation('page')}
-          className={`premium-main ${activeTab === 'chat' ? 'chat-mode' : ''}`}
-          style={{
-            maxWidth: activeTab === 'feed' ? '1460px' : '1240px',
-            margin: '0 auto',
-            width: '100%',
-            boxSizing: 'border-box',
-            display: (activeTab === 'chat' || activeTab === 'community') ? 'flex' : 'block',
-            flexDirection: (activeTab === 'chat' || activeTab === 'community') ? 'column' : 'initial',
-            overflow: (activeTab === 'chat' || activeTab === 'community') ? 'hidden' : 'visible',
-            height: activeTab === 'chat'
-              ? (isMobile ? (selectedChat ? '100dvh' : 'calc(100dvh - 125px)') : 'calc(100vh - 138px)')
-              : (activeTab === 'community'
-                ? (isMobile ? 'calc(100dvh - 56px - 65px - env(safe-area-inset-bottom, 0px))' : 'calc(100vh - 138px)')
-                : 'auto'),
-            maxHeight: activeTab === 'chat'
-              ? (isMobile ? (selectedChat ? '100dvh' : 'calc(100dvh - 125px)') : 'calc(100vh - 138px)')
-              : (activeTab === 'community'
-                ? (isMobile ? 'calc(100dvh - 56px - 65px - env(safe-area-inset-bottom, 0px))' : 'calc(100vh - 138px)')
-                : 'none'),
-            padding: activeTab === 'chat'
-              ? (isMobile ? (selectedChat ? '0' : '0 6px') : '14px 16px 0 16px')
-              : (activeTab === 'community'
-                ? (isMobile ? '8px 10px 0 10px' : '14px 16px 0 16px')
-                : (isMobile ? '12px 12px 90px' : '20px 20px 90px')),
-            transition: 'max-width 0.3s ease'
-          }}
-        >
+      {/* CONTENU DYNAMIQUE SELON L'ONGLET SÉLECTIONNÉ */}
+      <main
+        ref={mainContainerRef}
+        className={`premium-main ${activeTab === 'chat' ? 'chat-mode' : ''}`}
+        style={{
+          maxWidth: activeTab === 'feed' ? '1460px' : '1240px',
+          margin: '0 auto',
+          width: '100%',
+          boxSizing: 'border-box',
+          display: (activeTab === 'chat' || activeTab === 'community') ? 'flex' : 'block',
+          flexDirection: (activeTab === 'chat' || activeTab === 'community') ? 'column' : 'initial',
+          overflow: (activeTab === 'chat' || activeTab === 'community') ? 'hidden' : 'visible',
+          height: activeTab === 'chat'
+            ? (isMobile ? (selectedChat ? '100dvh' : 'calc(100dvh - 125px)') : 'calc(100vh - 138px)')
+            : (activeTab === 'community'
+              ? (isMobile ? 'calc(100dvh - 56px - 65px - env(safe-area-inset-bottom, 0px))' : 'calc(100vh - 138px)')
+              : 'auto'),
+          maxHeight: activeTab === 'chat'
+            ? (isMobile ? (selectedChat ? '100dvh' : 'calc(100dvh - 125px)') : 'calc(100vh - 138px)')
+            : (activeTab === 'community'
+              ? (isMobile ? 'calc(100dvh - 56px - 65px - env(safe-area-inset-bottom, 0px))' : 'calc(100vh - 138px)')
+              : 'none'),
+          padding: activeTab === 'chat'
+            ? (isMobile ? (selectedChat ? '0' : '0 6px') : '14px 16px 0 16px')
+            : (activeTab === 'community'
+              ? (isMobile ? '8px 10px 0 10px' : '14px 16px 0 16px')
+              : (isMobile ? '12px 12px 90px' : '20px 20px 90px')),
+          transition: 'max-width 0.3s ease'
+        }}
+      >
 
         {/* ONGLET 1 : EXPLORER / FEED */}
         {activeTab === 'feed' && (
+          <motion.div
+            key="page-feed"
+            {...getActiveAnimation('page')}
+            style={{ width: '100%' }}
+          >
           <div className="feed-layout-container">
             {/* BANNIÈRE LATÉRALE GAUCHE (DESKTOP) */}
             <aside className="desktop-ad-banner" aria-label="Espace Partenaires Troco">
@@ -3256,9 +3258,7 @@ export default function App() {
                     boxSizing: 'border-box'
                   }}
                 >
-                  {filteredListings.map((item, idx) => {
-                    const shouldRenderSponsor = (idx + 1) % 5 === 0;
-                    const sponsorIndex = Math.floor(idx / 5);
+                  {filteredListings.map((item, index) => {
 
                     return (
                       <React.Fragment key={item.id}>
@@ -3278,25 +3278,67 @@ export default function App() {
                           toggleOriginalListing={toggleOriginalListing}
                           localizeLocation={localizeLocation}
                           localizeTags={localizeTags}
-                          generateTags={generateTags}
-                          getAuthorAvatar={getAuthorAvatar}
-                          profile={profile}
-                          handleStartDiscussion={handleStartDiscussion}
+                          onMobileActionClick={setMobileListingActionTarget}
+                          onReportListing={(listing) => {
+                            setReportTarget({ listing, user: null });
+                            setIsReportModalOpen(true);
+                          }}
                           isAdmin={isAdmin}
-                          isGodModeActive={isGodModeActive}
-                          onAdminDeleteListing={handleAdminDeleteListing}
-                          onAdminToggleHideListing={handleAdminToggleHideListing}
-                          onAdminEditListing={handleAdminEditListing}
-                          onOpenMobileActions={setMobileListingActionTarget}
-                          t={t}
+                          onAdminDelete={(listing) => {
+                            if (window.confirm(`[ADMINISTRATEUR]\nSupprimer définitivement l'annonce #${listing.id} ?`)) {
+                              handleAdminDeleteListing(listing);
+                            }
+                          }}
+                          onAdminToggleHide={(listing) => {
+                            handleAdminToggleHideListing(listing);
+                          }}
+                          onAdminBoost={(listing) => {
+                            setBoostingListing(listing);
+                            setIsBoostModalOpen(true);
+                          }}
+                          onAuthorProfileClick={(authorProfile) => {
+                            if (!authorProfile) return;
+                            const userObj = {
+                              id: authorProfile.uid || `user-${authorProfile.name}`,
+                              name: authorProfile.name,
+                              user: authorProfile.name,
+                              avatar: authorProfile.avatar,
+                              bio: authorProfile.bio,
+                              rating: authorProfile.rating || 5.0,
+                              reviews: authorProfile.reviews || [],
+                              verified: authorProfile.verified || false,
+                              kycVerified: authorProfile.kycVerified || false,
+                              languages: authorProfile.languages || ['FR'],
+                              socials: authorProfile.socials || [],
+                              portfolio: authorProfile.portfolio || [],
+                              authorProfile: authorProfile,
+                            };
+                            setSelectedPublicUser(userObj);
+                          }}
                         />
-                        {shouldRenderSponsor && (
+
+                        {/* INJECTION FLUIDE D'UNE CARTE SPONSORISÉE TOUTES LES 6 ANNONCES */}
+                        {(index + 1) % 6 === 0 && (
                           <SponsoredFeedCard
-                            key={`sponsor-slot-${idx}`}
-                            index={sponsorIndex}
+                            key={`sponsored-card-${index}`}
                             darkMode={darkMode}
-                            onOpenNotification={(msg) => {
-                              setSaveMessage(msg);
+                            currentLang={currentLang}
+                            t={t}
+                            onOpenBoostModal={() => {
+                              const myListing = listings.find(l => l.author === profile.name) || listings[0];
+                              setBoostingListing(myListing);
+                              setIsBoostModalOpen(true);
+                            }}
+                            onOpenBusinessOffer={() => {
+                              setIsCguViewerOpen(true);
+                            }}
+                            onClaimBonus={(amount) => {
+                              setProfile(prev => ({
+                                ...prev,
+                                euroBalance: Number((prev.euroBalance + amount).toFixed(2))
+                              }));
+                              playApplePaySound();
+                              setSaveMessage(`🎁 Bonus partenaire crédité : +${amount}€ sur votre solde !`);
                               setTimeout(() => setSaveMessage(''), 6000);
                             }}
                           />
@@ -3364,7 +3406,6 @@ export default function App() {
                   <Flame size={13} /> Booster mon annonce
                 </button>
               </div>
-
               <div className="ad-card">
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                   <span style={{ fontSize: '9px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#7E22CE', backgroundColor: '#F3E8FF', padding: '3px 7px', borderRadius: '6px' }}>
@@ -3404,10 +3445,16 @@ export default function App() {
               </div>
             </aside>
           </div>
-        )}
+        </motion.div>
+      )}
 
-        {/* ONGLET COMMUNAUTÉ : TROCO LIVE & FIL D'ACTIVITÉ */}
-        {activeTab === 'community' && (
+      {/* ONGLET COMMUNAUTÉ : TROCO LIVE & FIL D'ACTIVITÉ */}
+      {activeTab === 'community' && (
+        <motion.div
+          key="page-community"
+          {...getActiveAnimation('page')}
+          style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', flex: 1 }}
+        >
           <SectoralErrorBoundary moduleName="Communauté & Troco Live">
             <Suspense fallback={<SkeletonModalFallback title="Chargement de Troco Live & Communauté..." />}>
               <CommunityHubSection
@@ -3430,15 +3477,21 @@ export default function App() {
               />
             </Suspense>
           </SectoralErrorBoundary>
-        )}
+        </motion.div>
+      )}
 
-        {/* ONGLET 2 : MESSAGERIE & NÉGOCIATIONS */}
-        {activeTab === 'chat' && (() => {
-          const activeChatData = chatsList.find(c => String(c.id) === String(selectedChat?.id));
-          const otherUserName = activeChatData?.user || selectedChat?.user;
-          const isThemTyping = !!(activeChatData?.typing && otherUserName && activeChatData.typing[otherUserName]);
+      {/* ONGLET 2 : MESSAGERIE & NÉGOCIATIONS */}
+      {activeTab === 'chat' && (() => {
+        const activeChatData = chatsList.find(c => String(c.id) === String(selectedChat?.id));
+        const otherUserName = activeChatData?.user || selectedChat?.user;
+        const isThemTyping = !!(activeChatData?.typing && otherUserName && activeChatData.typing[otherUserName]);
 
-          return (
+        return (
+          <motion.div
+            key="page-chat"
+            {...getActiveAnimation('page')}
+            style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', flex: 1 }}
+          >
             <SectoralErrorBoundary moduleName="Messagerie & Hub Collaboratif">
               <Suspense fallback={<SkeletonModalFallback title="Chargement de la messagerie..." />}>
                 <ChatSection
@@ -3482,11 +3535,17 @@ export default function App() {
                 />
               </Suspense>
             </SectoralErrorBoundary>
-          );
-        })()}
+          </motion.div>
+        );
+      })()}
 
-        {/* ONGLET 3 : DÉPOSER UNE ANNONCE */}
-        {activeTab === 'post' && (
+      {/* ONGLET 3 : DÉPOSER UNE ANNONCE */}
+      {activeTab === 'post' && (
+        <motion.div
+          key="page-post"
+          {...getActiveAnimation('page')}
+          style={{ width: '100%' }}
+        >
           <SectoralErrorBoundary featureName="Dépôt d'annonce">
             <Suspense fallback={<SkeletonModalFallback title="Chargement du tunnel d'annonce..." />}>
               <PostListingFeature
@@ -3524,10 +3583,16 @@ export default function App() {
               />
             </Suspense>
           </SectoralErrorBoundary>
-        )}
+        </motion.div>
+      )}
 
-        {/* ONGLET 4 : PROFIL UTILISATEUR */}
-        {activeTab === 'profile' && (
+      {/* ONGLET 4 : PROFIL UTILISATEUR */}
+      {activeTab === 'profile' && (
+        <motion.div
+          key="page-profile"
+          {...getActiveAnimation('page')}
+          style={{ width: '100%' }}
+        >
           <Suspense fallback={<SkeletonModalFallback title="Chargement du profil..." />}>
             <ProfileFeature
               profile={profile}
@@ -3559,9 +3624,9 @@ export default function App() {
               formatCompensation={formatCompensation}
             />
           </Suspense>
-        )}
-      </motion.main>
-    </AnimatePresence>
+        </motion.div>
+      )}
+    </main>
 
       {/* BARRE DE NAVIGATION EN BAS (CLEAN, TRANSPARENTE, AVEC GESTES DE SWIPE iOS) */}
       <AppBottomNav
