@@ -85,8 +85,20 @@ export default function CollaborativeWhiteboard({
   const [versionNumber, setVersionNumber] = useState(1);
   const [workspaceTitle, setWorkspaceTitle] = useState(projectTitle || 'Tableau Blanc Collaboratif');
   const [saveStatus, setSaveStatus] = useState('Prêt 🟢');
+  const [lastEditor, setLastEditor] = useState(myName);
   const [isSavingAndSharing, setIsSavingAndSharing] = useState(false);
   const [shareSuccessToast, setShareSuccessToast] = useState(false);
+
+  // Verrouillage strict du scroll global du document lors de l'ouverture
+  useEffect(() => {
+    if (isOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [isOpen]);
 
   // Interaction Refs
   const isDrawingRef = useRef(false);
@@ -260,7 +272,9 @@ export default function CollaborativeWhiteboard({
 
     // Connexion P2P pour diffusion immédiate
     whiteboardP2PService.joinRoom(effectiveId, (event) => {
+      if (event.authorName) setLastEditor(event.authorName);
       if (event.type === 'path_add' && event.path) {
+        if (event.path.authorName) setLastEditor(event.path.authorName);
         setPaths((prev) => {
           const remotePath = { ...event.path, isRemote: true };
           const next = [...prev, remotePath].slice(-450);
@@ -268,6 +282,7 @@ export default function CollaborativeWhiteboard({
           return next;
         });
       } else if (event.type === 'sticky_add' && event.sticky) {
+        if (event.sticky.authorName) setLastEditor(event.sticky.authorName);
         setStickyNotes((prev) => [...prev, event.sticky]);
       } else if (event.type === 'clear') {
         setPaths([]);
@@ -284,6 +299,8 @@ export default function CollaborativeWhiteboard({
         const unsub = onSnapshot(docRef, (snapshot) => {
           if (snapshot.exists() && isMounted) {
             const data = snapshot.data();
+            if (data.lastModifiedByName) setLastEditor(data.lastModifiedByName);
+            if (data.lastEditor) setLastEditor(data.lastEditor);
             if (data.version && data.version > versionNumber) {
               setVersionNumber(data.version);
             }
@@ -562,6 +579,8 @@ export default function CollaborativeWhiteboard({
         position: 'fixed',
         inset: 0,
         zIndex: 999999,
+        width: '100vw',
+        height: '100dvh',
         backgroundColor: darkMode ? '#12100E' : '#FDFBF7',
         color: 'var(--text-main, #1F2937)',
         display: 'flex',
@@ -569,8 +588,47 @@ export default function CollaborativeWhiteboard({
         userSelect: 'none',
         WebkitUserSelect: 'none',
         touchAction: 'none',
+        overflow: 'hidden',
+        pointerEvents: 'auto',
       }}
     >
+      {/* BADGE DE TRAÇABILITÉ COLLABORATIVE ("Modifié par...") */}
+      <div
+        style={{
+          position: 'absolute',
+          top: '72px',
+          left: '16px',
+          zIndex: 9999,
+          backgroundColor: darkMode ? 'rgba(26,23,21,0.88)' : 'rgba(255,255,255,0.88)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.1)',
+          borderRadius: '999px',
+          padding: '4px 12px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          fontSize: '11px',
+          fontWeight: '700',
+          color: darkMode ? '#FAF7F2' : '#3D3530',
+          boxShadow: '0 4px 14px rgba(0,0,0,0.12)',
+          pointerEvents: 'none',
+        }}
+      >
+        <span
+          style={{
+            width: '7px',
+            height: '7px',
+            borderRadius: '50%',
+            backgroundColor: '#10B981',
+            boxShadow: '0 0 6px #10B981',
+          }}
+        />
+        <span>
+          Dernière modification par : <strong style={{ color: 'var(--accent-primary, #C67D5B)' }}>{lastEditor || myName}</strong>
+        </span>
+      </div>
+
       {/* 1. BARRE D'EN-TÊTE SUPÉRIEURE (TITLE, VERSION, ACTIONS APPLE HIG) */}
       <div
         style={{

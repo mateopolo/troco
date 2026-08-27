@@ -101,8 +101,20 @@ export default function CollaborativeWhiteboardModal({
   const [versionNumber, setVersionNumber] = useState(1);
   const [workspaceTitle, setWorkspaceTitle] = useState(projectTitle || 'Tableau Blanc Collaboratif');
   const [saveStatus, setSaveStatus] = useState('Synchronisé en direct 🟢');
+  const [lastEditor, setLastEditor] = useState(myName);
   const [isSendingToChat, setIsSendingToChat] = useState(false);
   const [sendSuccessToast, setSendSuccessToast] = useState(false);
+
+  // Verrouillage strict du scroll global du document lors de l'ouverture
+  useEffect(() => {
+    if (isOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [isOpen]);
 
   // Modale de publication de version au chat
   const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
@@ -317,7 +329,9 @@ export default function CollaborativeWhiteboardModal({
 
     // 1. Écoute P2P WebRTC DataChannel (0ms de latence)
     whiteboardP2PService.joinRoom(effectiveBoardId, (event) => {
+      if (event.authorName) setLastEditor(event.authorName);
       if (event.type === 'path_add' && event.path) {
+        if (event.path.authorName) setLastEditor(event.path.authorName);
         setPaths((prev) => {
           const remotePath = { ...event.path, isRemote: true };
           const next = [...prev, remotePath].slice(-450);
@@ -325,6 +339,7 @@ export default function CollaborativeWhiteboardModal({
           return next;
         });
       } else if (event.type === 'sticky_add' && event.sticky) {
+        if (event.sticky.authorName) setLastEditor(event.sticky.authorName);
         setStickyNotes((prev) => [...prev, event.sticky]);
       } else if (event.type === 'sticky_update' && event.sticky) {
         setStickyNotes((prev) => prev.map((s) => (s.id === event.sticky.id ? event.sticky : s)));
@@ -350,6 +365,7 @@ export default function CollaborativeWhiteboardModal({
           if (snapshot.exists()) {
             const data = snapshot.data();
 
+            if (data.lastEditor) setLastEditor(data.lastEditor);
             if (data.versionNumber) setVersionNumber(data.versionNumber);
             if (data.title) setWorkspaceTitle(data.title);
 
@@ -727,13 +743,54 @@ export default function CollaborativeWhiteboardModal({
       style={{
         position: 'fixed',
         inset: 0,
+        zIndex: 999999,
+        width: '100vw',
+        height: '100dvh',
         backgroundColor: darkMode ? '#120F0D' : '#F5F0E8',
-        zIndex: 100010,
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
+        pointerEvents: 'auto',
       }}
     >
+      {/* BADGE DE TRAÇABILITÉ COLLABORATIVE ("Modifié par...") */}
+      <div
+        style={{
+          position: 'absolute',
+          top: isImmersiveMode ? '16px' : '72px',
+          left: '16px',
+          zIndex: 9999,
+          backgroundColor: darkMode ? 'rgba(28,24,22,0.88)' : 'rgba(255,255,255,0.88)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.1)',
+          borderRadius: '999px',
+          padding: '4px 12px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          fontSize: '11px',
+          fontWeight: '700',
+          color: darkMode ? '#FAF7F2' : '#3D3530',
+          boxShadow: '0 4px 14px rgba(0,0,0,0.12)',
+          pointerEvents: 'none',
+          transition: 'top 0.3s cubic-bezier(0.22, 1, 0.36, 1)',
+        }}
+      >
+        <span
+          style={{
+            width: '7px',
+            height: '7px',
+            borderRadius: '50%',
+            backgroundColor: '#10B981',
+            boxShadow: '0 0 6px #10B981',
+          }}
+        />
+        <span>
+          Dernière modification par : <strong style={{ color: 'var(--accent-primary, #C67D5B)' }}>{lastEditor || myName}</strong>
+        </span>
+      </div>
+
       {/* HEADER SUPÉRIEUR (MASQUÉ EN MODE IMMERSION) */}
       <header
         style={{
