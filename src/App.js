@@ -88,13 +88,14 @@ export default function App() {
   // eslint-disable-next-line no-unused-vars
   const [geolocMsg, setGeolocMsg] = useState('');
 
-  const t = (key) => (translations[currentLang] && translations[currentLang][key]) || translations['FR'][key] || key;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const t = useCallback((key) => (translations[currentLang] && translations[currentLang][key]) || translations['FR'][key] || key, [currentLang]);
 
-  const getCategoryLabel = (categoryKey) => getCategoryLabelUtil(categoryKey, t);
-  const formatStatus = (st) => formatStatusUtil(st, t);
-  const formatTokenCount = (count, lang = currentLang) => formatTokenCountUtil(count, lang);
-
-  const formatCompensation = (comp) => formatCompensationUtil(comp, currentLang, t);
+  const getCategoryLabel = useCallback((categoryKey) => getCategoryLabelUtil(categoryKey, t), [t]);
+  const formatStatus = useCallback((st) => formatStatusUtil(st, t), [t]);
+  // Stable : ne dépend que de currentLang, jamais de l'objet profile
+  const formatTokenCount = useCallback((count, lang = currentLang) => formatTokenCountUtil(count, lang), [currentLang]);
+  const formatCompensation = useCallback((comp) => formatCompensationUtil(comp, currentLang, t), [currentLang, t]);
   const [showingOriginalListings, setShowingOriginalListings] = useState({});
   const [showingOriginalMessages, setShowingOriginalMessages] = useState({});
   const mainContainerRef = useRef(null);

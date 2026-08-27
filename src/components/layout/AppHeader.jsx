@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Coins, Sparkles, Sun, Moon, Globe } from 'lucide-react';
 import TrocoLogo3D from '../common/TrocoLogo3D';
 import { AnimatedEuroBalance, AnimatedTokenBalance } from '../AnimatedBalances';
@@ -42,14 +42,15 @@ export const AppHeader = React.memo(({
     };
   }, []);
 
-  const handleLogoClick = () => {
+  const handleLogoClick = useCallback(() => {
     setActiveTab('feed');
     setSelectedListing(null);
     setSelectedChat(null);
     if (callState?.active && typeof endCall === 'function') {
       endCall();
     }
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [callState?.active]);
 
   const isHiddenOnMobileChat = isMobile && activeTab === 'chat' && Boolean(selectedChat);
 
@@ -287,9 +288,11 @@ export const AppHeader = React.memo(({
     prevProps.currentLang === nextProps.currentLang &&
     prevProps.selectedChat?.id === nextProps.selectedChat?.id &&
     prevProps.callState?.active === nextProps.callState?.active &&
+    prevProps.callState?.ringing === nextProps.callState?.ringing &&
     prevProps.profile?.euroBalance === nextProps.profile?.euroBalance &&
     prevProps.profile?.trocoTokens === nextProps.profile?.trocoTokens &&
-    prevProps.profile?.name === nextProps.profile?.name
+    prevProps.profile?.name === nextProps.profile?.name &&
+    prevProps.formatTokenCount === nextProps.formatTokenCount
   );
 });
 

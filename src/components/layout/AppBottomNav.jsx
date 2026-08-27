@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useCallback } from 'react';
 import { Search, Globe, MessageSquare, PlusCircle, User } from 'lucide-react';
 
 export const AppBottomNav = React.memo(({
@@ -76,7 +76,7 @@ export const AppBottomNav = React.memo(({
     };
   }, [activeTab, switchTab]);
 
-  const handlePostButtonClick = () => {
+  const handlePostButtonClick = useCallback(() => {
     if (typeof onPostClick === 'function') {
       onPostClick();
       return;
@@ -90,7 +90,8 @@ export const AppBottomNav = React.memo(({
     } else {
       switchTab('post');
     }
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, onPostClick, switchTab, defaultPostDraft]);
 
   const isHidden = (isMobile && activeTab === 'chat' && Boolean(selectedChat)) || Boolean(selectedListing);
 
@@ -366,7 +367,9 @@ export const AppBottomNav = React.memo(({
     prevProps.currentLang === nextProps.currentLang &&
     prevProps.unreadCount === nextProps.unreadCount &&
     prevProps.selectedChat?.id === nextProps.selectedChat?.id &&
-    Boolean(prevProps.selectedListing) === Boolean(nextProps.selectedListing)
+    Boolean(prevProps.selectedListing) === Boolean(nextProps.selectedListing) &&
+    prevProps.switchTab === nextProps.switchTab &&
+    prevProps.onPostClick === nextProps.onPostClick
   );
 });
 
