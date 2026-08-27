@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback, Suspense } from 'react';
-import { Search, MapPin, Video, Globe, Filter, MessageSquare, PlusCircle, User, ShieldCheck, CheckCircle, X, Sparkles, Coins, Trash2, Camera, Flame, Check, Lock, CreditCard, Tag, ChevronLeft, ChevronRight, Sun, Moon, ShieldAlert } from 'lucide-react';
+import { Search, MapPin, Video, Globe, Filter, ShieldCheck, CheckCircle, X, Sparkles, Coins, Trash2, Camera, Flame, Check, Lock, CreditCard, Tag, ChevronLeft, ChevronRight, ShieldAlert } from 'lucide-react';
 import { auth, db } from './firebase';
 import { collection, addDoc, doc, updateDoc, serverTimestamp, onSnapshot, query, orderBy, setDoc, deleteDoc, getDoc, getDocs, where, runTransaction } from 'firebase/firestore';
 import { isSignInWithEmailLink, signInWithEmailLink, signOut, onAuthStateChanged } from 'firebase/auth';
@@ -13,7 +13,7 @@ import { subscribeTranslations } from './utils/translator';
 import { playApplePaySound, playBetclicBalanceSound, playWelcomeGiftFanfare } from './utils/audioService';
 import { useChatManager } from './hooks/useChatManager';
 import { AppHeader, AppBottomNav } from './components/layout';
-import { themeMedia, fallbackCategoryImages, getSuggestedMedia, getSuggestedImage, getFallbackImage } from './utils/mediaHelpers';
+import { getSuggestedMedia, getSuggestedImage, getFallbackImage } from './utils/mediaHelpers';
 import FeedCardItem from './components/FeedCardItem';
 import { generateInvoiceRef } from './components/InvoiceCalculator';
 import TrocoLogo3D from './components/common/TrocoLogo3D';
@@ -182,16 +182,6 @@ export default function App() {
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState('list');
-
-  const switchTab = useCallback((newTab) => {
-    setActiveTab(newTab);
-    if (newTab !== 'chat') {
-      setSelectedChat(null);
-    }
-    if (typeof navigator !== 'undefined' && navigator.vibrate) {
-      try { navigator.vibrate(10); } catch (_) { }
-    }
-  }, [setActiveTab, setSelectedChat]);
 
   const TAB_ORDER = useMemo(() => ({ feed: 0, community: 1, chat: 2, post: 3, profile: 4, admin: 5 }), []);
   const prevTabRef = useRef(activeTab);
@@ -414,6 +404,16 @@ export default function App() {
     handleAcceptDeal,
     handleDeclineDeal,
   } = chatManager;
+
+  const switchTab = useCallback((newTab) => {
+    setActiveTab(newTab);
+    if (newTab !== 'chat') {
+      setSelectedChat(null);
+    }
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      try { navigator.vibrate(10); } catch (_) { }
+    }
+  }, [setActiveTab, setSelectedChat]);
 
   // Handler de succès de paiement (crédit solde, enregistrement transaction Firestore)
   // Handler de succès de paiement (crédit solde, abonnement Troco Plus, enregistrement transaction Firestore)
@@ -1040,8 +1040,6 @@ export default function App() {
     localStream,
     remoteStream,
     incomingCall,
-    localVideoRef,
-    remoteVideoRef,
     facingMode,
     hasMultipleCameras,
     switchCamera,
