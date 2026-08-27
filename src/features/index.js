@@ -6,4 +6,5 @@ export * from './profile';
 export * from './payment';
 export * from './community';
 export * from './post';
+export * from './workspace';
 export { default as AuthScreen } from './auth/AuthScreen';

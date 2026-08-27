@@ -14,11 +14,12 @@ import { analyzeContent } from '../utils/contentModeration';
 import VoiceNotePlayer from './VoiceNotePlayer';
 import VoiceNoteRecorder from './VoiceNoteRecorder';
 import PublicProfileModal from './PublicProfileModal';
+import WorkspaceMessageCard from '../features/workspace/WorkspaceMessageCard';
 
 // Lazy loading des outils collaboratifs & suites vectorielles lourdes pour préserver les performances et la rapidité du build
 const CreateProjectGroupModal = lazy(() => import('./CreateProjectGroupModal'));
 const ProjectRewardsModal = lazy(() => import('./ProjectRewardsModal'));
-const CollaborativeWhiteboardModal = lazy(() => import('./CollaborativeWhiteboardModal'));
+const CollaborativeWhiteboard = lazy(() => import('../features/workspace/CollaborativeWhiteboard'));
 const SharedDocumentModal = lazy(() => import('./SharedDocumentModal'));
 const ProjectWorkspaceToolsModal = lazy(() => import('./ProjectWorkspaceToolsModal'));
 const CloudOfficeSuiteModal = lazy(() => import('./CloudOfficeSuiteModal'));
@@ -1489,111 +1490,29 @@ function ChatView({
                 const isMine = (msg.senderName && profile?.name)
                   ? (msg.senderName.trim().toLowerCase() === profile.name.trim().toLowerCase())
                   : (msg.sender === 'me');
-                const wType = msg.workspaceType || 'whiteboard';
-                const isNotes = wType === 'notes';
-                const isDocs = wType === 'docs';
-                const isSheets = wType === 'sheets';
-
-                const badgeColor = isNotes ? '#F59E0B' : isDocs ? '#3B82F6' : isSheets ? '#10B981' : 'var(--accent-primary)';
-                const icon = isNotes ? <Edit3 size={18} /> : isDocs ? <FileText size={18} /> : isSheets ? <Table size={18} /> : <Palette size={18} />;
 
                 return (
-                  <div
-                    key={msg.id}
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: isMine ? 'flex-end' : 'flex-start',
-                      width: '100%',
-                      margin: '8px 0',
-                      boxSizing: 'border-box'
+                  <WorkspaceMessageCard
+                    key={msg.id || `ws_${msg.timestamp || Date.now()}`}
+                    msg={msg}
+                    isMine={isMine}
+                    isMobile={isMobile}
+                    darkMode={darkMode}
+                    onOpenWorkspace={({ type, workspaceId: targetWsId, boardId: targetBoardId }) => {
+                      if (type === 'notes') {
+                        setIsSharedDocOpen(true);
+                      } else if (type === 'docs') {
+                        setOfficeInitialTab('docs');
+                        setIsCloudOfficeOpen(true);
+                      } else if (type === 'sheets') {
+                        setOfficeInitialTab('sheets');
+                        setIsCloudOfficeOpen(true);
+                      } else {
+                        setActiveWhiteboardBoardId(targetWsId || targetBoardId || (effectiveSelectedChat?.id ? `board-${effectiveSelectedChat.id}` : 'default_board'));
+                        setIsWhiteboardOpen(true);
+                      }
                     }}
-                  >
-                    <div
-                      style={{
-                        width: isMobile ? '92%' : '75%',
-                        maxWidth: '460px',
-                        border: `1.5px solid ${badgeColor}`,
-                        borderRadius: '18px',
-                        padding: '14px',
-                        backgroundColor: 'var(--bg-card)',
-                        boxShadow: 'var(--shadow-card)',
-                        boxSizing: 'border-box',
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                        <div style={{
-                          width: '38px',
-                          height: '38px',
-                          borderRadius: '12px',
-                          backgroundColor: `${badgeColor}22`,
-                          color: badgeColor,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          flexShrink: 0
-                        }}>
-                          {icon}
-                        </div>
-                        <div style={{ minWidth: 0, flex: 1 }}>
-                          <div style={{ fontSize: '13.5px', fontWeight: '800', color: 'var(--text-main)' }}>
-                            {msg.workspaceTitle || (isNotes ? 'Notes Partagées (Apple-Style)' : isDocs ? 'Document Troco Docs' : isSheets ? 'Tableur Troco Sheets' : 'Tableau Blanc Collaboratif')}
-                          </div>
-                          <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                            Lancé par {msg.senderName || (isMine ? 'Vous' : 'Collaborateur')}
-                          </div>
-                        </div>
-                      </div>
-
-                      <p style={{ margin: '0 0 12px 0', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                        {isNotes
-                          ? 'Session de notes synchronisées en direct. Cliquez pour co-rédiger vos comptes-rendus et checklists.'
-                          : isDocs
-                            ? 'Document Markdown collaboratif en temps réel.'
-                            : isSheets
-                              ? 'Tableur multijoueur avec calculs et formules instantanées.'
-                              : 'Espace de dessin et schémas multijoueur 0ms sans latence.'}
-                      </p>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (isNotes) {
-                            setIsSharedDocOpen(true);
-                          } else if (isDocs) {
-                            setOfficeInitialTab('docs');
-                            setIsCloudOfficeOpen(true);
-                          } else if (isSheets) {
-                            setOfficeInitialTab('sheets');
-                            setIsCloudOfficeOpen(true);
-                          } else {
-                            setActiveWhiteboardBoardId(msg.boardId || (effectiveSelectedChat?.id ? `board-${effectiveSelectedChat.id}` : 'default_board'));
-                            setIsWhiteboardOpen(true);
-                          }
-                        }}
-                        className="premium-button"
-                        style={{
-                          width: '100%',
-                          border: 'none',
-                          borderRadius: '10px',
-                          padding: '10px 14px',
-                          backgroundColor: badgeColor,
-                          color: '#FFFFFF',
-                          fontSize: '12px',
-                          fontWeight: '800',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '6px',
-                          boxShadow: 'var(--shadow-accent)',
-                        }}
-                      >
-                        <Sparkles size={14} />
-                        <span>Rejoindre {isNotes ? 'la Note' : isDocs ? 'le Document' : isSheets ? 'le Tableur' : 'le Tableau Blanc'} en direct</span>
-                      </button>
-                    </div>
-                  </div>
+                  />
                 );
               }
 
@@ -2889,21 +2808,21 @@ function ChatView({
       {/* MODALE TABLEAU BLANC COLLABORATIF 100% CANVAS (LAZY LOADED) */}
       {isWhiteboardOpen && activeChatObj && (
         <Suspense fallback={null}>
-          <CollaborativeWhiteboardModal
+          <CollaborativeWhiteboard
             isOpen={isWhiteboardOpen}
             onClose={() => setIsWhiteboardOpen(false)}
             groupId={selectedChat?.id || activeChatObj.id || activeChatObj.firestoreId || 'group_whiteboard'}
             boardId={activeWhiteboardBoardId || (activeChatObj.id ? `board-${activeChatObj.id}` : 'default_board')}
+            workspaceId={activeWhiteboardBoardId || (activeChatObj.id ? `ws_${activeChatObj.id}_whiteboard` : 'default_board')}
             projectTitle={activeChatObj.projectTitle || activeChatObj.user || 'Tableau Blanc Collaboratif'}
             currentUser={profile}
             darkMode={darkMode}
             onSendMessage={handleSendMessage}
-            handleSendMessage={handleSendMessage}
             onSendToChat={(sentBoardId, version, msgPayload) => {
               if (typeof handleSendMessage === 'function' && msgPayload) {
                 handleSendMessage(msgPayload);
               }
-              if (setChatInputText) setChatInputText('');
+              if (typeof setChatInputText === 'function') setChatInputText('');
             }}
           />
         </Suspense>
