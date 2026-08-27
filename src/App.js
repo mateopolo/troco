@@ -5,7 +5,7 @@ import { collection, addDoc, doc, updateDoc, serverTimestamp, onSnapshot, query,
 import { isSignInWithEmailLink, signInWithEmailLink, signOut, onAuthStateChanged } from 'firebase/auth';
 import { useWebRTC } from './hooks/useWebRTC';
 import { useTheme } from './contexts/ThemeContext';
-import { SkeletonModalFallback } from './components/SkeletonLoader';
+import { SkeletonModalFallback, SkeletonFeedLayout, SkeletonChatLayout, SkeletonProfileLayout, SkeletonCommunityLayout, SkeletonPostLayout } from './components/SkeletonLoader';
 import CookieBanner from './components/CookieBanner';
 import { TROCO_CATEGORIES } from './data/categoriesData';
 import { mockListings } from './data/mockData';
@@ -3232,7 +3232,7 @@ export default function App() {
                   </button>
                 </div>
               ) : viewMode === 'map' ? (
-                <Suspense fallback={<SkeletonModalFallback title="Chargement de la carte interactive..." />}>
+                <Suspense fallback={<SkeletonFeedLayout />}>
                   <MapSection
                     filteredListings={filteredListings}
                     mapCenter={mapCenter}
@@ -3457,7 +3457,7 @@ export default function App() {
           style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', flex: 1 }}
         >
           <SectoralErrorBoundary moduleName="Communauté & Troco Live">
-            <Suspense fallback={<SkeletonModalFallback title="Chargement de Troco Live & Communauté..." />}>
+            <Suspense fallback={<SkeletonCommunityLayout />}>
               <CommunityHubSection
                 currentUser={profile}
                 onOpenProfile={(targetUser) => {
@@ -3494,7 +3494,7 @@ export default function App() {
             style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', flex: 1 }}
           >
             <SectoralErrorBoundary moduleName="Messagerie & Hub Collaboratif">
-              <Suspense fallback={<SkeletonModalFallback title="Chargement de la messagerie..." />}>
+              <Suspense fallback={<SkeletonChatLayout />}>
                 <ChatSection
                   activeTab={activeTab}
                   mockChats={chatsList}
@@ -3548,7 +3548,7 @@ export default function App() {
           style={{ width: '100%' }}
         >
           <SectoralErrorBoundary featureName="Dépôt d'annonce">
-            <Suspense fallback={<SkeletonModalFallback title="Chargement du tunnel d'annonce..." />}>
+            <Suspense fallback={<SkeletonPostLayout />}>
               <PostListingFeature
                 profile={profile}
                 setProfile={setProfile}
@@ -3594,7 +3594,7 @@ export default function App() {
           {...getActiveAnimation('page')}
           style={{ width: '100%' }}
         >
-          <Suspense fallback={<SkeletonModalFallback title="Chargement du profil..." />}>
+          <Suspense fallback={<SkeletonProfileLayout />}>
             <ProfileFeature
               profile={profile}
               setProfile={setProfile}
