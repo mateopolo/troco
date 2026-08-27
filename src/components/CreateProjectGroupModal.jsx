@@ -70,21 +70,23 @@ export default function CreateProjectGroupModal({
       ? (customCategoryName.trim() || 'Projet Collaboratif Sur-Mesure')
       : projectCategory;
 
-    onCreateGroup({
-      projectTitle: title,
-      category: finalCategory,
-      description: description.trim(),
-      rewardPool: parseFloat(rewardPool) || 0,
-      rewardStrategy,
-      participants: allParticipants,
-      members: allParticipants.map(name => ({
-        name,
-        role: name === myName ? 'Initiateur / Leader' : 'Contributeur Projet',
-        tokensEarned: 0,
-      })),
-    });
+    if (typeof onCreateGroup === 'function') {
+      onCreateGroup({
+        projectTitle: title,
+        category: finalCategory,
+        description: description.trim(),
+        rewardPool: parseFloat(rewardPool) || 0,
+        rewardStrategy,
+        participants: allParticipants,
+        members: allParticipants.map(name => ({
+          name,
+          role: name === myName ? 'Initiateur / Leader' : 'Contributeur Projet',
+          tokensEarned: 0,
+        })),
+      });
+    }
 
-    onClose();
+    onClose?.();
   };
 
   const modalElement = (

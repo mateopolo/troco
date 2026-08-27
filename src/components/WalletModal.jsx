@@ -22,25 +22,25 @@ export default function WalletModal({
   return (
     <div style={{ position: 'fixed', inset: 0, backgroundColor: 'var(--overlay-bg)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', zIndex: 50 }}>
       <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '24px', width: '100%', maxWidth: '560px', padding: '24px', boxShadow: 'var(--shadow-modal)', border: '1px solid var(--border-color)', position: 'relative' }}>
-        <button onClick={onClose} style={{ position: 'absolute', top: '16px', right: '16px', border: 'none', backgroundColor: 'var(--bg-subtle)', width: '34px', height: '34px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-main)' }}>
+        <button onClick={() => onClose?.()} style={{ position: 'absolute', top: '16px', right: '16px', border: 'none', backgroundColor: 'var(--bg-subtle)', width: '34px', height: '34px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-main)' }}>
           <X size={16} />
         </button>
 
         <div style={{ marginBottom: '18px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--accent-primary)', fontWeight: '700', marginBottom: '6px' }}>
             <Coins size={18} />
-            <span>{t('wallet')}</span>
+            <span>{typeof t === 'function' ? t('wallet') : 'Portefeuille'}</span>
           </div>
-          <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '24px', fontWeight: '600', color: 'var(--text-main)' }}>{t('manageWalletSub')}</h3>
-          <p style={{ margin: '6px 0 0', fontSize: '13px', color: 'var(--text-secondary)' }}>{t('walletNotice')}</p>
+          <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '24px', fontWeight: '600', color: 'var(--text-main)' }}>{typeof t === 'function' ? t('manageWalletSub') : 'Gérer mon solde'}</h3>
+          <p style={{ margin: '6px 0 0', fontSize: '13px', color: 'var(--text-secondary)' }}>{typeof t === 'function' ? t('walletNotice') : ''}</p>
         </div>
 
         <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-          <button onClick={() => setWalletTab('cash')} style={{ flex: 1, border: walletTab === 'cash' ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)', borderRadius: '14px', padding: '10px', backgroundColor: walletTab === 'cash' ? 'var(--bg-subtle)' : 'var(--bg-card)', color: walletTab === 'cash' ? 'var(--accent-primary)' : 'var(--text-secondary)', fontWeight: '700', cursor: 'pointer' }}>
-            {t('rechargeCash')}
+          <button onClick={() => setWalletTab?.('cash')} style={{ flex: 1, border: walletTab === 'cash' ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)', borderRadius: '14px', padding: '10px', backgroundColor: walletTab === 'cash' ? 'var(--bg-subtle)' : 'var(--bg-card)', color: walletTab === 'cash' ? 'var(--accent-primary)' : 'var(--text-secondary)', fontWeight: '700', cursor: 'pointer' }}>
+            {typeof t === 'function' ? t('rechargeCash') : 'Recharger'}
           </button>
-          <button onClick={() => setWalletTab('tokens')} style={{ flex: 1, border: walletTab === 'tokens' ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)', borderRadius: '14px', padding: '10px', backgroundColor: walletTab === 'tokens' ? 'var(--bg-subtle)' : 'var(--bg-card)', color: walletTab === 'tokens' ? 'var(--accent-primary)' : 'var(--text-secondary)', fontWeight: '700', cursor: 'pointer' }}>
-            {t('buyTokens')}
+          <button onClick={() => setWalletTab?.('tokens')} style={{ flex: 1, border: walletTab === 'tokens' ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)', borderRadius: '14px', padding: '10px', backgroundColor: walletTab === 'tokens' ? 'var(--bg-subtle)' : 'var(--bg-card)', color: walletTab === 'tokens' ? 'var(--accent-primary)' : 'var(--text-secondary)', fontWeight: '700', cursor: 'pointer' }}>
+            {typeof t === 'function' ? t('buyTokens') : 'Acheter des Jetons'}
           </button>
         </div>
 
@@ -48,24 +48,24 @@ export default function WalletModal({
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
               {[10, 20, 50].map(amount => (
-                <button key={amount} onClick={() => setWalletAmount(amount)} style={{ border: walletAmount === amount ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)', borderRadius: '999px', padding: '8px 16px', backgroundColor: walletAmount === amount ? 'var(--bg-subtle)' : 'var(--bg-card)', color: walletAmount === amount ? 'var(--accent-primary)' : 'var(--text-main)', fontWeight: '800', cursor: 'pointer' }}>
+                <button key={amount} onClick={() => setWalletAmount?.(amount)} style={{ border: walletAmount === amount ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)', borderRadius: '999px', padding: '8px 16px', backgroundColor: walletAmount === amount ? 'var(--bg-subtle)' : 'var(--bg-card)', color: walletAmount === amount ? 'var(--accent-primary)' : 'var(--text-main)', fontWeight: '800', cursor: 'pointer' }}>
                   {amount}€
                 </button>
               ))}
             </div>
             <div style={{ border: '1px solid var(--border-color)', borderRadius: '16px', padding: '14px', backgroundColor: 'var(--bg-subtle)' }}>
-              <label style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)' }}>{t('customAmount')}</label>
-              <input type="number" min="1" value={walletAmount} onChange={(e) => setWalletAmount(Number(e.target.value))} style={{ width: '100%', marginTop: '8px', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '10px 12px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', outline: 'none' }} />
+              <label style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)' }}>{typeof t === 'function' ? t('customAmount') : 'Montant libre'}</label>
+              <input type="number" min="1" value={walletAmount} onChange={(e) => setWalletAmount?.(Number(e.target.value))} style={{ width: '100%', marginTop: '8px', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '10px 12px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', outline: 'none' }} />
             </div>
             <button
               onClick={() => {
-                onClose();
-                openCheckout({ mode: 'wallet-cash', amount: walletAmount, label: 'Rechargement du solde Euro' });
+                onClose?.();
+                if (typeof openCheckout === 'function') openCheckout({ mode: 'wallet-cash', amount: walletAmount, label: 'Rechargement du solde Euro' });
               }}
               className="premium-button"
               style={{ width: '100%', border: 'none', borderRadius: '14px', padding: '12px', background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)', color: '#FFFFFF', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: 'var(--shadow-accent)' }}
             >
-              <Lock size={14} /> {t('rechargeAction')} {walletAmount}€ — {t('securePaymentHeader')}
+              <Lock size={14} /> {typeof t === 'function' ? t('rechargeAction') : 'Recharger'} {walletAmount}€ — {typeof t === 'function' ? t('securePaymentHeader') : 'Paiement sécurisé'}
             </button>
           </div>
         ) : (
@@ -74,9 +74,9 @@ export default function WalletModal({
               { amount: 1, euros: 12, titleKey: 'pack1Token' },
               { amount: 5, euros: 50, titleKey: 'pack5Tokens' }
             ].map(pack => {
-              const titleText = t(pack.titleKey);
-              const tokenText = formatTokenCount(pack.amount, currentLang);
-              const buyBtnText = `${t('buyAction')} ${tokenText} — ${pack.euros}€`;
+              const titleText = typeof t === 'function' ? t(pack.titleKey) : pack.titleKey;
+              const tokenText = typeof formatTokenCount === 'function' ? formatTokenCount(pack.amount, currentLang) : `${pack.amount} jetons`;
+              const buyBtnText = `${typeof t === 'function' ? t('buyAction') : 'Acheter'} ${tokenText} — ${pack.euros}€`;
               const isInsufficient = euroBalance < pack.euros;
               return (
                 <div key={pack.titleKey} style={{ border: '1px solid var(--border-color)', borderRadius: '16px', padding: '14px', backgroundColor: 'var(--bg-subtle)' }}>
@@ -84,7 +84,7 @@ export default function WalletModal({
                     <div style={{ fontWeight: '700', color: 'var(--text-main)' }}>{titleText}</div>
                     <span style={{ fontSize: '14px', fontWeight: '800', color: 'var(--accent-primary)' }}>{pack.euros}€</span>
                   </div>
-                  <p style={{ margin: '0 0 10px', fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{t('tokenPackSub')}</p>
+                  <p style={{ margin: '0 0 10px', fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>{typeof t === 'function' ? t('tokenPackSub') : ''}</p>
                   {isInsufficient && (
                     <div style={{ fontSize: '12px', color: 'var(--accent-danger)', fontWeight: '600', marginBottom: '8px', padding: '8px 10px', backgroundColor: 'rgba(239,68,68,0.12)', borderRadius: '10px', border: '1px solid var(--accent-danger)' }}>
                       ⚠️ Solde insuffisant ({euroBalance.toFixed(2)}€ disponibles sur {pack.euros}€ requis) — Recharge ton solde Euro d'abord.
@@ -93,8 +93,8 @@ export default function WalletModal({
                   <button
                     onClick={() => {
                       if (isInsufficient) return;
-                      onClose();
-                      openCheckout({ mode: 'wallet-tokens', amount: pack.euros, label: titleText, payload: { tokenAmount: pack.amount } });
+                      onClose?.();
+                      if (typeof openCheckout === 'function') openCheckout({ mode: 'wallet-tokens', amount: pack.euros, label: titleText, payload: { tokenAmount: pack.amount } });
                     }}
                     disabled={isInsufficient}
                     className="premium-button"

@@ -43,21 +43,23 @@ export default function ProjectRewardsModal({
     const amount = calculateAmount();
     if (!beneficiary || amount <= 0) return;
 
-    onProposeReward({
-      id: `reward-${Date.now()}`,
-      beneficiary,
-      title: rewardTitle.trim() || (rewardType === 'hourly' ? `Prestation horaire (${hoursCount}h)` : 'Rétribution de tâche'),
-      type: rewardType,
-      hours: rewardType === 'hourly' ? parseFloat(hoursCount) : null,
-      amount,
-      status: 'pending',
-      proposedBy: profile?.name || 'Initiateur',
-      createdAt: new Date(),
-    });
+    if (typeof onProposeReward === 'function') {
+      onProposeReward({
+        id: `reward-${Date.now()}`,
+        beneficiary,
+        title: rewardTitle.trim() || (rewardType === 'hourly' ? `Prestation horaire (${hoursCount}h)` : 'Rétribution de tâche'),
+        type: rewardType,
+        hours: rewardType === 'hourly' ? parseFloat(hoursCount) : null,
+        amount,
+        status: 'pending',
+        proposedBy: profile?.name || 'Initiateur',
+        createdAt: new Date(),
+      });
+    }
 
     setShowAddForm(false);
     setRewardTitle('');
-    onClose();
+    onClose?.();
   };
 
   const modalElement = (

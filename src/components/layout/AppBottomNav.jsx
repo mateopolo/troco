@@ -81,14 +81,14 @@ export const AppBottomNav = React.memo(({
       onPostClick();
       return;
     }
-    setSelectedChat(null);
+    setSelectedChat?.(null);
     if (activeTab === 'post') {
-      setPostStep(1);
-      if (defaultPostDraft) setPostDraft(defaultPostDraft);
-      setPublishMessage('');
-      setIsEditingListing(false);
+      setPostStep?.(1);
+      if (defaultPostDraft) setPostDraft?.(defaultPostDraft);
+      setPublishMessage?.('');
+      setIsEditingListing?.(false);
     } else {
-      switchTab('post');
+      switchTab?.('post');
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, onPostClick, switchTab, defaultPostDraft]);
@@ -129,11 +129,11 @@ export const AppBottomNav = React.memo(({
           willChange: 'transform',
         }}
       >
-        {/* 1. EXPLORER */}
+        {/* 1. EXPLORER (FEED) */}
         <button
           type="button"
           data-tab="feed"
-          onClick={() => switchTab('feed')}
+          onClick={() => switchTab?.('feed')}
           style={{
             border: 'none',
             background: 'transparent',
@@ -144,6 +144,7 @@ export const AppBottomNav = React.memo(({
             color: activeTab === 'feed' ? 'var(--accent-primary)' : 'var(--text-secondary)',
             cursor: 'pointer',
             padding: '6px 14px',
+            position: 'relative',
             transition: 'transform 0.3s var(--ease-monopo), color 0.2s ease',
             transform: activeTab === 'feed' ? 'scale(1.06)' : 'scale(1)',
             outline: 'none',
@@ -162,7 +163,7 @@ export const AppBottomNav = React.memo(({
               color: activeTab === 'feed' ? 'var(--accent-primary)' : 'var(--text-secondary)',
             }}
           >
-            {t('explorer')}
+            {typeof t === 'function' ? t('explorer') : 'Explorer'}
           </span>
         </button>
 
@@ -170,7 +171,7 @@ export const AppBottomNav = React.memo(({
         <button
           type="button"
           data-tab="community"
-          onClick={() => switchTab('community')}
+          onClick={() => switchTab?.('community')}
           style={{
             border: 'none',
             background: 'transparent',
@@ -223,7 +224,7 @@ export const AppBottomNav = React.memo(({
         <button
           type="button"
           data-tab="chat"
-          onClick={() => switchTab('chat')}
+          onClick={() => switchTab?.('chat')}
           style={{
             border: 'none',
             background: 'transparent',
@@ -279,7 +280,7 @@ export const AppBottomNav = React.memo(({
               color: activeTab === 'chat' ? 'var(--accent-primary)' : 'var(--text-secondary)',
             }}
           >
-            {t('messages')}
+            {typeof t === 'function' ? t('messages') : 'Messages'}
           </span>
         </button>
 
@@ -316,7 +317,7 @@ export const AppBottomNav = React.memo(({
               color: activeTab === 'post' ? 'var(--accent-primary)' : 'var(--text-secondary)',
             }}
           >
-            {currentLang === 'FR' ? 'Déposer' : t('post')}
+            {currentLang === 'FR' ? 'Déposer' : (typeof t === 'function' ? t('post') : 'Déposer')}
           </span>
         </button>
 
@@ -324,7 +325,7 @@ export const AppBottomNav = React.memo(({
         <button
           type="button"
           data-tab="profile"
-          onClick={() => switchTab('profile')}
+          onClick={() => switchTab?.('profile')}
           style={{
             border: 'none',
             background: 'transparent',
@@ -353,7 +354,7 @@ export const AppBottomNav = React.memo(({
               color: activeTab === 'profile' ? 'var(--accent-primary)' : 'var(--text-secondary)',
             }}
           >
-            {t('profile')}
+            {typeof t === 'function' ? t('profile') : 'Profil'}
           </span>
         </button>
       </div>

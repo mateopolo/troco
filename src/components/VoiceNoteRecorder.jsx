@@ -65,7 +65,7 @@ export default function VoiceNoteRecorder({
       } catch (err) {
         console.error('[VoiceNoteRecorder] Microphone access error:', err);
         alert('Impossible d’accéder au microphone. Veuillez vérifier les autorisations de votre navigateur.');
-        onCancel();
+        onCancel?.();
       }
     }
 
@@ -123,15 +123,19 @@ export default function VoiceNoteRecorder({
           type: mediaRecorderRef.current.mimeType || 'audio/webm',
         });
         if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
-        await onSendVoiceNote(blob, duration);
+        if (typeof onSendVoiceNote === 'function') {
+          try { await onSendVoiceNote(blob, duration); } catch (e) { console.warn(e); }
+        }
         setIsUploading(false);
       };
       mediaRecorderRef.current.stop();
     } else if (audioBlob) {
-      await onSendVoiceNote(audioBlob, duration);
+      if (typeof onSendVoiceNote === 'function') {
+        try { await onSendVoiceNote(audioBlob, duration); } catch (e) { console.warn(e); }
+      }
       setIsUploading(false);
     } else {
-      onCancel();
+      onCancel?.();
     }
   };
 

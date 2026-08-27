@@ -34,16 +34,20 @@ export default function VisioSettlementModal({
   const calculatedTokens = Math.max(1, Math.ceil(callDuration / 3600) || 1);
 
   const handleConfirmTransfer = () => {
-    if (onTransferTokens) {
-      onTransferTokens({
-        tokens: selectedTokens,
-        insurance: includeInsurance,
-        duration: callDuration,
-      });
+    if (typeof onTransferTokens === 'function') {
+      try {
+        onTransferTokens({
+          tokens: selectedTokens,
+          insurance: includeInsurance,
+          duration: callDuration,
+        });
+      } catch (err) {
+        console.warn('[VisioSettlement] Error:', err);
+      }
     }
     setIsTransferred(true);
     setTimeout(() => {
-      onClose();
+      onClose?.();
     }, 1500);
   };
 

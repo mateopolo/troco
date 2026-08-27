@@ -15,7 +15,7 @@ function FeedCardItem({
   formatCompensation,
   getListingDisplayContent,
   currentLang,
-  showingOriginalListings,
+  showingOriginalListings = {},
   toggleOriginalListing,
   localizeLocation,
   localizeTags,
@@ -26,11 +26,19 @@ function FeedCardItem({
   isAdmin = false,
   isGodModeActive = false,
   onAdminDeleteListing = null,
+  onAdminDelete = null,
   onAdminToggleHideListing = null,
+  onAdminToggleHide = null,
   onAdminEditListing = null,
   onOpenMobileActions = null,
+  onMobileActionClick = null,
+  onAuthorProfileClick = null,
   t = (key) => key
 }) {
+  const safeOpenMobileActions = onOpenMobileActions || onMobileActionClick;
+  const safeAdminDelete = onAdminDeleteListing || onAdminDelete;
+  const safeAdminToggleHide = onAdminToggleHideListing || onAdminToggleHide;
+
   const [localImageIndex, setLocalImageIndex] = useState(0);
   const [typedText, setTypedText] = useState('');
   const cardElementRef = useRef(null);
@@ -41,9 +49,11 @@ function FeedCardItem({
   const isSwipingRef = useRef(false);
   const longPressTimerRef = useRef(null);
 
-  const media = getSuggestedMedia ? getSuggestedMedia(item.title, item.description || '', item.image, item.video) : {};
-  const isHovered = hoveredCardId === item.id;
-  const displayContent = getListingDisplayContent ? getListingDisplayContent(item, currentLang, !!showingOriginalListings[item.id]) : { title: item.title, description: item.description };
+  const media = typeof getSuggestedMedia === 'function' ? getSuggestedMedia(item?.title, item?.description || '', item?.image, item?.video) : {};
+  const isHovered = hoveredCardId === item?.id;
+  const displayContent = typeof getListingDisplayContent === 'function'
+    ? getListingDisplayContent(item, currentLang, !!showingOriginalListings[item?.id])
+    : { title: item?.title || '', description: item?.description || '' };
 
   const trimStart = Number(item.videoTrimStart || item.videoMetadata?.trimStart || 0);
   const trimEnd = Number(item.videoTrimEnd || item.videoMetadata?.trimEnd || 0);
@@ -220,12 +230,12 @@ function FeedCardItem({
             🛡️ God Mode #{item.id}
           </span>
           <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-            {onAdminToggleHideListing && (
+            {safeAdminToggleHide && (
               <button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
-                  onAdminToggleHideListing(item);
+                  if (typeof safeAdminToggleHide === 'function') safeAdminToggleHide(item);
                 }}
                 style={{
                   border: 'none',
@@ -242,13 +252,13 @@ function FeedCardItem({
                 {item.isHidden ? '👁️ Visible' : '🚫 Masquer'}
               </button>
             )}
-            {onAdminDeleteListing && (
+            {safeAdminDelete && (
               <button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   if (window.confirm(`[ADMIN GOD MODE]\nSupprimer définitivement "${item.title}" ?`)) {
-                    onAdminDeleteListing(item);
+                    if (typeof safeAdminDelete === 'function') safeAdminDelete(item);
                   }
                 }}
                 style={{
@@ -541,7 +551,10 @@ function FeedCardItem({
         )}
 
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }}>
-          {localizeTags((item.tags || generateTags(item.title, item.description || '')), currentLang).slice(0, 3).map(tag => (
+          {(typeof localizeTags === 'function'
+            ? localizeTags((item.tags || (typeof generateTags === 'function' ? generateTags(item.title, item.description || '') : [])), currentLang)
+            : (item.tags || [])
+          ).slice(0, 3).map(tag => (
             <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', borderRadius: '999px', padding: '4px 10px', fontSize: '10px', fontWeight: '700', border: '1px solid var(--border-color)' }}>
               <Tag size={10} /> {tag}
             </span>
@@ -549,7 +562,15 @@ function FeedCardItem({
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: '1px solid var(--border-color)', gap: '8px', flexWrap: 'wrap' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '7px', fontWeight: '700', fontSize: '13px', color: 'var(--text-main)' }}>
+          <span
+            onClick={(e) => {
+              e.stopPropagation();
+              if (typeof onAuthorProfileClick === 'function') {
+                onAuthorProfileClick(item.authorProfile || { name: item.author, avatar: item.avatar, bio: item.bio });
+              }
+            }}
+            style={{ display: 'flex', alignItems: 'center', gap: '7px', fontWeight: '700', fontSize: '13px', color: 'var(--text-main)', cursor: onAuthorProfileClick ? 'pointer' : 'default' }}
+          >
             <img
               src={(profile?.name && item.author === profile.name) ? (profile?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80') : (typeof getAuthorAvatar === 'function' ? getAuthorAvatar(item.author) : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80')}
               alt={item.author || 'Auteur'}
@@ -564,7 +585,7 @@ function FeedCardItem({
                 onClick={(e) => {
                   e.stopPropagation();
                   if (window.confirm(`[ADMINISTRATEUR]\nVoulez-vous supprimer définitivement l'annonce "${item.title}" ?`)) {
-                    if (onAdminDeleteListing) onAdminDeleteListing(item);
+                    if (typeof safeAdminDelete === 'function') safeAdminDelete(item);
                   }
                 }}
                 className="premium-button"
@@ -588,13 +609,13 @@ function FeedCardItem({
               </button>
             )}
             {(!profile?.name || item.author !== profile.name) ? (
-              <button onClick={(event) => { event.stopPropagation(); if (typeof handleStartDiscussion === 'function') handleStartDiscussion(item); else if (typeof handleOpenListing === 'function') handleOpenListing(item); }} className="premium-button" style={{ background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)', color: '#FFF', border: 'none', padding: '9px 16px', borderRadius: '999px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', boxShadow: 'var(--shadow-accent)' }}>{t('proposeDealButton')} <ArrowRight size={12} /></button>
+              <button onClick={(event) => { event.stopPropagation(); if (typeof handleStartDiscussion === 'function') handleStartDiscussion(item); else if (typeof handleOpenListing === 'function') handleOpenListing(item); }} className="premium-button" style={{ background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)', color: '#FFF', border: 'none', padding: '9px 16px', borderRadius: '999px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', boxShadow: 'var(--shadow-accent)' }}>{typeof t === 'function' ? t('proposeDealButton') : 'Proposer un deal'} <ArrowRight size={12} /></button>
             ) : (
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)', border: '1px solid var(--border-color)', padding: '6px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '600' }}>{t('authorAnnc')}</span>
-                {onOpenMobileActions && (
+                <span style={{ backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)', border: '1px solid var(--border-color)', padding: '6px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '600' }}>{typeof t === 'function' ? t('authorAnnc') : 'Mon annonce'}</span>
+                {safeOpenMobileActions && (
                   <button
-                    onClick={(e) => { e.stopPropagation(); onOpenMobileActions(item); }}
+                    onClick={(e) => { e.stopPropagation(); safeOpenMobileActions(item); }}
                     className="premium-button"
                     style={{
                       border: '1px solid var(--border-color)',

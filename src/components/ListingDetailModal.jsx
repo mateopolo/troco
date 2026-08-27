@@ -415,8 +415,8 @@ export default function ListingDetailModal({
             <button
               type="button"
               onClick={() => {
-                handleViewOnMap(selectedListing);
-                onClose();
+                if (typeof handleViewOnMap === 'function') handleViewOnMap(selectedListing);
+                onClose?.();
               }}
               className="premium-button"
               style={{
@@ -437,13 +437,13 @@ export default function ListingDetailModal({
               title="Centrer la carte interactive sur cette annonce"
             >
               <MapPin size={16} color="var(--accent-primary)" />
-              <span>{t('viewOnMap') || 'Voir sur la carte'}</span>
+              <span>{typeof t === 'function' ? (t('viewOnMap') || 'Voir sur la carte') : 'Voir sur la carte'}</span>
             </button>
           )}
 
           {!isOwner ? (
             <button
-              onClick={() => handleStartDiscussion(selectedListing)}
+              onClick={() => { if (typeof handleStartDiscussion === 'function') handleStartDiscussion(selectedListing); }}
               className="premium-button"
               style={{
                 flex: 1, minWidth: '180px', border: 'none', borderRadius: '999px', padding: '14px 24px',
@@ -453,33 +453,33 @@ export default function ListingDetailModal({
                 boxShadow: 'var(--shadow-accent)'
               }}
             >
-              <MessageSquare size={18} /> {t('startDiscussion') || 'Contacter le membre'}
+              <MessageSquare size={18} /> {typeof t === 'function' ? (t('startDiscussion') || 'Contacter le membre') : 'Contacter le membre'}
             </button>
           ) : (
             <div style={{ display: 'flex', gap: '8px', flex: 1, minWidth: '220px', flexWrap: 'wrap' }}>
               <button
-                onClick={() => handleBoostListing(selectedListing)}
+                onClick={() => { if (typeof handleBoostListing === 'function') handleBoostListing(selectedListing); }}
                 className="premium-button"
                 style={{ flex: 1, border: 'none', borderRadius: '999px', padding: '12px', backgroundColor: 'var(--accent-warning)', color: '#FFF', fontWeight: '800', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: 'var(--shadow-card)' }}
               >
                 <Flame size={16} /> Booster (2,99€)
               </button>
               <button
-                onClick={() => handleStartEditListing(selectedListing)}
+                onClick={() => { if (typeof handleStartEditListing === 'function') handleStartEditListing(selectedListing); }}
                 className="premium-button"
                 style={{ flex: 1, border: '1px solid var(--border-color)', borderRadius: '999px', padding: '12px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', fontWeight: '800', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
               >
                 <Pencil size={16} /> Éditer
               </button>
               <button
-                onClick={() => handleTogglePauseListing(selectedListing.id)}
+                onClick={() => { if (typeof handleTogglePauseListing === 'function') handleTogglePauseListing(selectedListing.id); }}
                 className="premium-button"
                 style={{ border: '1px solid var(--border-color)', borderRadius: '999px', padding: '12px 16px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', fontWeight: '800', fontSize: '13px', cursor: 'pointer' }}
               >
                 {selectedListing.status === 'paused' ? 'Reprendre' : 'Pauser'}
               </button>
               <button
-                onClick={() => { handleDeleteListing(selectedListing.id); onClose(); }}
+                onClick={() => { if (typeof handleDeleteListing === 'function') handleDeleteListing(selectedListing.id); onClose?.(); }}
                 className="premium-button"
                 style={{ border: '1px solid var(--accent-danger)', borderRadius: '999px', padding: '12px 16px', backgroundColor: 'var(--accent-danger)', color: '#FFF', fontWeight: '800', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >

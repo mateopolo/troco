@@ -45,18 +45,20 @@ export default function CounterOfferModal({
     const dVal = durationValue ? String(durationValue) : '1';
     const finalConditions = conditions.trim() || `${dVal}h d'échange pour ${tTokens > 0 ? `${tTokens} Jeton(s)` : ''} ${euros > 0 ? `${euros}€` : ''}`.trim() || 'Échange convenu.';
 
-    onSubmit({
-      trocoTokens: tTokens,
-      euroAmount: euros,
-      durationType,
-      durationValue: dVal,
-      conditions: finalConditions
-    });
+    if (typeof onSubmit === 'function') {
+      onSubmit({
+        trocoTokens: tTokens,
+        euroAmount: euros,
+        durationType,
+        durationValue: dVal,
+        conditions: finalConditions
+      });
+    }
   };
 
   const modalElement = (
     <div
-      onClick={onClose}
+      onClick={() => onClose?.()}
       style={{
         position: 'fixed',
         inset: 0,

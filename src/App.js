@@ -163,6 +163,7 @@ export default function App() {
   });
   const [profileDraft, setProfileDraft] = useState(profile);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  // eslint-disable-next-line no-unused-vars
   const [saveMessage, setSaveMessage] = useState('');
   const [skills, setSkills] = useState([
     'Prod musicale & Ableton Live',
@@ -3308,24 +3309,22 @@ export default function App() {
                           formatCompensation={formatCompensation}
                           getListingDisplayContent={getListingDisplayContent}
                           currentLang={currentLang}
+                          t={t}
                           showingOriginalListings={showingOriginalListings}
                           toggleOriginalListing={toggleOriginalListing}
                           localizeLocation={localizeLocation}
                           localizeTags={localizeTags}
+                          onOpenMobileActions={setMobileListingActionTarget}
                           onMobileActionClick={setMobileListingActionTarget}
                           onReportListing={(listing) => {
                             setReportTarget({ listing, user: null });
                             setIsReportModalOpen(true);
                           }}
                           isAdmin={isAdmin}
-                          onAdminDelete={(listing) => {
-                            if (window.confirm(`[ADMINISTRATEUR]\nSupprimer définitivement l'annonce #${listing.id} ?`)) {
-                              handleAdminDeleteListing(listing);
-                            }
-                          }}
-                          onAdminToggleHide={(listing) => {
-                            handleAdminToggleHideListing(listing);
-                          }}
+                          onAdminDeleteListing={handleAdminDeleteListing}
+                          onAdminDelete={handleAdminDeleteListing}
+                          onAdminToggleHideListing={handleAdminToggleHideListing}
+                          onAdminToggleHide={handleAdminToggleHideListing}
                           onAdminBoost={(listing) => {
                             setBoostingListing(listing);
                             setIsBoostModalOpen(true);

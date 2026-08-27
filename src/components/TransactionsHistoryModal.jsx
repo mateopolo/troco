@@ -101,7 +101,7 @@ export default function TransactionsHistoryModal({
             </div>
           </div>
           <button
-            onClick={onClose}
+            onClick={() => onClose?.()}
             style={{
               border: 'none',
               background: 'var(--bg-subtle)',

@@ -55,32 +55,36 @@ export default function ReportModal({
       await addDoc(collection(db, 'reports'), reportPayload);
 
       setSubmitted(true);
-      if (onReportSubmitted) onReportSubmitted(reportPayload);
+      if (typeof onReportSubmitted === 'function') {
+        try { onReportSubmitted(reportPayload); } catch (e) { console.warn(e); }
+      }
 
       setTimeout(() => {
         setSubmitted(false);
         setDetails('');
         setSelectedReason('fraud');
-        onClose();
+        onClose?.();
       }, 1800);
     } catch (err) {
       console.warn('[Firestore] Failed to save report:', err);
       // Fallback local
       setSubmitted(true);
-      if (onReportSubmitted) {
-        onReportSubmitted({
-          listingTitle: targetTitle,
-          reportedUserName: targetAuthor,
-          reasonLabel: selectedReason,
-          details,
-          status: 'pending',
-          createdAt: new Date(),
-        });
+      if (typeof onReportSubmitted === 'function') {
+        try {
+          onReportSubmitted({
+            listingTitle: targetTitle,
+            reportedUserName: targetAuthor,
+            reasonLabel: selectedReason,
+            details,
+            status: 'pending',
+            createdAt: new Date(),
+          });
+        } catch (e) { console.warn(e); }
       }
       setTimeout(() => {
         setSubmitted(false);
         setDetails('');
-        onClose();
+        onClose?.();
       }, 1800);
     } finally {
       setLoading(false);

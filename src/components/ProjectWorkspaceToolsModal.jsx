@@ -458,8 +458,8 @@ export default function ProjectWorkspaceToolsModal({
                       <button
                         type="button"
                         onClick={() => {
-                          if (onStartVideoCall) onStartVideoCall();
-                          onClose();
+                          if (typeof onStartVideoCall === 'function') onStartVideoCall();
+                          onClose?.();
                         }}
                         className="premium-button"
                         style={{
@@ -605,9 +605,8 @@ export default function ProjectWorkspaceToolsModal({
                   <button
                     type="button"
                     onClick={() => {
-                      if (onStartScreenShare) onStartScreenShare();
-                      alert('🚀 Démarrage du flux de partage d’écran et prise en main WebRTC en haute fidélité...');
-                      onClose();
+                      if (typeof onStartScreenShare === 'function') onStartScreenShare();
+                      onClose?.();
                     }}
                     className="premium-button"
                     style={{

@@ -222,7 +222,7 @@ export default function AdminPanel({
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '14px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <button
-                onClick={onClose}
+                onClick={() => onClose?.()}
                 className="premium-button"
                 style={{
                   border: '1px solid var(--border-color)',
@@ -507,8 +507,8 @@ export default function AdminPanel({
                               <button
                                 onClick={() => {
                                   if (window.confirm(`Supprimer l'annonce « ${report.listingTitle || 'signalée'} » ?`)) {
-                                    onDeleteListing(report.listingId);
-                                    if (onResolveReport) onResolveReport(report.id, 'resolved');
+                                    if (typeof onDeleteListing === 'function') onDeleteListing(report.listingId);
+                                    if (typeof onResolveReport === 'function') onResolveReport(report.id, 'resolved');
                                   }
                                 }}
                                 className="premium-button"
@@ -526,8 +526,8 @@ export default function AdminPanel({
                               <button
                                 onClick={() => {
                                   if (window.confirm(`Shadow-bannir l'utilisateur ${report.reportedUserName} ?`)) {
-                                    onUpdateUser(report.reportedUserId, { isShadowBanned: true });
-                                    if (onResolveReport) onResolveReport(report.id, 'resolved');
+                                    if (typeof onUpdateUser === 'function') onUpdateUser(report.reportedUserId, { isShadowBanned: true });
+                                    if (typeof onResolveReport === 'function') onResolveReport(report.id, 'resolved');
                                   }
                                 }}
                                 className="premium-button"
@@ -544,7 +544,7 @@ export default function AdminPanel({
                             {isPending && onResolveReport && (
                               <div style={{ display: 'flex', gap: '6px' }}>
                                 <button
-                                  onClick={() => onResolveReport(report.id, 'resolved')}
+                                  onClick={() => { if (typeof onResolveReport === 'function') onResolveReport(report.id, 'resolved'); }}
                                   className="premium-button"
                                   style={{
                                     flex: 1, border: 'none', borderRadius: '10px', padding: '8px',
@@ -556,7 +556,7 @@ export default function AdminPanel({
                                   <Check size={13} /> Résolu
                                 </button>
                                 <button
-                                  onClick={() => onResolveReport(report.id, 'dismissed')}
+                                  onClick={() => { if (typeof onResolveReport === 'function') onResolveReport(report.id, 'dismissed'); }}
                                   className="premium-button"
                                   style={{
                                     flex: 1, border: '1px solid var(--border-color)', borderRadius: '10px', padding: '8px',
@@ -673,7 +673,7 @@ export default function AdminPanel({
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                         <div style={{ display: 'flex', gap: '6px' }}>
                           <button
-                            onClick={() => onUpdateUser && onUpdateUser(uid, { isShadowBanned: !isShadow })}
+                            onClick={() => { if (typeof onUpdateUser === 'function') onUpdateUser(uid, { isShadowBanned: !isShadow }); }}
                             className="premium-button"
                             style={{
                               flex: 1, padding: '7px 10px', borderRadius: '10px', border: '1px solid var(--border-color)',
@@ -684,7 +684,7 @@ export default function AdminPanel({
                             {isShadow ? '✓ Lever Shadow-ban' : '👻 Shadow-Ban'}
                           </button>
                           <button
-                            onClick={() => onUpdateUser && onUpdateUser(uid, { isBanned: !isBanned })}
+                            onClick={() => { if (typeof onUpdateUser === 'function') onUpdateUser(uid, { isBanned: !isBanned }); }}
                             className="premium-button"
                             style={{
                               flex: 1, padding: '7px 10px', borderRadius: '10px', border: '1px solid var(--border-color)',
@@ -699,7 +699,7 @@ export default function AdminPanel({
                         {onInspectUser && (
                           <button
                             type="button"
-                            onClick={() => onInspectUser(u)}
+                            onClick={() => { if (typeof onInspectUser === 'function') onInspectUser(u); }}
                             className="premium-button"
                             style={{
                               padding: '7px 10px', borderRadius: '10px', border: '1px solid var(--border-color)',
@@ -731,7 +731,7 @@ export default function AdminPanel({
                             onClick={() => {
                               const userName = u.name || u.username || 'cet utilisateur';
                               if (window.confirm(`⚠️ CONFIRMATION DE RÉINITIALISATION DU COMPTE\n\nÊtes-vous absolument sûr de vouloir réinitialiser intégralement le profil de « ${userName} » ?\n\nCette action va :\n- Remettre son solde en euros à 0.00€\n- Réinitialiser ses jetons de bienvenue à 10\n- Purger ses compétences et son historique de deals\n- Supprimer toutes ses annonces publiées\n- Forcer son onboarding à se relancer à sa prochaine connexion comme un nouvel utilisateur.`)) {
-                                onResetUser(uid, u);
+                                if (typeof onResetUser === 'function') onResetUser(uid, u);
                               }
                             }}
                             className="premium-button"
@@ -825,7 +825,7 @@ export default function AdminPanel({
                     <div style={{ display: 'flex', gap: '8px' }}>
                       {onEditListing && (
                         <button
-                          onClick={() => onEditListing(listing)}
+                          onClick={() => { if (typeof onEditListing === 'function') onEditListing(listing); }}
                           className="premium-button"
                           style={{
                             flex: 1, padding: '8px', borderRadius: '10px', border: 'none',
@@ -841,7 +841,7 @@ export default function AdminPanel({
                         <button
                           onClick={() => {
                             if (window.confirm(`Confirmer la suppression de l'annonce « ${listing.title} » ?`)) {
-                              onDeleteListing(listing.id);
+                              if (typeof onDeleteListing === 'function') onDeleteListing(listing.id);
                             }
                           }}
                           className="premium-button"

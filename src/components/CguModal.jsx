@@ -23,14 +23,18 @@ export default function CguModal({
   const handleConfirmAcceptance = async () => {
     if (!hasAgreedTerms || !hasAgreedPrivacy) return;
     setIsSubmitting(true);
-    if (onAccept) {
-      await onAccept({
-        cguVersion: '2026.1',
-        acceptedAt: new Date().toISOString(),
-      });
+    if (typeof onAccept === 'function') {
+      try {
+        await onAccept({
+          cguVersion: '2026.1',
+          acceptedAt: new Date().toISOString(),
+        });
+      } catch (err) {
+        console.warn('[CGU] onAccept error:', err);
+      }
     }
     setIsSubmitting(false);
-    if (onClose) onClose();
+    onClose?.();
   };
 
   const pillars = [

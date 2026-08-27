@@ -374,10 +374,14 @@ export default function PaymentModal({
   };
 
   const handleCloseModal = () => {
-    if (isSuccess && successDetails && onSuccess) {
-      onSuccess(successDetails);
+    if (isSuccess && successDetails && typeof onSuccess === 'function') {
+      try {
+        onSuccess(successDetails);
+      } catch (err) {
+        console.warn('[PaymentModal] onSuccess error:', err);
+      }
     }
-    onClose();
+    onClose?.();
   };
 
   return (
