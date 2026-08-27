@@ -1,7 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { Search, Globe, MessageSquare, PlusCircle, User } from 'lucide-react';
 
-export const AppBottomNav = ({
+export const AppBottomNav = React.memo(({
   isMobile = false,
   activeTab = 'feed',
   selectedChat = null,
@@ -358,6 +358,16 @@ export const AppBottomNav = ({
       </div>
     </nav>
   );
-};
+}, (prevProps, nextProps) => {
+  return (
+    prevProps.activeTab === nextProps.activeTab &&
+    prevProps.isMobile === nextProps.isMobile &&
+    prevProps.darkMode === nextProps.darkMode &&
+    prevProps.currentLang === nextProps.currentLang &&
+    prevProps.unreadCount === nextProps.unreadCount &&
+    prevProps.selectedChat?.id === nextProps.selectedChat?.id &&
+    Boolean(prevProps.selectedListing) === Boolean(nextProps.selectedListing)
+  );
+});
 
 export default AppBottomNav;

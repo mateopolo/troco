@@ -316,10 +316,10 @@ export default function App() {
   }, [profile?.uid]);
 
   // Handler d'ouverture du module de paiement
-  const handleOpenPayment = (mode = 'pack-tokens', payload = null) => {
+  const handleOpenPayment = useCallback((mode = 'pack-tokens', payload = null) => {
     setPaymentModalConfig({ mode, payload });
     setIsPaymentModalOpen(true);
-  };
+  }, []);
 
   // ---- MOTEUR CHAT, NÉGOCIATIONS & DEALS (HOOK EXTRAIT PHASE 4) ----
   const chatManager = useChatManager({

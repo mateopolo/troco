@@ -4,7 +4,7 @@ import TrocoLogo3D from '../common/TrocoLogo3D';
 import { AnimatedEuroBalance, AnimatedTokenBalance } from '../AnimatedBalances';
 import { formatTokenCount as formatTokenCountUtil } from '../../utils/formatters';
 
-export const AppHeader = ({
+export const AppHeader = React.memo(({
   isMobile = false,
   activeTab = 'feed',
   selectedChat = null,
@@ -22,16 +22,24 @@ export const AppHeader = ({
   t = (k) => k,
   formatTokenCount = formatTokenCountUtil,
 }) => {
-  // Condensation et élévation du header supérieur au défilement (Micro-interactions)
+  // Condensation et élévation du header supérieur au défilement (Micro-interactions avec RAF)
   const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
+    let rafId = null;
     const handleScroll = () => {
-      const scrolled = window.scrollY > 40;
-      setIsScrolled(prev => prev !== scrolled ? scrolled : prev);
+      if (rafId) return;
+      rafId = requestAnimationFrame(() => {
+        const scrolled = window.scrollY > 30;
+        setIsScrolled(prev => (prev !== scrolled ? scrolled : prev));
+        rafId = null;
+      });
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (rafId) cancelAnimationFrame(rafId);
+    };
   }, []);
 
   const handleLogoClick = () => {
@@ -271,6 +279,18 @@ export const AppHeader = ({
       </div>
     </header>
   );
-};
+}, (prevProps, nextProps) => {
+  return (
+    prevProps.activeTab === nextProps.activeTab &&
+    prevProps.isMobile === nextProps.isMobile &&
+    prevProps.darkMode === nextProps.darkMode &&
+    prevProps.currentLang === nextProps.currentLang &&
+    prevProps.selectedChat?.id === nextProps.selectedChat?.id &&
+    prevProps.callState?.active === nextProps.callState?.active &&
+    prevProps.profile?.euroBalance === nextProps.profile?.euroBalance &&
+    prevProps.profile?.trocoTokens === nextProps.profile?.trocoTokens &&
+    prevProps.profile?.name === nextProps.profile?.name
+  );
+});
 
 export default AppHeader;
