@@ -8,7 +8,6 @@ import { useTheme } from './contexts/ThemeContext';
 import { SkeletonModalFallback, SkeletonFeedLayout, SkeletonChatLayout, SkeletonProfileLayout, SkeletonCommunityLayout, SkeletonPostLayout } from './components/SkeletonLoader';
 import CookieBanner from './components/CookieBanner';
 import { TROCO_CATEGORIES } from './data/categoriesData';
-import { mockListings } from './data/mockData';
 import { subscribeTranslations } from './utils/translator';
 import { playApplePaySound, playBetclicBalanceSound, playWelcomeGiftFanfare } from './utils/audioService';
 import { useChatManager } from './hooks/useChatManager';
@@ -36,6 +35,7 @@ import { motion } from 'framer-motion';
 import { getActiveAnimation } from './config/animations';
 import {
   translations,
+  ensureLanguageLoaded,
   localizeLocation,
   localizeTags,
   localizeReview,
@@ -85,8 +85,12 @@ export default function App() {
   const [userCoords, setUserCoords] = useState([48.8566, 2.3522]); // Paris par défaut
   const [isGeolocated, setIsGeolocated] = useState(false);
   const [isGeolocating, setIsGeolocating] = useState(false);
-  // eslint-disable-next-line no-unused-vars
-  const [geolocMsg, setGeolocMsg] = useState('');
+  // Chargement différé et dynamique du pack de langue sélectionné
+  useEffect(() => {
+    if (currentLang && currentLang !== 'FR') {
+      ensureLanguageLoaded(currentLang);
+    }
+  }, [currentLang]);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const t = useCallback((key) => (translations[currentLang] && translations[currentLang][key]) || translations['FR'][key] || key, [currentLang]);
@@ -1467,7 +1471,7 @@ export default function App() {
         ES: { title: "Clase de React, Node.js y Firebase (1h)", description: "Sesión individual de desarrollo web moderno: React, Firebase y APIs REST." }
       }
     };
-    return [defaultUserListing, ...mockListings.map(l => ({ ...l, status: 'active' }))];
+    return [defaultUserListing];
   });
 
   useEffect(() => {
@@ -1478,36 +1482,50 @@ export default function App() {
     }
   }, [listings]);
 
-  // ---- SYNC TEMPS RÉEL FIRESTORE → état listings ----
-  // Fusionne les mockListings (isDemo: true, source immuable hors composant)
-  // avec les vraies annonces publiées dans la collection Firestore 'listings'.
-  // On lit directement mockListings au lieu de prev.filter() pour éviter
-  // que le feed soit vide si prev a été écrasé avant l'arrivée du snapshot.
+  // ---- SYNC TEMPS RÉEL FIRESTORE & DÉMOS DIFFÉRÉES ----
+  // Chargement asynchrone non-bloquant de mockData pour alléger le bundle initial (FCP optimal)
   useEffect(() => {
-    const demoBase = mockListings.map(l => ({ ...l, status: 'active', isDemo: true }));
+    let unsubFirestore = () => {};
+    let isCancelled = false;
 
-    const unsub = onSnapshot(
-      collection(db, 'listings'),
-      (snapshot) => {
-        // Annonces réelles depuis Firestore
-        const firestoreListings = snapshot.docs.map((docSnap) => ({
-          id: docSnap.data().id || docSnap.id,
-          firestoreId: docSnap.id,
-          ...docSnap.data(),
-          status: docSnap.data().status || 'active',
-          isDemo: false,
-        }));
-        // Fusion garantie : démos toujours présentes + annonces Firestore
-        setListings([...demoBase, ...firestoreListings]);
-      },
-      (error) => {
-        // En cas d'erreur réseau : on affiche au moins les démos
-        console.warn('[Firestore] onSnapshot error:', error);
-        setListings(prev => prev.length > 0 ? prev : demoBase);
-      }
-    );
-    return () => unsub();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    import('./data/mockData').then(({ mockListings }) => {
+      if (isCancelled) return;
+      const demoBase = (mockListings || []).map(l => ({ ...l, status: 'active', isDemo: true }));
+
+      // Si le cache local n'avait pas encore les démos, on les injecte
+      setListings(prev => {
+        const hasDemos = prev.some(item => item.isDemo);
+        return hasDemos ? prev : [...prev, ...demoBase];
+      });
+
+      unsubFirestore = onSnapshot(
+        collection(db, 'listings'),
+        (snapshot) => {
+          if (isCancelled) return;
+          const firestoreListings = snapshot.docs.map((docSnap) => ({
+            id: docSnap.data().id || docSnap.id,
+            firestoreId: docSnap.id,
+            ...docSnap.data(),
+            status: docSnap.data().status || 'active',
+            isDemo: false,
+          }));
+          setListings([...demoBase, ...firestoreListings]);
+        },
+        (error) => {
+          console.warn('[Firestore] onSnapshot error:', error);
+          if (!isCancelled) {
+            setListings(prev => prev.length > 0 ? prev : demoBase);
+          }
+        }
+      );
+    }).catch(err => {
+      console.warn('[MockData] Erreur de chargement différé des annonces démo:', err);
+    });
+
+    return () => {
+      isCancelled = true;
+      unsubFirestore();
+    };
   }, []);
 
   const getListingDistance = (item) => {

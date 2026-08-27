@@ -7,15 +7,39 @@ import SectoralErrorBoundary from '../../components/SectoralErrorBoundary';
 
 const MapClusterTracker = React.lazy(() => import('../../components/MapClusterTracker'));
 
-// Gestionnaire de redimensionnement dynamique de Leaflet
-function MapResizeHandler({ isFullScreen }) {
+// Gestionnaire de redimensionnement et de cycle de vie de Leaflet (Prévention des fuites mémoire GPU/DOM)
+function MapLifecycleManager({ isFullScreen }) {
   const map = useMap();
+
   useEffect(() => {
     const timer = setTimeout(() => {
-      map.invalidateSize();
+      if (map) map.invalidateSize();
     }, 150);
     return () => clearTimeout(timer);
   }, [isFullScreen, map]);
+
+  // Nettoyage strict au démontage du composant
+  useEffect(() => {
+    return () => {
+      if (!map) return;
+      try {
+        map.stop();
+        map.clearAllEventListeners();
+        map.eachLayer((layer) => {
+          try {
+            if (layer && typeof layer.remove === 'function') {
+              layer.remove();
+            } else if (layer) {
+              map.removeLayer(layer);
+            }
+          } catch (_) {}
+        });
+      } catch (err) {
+        // En cas d'instance déjà libérée
+      }
+    };
+  }, [map]);
+
   return null;
 }
 
@@ -238,7 +262,7 @@ export function MapSection({
             worldCopyJump={true}
             style={{ width: '100%', height: '100%' }}
           >
-            <MapResizeHandler isFullScreen={isFullScreen} />
+            <MapLifecycleManager isFullScreen={isFullScreen} />
 
             <TileLayer
               noWrap={true}
