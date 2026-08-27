@@ -33,6 +33,7 @@ export default function SharedDocumentModal({
   currentUser = null,
   darkMode = false,
   onSendToChat = null,
+  handleSendMessage = null,
 }) {
   const effectiveDocId = docId || groupId || 'default_shared_doc';
 
@@ -211,23 +212,23 @@ export default function SharedDocumentModal({
     setIsSendingToChat(true);
 
     try {
-      if (db && groupId !== 'demo_group_notes') {
-        const authorName = currentUser?.name || 'Moi';
-        const msgPayload = {
-          text: `📝 ${authorName} a mis à jour les Notes Partagées : "${title}"`,
-          sender: currentUser?.uid || currentUser?.id || 'me',
-          senderName: authorName,
-          senderAvatar: currentUser?.avatar || '',
-          timestamp: serverTimestamp(),
-          createdAt: Date.now(),
-          type: 'workspace_invite',
-          kind: 'workspace_invite',
-          workspaceType: 'notes',
-          workspaceTitle: title,
-          docId: effectiveDocId,
-          summary: content.slice(0, 160) + (content.length > 160 ? '...' : ''),
-        };
+      const authorName = currentUser?.name || 'Moi';
+      const msgPayload = {
+        text: `📝 ${authorName} a mis à jour les Notes Partagées : "${title}"`,
+        sender: currentUser?.uid || currentUser?.id || 'me',
+        senderName: authorName,
+        senderAvatar: currentUser?.avatar || '',
+        timestamp: serverTimestamp(),
+        createdAt: Date.now(),
+        type: 'workspace_invite',
+        kind: 'workspace_invite',
+        workspaceType: 'notes',
+        workspaceTitle: title,
+        docId: effectiveDocId,
+        summary: content.slice(0, 160) + (content.length > 160 ? '...' : ''),
+      };
 
+      if (db && groupId && groupId !== 'demo_group_notes') {
         await addDoc(collection(db, 'chats', String(groupId), 'messages'), msgPayload);
         await setDoc(doc(db, 'chats', String(groupId)), {
           lastMessage: `📝 Notes partagées : "${title}"`,
@@ -236,7 +237,11 @@ export default function SharedDocumentModal({
         }, { merge: true });
       }
 
-      if (onSendToChat) onSendToChat(effectiveDocId);
+      if (typeof handleSendMessage === 'function') {
+        handleSendMessage(msgPayload);
+      }
+
+      if (onSendToChat) onSendToChat(effectiveDocId, msgPayload);
 
       setSendSuccessToast(true);
       setTimeout(() => setSendSuccessToast(false), 3500);

@@ -6,7 +6,7 @@ import {
   AlertTriangle, Users, Coins, Mic, ShieldAlert, ShieldCheck,
   Palette, Briefcase, Plus, FileText, Calendar, Table
 } from 'lucide-react';
-import { doc, deleteDoc, addDoc, collection, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, deleteDoc, addDoc, collection, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { executeDirectTokenTransfer } from '../services/firestoreService';
 import { subscribeTranslations } from '../utils/translator';
@@ -105,12 +105,19 @@ function ChatView({
       return;
     }
 
+    const partnerUid = activeChatObj?.authorUid || activeChatObj?.partnerUid || activeChatObj?.userId || activeChatObj?.sellerUid || activeChatObj?.buyerUid || activeChatObj?.recipientUid || activeChatObj?.peerUid || selectedChat?.authorUid || selectedChat?.partnerUid || null;
+    
+    if (!partnerUid) {
+      console.error('🚨 [DirectTransfer] recipientUid introuvable pour ce contact:', { activeChatObj, selectedChat });
+      alert("Impossible de localiser l'UID du destinataire dans cette conversation.");
+      return;
+    }
+
     setIsTransferringTokens(true);
     try {
       const myUid = profile?.uid || auth?.currentUser?.uid || 'me';
       const myName = profile?.name || 'Moi';
       const partnerName = activeChatObj?.user || activeChatObj?.projectTitle || 'Interlocuteur';
-      const partnerUid = activeChatObj?.partnerUid || activeChatObj?.userId || activeChatObj?.authorUid || activeChatObj?.sellerUid || activeChatObj?.buyerUid || activeChatObj?.recipientUid || null;
       const updatedTokens = Math.max(0, currentBalance - tokens);
 
       // 1. Débit immédiat du solde utilisateur dans l'application
@@ -124,15 +131,21 @@ function ChatView({
       } catch (_) {}
 
       // 2. Exécution atomique Firestore (débit expéditeur + crédit destinataire)
-      await executeDirectTokenTransfer({
+      const res = await executeDirectTokenTransfer({
         senderUid: myUid,
         senderName: myName,
         recipientUid: partnerUid,
         recipientName: partnerName,
-        chatId: activeChatObj?.id ? String(activeChatObj.id) : null,
+        chatId: activeChatObj?.id ? String(activeChatObj.id) : (selectedChat?.id ? String(selectedChat.id) : null),
         tokenAmount: tokens,
         comment: transferComment || '',
       });
+
+      if (!res.success) {
+        console.error('🚨 [DirectTransfer] Échec transfert Firestore:', res.error);
+        alert(res.error || 'Erreur lors du transfert.');
+        return;
+      }
 
       // 3. Déclenchement de l'animation festive
       setShowConfetti(true);
@@ -744,95 +757,115 @@ function ChatView({
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
             {activeChatObj?.isGroup ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-                {/* BOUTON TABLEAU BLANC COLLABORATIF */}
+                {/* BOUTON TABLEAU BLANC COLLABORATIF (GROUPE) */}
                 <button
                   type="button"
-                  onClick={() => setIsWhiteboardOpen(true)}
+                  onClick={(e) => { e.stopPropagation(); setIsWhiteboardOpen(true); }}
+                  onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setIsWhiteboardOpen(true); }}
                   className="premium-button"
                   style={{
                     border: '1px solid var(--border-color)',
                     borderRadius: isMobile ? '50%' : '999px',
-                    width: isMobile ? '34px' : 'auto',
-                    height: '34px',
-                    padding: isMobile ? '0' : '0 11px',
+                    width: isMobile ? '44px' : 'auto',
+                    height: '44px',
+                    minWidth: '44px',
+                    minHeight: '44px',
+                    padding: isMobile ? '0' : '0 12px',
                     backgroundColor: 'var(--bg-subtle)',
                     color: 'var(--text-main)',
                     fontWeight: '700', fontSize: '11px', cursor: 'pointer',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
+                    position: 'relative', zIndex: 100, pointerEvents: 'auto', touchAction: 'manipulation'
                   }}
                   title="Ouvrir le Tableau Blanc Collaboratif"
                 >
-                  <Palette size={14} color="var(--accent-primary)" />
+                  <Palette size={15} color="var(--accent-primary)" />
                   {!isMobile && <span>Whiteboard</span>}
                 </button>
 
                 {/* BOUTON OUTILS PRO WORKSPACE */}
                 <button
                   type="button"
-                  onClick={() => setIsWorkspaceToolsOpen(true)}
+                  onClick={(e) => { e.stopPropagation(); setIsWorkspaceToolsOpen(true); }}
+                  onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setIsWorkspaceToolsOpen(true); }}
                   className="premium-button"
                   style={{
                     border: '1px solid var(--border-color)',
                     borderRadius: isMobile ? '50%' : '999px',
-                    width: isMobile ? '34px' : 'auto',
-                    height: '34px',
-                    padding: isMobile ? '0' : '0 11px',
+                    width: isMobile ? '44px' : 'auto',
+                    height: '44px',
+                    minWidth: '44px',
+                    minHeight: '44px',
+                    padding: isMobile ? '0' : '0 12px',
                     backgroundColor: 'var(--bg-subtle)',
                     color: 'var(--text-main)',
                     fontWeight: '700', fontSize: '11px', cursor: 'pointer',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
+                    position: 'relative', zIndex: 100, pointerEvents: 'auto', touchAction: 'manipulation'
                   }}
                   title="Outils Pro (Google Drive, Calendar, Remote)"
                 >
-                  <Briefcase size={14} color="var(--accent-primary)" />
+                  <Briefcase size={15} color="var(--accent-primary)" />
                   {!isMobile && <span>Outils Pro</span>}
                 </button>
 
                 {/* BOUTON RÉTRIBUTIONS JETONS */}
                 <button
                   type="button"
-                  onClick={() => setIsProjectRewardsModalOpen(true)}
+                  onClick={(e) => { e.stopPropagation(); setIsProjectRewardsModalOpen(true); }}
+                  onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setIsProjectRewardsModalOpen(true); }}
                   className="premium-button"
                   style={{
                     border: 'none',
                     borderRadius: isMobile ? '50%' : '999px',
-                    width: isMobile ? '34px' : 'auto',
-                    height: '34px',
-                    padding: isMobile ? '0' : '0 11px',
+                    width: isMobile ? '44px' : 'auto',
+                    height: '44px',
+                    minWidth: '44px',
+                    minHeight: '44px',
+                    padding: isMobile ? '0' : '0 12px',
                     background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
                     color: '#FFF',
                     fontWeight: '800', fontSize: '11px', cursor: 'pointer',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
-                    boxShadow: 'var(--shadow-accent)'
+                    boxShadow: 'var(--shadow-accent)',
+                    position: 'relative', zIndex: 100, pointerEvents: 'auto', touchAction: 'manipulation'
                   }}
                   title="Gérer l'équipe et rétribuer les membres en jetons"
                 >
-                  <Coins size={14} />
+                  <Coins size={15} />
                   {!isMobile && <span>💎 Rétributions</span>}
                 </button>
 
                 {/* APPELS AUDIO & VISIO DE GROUPE */}
                 <button
+                  type="button"
                   onClick={() => startCall('audio')}
+                  onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); startCall('audio'); }}
                   className="premium-button"
                   style={{
-                    border: 'none', borderRadius: '50%', width: '34px', height: '34px',
+                    border: 'none', borderRadius: '50%', width: '44px', height: '44px',
+                    minWidth: '44px', minHeight: '44px',
                     backgroundColor: 'var(--bg-subtle)',
                     color: 'var(--text-main)',
-                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    position: 'relative', zIndex: 100, pointerEvents: 'auto', touchAction: 'manipulation'
                   }}
                   title={t('audioCall') || 'Appel audio HD'}
                 >
                   <Phone size={15} />
                 </button>
                 <button
+                  type="button"
                   onClick={() => startCall('video')}
+                  onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); startCall('video'); }}
                   className="premium-button"
                   style={{
-                    border: 'none', borderRadius: '50%', width: '34px', height: '34px',
+                    border: 'none', borderRadius: '50%', width: '44px', height: '44px',
+                    minWidth: '44px', minHeight: '44px',
                     backgroundColor: 'var(--bg-subtle)',
                     color: 'var(--text-main)',
-                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    position: 'relative', zIndex: 100, pointerEvents: 'auto', touchAction: 'manipulation'
                   }}
                   title={t('videoCall') || 'Appel visio direct'}
                 >
@@ -844,34 +877,41 @@ function ChatView({
                 {/* BOUTON TABLEAU BLANC COLLABORATIF 1-TO-1 */}
                 <button
                   type="button"
-                  onClick={() => setIsWhiteboardOpen(true)}
+                  onClick={(e) => { e.stopPropagation(); setIsWhiteboardOpen(true); }}
+                  onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setIsWhiteboardOpen(true); }}
                   className="premium-button"
                   style={{
                     border: '1px solid var(--border-color)',
                     borderRadius: isMobile ? '50%' : '999px',
-                    width: isMobile ? '34px' : 'auto',
-                    height: '34px',
-                    padding: isMobile ? '0' : '0 11px',
+                    width: isMobile ? '44px' : 'auto',
+                    height: '44px',
+                    minWidth: '44px',
+                    minHeight: '44px',
+                    padding: isMobile ? '0' : '0 12px',
                     backgroundColor: 'var(--bg-subtle)',
                     color: 'var(--text-main)',
                     fontWeight: '700', fontSize: '11px', cursor: 'pointer',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
+                    position: 'relative', zIndex: 100, pointerEvents: 'auto', touchAction: 'manipulation'
                   }}
                   title="Ouvrir le Tableau Blanc Collaboratif"
                 >
-                  <Palette size={14} color="var(--accent-primary)" />
+                  <Palette size={15} color="var(--accent-primary)" />
                   {!isMobile && <span>Whiteboard</span>}
                 </button>
 
                 <button
                   type="button"
                   onClick={() => startCall('audio')}
+                  onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); startCall('audio'); }}
                   className="premium-button"
                   style={{
-                    border: 'none', borderRadius: '50%', width: '34px', height: '34px',
+                    border: 'none', borderRadius: '50%', width: '44px', height: '44px',
+                    minWidth: '44px', minHeight: '44px',
                     backgroundColor: 'var(--bg-subtle)',
                     color: 'var(--text-main)',
-                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    position: 'relative', zIndex: 100, pointerEvents: 'auto', touchAction: 'manipulation'
                   }}
                   title={t('audioCall') || 'Appel audio HD'}
                 >
@@ -2078,13 +2118,16 @@ function ChatView({
                   <div style={{ position: 'relative', flexShrink: 0 }}>
                     <button
                       type="button"
-                      onClick={() => setIsWorkspaceMenuOpen(prev => !prev)}
+                      onClick={(e) => { e.stopPropagation(); setIsWorkspaceMenuOpen(prev => !prev); }}
+                      onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setIsWorkspaceMenuOpen(prev => !prev); }}
                       className="premium-button"
                       style={{
                         border: '1px solid var(--border-color)',
                         borderRadius: '50%',
-                        width: '42px',
-                        height: '42px',
+                        width: '44px',
+                        height: '44px',
+                        minWidth: '44px',
+                        minHeight: '44px',
                         backgroundColor: isWorkspaceMenuOpen ? 'var(--accent-primary)' : 'var(--bg-card)',
                         color: isWorkspaceMenuOpen ? '#FFFFFF' : 'var(--accent-primary)',
                         cursor: 'pointer',
@@ -2093,6 +2136,10 @@ function ChatView({
                         justifyContent: 'center',
                         boxShadow: 'var(--shadow-card)',
                         flexShrink: 0,
+                        position: 'relative',
+                        zIndex: 100,
+                        pointerEvents: 'auto',
+                        touchAction: 'manipulation',
                         transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
                         transform: isWorkspaceMenuOpen ? 'rotate(45deg)' : 'none',
                       }}
@@ -2107,7 +2154,7 @@ function ChatView({
                         onClick={(e) => e.stopPropagation()}
                         style={{
                           position: 'absolute',
-                          bottom: '52px',
+                          bottom: '54px',
                           left: 0,
                           backgroundColor: 'var(--bg-card)',
                           borderRadius: '20px',
@@ -2115,11 +2162,12 @@ function ChatView({
                           boxShadow: 'var(--shadow-modal)',
                           border: '1px solid var(--border-color)',
                           width: '280px',
-                          zIndex: 100,
+                          zIndex: 1000,
                           display: 'flex',
                           flexDirection: 'column',
                           gap: '6px',
                           animation: 'fadeSlideUp 0.2s ease-out both',
+                          pointerEvents: 'auto',
                         }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 8px', borderBottom: '1px solid var(--border-color)', marginBottom: '4px' }}>
@@ -2135,13 +2183,15 @@ function ChatView({
                         {/* 1. TABLEAU BLANC COLLABORATIF MULTIJOUEUR */}
                         <button
                           type="button"
-                          onClick={() => handleOpenWorkspaceTool('whiteboard')}
+                          onClick={(e) => { e.stopPropagation(); handleOpenWorkspaceTool('whiteboard'); }}
+                          onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); handleOpenWorkspaceTool('whiteboard'); }}
                           className="hover-subtle"
                           style={{
                             border: 'none',
                             backgroundColor: 'transparent',
                             borderRadius: '12px',
                             padding: '8px 10px',
+                            minHeight: '44px',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '10px',
@@ -2149,9 +2199,11 @@ function ChatView({
                             textAlign: 'left',
                             width: '100%',
                             transition: 'background-color 0.15s ease',
+                            pointerEvents: 'auto',
+                            touchAction: 'manipulation',
                           }}
                         >
-                          <div style={{ width: '32px', height: '32px', borderRadius: '10px', backgroundColor: 'rgba(198, 125, 91, 0.15)', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <div style={{ width: '34px', height: '34px', borderRadius: '10px', backgroundColor: 'rgba(198, 125, 91, 0.15)', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                             <Palette size={16} />
                           </div>
                           <div style={{ minWidth: 0, flex: 1 }}>
@@ -2166,13 +2218,15 @@ function ChatView({
                         {/* 2. NOTES PARTAGÉES (RICH TEXT STYLE APPLE NOTES) */}
                         <button
                           type="button"
-                          onClick={() => handleOpenWorkspaceTool('notes')}
+                          onClick={(e) => { e.stopPropagation(); handleOpenWorkspaceTool('notes'); }}
+                          onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); handleOpenWorkspaceTool('notes'); }}
                           className="hover-subtle"
                           style={{
                             border: 'none',
                             backgroundColor: 'transparent',
                             borderRadius: '12px',
                             padding: '8px 10px',
+                            minHeight: '44px',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '10px',
@@ -2180,9 +2234,11 @@ function ChatView({
                             textAlign: 'left',
                             width: '100%',
                             transition: 'background-color 0.15s ease',
+                            pointerEvents: 'auto',
+                            touchAction: 'manipulation',
                           }}
                         >
-                          <div style={{ width: '32px', height: '32px', borderRadius: '10px', backgroundColor: 'rgba(245, 158, 11, 0.15)', color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <div style={{ width: '34px', height: '34px', borderRadius: '10px', backgroundColor: 'rgba(245, 158, 11, 0.15)', color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                             <Edit3 size={16} />
                           </div>
                           <div style={{ minWidth: 0, flex: 1 }}>
@@ -2197,13 +2253,15 @@ function ChatView({
                         {/* 3. TROCO DOCS (ALTERNATIVE NOTION / WORD OPEN-SOURCE) */}
                         <button
                           type="button"
-                          onClick={() => handleOpenWorkspaceTool('docs')}
+                          onClick={(e) => { e.stopPropagation(); handleOpenWorkspaceTool('docs'); }}
+                          onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); handleOpenWorkspaceTool('docs'); }}
                           className="hover-subtle"
                           style={{
                             border: 'none',
                             backgroundColor: 'transparent',
                             borderRadius: '12px',
                             padding: '8px 10px',
+                            minHeight: '44px',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '10px',
@@ -2211,9 +2269,11 @@ function ChatView({
                             textAlign: 'left',
                             width: '100%',
                             transition: 'background-color 0.15s ease',
+                            pointerEvents: 'auto',
+                            touchAction: 'manipulation',
                           }}
                         >
-                          <div style={{ width: '32px', height: '32px', borderRadius: '10px', backgroundColor: 'rgba(59, 130, 246, 0.15)', color: '#3B82F6', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <div style={{ width: '34px', height: '34px', borderRadius: '10px', backgroundColor: 'rgba(59, 130, 246, 0.15)', color: '#3B82F6', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                             <FileText size={16} />
                           </div>
                           <div style={{ minWidth: 0, flex: 1 }}>
@@ -2228,13 +2288,15 @@ function ChatView({
                         {/* 3. TROCO SHEETS (ALTERNATIVE EXCEL OPEN-SOURCE) */}
                         <button
                           type="button"
-                          onClick={() => handleOpenWorkspaceTool('sheets')}
+                          onClick={(e) => { e.stopPropagation(); handleOpenWorkspaceTool('sheets'); }}
+                          onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); handleOpenWorkspaceTool('sheets'); }}
                           className="hover-subtle"
                           style={{
                             border: 'none',
                             backgroundColor: 'transparent',
                             borderRadius: '12px',
                             padding: '8px 10px',
+                            minHeight: '44px',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '10px',
@@ -2242,9 +2304,11 @@ function ChatView({
                             textAlign: 'left',
                             width: '100%',
                             transition: 'background-color 0.15s ease',
+                            pointerEvents: 'auto',
+                            touchAction: 'manipulation',
                           }}
                         >
-                          <div style={{ width: '32px', height: '32px', borderRadius: '10px', backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <div style={{ width: '34px', height: '34px', borderRadius: '10px', backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                             <Table size={16} />
                           </div>
                           <div style={{ minWidth: 0, flex: 1 }}>
@@ -2259,7 +2323,14 @@ function ChatView({
                         {/* 4. CALENDRIER & RÉUNIONS */}
                         <button
                           type="button"
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setIsWorkspaceMenuOpen(false);
+                            setIsWorkspaceToolsOpen(true);
+                          }}
+                          onTouchEnd={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
                             setIsWorkspaceMenuOpen(false);
                             setIsWorkspaceToolsOpen(true);
                           }}
@@ -2269,6 +2340,7 @@ function ChatView({
                             backgroundColor: 'transparent',
                             borderRadius: '12px',
                             padding: '8px 10px',
+                            minHeight: '44px',
                             display: 'flex',
                             alignItems: 'center',
                             gap: '10px',
@@ -2276,9 +2348,11 @@ function ChatView({
                             textAlign: 'left',
                             width: '100%',
                             transition: 'background-color 0.15s ease',
+                            pointerEvents: 'auto',
+                            touchAction: 'manipulation',
                           }}
                         >
-                          <div style={{ width: '32px', height: '32px', borderRadius: '10px', backgroundColor: 'rgba(234, 67, 53, 0.15)', color: '#EA4335', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <div style={{ width: '34px', height: '34px', borderRadius: '10px', backgroundColor: 'rgba(234, 67, 53, 0.15)', color: '#EA4335', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                             <Calendar size={16} />
                           </div>
                           <div style={{ minWidth: 0, flex: 1 }}>
@@ -2291,7 +2365,14 @@ function ChatView({
                         {activeChatObj?.isGroup && (
                           <button
                             type="button"
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setIsWorkspaceMenuOpen(false);
+                              setIsProjectRewardsModalOpen(true);
+                            }}
+                            onTouchEnd={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
                               setIsWorkspaceMenuOpen(false);
                               setIsProjectRewardsModalOpen(true);
                             }}
@@ -2301,6 +2382,7 @@ function ChatView({
                               backgroundColor: 'transparent',
                               borderRadius: '12px',
                               padding: '8px 10px',
+                              minHeight: '44px',
                               display: 'flex',
                               alignItems: 'center',
                               gap: '10px',
@@ -2308,9 +2390,11 @@ function ChatView({
                               textAlign: 'left',
                               width: '100%',
                               transition: 'background-color 0.15s ease',
+                              pointerEvents: 'auto',
+                              touchAction: 'manipulation',
                             }}
                           >
-                            <div style={{ width: '32px', height: '32px', borderRadius: '10px', backgroundColor: 'rgba(245, 158, 11, 0.15)', color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <div style={{ width: '34px', height: '34px', borderRadius: '10px', backgroundColor: 'rgba(245, 158, 11, 0.15)', color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                               <Coins size={16} />
                             </div>
                             <div style={{ minWidth: 0, flex: 1 }}>
@@ -2352,13 +2436,16 @@ function ChatView({
                 {!editingMsg && (
                   <button
                     type="button"
-                    onClick={() => setIsDirectTransferOpen(true)}
+                    onClick={(e) => { e.stopPropagation(); setIsDirectTransferOpen(true); }}
+                    onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setIsDirectTransferOpen(true); }}
                     className="premium-button"
                     style={{
                       border: '1.5px solid #F59E0B',
                       borderRadius: '50%',
-                      width: '42px',
-                      height: '42px',
+                      width: '44px',
+                      height: '44px',
+                      minWidth: '44px',
+                      minHeight: '44px',
                       backgroundColor: 'rgba(245, 158, 11, 0.12)',
                       color: '#F59E0B',
                       cursor: 'pointer',
@@ -2367,6 +2454,10 @@ function ChatView({
                       justifyContent: 'center',
                       boxShadow: '0 4px 12px rgba(245, 158, 11, 0.2)',
                       flexShrink: 0,
+                      position: 'relative',
+                      zIndex: 100,
+                      pointerEvents: 'auto',
+                      touchAction: 'manipulation',
                       transition: 'transform 0.15s ease',
                     }}
                     title="Transférer des Jetons Troco instantanément"
@@ -2379,13 +2470,16 @@ function ChatView({
                 {!editingMsg && (
                   <button
                     type="button"
-                    onClick={() => setIsRecordingAudio(true)}
+                    onClick={(e) => { e.stopPropagation(); setIsRecordingAudio(true); }}
+                    onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setIsRecordingAudio(true); }}
                     className="premium-button"
                     style={{
                       border: '1px solid var(--border-color)',
                       borderRadius: '50%',
-                      width: '42px',
-                      height: '42px',
+                      width: '44px',
+                      height: '44px',
+                      minWidth: '44px',
+                      minHeight: '44px',
                       backgroundColor: 'var(--bg-card)',
                       color: 'var(--accent-primary)',
                       cursor: 'pointer',
@@ -2394,6 +2488,10 @@ function ChatView({
                       justifyContent: 'center',
                       boxShadow: 'var(--shadow-card)',
                       flexShrink: 0,
+                      position: 'relative',
+                      zIndex: 100,
+                      pointerEvents: 'auto',
+                      touchAction: 'manipulation',
                     }}
                     title="Enregistrer une note vocale"
                   >
@@ -2402,14 +2500,19 @@ function ChatView({
                 )}
 
                 <button
-                  onClick={onSubmitMessage}
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onSubmitMessage(); }}
+                  onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); onSubmitMessage(); }}
                   className="premium-button"
                   style={{
-                    border: 'none', borderRadius: '50%', width: '42px', height: '42px',
+                    border: 'none', borderRadius: '50%',
+                    width: '44px', height: '44px',
+                    minWidth: '44px', minHeight: '44px',
                     background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
                     color: '#FFF', cursor: 'pointer',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    boxShadow: 'var(--shadow-accent)', flexShrink: 0
+                    boxShadow: 'var(--shadow-accent)', flexShrink: 0,
+                    position: 'relative', zIndex: 100, pointerEvents: 'auto', touchAction: 'manipulation'
                   }}
                   title="Envoyer"
                 >
@@ -2789,13 +2892,16 @@ function ChatView({
           <CollaborativeWhiteboardModal
             isOpen={isWhiteboardOpen}
             onClose={() => setIsWhiteboardOpen(false)}
-            groupId={activeChatObj.id || activeChatObj.firestoreId || 'group_whiteboard'}
+            groupId={activeChatObj.id || activeChatObj.firestoreId || selectedChat?.id || 'group_whiteboard'}
             boardId={activeWhiteboardBoardId || (activeChatObj.id ? `board-${activeChatObj.id}` : 'default_board')}
             projectTitle={activeChatObj.projectTitle || activeChatObj.user || 'Tableau Blanc Collaboratif'}
             currentUser={profile}
             darkMode={darkMode}
             handleSendMessage={handleSendMessage}
-            onSendToChat={(sentBoardId, version) => {
+            onSendToChat={(sentBoardId, version, msgPayload) => {
+              if (typeof handleSendMessage === 'function' && msgPayload) {
+                handleSendMessage(msgPayload);
+              }
               if (setChatInputText) setChatInputText('');
             }}
           />
@@ -2808,12 +2914,16 @@ function ChatView({
           <SharedDocumentModal
             isOpen={isSharedDocOpen}
             onClose={() => setIsSharedDocOpen(false)}
-            groupId={activeChatObj.id || activeChatObj.firestoreId || 'group_notes'}
+            groupId={activeChatObj.id || activeChatObj.firestoreId || selectedChat?.id || 'group_notes'}
             docId={activeChatObj.id ? `doc-${activeChatObj.id}` : 'default_shared_doc'}
             projectTitle={activeChatObj.projectTitle || activeChatObj.user || 'Notes Partagées'}
             currentUser={profile}
             darkMode={darkMode}
-            onSendToChat={(sentDocId) => {
+            handleSendMessage={handleSendMessage}
+            onSendToChat={(sentDocId, msgPayload) => {
+              if (typeof handleSendMessage === 'function' && msgPayload) {
+                handleSendMessage(msgPayload);
+              }
               if (setChatInputText) setChatInputText('');
             }}
           />
@@ -3030,9 +3140,11 @@ function ChatView({
                 <button
                   key={amt}
                   type="button"
-                  onClick={() => setDirectTokensCount(amt)}
+                  onClick={(e) => { e.stopPropagation(); setDirectTokensCount(amt); }}
+                  onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setDirectTokensCount(amt); }}
                   style={{
                     padding: '10px 4px',
+                    minHeight: '44px',
                     borderRadius: '12px',
                     border: directTokensCount === amt ? '2px solid #F59E0B' : '1px solid var(--border-color)',
                     backgroundColor: directTokensCount === amt ? 'rgba(245, 158, 11, 0.15)' : 'var(--bg-subtle)',
@@ -3040,7 +3152,12 @@ function ChatView({
                     fontSize: '13px',
                     fontWeight: '800',
                     cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                     transition: 'all 0.15s ease',
+                    pointerEvents: 'auto',
+                    touchAction: 'manipulation',
                   }}
                 >
                   +{amt} 🪙
@@ -3076,10 +3193,12 @@ function ChatView({
             <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
               <button
                 type="button"
-                onClick={() => setIsDirectTransferOpen(false)}
+                onClick={(e) => { e.stopPropagation(); setIsDirectTransferOpen(false); }}
+                onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setIsDirectTransferOpen(false); }}
                 style={{
                   flex: 1,
                   padding: '10px 14px',
+                  minHeight: '44px',
                   borderRadius: '12px',
                   border: '1px solid var(--border-color)',
                   backgroundColor: 'var(--bg-subtle)',
@@ -3087,6 +3206,11 @@ function ChatView({
                   fontSize: '12.5px',
                   fontWeight: '700',
                   cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  pointerEvents: 'auto',
+                  touchAction: 'manipulation',
                 }}
               >
                 Annuler
@@ -3095,11 +3219,19 @@ function ChatView({
               <button
                 type="button"
                 disabled={isTransferringTokens || (profile?.trocoTokens || 0) < directTokensCount}
-                onClick={handleExecuteDirectTokenTransfer}
+                onClick={(e) => { e.stopPropagation(); handleExecuteDirectTokenTransfer(); }}
+                onTouchEnd={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (!isTransferringTokens && (profile?.trocoTokens || 0) >= directTokensCount) {
+                    handleExecuteDirectTokenTransfer();
+                  }
+                }}
                 className="premium-button"
                 style={{
                   flex: 1,
                   padding: '10px 14px',
+                  minHeight: '44px',
                   borderRadius: '12px',
                   border: 'none',
                   background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
@@ -3109,6 +3241,11 @@ function ChatView({
                   cursor: (isTransferringTokens || (profile?.trocoTokens || 0) < directTokensCount) ? 'not-allowed' : 'pointer',
                   opacity: (profile?.trocoTokens || 0) < directTokensCount ? 0.5 : 1,
                   boxShadow: '0 4px 14px rgba(245, 158, 11, 0.4)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  pointerEvents: 'auto',
+                  touchAction: 'manipulation',
                 }}
               >
                 {isTransferringTokens ? 'Transfert...' : `Envoyer ${directTokensCount} 🪙`}

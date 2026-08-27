@@ -1,14 +1,12 @@
 import {
   collection,
   doc,
-  getDocs,
   setDoc,
   addDoc,
   deleteDoc,
   query,
   where,
   orderBy,
-  limit,
   onSnapshot,
   serverTimestamp,
   runTransaction
@@ -338,23 +336,22 @@ export const executeDirectTokenTransfer = async ({
   comment = '',
 }) => {
   if (!senderUid || tokenAmount <= 0) {
+    console.error('[FirestoreService] executeDirectTokenTransfer: senderUid manquant ou tokenAmount invalide', { senderUid, tokenAmount });
     return { success: false, error: 'Paramètres invalides pour le transfert.' };
   }
 
+  if (!recipientUid) {
+    console.error('🚨 [FirestoreService] executeDirectTokenTransfer ERROR: recipientUid est introuvable ou indéfini ! Le destinataire ne peut pas être crédité.', {
+      senderUid,
+      senderName,
+      recipientName,
+      chatId,
+      tokenAmount
+    });
+    return { success: false, error: 'UID du destinataire manquant. Transfert annulé.' };
+  }
+
   try {
-    let targetRecipientUid = recipientUid;
-
-    // Si recipientUid n'est pas fourni mais qu'on a le nom, recherche dans la collection 'users'
-    if (!targetRecipientUid && recipientName && db) {
-      try {
-        const uQuery = query(collection(db, 'users'), where('name', '==', recipientName), limit(1));
-        const uSnap = await getDocs(uQuery);
-        if (!uSnap.empty) {
-          targetRecipientUid = uSnap.docs[0].id;
-        }
-      } catch (_) {}
-    }
-
     await runTransaction(db, async (transaction) => {
       // 1. Débit Expéditeur
       const senderRef = doc(db, 'users', String(senderUid));
@@ -369,25 +366,23 @@ export const executeDirectTokenTransfer = async ({
         });
       }
 
-      // 2. Crédit Destinataire
-      if (targetRecipientUid) {
-        const recipientRef = doc(db, 'users', String(targetRecipientUid));
-        const recipientDoc = await transaction.get(recipientRef);
-        if (recipientDoc.exists()) {
-          const recipientData = recipientDoc.data();
-          const currentRecipientTokens = Number(recipientData.trocoTokens || 0);
-          transaction.update(recipientRef, {
-            trocoTokens: currentRecipientTokens + tokenAmount,
-            updatedAt: serverTimestamp(),
-          });
-        } else {
-          transaction.set(recipientRef, {
-            name: recipientName || 'Utilisateur Troco',
-            trocoTokens: tokenAmount,
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-          }, { merge: true });
-        }
+      // 2. Crédit Direct Destinataire
+      const recipientRef = doc(db, 'users', String(recipientUid));
+      const recipientDoc = await transaction.get(recipientRef);
+      if (recipientDoc.exists()) {
+        const recipientData = recipientDoc.data();
+        const currentRecipientTokens = Number(recipientData.trocoTokens || 0);
+        transaction.update(recipientRef, {
+          trocoTokens: currentRecipientTokens + tokenAmount,
+          updatedAt: serverTimestamp(),
+        });
+      } else {
+        transaction.set(recipientRef, {
+          name: recipientName || 'Utilisateur Troco',
+          trocoTokens: tokenAmount,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
       }
     });
 
@@ -401,7 +396,7 @@ export const executeDirectTokenTransfer = async ({
         transferComment: comment || '',
         sender: senderUid,
         senderName: senderName || 'Moi',
-        recipientUid: targetRecipientUid || '',
+        recipientUid: String(recipientUid),
         recipientName: recipientName || '',
         timestamp: serverTimestamp(),
         createdAt: Date.now(),
@@ -419,7 +414,7 @@ export const executeDirectTokenTransfer = async ({
         type: 'token_transfer',
         senderUid: senderUid,
         senderName: senderName,
-        recipientUid: targetRecipientUid || '',
+        recipientUid: String(recipientUid),
         recipientName: recipientName || '',
         tokens: tokenAmount,
         comment: comment || '',
@@ -427,9 +422,9 @@ export const executeDirectTokenTransfer = async ({
       });
     }
 
-    return { success: true, targetRecipientUid };
+    return { success: true, targetRecipientUid: recipientUid };
   } catch (error) {
-    console.error('[FirestoreService] executeDirectTokenTransfer error:', error);
+    console.error('🚨 [FirestoreService] executeDirectTokenTransfer transaction failed:', error);
     return { success: false, error };
   }
 };
