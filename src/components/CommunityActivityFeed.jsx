@@ -290,9 +290,9 @@ export default function CommunityActivityFeed({
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                   {/* AVATAR ACTEUR */}
                   <img
-                    src={act.actor.avatar}
-                    alt={act.actor.name}
-                    onClick={() => onOpenProfile?.(act.actor)}
+                    src={act.actor?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'}
+                    alt={act.actor?.name || 'Membre'}
+                    onClick={() => act.actor && onOpenProfile?.(act.actor)}
                     style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', cursor: 'pointer', border: '1px solid var(--border-color)' }}
                   />
 
@@ -300,13 +300,13 @@ export default function CommunityActivityFeed({
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', fontSize: '13px' }}>
                       <button
                         type="button"
-                        onClick={() => onOpenProfile?.(act.actor)}
+                        onClick={() => act.actor && onOpenProfile?.(act.actor)}
                         style={{ border: 'none', background: 'transparent', padding: 0, fontWeight: '800', color: 'var(--text-main)', cursor: 'pointer', fontSize: '13px' }}
                       >
-                        {act.actor.name}
+                        {act.actor?.name || 'Membre'}
                       </button>
 
-                      <span style={{ color: 'var(--text-secondary)' }}>{act.actionText}</span>
+                      <span style={{ color: 'var(--text-secondary)' }}>{act.actionText || ''}</span>
 
                       {act.targetUser && (
                         <button
@@ -314,13 +314,13 @@ export default function CommunityActivityFeed({
                           onClick={() => onOpenProfile?.(act.targetUser)}
                           style={{ border: 'none', background: 'transparent', padding: 0, fontWeight: '800', color: 'var(--accent-primary)', cursor: 'pointer', fontSize: '13px' }}
                         >
-                          {act.targetUser.name}
+                          {act.targetUser?.name || 'Membre'}
                         </button>
                       )}
                     </div>
 
                     <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                      {act.time}
+                      {act.time || ''}
                     </div>
                   </div>
                 </div>

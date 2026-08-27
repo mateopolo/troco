@@ -100,7 +100,7 @@ export default function ProfileView({
           {/* AVATAR AVEC UPLOAD */}
           <div style={{ position: 'relative' }}>
             <div style={{ width: '96px', height: '96px', borderRadius: '50%', overflow: 'hidden', border: '3px solid var(--accent-primary)', boxShadow: 'var(--shadow-accent)' }}>
-              <img src={isEditingProfile ? profileDraft.avatar : profile.avatar} alt={profile.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <img src={isEditingProfile ? (profileDraft?.avatar || profile?.avatar) : (profile?.avatar || '')} alt={profile?.name || 'Profil'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             </div>
 
             {isEditingProfile && (
@@ -135,10 +135,10 @@ export default function ProfileView({
               <>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px', flexWrap: 'wrap' }}>
                   <h1 className="font-editorial-heading" style={{ margin: 0, fontSize: '28px', fontWeight: '600', color: 'var(--text-main)' }}>
-                    {profile.name}
+                    {profile?.name || 'Membre Troco'}
                   </h1>
-                  <span style={{ fontSize: '13px', color: 'var(--accent-primary)', fontWeight: '700' }}>{profile.username}</span>
-                  {profile.kycVerified ? (
+                  <span style={{ fontSize: '13px', color: 'var(--accent-primary)', fontWeight: '700' }}>{profile?.username || '@membre'}</span>
+                  {profile?.kycVerified ? (
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-success)', fontSize: '11px', fontWeight: '800', padding: '3px 8px', borderRadius: '999px', border: '1px solid var(--border-color)' }}>
                       <ShieldCheck size={13} /> Identité Vérifiée ✅
                     </span>
@@ -154,7 +154,7 @@ export default function ProfileView({
                 </div>
 
                 <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '14px' }}>
-                  {profile.bio}
+                  {profile?.bio || ''}
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
@@ -171,10 +171,10 @@ export default function ProfileView({
                     )}
                   </div>
                   <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600' }}>
-                    📍 {profile.location}
+                    📍 {profile?.location || 'France'}
                   </div>
                   <div style={{ display: 'flex', gap: '4px' }}>
-                    {profile.languages?.map(lang => (
+                    {profile?.languages?.map(lang => (
                       <span key={lang} style={{ fontSize: '11px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-main)', padding: '2px 6px', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
                         {lang}
                       </span>
@@ -187,14 +187,14 @@ export default function ProfileView({
                 <div style={{ display: 'flex', gap: '10px' }}>
                   <input
                     type="text"
-                    value={profileDraft.name}
+                    value={profileDraft?.name || ''}
                     onChange={(e) => setProfileDraft(prev => ({ ...prev, name: e.target.value }))}
                     placeholder="Nom complet"
                     style={{ flex: 1, padding: '10px 12px', border: '1px solid var(--border-color)', borderRadius: '12px', fontSize: '14px', fontWeight: '700', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', outline: 'none' }}
                   />
                   <input
                     type="text"
-                    value={profileDraft.username}
+                    value={profileDraft?.username || ''}
                     onChange={(e) => setProfileDraft(prev => ({ ...prev, username: e.target.value }))}
                     placeholder="@nomdutilisateur"
                     style={{ flex: 1, padding: '10px 12px', border: '1px solid var(--border-color)', borderRadius: '12px', fontSize: '14px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', outline: 'none' }}

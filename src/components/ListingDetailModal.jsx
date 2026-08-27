@@ -30,7 +30,7 @@ export default function ListingDetailModal({
 
   if (!selectedListing) return null;
 
-  const isOwner = selectedListing.author === profile.name;
+  const isOwner = Boolean(profile?.name && selectedListing.author === profile.name);
   const media = getSuggestedMedia ? getSuggestedMedia(selectedListing.title, selectedListing.description || '', selectedListing.image, selectedListing.video) : {};
   const gallery = (selectedListing.gallery && selectedListing.gallery.length > 0) ? selectedListing.gallery : (media.gallery && media.gallery.length > 0 ? media.gallery : (selectedListing.image ? [selectedListing.image] : []));
   const currentImage = gallery[selectedImageIndex] || selectedListing.image;

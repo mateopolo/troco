@@ -3296,11 +3296,13 @@ export default function App() {
                       <React.Fragment key={item.id}>
                         <FeedCardItem
                           item={item}
+                          profile={profile}
                           darkMode={darkMode}
                           hoveredCardId={hoveredCardId}
                           setHoveredCardId={setHoveredCardId}
                           hoverSlideIndex={hoverSlideIndex}
                           handleOpenListing={handleOpenListing}
+                          handleStartDiscussion={handleStartDiscussion}
                           getSuggestedMedia={getSuggestedMedia}
                           getFallbackImage={getFallbackImage}
                           formatCompensation={formatCompensation}

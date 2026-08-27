@@ -468,16 +468,21 @@ export const useChatManager = ({
     setMessageDraft(text);
     if (!selectedChat?.id || !profile?.name || !db) return;
     const chatId = String(selectedChat.id);
+    const userName = profile?.name || 'me';
 
-    setDoc(doc(db, 'chats', chatId), {
-      typing: { [profile.name]: true }
-    }, { merge: true }).catch(() => { });
+    if (db) {
+      setDoc(doc(db, 'chats', chatId), {
+        typing: { [userName]: true }
+      }, { merge: true }).catch(() => { });
+    }
 
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     typingTimeoutRef.current = setTimeout(() => {
-      setDoc(doc(db, 'chats', chatId), {
-        typing: { [profile.name]: false }
-      }, { merge: true }).catch(() => { });
+      if (db) {
+        setDoc(doc(db, 'chats', chatId), {
+          typing: { [userName]: false }
+        }, { merge: true }).catch(() => { });
+      }
     }, 2500);
   };
 

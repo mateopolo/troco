@@ -550,8 +550,12 @@ function FeedCardItem({
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: '1px solid var(--border-color)', gap: '8px', flexWrap: 'wrap' }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: '7px', fontWeight: '700', fontSize: '13px', color: 'var(--text-main)' }}>
-            <img src={item.author === profile.name ? profile.avatar : getAuthorAvatar(item.author)} alt={item.author} style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border-color)' }} />
-            {item.author}
+            <img
+              src={(profile?.name && item.author === profile.name) ? (profile?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80') : (typeof getAuthorAvatar === 'function' ? getAuthorAvatar(item.author) : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80')}
+              alt={item.author || 'Auteur'}
+              style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border-color)' }}
+            />
+            {item.author || 'Membre Troco'}
           </span>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             {isAdmin && (
@@ -583,8 +587,8 @@ function FeedCardItem({
                 <Trash2 size={12} /> Modérer
               </button>
             )}
-            {item.author !== profile.name ? (
-              <button onClick={(event) => { event.stopPropagation(); handleStartDiscussion(item); }} className="premium-button" style={{ background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)', color: '#FFF', border: 'none', padding: '9px 16px', borderRadius: '999px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', boxShadow: 'var(--shadow-accent)' }}>{t('proposeDealButton')} <ArrowRight size={12} /></button>
+            {(!profile?.name || item.author !== profile.name) ? (
+              <button onClick={(event) => { event.stopPropagation(); if (typeof handleStartDiscussion === 'function') handleStartDiscussion(item); else if (typeof handleOpenListing === 'function') handleOpenListing(item); }} className="premium-button" style={{ background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)', color: '#FFF', border: 'none', padding: '9px 16px', borderRadius: '999px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', boxShadow: 'var(--shadow-accent)' }}>{t('proposeDealButton')} <ArrowRight size={12} /></button>
             ) : (
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <span style={{ backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)', border: '1px solid var(--border-color)', padding: '6px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '600' }}>{t('authorAnnc')}</span>
