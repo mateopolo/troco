@@ -22,7 +22,10 @@ function FeedCardItem({
   profile,
   handleStartDiscussion,
   isAdmin = false,
+  isGodModeActive = false,
   onAdminDeleteListing = null,
+  onAdminToggleHideListing = null,
+  onAdminEditListing = null,
   onOpenMobileActions = null,
   t = (key) => key
 }) {
@@ -101,29 +104,22 @@ function FeedCardItem({
 
   const currentSlideIndex = localImageIndex % galleryLength;
 
-  // GESTION DU SWIPE TACTILE FLUIDE SANS BLOQUER LE SCROLL VERTICAL
+  // GESTION DU SWIPE TACTILE & LONG-PRESS
   const handleTouchStart = (e) => {
     if (!e.touches || e.touches.length === 0) return;
-    if (setHoveredCardId) setHoveredCardId(item.id);
-    touchStartRef.current = {
-      x: e.touches[0].clientX,
-      y: e.touches[0].clientY,
-    };
+    touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
     touchDeltaXRef.current = 0;
     touchDeltaYRef.current = 0;
     isSwipingRef.current = false;
 
-    // Détection appui long (~500ms) pour l'auteur
-    if (item.author === profile?.name && onOpenMobileActions) {
-      if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
+    if (onOpenMobileActions) {
       longPressTimerRef.current = setTimeout(() => {
-        if (!isSwipingRef.current && onOpenMobileActions) {
-          if (navigator.vibrate) navigator.vibrate(50);
+        if (!isSwipingRef.current) {
+          try { if (navigator.vibrate) navigator.vibrate(35); } catch (_) {}
           onOpenMobileActions(item);
         }
       }, 500);
     }
-    isSwipingRef.current = false;
   };
 
   const handleTouchMove = (e) => {
@@ -196,6 +192,78 @@ function FeedCardItem({
         transition: 'transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s cubic-bezier(0.22, 1, 0.36, 1)'
       }}
     >
+      {/* BANDEAU ADMINISTRATEUR GOD MODE / GHOST NAVIGATION */}
+      {(isAdmin || isGodModeActive) && (
+        <div
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            backgroundColor: 'rgba(28, 24, 22, 0.94)',
+            color: '#FFFFFF',
+            padding: '6px 12px',
+            fontSize: '11px',
+            fontWeight: '800',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderBottom: '1px solid rgba(255,255,255,0.15)',
+            zIndex: 20,
+            position: 'relative',
+          }}
+        >
+          <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#F59E0B' }}>
+            🛡️ God Mode #{item.id}
+          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+            {onAdminToggleHideListing && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAdminToggleHideListing(item);
+                }}
+                style={{
+                  border: 'none',
+                  backgroundColor: item.isHidden ? '#10B981' : 'rgba(255,255,255,0.2)',
+                  color: '#FFFFFF',
+                  borderRadius: '6px',
+                  padding: '3px 8px',
+                  fontSize: '10px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                }}
+                title={item.isHidden ? 'Démasquer' : 'Masquer cette annonce'}
+              >
+                {item.isHidden ? '👁️ Visible' : '🚫 Masquer'}
+              </button>
+            )}
+            {onAdminDeleteListing && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (window.confirm(`[ADMIN GOD MODE]\nSupprimer définitivement "${item.title}" ?`)) {
+                    onAdminDeleteListing(item);
+                  }
+                }}
+                style={{
+                  border: 'none',
+                  backgroundColor: '#EF4444',
+                  color: '#FFFFFF',
+                  borderRadius: '6px',
+                  padding: '3px 8px',
+                  fontSize: '10px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                }}
+                title="Supprimer immédiatement l'annonce"
+              >
+                🗑️ Suppr
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* CADRE PHOTO AVEC GESTION DU CARROUSEL, SWIPE ET SURVOL */}
       <div
         onClick={handleCardImageClick}

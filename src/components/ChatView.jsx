@@ -7,7 +7,7 @@ import {
   Palette, Briefcase, Plus, FileText, Calendar, Table
 } from 'lucide-react';
 import { doc, deleteDoc, addDoc, collection, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { db, auth } from '../firebase';
+import { db } from '../firebase';
 import { subscribeTranslations } from '../utils/translator';
 import { analyzeContent } from '../utils/contentModeration';
 import VoiceNotePlayer from './VoiceNotePlayer';
@@ -46,6 +46,7 @@ function ChatView({
   onAcceptReward,
   onSendAudioMessage,
   profile,
+  setProfile,
   currentLang = 'FR',
   t,
   darkMode = false,
@@ -81,11 +82,88 @@ function ChatView({
   const [confirmDeleteChat, setConfirmDeleteChat] = useState(null);
   const [isDirectTransferOpen, setIsDirectTransferOpen] = useState(false);
   const [directTokensCount, setDirectTokensCount] = useState(1);
+  const [transferComment, setTransferComment] = useState('');
+  const [isTransferringTokens, setIsTransferringTokens] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
   const [isMobileLocal, setIsMobileLocal] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
   const isMobile = isMobileProp !== undefined ? isMobileProp : isMobileLocal;
 
   const effectiveSelectedChat = (selectedChat && !deletedChatIds.has(selectedChat.id)) ? selectedChat : null;
   const [mobileSubView, setMobileSubView] = useState(() => (selectedChat && !deletedChatIds.has(selectedChat.id)) ? 'room' : 'list');
+
+  // Transfert direct de Jetons Troco avec débit immédiat et confettis
+  const handleExecuteDirectTokenTransfer = async () => {
+    const tokens = Number(directTokensCount) || 1;
+    if (tokens <= 0) return;
+    const currentBalance = Number(profile?.trocoTokens || 0);
+
+    if (currentBalance < tokens) {
+      alert(`Solde insuffisant : vous disposez de ${currentBalance} Jeton(s) Troco.`);
+      return;
+    }
+
+    setIsTransferringTokens(true);
+    try {
+      const myName = profile?.name || 'Moi';
+      const partnerName = effectiveSelectedChat?.user || effectiveSelectedChat?.projectTitle || 'Interlocuteur';
+      const updatedTokens = Math.max(0, currentBalance - tokens);
+
+      // 1. Débit immédiat du solde utilisateur dans l'application
+      if (typeof setProfile === 'function') {
+        setProfile(prev => ({ ...prev, trocoTokens: updatedTokens }));
+      }
+      try {
+        const saved = JSON.parse(localStorage.getItem('troco_user_profile') || '{}');
+        saved.trocoTokens = updatedTokens;
+        localStorage.setItem('troco_user_profile', JSON.stringify(saved));
+      } catch (_) {}
+
+      // 2. Écriture du message de transfert et de la transaction dans Firestore
+      if (db && effectiveSelectedChat?.id) {
+        const transferText = `🪙 ${myName} a envoyé ${tokens} Jeton${tokens > 1 ? 's' : ''} Troco à ${partnerName}${transferComment ? ` (« ${transferComment} »)` : ''} !`;
+        const chatDocId = String(effectiveSelectedChat.id);
+
+        await addDoc(collection(db, 'chats', chatDocId, 'messages'), {
+          text: transferText,
+          type: 'token_transfer',
+          tokenAmount: tokens,
+          transferComment: transferComment || '',
+          sender: 'me',
+          senderName: myName,
+          senderAvatar: profile?.avatar || '',
+          timestamp: serverTimestamp(),
+          createdAt: Date.now(),
+        });
+
+        await setDoc(doc(db, 'chats', chatDocId), {
+          lastMessage: transferText,
+          lastMessageTimestamp: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+
+        await addDoc(collection(db, 'transactions'), {
+          type: 'token_transfer',
+          userId: profile?.uid || 'me',
+          userName: myName,
+          partnerName: partnerName,
+          tokens: tokens,
+          comment: transferComment || '',
+          createdAt: serverTimestamp(),
+        });
+      }
+
+      // 3. Déclenchement de l'animation festive
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 3800);
+      setIsDirectTransferOpen(false);
+      setTransferComment('');
+      setDirectTokensCount(1);
+    } catch (err) {
+      console.warn('[DirectTransfer] error:', err);
+    } finally {
+      setIsTransferringTokens(false);
+    }
+  };
 
   // Gestion de l'ouverture d'un outil workspace avec invitation automatique dans la conversation
   const handleOpenWorkspaceTool = async (toolType) => {
@@ -1500,15 +1578,16 @@ function ChatView({
                       alignItems: 'center',
                       gap: '4px',
                       flexDirection: isMe ? 'row-reverse' : 'row',
-                      maxWidth: isMobile ? '88%' : '76%',
+                      maxWidth: isMobile ? '90%' : '76%',
                       position: 'relative'
                     }}
                   >
                     <div
                       className="message-bubble"
                       style={{
-                        padding: '10px 14px',
-                        maxWidth: '85%',
+                        padding: '11px 16px',
+                        maxWidth: '100%',
+                        width: 'fit-content',
                         minWidth: 0,
                         boxSizing: 'border-box',
                         overflow: 'hidden',
@@ -1530,7 +1609,9 @@ function ChatView({
                         boxShadow: isMe
                           ? 'var(--shadow-accent)'
                           : 'var(--shadow-card)',
-                        wordBreak: 'break-word',
+                        overflowWrap: 'break-word',
+                        wordBreak: 'normal',
+                        whiteSpace: 'pre-wrap',
                         position: 'relative',
                         display: 'flex',
                         flexDirection: 'column',
@@ -1545,12 +1626,41 @@ function ChatView({
 
                       {/* IMAGE OU CAPTURE DE TABLEAU BLANC */}
                       {(msg.imageUrl || msg.type === 'image' || msg.kind === 'image') && (
-                        <div style={{ borderRadius: '12px', overflow: 'hidden', marginBottom: '6px', maxWidth: '280px' }}>
+                        <div style={{ borderRadius: '12px', overflow: 'hidden', marginBottom: '6px', maxWidth: '320px' }}>
                           <img
                             src={msg.imageUrl}
                             alt="Capture tableau blanc"
                             style={{ width: '100%', height: 'auto', display: 'block', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.1)' }}
                           />
+                        </div>
+                      )}
+
+                      {/* NOTIFICATION DE TRANSFERT DE JETONS */}
+                      {msg.type === 'token_transfer' && (
+                        <div
+                          style={{
+                            borderRadius: '16px',
+                            padding: '12px 14px',
+                            backgroundColor: isMe ? 'rgba(255, 255, 255, 0.18)' : 'rgba(245, 158, 11, 0.12)',
+                            border: isMe ? '1px solid rgba(255, 255, 255, 0.4)' : '1.5px solid #F59E0B',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '10px',
+                            minWidth: '220px',
+                            marginBottom: '4px',
+                          }}
+                        >
+                          <div style={{ width: '36px', height: '36px', borderRadius: '10px', backgroundColor: '#F59E0B', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', flexShrink: 0, boxShadow: '0 2px 8px rgba(245, 158, 11, 0.4)' }}>
+                            🪙
+                          </div>
+                          <div>
+                            <div style={{ fontSize: '13px', fontWeight: '800', color: isMe ? '#FFFFFF' : 'var(--text-main)' }}>
+                              Transfert de {msg.tokenAmount || 1} Jeton{msg.tokenAmount > 1 ? 's' : ''} Troco
+                            </div>
+                            <div style={{ fontSize: '11px', color: isMe ? 'rgba(255,255,255,0.9)' : 'var(--text-secondary)' }}>
+                              {msg.text || 'Transfert validé immédiatement'}
+                            </div>
+                          </div>
                         </div>
                       )}
 
@@ -2908,40 +3018,8 @@ function ChatView({
 
               <button
                 type="button"
-                onClick={async () => {
-                  const count = parseInt(directTokensCount, 10) || 1;
-                  setIsDirectTransferOpen(false);
-
-                  try {
-                    const chatId = activeChatObj.id || currentChatId;
-                    if (db && chatId) {
-                      const authorName = profile?.name || 'Moi';
-                      const partnerName = activeChatObj.user || 'l’interlocuteur';
-                      const text = `🪙 Transfert direct : ${authorName} a envoyé ${count} Jeton${count > 1 ? 's' : ''} Troco à ${partnerName} ! 🎉`;
-
-                      await addDoc(collection(db, 'chats', String(chatId), 'messages'), {
-                        text,
-                        type: 'token_transfer',
-                        kind: 'token_transfer',
-                        tokenAmount: count,
-                        sender: profile?.uid || profile?.id || 'me',
-                        senderUid: profile?.uid || (auth.currentUser && auth.currentUser.uid) || 'me',
-                        senderName: authorName,
-                        senderAvatar: profile?.avatar || '',
-                        timestamp: serverTimestamp(),
-                        createdAt: Date.now(),
-                      });
-
-                      await setDoc(doc(db, 'chats', String(chatId)), {
-                        lastMessage: text,
-                        lastMessageTimestamp: serverTimestamp(),
-                        updatedAt: serverTimestamp(),
-                      }, { merge: true });
-                    }
-                  } catch (err) {
-                    console.warn('[Direct Token Transfer] error:', err);
-                  }
-                }}
+                disabled={isTransferringTokens || (profile?.trocoTokens || 0) < directTokensCount}
+                onClick={handleExecuteDirectTokenTransfer}
                 className="premium-button"
                 style={{
                   flex: 1,
@@ -2952,14 +3030,53 @@ function ChatView({
                   color: '#FFFFFF',
                   fontSize: '12.5px',
                   fontWeight: '800',
-                  cursor: 'pointer',
+                  cursor: (isTransferringTokens || (profile?.trocoTokens || 0) < directTokensCount) ? 'not-allowed' : 'pointer',
+                  opacity: (profile?.trocoTokens || 0) < directTokensCount ? 0.5 : 1,
                   boxShadow: '0 4px 14px rgba(245, 158, 11, 0.4)',
                 }}
               >
-                Envoyer {directTokensCount} 🪙
+                {isTransferringTokens ? 'Transfert...' : `Envoyer ${directTokensCount} 🪙`}
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ANIMATION FESTIVE DE CONFETTIS LORS DES DEALS ET TRANSFERTS */}
+      {showConfetti && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            pointerEvents: 'none',
+            zIndex: 100060,
+            overflow: 'hidden',
+          }}
+        >
+          {Array.from({ length: 45 }).map((_, i) => {
+            const randomLeft = Math.random() * 100;
+            const randomDelay = Math.random() * 0.8;
+            const randomDuration = 1.8 + Math.random() * 1.5;
+            const randomSize = 8 + Math.random() * 8;
+            const colors = ['#C67D5B', '#F59E0B', '#10B981', '#3B82F6', '#EF4444', '#8B5CF6', '#EC4899'];
+            const randomColor = colors[Math.floor(Math.random() * colors.length)];
+            return (
+              <div
+                key={i}
+                style={{
+                  position: 'absolute',
+                  top: '-20px',
+                  left: `${randomLeft}%`,
+                  width: `${randomSize}px`,
+                  height: `${randomSize * 0.6}px`,
+                  backgroundColor: randomColor,
+                  borderRadius: '2px',
+                  transform: `rotate(${Math.random() * 360}deg)`,
+                  animation: `fall ${randomDuration}s cubic-bezier(0.25, 1, 0.5, 1) ${randomDelay}s forwards`,
+                }}
+              />
+            );
+          })}
         </div>
       )}
 

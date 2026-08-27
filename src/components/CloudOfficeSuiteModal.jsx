@@ -1,13 +1,15 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  X, FileText, Table, Download,
-  Printer, Bold, Italic, Heading1, Heading2, List, Code
+  X, FileText, Table,
+  Bold, Italic, Heading1, Heading2, List, Code,
+  Presentation, History, Plus, Trash2,
+  Play, RotateCcw, Sparkles
 } from 'lucide-react';
 import { doc, setDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 
-// Helper pour évaluer des formules simples de tableur (=SUM(A1:A5), =A1+B1, etc.)
+// Helper pour évaluer des formules simples de tableur (=SUM(A1:A5), =AVERAGE(A1:A5), =A1+B1, etc.)
 const evaluateCellFormula = (val, gridData) => {
   if (typeof val !== 'string' || !val.startsWith('=')) {
     return val;
@@ -59,14 +61,13 @@ const evaluateCellFormula = (val, gridData) => {
     }
 
     // 3. Remplacement simple des références de cellules (ex: A1 + B2)
-    const sanitized = expr.replace(/([A-Z])(\d+)/g, (match, col, row) => {
+    const sanitized = expr.replace(/([A-Z])(\d+)/g, (match) => {
       const cellVal = gridData[match];
       const num = parseFloat(cellVal);
       return !isNaN(num) ? String(num) : '0';
     });
 
     if (/^[0-9+\-*/().\s]+$/.test(sanitized)) {
-      // eslint-disable-next-line no-eval
       const result = Function(`"use strict"; return (${sanitized});`)();
       return String(typeof result === 'number' ? Math.round(result * 100) / 100 : result);
     }
@@ -100,6 +101,30 @@ const DEFAULT_SHEET_DATA = {
   A5: 'Total Jetons', B5: 'Projet', C5: '=SUM(C2:C4)', D5: '30 Jetons', E5: 'Finalisé',
 };
 
+const DEFAULT_SLIDES = [
+  {
+    id: 's1',
+    title: 'Troco Workspace & Vision',
+    subtitle: 'Plateforme collaborative décentralisée de troc de compétences & matériel',
+    bullets: ['Échange pair-à-pair équitable', 'Séquestre automatisé en Jetons Troco', 'Collaboration en direct sans friction'],
+    theme: 'terracotta',
+  },
+  {
+    id: 's2',
+    title: 'Plan d’Action & Livrables',
+    subtitle: 'Feuille de route pour la mission en cours',
+    bullets: ['Sprint 1 : Prototypage & Alignement technique', 'Sprint 2 : Implémentation & Recette croisée', 'Sprint 3 : Validation du deal & transfert de compétences'],
+    theme: 'dark',
+  },
+  {
+    id: 's3',
+    title: 'Conditions du Troc & Validation',
+    subtitle: 'Modalités de clôture et évaluation réciproque',
+    bullets: ['Clôture bilatérale du deal', 'Notation 5 étoiles et retour d’expérience', 'Garantie confiance de la communauté Troco'],
+    theme: 'light',
+  }
+];
+
 export default function CloudOfficeSuiteModal({
   isOpen,
   onClose,
@@ -109,11 +134,16 @@ export default function CloudOfficeSuiteModal({
   darkMode = false,
   initialTab = 'docs',
 }) {
-  const [activeTab, setActiveTab] = useState(initialTab); // 'docs' | 'sheets'
+  const [activeTab, setActiveTab] = useState(initialTab); // 'docs' | 'sheets' | 'slides' | 'history'
   const [docTitle, setDocTitle] = useState('Spécifications & Notes - ' + projectTitle);
   const [docContent, setDocContent] = useState(DEFAULT_DOC_TEXT);
   const [sheetTitle, setSheetTitle] = useState('Budget & Planning - ' + projectTitle);
   const [sheetData, setSheetData] = useState(DEFAULT_SHEET_DATA);
+  const [slidesTitle, setSlidesTitle] = useState('Présentation - ' + projectTitle);
+  const [slides, setSlides] = useState(DEFAULT_SLIDES);
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+  const [isPresenting, setIsPresenting] = useState(false);
+  const [versionHistory, setVersionHistory] = useState([]);
   const [selectedCell, setSelectedCell] = useState('A1');
   const [saveStatus, setSaveStatus] = useState('Synchronisé en direct 🟢');
   const [collaborators, setCollaborators] = useState(['Mateo P.', 'Collaborateur']);
@@ -169,6 +199,29 @@ export default function CloudOfficeSuiteModal({
     } catch (_) {}
   }, [isOpen, groupId, currentUser]);
 
+  // Synchronisation Firestore en temps réel pour Troco Slides
+  useEffect(() => {
+    if (!isOpen || !groupId || !db) return;
+
+    try {
+      const slidesRef = doc(db, 'chats', String(groupId), 'workspace', 'slides');
+      const unsubscribe = onSnapshot(slidesRef, (snapshot) => {
+        if (snapshot.exists()) {
+          const data = snapshot.data();
+          if (data.title) setSlidesTitle(data.title);
+          if (data.slides && data.lastEditor !== (currentUser?.name || currentUser?.id)) {
+            setSlides(data.slides);
+          }
+          setSaveStatus('Synchronisé en direct 🟢');
+        }
+      }, (err) => {
+        console.warn('[TrocoSlides] snapshot error:', err);
+      });
+
+      return () => unsubscribe();
+    } catch (_) {}
+  }, [isOpen, groupId, currentUser]);
+
   // Sauvegarde des modifications Troco Docs
   const saveDocToFirestore = useCallback(async (newContent, newTitle = docTitle) => {
     if (!groupId || !db) return;
@@ -181,8 +234,21 @@ export default function CloudOfficeSuiteModal({
         content: newContent,
         lastEditor: myName,
         updatedAt: serverTimestamp(),
-        collaborators: [myName, 'Collaborateur en direct'],
       }, { merge: true });
+
+      // Ajout à l'historique des versions
+      setVersionHistory(prev => [
+        {
+          id: 'v_' + Date.now(),
+          type: 'doc',
+          title: newTitle,
+          content: newContent,
+          timestamp: new Date().toLocaleTimeString(),
+          author: myName,
+        },
+        ...prev.slice(0, 19),
+      ]);
+
       setSaveStatus('Synchronisé en direct 🟢');
     } catch (err) {
       console.warn('[TrocoDocs] Save error:', err);
@@ -203,6 +269,20 @@ export default function CloudOfficeSuiteModal({
         lastEditor: myName,
         updatedAt: serverTimestamp(),
       }, { merge: true });
+
+      // Ajout à l'historique des versions
+      setVersionHistory(prev => [
+        {
+          id: 'v_' + Date.now(),
+          type: 'sheet',
+          title: newTitle,
+          gridData: newGridData,
+          timestamp: new Date().toLocaleTimeString(),
+          author: myName,
+        },
+        ...prev.slice(0, 19),
+      ]);
+
       setSaveStatus('Synchronisé en direct 🟢');
     } catch (err) {
       console.warn('[TrocoSheets] Save error:', err);
@@ -210,7 +290,41 @@ export default function CloudOfficeSuiteModal({
     }
   }, [groupId, currentUser, sheetTitle]);
 
-  // Insertion de formatage Markdown dans Troco Docs
+  // Sauvegarde des modifications Troco Slides
+  const saveSlidesToFirestore = useCallback(async (newSlides, newTitle = slidesTitle) => {
+    if (!groupId || !db) return;
+    try {
+      setSaveStatus('Sauvegarde en cours...');
+      const myName = currentUser?.name || 'Moi';
+      const slidesRef = doc(db, 'chats', String(groupId), 'workspace', 'slides');
+      await setDoc(slidesRef, {
+        title: newTitle,
+        slides: newSlides,
+        lastEditor: myName,
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+
+      // Ajout à l'historique des versions
+      setVersionHistory(prev => [
+        {
+          id: 'v_' + Date.now(),
+          type: 'slides',
+          title: newTitle,
+          slides: newSlides,
+          timestamp: new Date().toLocaleTimeString(),
+          author: myName,
+        },
+        ...prev.slice(0, 19),
+      ]);
+
+      setSaveStatus('Synchronisé en direct 🟢');
+    } catch (err) {
+      console.warn('[TrocoSlides] Save error:', err);
+      setSaveStatus('Mode hors-ligne');
+    }
+  }, [groupId, currentUser, slidesTitle]);
+
+  // Formatage Markdown pour Troco Docs
   const insertMarkdownFormatting = (prefix, suffix = '') => {
     const textarea = textareaRef.current;
     if (!textarea) return;
@@ -238,8 +352,156 @@ export default function CloudOfficeSuiteModal({
     saveSheetToFirestore(updated);
   };
 
-  // Télécharger le document Markdown
-  const handleDownloadDoc = () => {
+  // Gestion des Slides
+  const handleAddSlide = () => {
+    const newSlide = {
+      id: 's_' + Date.now(),
+      title: 'Nouvelle Diapositive',
+      subtitle: 'Sous-titre et contexte du projet',
+      bullets: ['Point clé 1', 'Point clé 2'],
+      theme: 'terracotta',
+    };
+    const nextSlides = [...slides, newSlide];
+    setSlides(nextSlides);
+    setCurrentSlideIndex(nextSlides.length - 1);
+    saveSlidesToFirestore(nextSlides);
+  };
+
+  const handleDeleteSlide = (idx) => {
+    if (slides.length <= 1) return;
+    const nextSlides = slides.filter((_, i) => i !== idx);
+    setSlides(nextSlides);
+    setCurrentSlideIndex(Math.max(0, idx - 1));
+    saveSlidesToFirestore(nextSlides);
+  };
+
+  const handleUpdateCurrentSlide = (field, val) => {
+    const nextSlides = [...slides];
+    nextSlides[currentSlideIndex] = {
+      ...nextSlides[currentSlideIndex],
+      [field]: val,
+    };
+    setSlides(nextSlides);
+    saveSlidesToFirestore(nextSlides);
+  };
+
+  // ==========================================
+  // EXPORTS PROFESSIONNELS NATIFS (PDF, DOCX, XLSX, PPTX, MD, CSV)
+  // ==========================================
+
+  // 1. Export PDF (Moteur d'impression natif stylé)
+  const handleDownloadPDF = () => {
+    let contentHtml = '';
+    if (activeTab === 'docs') {
+      contentHtml = `<h1>${docTitle}</h1><pre style="white-space: pre-wrap; font-family: inherit; font-size: 14px; line-height: 1.6;">${docContent}</pre>`;
+    } else if (activeTab === 'sheets') {
+      const cols = ['A', 'B', 'C', 'D', 'E', 'F'];
+      let tableHtml = '<table border="1" cellpadding="8" style="border-collapse: collapse; width: 100%;">';
+      for (let r = 1; r <= 10; r++) {
+        tableHtml += '<tr>';
+        cols.forEach(c => {
+          const val = evaluateCellFormula(sheetData[`${c}${r}`] || '', sheetData);
+          tableHtml += r === 1 ? `<th style="background:#FAF7F2;">${val}</th>` : `<td>${val}</td>`;
+        });
+        tableHtml += '</tr>';
+      }
+      tableHtml += '</table>';
+      contentHtml = `<h1>${sheetTitle}</h1>${tableHtml}`;
+    } else {
+      contentHtml = `<h1>${slidesTitle}</h1>` + slides.map((s, idx) => `
+        <div style="page-break-after: always; padding: 24px; border: 1px solid #ddd; margin-bottom: 20px; border-radius: 12px;">
+          <h2>Diapo ${idx + 1} : ${s.title}</h2>
+          <p style="color: #666; font-style: italic;">${s.subtitle}</p>
+          <ul>${(s.bullets || []).map(b => `<li>${b}</li>`).join('')}</ul>
+        </div>
+      `).join('');
+    }
+
+    const printWin = window.open('', '_blank', 'width=800,height=900');
+    if (!printWin) return;
+    printWin.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>${docTitle} - Export PDF</title>
+          <style>
+            body { font-family: 'Inter', sans-serif; padding: 32px; color: #2D2825; }
+            h1 { color: #C67D5B; border-bottom: 2px solid #C67D5B; padding-bottom: 8px; }
+            @media print { @page { margin: 20mm; } }
+          </style>
+        </head>
+        <body>
+          ${contentHtml}
+          <div style="margin-top: 30px; font-size: 11px; color: #999; text-align: center;">Document certifié généré par Troco Cloud Workspace Pro.</div>
+        </body>
+      </html>
+    `);
+    printWin.document.close();
+    setTimeout(() => {
+      printWin.focus();
+      printWin.print();
+    }, 250);
+  };
+
+  // 2. Export Word (.docx / HTML Word Document)
+  const handleDownloadDOCX = () => {
+    const header = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+    <head><meta charset='utf-8'><title>${docTitle}</title></head><body>`;
+    const footer = `</body></html>`;
+    const body = `<h1>${docTitle}</h1><p>${docContent.replace(/\n/g, '<br/>')}</p>`;
+    const blob = new Blob(['\ufeff', header + body + footer], { type: 'application/msword' });
+    const link = document.createElement('a');
+    link.download = `${docTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.docx`;
+    link.href = URL.createObjectURL(blob);
+    link.click();
+  };
+
+  // 3. Export Excel (.xlsx / XML Spreadsheet)
+  const handleDownloadXLSX = () => {
+    const cols = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
+    let rowsXml = '';
+    for (let r = 1; r <= 15; r++) {
+      let cellsXml = '';
+      cols.forEach(c => {
+        const val = evaluateCellFormula(sheetData[`${c}${r}`] || '', sheetData);
+        cellsXml += `<Cell><Data ss:Type="String">${val.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</Data></Cell>`;
+      });
+      rowsXml += `<Row>${cellsXml}</Row>`;
+    }
+    const excelXml = `<?xml version="1.0"?>
+    <?mso-application progid="Excel.Sheet"?>
+    <Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+      xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+      <Worksheet ss:Name="Troco_Planning">
+        <Table>${rowsXml}</Table>
+      </Worksheet>
+    </Workbook>`;
+    const blob = new Blob([excelXml], { type: 'application/vnd.ms-excel;charset=utf-8' });
+    const link = document.createElement('a');
+    link.download = `${sheetTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.xlsx`;
+    link.href = URL.createObjectURL(blob);
+    link.click();
+  };
+
+  // 4. Export PowerPoint (.pptx / HTML Slide Presentation Package)
+  const handleDownloadPPTX = () => {
+    const slidesHtml = slides.map((s, idx) => `
+      <section style="page-break-after: always; padding: 40px; border: 2px solid #C67D5B; border-radius: 16px; margin-bottom: 24px;">
+        <h1 style="color: #C67D5B; font-size: 28px;">Diapositive ${idx + 1} : ${s.title}</h1>
+        <h3 style="color: #6B5E54;">${s.subtitle}</h3>
+        <ul>${(s.bullets || []).map(b => `<li style="font-size: 16px; margin-bottom: 8px;">${b}</li>`).join('')}</ul>
+      </section>
+    `).join('');
+    const fullHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${slidesTitle}</title></head><body>${slidesHtml}</body></html>`;
+    const blob = new Blob([fullHtml], { type: 'application/vnd.ms-powerpoint;charset=utf-8' });
+    const link = document.createElement('a');
+    link.download = `${slidesTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pptx`;
+    link.href = URL.createObjectURL(blob);
+    link.click();
+  };
+
+  // 5. Export Markdown & CSV
+  const handleDownloadMarkdown = () => {
     const blob = new Blob([docContent], { type: 'text/markdown;charset=utf-8' });
     const link = document.createElement('a');
     link.download = `${docTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.md`;
@@ -247,22 +509,13 @@ export default function CloudOfficeSuiteModal({
     link.click();
   };
 
-  // Télécharger le tableur en CSV
-  const handleDownloadSheetCSV = () => {
+  const handleDownloadCSV = () => {
     const cols = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
-    const rowsCount = 12;
     let csv = '';
-
-    for (let r = 1; r <= rowsCount; r++) {
-      const rowVals = cols.map(c => {
-        const key = `${c}${r}`;
-        const raw = sheetData[key] || '';
-        const evaluated = evaluateCellFormula(raw, sheetData);
-        return `"${String(evaluated).replace(/"/g, '""')}"`;
-      });
+    for (let r = 1; r <= 15; r++) {
+      const rowVals = cols.map(c => `"${(evaluateCellFormula(sheetData[`${c}${r}`] || '', sheetData)).replace(/"/g, '""')}"`);
       csv += rowVals.join(',') + '\n';
     }
-
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
     const link = document.createElement('a');
     link.download = `${sheetTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.csv`;
@@ -270,208 +523,322 @@ export default function CloudOfficeSuiteModal({
     link.click();
   };
 
-  // Imprimer / Enregistrer en PDF
-  const handlePrint = () => {
-    window.print();
-  };
-
   if (!isOpen) return null;
 
-  // Calcul du nombre de mots & caractères pour Troco Docs
-  const wordCount = docContent.trim() ? docContent.trim().split(/\s+/).length : 0;
-  const charCount = docContent.length;
-
-  const cols = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
-  const rows = Array.from({ length: 12 }, (_, i) => i + 1);
-
-  const modalElement = (
+  return createPortal(
     <div
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: 2000000,
-        backgroundColor: 'rgba(0, 0, 0, 0.85)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
+        backgroundColor: 'rgba(28, 24, 22, 0.75)',
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
+        zIndex: 100050,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '12px 12px max(80px, env(safe-area-inset-bottom, 24px)) 12px',
-        animation: 'fadeIn 0.2s ease both',
-        boxSizing: 'border-box',
+        padding: '16px',
       }}
-      onClick={onClose}
     >
+      {/* DIAPORAMA PLEIN ÉCRAN */}
+      {isPresenting && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: slides[currentSlideIndex]?.theme === 'dark' ? '#181513' : slides[currentSlideIndex]?.theme === 'terracotta' ? '#C67D5B' : '#FAF7F2',
+            color: slides[currentSlideIndex]?.theme === 'light' ? '#2D2825' : '#FFFFFF',
+            zIndex: 100099,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            padding: '48px',
+            animation: 'fadeIn 0.25s ease',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ fontSize: '13px', fontWeight: '800', opacity: 0.8 }}>
+              Troco Slides • {currentSlideIndex + 1} / {slides.length}
+            </div>
+            <button
+              onClick={() => setIsPresenting(false)}
+              style={{
+                border: 'none',
+                background: 'rgba(255,255,255,0.2)',
+                color: 'inherit',
+                borderRadius: '50%',
+                width: '36px',
+                height: '36px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <X size={20} />
+            </button>
+          </div>
+
+          <div style={{ maxWidth: '900px', margin: '0 auto', width: '100%', textAlign: 'center' }}>
+            <h1 className="font-editorial-heading" style={{ fontSize: '48px', fontWeight: '700', marginBottom: '16px', letterSpacing: '-0.02em' }}>
+              {slides[currentSlideIndex]?.title}
+            </h1>
+            <p style={{ fontSize: '20px', opacity: 0.9, marginBottom: '36px', fontStyle: 'italic' }}>
+              {slides[currentSlideIndex]?.subtitle}
+            </p>
+            <div style={{ textAlign: 'left', maxWidth: '600px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              {(slides[currentSlideIndex]?.bullets || []).map((b, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '18px', fontWeight: '600' }}>
+                  <Sparkles size={18} style={{ opacity: 0.8, flexShrink: 0 }} />
+                  <span>{b}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
+            <button
+              disabled={currentSlideIndex === 0}
+              onClick={() => setCurrentSlideIndex(prev => Math.max(0, prev - 1))}
+              style={{
+                border: 'none',
+                background: 'rgba(255,255,255,0.2)',
+                color: 'inherit',
+                padding: '10px 20px',
+                borderRadius: '12px',
+                cursor: currentSlideIndex === 0 ? 'not-allowed' : 'pointer',
+                opacity: currentSlideIndex === 0 ? 0.4 : 1,
+                fontWeight: '700',
+              }}
+            >
+              ← Précédent
+            </button>
+            <button
+              disabled={currentSlideIndex === slides.length - 1}
+              onClick={() => setCurrentSlideIndex(prev => Math.min(slides.length - 1, prev + 1))}
+              style={{
+                border: 'none',
+                background: 'rgba(255,255,255,0.2)',
+                color: 'inherit',
+                padding: '10px 20px',
+                borderRadius: '12px',
+                cursor: currentSlideIndex === slides.length - 1 ? 'not-allowed' : 'pointer',
+                opacity: currentSlideIndex === slides.length - 1 ? 0.4 : 1,
+                fontWeight: '700',
+              }}
+            >
+              Suivant →
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* CONTENEUR MODALE PRINCIPALE */}
       <div
         style={{
           width: '100%',
-          maxWidth: '1080px',
-          height: 'min(calc(100dvh - 80px), 840px)',
-          backgroundColor: darkMode ? '#181412' : '#FAF8F5',
+          maxWidth: '1100px',
+          height: '90vh',
+          maxHeight: '850px',
+          backgroundColor: 'var(--bg-card)',
           borderRadius: '24px',
           border: '1px solid var(--border-color)',
-          boxShadow: '0 24px 60px rgba(0, 0, 0, 0.5)',
+          boxShadow: 'var(--shadow-modal)',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
-          animation: 'scaleUp 0.25s ease both',
-          boxSizing: 'border-box',
-          position: 'relative',
+          animation: 'fadeSlideUp 0.3s ease both',
         }}
-        onClick={(e) => e.stopPropagation()}
       >
-        {/* 1. EN-TÊTE WORKSPACE (SÉLECTEUR TROCO DOCS / TROCO SHEETS + PRÉSENCE) */}
+        {/* HEADER MODALE */}
         <div
           style={{
             padding: '12px 18px',
             borderBottom: '1px solid var(--border-color)',
-            backgroundColor: darkMode ? 'rgba(28, 24, 21, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-            backdropFilter: 'blur(12px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            backgroundColor: 'var(--bg-subtle)',
             gap: '12px',
-            flexShrink: 0,
+            flexWrap: 'wrap',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
-            {/* BOUTONS DE COMMUTATION DES OUTILS OPEN-SOURCE */}
-            <div
+          {/* SÉLECTEUR D'ONGLETS / OUTILS BUREAUTIQUES */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <button
+              type="button"
+              onClick={() => setActiveTab('docs')}
+              className="premium-button"
               style={{
+                border: activeTab === 'docs' ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                backgroundColor: activeTab === 'docs' ? 'rgba(198, 125, 91, 0.15)' : 'var(--bg-card)',
+                color: activeTab === 'docs' ? 'var(--accent-primary)' : 'var(--text-main)',
+                borderRadius: '10px',
+                padding: '6px 12px',
+                fontSize: '12.5px',
+                fontWeight: '800',
                 display: 'flex',
-                backgroundColor: 'var(--bg-subtle)',
-                padding: '3px',
-                borderRadius: '12px',
-                border: '1px solid var(--border-color)',
+                alignItems: 'center',
+                gap: '6px',
+                cursor: 'pointer',
               }}
             >
-              <button
-                type="button"
-                onClick={() => setActiveTab('docs')}
-                style={{
-                  border: 'none',
-                  backgroundColor: activeTab === 'docs' ? 'var(--accent-primary)' : 'transparent',
-                  color: activeTab === 'docs' ? '#FFFFFF' : 'var(--text-secondary)',
-                  padding: '6px 12px',
-                  borderRadius: '9px',
-                  fontSize: '12px',
-                  fontWeight: '800',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                <FileText size={14} />
-                <span>Troco Docs</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveTab('sheets')}
-                style={{
-                  border: 'none',
-                  backgroundColor: activeTab === 'sheets' ? '#10B981' : 'transparent',
-                  color: activeTab === 'sheets' ? '#FFFFFF' : 'var(--text-secondary)',
-                  padding: '6px 12px',
-                  borderRadius: '9px',
-                  fontSize: '12px',
-                  fontWeight: '800',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                <Table size={14} />
-                <span>Troco Sheets</span>
-              </button>
-            </div>
-
-            {/* INDICATEUR DE STATUT & PRÉSENCE */}
-            <div style={{ minWidth: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#10B981', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '2px 8px', borderRadius: '999px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10B981', display: 'inline-block', animation: 'pulse 1.8s infinite' }} />
-                  {collaborators.length} en ligne
-                </span>
-                <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{saveStatus}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* ACTIONS HEADER */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-            {activeTab === 'docs' ? (
-              <button
-                type="button"
-                onClick={handleDownloadDoc}
-                className="premium-button"
-                style={{
-                  border: '1px solid var(--border-color)',
-                  backgroundColor: 'var(--bg-card)',
-                  color: 'var(--text-main)',
-                  borderRadius: '10px',
-                  padding: '6px 12px',
-                  fontSize: '12px',
-                  fontWeight: '700',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  cursor: 'pointer',
-                }}
-                title="Télécharger en Markdown (.md)"
-              >
-                <Download size={13} />
-                <span>Export .md</span>
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleDownloadSheetCSV}
-                className="premium-button"
-                style={{
-                  border: '1px solid var(--border-color)',
-                  backgroundColor: 'var(--bg-card)',
-                  color: 'var(--text-main)',
-                  borderRadius: '10px',
-                  padding: '6px 12px',
-                  fontSize: '12px',
-                  fontWeight: '700',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  cursor: 'pointer',
-                }}
-                title="Télécharger en CSV (.csv)"
-              >
-                <Download size={13} />
-                <span>Export CSV</span>
-              </button>
-            )}
+              <FileText size={15} />
+              <span>Troco Docs</span>
+            </button>
 
             <button
               type="button"
-              onClick={handlePrint}
+              onClick={() => setActiveTab('sheets')}
               className="premium-button"
               style={{
-                border: '1px solid var(--border-color)',
-                backgroundColor: 'var(--bg-card)',
-                color: 'var(--text-main)',
+                border: activeTab === 'sheets' ? '1.5px solid #10B981' : '1px solid var(--border-color)',
+                backgroundColor: activeTab === 'sheets' ? 'rgba(16, 185, 129, 0.15)' : 'var(--bg-card)',
+                color: activeTab === 'sheets' ? '#10B981' : 'var(--text-main)',
                 borderRadius: '10px',
-                width: '32px',
-                height: '32px',
+                padding: '6px 12px',
+                fontSize: '12.5px',
+                fontWeight: '800',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center',
+                gap: '6px',
                 cursor: 'pointer',
               }}
-              title="Imprimer ou enregistrer en PDF"
             >
-              <Printer size={14} />
+              <Table size={15} />
+              <span>Troco Sheets</span>
             </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('slides')}
+              className="premium-button"
+              style={{
+                border: activeTab === 'slides' ? '1.5px solid #3B82F6' : '1px solid var(--border-color)',
+                backgroundColor: activeTab === 'slides' ? 'rgba(59, 130, 246, 0.15)' : 'var(--bg-card)',
+                color: activeTab === 'slides' ? '#3B82F6' : 'var(--text-main)',
+                borderRadius: '10px',
+                padding: '6px 12px',
+                fontSize: '12.5px',
+                fontWeight: '800',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                cursor: 'pointer',
+              }}
+            >
+              <Presentation size={15} />
+              <span>Troco Slides</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('history')}
+              className="premium-button"
+              style={{
+                border: activeTab === 'history' ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                backgroundColor: activeTab === 'history' ? 'var(--bg-subtle)' : 'transparent',
+                color: 'var(--text-secondary)',
+                borderRadius: '10px',
+                padding: '6px 10px',
+                fontSize: '12px',
+                fontWeight: '700',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                cursor: 'pointer',
+              }}
+              title="Historique des versions"
+            >
+              <History size={14} />
+              <span>Versions ({versionHistory.length})</span>
+            </button>
+          </div>
+
+          {/* ACTIONS & EXPORTS */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+              {saveStatus}
+            </span>
+
+            {/* BOUTONS D'EXPORTS MULTI-FORMATS */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <button
+                type="button"
+                onClick={handleDownloadPDF}
+                className="premium-button"
+                style={{
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: 'var(--bg-card)',
+                  color: 'var(--text-main)',
+                  borderRadius: '8px',
+                  padding: '5px 8px',
+                  fontSize: '11px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                }}
+                title="Exporter en PDF imprimable"
+              >
+                📄 PDF
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDownloadDOCX}
+                className="premium-button"
+                style={{
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: 'var(--bg-card)',
+                  color: 'var(--text-main)',
+                  borderRadius: '8px',
+                  padding: '5px 8px',
+                  fontSize: '11px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                }}
+                title="Exporter au format Word (.docx)"
+              >
+                📝 DOCX
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDownloadXLSX}
+                className="premium-button"
+                style={{
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: 'var(--bg-card)',
+                  color: 'var(--text-main)',
+                  borderRadius: '8px',
+                  padding: '5px 8px',
+                  fontSize: '11px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                }}
+                title="Exporter au format Excel (.xlsx)"
+              >
+                📊 XLSX
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDownloadPPTX}
+                className="premium-button"
+                style={{
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: 'var(--bg-card)',
+                  color: 'var(--text-main)',
+                  borderRadius: '8px',
+                  padding: '5px 8px',
+                  fontSize: '11px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                }}
+                title="Exporter au format PowerPoint (.pptx)"
+              >
+                📽️ PPTX
+              </button>
+            </div>
 
             <button
               type="button"
@@ -481,7 +848,7 @@ export default function CloudOfficeSuiteModal({
                 border: '1px solid var(--border-color)',
                 backgroundColor: 'var(--bg-card)',
                 color: 'var(--text-main)',
-                borderRadius: '10px',
+                borderRadius: '8px',
                 width: '32px',
                 height: '32px',
                 display: 'flex',
@@ -489,97 +856,17 @@ export default function CloudOfficeSuiteModal({
                 justifyContent: 'center',
                 cursor: 'pointer',
               }}
-              title="Fermer"
             >
               <X size={16} />
             </button>
           </div>
         </div>
 
-        {/* 2. VUE TROCO DOCS (ALTERNATIVE OPEN-SOURCE TYPE NOTION/WORD) */}
-        {activeTab === 'docs' && (
-          <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', backgroundColor: darkMode ? '#181412' : '#FFFFFF' }}>
-            {/* BARRE D'OUTILS DE MISE EN FORME DU TEXTE */}
-            <div
-              style={{
-                padding: '8px 14px',
-                borderBottom: '1px solid var(--border-color)',
-                backgroundColor: darkMode ? '#1F1B18' : '#FAF8F5',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '8px',
-                flexWrap: 'wrap',
-                flexShrink: 0,
-              }}
-            >
-              {/* BOUTONS FORMATAGE MARKDOWN */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <button
-                  type="button"
-                  onClick={() => insertMarkdownFormatting('**', '**')}
-                  style={{ border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', width: '28px', height: '28px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                  title="Gras (**texte**)"
-                >
-                  <Bold size={13} />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => insertMarkdownFormatting('*', '*')}
-                  style={{ border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', width: '28px', height: '28px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                  title="Italique (*texte*)"
-                >
-                  <Italic size={13} />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => insertMarkdownFormatting('# ')}
-                  style={{ border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', width: '28px', height: '28px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                  title="Titre 1 (# Titre)"
-                >
-                  <Heading1 size={13} />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => insertMarkdownFormatting('## ')}
-                  style={{ border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', width: '28px', height: '28px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                  title="Titre 2 (## Sous-titre)"
-                >
-                  <Heading2 size={13} />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => insertMarkdownFormatting('- ')}
-                  style={{ border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', width: '28px', height: '28px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                  title="Liste à puces (- élément)"
-                >
-                  <List size={13} />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => insertMarkdownFormatting('```\n', '\n```')}
-                  style={{ border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', width: '28px', height: '28px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                  title="Bloc de code (```code```)"
-                >
-                  <Code size={13} />
-                </button>
-              </div>
-
-              {/* STATISTIQUES DU DOCUMENT */}
-              <div style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span>{wordCount} mots</span>
-                <span>•</span>
-                <span>{charCount} caractères</span>
-              </div>
-            </div>
-
-            {/* TITRE DU DOCUMENT */}
-            <div style={{ padding: '12px 20px 4px 20px' }}>
+        {/* CONTENU PRINCIPAL DE L'ONGLET SÉLECTIONNÉ */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          {/* 1. TROCO DOCS */}
+          {activeTab === 'docs' && (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px', overflow: 'hidden' }}>
               <input
                 type="text"
                 value={docTitle}
@@ -587,21 +874,30 @@ export default function CloudOfficeSuiteModal({
                   setDocTitle(e.target.value);
                   saveDocToFirestore(docContent, e.target.value);
                 }}
-                placeholder="Titre du document..."
                 style={{
-                  width: '100%',
+                  fontSize: '18px',
+                  fontWeight: '700',
                   border: 'none',
+                  outline: 'none',
                   backgroundColor: 'transparent',
                   color: 'var(--text-main)',
-                  fontSize: '18px',
-                  fontWeight: '800',
-                  outline: 'none',
+                  marginBottom: '12px',
+                  paddingBottom: '6px',
+                  borderBottom: '1px solid var(--border-color)',
                 }}
               />
-            </div>
 
-            {/* GRAND ÉDITEUR DE TEXTE PLEIN ÉCRAN */}
-            <div style={{ flex: 1, minHeight: 0, padding: '10px 20px 20px 20px', display: 'flex', flexDirection: 'column' }}>
+              {/* TOOLBAR FORMATAGE MARKDOWN */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '10px', flexWrap: 'wrap' }}>
+                <button type="button" onClick={() => insertMarkdownFormatting('**', '**')} className="premium-button" style={{ border: '1px solid var(--border-color)', borderRadius: '6px', padding: '4px 8px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', cursor: 'pointer' }}><Bold size={13} /></button>
+                <button type="button" onClick={() => insertMarkdownFormatting('*', '*')} className="premium-button" style={{ border: '1px solid var(--border-color)', borderRadius: '6px', padding: '4px 8px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', cursor: 'pointer' }}><Italic size={13} /></button>
+                <button type="button" onClick={() => insertMarkdownFormatting('# ', '')} className="premium-button" style={{ border: '1px solid var(--border-color)', borderRadius: '6px', padding: '4px 8px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', cursor: 'pointer' }}><Heading1 size={13} /></button>
+                <button type="button" onClick={() => insertMarkdownFormatting('## ', '')} className="premium-button" style={{ border: '1px solid var(--border-color)', borderRadius: '6px', padding: '4px 8px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', cursor: 'pointer' }}><Heading2 size={13} /></button>
+                <button type="button" onClick={() => insertMarkdownFormatting('- [ ] ', '')} className="premium-button" style={{ border: '1px solid var(--border-color)', borderRadius: '6px', padding: '4px 8px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', cursor: 'pointer' }}><List size={13} /></button>
+                <button type="button" onClick={() => insertMarkdownFormatting('```javascript\n', '\n```')} className="premium-button" style={{ border: '1px solid var(--border-color)', borderRadius: '6px', padding: '4px 8px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', cursor: 'pointer' }}><Code size={13} /></button>
+                <button type="button" onClick={handleDownloadMarkdown} className="premium-button" style={{ border: '1px solid var(--border-color)', borderRadius: '6px', padding: '4px 8px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', fontSize: '11px', fontWeight: '700', cursor: 'pointer', marginLeft: 'auto' }}>Export .md</button>
+              </div>
+
               <textarea
                 ref={textareaRef}
                 value={docContent}
@@ -609,179 +905,438 @@ export default function CloudOfficeSuiteModal({
                   setDocContent(e.target.value);
                   saveDocToFirestore(e.target.value);
                 }}
-                placeholder="Commencez à rédiger vos spécifications, compte-rendu ou notes de projet en Markdown..."
+                placeholder="Rédigez ici vos comptes-rendus..."
                 style={{
-                  width: '100%',
                   flex: 1,
-                  minHeight: 0,
-                  border: 'none',
-                  backgroundColor: 'transparent',
+                  width: '100%',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '14px',
+                  padding: '16px',
+                  backgroundColor: 'var(--bg-subtle)',
                   color: 'var(--text-main)',
-                  fontSize: '13.5px',
+                  fontSize: '14px',
+                  fontFamily: 'inherit',
                   lineHeight: 1.6,
-                  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
                   resize: 'none',
                   outline: 'none',
                   boxSizing: 'border-box',
                 }}
               />
             </div>
-          </div>
-        )}
+          )}
 
-        {/* 3. VUE TROCO SHEETS (ALTERNATIVE OPEN-SOURCE TYPE EXCEL) */}
-        {activeTab === 'sheets' && (
-          <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', backgroundColor: darkMode ? '#181412' : '#FFFFFF' }}>
-            {/* BARRE DE FORMULE FX & TITRE */}
-            <div
-              style={{
-                padding: '8px 14px',
-                borderBottom: '1px solid var(--border-color)',
-                backgroundColor: darkMode ? '#1F1B18' : '#FAF8F5',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                flexShrink: 0,
-              }}
-            >
-              {/* CELLULE ACTIVE */}
-              <div
-                style={{
-                  width: '42px',
-                  padding: '4px 6px',
-                  borderRadius: '6px',
-                  backgroundColor: 'var(--bg-card)',
-                  border: '1.5px solid #10B981',
-                  color: '#10B981',
-                  fontSize: '12px',
-                  fontWeight: '800',
-                  textAlign: 'center',
-                }}
-              >
-                {selectedCell}
-              </div>
-
-              <div style={{ fontSize: '13px', fontWeight: '900', color: 'var(--text-secondary)' }}>
-                fx
-              </div>
-
-              {/* INPUT DE FORMULE */}
+          {/* 2. TROCO SHEETS */}
+          {activeTab === 'sheets' && (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px', overflow: 'hidden' }}>
               <input
                 type="text"
-                value={sheetData[selectedCell] || ''}
-                onChange={(e) => handleCellChange(selectedCell, e.target.value)}
-                placeholder="Entrez une valeur ou une formule (ex: =SUM(A1:A5), =A1+B1)..."
+                value={sheetTitle}
+                onChange={(e) => {
+                  setSheetTitle(e.target.value);
+                  saveSheetToFirestore(sheetData, e.target.value);
+                }}
                 style={{
-                  flex: 1,
-                  padding: '6px 10px',
-                  borderRadius: '8px',
-                  border: '1px solid var(--border-color)',
-                  backgroundColor: 'var(--bg-card)',
-                  color: 'var(--text-main)',
-                  fontSize: '12.5px',
+                  fontSize: '18px',
+                  fontWeight: '700',
+                  border: 'none',
                   outline: 'none',
+                  backgroundColor: 'transparent',
+                  color: 'var(--text-main)',
+                  marginBottom: '12px',
+                  paddingBottom: '6px',
+                  borderBottom: '1px solid var(--border-color)',
                 }}
               />
-            </div>
 
-            {/* GRILLE TABLEUR DYNAMIQUE (COLONNES A-G x LIGNES 1-12) */}
-            <div style={{ flex: 1, minHeight: 0, overflow: 'auto', padding: '8px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '40px repeat(7, minmax(130px, 1fr))', border: '1px solid var(--border-color)', borderRadius: '8px', overflow: 'hidden' }}>
-                {/* EN-TÊTE DES COLONNES */}
-                <div style={{ backgroundColor: darkMode ? '#221D1A' : '#E8DDD3', borderBottom: '1px solid var(--border-color)', borderRight: '1px solid var(--border-color)', height: '28px' }} />
-                {cols.map(c => (
-                  <div
-                    key={c}
+              {/* BARRE DE FORMULE ACTIVE */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                <span style={{ fontSize: '12px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', padding: '4px 8px', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                  {selectedCell}
+                </span>
+                <input
+                  type="text"
+                  value={sheetData[selectedCell] || ''}
+                  onChange={(e) => handleCellChange(selectedCell, e.target.value)}
+                  placeholder="Valeur ou Formule (=SUM(A1:A5), =A1+B1)..."
+                  style={{
+                    flex: 1,
+                    padding: '6px 10px',
+                    borderRadius: '8px',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: 'var(--bg-card)',
+                    color: 'var(--text-main)',
+                    fontSize: '13px',
+                    outline: 'none',
+                  }}
+                />
+                <button type="button" onClick={handleDownloadCSV} className="premium-button" style={{ border: '1px solid var(--border-color)', borderRadius: '6px', padding: '5px 8px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>Export .csv</button>
+              </div>
+
+              {/* GRILLE TABLEUR EXCEL INTERACTIVE */}
+              <div style={{ flex: 1, overflow: 'auto', border: '1px solid var(--border-color)', borderRadius: '12px', backgroundColor: 'var(--bg-subtle)' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', minWidth: '600px' }}>
+                  <thead>
+                    <tr style={{ backgroundColor: 'var(--bg-card)' }}>
+                      <th style={{ width: '40px', padding: '8px', border: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}>#</th>
+                      {['A', 'B', 'C', 'D', 'E', 'F', 'G'].map(col => (
+                        <th key={col} style={{ padding: '8px', border: '1px solid var(--border-color)', fontWeight: '800', color: 'var(--text-main)' }}>
+                          {col}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Array.from({ length: 14 }).map((_, rIdx) => {
+                      const rowNum = rIdx + 1;
+                      return (
+                        <tr key={rowNum}>
+                          <td style={{ textAlign: 'center', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', fontWeight: '700' }}>
+                            {rowNum}
+                          </td>
+                          {['A', 'B', 'C', 'D', 'E', 'F', 'G'].map(col => {
+                            const cellKey = `${col}${rowNum}`;
+                            const rawVal = sheetData[cellKey] || '';
+                            const evaluated = evaluateCellFormula(rawVal, sheetData);
+                            const isSelected = selectedCell === cellKey;
+                            return (
+                              <td
+                                key={cellKey}
+                                onClick={() => setSelectedCell(cellKey)}
+                                style={{
+                                  border: isSelected ? '2px solid #10B981' : '1px solid var(--border-color)',
+                                  backgroundColor: isSelected ? 'rgba(16, 185, 129, 0.08)' : 'var(--bg-card)',
+                                  padding: 0,
+                                }}
+                              >
+                                <input
+                                  type="text"
+                                  value={isSelected ? rawVal : evaluated}
+                                  onChange={(e) => handleCellChange(cellKey, e.target.value)}
+                                  onFocus={() => setSelectedCell(cellKey)}
+                                  style={{
+                                    width: '100%',
+                                    border: 'none',
+                                    outline: 'none',
+                                    padding: '8px 10px',
+                                    background: 'transparent',
+                                    color: 'var(--text-main)',
+                                    fontSize: '12.5px',
+                                    fontWeight: rawVal.startsWith('=') || rowNum === 1 ? '700' : '400',
+                                    textAlign: !isNaN(parseFloat(evaluated)) ? 'right' : 'left',
+                                    boxSizing: 'border-box',
+                                  }}
+                                />
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* 3. TROCO SLIDES (POWERPOINT / PRÉSENTATIONS) */}
+          {activeTab === 'slides' && (
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'row', overflow: 'hidden' }}>
+              {/* LISTE DES DIAPOSITIVES LATÉRALE */}
+              <div
+                style={{
+                  width: '240px',
+                  borderRight: '1px solid var(--border-color)',
+                  backgroundColor: 'var(--bg-subtle)',
+                  padding: '12px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px',
+                  overflowY: 'auto',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-secondary)' }}>Diapositives ({slides.length})</span>
+                  <button
+                    type="button"
+                    onClick={handleAddSlide}
                     style={{
-                      backgroundColor: darkMode ? '#221D1A' : '#F5EAE4',
-                      borderBottom: '1px solid var(--border-color)',
-                      borderRight: '1px solid var(--border-color)',
-                      textAlign: 'center',
+                      border: 'none',
+                      backgroundColor: '#3B82F6',
+                      color: '#FFF',
+                      borderRadius: '8px',
+                      padding: '4px 8px',
                       fontSize: '11px',
                       fontWeight: '800',
-                      color: 'var(--text-main)',
-                      lineHeight: '28px',
-                      userSelect: 'none',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
                     }}
                   >
-                    {c}
+                    <Plus size={12} /> Diapo
+                  </button>
+                </div>
+
+                {slides.map((s, idx) => (
+                  <div
+                    key={s.id || idx}
+                    onClick={() => setCurrentSlideIndex(idx)}
+                    style={{
+                      border: currentSlideIndex === idx ? '2px solid #3B82F6' : '1px solid var(--border-color)',
+                      borderRadius: '12px',
+                      padding: '8px 10px',
+                      backgroundColor: 'var(--bg-card)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: '700' }}>#{idx + 1}</div>
+                      <div style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {s.title || 'Diapo sans titre'}
+                      </div>
+                    </div>
+                    {slides.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteSlide(idx);
+                        }}
+                        style={{ border: 'none', background: 'transparent', color: '#EF4444', cursor: 'pointer', padding: '2px' }}
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    )}
                   </div>
                 ))}
 
-                {/* LIGNES & CELLULES */}
-                {rows.map(r => (
-                  <React.Fragment key={r}>
-                    {/* NUMÉRO DE LIGNE */}
-                    <div
-                      style={{
-                        backgroundColor: darkMode ? '#221D1A' : '#F5EAE4',
-                        borderBottom: '1px solid var(--border-color)',
-                        borderRight: '1px solid var(--border-color)',
-                        textAlign: 'center',
-                        fontSize: '11px',
-                        fontWeight: '800',
-                        color: 'var(--text-secondary)',
-                        lineHeight: '32px',
-                        userSelect: 'none',
-                      }}
-                    >
-                      {r}
+                <button
+                  type="button"
+                  onClick={() => setIsPresenting(true)}
+                  className="premium-button"
+                  style={{
+                    marginTop: 'auto',
+                    border: 'none',
+                    background: 'linear-gradient(135deg, #3B82F6 0%, #2563EB 100%)',
+                    color: '#FFF',
+                    borderRadius: '12px',
+                    padding: '10px',
+                    fontWeight: '800',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <Play size={14} /> Diaporama Plein Écran
+                </button>
+              </div>
+
+              {/* ÉDITEUR DE LA DIAPOSITIVE EN COURS */}
+              <div style={{ flex: 1, padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px', overflowY: 'auto' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                  <input
+                    type="text"
+                    value={slides[currentSlideIndex]?.title || ''}
+                    onChange={(e) => handleUpdateCurrentSlide('title', e.target.value)}
+                    placeholder="Titre de la diapositive..."
+                    style={{
+                      flex: 1,
+                      fontSize: '22px',
+                      fontWeight: '700',
+                      border: 'none',
+                      outline: 'none',
+                      backgroundColor: 'transparent',
+                      color: 'var(--text-main)',
+                      borderBottom: '1.5px solid var(--border-color)',
+                      paddingBottom: '4px',
+                    }}
+                  />
+                  {/* SÉLECTEUR DE THÈME VISUEL */}
+                  <select
+                    value={slides[currentSlideIndex]?.theme || 'terracotta'}
+                    onChange={(e) => handleUpdateCurrentSlide('theme', e.target.value)}
+                    style={{
+                      padding: '6px 10px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: 'var(--bg-card)',
+                      color: 'var(--text-main)',
+                      fontSize: '12px',
+                      fontWeight: '700',
+                    }}
+                  >
+                    <option value="terracotta">Thème Terracotta</option>
+                    <option value="dark">Thème Sombre</option>
+                    <option value="light">Thème Clair</option>
+                  </select>
+                </div>
+
+                <input
+                  type="text"
+                  value={slides[currentSlideIndex]?.subtitle || ''}
+                  onChange={(e) => handleUpdateCurrentSlide('subtitle', e.target.value)}
+                  placeholder="Sous-titre / Message clé..."
+                  style={{
+                    fontSize: '14px',
+                    padding: '8px 12px',
+                    borderRadius: '10px',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: 'var(--bg-subtle)',
+                    color: 'var(--text-secondary)',
+                    outline: 'none',
+                  }}
+                />
+
+                {/* PUCES DE CONTENU */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-secondary)' }}>Arguments & Points Clés :</span>
+                  {(slides[currentSlideIndex]?.bullets || []).map((bullet, bIdx) => (
+                    <div key={bIdx} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ color: 'var(--accent-primary)', fontWeight: '800' }}>•</span>
+                      <input
+                        type="text"
+                        value={bullet}
+                        onChange={(e) => {
+                          const nextBullets = [...(slides[currentSlideIndex]?.bullets || [])];
+                          nextBullets[bIdx] = e.target.value;
+                          handleUpdateCurrentSlide('bullets', nextBullets);
+                        }}
+                        style={{
+                          flex: 1,
+                          padding: '8px 12px',
+                          borderRadius: '8px',
+                          border: '1px solid var(--border-color)',
+                          backgroundColor: 'var(--bg-card)',
+                          color: 'var(--text-main)',
+                          fontSize: '13px',
+                          outline: 'none',
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const nextBullets = (slides[currentSlideIndex]?.bullets || []).filter((_, i) => i !== bIdx);
+                          handleUpdateCurrentSlide('bullets', nextBullets);
+                        }}
+                        style={{ border: 'none', background: 'transparent', color: '#EF4444', cursor: 'pointer' }}
+                      >
+                        <X size={14} />
+                      </button>
                     </div>
-
-                    {/* CELLULES A-G DE LA LIGNE */}
-                    {cols.map(c => {
-                      const cellKey = `${c}${r}`;
-                      const rawVal = sheetData[cellKey] || '';
-                      const isSelected = selectedCell === cellKey;
-                      const displayVal = evaluateCellFormula(rawVal, sheetData);
-
-                      return (
-                        <div
-                          key={cellKey}
-                          onClick={() => setSelectedCell(cellKey)}
-                          style={{
-                            borderBottom: '1px solid var(--border-color)',
-                            borderRight: '1px solid var(--border-color)',
-                            backgroundColor: isSelected
-                              ? (darkMode ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.1)')
-                              : 'transparent',
-                            outline: isSelected ? '2px solid #10B981' : 'none',
-                            outlineOffset: '-2px',
-                            padding: '0 6px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            height: '32px',
-                            boxSizing: 'border-box',
-                          }}
-                        >
-                          <input
-                            type="text"
-                            value={isSelected ? rawVal : displayVal}
-                            onChange={(e) => handleCellChange(cellKey, e.target.value)}
-                            onFocus={() => setSelectedCell(cellKey)}
-                            style={{
-                              width: '100%',
-                              border: 'none',
-                              backgroundColor: 'transparent',
-                              color: 'var(--text-main)',
-                              fontSize: '12px',
-                              fontWeight: r === 1 ? '700' : '400',
-                              outline: 'none',
-                              textAlign: !isNaN(parseFloat(displayVal)) && !displayVal.startsWith('#') ? 'right' : 'left',
-                            }}
-                          />
-                        </div>
-                      );
-                    })}
-                  </React.Fragment>
-                ))}
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const nextBullets = [...(slides[currentSlideIndex]?.bullets || []), 'Nouveau point clé'];
+                      handleUpdateCurrentSlide('bullets', nextBullets);
+                    }}
+                    style={{
+                      alignSelf: 'flex-start',
+                      border: '1px dashed var(--border-color)',
+                      backgroundColor: 'transparent',
+                      color: 'var(--text-secondary)',
+                      borderRadius: '8px',
+                      padding: '6px 12px',
+                      fontSize: '12px',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    + Ajouter un point clé
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+          )}
 
-  return createPortal(modalElement, document.body);
+          {/* 4. HISTORIQUE DES VERSIONS */}
+          {activeTab === 'history' && (
+            <div style={{ flex: 1, padding: '20px', overflowY: 'auto' }}>
+              <h3 style={{ margin: '0 0 12px', fontSize: '18px', color: 'var(--text-main)' }}>
+                Historique des Versions & Restauration Instantanée
+              </h3>
+              <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '0 0 20px' }}>
+                Toutes les modifications collaboratives sont archivées avec horodatage et auteur.
+              </p>
+
+              {versionHistory.length === 0 ? (
+                <div style={{ padding: '32px', textAlign: 'center', backgroundColor: 'var(--bg-subtle)', borderRadius: '16px', color: 'var(--text-secondary)' }}>
+                  Aucune révision antérieure enregistrée pour cette session. Les versions s'archivent automatiquement au fil des modifications.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {versionHistory.map(v => (
+                    <div
+                      key={v.id}
+                      style={{
+                        padding: '14px',
+                        borderRadius: '14px',
+                        border: '1px solid var(--border-color)',
+                        backgroundColor: 'var(--bg-card)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-main)' }}>
+                          {v.type === 'doc' ? '📄 Document' : v.type === 'sheet' ? '📊 Tableur' : '📽️ Diaporama'} • {v.title}
+                        </div>
+                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
+                          Modifié à {v.timestamp} par <strong>{v.author}</strong>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (v.type === 'doc' && v.content) {
+                            setDocContent(v.content);
+                            saveDocToFirestore(v.content);
+                            setActiveTab('docs');
+                          } else if (v.type === 'sheet' && v.gridData) {
+                            setSheetData(v.gridData);
+                            saveSheetToFirestore(v.gridData);
+                            setActiveTab('sheets');
+                          } else if (v.type === 'slides' && v.slides) {
+                            setSlides(v.slides);
+                            saveSlidesToFirestore(v.slides);
+                            setActiveTab('slides');
+                          }
+                        }}
+                        className="premium-button"
+                        style={{
+                          border: '1.5px solid var(--accent-primary)',
+                          backgroundColor: 'var(--bg-subtle)',
+                          color: 'var(--accent-primary)',
+                          borderRadius: '10px',
+                          padding: '6px 12px',
+                          fontSize: '12px',
+                          fontWeight: '800',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                        }}
+                      >
+                        <RotateCcw size={12} /> Restaurer
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
 }

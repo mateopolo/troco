@@ -19,6 +19,7 @@ export default function AdminPanel({
   onResolveReport = null,
   onResetUser = null,
   onEditListing = null,
+  onInspectUser = null,
 }) {
   const [activeTab, setActiveTab] = useState('reports'); // 'reports' | 'users' | 'listings' | 'moderator'
   const [pinInput, setPinInput] = useState('');
@@ -694,6 +695,21 @@ export default function AdminPanel({
                             {isBanned ? '✓ Débannir' : '🚫 Bannir'}
                           </button>
                         </div>
+
+                        {onInspectUser && (
+                          <button
+                            type="button"
+                            onClick={() => onInspectUser(u)}
+                            className="premium-button"
+                            style={{
+                              padding: '7px 10px', borderRadius: '10px', border: '1px solid var(--border-color)',
+                              backgroundColor: 'rgba(198, 125, 91, 0.12)', color: 'var(--accent-primary)', fontSize: '11px', fontWeight: '800', cursor: 'pointer',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px'
+                            }}
+                          >
+                            👤 Voir Profil Détaillé & Troc
+                          </button>
+                        )}
 
                         <button
                           onClick={() => {

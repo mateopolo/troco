@@ -8,7 +8,7 @@
 export const mockListings = [
 
   // ═══════════════════════════════════════
-  // 🇫🇷 PARIS, FRANCE (nativeLang: FR)
+  // 🇫🇷 ROISSY-EN-FRANCE & PARIS (nativeLang: FR)
   // ═══════════════════════════════════════
   {
     id: 1,
@@ -17,8 +17,8 @@ export const mockListings = [
     author: "Marc L.",
     category: "Prêt de Matériel",
     verified: true, rating: 5.0, reviews: 14,
-    location: "Paris 11e (À 1.2 km)",
-    coordinates: [48.8584, 2.3785],
+    location: "Roissy-en-France (À 0.8 km)",
+    coordinates: [49.0097, 2.5186],
     type: "onsite", nativeLang: "FR",
     languages: ["FR", "EN"],
     compensation: "Troc ou 5€ consommables",

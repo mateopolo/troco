@@ -1143,6 +1143,7 @@ export default function CollaborativeWhiteboardModal({
       if (activeTab === 'canvas') {
         // 1. Sauvegarde explicite de l'état persistant dans Firestore
         await syncToFirestore(paths, stickyNotes, textElements);
+        const snapshotPreview = generateCompositeSnapshotDataUrl() || '';
 
         if (db && groupId) {
           const authorName = currentUser?.name || 'Moi';
@@ -1155,6 +1156,8 @@ export default function CollaborativeWhiteboardModal({
             workspaceType: 'whiteboard',
             boardId: effectiveBoardId,
             workspaceTitle: projectTitle,
+            previewUrl: snapshotPreview,
+            imageUrl: snapshotPreview,
             sender: currentUser?.id || currentUser?.name || 'me',
             senderName: authorName,
             senderAvatar: currentUser?.avatar || '',
@@ -1169,7 +1172,7 @@ export default function CollaborativeWhiteboardModal({
           }, { merge: true });
         }
 
-        if (onSendToChat) onSendToChat(effectiveBoardId);
+        if (onSendToChat) onSendToChat(effectiveBoardId, snapshotPreview);
       } else {
         if (db && groupId) {
           const authorName = currentUser?.name || 'Moi';
@@ -1510,26 +1513,79 @@ export default function CollaborativeWhiteboardModal({
                 })}
               </div>
 
-              {/* PALETTE CHROMATIQUE */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              {/* PALETTE CHROMATIQUE & SÉLECTEUR ABSOLU */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px', backgroundColor: 'var(--bg-card)', padding: '3px 8px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
                 {COLOR_PALETTE.map(c => (
                   <button
                     key={c.id}
                     type="button"
                     onClick={() => setColor(c.hex)}
                     style={{
-                      border: color === c.hex ? '2.5px solid var(--text-main)' : '1px solid rgba(0,0,0,0.1)',
+                      border: color.toLowerCase() === c.hex.toLowerCase() ? '2.5px solid var(--text-main)' : '1px solid rgba(0,0,0,0.15)',
                       backgroundColor: c.hex,
                       width: '20px',
                       height: '20px',
                       borderRadius: '50%',
                       cursor: 'pointer',
-                      transform: color === c.hex ? 'scale(1.2)' : 'scale(1)',
+                      transform: color.toLowerCase() === c.hex.toLowerCase() ? 'scale(1.2)' : 'scale(1)',
                       transition: 'transform 0.15s ease',
                     }}
                     title={c.name}
                   />
                 ))}
+
+                {/* SÉLECTEUR DE COULEUR PERSONNALISÉE (HEX / RGB) */}
+                <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', marginLeft: '4px' }}>
+                  <label
+                    title={`Couleur personnalisée : ${color}`}
+                    style={{
+                      width: '24px',
+                      height: '24px',
+                      borderRadius: '50%',
+                      background: `conic-gradient(red, yellow, lime, aqua, blue, magenta, red)`,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      border: '2px solid var(--border-color)',
+                      boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
+                    }}
+                  >
+                    <input
+                      type="color"
+                      value={color.startsWith('#') && color.length === 7 ? color : '#C67D5B'}
+                      onChange={(e) => setColor(e.target.value)}
+                      style={{
+                        opacity: 0,
+                        width: '100%',
+                        height: '100%',
+                        position: 'absolute',
+                        inset: 0,
+                        cursor: 'pointer',
+                      }}
+                    />
+                    <Palette size={11} color="#FFFFFF" style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.8))' }} />
+                  </label>
+                </div>
+
+                {/* BADGE HEX / COULEUR ACTUELLE */}
+                <span
+                  style={{
+                    fontSize: '10px',
+                    fontFamily: 'monospace',
+                    fontWeight: '800',
+                    color: 'var(--text-main)',
+                    backgroundColor: 'var(--bg-subtle)',
+                    padding: '2px 5px',
+                    borderRadius: '6px',
+                    border: '1px solid var(--border-color)',
+                    marginLeft: '2px',
+                    letterSpacing: '-0.2px',
+                  }}
+                  title="Code hexadécimal du pinceau"
+                >
+                  {color.toUpperCase()}
+                </span>
               </div>
 
               {/* ÉPAISSEUR DU TRAIT */}

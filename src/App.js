@@ -234,6 +234,14 @@ export default function App() {
 
   // ---- ÉTATS MODÉRATION & PANEL ADMINISTRATEUR ----
   const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
+  const [isGodModeActive, setIsGodModeActive] = useState(() => {
+    try {
+      return localStorage.getItem('troco_god_mode') === 'true';
+    } catch (_) {
+      return false;
+    }
+  });
+  const [selectedPublicUser, setSelectedPublicUser] = useState(null);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [reportTarget, setReportTarget] = useState({ listing: null, user: null });
   const [allReports, setAllReports] = useState([]);
@@ -1409,6 +1417,36 @@ export default function App() {
   };
 
   const isAdmin = profile?.email === 'mateopolo91@gmail.com' || auth.currentUser?.email === 'mateopolo91@gmail.com' || profile?.role === 'admin';
+
+  // ---- GOD MODE & MODÉRATION ADMINISTRATEUR ----
+  const handleToggleGodMode = () => {
+    setIsGodModeActive(prev => {
+      const next = !prev;
+      try { localStorage.setItem('troco_god_mode', String(next)); } catch (_) {}
+      setSaveMessage(next ? '🛡️ God Mode ADMIN activé — Navigation fantôme déverrouillée' : '🛡️ God Mode désactivé');
+      setTimeout(() => setSaveMessage(''), 4000);
+      return next;
+    });
+  };
+
+  const handleAdminToggleHideListing = async (listing) => {
+    if (!listing) return;
+    const newHidden = !listing.isHidden;
+    setListings(prev => prev.map(l => l.id === listing.id ? { ...l, isHidden: newHidden } : l));
+    if (db && listing.firestoreId) {
+      try {
+        await updateDoc(doc(db, 'listings', String(listing.firestoreId)), {
+          isHidden: newHidden,
+          updatedAt: serverTimestamp(),
+        });
+      } catch (err) {
+        console.warn('[Admin] toggle hide error:', err);
+      }
+    }
+    setSaveMessage(newHidden ? `🚫 Annonce #${listing.id} masquée du feed public` : `👁️ Annonce #${listing.id} visible`);
+    setTimeout(() => setSaveMessage(''), 4000);
+  };
+
   const userSwapHistory = Array.isArray(profile?.swapHistory) ? profile.swapHistory : [];
   const ratedEntries = userSwapHistory.filter(entry => entry.rating);
   const averageRating = ratedEntries.length
@@ -1679,28 +1717,33 @@ export default function App() {
 
   const listingsGridRef = useRef(null);
 
-  // GSAP SCROLLTRIGGER : MOTION DES ANNONCES (PREMIUM REVEAL DU COMMIT 2193D77)
+  // GSAP SCROLLTRIGGER : MOTION DES ANNONCES FLUIDE ET SANS SAUTS
   useGSAP(() => {
     if (!listingsGridRef.current) return;
     const cards = listingsGridRef.current.querySelectorAll('.gsap-card, .premium-card, .feed-card-item, .sponsored-feed-card, .ad-card');
     if (!cards || cards.length === 0) return;
 
+    gsap.killTweensOf(cards);
+
     gsap.fromTo(cards,
-      { opacity: 0, y: 40 },
+      { opacity: 0, y: 30 },
       {
         opacity: 1,
         y: 0,
-        duration: 0.6,
+        duration: 0.45,
         ease: 'power2.out',
-        stagger: 0.1,
-        clearProps: 'all',
+        stagger: 0.06,
+        clearProps: 'transform,opacity',
         scrollTrigger: {
           trigger: listingsGridRef.current,
-          start: 'top 88%',
-          toggleActions: 'play none none none'
+          start: 'top 92%',
+          toggleActions: 'play none none none',
+          once: true,
         }
       }
     );
+
+    ScrollTrigger.refresh();
   }, { dependencies: [filteredListings, selectedCategory, viewMode, formatFilter, activeTab, searchQuery], scope: listingsGridRef });
 
   const getListingDetail = (listing) => {
@@ -3310,7 +3353,10 @@ export default function App() {
                           profile={profile}
                           handleStartDiscussion={handleStartDiscussion}
                           isAdmin={isAdmin}
+                          isGodModeActive={isGodModeActive}
                           onAdminDeleteListing={handleAdminDeleteListing}
+                          onAdminToggleHideListing={handleAdminToggleHideListing}
+                          onAdminEditListing={handleAdminEditListing}
                           onOpenMobileActions={setMobileListingActionTarget}
                           t={t}
                         />
@@ -3490,6 +3536,7 @@ export default function App() {
                   onAcceptReward={handleAcceptReward}
                   onSendAudioMessage={handleSendAudioMessage}
                   profile={profile}
+                  setProfile={setProfile}
                   currentLang={currentLang}
                   t={t}
                   darkMode={darkMode}
@@ -3933,8 +3980,74 @@ export default function App() {
             onResolveReport={handleAdminResolveReport}
             onResetUser={handleAdminResetUser}
             onEditListing={handleAdminEditListing}
+            onInspectUser={(u) => {
+              setIsAdminPanelOpen(false);
+              setSelectedPublicUser(u);
+            }}
           />
         </Suspense>
+      )}
+
+      {/* MODALE DU PROFIL PUBLIC COMPLET */}
+      {selectedPublicUser && (
+        <Suspense fallback={<SkeletonModalFallback title="Chargement du profil..." />}>
+          <PublicProfileModal
+            isOpen={Boolean(selectedPublicUser)}
+            onClose={() => setSelectedPublicUser(null)}
+            targetUser={selectedPublicUser}
+            allListings={listings}
+            onOpenListing={handleOpenListing}
+            onStartDiscussion={handleStartDiscussion}
+            currentLang={currentLang}
+            darkMode={darkMode}
+            t={t}
+          />
+        </Suspense>
+      )}
+
+      {/* BOUTON FLOTTANT GHOST NAVIGATION / GOD MODE POUR L'ADMINISTRATEUR */}
+      {isAdmin && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: '24px',
+            left: '24px',
+            zIndex: 99990,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            backgroundColor: isGodModeActive ? '#1C1816' : 'rgba(28, 24, 22, 0.88)',
+            color: isGodModeActive ? '#F59E0B' : '#FFFFFF',
+            border: isGodModeActive ? '2px solid #F59E0B' : '1px solid var(--border-color)',
+            padding: '7px 14px',
+            borderRadius: '999px',
+            boxShadow: isGodModeActive ? '0 8px 24px rgba(245, 158, 11, 0.45)' : '0 4px 16px rgba(0,0,0,0.2)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+          }}
+        >
+          <span style={{ fontSize: '13px' }}>🛡️</span>
+          <span style={{ fontSize: '11.5px', fontWeight: '900', letterSpacing: '0.4px' }}>
+            GOD MODE
+          </span>
+          <button
+            type="button"
+            onClick={handleToggleGodMode}
+            style={{
+              border: 'none',
+              backgroundColor: isGodModeActive ? '#F59E0B' : 'rgba(255,255,255,0.2)',
+              color: isGodModeActive ? '#1C1816' : '#FFFFFF',
+              borderRadius: '999px',
+              padding: '3px 8px',
+              fontSize: '10.5px',
+              fontWeight: '800',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            {isGodModeActive ? 'ACTIF ⚡' : 'OFF'}
+          </button>
+        </div>
       )}
 
       {/* MODALE DE SIGNALEMENT COMMUNAUTAIRE */}

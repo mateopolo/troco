@@ -26,6 +26,7 @@ export default function ChatSection({
   onAcceptReward,
   onSendAudioMessage,
   profile,
+  setProfile,
   currentLang,
   t,
   darkMode,
@@ -65,6 +66,7 @@ export default function ChatSection({
       onAcceptReward={onAcceptReward}
       onSendAudioMessage={onSendAudioMessage}
       profile={profile}
+      setProfile={setProfile}
       currentLang={currentLang}
       t={t}
       darkMode={darkMode}

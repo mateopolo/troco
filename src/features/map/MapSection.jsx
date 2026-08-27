@@ -1,10 +1,91 @@
-import React, { Suspense, useCallback } from 'react';
-import { MapContainer, TileLayer } from 'react-leaflet';
+import React, { Suspense, useCallback, useState } from 'react';
+import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { Navigation, Loader2 } from 'lucide-react';
 import SectoralErrorBoundary from '../../components/SectoralErrorBoundary';
 
 const MapClusterTracker = React.lazy(() => import('../../components/MapClusterTracker'));
+
+// Composant interne pour le recentrage GPS "Me localiser"
+function MapLocateControl({ onLocated }) {
+  const map = useMap();
+  const [isLocating, setIsLocating] = useState(false);
+
+  const handleLocateMe = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!navigator.geolocation) {
+      alert("La géolocalisation n'est pas prise en charge par votre navigateur.");
+      return;
+    }
+
+    setIsLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setIsLocating(false);
+        const { latitude, longitude } = pos.coords;
+        map.flyTo([latitude, longitude], 14, {
+          animate: true,
+          duration: 1.5,
+        });
+        if (onLocated) onLocated([latitude, longitude]);
+      },
+      (err) => {
+        setIsLocating(false);
+        console.warn('[Geolocation] Error or permission denied:', err);
+        // Fallback smooth recenter sur Roissy / Paris
+        map.flyTo([49.0097, 2.5186], 13, {
+          animate: true,
+          duration: 1.2,
+        });
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  };
+
+  return (
+    <div
+      style={{
+        position: 'absolute',
+        bottom: '24px',
+        right: '24px',
+        zIndex: 1000,
+      }}
+    >
+      <button
+        type="button"
+        onClick={handleLocateMe}
+        className="premium-button"
+        style={{
+          border: '1px solid var(--border-color)',
+          backgroundColor: 'var(--bg-card)',
+          color: 'var(--accent-primary)',
+          borderRadius: '16px',
+          padding: '10px 16px',
+          fontSize: '13px',
+          fontWeight: '800',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          cursor: 'pointer',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+        }}
+        title="Me localiser instantanément sur la carte"
+      >
+        {isLocating ? (
+          <Loader2 size={16} className="animate-spin" />
+        ) : (
+          <Navigation size={16} />
+        )}
+        <span>{isLocating ? 'Localisation...' : '🎯 Me localiser'}</span>
+      </button>
+    </div>
+  );
+}
 
 export function MapSection({
   filteredListings,
@@ -54,6 +135,7 @@ export function MapSection({
   }, [theme]);
 
   const mapIconFn = createModernMapIcon || defaultCreateModernMapIcon;
+
   return (
     <SectoralErrorBoundary moduleName="Carte Interactive & Géolocalisation">
       <div
@@ -79,8 +161,8 @@ export function MapSection({
           }}
         >
           <MapContainer
-            center={mapCenter}
-            zoom={4}
+            center={mapCenter || [49.0097, 2.5186]}
+            zoom={mapZoom || 12}
             minZoom={2}
             maxBounds={[[-85, -180], [85, 180]]}
             maxBoundsViscosity={1.0}
@@ -94,11 +176,13 @@ export function MapSection({
               url={`https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&hl=${currentLang.toLowerCase()}`}
             />
 
+            <MapLocateControl />
+
             <Suspense fallback={null}>
               <MapClusterTracker
                 listings={filteredListings}
-                mapCenter={mapCenter}
-                mapZoom={mapZoom}
+                mapCenter={mapCenter || [49.0097, 2.5186]}
+                mapZoom={mapZoom || 12}
                 darkMode={darkMode}
                 currentLang={currentLang}
                 t={t}

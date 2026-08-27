@@ -34,7 +34,10 @@ export function FeedSection({
   profile,
   handleStartDiscussion,
   isAdmin,
+  isGodModeActive = false,
   handleAdminDeleteListing,
+  handleAdminToggleHideListing = null,
+  handleAdminEditListing = null,
   setMobileListingActionTarget,
   setSaveMessage,
   setBoostingListing,
@@ -368,7 +371,10 @@ export function FeedSection({
                     profile={profile}
                     handleStartDiscussion={handleStartDiscussion}
                     isAdmin={isAdmin}
+                    isGodModeActive={isGodModeActive}
                     onAdminDeleteListing={handleAdminDeleteListing}
+                    onAdminToggleHideListing={handleAdminToggleHideListing}
+                    onAdminEditListing={handleAdminEditListing}
                     onOpenMobileActions={setMobileListingActionTarget}
                     t={t}
                   />
