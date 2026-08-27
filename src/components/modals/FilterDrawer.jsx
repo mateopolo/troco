@@ -1,5 +1,6 @@
 import React from 'react';
 import { X, Sparkles, MapPin } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function FilterDrawer({
   isOpen,
@@ -27,33 +28,45 @@ export default function FilterDrawer({
   darkMode = false,
   t = (k) => k,
 }) {
-  if (!isOpen) return null;
-
   return (
-    <div style={{
-      position: 'fixed',
-      inset: 0,
-      backgroundColor: 'rgba(61,53,48,0.6)',
-      backdropFilter: 'blur(8px)',
-      WebkitBackdropFilter: 'blur(8px)',
-      zIndex: 55,
-      display: 'flex',
-      justifyContent: 'flex-end',
-      animation: 'fadeIn 0.2s ease-out'
-    }}>
-      <div style={{
-        width: '100%',
-        maxWidth: '360px',
-        height: '100%',
-        backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
-        backdropFilter: 'blur(24px)',
-        WebkitBackdropFilter: 'blur(24px)',
-        padding: '20px',
-        boxShadow: '-12px 0 40px rgba(0,0,0,0.25)',
-        overflowY: 'auto',
-        borderLeft: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
-        animation: 'slideLeft 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
-      }}>
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.22 }}
+          onClick={onClose}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(61,53,48,0.6)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            zIndex: 55,
+            display: 'flex',
+            justifyContent: 'flex-end',
+          }}
+        >
+          <motion.div
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '100%',
+              maxWidth: '360px',
+              height: '100%',
+              backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
+              backdropFilter: 'blur(24px)',
+              WebkitBackdropFilter: 'blur(24px)',
+              padding: '20px',
+              boxShadow: '-12px 0 40px rgba(0,0,0,0.25)',
+              overflowY: 'auto',
+              borderLeft: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
+            }}
+          >
         {/* EN-TÊTE DU TIROIR */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
           <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
@@ -258,7 +271,9 @@ export default function FilterDrawer({
             </button>
           ))}
         </div>
-      </div>
-    </div>
+        </motion.div>
+      </motion.div>
+    )}
+  </AnimatePresence>
   );
 }

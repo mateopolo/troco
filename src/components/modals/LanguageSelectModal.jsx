@@ -1,5 +1,7 @@
 import React from 'react';
 import { Globe, X, CheckCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { getActiveAnimation } from '../../config/animations';
 
 const AVAILABLE_LANGUAGES = [
   { code: 'FR', label: 'Français', flag: '🇫🇷' },
@@ -19,35 +21,44 @@ export default function LanguageSelectModal({
   darkMode = false,
   t = (k) => k,
 }) {
-  if (!isOpen) return null;
-
   return (
-    <div style={{
-      position: 'fixed',
-      inset: 0,
-      backgroundColor: 'rgba(61,53,48,0.7)',
-      backdropFilter: 'blur(10px)',
-      WebkitBackdropFilter: 'blur(10px)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '20px',
-      zIndex: 65,
-      animation: 'fadeIn 0.2s ease-out'
-    }}>
-      <div style={{
-        backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
-        backdropFilter: 'blur(24px) saturate(180%)',
-        WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-        borderRadius: '24px',
-        width: '100%',
-        maxWidth: '380px',
-        padding: '24px',
-        boxShadow: '0 24px 60px rgba(61,53,48,0.25)',
-        border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
-        position: 'relative',
-        animation: 'modalSlideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
-      }}>
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+          onClick={onClose}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(61,53,48,0.7)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            zIndex: 65,
+          }}
+        >
+          <motion.div
+            {...getActiveAnimation('modal')}
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
+              backdropFilter: 'blur(24px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+              borderRadius: '24px',
+              width: '100%',
+              maxWidth: '380px',
+              padding: '24px',
+              boxShadow: '0 24px 60px rgba(61,53,48,0.25)',
+              border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
+              position: 'relative',
+            }}
+          >
         {/* BOUTON FERMER */}
         <button
           onClick={onClose}
@@ -114,7 +125,9 @@ export default function LanguageSelectModal({
             </button>
           ))}
         </div>
-      </div>
-    </div>
+        </motion.div>
+      </motion.div>
+    )}
+  </AnimatePresence>
   );
 }

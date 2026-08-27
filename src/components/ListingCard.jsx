@@ -1,15 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Video, MapPin, Tag, ArrowRight, Globe, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
-import { gsap } from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { useGSAP } from '@gsap/react';
+import { motion } from 'framer-motion';
+import { getActiveAnimation } from '../config/animations';
 import { getSuggestedMedia as defaultGetSuggestedMedia, getFallbackImage as defaultGetFallbackImage } from '../utils/mediaUtils';
 import { localizeLocation as defaultLocalizeLocation, localizeTags as defaultLocalizeTags } from '../locales/translations';
 import { getAuthorAvatar as defaultGetAuthorAvatar } from '../data/mockData';
-
-if (typeof window !== 'undefined') {
-  gsap.registerPlugin(ScrollTrigger, useGSAP);
-}
 
 const defaultGenerateTags = (title = '', description = '') => ['Échange', 'Service'];
 const defaultFormatCompensation = (comp) => comp || '';
@@ -51,27 +46,6 @@ export default function ListingCard({
   const touchDeltaXRef = useRef(0);
   const touchDeltaYRef = useRef(0);
   const isSwipingRef = useRef(false);
-
-  // GSAP ScrollTrigger animation
-  useGSAP(() => {
-    if (!cardRef.current) return;
-    gsap.fromTo(
-      cardRef.current,
-      { opacity: 0, y: 35, scale: 0.98 },
-      {
-        opacity: 1,
-        y: 0,
-        scale: 1,
-        duration: 0.6,
-        ease: 'power2.out',
-        scrollTrigger: {
-          trigger: cardRef.current,
-          start: 'top 88%',
-          toggleActions: 'play none none reverse',
-        },
-      }
-    );
-  }, { scope: cardRef });
 
   if (!item) return null;
 
@@ -157,8 +131,12 @@ export default function ListingCard({
   };
 
   return (
-    <div
+    <motion.div
       ref={cardRef}
+      initial="initial"
+      whileInView="animate"
+      viewport={{ once: true, margin: '-50px' }}
+      variants={getActiveAnimation('card')}
       onClick={() => handleOpenListing(item)}
       onMouseEnter={() => setHoveredCardId(item.id)}
       onMouseLeave={() => setHoveredCardId(null)}
@@ -455,6 +433,6 @@ export default function ListingCard({
           </div>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }

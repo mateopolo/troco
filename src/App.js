@@ -32,9 +32,8 @@ import {
 } from './utils/translationHelpers';
 import FilterDrawer from './components/modals/FilterDrawer';
 import LanguageSelectModal from './components/modals/LanguageSelectModal';
-import { gsap } from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { useGSAP } from '@gsap/react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { getActiveAnimation } from './config/animations';
 import {
   translations,
   localizeLocation,
@@ -44,10 +43,6 @@ import {
 import {
   calculateHaversineDistance,
 } from './utils/geocodingNominatim';
-
-if (typeof window !== 'undefined') {
-  gsap.registerPlugin(ScrollTrigger, useGSAP);
-}
 
 // Lazy-loaded heavy components & modals (Strict Code-Splitting)
 const AdminPanel = React.lazy(() => import('./components/AdminPanel'));
@@ -71,10 +66,6 @@ const CallFeature = React.lazy(() => import('./features/call'));
 const WebRTCCallOverlay = React.lazy(() => import('./features/call/WebRTCCallOverlay'));
 const PostListingFeature = React.lazy(() => import('./features/post/PostListingFeature'));
 const ProfileFeature = React.lazy(() => import('./features/profile/ProfileFeature'));
-
-if (typeof window !== 'undefined') {
-  gsap.registerPlugin(ScrollTrigger, useGSAP);
-}
 
 export default function App() {
   const {
@@ -183,40 +174,6 @@ export default function App() {
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [viewMode, setViewMode] = useState('list');
 
-  const TAB_ORDER = useMemo(() => ({ feed: 0, community: 1, chat: 2, post: 3, profile: 4, admin: 5 }), []);
-  const prevTabRef = useRef(activeTab);
-  const tabSlideDirection = (TAB_ORDER[activeTab] ?? 0) >= (TAB_ORDER[prevTabRef.current] ?? 0) ? 'forward' : 'backward';
-
-  // Transition d'onglets & écrans GSAP (Organic Spring Glide + Back Ease)
-  useGSAP(() => {
-    if (!mainContainerRef.current) return;
-
-    // Sur mobile avec chat ouvert en plein écran, isolation totale
-    if (isMobile && activeTab === 'chat' && selectedChat) return;
-
-    const prevIdx = TAB_ORDER[prevTabRef.current] ?? 0;
-    const currentIdx = TAB_ORDER[activeTab] ?? 0;
-    const direction = currentIdx >= prevIdx ? 1 : -1;
-    prevTabRef.current = activeTab;
-
-    gsap.killTweensOf(mainContainerRef.current);
-    gsap.fromTo(
-      mainContainerRef.current,
-      {
-        opacity: 0.15,
-        x: direction * 28,
-        scale: 0.985,
-      },
-      {
-        opacity: 1,
-        x: 0,
-        scale: 1,
-        duration: 0.36,
-        ease: 'power3.out',
-        clearProps: 'transform,opacity',
-      }
-    );
-  }, { dependencies: [activeTab, viewMode], scope: mainContainerRef });
   // eslint-disable-next-line no-unused-vars
   const [selectedMapItem, setSelectedMapItem] = useState(null);
   const [isBoostModalOpen, setIsBoostModalOpen] = useState(false);
@@ -1717,35 +1674,6 @@ export default function App() {
 
   const listingsGridRef = useRef(null);
 
-  // GSAP SCROLLTRIGGER : MOTION DES ANNONCES FLUIDE ET SANS SAUTS
-  useGSAP(() => {
-    if (!listingsGridRef.current) return;
-    const cards = listingsGridRef.current.querySelectorAll('.gsap-card, .premium-card, .feed-card-item, .sponsored-feed-card, .ad-card');
-    if (!cards || cards.length === 0) return;
-
-    gsap.killTweensOf(cards);
-
-    gsap.fromTo(cards,
-      { opacity: 0, y: 30 },
-      {
-        opacity: 1,
-        y: 0,
-        duration: 0.45,
-        ease: 'power2.out',
-        stagger: 0.06,
-        clearProps: 'transform,opacity',
-        scrollTrigger: {
-          trigger: listingsGridRef.current,
-          start: 'top 92%',
-          toggleActions: 'play none none none',
-          once: true,
-        }
-      }
-    );
-
-    ScrollTrigger.refresh();
-  }, { dependencies: [filteredListings, selectedCategory, viewMode, formatFilter, activeTab, searchQuery], scope: listingsGridRef });
-
   const getListingDetail = (listing) => {
     const media = getSuggestedMedia(listing.title, listing.description || '', listing.image, listing.video);
     const isCurrentUser = Boolean(
@@ -2890,38 +2818,39 @@ export default function App() {
         </div>
       )}
 
-      {/* CONTENU DYNAMIQUE SELON L'ONGLET SÉLECTIONNÉ */}
-      <main
-        ref={mainContainerRef}
-        key={`${activeTab}-${viewMode}`}
-        className={`premium-main ${activeTab === 'chat' ? 'chat-mode' : ''} ${tabSlideDirection === 'forward' ? 'page-tab-transition-left' : 'page-tab-transition-right'
-          }`}
-        style={{
-          maxWidth: activeTab === 'feed' ? '1460px' : '1240px',
-          margin: '0 auto',
-          width: '100%',
-          boxSizing: 'border-box',
-          display: (activeTab === 'chat' || activeTab === 'community') ? 'flex' : 'block',
-          flexDirection: (activeTab === 'chat' || activeTab === 'community') ? 'column' : 'initial',
-          overflow: (activeTab === 'chat' || activeTab === 'community') ? 'hidden' : 'visible',
-          height: activeTab === 'chat'
-            ? (isMobile ? (selectedChat ? '100dvh' : 'calc(100dvh - 125px)') : 'calc(100vh - 138px)')
-            : (activeTab === 'community'
-              ? (isMobile ? 'calc(100dvh - 56px - 65px - env(safe-area-inset-bottom, 0px))' : 'calc(100vh - 138px)')
-              : 'auto'),
-          maxHeight: activeTab === 'chat'
-            ? (isMobile ? (selectedChat ? '100dvh' : 'calc(100dvh - 125px)') : 'calc(100vh - 138px)')
-            : (activeTab === 'community'
-              ? (isMobile ? 'calc(100dvh - 56px - 65px - env(safe-area-inset-bottom, 0px))' : 'calc(100vh - 138px)')
-              : 'none'),
-          padding: activeTab === 'chat'
-            ? (isMobile ? (selectedChat ? '0' : '0 6px') : '14px 16px 0 16px')
-            : (activeTab === 'community'
-              ? (isMobile ? '8px 10px 0 10px' : '14px 16px 0 16px')
-              : (isMobile ? '12px 12px 90px' : '20px 20px 90px')),
-          transition: 'max-width 0.3s ease'
-        }}
-      >
+      {/* CONTENU DYNAMIQUE SELON L'ONGLET SÉLECTIONNÉ (FRAMER MOTION ANIMATEPRESENCE) */}
+      <AnimatePresence mode="wait">
+        <motion.main
+          ref={mainContainerRef}
+          key={`${activeTab}-${viewMode}`}
+          {...getActiveAnimation('page')}
+          className={`premium-main ${activeTab === 'chat' ? 'chat-mode' : ''}`}
+          style={{
+            maxWidth: activeTab === 'feed' ? '1460px' : '1240px',
+            margin: '0 auto',
+            width: '100%',
+            boxSizing: 'border-box',
+            display: (activeTab === 'chat' || activeTab === 'community') ? 'flex' : 'block',
+            flexDirection: (activeTab === 'chat' || activeTab === 'community') ? 'column' : 'initial',
+            overflow: (activeTab === 'chat' || activeTab === 'community') ? 'hidden' : 'visible',
+            height: activeTab === 'chat'
+              ? (isMobile ? (selectedChat ? '100dvh' : 'calc(100dvh - 125px)') : 'calc(100vh - 138px)')
+              : (activeTab === 'community'
+                ? (isMobile ? 'calc(100dvh - 56px - 65px - env(safe-area-inset-bottom, 0px))' : 'calc(100vh - 138px)')
+                : 'auto'),
+            maxHeight: activeTab === 'chat'
+              ? (isMobile ? (selectedChat ? '100dvh' : 'calc(100dvh - 125px)') : 'calc(100vh - 138px)')
+              : (activeTab === 'community'
+                ? (isMobile ? 'calc(100dvh - 56px - 65px - env(safe-area-inset-bottom, 0px))' : 'calc(100vh - 138px)')
+                : 'none'),
+            padding: activeTab === 'chat'
+              ? (isMobile ? (selectedChat ? '0' : '0 6px') : '14px 16px 0 16px')
+              : (activeTab === 'community'
+                ? (isMobile ? '8px 10px 0 10px' : '14px 16px 0 16px')
+                : (isMobile ? '12px 12px 90px' : '20px 20px 90px')),
+            transition: 'max-width 0.3s ease'
+          }}
+        >
 
         {/* ONGLET 1 : EXPLORER / FEED */}
         {activeTab === 'feed' && (
@@ -3630,8 +3559,8 @@ export default function App() {
             />
           </Suspense>
         )}
-
-      </main>
+      </motion.main>
+    </AnimatePresence>
 
       {/* BARRE DE NAVIGATION EN BAS (CLEAN, TRANSPARENTE, AVEC GESTES DE SWIPE iOS) */}
       <AppBottomNav
