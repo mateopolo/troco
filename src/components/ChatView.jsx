@@ -18,6 +18,7 @@ import PublicProfileModal from './PublicProfileModal';
 const CreateProjectGroupModal = lazy(() => import('./CreateProjectGroupModal'));
 const ProjectRewardsModal = lazy(() => import('./ProjectRewardsModal'));
 const CollaborativeWhiteboardModal = lazy(() => import('./CollaborativeWhiteboardModal'));
+const SharedDocumentModal = lazy(() => import('./SharedDocumentModal'));
 const ProjectWorkspaceToolsModal = lazy(() => import('./ProjectWorkspaceToolsModal'));
 const CloudOfficeSuiteModal = lazy(() => import('./CloudOfficeSuiteModal'));
 
@@ -64,7 +65,7 @@ function ChatView({
   const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
   const [isProjectRewardsModalOpen, setIsProjectRewardsModalOpen] = useState(false);
   const [isWhiteboardOpen, setIsWhiteboardOpen] = useState(false);
-  const [whiteboardInitialView, setWhiteboardInitialView] = useState('canvas');
+  const [isSharedDocOpen, setIsSharedDocOpen] = useState(false);
   const [activeWhiteboardBoardId, setActiveWhiteboardBoardId] = useState(null);
   const [isWorkspaceToolsOpen, setIsWorkspaceToolsOpen] = useState(false);
   const [isCloudOfficeOpen, setIsCloudOfficeOpen] = useState(false);
@@ -173,11 +174,9 @@ function ChatView({
 
     if (toolType === 'whiteboard') {
       setActiveWhiteboardBoardId(currentBoardId);
-      setWhiteboardInitialView('canvas');
       setIsWhiteboardOpen(true);
     } else if (toolType === 'notes') {
-      setWhiteboardInitialView('notes');
-      setIsWhiteboardOpen(true);
+      setIsSharedDocOpen(true);
     } else if (toolType === 'docs') {
       setOfficeInitialTab('docs');
       setIsCloudOfficeOpen(true);
@@ -1517,8 +1516,7 @@ function ChatView({
                         type="button"
                         onClick={() => {
                           if (isNotes) {
-                            setWhiteboardInitialView('notes');
-                            setIsWhiteboardOpen(true);
+                            setIsSharedDocOpen(true);
                           } else if (isDocs) {
                             setOfficeInitialTab('docs');
                             setIsCloudOfficeOpen(true);
@@ -1527,7 +1525,6 @@ function ChatView({
                             setIsCloudOfficeOpen(true);
                           } else {
                             setActiveWhiteboardBoardId(msg.boardId || (effectiveSelectedChat?.id ? `board-${effectiveSelectedChat.id}` : 'default_board'));
-                            setWhiteboardInitialView('canvas');
                             setIsWhiteboardOpen(true);
                           }
                         }}
@@ -1686,20 +1683,56 @@ function ChatView({
                                 width: '36px',
                                 height: '36px',
                                 borderRadius: '10px',
-                                backgroundColor: msg.workspaceType === 'sheets' ? 'rgba(16, 185, 129, 0.2)' : msg.workspaceType === 'docs' ? 'rgba(59, 130, 246, 0.2)' : 'rgba(198, 125, 91, 0.2)',
-                                color: msg.workspaceType === 'sheets' ? '#10B981' : msg.workspaceType === 'docs' ? '#3B82F6' : 'var(--accent-primary)',
+                                backgroundColor: msg.workspaceType === 'sheets'
+                                  ? 'rgba(16, 185, 129, 0.2)'
+                                  : msg.workspaceType === 'docs'
+                                  ? 'rgba(59, 130, 246, 0.2)'
+                                  : msg.workspaceType === 'notes'
+                                  ? 'rgba(245, 158, 11, 0.2)'
+                                  : 'rgba(198, 125, 91, 0.2)',
+                                color: msg.workspaceType === 'sheets'
+                                  ? '#10B981'
+                                  : msg.workspaceType === 'docs'
+                                  ? '#3B82F6'
+                                  : msg.workspaceType === 'notes'
+                                  ? '#F59E0B'
+                                  : 'var(--accent-primary)',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 flexShrink: 0,
                               }}
                             >
-                              {msg.workspaceType === 'sheets' ? <Table size={18} /> : msg.workspaceType === 'docs' ? <FileText size={18} /> : <Palette size={18} />}
+                              {msg.workspaceType === 'sheets' ? (
+                                <Table size={18} />
+                              ) : msg.workspaceType === 'docs' ? (
+                                <FileText size={18} />
+                              ) : msg.workspaceType === 'notes' ? (
+                                <FileText size={18} />
+                              ) : (
+                                <Palette size={18} />
+                              )}
                             </div>
 
                             <div style={{ minWidth: 0, flex: 1 }}>
-                              <div style={{ fontSize: '13px', fontWeight: '800', color: isMe ? '#FFFFFF' : 'var(--text-main)' }}>
-                                {msg.workspaceTitle || (msg.workspaceType === 'sheets' ? 'Troco Sheets' : msg.workspaceType === 'docs' ? 'Troco Docs' : 'Tableau Blanc Collaboratif')}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                <span style={{ fontSize: '13px', fontWeight: '800', color: isMe ? '#FFFFFF' : 'var(--text-main)' }}>
+                                  {msg.workspaceTitle || (msg.workspaceType === 'sheets' ? 'Troco Sheets' : msg.workspaceType === 'docs' ? 'Troco Docs' : msg.workspaceType === 'notes' ? 'Notes Partagées' : 'Tableau Blanc')}
+                                </span>
+                                {msg.version && (
+                                  <span
+                                    style={{
+                                      backgroundColor: isMe ? 'rgba(255,255,255,0.25)' : 'rgba(198,125,91,0.2)',
+                                      color: isMe ? '#FFFFFF' : 'var(--accent-primary)',
+                                      fontSize: '10.5px',
+                                      fontWeight: '800',
+                                      padding: '1px 6px',
+                                      borderRadius: '6px',
+                                    }}
+                                  >
+                                    {msg.version}
+                                  </span>
+                                )}
                               </div>
                               <div style={{ fontSize: '10.5px', color: isMe ? 'rgba(255, 255, 255, 0.85)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '1px' }}>
                                 <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10B981', display: 'inline-block', animation: 'pulse 1.8s infinite' }} />
@@ -1707,6 +1740,25 @@ function ChatView({
                               </div>
                             </div>
                           </div>
+
+                          {msg.previewUrl && (
+                            <div
+                              style={{
+                                width: '100%',
+                                height: '110px',
+                                borderRadius: '10px',
+                                overflow: 'hidden',
+                                backgroundColor: 'rgba(0,0,0,0.1)',
+                                border: '1px solid rgba(255,255,255,0.1)',
+                              }}
+                            >
+                              <img
+                                src={msg.previewUrl}
+                                alt="Aperçu du Whiteboard"
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                              />
+                            </div>
+                          )}
 
                           <div style={{ fontSize: '12px', color: isMe ? '#FFFFFF' : 'var(--text-main)', lineHeight: 1.4 }}>
                             {msg.text}
@@ -1716,9 +1768,12 @@ function ChatView({
                             type="button"
                             onClick={() => {
                               if (msg.workspaceType === 'whiteboard') {
+                                if (msg.boardId) setActiveWhiteboardBoardId(msg.boardId);
                                 setIsWhiteboardOpen(true);
+                              } else if (msg.workspaceType === 'notes') {
+                                setIsSharedDocOpen(true);
                               } else {
-                                setOfficeInitialTab(msg.workspaceType === 'sheets' ? 'sheets' : 'docs');
+                                setOfficeInitialTab(msg.workspaceType === 'sheets' ? 'sheets' : (msg.workspaceType === 'slides' ? 'slides' : 'docs'));
                                 setIsCloudOfficeOpen(true);
                               }
                             }}
@@ -2725,7 +2780,7 @@ function ChatView({
         </Suspense>
       )}
 
-      {/* MODALE TABLEAU BLANC COLLABORATIF & NOTES PARTAGÉES (LAZY LOADED) */}
+      {/* MODALE TABLEAU BLANC COLLABORATIF 100% CANVAS (LAZY LOADED) */}
       {isWhiteboardOpen && activeChatObj && (
         <Suspense fallback={null}>
           <CollaborativeWhiteboardModal
@@ -2733,11 +2788,28 @@ function ChatView({
             onClose={() => setIsWhiteboardOpen(false)}
             groupId={activeChatObj.id || activeChatObj.firestoreId || 'group_whiteboard'}
             boardId={activeWhiteboardBoardId || (activeChatObj.id ? `board-${activeChatObj.id}` : 'default_board')}
-            projectTitle={activeChatObj.projectTitle || activeChatObj.user || 'Workspace Collaboratif'}
+            projectTitle={activeChatObj.projectTitle || activeChatObj.user || 'Tableau Blanc Collaboratif'}
             currentUser={profile}
             darkMode={darkMode}
-            initialView={whiteboardInitialView}
-            onSendToChat={(sentBoardId) => {
+            onSendToChat={(sentBoardId, version) => {
+              if (setChatInputText) setChatInputText('');
+            }}
+          />
+        </Suspense>
+      )}
+
+      {/* MODALE NOTES PARTAGÉES COLLABORATIVES APPLE-STYLE (LAZY LOADED) */}
+      {isSharedDocOpen && activeChatObj && (
+        <Suspense fallback={null}>
+          <SharedDocumentModal
+            isOpen={isSharedDocOpen}
+            onClose={() => setIsSharedDocOpen(false)}
+            groupId={activeChatObj.id || activeChatObj.firestoreId || 'group_notes'}
+            docId={activeChatObj.id ? `doc-${activeChatObj.id}` : 'default_shared_doc'}
+            projectTitle={activeChatObj.projectTitle || activeChatObj.user || 'Notes Partagées'}
+            currentUser={profile}
+            darkMode={darkMode}
+            onSendToChat={(sentDocId) => {
               if (setChatInputText) setChatInputText('');
             }}
           />

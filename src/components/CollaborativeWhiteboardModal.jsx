@@ -3,9 +3,7 @@ import { createPortal } from 'react-dom';
 import {
   X, Pen, Highlighter, Eraser, Square, Circle, ArrowRight,
   RotateCcw, RotateCw, Trash2, Download, StickyNote,
-  Palette, Maximize2, Minimize2, Send, Check, GripVertical,
-  Type, Grid, Hand, ZoomIn, ZoomOut, Bold, Italic, Underline,
-  Brush, Edit3, CheckSquare, List, Quote, Heading1, Heading2
+  Type, Hand, ZoomIn, ZoomOut, Brush, Eye, EyeOff, Share2, Tag, Check
 } from 'lucide-react';
 import { doc, setDoc, onSnapshot, serverTimestamp, collection, addDoc } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -22,14 +20,6 @@ const COLOR_PALETTE = [
   { id: 'purple', hex: '#8B5CF6', name: 'Violet Électrique' },
 ];
 
-const STROKE_SIZES = [
-  { size: 2, label: 'Très fin', dotSize: 4 },
-  { size: 4, label: 'Fin', dotSize: 7 },
-  { size: 8, label: 'Moyen', dotSize: 11 },
-  { size: 14, label: 'Large', dotSize: 16 },
-  { size: 24, label: 'Extra', dotSize: 22 },
-];
-
 const STICKY_COLORS = [
   { hex: '#FEF08A', name: 'Jaune' },
   { hex: '#FECDD3', name: 'Rose' },
@@ -44,16 +34,29 @@ const FONT_FAMILIES = [
   { id: 'mono', name: 'Code (Mono)', font: 'Roboto Mono, monospace' },
 ];
 
-const FONT_SIZES = [14, 18, 24, 32, 44, 56];
-
-const DEFAULT_SHARED_NOTE = `# 📝 Notes de Session & Objectifs Collaboratifs\n\n` +
-  `### Points d'action du projet\n` +
-  `- [x] Cadrage initial et alignement des compétences\n` +
-  `- [ ] Validation de la charte graphique et du prototype\n` +
-  `- [ ] Finalisation des livrables et déblocage de l'Escrow\n\n` +
-  `### 💡 Idées & Réflexions Clés\n` +
-  `> "La simplicité est la sophistication suprême."\n\n` +
-  `Partagez ici vos comptes-rendus, listes de tâches et spécifications en direct.`;
+/**
+ * Fusion intelligente des vecteurs locaux et distants par identifiant unique
+ * Empêche l'écrasement des traits locaux par les snapshots Firebase entrants.
+ */
+const mergeVectorPaths = (existingPaths, incomingPaths, myUid) => {
+  const pathMap = new Map();
+  // 1. Ingestion des chemins existants
+  existingPaths.forEach((p) => {
+    if (p && p.id) pathMap.set(p.id, p);
+  });
+  // 2. Fusion des chemins distants entrants (ajoute les nouveaux sans écraser les traits locaux en cours)
+  incomingPaths.forEach((p) => {
+    if (p && p.id) {
+      const existing = pathMap.get(p.id);
+      if (!existing) {
+        pathMap.set(p.id, { ...p, isRemote: p.authorUid !== myUid });
+      } else if (existing.isRemote) {
+        pathMap.set(p.id, { ...p, isRemote: p.authorUid !== myUid });
+      }
+    }
+  });
+  return Array.from(pathMap.values()).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0)).slice(-450);
+};
 
 export default function CollaborativeWhiteboardModal({
   isOpen,
@@ -64,18 +67,15 @@ export default function CollaborativeWhiteboardModal({
   currentUser = null,
   darkMode = false,
   onSendToChat = null,
-  initialView = 'canvas', // 'canvas' | 'notes'
 }) {
   const effectiveBoardId = boardId || groupId || 'default_board';
-
-  // Onglet supérieur : 'canvas' (Tableau blanc 0ms) ou 'notes' (Notes Partagées Apple-Style)
-  const [activeTab, setActiveTab] = useState(initialView);
+  const myUid = currentUser?.uid || currentUser?.id || 'local_user';
+  const myName = currentUser?.name || 'Moi';
 
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
-  const notesTextareaRef = useRef(null);
 
-  // Outils Whiteboard : 'pencil' | 'brush' | 'highlighter' | 'eraser' | 'rect' | 'circle' | 'arrow' | 'sticky' | 'text' | 'hand'
+  // Outils Whiteboard : 'pencil' | 'brush' | 'highlighter' | 'eraser' | 'rect' | 'circle' | 'arrow' | 'sticky' | 'text' | 'hand' | 'laser'
   const [tool, setTool] = useState('pencil');
   const [color, setColor] = useState('#C67D5B');
   const [lineWidth, setLineWidth] = useState(4);
@@ -94,33 +94,30 @@ export default function CollaborativeWhiteboardModal({
   // Édition de texte en cours
   const [editingTextId, setEditingTextId] = useState(null);
 
-  // État Notes Partagées (Apple-Style)
-  const [noteTitle, setNoteTitle] = useState('Note de collaboration - ' + projectTitle);
-  const [noteContent, setNoteContent] = useState(DEFAULT_SHARED_NOTE);
-  const [noteLastSaved, setNoteLastSaved] = useState('Synchronisé en direct 🟢');
-
-  // Multi-utilisateurs & Métadonnées
-  const [activeUsers, setActiveUsers] = useState(['Mateo P.', 'Collaborateur']);
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  // Multi-utilisateurs, Versioning & Immersion
+  const [isImmersiveMode, setIsImmersiveMode] = useState(false);
+  const [versionNumber, setVersionNumber] = useState(1);
+  const [workspaceTitle, setWorkspaceTitle] = useState(projectTitle || 'Tableau Blanc Collaboratif');
   const [saveStatus, setSaveStatus] = useState('Synchronisé en direct 🟢');
   const [isSendingToChat, setIsSendingToChat] = useState(false);
   const [sendSuccessToast, setSendSuccessToast] = useState(false);
 
-  // Références d'interaction & dessin 0ms
+  // Modale de publication de version au chat
+  const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
+  const [publishTitle, setPublishTitle] = useState(`${workspaceTitle} - V2`);
+  const [publishChangelog, setPublishChangelog] = useState('');
+
+  // Références d'interaction & synchronisation 0ms sans écrasement
   const isDrawingRef = useRef(false);
   const currentPathRef = useRef(null);
   const startPosRef = useRef({ x: 0, y: 0 });
   const isPanningRef = useRef(false);
   const panStartRef = useRef({ x: 0, y: 0, origPanX: 0, origPanY: 0 });
-  const touchStartDistRef = useRef(0);
-  const touchStartZoomRef = useRef(1);
   const draggingStickyRef = useRef(null);
-  const draggingTextRef = useRef(null);
-  const isDraggingTextBBoxRef = useRef(false);
 
-  useEffect(() => {
-    if (initialView) setActiveTab(initialView);
-  }, [initialView]);
+  // Buffer de snapshots reçus pendant le dessin local (File d'attente anti-écrasement)
+  const pendingSnapshotRef = useRef(null);
+  const firestoreDebounceTimerRef = useRef(null);
 
   // Conversion Coordonnées Écran (Pixel) -> Coordonnées Monde (World Canvas)
   const getCanvasCoords = useCallback((e) => {
@@ -136,36 +133,32 @@ export default function CollaborativeWhiteboardModal({
   }, [pan.x, pan.y, zoom]);
 
   // Configuration des propriétés du contexte 2D selon l'outil (Moteur de brosses Apple-Style)
-  const applyBrushStyleToContext = (ctx, brushTool, brushColor, brushWidth) => {
+  const applyBrushStyleToContext = (ctx, brushTool, brushColor, brushWidth, isRemote = false) => {
     ctx.lineWidth = brushWidth;
     ctx.shadowBlur = 0;
     ctx.shadowColor = 'transparent';
 
     if (brushTool === 'pencil' || brushTool === 'pen') {
-      // ✏️ Crayon : Trait dur, net, opacité 100%, lineCap butt
       ctx.lineCap = 'butt';
       ctx.lineJoin = 'miter';
-      ctx.globalAlpha = 1.0;
+      ctx.globalAlpha = isRemote ? 0.9 : 1.0;
       ctx.globalCompositeOperation = 'source-over';
       ctx.strokeStyle = brushColor;
     } else if (brushTool === 'brush') {
-      // 🖌️ Pinceau : Trait doux avec dégradé d'ombre pour effet aquarelle
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
-      ctx.globalAlpha = 0.88;
+      ctx.globalAlpha = isRemote ? 0.82 : 0.88;
       ctx.globalCompositeOperation = 'source-over';
       ctx.shadowBlur = Math.max(2, brushWidth * 0.85);
       ctx.shadowColor = brushColor;
       ctx.strokeStyle = brushColor;
     } else if (brushTool === 'highlighter') {
-      // 🖍️ Surligneur : Trait large translucide (globalAlpha = 0.3)
       ctx.lineCap = 'square';
       ctx.lineJoin = 'bevel';
-      ctx.globalAlpha = 0.3;
+      ctx.globalAlpha = isRemote ? 0.25 : 0.32;
       ctx.globalCompositeOperation = 'source-over';
       ctx.strokeStyle = brushColor;
     } else if (brushTool === 'eraser') {
-      // 🧽 Gomme : destination-out pure sans toucher à la grille CSS
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       ctx.globalAlpha = 1.0;
@@ -174,13 +167,13 @@ export default function CollaborativeWhiteboardModal({
     } else {
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
-      ctx.globalAlpha = 1.0;
+      ctx.globalAlpha = isRemote ? 0.9 : 1.0;
       ctx.globalCompositeOperation = 'source-over';
       ctx.strokeStyle = brushColor;
     }
   };
 
-  // Redessine l'ensemble des vecteurs sur le canvas transparent
+  // Redessine l'ensemble des vecteurs sur le canvas transparent (60 FPS)
   const redrawCanvas = useCallback((drawPaths = paths) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -192,20 +185,18 @@ export default function CollaborativeWhiteboardModal({
 
     const dpr = window.devicePixelRatio || 1;
 
-    // Reset du canvas HiDPI transparent
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.scale(dpr, dpr);
 
-    // Application de la caméra (Translation + Zoom)
     ctx.translate(pan.x, pan.y);
     ctx.scale(zoom, zoom);
 
-    // Traçage de tous les vecteurs
     drawPaths.forEach((path) => {
+      if (!path) return;
       ctx.save();
       ctx.beginPath();
-      applyBrushStyleToContext(ctx, path.tool, path.color, path.lineWidth);
+      applyBrushStyleToContext(ctx, path.tool, path.color, path.lineWidth, !!path.isRemote);
 
       if (path.type === 'freehand') {
         if (path.points && path.points.length > 0) {
@@ -251,8 +242,9 @@ export default function CollaborativeWhiteboardModal({
     const container = containerRef.current;
     if (!canvas || !container) return;
 
-    const dpr = window.devicePixelRatio || 1;
     const rect = container.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+
     canvas.width = rect.width * dpr;
     canvas.height = rect.height * dpr;
     canvas.style.width = `${rect.width}px`;
@@ -262,25 +254,71 @@ export default function CollaborativeWhiteboardModal({
   }, [redrawCanvas]);
 
   useEffect(() => {
-    if (isOpen && activeTab === 'canvas') {
-      setTimeout(updateCanvasSize, 50);
+    if (isOpen) {
+      updateCanvasSize();
       window.addEventListener('resize', updateCanvasSize);
       return () => window.removeEventListener('resize', updateCanvasSize);
     }
-  }, [isOpen, activeTab, updateCanvasSize]);
+  }, [isOpen, updateCanvasSize]);
 
-  // ÉTAPE 4 : MOTEUR MULTIJOUEUR P2P À COÛT ZÉRO (WEBRTC DATACHANNELS) & SNAPSHOT FIRESTORE
+  // Sauvegarde debouncée vers Firestore pour garantir 60fps sans surcharger Firebase
+  const debouncedSyncToFirestore = useCallback((
+    currentPaths = paths,
+    currentStickyNotes = stickyNotes,
+    currentTextElements = textElements,
+    currentVersion = versionNumber,
+    currentTitle = workspaceTitle
+  ) => {
+    if (!effectiveBoardId || !db) return;
+
+    if (firestoreDebounceTimerRef.current) {
+      clearTimeout(firestoreDebounceTimerRef.current);
+    }
+
+    setSaveStatus('Enregistrement en cours...');
+
+    firestoreDebounceTimerRef.current = setTimeout(async () => {
+      try {
+        const docRef = doc(db, 'project_whiteboards', String(effectiveBoardId));
+        const payload = {
+          boardId: effectiveBoardId,
+          groupId,
+          title: currentTitle,
+          versionNumber: currentVersion,
+          paths: currentPaths.slice(-350),
+          stickyNotes: currentStickyNotes,
+          textElements: currentTextElements,
+          updatedAt: serverTimestamp(),
+          lastEditor: myName,
+          lastEditorUid: myUid,
+          activeUsers: [myName, 'Collaborateurs P2P'],
+        };
+
+        await setDoc(docRef, payload, { merge: true });
+
+        if (groupId && groupId !== 'demo_group_whiteboard') {
+          const chatBoardRef = doc(db, 'chats', String(groupId), 'whiteboards', String(effectiveBoardId));
+          await setDoc(chatBoardRef, payload, { merge: true }).catch(() => {});
+        }
+
+        setSaveStatus('Synchronisé en direct 🟢');
+      } catch (err) {
+        console.warn('[Firestore Whiteboard Sync] error:', err);
+        setSaveStatus('Mode P2P Direct');
+      }
+    }, 350);
+  }, [effectiveBoardId, groupId, paths, stickyNotes, textElements, versionNumber, workspaceTitle, myName, myUid]);
+
+  // MOTEUR MULTIJOUEUR P2P & SNAPSHOT FIRESTORE SÉCURISÉ CONTRE L'EFFACEMENT DES TRAITS
   useEffect(() => {
     if (!isOpen || !effectiveBoardId) return;
 
-    const myName = currentUser?.name || 'Moi';
-    setActiveUsers([myName, 'Collaborateurs P2P ⚡']);
-
-    // 1. Initialisation de la salle P2P DataChannel (0ms de latence, zéro écriture Firestore superflue)
+    // 1. Écoute P2P WebRTC DataChannel (0ms de latence)
     whiteboardP2PService.joinRoom(effectiveBoardId, (event) => {
       if (event.type === 'path_add' && event.path) {
         setPaths((prev) => {
-          const next = [...prev, event.path].slice(-400);
+          const remotePath = { ...event.path, isRemote: true };
+          const next = [...prev, remotePath].slice(-450);
           redrawCanvas(next);
           return next;
         });
@@ -302,31 +340,45 @@ export default function CollaborativeWhiteboardModal({
       }
     });
 
-    // 2. Chargement unique du snapshot persistant depuis Firestore à l'ouverture
+    // 2. Écoute Firestore Snapshot avec protection Anti-Écrasement
     if (db) {
       try {
         const docRef = doc(db, 'project_whiteboards', String(effectiveBoardId));
-        const unsubInitial = onSnapshot(docRef, (snapshot) => {
+        const unsubFirestore = onSnapshot(docRef, (snapshot) => {
           if (snapshot.exists()) {
             const data = snapshot.data();
-            if (data.paths && Array.isArray(data.paths)) {
-              setPaths(data.paths);
-              redrawCanvas(data.paths);
+
+            if (data.versionNumber) setVersionNumber(data.versionNumber);
+            if (data.title) setWorkspaceTitle(data.title);
+
+            // RÈGLE CRITIQUE : Si l'utilisateur est en train de dessiner, mettre en file d'attente
+            if (isDrawingRef.current) {
+              pendingSnapshotRef.current = data;
+              return;
             }
-            if (data.stickyNotes && Array.isArray(data.stickyNotes)) {
+
+            // Fusion intelligente sans écraser les traits locaux récents
+            if (data.paths && Array.isArray(data.paths)) {
+              setPaths((prevPaths) => {
+                const merged = mergeVectorPaths(prevPaths, data.paths, myUid);
+                redrawCanvas(merged);
+                return merged;
+              });
+            }
+            if (data.stickyNotes && Array.isArray(data.stickyNotes) && !draggingStickyRef.current) {
               setStickyNotes(data.stickyNotes);
             }
-            if (data.textElements && Array.isArray(data.textElements)) {
+            if (data.textElements && Array.isArray(data.textElements) && !editingTextId) {
               setTextElements(data.textElements);
             }
             setSaveStatus('P2P Direct ⚡ 0ms Latence');
           }
         }, (err) => {
-          console.warn('[P2P Whiteboard] Snapshot note:', err);
+          console.warn('[Firestore Whiteboard] Snapshot note:', err);
         });
 
         return () => {
-          unsubInitial();
+          unsubFirestore();
           whiteboardP2PService.leaveRoom();
         };
       } catch (_) {}
@@ -335,176 +387,149 @@ export default function CollaborativeWhiteboardModal({
     return () => {
       whiteboardP2PService.leaveRoom();
     };
-  }, [isOpen, effectiveBoardId, redrawCanvas, currentUser]);
+  }, [isOpen, effectiveBoardId, myUid, myName, redrawCanvas, editingTextId]);
 
-  // Synchronisation Multi-joueurs en temps réel pour la Note Partagée (Apple Notes)
-  useEffect(() => {
-    if (!isOpen || !groupId || !db) return;
+  // Traitement d'un snapshot en attente dès que l'utilisateur relâche le pinceau
+  const processPendingSnapshot = useCallback(() => {
+    if (pendingSnapshotRef.current) {
+      const data = pendingSnapshotRef.current;
+      pendingSnapshotRef.current = null;
 
-    try {
-      const noteDocRef = doc(db, 'chats', String(groupId), 'workspace', 'shared_note');
-      const unsubscribe = onSnapshot(noteDocRef, (snapshot) => {
-        if (snapshot.exists()) {
-          const data = snapshot.data();
-          if (data.title) setNoteTitle(data.title);
-          if (data.content && data.lastEditor !== (currentUser?.name || currentUser?.id)) {
-            setNoteContent(data.content);
-          }
-          setNoteLastSaved('Synchronisé en direct 🟢');
-        }
-      }, (err) => {
-        console.warn('[Firestore Shared Note] snapshot notice:', err);
-      });
-
-      return () => unsubscribe();
-    } catch (_) {}
-  }, [isOpen, groupId, currentUser]);
-
-  // Sauvegarde finale du Whiteboard sur Firestore (Snapshot de clôture / Sauvegarde ponctuelle)
-  const syncToFirestore = useCallback(async (
-    newPaths = paths,
-    newStickyNotes = stickyNotes,
-    newTextElements = textElements
-  ) => {
-    if (!effectiveBoardId || !db) return;
-    try {
-      setSaveStatus('Sauvegarde du snapshot...');
-      const myName = currentUser?.name || 'Moi';
-
-      // 1. Sauvegarde sur project_whiteboards
-      const docRef = doc(db, 'project_whiteboards', String(effectiveBoardId));
-      const payload = {
-        boardId: effectiveBoardId,
-        groupId: groupId,
-        title: projectTitle,
-        paths: newPaths.slice(-350),
-        stickyNotes: newStickyNotes,
-        textElements: newTextElements,
-        updatedAt: serverTimestamp(),
-        lastEditor: myName,
-        activeUsers: [myName, 'Collaborateurs P2P'],
-      };
-
-      await setDoc(docRef, payload, { merge: true });
-
-      // 2. Sauvegarde miroir dans la sous-collection du chat pour persistance locale
-      if (groupId && groupId !== 'demo_group_whiteboard') {
-        const chatBoardRef = doc(db, 'chats', String(groupId), 'whiteboards', String(effectiveBoardId));
-        await setDoc(chatBoardRef, payload, { merge: true }).catch(() => {});
+      if (data.paths && Array.isArray(data.paths)) {
+        setPaths((prevPaths) => {
+          const merged = mergeVectorPaths(prevPaths, data.paths, myUid);
+          redrawCanvas(merged);
+          return merged;
+        });
       }
-
-      setSaveStatus('Snapshot sauvegardé 🟢');
-    } catch (e) {
-      console.warn('[Firestore Whiteboard] write notice:', e);
-      setSaveStatus('Mode P2P Local');
+      if (data.stickyNotes && Array.isArray(data.stickyNotes)) {
+        setStickyNotes(data.stickyNotes);
+      }
+      if (data.textElements && Array.isArray(data.textElements)) {
+        setTextElements(data.textElements);
+      }
     }
-  }, [effectiveBoardId, groupId, projectTitle, currentUser?.name, paths, stickyNotes, textElements]);
+  }, [myUid, redrawCanvas]);
 
-  // Sauvegarde de la Note Partagée sur Firestore
-  const saveNoteToFirestore = useCallback(async (newContent, newTitle = noteTitle) => {
-    if (!groupId || !db) return;
-    try {
-      setNoteLastSaved('Enregistrement...');
-      const myName = currentUser?.name || 'Moi';
-      const noteRef = doc(db, 'chats', String(groupId), 'workspace', 'shared_note');
-      await setDoc(noteRef, {
-        title: newTitle,
-        content: newContent,
-        lastEditor: myName,
-        updatedAt: serverTimestamp(),
-      }, { merge: true });
-      setNoteLastSaved('Synchronisé en direct 🟢');
-    } catch (err) {
-      console.warn('[Shared Note] Save error:', err);
-      setNoteLastSaved('Mode hors-ligne');
-    }
-  }, [groupId, currentUser, noteTitle]);
-
-  // 1. POINTER DOWN : Traçage direct 0ms sur le contexte 2D + Détection Bounding Box Texte
+  // GESTION DU DESSIN VECTORIEL & PAN
   const handlePointerDown = (e) => {
-    if (tool === 'hand' || e.button === 1) {
+    const coords = getCanvasCoords(e);
+
+    if (tool === 'hand' || e.button === 1 || e.spaceKey) {
       isPanningRef.current = true;
       panStartRef.current = {
-        x: e.clientX,
-        y: e.clientY,
+        x: coords.screenX,
+        y: coords.screenY,
         origPanX: pan.x,
         origPanY: pan.y,
       };
       return;
     }
 
-    const coords = getCanvasCoords(e);
-
-    // Dépôt d'un Post-it
     if (tool === 'sticky') {
       const newSticky = {
-        id: `sticky-${Date.now()}`,
+        id: `sticky_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
         x: coords.x - 90,
-        y: coords.y - 60,
-        text: '',
-        color: '#FEF08A',
-        author: currentUser?.name || 'Moi',
+        y: coords.y - 70,
+        width: 180,
+        height: 140,
+        text: 'Nouvelle note...',
+        color: STICKY_COLORS[0].hex,
+        authorName: myName,
+        authorUid: myUid,
+        createdAt: Date.now(),
       };
-      const updated = [...stickyNotes, newSticky];
-      setStickyNotes(updated);
+      const nextStickies = [...stickyNotes, newSticky];
+      setStickyNotes(nextStickies);
       whiteboardP2PService.broadcast({ type: 'sticky_add', sticky: newSticky });
+      debouncedSyncToFirestore(paths, nextStickies, textElements);
       setTool('pencil');
       return;
     }
 
-    // ÉTAPE 5 : TEXTE AVEC BOUNDING BOX ÉTIRABLE
     if (tool === 'text') {
-      isDrawingRef.current = true;
-      isDraggingTextBBoxRef.current = true;
-      startPosRef.current = coords;
+      const newText = {
+        id: `text_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        x: coords.x,
+        y: coords.y,
+        text: 'Votre texte...',
+        color: color === '#FFFFFF' ? (darkMode ? '#FFFFFF' : '#1F2937') : color,
+        fontSize: 24,
+        fontFamily: FONT_FAMILIES[0].id,
+        isBold: false,
+        isItalic: false,
+        isUnderline: false,
+        authorName: myName,
+        authorUid: myUid,
+        createdAt: Date.now(),
+      };
+      const nextTexts = [...textElements, newText];
+      setTextElements(nextTexts);
+      setEditingTextId(newText.id);
+      whiteboardP2PService.broadcast({ type: 'text_add', text: newText });
+      debouncedSyncToFirestore(paths, stickyNotes, nextTexts);
+      setTool('pencil');
       return;
     }
 
-    // Démarrage du tracé de dessin
+    // Début de tracé vectoriel
     isDrawingRef.current = true;
-    startPosRef.current = coords;
+    startPosRef.current = { x: coords.x, y: coords.y };
 
-    const actualWidth = tool === 'highlighter' ? lineWidth * 3.5 : tool === 'eraser' ? lineWidth * 4 : lineWidth;
+    const newPathId = `path_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
 
-    if (tool === 'pencil' || tool === 'pen' || tool === 'brush' || tool === 'highlighter' || tool === 'eraser') {
+    if (tool === 'rect' || tool === 'circle') {
       currentPathRef.current = {
-        id: `p-${Date.now()}`,
+        id: newPathId,
+        type: tool,
+        tool: 'pencil',
+        x: coords.x,
+        y: coords.y,
+        width: 0,
+        height: 0,
+        color,
+        lineWidth,
+        authorUid: myUid,
+        authorName: myName,
+        createdAt: Date.now(),
+      };
+    } else if (tool === 'arrow') {
+      currentPathRef.current = {
+        id: newPathId,
+        type: 'arrow',
+        tool: 'pencil',
+        fromX: coords.x,
+        fromY: coords.y,
+        toX: coords.x,
+        toY: coords.y,
+        color,
+        lineWidth,
+        authorUid: myUid,
+        authorName: myName,
+        createdAt: Date.now(),
+      };
+    } else {
+      // Pinceaux libres (pencil, brush, highlighter, eraser)
+      currentPathRef.current = {
+        id: newPathId,
+        type: 'freehand',
         tool,
         color,
-        lineWidth: actualWidth,
-        type: 'freehand',
-        points: [coords],
+        lineWidth: tool === 'eraser' ? lineWidth * 3 : lineWidth,
+        points: [{ x: coords.x, y: coords.y }],
+        authorUid: myUid,
+        authorName: myName,
+        createdAt: Date.now(),
       };
-
-      // MOTEUR ZÉRO LATENCE : Traçage immédiat sur le Canvas direct
-      const canvas = canvasRef.current;
-      if (canvas) {
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.save();
-          const dpr = window.devicePixelRatio || 1;
-          ctx.setTransform(1, 0, 0, 1, 0, 0);
-          ctx.scale(dpr, dpr);
-          ctx.translate(pan.x, pan.y);
-          ctx.scale(zoom, zoom);
-
-          ctx.beginPath();
-          applyBrushStyleToContext(ctx, tool, color, actualWidth);
-
-          ctx.moveTo(coords.x, coords.y);
-          ctx.lineTo(coords.x, coords.y);
-          ctx.stroke();
-          ctx.restore();
-        }
-      }
     }
   };
 
-  // 2. POINTER MOVE : Traçage 0ms direct sous le doigt / souris sans re-render React
   const handlePointerMove = (e) => {
+    const coords = getCanvasCoords(e);
+
     if (isPanningRef.current) {
-      const dx = e.clientX - panStartRef.current.x;
-      const dy = e.clientY - panStartRef.current.y;
+      const dx = coords.screenX - panStartRef.current.x;
+      const dy = coords.screenY - panStartRef.current.y;
       setPan({
         x: panStartRef.current.origPanX + dx,
         y: panStartRef.current.origPanY + dy,
@@ -512,693 +537,210 @@ export default function CollaborativeWhiteboardModal({
       return;
     }
 
-    if (!isDrawingRef.current) return;
-    const coords = getCanvasCoords(e);
+    if (!isDrawingRef.current || !currentPathRef.current) return;
 
-    // ÉTAPE 5 : Prévisualisation de la Bounding Box de texte en étirement
-    if (isDraggingTextBBoxRef.current) {
-      redrawCanvas();
-      const canvas = canvasRef.current;
-      if (canvas) {
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.save();
-          const dpr = window.devicePixelRatio || 1;
-          ctx.setTransform(1, 0, 0, 1, 0, 0);
-          ctx.scale(dpr, dpr);
-          ctx.translate(pan.x, pan.y);
-          ctx.scale(zoom, zoom);
+    const cur = currentPathRef.current;
 
-          const sx = Math.min(startPosRef.current.x, coords.x);
-          const sy = Math.min(startPosRef.current.y, coords.y);
-          const w = Math.abs(coords.x - startPosRef.current.x);
-          const h = Math.abs(coords.y - startPosRef.current.y);
-
-          ctx.strokeStyle = color;
-          ctx.lineWidth = 1.5;
-          ctx.setLineDash([5, 4]);
-          ctx.strokeRect(sx, sy, w, h);
-
-          ctx.fillStyle = 'rgba(198, 125, 91, 0.08)';
-          ctx.fillRect(sx, sy, w, h);
-
-          const estFontSize = Math.min(72, Math.max(14, Math.round(h * 0.7)));
-          ctx.fillStyle = color;
-          ctx.font = `${estFontSize}px Inter, sans-serif`;
-          ctx.fillText('Aa', sx + 8, sy + estFontSize);
-
-          ctx.restore();
-        }
-      }
-      return;
-    }
-
-    if (tool === 'pencil' || tool === 'pen' || tool === 'brush' || tool === 'highlighter' || tool === 'eraser') {
-      if (!currentPathRef.current) return;
-      const pts = currentPathRef.current.points;
-      const prev = pts[pts.length - 1] || coords;
-      pts.push(coords);
-
-      // Traçage direct dans le DOM à 0ms de latence (120 FPS)
-      const canvas = canvasRef.current;
-      if (canvas) {
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.save();
-          const dpr = window.devicePixelRatio || 1;
-          ctx.setTransform(1, 0, 0, 1, 0, 0);
-          ctx.scale(dpr, dpr);
-          ctx.translate(pan.x, pan.y);
-          ctx.scale(zoom, zoom);
-
-          ctx.beginPath();
-          applyBrushStyleToContext(ctx, tool, currentPathRef.current.color, currentPathRef.current.lineWidth);
-
-          ctx.moveTo(prev.x, prev.y);
-          ctx.lineTo(coords.x, coords.y);
-          ctx.stroke();
-          ctx.restore();
-        }
-      }
-    } else {
-      // Prévisualisation des formes géométriques
-      redrawCanvas();
-      const canvas = canvasRef.current;
-      if (canvas) {
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.save();
-          const dpr = window.devicePixelRatio || 1;
-          ctx.setTransform(1, 0, 0, 1, 0, 0);
-          ctx.scale(dpr, dpr);
-          ctx.translate(pan.x, pan.y);
-          ctx.scale(zoom, zoom);
-
-          ctx.beginPath();
-          ctx.strokeStyle = color;
-          ctx.lineWidth = lineWidth;
-          ctx.lineCap = 'round';
-          ctx.lineJoin = 'round';
-          ctx.setLineDash([6, 4]);
-
-          const sx = startPosRef.current.x;
-          const sy = startPosRef.current.y;
-          const w = coords.x - sx;
-          const h = coords.y - sy;
-
-          if (tool === 'rect') {
-            ctx.strokeRect(sx, sy, w, h);
-          } else if (tool === 'circle') {
-            const rx = Math.abs(w) / 2;
-            const ry = Math.abs(h) / 2;
-            const cx = sx + w / 2;
-            const cy = sy + h / 2;
-            ctx.ellipse(cx, cy, rx, ry, 0, 0, 2 * Math.PI);
-            ctx.stroke();
-          } else if (tool === 'arrow') {
-            ctx.moveTo(sx, sy);
-            ctx.lineTo(coords.x, coords.y);
-            ctx.stroke();
-          }
-          ctx.restore();
-        }
-      }
+    if (cur.type === 'freehand') {
+      cur.points.push({ x: coords.x, y: coords.y });
+      // Rendu 60 FPS immédiat
+      redrawCanvas([...paths, cur]);
+    } else if (cur.type === 'rect' || cur.type === 'circle') {
+      cur.width = coords.x - startPosRef.current.x;
+      cur.height = coords.y - startPosRef.current.y;
+      redrawCanvas([...paths, cur]);
+    } else if (cur.type === 'arrow') {
+      cur.toX = coords.x;
+      cur.toY = coords.y;
+      redrawCanvas([...paths, cur]);
     }
   };
 
-  // 3. POINTER UP : Validation du tracé et diffusion P2P WebRTC DataChannel
-  const handlePointerUp = (e) => {
+  const handlePointerUp = () => {
     if (isPanningRef.current) {
       isPanningRef.current = false;
       return;
     }
 
-    if (!isDrawingRef.current) return;
-    isDrawingRef.current = false;
-    const coords = getCanvasCoords(e);
-
-    // ÉTAPE 5 : Validation Bounding Box Texte Étiré
-    if (isDraggingTextBBoxRef.current) {
-      isDraggingTextBBoxRef.current = false;
-      const boxW = Math.abs(coords.x - startPosRef.current.x);
-      const boxH = Math.abs(coords.y - startPosRef.current.y);
-      const startX = Math.min(coords.x, startPosRef.current.x);
-      const startY = Math.min(coords.y, startPosRef.current.y);
-
-      let calcFontSize = 20;
-      let finalW = Math.max(140, boxW);
-
-      if (boxW > 25 && boxH > 15) {
-        calcFontSize = Math.min(72, Math.max(14, Math.round(boxH * 0.7)));
-      }
-
-      const newText = {
-        id: `text-${Date.now()}`,
-        x: startX,
-        y: startY,
-        width: finalW,
-        height: Math.max(30, boxH),
-        text: 'Nouveau texte',
-        fontFamily: 'Inter, sans-serif',
-        fontSize: calcFontSize,
-        color: color,
-        isBold: false,
-        isItalic: false,
-        isUnderline: false,
-        author: currentUser?.name || 'Moi',
-      };
-
-      const updated = [...textElements, newText];
-      setTextElements(updated);
-      setEditingTextId(newText.id);
-      whiteboardP2PService.broadcast({ type: 'text_add', text: newText });
-      setTool('pencil');
-      redrawCanvas();
-      return;
-    }
-
-    let newPath = null;
-    if (tool === 'pencil' || tool === 'pen' || tool === 'brush' || tool === 'highlighter' || tool === 'eraser') {
-      if (currentPathRef.current && currentPathRef.current.points.length > 0) {
-        newPath = currentPathRef.current;
-      }
-    } else if (tool === 'rect') {
-      newPath = {
-        id: `rect-${Date.now()}`,
-        type: 'rect',
-        color,
-        lineWidth,
-        x: startPosRef.current.x,
-        y: startPosRef.current.y,
-        width: coords.x - startPosRef.current.x,
-        height: coords.y - startPosRef.current.y,
-      };
-    } else if (tool === 'circle') {
-      newPath = {
-        id: `circle-${Date.now()}`,
-        type: 'circle',
-        color,
-        lineWidth,
-        x: startPosRef.current.x,
-        y: startPosRef.current.y,
-        width: coords.x - startPosRef.current.x,
-        height: coords.y - startPosRef.current.y,
-      };
-    } else if (tool === 'arrow') {
-      newPath = {
-        id: `arrow-${Date.now()}`,
-        type: 'arrow',
-        color,
-        lineWidth,
-        fromX: startPosRef.current.x,
-        fromY: startPosRef.current.y,
-        toX: coords.x,
-        toY: coords.y,
-      };
-    }
-
-    if (newPath) {
-      const updatedPaths = [...paths, newPath];
-      setPaths(updatedPaths);
-      setRedoStack([]);
-      redrawCanvas(updatedPaths);
-      // Diffusion instantanée P2P via WebRTC DataChannel (Zéro coût Firestore)
-      whiteboardP2PService.broadcast({ type: 'path_add', path: newPath });
-    }
-
-    currentPathRef.current = null;
-  };
-
-  // GESTION DU DÉPLACEMENT TACTILE À 2 DOIGTS (PANNING & PINCH-ZOOM)
-  const handleTouchStart = (e) => {
-    if (e.touches.length === 2) {
+    if (isDrawingRef.current && currentPathRef.current) {
+      const finishedPath = { ...currentPathRef.current };
       isDrawingRef.current = false;
-      isDraggingTextBBoxRef.current = false;
-      isPanningRef.current = true;
-      const t1 = e.touches[0];
-      const t2 = e.touches[1];
-      const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
-      touchStartDistRef.current = dist;
-      touchStartZoomRef.current = zoom;
-      panStartRef.current = {
-        x: (t1.clientX + t2.clientX) / 2,
-        y: (t1.clientY + t2.clientY) / 2,
-        origPanX: pan.x,
-        origPanY: pan.y,
-      };
+      currentPathRef.current = null;
+
+      const nextPaths = [...paths, finishedPath].slice(-450);
+      setPaths(nextPaths);
+      setRedoStack([]);
+      redrawCanvas(nextPaths);
+
+      // 1. Diffusion P2P immédiate
+      whiteboardP2PService.broadcast({ type: 'path_add', path: finishedPath });
+
+      // 2. Traitement d'un éventuel snapshot en file d'attente
+      processPendingSnapshot();
+
+      // 3. Sauvegarde debouncée Firestore
+      debouncedSyncToFirestore(nextPaths, stickyNotes, textElements);
     }
-  };
 
-  const handleTouchMove = (e) => {
-    if (e.touches.length === 2 && isPanningRef.current) {
-      e.preventDefault();
-      const t1 = e.touches[0];
-      const t2 = e.touches[1];
-      const currentMidX = (t1.clientX + t2.clientX) / 2;
-      const currentMidY = (t1.clientY + t2.clientY) / 2;
-      const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
-
-      if (touchStartDistRef.current > 0) {
-        const factor = dist / touchStartDistRef.current;
-        const newZoom = Math.min(3.0, Math.max(0.3, touchStartZoomRef.current * factor));
-        setZoom(newZoom);
-      }
-
-      const dx = currentMidX - panStartRef.current.x;
-      const dy = currentMidY - panStartRef.current.y;
-      setPan({
-        x: panStartRef.current.origPanX + dx,
-        y: panStartRef.current.origPanY + dy,
-      });
-    }
+    isDrawingRef.current = false;
   };
 
   // Annuler (Undo)
   const handleUndo = () => {
     if (paths.length === 0) return;
     const last = paths[paths.length - 1];
-    const newPaths = paths.slice(0, -1);
-    setPaths(newPaths);
-    setRedoStack(prev => [last, ...prev]);
-    redrawCanvas(newPaths);
-    syncToFirestore(newPaths, stickyNotes, textElements);
+    const nextPaths = paths.slice(0, -1);
+    setPaths(nextPaths);
+    setRedoStack((prev) => [...prev, last]);
+    redrawCanvas(nextPaths);
+    debouncedSyncToFirestore(nextPaths, stickyNotes, textElements);
   };
 
   // Rétablir (Redo)
   const handleRedo = () => {
     if (redoStack.length === 0) return;
-    const next = redoStack[0];
-    const newRedo = redoStack.slice(1);
-    const newPaths = [...paths, next];
-    setPaths(newPaths);
-    setRedoStack(newRedo);
-    redrawCanvas(newPaths);
-    syncToFirestore(newPaths, stickyNotes, textElements);
+    const restored = redoStack[redoStack.length - 1];
+    const nextRedo = redoStack.slice(0, -1);
+    const nextPaths = [...paths, restored];
+    setPaths(nextPaths);
+    setRedoStack(nextRedo);
+    redrawCanvas(nextPaths);
+    debouncedSyncToFirestore(nextPaths, stickyNotes, textElements);
   };
 
-  // Réinitialiser tout
+  // Effacer tout le tableau
   const handleClearAll = () => {
-    if (window.confirm("Voulez-vous réinitialiser l'ensemble du tableau blanc persistant, des textes et des post-its ?")) {
+    if (window.confirm('Voulez-vous vraiment effacer l’ensemble du tableau blanc ?')) {
       setPaths([]);
-      setRedoStack([]);
       setStickyNotes([]);
       setTextElements([]);
+      setRedoStack([]);
       redrawCanvas([]);
-      syncToFirestore([], [], []);
+      whiteboardP2PService.broadcast({ type: 'clear' });
+      debouncedSyncToFirestore([], [], []);
     }
   };
 
-  // Déplacement d'un Post-it
-  const handleStickyPointerDown = (id, e) => {
-    e.stopPropagation();
-    const sticky = stickyNotes.find(s => s.id === id);
-    if (!sticky) return;
-
-    draggingStickyRef.current = {
-      id,
-      startX: e.clientX,
-      startY: e.clientY,
-      origX: sticky.x,
-      origY: sticky.y,
-    };
-
-    const handlePointerMoveSticky = (moveEvt) => {
-      if (!draggingStickyRef.current) return;
-      const dx = (moveEvt.clientX - draggingStickyRef.current.startX) / zoom;
-      const dy = (moveEvt.clientY - draggingStickyRef.current.startY) / zoom;
-
-      setStickyNotes(prev => prev.map(s => s.id === id ? {
-        ...s,
-        x: draggingStickyRef.current.origX + dx,
-        y: draggingStickyRef.current.origY + dy,
-      } : s));
-    };
-
-    const handlePointerUpSticky = () => {
-      window.removeEventListener('pointermove', handlePointerMoveSticky);
-      window.removeEventListener('pointerup', handlePointerUpSticky);
-      if (draggingStickyRef.current) {
-        draggingStickyRef.current = null;
-        setStickyNotes(currentStickies => {
-          syncToFirestore(paths, currentStickies, textElements);
-          return currentStickies;
-        });
-      }
-    };
-
-    window.addEventListener('pointermove', handlePointerMoveSticky);
-    window.addEventListener('pointerup', handlePointerUpSticky);
+  // Zoomer / Dézoomer
+  const handleZoomIn = () => setZoom((z) => Math.min(3, +(z + 0.15).toFixed(2)));
+  const handleZoomOut = () => setZoom((z) => Math.max(0.3, +(z - 0.15).toFixed(2)));
+  const handleResetZoom = () => {
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
   };
 
-  // Déplacement d'un Texte
-  const handleTextPointerDown = (id, e) => {
-    e.stopPropagation();
-    const txt = textElements.find(t => t.id === id);
-    if (!txt) return;
+  // Export Image PNG
+  const handleExportPNG = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
 
-    draggingTextRef.current = {
-      id,
-      startX: e.clientX,
-      startY: e.clientY,
-      origX: txt.x,
-      origY: txt.y,
-    };
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = canvas.width;
+    tempCanvas.height = canvas.height;
+    const tCtx = tempCanvas.getContext('2d');
 
-    const handlePointerMoveText = (moveEvt) => {
-      if (!draggingTextRef.current) return;
-      const dx = (moveEvt.clientX - draggingTextRef.current.startX) / zoom;
-      const dy = (moveEvt.clientY - draggingTextRef.current.startY) / zoom;
+    tCtx.fillStyle = darkMode ? '#181412' : '#FFFFFF';
+    tCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+    tCtx.drawImage(canvas, 0, 0);
 
-      setTextElements(prev => prev.map(t => t.id === id ? {
-        ...t,
-        x: draggingTextRef.current.origX + dx,
-        y: draggingTextRef.current.origY + dy,
-      } : t));
-    };
-
-    const handlePointerUpText = () => {
-      window.removeEventListener('pointermove', handlePointerMoveText);
-      window.removeEventListener('pointerup', handlePointerUpText);
-      if (draggingTextRef.current) {
-        draggingTextRef.current = null;
-        setTextElements(currentTexts => {
-          syncToFirestore(paths, stickyNotes, currentTexts);
-          return currentTexts;
-        });
-      }
-    };
-
-    window.addEventListener('pointermove', handlePointerMoveText);
-    window.addEventListener('pointerup', handlePointerUpText);
+    const link = document.createElement('a');
+    link.download = `whiteboard-${workspaceTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}-V${versionNumber}.png`;
+    link.href = tempCanvas.toDataURL('image/png');
+    link.click();
   };
 
-  // Mise à jour de style de texte
-  const updateTextStyle = (id, updates) => {
-    const updated = textElements.map(t => t.id === id ? { ...t, ...updates } : t);
-    setTextElements(updated);
-    syncToFirestore(paths, stickyNotes, updated);
-  };
-
-  // Suppression d'un Texte
-  const handleDeleteText = (id) => {
-    const updated = textElements.filter(t => t.id !== id);
-    setTextElements(updated);
-    if (editingTextId === id) setEditingTextId(null);
-    syncToFirestore(paths, stickyNotes, updated);
-  };
-
-  // Formatage rapide Markdown pour Notes Partagées
-  const insertNoteFormatting = (prefix, suffix = '') => {
-    const textarea = notesTextareaRef.current;
-    if (!textarea) return;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const current = noteContent;
-    const selected = current.substring(start, end);
-    const replacement = `${prefix}${selected || 'texte'}${suffix}`;
-    const nextContent = current.substring(0, start) + replacement + current.substring(end);
-    setNoteContent(nextContent);
-    saveNoteToFirestore(nextContent);
-  };
-
-  // EXPORT INTELLIGENT AVEC RECADRAGE AUTOMATIQUE (SMART CROPPING / BOUNDING BOX)
-  const generateCompositeSnapshotDataUrl = () => {
-    let minX = Infinity;
-    let minY = Infinity;
-    let maxX = -Infinity;
-    let maxY = -Infinity;
-
-    paths.forEach(p => {
-      if (p.points) {
-        p.points.forEach(pt => {
-          minX = Math.min(minX, pt.x);
-          maxX = Math.max(maxX, pt.x);
-          minY = Math.min(minY, pt.y);
-          maxY = Math.max(maxY, pt.y);
-        });
-      } else if (p.x !== undefined && p.width !== undefined) {
-        minX = Math.min(minX, p.x, p.x + p.width);
-        maxX = Math.max(maxX, p.x, p.x + p.width);
-        minY = Math.min(minY, p.y, p.y + p.height);
-        maxY = Math.max(maxY, p.y, p.y + p.height);
-      } else if (p.fromX !== undefined) {
-        minX = Math.min(minX, p.fromX, p.toX);
-        maxX = Math.max(maxX, p.fromX, p.toX);
-        minY = Math.min(minY, p.fromY, p.toY);
-        maxY = Math.max(maxY, p.fromY, p.toY);
-      }
-    });
-
-    stickyNotes.forEach(s => {
-      minX = Math.min(minX, s.x);
-      minY = Math.min(minY, s.y);
-      maxX = Math.max(maxX, s.x + 200);
-      maxY = Math.max(maxY, s.y + 140);
-    });
-
-    textElements.forEach(t => {
-      minX = Math.min(minX, t.x);
-      minY = Math.min(minY, t.y);
-      maxX = Math.max(maxX, t.x + (t.width || 240));
-      maxY = Math.max(maxY, t.y + (t.height || 80));
-    });
-
-    if (minX === Infinity) {
-      minX = 0;
-      minY = 0;
-      maxX = 800;
-      maxY = 600;
-    }
-
-    const padding = 30;
-    minX -= padding;
-    minY -= padding;
-    maxX += padding;
-    maxY += padding;
-
-    const cropWidth = Math.max(200, maxX - minX);
-    const cropHeight = Math.max(150, maxY - minY);
-
-    const exportCanvas = document.createElement('canvas');
-    const dpr = 2;
-    exportCanvas.width = cropWidth * dpr;
-    exportCanvas.height = cropHeight * dpr;
-    const ctx = exportCanvas.getContext('2d');
-    if (!ctx) return null;
-
-    ctx.scale(dpr, dpr);
-    ctx.fillStyle = darkMode ? '#181513' : '#FAF8F5';
-    ctx.fillRect(0, 0, cropWidth, cropHeight);
-
-    if (showGrid) {
-      ctx.strokeStyle = darkMode ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.05)';
-      ctx.lineWidth = 1;
-      const gSize = 28;
-      for (let x = 0; x < cropWidth; x += gSize) {
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, cropHeight);
-        ctx.stroke();
-      }
-      for (let y = 0; y < cropHeight; y += gSize) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(cropWidth, y);
-        ctx.stroke();
-      }
-    }
-
-    ctx.save();
-    ctx.translate(-minX, -minY);
-
-    paths.forEach(path => {
-      ctx.save();
-      ctx.beginPath();
-      applyBrushStyleToContext(ctx, path.tool, path.color, path.lineWidth);
-
-      if (path.tool === 'eraser') {
-        ctx.strokeStyle = darkMode ? '#181513' : '#FAF8F5';
-        ctx.lineWidth = path.lineWidth * 1.5;
-      }
-
-      if (path.type === 'freehand' && path.points?.length > 0) {
-        ctx.moveTo(path.points[0].x, path.points[0].y);
-        for (let i = 1; i < path.points.length; i++) {
-          ctx.lineTo(path.points[i].x, path.points[i].y);
-        }
-        ctx.stroke();
-      } else if (path.type === 'rect') {
-        ctx.strokeRect(path.x, path.y, path.width, path.height);
-      } else if (path.type === 'circle') {
-        const rx = Math.abs(path.width) / 2;
-        const ry = Math.abs(path.height) / 2;
-        const cx = path.x + path.width / 2;
-        const cy = path.y + path.height / 2;
-        ctx.beginPath();
-        ctx.ellipse(cx, cy, rx, ry, 0, 0, 2 * Math.PI);
-        ctx.stroke();
-      } else if (path.type === 'arrow') {
-        ctx.beginPath();
-        ctx.moveTo(path.fromX, path.fromY);
-        ctx.lineTo(path.toX, path.toY);
-        ctx.stroke();
-        const headlen = Math.max(12, path.lineWidth * 2.5);
-        const angle = Math.atan2(path.toY - path.fromY, path.toX - path.fromX);
-        ctx.beginPath();
-        ctx.moveTo(path.toX, path.toY);
-        ctx.lineTo(path.toX - headlen * Math.cos(angle - Math.PI / 6), path.toY - headlen * Math.sin(angle - Math.PI / 6));
-        ctx.moveTo(path.toX, path.toY);
-        ctx.lineTo(path.toX - headlen * Math.cos(angle + Math.PI / 6), path.toY - headlen * Math.sin(angle + Math.PI / 6));
-        ctx.stroke();
-      }
-      ctx.restore();
-    });
-
-    stickyNotes.forEach(sticky => {
-      ctx.save();
-      const w = 180;
-      const h = 120;
-      ctx.fillStyle = sticky.color || '#FEF08A';
-      ctx.beginPath();
-      ctx.roundRect(sticky.x, sticky.y, w, h, 12);
-      ctx.fill();
-
-      ctx.strokeStyle = 'rgba(0,0,0,0.12)';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-
-      ctx.fillStyle = '#6B7280';
-      ctx.font = 'bold 10px sans-serif';
-      ctx.fillText(sticky.author || 'Post-it', sticky.x + 10, sticky.y + 18);
-
-      ctx.fillStyle = '#1F2937';
-      ctx.font = '12px sans-serif';
-      const words = (sticky.text || '').split(' ');
-      let line = '';
-      let lineY = sticky.y + 36;
-      for (let i = 0; i < words.length; i++) {
-        const testLine = line + words[i] + ' ';
-        if (ctx.measureText(testLine).width > w - 24 && i > 0) {
-          ctx.fillText(line, sticky.x + 10, lineY);
-          line = words[i] + ' ';
-          lineY += 15;
-          if (lineY > sticky.y + h - 10) break;
-        } else {
-          line = testLine;
-        }
-      }
-      ctx.fillText(line, sticky.x + 10, lineY);
-      ctx.restore();
-    });
-
-    textElements.forEach(txt => {
-      ctx.save();
-      let fontStyle = '';
-      if (txt.isItalic) fontStyle += 'italic ';
-      if (txt.isBold) fontStyle += 'bold ';
-      fontStyle += `${txt.fontSize || 20}px ${txt.fontFamily || 'Inter, sans-serif'}`;
-
-      ctx.font = fontStyle;
-      ctx.fillStyle = txt.color || '#C67D5B';
-      ctx.fillText(txt.text || '', txt.x, txt.y + (txt.fontSize || 20));
-
-      if (txt.isUnderline) {
-        const metrics = ctx.measureText(txt.text || '');
-        ctx.strokeStyle = txt.color || '#C67D5B';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(txt.x, txt.y + (txt.fontSize || 20) + 3);
-        ctx.lineTo(txt.x + metrics.width, txt.y + (txt.fontSize || 20) + 3);
-        ctx.stroke();
-      }
-      ctx.restore();
-    });
-
-    ctx.restore();
-    return exportCanvas.toDataURL('image/png');
-  };
-
-  // Télécharger le tableau recadré
-  const handleDownload = () => {
-    if (activeTab === 'canvas') {
-      const dataUrl = generateCompositeSnapshotDataUrl();
-      if (!dataUrl) return;
-      const link = document.createElement('a');
-      link.download = `whiteboard-${projectTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}-${Date.now()}.png`;
-      link.href = dataUrl;
-      link.click();
-    } else {
-      const blob = new Blob([noteContent], { type: 'text/markdown;charset=utf-8' });
-      const link = document.createElement('a');
-      link.download = `${noteTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.md`;
-      link.href = URL.createObjectURL(blob);
-      link.click();
-    }
-  };
-
-  // ÉTAPE 4 : ENVOI DE CARTE INTERACTIVE PERSISTANTE DANS LA CONVERSATION
-  const handleSendToChatAction = async () => {
-    setIsSendingToChat(true);
+  // Générer un snapshot thumbnail haute définition
+  const generateSnapshotDataUrl = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
     try {
-      if (activeTab === 'canvas') {
-        // 1. Sauvegarde explicite de l'état persistant dans Firestore
-        await syncToFirestore(paths, stickyNotes, textElements);
-        const snapshotPreview = generateCompositeSnapshotDataUrl() || '';
+      const snapCanvas = document.createElement('canvas');
+      snapCanvas.width = 480;
+      snapCanvas.height = 270;
+      const sCtx = snapCanvas.getContext('2d');
+      sCtx.fillStyle = darkMode ? '#181412' : '#FAF7F2';
+      sCtx.fillRect(0, 0, snapCanvas.width, snapCanvas.height);
+      sCtx.drawImage(canvas, 0, 0, snapCanvas.width, snapCanvas.height);
+      return snapCanvas.toDataURL('image/png', 0.85);
+    } catch (_) {
+      return null;
+    }
+  };
 
-        if (db && groupId) {
-          const authorName = currentUser?.name || 'Moi';
-          const caption = `🎨 ${authorName} a partagé un Tableau Blanc Collaboratif`;
+  // Déclencher la modale de publication de version au chat
+  const handleOpenPublishModal = () => {
+    setPublishTitle(`${workspaceTitle} - V${versionNumber + 1}`);
+    setPublishChangelog('');
+    setIsPublishModalOpen(true);
+  };
 
-          await addDoc(collection(db, 'chats', String(groupId), 'messages'), {
-            text: caption,
+  // Confirmer l'envoi de la version dans le Chat
+  const handleConfirmPublishToChat = async () => {
+    if (!groupId || isSendingToChat) return;
+    setIsSendingToChat(true);
+
+    const nextVer = versionNumber + 1;
+    const finalTitle = publishTitle.trim() || `${workspaceTitle} - V${nextVer}`;
+    const snapshotUrl = generateSnapshotDataUrl();
+
+    try {
+      setVersionNumber(nextVer);
+      setWorkspaceTitle(finalTitle);
+
+      // 1. Sauvegarde Firestore avec numéro de version incrémenté
+      if (db) {
+        const docRef = doc(db, 'project_whiteboards', String(effectiveBoardId));
+        await setDoc(docRef, {
+          boardId: effectiveBoardId,
+          groupId,
+          title: finalTitle,
+          versionNumber: nextVer,
+          previewUrl: snapshotUrl,
+          paths: paths.slice(-350),
+          stickyNotes,
+          textElements,
+          updatedAt: serverTimestamp(),
+          lastEditor: myName,
+          lastEditorUid: myUid,
+        }, { merge: true });
+
+        // 2. Publication du message structuré dans le chat actif
+        if (groupId !== 'demo_group_whiteboard') {
+          const msgPayload = {
+            text: `🎨 ${myName} a partagé une nouvelle version du Whiteboard : "${finalTitle}" (V${nextVer})`,
+            sender: myUid,
+            senderName: myName,
+            senderAvatar: currentUser?.avatar || '',
+            timestamp: serverTimestamp(),
+            createdAt: Date.now(),
             type: 'workspace_invite',
             kind: 'workspace_invite',
             workspaceType: 'whiteboard',
+            workspaceTitle: finalTitle,
             boardId: effectiveBoardId,
-            workspaceTitle: projectTitle,
-            previewUrl: snapshotPreview,
-            imageUrl: snapshotPreview,
-            sender: currentUser?.id || currentUser?.name || 'me',
-            senderName: authorName,
-            senderAvatar: currentUser?.avatar || '',
-            timestamp: serverTimestamp(),
-            createdAt: Date.now(),
-          });
+            version: `V${nextVer}`,
+            versionNumber: nextVer,
+            previewUrl: snapshotUrl,
+            summary: publishChangelog.trim() || `Mise à jour V${nextVer} avec ${paths.length} vecteurs et ${stickyNotes.length} notes`,
+          };
+
+          await addDoc(collection(db, 'chats', String(groupId), 'messages'), msgPayload);
 
           await setDoc(doc(db, 'chats', String(groupId)), {
-            lastMessage: caption,
-            lastMessageTimestamp: serverTimestamp(),
+            lastMessage: `🎨 Whiteboard V${nextVer} : "${finalTitle}"`,
+            lastSenderName: myName,
             updatedAt: serverTimestamp(),
           }, { merge: true });
         }
-
-        if (onSendToChat) onSendToChat(effectiveBoardId, snapshotPreview);
-      } else {
-        if (db && groupId) {
-          const authorName = currentUser?.name || 'Moi';
-          const caption = `📝 Note partagée : ${noteTitle}`;
-          await addDoc(collection(db, 'chats', String(groupId), 'messages'), {
-            text: caption,
-            type: 'workspace_invite',
-            kind: 'workspace_invite',
-            workspaceType: 'notes',
-            workspaceTitle: noteTitle,
-            sender: currentUser?.id || currentUser?.name || 'me',
-            senderName: authorName,
-            senderAvatar: currentUser?.avatar || '',
-            timestamp: serverTimestamp(),
-            createdAt: Date.now(),
-          });
-        }
       }
 
+      if (onSendToChat) onSendToChat(effectiveBoardId, nextVer);
+
+      setIsPublishModalOpen(false);
       setSendSuccessToast(true);
-      setTimeout(() => {
-        setSendSuccessToast(false);
-        onClose();
-      }, 1200);
+      setTimeout(() => setSendSuccessToast(false), 4000);
     } catch (err) {
-      console.warn('[Whiteboard] Send notice:', err);
+      console.warn('[Whiteboard] Publish to chat error:', err);
     } finally {
       setIsSendingToChat(false);
     }
@@ -1206,1025 +748,804 @@ export default function CollaborativeWhiteboardModal({
 
   if (!isOpen) return null;
 
-  // Calcul du background CSS pour la grille découplée
-  const bgGridStyle = showGrid
-    ? (darkMode
-        ? `radial-gradient(circle, rgba(255, 255, 255, 0.12) 1.2px, transparent 1.2px)`
-        : `radial-gradient(circle, rgba(45, 40, 37, 0.14) 1.2px, transparent 1.2px)`)
-    : 'none';
-  const bgGridSize = `${28 * zoom}px ${28 * zoom}px`;
-  const bgGridPos = `${pan.x % (28 * zoom)}px ${pan.y % (28 * zoom)}px`;
-
-  const modalElement = (
+  return createPortal(
     <div
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: 2000000,
-        backgroundColor: 'rgba(0, 0, 0, 0.85)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
+        backgroundColor: darkMode ? '#120F0D' : '#F5F0E8',
+        zIndex: 100010,
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: isFullscreen ? 0 : '12px 12px max(80px, env(safe-area-inset-bottom, 24px)) 12px',
-        animation: 'fadeIn 0.2s ease both',
-        boxSizing: 'border-box',
+        flexDirection: 'column',
+        overflow: 'hidden',
       }}
-      onClick={onClose}
     >
-      <div
+      {/* HEADER SUPÉRIEUR (MASQUÉ EN MODE IMMERSION) */}
+      <header
         style={{
-          width: isFullscreen ? '100vw' : '100%',
-          maxWidth: isFullscreen ? '100vw' : '1140px',
-          height: isFullscreen ? '100dvh' : 'min(calc(100dvh - 80px), 860px)',
-          backgroundColor: darkMode ? '#181412' : '#FAF8F5',
-          borderRadius: isFullscreen ? 0 : '24px',
-          border: isFullscreen ? 'none' : '1px solid var(--border-color)',
-          boxShadow: '0 24px 60px rgba(0, 0, 0, 0.5)',
+          padding: '12px 20px',
+          borderBottom: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid #E8DDD3',
+          backgroundColor: darkMode ? 'rgba(28,24,22,0.94)' : 'rgba(250,247,242,0.94)',
+          backdropFilter: 'blur(16px)',
           display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-          animation: 'scaleUp 0.25s ease both',
-          boxSizing: 'border-box',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '12px',
+          zIndex: 30,
+          transition: 'all 0.3s cubic-bezier(0.22, 1, 0.36, 1)',
+          opacity: isImmersiveMode ? 0 : 1,
+          pointerEvents: isImmersiveMode ? 'none' : 'auto',
+          transform: isImmersiveMode ? 'translateY(-100%)' : 'translateY(0)',
           position: 'relative',
         }}
-        onClick={(e) => e.stopPropagation()}
       >
-        {/* TOAST DE SUCCÈS D'INJECTION CHAT */}
-        {sendSuccessToast && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div
             style={{
-              position: 'absolute',
-              top: '70px',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              backgroundColor: '#10B981',
-              color: '#FFFFFF',
-              padding: '8px 20px',
-              borderRadius: '999px',
-              fontWeight: '800',
-              fontSize: '13px',
-              zIndex: 100,
-              boxShadow: '0 8px 24px rgba(16, 185, 129, 0.4)',
+              width: '38px',
+              height: '38px',
+              borderRadius: '12px',
+              backgroundColor: 'rgba(198,125,91,0.18)',
+              color: '#C67D5B',
               display: 'flex',
               alignItems: 'center',
-              gap: '6px',
-              animation: 'fadeSlideDown 0.25s ease',
+              justifyContent: 'center',
             }}
           >
-            <Check size={16} />
-            <span>Document synchronisé & injecté dans la discussion ! 💬🚀</span>
+            <Brush size={20} />
           </div>
-        )}
-
-        {/* 1. EN-TÊTE WORKSPACE AVEC SEGMENTED SWITCHER (TABLEAU BLANC / NOTES PARTAGÉES) */}
-        <div
-          style={{
-            padding: '10px 16px',
-            borderBottom: '1px solid var(--border-color)',
-            backgroundColor: darkMode ? 'rgba(28, 24, 21, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-            backdropFilter: 'blur(12px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '10px',
-            flexShrink: 0,
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
-            {/* SÉLECTEUR D'ONGLET DU WORKSPACE */}
-            <div
-              style={{
-                display: 'flex',
-                backgroundColor: 'var(--bg-subtle)',
-                padding: '3px',
-                borderRadius: '12px',
-                border: '1px solid var(--border-color)',
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => setActiveTab('canvas')}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <input
+                type="text"
+                value={workspaceTitle}
+                onChange={(e) => {
+                  setWorkspaceTitle(e.target.value);
+                  debouncedSyncToFirestore(paths, stickyNotes, textElements, versionNumber, e.target.value);
+                }}
                 style={{
+                  background: 'transparent',
                   border: 'none',
-                  backgroundColor: activeTab === 'canvas' ? 'var(--accent-primary)' : 'transparent',
-                  color: activeTab === 'canvas' ? '#FFFFFF' : 'var(--text-secondary)',
-                  padding: '6px 12px',
-                  borderRadius: '9px',
-                  fontSize: '12px',
+                  outline: 'none',
+                  fontSize: '16px',
                   fontWeight: '800',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  transition: 'all 0.15s ease',
+                  color: darkMode ? '#FAF7F2' : '#3D3530',
+                  fontFamily: 'inherit',
+                  maxWidth: '240px',
+                }}
+              />
+              <span
+                style={{
+                  backgroundColor: 'rgba(198,125,91,0.2)',
+                  color: '#C67D5B',
+                  borderRadius: '999px',
+                  padding: '2px 8px',
+                  fontSize: '11px',
+                  fontWeight: '800',
                 }}
               >
-                <Palette size={14} />
-                <span>Tableau Blanc (0ms)</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveTab('notes')}
-                style={{
-                  border: 'none',
-                  backgroundColor: activeTab === 'notes' ? '#F59E0B' : 'transparent',
-                  color: activeTab === 'notes' ? '#FFFFFF' : 'var(--text-secondary)',
-                  padding: '6px 12px',
-                  borderRadius: '9px',
-                  fontSize: '12px',
-                  fontWeight: '800',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                <Edit3 size={14} />
-                <span>Notes Partagées (Apple-Style)</span>
-              </button>
+                V{versionNumber}
+              </span>
             </div>
-
-            {/* PRÉSENCE & STATUT DE SAUVEGARDE */}
-            <div style={{ minWidth: 0 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#10B981', border: '1px solid rgba(16, 185, 129, 0.3)', padding: '2px 8px', borderRadius: '999px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10B981', display: 'inline-block', animation: 'pulse 1.8s infinite' }} />
-                  {activeUsers.length} en direct
-                </span>
-                <span style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>
-                  {activeTab === 'canvas' ? saveStatus : noteLastSaved}
-                </span>
-              </div>
+            <div style={{ fontSize: '11px', color: '#10B981', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span>{saveStatus}</span>
+              <span style={{ color: darkMode ? '#8E857E' : '#A89E95' }}>• {paths.length} traits vectoriels</span>
             </div>
-          </div>
-
-          {/* ACTIONS HEADER */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-            <button
-              type="button"
-              onClick={handleSendToChatAction}
-              disabled={isSendingToChat}
-              className="premium-button"
-              style={{
-                border: 'none',
-                background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
-                color: '#FFFFFF',
-                borderRadius: '10px',
-                padding: '6px 12px',
-                fontSize: '12px',
-                fontWeight: '800',
-                cursor: isSendingToChat ? 'not-allowed' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '5px',
-                boxShadow: 'var(--shadow-accent)',
-              }}
-              title="Partager et sauvegarder dans la conversation"
-            >
-              <Send size={13} />
-              <span>{isSendingToChat ? 'Envoi...' : 'Partager au chat'}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleDownload}
-              className="premium-button"
-              style={{
-                border: '1px solid var(--border-color)',
-                backgroundColor: 'var(--bg-card)',
-                color: 'var(--text-main)',
-                borderRadius: '8px',
-                width: '30px',
-                height: '30px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-              }}
-              title={activeTab === 'canvas' ? "Télécharger l'image recadrée (PNG)" : "Télécharger la note (Markdown)"}
-            >
-              <Download size={13} />
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setIsFullscreen(!isFullscreen)}
-              className="premium-button"
-              style={{
-                border: '1px solid var(--border-color)',
-                backgroundColor: 'var(--bg-card)',
-                color: 'var(--text-main)',
-                borderRadius: '8px',
-                width: '30px',
-                height: '30px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-              }}
-              title={isFullscreen ? "Réduire" : "Plein écran"}
-            >
-              {isFullscreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
-            </button>
-
-            <button
-              type="button"
-              onClick={onClose}
-              className="premium-button"
-              style={{
-                border: '1px solid var(--border-color)',
-                backgroundColor: 'var(--bg-card)',
-                color: 'var(--text-main)',
-                borderRadius: '8px',
-                width: '30px',
-                height: '30px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-              }}
-              title="Fermer"
-            >
-              <X size={15} />
-            </button>
           </div>
         </div>
 
-        {/* 2. VUE A : TABLEAU BLANC AVEC MOTEUR DE BROSSES APPLE-STYLE */}
-        {activeTab === 'canvas' && (
-          <>
-            {/* BARRE D'OUTILS PRINCIPALE */}
-            <div
-              style={{
-                padding: '6px 12px',
-                borderBottom: '1px solid var(--border-color)',
-                backgroundColor: darkMode ? '#1F1B18' : '#FAF8F5',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '8px',
-                flexWrap: 'wrap',
-                flexShrink: 0,
-              }}
-            >
-              {/* SÉLECTION DES OUTILS DE BROSSES STYLE APPLE NOTES */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '3px', backgroundColor: 'var(--bg-card)', padding: '2px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-                {[
-                  { id: 'pencil', icon: Pen, title: 'Crayon (Pencil) : Trait dur & précis' },
-                  { id: 'brush', icon: Brush, title: 'Pinceau (Brush) : Trait aquarelle doux avec ombre' },
-                  { id: 'highlighter', icon: Highlighter, title: 'Surligneur (Marker) : Translucide' },
-                  { id: 'eraser', icon: Eraser, title: 'Gomme transparente' },
-                  { id: 'rect', icon: Square, title: 'Rectangle' },
-                  { id: 'circle', icon: Circle, title: 'Cercle' },
-                  { id: 'arrow', icon: ArrowRight, title: 'Flèche' },
-                  { id: 'text', icon: Type, title: 'Texte étirable (Bounding Box dynamique)' },
-                  { id: 'sticky', icon: StickyNote, title: 'Post-it' },
-                  { id: 'hand', icon: Hand, title: 'Déplacement (Pan)' },
-                ].map(t => {
-                  const Icon = t.icon;
-                  const isActive = tool === t.id;
-                  return (
-                    <button
-                      key={t.id}
-                      type="button"
-                      onClick={() => setTool(t.id)}
-                      style={{
-                        border: 'none',
-                        backgroundColor: isActive ? 'var(--accent-primary)' : 'transparent',
-                        color: isActive ? '#FFFFFF' : 'var(--text-secondary)',
-                        width: '30px',
-                        height: '30px',
-                        borderRadius: '8px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        cursor: 'pointer',
-                        transition: 'all 0.15s ease',
-                      }}
-                      title={t.title}
-                    >
-                      <Icon size={14} />
-                    </button>
-                  );
-                })}
-              </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* BOUTON EXPORT PNG */}
+          <button
+            type="button"
+            onClick={handleExportPNG}
+            style={{
+              border: 'none',
+              backgroundColor: darkMode ? 'rgba(255,255,255,0.08)' : '#EFE8DE',
+              color: darkMode ? '#FAF7F2' : '#3D3530',
+              borderRadius: '10px',
+              padding: '7px 12px',
+              fontSize: '12px',
+              fontWeight: '700',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+            title="Exporter l'image PNG"
+          >
+            <Download size={14} />
+            <span className="hidden-mobile">Exporter</span>
+          </button>
 
-              {/* PALETTE CHROMATIQUE & SÉLECTEUR ABSOLU */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '5px', backgroundColor: 'var(--bg-card)', padding: '3px 8px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-                {COLOR_PALETTE.map(c => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => setColor(c.hex)}
-                    style={{
-                      border: color.toLowerCase() === c.hex.toLowerCase() ? '2.5px solid var(--text-main)' : '1px solid rgba(0,0,0,0.15)',
-                      backgroundColor: c.hex,
-                      width: '20px',
-                      height: '20px',
-                      borderRadius: '50%',
-                      cursor: 'pointer',
-                      transform: color.toLowerCase() === c.hex.toLowerCase() ? 'scale(1.2)' : 'scale(1)',
-                      transition: 'transform 0.15s ease',
-                    }}
-                    title={c.name}
-                  />
-                ))}
+          {/* BOUTON PUBLIER / ENVOYER AU CHAT */}
+          <button
+            type="button"
+            onClick={handleOpenPublishModal}
+            className="premium-button"
+            style={{
+              border: 'none',
+              background: 'linear-gradient(135deg, #C67D5B 0%, #B86B49 100%)',
+              color: '#FFFFFF',
+              borderRadius: '10px',
+              padding: '7px 14px',
+              fontSize: '12px',
+              fontWeight: '800',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 4px 14px rgba(198,125,91,0.3)',
+            }}
+          >
+            <Share2 size={14} />
+            <span>Mettre à jour au Chat (V{versionNumber + 1})</span>
+          </button>
 
-                {/* SÉLECTEUR DE COULEUR PERSONNALISÉE (HEX / RGB) */}
-                <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', marginLeft: '4px' }}>
-                  <label
-                    title={`Couleur personnalisée : ${color}`}
-                    style={{
-                      width: '24px',
-                      height: '24px',
-                      borderRadius: '50%',
-                      background: `conic-gradient(red, yellow, lime, aqua, blue, magenta, red)`,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: 'pointer',
-                      border: '2px solid var(--border-color)',
-                      boxShadow: '0 1px 4px rgba(0,0,0,0.15)',
-                    }}
-                  >
-                    <input
-                      type="color"
-                      value={color.startsWith('#') && color.length === 7 ? color : '#C67D5B'}
-                      onChange={(e) => setColor(e.target.value)}
-                      style={{
-                        opacity: 0,
-                        width: '100%',
-                        height: '100%',
-                        position: 'absolute',
-                        inset: 0,
-                        cursor: 'pointer',
-                      }}
-                    />
-                    <Palette size={11} color="#FFFFFF" style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.8))' }} />
-                  </label>
-                </div>
+          {/* BOUTON FERMER */}
+          <button
+            type="button"
+            onClick={onClose}
+            style={{
+              border: 'none',
+              backgroundColor: 'transparent',
+              color: darkMode ? '#A89E95' : '#6B5E54',
+              width: '34px',
+              height: '34px',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+            }}
+          >
+            <X size={18} />
+          </button>
+        </div>
+      </header>
 
-                {/* BADGE HEX / COULEUR ACTUELLE */}
-                <span
-                  style={{
-                    fontSize: '10px',
-                    fontFamily: 'monospace',
-                    fontWeight: '800',
-                    color: 'var(--text-main)',
-                    backgroundColor: 'var(--bg-subtle)',
-                    padding: '2px 5px',
-                    borderRadius: '6px',
-                    border: '1px solid var(--border-color)',
-                    marginLeft: '2px',
-                    letterSpacing: '-0.2px',
-                  }}
-                  title="Code hexadécimal du pinceau"
-                >
-                  {color.toUpperCase()}
-                </span>
-              </div>
+      {/* BOUTON FLOTTANT DISCRET POUR LE MODE IMMERSION (100% VISIBLE EN TOUT TEMPS) */}
+      <button
+        type="button"
+        onClick={() => setIsImmersiveMode(!isImmersiveMode)}
+        style={{
+          position: 'fixed',
+          top: isImmersiveMode ? '16px' : '72px',
+          right: '20px',
+          zIndex: 100020,
+          border: 'none',
+          backgroundColor: isImmersiveMode ? 'rgba(198,125,91,0.92)' : 'rgba(28,24,22,0.72)',
+          color: '#FFFFFF',
+          padding: '8px 14px',
+          borderRadius: '999px',
+          fontSize: '12px',
+          fontWeight: '800',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+          cursor: 'pointer',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          transition: 'all 0.25s cubic-bezier(0.22, 1, 0.36, 1)',
+        }}
+        title="Basculer le mode immersion (plein écran 100% Canvas)"
+      >
+        {isImmersiveMode ? <Eye size={15} /> : <EyeOff size={15} />}
+        <span>{isImmersiveMode ? 'Quitter Immersion' : 'Mode Immersion'}</span>
+      </button>
 
-              {/* ÉPAISSEUR DU TRAIT */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', backgroundColor: 'var(--bg-card)', padding: '3px 6px', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
-                {STROKE_SIZES.map(s => {
-                  const isSelected = lineWidth === s.size;
-                  return (
-                    <button
-                      key={s.size}
-                      type="button"
-                      onClick={() => setLineWidth(s.size)}
-                      style={{
-                        border: isSelected ? '1.5px solid var(--accent-primary)' : '1px solid transparent',
-                        backgroundColor: isSelected ? 'rgba(198, 125, 91, 0.15)' : 'transparent',
-                        width: '24px',
-                        height: '24px',
-                        borderRadius: '6px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        cursor: 'pointer',
-                      }}
-                      title={`${s.label} (${s.size}px)`}
-                    >
-                      <span
-                        style={{
-                          width: `${s.dotSize}px`,
-                          height: `${s.dotSize}px`,
-                          borderRadius: '50%',
-                          backgroundColor: color,
-                          display: 'inline-block',
-                        }}
-                      />
-                    </button>
-                  );
-                })}
-              </div>
+      {/* ZONE CENTRALE DU CANVAS VECTORIEL (CANVAS PRINCIPAL) */}
+      <div
+        ref={containerRef}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerLeave={handlePointerUp}
+        style={{
+          flex: 1,
+          width: '100%',
+          height: '100%',
+          position: 'relative',
+          overflow: 'hidden',
+          cursor: tool === 'hand' ? (isPanningRef.current ? 'grabbing' : 'grab') : 'crosshair',
+          backgroundColor: darkMode ? '#181412' : '#FAF7F2',
+          backgroundImage: showGrid
+            ? (darkMode
+                ? 'radial-gradient(rgba(255, 255, 255, 0.12) 1.2px, transparent 1.2px)'
+                : 'radial-gradient(rgba(61, 53, 48, 0.15) 1.2px, transparent 1.2px)')
+            : 'none',
+          backgroundSize: `${24 * zoom}px ${24 * zoom}px`,
+          backgroundPosition: `${pan.x}px ${pan.y}px`,
+          touchAction: 'none',
+        }}
+      >
+        <canvas
+          ref={canvasRef}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            pointerEvents: 'none',
+          }}
+        />
 
-              {/* ACTIONS : TOGGLE GRILLE + UNDO/REDO + CLEAR */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <button
-                  type="button"
-                  onClick={() => setShowGrid(!showGrid)}
-                  style={{
-                    border: '1px solid var(--border-color)',
-                    backgroundColor: showGrid ? 'rgba(198, 125, 91, 0.15)' : 'var(--bg-card)',
-                    color: showGrid ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                    width: '28px',
-                    height: '28px',
-                    borderRadius: '8px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                  }}
-                  title={showGrid ? "Masquer la grille" : "Afficher la grille"}
-                >
-                  <Grid size={13} />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleUndo}
-                  disabled={paths.length === 0}
-                  style={{
-                    border: '1px solid var(--border-color)',
-                    backgroundColor: 'var(--bg-card)',
-                    color: 'var(--text-main)',
-                    width: '28px',
-                    height: '28px',
-                    borderRadius: '8px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: paths.length === 0 ? 'not-allowed' : 'pointer',
-                    opacity: paths.length === 0 ? 0.4 : 1,
-                  }}
-                  title="Annuler (Ctrl+Z)"
-                >
-                  <RotateCcw size={12} />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleRedo}
-                  disabled={redoStack.length === 0}
-                  style={{
-                    border: '1px solid var(--border-color)',
-                    backgroundColor: 'var(--bg-card)',
-                    color: 'var(--text-main)',
-                    width: '28px',
-                    height: '28px',
-                    borderRadius: '8px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: redoStack.length === 0 ? 'not-allowed' : 'pointer',
-                    opacity: redoStack.length === 0 ? 0.4 : 1,
-                  }}
-                  title="Rétablir (Ctrl+Y)"
-                >
-                  <RotateCw size={12} />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleClearAll}
-                  style={{
-                    border: '1px solid rgba(239, 68, 68, 0.3)',
-                    backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                    color: '#EF4444',
-                    width: '28px',
-                    height: '28px',
-                    borderRadius: '8px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                  }}
-                  title="Effacer tout"
-                >
-                  <Trash2 size={12} />
-                </button>
-              </div>
+        {/* RENDU DES STICKY NOTES VECTORIELLES */}
+        {stickyNotes.map((sticky) => (
+          <div
+            key={sticky.id}
+            style={{
+              position: 'absolute',
+              left: `${sticky.x * zoom + pan.x}px`,
+              top: `${sticky.y * zoom + pan.y}px`,
+              width: `${sticky.width * zoom}px`,
+              minHeight: `${sticky.height * zoom}px`,
+              backgroundColor: sticky.color || '#FEF08A',
+              color: '#1F2937',
+              borderRadius: '12px',
+              padding: '10px 12px',
+              boxShadow: '0 10px 25px rgba(0,0,0,0.18)',
+              transform: `scale(${zoom})`,
+              transformOrigin: 'top left',
+              zIndex: 10,
+              display: 'flex',
+              flexDirection: 'column',
+              boxSizing: 'border-box',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+              <span style={{ fontSize: '10px', fontWeight: '800', opacity: 0.6 }}>{sticky.authorName || 'Note'}</span>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const nextStickies = stickyNotes.filter((s) => s.id !== sticky.id);
+                  setStickyNotes(nextStickies);
+                  whiteboardP2PService.broadcast({ type: 'sticky_delete', id: sticky.id });
+                  debouncedSyncToFirestore(paths, nextStickies, textElements);
+                }}
+                style={{ border: 'none', background: 'transparent', cursor: 'pointer', opacity: 0.5, padding: '2px' }}
+              >
+                <Trash2 size={12} />
+              </button>
             </div>
-
-            {/* ZONE PRINCIPALE DU CANVAS AVEC DÉPLACEMENT FLUIDE 2 DOIGTS */}
-            <div
-              ref={containerRef}
-              onTouchStart={handleTouchStart}
-              onTouchMove={handleTouchMove}
+            <textarea
+              value={sticky.text}
+              onChange={(e) => {
+                const nextText = e.target.value;
+                const nextStickies = stickyNotes.map((s) => (s.id === sticky.id ? { ...s, text: nextText } : s));
+                setStickyNotes(nextStickies);
+                whiteboardP2PService.broadcast({ type: 'sticky_update', sticky: { ...sticky, text: nextText } });
+                debouncedSyncToFirestore(paths, nextStickies, textElements);
+              }}
               style={{
                 flex: 1,
-                minHeight: 0,
-                position: 'relative',
-                overflow: 'hidden',
-                backgroundColor: darkMode ? '#181513' : '#FAF8F5',
-                backgroundImage: bgGridStyle,
-                backgroundSize: bgGridSize,
-                backgroundPosition: bgGridPos,
-                touchAction: 'none',
-                cursor: tool === 'hand' ? (isPanningRef.current ? 'grabbing' : 'grab') : tool === 'text' ? 'crosshair' : tool === 'sticky' ? 'copy' : tool === 'eraser' ? 'cell' : 'crosshair',
+                background: 'transparent',
+                border: 'none',
+                outline: 'none',
+                resize: 'none',
+                fontFamily: 'inherit',
+                fontSize: '13px',
+                lineHeight: 1.4,
+                color: '#1F2937',
               }}
-            >
-              <canvas
-                ref={canvasRef}
-                onPointerDown={handlePointerDown}
-                onPointerMove={handlePointerMove}
-                onPointerUp={handlePointerUp}
-                onPointerCancel={handlePointerUp}
-                style={{
-                  display: 'block',
-                  width: '100%',
-                  height: '100%',
-                  touchAction: 'none',
-                }}
-              />
+            />
+          </div>
+        ))}
 
-              {/* TEXTES BOUNDING BOX ÉTIRABLES */}
-              {textElements.map((txt) => {
-                const isEditing = editingTextId === txt.id;
-                const screenPosX = txt.x * zoom + pan.x;
-                const screenPosY = txt.y * zoom + pan.y;
-                const screenW = (txt.width || 180) * zoom;
-
-                return (
-                  <div
-                    key={txt.id}
-                    style={{
-                      position: 'absolute',
-                      left: `${screenPosX}px`,
-                      top: `${screenPosY}px`,
-                      width: `${screenW}px`,
-                      transformOrigin: 'top left',
-                      zIndex: isEditing ? 25 : 15,
-                      minWidth: '100px',
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    {isEditing && (
-                      <div
-                        style={{
-                          position: 'absolute',
-                          bottom: '100%',
-                          left: 0,
-                          marginBottom: '6px',
-                          backgroundColor: 'var(--bg-card)',
-                          borderRadius: '12px',
-                          padding: '4px 8px',
-                          border: '1px solid var(--border-color)',
-                          boxShadow: '0 8px 20px rgba(0,0,0,0.25)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          whiteSpace: 'nowrap',
-                          animation: 'fadeSlideUp 0.15s ease',
-                          zIndex: 30,
-                        }}
-                      >
-                        <select
-                          value={txt.fontFamily}
-                          onChange={(e) => updateTextStyle(txt.id, { fontFamily: e.target.value })}
-                          style={{ border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-main)', fontSize: '11px', borderRadius: '6px', padding: '2px 4px', outline: 'none' }}
-                        >
-                          {FONT_FAMILIES.map(f => (
-                            <option key={f.id} value={f.font}>{f.name}</option>
-                          ))}
-                        </select>
-
-                        <select
-                          value={txt.fontSize}
-                          onChange={(e) => updateTextStyle(txt.id, { fontSize: parseInt(e.target.value, 10) })}
-                          style={{ border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-main)', fontSize: '11px', borderRadius: '6px', padding: '2px 4px', outline: 'none' }}
-                        >
-                          {FONT_SIZES.map(s => (
-                            <option key={s} value={s}>{s}px</option>
-                          ))}
-                        </select>
-
-                        <button
-                          type="button"
-                          onClick={() => updateTextStyle(txt.id, { isBold: !txt.isBold })}
-                          style={{ border: 'none', backgroundColor: txt.isBold ? 'var(--accent-primary)' : 'transparent', color: txt.isBold ? '#FFF' : 'var(--text-main)', borderRadius: '4px', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                        >
-                          <Bold size={12} />
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => updateTextStyle(txt.id, { isItalic: !txt.isItalic })}
-                          style={{ border: 'none', backgroundColor: txt.isItalic ? 'var(--accent-primary)' : 'transparent', color: txt.isItalic ? '#FFF' : 'var(--text-main)', borderRadius: '4px', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                        >
-                          <Italic size={12} />
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => updateTextStyle(txt.id, { isUnderline: !txt.isUnderline })}
-                          style={{ border: 'none', backgroundColor: txt.isUnderline ? 'var(--accent-primary)' : 'transparent', color: txt.isUnderline ? '#FFF' : 'var(--text-main)', borderRadius: '4px', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                        >
-                          <Underline size={12} />
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => setEditingTextId(null)}
-                          style={{ border: 'none', backgroundColor: '#10B981', color: '#FFF', borderRadius: '4px', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                          title="Valider"
-                        >
-                          <Check size={12} />
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteText(txt.id)}
-                          style={{ border: 'none', backgroundColor: 'rgba(239, 68, 68, 0.2)', color: '#EF4444', borderRadius: '4px', width: '22px', height: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                          title="Supprimer"
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      </div>
-                    )}
-
-                    <div
-                      onPointerDown={(e) => handleTextPointerDown(txt.id, e)}
-                      onDoubleClick={() => setEditingTextId(txt.id)}
-                      style={{
-                        padding: '4px 8px',
-                        borderRadius: '6px',
-                        border: isEditing ? '1.5px dashed var(--accent-primary)' : '1px solid transparent',
-                        backgroundColor: isEditing ? 'rgba(198, 125, 91, 0.08)' : 'transparent',
-                        cursor: 'move',
-                        userSelect: 'none',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                        width: '100%',
-                        boxSizing: 'border-box',
-                      }}
-                    >
-                      <GripVertical size={12} style={{ opacity: isEditing ? 0.7 : 0.2, flexShrink: 0 }} />
-                      {isEditing ? (
-                        <input
-                          type="text"
-                          autoFocus
-                          value={txt.text}
-                          onChange={(e) => updateTextStyle(txt.id, { text: e.target.value })}
-                          onKeyDown={(e) => e.key === 'Enter' && setEditingTextId(null)}
-                          style={{
-                            width: '100%',
-                            border: 'none',
-                            backgroundColor: 'transparent',
-                            color: txt.color || color,
-                            fontFamily: txt.fontFamily || 'Inter, sans-serif',
-                            fontSize: `${(txt.fontSize || 20) * zoom}px`,
-                            fontWeight: txt.isBold ? 'bold' : 'normal',
-                            fontStyle: txt.isItalic ? 'italic' : 'normal',
-                            textDecoration: txt.isUnderline ? 'underline' : 'none',
-                            outline: 'none',
-                            minWidth: '80px',
-                          }}
-                        />
-                      ) : (
-                        <span
-                          style={{
-                            color: txt.color || color,
-                            fontFamily: txt.fontFamily || 'Inter, sans-serif',
-                            fontSize: `${(txt.fontSize || 20) * zoom}px`,
-                            fontWeight: txt.isBold ? 'bold' : 'normal',
-                            fontStyle: txt.isItalic ? 'italic' : 'normal',
-                            textDecoration: txt.isUnderline ? 'underline' : 'none',
-                            whiteSpace: 'pre-wrap',
-                            wordBreak: 'break-word',
-                            width: '100%',
-                          }}
-                        >
-                          {txt.text || 'Texte vide'}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-
-              {/* POST-ITS */}
-              {stickyNotes.map((sticky) => {
-                const screenPosX = sticky.x * zoom + pan.x;
-                const screenPosY = sticky.y * zoom + pan.y;
-
-                return (
-                  <div
-                    key={sticky.id}
-                    style={{
-                      position: 'absolute',
-                      left: `${screenPosX}px`,
-                      top: `${screenPosY}px`,
-                      width: `${200 * zoom}px`,
-                      backgroundColor: sticky.color || '#FEF08A',
-                      color: '#1F2937',
-                      borderRadius: `${14 * zoom}px`,
-                      boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
-                      border: '1px solid rgba(0,0,0,0.08)',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      overflow: 'hidden',
-                      zIndex: 10,
-                      boxSizing: 'border-box',
-                      transformOrigin: 'top left',
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <div
-                      onPointerDown={(e) => handleStickyPointerDown(sticky.id, e)}
-                      style={{
-                        padding: `${6 * zoom}px ${8 * zoom}px`,
-                        backgroundColor: 'rgba(0,0,0,0.06)',
-                        cursor: 'grab',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        userSelect: 'none',
-                        touchAction: 'none',
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-                        <GripVertical size={Math.max(10, 13 * zoom)} style={{ opacity: 0.6 }} />
-                        <span style={{ fontSize: `${Math.max(8, 10 * zoom)}px`, fontWeight: '800', color: 'rgba(0,0,0,0.7)' }}>
-                          {sticky.author || 'Post-it'}
-                        </span>
-                      </div>
-
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <div style={{ display: 'flex', gap: '3px' }}>
-                          {STICKY_COLORS.map(sc => (
-                            <button
-                              key={sc.hex}
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const updated = stickyNotes.map(s => s.id === sticky.id ? { ...s, color: sc.hex } : s);
-                                setStickyNotes(updated);
-                                syncToFirestore(paths, updated, textElements);
-                              }}
-                              style={{
-                                border: sticky.color === sc.hex ? '1.5px solid #000' : 'none',
-                                backgroundColor: sc.hex,
-                                width: `${Math.max(8, 12 * zoom)}px`,
-                                height: `${Math.max(8, 12 * zoom)}px`,
-                                borderRadius: '50%',
-                                cursor: 'pointer',
-                                padding: 0,
-                              }}
-                            />
-                          ))}
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            const updated = stickyNotes.filter(s => s.id !== sticky.id);
-                            setStickyNotes(updated);
-                            syncToFirestore(paths, updated, textElements);
-                          }}
-                          style={{
-                            border: 'none',
-                            background: 'rgba(0,0,0,0.1)',
-                            width: `${Math.max(14, 18 * zoom)}px`,
-                            height: `${Math.max(14, 18 * zoom)}px`,
-                            borderRadius: '50%',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            cursor: 'pointer',
-                            color: '#000',
-                            padding: 0,
-                          }}
-                          title="Supprimer ce post-it"
-                        >
-                          <X size={Math.max(9, 11 * zoom)} />
-                        </button>
-                      </div>
-                    </div>
-
-                    <textarea
-                      value={sticky.text}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setStickyNotes(prev => prev.map(s => s.id === sticky.id ? { ...s, text: val } : s));
-                      }}
-                      onBlur={() => syncToFirestore(paths, stickyNotes, textElements)}
-                      placeholder="Écrire une note..."
-                      rows={3}
-                      style={{
-                        width: '100%',
-                        border: 'none',
-                        backgroundColor: 'transparent',
-                        padding: `${8 * zoom}px ${10 * zoom}px`,
-                        fontSize: `${Math.max(10, 12 * zoom)}px`,
-                        fontFamily: 'inherit',
-                        color: '#1F2937',
-                        resize: 'none',
-                        outline: 'none',
-                        boxSizing: 'border-box',
-                      }}
-                    />
-                  </div>
-                );
-              })}
-
-              {/* CONTRÔLES FLOTTANTS DE ZOOM */}
-              <div
-                style={{
-                  position: 'absolute',
-                  bottom: '16px',
-                  right: '16px',
-                  backgroundColor: 'var(--bg-card)',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: '14px',
-                  padding: '4px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
-                  zIndex: 30,
-                }}
-              >
-                <button
-                  type="button"
-                  onClick={() => setZoom(z => Math.max(0.3, z - 0.15))}
-                  style={{ border: 'none', backgroundColor: 'transparent', color: 'var(--text-main)', width: '28px', height: '28px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                  title="Zoom arrière"
-                >
-                  <ZoomOut size={14} />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}
-                  style={{ border: 'none', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '800', cursor: 'pointer' }}
-                  title="Réinitialiser la vue (100%)"
-                >
-                  {Math.round(zoom * 100)}%
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setZoom(z => Math.min(3.0, z + 0.15))}
-                  style={{ border: 'none', backgroundColor: 'transparent', color: 'var(--text-main)', width: '28px', height: '28px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                  title="Zoom avant"
-                >
-                  <ZoomIn size={14} />
-                </button>
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* 2. VUE B : NOTES PARTAGÉES (RICH TEXT STYLE APPLE NOTES) */}
-        {activeTab === 'notes' && (
-          <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', backgroundColor: darkMode ? '#181412' : '#FCFBF7' }}>
-            {/* BARRE D'OUTILS APPLE NOTES */}
+        {/* RENDU DES ÉLÉMENTS DE TEXTE LIBRES */}
+        {textElements.map((textItem) => {
+          const isEditing = editingTextId === textItem.id;
+          return (
             <div
+              key={textItem.id}
               style={{
-                padding: '8px 16px',
-                borderBottom: '1px solid var(--border-color)',
-                backgroundColor: darkMode ? '#1F1B18' : '#FAF8F5',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '8px',
-                flexWrap: 'wrap',
-                flexShrink: 0,
+                position: 'absolute',
+                left: `${textItem.x * zoom + pan.x}px`,
+                top: `${textItem.y * zoom + pan.y}px`,
+                transform: `scale(${zoom})`,
+                transformOrigin: 'top left',
+                zIndex: 12,
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <button
-                  type="button"
-                  onClick={() => insertNoteFormatting('# ')}
-                  style={{ border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', padding: '4px 8px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '3px', fontSize: '12px', fontWeight: '800', cursor: 'pointer' }}
-                  title="Grand Titre"
+              {isEditing ? (
+                <input
+                  type="text"
+                  autoFocus
+                  value={textItem.text}
+                  onBlur={() => setEditingTextId(null)}
+                  onChange={(e) => {
+                    const nextVal = e.target.value;
+                    const nextTexts = textElements.map((t) => (t.id === textItem.id ? { ...t, text: nextVal } : t));
+                    setTextElements(nextTexts);
+                    whiteboardP2PService.broadcast({ type: 'text_update', text: { ...textItem, text: nextVal } });
+                    debouncedSyncToFirestore(paths, stickyNotes, nextTexts);
+                  }}
+                  onKeyDown={(e) => { if (e.key === 'Enter') setEditingTextId(null); }}
+                  style={{
+                    background: 'transparent',
+                    border: '1px dashed #C67D5B',
+                    outline: 'none',
+                    fontSize: `${textItem.fontSize || 24}px`,
+                    color: textItem.color || '#C67D5B',
+                    fontWeight: textItem.isBold ? '800' : '500',
+                    fontFamily: textItem.fontFamily === 'mono' ? 'Roboto Mono, monospace' : 'Inter, sans-serif',
+                  }}
+                />
+              ) : (
+                <div
+                  onDoubleClick={() => setEditingTextId(textItem.id)}
+                  style={{
+                    fontSize: `${textItem.fontSize || 24}px`,
+                    color: textItem.color || '#C67D5B',
+                    fontWeight: textItem.isBold ? '800' : '500',
+                    fontFamily: textItem.fontFamily === 'mono' ? 'Roboto Mono, monospace' : 'Inter, sans-serif',
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                  }}
                 >
-                  <Heading1 size={13} /> Titre
-                </button>
+                  {textItem.text}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
 
-                <button
-                  type="button"
-                  onClick={() => insertNoteFormatting('### ')}
-                  style={{ border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', padding: '4px 8px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '3px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
-                  title="Sous-titre"
-                >
-                  <Heading2 size={13} /> Sous-titre
-                </button>
+      {/* DOCK BARRE D'OUTILS FLOTTANTE INFÉRIEURE (MASQUÉE EN MODE IMMERSION) */}
+      <div
+        style={{
+          position: 'fixed',
+          bottom: '24px',
+          left: '50%',
+          transform: isImmersiveMode ? 'translate(-50%, 120%)' : 'translate(-50%, 0)',
+          zIndex: 100015,
+          backgroundColor: darkMode ? 'rgba(28,24,22,0.92)' : 'rgba(255,255,255,0.92)',
+          border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E5DCD3',
+          boxShadow: '0 20px 50px rgba(0,0,0,0.3)',
+          borderRadius: '20px',
+          padding: '8px 14px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          transition: 'all 0.3s cubic-bezier(0.22, 1, 0.36, 1)',
+          pointerEvents: isImmersiveMode ? 'none' : 'auto',
+          opacity: isImmersiveMode ? 0 : 1,
+        }}
+      >
+        {/* OUTIL CRAYON */}
+        <button
+          type="button"
+          onClick={() => setTool('pencil')}
+          style={{
+            border: 'none',
+            backgroundColor: tool === 'pencil' ? '#C67D5B' : 'transparent',
+            color: tool === 'pencil' ? '#FFFFFF' : (darkMode ? '#FAF7F2' : '#3D3530'),
+            padding: '8px 10px',
+            borderRadius: '10px',
+            cursor: 'pointer',
+          }}
+          title="Crayon fin"
+        >
+          <Pen size={18} />
+        </button>
 
-                <button
-                  type="button"
-                  onClick={() => insertNoteFormatting('- [ ] ')}
-                  style={{ border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', padding: '4px 8px', borderRadius: '6px', display: 'flex', alignItems: 'center', gap: '3px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
-                  title="Checklist à cocher"
-                >
-                  <CheckSquare size={13} /> Checklist
-                </button>
+        {/* OUTIL PINCEAU */}
+        <button
+          type="button"
+          onClick={() => setTool('brush')}
+          style={{
+            border: 'none',
+            backgroundColor: tool === 'brush' ? '#C67D5B' : 'transparent',
+            color: tool === 'brush' ? '#FFFFFF' : (darkMode ? '#FAF7F2' : '#3D3530'),
+            padding: '8px 10px',
+            borderRadius: '10px',
+            cursor: 'pointer',
+          }}
+          title="Pinceau aquarelle"
+        >
+          <Brush size={18} />
+        </button>
 
-                <button
-                  type="button"
-                  onClick={() => insertNoteFormatting('- ')}
-                  style={{ border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', width: '28px', height: '28px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                  title="Liste à puces"
-                >
-                  <List size={13} />
-                </button>
+        {/* OUTIL SURLIGNEUR */}
+        <button
+          type="button"
+          onClick={() => setTool('highlighter')}
+          style={{
+            border: 'none',
+            backgroundColor: tool === 'highlighter' ? '#C67D5B' : 'transparent',
+            color: tool === 'highlighter' ? '#FFFFFF' : (darkMode ? '#FAF7F2' : '#3D3530'),
+            padding: '8px 10px',
+            borderRadius: '10px',
+            cursor: 'pointer',
+          }}
+          title="Surligneur"
+        >
+          <Highlighter size={18} />
+        </button>
 
-                <button
-                  type="button"
-                  onClick={() => insertNoteFormatting('> ')}
-                  style={{ border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', width: '28px', height: '28px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                  title="Citation"
-                >
-                  <Quote size={13} />
-                </button>
+        {/* OUTIL GOMME */}
+        <button
+          type="button"
+          onClick={() => setTool('eraser')}
+          style={{
+            border: 'none',
+            backgroundColor: tool === 'eraser' ? '#C67D5B' : 'transparent',
+            color: tool === 'eraser' ? '#FFFFFF' : (darkMode ? '#FAF7F2' : '#3D3530'),
+            padding: '8px 10px',
+            borderRadius: '10px',
+            cursor: 'pointer',
+          }}
+          title="Gomme vectorielle"
+        >
+          <Eraser size={18} />
+        </button>
 
-                <button
-                  type="button"
-                  onClick={() => insertNoteFormatting('**', '**')}
-                  style={{ border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', width: '28px', height: '28px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                  title="Gras"
-                >
-                  <Bold size={13} />
-                </button>
+        <div style={{ width: '1px', height: '22px', backgroundColor: darkMode ? 'rgba(255,255,255,0.15)' : '#E5DCD3', margin: '0 2px' }} />
 
-                <button
-                  type="button"
-                  onClick={() => insertNoteFormatting('*', '*')}
-                  style={{ border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', width: '28px', height: '28px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                  title="Italique"
-                >
-                  <Italic size={13} />
-                </button>
+        {/* FORMES GÉOMÉTRIQUES */}
+        <button
+          type="button"
+          onClick={() => setTool('rect')}
+          style={{
+            border: 'none',
+            backgroundColor: tool === 'rect' ? '#C67D5B' : 'transparent',
+            color: tool === 'rect' ? '#FFFFFF' : (darkMode ? '#FAF7F2' : '#3D3530'),
+            padding: '8px 10px',
+            borderRadius: '10px',
+            cursor: 'pointer',
+          }}
+          title="Rectangle"
+        >
+          <Square size={18} />
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setTool('circle')}
+          style={{
+            border: 'none',
+            backgroundColor: tool === 'circle' ? '#C67D5B' : 'transparent',
+            color: tool === 'circle' ? '#FFFFFF' : (darkMode ? '#FAF7F2' : '#3D3530'),
+            padding: '8px 10px',
+            borderRadius: '10px',
+            cursor: 'pointer',
+          }}
+          title="Cercle"
+        >
+          <Circle size={18} />
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setTool('arrow')}
+          style={{
+            border: 'none',
+            backgroundColor: tool === 'arrow' ? '#C67D5B' : 'transparent',
+            color: tool === 'arrow' ? '#FFFFFF' : (darkMode ? '#FAF7F2' : '#3D3530'),
+            padding: '8px 10px',
+            borderRadius: '10px',
+            cursor: 'pointer',
+          }}
+          title="Flèche"
+        >
+          <ArrowRight size={18} />
+        </button>
+
+        <div style={{ width: '1px', height: '22px', backgroundColor: darkMode ? 'rgba(255,255,255,0.15)' : '#E5DCD3', margin: '0 2px' }} />
+
+        {/* POST-IT & TEXTE */}
+        <button
+          type="button"
+          onClick={() => setTool('sticky')}
+          style={{
+            border: 'none',
+            backgroundColor: tool === 'sticky' ? '#C67D5B' : 'transparent',
+            color: tool === 'sticky' ? '#FFFFFF' : (darkMode ? '#FAF7F2' : '#3D3530'),
+            padding: '8px 10px',
+            borderRadius: '10px',
+            cursor: 'pointer',
+          }}
+          title="Ajouter un Post-it"
+        >
+          <StickyNote size={18} />
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setTool('text')}
+          style={{
+            border: 'none',
+            backgroundColor: tool === 'text' ? '#C67D5B' : 'transparent',
+            color: tool === 'text' ? '#FFFFFF' : (darkMode ? '#FAF7F2' : '#3D3530'),
+            padding: '8px 10px',
+            borderRadius: '10px',
+            cursor: 'pointer',
+          }}
+          title="Ajouter du Texte"
+        >
+          <Type size={18} />
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setTool('hand')}
+          style={{
+            border: 'none',
+            backgroundColor: tool === 'hand' ? '#C67D5B' : 'transparent',
+            color: tool === 'hand' ? '#FFFFFF' : (darkMode ? '#FAF7F2' : '#3D3530'),
+            padding: '8px 10px',
+            borderRadius: '10px',
+            cursor: 'pointer',
+          }}
+          title="Outil Main (Déplacement de la vue)"
+        >
+          <Hand size={18} />
+        </button>
+
+        <div style={{ width: '1px', height: '22px', backgroundColor: darkMode ? 'rgba(255,255,255,0.15)' : '#E5DCD3', margin: '0 2px' }} />
+
+        {/* SÉLECTEUR DE COULEURS */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          {COLOR_PALETTE.slice(0, 4).map((c) => (
+            <button
+              key={c.id}
+              type="button"
+              onClick={() => setColor(c.hex)}
+              style={{
+                width: '20px',
+                height: '20px',
+                borderRadius: '50%',
+                backgroundColor: c.hex,
+                border: color === c.hex ? '2px solid #FFFFFF' : '1px solid rgba(0,0,0,0.2)',
+                boxShadow: color === c.hex ? '0 0 0 2px #C67D5B' : 'none',
+                cursor: 'pointer',
+              }}
+            />
+          ))}
+          <input
+            type="color"
+            value={color}
+            onChange={(e) => setColor(e.target.value)}
+            style={{
+              width: '24px',
+              height: '24px',
+              padding: 0,
+              border: 'none',
+              borderRadius: '50%',
+              cursor: 'pointer',
+              background: 'transparent',
+            }}
+            title="Sélecteur de couleur personnalisé"
+          />
+        </div>
+
+        <div style={{ width: '1px', height: '22px', backgroundColor: darkMode ? 'rgba(255,255,255,0.15)' : '#E5DCD3', margin: '0 2px' }} />
+
+        {/* CONTRÔLES ZOOM & UNDO/REDO */}
+        <button
+          type="button"
+          onClick={handleUndo}
+          disabled={paths.length === 0}
+          style={{ border: 'none', background: 'transparent', cursor: paths.length === 0 ? 'default' : 'pointer', opacity: paths.length === 0 ? 0.3 : 1, color: darkMode ? '#FAF7F2' : '#3D3530' }}
+          title="Annuler (Undo)"
+        >
+          <RotateCcw size={16} />
+        </button>
+
+        <button
+          type="button"
+          onClick={handleRedo}
+          disabled={redoStack.length === 0}
+          style={{ border: 'none', background: 'transparent', cursor: redoStack.length === 0 ? 'default' : 'pointer', opacity: redoStack.length === 0 ? 0.3 : 1, color: darkMode ? '#FAF7F2' : '#3D3530' }}
+          title="Rétablir (Redo)"
+        >
+          <RotateCw size={16} />
+        </button>
+
+        <button
+          type="button"
+          onClick={handleZoomIn}
+          style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: darkMode ? '#FAF7F2' : '#3D3530' }}
+          title="Zoom +"
+        >
+          <ZoomIn size={16} />
+        </button>
+
+        <button
+          type="button"
+          onClick={handleZoomOut}
+          style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: darkMode ? '#FAF7F2' : '#3D3530' }}
+          title="Zoom -"
+        >
+          <ZoomOut size={16} />
+        </button>
+
+        <button
+          type="button"
+          onClick={handleResetZoom}
+          style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '11px', fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530' }}
+          title="Réinitialiser le zoom"
+        >
+          {Math.round(zoom * 100)}%
+        </button>
+
+        <button
+          type="button"
+          onClick={handleClearAll}
+          style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#EF4444', marginLeft: '4px' }}
+          title="Effacer tout le tableau"
+        >
+          <Trash2 size={16} />
+        </button>
+      </div>
+
+      {/* MODALE DIALOGUE POUR PUBLIER LA VERSION DANS LE CHAT */}
+      {isPublishModalOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.65)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            zIndex: 100030,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+          }}
+        >
+          <div
+            style={{
+              width: '100%',
+              maxWidth: '480px',
+              backgroundColor: darkMode ? '#221D1A' : '#FAF7F2',
+              borderRadius: '24px',
+              padding: '24px',
+              border: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-color)',
+              boxShadow: '0 25px 60px rgba(0,0,0,0.4)',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Tag size={18} color="#C67D5B" />
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
+                  Publier la Version V{versionNumber + 1}
+                </h3>
               </div>
-
-              <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                {noteContent.trim().split(/\s+/).filter(Boolean).length} mots • Note partagée Apple-Style
-              </div>
+              <button
+                type="button"
+                onClick={() => setIsPublishModalOpen(false)}
+                style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: darkMode ? '#A89E95' : '#6B5E54' }}
+              >
+                <X size={18} />
+              </button>
             </div>
 
-            {/* TITRE DE LA NOTE STYLE APPLE */}
-            <div style={{ padding: '16px 24px 6px 24px' }}>
+            <p style={{ margin: '0 0 16px', fontSize: '13px', color: darkMode ? '#B8ABA0' : '#6B5E54', lineHeight: 1.5 }}>
+              Cette action enregistre un instantané haute définition de votre tableau blanc et diffuse une invitation cliquable dans la discussion de groupe.
+            </p>
+
+            <div style={{ marginBottom: '14px' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: darkMode ? '#FAF7F2' : '#3D3530', marginBottom: '6px' }}>
+                Titre de la version :
+              </label>
               <input
                 type="text"
-                value={noteTitle}
-                onChange={(e) => {
-                  setNoteTitle(e.target.value);
-                  saveNoteToFirestore(noteContent, e.target.value);
-                }}
-                placeholder="Titre de la note..."
+                value={publishTitle}
+                onChange={(e) => setPublishTitle(e.target.value)}
+                placeholder="Ex: Wireframes & Schéma d'architecture"
                 style={{
                   width: '100%',
-                  border: 'none',
-                  backgroundColor: 'transparent',
-                  color: 'var(--text-main)',
-                  fontSize: '22px',
-                  fontWeight: '800',
-                  fontFamily: 'Cormorant Garamond, Georgia, serif',
-                  outline: 'none',
-                }}
-              />
-            </div>
-
-            {/* CORPS DE LA NOTE FLUIDE */}
-            <div style={{ flex: 1, minHeight: 0, padding: '10px 24px 24px 24px', display: 'flex', flexDirection: 'column' }}>
-              <textarea
-                ref={notesTextareaRef}
-                value={noteContent}
-                onChange={(e) => {
-                  setNoteContent(e.target.value);
-                  saveNoteToFirestore(e.target.value);
-                }}
-                placeholder="Rédigez ici vos notes de session, tâches ou spécifications partagées..."
-                style={{
-                  width: '100%',
-                  flex: 1,
-                  minHeight: 0,
-                  border: 'none',
-                  backgroundColor: 'transparent',
-                  color: 'var(--text-main)',
-                  fontSize: '14.5px',
-                  lineHeight: 1.7,
-                  fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif',
-                  resize: 'none',
+                  padding: '10px 14px',
+                  borderRadius: '12px',
+                  border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E0D4C5',
+                  backgroundColor: darkMode ? '#181412' : '#FFFFFF',
+                  color: darkMode ? '#FAF7F2' : '#3D3530',
+                  fontSize: '14px',
                   outline: 'none',
                   boxSizing: 'border-box',
                 }}
               />
             </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
 
-  return createPortal(modalElement, document.body);
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: darkMode ? '#FAF7F2' : '#3D3530', marginBottom: '6px' }}>
+                Résumé des changements (optionnel) :
+              </label>
+              <textarea
+                value={publishChangelog}
+                onChange={(e) => setPublishChangelog(e.target.value)}
+                placeholder="Ex: Ajout des maquettes de la vue mobile et corrections des flux de paiement..."
+                style={{
+                  width: '100%',
+                  height: '70px',
+                  padding: '10px 14px',
+                  borderRadius: '12px',
+                  border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E0D4C5',
+                  backgroundColor: darkMode ? '#181412' : '#FFFFFF',
+                  color: darkMode ? '#FAF7F2' : '#3D3530',
+                  fontSize: '13px',
+                  outline: 'none',
+                  resize: 'none',
+                  boxSizing: 'border-box',
+                }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={() => setIsPublishModalOpen(false)}
+                style={{
+                  border: 'none',
+                  backgroundColor: darkMode ? 'rgba(255,255,255,0.08)' : '#EFE8DE',
+                  color: darkMode ? '#FAF7F2' : '#3D3530',
+                  padding: '10px 16px',
+                  borderRadius: '12px',
+                  fontSize: '13px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                }}
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmPublishToChat}
+                disabled={isSendingToChat}
+                className="premium-button"
+                style={{
+                  border: 'none',
+                  background: 'linear-gradient(135deg, #C67D5B 0%, #B86B49 100%)',
+                  color: '#FFFFFF',
+                  padding: '10px 20px',
+                  borderRadius: '12px',
+                  fontSize: '13px',
+                  fontWeight: '800',
+                  cursor: isSendingToChat ? 'wait' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 6px 18px rgba(198,125,91,0.35)',
+                }}
+              >
+                <Share2 size={15} />
+                <span>{isSendingToChat ? 'Publication...' : `Valider & Envoyer (V${versionNumber + 1})`}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TOAST SUCCÈS PUBLICATION */}
+      {sendSuccessToast && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: '24px',
+            right: '24px',
+            backgroundColor: '#10B981',
+            color: '#FFFFFF',
+            padding: '12px 20px',
+            borderRadius: '14px',
+            fontWeight: '800',
+            fontSize: '13px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            boxShadow: '0 10px 30px rgba(16, 185, 129, 0.45)',
+            zIndex: 100040,
+            animation: 'popIn 0.3s cubic-bezier(0.22, 1, 0.36, 1)',
+          }}
+        >
+          <Check size={18} strokeWidth={3} />
+          <span>Version V{versionNumber} partagée dans la conversation avec succès !</span>
+        </div>
+      )}
+    </div>,
+    document.body
+  );
 }
