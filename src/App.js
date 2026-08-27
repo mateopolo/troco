@@ -1349,6 +1349,7 @@ export default function App() {
     if (!location) return [48.8566, 2.3522];
 
     const locLower = String(location).toLowerCase();
+    if (locLower.includes('roissy')) return [49.0022, 2.5153];
     if (locLower.includes('tokyo') || locLower.includes('shibuya') || locLower.includes('japon')) return [35.6580, 139.7016];
     if (locLower.includes('new york') || locLower.includes('soho') || locLower.includes('manhattan') || locLower.includes('usa')) return [40.7128, -74.0060];
     if (locLower.includes('londres') || locLower.includes('london') || locLower.includes('uk')) return [51.5074, -0.1278];

@@ -1,11 +1,23 @@
-import React, { Suspense, useCallback, useState } from 'react';
+import React, { Suspense, useCallback, useState, useEffect } from 'react';
 import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Navigation, Loader2 } from 'lucide-react';
+import { Navigation, Loader2, Maximize, Minimize } from 'lucide-react';
 import SectoralErrorBoundary from '../../components/SectoralErrorBoundary';
 
 const MapClusterTracker = React.lazy(() => import('../../components/MapClusterTracker'));
+
+// Gestionnaire de redimensionnement dynamique de Leaflet
+function MapResizeHandler({ isFullScreen }) {
+  const map = useMap();
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      map.invalidateSize();
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [isFullScreen, map]);
+  return null;
+}
 
 // Composant interne pour le recentrage GPS "Me localiser"
 function MapLocateControl({ onLocated }) {
@@ -35,8 +47,8 @@ function MapLocateControl({ onLocated }) {
       (err) => {
         setIsLocating(false);
         console.warn('[Geolocation] Error or permission denied:', err);
-        // Fallback smooth recenter sur Roissy / Paris
-        map.flyTo([49.0097, 2.5186], 13, {
+        // Fallback smooth recenter sur Roissy-en-France
+        map.flyTo([49.0022, 2.5153], 13, {
           animate: true,
           duration: 1.2,
         });
@@ -102,6 +114,8 @@ export function MapSection({
   handleOpenListing,
   createModernMapIcon,
 }) {
+  const [isFullScreen, setIsFullScreen] = useState(false);
+
   const defaultCreateModernMapIcon = useCallback(() => {
     const primaryBg = theme?.variables?.['--accent-primary'] || '#B98B73';
     const innerDot = theme?.variables?.['--bg-global'] || '#FAF7F2';
@@ -140,7 +154,23 @@ export function MapSection({
     <SectoralErrorBoundary moduleName="Carte Interactive & Géolocalisation">
       <div
         className="premium-panel"
-        style={{
+        style={isFullScreen ? {
+          position: 'fixed',
+          inset: 0,
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          width: '100vw',
+          height: '100dvh',
+          zIndex: 9999,
+          borderRadius: 0,
+          padding: 0,
+          margin: 0,
+          backgroundColor: 'var(--bg-global)',
+          boxShadow: 'none',
+          border: 'none',
+        } : {
           backgroundColor: 'var(--bg-card)',
           backdropFilter: 'blur(16px)',
           WebkitBackdropFilter: 'blur(16px)',
@@ -154,14 +184,53 @@ export function MapSection({
           style={{
             position: 'relative',
             width: '100%',
-            height: '550px',
-            borderRadius: '18px',
+            height: isFullScreen ? '100dvh' : '550px',
+            borderRadius: isFullScreen ? '0' : '18px',
             overflow: 'hidden',
-            boxShadow: 'var(--shadow-card)',
+            boxShadow: isFullScreen ? 'none' : 'var(--shadow-card)',
           }}
         >
+          {/* BOUTON PLEIN ÉCRAN */}
+          <div
+            style={{
+              position: 'absolute',
+              top: '16px',
+              right: '16px',
+              zIndex: 1000,
+            }}
+          >
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setIsFullScreen(prev => !prev);
+              }}
+              className="premium-button"
+              style={{
+                border: '1px solid var(--border-color)',
+                backgroundColor: 'var(--bg-card)',
+                color: 'var(--text-main)',
+                borderRadius: '14px',
+                width: '40px',
+                height: '40px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+                transition: 'all 0.2s ease',
+              }}
+              title={isFullScreen ? "Quitter le plein écran" : "Carte en plein écran"}
+            >
+              {isFullScreen ? <Minimize size={18} /> : <Maximize size={18} />}
+            </button>
+          </div>
+
           <MapContainer
-            center={mapCenter || [49.0097, 2.5186]}
+            center={mapCenter || [49.0022, 2.5153]}
             zoom={mapZoom || 12}
             minZoom={2}
             maxBounds={[[-85, -180], [85, 180]]}
@@ -169,6 +238,8 @@ export function MapSection({
             worldCopyJump={true}
             style={{ width: '100%', height: '100%' }}
           >
+            <MapResizeHandler isFullScreen={isFullScreen} />
+
             <TileLayer
               noWrap={true}
               bounds={[[-85, -180], [85, 180]]}
@@ -181,7 +252,7 @@ export function MapSection({
             <Suspense fallback={null}>
               <MapClusterTracker
                 listings={filteredListings}
-                mapCenter={mapCenter || [49.0097, 2.5186]}
+                mapCenter={mapCenter || [49.0022, 2.5153]}
                 mapZoom={mapZoom || 12}
                 darkMode={darkMode}
                 currentLang={currentLang}

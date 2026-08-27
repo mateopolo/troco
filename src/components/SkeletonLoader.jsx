@@ -1,4 +1,5 @@
 import React from 'react';
+import TrocoLogo3D from './common/TrocoLogo3D';
 
 /**
  * SkeletonCard — Carte fantôme élégante aux couleurs du thème actif
@@ -116,58 +117,36 @@ export function SkeletonChatList({ count = 5 }) {
 }
 
 /**
- * SkeletonModalFallback — Skeleton pour les modales en chargement lazy
+ * SkeletonModalFallback — Écran de chargement minimaliste et ultra-premium pour les modules et modales lazy
  */
-export function SkeletonModalFallback({ title = "Chargement en cours..." }) {
+export function SkeletonModalFallback({ title = "Chargement..." }) {
   return (
     <div
       style={{
         position: 'fixed',
         inset: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.65)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
+        backgroundColor: 'var(--bg-global)',
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
         zIndex: 10000000,
-        padding: '16px',
-        animation: 'fadeIn 0.2s ease',
+        gap: '16px',
+        animation: 'fadeIn 0.2s ease-out',
       }}
     >
-      <div
+      <TrocoLogo3D animated={true} size={60} />
+      <span
         style={{
-          width: '100%',
-          maxWidth: '480px',
-          backgroundColor: 'var(--bg-card)',
-          borderRadius: '24px',
-          border: '1px solid var(--border-color)',
-          padding: '24px',
-          boxShadow: 'var(--shadow-modal)',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '16px',
-          textAlign: 'center',
+          fontSize: '13px',
+          fontWeight: '600',
+          color: 'var(--text-secondary)',
+          letterSpacing: '0.04em',
+          opacity: 0.85,
         }}
       >
-        <div
-          className="skeleton-shimmer"
-          style={{ width: '48px', height: '48px', borderRadius: '50%' }}
-        />
-        <div
-          className="skeleton-shimmer"
-          style={{ width: '60%', height: '18px', borderRadius: '8px' }}
-        />
-        <div
-          className="skeleton-shimmer"
-          style={{ width: '85%', height: '12px', borderRadius: '6px' }}
-        />
-        <div
-          className="skeleton-shimmer"
-          style={{ width: '100%', height: '42px', borderRadius: '14px', marginTop: '8px' }}
-        />
-      </div>
+        {title || "Chargement..."}
+      </span>
     </div>
   );
 }

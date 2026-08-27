@@ -135,7 +135,7 @@ export default function ListingCard({
       ref={cardRef}
       initial="initial"
       whileInView="animate"
-      viewport={{ once: true, margin: '-50px' }}
+      viewport={{ once: false, margin: '10%' }}
       variants={getActiveAnimation('card')}
       onClick={() => handleOpenListing(item)}
       onMouseEnter={() => setHoveredCardId(item.id)}

@@ -178,7 +178,7 @@ function FeedCardItem({
       ref={cardElementRef}
       initial="initial"
       whileInView="animate"
-      viewport={{ once: true, margin: '-50px' }}
+      viewport={{ once: false, margin: '10%' }}
       variants={getActiveAnimation('card')}
       onClick={() => handleOpenListing(item)}
       onTouchStart={() => { if (setHoveredCardId) setHoveredCardId(item.id); }}

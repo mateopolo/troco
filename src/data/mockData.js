@@ -18,7 +18,7 @@ export const mockListings = [
     category: "Prêt de Matériel",
     verified: true, rating: 5.0, reviews: 14,
     location: "Roissy-en-France (À 0.8 km)",
-    coordinates: [49.0097, 2.5186],
+    coordinates: [49.0022, 2.5153],
     type: "onsite", nativeLang: "FR",
     languages: ["FR", "EN"],
     compensation: "Troc ou 5€ consommables",

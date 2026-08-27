@@ -136,6 +136,7 @@ export const ANIMATION_PRESETS = [
       initial: { opacity: 0, y: 60, scale: 0.98 },
       animate: { opacity: 1, y: 0, scale: 1, transition: { type: 'spring', stiffness: 260, damping: 25, mass: 1, duration: 0.6 } },
       whileInView: { opacity: 1, y: 0, scale: 1 },
+      viewport: { once: false, margin: '10%' },
       transition: { type: 'spring', stiffness: 260, damping: 25, mass: 1, duration: 0.6 },
     },
     modal: {
