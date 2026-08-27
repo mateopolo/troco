@@ -2892,11 +2892,12 @@ function ChatView({
           <CollaborativeWhiteboardModal
             isOpen={isWhiteboardOpen}
             onClose={() => setIsWhiteboardOpen(false)}
-            groupId={activeChatObj.id || activeChatObj.firestoreId || selectedChat?.id || 'group_whiteboard'}
+            groupId={selectedChat?.id || activeChatObj.id || activeChatObj.firestoreId || 'group_whiteboard'}
             boardId={activeWhiteboardBoardId || (activeChatObj.id ? `board-${activeChatObj.id}` : 'default_board')}
             projectTitle={activeChatObj.projectTitle || activeChatObj.user || 'Tableau Blanc Collaboratif'}
             currentUser={profile}
             darkMode={darkMode}
+            onSendMessage={handleSendMessage}
             handleSendMessage={handleSendMessage}
             onSendToChat={(sentBoardId, version, msgPayload) => {
               if (typeof handleSendMessage === 'function' && msgPayload) {

@@ -5,7 +5,7 @@ import {
   RotateCcw, RotateCw, Trash2, Download, StickyNote,
   Type, Hand, ZoomIn, ZoomOut, Brush, Eye, EyeOff, Share2, Tag, Check
 } from 'lucide-react';
-import { doc, setDoc, onSnapshot, serverTimestamp, collection, addDoc } from 'firebase/firestore';
+import { doc, setDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { whiteboardP2PService } from '../services/whiteboardP2PService';
 
@@ -67,6 +67,7 @@ export default function CollaborativeWhiteboardModal({
   currentUser = null,
   darkMode = false,
   onSendToChat = null,
+  onSendMessage = null,
   handleSendMessage = null,
 }) {
   const effectiveBoardId = boardId || groupId || 'default_board';
@@ -677,7 +678,7 @@ export default function CollaborativeWhiteboardModal({
 
   // Confirmer l'envoi de la version dans le Chat
   const handleConfirmPublishToChat = async () => {
-    if (!groupId || isSendingToChat) return;
+    if (isSendingToChat) return;
     setIsSendingToChat(true);
 
     const nextVer = versionNumber + 1;
@@ -688,31 +689,10 @@ export default function CollaborativeWhiteboardModal({
       setVersionNumber(nextVer);
       setWorkspaceTitle(finalTitle);
 
-      // 1. Sauvegarde Firestore avec numéro de version incrémenté
-      if (db) {
-        const docRef = doc(db, 'project_whiteboards', String(effectiveBoardId));
-        await setDoc(docRef, {
-          boardId: effectiveBoardId,
-          groupId,
-          title: finalTitle,
-          versionNumber: nextVer,
-          previewUrl: snapshotUrl,
-          paths: paths.slice(-350),
-          stickyNotes,
-          textElements,
-          updatedAt: serverTimestamp(),
-          lastEditor: myName,
-          lastEditorUid: myUid,
-        }, { merge: true });
-
-        // 2. Publication du message structuré dans le chat actif
-        const msgPayload = {
+      const sendFn = onSendMessage || handleSendMessage;
+      if (typeof sendFn === 'function') {
+        sendFn({
           text: `Nouvelle version du tableau blanc disponible (${finalTitle} - V${nextVer})`,
-          sender: myUid,
-          senderName: myName,
-          senderAvatar: currentUser?.avatar || '',
-          timestamp: serverTimestamp(),
-          createdAt: Date.now(),
           type: 'workspace_invite',
           kind: 'workspace_invite',
           workspaceType: 'whiteboard',
@@ -721,25 +701,14 @@ export default function CollaborativeWhiteboardModal({
           version: `V${nextVer}`,
           versionNumber: nextVer,
           previewUrl: snapshotUrl,
-          summary: publishChangelog.trim() || `Mise à jour V${nextVer} avec ${paths.length} vecteurs et ${stickyNotes.length} notes`,
-        };
-
-        if (groupId && groupId !== 'demo_group_whiteboard') {
-          await addDoc(collection(db, 'chats', String(groupId), 'messages'), msgPayload);
-
-          await setDoc(doc(db, 'chats', String(groupId)), {
-            lastMessage: `🎨 Whiteboard V${nextVer} : "${finalTitle}"`,
-            lastSenderName: myName,
-            updatedAt: serverTimestamp(),
-          }, { merge: true });
-        }
-
-        if (typeof handleSendMessage === 'function') {
-          handleSendMessage(msgPayload);
-        }
+        });
+      } else {
+        console.error("CRITICAL ERROR: onSendMessage prop is missing in CollaborativeWhiteboardModal");
       }
 
-      if (onSendToChat) onSendToChat(effectiveBoardId, nextVer);
+      if (typeof onSendToChat === 'function') {
+        onSendToChat(effectiveBoardId, nextVer);
+      }
 
       setIsPublishModalOpen(false);
       setSendSuccessToast(true);
