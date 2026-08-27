@@ -478,7 +478,7 @@ export default function App() {
       id: 'tx-' + Date.now(),
       ...txData,
       userId: uid || 'guest',
-      userName: profile.name,
+      userName: profile?.name || 'Utilisateur',
       createdAt: new Date().toISOString(),
     };
     setUserTransactions(prev => [newTxRecord, ...prev]);
@@ -501,8 +501,8 @@ export default function App() {
         await addDoc(collection(db, 'transactions'), {
           ...txData,
           userId: uid,
-          userName: profile.name,
-          userEmail: profile.email || '',
+          userName: profile?.name || 'Utilisateur',
+          userEmail: profile?.email || '',
           createdAt: serverTimestamp(),
         });
       } catch (err) {
@@ -1024,7 +1024,7 @@ export default function App() {
     hostMuteParticipant,
     hostStopParticipantScreenShare,
     copyInviteLink,
-  } = useWebRTC({ profileName: profile.name, profileUid: profile?.uid || (auth.currentUser && auth.currentUser.uid), selectedChat });
+  } = useWebRTC({ profileName: profile?.name || 'Membre', profileUid: profile?.uid || (auth.currentUser && auth.currentUser.uid), selectedChat });
 
   // Attacheurs de flux universels sans conflit de ref (évite les écrans noirs sur tous navigateurs)
   const attachLocalStream = useCallback((el) => {
@@ -1205,7 +1205,7 @@ export default function App() {
           transaction.set(txDocRef, {
             ...newTx,
             userId: uid,
-            userName: profile.name,
+            userName: profile?.name || 'Utilisateur',
             partnerUid: partnerUid || null,
             createdAt: serverTimestamp(),
           });
@@ -2672,83 +2672,92 @@ export default function App() {
                           </button>
                         )}
                       </div>
-                      {selectedListing.authorProfile.name !== profile.name ? (
-                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-                          <button
-                            type="button"
-                            onClick={() => handleViewOnMap(selectedListing)}
-                            className="premium-button"
-                            title="Centrer la carte interactive sur cette annonce"
-                            style={{
-                              border: darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #E8DDD3',
-                              borderRadius: '999px',
-                              padding: '11px 14px',
-                              backgroundColor: darkMode ? '#1A1715' : '#FFF',
-                              color: darkMode ? '#FAF7F2' : '#3D3530',
-                              fontWeight: '700',
-                              fontSize: '12px',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '6px',
-                            }}
-                          >
-                            <MapPin size={14} color="#C67D5B" /> {t('viewOnMap') || 'Voir sur la carte'}
-                          </button>
-                          <button
-                            onClick={() => {
-                              setReportTarget({
-                                listing: selectedListing,
-                                user: { name: selectedListing.authorProfile.name, uid: selectedListing.authorProfile.uid || null }
-                              });
-                              setIsReportModalOpen(true);
-                            }}
-                            className="premium-button"
-                            title="Signaler un contenu abusif ou suspect"
-                            style={{
-                              border: 'none',
-                              borderRadius: '999px',
-                              padding: '11px 14px',
-                              backgroundColor: darkMode ? 'rgba(239,68,68,0.2)' : '#FEF2F2',
-                              color: '#EF4444',
-                              fontWeight: '700',
-                              fontSize: '12px',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '5px',
-                            }}
-                          >
-                            <ShieldAlert size={14} /> Signaler
-                          </button>
-                          <button onClick={() => handleStartDiscussion({ id: selectedListing.id, title: selectedListing.title, author: selectedListing.authorProfile.name, compensation: selectedListing.compensation })} className="premium-button" style={{ border: 'none', borderRadius: '999px', padding: '11px 16px', background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)', color: '#FFF', fontWeight: '800', cursor: 'pointer', boxShadow: '0 8px 20px rgba(198,125,91,0.35)' }}>{t('startDiscussion')}</button>
-                        </div>
-                      ) : (
-                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                          <button
-                            type="button"
-                            onClick={() => handleViewOnMap(selectedListing)}
-                            className="premium-button"
-                            title="Centrer la carte interactive sur cette annonce"
-                            style={{
-                              border: darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #E8DDD3',
-                              borderRadius: '999px',
-                              padding: '10px 14px',
-                              backgroundColor: darkMode ? '#1A1715' : '#FFF',
-                              color: darkMode ? '#FAF7F2' : '#3D3530',
-                              fontWeight: '700',
-                              fontSize: '12px',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '6px',
-                            }}
-                          >
-                            <MapPin size={14} color="#C67D5B" /> {t('viewOnMap') || 'Voir sur la carte'}
-                          </button>
-                          <div style={{ backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', color: darkMode ? '#D4C5B5' : '#6B5E54', padding: '10px 16px', borderRadius: '999px', fontSize: '13px', fontWeight: '700', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3' }}>{t('authorAnnc')}</div>
-                        </div>
-                      )}
+                      {(() => {
+                        const authorName = selectedListing.authorProfile?.name || selectedListing.author || 'Membre Troco';
+                        const authorUid = selectedListing.authorProfile?.uid || selectedListing.authorUid || null;
+                        const isOwnListing = Boolean(
+                          (profile?.name && authorName === profile.name) ||
+                          (authorUid && (authorUid === profile?.uid || authorUid === auth.currentUser?.uid))
+                        );
+
+                        return !isOwnListing ? (
+                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                            <button
+                              type="button"
+                              onClick={() => handleViewOnMap(selectedListing)}
+                              className="premium-button"
+                              title="Centrer la carte interactive sur cette annonce"
+                              style={{
+                                border: darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #E8DDD3',
+                                borderRadius: '999px',
+                                padding: '11px 14px',
+                                backgroundColor: darkMode ? '#1A1715' : '#FFF',
+                                color: darkMode ? '#FAF7F2' : '#3D3530',
+                                fontWeight: '700',
+                                fontSize: '12px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                              }}
+                            >
+                              <MapPin size={14} color="#C67D5B" /> {t('viewOnMap') || 'Voir sur la carte'}
+                            </button>
+                            <button
+                              onClick={() => {
+                                setReportTarget({
+                                  listing: selectedListing,
+                                  user: { name: authorName, uid: authorUid }
+                                });
+                                setIsReportModalOpen(true);
+                              }}
+                              className="premium-button"
+                              title="Signaler un contenu abusif ou suspect"
+                              style={{
+                                border: 'none',
+                                borderRadius: '999px',
+                                padding: '11px 14px',
+                                backgroundColor: darkMode ? 'rgba(239,68,68,0.2)' : '#FEF2F2',
+                                color: '#EF4444',
+                                fontWeight: '700',
+                                fontSize: '12px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '5px',
+                              }}
+                            >
+                              <ShieldAlert size={14} /> Signaler
+                            </button>
+                            <button onClick={() => handleStartDiscussion({ id: selectedListing.id, title: selectedListing.title, author: authorName, compensation: selectedListing.compensation })} className="premium-button" style={{ border: 'none', borderRadius: '999px', padding: '11px 16px', background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)', color: '#FFF', fontWeight: '800', cursor: 'pointer', boxShadow: '0 8px 20px rgba(198,125,91,0.35)' }}>{t('startDiscussion')}</button>
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                            <button
+                              type="button"
+                              onClick={() => handleViewOnMap(selectedListing)}
+                              className="premium-button"
+                              title="Centrer la carte interactive sur cette annonce"
+                              style={{
+                                border: darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #E8DDD3',
+                                borderRadius: '999px',
+                                padding: '10px 14px',
+                                backgroundColor: darkMode ? '#1A1715' : '#FFF',
+                                color: darkMode ? '#FAF7F2' : '#3D3530',
+                                fontWeight: '700',
+                                fontSize: '12px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                              }}
+                            >
+                              <MapPin size={14} color="#C67D5B" /> {t('viewOnMap') || 'Voir sur la carte'}
+                            </button>
+                            <div style={{ backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', color: darkMode ? '#D4C5B5' : '#6B5E54', padding: '10px 16px', borderRadius: '999px', fontSize: '13px', fontWeight: '700', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3' }}>{t('authorAnnc')}</div>
+                          </div>
+                        );
+                      })()}
                     </div>
                     <p style={{ margin: '0 0 14px', lineHeight: 1.7, color: darkMode ? '#D4C5B5' : '#6B5E54', fontSize: '14px' }}>{detailDisplayContent.description}</p>
                   </>
@@ -2766,23 +2775,23 @@ export default function App() {
                 <div style={{ fontSize: '13px', color: '#C67D5B', fontWeight: '700' }}>{formatCompensation(selectedListing.compensation)}</div>
               </div>
               <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '14px', padding: '14px', borderRadius: '16px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3' }}>
-                <img src={selectedListing.authorProfile.avatar} alt={selectedListing.authorProfile.name} style={{ width: '56px', height: '56px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #E8DDD3' }} />
+                <img src={selectedListing.authorProfile?.avatar || selectedListing.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'} alt={selectedListing.authorProfile?.name || selectedListing.author || 'Auteur'} style={{ width: '56px', height: '56px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #E8DDD3' }} />
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{selectedListing.authorProfile.name}</div>
-                  <div style={{ fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54', marginTop: '4px' }}>{getBioTranslation(selectedListing.authorProfile.bio, currentLang, !!showingOriginalListings[selectedListing.id])}</div>
+                  <div style={{ fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{selectedListing.authorProfile?.name || selectedListing.author || 'Membre Troco'}</div>
+                  <div style={{ fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54', marginTop: '4px' }}>{getBioTranslation(selectedListing.authorProfile?.bio || selectedListing.bio || '', currentLang, !!showingOriginalListings[selectedListing.id])}</div>
                 </div>
               </div>
               <div style={{ marginBottom: '14px' }}>
                 <div style={{ fontWeight: '800', fontSize: '13px', color: darkMode ? '#FAF7F2' : '#3D3530', marginBottom: '8px' }}>{t('socialNetworks')}</div>
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  {selectedListing.authorProfile.socials.map(link => <span key={link} style={{ border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', borderRadius: '999px', padding: '6px 10px', fontSize: '12px', color: '#C67D5B', fontWeight: '700', backgroundColor: darkMode ? '#1A1715' : '#FAF7F2' }}>{link}</span>)}
+                  {(selectedListing.authorProfile?.socials || selectedListing.socials || []).map(link => <span key={link} style={{ border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', borderRadius: '999px', padding: '6px 10px', fontSize: '12px', color: '#C67D5B', fontWeight: '700', backgroundColor: darkMode ? '#1A1715' : '#FAF7F2' }}>{link}</span>)}
                 </div>
               </div>
-              {selectedListing.authorProfile?.portfolio && selectedListing.authorProfile.portfolio.length > 0 && (
+              {(selectedListing.authorProfile?.portfolio || selectedListing.portfolio) && (selectedListing.authorProfile?.portfolio || selectedListing.portfolio).length > 0 && (
                 <div style={{ marginBottom: '14px' }}>
                   <div style={{ fontWeight: '800', fontSize: '13px', color: darkMode ? '#FAF7F2' : '#3D3530', marginBottom: '8px' }}>{t('portfolio')}</div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '8px' }}>
-                    {selectedListing.authorProfile.portfolio.map((image, index) => (
+                    {(selectedListing.authorProfile?.portfolio || selectedListing.portfolio).map((image, index) => (
                       <img key={image + index} src={image} alt="portfolio" style={{ width: '100%', height: '80px', objectFit: 'cover', borderRadius: '14px' }} />
                     ))}
                   </div>
@@ -2791,8 +2800,8 @@ export default function App() {
               <div>
                 <div style={{ fontWeight: '800', fontSize: '13px', color: darkMode ? '#FAF7F2' : '#3D3530', marginBottom: '8px' }}>{t('reviews')}</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {selectedListing.authorProfile?.reviews && selectedListing.authorProfile.reviews.length > 0 ? (
-                    selectedListing.authorProfile.reviews.map((review, index) => (
+                  {(selectedListing.authorProfile?.reviews || selectedListing.authorReviews) && (selectedListing.authorProfile?.reviews || selectedListing.authorReviews).length > 0 ? (
+                    (selectedListing.authorProfile?.reviews || selectedListing.authorReviews).map((review, index) => (
                       <div key={review.text + index} style={{ border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3', borderRadius: '14px', padding: '12px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8' }}>
                         <div style={{ color: '#F59E0B', marginBottom: '4px' }}>{'⭐'.repeat(review.rating)}{'☆'.repeat(Math.max(0, 5 - review.rating))}</div>
                         <div style={{ fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>{localizeReview(review.text, currentLang)}</div>
@@ -3348,7 +3357,7 @@ export default function App() {
                             currentLang={currentLang}
                             t={t}
                             onOpenBoostModal={() => {
-                              const myListing = listings.find(l => l.author === profile.name) || listings[0];
+                              const myListing = listings.find(l => l.author === profile?.name) || listings[0];
                               setBoostingListing(myListing);
                               setIsBoostModalOpen(true);
                             }}
@@ -3399,7 +3408,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => {
-                    const myListing = listings.find(l => l.author === profile.name) || listings[0];
+                    const myListing = listings.find(l => l.author === profile?.name) || listings[0];
                     if (myListing) {
                       setBoostingListing(myListing);
                       setIsBoostModalOpen(true);
