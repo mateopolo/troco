@@ -1,68 +1,68 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+/**
+ * CollaborativeWhiteboardModal.jsx — Moteur de Tableau Blanc Collaboratif Multi-versions (Standard International)
+ *
+ * Fonctionnalités Clés :
+ * 1. Synchronisation temps réel 60 FPS (WebRTC P2P 0ms & Firestore anti-conflits).
+ * 2. Séparation stricte localPaths vs remotePaths (Zéro écrasement de traits).
+ * 3. Effet Ghosting sur les traits distants et curseurs collaboratifs en direct.
+ * 4. Moteur d'historique Undo / Redo complet (Pile d'historique + raccourcis Ctrl+Z / Ctrl+Y / Cmd+Z / Cmd+Shift+Z).
+ * 5. Couleurs infinies (Palette rapide + sélecteur natif <input type="color"> + Pipette EyeDropper API).
+ * 6. Barre d'outils dynamique avec support mobile fluide (touch-action: pan-x, overflow-x: auto).
+ * 7. Mode Immersion Absolue (Plein écran avec masquage automatique des outils et bouton flottant de restauration).
+ * 8. Redimensionnement du texte avec logique Scale-to-fit proportionnelle.
+ * 9. Export Snapshot rogné sur la Bounding Box (DataURL) + Versioning incrémental (V1 -> V2 -> V3) et émission chat.
+ */
+
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import {
   X, Pen, Highlighter, Eraser, Square, Circle, ArrowRight,
-  RotateCcw, RotateCw, Trash2, Download, StickyNote,
-  Type, Hand, ZoomIn, ZoomOut, Brush, Eye, EyeOff, Share2, Tag, Check
+  RotateCcw, RotateCw, Trash2, StickyNote,
+  Type, Hand, Brush, Share2, Check, Eye, EyeOff,
+  Pipette, ZoomIn, ZoomOut, Sparkles, Layers,
+  ChevronRight, Download, Move
 } from 'lucide-react';
-import { doc, setDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { whiteboardP2PService } from '../services/whiteboardP2PService';
+import {
+  saveWorkspaceVersion,
+  WORKSPACE_TYPES,
+} from '../features/workspace/workspaceService';
 
-const COLOR_PALETTE = [
-  { id: 'troco', hex: '#C67D5B', name: 'Troco Terracotta' },
-  { id: 'dark', hex: '#1F2937', name: 'Anthracite' },
-  { id: 'white', hex: '#FFFFFF', name: 'Blanc' },
-  { id: 'red', hex: '#EF4444', name: 'Rouge' },
-  { id: 'blue', hex: '#3B82F6', name: 'Bleu Pro' },
+const CURATED_PALETTE = [
+  { id: 'troco', hex: '#C67D5B', name: 'Terracotta Troco' },
+  { id: 'anthracite', hex: '#1F2937', name: 'Anthracite' },
+  { id: 'white', hex: '#FFFFFF', name: 'Blanc Pur' },
+  { id: 'red', hex: '#EF4444', name: 'Rouge Corail' },
+  { id: 'blue', hex: '#3B82F6', name: 'Bleu Royal' },
   { id: 'green', hex: '#10B981', name: 'Vert Émeraude' },
-  { id: 'yellow', hex: '#F59E0B', name: 'Jaune Ambre' },
+  { id: 'amber', hex: '#F59E0B', name: 'Jaune Ambre' },
   { id: 'purple', hex: '#8B5CF6', name: 'Violet Électrique' },
+  { id: 'pink', hex: '#EC4899', name: 'Rose Vif' },
+  { id: 'cyan', hex: '#06B6D4', name: 'Cyan Lagon' },
 ];
 
 const STICKY_COLORS = [
-  { hex: '#FEF08A', name: 'Jaune' },
-  { hex: '#FECDD3', name: 'Rose' },
+  { hex: '#FEF08A', name: 'Jaune Pastel' },
+  { hex: '#FECDD3', name: 'Rose Pastel' },
   { hex: '#A7F3D0', name: 'Menthe' },
   { hex: '#BAE6FD', name: 'Ciel' },
   { hex: '#E9D5FF', name: 'Lavande' },
 ];
 
 const FONT_FAMILIES = [
-  { id: 'sans', name: 'Moderne (Inter)', font: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif' },
-  { id: 'serif', name: 'Éditorial (Cormorant)', font: 'Cormorant Garamond, Georgia, serif' },
-  { id: 'mono', name: 'Code (Mono)', font: 'Roboto Mono, monospace' },
+  { id: 'sans', name: 'Sans (Inter)', font: 'Inter, sans-serif' },
+  { id: 'serif', name: 'Éditorial', font: 'Georgia, serif' },
+  { id: 'mono', name: 'Monospace', font: 'monospace' },
 ];
-
-/**
- * Fusion intelligente des vecteurs locaux et distants par identifiant unique
- * Empêche l'écrasement des traits locaux par les snapshots Firebase entrants.
- */
-const mergeVectorPaths = (existingPaths, incomingPaths, myUid) => {
-  const pathMap = new Map();
-  // 1. Ingestion des chemins existants
-  existingPaths.forEach((p) => {
-    if (p && p.id) pathMap.set(p.id, p);
-  });
-  // 2. Fusion des chemins distants entrants (ajoute les nouveaux sans écraser les traits locaux en cours)
-  incomingPaths.forEach((p) => {
-    if (p && p.id) {
-      const existing = pathMap.get(p.id);
-      if (!existing) {
-        pathMap.set(p.id, { ...p, isRemote: p.authorUid !== myUid });
-      } else if (existing.isRemote) {
-        pathMap.set(p.id, { ...p, isRemote: p.authorUid !== myUid });
-      }
-    }
-  });
-  return Array.from(pathMap.values()).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0)).slice(-450);
-};
 
 export default function CollaborativeWhiteboardModal({
   isOpen,
   onClose,
-  groupId = 'demo_group_whiteboard',
+  groupId = 'default_chat',
   boardId = null,
+  workspaceId = null,
   projectTitle = 'Tableau Blanc Collaboratif',
   currentUser = null,
   darkMode = false,
@@ -70,40 +70,65 @@ export default function CollaborativeWhiteboardModal({
   onSendMessage = null,
   handleSendMessage = null,
 }) {
-  const effectiveBoardId = boardId || groupId || 'default_board';
+  const effectiveId = workspaceId || boardId || `ws_${groupId}_whiteboard`;
   const myUid = currentUser?.uid || currentUser?.id || 'local_user';
-  const myName = currentUser?.name || 'Moi';
+  const myName = currentUser?.name || currentUser?.username || 'Moi';
 
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
+  const colorInputRef = useRef(null);
 
-  // Outils Whiteboard : 'pencil' | 'brush' | 'highlighter' | 'eraser' | 'rect' | 'circle' | 'arrow' | 'sticky' | 'text' | 'hand' | 'laser'
+  // 1. Outils Whiteboard : 'pencil' | 'brush' | 'highlighter' | 'eraser' | 'rect' | 'circle' | 'arrow' | 'sticky' | 'text' | 'hand'
   const [tool, setTool] = useState('pencil');
   const [color, setColor] = useState('#C67D5B');
   const [lineWidth, setLineWidth] = useState(4);
   const [showGrid, setShowGrid] = useState(true);
 
-  // État des objets du tableau (PERSISTANCE FIRESTORE VECTORIELLE)
-  const [paths, setPaths] = useState([]);
+  // 2. Mode Immersion Absolue
+  const [isImmersiveMode, setIsImmersiveMode] = useState(false);
+
+  // 3. Séparation stricte d'état pour zéro conflit
+  const [localPaths, setLocalPaths] = useState([]);
+  const [remotePaths, setRemotePaths] = useState([]);
   const [stickyNotes, setStickyNotes] = useState([]);
   const [textElements, setTextElements] = useState([]);
-  const [redoStack, setRedoStack] = useState([]);
+  const [currentPath, setCurrentPath] = useState(null);
 
-  // Caméra infinie (Viewport Pan & Zoom)
+  // 4. Moteur d'historique Undo / Redo
+  const [history, setHistory] = useState([
+    { localPaths: [], stickyNotes: [], textElements: [] }
+  ]);
+  const [historyIndex, setHistoryIndex] = useState(0);
+
+  // 5. Caméra infinie (Viewport Pan & Zoom)
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
 
-  // Édition de texte en cours
-  const [editingTextId, setEditingTextId] = useState(null);
-
-  // Multi-utilisateurs, Versioning & Immersion
-  const [isImmersiveMode, setIsImmersiveMode] = useState(false);
+  // 6. Multi-versions & Métadonnées
   const [versionNumber, setVersionNumber] = useState(1);
   const [workspaceTitle, setWorkspaceTitle] = useState(projectTitle || 'Tableau Blanc Collaboratif');
   const [saveStatus, setSaveStatus] = useState('Synchronisé en direct 🟢');
   const [lastEditor, setLastEditor] = useState(myName);
-  const [isSendingToChat, setIsSendingToChat] = useState(false);
-  const [sendSuccessToast, setSendSuccessToast] = useState(false);
+  const [isSavingAndSharing, setIsSavingAndSharing] = useState(false);
+  const [shareSuccessToast, setShareSuccessToast] = useState(false);
+
+  // 7. Curseur P2P Collaboratif (Ghosting live)
+  const [remoteCursors, setRemoteCursors] = useState({});
+
+  // 8. État d'édition / sélection
+  const [editingTextId, setEditingTextId] = useState(null);
+  const [selectedStickyId, setSelectedStickyId] = useState(null);
+  const [resizingTextId, setResizingTextId] = useState(null);
+
+  // Références d'interaction rapide
+  const isDrawingRef = useRef(false);
+  const isPanningRef = useRef(false);
+  const startPosRef = useRef({ x: 0, y: 0 });
+  const panStartRef = useRef({ x: 0, y: 0, origPanX: 0, origPanY: 0 });
+  const draggingStickyRef = useRef(null);
+  const resizingTextRef = useRef(null);
+  const firestoreDebounceTimerRef = useRef(null);
+  const p2pBroadcastThrottleRef = useRef(0);
 
   // Verrouillage strict du scroll global du document lors de l'ouverture
   useEffect(() => {
@@ -116,37 +141,89 @@ export default function CollaborativeWhiteboardModal({
     }
   }, [isOpen]);
 
-  // Modale de publication de version au chat
-  const [isPublishModalOpen, setIsPublishModalOpen] = useState(false);
-  const [publishTitle, setPublishTitle] = useState(`${workspaceTitle} - V2`);
-  const [publishChangelog, setPublishChangelog] = useState('');
-
-  // Références d'interaction & synchronisation 0ms sans écrasement
-  const isDrawingRef = useRef(false);
-  const currentPathRef = useRef(null);
-  const startPosRef = useRef({ x: 0, y: 0 });
-  const isPanningRef = useRef(false);
-  const panStartRef = useRef({ x: 0, y: 0, origPanX: 0, origPanY: 0 });
-  const draggingStickyRef = useRef(null);
-
-  // Buffer de snapshots reçus pendant le dessin local (File d'attente anti-écrasement)
-  const pendingSnapshotRef = useRef(null);
-  const firestoreDebounceTimerRef = useRef(null);
-
   // Conversion Coordonnées Écran (Pixel) -> Coordonnées Monde (World Canvas)
   const getCanvasCoords = useCallback((e) => {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0, screenX: 0, screenY: 0 };
     const rect = canvas.getBoundingClientRect();
-    const screenX = (e.clientX !== undefined ? e.clientX : e.touches?.[0]?.clientX || 0) - rect.left;
-    const screenY = (e.clientY !== undefined ? e.clientY : e.touches?.[0]?.clientY || 0) - rect.top;
+    const clientX = e.clientX !== undefined ? e.clientX : e.touches?.[0]?.clientX || 0;
+    const clientY = e.clientY !== undefined ? e.clientY : e.touches?.[0]?.clientY || 0;
+    const screenX = clientX - rect.left;
+    const screenY = clientY - rect.top;
 
     const worldX = (screenX - pan.x) / zoom;
     const worldY = (screenY - pan.y) / zoom;
     return { x: worldX, y: worldY, screenX, screenY };
   }, [pan.x, pan.y, zoom]);
 
-  // Configuration des propriétés du contexte 2D selon l'outil (Moteur de brosses Apple-Style)
+  // ================= 2. MOTEUR D'HISTORIQUE LOCAL (Undo / Redo) =================
+  const pushToHistory = useCallback((newLocalPaths, newStickies, newTexts) => {
+    setHistory((prevHistory) => {
+      const nextHistory = prevHistory.slice(0, historyIndex + 1);
+      const snapshot = {
+        localPaths: [...newLocalPaths],
+        stickyNotes: [...newStickies],
+        textElements: [...newTexts],
+      };
+      const updated = [...nextHistory, snapshot];
+      if (updated.length > 45) updated.shift(); // Limite à 45 états
+      return updated;
+    });
+    setHistoryIndex((prevIndex) => Math.min(prevIndex + 1, 44));
+  }, [historyIndex]);
+
+  const handleUndo = useCallback(() => {
+    if (historyIndex > 0) {
+      const targetIndex = historyIndex - 1;
+      const targetState = history[targetIndex];
+      if (targetState) {
+        setLocalPaths(targetState.localPaths || []);
+        setStickyNotes(targetState.stickyNotes || []);
+        setTextElements(targetState.textElements || []);
+        setHistoryIndex(targetIndex);
+      }
+    }
+  }, [historyIndex, history]);
+
+  const handleRedo = useCallback(() => {
+    if (historyIndex < history.length - 1) {
+      const targetIndex = historyIndex + 1;
+      const targetState = history[targetIndex];
+      if (targetState) {
+        setLocalPaths(targetState.localPaths || []);
+        setStickyNotes(targetState.stickyNotes || []);
+        setTextElements(targetState.textElements || []);
+        setHistoryIndex(targetIndex);
+      }
+    }
+  }, [historyIndex, history]);
+
+  // Raccourcis clavier (Ctrl+Z, Ctrl+Y, Cmd+Z, Cmd+Shift+Z)
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e) => {
+      const isInput = e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA');
+      if (isInput) return; // Ne pas intercepter si l'utilisateur saisit du texte
+
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          handleRedo();
+        } else {
+          handleUndo();
+        }
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') {
+        e.preventDefault();
+        handleRedo();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, handleUndo, handleRedo]);
+
+  // ================= 3. RENDU DU CANVAS (60 FPS & Effet Ghosting) =================
   const applyBrushStyleToContext = (ctx, brushTool, brushColor, brushWidth, isRemote = false) => {
     ctx.lineWidth = brushWidth;
     ctx.shadowBlur = 0;
@@ -155,13 +232,17 @@ export default function CollaborativeWhiteboardModal({
     if (brushTool === 'pencil' || brushTool === 'pen') {
       ctx.lineCap = 'butt';
       ctx.lineJoin = 'miter';
-      ctx.globalAlpha = isRemote ? 0.9 : 1.0;
+      ctx.globalAlpha = isRemote ? 0.72 : 1.0;
       ctx.globalCompositeOperation = 'source-over';
       ctx.strokeStyle = brushColor;
+      if (isRemote) {
+        ctx.shadowBlur = 4;
+        ctx.shadowColor = brushColor;
+      }
     } else if (brushTool === 'brush') {
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
-      ctx.globalAlpha = isRemote ? 0.82 : 0.88;
+      ctx.globalAlpha = isRemote ? 0.68 : 0.88;
       ctx.globalCompositeOperation = 'source-over';
       ctx.shadowBlur = Math.max(2, brushWidth * 0.85);
       ctx.shadowColor = brushColor;
@@ -169,7 +250,7 @@ export default function CollaborativeWhiteboardModal({
     } else if (brushTool === 'highlighter') {
       ctx.lineCap = 'square';
       ctx.lineJoin = 'bevel';
-      ctx.globalAlpha = isRemote ? 0.25 : 0.32;
+      ctx.globalAlpha = isRemote ? 0.22 : 0.32;
       ctx.globalCompositeOperation = 'source-over';
       ctx.strokeStyle = brushColor;
     } else if (brushTool === 'eraser') {
@@ -181,14 +262,13 @@ export default function CollaborativeWhiteboardModal({
     } else {
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
-      ctx.globalAlpha = isRemote ? 0.9 : 1.0;
+      ctx.globalAlpha = isRemote ? 0.75 : 1.0;
       ctx.globalCompositeOperation = 'source-over';
       ctx.strokeStyle = brushColor;
     }
   };
 
-  // Redessine l'ensemble des vecteurs sur le canvas transparent (60 FPS)
-  const redrawCanvas = useCallback((drawPaths = paths) => {
+  const redrawCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -206,7 +286,14 @@ export default function CollaborativeWhiteboardModal({
     ctx.translate(pan.x, pan.y);
     ctx.scale(zoom, zoom);
 
-    drawPaths.forEach((path) => {
+    // Tous les traits combinés (Distants avec ghosting + Locaux + Trait en cours)
+    const allPathsToRender = [
+      ...remotePaths,
+      ...localPaths,
+      ...(currentPath ? [currentPath] : [])
+    ];
+
+    allPathsToRender.forEach((path) => {
       if (!path) return;
       ctx.save();
       ctx.beginPath();
@@ -248,9 +335,9 @@ export default function CollaborativeWhiteboardModal({
 
       ctx.restore();
     });
-  }, [paths, pan.x, pan.y, zoom]);
+  }, [remotePaths, localPaths, currentPath, pan.x, pan.y, zoom]);
 
-  // Initialisation de la taille du canvas
+  // Mise à jour de la taille du canvas
   const updateCanvasSize = useCallback(() => {
     const canvas = canvasRef.current;
     const container = containerRef.current;
@@ -275,71 +362,74 @@ export default function CollaborativeWhiteboardModal({
     }
   }, [isOpen, updateCanvasSize]);
 
-  // Sauvegarde debouncée vers Firestore pour garantir 60fps sans surcharger Firebase
+  useEffect(() => {
+    redrawCanvas();
+  }, [redrawCanvas]);
+
+  // Synchronisation Firestore Debouncée
   const debouncedSyncToFirestore = useCallback((
-    currentPaths = paths,
+    currentLocalPaths = localPaths,
+    currentRemotePaths = remotePaths,
     currentStickyNotes = stickyNotes,
     currentTextElements = textElements,
     currentVersion = versionNumber,
     currentTitle = workspaceTitle
   ) => {
-    if (!effectiveBoardId || !db) return;
+    if (!effectiveId || !db) return;
 
     if (firestoreDebounceTimerRef.current) {
       clearTimeout(firestoreDebounceTimerRef.current);
     }
 
-    setSaveStatus('Enregistrement en cours...');
+    setSaveStatus('Enregistrement...');
 
     firestoreDebounceTimerRef.current = setTimeout(async () => {
       try {
-        const docRef = doc(db, 'project_whiteboards', String(effectiveBoardId));
+        const docRef = doc(db, 'project_whiteboards', String(effectiveId));
+        const combinedPaths = [...currentRemotePaths, ...currentLocalPaths].slice(-400);
+
         const payload = {
-          boardId: effectiveBoardId,
+          boardId: effectiveId,
           groupId,
           title: currentTitle,
           versionNumber: currentVersion,
-          paths: currentPaths.slice(-350),
+          paths: combinedPaths,
           stickyNotes: currentStickyNotes,
           textElements: currentTextElements,
           updatedAt: serverTimestamp(),
           lastEditor: myName,
           lastEditorUid: myUid,
-          activeUsers: [myName, 'Collaborateurs P2P'],
         };
 
         await setDoc(docRef, payload, { merge: true });
-
-        if (groupId && groupId !== 'demo_group_whiteboard') {
-          const chatBoardRef = doc(db, 'chats', String(groupId), 'whiteboards', String(effectiveBoardId));
-          await setDoc(chatBoardRef, payload, { merge: true }).catch(() => {});
-        }
-
         setSaveStatus('Synchronisé en direct 🟢');
       } catch (err) {
         console.warn('[Firestore Whiteboard Sync] error:', err);
-        setSaveStatus('Mode P2P Direct');
+        setSaveStatus('Mode P2P Direct ⚡');
       }
-    }, 350);
-  }, [effectiveBoardId, groupId, paths, stickyNotes, textElements, versionNumber, workspaceTitle, myName, myUid]);
+    }, 380);
+  }, [effectiveId, groupId, localPaths, remotePaths, stickyNotes, textElements, versionNumber, workspaceTitle, myName, myUid]);
 
-  // MOTEUR MULTIJOUEUR P2P & SNAPSHOT FIRESTORE SÉCURISÉ CONTRE L'EFFACEMENT DES TRAITS
+  // ================= 3. SYNCHRONISATION MULTIJOUEUR (P2P + Firestore) =================
   useEffect(() => {
-    if (!isOpen || !effectiveBoardId) return;
+    if (!isOpen || !effectiveId) return;
 
-    // 1. Écoute P2P WebRTC DataChannel (0ms de latence)
-    whiteboardP2PService.joinRoom(effectiveBoardId, (event) => {
+    // 1. Connexion P2P WebRTC DataChannel (0ms latence)
+    whiteboardP2PService.joinRoom(effectiveId, (event) => {
       if (event.authorName) setLastEditor(event.authorName);
+
       if (event.type === 'path_add' && event.path) {
-        if (event.path.authorName) setLastEditor(event.path.authorName);
-        setPaths((prev) => {
-          const remotePath = { ...event.path, isRemote: true };
-          const next = [...prev, remotePath].slice(-450);
-          redrawCanvas(next);
-          return next;
-        });
+        const incoming = { ...event.path, isRemote: true };
+        setRemotePaths((prev) => [...prev, incoming].slice(-400));
+      } else if (event.type === 'cursor_move' && event.cursor) {
+        setRemoteCursors((prev) => ({
+          ...prev,
+          [event.peerId || event.cursor.authorUid || 'peer']: {
+            ...event.cursor,
+            lastSeen: Date.now(),
+          },
+        }));
       } else if (event.type === 'sticky_add' && event.sticky) {
-        if (event.sticky.authorName) setLastEditor(event.sticky.authorName);
         setStickyNotes((prev) => [...prev, event.sticky]);
       } else if (event.type === 'sticky_update' && event.sticky) {
         setStickyNotes((prev) => prev.map((s) => (s.id === event.sticky.id ? event.sticky : s)));
@@ -350,90 +440,80 @@ export default function CollaborativeWhiteboardModal({
       } else if (event.type === 'text_update' && event.text) {
         setTextElements((prev) => prev.map((t) => (t.id === event.text.id ? event.text : t)));
       } else if (event.type === 'clear') {
-        setPaths([]);
+        setLocalPaths([]);
+        setRemotePaths([]);
         setStickyNotes([]);
         setTextElements([]);
-        redrawCanvas([]);
       }
     });
 
-    // 2. Écoute Firestore Snapshot avec protection Anti-Écrasement
+    // 2. Écoute Firestore Snapshot avec protection Anti-Écrasement (Séparation des flux)
+    let unsubFirestore = () => {};
     if (db) {
       try {
-        const docRef = doc(db, 'project_whiteboards', String(effectiveBoardId));
-        const unsubFirestore = onSnapshot(docRef, (snapshot) => {
+        const docRef = doc(db, 'project_whiteboards', String(effectiveId));
+        unsubFirestore = onSnapshot(docRef, (snapshot) => {
           if (snapshot.exists()) {
             const data = snapshot.data();
-
             if (data.lastEditor) setLastEditor(data.lastEditor);
             if (data.versionNumber) setVersionNumber(data.versionNumber);
             if (data.title) setWorkspaceTitle(data.title);
 
-            // RÈGLE CRITIQUE : Si l'utilisateur est en train de dessiner, mettre en file d'attente
-            if (isDrawingRef.current) {
-              pendingSnapshotRef.current = data;
-              return;
+            // Ne pas écraser les traits locaux de l'utilisateur : on extrait uniquement les traits distants
+            if (data.paths && Array.isArray(data.paths)) {
+              const onlyRemote = data.paths
+                .filter((p) => p && p.authorUid !== myUid)
+                .map((p) => ({ ...p, isRemote: true }));
+              setRemotePaths(onlyRemote);
             }
 
-            // Fusion intelligente sans écraser les traits locaux récents
-            if (data.paths && Array.isArray(data.paths)) {
-              setPaths((prevPaths) => {
-                const merged = mergeVectorPaths(prevPaths, data.paths, myUid);
-                redrawCanvas(merged);
-                return merged;
-              });
-            }
             if (data.stickyNotes && Array.isArray(data.stickyNotes) && !draggingStickyRef.current) {
               setStickyNotes(data.stickyNotes);
             }
-            if (data.textElements && Array.isArray(data.textElements) && !editingTextId) {
+
+            if (data.textElements && Array.isArray(data.textElements) && !editingTextId && !resizingTextRef.current) {
               setTextElements(data.textElements);
             }
-            setSaveStatus('P2P Direct ⚡ 0ms Latence');
+
+            setSaveStatus('P2P Direct ⚡ 0ms');
           }
         }, (err) => {
-          console.warn('[Firestore Whiteboard] Snapshot note:', err);
+          console.warn('[Firestore Whiteboard] Note:', err);
         });
-
-        return () => {
-          unsubFirestore();
-          whiteboardP2PService.leaveRoom();
-        };
-      } catch (_) {}
+      } catch (e) {
+        console.warn('[Firestore Whiteboard] Error:', e);
+      }
     }
 
     return () => {
+      unsubFirestore();
       whiteboardP2PService.leaveRoom();
     };
-  }, [isOpen, effectiveBoardId, myUid, myName, redrawCanvas, editingTextId]);
+  }, [isOpen, effectiveId, myUid, editingTextId]);
 
-  // Traitement d'un snapshot en attente dès que l'utilisateur relâche le pinceau
-  const processPendingSnapshot = useCallback(() => {
-    if (pendingSnapshotRef.current) {
-      const data = pendingSnapshotRef.current;
-      pendingSnapshotRef.current = null;
-
-      if (data.paths && Array.isArray(data.paths)) {
-        setPaths((prevPaths) => {
-          const merged = mergeVectorPaths(prevPaths, data.paths, myUid);
-          redrawCanvas(merged);
-          return merged;
-        });
+  // ================= 1. GESTION DES COULEURS & PIPETTE =================
+  const handleOpenEyeDropper = async () => {
+    if (window.EyeDropper) {
+      try {
+        const eyeDropper = new window.EyeDropper();
+        const result = await eyeDropper.open();
+        if (result && result.sRGBHex) {
+          setColor(result.sRGBHex);
+        }
+      } catch (e) {
+        // Annulation par l'utilisateur
       }
-      if (data.stickyNotes && Array.isArray(data.stickyNotes)) {
-        setStickyNotes(data.stickyNotes);
-      }
-      if (data.textElements && Array.isArray(data.textElements)) {
-        setTextElements(data.textElements);
-      }
+    } else if (colorInputRef.current) {
+      colorInputRef.current.click();
     }
-  }, [myUid, redrawCanvas]);
+  };
 
-  // GESTION DU DESSIN VECTORIEL & PAN
+  // ================= GESTION DES POINTER EVENTS =================
   const handlePointerDown = (e) => {
     const coords = getCanvasCoords(e);
+    startPosRef.current = coords;
 
-    if (tool === 'hand' || e.button === 1 || e.spaceKey) {
+    if (tool === 'hand') {
       isPanningRef.current = true;
       panStartRef.current = {
         x: coords.screenX,
@@ -446,37 +526,37 @@ export default function CollaborativeWhiteboardModal({
 
     if (tool === 'sticky') {
       const newSticky = {
-        id: `sticky_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-        x: coords.x - 90,
-        y: coords.y - 70,
-        width: 180,
-        height: 140,
-        text: 'Nouvelle note...',
-        color: STICKY_COLORS[0].hex,
+        id: `sticky-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+        x: coords.x - 70,
+        y: coords.y - 60,
+        width: 150,
+        height: 130,
+        text: 'Nouveau Post-it',
+        color: STICKY_COLORS[Math.floor(Math.random() * STICKY_COLORS.length)].hex,
         authorName: myName,
         authorUid: myUid,
         createdAt: Date.now(),
       };
       const nextStickies = [...stickyNotes, newSticky];
       setStickyNotes(nextStickies);
-      whiteboardP2PService.broadcast({ type: 'sticky_add', sticky: newSticky });
-      debouncedSyncToFirestore(paths, nextStickies, textElements);
+      pushToHistory(localPaths, nextStickies, textElements);
+      whiteboardP2PService.broadcastEvent('sticky_add', { sticky: newSticky });
+      debouncedSyncToFirestore(localPaths, remotePaths, nextStickies, textElements);
       setTool('pencil');
       return;
     }
 
     if (tool === 'text') {
       const newText = {
-        id: `text_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        id: `text-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
         x: coords.x,
         y: coords.y,
+        width: 220,
+        height: 60,
         text: 'Votre texte...',
-        color: color === '#FFFFFF' ? (darkMode ? '#FFFFFF' : '#1F2937') : color,
+        color: color === '#FFFFFF' && !darkMode ? '#1F2937' : color,
         fontSize: 24,
-        fontFamily: FONT_FAMILIES[0].id,
-        isBold: false,
-        isItalic: false,
-        isUnderline: false,
+        fontFamily: 'Inter, sans-serif',
         authorName: myName,
         authorUid: myUid,
         createdAt: Date.now(),
@@ -484,66 +564,75 @@ export default function CollaborativeWhiteboardModal({
       const nextTexts = [...textElements, newText];
       setTextElements(nextTexts);
       setEditingTextId(newText.id);
-      whiteboardP2PService.broadcast({ type: 'text_add', text: newText });
-      debouncedSyncToFirestore(paths, stickyNotes, nextTexts);
+      pushToHistory(localPaths, stickyNotes, nextTexts);
+      whiteboardP2PService.broadcastEvent('text_add', { text: newText });
+      debouncedSyncToFirestore(localPaths, remotePaths, stickyNotes, nextTexts);
       setTool('pencil');
       return;
     }
 
-    // Début de tracé vectoriel
+    // Outils de dessin
     isDrawingRef.current = true;
-    startPosRef.current = { x: coords.x, y: coords.y };
 
-    const newPathId = `path_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-
-    if (tool === 'rect' || tool === 'circle') {
-      currentPathRef.current = {
-        id: newPathId,
+    if (tool === 'pencil' || tool === 'brush' || tool === 'highlighter' || tool === 'eraser') {
+      const newPath = {
+        id: `p-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+        type: 'freehand',
+        tool,
+        color,
+        lineWidth,
+        points: [{ x: coords.x, y: coords.y }],
+        authorName: myName,
+        authorUid: myUid,
+        createdAt: Date.now(),
+      };
+      setCurrentPath(newPath);
+    } else if (tool === 'rect' || tool === 'circle') {
+      const shapePath = {
+        id: `s-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
         type: tool,
-        tool: 'pencil',
+        tool,
+        color,
+        lineWidth,
         x: coords.x,
         y: coords.y,
         width: 0,
         height: 0,
-        color,
-        lineWidth,
-        authorUid: myUid,
         authorName: myName,
+        authorUid: myUid,
         createdAt: Date.now(),
       };
+      setCurrentPath(shapePath);
     } else if (tool === 'arrow') {
-      currentPathRef.current = {
-        id: newPathId,
+      const arrowPath = {
+        id: `a-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
         type: 'arrow',
-        tool: 'pencil',
+        tool,
+        color,
+        lineWidth,
         fromX: coords.x,
         fromY: coords.y,
         toX: coords.x,
         toY: coords.y,
-        color,
-        lineWidth,
-        authorUid: myUid,
         authorName: myName,
+        authorUid: myUid,
         createdAt: Date.now(),
       };
-    } else {
-      // Pinceaux libres (pencil, brush, highlighter, eraser)
-      currentPathRef.current = {
-        id: newPathId,
-        type: 'freehand',
-        tool,
-        color,
-        lineWidth: tool === 'eraser' ? lineWidth * 3 : lineWidth,
-        points: [{ x: coords.x, y: coords.y }],
-        authorUid: myUid,
-        authorName: myName,
-        createdAt: Date.now(),
-      };
+      setCurrentPath(arrowPath);
     }
   };
 
   const handlePointerMove = (e) => {
     const coords = getCanvasCoords(e);
+
+    // Émission du curseur collaboratif (throttlé)
+    const now = Date.now();
+    if (now - p2pBroadcastThrottleRef.current > 60) {
+      p2pBroadcastThrottleRef.current = now;
+      whiteboardP2PService.broadcastEvent('cursor_move', {
+        cursor: { x: coords.x, y: coords.y, authorName: myName, authorUid: myUid, color },
+      });
+    }
 
     if (isPanningRef.current) {
       const dx = coords.screenX - panStartRef.current.x;
@@ -555,1028 +644,996 @@ export default function CollaborativeWhiteboardModal({
       return;
     }
 
-    if (!isDrawingRef.current || !currentPathRef.current) return;
+    if (draggingStickyRef.current) {
+      const { id, startX, startY, origX, origY } = draggingStickyRef.current;
+      const dx = coords.x - startX;
+      const dy = coords.y - startY;
+      setStickyNotes((prev) =>
+        prev.map((s) => (s.id === id ? { ...s, x: origX + dx, y: origY + dy } : s))
+      );
+      return;
+    }
 
-    const cur = currentPathRef.current;
+    // Redimensionnement de zone de texte (Scale-to-fit proportionnel)
+    if (resizingTextRef.current) {
+      const { id, startX, startY, origW, origH, textStr } = resizingTextRef.current;
+      const dw = coords.x - startX;
+      const dh = coords.y - startY;
+      const newW = Math.max(100, origW + dw);
+      const newH = Math.max(40, origH + dh);
 
-    if (cur.type === 'freehand') {
-      cur.points.push({ x: coords.x, y: coords.y });
-      // Rendu 60 FPS immédiat
-      redrawCanvas([...paths, cur]);
-    } else if (cur.type === 'rect' || cur.type === 'circle') {
-      cur.width = coords.x - startPosRef.current.x;
-      cur.height = coords.y - startPosRef.current.y;
-      redrawCanvas([...paths, cur]);
-    } else if (cur.type === 'arrow') {
-      cur.toX = coords.x;
-      cur.toY = coords.y;
-      redrawCanvas([...paths, cur]);
+      // Calcul dynamique de la taille de police proportionnelle
+      const len = Math.max(1, textStr?.length || 1);
+      const autoFontSize = Math.max(12, Math.min(84, Math.round((newW / len) * 2.2 + newH * 0.25)));
+
+      setTextElements((prev) =>
+        prev.map((t) =>
+          t.id === id
+            ? { ...t, width: newW, height: newH, fontSize: autoFontSize }
+            : t
+        )
+      );
+      return;
+    }
+
+    if (!isDrawingRef.current || !currentPath) return;
+
+    if (currentPath.type === 'freehand') {
+      setCurrentPath((prev) => ({
+        ...prev,
+        points: [...prev.points, { x: coords.x, y: coords.y }],
+      }));
+    } else if (currentPath.type === 'rect' || currentPath.type === 'circle') {
+      const w = coords.x - startPosRef.current.x;
+      const h = coords.y - startPosRef.current.y;
+      setCurrentPath((prev) => ({
+        ...prev,
+        x: w < 0 ? coords.x : startPosRef.current.x,
+        y: h < 0 ? coords.y : startPosRef.current.y,
+        width: Math.abs(w),
+        height: Math.abs(h),
+      }));
+    } else if (currentPath.type === 'arrow') {
+      setCurrentPath((prev) => ({
+        ...prev,
+        toX: coords.x,
+        toY: coords.y,
+      }));
     }
   };
 
   const handlePointerUp = () => {
     if (isPanningRef.current) {
       isPanningRef.current = false;
-      return;
     }
 
-    if (isDrawingRef.current && currentPathRef.current) {
-      const finishedPath = { ...currentPathRef.current };
+    if (draggingStickyRef.current) {
+      const dragged = stickyNotes.find((s) => s.id === draggingStickyRef.current.id);
+      if (dragged) {
+        whiteboardP2PService.broadcastEvent('sticky_update', { sticky: dragged });
+        pushToHistory(localPaths, stickyNotes, textElements);
+        debouncedSyncToFirestore(localPaths, remotePaths, stickyNotes, textElements);
+      }
+      draggingStickyRef.current = null;
+    }
+
+    if (resizingTextRef.current) {
+      const resized = textElements.find((t) => t.id === resizingTextRef.current.id);
+      if (resized) {
+        whiteboardP2PService.broadcastEvent('text_update', { text: resized });
+        pushToHistory(localPaths, stickyNotes, textElements);
+        debouncedSyncToFirestore(localPaths, remotePaths, stickyNotes, textElements);
+      }
+      resizingTextRef.current = null;
+    }
+
+    if (isDrawingRef.current && currentPath) {
       isDrawingRef.current = false;
-      currentPathRef.current = null;
+      const nextLocalPaths = [...localPaths, currentPath];
+      setLocalPaths(nextLocalPaths);
+      setCurrentPath(null);
 
-      const nextPaths = [...paths, finishedPath].slice(-450);
-      setPaths(nextPaths);
-      setRedoStack([]);
-      redrawCanvas(nextPaths);
+      // 1. Broadcast P2P direct
+      whiteboardP2PService.broadcastEvent('path_add', { path: currentPath });
 
-      // 1. Diffusion P2P immédiate
-      whiteboardP2PService.broadcast({ type: 'path_add', path: finishedPath });
+      // 2. Empilement dans l'historique
+      pushToHistory(nextLocalPaths, stickyNotes, textElements);
 
-      // 2. Traitement d'un éventuel snapshot en file d'attente
-      processPendingSnapshot();
-
-      // 3. Sauvegarde debouncée Firestore
-      debouncedSyncToFirestore(nextPaths, stickyNotes, textElements);
-    }
-
-    isDrawingRef.current = false;
-  };
-
-  // Annuler (Undo)
-  const handleUndo = () => {
-    if (paths.length === 0) return;
-    const last = paths[paths.length - 1];
-    const nextPaths = paths.slice(0, -1);
-    setPaths(nextPaths);
-    setRedoStack((prev) => [...prev, last]);
-    redrawCanvas(nextPaths);
-    debouncedSyncToFirestore(nextPaths, stickyNotes, textElements);
-  };
-
-  // Rétablir (Redo)
-  const handleRedo = () => {
-    if (redoStack.length === 0) return;
-    const restored = redoStack[redoStack.length - 1];
-    const nextRedo = redoStack.slice(0, -1);
-    const nextPaths = [...paths, restored];
-    setPaths(nextPaths);
-    setRedoStack(nextRedo);
-    redrawCanvas(nextPaths);
-    debouncedSyncToFirestore(nextPaths, stickyNotes, textElements);
-  };
-
-  // Effacer tout le tableau
-  const handleClearAll = () => {
-    if (window.confirm('Voulez-vous vraiment effacer l’ensemble du tableau blanc ?')) {
-      setPaths([]);
-      setStickyNotes([]);
-      setTextElements([]);
-      setRedoStack([]);
-      redrawCanvas([]);
-      whiteboardP2PService.broadcast({ type: 'clear' });
-      debouncedSyncToFirestore([], [], []);
+      // 3. Debounce vers Firestore
+      debouncedSyncToFirestore(nextLocalPaths, remotePaths, stickyNotes, textElements);
     }
   };
 
-  // Zoomer / Dézoomer
-  const handleZoomIn = () => setZoom((z) => Math.min(3, +(z + 0.15).toFixed(2)));
-  const handleZoomOut = () => setZoom((z) => Math.max(0.3, +(z - 0.15).toFixed(2)));
-  const handleResetZoom = () => {
-    setZoom(1);
-    setPan({ x: 0, y: 0 });
-  };
-
-  // Export Image PNG
-  const handleExportPNG = () => {
+  // ================= 4. GESTION DES VERSIONS & EXPORT CHAT =================
+  const generateBoundingBoxPreview = useCallback(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas) return '';
+
+    const allPaths = [...remotePaths, ...localPaths];
+
+    // Calcul de l'emprise réelle du dessin (Bounding Box)
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+
+    allPaths.forEach((p) => {
+      if (p.type === 'freehand' && p.points) {
+        p.points.forEach((pt) => {
+          if (pt.x < minX) minX = pt.x;
+          if (pt.y < minY) minY = pt.y;
+          if (pt.x > maxX) maxX = pt.x;
+          if (pt.y > maxY) maxY = pt.y;
+        });
+      } else if (p.x !== undefined && p.y !== undefined && p.width !== undefined && p.height !== undefined) {
+        if (p.x < minX) minX = p.x;
+        if (p.y < minY) minY = p.y;
+        if (p.x + p.width > maxX) maxX = p.x + p.width;
+        if (p.y + p.height > maxY) maxY = p.y + p.height;
+      } else if (p.fromX !== undefined) {
+        minX = Math.min(minX, p.fromX, p.toX);
+        minY = Math.min(minY, p.fromY, p.toY);
+        maxX = Math.max(maxX, p.fromX, p.toX);
+        maxY = Math.max(maxY, p.fromY, p.toY);
+      }
+    });
+
+    stickyNotes.forEach((s) => {
+      minX = Math.min(minX, s.x);
+      minY = Math.min(minY, s.y);
+      maxX = Math.max(maxX, s.x + (s.width || 150));
+      maxY = Math.max(maxY, s.y + (s.height || 130));
+    });
+
+    textElements.forEach((t) => {
+      minX = Math.min(minX, t.x);
+      minY = Math.min(minY, t.y);
+      maxX = Math.max(maxX, t.x + (t.width || 200));
+      maxY = Math.max(maxY, t.y + (t.height || 60));
+    });
+
+    const padding = 50;
+    const targetW = 640;
+    const targetH = 420;
 
     const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = canvas.width;
-    tempCanvas.height = canvas.height;
-    const tCtx = tempCanvas.getContext('2d');
+    tempCanvas.width = targetW;
+    tempCanvas.height = targetH;
+    const ctx = tempCanvas.getContext('2d');
 
-    tCtx.fillStyle = darkMode ? '#181412' : '#FFFFFF';
-    tCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-    tCtx.drawImage(canvas, 0, 0);
+    // Fond neutre élégant
+    ctx.fillStyle = darkMode ? '#181411' : '#FAF8F5';
+    ctx.fillRect(0, 0, targetW, targetH);
 
-    const link = document.createElement('a');
-    link.download = `whiteboard-${workspaceTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}-V${versionNumber}.png`;
-    link.href = tempCanvas.toDataURL('image/png');
-    link.click();
-  };
+    // Dessin rogné ou plein écran selon contenu
+    if (minX !== Infinity && maxX > minX && maxY > minY) {
+      const contentW = maxX - minX + padding * 2;
+      const contentH = maxY - minY + padding * 2;
+      const scale = Math.min(targetW / contentW, targetH / contentH);
 
-  // Générer un snapshot thumbnail haute définition
-  const generateSnapshotDataUrl = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return null;
-    try {
-      const snapCanvas = document.createElement('canvas');
-      snapCanvas.width = 480;
-      snapCanvas.height = 270;
-      const sCtx = snapCanvas.getContext('2d');
-      sCtx.fillStyle = darkMode ? '#181412' : '#FAF7F2';
-      sCtx.fillRect(0, 0, snapCanvas.width, snapCanvas.height);
-      sCtx.drawImage(canvas, 0, 0, snapCanvas.width, snapCanvas.height);
-      return snapCanvas.toDataURL('image/png', 0.85);
-    } catch (_) {
-      return null;
+      ctx.save();
+      ctx.translate((targetW - contentW * scale) / 2, (targetH - contentH * scale) / 2);
+      ctx.scale(scale, scale);
+      ctx.translate(-minX + padding, -minY + padding);
+
+      // Rendu des chemins
+      allPaths.forEach((p) => {
+        ctx.save();
+        ctx.beginPath();
+        applyBrushStyleToContext(ctx, p.tool, p.color, p.lineWidth, false);
+        if (p.type === 'freehand' && p.points && p.points.length > 0) {
+          ctx.moveTo(p.points[0].x, p.points[0].y);
+          for (let i = 1; i < p.points.length; i++) {
+            ctx.lineTo(p.points[i].x, p.points[i].y);
+          }
+          ctx.stroke();
+        } else if (p.type === 'rect') {
+          ctx.strokeRect(p.x, p.y, p.width, p.height);
+        } else if (p.type === 'circle') {
+          ctx.beginPath();
+          const rx = Math.abs(p.width) / 2;
+          const ry = Math.abs(p.height) / 2;
+          ctx.ellipse(p.x + p.width / 2, p.y + p.height / 2, rx, ry, 0, 0, 2 * Math.PI);
+          ctx.stroke();
+        }
+        ctx.restore();
+      });
+
+      ctx.restore();
+    } else {
+      ctx.drawImage(canvas, 0, 0, targetW, targetH);
     }
-  };
 
-  // Déclencher la modale de publication de version au chat
-  const handleOpenPublishModal = () => {
-    setPublishTitle(`${workspaceTitle} - V${versionNumber + 1}`);
-    setPublishChangelog('');
-    setIsPublishModalOpen(true);
-  };
+    return tempCanvas.toDataURL('image/jpeg', 0.88);
+  }, [remotePaths, localPaths, stickyNotes, textElements, darkMode]);
 
-  // Confirmer l'envoi de la version dans le Chat
-  const handleConfirmPublishToChat = async () => {
-    if (isSendingToChat) return;
-    setIsSendingToChat(true);
-
-    const nextVer = versionNumber + 1;
-    const finalTitle = publishTitle.trim() || `${workspaceTitle} - V${nextVer}`;
-    const snapshotUrl = generateSnapshotDataUrl();
+  const handleSaveAndShare = async () => {
+    if (isSavingAndSharing) return;
+    setIsSavingAndSharing(true);
+    setSaveStatus('Génération de la version...');
 
     try {
-      setVersionNumber(nextVer);
-      setWorkspaceTitle(finalTitle);
+      // 1. Snapshot rogné sur Bounding Box
+      const previewUrl = generateBoundingBoxPreview();
 
-      const sendFn = onSendMessage || handleSendMessage;
+      // 2. Sauvegarde de la version dans Firestore
+      const res = await saveWorkspaceVersion({
+        workspaceId: effectiveId,
+        chatId: groupId,
+        type: WORKSPACE_TYPES.WHITEBOARD,
+        title: workspaceTitle,
+        data: { paths: [...remotePaths, ...localPaths], stickyNotes, textElements },
+        previewUrl,
+        currentUser,
+        changeSummary: `Version ${versionNumber + 1}`,
+      });
+
+      const nextVersion = res.version || versionNumber + 1;
+      setVersionNumber(nextVersion);
+
+      // 3. Payload d'invitation conforme
+      const invitePayload = {
+        type: 'workspace_invite',
+        kind: 'workspace_invite',
+        workspaceType: 'whiteboard',
+        workspaceId: effectiveId,
+        boardId: effectiveId,
+        version: nextVersion,
+        previewUrl,
+        workspaceTitle: workspaceTitle,
+        text: `🎨 Tableau Blanc Collaboratif partagé (Version V${nextVersion})`,
+        timestamp: Date.now(),
+      };
+
+      // 4. Déclenchement de l'émission chat
+      const sendFn = onSendMessage || handleSendMessage || onSendToChat;
       if (typeof sendFn === 'function') {
-        sendFn({
-          text: `Nouvelle version du tableau blanc disponible (${finalTitle} - V${nextVer})`,
-          type: 'workspace_invite',
-          kind: 'workspace_invite',
-          workspaceType: 'whiteboard',
-          workspaceTitle: finalTitle,
-          boardId: effectiveBoardId,
-          version: `V${nextVer}`,
-          versionNumber: nextVer,
-          previewUrl: snapshotUrl,
-        });
-      } else {
-        console.error("CRITICAL ERROR: onSendMessage prop is missing in CollaborativeWhiteboardModal");
+        sendFn(invitePayload);
       }
 
-      if (typeof onSendToChat === 'function') {
-        onSendToChat(effectiveBoardId, nextVer);
-      }
-
-      setIsPublishModalOpen(false);
-      setSendSuccessToast(true);
-      setTimeout(() => setSendSuccessToast(false), 4000);
+      setSaveStatus(`Version V${nextVersion} enregistrée et partagée ! ✨`);
+      setShareSuccessToast(true);
+      setTimeout(() => setShareSuccessToast(false), 3500);
     } catch (err) {
-      console.warn('[Whiteboard] Publish to chat error:', err);
+      console.error('[CollaborativeWhiteboard] Save & Share error:', err);
+      setSaveStatus('Erreur de sauvegarde');
     } finally {
-      setIsSendingToChat(false);
+      setIsSavingAndSharing(false);
     }
   };
 
   if (!isOpen) return null;
 
-  return createPortal(
+  const modalContent = (
     <div
+      ref={containerRef}
       style={{
         position: 'fixed',
         inset: 0,
         zIndex: 999999,
         width: '100vw',
         height: '100dvh',
-        backgroundColor: darkMode ? '#120F0D' : '#F5F0E8',
+        backgroundColor: darkMode ? '#12100E' : '#FDFBF7',
+        color: darkMode ? '#FAF7F2' : '#1F2937',
         display: 'flex',
         flexDirection: 'column',
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
+        touchAction: 'none',
         overflow: 'hidden',
         pointerEvents: 'auto',
       }}
     >
-      {/* BADGE DE TRAÇABILITÉ COLLABORATIVE ("Modifié par...") */}
-      <div
-        style={{
-          position: 'absolute',
-          top: isImmersiveMode ? '16px' : '72px',
-          left: '16px',
-          zIndex: 9999,
-          backgroundColor: darkMode ? 'rgba(28,24,22,0.88)' : 'rgba(255,255,255,0.88)',
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)',
-          border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.1)',
-          borderRadius: '999px',
-          padding: '4px 12px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px',
-          fontSize: '11px',
-          fontWeight: '700',
-          color: darkMode ? '#FAF7F2' : '#3D3530',
-          boxShadow: '0 4px 14px rgba(0,0,0,0.12)',
-          pointerEvents: 'none',
-          transition: 'top 0.3s cubic-bezier(0.22, 1, 0.36, 1)',
-        }}
-      >
-        <span
+      {/* 1. EN-TÊTE PRINCIPAL (Masqué en mode immersion) */}
+      {!isImmersiveMode && (
+        <header
           style={{
-            width: '7px',
-            height: '7px',
-            borderRadius: '50%',
-            backgroundColor: '#10B981',
-            boxShadow: '0 0 6px #10B981',
+            height: '60px',
+            padding: '0 20px',
+            borderBottom: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+            backgroundColor: darkMode ? 'rgba(21,18,15,0.85)' : 'rgba(255,255,255,0.85)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexShrink: 0,
+            zIndex: 10,
           }}
-        />
-        <span>
-          Dernière modification par : <strong style={{ color: 'var(--accent-primary, #C67D5B)' }}>{lastEditor || myName}</strong>
-        </span>
-      </div>
+        >
+          {/* Titre & Statut */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div
+              style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)',
+                color: '#FFF',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 4px 14px rgba(198,125,91,0.35)',
+              }}
+            >
+              <Brush size={20} />
+            </div>
 
-      {/* HEADER SUPÉRIEUR (MASQUÉ EN MODE IMMERSION) */}
-      <header
-        style={{
-          padding: '12px 20px',
-          borderBottom: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid #E8DDD3',
-          backgroundColor: darkMode ? 'rgba(28,24,22,0.94)' : 'rgba(250,247,242,0.94)',
-          backdropFilter: 'blur(16px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '12px',
-          zIndex: 30,
-          transition: 'all 0.3s cubic-bezier(0.22, 1, 0.36, 1)',
-          opacity: isImmersiveMode ? 0 : 1,
-          pointerEvents: isImmersiveMode ? 'none' : 'auto',
-          transform: isImmersiveMode ? 'translateY(-100%)' : 'translateY(0)',
-          position: 'relative',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div
-            style={{
-              width: '38px',
-              height: '38px',
-              borderRadius: '12px',
-              backgroundColor: 'rgba(198,125,91,0.18)',
-              color: '#C67D5B',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Brush size={20} />
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <input
+                  type="text"
+                  value={workspaceTitle}
+                  onChange={(e) => setWorkspaceTitle(e.target.value)}
+                  style={{
+                    fontSize: '15px',
+                    fontWeight: '900',
+                    background: 'none',
+                    border: 'none',
+                    outline: 'none',
+                    color: 'inherit',
+                    padding: 0,
+                    maxWidth: '220px',
+                  }}
+                />
+                <span
+                  style={{
+                    fontSize: '10.5px',
+                    fontWeight: '800',
+                    backgroundColor: 'rgba(198,125,91,0.2)',
+                    color: '#C67D5B',
+                    padding: '2px 7px',
+                    borderRadius: '6px',
+                  }}
+                >
+                  V{versionNumber}
+                </span>
+              </div>
+              <div style={{ fontSize: '11px', color: darkMode ? '#A8998C' : '#6B7280', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span>{saveStatus}</span>
+                <span>•</span>
+                <span>Modifié par <strong>{lastEditor}</strong></span>
+              </div>
+            </div>
           </div>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <input
-                type="text"
-                value={workspaceTitle}
-                onChange={(e) => {
-                  setWorkspaceTitle(e.target.value);
-                  debouncedSyncToFirestore(paths, stickyNotes, textElements, versionNumber, e.target.value);
-                }}
+
+          {/* Boutons d'action Header */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            {/* Mode Immersion Absolue */}
+            <button
+              type="button"
+              onClick={() => setIsImmersiveMode(true)}
+              className="premium-button"
+              style={{
+                padding: '8px 14px',
+                borderRadius: '10px',
+                border: '1px solid var(--border-color, rgba(0,0,0,0.1))',
+                backgroundColor: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                color: 'inherit',
+                fontSize: '12px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+              title="Plein écran (Cacher les outils)"
+            >
+              <EyeOff size={15} />
+              <span className="hide-on-mobile">Immersion</span>
+            </button>
+
+            {/* Sauvegarder & Partager */}
+            <button
+              type="button"
+              disabled={isSavingAndSharing}
+              onClick={handleSaveAndShare}
+              className="premium-button"
+              style={{
+                padding: '8px 16px',
+                borderRadius: '10px',
+                border: 'none',
+                background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)',
+                color: '#FFF',
+                fontSize: '12.5px',
+                fontWeight: '800',
+                cursor: isSavingAndSharing ? 'not-allowed' : 'pointer',
+                boxShadow: '0 4px 14px rgba(198,125,91,0.35)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              {isSavingAndSharing ? <Sparkles size={15} /> : <Share2 size={15} />}
+              <span>{isSavingAndSharing ? 'Enregistrement...' : 'Sauvegarder & Partager'}</span>
+            </button>
+
+            {/* Fermer */}
+            {onClose && (
+              <button
+                type="button"
+                onClick={onClose}
+                className="premium-button"
                 style={{
-                  background: 'transparent',
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '50%',
                   border: 'none',
-                  outline: 'none',
-                  fontSize: '16px',
-                  fontWeight: '800',
-                  color: darkMode ? '#FAF7F2' : '#3D3530',
-                  fontFamily: 'inherit',
-                  maxWidth: '240px',
-                }}
-              />
-              <span
-                style={{
-                  backgroundColor: 'rgba(198,125,91,0.2)',
-                  color: '#C67D5B',
-                  borderRadius: '999px',
-                  padding: '2px 8px',
-                  fontSize: '11px',
-                  fontWeight: '800',
+                  backgroundColor: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+                  color: 'inherit',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
                 }}
               >
-                V{versionNumber}
-              </span>
-            </div>
-            <div style={{ fontSize: '11px', color: '#10B981', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span>{saveStatus}</span>
-              <span style={{ color: darkMode ? '#8E857E' : '#A89E95' }}>• {paths.length} traits vectoriels</span>
-            </div>
+                <X size={18} />
+              </button>
+            )}
           </div>
+        </header>
+      )}
+
+      {/* BOUTON FLOTTANT DE SORTIE D'IMMERSION */}
+      {isImmersiveMode && (
+        <button
+          type="button"
+          onClick={() => setIsImmersiveMode(false)}
+          className="premium-button"
+          style={{
+            position: 'fixed',
+            top: '16px',
+            right: '16px',
+            zIndex: 1000000,
+            padding: '10px 16px',
+            borderRadius: '999px',
+            border: '1px solid rgba(255,255,255,0.15)',
+            backgroundColor: darkMode ? 'rgba(26,22,19,0.85)' : 'rgba(255,255,255,0.85)',
+            backdropFilter: 'blur(16px)',
+            color: 'inherit',
+            fontSize: '12.5px',
+            fontWeight: '800',
+            cursor: 'pointer',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+          }}
+        >
+          <Eye size={16} color="#C67D5B" />
+          <span>Afficher les outils</span>
+        </button>
+      )}
+
+      {/* TOAST DE SUCCÈS DE PARTAGE */}
+      {shareSuccessToast && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: '84px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 1000000,
+            backgroundColor: '#10B981',
+            color: '#FFF',
+            padding: '10px 20px',
+            borderRadius: '999px',
+            fontWeight: '800',
+            fontSize: '13px',
+            boxShadow: '0 10px 30px rgba(16,185,129,0.4)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            animation: 'fadeIn 0.2s ease',
+          }}
+        >
+          <Check size={18} />
+          Version V{versionNumber} sauvegardée et publiée dans le chat !
         </div>
+      )}
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {/* BOUTON EXPORT PNG */}
-          <button
-            type="button"
-            onClick={handleExportPNG}
-            style={{
-              border: 'none',
-              backgroundColor: darkMode ? 'rgba(255,255,255,0.08)' : '#EFE8DE',
-              color: darkMode ? '#FAF7F2' : '#3D3530',
-              borderRadius: '10px',
-              padding: '7px 12px',
-              fontSize: '12px',
-              fontWeight: '700',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-            }}
-            title="Exporter l'image PNG"
-          >
-            <Download size={14} />
-            <span className="hidden-mobile">Exporter</span>
-          </button>
-
-          {/* BOUTON PUBLIER / ENVOYER AU CHAT */}
-          <button
-            type="button"
-            onClick={handleOpenPublishModal}
-            className="premium-button"
-            style={{
-              border: 'none',
-              background: 'linear-gradient(135deg, #C67D5B 0%, #B86B49 100%)',
-              color: '#FFFFFF',
-              borderRadius: '10px',
-              padding: '7px 14px',
-              fontSize: '12px',
-              fontWeight: '800',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              boxShadow: '0 4px 14px rgba(198,125,91,0.3)',
-            }}
-          >
-            <Share2 size={14} />
-            <span>Mettre à jour au Chat (V{versionNumber + 1})</span>
-          </button>
-
-          {/* BOUTON FERMER */}
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              border: 'none',
-              backgroundColor: 'transparent',
-              color: darkMode ? '#A89E95' : '#6B5E54',
-              width: '34px',
-              height: '34px',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-            }}
-          >
-            <X size={18} />
-          </button>
-        </div>
-      </header>
-
-      {/* BOUTON FLOTTANT DISCRET POUR LE MODE IMMERSION (100% VISIBLE EN TOUT TEMPS) */}
-      <button
-        type="button"
-        onClick={() => setIsImmersiveMode(!isImmersiveMode)}
-        style={{
-          position: 'fixed',
-          top: isImmersiveMode ? '16px' : '72px',
-          right: '20px',
-          zIndex: 100020,
-          border: 'none',
-          backgroundColor: isImmersiveMode ? 'rgba(198,125,91,0.92)' : 'rgba(28,24,22,0.72)',
-          color: '#FFFFFF',
-          padding: '8px 14px',
-          borderRadius: '999px',
-          fontSize: '12px',
-          fontWeight: '800',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px',
-          cursor: 'pointer',
-          boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
-          transition: 'all 0.25s cubic-bezier(0.22, 1, 0.36, 1)',
-        }}
-        title="Basculer le mode immersion (plein écran 100% Canvas)"
-      >
-        {isImmersiveMode ? <Eye size={15} /> : <EyeOff size={15} />}
-        <span>{isImmersiveMode ? 'Quitter Immersion' : 'Mode Immersion'}</span>
-      </button>
-
-      {/* ZONE CENTRALE DU CANVAS VECTORIEL (CANVAS PRINCIPAL) */}
+      {/* 2. ZONE DE DESSIN CANVAS 100% PLEIN ÉCRAN */}
       <div
-        ref={containerRef}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerLeave={handlePointerUp}
         style={{
           flex: 1,
+          position: 'relative',
           width: '100%',
           height: '100%',
-          position: 'relative',
           overflow: 'hidden',
-          cursor: tool === 'hand' ? (isPanningRef.current ? 'grabbing' : 'grab') : 'crosshair',
-          backgroundColor: darkMode ? '#181412' : '#FAF7F2',
+          backgroundColor: darkMode ? '#12100E' : '#FDFBF7',
           backgroundImage: showGrid
-            ? (darkMode
-                ? 'radial-gradient(rgba(255, 255, 255, 0.12) 1.2px, transparent 1.2px)'
-                : 'radial-gradient(rgba(61, 53, 48, 0.15) 1.2px, transparent 1.2px)')
+            ? darkMode
+              ? 'radial-gradient(circle, rgba(255,255,255,0.08) 1px, transparent 1px)'
+              : 'radial-gradient(circle, rgba(0,0,0,0.08) 1px, transparent 1px)'
             : 'none',
           backgroundSize: `${24 * zoom}px ${24 * zoom}px`,
           backgroundPosition: `${pan.x}px ${pan.y}px`,
-          touchAction: 'none',
         }}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
       >
         <canvas
           ref={canvasRef}
           style={{
             position: 'absolute',
             inset: 0,
-            pointerEvents: 'none',
+            width: '100%',
+            height: '100%',
+            cursor: tool === 'hand' ? 'grab' : tool === 'eraser' ? 'cell' : 'crosshair',
           }}
         />
 
-        {/* RENDU DES STICKY NOTES VECTORIELLES */}
+        {/* POST-ITS (STICKY NOTES) */}
         {stickyNotes.map((sticky) => (
           <div
             key={sticky.id}
+            onPointerDown={(e) => {
+              e.stopPropagation();
+              setSelectedStickyId(sticky.id);
+              const coords = getCanvasCoords(e);
+              draggingStickyRef.current = {
+                id: sticky.id,
+                startX: coords.x,
+                startY: coords.y,
+                origX: sticky.x,
+                origY: sticky.y,
+              };
+            }}
             style={{
               position: 'absolute',
-              left: `${sticky.x * zoom + pan.x}px`,
-              top: `${sticky.y * zoom + pan.y}px`,
-              width: `${sticky.width * zoom}px`,
-              minHeight: `${sticky.height * zoom}px`,
+              left: `${pan.x + sticky.x * zoom}px`,
+              top: `${pan.y + sticky.y * zoom}px`,
+              width: `${(sticky.width || 150) * zoom}px`,
+              minHeight: `${(sticky.height || 130) * zoom}px`,
               backgroundColor: sticky.color || '#FEF08A',
               color: '#1F2937',
               borderRadius: '12px',
-              padding: '10px 12px',
-              boxShadow: '0 10px 25px rgba(0,0,0,0.18)',
-              transform: `scale(${zoom})`,
+              padding: `${12 * zoom}px`,
+              boxShadow: '0 8px 24px rgba(0,0,0,0.15)',
+              zIndex: selectedStickyId === sticky.id ? 50 : 20,
+              cursor: 'move',
               transformOrigin: 'top left',
-              zIndex: 10,
               display: 'flex',
               flexDirection: 'column',
               boxSizing: 'border-box',
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-              <span style={{ fontSize: '10px', fontWeight: '800', opacity: 0.6 }}>{sticky.authorName || 'Note'}</span>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+              <span style={{ fontSize: `${9 * zoom}px`, fontWeight: '800', color: 'rgba(0,0,0,0.5)' }}>
+                {sticky.authorName || 'Post-it'}
+              </span>
               <button
                 type="button"
                 onClick={(e) => {
                   e.stopPropagation();
                   const nextStickies = stickyNotes.filter((s) => s.id !== sticky.id);
                   setStickyNotes(nextStickies);
-                  whiteboardP2PService.broadcast({ type: 'sticky_delete', id: sticky.id });
-                  debouncedSyncToFirestore(paths, nextStickies, textElements);
+                  whiteboardP2PService.broadcastEvent('sticky_delete', { id: sticky.id });
+                  pushToHistory(localPaths, nextStickies, textElements);
+                  debouncedSyncToFirestore(localPaths, remotePaths, nextStickies, textElements);
                 }}
-                style={{ border: 'none', background: 'transparent', cursor: 'pointer', opacity: 0.5, padding: '2px' }}
+                style={{ background: 'none', border: 'none', color: 'rgba(0,0,0,0.5)', cursor: 'pointer', padding: 0 }}
               >
-                <Trash2 size={12} />
+                <X size={12 * zoom} />
               </button>
             </div>
             <textarea
               value={sticky.text}
               onChange={(e) => {
-                const nextText = e.target.value;
-                const nextStickies = stickyNotes.map((s) => (s.id === sticky.id ? { ...s, text: nextText } : s));
+                const nextStickies = stickyNotes.map((s) =>
+                  s.id === sticky.id ? { ...s, text: e.target.value } : s
+                );
                 setStickyNotes(nextStickies);
-                whiteboardP2PService.broadcast({ type: 'sticky_update', sticky: { ...sticky, text: nextText } });
-                debouncedSyncToFirestore(paths, nextStickies, textElements);
+                whiteboardP2PService.broadcastEvent('sticky_update', { sticky: { ...sticky, text: e.target.value } });
+                debouncedSyncToFirestore(localPaths, remotePaths, nextStickies, textElements);
               }}
               style={{
+                width: '100%',
                 flex: 1,
-                background: 'transparent',
+                background: 'none',
                 border: 'none',
                 outline: 'none',
                 resize: 'none',
-                fontFamily: 'inherit',
-                fontSize: '13px',
-                lineHeight: 1.4,
+                fontFamily: 'Inter, sans-serif',
+                fontSize: `${13 * zoom}px`,
                 color: '#1F2937',
+                lineHeight: 1.4,
               }}
             />
           </div>
         ))}
 
-        {/* RENDU DES ÉLÉMENTS DE TEXTE LIBRES */}
-        {textElements.map((textItem) => {
-          const isEditing = editingTextId === textItem.id;
+        {/* TEXT ELEMENTS AVEC SCALE-TO-FIT */}
+        {textElements.map((t) => {
+          const isEditing = editingTextId === t.id;
+          const fontSizePx = (t.fontSize || 24) * zoom;
+
           return (
             <div
-              key={textItem.id}
+              key={t.id}
               style={{
                 position: 'absolute',
-                left: `${textItem.x * zoom + pan.x}px`,
-                top: `${textItem.y * zoom + pan.y}px`,
-                transform: `scale(${zoom})`,
-                transformOrigin: 'top left',
-                zIndex: 12,
+                left: `${pan.x + t.x * zoom}px`,
+                top: `${pan.y + t.y * zoom}px`,
+                width: `${(t.width || 220) * zoom}px`,
+                minHeight: `${(t.height || 50) * zoom}px`,
+                zIndex: 25,
+                boxSizing: 'border-box',
+                border: isEditing ? '1.5px dashed var(--accent-primary, #C67D5B)' : '1.5px solid transparent',
+                borderRadius: '8px',
+                padding: '4px',
               }}
+              onDoubleClick={() => setEditingTextId(t.id)}
             >
               {isEditing ? (
-                <input
-                  type="text"
+                <textarea
                   autoFocus
-                  value={textItem.text}
+                  value={t.text}
                   onBlur={() => setEditingTextId(null)}
                   onChange={(e) => {
-                    const nextVal = e.target.value;
-                    const nextTexts = textElements.map((t) => (t.id === textItem.id ? { ...t, text: nextVal } : t));
+                    const nextTexts = textElements.map((item) =>
+                      item.id === t.id ? { ...item, text: e.target.value } : item
+                    );
                     setTextElements(nextTexts);
-                    whiteboardP2PService.broadcast({ type: 'text_update', text: { ...textItem, text: nextVal } });
-                    debouncedSyncToFirestore(paths, stickyNotes, nextTexts);
+                    whiteboardP2PService.broadcastEvent('text_update', { text: { ...t, text: e.target.value } });
+                    debouncedSyncToFirestore(localPaths, remotePaths, stickyNotes, nextTexts);
                   }}
-                  onKeyDown={(e) => { if (e.key === 'Enter') setEditingTextId(null); }}
                   style={{
-                    background: 'transparent',
-                    border: '1px dashed #C67D5B',
+                    width: '100%',
+                    height: '100%',
+                    background: 'none',
+                    border: 'none',
                     outline: 'none',
-                    fontSize: `${textItem.fontSize || 24}px`,
-                    color: textItem.color || '#C67D5B',
-                    fontWeight: textItem.isBold ? '800' : '500',
-                    fontFamily: textItem.fontFamily === 'mono' ? 'Roboto Mono, monospace' : 'Inter, sans-serif',
+                    resize: 'none',
+                    color: t.color || 'inherit',
+                    fontFamily: t.fontFamily || 'Inter, sans-serif',
+                    fontSize: `${fontSizePx}px`,
+                    fontWeight: '800',
+                    lineHeight: 1.2,
                   }}
                 />
               ) : (
                 <div
-                  onDoubleClick={() => setEditingTextId(textItem.id)}
                   style={{
-                    fontSize: `${textItem.fontSize || 24}px`,
-                    color: textItem.color || '#C67D5B',
-                    fontWeight: textItem.isBold ? '800' : '500',
-                    fontFamily: textItem.fontFamily === 'mono' ? 'Roboto Mono, monospace' : 'Inter, sans-serif',
-                    cursor: 'pointer',
-                    userSelect: 'none',
+                    width: '100%',
+                    height: '100%',
+                    color: t.color || 'inherit',
+                    fontFamily: t.fontFamily || 'Inter, sans-serif',
+                    fontSize: `${fontSizePx}px`,
+                    fontWeight: '800',
+                    lineHeight: 1.2,
+                    whiteSpace: 'pre-wrap',
+                    wordBreak: 'break-word',
                   }}
                 >
-                  {textItem.text}
+                  {t.text}
                 </div>
               )}
+
+              {/* Poignée de redimensionnement Scale-to-fit */}
+              <div
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  const coords = getCanvasCoords(e);
+                  resizingTextRef.current = {
+                    id: t.id,
+                    startX: coords.x,
+                    startY: coords.y,
+                    origW: t.width || 220,
+                    origH: t.height || 50,
+                    textStr: t.text,
+                  };
+                }}
+                style={{
+                  position: 'absolute',
+                  bottom: '-6px',
+                  right: '-6px',
+                  width: '14px',
+                  height: '14px',
+                  borderRadius: '50%',
+                  backgroundColor: 'var(--accent-primary, #C67D5B)',
+                  cursor: 'nwse-resize',
+                  zIndex: 30,
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+                }}
+                title="Redimensionner la zone et ajuster la police"
+              />
+            </div>
+          );
+        })}
+
+        {/* CURSEURS COLLABORATIFS EN DIRECT (GHOSTING LIVE) */}
+        {Object.entries(remoteCursors).map(([peerId, cursor]) => {
+          if (!cursor || Date.now() - (cursor.lastSeen || 0) > 8000) return null;
+          return (
+            <div
+              key={peerId}
+              style={{
+                position: 'absolute',
+                left: `${pan.x + cursor.x * zoom}px`,
+                top: `${pan.y + cursor.y * zoom}px`,
+                pointerEvents: 'none',
+                zIndex: 60,
+                transition: 'all 0.08s ease-out',
+              }}
+            >
+              <div
+                style={{
+                  width: '12px',
+                  height: '12px',
+                  borderRadius: '50%',
+                  backgroundColor: cursor.color || '#3B82F6',
+                  boxShadow: `0 0 12px ${cursor.color || '#3B82F6'}`,
+                  border: '2px solid #FFF',
+                }}
+              />
+              <span
+                style={{
+                  position: 'absolute',
+                  top: '14px',
+                  left: '6px',
+                  backgroundColor: cursor.color || '#3B82F6',
+                  color: '#FFF',
+                  fontSize: '10px',
+                  fontWeight: '800',
+                  padding: '2px 6px',
+                  borderRadius: '6px',
+                  whiteSpace: 'nowrap',
+                  boxShadow: '0 4px 10px rgba(0,0,0,0.2)',
+                }}
+              >
+                {cursor.authorName || 'Collaborateur'}
+              </span>
             </div>
           );
         })}
       </div>
 
-      {/* DOCK BARRE D'OUTILS FLOTTANTE INFÉRIEURE (MASQUÉE EN MODE IMMERSION) */}
-      <div
-        style={{
-          position: 'fixed',
-          bottom: '24px',
-          left: '50%',
-          transform: isImmersiveMode ? 'translate(-50%, 120%)' : 'translate(-50%, 0)',
-          zIndex: 100015,
-          backgroundColor: darkMode ? 'rgba(28,24,22,0.92)' : 'rgba(255,255,255,0.92)',
-          border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E5DCD3',
-          boxShadow: '0 20px 50px rgba(0,0,0,0.3)',
-          borderRadius: '20px',
-          padding: '8px 14px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '8px',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-          transition: 'all 0.3s cubic-bezier(0.22, 1, 0.36, 1)',
-          pointerEvents: isImmersiveMode ? 'none' : 'auto',
-          opacity: isImmersiveMode ? 0 : 1,
-        }}
-      >
-        {/* OUTIL CRAYON */}
-        <button
-          type="button"
-          onClick={() => setTool('pencil')}
-          style={{
-            border: 'none',
-            backgroundColor: tool === 'pencil' ? '#C67D5B' : 'transparent',
-            color: tool === 'pencil' ? '#FFFFFF' : (darkMode ? '#FAF7F2' : '#3D3530'),
-            padding: '8px 10px',
-            borderRadius: '10px',
-            cursor: 'pointer',
-          }}
-          title="Crayon fin"
-        >
-          <Pen size={18} />
-        </button>
-
-        {/* OUTIL PINCEAU */}
-        <button
-          type="button"
-          onClick={() => setTool('brush')}
-          style={{
-            border: 'none',
-            backgroundColor: tool === 'brush' ? '#C67D5B' : 'transparent',
-            color: tool === 'brush' ? '#FFFFFF' : (darkMode ? '#FAF7F2' : '#3D3530'),
-            padding: '8px 10px',
-            borderRadius: '10px',
-            cursor: 'pointer',
-          }}
-          title="Pinceau aquarelle"
-        >
-          <Brush size={18} />
-        </button>
-
-        {/* OUTIL SURLIGNEUR */}
-        <button
-          type="button"
-          onClick={() => setTool('highlighter')}
-          style={{
-            border: 'none',
-            backgroundColor: tool === 'highlighter' ? '#C67D5B' : 'transparent',
-            color: tool === 'highlighter' ? '#FFFFFF' : (darkMode ? '#FAF7F2' : '#3D3530'),
-            padding: '8px 10px',
-            borderRadius: '10px',
-            cursor: 'pointer',
-          }}
-          title="Surligneur"
-        >
-          <Highlighter size={18} />
-        </button>
-
-        {/* OUTIL GOMME */}
-        <button
-          type="button"
-          onClick={() => setTool('eraser')}
-          style={{
-            border: 'none',
-            backgroundColor: tool === 'eraser' ? '#C67D5B' : 'transparent',
-            color: tool === 'eraser' ? '#FFFFFF' : (darkMode ? '#FAF7F2' : '#3D3530'),
-            padding: '8px 10px',
-            borderRadius: '10px',
-            cursor: 'pointer',
-          }}
-          title="Gomme vectorielle"
-        >
-          <Eraser size={18} />
-        </button>
-
-        <div style={{ width: '1px', height: '22px', backgroundColor: darkMode ? 'rgba(255,255,255,0.15)' : '#E5DCD3', margin: '0 2px' }} />
-
-        {/* FORMES GÉOMÉTRIQUES */}
-        <button
-          type="button"
-          onClick={() => setTool('rect')}
-          style={{
-            border: 'none',
-            backgroundColor: tool === 'rect' ? '#C67D5B' : 'transparent',
-            color: tool === 'rect' ? '#FFFFFF' : (darkMode ? '#FAF7F2' : '#3D3530'),
-            padding: '8px 10px',
-            borderRadius: '10px',
-            cursor: 'pointer',
-          }}
-          title="Rectangle"
-        >
-          <Square size={18} />
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setTool('circle')}
-          style={{
-            border: 'none',
-            backgroundColor: tool === 'circle' ? '#C67D5B' : 'transparent',
-            color: tool === 'circle' ? '#FFFFFF' : (darkMode ? '#FAF7F2' : '#3D3530'),
-            padding: '8px 10px',
-            borderRadius: '10px',
-            cursor: 'pointer',
-          }}
-          title="Cercle"
-        >
-          <Circle size={18} />
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setTool('arrow')}
-          style={{
-            border: 'none',
-            backgroundColor: tool === 'arrow' ? '#C67D5B' : 'transparent',
-            color: tool === 'arrow' ? '#FFFFFF' : (darkMode ? '#FAF7F2' : '#3D3530'),
-            padding: '8px 10px',
-            borderRadius: '10px',
-            cursor: 'pointer',
-          }}
-          title="Flèche"
-        >
-          <ArrowRight size={18} />
-        </button>
-
-        <div style={{ width: '1px', height: '22px', backgroundColor: darkMode ? 'rgba(255,255,255,0.15)' : '#E5DCD3', margin: '0 2px' }} />
-
-        {/* POST-IT & TEXTE */}
-        <button
-          type="button"
-          onClick={() => setTool('sticky')}
-          style={{
-            border: 'none',
-            backgroundColor: tool === 'sticky' ? '#C67D5B' : 'transparent',
-            color: tool === 'sticky' ? '#FFFFFF' : (darkMode ? '#FAF7F2' : '#3D3530'),
-            padding: '8px 10px',
-            borderRadius: '10px',
-            cursor: 'pointer',
-          }}
-          title="Ajouter un Post-it"
-        >
-          <StickyNote size={18} />
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setTool('text')}
-          style={{
-            border: 'none',
-            backgroundColor: tool === 'text' ? '#C67D5B' : 'transparent',
-            color: tool === 'text' ? '#FFFFFF' : (darkMode ? '#FAF7F2' : '#3D3530'),
-            padding: '8px 10px',
-            borderRadius: '10px',
-            cursor: 'pointer',
-          }}
-          title="Ajouter du Texte"
-        >
-          <Type size={18} />
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setTool('hand')}
-          style={{
-            border: 'none',
-            backgroundColor: tool === 'hand' ? '#C67D5B' : 'transparent',
-            color: tool === 'hand' ? '#FFFFFF' : (darkMode ? '#FAF7F2' : '#3D3530'),
-            padding: '8px 10px',
-            borderRadius: '10px',
-            cursor: 'pointer',
-          }}
-          title="Outil Main (Déplacement de la vue)"
-        >
-          <Hand size={18} />
-        </button>
-
-        <div style={{ width: '1px', height: '22px', backgroundColor: darkMode ? 'rgba(255,255,255,0.15)' : '#E5DCD3', margin: '0 2px' }} />
-
-        {/* SÉLECTEUR DE COULEURS */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          {COLOR_PALETTE.slice(0, 4).map((c) => (
-            <button
-              key={c.id}
-              type="button"
-              onClick={() => setColor(c.hex)}
-              style={{
-                width: '20px',
-                height: '20px',
-                borderRadius: '50%',
-                backgroundColor: c.hex,
-                border: color === c.hex ? '2px solid #FFFFFF' : '1px solid rgba(0,0,0,0.2)',
-                boxShadow: color === c.hex ? '0 0 0 2px #C67D5B' : 'none',
-                cursor: 'pointer',
-              }}
-            />
-          ))}
-          <input
-            type="color"
-            value={color}
-            onChange={(e) => setColor(e.target.value)}
-            style={{
-              width: '24px',
-              height: '24px',
-              padding: 0,
-              border: 'none',
-              borderRadius: '50%',
-              cursor: 'pointer',
-              background: 'transparent',
-            }}
-            title="Sélecteur de couleur personnalisé"
-          />
-        </div>
-
-        <div style={{ width: '1px', height: '22px', backgroundColor: darkMode ? 'rgba(255,255,255,0.15)' : '#E5DCD3', margin: '0 2px' }} />
-
-        {/* CONTRÔLES ZOOM & UNDO/REDO */}
-        <button
-          type="button"
-          onClick={handleUndo}
-          disabled={paths.length === 0}
-          style={{ border: 'none', background: 'transparent', cursor: paths.length === 0 ? 'default' : 'pointer', opacity: paths.length === 0 ? 0.3 : 1, color: darkMode ? '#FAF7F2' : '#3D3530' }}
-          title="Annuler (Undo)"
-        >
-          <RotateCcw size={16} />
-        </button>
-
-        <button
-          type="button"
-          onClick={handleRedo}
-          disabled={redoStack.length === 0}
-          style={{ border: 'none', background: 'transparent', cursor: redoStack.length === 0 ? 'default' : 'pointer', opacity: redoStack.length === 0 ? 0.3 : 1, color: darkMode ? '#FAF7F2' : '#3D3530' }}
-          title="Rétablir (Redo)"
-        >
-          <RotateCw size={16} />
-        </button>
-
-        <button
-          type="button"
-          onClick={handleZoomIn}
-          style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: darkMode ? '#FAF7F2' : '#3D3530' }}
-          title="Zoom +"
-        >
-          <ZoomIn size={16} />
-        </button>
-
-        <button
-          type="button"
-          onClick={handleZoomOut}
-          style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: darkMode ? '#FAF7F2' : '#3D3530' }}
-          title="Zoom -"
-        >
-          <ZoomOut size={16} />
-        </button>
-
-        <button
-          type="button"
-          onClick={handleResetZoom}
-          style={{ border: 'none', background: 'transparent', cursor: 'pointer', fontSize: '11px', fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530' }}
-          title="Réinitialiser le zoom"
-        >
-          {Math.round(zoom * 100)}%
-        </button>
-
-        <button
-          type="button"
-          onClick={handleClearAll}
-          style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: '#EF4444', marginLeft: '4px' }}
-          title="Effacer tout le tableau"
-        >
-          <Trash2 size={16} />
-        </button>
-      </div>
-
-      {/* MODALE DIALOGUE POUR PUBLIER LA VERSION DANS LE CHAT */}
-      {isPublishModalOpen && (
+      {/* 3. BARRE D'OUTILS PRINCIPALE FLUIDE & DRAGGABLE (Standard Apple HIG) */}
+      {!isImmersiveMode && (
         <div
           style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0,0,0,0.65)',
-            backdropFilter: 'blur(12px)',
-            WebkitBackdropFilter: 'blur(12px)',
-            zIndex: 100030,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '16px',
-          }}
-        >
-          <div
-            style={{
-              width: '100%',
-              maxWidth: '480px',
-              backgroundColor: darkMode ? '#221D1A' : '#FAF7F2',
-              borderRadius: '24px',
-              padding: '24px',
-              border: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-color)',
-              boxShadow: '0 25px 60px rgba(0,0,0,0.4)',
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Tag size={18} color="#C67D5B" />
-                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
-                  Publier la Version V{versionNumber + 1}
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsPublishModalOpen(false)}
-                style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: darkMode ? '#A89E95' : '#6B5E54' }}
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <p style={{ margin: '0 0 16px', fontSize: '13px', color: darkMode ? '#B8ABA0' : '#6B5E54', lineHeight: 1.5 }}>
-              Cette action enregistre un instantané haute définition de votre tableau blanc et diffuse une invitation cliquable dans la discussion de groupe.
-            </p>
-
-            <div style={{ marginBottom: '14px' }}>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: darkMode ? '#FAF7F2' : '#3D3530', marginBottom: '6px' }}>
-                Titre de la version :
-              </label>
-              <input
-                type="text"
-                value={publishTitle}
-                onChange={(e) => setPublishTitle(e.target.value)}
-                placeholder="Ex: Wireframes & Schéma d'architecture"
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  borderRadius: '12px',
-                  border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E0D4C5',
-                  backgroundColor: darkMode ? '#181412' : '#FFFFFF',
-                  color: darkMode ? '#FAF7F2' : '#3D3530',
-                  fontSize: '14px',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                }}
-              />
-            </div>
-
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: '700', color: darkMode ? '#FAF7F2' : '#3D3530', marginBottom: '6px' }}>
-                Résumé des changements (optionnel) :
-              </label>
-              <textarea
-                value={publishChangelog}
-                onChange={(e) => setPublishChangelog(e.target.value)}
-                placeholder="Ex: Ajout des maquettes de la vue mobile et corrections des flux de paiement..."
-                style={{
-                  width: '100%',
-                  height: '70px',
-                  padding: '10px 14px',
-                  borderRadius: '12px',
-                  border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid #E0D4C5',
-                  backgroundColor: darkMode ? '#181412' : '#FFFFFF',
-                  color: darkMode ? '#FAF7F2' : '#3D3530',
-                  fontSize: '13px',
-                  outline: 'none',
-                  resize: 'none',
-                  boxSizing: 'border-box',
-                }}
-              />
-            </div>
-
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-              <button
-                type="button"
-                onClick={() => setIsPublishModalOpen(false)}
-                style={{
-                  border: 'none',
-                  backgroundColor: darkMode ? 'rgba(255,255,255,0.08)' : '#EFE8DE',
-                  color: darkMode ? '#FAF7F2' : '#3D3530',
-                  padding: '10px 16px',
-                  borderRadius: '12px',
-                  fontSize: '13px',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                }}
-              >
-                Annuler
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmPublishToChat}
-                disabled={isSendingToChat}
-                className="premium-button"
-                style={{
-                  border: 'none',
-                  background: 'linear-gradient(135deg, #C67D5B 0%, #B86B49 100%)',
-                  color: '#FFFFFF',
-                  padding: '10px 20px',
-                  borderRadius: '12px',
-                  fontSize: '13px',
-                  fontWeight: '800',
-                  cursor: isSendingToChat ? 'wait' : 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  boxShadow: '0 6px 18px rgba(198,125,91,0.35)',
-                }}
-              >
-                <Share2 size={15} />
-                <span>{isSendingToChat ? 'Publication...' : `Valider & Envoyer (V${versionNumber + 1})`}</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* TOAST SUCCÈS PUBLICATION */}
-      {sendSuccessToast && (
-        <div
-          style={{
-            position: 'fixed',
-            bottom: '24px',
-            right: '24px',
-            backgroundColor: '#10B981',
-            color: '#FFFFFF',
-            padding: '12px 20px',
-            borderRadius: '14px',
-            fontWeight: '800',
-            fontSize: '13px',
+            position: 'absolute',
+            bottom: '20px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 100,
+            maxWidth: '96vw',
+            backgroundColor: darkMode ? 'rgba(26,22,19,0.92)' : 'rgba(255,255,255,0.92)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.1)',
+            borderRadius: '24px',
+            padding: '8px 14px',
+            boxShadow: '0 20px 40px -10px rgba(0,0,0,0.25)',
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            boxShadow: '0 10px 30px rgba(16, 185, 129, 0.45)',
-            zIndex: 100040,
-            animation: 'popIn 0.3s cubic-bezier(0.22, 1, 0.36, 1)',
+            overflowX: 'auto',
+            scrollbarWidth: 'none',
+            touchAction: 'pan-x',
+            WebkitOverflowScrolling: 'touch',
           }}
         >
-          <Check size={18} strokeWidth={3} />
-          <span>Version V{versionNumber} partagée dans la conversation avec succès !</span>
+          {/* Outils de dessin */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            {[
+              { id: 'pencil', icon: Pen, title: 'Crayon' },
+              { id: 'brush', icon: Brush, title: 'Pinceau Artistique' },
+              { id: 'highlighter', icon: Highlighter, title: 'Surligneur' },
+              { id: 'eraser', icon: Eraser, title: 'Gomme' },
+              { id: 'rect', icon: Square, title: 'Rectangle' },
+              { id: 'circle', icon: Circle, title: 'Cercle' },
+              { id: 'arrow', icon: ArrowRight, title: 'Flèche' },
+              { id: 'sticky', icon: StickyNote, title: 'Post-it' },
+              { id: 'text', icon: Type, title: 'Texte' },
+              { id: 'hand', icon: Hand, title: 'Déplacer (Pan)' },
+            ].map((btn) => {
+              const Icon = btn.icon;
+              const isSelected = tool === btn.id;
+              return (
+                <button
+                  key={btn.id}
+                  type="button"
+                  onClick={() => setTool(btn.id)}
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '12px',
+                    border: 'none',
+                    backgroundColor: isSelected
+                      ? 'var(--accent-primary, #C67D5B)'
+                      : darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                    color: isSelected ? '#FFFFFF' : 'inherit',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    flexShrink: 0,
+                  }}
+                  title={btn.title}
+                >
+                  <Icon size={18} />
+                </button>
+              );
+            })}
+          </div>
+
+          <div style={{ width: '1px', height: '24px', backgroundColor: 'var(--border-color, rgba(0,0,0,0.1))', margin: '0 4px', flexShrink: 0 }} />
+
+          {/* PALETTE DE COULEURS INFINIES (Couleurs + Pipette + Input Color Natif) */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+            {CURATED_PALETTE.slice(0, 6).map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => setColor(c.hex)}
+                style={{
+                  width: '26px',
+                  height: '26px',
+                  borderRadius: '50%',
+                  backgroundColor: c.hex,
+                  border: color === c.hex ? '3px solid #C67D5B' : '2px solid rgba(0,0,0,0.1)',
+                  cursor: 'pointer',
+                  boxShadow: color === c.hex ? '0 0 10px rgba(198,125,91,0.5)' : 'none',
+                }}
+                title={c.name}
+              />
+            ))}
+
+            {/* Bouton Pipette & Sélecteur Natif Hexadécimal */}
+            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+              <button
+                type="button"
+                onClick={handleOpenEyeDropper}
+                style={{
+                  width: '28px',
+                  height: '28px',
+                  borderRadius: '50%',
+                  border: '1.5px solid var(--border-color)',
+                  background: 'conic-gradient(from 0deg, red, yellow, green, cyan, blue, magenta, red)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                }}
+                title="Choisir n'importe quelle couleur (Pipette / Hex)"
+              />
+              <input
+                ref={colorInputRef}
+                type="color"
+                value={color}
+                onChange={(e) => setColor(e.target.value)}
+                style={{
+                  position: 'absolute',
+                  opacity: 0,
+                  pointerEvents: 'none',
+                  width: 0,
+                  height: 0,
+                }}
+              />
+            </div>
+          </div>
+
+          <div style={{ width: '1px', height: '24px', backgroundColor: 'var(--border-color, rgba(0,0,0,0.1))', margin: '0 4px', flexShrink: 0 }} />
+
+          {/* ÉPAISSEUR DU TRAIT */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+            {[2, 4, 8, 16].map((w) => (
+              <button
+                key={w}
+                type="button"
+                onClick={() => setLineWidth(w)}
+                style={{
+                  width: '28px',
+                  height: '28px',
+                  borderRadius: '8px',
+                  border: lineWidth === w ? '1.5px solid #C67D5B' : '1px solid transparent',
+                  backgroundColor: lineWidth === w ? 'rgba(198,125,91,0.15)' : 'transparent',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: 'inherit',
+                }}
+                title={`Épaisseur ${w}px`}
+              >
+                <div
+                  style={{
+                    width: `${Math.min(18, w * 1.8)}px`,
+                    height: `${Math.min(18, w * 1.8)}px`,
+                    borderRadius: '50%',
+                    backgroundColor: color,
+                  }}
+                />
+              </button>
+            ))}
+          </div>
+
+          <div style={{ width: '1px', height: '24px', backgroundColor: 'var(--border-color, rgba(0,0,0,0.1))', margin: '0 4px', flexShrink: 0 }} />
+
+          {/* BOUTONS UNDO / REDO & EFFACER */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+            <button
+              type="button"
+              disabled={historyIndex <= 0}
+              onClick={handleUndo}
+              style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '10px',
+                border: 'none',
+                backgroundColor: 'transparent',
+                color: historyIndex <= 0 ? 'rgba(150,150,150,0.4)' : 'inherit',
+                cursor: historyIndex <= 0 ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+              title="Annuler (Ctrl+Z)"
+            >
+              <RotateCcw size={16} />
+            </button>
+
+            <button
+              type="button"
+              disabled={historyIndex >= history.length - 1}
+              onClick={handleRedo}
+              style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '10px',
+                border: 'none',
+                backgroundColor: 'transparent',
+                color: historyIndex >= history.length - 1 ? 'rgba(150,150,150,0.4)' : 'inherit',
+                cursor: historyIndex >= history.length - 1 ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+              title="Rétablir (Ctrl+Y)"
+            >
+              <RotateCw size={16} />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (window.confirm('Effacer la totalité du tableau blanc ?')) {
+                  setLocalPaths([]);
+                  setRemotePaths([]);
+                  setStickyNotes([]);
+                  setTextElements([]);
+                  pushToHistory([], [], []);
+                  whiteboardP2PService.broadcastEvent('clear', {});
+                  debouncedSyncToFirestore([], [], [], []);
+                }
+              }}
+              style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '10px',
+                border: 'none',
+                backgroundColor: 'rgba(239,68,68,0.1)',
+                color: '#EF4444',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+              title="Tout effacer"
+            >
+              <Trash2 size={16} />
+            </button>
+          </div>
         </div>
       )}
-    </div>,
-    document.body
+    </div>
   );
+
+  return createPortal(modalContent, document.body);
 }

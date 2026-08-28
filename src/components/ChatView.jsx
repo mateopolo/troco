@@ -1640,114 +1640,149 @@ function ChatView({
                         </div>
                       )}
 
-                      {/* INVITATION SESSION WORKSPACE TEMPS RÉEL (WHITEBOARD, DOCS, SHEETS) */}
+                      {/* INVITATION SESSION WORKSPACE TEMPS RÉEL (WHITEBOARD, DOCS, SHEETS) — CARTE MÉDIA PREMIUM */}
                       {(msg.type === 'workspace_invite' || msg.kind === 'workspace_invite') ? (
                         <div
                           style={{
-                            borderRadius: '16px',
-                            padding: '12px 14px',
-                            backgroundColor: isMe ? 'rgba(255, 255, 255, 0.15)' : 'var(--bg-subtle)',
-                            border: isMe ? '1px solid rgba(255, 255, 255, 0.3)' : '1.5px solid var(--accent-primary)',
+                            borderRadius: '20px',
+                            padding: '14px 16px',
+                            backgroundColor: isMe ? 'rgba(255, 255, 255, 0.18)' : 'var(--bg-card)',
+                            border: isMe ? '1.5px solid rgba(255, 255, 255, 0.4)' : '1.5px solid var(--accent-primary)',
                             display: 'flex',
                             flexDirection: 'column',
                             gap: '10px',
-                            maxWidth: '300px',
+                            maxWidth: '340px',
+                            width: '100%',
                             boxSizing: 'border-box',
                             marginBottom: '4px',
+                            boxShadow: '0 8px 24px rgba(0,0,0,0.08)',
                           }}
                         >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <div
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                              <div
+                                style={{
+                                  width: '38px',
+                                  height: '38px',
+                                  borderRadius: '12px',
+                                  backgroundColor: msg.workspaceType === 'sheets'
+                                    ? 'rgba(16, 185, 129, 0.2)'
+                                    : msg.workspaceType === 'docs'
+                                    ? 'rgba(59, 130, 246, 0.2)'
+                                    : msg.workspaceType === 'notes'
+                                    ? 'rgba(245, 158, 11, 0.2)'
+                                    : 'rgba(198, 125, 91, 0.2)',
+                                  color: msg.workspaceType === 'sheets'
+                                    ? '#10B981'
+                                    : msg.workspaceType === 'docs'
+                                    ? '#3B82F6'
+                                    : msg.workspaceType === 'notes'
+                                    ? '#F59E0B'
+                                    : 'var(--accent-primary)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  flexShrink: 0,
+                                }}
+                              >
+                                {msg.workspaceType === 'sheets' ? (
+                                  <Table size={20} />
+                                ) : msg.workspaceType === 'docs' ? (
+                                  <FileText size={20} />
+                                ) : msg.workspaceType === 'notes' ? (
+                                  <FileText size={20} />
+                                ) : (
+                                  <Palette size={20} />
+                                )}
+                              </div>
+
+                              <div style={{ minWidth: 0 }}>
+                                <div style={{ fontSize: '13.5px', fontWeight: '900', color: isMe ? '#FFFFFF' : 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                  {msg.workspaceTitle || (msg.workspaceType === 'sheets' ? 'Troco Sheets' : msg.workspaceType === 'docs' ? 'Troco Docs' : msg.workspaceType === 'notes' ? 'Notes Partagées' : 'Tableau Blanc')}
+                                </div>
+                                <div style={{ fontSize: '11px', color: isMe ? 'rgba(255, 255, 255, 0.85)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                  <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10B981', display: 'inline-block' }} />
+                                  <span>Session en direct (0ms)</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Badge de version V1, V2, V3 */}
+                            <span
                               style={{
-                                width: '36px',
-                                height: '36px',
-                                borderRadius: '10px',
-                                backgroundColor: msg.workspaceType === 'sheets'
-                                  ? 'rgba(16, 185, 129, 0.2)'
-                                  : msg.workspaceType === 'docs'
-                                  ? 'rgba(59, 130, 246, 0.2)'
-                                  : msg.workspaceType === 'notes'
-                                  ? 'rgba(245, 158, 11, 0.2)'
-                                  : 'rgba(198, 125, 91, 0.2)',
-                                color: msg.workspaceType === 'sheets'
-                                  ? '#10B981'
-                                  : msg.workspaceType === 'docs'
-                                  ? '#3B82F6'
-                                  : msg.workspaceType === 'notes'
-                                  ? '#F59E0B'
-                                  : 'var(--accent-primary)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
+                                backgroundColor: isMe ? 'rgba(255,255,255,0.25)' : 'rgba(198,125,91,0.18)',
+                                color: isMe ? '#FFFFFF' : 'var(--accent-primary)',
+                                border: isMe ? '1px solid rgba(255,255,255,0.4)' : '1px solid rgba(198,125,91,0.35)',
+                                fontSize: '11px',
+                                fontWeight: '900',
+                                padding: '2px 8px',
+                                borderRadius: '999px',
                                 flexShrink: 0,
                               }}
                             >
-                              {msg.workspaceType === 'sheets' ? (
-                                <Table size={18} />
-                              ) : msg.workspaceType === 'docs' ? (
-                                <FileText size={18} />
-                              ) : msg.workspaceType === 'notes' ? (
-                                <FileText size={18} />
-                              ) : (
-                                <Palette size={18} />
-                              )}
-                            </div>
-
-                            <div style={{ minWidth: 0, flex: 1 }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                                <span style={{ fontSize: '13px', fontWeight: '800', color: isMe ? '#FFFFFF' : 'var(--text-main)' }}>
-                                  {msg.workspaceTitle || (msg.workspaceType === 'sheets' ? 'Troco Sheets' : msg.workspaceType === 'docs' ? 'Troco Docs' : msg.workspaceType === 'notes' ? 'Notes Partagées' : 'Tableau Blanc')}
-                                </span>
-                                {msg.version && (
-                                  <span
-                                    style={{
-                                      backgroundColor: isMe ? 'rgba(255,255,255,0.25)' : 'rgba(198,125,91,0.2)',
-                                      color: isMe ? '#FFFFFF' : 'var(--accent-primary)',
-                                      fontSize: '10.5px',
-                                      fontWeight: '800',
-                                      padding: '1px 6px',
-                                      borderRadius: '6px',
-                                    }}
-                                  >
-                                    {msg.version}
-                                  </span>
-                                )}
-                              </div>
-                              <div style={{ fontSize: '10.5px', color: isMe ? 'rgba(255, 255, 255, 0.85)' : 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '1px' }}>
-                                <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10B981', display: 'inline-block', animation: 'pulse 1.8s infinite' }} />
-                                <span>Session active en direct</span>
-                              </div>
-                            </div>
+                              V{msg.version || 1}
+                            </span>
                           </div>
 
+                          {/* Aperçu Miniature Image HD (façon WhatsApp Media Card) */}
                           {msg.previewUrl && (
                             <div
+                              onClick={() => {
+                                if (msg.workspaceType === 'whiteboard' || !msg.workspaceType) {
+                                  if (msg.boardId || msg.workspaceId) setActiveWhiteboardBoardId(msg.boardId || msg.workspaceId);
+                                  setIsWhiteboardOpen(true);
+                                }
+                              }}
                               style={{
                                 width: '100%',
-                                height: '110px',
-                                borderRadius: '10px',
+                                height: '140px',
+                                borderRadius: '14px',
                                 overflow: 'hidden',
-                                backgroundColor: 'rgba(0,0,0,0.1)',
-                                border: '1px solid rgba(255,255,255,0.1)',
+                                backgroundColor: darkMode ? '#181513' : '#F9F6F0',
+                                border: '1px solid rgba(0,0,0,0.08)',
+                                cursor: 'pointer',
+                                position: 'relative',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
                               }}
                             >
                               <img
                                 src={msg.previewUrl}
-                                alt="Aperçu du Whiteboard"
-                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                alt="Aperçu du Tableau Blanc"
+                                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                               />
+                              <div
+                                style={{
+                                  position: 'absolute',
+                                  bottom: '6px',
+                                  right: '8px',
+                                  backgroundColor: 'rgba(0,0,0,0.65)',
+                                  backdropFilter: 'blur(6px)',
+                                  color: '#FFF',
+                                  fontSize: '10px',
+                                  fontWeight: '800',
+                                  padding: '2px 7px',
+                                  borderRadius: '6px',
+                                }}
+                              >
+                                Aperçu V{msg.version || 1}
+                              </div>
                             </div>
                           )}
 
-                          <div style={{ fontSize: '12px', color: isMe ? '#FFFFFF' : 'var(--text-main)', lineHeight: 1.4 }}>
-                            {msg.text}
-                          </div>
+                          {msg.text && (
+                            <div style={{ fontSize: '12.5px', color: isMe ? '#FFFFFF' : 'var(--text-main)', lineHeight: 1.4 }}>
+                              {msg.text}
+                            </div>
+                          )}
 
+                          {/* Bouton d'action pro pour reprendre la version */}
                           <button
                             type="button"
                             onClick={() => {
-                              if (msg.workspaceType === 'whiteboard') {
-                                if (msg.boardId) setActiveWhiteboardBoardId(msg.boardId);
+                              if (msg.workspaceType === 'whiteboard' || !msg.workspaceType) {
+                                if (msg.boardId || msg.workspaceId) setActiveWhiteboardBoardId(msg.boardId || msg.workspaceId);
                                 setIsWhiteboardOpen(true);
                               } else if (msg.workspaceType === 'notes') {
                                 setIsSharedDocOpen(true);
@@ -1758,26 +1793,29 @@ function ChatView({
                             }}
                             className="premium-button"
                             style={{
+                              width: '100%',
                               border: 'none',
                               background: isMe
                                 ? '#FFFFFF'
-                                : 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
+                                : 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover, #A8644A) 100%)',
                               color: isMe ? 'var(--accent-primary)' : '#FFFFFF',
-                              borderRadius: '10px',
-                              padding: '8px 12px',
-                              fontSize: '12px',
-                              fontWeight: '800',
+                              borderRadius: '12px',
+                              padding: '10px 14px',
+                              minHeight: '44px',
+                              fontSize: '13px',
+                              fontWeight: '900',
                               cursor: 'pointer',
                               display: 'flex',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              gap: '6px',
-                              boxShadow: 'var(--shadow-card)',
+                              gap: '8px',
+                              boxShadow: '0 4px 14px rgba(198,125,91,0.3)',
                               transition: 'transform 0.15s ease',
+                              touchAction: 'manipulation',
                             }}
                           >
-                            <Users size={14} />
-                            <span>Rejoindre la session en direct</span>
+                            <Palette size={16} />
+                            <span>Ouvrir le tableau V{msg.version || 1}</span>
                           </button>
                         </div>
                       ) : (msg.type === 'audio' || msg.kind === 'audio' || msg.audioUrl) ? (
