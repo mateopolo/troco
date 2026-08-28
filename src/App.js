@@ -44,8 +44,10 @@ import {
   calculateHaversineDistance,
 } from './utils/geocodingNominatim';
 
+import { useGlobalContent } from './features/admin/useGlobalContent';
+
 // Lazy-loaded heavy components & modals (Strict Code-Splitting)
-const AdminPanel = React.lazy(() => import('./components/AdminPanel'));
+const AdminDashboard = React.lazy(() => import('./features/admin/AdminDashboard'));
 const ReportModal = React.lazy(() => import('./components/ReportModal'));
 const CguModal = React.lazy(() => import('./components/CguModal'));
 const PrivacyCenterModal = React.lazy(() => import('./components/PrivacyCenterModal'));
@@ -141,6 +143,14 @@ export default function App() {
 
   const [activeTab, setActiveTab] = useState('feed');
   const [isPending, startTransition] = useTransition();
+
+  // CMS & Textes Globaux en direct
+  const globalAnnouncement = useGlobalContent('platform_announcement');
+  const globalWelcomeMsg = useGlobalContent('welcome_message');
+
+  // Sécurité : État de bannissement temps réel
+  const [isUserBanned, setIsUserBanned] = useState(false);
+  const [bannedReason, setBannedReason] = useState('');
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
@@ -699,6 +709,18 @@ export default function App() {
         const unsubDoc = onSnapshot(userDocRef, async (docSnap) => {
           if (docSnap.exists()) {
             const data = docSnap.data();
+
+            // PROTECTION TEMPS RÉEL CONTRE LE BANNISSEMENT
+            if (data.isBanned) {
+              setIsUserBanned(true);
+              setBannedReason(data.bannedReason || "Votre compte a été suspendu par l'administration Troco suite à un non-respect des règles de la communauté.");
+              try { await signOut(auth); } catch (_) {}
+              window.localStorage.removeItem('troco_is_authenticated');
+              window.localStorage.removeItem('troco_user_profile');
+              setIsAuthenticated(false);
+              return;
+            }
+
             setProfile(prev => ({
               ...prev,
               ...data,
@@ -3013,6 +3035,33 @@ export default function App() {
 
             {/* CONTENU CENTRAL DU FEED */}
             <div className="feed-main-content">
+              {/* BANNIÈRE D'ANNONCE GLOBALE DYNAMIQUE DU CMS (useGlobalContent) */}
+              {globalAnnouncement && (
+                <div
+                  style={{
+                    backgroundColor: darkMode ? 'rgba(198,125,91,0.15)' : '#FBF3EE',
+                    border: '1px solid rgba(198,125,91,0.3)',
+                    borderRadius: '16px',
+                    padding: '10px 16px',
+                    marginBottom: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '10px',
+                    fontSize: '13px',
+                    fontWeight: '700',
+                    color: darkMode ? '#FAF7F2' : '#8C482F',
+                    boxShadow: '0 4px 12px rgba(198,125,91,0.08)',
+                    animation: 'fadeIn 0.3s ease',
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Sparkles size={16} color="var(--accent-primary)" style={{ flexShrink: 0 }} />
+                    <span>{globalAnnouncement}</span>
+                  </div>
+                </div>
+              )}
+
               {/* Ligne Recherche + Filtre Rayon + Bascule Vue Liste / Carte */}
               <div style={{ display: 'flex', gap: '8px', marginBottom: '14px', flexWrap: 'wrap', alignItems: 'center' }}>
                 <div style={{ flex: 1, minWidth: '220px', display: 'flex', alignItems: 'center', backgroundColor: 'var(--bg-card)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '10px 14px', boxShadow: 'var(--shadow-card)' }}>
@@ -4024,22 +4073,14 @@ export default function App() {
         />
       </Suspense>
 
-      {/* PANEL ADMINISTRATEUR & MODÉRATION (/admin) */}
+      {/* PANEL ADMINISTRATEUR "GOD MODE" TEMPS RÉEL (/admin) */}
       {isAdminPanelOpen && (
-        <Suspense fallback={<SkeletonModalFallback title="Chargement du panel d'administration..." />}>
-          <AdminPanel
+        <Suspense fallback={null}>
+          <AdminDashboard
             isOpen={isAdminPanelOpen}
             onClose={() => setIsAdminPanelOpen(false)}
             darkMode={darkMode}
             currentUser={profile}
-            allUsers={allFirestoreUsers}
-            allListings={listings}
-            allReports={allReports}
-            onUpdateUser={handleAdminUpdateUser}
-            onDeleteListing={handleAdminDeleteListing}
-            onResolveReport={handleAdminResolveReport}
-            onResetUser={handleAdminResetUser}
-            onEditListing={handleAdminEditListing}
             onInspectUser={(u) => {
               setIsAdminPanelOpen(false);
               setSelectedPublicUser(u);
@@ -4317,6 +4358,94 @@ export default function App() {
             <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600' }}>
               {topUpCelebration.subtitle}
             </div>
+          </div>
+        </div>
+      {/* ÉCRAN D'EXCLUSION TOTAL EN CAS DE BANNISSEMENT TEMPS RÉEL */}
+      {isUserBanned && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 10000000,
+            backgroundColor: '#0F0D0B',
+            color: '#FAF7F2',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '24px',
+            backdropFilter: 'blur(30px)',
+            WebkitBackdropFilter: 'blur(30px)',
+          }}
+        >
+          <div
+            style={{
+              maxWidth: '480px',
+              width: '100%',
+              backgroundColor: '#1C1714',
+              border: '2px solid #EF4444',
+              borderRadius: '28px',
+              padding: '38px 32px',
+              textAlign: 'center',
+              boxShadow: '0 25px 60px rgba(239,68,68,0.25), 0 0 50px rgba(0,0,0,0.8)',
+            }}
+          >
+            <div
+              style={{
+                width: '68px',
+                height: '68px',
+                borderRadius: '50%',
+                backgroundColor: 'rgba(239,68,68,0.15)',
+                color: '#EF4444',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 20px',
+                boxShadow: '0 8px 24px rgba(239,68,68,0.3)',
+              }}
+            >
+              <ShieldAlert size={36} />
+            </div>
+            <h2 style={{ fontSize: '24px', fontWeight: '900', margin: '0 0 10px', color: '#EF4444', letterSpacing: '-0.02em' }}>
+              Compte Suspendu
+            </h2>
+            <p style={{ fontSize: '14px', color: '#D4C5B5', lineHeight: 1.55, margin: '0 0 20px' }}>
+              {bannedReason || "Votre compte a été suspendu par l'administration Troco suite à un non-respect des règles de la communauté."}
+            </p>
+            <div
+              style={{
+                fontSize: '12px',
+                color: '#A8998C',
+                backgroundColor: 'rgba(0,0,0,0.3)',
+                padding: '12px 16px',
+                borderRadius: '12px',
+                marginBottom: '24px',
+                lineHeight: 1.4,
+              }}
+            >
+              Pour toute réclamation, contactez la modération officielle à <strong>support@troco.fr</strong> avec votre identifiant.
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                window.localStorage.clear();
+                window.sessionStorage.clear();
+                window.location.reload();
+              }}
+              className="premium-button"
+              style={{
+                width: '100%',
+                padding: '14px 24px',
+                borderRadius: '14px',
+                border: 'none',
+                backgroundColor: 'rgba(255,255,255,0.12)',
+                color: '#FFF',
+                fontSize: '13.5px',
+                fontWeight: '800',
+                cursor: 'pointer',
+              }}
+            >
+              Fermer la session & Revenir à l'accueil
+            </button>
           </div>
         </div>
       )}
