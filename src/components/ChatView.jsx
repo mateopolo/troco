@@ -6,7 +6,7 @@ import {
   AlertTriangle, Users, Coins, Mic, ShieldAlert, ShieldCheck,
   Palette, Briefcase, Plus, FileText, Calendar, Table
 } from 'lucide-react';
-import { doc, deleteDoc, addDoc, collection, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, deleteDoc, addDoc, collection, updateDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { executeDirectTokenTransfer } from '../services/firestoreService';
 import { subscribeTranslations } from '../utils/translator';
@@ -106,10 +106,27 @@ function ChatView({
       return;
     }
 
-    const partnerUid = activeChatObj?.authorUid || activeChatObj?.partnerUid || activeChatObj?.userId || activeChatObj?.sellerUid || activeChatObj?.buyerUid || activeChatObj?.recipientUid || activeChatObj?.peerUid || selectedChat?.authorUid || selectedChat?.partnerUid || null;
-    
+    // Résolution robuste de l'UID destinataire : champs directs → fallback lookup Firestore par nom
+    let partnerUid = activeChatObj?.authorUid || activeChatObj?.partnerUid || activeChatObj?.userId
+      || activeChatObj?.sellerUid || activeChatObj?.buyerUid || activeChatObj?.recipientUid
+      || activeChatObj?.peerUid || selectedChat?.authorUid || selectedChat?.partnerUid || null;
+
     if (!partnerUid) {
-      console.error('🚨 [DirectTransfer] recipientUid introuvable pour ce contact:', { activeChatObj, selectedChat });
+      // Fallback : recherche Firestore par nom d'utilisateur (cas chats classiques sans UID stocké)
+      const partnerName = activeChatObj?.user || selectedChat?.user;
+      if (partnerName && db) {
+        try {
+          const uQuery = query(collection(db, 'users'), where('name', '==', partnerName));
+          const uSnap = await getDocs(uQuery);
+          if (!uSnap.empty) {
+            partnerUid = uSnap.docs[0].id;
+          }
+        } catch (_) {}
+      }
+    }
+
+    if (!partnerUid) {
+      console.error('🚨 [DirectTransfer] recipientUid introuvable:', { activeChatObj, selectedChat });
       alert("Impossible de localiser l'UID du destinataire dans cette conversation.");
       return;
     }
@@ -3005,8 +3022,8 @@ function ChatView({
         </div>
       )}
 
-      {/* MODALE DE TRANSFERT DIRECT DE JETONS (🪙) */}
-      {isDirectTransferOpen && activeChatObj && (
+      {/* MODALE DE TRANSFERT DIRECT DE JETONS (🪙) — Portal pour échapper aux stacking contexts Framer Motion */}
+      {isDirectTransferOpen && activeChatObj && createPortal(
         <div
           onClick={() => setIsDirectTransferOpen(false)}
           style={{
@@ -3018,7 +3035,7 @@ function ChatView({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            zIndex: 99999,
+            zIndex: 999999,
             padding: '16px',
             animation: 'fadeIn 0.2s ease',
           }}
@@ -3173,7 +3190,7 @@ function ChatView({
             </div>
           </div>
         </div>
-      )}
+      , document.body)}
 
       {/* ANIMATION FESTIVE DE CONFETTIS LORS DES DEALS ET TRANSFERTS */}
       {showConfetti && (
