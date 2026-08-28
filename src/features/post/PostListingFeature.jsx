@@ -112,6 +112,7 @@ export default function PostListingFeature({
   const [tagInputValue, setTagInputValue] = useState('');
   const [nominatimSuggestions, setNominatimSuggestions] = useState([]);
   const [isSearchingLocation, setIsSearchingLocation] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const nominatimTimeoutRef = useRef(null);
 
   // État de l'éditeur vidéo
@@ -256,237 +257,257 @@ export default function PostListingFeature({
 
   // ---- PUBLICATION FINALE DE L'ANNONCE ----
   const handlePublishAnnouncement = async () => {
-    const rawTitle = (postDraft.title || '').trim();
-    const rawDescription = (postDraft.description || '').trim();
+    if (isSubmitting) return;
+    setIsSubmitting(true);
 
-    if (!rawTitle || !rawDescription) {
-      setPublishMessage(currentLang === 'FR' ? 'Ajoute un titre et une description pour publier ton annonce.' : currentLang === 'EN' ? 'Add a title and a description to publish your ad.' : currentLang === 'ES' ? 'Añade un título y una descripción para publicar tu anuncio.' : currentLang === 'IT' ? 'Aggiungi un titre e una descrizione per pubblicare il tuo annuncio.' : currentLang === 'DE' ? 'Füge einen Titel und eine Beschreibung hinzu, um deine Anzeige zu veröffentlichen.' : currentLang === 'JA' ? 'タイトルと説明を追加して広告を公開してください。' : '添加标题和描述以发布您的广告。');
-      return;
-    }
+    try {
+      const rawTitle = (postDraft.title || '').trim();
+      const rawDescription = (postDraft.description || '').trim();
 
-    // Modération automatique
-    const blacklistCheck = validateListingContent({
-      title: rawTitle,
-      description: rawDescription,
-      tags: postDraft.tags || [],
-    });
-    if (!blacklistCheck.isValid) {
-      setPublishMessage(blacklistCheck.errorMessage);
-      alert(blacklistCheck.errorMessage);
-      return;
-    }
-
-    const moderationAnalysis = analyzeContent(`${rawTitle} ${rawDescription}`);
-    if (!moderationAnalysis.isClean && moderationAnalysis.score >= 40) {
-      setPublishMessage(`⚠️ Annonce non conforme aux règles Troco : ${moderationAnalysis.reasons.join(' ')}`);
-      return;
-    }
-
-    const wantsUrgent = postDraft.isUrgent;
-    const compensationText = postDraft.compensation === 'credits'
-      ? '1h = 1 Crédit'
-      : postDraft.compensation === 'cash'
-        ? `${postDraft.price || '20'}€`
-        : postDraft.compensation === 'hybrid'
-          ? `${postDraft.trocoTokens || 0} Jetons + ${postDraft.euroAmount || 0}€`
-          : 'Troc direct';
-
-    const cautionText = postDraft.requiresCaution
-      ? `Caution virtuelle ${postDraft.cautionAmount || 0}€`
-      : (postDraft.caution && typeof postDraft.caution === 'string' ? postDraft.caution.trim() : null);
-
-    const generatedTags = postDraft.tags && postDraft.tags.length > 0 ? postDraft.tags : generateTags(rawTitle, rawDescription);
-    const media = getSuggestedMedia(rawTitle, rawDescription, postDraft.imageUrl, postDraft.videoUrl);
-
-    const baseTranslations = {};
-    const lowerTitle = rawTitle.toLowerCase();
-    const isPython = lowerTitle.includes('python');
-    ['EN', 'ES', 'IT', 'DE', 'JA', 'ZH'].forEach(l => {
-      let tTitle = rawTitle;
-      let tDesc = rawDescription;
-      if (isPython) {
-        if (l === 'EN') tTitle = tTitle.replace(/cours/i, 'COURSE');
-        if (l === 'ES') tTitle = tTitle.replace(/cours/i, 'CURSO');
-        if (l === 'IT') tTitle = tTitle.replace(/cours/i, 'CORSO');
-        if (l === 'DE') tTitle = tTitle.replace(/cours/i, 'KURS');
-        if (l === 'JA') tTitle = 'Pythonレッスン';
-        if (l === 'ZH') tTitle = 'Python课程';
+      if (!rawTitle || !rawDescription) {
+        setPublishMessage(currentLang === 'FR' ? 'Ajoute un titre et une description pour publier ton annonce.' : currentLang === 'EN' ? 'Add a title and a description to publish your ad.' : currentLang === 'ES' ? 'Añade un título y una descripción para publicar tu anuncio.' : currentLang === 'IT' ? 'Aggiungi un titre e una descrizione per pubblicare il tuo annuncio.' : currentLang === 'DE' ? 'Füge einen Titel und eine Beschreibung hinzu, um deine Anzeige zu veröffentlichen.' : currentLang === 'JA' ? 'タイトルと説明を追加して広告を公開してください。' : '添加标题和描述以发布您的广告。');
+        setIsSubmitting(false);
+        return;
       }
-      baseTranslations[l] = { title: tTitle, description: `[${l}] ${tDesc}` };
-    });
 
-    const finalGallery = postDraft.gallery && postDraft.gallery.length > 0 ? postDraft.gallery : media.gallery;
-
-    const finalCategory = ((postDraft.category === 'Autre' || postDraft.category === 'Autre / Domaine personnalisé') && postDraft.customCategoryName?.trim())
-      ? postDraft.customCategoryName.trim()
-      : postDraft.category;
-
-    if (postDraft.customCategoryName?.trim() && !customCategories.includes(postDraft.customCategoryName.trim())) {
-      setCustomCategories(prev => [...prev, postDraft.customCategoryName.trim()]);
-    }
-
-    const isBlurred = postDraft.locationPrivacy === 'blurred';
-    const blurOffsetLat = isBlurred ? (Math.random() - 0.5) * 0.009 : 0;
-    const blurOffsetLng = isBlurred ? (Math.random() - 0.5) * 0.009 : 0;
-    const baseCoords = postDraft.coordinates || getCoordinatesForLocation(postDraft.location) || (userCoords ? userCoords : [48.8566, 2.3522]);
-    const resolvedCoords = [baseCoords[0] + blurOffsetLat, baseCoords[1] + blurOffsetLng];
-
-    const newListing = {
-      ...(isEditingListing ? editingOriginalListing : {}),
-      id: isEditingListing ? editingOriginalListing.id : Date.now(),
-      title: rawTitle,
-      author: profile.name || 'Utilisateur',
-      category: finalCategory,
-      customCategory: (postDraft.category === 'Autre' || postDraft.category === 'Autre / Domaine personnalisé') || Boolean(postDraft.customCategoryName?.trim()),
-      customCategoryName: postDraft.customCategoryName?.trim() || null,
-      verified: isEditingListing ? editingOriginalListing.verified : (profile?.kycVerified || false),
-      rating: isEditingListing ? editingOriginalListing.rating : null,
-      reviews: isEditingListing ? (editingOriginalListing.reviews || 0) : 0,
-      status: postDraft.status || 'active',
-      location: (postDraft.location || '').trim() || (postDraft.format === 'remote' ? 'À distance' : 'Sur place'),
-      locationPrivacy: postDraft.locationPrivacy || 'exact',
-      coordinates: isEditingListing && editingOriginalListing.coordinates ? editingOriginalListing.coordinates : resolvedCoords,
-      type: postDraft.format,
-      languages: profile.languages ? profile.languages.slice(0, 2) : ['FR'],
-      compensation: compensationText,
-      image: finalGallery[0] || media.image,
-      video: postDraft.videoUrl || media.video,
-      videoUrl: postDraft.videoUrl || media.video,
-      videoTrimStart: Number(postDraft.videoTrimStart || 0),
-      videoTrimEnd: Number(postDraft.videoTrimEnd || 0),
-      cropRatio: postDraft.cropRatio || '16:9',
-      videoMetadata: postDraft.videoMetadata || {
-        trimStart: Number(postDraft.videoTrimStart || 0),
-        trimEnd: Number(postDraft.videoTrimEnd || 0),
-        cropRatio: postDraft.cropRatio || '16:9'
-      },
-      gallery: finalGallery,
-      urgent: wantsUrgent,
-      caution: cautionText,
-      description: rawDescription,
-      tags: generatedTags,
-      isCollaborative: postDraft.type === 'collaborative_project' || Boolean(postDraft.isCollaborative),
-      postType: postDraft.type || 'offer',
-      nativeLang: 'FR',
-      translations: baseTranslations,
-    };
-
-    const textChanged = isEditingListing
-      ? (rawTitle !== (editingOriginalListing?.title || '') || rawDescription !== (editingOriginalListing?.description || ''))
-      : false;
-    const invoiceCalc = calculateListingInvoice({
-      isUrgent: wantsUrgent,
-      photoCount: finalGallery.length,
-      isEditing: isEditingListing,
-      isEditingContentChanged: textChanged,
-    });
-
-    const totalToPay = invoiceCalc.totalTTC;
-
-    if (totalToPay > 0 && (profile.euroBalance || 0) < totalToPay) {
-      openCheckout({
-        mode: 'publish-options',
-        amount: totalToPay,
-        label: isEditingListing ? `Options modification annonce (${totalToPay.toFixed(2)} €)` : `Options de publication (${totalToPay.toFixed(2)} €)`,
-        payload: { newListing, invoiceCalc }
+      // Modération automatique
+      const blacklistCheck = validateListingContent({
+        title: rawTitle,
+        description: rawDescription,
+        tags: postDraft.tags || [],
       });
-      return;
-    }
-
-    if (totalToPay > 0) {
-      setProfile(prev => ({ ...prev, euroBalance: Number(((prev.euroBalance || 0) - totalToPay).toFixed(2)) }));
-
-      const invoiceRef = generateInvoiceRef();
-      const txRecord = {
-        id: `tx-${Date.now()}`,
-        type: isEditingListing ? 'edit-listing' : 'publish-options',
-        title: isEditingListing ? `Modification annonce — ${rawTitle}` : `Options publication — ${rawTitle}`,
-        amount: totalToPay,
-        currency: 'EUR',
-        status: 'completed',
-        invoiceRef: invoiceRef,
-        date: new Date().toISOString(),
-        createdAt: serverTimestamp(),
-        userId: profile.uid || auth.currentUser?.uid || 'anonymous',
-        items: invoiceCalc.items,
-      };
-      try {
-        await addDoc(collection(db, 'transactions'), txRecord);
-      } catch (e) {
-        console.warn('[Firestore] transaction addDoc failed:', e);
+      if (!blacklistCheck.isValid) {
+        setPublishMessage(blacklistCheck.errorMessage);
+        alert(blacklistCheck.errorMessage);
+        setIsSubmitting(false);
+        return;
       }
-      setUserTransactions(prev => [txRecord, ...prev]);
-    }
 
-    if (isEditingListing) {
-      setListings(prev => prev.map(item => item.id === newListing.id ? newListing : item));
-      if (editingOriginalListing?.firestoreId) {
+      const moderationAnalysis = analyzeContent(`${rawTitle} ${rawDescription}`);
+      if (!moderationAnalysis.isClean && moderationAnalysis.score >= 40) {
+        setPublishMessage(`⚠️ Annonce non conforme aux règles Troco : ${moderationAnalysis.reasons.join(' ')}`);
+        setIsSubmitting(false);
+        return;
+      }
+
+      const wantsUrgent = postDraft.isUrgent;
+      const compensationText = postDraft.compensation === 'credits'
+        ? '1h = 1 Crédit'
+        : postDraft.compensation === 'cash'
+          ? `${postDraft.price || '20'}€`
+          : postDraft.compensation === 'hybrid'
+            ? `${postDraft.trocoTokens || 0} Jetons + ${postDraft.euroAmount || 0}€`
+            : 'Troc direct';
+
+      const cautionText = postDraft.requiresCaution
+        ? `Caution virtuelle ${postDraft.cautionAmount || 0}€`
+        : (postDraft.caution && typeof postDraft.caution === 'string' ? postDraft.caution.trim() : null);
+
+      const generatedTags = postDraft.tags && postDraft.tags.length > 0 ? postDraft.tags : generateTags(rawTitle, rawDescription);
+      const media = getSuggestedMedia(rawTitle, rawDescription, postDraft.imageUrl, postDraft.videoUrl);
+
+      const baseTranslations = {};
+      const lowerTitle = rawTitle.toLowerCase();
+      const isPython = lowerTitle.includes('python');
+      ['EN', 'ES', 'IT', 'DE', 'JA', 'ZH'].forEach(l => {
+        let tTitle = rawTitle;
+        let tDesc = rawDescription;
+        if (isPython) {
+          if (l === 'EN') tTitle = tTitle.replace(/cours/i, 'COURSE');
+          if (l === 'ES') tTitle = tTitle.replace(/cours/i, 'CURSO');
+          if (l === 'IT') tTitle = tTitle.replace(/cours/i, 'CORSO');
+          if (l === 'DE') tTitle = tTitle.replace(/cours/i, 'KURS');
+          if (l === 'JA') tTitle = 'Pythonレッスン';
+          if (l === 'ZH') tTitle = 'Python课程';
+        }
+        baseTranslations[l] = { title: tTitle, description: `[${l}] ${tDesc}` };
+      });
+
+      const finalGallery = postDraft.gallery && postDraft.gallery.length > 0 ? postDraft.gallery : media.gallery;
+
+      const finalCategory = ((postDraft.category === 'Autre' || postDraft.category === 'Autre / Domaine personnalisé') && postDraft.customCategoryName?.trim())
+        ? postDraft.customCategoryName.trim()
+        : postDraft.category;
+
+      if (postDraft.customCategoryName?.trim() && !customCategories.includes(postDraft.customCategoryName.trim())) {
+        setCustomCategories(prev => [...prev, postDraft.customCategoryName.trim()]);
+      }
+
+      const isBlurred = postDraft.locationPrivacy === 'blurred';
+      const blurOffsetLat = isBlurred ? (Math.random() - 0.5) * 0.009 : 0;
+      const blurOffsetLng = isBlurred ? (Math.random() - 0.5) * 0.009 : 0;
+      const baseCoords = postDraft.coordinates || getCoordinatesForLocation(postDraft.location) || (userCoords ? userCoords : [48.8566, 2.3522]);
+      const resolvedCoords = [baseCoords[0] + blurOffsetLat, baseCoords[1] + blurOffsetLng];
+
+      const newListing = {
+        ...(isEditingListing ? editingOriginalListing : {}),
+        id: isEditingListing ? editingOriginalListing.id : Date.now(),
+        title: rawTitle,
+        author: profile.name || 'Utilisateur',
+        category: finalCategory,
+        customCategory: (postDraft.category === 'Autre' || postDraft.category === 'Autre / Domaine personnalisé') || Boolean(postDraft.customCategoryName?.trim()),
+        customCategoryName: postDraft.customCategoryName?.trim() || null,
+        verified: isEditingListing ? editingOriginalListing.verified : (profile?.kycVerified || false),
+        rating: isEditingListing ? editingOriginalListing.rating : null,
+        reviews: isEditingListing ? (editingOriginalListing.reviews || 0) : 0,
+        status: postDraft.status || 'active',
+        location: (postDraft.location || '').trim() || (postDraft.format === 'remote' ? 'À distance' : 'Sur place'),
+        locationPrivacy: postDraft.locationPrivacy || 'exact',
+        coordinates: isEditingListing && editingOriginalListing.coordinates ? editingOriginalListing.coordinates : resolvedCoords,
+        type: postDraft.format,
+        languages: profile.languages ? profile.languages.slice(0, 2) : ['FR'],
+        compensation: compensationText,
+        image: finalGallery[0] || media.image,
+        video: postDraft.videoUrl || media.video,
+        videoUrl: postDraft.videoUrl || media.video,
+        videoTrimStart: Number(postDraft.videoTrimStart || 0),
+        videoTrimEnd: Number(postDraft.videoTrimEnd || 0),
+        cropRatio: postDraft.cropRatio || '16:9',
+        videoMetadata: postDraft.videoMetadata || {
+          trimStart: Number(postDraft.videoTrimStart || 0),
+          trimEnd: Number(postDraft.videoTrimEnd || 0),
+          cropRatio: postDraft.cropRatio || '16:9'
+        },
+        gallery: finalGallery,
+        urgent: wantsUrgent,
+        caution: cautionText,
+        description: rawDescription,
+        tags: generatedTags,
+        isCollaborative: postDraft.type === 'collaborative_project' || Boolean(postDraft.isCollaborative),
+        postType: postDraft.type || 'offer',
+        nativeLang: 'FR',
+        translations: baseTranslations,
+      };
+
+      const textChanged = isEditingListing
+        ? (rawTitle !== (editingOriginalListing?.title || '') || rawDescription !== (editingOriginalListing?.description || ''))
+        : false;
+      const invoiceCalc = calculateListingInvoice({
+        isUrgent: wantsUrgent,
+        photoCount: finalGallery.length,
+        isEditing: isEditingListing,
+        isEditingContentChanged: textChanged,
+      });
+
+      const totalToPay = invoiceCalc.totalTTC;
+
+      // Si paiement requis et solde Euro insuffisant -> ouvrir le checkout (Apple Pay / Carte)
+      if (totalToPay > 0 && (profile.euroBalance || 0) < totalToPay) {
+        setIsSubmitting(false);
+        openCheckout({
+          mode: 'publish-options',
+          amount: totalToPay,
+          label: isEditingListing ? `Options modification annonce (${totalToPay.toFixed(2)} €)` : `Options de publication (${totalToPay.toFixed(2)} €)`,
+          payload: { newListing, invoiceCalc }
+        });
+        return;
+      }
+
+      // Débit STRICTEMENT en Euros (sans toucher aux trocoTokens)
+      if (totalToPay > 0) {
+        setProfile(prev => ({
+          ...prev,
+          euroBalance: Number(Math.max(0, (prev.euroBalance || 0) - totalToPay).toFixed(2))
+          // trocoTokens reste 100% INTACT
+        }));
+
+        const invoiceRef = generateInvoiceRef();
+        const txRecord = {
+          id: `tx-${Date.now()}`,
+          type: isEditingListing ? 'edit-listing' : 'publish-options',
+          title: isEditingListing ? `Modification annonce — ${rawTitle}` : `Options publication — ${rawTitle}`,
+          amount: totalToPay,
+          currency: 'EUR',
+          status: 'completed',
+          invoiceRef: invoiceRef,
+          date: new Date().toISOString(),
+          createdAt: serverTimestamp(),
+          userId: profile.uid || auth.currentUser?.uid || 'anonymous',
+          items: invoiceCalc.items,
+        };
         try {
-          const { id: _localId, firestoreId: _fid, ...firestorePayload } = newListing;
-          await updateDoc(doc(db, 'listings', editingOriginalListing.firestoreId), {
+          await addDoc(collection(db, 'transactions'), txRecord);
+        } catch (e) {
+          console.warn('[Firestore] transaction addDoc failed:', e);
+        }
+        setUserTransactions(prev => [txRecord, ...prev]);
+      }
+
+      if (isEditingListing) {
+        setListings(prev => prev.map(item => item.id === newListing.id ? newListing : item));
+        if (editingOriginalListing?.firestoreId) {
+          try {
+            const { id: _localId, firestoreId: _fid, ...firestorePayload } = newListing;
+            await updateDoc(doc(db, 'listings', editingOriginalListing.firestoreId), {
+              ...firestorePayload,
+              updatedAt: serverTimestamp(),
+            });
+          } catch (e) {
+            console.warn('[Firestore] updateDoc failed:', e);
+          }
+        }
+      } else {
+        setListings(prev => [newListing, ...prev]);
+        try {
+          const { id: _localId, ...firestorePayload } = newListing;
+          await addDoc(collection(db, 'listings'), {
             ...firestorePayload,
+            createdAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
           });
         } catch (e) {
-          console.warn('[Firestore] updateDoc failed:', e);
+          console.warn('[Firestore] addDoc failed:', e);
         }
       }
-    } else {
-      setListings(prev => [newListing, ...prev]);
-      try {
-        const { id: _localId, ...firestorePayload } = newListing;
-        await addDoc(collection(db, 'listings'), {
-          ...firestorePayload,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        });
-      } catch (e) {
-        console.warn('[Firestore] addDoc failed:', e);
-      }
+
+      const urgentMsg = wantsUrgent ? ' • Option Urgent activée 🔥' : '';
+      const publishedMsg = isEditingListing
+        ? (currentLang === 'FR' ? 'Annonce modifiée avec succès :' : 'Listing updated successfully:')
+        : (currentLang === 'FR' ? '🎉 Annonce publiée avec succès :' : '🎉 Listing published successfully:');
+      setPublishMessage(`${publishedMsg} ${newListing.title}${urgentMsg}`);
+
+      playApplePaySound();
+
+      const updatedListingDetail = getListingDetail(newListing);
+      setPublishedListing(updatedListingDetail);
+      setShowPublishedPopup(true);
+      setSelectedListing(updatedListingDetail);
+
+      setIsEditingListing(false);
+      setEditingOriginalListing(null);
+      setPostStep(1);
+      setPostDraft({
+        type: 'offer',
+        status: 'active',
+        title: '',
+        category: 'Cours & Compétences',
+        customCategoryName: '',
+        format: 'onsite',
+        description: '',
+        compensation: 'credits',
+        durationType: 'hourly',
+        durationValue: '1',
+        price: '20',
+        location: '',
+        availability: '',
+        caution: '',
+        requiresCaution: false,
+        cautionAmount: '',
+        trocoTokens: '1',
+        euroAmount: '',
+        isUrgent: false,
+        locationPrivacy: 'exact',
+        coordinates: null,
+        image: 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=800&q=80',
+        imageUrl: '',
+        videoUrl: '',
+      });
+    } catch (err) {
+      console.error('[PostListingFeature] Erreur de publication:', err);
+      setPublishMessage(`Erreur lors de la publication : ${err.message || 'Veuillez réessayer'}`);
+    } finally {
+      setIsSubmitting(false);
     }
-
-    const urgentMsg = wantsUrgent ? ' • Option Urgent activée' : '';
-    const publishedMsg = isEditingListing
-      ? (currentLang === 'FR' ? 'Annonce modifiée avec succès :' : 'Listing updated successfully:')
-      : (currentLang === 'FR' ? 'Annonce publiée avec succès :' : 'Listing published successfully:');
-    setPublishMessage(`${publishedMsg} ${newListing.title}${urgentMsg}`);
-
-    playApplePaySound();
-
-    const updatedListingDetail = getListingDetail(newListing);
-    setPublishedListing(updatedListingDetail);
-    setShowPublishedPopup(true);
-    setSelectedListing(updatedListingDetail);
-
-    setIsEditingListing(false);
-    setEditingOriginalListing(null);
-    setPostStep(1);
-    setPostDraft({
-      type: 'offer',
-      status: 'active',
-      title: '',
-      category: 'Cours & Compétences',
-      customCategoryName: '',
-      format: 'onsite',
-      description: '',
-      compensation: 'credits',
-      durationType: 'hourly',
-      durationValue: '1',
-      price: '20',
-      location: '',
-      availability: '',
-      caution: '',
-      requiresCaution: false,
-      cautionAmount: '',
-      trocoTokens: '1',
-      euroAmount: '',
-      isUrgent: false,
-      locationPrivacy: 'exact',
-      coordinates: null,
-      image: 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=800&q=80',
-      imageUrl: '',
-      videoUrl: '',
-    });
   };
 
   return (
@@ -1184,29 +1205,53 @@ export default function PostListingFeature({
               isEditingContentChanged: isEditingContentChanged,
             });
 
-            const buttonLabel = isEditingListing
-              ? (quote.totalTTC > 0
-                ? (currentLang === 'FR' ? `Valider et payer ${quote.totalTTC.toFixed(2)} €` : `Confirm & Pay €${quote.totalTTC.toFixed(2)}`)
-                : (currentLang === 'FR' ? 'Sauvegarder les modifications' : 'Save changes'))
-              : (quote.totalTTC > 0
-                ? (currentLang === 'FR' ? `Publier et payer ${quote.totalTTC.toFixed(2)} €` : `Publish & Pay €${quote.totalTTC.toFixed(2)}`)
-                : t('publishAdButton'));
+            const buttonLabel = isSubmitting
+              ? (currentLang === 'FR' ? 'Publication en cours...' : 'Publishing...')
+              : isEditingListing
+                ? (quote.totalTTC > 0
+                  ? (currentLang === 'FR' ? `Valider et payer ${quote.totalTTC.toFixed(2)} €` : `Confirm & Pay €${quote.totalTTC.toFixed(2)}`)
+                  : (currentLang === 'FR' ? 'Sauvegarder les modifications' : 'Save changes'))
+                : (quote.totalTTC > 0
+                  ? (currentLang === 'FR' ? `Publier et payer ${quote.totalTTC.toFixed(2)} €` : `Publish & Pay €${quote.totalTTC.toFixed(2)}`)
+                  : t('publishAdButton'));
 
             return (
               <button
+                type="button"
+                disabled={isSubmitting}
                 onClick={handlePublishAnnouncement}
                 className="premium-button"
                 style={{
                   border: 'none',
                   borderRadius: 'var(--border-radius-main, 999px)',
                   padding: '10px 20px',
-                  background: quote.totalTTC > 0 ? '#F59E0B' : 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
+                  background: isSubmitting
+                    ? 'rgba(150, 150, 150, 0.4)'
+                    : quote.totalTTC > 0
+                      ? '#F59E0B'
+                      : 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
                   color: 'var(--accent-contrast-text, #FFF)',
                   fontWeight: '800',
-                  cursor: 'pointer',
-                  boxShadow: 'var(--shadow-accent)'
+                  cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                  opacity: isSubmitting ? 0.75 : 1,
+                  boxShadow: isSubmitting ? 'none' : 'var(--shadow-accent)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
                 }}
               >
+                {isSubmitting && (
+                  <div
+                    style={{
+                      width: '14px',
+                      height: '14px',
+                      border: '2px solid rgba(255,255,255,0.4)',
+                      borderTopColor: '#FFF',
+                      borderRadius: '50%',
+                      animation: 'spin 0.8s linear infinite',
+                    }}
+                  />
+                )}
                 {buttonLabel}
               </button>
             );

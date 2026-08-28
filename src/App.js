@@ -11,7 +11,7 @@ import { TROCO_CATEGORIES } from './data/categoriesData';
 import { subscribeTranslations } from './utils/translator';
 import { playApplePaySound, playBetclicBalanceSound, playWelcomeGiftFanfare } from './utils/audioService';
 import { useChatManager } from './hooks/useChatManager';
-import { AppHeader, AppBottomNav } from './components/layout';
+import { AppHeader, AppBottomNav, GeometricBackground } from './components/layout';
 import { getSuggestedMedia, getSuggestedImage, getFallbackImage } from './utils/mediaHelpers';
 import FeedCardItem from './components/FeedCardItem';
 import { generateInvoiceRef } from './components/InvoiceCalculator';
@@ -2242,6 +2242,9 @@ export default function App() {
       position: 'relative',
       fontFamily: 'var(--font-family-main)'
     }}>
+      {/* CONSTELLATION GÉOMÉTRIQUE FLUIDE EN ARRIÈRE-PLAN */}
+      <GeometricBackground darkMode={darkMode} />
+
       {/* FOND LIQUIDE IRIDESCENT (PASTEL EDITION) */}
       <div className="liquid-iridescence-container">
         <div className="liquid-blob liquid-blob-1" />
@@ -4360,6 +4363,8 @@ export default function App() {
             </div>
           </div>
         </div>
+      )}
+
       {/* ÉCRAN D'EXCLUSION TOTAL EN CAS DE BANNISSEMENT TEMPS RÉEL */}
       {isUserBanned && (
         <div

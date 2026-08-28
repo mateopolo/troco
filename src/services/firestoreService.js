@@ -180,42 +180,46 @@ export const executeDealTransaction = async ({
 }) => {
   try {
     await runTransaction(db, async (transaction) => {
-      // 1. Mise à jour de l'état du deal dans le chat
+      // 1. TOUTES LES LECTURES (transaction.get) EN PREMIER
       const msgRef = doc(db, 'chats', String(chatId), 'messages', String(dealId));
+      let buyerDoc = null;
+      let sellerDoc = null;
+      let buyerRef = null;
+      let sellerRef = null;
+
+      if (buyerUid && sellerUid) {
+        buyerRef = doc(db, 'users', String(buyerUid));
+        sellerRef = doc(db, 'users', String(sellerUid));
+        buyerDoc = await transaction.get(buyerRef);
+        sellerDoc = await transaction.get(sellerRef);
+      }
+
+      // 2. TOUTES LES ÉCRITURES (transaction.update / set) APRÈS
       transaction.update(msgRef, {
         status: 'confirmed',
         updatedAt: serverTimestamp(),
       });
 
-      // 2. Transfert de solde si les UIDs sont présents
-      if (buyerUid && sellerUid) {
-        const buyerRef = doc(db, 'users', String(buyerUid));
-        const sellerRef = doc(db, 'users', String(sellerUid));
+      if (buyerDoc?.exists() && sellerDoc?.exists()) {
+        const buyerData = buyerDoc.data();
+        const sellerData = sellerDoc.data();
 
-        const buyerDoc = await transaction.get(buyerRef);
-        const sellerDoc = await transaction.get(sellerRef);
+        const newBuyerTokens = Math.max(0, (buyerData.trocoTokens || 0) - trocoTokens);
+        const newBuyerEuro = Math.max(0, (buyerData.euroBalance || 0) - euroAmount);
+        const newSellerTokens = (sellerData.trocoTokens || 0) + trocoTokens;
+        const newSellerEuro = (sellerData.euroBalance || 0) + euroAmount;
 
-        if (buyerDoc.exists() && sellerDoc.exists()) {
-          const buyerData = buyerDoc.data();
-          const sellerData = sellerDoc.data();
+        transaction.update(buyerRef, {
+          trocoTokens: newBuyerTokens,
+          euroBalance: newBuyerEuro,
+          updatedAt: serverTimestamp(),
+        });
 
-          const newBuyerTokens = Math.max(0, (buyerData.trocoTokens || 0) - trocoTokens);
-          const newBuyerEuro = Math.max(0, (buyerData.euroBalance || 0) - euroAmount);
-          const newSellerTokens = (sellerData.trocoTokens || 0) + trocoTokens;
-          const newSellerEuro = (sellerData.euroBalance || 0) + euroAmount;
-
-          transaction.update(buyerRef, {
-            trocoTokens: newBuyerTokens,
-            euroBalance: newBuyerEuro,
-            updatedAt: serverTimestamp(),
-          });
-
-          transaction.update(sellerRef, {
-            trocoTokens: newSellerTokens,
-            euroBalance: newSellerEuro,
-            updatedAt: serverTimestamp(),
-          });
-        }
+        transaction.update(sellerRef, {
+          trocoTokens: newSellerTokens,
+          euroBalance: newSellerEuro,
+          updatedAt: serverTimestamp(),
+        });
       }
     });
 
@@ -239,7 +243,24 @@ export const releaseEscrowTransaction = async ({
 }) => {
   try {
     await runTransaction(db, async (transaction) => {
+      // 1. TOUTES LES LECTURES EN PREMIER
       const msgRef = doc(db, 'chats', String(chatId), 'messages', String(dealId));
+      let sellerDoc = null;
+      let buyerDoc = null;
+      let sellerRef = null;
+      let buyerRef = null;
+
+      if (sellerUid) {
+        sellerRef = doc(db, 'users', String(sellerUid));
+        sellerDoc = await transaction.get(sellerRef);
+      }
+
+      if (buyerUid) {
+        buyerRef = doc(db, 'users', String(buyerUid));
+        buyerDoc = await transaction.get(buyerRef);
+      }
+
+      // 2. TOUTES LES ÉCRITURES APRÈS
       transaction.update(msgRef, {
         status: 'confirmed',
         'escrow.status': 'released',
@@ -247,29 +268,21 @@ export const releaseEscrowTransaction = async ({
         updatedAt: serverTimestamp(),
       });
 
-      if (sellerUid) {
-        const sellerRef = doc(db, 'users', String(sellerUid));
-        const sellerDoc = await transaction.get(sellerRef);
-        if (sellerDoc.exists()) {
-          const sellerData = sellerDoc.data();
-          transaction.update(sellerRef, {
-            trocoTokens: (sellerData.trocoTokens || 0) + trocoTokens,
-            euroBalance: Number(((sellerData.euroBalance || 0) + euroAmount).toFixed(2)),
-            dealsCompleted: (sellerData.dealsCompleted || 0) + 1,
-            updatedAt: serverTimestamp(),
-          });
-        }
+      if (sellerDoc?.exists()) {
+        const sellerData = sellerDoc.data();
+        transaction.update(sellerRef, {
+          trocoTokens: (sellerData.trocoTokens || 0) + trocoTokens,
+          euroBalance: Number(((sellerData.euroBalance || 0) + euroAmount).toFixed(2)),
+          dealsCompleted: (sellerData.dealsCompleted || 0) + 1,
+          updatedAt: serverTimestamp(),
+        });
       }
 
-      if (buyerUid) {
-        const buyerRef = doc(db, 'users', String(buyerUid));
-        const buyerDoc = await transaction.get(buyerRef);
-        if (buyerDoc.exists()) {
-          transaction.update(buyerRef, {
-            dealsCompleted: (buyerDoc.data().dealsCompleted || 0) + 1,
-            updatedAt: serverTimestamp(),
-          });
-        }
+      if (buyerDoc?.exists()) {
+        transaction.update(buyerRef, {
+          dealsCompleted: (buyerDoc.data().dealsCompleted || 0) + 1,
+          updatedAt: serverTimestamp(),
+        });
       }
     });
 
@@ -353,22 +366,33 @@ export const executeDirectTokenTransfer = async ({
 
   try {
     await runTransaction(db, async (transaction) => {
-      // 1. Débit Expéditeur
+      // 1. TOUTES LES LECTURES AU TOUT DÉBUT DE LA TRANSACTION (READS FIRST)
       const senderRef = doc(db, 'users', String(senderUid));
+      const recipientRef = doc(db, 'users', String(recipientUid));
+
       const senderDoc = await transaction.get(senderRef);
-      if (senderDoc.exists()) {
-        const senderData = senderDoc.data();
-        const currentSenderTokens = Number(senderData.trocoTokens || 0);
-        const newSenderTokens = Math.max(0, currentSenderTokens - tokenAmount);
-        transaction.update(senderRef, {
-          trocoTokens: newSenderTokens,
-          updatedAt: serverTimestamp(),
-        });
+      const recipientDoc = await transaction.get(recipientRef);
+
+      // 2. VÉRIFICATIONS ET CALCULS
+      if (!senderDoc.exists()) {
+        throw new Error("Le compte expéditeur n'existe pas dans Firestore.");
       }
 
-      // 2. Crédit Direct Destinataire
-      const recipientRef = doc(db, 'users', String(recipientUid));
-      const recipientDoc = await transaction.get(recipientRef);
+      const senderData = senderDoc.data();
+      const currentSenderTokens = Number(senderData.trocoTokens || 0);
+
+      if (currentSenderTokens < tokenAmount) {
+        throw new Error(`Solde insuffisant (${currentSenderTokens} jeton(s) disponible(s)).`);
+      }
+
+      const newSenderTokens = Math.max(0, currentSenderTokens - tokenAmount);
+
+      // 3. TOUTES LES ÉCRITURES APRÈS LES LECTURES (WRITES)
+      transaction.update(senderRef, {
+        trocoTokens: newSenderTokens,
+        updatedAt: serverTimestamp(),
+      });
+
       if (recipientDoc.exists()) {
         const recipientData = recipientDoc.data();
         const currentRecipientTokens = Number(recipientData.trocoTokens || 0);

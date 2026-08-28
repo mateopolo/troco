@@ -74,6 +74,23 @@ body,
   min-height: 100dvh;
   padding-top: var(--safe-area-top);
   box-sizing: border-box;
+  background: radial-gradient(circle at 15% 15%, rgba(198, 125, 91, 0.09) 0%, transparent 45%),
+              radial-gradient(circle at 85% 85%, rgba(203, 153, 126, 0.07) 0%, transparent 50%),
+              var(--bg-global, #FAF7F2);
+  background-attachment: fixed;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+body.dark-mode,
+[data-theme="dark"],
+.dark {
+  background: radial-gradient(circle at 15% 15%, rgba(198, 125, 91, 0.16) 0%, transparent 50%),
+              radial-gradient(circle at 85% 85%, rgba(239, 68, 68, 0.09) 0%, transparent 55%),
+              #12100E !important;
+  background-attachment: fixed !important;
+  background-size: cover !important;
+  background-repeat: no-repeat !important;
 }
 
 /* FIXE AUTOMATIQUE POUR LES BARRES INFERIEURES AVEC HOME INDICATOR */

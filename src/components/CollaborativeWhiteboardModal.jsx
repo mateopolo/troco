@@ -120,7 +120,7 @@ export default function CollaborativeWhiteboardModal({
   const [selectedStickyId, setSelectedStickyId] = useState(null);
   const [resizingTextId, setResizingTextId] = useState(null);
 
-  // Références d'interaction rapide
+  // Références d'interaction rapide & Verrouillage Anti-Écrasement
   const isDrawingRef = useRef(false);
   const isPanningRef = useRef(false);
   const startPosRef = useRef({ x: 0, y: 0 });
@@ -129,6 +129,7 @@ export default function CollaborativeWhiteboardModal({
   const resizingTextRef = useRef(null);
   const firestoreDebounceTimerRef = useRef(null);
   const p2pBroadcastThrottleRef = useRef(0);
+  const lastLocalModificationTimeRef = useRef(0);
 
   // Verrouillage strict du scroll global du document lors de l'ouverture
   useEffect(() => {
@@ -177,6 +178,7 @@ export default function CollaborativeWhiteboardModal({
       const targetIndex = historyIndex - 1;
       const targetState = history[targetIndex];
       if (targetState) {
+        lastLocalModificationTimeRef.current = Date.now();
         setLocalPaths(targetState.localPaths || []);
         setStickyNotes(targetState.stickyNotes || []);
         setTextElements(targetState.textElements || []);
@@ -190,6 +192,7 @@ export default function CollaborativeWhiteboardModal({
       const targetIndex = historyIndex + 1;
       const targetState = history[targetIndex];
       if (targetState) {
+        lastLocalModificationTimeRef.current = Date.now();
         setLocalPaths(targetState.localPaths || []);
         setStickyNotes(targetState.stickyNotes || []);
         setTextElements(targetState.textElements || []);
@@ -459,7 +462,9 @@ export default function CollaborativeWhiteboardModal({
             if (data.versionNumber) setVersionNumber(data.versionNumber);
             if (data.title) setWorkspaceTitle(data.title);
 
-            // Ne pas écraser les traits locaux de l'utilisateur : on extrait uniquement les traits distants
+            // RÈGLE CRITIQUE ANTI-CONFLIT :
+            // Si l'utilisateur est en train de dessiner ou vient de modifier localement (< 2s),
+            // on ne met à jour que les traits distants (authorUid !== myUid) pour ne jamais effacer les traits locaux
             if (data.paths && Array.isArray(data.paths)) {
               const onlyRemote = data.paths
                 .filter((p) => p && p.authorUid !== myUid)
@@ -467,12 +472,15 @@ export default function CollaborativeWhiteboardModal({
               setRemotePaths(onlyRemote);
             }
 
-            if (data.stickyNotes && Array.isArray(data.stickyNotes) && !draggingStickyRef.current) {
-              setStickyNotes(data.stickyNotes);
-            }
+            // Ne pas écraser les post-its ou textes s'ils sont manipulés localement
+            if (!isDrawingRef.current && Date.now() - lastLocalModificationTimeRef.current > 2000) {
+              if (data.stickyNotes && Array.isArray(data.stickyNotes) && !draggingStickyRef.current) {
+                setStickyNotes(data.stickyNotes);
+              }
 
-            if (data.textElements && Array.isArray(data.textElements) && !editingTextId && !resizingTextRef.current) {
-              setTextElements(data.textElements);
+              if (data.textElements && Array.isArray(data.textElements) && !editingTextId && !resizingTextRef.current) {
+                setTextElements(data.textElements);
+              }
             }
 
             setSaveStatus('P2P Direct ⚡ 0ms');
@@ -525,6 +533,7 @@ export default function CollaborativeWhiteboardModal({
     }
 
     if (tool === 'sticky') {
+      lastLocalModificationTimeRef.current = Date.now();
       const newSticky = {
         id: `sticky-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
         x: coords.x - 70,
@@ -547,6 +556,7 @@ export default function CollaborativeWhiteboardModal({
     }
 
     if (tool === 'text') {
+      lastLocalModificationTimeRef.current = Date.now();
       const newText = {
         id: `text-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
         x: coords.x,
@@ -573,6 +583,7 @@ export default function CollaborativeWhiteboardModal({
 
     // Outils de dessin
     isDrawingRef.current = true;
+    lastLocalModificationTimeRef.current = Date.now();
 
     if (tool === 'pencil' || tool === 'brush' || tool === 'highlighter' || tool === 'eraser') {
       const newPath = {
@@ -708,6 +719,7 @@ export default function CollaborativeWhiteboardModal({
     }
 
     if (draggingStickyRef.current) {
+      lastLocalModificationTimeRef.current = Date.now();
       const dragged = stickyNotes.find((s) => s.id === draggingStickyRef.current.id);
       if (dragged) {
         whiteboardP2PService.broadcastEvent('sticky_update', { sticky: dragged });
@@ -718,6 +730,7 @@ export default function CollaborativeWhiteboardModal({
     }
 
     if (resizingTextRef.current) {
+      lastLocalModificationTimeRef.current = Date.now();
       const resized = textElements.find((t) => t.id === resizingTextRef.current.id);
       if (resized) {
         whiteboardP2PService.broadcastEvent('text_update', { text: resized });
@@ -727,19 +740,25 @@ export default function CollaborativeWhiteboardModal({
       resizingTextRef.current = null;
     }
 
+    // FUSION SYNCHRONE LOCALE IMMÉDIATE (ÉVITE LA RACE CONDITION DE DISPARITION DU TRAIT)
     if (isDrawingRef.current && currentPath) {
       isDrawingRef.current = false;
-      const nextLocalPaths = [...localPaths, currentPath];
+      lastLocalModificationTimeRef.current = Date.now();
+
+      const completedPath = { ...currentPath };
+      const nextLocalPaths = [...localPaths, completedPath];
+
+      // 1. Commit synchrone immédiat dans l'état local
       setLocalPaths(nextLocalPaths);
       setCurrentPath(null);
 
-      // 1. Broadcast P2P direct
-      whiteboardP2PService.broadcastEvent('path_add', { path: currentPath });
+      // 2. Broadcast P2P direct (0ms)
+      whiteboardP2PService.broadcastEvent('path_add', { path: completedPath });
 
-      // 2. Empilement dans l'historique
+      // 3. Empilement immédiat dans l'historique Undo/Redo
       pushToHistory(nextLocalPaths, stickyNotes, textElements);
 
-      // 3. Debounce vers Firestore
+      // 4. Debounce vers Firestore sans bloquer le rendu
       debouncedSyncToFirestore(nextLocalPaths, remotePaths, stickyNotes, textElements);
     }
   };
@@ -849,14 +868,23 @@ export default function CollaborativeWhiteboardModal({
 
   const handleSaveAndShare = async () => {
     if (isSavingAndSharing) return;
+
+    // 1. Demande du nom de version via prompt natif ou nom par défaut
+    const defaultVersionLabel = `V${versionNumber + 1}`;
+    const userVersionInput = window.prompt("Nom de cette nouvelle version ? (ex: V3)", defaultVersionLabel);
+    if (userVersionInput === null) {
+      return; // Annulation par l'utilisateur
+    }
+    const chosenVersion = userVersionInput.trim() || defaultVersionLabel;
+
     setIsSavingAndSharing(true);
-    setSaveStatus('Génération de la version...');
+    setSaveStatus(`Enregistrement de ${chosenVersion}...`);
 
     try {
-      // 1. Snapshot rogné sur Bounding Box
+      // 2. Snapshot rogné sur Bounding Box
       const previewUrl = generateBoundingBoxPreview();
 
-      // 2. Sauvegarde de la version dans Firestore
+      // 3. Sauvegarde incrémentale de la version dans Firestore
       const res = await saveWorkspaceVersion({
         workspaceId: effectiveId,
         chatId: groupId,
@@ -865,33 +893,33 @@ export default function CollaborativeWhiteboardModal({
         data: { paths: [...remotePaths, ...localPaths], stickyNotes, textElements },
         previewUrl,
         currentUser,
-        changeSummary: `Version ${versionNumber + 1}`,
+        changeSummary: `Version ${chosenVersion}`,
       });
 
-      const nextVersion = res.version || versionNumber + 1;
-      setVersionNumber(nextVersion);
+      const nextVersionNum = res.version || versionNumber + 1;
+      setVersionNumber(nextVersionNum);
 
-      // 3. Payload d'invitation conforme
+      // 4. Payload d'invitation conforme avec version choisie
       const invitePayload = {
         type: 'workspace_invite',
         kind: 'workspace_invite',
         workspaceType: 'whiteboard',
         workspaceId: effectiveId,
         boardId: effectiveId,
-        version: nextVersion,
+        version: chosenVersion,
         previewUrl,
         workspaceTitle: workspaceTitle,
-        text: `🎨 Tableau Blanc Collaboratif partagé (Version V${nextVersion})`,
+        text: `🎨 ${myName} a partagé ${chosenVersion} du Tableau Blanc`,
         timestamp: Date.now(),
       };
 
-      // 4. Déclenchement de l'émission chat
+      // 5. Déclenchement immédiat de l'émission chat
       const sendFn = onSendMessage || handleSendMessage || onSendToChat;
       if (typeof sendFn === 'function') {
         sendFn(invitePayload);
       }
 
-      setSaveStatus(`Version V${nextVersion} enregistrée et partagée ! ✨`);
+      setSaveStatus(`Version ${chosenVersion} enregistrée et partagée ! ✨`);
       setShareSuccessToast(true);
       setTimeout(() => setShareSuccessToast(false), 3500);
     } catch (err) {
