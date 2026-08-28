@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback, Suspense } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback, Suspense, useTransition } from 'react';
 import { Search, MapPin, Video, Globe, Filter, ShieldCheck, CheckCircle, X, Sparkles, Coins, Trash2, Camera, Flame, Check, Lock, CreditCard, Tag, ChevronLeft, ChevronRight, ShieldAlert } from 'lucide-react';
 import { auth, db } from './firebase';
 import { collection, addDoc, doc, updateDoc, serverTimestamp, onSnapshot, query, orderBy, setDoc, deleteDoc, getDoc, getDocs, where, runTransaction } from 'firebase/firestore';
@@ -140,6 +140,7 @@ export default function App() {
   };
 
   const [activeTab, setActiveTab] = useState('feed');
+  const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
@@ -377,14 +378,16 @@ export default function App() {
   } = chatManager;
 
   const switchTab = useCallback((newTab) => {
-    setActiveTab(newTab);
-    if (newTab !== 'chat') {
-      setSelectedChat(null);
-    }
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
       try { navigator.vibrate(10); } catch (_) { }
     }
-  }, [setActiveTab, setSelectedChat]);
+    startTransition(() => {
+      setActiveTab(newTab);
+      if (newTab !== 'chat') {
+        setSelectedChat(null);
+      }
+    });
+  }, [setActiveTab, setSelectedChat, startTransition]);
 
   // Handler de succès de paiement (crédit solde, enregistrement transaction Firestore)
   // Handler de succès de paiement (crédit solde, abonnement Troco Plus, enregistrement transaction Firestore)
@@ -2293,6 +2296,35 @@ export default function App() {
         input, select, textarea { font-family: inherit; }
       `}</style>
 
+      {/* MICRO-INDICATEUR DE PROGRESSION (React 18 useTransition — barre YouTube-style) */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: '3px',
+          zIndex: 99999,
+          pointerEvents: 'none',
+          overflow: 'hidden',
+        }}
+      >
+        <div
+          style={{
+            height: '100%',
+            background: 'linear-gradient(90deg, var(--accent-primary, #C67D5B) 0%, #F59E0B 60%, #EC4899 100%)',
+            transformOrigin: 'left center',
+            transform: isPending ? 'scaleX(0.85)' : 'scaleX(0)',
+            opacity: isPending ? 1 : 0,
+            transition: isPending
+              ? 'transform 1.4s cubic-bezier(0.1, 0.4, 0.2, 1), opacity 0.1s ease'
+              : 'transform 0.15s ease, opacity 0.3s ease 0.1s',
+            boxShadow: isPending ? '0 0 10px rgba(198,125,91,0.6)' : 'none',
+          }}
+        />
+      </div>
+
       {/* HEADER FIXE GLASSMORPHISM FLUIDE AVEC CONDENSATION AU SCROLL */}
       <AppHeader
         isMobile={isMobile}
@@ -2300,7 +2332,7 @@ export default function App() {
         selectedChat={selectedChat}
         callState={callState}
         endCall={endCall}
-        setActiveTab={setActiveTab}
+        setActiveTab={switchTab}
         setSelectedListing={setSelectedListing}
         setSelectedChat={setSelectedChat}
         handleOpenPayment={handleOpenPayment}
@@ -3264,7 +3296,7 @@ export default function App() {
                   </button>
                 </div>
               ) : viewMode === 'map' ? (
-                <Suspense fallback={<SkeletonFeedLayout />}>
+                <Suspense fallback={null}>
                   <MapSection
                     filteredListings={filteredListings}
                     mapCenter={mapCenter}
@@ -3489,7 +3521,7 @@ export default function App() {
           style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', flex: 1 }}
         >
           <SectoralErrorBoundary moduleName="Communauté & Troco Live">
-            <Suspense fallback={<SkeletonCommunityLayout />}>
+            <Suspense fallback={null}>
               <CommunityHubSection
                 currentUser={profile}
                 onOpenProfile={(targetUser) => {
@@ -3526,7 +3558,7 @@ export default function App() {
             style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', flex: 1 }}
           >
             <SectoralErrorBoundary moduleName="Messagerie & Hub Collaboratif">
-              <Suspense fallback={<SkeletonChatLayout />}>
+              <Suspense fallback={null}>
                 <ChatSection
                   activeTab={activeTab}
                   mockChats={chatsList}
@@ -3580,7 +3612,7 @@ export default function App() {
           style={{ width: '100%' }}
         >
           <SectoralErrorBoundary featureName="Dépôt d'annonce">
-            <Suspense fallback={<SkeletonPostLayout />}>
+            <Suspense fallback={null}>
               <PostListingFeature
                 profile={profile}
                 setProfile={setProfile}
@@ -3626,7 +3658,7 @@ export default function App() {
           {...getActiveAnimation('page')}
           style={{ width: '100%' }}
         >
-          <Suspense fallback={<SkeletonProfileLayout />}>
+          <Suspense fallback={null}>
             <ProfileFeature
               profile={profile}
               setProfile={setProfile}
