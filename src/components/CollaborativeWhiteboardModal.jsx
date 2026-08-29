@@ -14,20 +14,31 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, Pen, Highlighter, Eraser, Square, Circle, ArrowRight,
   RotateCcw, RotateCw, Trash2, StickyNote,
   Type, Hand, Brush, Check, Eye, Maximize2,
-  Sparkles, Save, Send
+  Sparkles, Save, Send, History, Palette, Clock
 } from 'lucide-react';
-import { doc, onSnapshot, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, setDoc, serverTimestamp, arrayUnion } from 'firebase/firestore';
 import { db } from '../firebase';
 import { whiteboardP2PService } from '../services/whiteboardP2PService';
 import {
   saveWorkspaceVersion,
   loadWorkspaceData,
+  fetchWorkspaceVersions,
   WORKSPACE_TYPES,
 } from '../features/workspace/workspaceService';
+
+const BG_PRESETS = [
+  { id: 'white', hex: '#FFFFFF', name: 'Blanc Pur' },
+  { id: 'dark', hex: '#12100E', name: 'Noir Studio' },
+  { id: 'cream', hex: '#FDFBF7', name: 'Crème Troco' },
+  { id: 'slate', hex: '#1E293B', name: 'Ardoise' },
+  { id: 'yellow', hex: '#FEF9C3', name: 'Papier Jaune' },
+  { id: 'blue', hex: '#E0F2FE', name: 'Bleu Doux' },
+];
 
 const CURATED_PALETTE = [
   { id: 'troco', hex: '#C67D5B', name: 'Terracotta Troco' },
@@ -73,11 +84,13 @@ export default function CollaborativeWhiteboardModal({
   const containerRef = useRef(null);
   const colorInputRef = useRef(null);
 
-  // 1. Outils Whiteboard
+  // 1. Outils Whiteboard & Arrière-plan indépendant
   const [tool, setTool] = useState('pencil');
   const [color, setColor] = useState('#C67D5B');
   const [lineWidth, setLineWidth] = useState(4);
   const [showGrid] = useState(true);
+  const [backgroundColor, setBackgroundColor] = useState(() => (darkMode ? '#12100E' : '#FFFFFF'));
+  const bgColorInputRef = useRef(null);
 
   // 2. Mode Immersion Absolue (Plein écran sans distractions)
   const [isImmersiveMode, setIsImmersiveMode] = useState(false);
@@ -112,6 +125,11 @@ export default function CollaborativeWhiteboardModal({
   const [saveSuccessToast, setSaveSuccessToast] = useState(false);
   const [shareSuccessToast, setShareSuccessToast] = useState(false);
 
+  // Panneau Latéral des Versions (Historique)
+  const [isVersionsSidebarOpen, setIsVersionsSidebarOpen] = useState(false);
+  const [versionsList, setVersionsList] = useState([]);
+  const [isLoadingVersions, setIsLoadingVersions] = useState(false);
+
   // 7. Curseur P2P Collaboratif (Ghosting live)
   const [remoteCursors, setRemoteCursors] = useState({});
 
@@ -130,6 +148,68 @@ export default function CollaborativeWhiteboardModal({
   const firestoreDebounceTimerRef = useRef(null);
   const p2pBroadcastThrottleRef = useRef(0);
   const lastLocalModificationTimeRef = useRef(0);
+
+  // Récupération de l'historique complet des versions depuis Firestore
+  const fetchVersions = useCallback(async () => {
+    if (!effectiveId || !db) return;
+    setIsLoadingVersions(true);
+    try {
+      const docRef = doc(db, 'project_whiteboards', String(effectiveId));
+      const snap = await getDoc(docRef);
+      let list = [];
+      if (snap.exists()) {
+        const data = snap.data();
+        if (Array.isArray(data.versionHistory)) {
+          list = [...data.versionHistory];
+        }
+      }
+
+      const wsHistory = await fetchWorkspaceVersions(effectiveId);
+      if (Array.isArray(wsHistory)) {
+        wsHistory.forEach((v) => {
+          if (!list.some((existing) => Number(existing.version) === Number(v.version))) {
+            list.push(v);
+          }
+        });
+      }
+
+      list.sort((a, b) => (Number(b.version) || 0) - (Number(a.version) || 0));
+      setVersionsList(list);
+    } catch (e) {
+      console.warn('[CollaborativeWhiteboard] Erreur récupération versions:', e);
+    } finally {
+      setIsLoadingVersions(false);
+    }
+  }, [effectiveId]);
+
+  // Chargement instantané d'une version spécifique depuis l'historique
+  const handleLoadVersion = (ver) => {
+    if (!ver) return;
+    const data = ver.data || {};
+    const paths = Array.isArray(data.paths) ? data.paths : (Array.isArray(ver.paths) ? ver.paths : []);
+    const stickies = Array.isArray(data.stickyNotes) ? data.stickyNotes : (Array.isArray(ver.stickyNotes) ? ver.stickyNotes : []);
+    const texts = Array.isArray(data.textElements) ? data.textElements : (Array.isArray(ver.textElements) ? ver.textElements : []);
+
+    setLocalPaths(paths);
+    setRemotePaths([]);
+    setStickyNotes(stickies);
+    setTextElements(texts);
+    if (data.backgroundColor || ver.backgroundColor) {
+      setBackgroundColor(data.backgroundColor || ver.backgroundColor);
+    }
+    if (ver.version) {
+      setVersionNumber(Number(ver.version));
+    }
+    if (ver.name || ver.changeSummary) {
+      setWorkspaceTitle(ver.name || ver.changeSummary);
+    }
+
+    setHistory([paths]);
+    setHistoryStep(0);
+    historyStepRef.current = 0;
+    setIsVersionsSidebarOpen(false);
+    setSaveStatus(`Version V${ver.version || 1} chargée ⚡`);
+  };
 
   // Verrouillage strict du scroll global du document
   useEffect(() => {
@@ -157,14 +237,15 @@ export default function CollaborativeWhiteboardModal({
     return { x: worldX, y: worldY, screenX, screenY };
   }, [pan.x, pan.y, zoom]);
 
-  // Synchronisation Firestore Debouncée
+  // Synchronisation Firestore Debouncée avec Arrière-plan
   const debouncedSyncToFirestore = useCallback((
     currentLocalPaths = localPaths,
     currentRemotePaths = remotePaths,
     currentStickyNotes = stickyNotes,
     currentTextElements = textElements,
     currentVersion = versionNumber,
-    currentTitle = workspaceTitle
+    currentTitle = workspaceTitle,
+    currentBg = backgroundColor
   ) => {
     if (!effectiveId || !db) return;
 
@@ -187,6 +268,7 @@ export default function CollaborativeWhiteboardModal({
           paths: combinedPaths,
           stickyNotes: currentStickyNotes,
           textElements: currentTextElements,
+          backgroundColor: currentBg,
           updatedAt: serverTimestamp(),
           lastEditor: myName,
           lastEditorUid: myUid,
@@ -199,7 +281,14 @@ export default function CollaborativeWhiteboardModal({
         setSaveStatus('Mode P2P Direct ⚡');
       }
     }, 380);
-  }, [effectiveId, groupId, localPaths, remotePaths, stickyNotes, textElements, versionNumber, workspaceTitle, myName, myUid]);
+  }, [effectiveId, groupId, localPaths, remotePaths, stickyNotes, textElements, versionNumber, workspaceTitle, backgroundColor, myName, myUid]);
+
+  // Modification et diffusion de la couleur de fond
+  const handleChangeBackgroundColor = (newBg) => {
+    setBackgroundColor(newBg);
+    whiteboardP2PService.broadcastEvent('bg_change', { backgroundColor: newBg });
+    debouncedSyncToFirestore(localPaths, remotePaths, stickyNotes, textElements, versionNumber, workspaceTitle, newBg);
+  };
 
   // ================= 2. MOTEUR D'HISTORIQUE LOCAL (Undo / Redo Trait par Trait) =================
   const pushToHistory = useCallback((newLocalPaths) => {
@@ -464,6 +553,8 @@ export default function CollaborativeWhiteboardModal({
         setTextElements((prev) => [...prev, event.text]);
       } else if (event.type === 'text_update' && event.text) {
         setTextElements((prev) => prev.map((t) => (t.id === event.text.id ? event.text : t)));
+      } else if (event.type === 'bg_change' && event.backgroundColor) {
+        setBackgroundColor(event.backgroundColor);
       } else if (event.type === 'clear') {
         setLocalPaths([]);
         setRemotePaths([]);
@@ -482,6 +573,7 @@ export default function CollaborativeWhiteboardModal({
             if (data.lastEditor) setLastEditor(data.lastEditor);
             if (data.versionNumber) setVersionNumber(data.versionNumber);
             if (data.title) setWorkspaceTitle(data.title);
+            if (data.backgroundColor) setBackgroundColor(data.backgroundColor);
 
             // RÈGLE ANTI-CONFLIT : On ne met à jour que les traits distants pour ne jamais écraser les traits locaux
             if (data.paths && Array.isArray(data.paths)) {
@@ -516,9 +608,11 @@ export default function CollaborativeWhiteboardModal({
     };
   }, [isOpen, effectiveId, myUid, editingTextId]);
 
-  // Chargement initial des données de la session
+  // Chargement initial des données de la session et liste des versions
   useEffect(() => {
     if (!isOpen || !effectiveId) return;
+
+    fetchVersions();
 
     const loadInitialState = async () => {
       try {
@@ -531,6 +625,9 @@ export default function CollaborativeWhiteboardModal({
           setLocalPaths(loadedPaths);
           setStickyNotes(loadedStickies);
           setTextElements(loadedTexts);
+          if (loaded.data.backgroundColor || loaded.backgroundColor) {
+            setBackgroundColor(loaded.data.backgroundColor || loaded.backgroundColor);
+          }
           if (loaded.version) setVersionNumber(Number(loaded.version) || 1);
           if (loaded.title) setWorkspaceTitle(loaded.title);
 
@@ -544,7 +641,7 @@ export default function CollaborativeWhiteboardModal({
     };
 
     loadInitialState();
-  }, [isOpen, effectiveId, version, initialVersion]);
+  }, [isOpen, effectiveId, version, initialVersion, fetchVersions]);
 
   // ================= GESTION DES POINTER EVENTS =================
   const handlePointerDown = (e) => {
@@ -849,7 +946,7 @@ export default function CollaborativeWhiteboardModal({
     // Marge obligatoire de 20px
     const margin = 20;
 
-    const backgroundColor = darkMode ? '#181411' : '#FFFFFF';
+    const bgToUse = backgroundColor || (darkMode ? '#12100E' : '#FFFFFF');
 
     if (minX === Infinity || maxX <= minX || maxY <= minY) {
       const emptyW = 400;
@@ -860,7 +957,7 @@ export default function CollaborativeWhiteboardModal({
       const ctx = tempCanvas.getContext('2d');
       if (ctx) {
         // Remplissage explicite du fond
-        ctx.fillStyle = backgroundColor;
+        ctx.fillStyle = bgToUse;
         ctx.fillRect(0, 0, emptyW, emptyH);
       }
       return tempCanvas.toDataURL('image/png');
@@ -879,7 +976,7 @@ export default function CollaborativeWhiteboardModal({
     if (!ctx) return canvas ? canvas.toDataURL('image/png') : '';
 
     // 1. CORRECTION DE L'EXPORT CANVAS (Image Noire) : Remplissage explicite du fond avant les traits
-    ctx.fillStyle = backgroundColor;
+    ctx.fillStyle = bgToUse;
     ctx.fillRect(0, 0, cropWidth, cropHeight);
 
     ctx.save();
@@ -950,46 +1047,78 @@ export default function CollaborativeWhiteboardModal({
     ctx.restore();
 
     return tempCanvas.toDataURL('image/png');
-  }, [remotePaths, localPaths, stickyNotes, textElements, darkMode]);
+  }, [remotePaths, localPaths, stickyNotes, textElements, backgroundColor, darkMode]);
 
-  // 1. Bouton "Sauvegarder" (Firestore uniquement)
+  // 1. Bouton "Sauvegarder" (Firestore avec prompt de nommage de version et archivage)
   const handleSave = async () => {
     if (isSaving) return;
+
+    // 2. NOMMAGE DES VERSIONS (Le Prompt)
+    const nextVersion = versionNumber + 1;
+    const defaultName = `Croquis V${nextVersion}`;
+    const userVersionName = window.prompt("Nommez cette version (ex: Croquis V1) :", defaultName);
+    if (userVersionName === null) {
+      // Annulation utilisateur
+      return;
+    }
+    const versionName = userVersionName.trim() || defaultName;
+
     setIsSaving(true);
     setSaveStatus('Enregistrement Cloud...');
 
     try {
       const docRef = doc(db, 'project_whiteboards', String(effectiveId));
       const combinedPaths = [...remotePaths, ...localPaths].slice(-400);
+      const previewUrl = generateBoundingBoxPreview();
+
+      const versionEntry = {
+        version: nextVersion,
+        name: versionName,
+        changeSummary: versionName,
+        savedAt: new Date().toISOString(),
+        savedByUid: myUid,
+        savedByName: myName,
+        previewUrl,
+        backgroundColor,
+        data: {
+          paths: combinedPaths,
+          stickyNotes,
+          textElements,
+          backgroundColor,
+        },
+      };
 
       const payload = {
         boardId: effectiveId,
         groupId,
         title: workspaceTitle,
-        versionNumber,
+        versionNumber: nextVersion,
         paths: combinedPaths,
         stickyNotes,
         textElements,
+        backgroundColor,
         updatedAt: serverTimestamp(),
         lastEditor: myName,
         lastEditorUid: myUid,
+        versionHistory: arrayUnion(versionEntry),
       };
 
       await setDoc(docRef, payload, { merge: true });
 
-      const previewUrl = generateBoundingBoxPreview();
       await saveWorkspaceVersion({
         workspaceId: effectiveId,
         chatId: groupId,
         type: WORKSPACE_TYPES.WHITEBOARD,
         title: workspaceTitle,
-        data: { paths: combinedPaths, stickyNotes, textElements },
+        data: { paths: combinedPaths, stickyNotes, textElements, backgroundColor },
         previewUrl,
         currentUser,
-        changeSummary: `Sauvegarde V${versionNumber}`,
+        changeSummary: versionName,
       });
 
-      setSaveStatus('Sauvegardé dans le Cloud 🟢');
+      setVersionNumber(nextVersion);
+      setVersionsList((prev) => [versionEntry, ...prev.filter((v) => Number(v.version) !== Number(nextVersion))]);
+      setSaveStatus(`Sauvegardé (${versionName}) 🟢`);
       setSaveSuccessToast(true);
       setTimeout(() => setSaveSuccessToast(false), 3500);
     } catch (err) {
@@ -1175,9 +1304,53 @@ export default function CollaborativeWhiteboardModal({
             </div>
           </div>
 
-          {/* Boutons d'action Header : Sauvegarder & Envoyer séparés */}
+          {/* Boutons d'action Header : Versions, Sauvegarder & Envoyer */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            {/* BOUTON SAUVEGARDER (Firestore Cloud) */}
+            {/* BOUTON HISTORIQUE DES VERSIONS */}
+            <button
+              type="button"
+              onClick={() => {
+                const nextOpen = !isVersionsSidebarOpen;
+                setIsVersionsSidebarOpen(nextOpen);
+                if (nextOpen) fetchVersions();
+              }}
+              className="premium-button"
+              style={{
+                padding: '8px 14px',
+                borderRadius: '12px',
+                border: isVersionsSidebarOpen ? '1px solid #C67D5B' : (darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(0,0,0,0.12)'),
+                backgroundColor: isVersionsSidebarOpen ? 'rgba(198,125,91,0.18)' : (darkMode ? 'rgba(255,255,255,0.06)' : '#FAF8F5'),
+                color: isVersionsSidebarOpen ? '#C67D5B' : 'inherit',
+                fontSize: '12.5px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                minHeight: '38px',
+                transition: 'all 0.15s ease',
+              }}
+              title="Afficher l'historique de toutes les versions sauvegardées"
+            >
+              <History size={16} color={isVersionsSidebarOpen ? '#C67D5B' : 'currentColor'} />
+              <span>Versions</span>
+              {versionsList.length > 0 && (
+                <span
+                  style={{
+                    fontSize: '10px',
+                    padding: '1px 6px',
+                    borderRadius: '999px',
+                    backgroundColor: isVersionsSidebarOpen ? '#C67D5B' : 'rgba(198,125,91,0.18)',
+                    color: isVersionsSidebarOpen ? '#FFF' : '#C67D5B',
+                    fontWeight: '800',
+                  }}
+                >
+                  {versionsList.length}
+                </span>
+              )}
+            </button>
+
+            {/* BOUTON SAUVEGARDER (Firestore Cloud avec prompt de nommage) */}
             <button
               type="button"
               disabled={isSaving}
@@ -1198,7 +1371,7 @@ export default function CollaborativeWhiteboardModal({
                 minHeight: '38px',
                 transition: 'all 0.15s ease',
               }}
-              title="Sauvegarder les modifications dans le Cloud (Firestore)"
+              title="Sauvegarder et nommer une nouvelle version dans le Cloud"
             >
               {isSaving ? <Sparkles size={15} /> : <Save size={15} color="#10B981" />}
               <span>{isSaving ? 'Enregistrement...' : 'Sauvegarder'}</span>
@@ -1329,11 +1502,11 @@ export default function CollaborativeWhiteboardModal({
           width: '100%',
           height: '100%',
           overflow: 'hidden',
-          backgroundColor: darkMode ? '#12100E' : '#FDFBF7',
+          backgroundColor: backgroundColor,
           backgroundImage: showGrid
-            ? darkMode
-              ? 'radial-gradient(circle, rgba(255,255,255,0.08) 1px, transparent 1px)'
-              : 'radial-gradient(circle, rgba(0,0,0,0.08) 1px, transparent 1px)'
+            ? (['#FFFFFF', '#FDFBF7', '#FEF9C3', '#E0F2FE'].includes(backgroundColor)
+                ? 'radial-gradient(circle, rgba(0,0,0,0.1) 1px, transparent 1px)'
+                : 'radial-gradient(circle, rgba(255,255,255,0.12) 1px, transparent 1px)')
             : 'none',
           backgroundSize: `${24 * zoom}px ${24 * zoom}px`,
           backgroundPosition: `${pan.x}px ${pan.y}px`,
@@ -1773,6 +1946,72 @@ export default function CollaborativeWhiteboardModal({
 
           <div style={{ width: '1px', height: '24px', backgroundColor: 'var(--border-color, rgba(0,0,0,0.1))', margin: '0 4px', flexShrink: 0 }} />
 
+          {/* SÉLECTEUR DE COULEUR DE FOND DU CANVAS (Indépendant du thème global) */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }} title="Couleur d'arrière-plan du tableau">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '11px', fontWeight: '800', opacity: 0.8, marginRight: '2px' }}>
+              <Palette size={14} color="#C67D5B" />
+              <span>Fond</span>
+            </div>
+
+            {BG_PRESETS.slice(0, 4).map((bg) => (
+              <button
+                key={bg.id}
+                type="button"
+                onClick={() => handleChangeBackgroundColor(bg.hex)}
+                style={{
+                  width: '22px',
+                  height: '22px',
+                  borderRadius: '6px',
+                  backgroundColor: bg.hex,
+                  border: backgroundColor === bg.hex ? '2.5px solid #C67D5B' : '1.5px solid rgba(0,0,0,0.15)',
+                  cursor: 'pointer',
+                  boxShadow: backgroundColor === bg.hex ? '0 0 8px rgba(198,125,91,0.5)' : 'none',
+                  flexShrink: 0,
+                  transition: 'all 0.15s ease',
+                }}
+                title={`Fond ${bg.name}`}
+              />
+            ))}
+
+            {/* Custom Background Color Picker */}
+            <label
+              style={{
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: '24px',
+                height: '24px',
+                borderRadius: '6px',
+                border: darkMode ? '1.5px solid rgba(255,255,255,0.2)' : '1.5px solid rgba(0,0,0,0.2)',
+                backgroundColor: backgroundColor,
+                cursor: 'pointer',
+                flexShrink: 0,
+                boxShadow: '0 2px 5px rgba(0,0,0,0.15)',
+              }}
+              title="Personnaliser la couleur d'arrière-plan"
+            >
+              <Palette size={12} color={['#FFFFFF', '#FDFBF7', '#FEF9C3', '#E0F2FE'].includes(backgroundColor) ? '#1F2937' : '#FFFFFF'} />
+              <input
+                ref={bgColorInputRef}
+                type="color"
+                value={backgroundColor}
+                onChange={(e) => handleChangeBackgroundColor(e.target.value)}
+                style={{
+                  position: 'absolute',
+                  opacity: 0,
+                  width: '100%',
+                  height: '100%',
+                  top: 0,
+                  left: 0,
+                  cursor: 'pointer',
+                }}
+              />
+            </label>
+          </div>
+
+          <div style={{ width: '1px', height: '24px', backgroundColor: 'var(--border-color, rgba(0,0,0,0.1))', margin: '0 4px', flexShrink: 0 }} />
+
           {/* ÉPAISSEUR DU TRAIT */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
             {[2, 4, 8, 16].map((w) => (
@@ -1910,6 +2149,222 @@ export default function CollaborativeWhiteboardModal({
           </div>
         </div>
       )}
+
+      {/* 4. MENU LATÉRAL DES VERSIONS ANIMÉ (FRAMER MOTION) */}
+      <AnimatePresence>
+        {isVersionsSidebarOpen && (
+          <>
+            {/* Backdrop translucide */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsVersionsSidebarOpen(false)}
+              style={{
+                position: 'fixed',
+                inset: 0,
+                backgroundColor: 'rgba(0,0,0,0.45)',
+                backdropFilter: 'blur(6px)',
+                WebkitBackdropFilter: 'blur(6px)',
+                zIndex: 1000008,
+              }}
+            />
+
+            {/* Panneau latéral Sidebar */}
+            <motion.aside
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 28, stiffness: 280 }}
+              style={{
+                position: 'fixed',
+                top: 0,
+                right: 0,
+                bottom: 0,
+                width: 'min(380px, 90vw)',
+                backgroundColor: darkMode ? '#181513' : '#FFFFFF',
+                color: darkMode ? '#FAF7F2' : '#1F2937',
+                borderLeft: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.1)',
+                boxShadow: '-10px 0 40px rgba(0,0,0,0.3)',
+                zIndex: 1000010,
+                display: 'flex',
+                flexDirection: 'column',
+                overflow: 'hidden',
+              }}
+            >
+              {/* En-tête Sidebar */}
+              <div
+                style={{
+                  padding: '18px 20px',
+                  borderBottom: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  flexShrink: 0,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div
+                    style={{
+                      width: '34px',
+                      height: '34px',
+                      borderRadius: '10px',
+                      backgroundColor: 'rgba(198,125,91,0.18)',
+                      color: '#C67D5B',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    <History size={18} />
+                  </div>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '800' }}>Versions & Historique</h3>
+                    <p style={{ margin: 0, fontSize: '11.5px', color: darkMode ? '#A8998C' : '#6B7280' }}>
+                      {versionsList.length} version{versionsList.length > 1 ? 's' : ''} enregistrée{versionsList.length > 1 ? 's' : ''}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsVersionsSidebarOpen(false)}
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    backgroundColor: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
+                    color: 'inherit',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                  }}
+                  title="Fermer le panneau des versions"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Liste des versions */}
+              <div
+                style={{
+                  flex: 1,
+                  overflowY: 'auto',
+                  padding: '14px 16px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px',
+                }}
+              >
+                {isLoadingVersions ? (
+                  <div style={{ padding: '40px 20px', textAlign: 'center', color: darkMode ? '#A8998C' : '#6B7280', fontSize: '13px' }}>
+                    <Clock size={24} style={{ margin: '0 auto 10px auto', display: 'block', opacity: 0.6 }} />
+                    Chargement des versions...
+                  </div>
+                ) : versionsList.length === 0 ? (
+                  <div style={{ padding: '40px 20px', textAlign: 'center', color: darkMode ? '#A8998C' : '#6B7280', fontSize: '13px' }}>
+                    <History size={32} color="#C67D5B" style={{ margin: '0 auto 12px auto', display: 'block', opacity: 0.7 }} />
+                    <p style={{ margin: '0 0 6px 0', fontWeight: '800', fontSize: '14px', color: 'inherit' }}>Aucune version archivée</p>
+                    <p style={{ margin: 0, fontSize: '12px', opacity: 0.8 }}>Cliquez sur "Sauvegarder" dans l'en-tête pour créer et nommer votre première version.</p>
+                  </div>
+                ) : (
+                  versionsList.map((ver, idx) => {
+                    const isCurrent = Number(ver.version) === Number(versionNumber);
+                    const dateStr = ver.savedAt
+                      ? new Date(ver.savedAt).toLocaleDateString('fr-FR', {
+                          day: '2-digit',
+                          month: 'short',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })
+                      : '';
+
+                    return (
+                      <div
+                        key={ver.version || idx}
+                        onClick={() => handleLoadVersion(ver)}
+                        className="premium-button"
+                        style={{
+                          borderRadius: '14px',
+                          border: isCurrent
+                            ? '2px solid #C67D5B'
+                            : darkMode
+                            ? '1px solid rgba(255,255,255,0.08)'
+                            : '1px solid rgba(0,0,0,0.08)',
+                          backgroundColor: isCurrent
+                            ? (darkMode ? 'rgba(198,125,91,0.14)' : 'rgba(198,125,91,0.08)')
+                            : (darkMode ? 'rgba(255,255,255,0.03)' : '#FAF8F5'),
+                          padding: '12px',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          gap: '8px',
+                          textAlign: 'left',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span
+                              style={{
+                                fontSize: '11px',
+                                fontWeight: '900',
+                                padding: '2px 8px',
+                                borderRadius: '6px',
+                                backgroundColor: isCurrent ? '#C67D5B' : (darkMode ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)'),
+                                color: isCurrent ? '#FFFFFF' : 'inherit',
+                              }}
+                            >
+                              V{ver.version}
+                            </span>
+                            <span style={{ fontSize: '13px', fontWeight: '800' }}>
+                              {ver.name || ver.changeSummary || `Version ${ver.version}`}
+                            </span>
+                          </div>
+                          {isCurrent && (
+                            <span style={{ fontSize: '10.5px', color: '#C67D5B', fontWeight: '800' }}>
+                              Actuelle
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Snapshot thumbnail preview */}
+                        {ver.previewUrl && (
+                          <div
+                            style={{
+                              width: '100%',
+                              height: '95px',
+                              borderRadius: '8px',
+                              overflow: 'hidden',
+                              backgroundColor: ver.backgroundColor || (darkMode ? '#12100E' : '#FFFFFF'),
+                              border: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}
+                          >
+                            <img
+                              src={ver.previewUrl}
+                              alt={`Aperçu V${ver.version}`}
+                              style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                            />
+                          </div>
+                        )}
+
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '11px', color: darkMode ? '#A8998C' : '#6B7280' }}>
+                          <span>Par <strong>{ver.savedByName || 'Collaborateur'}</strong></span>
+                          <span>{dateStr}</span>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 

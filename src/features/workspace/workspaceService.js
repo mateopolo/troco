@@ -64,11 +64,19 @@ export async function saveWorkspaceVersion({
 
     const versionEntry = {
       version: nextVersion,
+      name: changeSummary || `Version ${nextVersion}`,
+      changeSummary: changeSummary || `Version ${nextVersion}`,
       savedAt: new Date().toISOString(),
       savedByUid: userUid,
       savedByName: userName,
       previewUrl: previewUrl || '',
-      changeSummary: changeSummary || `Version ${nextVersion}`,
+      backgroundColor: data.backgroundColor || '#FFFFFF',
+      data: {
+        paths: (data.paths || []).slice(-450),
+        stickyNotes: data.stickyNotes || [],
+        textElements: data.textElements || [],
+        backgroundColor: data.backgroundColor || '#FFFFFF',
+      },
       itemCount: (data.paths?.length || 0) + (data.stickyNotes?.length || 0) + (data.textElements?.length || 0),
     };
 
@@ -83,6 +91,7 @@ export async function saveWorkspaceVersion({
         paths: (data.paths || []).slice(-450),
         stickyNotes: data.stickyNotes || [],
         textElements: data.textElements || [],
+        backgroundColor: data.backgroundColor || '#FFFFFF',
       },
       lastModifiedBy: userUid,
       lastModifiedByName: userName,
@@ -198,3 +207,26 @@ export async function postWorkspaceInviteToChat({
     return false;
   }
 }
+
+/**
+ * Récupère l'historique complet des versions pour un workspace/boardId.
+ */
+export async function fetchWorkspaceVersions(workspaceId) {
+  if (!db || !workspaceId) return [];
+
+  try {
+    const docRef = doc(db, 'workspaces', String(workspaceId));
+    const docSnap = await getDoc(docRef);
+
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      const history = Array.isArray(data.versionHistory) ? data.versionHistory : [];
+      return history.sort((a, b) => (Number(b.version) || 0) - (Number(a.version) || 0));
+    }
+    return [];
+  } catch (err) {
+    console.warn('[WorkspaceService] Erreur récupération versions:', err);
+    return [];
+  }
+}
+
