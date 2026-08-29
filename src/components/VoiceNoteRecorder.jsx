@@ -86,6 +86,7 @@ export default function VoiceNoteRecorder({
         URL.revokeObjectURL(previewUrl);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isRecording]);
 
   const handleStopAndPreview = () => {

@@ -68,6 +68,7 @@ const evaluateCellFormula = (val, gridData) => {
     });
 
     if (/^[0-9+\-*/().\s]+$/.test(sanitized)) {
+      // eslint-disable-next-line no-new-func
       const result = Function(`"use strict"; return (${sanitized});`)();
       return String(typeof result === 'number' ? Math.round(result * 100) / 100 : result);
     }
@@ -396,16 +397,15 @@ export default function CloudOfficeSuiteModal({
       contentHtml = `<h1>${docTitle}</h1><pre style="white-space: pre-wrap; font-family: inherit; font-size: 14px; line-height: 1.6;">${docContent}</pre>`;
     } else if (activeTab === 'sheets') {
       const cols = ['A', 'B', 'C', 'D', 'E', 'F'];
-      let tableHtml = '<table border="1" cellpadding="8" style="border-collapse: collapse; width: 100%;">';
+      const rowsHtml = [];
       for (let r = 1; r <= 10; r++) {
-        tableHtml += '<tr>';
-        cols.forEach(c => {
+        const cellsHtml = cols.map(c => {
           const val = evaluateCellFormula(sheetData[`${c}${r}`] || '', sheetData);
-          tableHtml += r === 1 ? `<th style="background:#FAF7F2;">${val}</th>` : `<td>${val}</td>`;
-        });
-        tableHtml += '</tr>';
+          return r === 1 ? `<th style="background:#FAF7F2;">${val}</th>` : `<td>${val}</td>`;
+        }).join('');
+        rowsHtml.push(`<tr>${cellsHtml}</tr>`);
       }
-      tableHtml += '</table>';
+      const tableHtml = `<table border="1" cellpadding="8" style="border-collapse: collapse; width: 100%;">${rowsHtml.join('')}</table>`;
       contentHtml = `<h1>${sheetTitle}</h1>${tableHtml}`;
     } else {
       contentHtml = `<h1>${slidesTitle}</h1>` + slides.map((s, idx) => `
@@ -758,7 +758,7 @@ export default function CloudOfficeSuiteModal({
           {/* ACTIONS & EXPORTS */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-              {saveStatus}
+              👥 {collaborators.join(', ')} • {saveStatus}
             </span>
 
             {/* BOUTONS D'EXPORTS MULTI-FORMATS */}

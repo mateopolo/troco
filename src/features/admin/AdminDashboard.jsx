@@ -1,17 +1,16 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Shield, Users, FileText, MessageSquare, Globe, Search,
-  Trash2, Edit3, CheckCircle, AlertTriangle, X, Lock, Unlock,
-  Coins, Sparkles, Check, RefreshCw, Zap, ShieldAlert,
-  ArrowRight, ShieldCheck, UserX, UserCheck, Flame, Plus,
-  Sliders, Eye, Key, Save, Clock
+  Trash2, Edit3, CheckCircle, AlertTriangle, X,
+  Coins, Sparkles, Check, RefreshCw, ShieldAlert,
+  ShieldCheck, UserX, UserCheck, Plus, Key, Save
 } from 'lucide-react';
 import {
   collection, doc, onSnapshot, updateDoc, deleteDoc,
-  setDoc, serverTimestamp, query, orderBy, limit, addDoc, getDoc
+  serverTimestamp, query, orderBy, limit, addDoc, getDoc
 } from 'firebase/firestore';
 import { db } from '../../firebase';
-import { useAllGlobalContent, DEFAULT_GLOBAL_CONTENT } from './useGlobalContent';
+import { useAllGlobalContent } from './useGlobalContent';
 
 export default function AdminDashboard({
   isOpen = true,

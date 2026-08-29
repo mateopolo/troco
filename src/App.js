@@ -6,7 +6,7 @@ import { fetchListingsPaginated } from './services/firestoreService';
 import { isSignInWithEmailLink, signInWithEmailLink, signOut, onAuthStateChanged } from 'firebase/auth';
 import { useWebRTC } from './hooks/useWebRTC';
 import { useTheme } from './contexts/ThemeContext';
-import { SkeletonModalFallback, SkeletonFeedLayout, SkeletonChatLayout, SkeletonProfileLayout, SkeletonCommunityLayout, SkeletonPostLayout } from './components/SkeletonLoader';
+import { SkeletonModalFallback } from './components/SkeletonLoader';
 import CookieBanner from './components/CookieBanner';
 import { TROCO_CATEGORIES } from './data/categoriesData';
 import { subscribeTranslations } from './utils/translator';
@@ -148,6 +148,7 @@ export default function App() {
 
   // CMS & Textes Globaux en direct
   const globalAnnouncement = useGlobalContent('platform_announcement');
+  // eslint-disable-next-line no-unused-vars
   const globalWelcomeMsg = useGlobalContent('welcome_message');
 
   // Sécurité : État de bannissement temps réel
@@ -220,6 +221,7 @@ export default function App() {
   const [selectedPublicUser, setSelectedPublicUser] = useState(null);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [reportTarget, setReportTarget] = useState({ listing: null, user: null });
+  // eslint-disable-next-line no-unused-vars
   const [allReports, setAllReports] = useState([]);
   const [allFirestoreUsers, setAllFirestoreUsers] = useState([]);
   const categoryScrollRef = useRef(null);
@@ -709,6 +711,7 @@ export default function App() {
   }, []);
 
   // Handlers actions administrateur
+  // eslint-disable-next-line no-unused-vars
   const handleAdminUpdateUser = async (uid, updates) => {
     if (!uid) return;
     try {
@@ -738,6 +741,7 @@ export default function App() {
     }
   };
 
+  // eslint-disable-next-line no-unused-vars
   const handleAdminResolveReport = async (reportId, status = 'resolved') => {
     if (!reportId) return;
     try {
@@ -752,6 +756,7 @@ export default function App() {
   };
 
   // ---- RÉINITIALISATION TOTALE D'UN UTILISATEUR (WIPE & RESET ADMIN) ----
+  // eslint-disable-next-line no-unused-vars
   const handleAdminResetUser = async (uid, userData = null) => {
     if (!uid) return;
     try {
@@ -950,6 +955,7 @@ export default function App() {
         setIsOnboardingOpen(true);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, profile?.onboardingCompleted, profile?.uid]);
 
   // Synchronisation réactive globale avec le store Zustand useWalletStore (élimine le prop drilling)
@@ -961,6 +967,7 @@ export default function App() {
       if (typeof state?.setKycVerified === 'function') state.setKycVerified(profile.kycVerified ?? false);
       if (typeof state?.setTrocoPlus === 'function') state.setTrocoPlus(profile.isTrocoPlus ?? false, profile.trocoPlusPlan);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.euroBalance, profile?.trocoTokens, profile?.kycVerified, profile?.isTrocoPlus, profile?.trocoPlusPlan]);
 
   const [isWelcomeGiftModalOpen, setIsWelcomeGiftModalOpen] = useState(false);
@@ -1933,6 +1940,7 @@ export default function App() {
       };
       return getTime(b) - getTime(a);
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     listings,
     debouncedSearchQuery,
@@ -1967,6 +1975,7 @@ export default function App() {
     return () => {
       if (target) observer.unobserve(target);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasMoreListings, isLoadingMoreListings, activeTab, lastVisibleListingDoc]);
 
   const getListingDetail = (listing) => {
@@ -3638,14 +3647,13 @@ export default function App() {
                       boxSizing: 'border-box'
                     }}
                   >
-                    {filteredListings.map((item, index) => {
-                      const currentComp = item.compensation || 'Troc Direct';
-                      const authorProfile = item.authorProfile || {
-                        name: item.author || 'Membre Troco',
-                        avatar: item.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
-                        bio: item.bio || '',
-                        location: item.location || 'Paris',
-                        uid: item.authorUid || null,
+                    {(filteredListings || []).map((item, index) => {
+                      const authorProfile = item?.authorProfile || {
+                        name: item?.author || 'Membre Troco',
+                        avatar: item?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+                        bio: item?.bio || '',
+                        location: item?.location || 'Paris',
+                        uid: item?.authorUid || null,
                       };
 
                       return (
