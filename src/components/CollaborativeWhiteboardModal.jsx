@@ -16,9 +16,9 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  X, Pen, Highlighter, Eraser, Square, Circle, ArrowRight,
+  X, Pen, Highlighter, Eraser, Square, Circle, Minus, ArrowRight,
   RotateCcw, RotateCw, Trash2, StickyNote,
-  Type, Hand, Brush, Check, Eye, Maximize2,
+  Type, Hand, Brush, Check, Eye, Maximize2, ChevronDown,
   Sparkles, Save, Send, History, Palette, Clock
 } from 'lucide-react';
 import { doc, getDoc, onSnapshot, setDoc, serverTimestamp, arrayUnion } from 'firebase/firestore';
@@ -30,6 +30,13 @@ import {
   fetchWorkspaceVersions,
   WORKSPACE_TYPES,
 } from '../features/workspace/workspaceService';
+
+const SHAPE_OPTIONS = [
+  { id: 'rect', label: 'Rectangle', icon: Square },
+  { id: 'circle', label: 'Cercle', icon: Circle },
+  { id: 'line', label: 'Ligne Droite', icon: Minus },
+  { id: 'arrow', label: 'Flèche', icon: ArrowRight },
+];
 
 const BG_PRESETS = [
   { id: 'white', hex: '#FFFFFF', name: 'Blanc Pur' },
@@ -90,6 +97,8 @@ export default function CollaborativeWhiteboardModal({
   const [lineWidth, setLineWidth] = useState(4);
   const [showGrid] = useState(true);
   const [backgroundColor, setBackgroundColor] = useState(() => (darkMode ? '#12100E' : '#FFFFFF'));
+  const [isShapesMenuOpen, setIsShapesMenuOpen] = useState(false);
+  const [selectedShape, setSelectedShape] = useState('rect');
   const bgColorInputRef = useRef(null);
 
   // 2. Mode Immersion Absolue (Plein écran sans distractions)
@@ -182,21 +191,22 @@ export default function CollaborativeWhiteboardModal({
     }
   }, [effectiveId]);
 
-  // Chargement instantané d'une version spécifique depuis l'historique
+  // Chargement instantané d'une version spécifique depuis l'historique (Réhydratation complète)
   const handleLoadVersion = (ver) => {
     if (!ver) return;
-    const data = ver.data || {};
-    const paths = Array.isArray(data.paths) ? data.paths : (Array.isArray(ver.paths) ? ver.paths : []);
-    const stickies = Array.isArray(data.stickyNotes) ? data.stickyNotes : (Array.isArray(ver.stickyNotes) ? ver.stickyNotes : []);
-    const texts = Array.isArray(data.textElements) ? data.textElements : (Array.isArray(ver.textElements) ? ver.textElements : []);
+    const versionData = ver.data || ver;
+    const paths = Array.isArray(versionData.paths) ? versionData.paths : (Array.isArray(ver.paths) ? ver.paths : []);
+    const stickies = Array.isArray(versionData.stickyNotes) ? versionData.stickyNotes : (Array.isArray(ver.stickyNotes) ? ver.stickyNotes : []);
+    const texts = Array.isArray(versionData.textElements) ? versionData.textElements : (Array.isArray(ver.textElements) ? ver.textElements : []);
+    const bg = versionData.backgroundColor || ver.backgroundColor || (darkMode ? '#12100E' : '#FFFFFF');
 
     setLocalPaths(paths);
     setRemotePaths([]);
     setStickyNotes(stickies);
     setTextElements(texts);
-    if (data.backgroundColor || ver.backgroundColor) {
-      setBackgroundColor(data.backgroundColor || ver.backgroundColor);
-    }
+    setBackgroundColor(bg);
+    setCurrentPath(null);
+
     if (ver.version) {
       setVersionNumber(Number(ver.version));
     }
@@ -209,6 +219,14 @@ export default function CollaborativeWhiteboardModal({
     historyStepRef.current = 0;
     setIsVersionsSidebarOpen(false);
     setSaveStatus(`Version V${ver.version || 1} chargée ⚡`);
+
+    // Force le re-render immédiat du Canvas
+    requestAnimationFrame(() => {
+      redrawCanvas();
+    });
+    setTimeout(() => {
+      redrawCanvas();
+    }, 40);
   };
 
   // Verrouillage strict du scroll global du document
@@ -476,6 +494,11 @@ export default function CollaborativeWhiteboardModal({
         const cy = path.y + path.height / 2;
         ctx.ellipse(cx, cy, rx, ry, 0, 0, 2 * Math.PI);
         ctx.stroke();
+      } else if (path.type === 'line') {
+        ctx.beginPath();
+        ctx.moveTo(path.fromX, path.fromY);
+        ctx.lineTo(path.toX, path.toY);
+        ctx.stroke();
       } else if (path.type === 'arrow') {
         ctx.beginPath();
         ctx.moveTo(path.fromX, path.fromY);
@@ -488,8 +511,15 @@ export default function CollaborativeWhiteboardModal({
         ctx.moveTo(path.toX, path.toY);
         ctx.lineTo(path.toX - headlen * Math.cos(angle - Math.PI / 6), path.toY - headlen * Math.sin(angle - Math.PI / 6));
         ctx.moveTo(path.toX, path.toY);
-        ctx.lineTo(path.toX - headlen * Math.cos(angle + Math.PI / 6), path.toY - headlen * Math.sin(angle + Math.PI / 6));
+        ctx.lineTo(path.toX + headlen * Math.cos(angle + Math.PI / 6), path.toY - headlen * Math.sin(angle + Math.PI / 6));
         ctx.stroke();
+      } else if (path.type === 'text_box') {
+        ctx.save();
+        ctx.strokeStyle = '#C67D5B';
+        ctx.setLineDash([4, 4]);
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(path.x, path.y, path.width, path.height);
+        ctx.restore();
       }
 
       ctx.restore();
@@ -617,23 +647,29 @@ export default function CollaborativeWhiteboardModal({
     const loadInitialState = async () => {
       try {
         const loaded = await loadWorkspaceData(effectiveId);
-        if (loaded && loaded.data) {
-          const loadedPaths = Array.isArray(loaded.data.paths) ? loaded.data.paths : [];
-          const loadedStickies = Array.isArray(loaded.data.stickyNotes) ? loaded.data.stickyNotes : [];
-          const loadedTexts = Array.isArray(loaded.data.textElements) ? loaded.data.textElements : [];
+        if (loaded) {
+          const versionData = loaded.data || loaded;
+          const loadedPaths = Array.isArray(versionData.paths) ? versionData.paths : [];
+          const loadedStickies = Array.isArray(versionData.stickyNotes) ? versionData.stickyNotes : [];
+          const loadedTexts = Array.isArray(versionData.textElements) ? versionData.textElements : [];
+          const bg = versionData.backgroundColor || loaded.backgroundColor || (darkMode ? '#12100E' : '#FFFFFF');
 
           setLocalPaths(loadedPaths);
+          setRemotePaths([]);
           setStickyNotes(loadedStickies);
           setTextElements(loadedTexts);
-          if (loaded.data.backgroundColor || loaded.backgroundColor) {
-            setBackgroundColor(loaded.data.backgroundColor || loaded.backgroundColor);
-          }
+          setBackgroundColor(bg);
+
           if (loaded.version) setVersionNumber(Number(loaded.version) || 1);
           if (loaded.title) setWorkspaceTitle(loaded.title);
 
           setHistory([loadedPaths]);
           setHistoryStep(0);
           historyStepRef.current = 0;
+
+          requestAnimationFrame(() => {
+            redrawCanvas();
+          });
         }
       } catch (err) {
         console.warn('[CollaborativeWhiteboard] Initial load failed:', err);
@@ -641,10 +677,13 @@ export default function CollaborativeWhiteboardModal({
     };
 
     loadInitialState();
-  }, [isOpen, effectiveId, version, initialVersion, fetchVersions]);
+  }, [isOpen, effectiveId, version, initialVersion, fetchVersions, redrawCanvas, darkMode]);
 
   // ================= GESTION DES POINTER EVENTS =================
   const handlePointerDown = (e) => {
+    // Empêche la création de nouveaux textes ou tracés tant qu'un texte est en cours d'édition
+    if (editingTextId) return;
+
     const coords = getCanvasCoords(e);
     startPosRef.current = coords;
 
@@ -683,28 +722,17 @@ export default function CollaborativeWhiteboardModal({
     }
 
     if (tool === 'text') {
+      isDrawingRef.current = true;
       lastLocalModificationTimeRef.current = Date.now();
-      const newText = {
-        id: `text-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+      setCurrentPath({
+        type: 'text_box',
+        tool: 'text',
+        color: color === '#FFFFFF' && ['#FFFFFF', '#FDFBF7', '#FEF9C3', '#E0F2FE'].includes(backgroundColor) ? '#1F2937' : color,
         x: coords.x,
         y: coords.y,
-        width: 220,
-        height: 60,
-        text: 'Votre texte...',
-        color: color === '#FFFFFF' && !darkMode ? '#1F2937' : color,
-        fontSize: 24,
-        fontFamily: 'Inter, sans-serif',
-        authorName: myName,
-        authorUid: myUid,
-        createdAt: Date.now(),
-      };
-      const nextTexts = [...textElements, newText];
-      setTextElements(nextTexts);
-      setEditingTextId(newText.id);
-      pushToHistory(localPaths);
-      whiteboardP2PService.broadcastEvent('text_add', { text: newText });
-      debouncedSyncToFirestore(localPaths, remotePaths, stickyNotes, nextTexts);
-      setTool('pencil');
+        width: 0,
+        height: 0,
+      });
       return;
     }
 
@@ -741,6 +769,22 @@ export default function CollaborativeWhiteboardModal({
         createdAt: Date.now(),
       };
       setCurrentPath(shapePath);
+    } else if (tool === 'line') {
+      const linePath = {
+        id: `l-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+        type: 'line',
+        tool,
+        color,
+        lineWidth,
+        fromX: coords.x,
+        fromY: coords.y,
+        toX: coords.x,
+        toY: coords.y,
+        authorName: myName,
+        authorUid: myUid,
+        createdAt: Date.now(),
+      };
+      setCurrentPath(linePath);
     } else if (tool === 'arrow') {
       const arrowPath = {
         id: `a-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
@@ -793,14 +837,15 @@ export default function CollaborativeWhiteboardModal({
     }
 
     if (resizingTextRef.current) {
-      const { id, startX, startY, origW, origH, textStr } = resizingTextRef.current;
+      const { id, startX, startY, origW, origH } = resizingTextRef.current;
       const dw = coords.x - startX;
       const dh = coords.y - startY;
-      const newW = Math.max(100, origW + dw);
+      const newW = Math.max(120, origW + dw);
       const newH = Math.max(40, origH + dh);
 
-      const len = Math.max(1, textStr?.length || 1);
-      const autoFontSize = Math.max(12, Math.min(84, Math.round((newW / len) * 2.2 + newH * 0.25)));
+      // Calcule la taille de police proportionnellement sur tous les axes en utilisant la diagonale :
+      const diag = Math.hypot(coords.x - startX, coords.y - startY);
+      const autoFontSize = Math.max(12, Math.min(120, Math.round(diag * 0.5)));
 
       setTextElements((prev) =>
         prev.map((t) =>
@@ -819,7 +864,7 @@ export default function CollaborativeWhiteboardModal({
         ...prev,
         points: [...prev.points, { x: coords.x, y: coords.y }],
       }));
-    } else if (currentPath.type === 'rect' || currentPath.type === 'circle') {
+    } else if (currentPath.type === 'rect' || currentPath.type === 'circle' || currentPath.type === 'text_box') {
       const w = coords.x - startPosRef.current.x;
       const h = coords.y - startPosRef.current.y;
       setCurrentPath((prev) => ({
@@ -829,7 +874,7 @@ export default function CollaborativeWhiteboardModal({
         width: Math.abs(w),
         height: Math.abs(h),
       }));
-    } else if (currentPath.type === 'arrow') {
+    } else if (currentPath.type === 'line' || currentPath.type === 'arrow') {
       setCurrentPath((prev) => ({
         ...prev,
         toX: coords.x,
@@ -838,7 +883,7 @@ export default function CollaborativeWhiteboardModal({
     }
   };
 
-  const handlePointerUp = () => {
+  const handlePointerUp = (e) => {
     if (isPanningRef.current) {
       isPanningRef.current = false;
     }
@@ -854,6 +899,7 @@ export default function CollaborativeWhiteboardModal({
       draggingStickyRef.current = null;
     }
 
+    // Clôture IMMÉDIATE du mode redimensionnement texte
     if (resizingTextRef.current) {
       lastLocalModificationTimeRef.current = Date.now();
       const resized = textElements.find((t) => t.id === resizingTextRef.current.id);
@@ -863,6 +909,61 @@ export default function CollaborativeWhiteboardModal({
         debouncedSyncToFirestore(localPaths, remotePaths, stickyNotes, textElements);
       }
       resizingTextRef.current = null;
+      isDrawingRef.current = false;
+    }
+
+    // GESTION DU TEXTE : Création par tracé, calcul proportionnel diagonale et bascule automatique en édition
+    if (isDrawingRef.current && currentPath?.type === 'text_box') {
+      isDrawingRef.current = false;
+      const coords = getCanvasCoords(e || {});
+      const startX = startPosRef.current.x;
+      const startY = startPosRef.current.y;
+      const endX = coords.x;
+      const endY = coords.y;
+
+      const rawW = Math.abs(endX - startX);
+      const rawH = Math.abs(endY - startY);
+      const rawDiag = Math.hypot(endX - startX, endY - startY);
+
+      // Calcule la taille de police proportionnellement sur tous les axes en utilisant la diagonale :
+      let calculatedFontSize = Math.hypot(endX - startX, endY - startY) * 0.5;
+      if (rawDiag < 20) {
+        calculatedFontSize = 24;
+      } else {
+        calculatedFontSize = Math.max(14, Math.min(120, Math.round(calculatedFontSize)));
+      }
+
+      const finalW = Math.max(180, Math.max(rawW, calculatedFontSize * 4.5));
+      const finalH = Math.max(48, Math.max(rawH, calculatedFontSize * 1.5));
+      const finalX = Math.min(startX, endX);
+      const finalY = Math.min(startY, endY);
+
+      const textColor = color === '#FFFFFF' && ['#FFFFFF', '#FDFBF7', '#FEF9C3', '#E0F2FE'].includes(backgroundColor) ? '#1F2937' : color;
+
+      const newText = {
+        id: `text-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+        x: finalX,
+        y: finalY,
+        width: finalW,
+        height: finalH,
+        text: '',
+        color: textColor,
+        fontSize: calculatedFontSize,
+        fontFamily: 'Inter, sans-serif',
+        authorName: myName,
+        authorUid: myUid,
+        createdAt: Date.now(),
+      };
+
+      const nextTexts = [...textElements, newText];
+      setTextElements(nextTexts);
+      setCurrentPath(null);
+      setEditingTextId(newText.id);
+
+      whiteboardP2PService.broadcastEvent('text_add', { text: newText });
+      pushToHistory(localPaths);
+      debouncedSyncToFirestore(localPaths, remotePaths, stickyNotes, nextTexts);
+      return;
     }
 
     // FUSION SYNCHRONE LOCALE IMMÉDIATE & ENREGISTREMENT DANS L'HISTORIQUE LOCAL TRAIT PAR TRAIT
@@ -1004,6 +1105,11 @@ export default function CollaborativeWhiteboardModal({
         const cx = p.x + p.width / 2;
         const cy = p.y + p.height / 2;
         ctx.ellipse(cx, cy, rx, ry, 0, 0, 2 * Math.PI);
+        ctx.stroke();
+      } else if (p.type === 'line') {
+        ctx.beginPath();
+        ctx.moveTo(p.fromX, p.fromY);
+        ctx.lineTo(p.toX, p.toY);
         ctx.stroke();
       } else if (p.type === 'arrow') {
         ctx.beginPath();
@@ -1657,7 +1763,7 @@ export default function CollaborativeWhiteboardModal({
           </div>
         ))}
 
-        {/* TEXT ELEMENTS AVEC SCALE-TO-FIT */}
+        {/* TEXT ELEMENTS AVEC SCALE-TO-FIT & ÉDITION DIRECTE */}
         {textElements.map((t) => {
           const isEditing = editingTextId === t.id;
           const fontSizePx = (t.fontSize || 24) * zoom;
@@ -1665,15 +1771,17 @@ export default function CollaborativeWhiteboardModal({
           return (
             <div
               key={t.id}
+              onPointerDown={(e) => e.stopPropagation()}
               style={{
                 position: 'absolute',
                 left: `${pan.x + t.x * zoom}px`,
                 top: `${pan.y + t.y * zoom}px`,
                 width: `${(t.width || 220) * zoom}px`,
                 minHeight: `${(t.height || 50) * zoom}px`,
-                zIndex: 25,
+                zIndex: isEditing ? 50 : 25,
                 boxSizing: 'border-box',
-                border: isEditing ? '1.5px dashed var(--accent-primary, #C67D5B)' : '1.5px solid transparent',
+                border: isEditing ? '2px dashed var(--accent-primary, #C67D5B)' : '2px solid transparent',
+                backgroundColor: isEditing ? (darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)') : 'transparent',
                 borderRadius: '8px',
                 padding: '4px',
               }}
@@ -1682,8 +1790,25 @@ export default function CollaborativeWhiteboardModal({
               {isEditing ? (
                 <textarea
                   autoFocus
+                  placeholder="Tapez votre texte..."
                   value={t.text}
-                  onBlur={() => setEditingTextId(null)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') {
+                      e.target.blur();
+                    } else if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      e.target.blur();
+                    }
+                  }}
+                  onBlur={() => {
+                    if (!t.text || t.text.trim() === '') {
+                      const filtered = textElements.filter((item) => item.id !== t.id);
+                      setTextElements(filtered);
+                      whiteboardP2PService.broadcastEvent('text_delete', { id: t.id });
+                      debouncedSyncToFirestore(localPaths, remotePaths, stickyNotes, filtered);
+                    }
+                    setEditingTextId(null);
+                  }}
                   onChange={(e) => {
                     const nextTexts = textElements.map((item) =>
                       item.id === t.id ? { ...item, text: e.target.value } : item
@@ -1699,7 +1824,7 @@ export default function CollaborativeWhiteboardModal({
                     border: 'none',
                     outline: 'none',
                     resize: 'none',
-                    color: t.color || 'inherit',
+                    color: t.color || (['#FFFFFF', '#FDFBF7'].includes(backgroundColor) ? '#1F2937' : '#FFFFFF'),
                     fontFamily: t.fontFamily || 'Inter, sans-serif',
                     fontSize: `${fontSizePx}px`,
                     fontWeight: '800',
@@ -1708,19 +1833,21 @@ export default function CollaborativeWhiteboardModal({
                 />
               ) : (
                 <div
+                  onClick={() => setEditingTextId(t.id)}
                   style={{
                     width: '100%',
                     height: '100%',
-                    color: t.color || 'inherit',
+                    color: t.color || (['#FFFFFF', '#FDFBF7'].includes(backgroundColor) ? '#1F2937' : '#FFFFFF'),
                     fontFamily: t.fontFamily || 'Inter, sans-serif',
                     fontSize: `${fontSizePx}px`,
                     fontWeight: '800',
                     lineHeight: 1.2,
                     whiteSpace: 'pre-wrap',
                     wordBreak: 'break-word',
+                    cursor: 'text',
                   }}
                 >
-                  {t.text}
+                  {t.text || 'Texte vide'}
                 </div>
               )}
 
@@ -1829,16 +1956,146 @@ export default function CollaborativeWhiteboardModal({
             WebkitOverflowScrolling: 'touch',
           }}
         >
-          {/* Outils de dessin */}
+          {/* Outils de dessin libres */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
             {[
               { id: 'pencil', icon: Pen, title: 'Crayon' },
               { id: 'brush', icon: Brush, title: 'Pinceau Artistique' },
               { id: 'highlighter', icon: Highlighter, title: 'Surligneur' },
               { id: 'eraser', icon: Eraser, title: 'Gomme' },
-              { id: 'rect', icon: Square, title: 'Rectangle' },
-              { id: 'circle', icon: Circle, title: 'Cercle' },
-              { id: 'arrow', icon: ArrowRight, title: 'Flèche' },
+            ].map((btn) => {
+              const Icon = btn.icon;
+              const isSelected = tool === btn.id;
+              return (
+                <button
+                  key={btn.id}
+                  type="button"
+                  onClick={() => {
+                    setTool(btn.id);
+                    setIsShapesMenuOpen(false);
+                  }}
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '12px',
+                    border: 'none',
+                    backgroundColor: isSelected
+                      ? 'var(--accent-primary, #C67D5B)'
+                      : darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                    color: isSelected ? '#FFFFFF' : 'inherit',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    flexShrink: 0,
+                  }}
+                  title={btn.title}
+                >
+                  <Icon size={18} />
+                </button>
+              );
+            })}
+
+            {/* BOUTON DÉROULANT FORMES GÉOMÉTRIQUES (Rectangle, Cercle, Ligne, Flèche) */}
+            <div style={{ position: 'relative' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  if (['rect', 'circle', 'line', 'arrow'].includes(tool)) {
+                    setIsShapesMenuOpen((prev) => !prev);
+                  } else {
+                    setTool(selectedShape);
+                    setIsShapesMenuOpen((prev) => !prev);
+                  }
+                }}
+                style={{
+                  height: '40px',
+                  padding: '0 10px',
+                  borderRadius: '12px',
+                  border: 'none',
+                  backgroundColor: ['rect', 'circle', 'line', 'arrow'].includes(tool)
+                    ? 'var(--accent-primary, #C67D5B)'
+                    : darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                  color: ['rect', 'circle', 'line', 'arrow'].includes(tool) ? '#FFFFFF' : 'inherit',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  flexShrink: 0,
+                }}
+                title="Formes géométriques (Rectangle, Cercle, Ligne, Flèche)"
+              >
+                {React.createElement(
+                  (SHAPE_OPTIONS.find((s) => s.id === selectedShape) || SHAPE_OPTIONS[0]).icon,
+                  { size: 18 }
+                )}
+                <ChevronDown size={13} style={{ opacity: 0.85 }} />
+              </button>
+
+              {/* Sous-menu Popover des Formes */}
+              <AnimatePresence>
+                {isShapesMenuOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    transition={{ duration: 0.15 }}
+                    style={{
+                      position: 'absolute',
+                      bottom: 'calc(100% + 12px)',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      backgroundColor: darkMode ? '#1F1B18' : '#FFFFFF',
+                      border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(0,0,0,0.12)',
+                      borderRadius: '16px',
+                      padding: '6px',
+                      boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
+                      zIndex: 200,
+                      display: 'flex',
+                      gap: '4px',
+                    }}
+                  >
+                    {SHAPE_OPTIONS.map((shape) => {
+                      const ShapeIcon = shape.icon;
+                      const isCurSelected = tool === shape.id;
+                      return (
+                        <button
+                          key={shape.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedShape(shape.id);
+                            setTool(shape.id);
+                            setIsShapesMenuOpen(false);
+                          }}
+                          style={{
+                            width: '38px',
+                            height: '38px',
+                            borderRadius: '10px',
+                            border: 'none',
+                            backgroundColor: isCurSelected
+                              ? '#C67D5B'
+                              : darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
+                            color: isCurSelected ? '#FFFFFF' : 'inherit',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                          }}
+                          title={shape.label}
+                        >
+                          <ShapeIcon size={18} />
+                        </button>
+                      );
+                    })}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Post-it, Texte & Main Pan */}
+            {[
               { id: 'sticky', icon: StickyNote, title: 'Post-it' },
               { id: 'text', icon: Type, title: 'Texte' },
               { id: 'hand', icon: Hand, title: 'Déplacer (Pan)' },
@@ -1849,7 +2106,10 @@ export default function CollaborativeWhiteboardModal({
                 <button
                   key={btn.id}
                   type="button"
-                  onClick={() => setTool(btn.id)}
+                  onClick={() => {
+                    setTool(btn.id);
+                    setIsShapesMenuOpen(false);
+                  }}
                   style={{
                     width: '40px',
                     height: '40px',
@@ -1876,7 +2136,7 @@ export default function CollaborativeWhiteboardModal({
 
           <div style={{ width: '1px', height: '24px', backgroundColor: 'var(--border-color, rgba(0,0,0,0.1))', margin: '0 4px', flexShrink: 0 }} />
 
-          {/* PALETTE DE COULEURS INFINIES (<input type="color"> natif masqué derrière bouton élégant) */}
+          {/* PALETTE DE COULEURS INFINIES (<input type="color"> masqué derrière bouton élégant) */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
             {CURATED_PALETTE.slice(0, 5).map((c) => (
               <button
@@ -1899,12 +2159,13 @@ export default function CollaborativeWhiteboardModal({
 
             {/* Sélecteur de Couleur Spectre Complet */}
             <label
+              className="premium-button"
               style={{
                 position: 'relative',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '6px',
-                padding: '4px 8px',
+                padding: '4px 10px',
                 borderRadius: '999px',
                 border: darkMode ? '1.5px solid rgba(255,255,255,0.15)' : '1.5px solid rgba(0,0,0,0.15)',
                 backgroundColor: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
@@ -1913,10 +2174,11 @@ export default function CollaborativeWhiteboardModal({
               }}
               title="Ouvrir le spectre de couleurs complet"
             >
+              <Brush size={14} color="#C67D5B" />
               <div
                 style={{
-                  width: '18px',
-                  height: '18px',
+                  width: '16px',
+                  height: '16px',
                   borderRadius: '50%',
                   backgroundColor: color,
                   border: '1.5px solid #FFF',
@@ -1931,14 +2193,13 @@ export default function CollaborativeWhiteboardModal({
                 type="color"
                 value={color}
                 onChange={(e) => setColor(e.target.value)}
+                className="opacity-0 absolute w-0 h-0 pointer-events-none"
                 style={{
                   position: 'absolute',
                   opacity: 0,
-                  width: '100%',
-                  height: '100%',
-                  top: 0,
-                  left: 0,
-                  cursor: 'pointer',
+                  width: 0,
+                  height: 0,
+                  pointerEvents: 'none',
                 }}
               />
             </label>
@@ -1975,14 +2236,15 @@ export default function CollaborativeWhiteboardModal({
 
             {/* Custom Background Color Picker */}
             <label
+              className="premium-button"
               style={{
                 position: 'relative',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                width: '24px',
-                height: '24px',
-                borderRadius: '6px',
+                width: '26px',
+                height: '26px',
+                borderRadius: '8px',
                 border: darkMode ? '1.5px solid rgba(255,255,255,0.2)' : '1.5px solid rgba(0,0,0,0.2)',
                 backgroundColor: backgroundColor,
                 cursor: 'pointer',
@@ -1991,20 +2253,19 @@ export default function CollaborativeWhiteboardModal({
               }}
               title="Personnaliser la couleur d'arrière-plan"
             >
-              <Palette size={12} color={['#FFFFFF', '#FDFBF7', '#FEF9C3', '#E0F2FE'].includes(backgroundColor) ? '#1F2937' : '#FFFFFF'} />
+              <Palette size={14} color={['#FFFFFF', '#FDFBF7', '#FEF9C3', '#E0F2FE'].includes(backgroundColor) ? '#1F2937' : '#FFFFFF'} />
               <input
                 ref={bgColorInputRef}
                 type="color"
                 value={backgroundColor}
                 onChange={(e) => handleChangeBackgroundColor(e.target.value)}
+                className="opacity-0 absolute w-0 h-0 pointer-events-none"
                 style={{
                   position: 'absolute',
                   opacity: 0,
-                  width: '100%',
-                  height: '100%',
-                  top: 0,
-                  left: 0,
-                  cursor: 'pointer',
+                  width: 0,
+                  height: 0,
+                  pointerEvents: 'none',
                 }}
               />
             </label>
