@@ -67,15 +67,11 @@ function ChatView({
   const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
   const [isProjectRewardsModalOpen, setIsProjectRewardsModalOpen] = useState(false);
   const [isWhiteboardOpen, setIsWhiteboardOpen] = useState(false);
+  const [isWhiteboardPickerOpen, setIsWhiteboardPickerOpen] = useState(false);
   const [isSharedDocOpen, setIsSharedDocOpen] = useState(false);
   const [activeWhiteboardBoardId, setActiveWhiteboardBoardId] = useState(null);
   const [activeWhiteboardVersion, setActiveWhiteboardVersion] = useState(null);
-
-  const openWhiteboard = (boardId, version = null) => {
-    setActiveWhiteboardBoardId(boardId || (effectiveSelectedChat?.id ? `board-${effectiveSelectedChat.id}` : 'default_board'));
-    setActiveWhiteboardVersion(version);
-    setIsWhiteboardOpen(true);
-  };
+  const [firestoreRecentBoards, setFirestoreRecentBoards] = useState([]);
   const [isWorkspaceToolsOpen, setIsWorkspaceToolsOpen] = useState(false);
   const [isCloudOfficeOpen, setIsCloudOfficeOpen] = useState(false);
   const [officeInitialTab, setOfficeInitialTab] = useState('docs');
@@ -101,6 +97,12 @@ function ChatView({
   const effectiveSelectedChat = (selectedChat && !deletedChatIds.has(selectedChat.id)) ? selectedChat : null;
   const activeChatObj = effectiveSelectedChat;
   const [mobileSubView, setMobileSubView] = useState(() => (selectedChat && !deletedChatIds.has(selectedChat.id)) ? 'room' : 'list');
+
+  const openWhiteboard = useCallback((boardId, version = null) => {
+    setActiveWhiteboardBoardId(boardId || (effectiveSelectedChat?.id ? `board-${effectiveSelectedChat.id}` : 'default_board'));
+    setActiveWhiteboardVersion(version);
+    setIsWhiteboardOpen(true);
+  }, [effectiveSelectedChat?.id]);
 
   // Transfert direct de Jetons Troco avec débit immédiat et confettis
   const handleExecuteDirectTokenTransfer = async () => {
@@ -381,6 +383,105 @@ function ChatView({
   const messages = useMemo(() => {
     return currentChatId ? (chatThreads[currentChatId] || []) : [];
   }, [currentChatId, chatThreads]);
+
+  // Multi-Board Management (Phase 23) : Récupération dynamique des 3 derniers tableaux blancs modifiés dans ce chat
+  const recentBoardsFromMessages = useMemo(() => {
+    if (!currentChatId) return [];
+
+    const boardsMap = new Map();
+
+    // 1. Scanner les messages du fil de discussion actuel
+    if (Array.isArray(messages)) {
+      messages.forEach((msg) => {
+        if (!msg) return;
+        const isWhiteboardInvite = (msg.type === 'workspace_invite' || msg.kind === 'workspace_invite') &&
+          (msg.workspaceType === 'whiteboard' || !msg.workspaceType || msg.boardId);
+
+        if (isWhiteboardInvite && (msg.boardId || msg.workspaceId)) {
+          const bId = String(msg.boardId || msg.workspaceId);
+          const rawTime = msg.timestamp?.toMillis ? msg.timestamp.toMillis() : (Number(msg.timestamp) || Number(msg.createdAt) || 0);
+          const existing = boardsMap.get(bId);
+          if (!existing || rawTime > existing.timestamp) {
+            boardsMap.set(bId, {
+              boardId: bId,
+              title: msg.workspaceTitle || msg.title || 'Tableau Blanc Collaboratif',
+              version: msg.version || 'V1',
+              previewUrl: msg.previewUrl || null,
+              timestamp: rawTime,
+              lastEditor: msg.senderName || 'Collaborateur',
+            });
+          }
+        }
+      });
+    }
+
+    // 2. Inclure le tableau principal par défaut s'il n'y a pas d'autre tableau
+    const defaultBoardId = `board-${currentChatId}`;
+    if (!boardsMap.has(defaultBoardId)) {
+      boardsMap.set(defaultBoardId, {
+        boardId: defaultBoardId,
+        title: activeChatObj?.projectTitle || activeChatObj?.user ? `Tableau de ${activeChatObj.projectTitle || activeChatObj.user}` : 'Tableau Principal',
+        version: 'V1',
+        previewUrl: null,
+        timestamp: activeChatObj?.timestamp || 0,
+        lastEditor: 'Principal',
+        isDefault: true,
+      });
+    }
+
+    return Array.from(boardsMap.values());
+  }, [currentChatId, messages, activeChatObj]);
+
+  // Synchronisation Firestore pour lister les boards de ce chat
+  useEffect(() => {
+    if (!isWhiteboardPickerOpen || !currentChatId || !db) return;
+
+    let isMounted = true;
+    const fetchRecentFromFirestore = async () => {
+      try {
+        const q = query(
+          collection(db, 'project_whiteboards'),
+          where('groupId', '==', String(currentChatId))
+        );
+        const snap = await getDocs(q);
+        if (!isMounted) return;
+        const list = [];
+        snap.forEach((d) => {
+          const data = d.data();
+          list.push({
+            boardId: data.boardId || d.id,
+            title: data.title || 'Tableau Blanc',
+            version: `V${data.versionNumber || 1}`,
+            previewUrl: data.versionHistory?.[data.versionHistory.length - 1]?.previewUrl || null,
+            timestamp: data.updatedAt?.toMillis ? data.updatedAt.toMillis() : Date.now(),
+            lastEditor: data.lastEditor || 'Collaborateur',
+          });
+        });
+        setFirestoreRecentBoards(list);
+      } catch (err) {
+        console.warn('[ChatView] Firestore recent boards note:', err);
+      }
+    };
+
+    fetchRecentFromFirestore();
+    return () => { isMounted = false; };
+  }, [isWhiteboardPickerOpen, currentChatId]);
+
+  const mergedRecentBoards = useMemo(() => {
+    const map = new Map();
+    firestoreRecentBoards.forEach((b) => map.set(b.boardId, b));
+    recentBoardsFromMessages.forEach((b) => {
+      if (!map.has(b.boardId)) {
+        map.set(b.boardId, b);
+      } else {
+        const existing = map.get(b.boardId);
+        if (b.timestamp > existing.timestamp) map.set(b.boardId, { ...existing, ...b });
+      }
+    });
+    return Array.from(map.values())
+      .sort((a, b) => b.timestamp - a.timestamp)
+      .slice(0, 3);
+  }, [firestoreRecentBoards, recentBoardsFromMessages]);
 
   // Auto-scroll fiable vers le bas des messages (Mission 3)
   useEffect(() => {
@@ -798,8 +899,8 @@ function ChatView({
                 {/* BOUTON TABLEAU BLANC COLLABORATIF (GROUPE) */}
                 <button
                   type="button"
-                  onClick={(e) => { e.stopPropagation(); setIsWhiteboardOpen(true); }}
-                  onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setIsWhiteboardOpen(true); }}
+                  onClick={(e) => { e.stopPropagation(); setIsWhiteboardPickerOpen(true); }}
+                  onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setIsWhiteboardPickerOpen(true); }}
                   className="premium-button"
                   style={{
                     border: '1px solid var(--border-color)',
@@ -815,7 +916,7 @@ function ChatView({
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
                     position: 'relative', zIndex: 100, pointerEvents: 'auto', touchAction: 'manipulation'
                   }}
-                  title="Ouvrir le Tableau Blanc Collaboratif"
+                  title="Gérer ou créer des Tableaux Blancs Collaboratifs"
                 >
                   <Palette size={15} color="var(--accent-primary)" />
                   {!isMobile && <span>Whiteboard</span>}
@@ -915,8 +1016,8 @@ function ChatView({
                 {/* BOUTON TABLEAU BLANC COLLABORATIF 1-TO-1 */}
                 <button
                   type="button"
-                  onClick={(e) => { e.stopPropagation(); setIsWhiteboardOpen(true); }}
-                  onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setIsWhiteboardOpen(true); }}
+                  onClick={(e) => { e.stopPropagation(); setIsWhiteboardPickerOpen(true); }}
+                  onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setIsWhiteboardPickerOpen(true); }}
                   className="premium-button"
                   style={{
                     border: '1px solid var(--border-color)',
@@ -932,7 +1033,7 @@ function ChatView({
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
                     position: 'relative', zIndex: 100, pointerEvents: 'auto', touchAction: 'manipulation'
                   }}
-                  title="Ouvrir le Tableau Blanc Collaboratif"
+                  title="Gérer ou créer des Tableaux Blancs Collaboratifs"
                 >
                   <Palette size={15} color="var(--accent-primary)" />
                   {!isMobile && <span>Whiteboard</span>}
@@ -1545,7 +1646,8 @@ function ChatView({
                         setOfficeInitialTab('sheets');
                         setIsCloudOfficeOpen(true);
                       } else {
-                        openWhiteboard(targetWsId || targetBoardId, targetVersion || msg.version);
+                        const specificBoardId = targetBoardId || targetWsId || msg.boardId || msg.workspaceId;
+                        openWhiteboard(specificBoardId, targetVersion || msg.version);
                       }
                     }}
                   />
@@ -1998,8 +2100,8 @@ function ChatView({
                         {/* 1. TABLEAU BLANC COLLABORATIF MULTIJOUEUR */}
                         <button
                           type="button"
-                          onClick={(e) => { e.stopPropagation(); handleOpenWorkspaceTool('whiteboard'); }}
-                          onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); handleOpenWorkspaceTool('whiteboard'); }}
+                          onClick={(e) => { e.stopPropagation(); setIsWorkspaceMenuOpen(false); setIsWhiteboardPickerOpen(true); }}
+                          onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setIsWorkspaceMenuOpen(false); setIsWhiteboardPickerOpen(true); }}
                           className="hover-subtle"
                           style={{
                             border: 'none',
@@ -2026,7 +2128,7 @@ function ChatView({
                               <span>Tableau Blanc</span>
                               <span style={{ fontSize: '9px', fontWeight: '800', color: '#10B981', backgroundColor: 'rgba(16, 185, 129, 0.15)', padding: '1px 5px', borderRadius: '4px' }}>0ms</span>
                             </div>
-                            <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>Moteur de brosses Apple & dessin direct</div>
+                            <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>Créer un nouveau projet ou reprendre un board</div>
                           </div>
                         </button>
 
@@ -2701,6 +2803,292 @@ function ChatView({
         </Suspense>
       )}
 
+      {/* POPOVER / DROPDOWN MULTI-BOARD PICKER (PHASE 23) */}
+      {isWhiteboardPickerOpen && activeChatObj && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 999999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'rgba(0,0,0,0.55)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            padding: '16px',
+            animation: 'fadeIn 0.15s ease',
+          }}
+          onClick={() => setIsWhiteboardPickerOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              width: '100%',
+              maxWidth: '430px',
+              backgroundColor: darkMode ? '#1A1613' : '#FFFFFF',
+              borderRadius: '24px',
+              border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.1)',
+              boxShadow: '0 24px 60px rgba(0,0,0,0.35)',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+              animation: 'popoverZoom 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+            }}
+          >
+            {/* EN-TÊTE DU MENU POPOVER */}
+            <div
+              style={{
+                padding: '18px 20px 14px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                borderBottom: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.06)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div
+                  style={{
+                    width: '36px',
+                    height: '36px',
+                    borderRadius: '10px',
+                    background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)',
+                    color: '#FFF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 4px 12px rgba(198,125,91,0.3)',
+                  }}
+                >
+                  <Palette size={18} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '15px', fontWeight: '900', color: 'var(--text-main)' }}>
+                    Tableaux Blancs
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                    Création infinie & gestion de projets
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsWhiteboardPickerOpen(false)}
+                className="premium-button"
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  border: 'none',
+                  backgroundColor: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+                  color: 'var(--text-secondary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                }}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* CONTENU */}
+            <div style={{ padding: '16px 20px 20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              
+              {/* 1. NOUVEAU TABLEAU BLANC (GÉNÉRATION D'UN ID UNIQUE) */}
+              <button
+                type="button"
+                onClick={() => {
+                  const newBoardId = `${activeChatObj.id || 'chat'}_board_${Date.now()}`;
+                  openWhiteboard(newBoardId, 1);
+                  setIsWhiteboardPickerOpen(false);
+                }}
+                className="premium-button"
+                style={{
+                  padding: '14px 16px',
+                  borderRadius: '16px',
+                  border: 'none',
+                  background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)',
+                  color: '#FFFFFF',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  boxShadow: '0 6px 20px rgba(198,125,91,0.35)',
+                  textAlign: 'left',
+                  transition: 'all 0.15s ease',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-1px)'}
+                onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+              >
+                <div
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '12px',
+                    backgroundColor: 'rgba(255,255,255,0.2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  <Plus size={22} strokeWidth={2.8} />
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: '13.5px', fontWeight: '900', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>🎨 Nouveau Tableau Blanc</span>
+                    <Sparkles size={13} color="#FEF08A" />
+                  </div>
+                  <div style={{ fontSize: '11px', opacity: 0.9, marginTop: '2px' }}>
+                    Démarrer un projet vierge sans écraser le précédent
+                  </div>
+                </div>
+              </button>
+
+              {/* 2. REPRENDRE UN PROJET (3 DERNIERS BOARDS DU CHAT) */}
+              <div>
+                <div
+                  style={{
+                    fontSize: '11px',
+                    fontWeight: '800',
+                    color: 'var(--text-secondary)',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                    marginBottom: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                  }}
+                >
+                  <Clock size={12} />
+                  <span>📁 Reprendre un projet ({mergedRecentBoards.length})</span>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {mergedRecentBoards.length > 0 ? (
+                    mergedRecentBoards.map((board) => (
+                      <button
+                        key={board.boardId}
+                        type="button"
+                        onClick={() => {
+                          openWhiteboard(board.boardId, board.version || null);
+                          setIsWhiteboardPickerOpen(false);
+                        }}
+                        className="hover-subtle"
+                        style={{
+                          padding: '10px 12px',
+                          borderRadius: '14px',
+                          border: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
+                          backgroundColor: darkMode ? 'rgba(255,255,255,0.03)' : '#F9F8F6',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '10px',
+                          textAlign: 'left',
+                          width: '100%',
+                          transition: 'all 0.15s ease',
+                        }}
+                      >
+                        {board.previewUrl ? (
+                          <div
+                            style={{
+                              width: '42px',
+                              height: '42px',
+                              borderRadius: '10px',
+                              overflow: 'hidden',
+                              backgroundColor: '#111',
+                              border: '1px solid rgba(198,125,91,0.3)',
+                              flexShrink: 0,
+                            }}
+                          >
+                            <img
+                              src={board.previewUrl}
+                              alt="Preview"
+                              style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                            />
+                          </div>
+                        ) : (
+                          <div
+                            style={{
+                              width: '42px',
+                              height: '42px',
+                              borderRadius: '10px',
+                              backgroundColor: 'rgba(198,125,91,0.12)',
+                              color: 'var(--accent-primary)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0,
+                            }}
+                          >
+                            <Palette size={18} />
+                          </div>
+                        )}
+
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+                            <span
+                              style={{
+                                fontSize: '12.5px',
+                                fontWeight: '800',
+                                color: 'var(--text-main)',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              {board.title}
+                            </span>
+                            <span
+                              style={{
+                                fontSize: '9.5px',
+                                fontWeight: '800',
+                                backgroundColor: 'rgba(198,125,91,0.18)',
+                                color: 'var(--accent-primary)',
+                                padding: '1px 6px',
+                                borderRadius: '6px',
+                                flexShrink: 0,
+                              }}
+                            >
+                              {board.version || 'V1'}
+                            </span>
+                          </div>
+
+                          <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            <span>{board.lastEditor ? `Édité par ${board.lastEditor}` : 'Projet actif'}</span>
+                            {board.timestamp > 0 && (
+                              <>
+                                <span>•</span>
+                                <span>{new Date(board.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </button>
+                    ))
+                  ) : (
+                    <div
+                      style={{
+                        padding: '16px',
+                        textAlign: 'center',
+                        fontSize: '12px',
+                        color: 'var(--text-secondary)',
+                        backgroundColor: darkMode ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
+                        borderRadius: '12px',
+                      }}
+                    >
+                      Aucun projet précédent dans cette discussion.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* MODALE TABLEAU BLANC COLLABORATIF 100% CANVAS (LAZY LOADED) */}
       {isWhiteboardOpen && activeChatObj && (
         <Suspense fallback={null}>
@@ -2712,7 +3100,7 @@ function ChatView({
             }}
             groupId={selectedChat?.id || activeChatObj.id || activeChatObj.firestoreId || 'group_whiteboard'}
             boardId={activeWhiteboardBoardId || (activeChatObj.id ? `board-${activeChatObj.id}` : 'default_board')}
-            workspaceId={activeWhiteboardBoardId || (activeChatObj.id ? `ws_${activeChatObj.id}_whiteboard` : 'default_board')}
+            workspaceId={activeWhiteboardBoardId || (activeChatObj.id ? `board-${activeChatObj.id}` : 'default_board')}
             version={activeWhiteboardVersion}
             initialVersion={activeWhiteboardVersion}
             projectTitle={activeChatObj.projectTitle || activeChatObj.user || 'Tableau Blanc Collaboratif'}

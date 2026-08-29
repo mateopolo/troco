@@ -719,12 +719,19 @@ export default function CollaborativeWhiteboardModal({
 
     const loadInitialState = async () => {
       try {
-        const loaded = await loadWorkspaceData(effectiveId);
+        let loaded = await loadWorkspaceData(effectiveId);
+        if (!loaded && db) {
+          const snap = await getDoc(doc(db, 'project_whiteboards', String(effectiveId)));
+          if (snap.exists()) {
+            loaded = snap.data();
+          }
+        }
+
         if (loaded) {
           const versionData = loaded.data || loaded;
-          const loadedPaths = Array.isArray(versionData.paths) ? versionData.paths : [];
-          const loadedStickies = Array.isArray(versionData.stickyNotes) ? versionData.stickyNotes : [];
-          const loadedTexts = Array.isArray(versionData.textElements) ? versionData.textElements : [];
+          const loadedPaths = Array.isArray(versionData.paths) ? versionData.paths : (Array.isArray(loaded.paths) ? loaded.paths : []);
+          const loadedStickies = Array.isArray(versionData.stickyNotes) ? versionData.stickyNotes : (Array.isArray(loaded.stickyNotes) ? loaded.stickyNotes : []);
+          const loadedTexts = Array.isArray(versionData.textElements) ? versionData.textElements : (Array.isArray(loaded.textElements) ? loaded.textElements : []);
           const bg = versionData.backgroundColor || loaded.backgroundColor || (darkMode ? '#12100E' : '#FFFFFF');
 
           setLocalPaths(loadedPaths);
@@ -733,13 +740,29 @@ export default function CollaborativeWhiteboardModal({
           setTextElements(loadedTexts);
           setBackgroundColor(bg);
 
-          if (loaded.version) setVersionNumber(Number(loaded.version) || 1);
+          if (loaded.version || loaded.versionNumber) setVersionNumber(Number(loaded.version || loaded.versionNumber) || 1);
           if (loaded.title) setWorkspaceTitle(loaded.title);
 
           setHistory([loadedPaths]);
           setHistoryStep(0);
           historyStepRef.current = 0;
 
+          requestAnimationFrame(() => {
+            redrawCanvas();
+          });
+        } else {
+          // Nouveau projet vierge complet sans interférence
+          setLocalPaths([]);
+          setRemotePaths([]);
+          setStickyNotes([]);
+          setTextElements([]);
+          setBackgroundColor(darkMode ? '#12100E' : '#FFFFFF');
+          setVersionNumber(1);
+          setWorkspaceTitle(projectTitle || 'Tableau Blanc');
+          setHistory([[]]);
+          setHistoryStep(0);
+          historyStepRef.current = 0;
+          setCurrentPath(null);
           requestAnimationFrame(() => {
             redrawCanvas();
           });
@@ -750,7 +773,7 @@ export default function CollaborativeWhiteboardModal({
     };
 
     loadInitialState();
-  }, [isOpen, effectiveId, version, initialVersion, fetchVersions, redrawCanvas, darkMode]);
+  }, [isOpen, effectiveId, version, initialVersion, fetchVersions, redrawCanvas, darkMode, projectTitle]);
 
   // ================= GESTION DES POINTER EVENTS =================
   const handlePointerDown = (e) => {
