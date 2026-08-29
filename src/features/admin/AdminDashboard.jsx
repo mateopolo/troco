@@ -11,6 +11,8 @@ import {
 } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAllGlobalContent } from './useGlobalContent';
+import AdminCommunityTab from './AdminCommunityTab';
+import AdminChatsTab from './AdminChatsTab';
 
 export default function AdminDashboard({
   isOpen = true,
@@ -51,17 +53,12 @@ export default function AdminDashboard({
 
   const [listingSearch, setListingSearch] = useState('');
   const [listingCategoryFilter, setListingCategoryFilter] = useState('all');
-
-  const [communitySearch, setCommunitySearch] = useState('');
-  const [communityFilter, setCommunityFilter] = useState('all'); // 'all' | 'urgent' | 'admin_edited'
-
   const [txSearch, setTxSearch] = useState('');
   const [txFilter, setTxFilter] = useState('all'); // 'all' | 'disputed' | 'deal' | 'admin_adjustment' | 'refunded'
 
   // Modales d'action
   const [editingUser, setEditingUser] = useState(null); // Utilisateur complet à éditer
   const [editingListing, setEditingListing] = useState(null); // Document annonce à éditer
-  const [editingCommunityMsg, setEditingCommunityMsg] = useState(null); // Message communauté à éditer
   const [balanceModalUser, setBalanceModalUser] = useState(null); // Utilisateur pour ajustement de solde
   const [deltaTokens, setDeltaTokens] = useState('');
   const [deltaEuros, setDeltaEuros] = useState('');
@@ -163,21 +160,16 @@ export default function AdminDashboard({
     };
   }, [isUnlocked]);
 
-  // 3. LISTENER TEMPS RÉEL : FLUX COMMUNAUTÉ (global_chat)
+  // 3. LISTENER TEMPS RÉEL : FLUX COMMUNAUTÉ (community_messages & global_chat)
   useEffect(() => {
     if (!db || !isUnlocked) return;
 
-    let unsubscribe = () => {};
+    let unsubCommunity = () => {};
+    let unsubGlobal = () => {};
+    const messagesMap = new Map();
 
-    const handleSnapshot = (snapshot) => {
-      const list = [];
-      snapshot.forEach((docSnap) => {
-        const data = docSnap.data();
-        list.push({
-          id: docSnap.id,
-          ...data,
-        });
-      });
+    const updateCommunityList = () => {
+      const list = Array.from(messagesMap.values());
       list.sort((a, b) => {
         const tA = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.timestamp?.toMillis ? a.timestamp.toMillis() : (a.createdAt || a.timestamp || 0));
         const tB = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.timestamp?.toMillis ? b.timestamp.toMillis() : (b.createdAt || b.timestamp || 0));
@@ -188,32 +180,50 @@ export default function AdminDashboard({
     };
 
     try {
-      const q = query(
-        collection(db, 'global_chat'),
-        orderBy('createdAt', 'desc'),
-        limit(100)
-      );
-
-      unsubscribe = onSnapshot(
-        q,
-        handleSnapshot,
-        (err) => {
-          console.warn('[AdminDashboard] Erreur écoute global_chat avec orderBy, fallback sans orderBy:', err);
-          try {
-            const fallbackQ = query(collection(db, 'global_chat'), limit(100));
-            unsubscribe = onSnapshot(fallbackQ, handleSnapshot, () => setIsLoadingCommunity(false));
-          } catch (_) {
-            setIsLoadingCommunity(false);
-          }
+      const qComm = query(collection(db, 'community_messages'), orderBy('createdAt', 'desc'), limit(100));
+      unsubCommunity = onSnapshot(qComm, (snap) => {
+        snap.forEach(docSnap => {
+          messagesMap.set('comm_' + docSnap.id, { id: docSnap.id, _collection: 'community_messages', ...docSnap.data() });
+        });
+        updateCommunityList();
+      }, () => {
+        try {
+          unsubCommunity = onSnapshot(query(collection(db, 'community_messages'), limit(100)), (snap) => {
+            snap.forEach(docSnap => {
+              messagesMap.set('comm_' + docSnap.id, { id: docSnap.id, _collection: 'community_messages', ...docSnap.data() });
+            });
+            updateCommunityList();
+          });
+        } catch (_) {
+          setIsLoadingCommunity(false);
         }
-      );
-    } catch (e) {
-      console.warn('[AdminDashboard] Exception global_chat:', e);
-      setIsLoadingCommunity(false);
-    }
+      });
+    } catch (_) {}
+
+    try {
+      const qGlob = query(collection(db, 'global_chat'), orderBy('createdAt', 'desc'), limit(100));
+      unsubGlobal = onSnapshot(qGlob, (snap) => {
+        snap.forEach(docSnap => {
+          messagesMap.set('glob_' + docSnap.id, { id: docSnap.id, _collection: 'global_chat', ...docSnap.data() });
+        });
+        updateCommunityList();
+      }, () => {
+        try {
+          unsubGlobal = onSnapshot(query(collection(db, 'global_chat'), limit(100)), (snap) => {
+            snap.forEach(docSnap => {
+              messagesMap.set('glob_' + docSnap.id, { id: docSnap.id, _collection: 'global_chat', ...docSnap.data() });
+            });
+            updateCommunityList();
+          });
+        } catch (_) {
+          setIsLoadingCommunity(false);
+        }
+      });
+    } catch (_) {}
 
     return () => {
-      if (typeof unsubscribe === 'function') unsubscribe();
+      if (typeof unsubCommunity === 'function') unsubCommunity();
+      if (typeof unsubGlobal === 'function') unsubGlobal();
     };
   }, [isUnlocked]);
 
@@ -489,80 +499,26 @@ export default function AdminDashboard({
     try {
       const listingRef = doc(db, 'listings', String(editingListing.id));
       await updateDoc(listingRef, {
-        title: editingListing.title,
-        description: editingListing.description,
+        title: editingListing.title || '',
+        description: editingListing.description || '',
         compensation: editingListing.compensation || '',
+        trocoTokens: Number(editingListing.trocoTokens) || 0,
+        euroAmount: Number(editingListing.euroAmount) || 0,
+        price: Number(editingListing.price) || 0,
         category: editingListing.category || 'Autre',
         location: editingListing.location || '',
+        format: editingListing.format || 'both',
+        status: editingListing.status || 'active',
+        isBoosted: Boolean(editingListing.isBoosted),
+        urgent: Boolean(editingListing.urgent),
         updatedAt: serverTimestamp(),
         editedByAdmin: true,
       });
 
-      showToast(`Annonce "${editingListing.title}" mise à jour en direct !`);
+      showToast(`Annonce "${editingListing.title}" mise à jour et synchronisée en direct !`);
       setEditingListing(null);
     } catch (err) {
       alert('Erreur modification annonce : ' + err.message);
-    }
-  };
-
-  // ================= ACTIONS COMMUNAUTÉ =================
-  const handleDeleteCommunityMessage = async (msgId) => {
-    if (!window.confirm('Supprimer ce message du flux communauté en direct ?')) return;
-
-    try {
-      await deleteDoc(doc(db, 'global_chat', msgId));
-      showToast('Message communauté supprimé en temps réel.');
-    } catch (err) {
-      alert('Erreur suppression message : ' + err.message);
-    }
-  };
-
-  const handleSaveCommunityMessageEdit = async () => {
-    if (!editingCommunityMsg) return;
-    try {
-      const msgRef = doc(db, 'global_chat', editingCommunityMsg.id);
-      await updateDoc(msgRef, {
-        text: editingCommunityMsg.text,
-        isEditedByAdmin: true,
-        editedAt: serverTimestamp(),
-      });
-      showToast('Message communauté modifié en direct !');
-      setEditingCommunityMsg(null);
-    } catch (err) {
-      alert('Erreur modification message : ' + err.message);
-    }
-  };
-
-  const handleQuickBanMessageAuthor = async (msg) => {
-    const authorName = msg.author || 'Auteur';
-    const authorUid = msg.authorUid || msg.userId;
-
-    if (!window.confirm(`Bannir directement l'auteur "${authorName}" de ce message ?`)) return;
-
-    try {
-      if (authorUid) {
-        await updateDoc(doc(db, 'users', authorUid), {
-          isBanned: true,
-          bannedAt: serverTimestamp(),
-          bannedReason: `Message communauté abusif: "${msg.text?.slice(0, 50)}..."`,
-          updatedAt: serverTimestamp(),
-        });
-      } else {
-        // Recherche dans users par nom
-        const target = usersList.find(u => u.name === msg.author || u.username === msg.authorUsername);
-        if (target) {
-          await updateDoc(doc(db, 'users', target.id), {
-            isBanned: true,
-            bannedAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-          });
-        }
-      }
-      // Supprime également le message
-      await deleteDoc(doc(db, 'global_chat', msg.id));
-      showToast(`Auteur "${authorName}" banni et message supprimé.`);
-    } catch (err) {
-      alert('Erreur : ' + err.message);
     }
   };
 
@@ -657,24 +613,6 @@ export default function AdminDashboard({
       return true;
     });
   }, [listingsList, listingSearch, listingCategoryFilter]);
-
-  // Filtrage de la communauté
-  const filteredCommunity = useMemo(() => {
-    return communityMessages.filter((m) => {
-      const q = communitySearch.toLowerCase();
-      const matchSearch =
-        !q ||
-        (m.text && m.text.toLowerCase().includes(q)) ||
-        (m.author && m.author.toLowerCase().includes(q)) ||
-        (m.authorUsername && m.authorUsername.toLowerCase().includes(q));
-
-      if (!matchSearch) return false;
-      if (communityFilter === 'urgent') return !!m.isUrgent;
-      if (communityFilter === 'admin_edited') return !!m.isEditedByAdmin;
-
-      return true;
-    });
-  }, [communityMessages, communitySearch, communityFilter]);
 
   // Filtrage des transactions & litiges
   const filteredTransactions = useMemo(() => {
@@ -1000,8 +938,9 @@ export default function AdminDashboard({
         {[
           { id: 'users', label: 'Utilisateurs', icon: Users, count: stats.totalUsers, badge: stats.bannedUsers ? `${stats.bannedUsers} bannis` : null },
           { id: 'listings', label: 'Annonces', icon: FileText, count: stats.totalListings },
-          { id: 'community', label: 'Communauté & Live', icon: MessageSquare, count: stats.totalMessages },
-          { id: 'economy', label: 'Économie & Litiges', icon: Coins, count: stats.totalTransactions, badge: stats.disputedTransactions ? `${stats.disputedTransactions} litige${stats.disputedTransactions > 1 ? 's' : ''}` : null },
+          { id: 'community', label: 'Communauté Live', icon: MessageSquare, count: stats.totalMessages },
+          { id: 'chats', label: 'Litiges & Chats', icon: ShieldAlert },
+          { id: 'economy', label: 'Économie & Transactions', icon: Coins, count: stats.totalTransactions, badge: stats.disputedTransactions ? `${stats.disputedTransactions} litige${stats.disputedTransactions > 1 ? 's' : ''}` : null },
           { id: 'cms', label: 'Textes Globaux (CMS)', icon: Globe, count: Object.keys(globalContent).length },
         ].map((tab) => {
           const Icon = tab.icon;
@@ -1523,189 +1462,28 @@ export default function AdminDashboard({
           </div>
         )}
 
-        {/* ================= ONGLET 3 : COMMUNAUTÉ & FLUX LIVE ================= */}
+        {/* ================= ONGLET 3 : COMMUNAUTÉ & FLUX LIVE (CRUD TOTAL) ================= */}
         {activeTab === 'community' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '1200px', margin: '0 auto' }}>
-            {/* Barre de filtrage communauté */}
-            <div
-              style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: '12px',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                backgroundColor: darkMode ? '#1A1613' : '#FFFFFF',
-                padding: '14px 18px',
-                borderRadius: '18px',
-                border: '1px solid var(--border-color, rgba(0,0,0,0.08))',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: '240px' }}>
-                <Search size={18} color="var(--text-secondary)" />
-                <input
-                  type="text"
-                  placeholder="Rechercher dans les messages du chat mondial..."
-                  value={communitySearch}
-                  onChange={(e) => setCommunitySearch(e.target.value)}
-                  style={{
-                    width: '100%',
-                    background: 'none',
-                    border: 'none',
-                    outline: 'none',
-                    color: 'inherit',
-                    fontSize: '13.5px',
-                    fontWeight: '600',
-                  }}
-                />
-              </div>
+          <div style={{ maxWidth: '1300px', margin: '0 auto', width: '100%' }}>
+            <AdminCommunityTab
+              communityMessages={communityMessages}
+              isLoading={isLoadingCommunity}
+              darkMode={darkMode}
+              showToast={showToast}
+              currentUser={currentUser}
+              usersList={usersList}
+            />
+          </div>
+        )}
 
-              <div style={{ display: 'flex', gap: '6px' }}>
-                {[
-                  { id: 'all', label: 'Tous les flux' },
-                  { id: 'urgent', label: '⚡ Urgents' },
-                  { id: 'admin_edited', label: '✏️ Modifiés' },
-                ].map(f => (
-                  <button
-                    key={f.id}
-                    type="button"
-                    onClick={() => setCommunityFilter(f.id)}
-                    style={{
-                      padding: '6px 12px',
-                      borderRadius: '8px',
-                      border: communityFilter === f.id ? '1px solid var(--accent-primary)' : '1px solid transparent',
-                      backgroundColor: communityFilter === f.id ? 'rgba(198,125,91,0.15)' : darkMode ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.04)',
-                      color: communityFilter === f.id ? 'var(--accent-primary)' : 'inherit',
-                      fontSize: '12px',
-                      fontWeight: '700',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {f.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Liste en temps réel des messages */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {isLoadingCommunity ? (
-                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>
-                  Connexion au flux en direct global_chat...
-                </div>
-              ) : filteredCommunity.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>
-                  Aucun message trouvé dans le flux mondial.
-                </div>
-              ) : (
-                filteredCommunity.map((msg) => (
-                  <div
-                    key={msg.id}
-                    style={{
-                      backgroundColor: darkMode ? '#1A1613' : '#FFFFFF',
-                      borderRadius: '16px',
-                      border: msg.isUrgent ? '1px solid rgba(239,68,68,0.4)' : '1px solid var(--border-color, rgba(0,0,0,0.08))',
-                      padding: '16px',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'flex-start',
-                      gap: '14px',
-                      boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
-                    }}
-                  >
-                    <div style={{ display: 'flex', gap: '12px', flex: 1 }}>
-                      <img
-                        src={msg.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'}
-                        alt=""
-                        style={{ width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
-                      />
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                          <span style={{ fontWeight: '800', fontSize: '13.5px' }}>{msg.author || 'Membre'}</span>
-                          <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{msg.authorUsername || '@membre'}</span>
-                          {msg.isUrgent && (
-                            <span style={{ fontSize: '9px', fontWeight: '900', backgroundColor: '#EF4444', color: '#FFF', padding: '1px 6px', borderRadius: '4px' }}>
-                              ⚡ URGENT
-                            </span>
-                          )}
-                          {msg.isEditedByAdmin && (
-                            <span style={{ fontSize: '9px', fontWeight: '800', backgroundColor: '#3B82F6', color: '#FFF', padding: '1px 6px', borderRadius: '4px' }}>
-                              MODIFIÉ PAR ADMIN
-                            </span>
-                          )}
-                        </div>
-                        <p style={{ margin: 0, fontSize: '13.5px', lineHeight: 1.45, color: 'inherit' }}>
-                          {msg.text}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Actions de modération rapide */}
-                    <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
-                      <button
-                        type="button"
-                        onClick={() => setEditingCommunityMsg({ ...msg })}
-                        className="premium-button"
-                        style={{
-                          padding: '6px 10px',
-                          borderRadius: '8px',
-                          border: '1px solid var(--border-color)',
-                          backgroundColor: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-                          color: 'inherit',
-                          fontSize: '11px',
-                          fontWeight: '700',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                        }}
-                      >
-                        <Edit3 size={13} /> Éditer
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleQuickBanMessageAuthor(msg)}
-                        className="premium-button"
-                        style={{
-                          padding: '6px 10px',
-                          borderRadius: '8px',
-                          border: 'none',
-                          backgroundColor: 'rgba(239,68,68,0.15)',
-                          color: '#EF4444',
-                          fontSize: '11px',
-                          fontWeight: '800',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                        }}
-                        title="Bannir l'auteur"
-                      >
-                        <UserX size={13} /> Bannir Auteur
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteCommunityMessage(msg.id)}
-                        className="premium-button"
-                        style={{
-                          padding: '6px 10px',
-                          borderRadius: '8px',
-                          border: 'none',
-                          backgroundColor: 'rgba(239,68,68,0.15)',
-                          color: '#EF4444',
-                          fontSize: '11px',
-                          cursor: 'pointer',
-                        }}
-                        title="Supprimer le message"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
+        {/* ================= ONGLET 4 : LITIGES & CHATS PRIVÉS (GOD MODE ARBITRAGE) ================= */}
+        {activeTab === 'chats' && (
+          <div style={{ maxWidth: '1400px', margin: '0 auto', width: '100%' }}>
+            <AdminChatsTab
+              darkMode={darkMode}
+              showToast={showToast}
+              currentUser={currentUser}
+            />
           </div>
         )}
 
@@ -2433,53 +2211,178 @@ export default function AdminDashboard({
               </button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <label style={{ fontSize: '12px', fontWeight: '800' }}>Titre de l'annonce</label>
-              <input
-                type="text"
-                value={editingListing.title || ''}
-                onChange={(e) => setEditingListing({ ...editingListing, title: e.target.value })}
-                style={{
-                  padding: '12px',
-                  borderRadius: '10px',
-                  border: '1px solid var(--border-color)',
-                  backgroundColor: darkMode ? '#12100E' : '#FAF8F5',
-                  color: 'inherit',
-                  fontSize: '13.5px',
-                  fontWeight: '700',
-                }}
-              />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '65vh', overflowY: 'auto', paddingRight: '4px' }}>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '800', display: 'block', marginBottom: '4px' }}>Titre de l'annonce</label>
+                <input
+                  type="text"
+                  value={editingListing.title || ''}
+                  onChange={(e) => setEditingListing({ ...editingListing, title: e.target.value })}
+                  style={{
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    padding: '10px 12px',
+                    borderRadius: '10px',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: darkMode ? '#12100E' : '#FAF8F5',
+                    color: 'inherit',
+                    fontSize: '13.5px',
+                    fontWeight: '700',
+                  }}
+                />
+              </div>
 
-              <label style={{ fontSize: '12px', fontWeight: '800' }}>Description détaillée</label>
-              <textarea
-                rows="4"
-                value={editingListing.description || ''}
-                onChange={(e) => setEditingListing({ ...editingListing, description: e.target.value })}
-                style={{
-                  padding: '12px',
-                  borderRadius: '10px',
-                  border: '1px solid var(--border-color)',
-                  backgroundColor: darkMode ? '#12100E' : '#FAF8F5',
-                  color: 'inherit',
-                  fontSize: '13px',
-                  lineHeight: 1.4,
-                }}
-              />
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '800', display: 'block', marginBottom: '4px' }}>Description détaillée</label>
+                <textarea
+                  rows="3"
+                  value={editingListing.description || ''}
+                  onChange={(e) => setEditingListing({ ...editingListing, description: e.target.value })}
+                  style={{
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    padding: '10px 12px',
+                    borderRadius: '10px',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: darkMode ? '#12100E' : '#FAF8F5',
+                    color: 'inherit',
+                    fontSize: '13px',
+                    lineHeight: 1.4,
+                  }}
+                />
+              </div>
 
-              <label style={{ fontSize: '12px', fontWeight: '800' }}>Contrepartie / Modalités de troc</label>
-              <input
-                type="text"
-                value={editingListing.compensation || ''}
-                onChange={(e) => setEditingListing({ ...editingListing, compensation: e.target.value })}
-                style={{
-                  padding: '12px',
-                  borderRadius: '10px',
-                  border: '1px solid var(--border-color)',
-                  backgroundColor: darkMode ? '#12100E' : '#FAF8F5',
-                  color: 'inherit',
-                  fontSize: '13px',
-                }}
-              />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: '800', display: 'block', marginBottom: '4px' }}>🪙 Prix Jetons Troco</label>
+                  <input
+                    type="number"
+                    value={editingListing.trocoTokens ?? 1}
+                    onChange={(e) => setEditingListing({ ...editingListing, trocoTokens: e.target.value })}
+                    style={{
+                      width: '100%',
+                      boxSizing: 'border-box',
+                      padding: '10px 12px',
+                      borderRadius: '10px',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: darkMode ? '#12100E' : '#FAF8F5',
+                      color: 'inherit',
+                      fontSize: '13px',
+                      fontWeight: '800',
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: '800', display: 'block', marginBottom: '4px' }}>💶 Équivalent Euros (€)</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    value={editingListing.euroAmount ?? editingListing.price ?? 0}
+                    onChange={(e) => setEditingListing({ ...editingListing, euroAmount: e.target.value, price: e.target.value })}
+                    style={{
+                      width: '100%',
+                      boxSizing: 'border-box',
+                      padding: '10px 12px',
+                      borderRadius: '10px',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: darkMode ? '#12100E' : '#FAF8F5',
+                      color: 'inherit',
+                      fontSize: '13px',
+                      fontWeight: '800',
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '800', display: 'block', marginBottom: '4px' }}>Contrepartie / Modalités de troc</label>
+                <input
+                  type="text"
+                  value={editingListing.compensation || ''}
+                  onChange={(e) => setEditingListing({ ...editingListing, compensation: e.target.value })}
+                  style={{
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    padding: '10px 12px',
+                    borderRadius: '10px',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: darkMode ? '#12100E' : '#FAF8F5',
+                    color: 'inherit',
+                    fontSize: '13px',
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: '800', display: 'block', marginBottom: '4px' }}>Catégorie</label>
+                  <select
+                    value={editingListing.category || 'Autre'}
+                    onChange={(e) => setEditingListing({ ...editingListing, category: e.target.value })}
+                    style={{
+                      width: '100%',
+                      boxSizing: 'border-box',
+                      padding: '10px 12px',
+                      borderRadius: '10px',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: darkMode ? '#12100E' : '#FAF8F5',
+                      color: 'inherit',
+                      fontSize: '13px',
+                      fontWeight: '700',
+                    }}
+                  >
+                    <option value="Bricolage">Bricolage</option>
+                    <option value="Informatique">Informatique</option>
+                    <option value="Jardinage">Jardinage</option>
+                    <option value="Cours & Coaching">Cours & Coaching</option>
+                    <option value="Musique">Musique</option>
+                    <option value="Outillage">Outillage</option>
+                    <option value="Maison">Maison</option>
+                    <option value="Art & Design">Art & Design</option>
+                    <option value="Autre">Autre</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: '800', display: 'block', marginBottom: '4px' }}>Localisation (Ville)</label>
+                  <input
+                    type="text"
+                    value={editingListing.location || ''}
+                    onChange={(e) => setEditingListing({ ...editingListing, location: e.target.value })}
+                    style={{
+                      width: '100%',
+                      boxSizing: 'border-box',
+                      padding: '10px 12px',
+                      borderRadius: '10px',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: darkMode ? '#12100E' : '#FAF8F5',
+                      color: 'inherit',
+                      fontSize: '13px',
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginTop: '4px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', fontWeight: '700', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={Boolean(editingListing.isBoosted)}
+                    onChange={(e) => setEditingListing({ ...editingListing, isBoosted: e.target.checked })}
+                  />
+                  <span>🚀 Annonce Boostée</span>
+                </label>
+
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', fontWeight: '700', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={Boolean(editingListing.urgent)}
+                    onChange={(e) => setEditingListing({ ...editingListing, urgent: e.target.checked })}
+                  />
+                  <span>⚡ Urgente</span>
+                </label>
+              </div>
             </div>
 
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '8px' }}>
@@ -2513,101 +2416,6 @@ export default function AdminDashboard({
                 }}
               >
                 Enregistrer & Publier
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ================= MODALE ÉDITION MESSAGE COMMUNAUTÉ ================= */}
-      {editingCommunityMsg && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 1000001,
-            backgroundColor: 'rgba(0,0,0,0.7)',
-            backdropFilter: 'blur(10px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '20px',
-          }}
-          onClick={() => setEditingCommunityMsg(null)}
-        >
-          <div
-            style={{
-              backgroundColor: darkMode ? '#1A1613' : '#FFFFFF',
-              color: 'inherit',
-              borderRadius: '24px',
-              padding: '28px',
-              maxWidth: '480px',
-              width: '100%',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '16px',
-            }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '900' }}>
-                ✏️ Modérer le message de {editingCommunityMsg.author}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setEditingCommunityMsg(null)}
-                style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer' }}
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <textarea
-              rows="4"
-              value={editingCommunityMsg.text || ''}
-              onChange={(e) => setEditingCommunityMsg({ ...editingCommunityMsg, text: e.target.value })}
-              style={{
-                padding: '12px',
-                borderRadius: '10px',
-                border: '1px solid var(--border-color)',
-                backgroundColor: darkMode ? '#12100E' : '#FAF8F5',
-                color: 'inherit',
-                fontSize: '13.5px',
-                lineHeight: 1.45,
-              }}
-            />
-
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-              <button
-                type="button"
-                onClick={() => setEditingCommunityMsg(null)}
-                style={{
-                  padding: '8px 14px',
-                  borderRadius: '8px',
-                  border: '1px solid var(--border-color)',
-                  background: 'none',
-                  color: 'inherit',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                }}
-              >
-                Annuler
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveCommunityMessageEdit}
-                className="premium-button"
-                style={{
-                  padding: '8px 18px',
-                  borderRadius: '8px',
-                  border: 'none',
-                  backgroundColor: '#10B981',
-                  color: '#FFF',
-                  fontWeight: '800',
-                  cursor: 'pointer',
-                }}
-              >
-                Enregistrer la modification
               </button>
             </div>
           </div>
