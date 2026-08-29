@@ -678,15 +678,16 @@ export default function CollaborativeWhiteboardModal({
             if (data.title) setWorkspaceTitle(data.title);
             if (data.backgroundColor) setBackgroundColor(data.backgroundColor);
 
-            // RÈGLE ANTI-CONFLIT : On ne met à jour que les traits distants pour ne jamais écraser les traits locaux
+            // RÈGLE ANTI-CONFLIT STRICTE (Fix 1) : On ne met à jour QUE les traits distants sans JAMAIS écraser localPaths ou currentPath
             if (data.paths && Array.isArray(data.paths)) {
               const onlyRemote = data.paths
-                .filter((p) => p && p.authorUid !== myUid)
+                .filter((p) => p && p.authorUid && p.authorUid !== myUid)
                 .map((p) => ({ ...p, isRemote: true }));
               setRemotePaths(onlyRemote);
             }
 
-            if (!isDrawingRef.current && Date.now() - lastLocalModificationTimeRef.current > 2000) {
+            // Protège les post-its et textes contre tout écrasement pendant le dessin ou la manipulation locale
+            if (!isDrawingRef.current && Date.now() - lastLocalModificationTimeRef.current > 2500) {
               if (data.stickyNotes && Array.isArray(data.stickyNotes) && !draggingStickyRef.current) {
                 setStickyNotes(data.stickyNotes);
               }
@@ -711,19 +712,46 @@ export default function CollaborativeWhiteboardModal({
     };
   }, [isOpen, effectiveId, myUid, editingTextId]);
 
-  // Chargement initial des données de la session et liste des versions
-  useEffect(() => {
-    if (!isOpen || !effectiveId) return;
+  // 1. Chargement initial UNIQUE à l'ouverture du board (Fix 2 & Fix 5 : Zéro boucle infinie, Zéro clignotement)
+  const initialLoadDoneForIdRef = useRef(null);
 
-    fetchVersions();
+  useEffect(() => {
+    if (!isOpen || !effectiveId) {
+      initialLoadDoneForIdRef.current = null;
+      return;
+    }
+
+    // Évite tout rechargement intempestif si l'id n'a pas changé
+    if (initialLoadDoneForIdRef.current === effectiveId) return;
+    initialLoadDoneForIdRef.current = effectiveId;
 
     const loadInitialState = async () => {
       try {
         let loaded = await loadWorkspaceData(effectiveId);
         if (!loaded && db) {
-          const snap = await getDoc(doc(db, 'project_whiteboards', String(effectiveId)));
+          const docRef = doc(db, 'project_whiteboards', String(effectiveId));
+          const snap = await getDoc(docRef);
           if (snap.exists()) {
             loaded = snap.data();
+          } else {
+            // INITIALISATION IMMÉDIATE DU NOUVEAU TABLEAU SUR FIREBASE (Fix 5)
+            const initialDocPayload = {
+              boardId: effectiveId,
+              groupId: groupId || 'group_whiteboard',
+              chatId: groupId || 'group_whiteboard',
+              title: projectTitle || 'Tableau Blanc',
+              versionNumber: 1,
+              paths: [],
+              stickyNotes: [],
+              textElements: [],
+              backgroundColor: darkMode ? '#12100E' : '#FFFFFF',
+              createdAt: serverTimestamp(),
+              updatedAt: serverTimestamp(),
+              lastEditor: myName,
+              lastEditorUid: myUid,
+              versionHistory: [],
+            };
+            await setDoc(docRef, initialDocPayload, { merge: true });
           }
         }
 
@@ -746,10 +774,7 @@ export default function CollaborativeWhiteboardModal({
           setHistory([loadedPaths]);
           setHistoryStep(0);
           historyStepRef.current = 0;
-
-          requestAnimationFrame(() => {
-            redrawCanvas();
-          });
+          setCurrentPath(null);
         } else {
           // Nouveau projet vierge complet sans interférence
           setLocalPaths([]);
@@ -763,9 +788,6 @@ export default function CollaborativeWhiteboardModal({
           setHistoryStep(0);
           historyStepRef.current = 0;
           setCurrentPath(null);
-          requestAnimationFrame(() => {
-            redrawCanvas();
-          });
         }
       } catch (err) {
         console.warn('[CollaborativeWhiteboard] Initial load failed:', err);
@@ -773,7 +795,21 @@ export default function CollaborativeWhiteboardModal({
     };
 
     loadInitialState();
-  }, [isOpen, effectiveId, version, initialVersion, fetchVersions, redrawCanvas, darkMode, projectTitle]);
+  }, [isOpen, effectiveId, groupId, projectTitle, darkMode, myName, myUid]);
+
+  // 2. Redessin du canvas déclenché de façon autonome quand les données graphiques changent
+  useEffect(() => {
+    if (isOpen) {
+      redrawCanvas();
+    }
+  }, [isOpen, redrawCanvas]);
+
+  // 3. Récupération des versions UNIQUEMENT quand la barre latérale des versions est ouverte
+  useEffect(() => {
+    if (isOpen && effectiveId && isVersionsSidebarOpen) {
+      fetchVersions();
+    }
+  }, [isOpen, effectiveId, isVersionsSidebarOpen, fetchVersions]);
 
   // ================= GESTION DES POINTER EVENTS =================
   const handlePointerDown = (e) => {
@@ -1091,8 +1127,8 @@ export default function CollaborativeWhiteboardModal({
   };
 
   // ================= 4. GESTION DES VERSIONS & EXPORT CHAT (Auto-Crop Bounding Box) =================
+  // ================= 4. GESTION DES VERSIONS & EXPORT CHAT (Auto-Crop Bounding Box) =================
   const generateBoundingBoxPreview = useCallback(() => {
-    const canvas = canvasRef.current;
     const allPaths = [...remotePaths, ...localPaths];
 
     let minX = Infinity;
@@ -1109,13 +1145,15 @@ export default function CollaborativeWhiteboardModal({
           if (pt.x > maxX) maxX = pt.x;
           if (pt.y > maxY) maxY = pt.y;
         });
-      } else if (p.x !== undefined && p.y !== undefined && p.width !== undefined && p.height !== undefined) {
-        const x2 = p.x + p.width;
-        const y2 = p.y + p.height;
-        minX = Math.min(minX, p.x, x2);
-        minY = Math.min(minY, p.y, y2);
-        maxX = Math.max(maxX, p.x, x2);
-        maxY = Math.max(maxY, p.y, y2);
+      } else if (p.type === 'rect' || p.type === 'circle' || p.type === 'text_box') {
+        const xMin = Math.min(p.x, p.x + (p.width || 0));
+        const xMax = Math.max(p.x, p.x + (p.width || 0));
+        const yMin = Math.min(p.y, p.y + (p.height || 0));
+        const yMax = Math.max(p.y, p.y + (p.height || 0));
+        minX = Math.min(minX, xMin);
+        minY = Math.min(minY, yMin);
+        maxX = Math.max(maxX, xMax);
+        maxY = Math.max(maxY, yMax);
       } else if (p.fromX !== undefined && p.toX !== undefined) {
         minX = Math.min(minX, p.fromX, p.toX);
         minY = Math.min(minY, p.fromY, p.toY);
@@ -1140,43 +1178,47 @@ export default function CollaborativeWhiteboardModal({
       maxY = Math.max(maxY, t.y + (t.height || 60));
     });
 
-    // Marge obligatoire de 20px
-    const margin = 20;
-
     const bgToUse = backgroundColor || (darkMode ? '#12100E' : '#FFFFFF');
 
+    // Cas d'un tableau vide
     if (minX === Infinity || maxX <= minX || maxY <= minY) {
       const emptyW = 400;
-      const emptyH = 300;
+      const emptyH = 260;
       const tempCanvas = document.createElement('canvas');
       tempCanvas.width = emptyW;
       tempCanvas.height = emptyH;
       const ctx = tempCanvas.getContext('2d');
       if (ctx) {
-        // Remplissage explicite du fond
         ctx.fillStyle = bgToUse;
         ctx.fillRect(0, 0, emptyW, emptyH);
+        ctx.fillStyle = darkMode ? '#A8998C' : '#9CA3AF';
+        ctx.font = 'bold 14px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🎨 Tableau Blanc Vierge', emptyW / 2, emptyH / 2);
       }
       return tempCanvas.toDataURL('image/png');
     }
 
+    const margin = 28;
     const boxWidth = Math.ceil(maxX - minX);
     const boxHeight = Math.ceil(maxY - minY);
-    const cropWidth = Math.max(60, boxWidth + margin * 2);
-    const cropHeight = Math.max(60, boxHeight + margin * 2);
+    const cropWidth = Math.max(260, boxWidth + margin * 2);
+    const cropHeight = Math.max(180, boxHeight + margin * 2);
 
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = cropWidth;
     tempCanvas.height = cropHeight;
     const ctx = tempCanvas.getContext('2d');
 
-    if (!ctx) return canvas ? canvas.toDataURL('image/png') : '';
+    if (!ctx) return '';
 
-    // 1. CORRECTION DE L'EXPORT CANVAS (Image Noire) : Remplissage explicite du fond avant les traits
+    // 1. CORRECTION DE L'EXPORT CANVAS (Image Noire) : Remplissage explicite et net du fond
     ctx.fillStyle = bgToUse;
     ctx.fillRect(0, 0, cropWidth, cropHeight);
 
     ctx.save();
+    // 2. Décalage (Offset) pour centrer le contenu exactement dans la miniature
     ctx.translate(-minX + margin, -minY + margin);
 
     // Dessine tous les traits dans le canvas rogné
@@ -1184,7 +1226,16 @@ export default function CollaborativeWhiteboardModal({
       if (!p) return;
       ctx.save();
       ctx.beginPath();
-      applyBrushStyleToContext(ctx, p.tool, p.color, p.lineWidth, false);
+
+      if (p.tool === 'eraser') {
+        ctx.strokeStyle = bgToUse;
+        ctx.lineWidth = p.lineWidth || 12;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.globalCompositeOperation = 'source-over';
+      } else {
+        applyBrushStyleToContext(ctx, p.tool, p.color, p.lineWidth, false);
+      }
 
       if (p.type === 'freehand' && p.points && p.points.length > 0) {
         ctx.moveTo(p.points[0].x, p.points[0].y);
@@ -2050,7 +2101,7 @@ export default function CollaborativeWhiteboardModal({
             bottom: '20px',
             left: '50%',
             transform: 'translateX(-50%)',
-            zIndex: 100,
+            zIndex: 1000000,
             maxWidth: '96vw',
             backgroundColor: darkMode ? 'rgba(26,22,19,0.92)' : 'rgba(255,255,255,0.92)',
             backdropFilter: 'blur(20px)',
@@ -2062,10 +2113,8 @@ export default function CollaborativeWhiteboardModal({
             display: 'flex',
             alignItems: 'center',
             gap: '8px',
-            overflowX: 'auto',
-            scrollbarWidth: 'none',
-            touchAction: 'pan-x',
-            WebkitOverflowScrolling: 'touch',
+            overflow: 'visible',
+            touchAction: 'manipulation',
           }}
         >
           {/* Outils de dessin libres */}
@@ -2146,7 +2195,7 @@ export default function CollaborativeWhiteboardModal({
                 <ChevronDown size={13} style={{ opacity: 0.85 }} />
               </button>
 
-              {/* Sous-menu Popover des Formes */}
+              {/* Sous-menu Popover des Formes (Z-Index massif & pointer-events garantis) */}
               <AnimatePresence>
                 {isShapesMenuOpen && (
                   <motion.div
@@ -2156,17 +2205,18 @@ export default function CollaborativeWhiteboardModal({
                     transition={{ duration: 0.15 }}
                     style={{
                       position: 'absolute',
-                      bottom: 'calc(100% + 12px)',
+                      bottom: 'calc(100% + 14px)',
                       left: '50%',
                       transform: 'translateX(-50%)',
                       backgroundColor: darkMode ? '#1F1B18' : '#FFFFFF',
-                      border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(0,0,0,0.12)',
+                      border: darkMode ? '1px solid rgba(255,255,255,0.18)' : '1px solid rgba(0,0,0,0.12)',
                       borderRadius: '16px',
-                      padding: '6px',
-                      boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
-                      zIndex: 200,
+                      padding: '8px',
+                      boxShadow: '0 16px 40px rgba(0,0,0,0.45)',
+                      zIndex: 1000005,
                       display: 'flex',
-                      gap: '4px',
+                      gap: '6px',
+                      pointerEvents: 'auto',
                     }}
                   >
                     {SHAPE_OPTIONS.map((shape) => {
