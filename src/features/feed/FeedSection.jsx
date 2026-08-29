@@ -52,6 +52,9 @@ export function FeedSection({
   darkMode,
   t,
   listings,
+  hasMore = false,
+  isLoadingMore = false,
+  onLoadMore = null,
 }) {
   return (
     <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-start', width: '100%' }}>
@@ -393,6 +396,46 @@ export function FeedSection({
               );
             })}
           </div>
+
+          {/* BOUTON CHARGEMENT INFINITE SCROLL */}
+          {hasMore && (
+            <div style={{ display: 'flex', justifyContent: 'center', marginTop: '28px', marginBottom: '20px' }}>
+              <button
+                type="button"
+                onClick={onLoadMore}
+                disabled={isLoadingMore}
+                className="premium-button"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  padding: '12px 30px',
+                  borderRadius: '999px',
+                  border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(0,0,0,0.12)',
+                  backgroundColor: darkMode ? 'rgba(35,30,27,0.95)' : '#FFFFFF',
+                  color: darkMode ? '#FAF7F2' : '#3D3530',
+                  fontSize: '13px',
+                  fontWeight: '800',
+                  cursor: isLoadingMore ? 'not-allowed' : 'pointer',
+                  boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                  transition: 'all 0.2s ease',
+                  opacity: isLoadingMore ? 0.7 : 1,
+                }}
+              >
+                {isLoadingMore ? (
+                  <>
+                    <div style={{ width: '16px', height: '16px', border: '2px solid #C67D5B', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                    <span>Chargement des annonces...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Charger plus d'annonces</span>
+                    <ChevronRight size={16} />
+                  </>
+                )}
+              </button>
+            </div>
+          )}
         )}
       </div>
 

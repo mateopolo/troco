@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback, Suspense, useTransition } from 'react';
 import { Search, MapPin, Video, Globe, Filter, ShieldCheck, CheckCircle, X, Sparkles, Coins, Trash2, Camera, Flame, Check, Lock, CreditCard, Tag, ChevronLeft, ChevronRight, ShieldAlert } from 'lucide-react';
 import { auth, db } from './firebase';
-import { collection, addDoc, doc, updateDoc, serverTimestamp, onSnapshot, query, orderBy, setDoc, deleteDoc, getDoc, getDocs, where, runTransaction } from 'firebase/firestore';
+import { collection, addDoc, doc, updateDoc, serverTimestamp, onSnapshot, query, orderBy, limit, setDoc, deleteDoc, getDoc, getDocs, where, runTransaction } from 'firebase/firestore';
+import { fetchListingsPaginated } from './services/firestoreService';
 import { isSignInWithEmailLink, signInWithEmailLink, signOut, onAuthStateChanged } from 'firebase/auth';
 import { useWebRTC } from './hooks/useWebRTC';
 import { useTheme } from './contexts/ThemeContext';
@@ -1527,8 +1528,13 @@ export default function App() {
     }
   }, [listings]);
 
-  // ---- SYNC TEMPS RÉEL FIRESTORE & DÉMOS DIFFÉRÉES ----
-  // Chargement asynchrone non-bloquant de mockData pour alléger le bundle initial (FCP optimal)
+  // ---- ÉTATS PAGINATION FEED (PAGINATED INFINITE SCROLL) ----
+  const [lastVisibleListingDoc, setLastVisibleListingDoc] = useState(null);
+  const [hasMoreListings, setHasMoreListings] = useState(true);
+  const [isLoadingMoreListings, setIsLoadingMoreListings] = useState(false);
+
+  // ---- SYNC TEMPS RÉEL FIRESTORE & DÉMOS DIFFÉRÉES (LIMIT 20) ----
+  // Chargement asynchrone non-bloquant de mockData avec pagination pour éliminer le goulot d'étranglement
   useEffect(() => {
     let unsubFirestore = () => {};
     let isCancelled = false;
@@ -1543,8 +1549,10 @@ export default function App() {
         return hasDemos ? prev : [...prev, ...demoBase];
       });
 
+      // Écoute initiale paginée à 20 pour un FCP et un réseau optimal
+      const initialQuery = query(collection(db, 'listings'), orderBy('createdAt', 'desc'), limit(20));
       unsubFirestore = onSnapshot(
-        collection(db, 'listings'),
+        initialQuery,
         (snapshot) => {
           if (isCancelled) return;
           const firestoreListings = snapshot.docs.map((docSnap) => ({
@@ -1553,16 +1561,45 @@ export default function App() {
             ...docSnap.data(),
             status: docSnap.data().status || 'active',
             isDemo: false,
+            _doc: docSnap,
           }));
+
+          const lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
+          setLastVisibleListingDoc(lastDoc);
+          setHasMoreListings(snapshot.docs.length === 20);
+
           setListings(prev => {
             const customLocalListings = prev.filter(p => !p.isDemo && !firestoreListings.some(f => f.id === p.id));
             return [...demoBase, ...firestoreListings, ...customLocalListings];
           });
         },
         (error) => {
-          console.warn('[Firestore] onSnapshot error:', error);
+          console.warn('[Firestore] onSnapshot with orderBy error, trying fallback query:', error);
           if (!isCancelled) {
-            setListings(prev => prev.length > 0 ? prev : demoBase);
+            try {
+              const fallbackQuery = query(collection(db, 'listings'), limit(20));
+              unsubFirestore = onSnapshot(fallbackQuery, (snapshot) => {
+                const firestoreListings = snapshot.docs.map((docSnap) => ({
+                  id: docSnap.data().id || docSnap.id,
+                  firestoreId: docSnap.id,
+                  ...docSnap.data(),
+                  status: docSnap.data().status || 'active',
+                  isDemo: false,
+                  _doc: docSnap,
+                }));
+                const lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
+                setLastVisibleListingDoc(lastDoc);
+                setHasMoreListings(snapshot.docs.length === 20);
+                setListings(prev => {
+                  const customLocalListings = prev.filter(p => !p.isDemo && !firestoreListings.some(f => f.id === p.id));
+                  return [...demoBase, ...firestoreListings, ...customLocalListings];
+                });
+              }, () => {
+                setListings(prev => prev.length > 0 ? prev : demoBase);
+              });
+            } catch (_) {
+              setListings(prev => prev.length > 0 ? prev : demoBase);
+            }
           }
         }
       );
@@ -1575,6 +1612,29 @@ export default function App() {
       unsubFirestore();
     };
   }, []);
+
+  const handleLoadMoreListings = async () => {
+    if (isLoadingMoreListings || !hasMoreListings) return;
+    setIsLoadingMoreListings(true);
+    try {
+      const result = await fetchListingsPaginated({ pageSize: 20, lastDoc: lastVisibleListingDoc });
+      if (result && result.items && result.items.length > 0) {
+        setListings(prev => {
+          const existingIds = new Set(prev.map(p => p.id));
+          const newItems = result.items.filter(item => !existingIds.has(item.id));
+          return [...prev, ...newItems];
+        });
+        setLastVisibleListingDoc(result.lastVisible);
+        setHasMoreListings(result.hasMore);
+      } else {
+        setHasMoreListings(false);
+      }
+    } catch (err) {
+      console.error('[App] handleLoadMoreListings error:', err);
+    } finally {
+      setIsLoadingMoreListings(false);
+    }
+  };
 
   const getListingDistance = (item) => {
     if (typeof item.distanceKm === 'number') return item.distanceKm;
@@ -3384,105 +3444,147 @@ export default function App() {
                   />
                 </Suspense>
               ) : (
-                <div
-                  ref={listingsGridRef}
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(290px, 1fr))',
-                    gap: isMobile ? '16px' : '24px',
-                    width: '100%',
-                    boxSizing: 'border-box'
-                  }}
-                >
-                  {filteredListings.map((item, index) => {
+                <>
+                  <div
+                    ref={listingsGridRef}
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(290px, 1fr))',
+                      gap: isMobile ? '16px' : '24px',
+                      width: '100%',
+                      boxSizing: 'border-box'
+                    }}
+                  >
+                    {filteredListings.map((item, index) => {
+                      const currentComp = item.compensation || 'Troc Direct';
+                      const authorProfile = item.authorProfile || {
+                        name: item.author || 'Membre Troco',
+                        avatar: item.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+                        bio: item.bio || '',
+                        location: item.location || 'Paris',
+                        uid: item.authorUid || null,
+                      };
 
-                    return (
-                      <React.Fragment key={item.id}>
-                        <FeedCardItem
-                          item={item}
-                          profile={profile}
-                          darkMode={darkMode}
-                          hoveredCardId={hoveredCardId}
-                          setHoveredCardId={setHoveredCardId}
-                          hoverSlideIndex={hoverSlideIndex}
-                          handleOpenListing={handleOpenListing}
-                          handleStartDiscussion={handleStartDiscussion}
-                          getSuggestedMedia={getSuggestedMedia}
-                          getFallbackImage={getFallbackImage}
-                          formatCompensation={formatCompensation}
-                          getListingDisplayContent={getListingDisplayContent}
-                          currentLang={currentLang}
-                          t={t}
-                          showingOriginalListings={showingOriginalListings}
-                          toggleOriginalListing={toggleOriginalListing}
-                          localizeLocation={localizeLocation}
-                          localizeTags={localizeTags}
-                          onOpenMobileActions={setMobileListingActionTarget}
-                          onMobileActionClick={setMobileListingActionTarget}
-                          onReportListing={(listing) => {
-                            setReportTarget({ listing, user: null });
-                            setIsReportModalOpen(true);
-                          }}
-                          isAdmin={isAdmin}
-                          onAdminDeleteListing={handleAdminDeleteListing}
-                          onAdminDelete={handleAdminDeleteListing}
-                          onAdminToggleHideListing={handleAdminToggleHideListing}
-                          onAdminToggleHide={handleAdminToggleHideListing}
-                          onAdminBoost={(listing) => {
-                            setBoostingListing(listing);
-                            setIsBoostModalOpen(true);
-                          }}
-                          onAuthorProfileClick={(authorProfile) => {
-                            if (!authorProfile) return;
-                            const userObj = {
-                              id: authorProfile.uid || `user-${authorProfile.name}`,
-                              name: authorProfile.name,
-                              user: authorProfile.name,
-                              avatar: authorProfile.avatar,
-                              bio: authorProfile.bio,
-                              rating: authorProfile.rating || 5.0,
-                              reviews: authorProfile.reviews || [],
-                              verified: authorProfile.verified || false,
-                              kycVerified: authorProfile.kycVerified || false,
-                              languages: authorProfile.languages || ['FR'],
-                              socials: authorProfile.socials || [],
-                              portfolio: authorProfile.portfolio || [],
-                              authorProfile: authorProfile,
-                            };
-                            setSelectedPublicUser(userObj);
-                          }}
-                        />
-
-                        {/* INJECTION FLUIDE D'UNE CARTE SPONSORISÉE TOUTES LES 6 ANNONCES */}
-                        {(index + 1) % 6 === 0 && (
-                          <SponsoredFeedCard
-                            key={`sponsored-card-${index}`}
+                      return (
+                        <React.Fragment key={item.id || index}>
+                          <FeedCardItem
+                            item={item}
                             darkMode={darkMode}
+                            hoveredCardId={hoveredCardId}
+                            setHoveredCardId={setHoveredCardId}
+                            hoverSlideIndex={hoverSlideIndex}
+                            handleOpenListing={handleOpenListing}
+                            getSuggestedMedia={getSuggestedMedia}
+                            getFallbackImage={getFallbackImage}
+                            formatCompensation={formatCompensation}
+                            getListingDisplayContent={getListingDisplayContent}
                             currentLang={currentLang}
+                            showingOriginalListings={showingOriginalListings}
+                            toggleOriginalListing={toggleOriginalListing}
+                            localizeLocation={localizeLocation}
+                            localizeTags={localizeTags}
+                            generateTags={generateTags}
+                            getAuthorAvatar={getAuthorAvatar}
+                            profile={profile}
+                            handleStartDiscussion={handleStartDiscussion}
+                            isAdmin={isAdmin}
+                            isGodModeActive={isGodModeActive}
+                            onAdminDeleteListing={handleAdminDeleteListing}
+                            onAdminToggleHideListing={handleAdminToggleHideListing}
+                            onAdminEditListing={handleAdminEditListing}
+                            onOpenMobileActions={setMobileListingActionTarget}
                             t={t}
-                            onOpenBoostModal={() => {
-                              const myListing = listings.find(l => l.author === profile?.name) || listings[0];
-                              setBoostingListing(myListing);
-                              setIsBoostModalOpen(true);
-                            }}
-                            onOpenBusinessOffer={() => {
-                              setIsCguViewerOpen(true);
-                            }}
-                            onClaimBonus={(amount) => {
-                              setProfile(prev => ({
-                                ...prev,
-                                euroBalance: Number((prev.euroBalance + amount).toFixed(2))
-                              }));
-                              playApplePaySound();
-                              setSaveMessage(`🎁 Bonus partenaire crédité : +${amount}€ sur votre solde !`);
-                              setTimeout(() => setSaveMessage(''), 6000);
+                            onViewUserProfile={() => {
+                              const userObj = {
+                                id: item.authorUid || item.userId || `user_${item.author}`,
+                                uid: item.authorUid || item.userId || null,
+                                name: item.author || 'Membre Troco',
+                                username: item.author ? `@${item.author.toLowerCase().replace(/\s+/g, '')}` : '@membre',
+                                avatar: authorProfile.avatar,
+                                bio: authorProfile.bio,
+                                location: item.location || 'France',
+                                trocoTokens: item.trocoTokens || 12,
+                                euroBalance: item.euroBalance || 100,
+                                isTrocoPlus: item.isTrocoPlus || false,
+                                kycVerified: item.kycVerified || false,
+                                dealsCompleted: item.dealsCompleted || 0,
+                                authorProfile: authorProfile,
+                              };
+                              setSelectedPublicUser(userObj);
                             }}
                           />
+
+                          {/* INJECTION FLUIDE D'UNE CARTE SPONSORISÉE TOUTES LES 6 ANNONCES */}
+                          {(index + 1) % 6 === 0 && (
+                            <SponsoredFeedCard
+                              key={`sponsored-card-${index}`}
+                              darkMode={darkMode}
+                              currentLang={currentLang}
+                              t={t}
+                              onOpenBoostModal={() => {
+                                const myListing = listings.find(l => l.author === profile?.name) || listings[0];
+                                setBoostingListing(myListing);
+                                setIsBoostModalOpen(true);
+                              }}
+                              onOpenBusinessOffer={() => {
+                                setIsCguViewerOpen(true);
+                              }}
+                              onClaimBonus={(amount) => {
+                                setProfile(prev => ({
+                                  ...prev,
+                                  euroBalance: Number((prev.euroBalance + amount).toFixed(2))
+                                }));
+                                playApplePaySound();
+                                setSaveMessage(`🎁 Bonus partenaire crédité : +${amount}€ sur votre solde !`);
+                                setTimeout(() => setSaveMessage(''), 6000);
+                              }}
+                            />
+                          )}
+                        </React.Fragment>
+                      );
+                    })}
+                  </div>
+
+                  {/* BOUTON CHARGER PLUS D'ANNONCES (PAGINATED INFINITE SCROLL) */}
+                  {hasMoreListings && (
+                    <div style={{ display: 'flex', justifyContent: 'center', marginTop: '28px', marginBottom: '20px' }}>
+                      <button
+                        type="button"
+                        onClick={handleLoadMoreListings}
+                        disabled={isLoadingMoreListings}
+                        className="premium-button"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '10px',
+                          padding: '12px 30px',
+                          borderRadius: '999px',
+                          border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(0,0,0,0.12)',
+                          backgroundColor: darkMode ? 'rgba(35,30,27,0.95)' : '#FFFFFF',
+                          color: darkMode ? '#FAF7F2' : '#3D3530',
+                          fontSize: '13px',
+                          fontWeight: '800',
+                          cursor: isLoadingMoreListings ? 'not-allowed' : 'pointer',
+                          boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                          transition: 'all 0.2s ease',
+                          opacity: isLoadingMoreListings ? 0.7 : 1,
+                        }}
+                      >
+                        {isLoadingMoreListings ? (
+                          <>
+                            <div style={{ width: '16px', height: '16px', border: '2px solid #C67D5B', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                            <span>Chargement des annonces...</span>
+                          </>
+                        ) : (
+                          <>
+                            <span>Charger plus d'annonces</span>
+                            <ChevronRight size={16} />
+                          </>
                         )}
-                      </React.Fragment>
-                    );
-                  })}
-                </div>
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
             </div>
 

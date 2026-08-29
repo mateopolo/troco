@@ -7,6 +7,9 @@ import {
   query,
   where,
   orderBy,
+  limit,
+  startAfter,
+  getDocs,
   onSnapshot,
   serverTimestamp,
   runTransaction
@@ -22,27 +25,121 @@ import { db } from '../firebase';
  */
 
 // ------------------------------------------------------------------------------
-// 1. GESTION DES ANNONCES (LISTINGS)
+// 1. GESTION DES ANNONCES (LISTINGS & PAGINATION PAR CURSEUR)
 // ------------------------------------------------------------------------------
 
 /**
- * Écoute en temps réel les annonces Firestore
+ * Récupère une page d'annonces de manière paginée et optimisée (limit 20)
+ * @param {Object} options
+ * @param {number} options.pageSize Nombre d'annonces par page (défaut: 20)
+ * @param {Object} options.lastDoc Dernier document Firestore (curseur startAfter)
+ * @returns {Promise<{items: Array, lastVisible: Object|null, hasMore: boolean}>}
+ */
+export const fetchListingsPaginated = async ({ pageSize = 20, lastDoc = null } = {}) => {
+  if (!db) return { items: [], lastVisible: null, hasMore: false };
+  try {
+    let q;
+    if (lastDoc) {
+      q = query(
+        collection(db, 'listings'),
+        orderBy('createdAt', 'desc'),
+        startAfter(lastDoc),
+        limit(pageSize)
+      );
+    } else {
+      q = query(
+        collection(db, 'listings'),
+        orderBy('createdAt', 'desc'),
+        limit(pageSize)
+      );
+    }
+
+    const snapshot = await getDocs(q);
+    const items = snapshot.docs.map((docSnap) => ({
+      id: docSnap.data().id || docSnap.id,
+      firestoreId: docSnap.id,
+      ...docSnap.data(),
+      status: docSnap.data().status || 'active',
+      isDemo: false,
+      _doc: docSnap,
+    }));
+
+    const lastVisible = snapshot.docs[snapshot.docs.length - 1] || null;
+    const hasMore = snapshot.docs.length === pageSize;
+
+    return {
+      items,
+      lastVisible,
+      hasMore,
+    };
+  } catch (error) {
+    console.warn('[FirestoreService] fetchListingsPaginated with orderBy failed, falling back without orderBy:', error);
+    try {
+      let fallbackQuery;
+      if (lastDoc) {
+        fallbackQuery = query(collection(db, 'listings'), startAfter(lastDoc), limit(pageSize));
+      } else {
+        fallbackQuery = query(collection(db, 'listings'), limit(pageSize));
+      }
+      const snapshot = await getDocs(fallbackQuery);
+      const items = snapshot.docs.map((docSnap) => ({
+        id: docSnap.data().id || docSnap.id,
+        firestoreId: docSnap.id,
+        ...docSnap.data(),
+        status: docSnap.data().status || 'active',
+        isDemo: false,
+        _doc: docSnap,
+      }));
+      return {
+        items,
+        lastVisible: snapshot.docs[snapshot.docs.length - 1] || null,
+        hasMore: snapshot.docs.length === pageSize,
+      };
+    } catch (fallbackErr) {
+      console.error('[FirestoreService] fetchListingsPaginated fallback error:', fallbackErr);
+      return { items: [], lastVisible: null, hasMore: false, error: fallbackErr };
+    }
+  }
+};
+
+/**
+ * Écoute en temps réel les annonces Firestore avec limite pour éviter la surcharge mémoire
  * @param {Function} onUpdate Callback avec les annonces formatées
  * @param {Function} onError Callback en cas d'erreur
+ * @param {number} pageSize Nombre maximum d'annonces à écouter en direct (défaut: 20)
  * @returns {Function} Fonction de désabonnement propre (unsubscribe)
  */
-export const subscribeToListings = (onUpdate, onError) => {
+export const subscribeToListings = (onUpdate, onError, pageSize = 20) => {
   try {
-    const q = query(collection(db, 'listings'), orderBy('createdAt', 'desc'));
+    const q = query(collection(db, 'listings'), orderBy('createdAt', 'desc'), limit(pageSize));
     return onSnapshot(q, (snapshot) => {
       const items = snapshot.docs.map(d => ({
-        id: d.id,
-        ...d.data()
+        id: d.data().id || d.id,
+        firestoreId: d.id,
+        ...d.data(),
+        status: d.data().status || 'active',
+        isDemo: false,
+        _doc: d,
       }));
-      onUpdate(items);
+      onUpdate(items, snapshot.docs[snapshot.docs.length - 1] || null);
     }, (error) => {
-      console.warn('[FirestoreService] subscribeToListings error:', error);
-      if (onError) onError(error);
+      console.warn('[FirestoreService] subscribeToListings error, falling back without orderBy:', error);
+      try {
+        const fallbackQ = query(collection(db, 'listings'), limit(pageSize));
+        return onSnapshot(fallbackQ, (snapshot) => {
+          const items = snapshot.docs.map(d => ({
+            id: d.data().id || d.id,
+            firestoreId: d.id,
+            ...d.data(),
+            status: d.data().status || 'active',
+            isDemo: false,
+            _doc: d,
+          }));
+          onUpdate(items, snapshot.docs[snapshot.docs.length - 1] || null);
+        }, onError);
+      } catch (e) {
+        if (onError) onError(error);
+      }
     });
   } catch (err) {
     console.warn('[FirestoreService] subscribeToListings setup failed:', err);
@@ -85,20 +182,37 @@ export const deleteListing = async (listingId) => {
 // ------------------------------------------------------------------------------
 
 /**
- * Écoute les discussions de l'utilisateur connecté
+ * Construit un identifiant de conversation 100% déterministe basé sur les UIDs
+ */
+export const buildDeterministicConversationId = (listingId, userAId, userBId) => {
+  const sortedUids = [String(userAId || '').trim(), String(userBId || '').trim()].sort().filter(Boolean);
+  const uidsPart = sortedUids.join('_') || 'conversation';
+  const cleanListingId = listingId ? `_${String(listingId).trim()}` : '';
+  return `chat_${uidsPart}${cleanListingId}`.replace(/[^a-zA-Z0-9_-]/g, '_');
+};
+
+/**
+ * Écoute les discussions de l'utilisateur connecté avec tri en mémoire sécurisé
  */
 export const subscribeToUserChats = (userNameOrUid, onUpdate, onError) => {
   if (!userNameOrUid || typeof userNameOrUid !== 'string') return () => {};
   try {
+    const target = userNameOrUid.trim();
     const q = query(
       collection(db, 'chats'),
-      where('participants', 'array-contains', userNameOrUid.trim())
+      where('participants', 'array-contains', target)
     );
     return onSnapshot(q, (snapshot) => {
       const chats = snapshot.docs.map(d => ({
         id: d.id,
         ...d.data()
       }));
+      // Tri mémoire par date de dernière activité
+      chats.sort((a, b) => {
+        const timeA = a.updatedAt?.toMillis ? a.updatedAt.toMillis() : (a.updatedAt || a.createdAt || 0);
+        const timeB = b.updatedAt?.toMillis ? b.updatedAt.toMillis() : (b.updatedAt || b.createdAt || 0);
+        return timeB - timeA;
+      });
       onUpdate(chats);
     }, (error) => {
       console.error('🚨 [FirestoreService] subscribeToUserChats error:', error);

@@ -675,21 +675,27 @@ export const useChatManager = ({
     }
   };
 
-  // ---- ISOLATION DES DISCUSSIONS PAR PAIRE D'UTILISATEURS ET ANNONCE ----
-  const buildConversationId = (listingId, userA, userB) => {
+  // ---- ISOLATION DES DISCUSSIONS PAR PAIRE D'UTILISATEURS ET ANNONCE (UIDS FIRST) ----
+  const buildConversationId = (listingId, userA, userB, uidA = null, uidB = null) => {
+    if (uidA && uidB) {
+      const sortedUids = [String(uidA).trim(), String(uidB).trim()].sort().join('_');
+      const cleanListingId = listingId ? `_${String(listingId).trim()}` : '';
+      return `chat_${sortedUids}${cleanListingId}`.replace(/[^a-zA-Z0-9_-]/g, '_');
+    }
     const uA = String(userA || '').trim().toLowerCase();
     const uB = String(userB || '').trim().toLowerCase();
     const pair = [uA, uB].sort().join('_');
-    return `chat_${listingId}_${pair}`.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const cleanListingId = listingId ? `_${String(listingId).trim()}` : '';
+    return `chat_${pair}${cleanListingId}`.replace(/[^a-zA-Z0-9_-]/g, '_');
   };
 
   const handleStartDiscussion = async (listing) => {
     if (listing.author === profile?.name) return;
 
-    const conversationId = buildConversationId(listing.id, profile?.name, listing.author);
-
     const myUid = profile?.uid || auth?.currentUser?.uid || null;
     const authorUid = listing.authorUid || listing.userId || null;
+
+    const conversationId = buildConversationId(listing.id, profile?.name, listing.author, myUid, authorUid);
 
     const conversation = {
       id: conversationId,
