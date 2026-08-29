@@ -545,9 +545,68 @@ export const useChatManager = ({
     }, 2500);
   };
 
-  // ---- ENVOI DE MESSAGE ----
-  const handleSendMessage = async () => {
+  // ---- ENVOI DE MESSAGE (TEXTE OU PAYLOAD OBJET PERSONNALISÉ / WHITEBOARD) ----
+  const handleSendMessage = async (customPayload = null) => {
     if (!selectedChat) return;
+
+    if (customPayload && typeof customPayload === 'object') {
+      const chatId = selectedChat.id;
+      const myUid = profile?.uid || auth?.currentUser?.uid || 'me';
+      const myName = profile?.name || 'Moi';
+
+      const payload = {
+        id: Date.now(),
+        sender: 'me',
+        senderUid: myUid,
+        senderName: myName,
+        status: 'sent',
+        createdAt: new Date(),
+        ...customPayload,
+        text: customPayload.text || `🎨 ${myName} a partagé le Tableau Blanc : "${customPayload.workspaceTitle || customPayload.title || 'Tableau Blanc'}"`,
+      };
+
+      setChatThreads(prev => ({
+        ...prev,
+        [chatId]: [...(prev[chatId] || []), payload]
+      }));
+
+      const lastMessagePreview = payload.text;
+      setChatsList(prev => prev.map(c => String(c.id) === String(chatId) ? {
+        ...c,
+        lastMessage: lastMessagePreview,
+        lastSenderName: myName
+      } : c));
+
+      if (db) {
+        try {
+          await addDoc(collection(db, 'chats', String(chatId), 'messages'), {
+            ...customPayload,
+            sender: myUid,
+            senderUid: myUid,
+            senderName: myName,
+            text: payload.text,
+            read: false,
+            status: 'sent',
+            createdAt: serverTimestamp(),
+          });
+
+          await setDoc(doc(db, 'chats', String(chatId)), {
+            id: chatId,
+            user: selectedChat.user,
+            listing: selectedChat.listing,
+            lastMessage: payload.text,
+            lastSenderName: myName,
+            unreadCount: increment(1),
+            participants: selectedChat.participants || [myName, selectedChat.user],
+            updatedAt: serverTimestamp(),
+          }, { merge: true });
+        } catch (e) {
+          console.warn('[Firestore] custom message write failed:', e);
+        }
+      }
+      return;
+    }
+
     const text = messageDraft.trim();
     if (!text) return;
 

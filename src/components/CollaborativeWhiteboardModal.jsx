@@ -849,6 +849,8 @@ export default function CollaborativeWhiteboardModal({
     // Marge obligatoire de 20px
     const margin = 20;
 
+    const backgroundColor = darkMode ? '#181411' : '#FFFFFF';
+
     if (minX === Infinity || maxX <= minX || maxY <= minY) {
       const emptyW = 400;
       const emptyH = 300;
@@ -857,10 +859,11 @@ export default function CollaborativeWhiteboardModal({
       tempCanvas.height = emptyH;
       const ctx = tempCanvas.getContext('2d');
       if (ctx) {
-        ctx.fillStyle = darkMode ? '#181411' : '#FAF8F5';
+        // Remplissage explicite du fond
+        ctx.fillStyle = backgroundColor;
         ctx.fillRect(0, 0, emptyW, emptyH);
       }
-      return tempCanvas.toDataURL('image/jpeg', 0.9);
+      return tempCanvas.toDataURL('image/png');
     }
 
     const boxWidth = Math.ceil(maxX - minX);
@@ -873,9 +876,10 @@ export default function CollaborativeWhiteboardModal({
     tempCanvas.height = cropHeight;
     const ctx = tempCanvas.getContext('2d');
 
-    if (!ctx) return canvas ? canvas.toDataURL('image/jpeg', 0.88) : '';
+    if (!ctx) return canvas ? canvas.toDataURL('image/png') : '';
 
-    ctx.fillStyle = darkMode ? '#181411' : '#FAF8F5';
+    // 1. CORRECTION DE L'EXPORT CANVAS (Image Noire) : Remplissage explicite du fond avant les traits
+    ctx.fillStyle = backgroundColor;
     ctx.fillRect(0, 0, cropWidth, cropHeight);
 
     ctx.save();
@@ -945,7 +949,7 @@ export default function CollaborativeWhiteboardModal({
 
     ctx.restore();
 
-    return tempCanvas.toDataURL('image/jpeg', 0.9);
+    return tempCanvas.toDataURL('image/png');
   }, [remotePaths, localPaths, stickyNotes, textElements, darkMode]);
 
   // 1. Bouton "Sauvegarder" (Firestore uniquement)
@@ -1018,9 +1022,17 @@ export default function CollaborativeWhiteboardModal({
         timestamp: Date.now(),
       };
 
+      console.log('Payload envoyé:', invitePayload);
+
       const sendFn = onSendMessage || handleSendMessage || onSendToChat;
       if (typeof sendFn === 'function') {
         await sendFn(invitePayload);
+      } else {
+        console.warn('⚠️ [CollaborativeWhiteboard] Aucune fonction onSendMessage trouvée !', {
+          onSendMessage,
+          handleSendMessage,
+          onSendToChat
+        });
       }
 
       setShareSuccessToast(true);
