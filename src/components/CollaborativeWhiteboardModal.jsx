@@ -89,12 +89,14 @@ export default function CollaborativeWhiteboardModal({
   const [textElements, setTextElements] = useState([]);
   const [currentPath, setCurrentPath] = useState(null);
 
-  // 4. Moteur d'historique Undo / Redo
-  const [history, setHistory] = useState([
-    { localPaths: [], stickyNotes: [], textElements: [] }
-  ]);
-  const [historyIndex, setHistoryIndex] = useState(0);
-  const historyIndexRef = useRef(0);
+  // 4. Moteur d'historique Undo / Redo Local (Trait par trait)
+  const [history, setHistory] = useState([[]]);
+  const [historyStep, setHistoryStep] = useState(0);
+  const historyStepRef = useRef(0);
+
+  useEffect(() => {
+    historyStepRef.current = historyStep;
+  }, [historyStep]);
 
   // 5. Caméra infinie (Viewport Pan & Zoom)
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -153,62 +155,95 @@ export default function CollaborativeWhiteboardModal({
     return { x: worldX, y: worldY, screenX, screenY };
   }, [pan.x, pan.y, zoom]);
 
-  // ================= 2. MOTEUR D'HISTORIQUE LOCAL (Undo / Redo Fiable) =================
-  const pushToHistory = useCallback((newLocalPaths, newStickies, newTexts) => {
+  // Synchronisation Firestore Debouncée
+  const debouncedSyncToFirestore = useCallback((
+    currentLocalPaths = localPaths,
+    currentRemotePaths = remotePaths,
+    currentStickyNotes = stickyNotes,
+    currentTextElements = textElements,
+    currentVersion = versionNumber,
+    currentTitle = workspaceTitle
+  ) => {
+    if (!effectiveId || !db) return;
+
+    if (firestoreDebounceTimerRef.current) {
+      clearTimeout(firestoreDebounceTimerRef.current);
+    }
+
+    setSaveStatus('Enregistrement...');
+
+    firestoreDebounceTimerRef.current = setTimeout(async () => {
+      try {
+        const docRef = doc(db, 'project_whiteboards', String(effectiveId));
+        const combinedPaths = [...currentRemotePaths, ...currentLocalPaths].slice(-400);
+
+        const payload = {
+          boardId: effectiveId,
+          groupId,
+          title: currentTitle,
+          versionNumber: currentVersion,
+          paths: combinedPaths,
+          stickyNotes: currentStickyNotes,
+          textElements: currentTextElements,
+          updatedAt: serverTimestamp(),
+          lastEditor: myName,
+          lastEditorUid: myUid,
+        };
+
+        await setDoc(docRef, payload, { merge: true });
+        setSaveStatus('Synchronisé en direct 🟢');
+      } catch (err) {
+        console.warn('[Firestore Whiteboard Sync] error:', err);
+        setSaveStatus('Mode P2P Direct ⚡');
+      }
+    }, 380);
+  }, [effectiveId, groupId, localPaths, remotePaths, stickyNotes, textElements, versionNumber, workspaceTitle, myName, myUid]);
+
+  // ================= 2. MOTEUR D'HISTORIQUE LOCAL (Undo / Redo Trait par Trait) =================
+  const pushToHistory = useCallback((newLocalPaths) => {
     setHistory((prevHistory) => {
-      const curIdx = historyIndexRef.current;
-      const nextHistory = prevHistory.slice(0, curIdx + 1);
-      const snapshot = {
-        localPaths: [...newLocalPaths],
-        stickyNotes: [...newStickies],
-        textElements: [...newTexts],
-      };
-      const updated = [...nextHistory, snapshot];
-      if (updated.length > 50) updated.shift();
-      const newIdx = updated.length - 1;
-      historyIndexRef.current = newIdx;
-      setHistoryIndex(newIdx);
+      const curStep = historyStepRef.current;
+      const nextHistory = prevHistory.slice(0, curStep + 1);
+      const updated = [...nextHistory, [...newLocalPaths]];
+      if (updated.length > 80) updated.shift();
+      const newStep = updated.length - 1;
+      historyStepRef.current = newStep;
+      setHistoryStep(newStep);
       return updated;
     });
   }, []);
 
   const handleUndo = useCallback(() => {
     setHistory((prevHistory) => {
-      const curIdx = historyIndexRef.current;
-      if (curIdx > 0) {
-        const targetIndex = curIdx - 1;
-        const targetState = prevHistory[targetIndex];
-        if (targetState) {
-          lastLocalModificationTimeRef.current = Date.now();
-          setLocalPaths(targetState.localPaths || []);
-          setStickyNotes(targetState.stickyNotes || []);
-          setTextElements(targetState.textElements || []);
-          historyIndexRef.current = targetIndex;
-          setHistoryIndex(targetIndex);
-        }
+      const curStep = historyStepRef.current;
+      if (curStep > 0) {
+        const targetStep = curStep - 1;
+        const targetPaths = prevHistory[targetStep] || [];
+        lastLocalModificationTimeRef.current = Date.now();
+        setLocalPaths(targetPaths);
+        historyStepRef.current = targetStep;
+        setHistoryStep(targetStep);
+        debouncedSyncToFirestore(targetPaths, remotePaths, stickyNotes, textElements);
       }
       return prevHistory;
     });
-  }, []);
+  }, [remotePaths, stickyNotes, textElements, debouncedSyncToFirestore]);
 
   const handleRedo = useCallback(() => {
     setHistory((prevHistory) => {
-      const curIdx = historyIndexRef.current;
-      if (curIdx < prevHistory.length - 1) {
-        const targetIndex = curIdx + 1;
-        const targetState = prevHistory[targetIndex];
-        if (targetState) {
-          lastLocalModificationTimeRef.current = Date.now();
-          setLocalPaths(targetState.localPaths || []);
-          setStickyNotes(targetState.stickyNotes || []);
-          setTextElements(targetState.textElements || []);
-          historyIndexRef.current = targetIndex;
-          setHistoryIndex(targetIndex);
-        }
+      const curStep = historyStepRef.current;
+      if (curStep < prevHistory.length - 1) {
+        const targetStep = curStep + 1;
+        const targetPaths = prevHistory[targetStep] || [];
+        lastLocalModificationTimeRef.current = Date.now();
+        setLocalPaths(targetPaths);
+        historyStepRef.current = targetStep;
+        setHistoryStep(targetStep);
+        debouncedSyncToFirestore(targetPaths, remotePaths, stickyNotes, textElements);
       }
       return prevHistory;
     });
-  }, []);
+  }, [remotePaths, stickyNotes, textElements, debouncedSyncToFirestore]);
 
   // Gestion du zoom à la molette de la souris centré sur le curseur
   const handleWheel = useCallback((e) => {
@@ -399,50 +434,6 @@ export default function CollaborativeWhiteboardModal({
     redrawCanvas();
   }, [redrawCanvas]);
 
-  // Synchronisation Firestore Debouncée
-  const debouncedSyncToFirestore = useCallback((
-    currentLocalPaths = localPaths,
-    currentRemotePaths = remotePaths,
-    currentStickyNotes = stickyNotes,
-    currentTextElements = textElements,
-    currentVersion = versionNumber,
-    currentTitle = workspaceTitle
-  ) => {
-    if (!effectiveId || !db) return;
-
-    if (firestoreDebounceTimerRef.current) {
-      clearTimeout(firestoreDebounceTimerRef.current);
-    }
-
-    setSaveStatus('Enregistrement...');
-
-    firestoreDebounceTimerRef.current = setTimeout(async () => {
-      try {
-        const docRef = doc(db, 'project_whiteboards', String(effectiveId));
-        const combinedPaths = [...currentRemotePaths, ...currentLocalPaths].slice(-400);
-
-        const payload = {
-          boardId: effectiveId,
-          groupId,
-          title: currentTitle,
-          versionNumber: currentVersion,
-          paths: combinedPaths,
-          stickyNotes: currentStickyNotes,
-          textElements: currentTextElements,
-          updatedAt: serverTimestamp(),
-          lastEditor: myName,
-          lastEditorUid: myUid,
-        };
-
-        await setDoc(docRef, payload, { merge: true });
-        setSaveStatus('Synchronisé en direct 🟢');
-      } catch (err) {
-        console.warn('[Firestore Whiteboard Sync] error:', err);
-        setSaveStatus('Mode P2P Direct ⚡');
-      }
-    }, 380);
-  }, [effectiveId, groupId, localPaths, remotePaths, stickyNotes, textElements, versionNumber, workspaceTitle, myName, myUid]);
-
   // ================= 3. SYNCHRONISATION MULTIJOUEUR (P2P + Firestore) =================
   useEffect(() => {
     if (!isOpen || !effectiveId) return;
@@ -541,7 +532,9 @@ export default function CollaborativeWhiteboardModal({
           if (loaded.version) setVersionNumber(Number(loaded.version) || 1);
           if (loaded.title) setWorkspaceTitle(loaded.title);
 
-          pushToHistory(loadedPaths, loadedStickies, loadedTexts);
+          setHistory([loadedPaths]);
+          setHistoryStep(0);
+          historyStepRef.current = 0;
         }
       } catch (err) {
         console.warn('[CollaborativeWhiteboard] Initial load failed:', err);
@@ -549,7 +542,7 @@ export default function CollaborativeWhiteboardModal({
     };
 
     loadInitialState();
-  }, [isOpen, effectiveId, version, initialVersion, pushToHistory]);
+  }, [isOpen, effectiveId, version, initialVersion]);
 
   // ================= GESTION DES POINTER EVENTS =================
   const handlePointerDown = (e) => {
@@ -583,7 +576,7 @@ export default function CollaborativeWhiteboardModal({
       };
       const nextStickies = [...stickyNotes, newSticky];
       setStickyNotes(nextStickies);
-      pushToHistory(localPaths, nextStickies, textElements);
+      pushToHistory(localPaths);
       whiteboardP2PService.broadcastEvent('sticky_add', { sticky: newSticky });
       debouncedSyncToFirestore(localPaths, remotePaths, nextStickies, textElements);
       setTool('pencil');
@@ -609,7 +602,7 @@ export default function CollaborativeWhiteboardModal({
       const nextTexts = [...textElements, newText];
       setTextElements(nextTexts);
       setEditingTextId(newText.id);
-      pushToHistory(localPaths, stickyNotes, nextTexts);
+      pushToHistory(localPaths);
       whiteboardP2PService.broadcastEvent('text_add', { text: newText });
       debouncedSyncToFirestore(localPaths, remotePaths, stickyNotes, nextTexts);
       setTool('pencil');
@@ -756,7 +749,7 @@ export default function CollaborativeWhiteboardModal({
       const dragged = stickyNotes.find((s) => s.id === draggingStickyRef.current.id);
       if (dragged) {
         whiteboardP2PService.broadcastEvent('sticky_update', { sticky: dragged });
-        pushToHistory(localPaths, stickyNotes, textElements);
+        pushToHistory(localPaths);
         debouncedSyncToFirestore(localPaths, remotePaths, stickyNotes, textElements);
       }
       draggingStickyRef.current = null;
@@ -767,13 +760,13 @@ export default function CollaborativeWhiteboardModal({
       const resized = textElements.find((t) => t.id === resizingTextRef.current.id);
       if (resized) {
         whiteboardP2PService.broadcastEvent('text_update', { text: resized });
-        pushToHistory(localPaths, stickyNotes, textElements);
+        pushToHistory(localPaths);
         debouncedSyncToFirestore(localPaths, remotePaths, stickyNotes, textElements);
       }
       resizingTextRef.current = null;
     }
 
-    // FUSION SYNCHRONE LOCALE IMMÉDIATE & ENREGISTREMENT FORCÉ DANS L'HISTORIQUE
+    // FUSION SYNCHRONE LOCALE IMMÉDIATE & ENREGISTREMENT DANS L'HISTORIQUE LOCAL TRAIT PAR TRAIT
     if (isDrawingRef.current && currentPath) {
       isDrawingRef.current = false;
       lastLocalModificationTimeRef.current = Date.now();
@@ -784,8 +777,19 @@ export default function CollaborativeWhiteboardModal({
       setLocalPaths(nextLocalPaths);
       setCurrentPath(null);
 
+      // Clone les traits actuels, ajoute-les à history (en coupant l'historique futur si on avait fait "Undo"), et incrémente historyStep
+      setHistory((prevHistory) => {
+        const curStep = historyStepRef.current;
+        const sliced = prevHistory.slice(0, curStep + 1);
+        const updated = [...sliced, [...nextLocalPaths]];
+        if (updated.length > 80) updated.shift();
+        const newStep = updated.length - 1;
+        historyStepRef.current = newStep;
+        setHistoryStep(newStep);
+        return updated;
+      });
+
       whiteboardP2PService.broadcastEvent('path_add', { path: completedPath });
-      pushToHistory(nextLocalPaths, stickyNotes, textElements);
       debouncedSyncToFirestore(nextLocalPaths, remotePaths, stickyNotes, textElements);
     }
   };
@@ -1663,7 +1667,7 @@ export default function CollaborativeWhiteboardModal({
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
             <button
               type="button"
-              disabled={historyIndex <= 0}
+              disabled={historyStep <= 0}
               onClick={handleUndo}
               style={{
                 width: '36px',
@@ -1671,11 +1675,13 @@ export default function CollaborativeWhiteboardModal({
                 borderRadius: '10px',
                 border: 'none',
                 backgroundColor: 'transparent',
-                color: historyIndex <= 0 ? 'rgba(150,150,150,0.4)' : 'inherit',
-                cursor: historyIndex <= 0 ? 'not-allowed' : 'pointer',
+                color: historyStep <= 0 ? (darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)') : 'inherit',
+                cursor: historyStep <= 0 ? 'not-allowed' : 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                opacity: historyStep <= 0 ? 0.35 : 1,
+                transition: 'all 0.15s ease',
               }}
               title="Annuler (Ctrl+Z)"
             >
@@ -1684,7 +1690,7 @@ export default function CollaborativeWhiteboardModal({
 
             <button
               type="button"
-              disabled={historyIndex >= history.length - 1}
+              disabled={historyStep >= history.length - 1}
               onClick={handleRedo}
               style={{
                 width: '36px',
@@ -1692,11 +1698,13 @@ export default function CollaborativeWhiteboardModal({
                 borderRadius: '10px',
                 border: 'none',
                 backgroundColor: 'transparent',
-                color: historyIndex >= history.length - 1 ? 'rgba(150,150,150,0.4)' : 'inherit',
-                cursor: historyIndex >= history.length - 1 ? 'not-allowed' : 'pointer',
+                color: historyStep >= history.length - 1 ? (darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)') : 'inherit',
+                cursor: historyStep >= history.length - 1 ? 'not-allowed' : 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
+                opacity: historyStep >= history.length - 1 ? 0.35 : 1,
+                transition: 'all 0.15s ease',
               }}
               title="Rétablir (Ctrl+Y)"
             >
@@ -1711,7 +1719,7 @@ export default function CollaborativeWhiteboardModal({
                   setRemotePaths([]);
                   setStickyNotes([]);
                   setTextElements([]);
-                  pushToHistory([], [], []);
+                  pushToHistory([]);
                   whiteboardP2PService.broadcastEvent('clear', {});
                   debouncedSyncToFirestore([], [], [], []);
                 }
