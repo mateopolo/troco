@@ -3970,6 +3970,7 @@ export default function App() {
                 generateTags={generateTags}
                 getSuggestedMedia={getSuggestedMedia}
                 getSuggestedImage={getSuggestedImage}
+                setActiveTab={setActiveTab}
               />
             </Suspense>
           </SectoralErrorBoundary>

@@ -8,6 +8,7 @@ import {
   MapPin,
   Flame,
   ArrowLeft,
+  CheckCircle,
 } from 'lucide-react';
 import { auth, db } from '../../firebase';
 import {
@@ -38,6 +39,42 @@ import { SkeletonModalFallback } from '../../components/SkeletonLoader';
 // Lazy loading des sous-composants lourds de création
 const PhotoGrid = React.lazy(() => import('../../components/PhotoGrid'));
 const VideoEditorModal = React.lazy(() => import('../../components/VideoEditorModal'));
+
+/**
+ * Assainit récursivement les objets avant transmission à Firestore.
+ * Remplace tout `undefined` par `null` ou supprime les clés pour éviter les crashs silencieux de Firebase SDK.
+ */
+function sanitizeForFirestore(data) {
+  if (data === undefined) return null;
+  if (data === null || typeof data !== 'object') return data;
+  if (data instanceof Date) return data;
+  if (Array.isArray(data)) {
+    return data.filter(item => item !== undefined).map(sanitizeForFirestore);
+  }
+  const cleaned = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (value === undefined) {
+      cleaned[key] = null;
+    } else if (typeof value === 'string') {
+      cleaned[key] = value;
+    } else if (typeof value === 'number') {
+      cleaned[key] = isNaN(value) ? 0 : value;
+    } else if (typeof value === 'boolean') {
+      cleaned[key] = value;
+    } else if (Array.isArray(value)) {
+      cleaned[key] = value.filter(v => v !== undefined).map(sanitizeForFirestore);
+    } else if (typeof value === 'object' && value !== null) {
+      if (value._methodName || value.constructor?.name === 'FieldValue') {
+        cleaned[key] = value;
+      } else {
+        cleaned[key] = sanitizeForFirestore(value);
+      }
+    } else {
+      cleaned[key] = value;
+    }
+  }
+  return cleaned;
+}
 
 // Helper compression d'image local
 const compressImage = (file, maxWidth = 800, maxHeight = 800, quality = 0.75) => {
@@ -108,12 +145,14 @@ export default function PostListingFeature({
   generateTags: propGenerateTags,
   getSuggestedMedia = defaultGetSuggestedMedia,
   getSuggestedImage = defaultGetFallbackImage,
+  setActiveTab = () => {},
 }) {
   // États internes du tunnel de publication
   const [tagInputValue, setTagInputValue] = useState('');
   const [nominatimSuggestions, setNominatimSuggestions] = useState([]);
   const [isSearchingLocation, setIsSearchingLocation] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [publishedSuccessListing, setPublishedSuccessListing] = useState(null);
   const nominatimTimeoutRef = useRef(null);
 
   // État de l'éditeur vidéo
@@ -256,9 +295,12 @@ export default function PostListingFeature({
     event.target.value = '';
   };
 
-  // ---- PUBLICATION FINALE DE L'ANNONCE ----
+  // ---- PUBLICATION FINALE DE L'ANNONCE (ANTI DOUBLE-CLIC + ASSAINISSEMENT FIRESTORE + SÉPARATION EUROS/TOKENS) ----
   const handlePublishAnnouncement = async () => {
-    if (isSubmitting) return;
+    if (isSubmitting) {
+      console.warn('[PostListingFeature] Publication déjà en cours (Anti-Double Clic actif)');
+      return;
+    }
     setIsSubmitting(true);
 
     try {
@@ -291,7 +333,7 @@ export default function PostListingFeature({
         return;
       }
 
-      const wantsUrgent = postDraft.isUrgent;
+      const wantsUrgent = Boolean(postDraft.isUrgent);
       const compensationText = postDraft.compensation === 'credits'
         ? '1h = 1 Crédit'
         : postDraft.compensation === 'cash'
@@ -324,43 +366,67 @@ export default function PostListingFeature({
         baseTranslations[l] = { title: tTitle, description: `[${l}] ${tDesc}` };
       });
 
-      const finalGallery = postDraft.gallery && postDraft.gallery.length > 0 ? postDraft.gallery : media.gallery;
+      const finalGallery = postDraft.gallery && postDraft.gallery.length > 0
+        ? postDraft.gallery
+        : (media.gallery && media.gallery.length > 0 ? media.gallery : [postDraft.imageUrl || media.image || 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=800&q=80']);
 
       const finalCategory = ((postDraft.category === 'Autre' || postDraft.category === 'Autre / Domaine personnalisé') && postDraft.customCategoryName?.trim())
         ? postDraft.customCategoryName.trim()
-        : postDraft.category;
+        : (postDraft.category || 'Cours & Compétences');
 
       if (postDraft.customCategoryName?.trim() && !customCategories.includes(postDraft.customCategoryName.trim())) {
         setCustomCategories(prev => [...prev, postDraft.customCategoryName.trim()]);
       }
 
+      // GÉOLOCALISATION ROBUSTE AVEC FALLBACK INTÉGRÉ
       const isBlurred = postDraft.locationPrivacy === 'blurred';
       const blurOffsetLat = isBlurred ? (Math.random() - 0.5) * 0.009 : 0;
       const blurOffsetLng = isBlurred ? (Math.random() - 0.5) * 0.009 : 0;
-      const baseCoords = postDraft.coordinates || getCoordinatesForLocation(postDraft.location) || (userCoords ? userCoords : [48.8566, 2.3522]);
-      const resolvedCoords = [baseCoords[0] + blurOffsetLat, baseCoords[1] + blurOffsetLng];
+
+      let baseCoords = [48.8566, 2.3522]; // Paris par défaut
+      try {
+        if (postDraft.coordinates && Array.isArray(postDraft.coordinates) && postDraft.coordinates.length >= 2 && !isNaN(postDraft.coordinates[0]) && !isNaN(postDraft.coordinates[1])) {
+          baseCoords = [Number(postDraft.coordinates[0]), Number(postDraft.coordinates[1])];
+        } else if (typeof getCoordinatesForLocation === 'function') {
+          const lookedUp = getCoordinatesForLocation(postDraft.location);
+          if (lookedUp && Array.isArray(lookedUp) && lookedUp.length >= 2 && !isNaN(lookedUp[0]) && !isNaN(lookedUp[1])) {
+            baseCoords = [Number(lookedUp[0]), Number(lookedUp[1])];
+          } else if (userCoords && Array.isArray(userCoords) && userCoords.length >= 2) {
+            baseCoords = [Number(userCoords[0]), Number(userCoords[1])];
+          }
+        }
+      } catch (geoErr) {
+        console.warn('[PostListingFeature] Erreur geocoding tolérée, coordonnées par défaut utilisées:', geoErr);
+        baseCoords = [48.8566, 2.3522];
+      }
+
+      const resolvedCoords = [
+        Number((baseCoords[0] + blurOffsetLat).toFixed(6)),
+        Number((baseCoords[1] + blurOffsetLng).toFixed(6))
+      ];
 
       const newListing = {
-        ...(isEditingListing ? editingOriginalListing : {}),
-        id: isEditingListing ? editingOriginalListing.id : Date.now(),
+        ...(isEditingListing ? (editingOriginalListing || {}) : {}),
+        id: isEditingListing ? (editingOriginalListing?.id || Date.now()) : Date.now(),
         title: rawTitle,
-        author: profile.name || 'Utilisateur',
+        author: profile?.name || 'Utilisateur',
+        authorUid: profile?.uid || auth.currentUser?.uid || 'anonymous',
         category: finalCategory,
         customCategory: (postDraft.category === 'Autre' || postDraft.category === 'Autre / Domaine personnalisé') || Boolean(postDraft.customCategoryName?.trim()),
         customCategoryName: postDraft.customCategoryName?.trim() || null,
-        verified: isEditingListing ? editingOriginalListing.verified : (profile?.kycVerified || false),
-        rating: isEditingListing ? editingOriginalListing.rating : null,
-        reviews: isEditingListing ? (editingOriginalListing.reviews || 0) : 0,
+        verified: isEditingListing ? Boolean(editingOriginalListing?.verified) : Boolean(profile?.kycVerified),
+        rating: isEditingListing ? (editingOriginalListing?.rating ?? null) : null,
+        reviews: isEditingListing ? Number(editingOriginalListing?.reviews || 0) : 0,
         status: postDraft.status || 'active',
         location: (postDraft.location || '').trim() || (postDraft.format === 'remote' ? 'À distance' : 'Sur place'),
         locationPrivacy: postDraft.locationPrivacy || 'exact',
-        coordinates: isEditingListing && editingOriginalListing.coordinates ? editingOriginalListing.coordinates : resolvedCoords,
-        type: postDraft.format,
-        languages: profile.languages ? profile.languages.slice(0, 2) : ['FR'],
+        coordinates: isEditingListing && editingOriginalListing?.coordinates ? editingOriginalListing.coordinates : resolvedCoords,
+        type: postDraft.format || 'onsite',
+        languages: profile?.languages ? profile.languages.slice(0, 2) : ['FR'],
         compensation: compensationText,
-        image: finalGallery[0] || media.image,
-        video: postDraft.videoUrl || media.video,
-        videoUrl: postDraft.videoUrl || media.video,
+        image: finalGallery[0] || media.image || 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=800&q=80',
+        video: postDraft.videoUrl || media.video || null,
+        videoUrl: postDraft.videoUrl || media.video || null,
         videoTrimStart: Number(postDraft.videoTrimStart || 0),
         videoTrimEnd: Number(postDraft.videoTrimEnd || 0),
         cropRatio: postDraft.cropRatio || '16:9',
@@ -404,7 +470,7 @@ export default function PostListingFeature({
         return;
       }
 
-      // Débit STRICTEMENT en Euros (sans toucher aux trocoTokens)
+      // SÉPARATION STRICTE : Débit uniquement en Euros sans JAMAIS toucher aux trocoTokens
       if (totalToPay > 0) {
         setProfile(prev => ({
           ...prev,
@@ -427,38 +493,50 @@ export default function PostListingFeature({
           items: invoiceCalc.items,
         };
         try {
-          await addDoc(collection(db, 'transactions'), txRecord);
+          if (db) {
+            await addDoc(collection(db, 'transactions'), sanitizeForFirestore(txRecord));
+          }
         } catch (e) {
-          console.warn('[Firestore] transaction addDoc failed:', e);
+          console.error('[PostListingFeature] Firestore transaction addDoc failed:', e);
         }
         setUserTransactions(prev => [txRecord, ...prev]);
       }
 
+      // ÉCRITURE FIRESTORE ASSAINIE (ZÉRO UNDEFINED)
       if (isEditingListing) {
         setListings(prev => prev.map(item => item.id === newListing.id ? newListing : item));
-        if (editingOriginalListing?.firestoreId) {
+        if (editingOriginalListing?.firestoreId && db) {
           try {
             const { id: _localId, firestoreId: _fid, ...firestorePayload } = newListing;
-            await updateDoc(doc(db, 'listings', editingOriginalListing.firestoreId), {
+            const sanitized = sanitizeForFirestore({
               ...firestorePayload,
               updatedAt: serverTimestamp(),
             });
+            await updateDoc(doc(db, 'listings', editingOriginalListing.firestoreId), sanitized);
+            console.log('[PostListingFeature] Listing mis à jour avec succès dans Firestore:', editingOriginalListing.firestoreId);
           } catch (e) {
-            console.warn('[Firestore] updateDoc failed:', e);
+            console.error('[PostListingFeature] Firestore updateDoc failed:', e);
           }
         }
       } else {
-        setListings(prev => [newListing, ...prev]);
-        try {
-          const { id: _localId, ...firestorePayload } = newListing;
-          await addDoc(collection(db, 'listings'), {
-            ...firestorePayload,
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-          });
-        } catch (e) {
-          console.warn('[Firestore] addDoc failed:', e);
+        let createdFirestoreId = null;
+        if (db) {
+          try {
+            const { id: _localId, ...firestorePayload } = newListing;
+            const sanitized = sanitizeForFirestore({
+              ...firestorePayload,
+              createdAt: serverTimestamp(),
+              updatedAt: serverTimestamp(),
+            });
+            const docRef = await addDoc(collection(db, 'listings'), sanitized);
+            createdFirestoreId = docRef.id;
+            newListing.firestoreId = createdFirestoreId;
+            console.log('[PostListingFeature] Annonce créée avec succès dans Firestore (ID):', createdFirestoreId);
+          } catch (e) {
+            console.error('[PostListingFeature] Firestore addDoc failed:', e);
+          }
         }
+        setListings(prev => [newListing, ...prev]);
       }
 
       const urgentMsg = wantsUrgent ? ' • Option Urgent activée 🔥' : '';
@@ -473,6 +551,7 @@ export default function PostListingFeature({
       setPublishedListing(updatedListingDetail);
       setShowPublishedPopup(true);
       setSelectedListing(updatedListingDetail);
+      setPublishedSuccessListing(updatedListingDetail);
 
       setIsEditingListing(false);
       setEditingOriginalListing(null);
@@ -504,7 +583,7 @@ export default function PostListingFeature({
         videoUrl: '',
       });
     } catch (err) {
-      console.error('[PostListingFeature] Erreur de publication:', err);
+      console.error('[PostListingFeature] Erreur critique de publication:', err);
       setPublishMessage(`Erreur lors de la publication : ${err.message || 'Veuillez réessayer'}`);
     } finally {
       setIsSubmitting(false);
@@ -1305,6 +1384,146 @@ export default function PostListingFeature({
             darkMode={darkMode}
           />
         </Suspense>
+      )}
+
+      {/* MODAL DE SUCCÈS / FÉLICITATIONS AVEC REDIRECTION FEED */}
+      {publishedSuccessListing && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 999999,
+            backgroundColor: 'rgba(26, 22, 19, 0.75)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            boxSizing: 'border-box',
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
+              borderRadius: '28px',
+              border: darkMode ? '1px solid rgba(232,221,211,0.18)' : '1px solid #E8DDD3',
+              boxShadow: '0 25px 60px -15px rgba(0,0,0,0.3)',
+              padding: '28px 24px',
+              maxWidth: '440px',
+              width: '100%',
+              textAlign: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '16px',
+              boxSizing: 'border-box',
+            }}
+          >
+            <div
+              style={{
+                width: '64px',
+                height: '64px',
+                borderRadius: '50%',
+                backgroundColor: 'rgba(16, 185, 129, 0.15)',
+                color: '#10B981',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 0 24px rgba(16, 185, 129, 0.3)',
+              }}
+            >
+              <CheckCircle size={36} strokeWidth={2.5} />
+            </div>
+
+            <div>
+              <h3
+                className="font-editorial-heading"
+                style={{
+                  margin: '0 0 6px 0',
+                  fontSize: '22px',
+                  fontWeight: '700',
+                  color: 'var(--text-main)',
+                }}
+              >
+                🎉 Félicitations !
+              </h3>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: '13.5px',
+                  color: 'var(--text-secondary)',
+                  lineHeight: 1.5,
+                }}
+              >
+                Votre annonce <strong>"{publishedSuccessListing.title}"</strong> est désormais en ligne et visible par toute la communauté Troco.
+              </p>
+            </div>
+
+            {publishedSuccessListing.image && (
+              <div
+                style={{
+                  width: '100%',
+                  height: '140px',
+                  borderRadius: '16px',
+                  overflow: 'hidden',
+                  position: 'relative',
+                  boxShadow: '0 4px 14px rgba(0,0,0,0.1)',
+                }}
+              >
+                <img
+                  src={publishedSuccessListing.image}
+                  alt={publishedSuccessListing.title}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+                {publishedSuccessListing.urgent && (
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: '8px',
+                      right: '8px',
+                      backgroundColor: 'rgba(198, 125, 91, 0.95)',
+                      color: '#FFF',
+                      fontSize: '10px',
+                      fontWeight: '800',
+                      padding: '4px 8px',
+                      borderRadius: '8px',
+                      backdropFilter: 'blur(4px)',
+                    }}
+                  >
+                    🔥 Urgent
+                  </span>
+                )}
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => {
+                setPublishedSuccessListing(null);
+                if (typeof setActiveTab === 'function') {
+                  setActiveTab('feed');
+                }
+              }}
+              className="premium-button"
+              style={{
+                width: '100%',
+                padding: '14px 20px',
+                borderRadius: '999px',
+                border: 'none',
+                background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
+                color: '#FFFFFF',
+                fontSize: '14px',
+                fontWeight: '800',
+                cursor: 'pointer',
+                boxShadow: 'var(--shadow-accent)',
+                marginTop: '6px',
+              }}
+            >
+              Voir dans le fil d'actualités 🚀
+            </button>
+          </div>
+        </div>
       )}
     </>
   );
