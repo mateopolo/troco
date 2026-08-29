@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import {
   collection, doc, onSnapshot, updateDoc, deleteDoc,
-  setDoc, serverTimestamp, query, orderBy, limit, addDoc
+  setDoc, serverTimestamp, query, orderBy, limit, addDoc, getDoc
 } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAllGlobalContent, DEFAULT_GLOBAL_CONTENT } from './useGlobalContent';
@@ -20,8 +20,8 @@ export default function AdminDashboard({
   darkMode = false,
   onInspectUser = null,
 }) {
-  // Navigation entre les 4 onglets obligatoires
-  const [activeTab, setActiveTab] = useState('users'); // 'users' | 'listings' | 'community' | 'cms'
+  // Navigation entre les 5 onglets : utilisateurs, annonces, communauté, économie & litiges, cms
+  const [activeTab, setActiveTab] = useState('users'); // 'users' | 'listings' | 'community' | 'economy' | 'cms'
 
   // Vérification de sécurité / Code PIN d'urgence
   const isDirectAdmin = Boolean(
@@ -37,9 +37,11 @@ export default function AdminDashboard({
   const [usersList, setUsersList] = useState([]);
   const [listingsList, setListingsList] = useState([]);
   const [communityMessages, setCommunityMessages] = useState([]);
+  const [transactionsList, setTransactionsList] = useState([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(true);
   const [isLoadingListings, setIsLoadingListings] = useState(true);
   const [isLoadingCommunity, setIsLoadingCommunity] = useState(true);
+  const [isLoadingTransactions, setIsLoadingTransactions] = useState(true);
 
   // Hook CMS Textes Globaux
   const { items: globalContent, saveContent: saveGlobalContent } = useAllGlobalContent();
@@ -54,7 +56,11 @@ export default function AdminDashboard({
   const [communitySearch, setCommunitySearch] = useState('');
   const [communityFilter, setCommunityFilter] = useState('all'); // 'all' | 'urgent' | 'admin_edited'
 
+  const [txSearch, setTxSearch] = useState('');
+  const [txFilter, setTxFilter] = useState('all'); // 'all' | 'disputed' | 'deal' | 'admin_adjustment' | 'refunded'
+
   // Modales d'action
+  const [editingUser, setEditingUser] = useState(null); // Utilisateur complet à éditer
   const [editingListing, setEditingListing] = useState(null); // Document annonce à éditer
   const [editingCommunityMsg, setEditingCommunityMsg] = useState(null); // Message communauté à éditer
   const [balanceModalUser, setBalanceModalUser] = useState(null); // Utilisateur pour ajustement de solde
@@ -212,7 +218,87 @@ export default function AdminDashboard({
     };
   }, [isUnlocked]);
 
+  // 4. LISTENER TEMPS RÉEL : TRANSACTIONS & ÉCONOMIE (transactions)
+  useEffect(() => {
+    if (!db || !isUnlocked) return;
+
+    let unsubscribe = () => {};
+
+    const handleSnapshot = (snapshot) => {
+      const list = [];
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        list.push({
+          id: docSnap.id,
+          ...data,
+        });
+      });
+      list.sort((a, b) => {
+        const tA = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.timestamp?.toMillis ? a.timestamp.toMillis() : (a.createdAt || a.timestamp || 0));
+        const tB = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.timestamp?.toMillis ? b.timestamp.toMillis() : (b.createdAt || b.timestamp || 0));
+        return tB - tA;
+      });
+      setTransactionsList(list);
+      setIsLoadingTransactions(false);
+    };
+
+    try {
+      const q = query(
+        collection(db, 'transactions'),
+        orderBy('createdAt', 'desc'),
+        limit(100)
+      );
+
+      unsubscribe = onSnapshot(
+        q,
+        handleSnapshot,
+        (err) => {
+          console.warn('[AdminDashboard] Erreur écoute transactions avec orderBy, fallback sans orderBy:', err);
+          try {
+            const fallbackQ = query(collection(db, 'transactions'), limit(100));
+            unsubscribe = onSnapshot(fallbackQ, handleSnapshot, () => setIsLoadingTransactions(false));
+          } catch (_) {
+            setIsLoadingTransactions(false);
+          }
+        }
+      );
+    } catch (e) {
+      console.warn('[AdminDashboard] Exception transactions:', e);
+      setIsLoadingTransactions(false);
+    }
+
+    return () => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+    };
+  }, [isUnlocked]);
+
   // ================= ACTIONS UTILISATEURS =================
+  const handleSaveUserEdit = async () => {
+    if (!editingUser) return;
+    try {
+      const userRef = doc(db, 'users', editingUser.id);
+      await updateDoc(userRef, {
+        name: editingUser.name || '',
+        username: editingUser.username || '',
+        email: editingUser.email || '',
+        bio: editingUser.bio || '',
+        location: editingUser.location || '',
+        trocoTokens: Number(editingUser.trocoTokens) || 0,
+        euroBalance: Number(editingUser.euroBalance) || 0,
+        isAdmin: Boolean(editingUser.isAdmin),
+        isBanned: Boolean(editingUser.isBanned),
+        kycVerified: Boolean(editingUser.kycVerified),
+        verified: Boolean(editingUser.kycVerified),
+        role: editingUser.isAdmin ? 'admin' : 'user',
+        updatedAt: serverTimestamp(),
+      });
+      showToast(`Profil de ${editingUser.name} mis à jour en direct !`);
+      setEditingUser(null);
+    } catch (err) {
+      alert("Erreur mise à jour utilisateur : " + err.message);
+    }
+  };
+
   const handleToggleBanUser = async (user) => {
     const newBannedState = !user.isBanned;
     const confirmText = newBannedState
@@ -313,10 +399,66 @@ export default function AdminDashboard({
     if (!window.confirm(`⚠️ SUPPRESSION DÉFINITIVE DU COMPTE ${user.name} (${user.id}) ? Cette action est irréversible.`)) return;
 
     try {
-      await deleteDoc(doc(db, 'users', user.id));
+      await deleteDoc(doc(db, 'users', String(user.id)));
       showToast(`Compte de ${user.name} supprimé définitivement.`);
     } catch (err) {
       alert('Erreur suppression : ' + err.message);
+    }
+  };
+
+  // ================= ACTIONS ÉCONOMIE & LITIGES =================
+  const handleResolveDispute = async (tx) => {
+    if (!window.confirm(`⚖️ Valider et clôturer le litige pour la transaction #${String(tx.id).slice(0, 6)} ?`)) return;
+    try {
+      await updateDoc(doc(db, 'transactions', String(tx.id)), {
+        status: 'resolved',
+        isDisputed: false,
+        resolvedAt: serverTimestamp(),
+        resolvedBy: currentUser?.email || 'admin',
+      });
+      showToast(`Litige sur #${String(tx.id).slice(0, 6)} résolu.`);
+    } catch (err) {
+      alert('Erreur résolution litige : ' + err.message);
+    }
+  };
+
+  const handleRefundTransaction = async (tx) => {
+    if (!window.confirm(`↩️ Rembourser la transaction #${String(tx.id).slice(0, 6)} (${tx.deltaTokens || tx.tokens || 0}🪙, ${tx.deltaEuros || tx.euros || 0}€) ?`)) return;
+    try {
+      const payerUid = tx.userId || tx.payerUid;
+      if (payerUid) {
+        const userRef = doc(db, 'users', payerUid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          const uData = userSnap.data();
+          const refundTok = Number(tx.deltaTokens || tx.tokens || 0);
+          const refundEur = Number(tx.deltaEuros || tx.euros || 0);
+          await updateDoc(userRef, {
+            trocoTokens: (uData.trocoTokens || 0) + Math.abs(refundTok),
+            euroBalance: (uData.euroBalance || 0) + Math.abs(refundEur),
+            updatedAt: serverTimestamp(),
+          });
+        }
+      }
+      await updateDoc(doc(db, 'transactions', String(tx.id)), {
+        status: 'refunded',
+        isDisputed: false,
+        refundedAt: serverTimestamp(),
+        refundedBy: currentUser?.email || 'admin',
+      });
+      showToast(`Transaction #${String(tx.id).slice(0, 6)} remboursée avec succès !`);
+    } catch (err) {
+      alert('Erreur remboursement : ' + err.message);
+    }
+  };
+
+  const handleDeleteTransaction = async (tx) => {
+    if (!window.confirm(`🗑️ Supprimer définitivement la transaction #${String(tx.id).slice(0, 6)} de Firestore ?`)) return;
+    try {
+      await deleteDoc(doc(db, 'transactions', String(tx.id)));
+      showToast(`Transaction #${String(tx.id).slice(0, 6)} supprimée.`);
+    } catch (err) {
+      alert('Erreur suppression transaction : ' + err.message);
     }
   };
 
@@ -459,6 +601,8 @@ export default function AdminDashboard({
     const adminUsers = usersList.filter(u => u.isAdmin).length;
     const totalListings = listingsList.length;
     const totalMessages = communityMessages.length;
+    const totalTransactions = transactionsList.length;
+    const disputedTransactions = transactionsList.filter(t => t.isDisputed || t.status === 'disputed' || t.status === 'litige').length;
     const totalTokensInEconomy = usersList.reduce((acc, u) => acc + (Number(u.trocoTokens) || 0), 0);
     const totalEurosInEconomy = usersList.reduce((acc, u) => acc + (Number(u.euroBalance) || 0), 0);
 
@@ -469,10 +613,12 @@ export default function AdminDashboard({
       adminUsers,
       totalListings,
       totalMessages,
+      totalTransactions,
+      disputedTransactions,
       totalTokensInEconomy,
       totalEurosInEconomy,
     };
-  }, [usersList, listingsList, communityMessages]);
+  }, [usersList, listingsList, communityMessages, transactionsList]);
 
   // Filtrage des utilisateurs
   const filteredUsers = useMemo(() => {
@@ -531,6 +677,29 @@ export default function AdminDashboard({
     });
   }, [communityMessages, communitySearch, communityFilter]);
 
+  // Filtrage des transactions & litiges
+  const filteredTransactions = useMemo(() => {
+    return transactionsList.filter((tx) => {
+      const q = (txSearch || '').toLowerCase();
+      const matchSearch =
+        !q ||
+        (tx.id && String(tx.id).toLowerCase().includes(q)) ||
+        (tx.userName && tx.userName.toLowerCase().includes(q)) ||
+        (tx.userId && String(tx.userId).toLowerCase().includes(q)) ||
+        (tx.partnerName && tx.partnerName.toLowerCase().includes(q)) ||
+        (tx.type && tx.type.toLowerCase().includes(q)) ||
+        (tx.label && tx.label.toLowerCase().includes(q));
+
+      if (!matchSearch) return false;
+      if (txFilter === 'disputed') return Boolean(tx.isDisputed || tx.status === 'disputed' || tx.status === 'litige');
+      if (txFilter === 'deal') return tx.type === 'deal' || tx.mode === 'deal';
+      if (txFilter === 'admin_adjustment') return tx.type === 'admin_adjustment';
+      if (txFilter === 'refunded') return tx.status === 'refunded';
+
+      return true;
+    });
+  }, [transactionsList, txSearch, txFilter]);
+
   if (!isOpen) return null;
 
   // ================= VUE 0 : ÉCRAN DE VERROUILLAGE SÉCURITÉ ADMIN =================
@@ -556,35 +725,37 @@ export default function AdminDashboard({
             maxWidth: '420px',
             width: '100%',
             backgroundColor: darkMode ? 'rgba(26,22,19,0.92)' : 'rgba(38,32,28,0.95)',
-            border: '1px solid rgba(198,125,91,0.3)',
-            borderRadius: '28px',
-            padding: '36px 30px',
+            backdropFilter: 'blur(24px)',
+            WebkitBackdropFilter: 'blur(24px)',
+            borderRadius: '24px',
+            padding: '32px',
+            boxShadow: '0 24px 60px rgba(0,0,0,0.6)',
+            border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(255,255,255,0.2)',
             textAlign: 'center',
-            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.7), 0 0 40px rgba(198,125,91,0.15)',
           }}
         >
           <div
             style={{
-              width: '68px',
-              height: '68px',
-              borderRadius: '20px',
-              background: 'linear-gradient(135deg, #C67D5B 0%, #EF4444 100%)',
-              color: '#FFF',
+              width: '64px',
+              height: '64px',
+              borderRadius: '50%',
+              backgroundColor: 'rgba(239,68,68,0.15)',
+              color: '#EF4444',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto 20px',
-              boxShadow: '0 12px 30px rgba(239,68,68,0.35)',
+              boxShadow: '0 8px 24px rgba(239,68,68,0.3)',
             }}
           >
-            <ShieldAlert size={36} />
+            <ShieldAlert size={32} />
           </div>
 
-          <h2 style={{ fontSize: '22px', fontWeight: '900', margin: '0 0 8px', letterSpacing: '-0.02em' }}>
-            Console Administrateur Troco
+          <h2 style={{ margin: '0 0 8px', fontSize: '22px', fontWeight: '900', color: '#FFF' }}>
+            Accès Réservé — Troco God Mode
           </h2>
-          <p style={{ fontSize: '13px', color: '#D4C5B5', margin: '0 0 24px', lineHeight: 1.5 }}>
-            Accès strictement réservé à la gouvernance. Veuillez saisir votre code PIN de modération pour déverrouiller le God Mode en temps réel.
+          <p style={{ margin: '0 0 24px', fontSize: '13.5px', color: '#A8998C', lineHeight: 1.5 }}>
+            Cette console accorde les pleins pouvoirs en direct sur l'infrastructure Firestore. Entrez le code d'accès administrateur pour continuer.
           </p>
 
           <form onSubmit={handleUnlockWithPin} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -592,7 +763,7 @@ export default function AdminDashboard({
               <input
                 type="password"
                 maxLength="6"
-                placeholder="Code PIN (ex: 2609)"
+                placeholder="••••"
                 value={pinInput}
                 onChange={(e) => {
                   setPinInput(e.target.value);
@@ -737,7 +908,7 @@ export default function AdminDashboard({
               </span>
             </div>
             <p style={{ margin: 0, fontSize: '11.5px', color: darkMode ? '#A8998C' : '#7A6B60' }}>
-              Modération omnipotente, suppression instantanée et édition globale du CMS.
+              Modération omnipotente, surveillance économique, gestion des litiges et CMS.
             </p>
           </div>
         </div>
@@ -761,6 +932,7 @@ export default function AdminDashboard({
             <span style={{ color: '#EF4444' }}>⛔ {stats.bannedUsers} bannis</span>
             <span>📢 {stats.totalListings} annonces</span>
             <span>🪙 {stats.totalTokensInEconomy} jetons</span>
+            {stats.disputedTransactions > 0 && <span style={{ color: '#EF4444' }}>⚠️ {stats.disputedTransactions} litiges</span>}
           </div>
 
           {onClose && (
@@ -814,7 +986,7 @@ export default function AdminDashboard({
         </div>
       )}
 
-      {/* 2. NAVIGATION PAR ONGLETS (4 ONGLETS REQUIS) */}
+      {/* 2. NAVIGATION PAR ONGLETS (5 ONGLETS GOD MODE) */}
       <div
         style={{
           display: 'flex',
@@ -830,6 +1002,7 @@ export default function AdminDashboard({
           { id: 'users', label: 'Utilisateurs', icon: Users, count: stats.totalUsers, badge: stats.bannedUsers ? `${stats.bannedUsers} bannis` : null },
           { id: 'listings', label: 'Annonces', icon: FileText, count: stats.totalListings },
           { id: 'community', label: 'Communauté & Live', icon: MessageSquare, count: stats.totalMessages },
+          { id: 'economy', label: 'Économie & Litiges', icon: Coins, count: stats.totalTransactions, badge: stats.disputedTransactions ? `${stats.disputedTransactions} litige${stats.disputedTransactions > 1 ? 's' : ''}` : null },
           { id: 'cms', label: 'Textes Globaux (CMS)', icon: Globe, count: Object.keys(globalContent).length },
         ].map((tab) => {
           const Icon = tab.icon;
@@ -1066,6 +1239,29 @@ export default function AdminDashboard({
                               >
                                 {user.isBanned ? <UserCheck size={13} /> : <UserX size={13} />}
                                 {user.isBanned ? 'Débannir' : 'Bannir'}
+                              </button>
+
+                              {/* Bouton Éditer Profil Utilisateur */}
+                              <button
+                                type="button"
+                                onClick={() => setEditingUser({ ...user })}
+                                className="premium-button"
+                                style={{
+                                  padding: '6px 10px',
+                                  borderRadius: '8px',
+                                  border: '1px solid var(--border-color, rgba(0,0,0,0.1))',
+                                  backgroundColor: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                                  color: 'inherit',
+                                  fontSize: '11px',
+                                  fontWeight: '700',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                }}
+                                title="Éditer le profil utilisateur"
+                              >
+                                <Edit3 size={13} /> Éditer
                               </button>
 
                               {/* Bouton Ajuster Solde */}
@@ -1514,7 +1710,419 @@ export default function AdminDashboard({
           </div>
         )}
 
-        {/* ================= ONGLET 4 : TEXTES GLOBAUX (CMS) ================= */}
+        {/* ================= ONGLET 4 : ÉCONOMIE & LITIGES ================= */}
+        {activeTab === 'economy' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            {/* KPI Cards Économie */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                gap: '14px',
+              }}
+            >
+              {/* Carte 1 : Jetons en circulation */}
+              <div
+                style={{
+                  backgroundColor: darkMode ? '#1A1613' : '#FFFFFF',
+                  padding: '18px',
+                  borderRadius: '16px',
+                  border: '1px solid var(--border-color, rgba(0,0,0,0.08))',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '14px',
+                }}
+              >
+                <div
+                  style={{
+                    width: '44px',
+                    height: '44px',
+                    borderRadius: '12px',
+                    backgroundColor: 'rgba(245,158,11,0.15)',
+                    color: '#F59E0B',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Coins size={22} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '11.5px', color: 'var(--text-secondary)', fontWeight: '700' }}>
+                    Jetons en Circulation
+                  </div>
+                  <div style={{ fontSize: '20px', fontWeight: '900', color: '#F59E0B' }}>
+                    🪙 {stats.totalTokensInEconomy}
+                  </div>
+                </div>
+              </div>
+
+              {/* Carte 2 : Euros en comptes */}
+              <div
+                style={{
+                  backgroundColor: darkMode ? '#1A1613' : '#FFFFFF',
+                  padding: '18px',
+                  borderRadius: '16px',
+                  border: '1px solid var(--border-color, rgba(0,0,0,0.08))',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '14px',
+                }}
+              >
+                <div
+                  style={{
+                    width: '44px',
+                    height: '44px',
+                    borderRadius: '12px',
+                    backgroundColor: 'rgba(16,185,129,0.15)',
+                    color: '#10B981',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Sparkles size={22} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '11.5px', color: 'var(--text-secondary)', fontWeight: '700' }}>
+                    Solde Euros Cumulé
+                  </div>
+                  <div style={{ fontSize: '20px', fontWeight: '900', color: '#10B981' }}>
+                    € {stats.totalEurosInEconomy.toFixed(2)}
+                  </div>
+                </div>
+              </div>
+
+              {/* Carte 3 : Volume transactions */}
+              <div
+                style={{
+                  backgroundColor: darkMode ? '#1A1613' : '#FFFFFF',
+                  padding: '18px',
+                  borderRadius: '16px',
+                  border: '1px solid var(--border-color, rgba(0,0,0,0.08))',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '14px',
+                }}
+              >
+                <div
+                  style={{
+                    width: '44px',
+                    height: '44px',
+                    borderRadius: '12px',
+                    backgroundColor: 'rgba(59,130,246,0.15)',
+                    color: '#3B82F6',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <RefreshCw size={22} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '11.5px', color: 'var(--text-secondary)', fontWeight: '700' }}>
+                    Transactions Enregistrées
+                  </div>
+                  <div style={{ fontSize: '20px', fontWeight: '900' }}>
+                    {stats.totalTransactions}
+                  </div>
+                </div>
+              </div>
+
+              {/* Carte 4 : Litiges actifs */}
+              <div
+                style={{
+                  backgroundColor: darkMode ? '#1A1613' : '#FFFFFF',
+                  padding: '18px',
+                  borderRadius: '16px',
+                  border: stats.disputedTransactions > 0 ? '1px solid #EF4444' : '1px solid var(--border-color, rgba(0,0,0,0.08))',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '14px',
+                }}
+              >
+                <div
+                  style={{
+                    width: '44px',
+                    height: '44px',
+                    borderRadius: '12px',
+                    backgroundColor: stats.disputedTransactions > 0 ? 'rgba(239,68,68,0.2)' : 'rgba(239,68,68,0.1)',
+                    color: '#EF4444',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <AlertTriangle size={22} />
+                </div>
+                <div>
+                  <div style={{ fontSize: '11.5px', color: 'var(--text-secondary)', fontWeight: '700' }}>
+                    Litiges en Attente
+                  </div>
+                  <div style={{ fontSize: '20px', fontWeight: '900', color: stats.disputedTransactions > 0 ? '#EF4444' : 'inherit' }}>
+                    ⚖️ {stats.disputedTransactions}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Barre de recherche et filtres transactions */}
+            <div
+              style={{
+                backgroundColor: darkMode ? '#1A1613' : '#FFFFFF',
+                padding: '16px',
+                borderRadius: '18px',
+                border: '1px solid var(--border-color, rgba(0,0,0,0.08))',
+                display: 'flex',
+                gap: '12px',
+                flexWrap: 'wrap',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: '240px', position: 'relative' }}>
+                <Search size={16} color="var(--text-secondary)" style={{ position: 'absolute', left: '12px' }} />
+                <input
+                  type="text"
+                  placeholder="Rechercher par ID, utilisateur, type..."
+                  value={txSearch}
+                  onChange={(e) => setTxSearch(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px 10px 36px',
+                    borderRadius: '10px',
+                    border: '1px solid var(--border-color, rgba(0,0,0,0.1))',
+                    backgroundColor: darkMode ? '#12100E' : '#FAF8F5',
+                    color: 'inherit',
+                    fontSize: '13px',
+                    outline: 'none',
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>
+                {[
+                  { id: 'all', label: 'Toutes les transactions' },
+                  { id: 'disputed', label: `⚖️ Litiges (${stats.disputedTransactions})` },
+                  { id: 'deal', label: '🤝 Deals' },
+                  { id: 'admin_adjustment', label: '🪙 Ajustements Admin' },
+                  { id: 'refunded', label: '↩️ Remboursées' },
+                ].map((f) => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => setTxFilter(f.id)}
+                    style={{
+                      padding: '8px 14px',
+                      borderRadius: '10px',
+                      border: txFilter === f.id ? 'none' : '1px solid var(--border-color, rgba(0,0,0,0.08))',
+                      backgroundColor: txFilter === f.id ? (f.id === 'disputed' ? '#EF4444' : 'var(--accent-primary, #C67D5B)') : (darkMode ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.03)'),
+                      color: txFilter === f.id ? '#FFF' : 'inherit',
+                      fontSize: '12px',
+                      fontWeight: '700',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Tableau des transactions */}
+            <div
+              style={{
+                backgroundColor: darkMode ? '#1A1613' : '#FFFFFF',
+                borderRadius: '18px',
+                border: '1px solid var(--border-color, rgba(0,0,0,0.08))',
+                overflow: 'hidden',
+              }}
+            >
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                  <thead>
+                    <tr style={{ borderBottom: darkMode ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.06)', backgroundColor: darkMode ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.02)' }}>
+                      <th style={{ padding: '14px 18px', fontWeight: '800' }}>Date & ID</th>
+                      <th style={{ padding: '14px 18px', fontWeight: '800' }}>Type / Libellé</th>
+                      <th style={{ padding: '14px 18px', fontWeight: '800' }}>Utilisateur / Initiateur</th>
+                      <th style={{ padding: '14px 18px', fontWeight: '800' }}>Montant</th>
+                      <th style={{ padding: '14px 18px', fontWeight: '800' }}>Statut</th>
+                      <th style={{ padding: '14px 18px', fontWeight: '800', textAlign: 'right' }}>Actions God Mode</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {isLoadingTransactions ? (
+                      <tr>
+                        <td colSpan="6" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                          Chargement des transactions en direct...
+                        </td>
+                      </tr>
+                    ) : filteredTransactions.length === 0 ? (
+                      <tr>
+                        <td colSpan="6" style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                          Aucune transaction trouvée.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredTransactions.map((tx) => {
+                        const isDisputed = Boolean(tx.isDisputed || tx.status === 'disputed' || tx.status === 'litige');
+                        const isRefunded = tx.status === 'refunded';
+                        const dateStr = (() => {
+                          if (tx.createdAt?.toDate) return tx.createdAt.toDate().toLocaleDateString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+                          if (tx.timestamp?.toDate) return tx.timestamp.toDate().toLocaleDateString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+                          if (typeof tx.createdAt === 'string') return new Date(tx.createdAt).toLocaleDateString('fr-FR');
+                          return 'Récent';
+                        })();
+
+                        return (
+                          <tr
+                            key={tx.id}
+                            style={{
+                              borderBottom: darkMode ? '1px solid rgba(255,255,255,0.04)' : '1px solid rgba(0,0,0,0.04)',
+                              backgroundColor: isDisputed ? 'rgba(239,68,68,0.08)' : (isRefunded ? 'rgba(107,114,128,0.05)' : 'transparent'),
+                            }}
+                          >
+                            {/* Date & ID */}
+                            <td style={{ padding: '14px 18px' }}>
+                              <div style={{ fontWeight: '700', fontSize: '12px' }}>{dateStr}</div>
+                              <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>
+                                #{String(tx.id).slice(0, 10)}
+                              </div>
+                            </td>
+
+                            {/* Type & Libellé */}
+                            <td style={{ padding: '14px 18px' }}>
+                              <div style={{ fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span>{tx.label || tx.title || tx.type || 'Transaction'}</span>
+                                {isDisputed && (
+                                  <span style={{ fontSize: '10px', backgroundColor: '#EF4444', color: '#FFF', padding: '1px 6px', borderRadius: '4px', fontWeight: '900' }}>
+                                    LITIGE
+                                  </span>
+                                )}
+                              </div>
+                              <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                                Type : <code>{tx.type || 'standard'}</code>
+                              </div>
+                            </td>
+
+                            {/* Utilisateur */}
+                            <td style={{ padding: '14px 18px' }}>
+                              <div style={{ fontWeight: '700' }}>{tx.userName || tx.userId || 'Utilisateur'}</div>
+                              {tx.partnerName && (
+                                <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                                  → {tx.partnerName}
+                                </div>
+                              )}
+                            </td>
+
+                            {/* Montant */}
+                            <td style={{ padding: '14px 18px' }}>
+                              {(tx.deltaTokens !== undefined || tx.tokens !== undefined) && (
+                                <div style={{ fontWeight: '800', color: '#F59E0B' }}>
+                                  🪙 {tx.deltaTokens || tx.tokens || 0} Jetons
+                                </div>
+                              )}
+                              {(tx.deltaEuros !== undefined || tx.euros !== undefined || tx.amount !== undefined) && (
+                                <div style={{ fontSize: '11px', color: '#10B981', fontWeight: '700' }}>
+                                  € {Number(tx.deltaEuros || tx.euros || tx.amount || 0).toFixed(2)}
+                                </div>
+                              )}
+                            </td>
+
+                            {/* Statut */}
+                            <td style={{ padding: '14px 18px' }}>
+                              {isDisputed ? (
+                                <span style={{ color: '#EF4444', fontWeight: '800', fontSize: '11.5px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                  <AlertTriangle size={13} /> En Litige
+                                </span>
+                              ) : isRefunded ? (
+                                <span style={{ color: '#9CA3AF', fontWeight: '700', fontSize: '11.5px' }}>
+                                  ↩️ Remboursée
+                                </span>
+                              ) : (
+                                <span style={{ color: '#10B981', fontWeight: '800', fontSize: '11.5px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                  <Check size={13} /> Validée
+                                </span>
+                              )}
+                            </td>
+
+                            {/* Actions */}
+                            <td style={{ padding: '14px 18px', textAlign: 'right' }}>
+                              <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                                {isDisputed && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleResolveDispute(tx)}
+                                    className="premium-button"
+                                    style={{
+                                      padding: '6px 10px',
+                                      borderRadius: '8px',
+                                      border: 'none',
+                                      backgroundColor: '#10B981',
+                                      color: '#FFF',
+                                      fontSize: '11px',
+                                      fontWeight: '800',
+                                      cursor: 'pointer',
+                                    }}
+                                    title="Clôturer le litige et valider la transaction"
+                                  >
+                                    ⚖️ Résoudre
+                                  </button>
+                                )}
+
+                                {!isRefunded && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRefundTransaction(tx)}
+                                    className="premium-button"
+                                    style={{
+                                      padding: '6px 10px',
+                                      borderRadius: '8px',
+                                      border: '1px solid var(--border-color, rgba(0,0,0,0.1))',
+                                      backgroundColor: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                                      color: 'inherit',
+                                      fontSize: '11px',
+                                      fontWeight: '700',
+                                      cursor: 'pointer',
+                                    }}
+                                    title="Rembourser la transaction à l'utilisateur"
+                                  >
+                                    ↩️ Rembourser
+                                  </button>
+                                )}
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteTransaction(tx)}
+                                  className="premium-button"
+                                  style={{
+                                    padding: '6px 8px',
+                                    borderRadius: '8px',
+                                    border: 'none',
+                                    backgroundColor: 'rgba(239,68,68,0.15)',
+                                    color: '#EF4444',
+                                    fontSize: '11px',
+                                    cursor: 'pointer',
+                                  }}
+                                  title="Supprimer la transaction de Firestore"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ================= ONGLET 5 : TEXTES GLOBAUX (CMS) ================= */}
         {activeTab === 'cms' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', maxWidth: '1200px', margin: '0 auto' }}>
             <div
@@ -2134,6 +2742,279 @@ export default function AdminDashboard({
                 }}
               >
                 Appliquer la variation
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODALE ÉDITION UTILISATEUR ================= */}
+      {editingUser && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 1000001,
+            backgroundColor: 'rgba(0,0,0,0.7)',
+            backdropFilter: 'blur(10px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+          }}
+          onClick={() => setEditingUser(null)}
+        >
+          <div
+            style={{
+              backgroundColor: darkMode ? '#1A1613' : '#FFFFFF',
+              color: 'inherit',
+              borderRadius: '24px',
+              padding: '28px',
+              maxWidth: '560px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '900' }}>
+                ✏️ Éditer le profil de {editingUser.name || 'l\'utilisateur'}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setEditingUser(null)}
+                style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
+                  Nom complet
+                </label>
+                <input
+                  type="text"
+                  value={editingUser.name || ''}
+                  onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
+                  style={{
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    padding: '10px 12px',
+                    borderRadius: '10px',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: darkMode ? '#12100E' : '#FAF8F5',
+                    color: 'inherit',
+                    fontSize: '13.5px',
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
+                  Identifiant (@username)
+                </label>
+                <input
+                  type="text"
+                  value={editingUser.username || ''}
+                  onChange={(e) => setEditingUser({ ...editingUser, username: e.target.value })}
+                  style={{
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    padding: '10px 12px',
+                    borderRadius: '10px',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: darkMode ? '#12100E' : '#FAF8F5',
+                    color: 'inherit',
+                    fontSize: '13.5px',
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={editingUser.email || ''}
+                  onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
+                  style={{
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    padding: '10px 12px',
+                    borderRadius: '10px',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: darkMode ? '#12100E' : '#FAF8F5',
+                    color: 'inherit',
+                    fontSize: '13.5px',
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
+                  Localisation / Ville
+                </label>
+                <input
+                  type="text"
+                  value={editingUser.location || ''}
+                  onChange={(e) => setEditingUser({ ...editingUser, location: e.target.value })}
+                  style={{
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    padding: '10px 12px',
+                    borderRadius: '10px',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: darkMode ? '#12100E' : '#FAF8F5',
+                    color: 'inherit',
+                    fontSize: '13.5px',
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
+                  Bio & Description
+                </label>
+                <textarea
+                  rows="3"
+                  value={editingUser.bio || ''}
+                  onChange={(e) => setEditingUser({ ...editingUser, bio: e.target.value })}
+                  style={{
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    padding: '10px 12px',
+                    borderRadius: '10px',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: darkMode ? '#12100E' : '#FAF8F5',
+                    color: 'inherit',
+                    fontSize: '13.5px',
+                    fontFamily: 'inherit',
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
+                    🪙 Solde Jetons Troco
+                  </label>
+                  <input
+                    type="number"
+                    value={editingUser.trocoTokens ?? 0}
+                    onChange={(e) => setEditingUser({ ...editingUser, trocoTokens: Number(e.target.value) || 0 })}
+                    style={{
+                      width: '100%',
+                      boxSizing: 'border-box',
+                      padding: '10px 12px',
+                      borderRadius: '10px',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: darkMode ? '#12100E' : '#FAF8F5',
+                      color: 'inherit',
+                      fontSize: '13.5px',
+                      fontWeight: '800',
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: '800', display: 'block', marginBottom: '4px' }}>
+                    💶 Solde Euros (€)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    value={editingUser.euroBalance ?? 0}
+                    onChange={(e) => setEditingUser({ ...editingUser, euroBalance: Number(e.target.value) || 0 })}
+                    style={{
+                      width: '100%',
+                      boxSizing: 'border-box',
+                      padding: '10px 12px',
+                      borderRadius: '10px',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: darkMode ? '#12100E' : '#FAF8F5',
+                      color: 'inherit',
+                      fontSize: '13.5px',
+                      fontWeight: '800',
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Toggles Statuts */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '700' }}>
+                  <input
+                    type="checkbox"
+                    checked={Boolean(editingUser.isAdmin)}
+                    onChange={(e) => setEditingUser({ ...editingUser, isAdmin: e.target.checked })}
+                    style={{ width: '18px', height: '18px', accentColor: '#F59E0B' }}
+                  />
+                  <span>🛡️ Droits Administrateur Troco</span>
+                </label>
+
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '700' }}>
+                  <input
+                    type="checkbox"
+                    checked={Boolean(editingUser.kycVerified || editingUser.verified)}
+                    onChange={(e) => setEditingUser({ ...editingUser, kycVerified: e.target.checked, verified: e.target.checked })}
+                    style={{ width: '18px', height: '18px', accentColor: '#10B981' }}
+                  />
+                  <span>✅ Compte Certifié / KYC Vérifié</span>
+                </label>
+
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '700', color: '#EF4444' }}>
+                  <input
+                    type="checkbox"
+                    checked={Boolean(editingUser.isBanned)}
+                    onChange={(e) => setEditingUser({ ...editingUser, isBanned: e.target.checked })}
+                    style={{ width: '18px', height: '18px', accentColor: '#EF4444' }}
+                  />
+                  <span>⛔ Compte Banni du service</span>
+                </label>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '8px' }}>
+              <button
+                type="button"
+                onClick={() => setEditingUser(null)}
+                style={{
+                  padding: '10px 16px',
+                  borderRadius: '10px',
+                  border: '1px solid var(--border-color)',
+                  background: 'none',
+                  color: 'inherit',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                }}
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveUserEdit}
+                className="premium-button"
+                style={{
+                  padding: '10px 20px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                  color: '#FFF',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <Save size={16} /> Enregistrer les modifications
               </button>
             </div>
           </div>

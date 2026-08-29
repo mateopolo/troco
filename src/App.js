@@ -1138,6 +1138,16 @@ export default function App() {
   const [selectedLanguages, setSelectedLanguages] = useState(['FR', 'EN']);
   const [selectedPayment, setSelectedPayment] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+
+  // ---- DÉBOUNCE 300MS SUR LA RECHERCHE (Évite tout freeze du thread JS) ----
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
   const [postStep, setPostStep] = useState(1);
   const [publishMessage, setPublishMessage] = useState('');
 
@@ -1810,7 +1820,7 @@ export default function App() {
 
   const filteredListings = useMemo(() => {
     return listings.filter((item) => {
-      const rawQuery = searchQuery.trim();
+      const rawQuery = (debouncedSearchQuery || '').trim();
       const cleanQuery = removeAccents(rawQuery);
       const words = cleanQuery.split(/\s+/).filter(Boolean);
       const expandedWords = words.map(w => CITY_ALIASES[w] || w);
@@ -1925,7 +1935,7 @@ export default function App() {
     });
   }, [
     listings,
-    searchQuery,
+    debouncedSearchQuery,
     formatFilter,
     selectedCategory,
     selectedLanguages,
@@ -1937,6 +1947,27 @@ export default function App() {
   ]);
 
   const listingsGridRef = useRef(null);
+  const loadMoreSentinelRef = useRef(null);
+
+  // ---- INFINITE SCROLL AUTOMATIQUE VIA INTERSECTION OBSERVER ----
+  useEffect(() => {
+    if (!hasMoreListings || isLoadingMoreListings || activeTab !== 'feed') return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0] && entries[0].isIntersecting) {
+          handleLoadMoreListings();
+        }
+      },
+      { rootMargin: '350px 0px', threshold: 0.1 }
+    );
+
+    const target = loadMoreSentinelRef.current;
+    if (target) observer.observe(target);
+
+    return () => {
+      if (target) observer.unobserve(target);
+    };
+  }, [hasMoreListings, isLoadingMoreListings, activeTab, lastVisibleListingDoc]);
 
   const getListingDetail = (listing) => {
     const media = getSuggestedMedia(listing.title, listing.description || '', listing.image, listing.video);
@@ -3696,6 +3727,11 @@ export default function App() {
                       );
                     })}
                   </div>
+
+                  {/* SENTINELLE OBSERVER POUR AUTO INFINITE SCROLL */}
+                  {hasMoreListings && (
+                    <div ref={loadMoreSentinelRef} style={{ width: '100%', height: '24px', margin: '8px 0', pointerEvents: 'none' }} />
+                  )}
 
                   {/* BOUTON CHARGER PLUS D'ANNONCES (PAGINATED INFINITE SCROLL) */}
                   {hasMoreListings && (

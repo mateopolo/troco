@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Search, ChevronLeft, ChevronRight, MapPin, Video, Flame } from 'lucide-react';
 import FeedCardItem from '../../components/FeedCardItem';
 import SponsoredFeedCard from '../../components/SponsoredFeedCard';
@@ -56,6 +56,26 @@ export function FeedSection({
   isLoadingMore = false,
   onLoadMore = null,
 }) {
+  const sentinelRef = useRef(null);
+
+  useEffect(() => {
+    if (!hasMore || isLoadingMore || typeof onLoadMore !== 'function') return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0] && entries[0].isIntersecting) {
+          onLoadMore();
+        }
+      },
+      { rootMargin: '300px 0px', threshold: 0.1 }
+    );
+
+    const el = sentinelRef.current;
+    if (el) observer.observe(el);
+
+    return () => {
+      if (el) observer.unobserve(el);
+    };
+  }, [hasMore, isLoadingMore, onLoadMore]);
   return (
     <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-start', width: '100%' }}>
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -396,6 +416,11 @@ export function FeedSection({
               );
             })}
           </div>
+
+          {/* SENTINELLE OBSERVER POUR AUTO INFINITE SCROLL */}
+          {hasMore && (
+            <div ref={sentinelRef} style={{ width: '100%', height: '24px', margin: '4px 0', pointerEvents: 'none' }} />
+          )}
 
           {/* BOUTON CHARGEMENT INFINITE SCROLL */}
           {hasMore && (
