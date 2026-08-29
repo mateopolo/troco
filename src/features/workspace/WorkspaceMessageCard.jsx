@@ -1,21 +1,24 @@
 /**
- * WorkspaceMessageCard.jsx — Carte Interactive Workspace pour les messages de chat
- * Rendu visuel haut de gamme (Glassmorphism, Preview Canvas, Badge de Version V1/V2/V3).
- * Support tactile Apple HIG (44px min touch target, bypass Safari/Chrome Mobile).
+ * WorkspaceMessageCard.jsx — Carte Média Interactive Workspace pour les messages de chat
+ * Refonte Visuelle Phase 16 : Conteneur structuré façon WhatsApp/iMessage
+ * - Haut de la carte : Image previewUrl (object-fit: contain, fond sombre avec grille subtile)
+ * - Bas de la carte : Encart avec le nom du tableau + badge statut
+ * - Bouton compact : Icône <Palette size={16} /> et texte "Ouvrir" ou "Rejoindre"
+ * - Clic sur le composant global ou sur le bouton déclenche l'ouverture de la modale openWhiteboard(msg.boardId)
  */
 
 import React from 'react';
-import { Palette, FileText, Table, Sparkles, ArrowRight, Layers } from 'lucide-react';
+import { Palette, FileText, Table } from 'lucide-react';
 
 export default function WorkspaceMessageCard({
-  msg,
+  msg = {},
   isMine = false,
   isMobile = false,
   onOpenWorkspace,
   darkMode = false,
 }) {
   const wType = msg.workspaceType || 'whiteboard';
-  const versionNumber = Number(msg.version) || 1;
+  const versionNumber = Number(msg.version?.toString().replace(/\D/g, '')) || 1;
   const isNotes = wType === 'notes';
   const isDocs = wType === 'docs';
   const isSheets = wType === 'sheets';
@@ -30,22 +33,17 @@ export default function WorkspaceMessageCard({
         : 'var(--accent-primary, #C67D5B)';
 
   const typeIcon = isNotes ? (
-    <FileText size={18} />
+    <FileText size={16} />
   ) : isDocs ? (
-    <FileText size={18} />
+    <FileText size={16} />
   ) : isSheets ? (
-    <Table size={18} />
+    <Table size={16} />
   ) : (
-    <Palette size={18} />
+    <Palette size={16} />
   );
 
-  const typeLabel = isNotes
-    ? 'Notes Partagées'
-    : isDocs
-      ? 'Troco Doc'
-      : isSheets
-        ? 'Troco Sheet'
-        : 'Tableau Blanc';
+  const displayTitle = msg.workspaceTitle || msg.title || (isWhiteboard ? 'Tableau Blanc collaboratif' : isNotes ? 'Notes Partagées' : isDocs ? 'Troco Doc' : 'Troco Sheet');
+  const buttonLabel = isMine ? 'Ouvrir' : 'Rejoindre';
 
   const handleCardClick = (e) => {
     e?.preventDefault?.();
@@ -54,8 +52,8 @@ export default function WorkspaceMessageCard({
       onOpenWorkspace({
         type: wType,
         workspaceId: msg.workspaceId || msg.boardId,
-        boardId: msg.workspaceId || msg.boardId,
-        title: msg.workspaceTitle || typeLabel,
+        boardId: msg.boardId || msg.workspaceId,
+        title: displayTitle,
         version: versionNumber,
       });
     }
@@ -68,111 +66,61 @@ export default function WorkspaceMessageCard({
         flexDirection: 'column',
         alignItems: isMine ? 'flex-end' : 'flex-start',
         width: '100%',
-        margin: '10px 0',
+        margin: '6px 0',
         boxSizing: 'border-box',
       }}
     >
       <div
+        onClick={handleCardClick}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            handleCardClick(e);
+          }
+        }}
         style={{
-          width: isMobile ? '94%' : '78%',
-          maxWidth: '480px',
-          border: `1.5px solid ${accentColor}`,
-          borderRadius: '22px',
-          padding: isMobile ? '14px' : '18px',
-          backgroundColor: 'var(--bg-card, #FFFFFF)',
-          boxShadow: 'var(--shadow-card, 0 8px 30px rgba(0, 0, 0, 0.08))',
-          boxSizing: 'border-box',
-          position: 'relative',
+          width: '100%',
+          maxWidth: isMobile ? '290px' : '320px',
+          borderRadius: '16px',
           overflow: 'hidden',
-          transition: 'transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease',
+          backgroundColor: 'var(--bg-card, #FFFFFF)',
+          border: '1px solid var(--border-color, rgba(0, 0, 0, 0.08))',
+          boxShadow: '0 4px 18px rgba(0, 0, 0, 0.07)',
+          cursor: 'pointer',
+          transition: 'transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s ease',
+          boxSizing: 'border-box',
+          userSelect: 'none',
+          outline: 'none',
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.transform = 'translateY(-2px)';
+          e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.12)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.transform = 'none';
+          e.currentTarget.style.boxShadow = '0 4px 18px rgba(0, 0, 0, 0.07)';
         }}
       >
-        {/* EN-TÊTE DE LA CARTE AVEC BADGE DE VERSION */}
+        {/* HAUT DE LA CARTE : APERÇU MEDIA (OBJECT-FIT CONTAIN + FOND SOMBRE / GRILLE SUBTILE) */}
         <div
           style={{
+            width: '100%',
+            height: isMobile ? '145px' : '160px',
+            backgroundColor: darkMode ? '#12100E' : '#181513',
+            backgroundImage: 'radial-gradient(rgba(255, 255, 255, 0.12) 1px, transparent 1px)',
+            backgroundSize: '14px 14px',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: '12px',
-            gap: '8px',
+            justifyContent: 'center',
+            position: 'relative',
+            overflow: 'hidden',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
-            <div
-              style={{
-                width: '38px',
-                height: '38px',
-                borderRadius: '12px',
-                backgroundColor: `${accentColor}22`,
-                color: accentColor,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}
-            >
-              {typeIcon}
-            </div>
-            <div style={{ minWidth: 0 }}>
-              <div
-                style={{
-                  fontSize: '14px',
-                  fontWeight: '800',
-                  color: 'var(--text-main, #1F2937)',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                }}
-              >
-                {msg.workspaceTitle || typeLabel}
-              </div>
-              <div style={{ fontSize: '11px', color: 'var(--text-secondary, #6B7280)' }}>
-                Par {msg.senderName || (isMine ? 'Vous' : 'Collaborateur')}
-              </div>
-            </div>
-          </div>
-
-          {/* BADGE DE VERSION V1 / V2 / V3 */}
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '4px',
-              backgroundColor: `${accentColor}18`,
-              color: accentColor,
-              border: `1px solid ${accentColor}44`,
-              padding: '4px 10px',
-              borderRadius: '999px',
-              fontSize: '11.5px',
-              fontWeight: '900',
-              flexShrink: 0,
-            }}
-          >
-            <Layers size={12} />
-            <span>V{versionNumber}</span>
-          </div>
-        </div>
-
-        {/* APERÇU MINIATURE CANVAS (SI PRÉSENT) */}
-        {msg.previewUrl ? (
-          <div
-            style={{
-              width: '100%',
-              height: isMobile ? '140px' : '170px',
-              borderRadius: '14px',
-              overflow: 'hidden',
-              marginBottom: '12px',
-              border: '1px solid var(--border-color, rgba(0, 0, 0, 0.08))',
-              backgroundColor: darkMode ? '#181513' : '#F9F6F0',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              position: 'relative',
-            }}
-          >
+          {msg.previewUrl ? (
             <img
               src={msg.previewUrl}
-              alt="Aperçu Workspace"
+              alt={displayTitle}
               style={{
                 width: '100%',
                 height: '100%',
@@ -180,70 +128,134 @@ export default function WorkspaceMessageCard({
                 display: 'block',
               }}
             />
+          ) : (
             <div
               style={{
-                position: 'absolute',
-                bottom: '6px',
-                right: '8px',
-                backgroundColor: 'rgba(0, 0, 0, 0.65)',
-                backdropFilter: 'blur(6px)',
-                WebkitBackdropFilter: 'blur(6px)',
-                color: '#FFFFFF',
-                fontSize: '10px',
-                fontWeight: '700',
-                padding: '2px 8px',
-                borderRadius: '6px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                color: 'rgba(255, 255, 255, 0.45)',
               }}
             >
-              Aperçu V{versionNumber}
+              <div
+                style={{
+                  width: '44px',
+                  height: '44px',
+                  borderRadius: '12px',
+                  backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: accentColor,
+                }}
+              >
+                {typeIcon}
+              </div>
+              <span style={{ fontSize: '11px', fontWeight: '600', color: 'rgba(255, 255, 255, 0.6)' }}>
+                {displayTitle}
+              </span>
             </div>
-          </div>
-        ) : (
-          <p
+          )}
+
+          {/* BADGE DE VERSION DISCRET EN COIN SUPÉRIEUR */}
+          <div
             style={{
-              margin: '0 0 14px 0',
-              fontSize: '12px',
-              color: 'var(--text-secondary, #6B7280)',
-              lineHeight: 1.45,
+              position: 'absolute',
+              top: '8px',
+              right: '8px',
+              backgroundColor: 'rgba(0, 0, 0, 0.6)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+              color: '#FFFFFF',
+              fontSize: '10px',
+              fontWeight: '800',
+              padding: '3px 8px',
+              borderRadius: '999px',
+              border: '1px solid rgba(255, 255, 255, 0.15)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
             }}
           >
-            {isWhiteboard
-              ? 'Session de dessin et schémas vectoriels temps réel. Cliquez pour reprendre et enrichir la version actuelle.'
-              : 'Espace de travail collaboratif synchronisé. Cliquez pour rejoindre en direct.'}
-          </p>
-        )}
+            <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#10B981' }} />
+            <span>V{versionNumber}</span>
+          </div>
+        </div>
 
-        {/* BOUTON D'ACTION PRINCIPALE — APPLE HIG TOUCH TARGET (44px MIN) */}
-        <button
-          type="button"
-          onClick={handleCardClick}
-          onTouchEnd={handleCardClick}
-          className="premium-button"
+        {/* BAS DE LA CARTE : ENCART AVEC NOM DU TABLEAU + BOUTON COMPACT & ÉLÉGANT */}
+        <div
           style={{
-            width: '100%',
-            border: 'none',
-            borderRadius: '12px',
-            padding: '12px 16px',
-            minHeight: '44px',
-            background: `linear-gradient(135deg, ${accentColor} 0%, ${accentColor}dd 100%)`,
-            color: '#FFFFFF',
-            fontSize: '12.5px',
-            fontWeight: '800',
-            cursor: 'pointer',
+            padding: '10px 12px',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            boxShadow: 'var(--shadow-accent, 0 4px 14px rgba(198, 125, 91, 0.3))',
-            touchAction: 'manipulation',
-            WebkitTapHighlightColor: 'transparent',
+            justifyContent: 'space-between',
+            gap: '10px',
+            backgroundColor: 'var(--bg-card, #FFFFFF)',
           }}
         >
-          <Sparkles size={15} />
-          <span>Ouvrir & Éditer ({versionNumber > 1 ? `Reprendre V${versionNumber}` : 'Session Directe'})</span>
-          <ArrowRight size={14} />
-        </button>
+          {/* NOM DU TABLEAU ET AUTEUR */}
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div
+              style={{
+                fontSize: '13px',
+                fontWeight: '800',
+                color: 'var(--text-main, #1F2937)',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                lineHeight: 1.3,
+              }}
+              title={displayTitle}
+            >
+              {displayTitle}
+            </div>
+            <div
+              style={{
+                fontSize: '11px',
+                color: 'var(--text-secondary, #6B7280)',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                marginTop: '1px',
+              }}
+            >
+              {msg.senderName ? `Par ${msg.senderName}` : isMine ? 'Par Vous' : 'Tableau partagé'}
+            </div>
+          </div>
+
+          {/* LE BOUTON COMPACT AVEC ICÔNE PALETTE ET TEXTE "OUVRIR" / "REJOINDRE" */}
+          <button
+            type="button"
+            onClick={handleCardClick}
+            className="premium-button"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              padding: '8px 14px',
+              borderRadius: '10px',
+              border: 'none',
+              background: 'linear-gradient(135deg, var(--accent-primary, #C67D5B) 0%, var(--accent-primary-hover, #A8644A) 100%)',
+              color: '#FFFFFF',
+              fontSize: '12px',
+              fontWeight: '800',
+              cursor: 'pointer',
+              flexShrink: 0,
+              boxShadow: '0 2px 8px rgba(198, 125, 91, 0.28)',
+              touchAction: 'manipulation',
+              WebkitTapHighlightColor: 'transparent',
+              transition: 'transform 0.12s ease, opacity 0.12s ease',
+            }}
+          >
+            {typeIcon}
+            <span>{buttonLabel}</span>
+          </button>
+        </div>
       </div>
     </div>
   );
 }
+
