@@ -212,7 +212,7 @@ export const useChatManager = ({
     const myUsername = (profile?.username || '').trim();
     const myEmail = (profile?.email || auth?.currentUser?.email || '').trim();
 
-    // Tous les identifiants possibles de l'utilisateur
+    // Tous les identifiants possibles de l'utilisateur pour une récupération exhaustive
     const targetSet = new Set([
       myName,
       myName.toLowerCase(),
@@ -267,6 +267,7 @@ export const useChatManager = ({
       try { useChatStore.getState().setChatsList(merged); } catch (_) { }
     };
 
+    // Écoute des discussions par participants
     targets.forEach(targetVal => {
       try {
         const q = query(
@@ -315,15 +316,39 @@ export const useChatManager = ({
           updateMergedChats();
           isInitialLoad = false;
         }, (err) => {
-          console.warn('[Firestore] chats onSnapshot error for target:', targetVal, err);
+          console.error('🚨 [Firestore] chats onSnapshot error for target:', targetVal, err);
+          if (err?.message?.includes('index')) {
+            console.error('🔗 [Firebase Composite Index Required]:', err.message);
+          }
           updateMergedChats();
         });
 
         unsubs.push(unsub);
       } catch (err) {
-        console.warn('[Firestore] query setup error:', err);
+        console.error('[Firestore] query setup error:', err);
       }
     });
+
+    // Écoute additionnelle par participantUids si myUid est présent
+    if (myUid) {
+      try {
+        const qUids = query(
+          collection(db, 'chats'),
+          where('participantUids', 'array-contains', myUid)
+        );
+
+        const unsubUids = onSnapshot(qUids, (snapshot) => {
+          snapshot.docs.forEach(docSnap => {
+            allDocsMap.set(docSnap.id, docSnap.data());
+          });
+          updateMergedChats();
+        }, (err) => {
+          console.error('🚨 [Firestore] chats onSnapshot error for participantUids:', err);
+        });
+
+        unsubs.push(unsubUids);
+      } catch (_) {}
+    }
 
     return () => {
       unsubs.forEach(u => { try { u(); } catch (_) { } });
@@ -663,14 +688,20 @@ export const useChatManager = ({
 
     const conversationId = buildConversationId(listing.id, profile?.name, listing.author);
 
+    const myUid = profile?.uid || auth?.currentUser?.uid || null;
+    const authorUid = listing.authorUid || listing.userId || null;
+
     const conversation = {
       id: conversationId,
       user: listing.author,
+      authorUid: authorUid,
+      partnerUid: authorUid,
       listing: listing.title,
       lastMessage: `Début de discussion pour ${listing.title}`,
       status: 'Nouvelle discussion',
       terms: listing.compensation || '',
-      participants: [profile?.name, listing.author],
+      participants: [profile?.name, listing.author, myUid, authorUid].filter(Boolean),
+      participantUids: [myUid, authorUid].filter(Boolean),
     };
 
     setSelectedChat(conversation);
@@ -685,15 +716,18 @@ export const useChatManager = ({
         await setDoc(doc(db, 'chats', String(conversationId)), {
           id: conversationId,
           user: listing.author,
+          authorUid: authorUid,
+          partnerUid: authorUid,
           listing: listing.title,
           lastMessage: `Début de discussion pour ${listing.title}`,
           status: 'Nouvelle discussion',
           terms: listing.compensation || '',
-          participants: [profile?.name, listing.author],
+          participants: [profile?.name, listing.author, myUid, authorUid].filter(Boolean),
+          participantUids: [myUid, authorUid].filter(Boolean),
           updatedAt: serverTimestamp(),
         }, { merge: true });
       } catch (e) {
-        console.warn('[Firestore] start discussion failed:', e);
+        console.error('[Firestore] start discussion failed:', e);
       }
     }
 

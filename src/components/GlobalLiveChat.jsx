@@ -103,56 +103,71 @@ export default function GlobalLiveChat({
     setHasNewMessagesBelow(false);
   };
 
-  // Écoute en temps réel des messages dans Firestore
+  // Écoute en temps réel des messages dans Firestore avec fallback robuste
   useEffect(() => {
     if (!db) return;
 
-    try {
-      const q = query(
-        collection(db, 'global_chat'),
-        orderBy('createdAt', 'desc'),
-        limit(60)
-      );
+    let unsubscribe = () => {};
 
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        if (!snapshot.empty) {
-          const fetched = [];
-          snapshot.forEach((docSnap) => {
-            const data = docSnap.data();
-            fetched.push({
-              id: docSnap.id,
-              author: data.author || 'Membre Troco',
-              authorUsername: data.authorUsername || '@membre',
-              avatar: data.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
-              text: data.text || '',
-              badge: data.badge || (data.verified ? 'VÉRIFIÉ' : 'MEMBRE'),
-              isUrgent: !!data.isUrgent,
-              isEditedByAdmin: !!data.isEditedByAdmin,
-              timestamp: data.timestamp?.toMillis ? data.timestamp.toMillis() : (data.createdAt || Date.now()),
+    const setupListener = (useOrderBy = true) => {
+      try {
+        const q = useOrderBy
+          ? query(collection(db, 'global_chat'), orderBy('createdAt', 'desc'), limit(60))
+          : query(collection(db, 'global_chat'), limit(60));
+
+        return onSnapshot(q, (snapshot) => {
+          if (!snapshot.empty) {
+            const fetched = [];
+            snapshot.forEach((docSnap) => {
+              const data = docSnap.data();
+              fetched.push({
+                id: docSnap.id,
+                author: data.author || 'Membre Troco',
+                authorUsername: data.authorUsername || '@membre',
+                avatar: data.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+                text: data.text || '',
+                badge: data.badge || (data.verified ? 'VÉRIFIÉ' : 'MEMBRE'),
+                isUrgent: !!data.isUrgent,
+                isEditedByAdmin: !!data.isEditedByAdmin,
+                timestamp: data.timestamp?.toMillis ? data.timestamp.toMillis() : (data.createdAt || Date.now()),
+              });
             });
-          });
-          fetched.reverse();
 
-          if (fetched.length < 3) {
-            const existingIds = new Set(fetched.map(m => m.id));
-            const baseList = INITIAL_GLOBAL_MESSAGES.filter(m => !existingIds.has(m.id));
-            setMessages([...baseList, ...fetched]);
-          } else {
-            setMessages(fetched);
+            // Tri chronologique ascendant
+            fetched.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+
+            if (fetched.length < 3) {
+              const existingIds = new Set(fetched.map(m => m.id));
+              const baseList = INITIAL_GLOBAL_MESSAGES.filter(m => !existingIds.has(m.id));
+              setMessages([...baseList, ...fetched]);
+            } else {
+              setMessages(fetched);
+            }
+
+            if (isAutoScrollEnabled) {
+              setTimeout(() => scrollToBottom('smooth'), 50);
+            } else {
+              setHasNewMessagesBelow(true);
+            }
           }
-
-          if (isAutoScrollEnabled) {
-            setTimeout(() => scrollToBottom('smooth'), 50);
-          } else {
-            setHasNewMessagesBelow(true);
+        }, (err) => {
+          console.error('🚨 [GlobalChat] Firestore listener error:', err);
+          if (err?.message?.includes('index')) {
+            console.error('🔗 [Firebase Composite Index Link]:', err.message);
           }
-        }
-      }, (err) => {
-        console.warn('[GlobalChat] Firestore listener notice:', err);
-      });
+          if (useOrderBy) {
+            console.warn('[GlobalChat] Essai de la requête de repli sans orderBy...');
+            unsubscribe = setupListener(false);
+          }
+        });
+      } catch (err) {
+        console.error('[GlobalChat] Erreur configuration écouteur:', err);
+        return () => {};
+      }
+    };
 
-      return () => unsubscribe();
-    } catch (_) {}
+    unsubscribe = setupListener(true);
+    return () => unsubscribe();
   }, [isAutoScrollEnabled]);
 
   // Détection du défilement manuel

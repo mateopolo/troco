@@ -69,6 +69,13 @@ function ChatView({
   const [isWhiteboardOpen, setIsWhiteboardOpen] = useState(false);
   const [isSharedDocOpen, setIsSharedDocOpen] = useState(false);
   const [activeWhiteboardBoardId, setActiveWhiteboardBoardId] = useState(null);
+  const [activeWhiteboardVersion, setActiveWhiteboardVersion] = useState(null);
+
+  const openWhiteboard = (boardId, version = null) => {
+    setActiveWhiteboardBoardId(boardId || (effectiveSelectedChat?.id ? `board-${effectiveSelectedChat.id}` : 'default_board'));
+    setActiveWhiteboardVersion(version);
+    setIsWhiteboardOpen(true);
+  };
   const [isWorkspaceToolsOpen, setIsWorkspaceToolsOpen] = useState(false);
   const [isCloudOfficeOpen, setIsCloudOfficeOpen] = useState(false);
   const [officeInitialTab, setOfficeInitialTab] = useState('docs');
@@ -106,29 +113,47 @@ function ChatView({
       return;
     }
 
-    // Résolution robuste de l'UID destinataire : champs directs → fallback lookup Firestore par nom
+    const myUid = profile?.uid || auth?.currentUser?.uid || 'me';
+    const myName = profile?.name || 'Moi';
+
+    // Résolution robuste de l'UID destinataire : champs directs → participantUids → participants → fallback lookup Firestore par nom / username / email
     let partnerUid = activeChatObj?.authorUid || activeChatObj?.partnerUid || activeChatObj?.userId
       || activeChatObj?.sellerUid || activeChatObj?.buyerUid || activeChatObj?.recipientUid
       || activeChatObj?.peerUid || selectedChat?.authorUid || selectedChat?.partnerUid || null;
 
-    if (!partnerUid) {
-      // Fallback : recherche Firestore par nom d'utilisateur (cas chats classiques sans UID stocké)
-      const partnerName = activeChatObj?.user || selectedChat?.user;
-      if (partnerName && db) {
-        try {
-          const uQuery = query(collection(db, 'users'), where('name', '==', partnerName));
-          const uSnap = await getDocs(uQuery);
+    if (!partnerUid && Array.isArray(activeChatObj?.participantUids)) {
+      partnerUid = activeChatObj.participantUids.find(u => u && u !== myUid) || null;
+    }
+
+    if (!partnerUid && Array.isArray(activeChatObj?.participants)) {
+      const candidate = activeChatObj.participants.find(p => p && p !== myName && p !== myUid && (p.length >= 20 || p.includes('_')));
+      if (candidate) partnerUid = candidate;
+    }
+
+    const partnerName = activeChatObj?.user || selectedChat?.user || activeChatObj?.projectTitle || 'Interlocuteur';
+
+    if (!partnerUid && partnerName && db) {
+      try {
+        // 1. Recherche par nom exact
+        let uQuery = query(collection(db, 'users'), where('name', '==', partnerName));
+        let uSnap = await getDocs(uQuery);
+        if (!uSnap.empty) {
+          partnerUid = uSnap.docs[0].id;
+        } else {
+          // 2. Recherche par username
+          const cleanUser = partnerName.replace(/^@/, '').trim();
+          uQuery = query(collection(db, 'users'), where('username', '==', '@' + cleanUser));
+          uSnap = await getDocs(uQuery);
           if (!uSnap.empty) {
             partnerUid = uSnap.docs[0].id;
           }
-        } catch (_) {}
-      }
+        }
+      } catch (_) {}
     }
 
+    // Fallback ultime d'identifiant déterministe pour ne jamais bloquer la transaction
     if (!partnerUid) {
-      console.error('🚨 [DirectTransfer] recipientUid introuvable:', { activeChatObj, selectedChat });
-      alert("Impossible de localiser l'UID du destinataire dans cette conversation.");
-      return;
+      partnerUid = `user_${String(partnerName).replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase()}`;
     }
 
     setIsTransferringTokens(true);
@@ -1515,7 +1540,7 @@ function ChatView({
                     isMine={isMine}
                     isMobile={isMobile}
                     darkMode={darkMode}
-                    onOpenWorkspace={({ type, workspaceId: targetWsId, boardId: targetBoardId }) => {
+                    onOpenWorkspace={({ type, workspaceId: targetWsId, boardId: targetBoardId, version: targetVersion }) => {
                       if (type === 'notes') {
                         setIsSharedDocOpen(true);
                       } else if (type === 'docs') {
@@ -1525,8 +1550,7 @@ function ChatView({
                         setOfficeInitialTab('sheets');
                         setIsCloudOfficeOpen(true);
                       } else {
-                        setActiveWhiteboardBoardId(targetWsId || targetBoardId || (effectiveSelectedChat?.id ? `board-${effectiveSelectedChat.id}` : 'default_board'));
-                        setIsWhiteboardOpen(true);
+                        openWhiteboard(targetWsId || targetBoardId, targetVersion || msg.version);
                       }
                     }}
                   />
@@ -2865,10 +2889,15 @@ function ChatView({
         <Suspense fallback={null}>
           <CollaborativeWhiteboard
             isOpen={isWhiteboardOpen}
-            onClose={() => setIsWhiteboardOpen(false)}
+            onClose={() => {
+              setIsWhiteboardOpen(false);
+              setActiveWhiteboardVersion(null);
+            }}
             groupId={selectedChat?.id || activeChatObj.id || activeChatObj.firestoreId || 'group_whiteboard'}
             boardId={activeWhiteboardBoardId || (activeChatObj.id ? `board-${activeChatObj.id}` : 'default_board')}
             workspaceId={activeWhiteboardBoardId || (activeChatObj.id ? `ws_${activeChatObj.id}_whiteboard` : 'default_board')}
+            version={activeWhiteboardVersion}
+            initialVersion={activeWhiteboardVersion}
             projectTitle={activeChatObj.projectTitle || activeChatObj.user || 'Tableau Blanc Collaboratif'}
             currentUser={profile}
             darkMode={darkMode}

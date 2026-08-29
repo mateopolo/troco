@@ -16,9 +16,9 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  X, Pen, Highlighter, Eraser, Square, Circle, ArrowRight,
+  X, Pen, Highlighter, Eraser, Square, Circle, ArrowRight, ArrowLeft,
   RotateCcw, RotateCw, Trash2, StickyNote,
-  Type, Hand, Brush, Share2, Check, Eye, EyeOff,
+  Type, Hand, Brush, Share2, Check, Eye, EyeOff, Maximize2,
   Pipette, ZoomIn, ZoomOut, Sparkles, Layers,
   ChevronRight, Download, Move
 } from 'lucide-react';
@@ -27,6 +27,7 @@ import { db } from '../firebase';
 import { whiteboardP2PService } from '../services/whiteboardP2PService';
 import {
   saveWorkspaceVersion,
+  loadWorkspaceData,
   WORKSPACE_TYPES,
 } from '../features/workspace/workspaceService';
 
@@ -63,6 +64,8 @@ export default function CollaborativeWhiteboardModal({
   groupId = 'default_chat',
   boardId = null,
   workspaceId = null,
+  version = null,
+  initialVersion = null,
   projectTitle = 'Tableau Blanc Collaboratif',
   currentUser = null,
   darkMode = false,
@@ -94,11 +97,12 @@ export default function CollaborativeWhiteboardModal({
   const [textElements, setTextElements] = useState([]);
   const [currentPath, setCurrentPath] = useState(null);
 
-  // 4. Moteur d'historique Undo / Redo
+  // 4. Moteur d'historique Undo / Redo avec ref pour synchronisation immédiate
   const [history, setHistory] = useState([
     { localPaths: [], stickyNotes: [], textElements: [] }
   ]);
   const [historyIndex, setHistoryIndex] = useState(0);
+  const historyIndexRef = useRef(0);
 
   // 5. Caméra infinie (Viewport Pan & Zoom)
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -125,6 +129,7 @@ export default function CollaborativeWhiteboardModal({
   const isPanningRef = useRef(false);
   const startPosRef = useRef({ x: 0, y: 0 });
   const panStartRef = useRef({ x: 0, y: 0, origPanX: 0, origPanY: 0 });
+  const touchStateRef = useRef({ distance: 0, midX: 0, midY: 0, origPanX: 0, origPanY: 0, origZoom: 1 });
   const draggingStickyRef = useRef(null);
   const resizingTextRef = useRef(null);
   const firestoreDebounceTimerRef = useRef(null);
@@ -157,49 +162,82 @@ export default function CollaborativeWhiteboardModal({
     return { x: worldX, y: worldY, screenX, screenY };
   }, [pan.x, pan.y, zoom]);
 
-  // ================= 2. MOTEUR D'HISTORIQUE LOCAL (Undo / Redo) =================
+  // ================= 2. MOTEUR D'HISTORIQUE LOCAL (Undo / Redo Fiable) =================
   const pushToHistory = useCallback((newLocalPaths, newStickies, newTexts) => {
     setHistory((prevHistory) => {
-      const nextHistory = prevHistory.slice(0, historyIndex + 1);
+      const curIdx = historyIndexRef.current;
+      const nextHistory = prevHistory.slice(0, curIdx + 1);
       const snapshot = {
         localPaths: [...newLocalPaths],
         stickyNotes: [...newStickies],
         textElements: [...newTexts],
       };
       const updated = [...nextHistory, snapshot];
-      if (updated.length > 45) updated.shift(); // Limite à 45 états
+      if (updated.length > 50) updated.shift();
+      const newIdx = updated.length - 1;
+      historyIndexRef.current = newIdx;
+      setHistoryIndex(newIdx);
       return updated;
     });
-    setHistoryIndex((prevIndex) => Math.min(prevIndex + 1, 44));
-  }, [historyIndex]);
+  }, []);
 
   const handleUndo = useCallback(() => {
-    if (historyIndex > 0) {
-      const targetIndex = historyIndex - 1;
-      const targetState = history[targetIndex];
-      if (targetState) {
-        lastLocalModificationTimeRef.current = Date.now();
-        setLocalPaths(targetState.localPaths || []);
-        setStickyNotes(targetState.stickyNotes || []);
-        setTextElements(targetState.textElements || []);
-        setHistoryIndex(targetIndex);
+    setHistory((prevHistory) => {
+      const curIdx = historyIndexRef.current;
+      if (curIdx > 0) {
+        const targetIndex = curIdx - 1;
+        const targetState = prevHistory[targetIndex];
+        if (targetState) {
+          lastLocalModificationTimeRef.current = Date.now();
+          setLocalPaths(targetState.localPaths || []);
+          setStickyNotes(targetState.stickyNotes || []);
+          setTextElements(targetState.textElements || []);
+          historyIndexRef.current = targetIndex;
+          setHistoryIndex(targetIndex);
+        }
       }
-    }
-  }, [historyIndex, history]);
+      return prevHistory;
+    });
+  }, []);
 
   const handleRedo = useCallback(() => {
-    if (historyIndex < history.length - 1) {
-      const targetIndex = historyIndex + 1;
-      const targetState = history[targetIndex];
-      if (targetState) {
-        lastLocalModificationTimeRef.current = Date.now();
-        setLocalPaths(targetState.localPaths || []);
-        setStickyNotes(targetState.stickyNotes || []);
-        setTextElements(targetState.textElements || []);
-        setHistoryIndex(targetIndex);
+    setHistory((prevHistory) => {
+      const curIdx = historyIndexRef.current;
+      if (curIdx < prevHistory.length - 1) {
+        const targetIndex = curIdx + 1;
+        const targetState = prevHistory[targetIndex];
+        if (targetState) {
+          lastLocalModificationTimeRef.current = Date.now();
+          setLocalPaths(targetState.localPaths || []);
+          setStickyNotes(targetState.stickyNotes || []);
+          setTextElements(targetState.textElements || []);
+          historyIndexRef.current = targetIndex;
+          setHistoryIndex(targetIndex);
+        }
       }
-    }
-  }, [historyIndex, history]);
+      return prevHistory;
+    });
+  }, []);
+
+  // Gestion du zoom à la molette de la souris centré sur le curseur
+  const handleWheel = useCallback((e) => {
+    e.preventDefault();
+    const zoomFactor = e.deltaY < 0 ? 1.12 : 0.88;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    setZoom((prevZoom) => {
+      const newZoom = Math.min(Math.max(prevZoom * zoomFactor, 0.25), 4.0);
+      setPan((prevPan) => ({
+        x: mouseX - ((mouseX - prevPan.x) / prevZoom) * newZoom,
+        y: mouseY - ((mouseY - prevPan.y) / prevZoom) * newZoom,
+      }));
+      return newZoom;
+    });
+  }, []);
 
   // Raccourcis clavier (Ctrl+Z, Ctrl+Y, Cmd+Z, Cmd+Shift+Z)
   useEffect(() => {
@@ -498,6 +536,34 @@ export default function CollaborativeWhiteboardModal({
       whiteboardP2PService.leaveRoom();
     };
   }, [isOpen, effectiveId, myUid, editingTextId]);
+
+  // Chargement initial des données de la version ou session sélectionnée
+  useEffect(() => {
+    if (!isOpen || !effectiveId) return;
+
+    const loadInitialState = async () => {
+      try {
+        const loaded = await loadWorkspaceData(effectiveId);
+        if (loaded && loaded.data) {
+          const loadedPaths = Array.isArray(loaded.data.paths) ? loaded.data.paths : [];
+          const loadedStickies = Array.isArray(loaded.data.stickyNotes) ? loaded.data.stickyNotes : [];
+          const loadedTexts = Array.isArray(loaded.data.textElements) ? loaded.data.textElements : [];
+
+          setLocalPaths(loadedPaths);
+          setStickyNotes(loadedStickies);
+          setTextElements(loadedTexts);
+          if (loaded.version) setVersionNumber(Number(loaded.version) || 1);
+          if (loaded.title) setWorkspaceTitle(loaded.title);
+
+          pushToHistory(loadedPaths, loadedStickies, loadedTexts);
+        }
+      } catch (err) {
+        console.warn('[CollaborativeWhiteboard] Initial load failed:', err);
+      }
+    };
+
+    loadInitialState();
+  }, [isOpen, effectiveId, version, initialVersion, pushToHistory]);
 
   // ================= 1. GESTION DES COULEURS & PIPETTE =================
   const handleOpenEyeDropper = async () => {
@@ -952,12 +1018,43 @@ export default function CollaborativeWhiteboardModal({
         pointerEvents: 'auto',
       }}
     >
+      {/* BOUTON RETOUR AU CHAT ULTRA-VISIBLE EN HAUT À GAUCHE */}
+      <button
+        type="button"
+        onClick={onClose}
+        className="premium-button"
+        style={{
+          position: 'absolute',
+          top: '12px',
+          left: '14px',
+          zIndex: 1000002,
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          padding: '8px 16px',
+          borderRadius: '999px',
+          border: darkMode ? '1px solid rgba(255,255,255,0.18)' : '1px solid rgba(0,0,0,0.12)',
+          backgroundColor: darkMode ? 'rgba(26,22,19,0.92)' : 'rgba(255,255,255,0.92)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          color: 'inherit',
+          fontSize: '12.5px',
+          fontWeight: '800',
+          cursor: 'pointer',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
+        }}
+        title="Fermer le tableau blanc et revenir au chat"
+      >
+        <ArrowLeft size={16} />
+        <span>Retour au chat</span>
+      </button>
+
       {/* 1. EN-TÊTE PRINCIPAL (Masqué en mode immersion) */}
       {!isImmersiveMode && (
         <header
           style={{
             height: '60px',
-            padding: '0 20px',
+            padding: '0 20px 0 160px',
             borderBottom: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
             backgroundColor: darkMode ? 'rgba(21,18,15,0.85)' : 'rgba(255,255,255,0.85)',
             backdropFilter: 'blur(16px)',
@@ -1162,6 +1259,7 @@ export default function CollaborativeWhiteboardModal({
 
       {/* 2. ZONE DE DESSIN CANVAS 100% PLEIN ÉCRAN */}
       <div
+        ref={containerRef}
         style={{
           flex: 1,
           position: 'relative',
@@ -1176,11 +1274,60 @@ export default function CollaborativeWhiteboardModal({
             : 'none',
           backgroundSize: `${24 * zoom}px ${24 * zoom}px`,
           backgroundPosition: `${pan.x}px ${pan.y}px`,
+          touchAction: 'none',
         }}
+        onWheel={handleWheel}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onPointerCancel={handlePointerUp}
+        onTouchStart={(e) => {
+          if (e.touches.length === 2) {
+            const t1 = e.touches[0];
+            const t2 = e.touches[1];
+            const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+            const midX = (t1.clientX + t2.clientX) / 2;
+            const midY = (t1.clientY + t2.clientY) / 2;
+            touchStateRef.current = {
+              distance: dist,
+              midX,
+              midY,
+              origPanX: pan.x,
+              origPanY: pan.y,
+              origZoom: zoom,
+            };
+            isDrawingRef.current = false;
+            setCurrentPath(null);
+          }
+        }}
+        onTouchMove={(e) => {
+          if (e.touches.length === 2) {
+            e.preventDefault();
+            const t1 = e.touches[0];
+            const t2 = e.touches[1];
+            const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+            const midX = (t1.clientX + t2.clientX) / 2;
+            const midY = (t1.clientY + t2.clientY) / 2;
+
+            const { distance: initDist, midX: initMidX, midY: initMidY, origPanX, origPanY, origZoom } = touchStateRef.current;
+            if (initDist > 0) {
+              const scaleRatio = dist / initDist;
+              const newZoom = Math.min(Math.max(origZoom * scaleRatio, 0.25), 4.0);
+              const dx = midX - initMidX;
+              const dy = midY - initMidY;
+              setZoom(newZoom);
+              setPan({
+                x: origPanX + dx,
+                y: origPanY + dy,
+              });
+            }
+          }
+        }}
+        onTouchEnd={(e) => {
+          if (e.touches.length < 2) {
+            touchStateRef.current.distance = 0;
+          }
+        }}
       >
         <canvas
           ref={canvasRef}
@@ -1190,6 +1337,7 @@ export default function CollaborativeWhiteboardModal({
             width: '100%',
             height: '100%',
             cursor: tool === 'hand' ? 'grab' : tool === 'eraser' ? 'cell' : 'crosshair',
+            touchAction: 'none',
           }}
         />
 
@@ -1492,45 +1640,56 @@ export default function CollaborativeWhiteboardModal({
 
           <div style={{ width: '1px', height: '24px', backgroundColor: 'var(--border-color, rgba(0,0,0,0.1))', margin: '0 4px', flexShrink: 0 }} />
 
-          {/* PALETTE DE COULEURS INFINIES (Couleurs + Pipette + Input Color Natif) */}
+          {/* PALETTE DE COULEURS INFINIES (Chips + Sélecteur Spectre Complet) */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
-            {CURATED_PALETTE.slice(0, 6).map((c) => (
+            {CURATED_PALETTE.slice(0, 5).map((c) => (
               <button
                 key={c.id}
                 type="button"
                 onClick={() => setColor(c.hex)}
                 style={{
-                  width: '26px',
-                  height: '26px',
+                  width: '24px',
+                  height: '24px',
                   borderRadius: '50%',
                   backgroundColor: c.hex,
                   border: color === c.hex ? '3px solid #C67D5B' : '2px solid rgba(0,0,0,0.1)',
                   cursor: 'pointer',
                   boxShadow: color === c.hex ? '0 0 10px rgba(198,125,91,0.5)' : 'none',
+                  flexShrink: 0,
                 }}
                 title={c.name}
               />
             ))}
 
-            {/* Bouton Pipette & Sélecteur Natif Hexadécimal */}
-            <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-              <button
-                type="button"
-                onClick={handleOpenEyeDropper}
+            {/* Sélecteur de Couleur Spectre Complet (Natif HTML5 Input Color dans un label stylisé) */}
+            <label
+              style={{
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '4px 8px',
+                borderRadius: '999px',
+                border: darkMode ? '1.5px solid rgba(255,255,255,0.15)' : '1.5px solid rgba(0,0,0,0.15)',
+                backgroundColor: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                cursor: 'pointer',
+                flexShrink: 0,
+              }}
+              title="Ouvrir le spectre de couleurs complet"
+            >
+              <div
                 style={{
-                  width: '28px',
-                  height: '28px',
+                  width: '18px',
+                  height: '18px',
                   borderRadius: '50%',
-                  border: '1.5px solid var(--border-color)',
-                  background: 'conic-gradient(from 0deg, red, yellow, green, cyan, blue, magenta, red)',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+                  backgroundColor: color,
+                  border: '1.5px solid #FFF',
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.25)',
                 }}
-                title="Choisir n'importe quelle couleur (Pipette / Hex)"
               />
+              <span style={{ fontSize: '11px', fontWeight: '800', fontFamily: 'monospace', color: 'inherit' }}>
+                {color.toUpperCase()}
+              </span>
               <input
                 ref={colorInputRef}
                 type="color"
@@ -1539,12 +1698,14 @@ export default function CollaborativeWhiteboardModal({
                 style={{
                   position: 'absolute',
                   opacity: 0,
-                  pointerEvents: 'none',
-                  width: 0,
-                  height: 0,
+                  width: '100%',
+                  height: '100%',
+                  top: 0,
+                  left: 0,
+                  cursor: 'pointer',
                 }}
               />
-            </div>
+            </label>
           </div>
 
           <div style={{ width: '1px', height: '24px', backgroundColor: 'var(--border-color, rgba(0,0,0,0.1))', margin: '0 4px', flexShrink: 0 }} />
@@ -1584,7 +1745,7 @@ export default function CollaborativeWhiteboardModal({
 
           <div style={{ width: '1px', height: '24px', backgroundColor: 'var(--border-color, rgba(0,0,0,0.1))', margin: '0 4px', flexShrink: 0 }} />
 
-          {/* BOUTONS UNDO / REDO & EFFACER */}
+          {/* BOUTONS UNDO / REDO, EFFACER & MODE IMMERSION INTÉGRÉ */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
             <button
               type="button"
@@ -1656,6 +1817,28 @@ export default function CollaborativeWhiteboardModal({
               title="Tout effacer"
             >
               <Trash2 size={16} />
+            </button>
+
+            {/* Mode Plein Écran / Immersion intégré dans la barre */}
+            <button
+              type="button"
+              onClick={() => setIsImmersiveMode(!isImmersiveMode)}
+              style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '10px',
+                border: 'none',
+                backgroundColor: isImmersiveMode ? 'var(--accent-primary, #C67D5B)' : darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                color: isImmersiveMode ? '#FFFFFF' : 'inherit',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                flexShrink: 0,
+              }}
+              title={isImmersiveMode ? 'Quitter le mode plein écran' : 'Mode Plein Écran / Immersion'}
+            >
+              {isImmersiveMode ? <Eye size={16} /> : <Maximize2 size={16} />}
             </button>
           </div>
         </div>

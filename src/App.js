@@ -721,11 +721,30 @@ export default function App() {
               return;
             }
 
-            setProfile(prev => ({
-              ...prev,
-              ...data,
-              uid: uid,
-            }));
+            setProfile(prev => {
+              if (prev && prev.trocoTokens !== undefined && data.trocoTokens > prev.trocoTokens) {
+                const gained = Number(data.trocoTokens) - Number(prev.trocoTokens);
+                playBetclicBalanceSound();
+                setTopUpCelebration({
+                  title: `+${gained} Jeton${gained > 1 ? 's' : ''} Troco reçus ! 🪙`,
+                  subtitle: `Nouveau solde : ${data.trocoTokens} Jetons Troco`,
+                });
+                setTimeout(() => setTopUpCelebration(null), 4500);
+              } else if (prev && prev.euroBalance !== undefined && data.euroBalance > prev.euroBalance) {
+                const gained = (Number(data.euroBalance) - Number(prev.euroBalance)).toFixed(2);
+                playApplePaySound();
+                setTopUpCelebration({
+                  title: `+${gained} € reçus sur votre solde ! 💳`,
+                  subtitle: `Nouveau solde : ${Number(data.euroBalance).toFixed(2)} €`,
+                });
+                setTimeout(() => setTopUpCelebration(null), 4500);
+              }
+              return {
+                ...prev,
+                ...data,
+                uid: uid,
+              };
+            });
             if (Array.isArray(data.skills)) setSkills(data.skills);
             if (Array.isArray(data.equipment)) setEquipment(data.equipment);
           } else {

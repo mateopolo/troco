@@ -87,12 +87,12 @@ export const deleteListing = async (listingId) => {
 /**
  * Écoute les discussions de l'utilisateur connecté
  */
-export const subscribeToUserChats = (userName, onUpdate, onError) => {
-  if (!userName || typeof userName !== 'string') return () => {};
+export const subscribeToUserChats = (userNameOrUid, onUpdate, onError) => {
+  if (!userNameOrUid || typeof userNameOrUid !== 'string') return () => {};
   try {
     const q = query(
       collection(db, 'chats'),
-      where('participants', 'array-contains', userName.trim())
+      where('participants', 'array-contains', userNameOrUid.trim())
     );
     return onSnapshot(q, (snapshot) => {
       const chats = snapshot.docs.map(d => ({
@@ -101,11 +101,15 @@ export const subscribeToUserChats = (userName, onUpdate, onError) => {
       }));
       onUpdate(chats);
     }, (error) => {
-      console.warn('[FirestoreService] subscribeToUserChats error:', error);
+      console.error('🚨 [FirestoreService] subscribeToUserChats error:', error);
+      if (error?.message?.includes('index')) {
+        console.error('🔗 [Firebase Composite Index Link]:', error.message);
+      }
       if (onError) onError(error);
     });
   } catch (err) {
-    console.warn('[FirestoreService] subscribeToUserChats setup failed:', err);
+    console.error('🚨 [FirestoreService] subscribeToUserChats setup failed:', err);
+    if (onError) onError(err);
     return () => {};
   }
 };
@@ -393,21 +397,16 @@ export const executeDirectTokenTransfer = async ({
         updatedAt: serverTimestamp(),
       });
 
-      if (recipientDoc.exists()) {
-        const recipientData = recipientDoc.data();
-        const currentRecipientTokens = Number(recipientData.trocoTokens || 0);
-        transaction.update(recipientRef, {
-          trocoTokens: currentRecipientTokens + tokenAmount,
-          updatedAt: serverTimestamp(),
-        });
-      } else {
-        transaction.set(recipientRef, {
-          name: recipientName || 'Utilisateur Troco',
-          trocoTokens: tokenAmount,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        }, { merge: true });
-      }
+      // Mise à jour sécurisée du destinataire (merge: true garantit l'écriture même si document partiel ou absent)
+      const recipientData = recipientDoc.exists() ? (recipientDoc.data() || {}) : {};
+      const currentRecipientTokens = Number(recipientData.trocoTokens || 0);
+      const newRecipientTokens = currentRecipientTokens + tokenAmount;
+
+      transaction.set(recipientRef, {
+        name: recipientName || recipientData.name || 'Utilisateur Troco',
+        trocoTokens: newRecipientTokens,
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
     });
 
     // 3. Messages et enregistrement de transaction
