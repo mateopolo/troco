@@ -17,8 +17,8 @@ import { createPortal } from 'react-dom';
 import {
   X, Pen, Highlighter, Eraser, Square, Circle, ArrowRight,
   RotateCcw, RotateCw, Trash2, StickyNote,
-  Type, Hand, Brush, Share2, Check, Eye, Maximize2,
-  Sparkles
+  Type, Hand, Brush, Check, Eye, Maximize2,
+  Sparkles, Save, Send
 } from 'lucide-react';
 import { doc, onSnapshot, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -107,7 +107,9 @@ export default function CollaborativeWhiteboardModal({
   const [workspaceTitle, setWorkspaceTitle] = useState(projectTitle || 'Tableau Blanc Collaboratif');
   const [saveStatus, setSaveStatus] = useState('Synchronisé en direct 🟢');
   const [lastEditor, setLastEditor] = useState(myName);
-  const [isSavingAndSharing, setIsSavingAndSharing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [saveSuccessToast, setSaveSuccessToast] = useState(false);
   const [shareSuccessToast, setShareSuccessToast] = useState(false);
 
   // 7. Curseur P2P Collaboratif (Ghosting live)
@@ -794,11 +796,9 @@ export default function CollaborativeWhiteboardModal({
     }
   };
 
-  // ================= 4. GESTION DES VERSIONS & EXPORT CHAT =================
+  // ================= 4. GESTION DES VERSIONS & EXPORT CHAT (Auto-Crop Bounding Box) =================
   const generateBoundingBoxPreview = useCallback(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return '';
-
     const allPaths = [...remotePaths, ...localPaths];
 
     let minX = Infinity;
@@ -807,7 +807,8 @@ export default function CollaborativeWhiteboardModal({
     let maxY = -Infinity;
 
     allPaths.forEach((p) => {
-      if (p.type === 'freehand' && p.points) {
+      if (!p) return;
+      if (p.type === 'freehand' && p.points && p.points.length > 0) {
         p.points.forEach((pt) => {
           if (pt.x < minX) minX = pt.x;
           if (pt.y < minY) minY = pt.y;
@@ -815,11 +816,13 @@ export default function CollaborativeWhiteboardModal({
           if (pt.y > maxY) maxY = pt.y;
         });
       } else if (p.x !== undefined && p.y !== undefined && p.width !== undefined && p.height !== undefined) {
-        if (p.x < minX) minX = p.x;
-        if (p.y < minY) minY = p.y;
-        if (p.x + p.width > maxX) maxX = p.x + p.width;
-        if (p.y + p.height > maxY) maxY = p.y + p.height;
-      } else if (p.fromX !== undefined) {
+        const x2 = p.x + p.width;
+        const y2 = p.y + p.height;
+        minX = Math.min(minX, p.x, x2);
+        minY = Math.min(minY, p.y, y2);
+        maxX = Math.max(maxX, p.x, x2);
+        maxY = Math.max(maxY, p.y, y2);
+      } else if (p.fromX !== undefined && p.toX !== undefined) {
         minX = Math.min(minX, p.fromX, p.toX);
         minY = Math.min(minY, p.fromY, p.toY);
         maxX = Math.max(maxX, p.fromX, p.toX);
@@ -828,6 +831,7 @@ export default function CollaborativeWhiteboardModal({
     });
 
     stickyNotes.forEach((s) => {
+      if (!s) return;
       minX = Math.min(minX, s.x);
       minY = Math.min(minY, s.y);
       maxX = Math.max(maxX, s.x + (s.width || 150));
@@ -835,125 +839,198 @@ export default function CollaborativeWhiteboardModal({
     });
 
     textElements.forEach((t) => {
+      if (!t) return;
       minX = Math.min(minX, t.x);
       minY = Math.min(minY, t.y);
       maxX = Math.max(maxX, t.x + (t.width || 200));
       maxY = Math.max(maxY, t.y + (t.height || 60));
     });
 
-    const padding = 50;
-    const targetW = 640;
-    const targetH = 420;
+    // Marge obligatoire de 20px
+    const margin = 20;
+
+    if (minX === Infinity || maxX <= minX || maxY <= minY) {
+      const emptyW = 400;
+      const emptyH = 300;
+      const tempCanvas = document.createElement('canvas');
+      tempCanvas.width = emptyW;
+      tempCanvas.height = emptyH;
+      const ctx = tempCanvas.getContext('2d');
+      if (ctx) {
+        ctx.fillStyle = darkMode ? '#181411' : '#FAF8F5';
+        ctx.fillRect(0, 0, emptyW, emptyH);
+      }
+      return tempCanvas.toDataURL('image/jpeg', 0.9);
+    }
+
+    const boxWidth = Math.ceil(maxX - minX);
+    const boxHeight = Math.ceil(maxY - minY);
+    const cropWidth = Math.max(60, boxWidth + margin * 2);
+    const cropHeight = Math.max(60, boxHeight + margin * 2);
 
     const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = targetW;
-    tempCanvas.height = targetH;
+    tempCanvas.width = cropWidth;
+    tempCanvas.height = cropHeight;
     const ctx = tempCanvas.getContext('2d');
 
+    if (!ctx) return canvas ? canvas.toDataURL('image/jpeg', 0.88) : '';
+
     ctx.fillStyle = darkMode ? '#181411' : '#FAF8F5';
-    ctx.fillRect(0, 0, targetW, targetH);
+    ctx.fillRect(0, 0, cropWidth, cropHeight);
 
-    if (minX !== Infinity && maxX > minX && maxY > minY) {
-      const contentW = maxX - minX + padding * 2;
-      const contentH = maxY - minY + padding * 2;
-      const scale = Math.min(targetW / contentW, targetH / contentH);
+    ctx.save();
+    ctx.translate(-minX + margin, -minY + margin);
 
+    // Dessine tous les traits dans le canvas rogné
+    allPaths.forEach((p) => {
+      if (!p) return;
       ctx.save();
-      ctx.translate((targetW - contentW * scale) / 2, (targetH - contentH * scale) / 2);
-      ctx.scale(scale, scale);
-      ctx.translate(-minX + padding, -minY + padding);
+      ctx.beginPath();
+      applyBrushStyleToContext(ctx, p.tool, p.color, p.lineWidth, false);
 
-      allPaths.forEach((p) => {
-        ctx.save();
-        ctx.beginPath();
-        applyBrushStyleToContext(ctx, p.tool, p.color, p.lineWidth, false);
-        if (p.type === 'freehand' && p.points && p.points.length > 0) {
-          ctx.moveTo(p.points[0].x, p.points[0].y);
-          for (let i = 1; i < p.points.length; i++) {
-            ctx.lineTo(p.points[i].x, p.points[i].y);
-          }
-          ctx.stroke();
-        } else if (p.type === 'rect') {
-          ctx.strokeRect(p.x, p.y, p.width, p.height);
-        } else if (p.type === 'circle') {
-          ctx.beginPath();
-          const rx = Math.abs(p.width) / 2;
-          const ry = Math.abs(p.height) / 2;
-          ctx.ellipse(p.x + p.width / 2, p.y + p.height / 2, rx, ry, 0, 0, 2 * Math.PI);
-          ctx.stroke();
+      if (p.type === 'freehand' && p.points && p.points.length > 0) {
+        ctx.moveTo(p.points[0].x, p.points[0].y);
+        for (let i = 1; i < p.points.length; i++) {
+          ctx.lineTo(p.points[i].x, p.points[i].y);
         }
-        ctx.restore();
-      });
+        ctx.stroke();
+      } else if (p.type === 'rect') {
+        ctx.strokeRect(p.x, p.y, p.width, p.height);
+      } else if (p.type === 'circle') {
+        ctx.beginPath();
+        const rx = Math.abs(p.width) / 2;
+        const ry = Math.abs(p.height) / 2;
+        const cx = p.x + p.width / 2;
+        const cy = p.y + p.height / 2;
+        ctx.ellipse(cx, cy, rx, ry, 0, 0, 2 * Math.PI);
+        ctx.stroke();
+      } else if (p.type === 'arrow') {
+        ctx.beginPath();
+        ctx.moveTo(p.fromX, p.fromY);
+        ctx.lineTo(p.toX, p.toY);
+        ctx.stroke();
+
+        const headlen = Math.max(12, p.lineWidth * 2.5);
+        const angle = Math.atan2(p.toY - p.fromY, p.toX - p.fromX);
+        ctx.beginPath();
+        ctx.moveTo(p.toX, p.toY);
+        ctx.lineTo(p.toX - headlen * Math.cos(angle - Math.PI / 6), p.toY - headlen * Math.sin(angle - Math.PI / 6));
+        ctx.moveTo(p.toX, p.toY);
+        ctx.lineTo(p.toX - headlen * Math.cos(angle + Math.PI / 6), p.toY - headlen * Math.sin(angle + Math.PI / 6));
+        ctx.stroke();
+      }
 
       ctx.restore();
-    } else {
-      ctx.drawImage(canvas, 0, 0, targetW, targetH);
-    }
+    });
 
-    return tempCanvas.toDataURL('image/jpeg', 0.88);
+    // Dessine les post-its
+    stickyNotes.forEach((s) => {
+      ctx.save();
+      ctx.fillStyle = s.color || '#FEF08A';
+      ctx.fillRect(s.x, s.y, s.width || 150, s.height || 130);
+      ctx.fillStyle = '#1F2937';
+      ctx.font = '12px Inter, sans-serif';
+      ctx.fillText(s.text || '', s.x + 10, s.y + 25);
+      ctx.restore();
+    });
+
+    // Dessine les textes
+    textElements.forEach((t) => {
+      ctx.save();
+      ctx.fillStyle = t.color || (darkMode ? '#FFFFFF' : '#1F2937');
+      ctx.font = `${t.fontSize || 20}px Inter, sans-serif`;
+      ctx.fillText(t.text || '', t.x, t.y + (t.fontSize || 20));
+      ctx.restore();
+    });
+
+    ctx.restore();
+
+    return tempCanvas.toDataURL('image/jpeg', 0.9);
   }, [remotePaths, localPaths, stickyNotes, textElements, darkMode]);
 
-  const handleSaveAndShare = async () => {
-    if (isSavingAndSharing) return;
-
-    // 1. Demande du nom de version via dialogue
-    const defaultVersionLabel = `V${versionNumber + 1}`;
-    const userVersionInput = window.prompt("Nom de la version (ex: V2)", defaultVersionLabel);
-    if (userVersionInput === null) {
-      return;
-    }
-    const chosenVersion = userVersionInput.trim() || defaultVersionLabel;
-
-    setIsSavingAndSharing(true);
-    setSaveStatus(`Enregistrement de ${chosenVersion}...`);
+  // 1. Bouton "Sauvegarder" (Firestore uniquement)
+  const handleSave = async () => {
+    if (isSaving) return;
+    setIsSaving(true);
+    setSaveStatus('Enregistrement Cloud...');
 
     try {
-      // 2. Snapshot rogné sur Bounding Box
-      const previewUrl = generateBoundingBoxPreview();
+      const docRef = doc(db, 'project_whiteboards', String(effectiveId));
+      const combinedPaths = [...remotePaths, ...localPaths].slice(-400);
 
-      // 3. Sauvegarde incrémentale de la version dans Firestore
-      const res = await saveWorkspaceVersion({
+      const payload = {
+        boardId: effectiveId,
+        groupId,
+        title: workspaceTitle,
+        versionNumber,
+        paths: combinedPaths,
+        stickyNotes,
+        textElements,
+        updatedAt: serverTimestamp(),
+        lastEditor: myName,
+        lastEditorUid: myUid,
+      };
+
+      await setDoc(docRef, payload, { merge: true });
+
+      const previewUrl = generateBoundingBoxPreview();
+      await saveWorkspaceVersion({
         workspaceId: effectiveId,
         chatId: groupId,
         type: WORKSPACE_TYPES.WHITEBOARD,
         title: workspaceTitle,
-        data: { paths: [...remotePaths, ...localPaths], stickyNotes, textElements },
+        data: { paths: combinedPaths, stickyNotes, textElements },
         previewUrl,
         currentUser,
-        changeSummary: `Version ${chosenVersion}`,
+        changeSummary: `Sauvegarde V${versionNumber}`,
       });
 
-      const nextVersionNum = res.version || versionNumber + 1;
-      setVersionNumber(nextVersionNum);
+      setSaveStatus('Sauvegardé dans le Cloud 🟢');
+      setSaveSuccessToast(true);
+      setTimeout(() => setSaveSuccessToast(false), 3500);
+    } catch (err) {
+      console.warn('[CollaborativeWhiteboard] Save error:', err);
+      setSaveStatus('Erreur de sauvegarde ⚠️');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
-      // 4. Payload d'invitation conforme avec type workspace_invite
+  // 2. Bouton "Envoyer" (Publication dans le chat avec snapshot Bounding Box)
+  const handleSend = async () => {
+    if (isSending) return;
+    setIsSending(true);
+
+    try {
+      const previewUrl = generateBoundingBoxPreview();
+
       const invitePayload = {
         type: 'workspace_invite',
         kind: 'workspace_invite',
         workspaceType: 'whiteboard',
-        workspaceId: effectiveId,
         boardId: effectiveId,
-        version: chosenVersion,
+        workspaceId: effectiveId,
         previewUrl,
-        workspaceTitle: workspaceTitle,
-        text: `🎨 ${myName} a partagé ${chosenVersion} du Tableau Blanc`,
+        title: workspaceTitle,
+        workspaceTitle,
+        version: `V${versionNumber}`,
+        text: `🎨 ${myName} a partagé le Tableau Blanc : "${workspaceTitle}"`,
         timestamp: Date.now(),
       };
 
-      // 5. Déclenchement immédiat de l'émission chat
       const sendFn = onSendMessage || handleSendMessage || onSendToChat;
       if (typeof sendFn === 'function') {
-        sendFn(invitePayload);
+        await sendFn(invitePayload);
       }
 
-      setSaveStatus(`Version ${chosenVersion} enregistrée et partagée ! ✨`);
       setShareSuccessToast(true);
       setTimeout(() => setShareSuccessToast(false), 3500);
+      setSaveStatus('Envoyé dans le chat 💬');
     } catch (err) {
-      console.error('[CollaborativeWhiteboard] Save & Share error:', err);
-      setSaveStatus('Erreur de sauvegarde');
+      console.warn('[CollaborativeWhiteboard] Send error:', err);
+      alert("Erreur lors de l'envoi : " + (err.message || 'Échec'));
     } finally {
-      setIsSavingAndSharing(false);
+      setIsSending(false);
     }
   };
 
@@ -1086,32 +1163,61 @@ export default function CollaborativeWhiteboardModal({
             </div>
           </div>
 
-          {/* Boutons d'action Header */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            {/* Sauvegarder & Partager dans le chat */}
+          {/* Boutons d'action Header : Sauvegarder & Envoyer séparés */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {/* BOUTON SAUVEGARDER (Firestore Cloud) */}
             <button
               type="button"
-              disabled={isSavingAndSharing}
-              onClick={handleSaveAndShare}
+              disabled={isSaving}
+              onClick={handleSave}
               className="premium-button"
               style={{
-                padding: '10px 18px',
+                padding: '8px 14px',
+                borderRadius: '12px',
+                border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(0,0,0,0.12)',
+                backgroundColor: darkMode ? 'rgba(255,255,255,0.06)' : '#FAF8F5',
+                color: 'inherit',
+                fontSize: '12.5px',
+                fontWeight: '700',
+                cursor: isSaving ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                minHeight: '38px',
+                transition: 'all 0.15s ease',
+              }}
+              title="Sauvegarder les modifications dans le Cloud (Firestore)"
+            >
+              {isSaving ? <Sparkles size={15} /> : <Save size={15} color="#10B981" />}
+              <span>{isSaving ? 'Enregistrement...' : 'Sauvegarder'}</span>
+            </button>
+
+            {/* BOUTON ENVOYER (Publication dans le chat avec snapshot Bounding Box) */}
+            <button
+              type="button"
+              disabled={isSending}
+              onClick={handleSend}
+              className="premium-button"
+              style={{
+                padding: '8px 16px',
                 borderRadius: '12px',
                 border: 'none',
                 background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)',
                 color: '#FFF',
-                fontSize: '13px',
+                fontSize: '12.5px',
                 fontWeight: '800',
-                cursor: isSavingAndSharing ? 'not-allowed' : 'pointer',
+                cursor: isSending ? 'not-allowed' : 'pointer',
                 boxShadow: '0 4px 14px rgba(198,125,91,0.35)',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '8px',
-                minHeight: '40px',
+                gap: '6px',
+                minHeight: '38px',
+                transition: 'all 0.15s ease',
               }}
+              title="Envoyer l'aperçu rogné du tableau blanc dans la conversation"
             >
-              {isSavingAndSharing ? <Sparkles size={16} /> : <Share2 size={16} />}
-              <span>{isSavingAndSharing ? 'Enregistrement...' : 'Sauvegarder'}</span>
+              {isSending ? <Sparkles size={15} /> : <Send size={15} />}
+              <span>{isSending ? 'Envoi...' : 'Envoyer'}</span>
             </button>
           </div>
         </header>
@@ -1148,8 +1254,8 @@ export default function CollaborativeWhiteboardModal({
         </button>
       )}
 
-      {/* TOAST DE SUCCÈS DE PARTAGE */}
-      {shareSuccessToast && (
+      {/* TOAST DE SUCCÈS DE SAUVEGARDE */}
+      {saveSuccessToast && (
         <div
           style={{
             position: 'fixed',
@@ -1171,7 +1277,34 @@ export default function CollaborativeWhiteboardModal({
           }}
         >
           <Check size={18} />
-          Version V{versionNumber} sauvegardée et publiée dans le chat !
+          Tableau blanc sauvegardé dans le Cloud ! 🟢
+        </div>
+      )}
+
+      {/* TOAST DE SUCCÈS D'ENVOI DANS LE CHAT */}
+      {shareSuccessToast && (
+        <div
+          style={{
+            position: 'fixed',
+            bottom: '84px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 1000000,
+            backgroundColor: '#C67D5B',
+            color: '#FFF',
+            padding: '10px 20px',
+            borderRadius: '999px',
+            fontWeight: '800',
+            fontSize: '13px',
+            boxShadow: '0 10px 30px rgba(198,125,91,0.4)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            animation: 'fadeIn 0.2s ease',
+          }}
+        >
+          <Send size={16} />
+          Tableau blanc envoyé et publié dans le chat ! 💬
         </div>
       )}
 
