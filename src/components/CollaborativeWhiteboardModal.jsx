@@ -101,8 +101,15 @@ export default function CollaborativeWhiteboardModal({
   const [selectedShape, setSelectedShape] = useState('rect');
   const bgColorInputRef = useRef(null);
 
-  // 2. Mode Immersion Absolue (Plein écran sans distractions)
+  // 2. Mode Immersion Absolue (Plein écran sans distractions) & Responsive Mobile
   const [isImmersiveMode, setIsImmersiveMode] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // 3. Séparation stricte d'état pour zéro conflit
   const [localPaths, setLocalPaths] = useState([]);
@@ -152,6 +159,7 @@ export default function CollaborativeWhiteboardModal({
   const startPosRef = useRef({ x: 0, y: 0 });
   const panStartRef = useRef({ x: 0, y: 0, origPanX: 0, origPanY: 0 });
   const touchStateRef = useRef({ distance: 0, midX: 0, midY: 0, origPanX: 0, origPanY: 0, origZoom: 1 });
+  const lastTouchZoomTimeRef = useRef(0);
   const draggingStickyRef = useRef(null);
   const resizingTextRef = useRef(null);
   const firestoreDebounceTimerRef = useRef(null);
@@ -354,10 +362,15 @@ export default function CollaborativeWhiteboardModal({
     });
   }, [remotePaths, stickyNotes, textElements, debouncedSyncToFirestore]);
 
-  // Gestion du zoom à la molette de la souris centré sur le curseur
+  // Gestion du zoom à la molette de la souris avec throttle 16ms (60 FPS) et centrage sur le curseur
+  const lastWheelTimeRef = useRef(0);
   const handleWheel = useCallback((e) => {
     e.preventDefault();
-    const zoomFactor = e.deltaY < 0 ? 1.12 : 0.88;
+    const now = performance.now();
+    if (now - lastWheelTimeRef.current < 16) return;
+    lastWheelTimeRef.current = now;
+
+    const zoomFactor = e.deltaY < 0 ? 1.09 : 0.91;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
@@ -399,7 +412,7 @@ export default function CollaborativeWhiteboardModal({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, handleUndo, handleRedo]);
 
-  // ================= 3. RENDU DU CANVAS (60 FPS & Effet Ghosting) =================
+  // ================= 3. RENDU DU CANVAS (60 FPS, VIEWPORT CULLING & Effet Ghosting) =================
   const applyBrushStyleToContext = (ctx, brushTool, brushColor, brushWidth, isRemote = false) => {
     ctx.lineWidth = brushWidth;
     ctx.shadowBlur = 0;
@@ -445,6 +458,55 @@ export default function CollaborativeWhiteboardModal({
     }
   };
 
+  // 1. FILTRE DE CULLING VIEWPORT (Optimisation GPU & Mobile Anti-Lag)
+  const isPathInViewport = (path, vMinX, vMaxX, vMinY, vMaxY) => {
+    if (!path) return false;
+    const pad = (path.lineWidth || 4) + 12;
+
+    if (path.type === 'freehand') {
+      if (!path.points || path.points.length === 0) return false;
+      if (!path.bounds) {
+        let minX = Infinity;
+        let maxX = -Infinity;
+        let minY = Infinity;
+        let maxY = -Infinity;
+        const pts = path.points;
+        for (let i = 0; i < pts.length; i++) {
+          const pt = pts[i];
+          if (pt.x < minX) minX = pt.x;
+          if (pt.x > maxX) maxX = pt.x;
+          if (pt.y < minY) minY = pt.y;
+          if (pt.y > maxY) maxY = pt.y;
+        }
+        path.bounds = { minX, maxX, minY, maxY };
+      }
+      return !(
+        path.bounds.maxX + pad < vMinX ||
+        path.bounds.minX - pad > vMaxX ||
+        path.bounds.maxY + pad < vMinY ||
+        path.bounds.minY - pad > vMaxY
+      );
+    }
+
+    if (path.type === 'rect' || path.type === 'circle' || path.type === 'text_box') {
+      const pMinX = Math.min(path.x, path.x + (path.width || 0));
+      const pMaxX = Math.max(path.x, path.x + (path.width || 0));
+      const pMinY = Math.min(path.y, path.y + (path.height || 0));
+      const pMaxY = Math.max(path.y, path.y + (path.height || 0));
+      return !(pMaxX + pad < vMinX || pMinX - pad > vMaxX || pMaxY + pad < vMinY || pMinY - pad > vMaxY);
+    }
+
+    if (path.type === 'line' || path.type === 'arrow') {
+      const pMinX = Math.min(path.fromX, path.toX);
+      const pMaxX = Math.max(path.fromX, path.toX);
+      const pMinY = Math.min(path.fromY, path.toY);
+      const pMaxY = Math.max(path.fromY, path.toY);
+      return !(pMaxX + pad < vMinX || pMinX - pad > vMaxX || pMaxY + pad < vMinY || pMinY - pad > vMaxY);
+    }
+
+    return true;
+  };
+
   const redrawCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -463,6 +525,13 @@ export default function CollaborativeWhiteboardModal({
     ctx.translate(pan.x, pan.y);
     ctx.scale(zoom, zoom);
 
+    // Calcul des coordonnées monde visibles pour le Viewport Culling (+50px marge)
+    const margin = 50;
+    const vMinX = (-pan.x - margin) / zoom;
+    const vMinY = (-pan.y - margin) / zoom;
+    const vMaxX = (rect.width - pan.x + margin) / zoom;
+    const vMaxY = (rect.height - pan.y + margin) / zoom;
+
     // Tous les traits combinés (Distants avec ghosting + Locaux + Trait en cours)
     const allPathsToRender = [
       ...remotePaths,
@@ -472,6 +541,10 @@ export default function CollaborativeWhiteboardModal({
 
     allPathsToRender.forEach((path) => {
       if (!path) return;
+
+      // FILTRE DE CULLING GPU/CPU : Si le trait est hors-champ, on ne l'envoie pas au ctx.stroke()
+      if (!isPathInViewport(path, vMinX, vMaxX, vMinY, vMaxY)) return;
+
       ctx.save();
       ctx.beginPath();
       applyBrushStyleToContext(ctx, path.tool, path.color, path.lineWidth, !!path.isRemote);
@@ -1310,12 +1383,12 @@ export default function CollaborativeWhiteboardModal({
         className="premium-button"
         style={{
           position: 'absolute',
-          top: 'max(12px, env(safe-area-inset-top, 12px))',
-          left: '14px',
+          top: 'max(10px, env(safe-area-inset-top, 10px))',
+          left: isMobile ? '8px' : '14px',
           zIndex: 1000005,
-          minWidth: '44px',
-          minHeight: '44px',
-          padding: '10px 18px',
+          minWidth: isMobile ? '38px' : '44px',
+          minHeight: isMobile ? '38px' : '44px',
+          padding: isMobile ? '8px 12px' : '10px 18px',
           borderRadius: '999px',
           border: darkMode ? '1px solid rgba(255,255,255,0.22)' : '1px solid rgba(0,0,0,0.15)',
           backgroundColor: darkMode ? 'rgba(26,22,19,0.95)' : 'rgba(255,255,255,0.95)',
@@ -1328,21 +1401,21 @@ export default function CollaborativeWhiteboardModal({
           boxShadow: '0 8px 30px rgba(0,0,0,0.25)',
           display: 'flex',
           alignItems: 'center',
-          gap: '8px',
+          gap: '6px',
         }}
         title="Fermer le tableau blanc et revenir au chat"
         aria-label="Fermer le tableau blanc"
       >
-        <X size={20} strokeWidth={2.5} />
-        <span>Fermer</span>
+        <X size={isMobile ? 18 : 20} strokeWidth={2.5} />
+        {!isMobile && <span>Fermer</span>}
       </button>
 
-      {/* 1. EN-TÊTE PRINCIPAL (Masqué en mode immersion) */}
+      {/* 1. EN-TÊTE PRINCIPAL RESPONSIVE (Masqué en mode immersion) */}
       {!isImmersiveMode && (
         <header
           style={{
-            height: '60px',
-            padding: '0 20px 0 130px',
+            height: '56px',
+            padding: isMobile ? '0 8px 0 62px' : '0 20px 0 130px',
             borderBottom: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
             backgroundColor: darkMode ? 'rgba(21,18,15,0.85)' : 'rgba(255,255,255,0.85)',
             backdropFilter: 'blur(16px)',
@@ -1350,68 +1423,80 @@ export default function CollaborativeWhiteboardModal({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
+            gap: isMobile ? '6px' : '12px',
             flexShrink: 0,
             zIndex: 10,
+            overflowX: 'auto',
+            scrollbarWidth: 'none',
+            WebkitOverflowScrolling: 'touch',
+            whiteSpace: 'nowrap',
           }}
         >
           {/* Titre & Statut */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '12px', flexShrink: 0, minWidth: 0 }}>
             <div
               style={{
-                width: '38px',
-                height: '38px',
-                borderRadius: '12px',
+                width: isMobile ? '32px' : '38px',
+                height: isMobile ? '32px' : '38px',
+                borderRadius: '10px',
                 background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)',
                 color: '#FFF',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 boxShadow: '0 4px 14px rgba(198,125,91,0.35)',
+                flexShrink: 0,
               }}
             >
-              <Brush size={20} />
+              <Brush size={isMobile ? 16 : 20} />
             </div>
 
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <input
                   type="text"
                   value={workspaceTitle}
                   onChange={(e) => setWorkspaceTitle(e.target.value)}
                   style={{
-                    fontSize: '15px',
+                    fontSize: isMobile ? '13px' : '15px',
                     fontWeight: '900',
                     background: 'none',
                     border: 'none',
                     outline: 'none',
                     color: 'inherit',
                     padding: 0,
-                    maxWidth: '220px',
+                    maxWidth: isMobile ? '110px' : '220px',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
                   }}
                 />
                 <span
                   style={{
-                    fontSize: '10.5px',
+                    fontSize: '10px',
                     fontWeight: '800',
                     backgroundColor: 'rgba(198,125,91,0.2)',
                     color: '#C67D5B',
-                    padding: '2px 7px',
+                    padding: '2px 6px',
                     borderRadius: '6px',
+                    flexShrink: 0,
                   }}
                 >
                   V{versionNumber}
                 </span>
               </div>
-              <div style={{ fontSize: '11px', color: darkMode ? '#A8998C' : '#6B7280', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span>{saveStatus}</span>
-                <span>•</span>
-                <span>Modifié par <strong>{lastEditor}</strong></span>
-              </div>
+              {!isMobile && (
+                <div style={{ fontSize: '11px', color: darkMode ? '#A8998C' : '#6B7280', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span>{saveStatus}</span>
+                  <span>•</span>
+                  <span>Modifié par <strong>{lastEditor}</strong></span>
+                </div>
+              )}
             </div>
           </div>
 
           {/* Boutons d'action Header : Versions, Sauvegarder & Envoyer */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '4px' : '8px', flexShrink: 0 }}>
             {/* BOUTON HISTORIQUE DES VERSIONS */}
             <button
               type="button"
@@ -1422,29 +1507,29 @@ export default function CollaborativeWhiteboardModal({
               }}
               className="premium-button"
               style={{
-                padding: '8px 14px',
+                padding: isMobile ? '6px 10px' : '8px 14px',
                 borderRadius: '12px',
                 border: isVersionsSidebarOpen ? '1px solid #C67D5B' : (darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(0,0,0,0.12)'),
                 backgroundColor: isVersionsSidebarOpen ? 'rgba(198,125,91,0.18)' : (darkMode ? 'rgba(255,255,255,0.06)' : '#FAF8F5'),
                 color: isVersionsSidebarOpen ? '#C67D5B' : 'inherit',
-                fontSize: '12.5px',
+                fontSize: '12px',
                 fontWeight: '700',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
-                minHeight: '38px',
+                gap: '5px',
+                minHeight: isMobile ? '34px' : '38px',
                 transition: 'all 0.15s ease',
               }}
-              title="Afficher l'historique de toutes les versions sauvegardées"
+              title="Afficher l'historique des versions"
             >
               <History size={16} color={isVersionsSidebarOpen ? '#C67D5B' : 'currentColor'} />
-              <span>Versions</span>
+              {!isMobile && <span>Versions</span>}
               {versionsList.length > 0 && (
                 <span
                   style={{
                     fontSize: '10px',
-                    padding: '1px 6px',
+                    padding: '1px 5px',
                     borderRadius: '999px',
                     backgroundColor: isVersionsSidebarOpen ? '#C67D5B' : 'rgba(198,125,91,0.18)',
                     color: isVersionsSidebarOpen ? '#FFF' : '#C67D5B',
@@ -1456,59 +1541,59 @@ export default function CollaborativeWhiteboardModal({
               )}
             </button>
 
-            {/* BOUTON SAUVEGARDER (Firestore Cloud avec prompt de nommage) */}
+            {/* BOUTON SAUVEGARDER (💾 sur mobile) */}
             <button
               type="button"
               disabled={isSaving}
               onClick={handleSave}
               className="premium-button"
               style={{
-                padding: '8px 14px',
+                padding: isMobile ? '6px 10px' : '8px 14px',
                 borderRadius: '12px',
                 border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(0,0,0,0.12)',
                 backgroundColor: darkMode ? 'rgba(255,255,255,0.06)' : '#FAF8F5',
                 color: 'inherit',
-                fontSize: '12.5px',
+                fontSize: '12px',
                 fontWeight: '700',
                 cursor: isSaving ? 'not-allowed' : 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
-                minHeight: '38px',
+                gap: '5px',
+                minHeight: isMobile ? '34px' : '38px',
                 transition: 'all 0.15s ease',
               }}
-              title="Sauvegarder et nommer une nouvelle version dans le Cloud"
+              title="Sauvegarder dans le Cloud (💾)"
             >
-              {isSaving ? <Sparkles size={15} /> : <Save size={15} color="#10B981" />}
-              <span>{isSaving ? 'Enregistrement...' : 'Sauvegarder'}</span>
+              {isSaving ? <Sparkles size={15} /> : <Save size={16} color="#10B981" />}
+              {!isMobile && <span>{isSaving ? 'Enregistrement...' : 'Sauvegarder'}</span>}
             </button>
 
-            {/* BOUTON ENVOYER (Publication dans le chat avec snapshot Bounding Box) */}
+            {/* BOUTON ENVOYER (✈️ sur mobile) */}
             <button
               type="button"
               disabled={isSending}
               onClick={handleSend}
               className="premium-button"
               style={{
-                padding: '8px 16px',
+                padding: isMobile ? '6px 12px' : '8px 16px',
                 borderRadius: '12px',
                 border: 'none',
                 background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)',
                 color: '#FFF',
-                fontSize: '12.5px',
+                fontSize: '12px',
                 fontWeight: '800',
                 cursor: isSending ? 'not-allowed' : 'pointer',
                 boxShadow: '0 4px 14px rgba(198,125,91,0.35)',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
-                minHeight: '38px',
+                gap: '5px',
+                minHeight: isMobile ? '34px' : '38px',
                 transition: 'all 0.15s ease',
               }}
-              title="Envoyer l'aperçu rogné du tableau blanc dans la conversation"
+              title="Envoyer dans la conversation (✈️)"
             >
-              {isSending ? <Sparkles size={15} /> : <Send size={15} />}
-              <span>{isSending ? 'Envoi...' : 'Envoyer'}</span>
+              {isSending ? <Sparkles size={15} /> : <Send size={16} />}
+              {!isMobile && <span>{isSending ? 'Envoi...' : 'Envoyer'}</span>}
             </button>
           </div>
         </header>
@@ -1645,6 +1730,10 @@ export default function CollaborativeWhiteboardModal({
         onTouchMove={(e) => {
           if (e.touches.length === 2) {
             e.preventDefault();
+            const now = performance.now();
+            if (now - lastTouchZoomTimeRef.current < 16) return;
+            lastTouchZoomTimeRef.current = now;
+
             const t1 = e.touches[0];
             const t2 = e.touches[1];
             const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
