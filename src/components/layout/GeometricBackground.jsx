@@ -1,9 +1,10 @@
 import React, { useEffect, useRef } from 'react';
 
 /**
- * GeometricBackground
- * Composant Canvas de constellation géométrique interactive et fluide (particules interconnectées).
+ * GeometricBackground.jsx
+ * Composant Canvas de constellation géométrique fluide (particules interconnectées).
  * Conçu pour un rendu haut de gamme (Gemini / Apple Intelligence style) avec un impact CPU minimal.
+ * Visible et unifié sur Desktop ET Mobile.
  */
 export default function GeometricBackground({ darkMode = false }) {
   const canvasRef = useRef(null);
@@ -19,10 +20,12 @@ export default function GeometricBackground({ darkMode = false }) {
     let width = 0;
     let height = 0;
     let particles = [];
+    let isPaused = false;
 
-    // Paramètres des particules & constellation
-    const PARTICLE_COUNT = 55;
-    const MAX_DISTANCE = 140; // Distance max de connexion en pixels
+    // Paramètres des particules & constellation optimisés
+    const isMobileDevice = typeof window !== 'undefined' && window.innerWidth < 768;
+    const PARTICLE_COUNT = isMobileDevice ? 36 : 60;
+    const MAX_DISTANCE = isMobileDevice ? 110 : 145; // Distance max de connexion en pixels
 
     const resizeCanvas = () => {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -40,13 +43,14 @@ export default function GeometricBackground({ darkMode = false }) {
     // Initialisation des particules
     const initParticles = () => {
       particles = [];
-      for (let i = 0; i < PARTICLE_COUNT; i++) {
+      const count = PARTICLE_COUNT;
+      for (let i = 0; i < count; i++) {
         particles.push({
           x: Math.random() * (width || window.innerWidth),
           y: Math.random() * (height || window.innerHeight),
-          vx: (Math.random() - 0.5) * 0.4, // Vitesse très lente et fluide
-          vy: (Math.random() - 0.5) * 0.4,
-          radius: Math.random() * 1.6 + 1.0, // Rayon entre 1.0px et 2.6px
+          vx: (Math.random() - 0.5) * 0.35, // Vitesse lente et fluide
+          vy: (Math.random() - 0.5) * 0.35,
+          radius: Math.random() * 1.5 + 1.0, // Rayon entre 1.0px et 2.5px
           baseAlpha: Math.random() * 0.35 + 0.15,
         });
       }
@@ -55,12 +59,24 @@ export default function GeometricBackground({ darkMode = false }) {
     resizeCanvas();
     initParticles();
 
-    window.addEventListener('resize', () => {
+    const handleResize = () => {
       resizeCanvas();
-    });
+    };
+
+    const handleVisibilityChange = () => {
+      isPaused = document.hidden;
+      if (!isPaused) {
+        animationFrameId = requestAnimationFrame(render);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     // Boucle d'animation 60 FPS ultra-légère
     const render = () => {
+      if (isPaused) return;
+
       ctx.clearRect(0, 0, width, height);
 
       // Couleurs adaptées au thème (terre cuite / doré cuivré très subtil)
@@ -127,7 +143,8 @@ export default function GeometricBackground({ darkMode = false }) {
 
     return () => {
       cancelAnimationFrame(animationFrameId);
-      window.removeEventListener('resize', resizeCanvas);
+      window.removeEventListener('resize', handleResize);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, [darkMode]);
 
@@ -137,6 +154,7 @@ export default function GeometricBackground({ darkMode = false }) {
       aria-hidden="true"
       style={{
         position: 'fixed',
+        inset: 0,
         top: 0,
         left: 0,
         width: '100vw',

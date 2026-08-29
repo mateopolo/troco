@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import {
-  X, ArrowLeft, Star, ShieldCheck, MapPin, Sparkles, MessageSquare,
+  X, Star, ShieldCheck, MapPin, Sparkles, MessageSquare,
   CheckCircle, Briefcase, Award, Camera, Wrench, ExternalLink
 } from 'lucide-react';
+import MobileHeader from './common/MobileHeader';
 
 export default function PublicProfileModal({
   isOpen,
@@ -157,61 +158,36 @@ export default function PublicProfileModal({
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* EN-TÊTE FIXE AVEC RETOUR AU CHAT */}
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '14px 18px',
-            borderBottom: '1px solid var(--border-color)',
-            backgroundColor: 'var(--bg-subtle)',
-            flexShrink: 0,
-          }}
-        >
-          <button
-            type="button"
-            onClick={onClose}
-            className="premium-button"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              border: 'none',
-              backgroundColor: 'transparent',
-              color: 'var(--accent-primary)',
-              fontWeight: '800',
-              fontSize: '13px',
-              cursor: 'pointer',
-              padding: '6px 10px',
-              borderRadius: '999px',
-            }}
-          >
-            <ArrowLeft size={16} />
-            <span>Retour à la discussion</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              border: 'none',
-              backgroundColor: 'var(--bg-card)',
-              color: 'var(--text-secondary)',
-              width: '32px',
-              height: '32px',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              boxShadow: 'var(--shadow-card)',
-            }}
-            title="Fermer le profil"
-          >
-            <X size={16} />
-          </button>
-        </div>
+        {/* EN-TÊTE FIXE AVEC RETOUR 44x44px (APPLE HIG) */}
+        <MobileHeader
+          title={userName}
+          subtitle={username}
+          onBack={onClose}
+          darkMode={darkMode}
+          rightAction={
+            <button
+              type="button"
+              onClick={onClose}
+              className="premium-button"
+              style={{
+                border: 'none',
+                backgroundColor: 'var(--bg-subtle, rgba(0,0,0,0.05))',
+                color: 'var(--text-secondary)',
+                width: '38px',
+                height: '38px',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+              }}
+              title="Fermer"
+              aria-label="Fermer"
+            >
+              <X size={18} />
+            </button>
+          }
+        />
 
         {/* CORPS DÉROULANT DU PROFIL PUBLIC */}
         <div

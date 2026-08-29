@@ -13,6 +13,7 @@ import { subscribeTranslations } from './utils/translator';
 import { playApplePaySound, playBetclicBalanceSound, playWelcomeGiftFanfare } from './utils/audioService';
 import { useChatManager } from './hooks/useChatManager';
 import { AppHeader, AppBottomNav, GeometricBackground } from './components/layout';
+import MobileHeader from './components/common/MobileHeader';
 import { getSuggestedMedia, getSuggestedImage, getFallbackImage } from './utils/mediaHelpers';
 import FeedCardItem from './components/FeedCardItem';
 import { generateInvoiceRef } from './components/InvoiceCalculator';
@@ -270,6 +271,140 @@ export default function App() {
       }
     }
   };
+
+  // ---- INTERCEPTION DE LA TOUCHE RETOUR PHYSIQUE ANDROID (POPSTATE / HISTORY API) ----
+  // Permet de fermer les modales et les vues profondes au lieu de quitter l'application
+  useEffect(() => {
+    const handlePopState = () => {
+      // 1. Fermeture hiérarchique des modales ouvertes
+      if (selectedListing) {
+        setSelectedListing(null);
+        return;
+      }
+      if (selectedPublicUser) {
+        setSelectedPublicUser(null);
+        return;
+      }
+      if (isEditingProfile) {
+        setIsEditingProfile(false);
+        return;
+      }
+      if (isFilterDrawerOpen) {
+        setIsFilterDrawerOpen(false);
+        return;
+      }
+      if (isCategoryModalOpen) {
+        setIsCategoryModalOpen(false);
+        return;
+      }
+      if (isBoostModalOpen) {
+        setIsBoostModalOpen(false);
+        return;
+      }
+      if (isPrivacyCenterOpen) {
+        setIsPrivacyCenterOpen(false);
+        return;
+      }
+      if (isCguViewerOpen) {
+        setIsCguViewerOpen(false);
+        return;
+      }
+      if (isKycModalOpen) {
+        setIsKycModalOpen(false);
+        return;
+      }
+      if (isAdminPanelOpen) {
+        setIsAdminPanelOpen(false);
+        return;
+      }
+      if (isLangModalOpen) {
+        setIsLangModalOpen(false);
+        return;
+      }
+      if (isReportModalOpen) {
+        setIsReportModalOpen(false);
+        return;
+      }
+      if (isTransactionsModalOpen) {
+        setIsTransactionsModalOpen(false);
+        return;
+      }
+      if (isPaymentModalOpen) {
+        setIsPaymentModalOpen(false);
+        return;
+      }
+      if (isOnboardingOpen) {
+        setIsOnboardingOpen(false);
+        return;
+      }
+      // 2. Si aucune modale n'est ouverte mais qu'on est sur un onglet secondaire, retour au Feed
+      if (activeTab !== 'feed') {
+        setActiveTab('feed');
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [
+    selectedListing,
+    selectedPublicUser,
+    isEditingProfile,
+    isFilterDrawerOpen,
+    isCategoryModalOpen,
+    isBoostModalOpen,
+    isPrivacyCenterOpen,
+    isCguViewerOpen,
+    isKycModalOpen,
+    isAdminPanelOpen,
+    isLangModalOpen,
+    isReportModalOpen,
+    isTransactionsModalOpen,
+    isPaymentModalOpen,
+    isOnboardingOpen,
+    activeTab,
+  ]);
+
+  // Synchronisation de l'historique de navigation quand une modale s'ouvre
+  useEffect(() => {
+    const hasActiveModal = !!(
+      selectedListing ||
+      selectedPublicUser ||
+      isEditingProfile ||
+      isFilterDrawerOpen ||
+      isCategoryModalOpen ||
+      isBoostModalOpen ||
+      isPrivacyCenterOpen ||
+      isCguViewerOpen ||
+      isKycModalOpen ||
+      isAdminPanelOpen ||
+      isLangModalOpen ||
+      isReportModalOpen ||
+      isTransactionsModalOpen ||
+      isPaymentModalOpen ||
+      isOnboardingOpen
+    );
+
+    if (hasActiveModal && typeof window !== 'undefined' && window.history) {
+      window.history.pushState({ modalOpen: true }, '');
+    }
+  }, [
+    selectedListing,
+    selectedPublicUser,
+    isEditingProfile,
+    isFilterDrawerOpen,
+    isCategoryModalOpen,
+    isBoostModalOpen,
+    isPrivacyCenterOpen,
+    isCguViewerOpen,
+    isKycModalOpen,
+    isAdminPanelOpen,
+    isLangModalOpen,
+    isReportModalOpen,
+    isTransactionsModalOpen,
+    isPaymentModalOpen,
+    isOnboardingOpen,
+  ]);
+
   const [userTransactions, setUserTransactions] = useState(() => {
     try {
       const saved = localStorage.getItem('troco_user_transactions');
@@ -2400,6 +2535,9 @@ export default function App() {
         input, select, textarea { font-family: inherit; }
       `}</style>
 
+      {/* 1. FOND GÉOMÉTRIQUE UNIFIÉ DESKTOP & MOBILE */}
+      <GeometricBackground darkMode={darkMode} />
+
       {/* MICRO-INDICATEUR DE PROGRESSION (React 18 useTransition — barre YouTube-style) */}
       <div
         aria-hidden="true"
@@ -2614,6 +2752,20 @@ export default function App() {
             color: darkMode ? '#FAF7F2' : '#3D3530',
             animation: 'modalSlideIn 0.55s var(--ease-monopo) both'
           }}>
+
+            {/* EN-TÊTE MOBILE RETOUR TACTILE 44x44px (APPLE HIG) */}
+            {isMobile && (
+              <MobileHeader
+                title={selectedListing.title || "Détail de l'annonce"}
+                subtitle={selectedListing.category || "Troco"}
+                onBack={() => {
+                  setSelectedListing(null);
+                  setSelectedDetailImageIndex(0);
+                  setDetailMediaTab('image');
+                }}
+                darkMode={darkMode}
+              />
+            )}
 
             {/* CARROUSEL HÉRO INTERACTIF */}
             <div

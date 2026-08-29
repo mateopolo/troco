@@ -29,6 +29,7 @@ import { useTheme, TYPOGRAPHY_OPTIONS } from '../../contexts/ThemeContext';
 import { validateProfileContent } from '../../utils/moderationBlacklist';
 import { DIVERSE_AVATARS } from '../../data/categoriesData';
 import { AnimatedEuroBalance, AnimatedTokenBalance } from '../../components/AnimatedBalances';
+import MobileHeader from '../../components/common/MobileHeader';
 import {
   getBioTranslation as getBioTranslationUtil,
   getReviewTranslation as getReviewTranslationUtil,
@@ -246,6 +247,24 @@ export default function ProfileFeature({
 
   return (
     <div style={{ backgroundColor: darkMode ? '#231E1B' : '#FAF7F2', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', padding: '22px', borderRadius: '28px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', boxShadow: '0 10px 30px rgba(61,53,48,0.06)', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
+      {/* EN-TÊTE MOBILE RETOUR TACTILE 44x44px (APPLE HIG) */}
+      {isMobile && (
+        <div style={{ margin: '-22px -22px 18px -22px' }}>
+          <MobileHeader
+            title={isEditingProfile ? "Modifier le profil" : (profile.name || "Mon Profil")}
+            subtitle={profile.username || "@troco"}
+            onBack={() => {
+              if (isEditingProfile) {
+                setIsEditingProfile(false);
+              } else if (typeof setActiveTab === 'function') {
+                setActiveTab('feed');
+              }
+            }}
+            darkMode={darkMode}
+          />
+        </div>
+      )}
+
       {/* EN-TÊTE DU PROFIL (AVATAR + INFORMATIONS ALIGNÉES) */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '16px', flexWrap: 'wrap' }}>
         <input type="file" ref={profileAvatarFileInputRef} onChange={handleAvatarFileUpload} accept="image/*" style={{ display: "none" }} />

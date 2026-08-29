@@ -7,6 +7,7 @@ import {
   X,
   MapPin,
   Flame,
+  ArrowLeft,
 } from 'lucide-react';
 import { auth, db } from '../../firebase';
 import {
@@ -525,6 +526,37 @@ export default function PostListingFeature({
         {publishMessage && (
           <div style={{ marginBottom: '14px', padding: '12px 14px', borderRadius: '14px', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', fontSize: '13px', fontWeight: '700', lineHeight: 1.5, border: '1px solid var(--border-color)' }}>
             {publishMessage}
+          </div>
+        )}
+
+        {postStep > 1 && (
+          <div style={{ marginBottom: '14px' }}>
+            <button
+              type="button"
+              onClick={() => setPostStep(prev => Math.max(1, prev - 1))}
+              className="premium-button"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                minHeight: '44px',
+                padding: '8px 16px',
+                borderRadius: '999px',
+                border: '1px solid var(--border-color)',
+                backgroundColor: 'var(--bg-subtle)',
+                color: 'var(--text-main)',
+                fontSize: '13px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+                transition: 'all 0.15s ease',
+              }}
+              title="Revenir à l'étape précédente"
+              aria-label="Étape précédente"
+            >
+              <ArrowLeft size={16} strokeWidth={2.5} />
+              <span>Étape précédente ({postStep - 1}/4)</span>
+            </button>
           </div>
         )}
 
