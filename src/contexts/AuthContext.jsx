@@ -22,7 +22,8 @@ import {
   query,
   where,
   getDocs,
-  serverTimestamp
+  serverTimestamp,
+  onSnapshot
 } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 
@@ -93,39 +94,54 @@ export const AuthProvider = ({ children }) => {
   const isDemoProfile = Boolean(profile?.isDemo || (profile?.uid && String(profile.uid).startsWith('demo_')));
   const isAdmin = profile?.email === 'mateopolo91@gmail.com' || auth.currentUser?.email === 'mateopolo91@gmail.com' || profile?.role === 'admin';
 
-  // Synchronisation de la session Firebase Auth
+  // Synchronisation temps réel de la session Firebase Auth et du document utilisateur
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+    let unsubscribeDoc = null;
+
+    const unsubscribeAuth = onAuthStateChanged(auth, async (currentUser) => {
       setUser(currentUser);
+      if (unsubscribeDoc) {
+        unsubscribeDoc();
+        unsubscribeDoc = null;
+      }
+
       if (currentUser) {
         setIsAuthenticated(true);
         window.localStorage.setItem('troco_is_authenticated', 'true');
         try {
           const userDocRef = doc(db, 'users', currentUser.uid);
-          const userSnap = await getDoc(userDocRef);
-          if (userSnap.exists()) {
-            const data = userSnap.data();
-            setProfile(prev => ({
-              ...prev,
-              ...data,
-              uid: currentUser.uid,
-              name: data.name || currentUser.displayName || prev.name,
-              email: currentUser.email || data.email || prev.email,
-              avatar: data.avatar || currentUser.photoURL || prev.avatar,
-            }));
-            window.localStorage.setItem('troco_user_profile', JSON.stringify({
-              ...data,
-              uid: currentUser.uid
-            }));
-          }
+          unsubscribeDoc = onSnapshot(userDocRef, (userSnap) => {
+            if (userSnap.exists()) {
+              const data = userSnap.data();
+              setProfile(prev => ({
+                ...prev,
+                ...data,
+                uid: currentUser.uid,
+                name: data.name || currentUser.displayName || prev?.name,
+                email: currentUser.email || data.email || prev?.email,
+                avatar: data.avatar || currentUser.photoURL || prev?.avatar,
+              }));
+              try {
+                window.localStorage.setItem('troco_user_profile', JSON.stringify({
+                  ...data,
+                  uid: currentUser.uid
+                }));
+              } catch (_) {}
+            }
+          }, (err) => {
+            console.warn('[AuthContext] onSnapshot user doc error:', err);
+          });
         } catch (e) {
-          console.warn('[AuthContext] Error fetching user doc from Firestore:', e);
+          console.warn('[AuthContext] Error setting up user doc listener:', e);
         }
       }
       setIsLoadingSession(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      if (unsubscribeDoc) unsubscribeDoc();
+      unsubscribeAuth();
+    };
   }, []);
 
   // Déconnexion

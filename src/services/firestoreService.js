@@ -15,7 +15,8 @@ import {
   getDoc,
   onSnapshot,
   serverTimestamp,
-  runTransaction
+  runTransaction,
+  increment
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { encodeGeohash, getGeohashQueryBounds } from '../utils/geohash';
@@ -769,7 +770,7 @@ export const executeDirectTokenTransfer = async (
       const recipientRef = doc(db, 'users', String(recipientUid));
 
       const senderDoc = await transaction.get(senderRef);
-      const recipientDoc = await transaction.get(recipientRef);
+      await transaction.get(recipientRef);
 
       // 2. VÉRIFICATIONS DE L'EXPÉDITEUR
       if (!senderDoc.exists()) {
@@ -791,25 +792,13 @@ export const executeDirectTokenTransfer = async (
         updatedAt: serverTimestamp(),
       });
 
-      // 4. FALLBACK DE CRÉATION DE PORTEFEUILLE DESTINATAIRE
-      if (!recipientDoc.exists()) {
-        transaction.set(recipientRef, {
-          uid: String(recipientUid),
-          name: recipientName || 'Utilisateur Troco',
-          trocoTokens: amount,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        }, { merge: true });
-      } else {
-        const recipientData = recipientDoc.data() || {};
-        const currentRecipientTokens = Number(recipientData.trocoTokens || 0);
-        const newRecipientTokens = currentRecipientTokens + amount;
-
-        transaction.set(recipientRef, {
-          trocoTokens: newRecipientTokens,
-          updatedAt: serverTimestamp(),
-        }, { merge: true });
-      }
+      // 4. INCRÉMENTATION ATOMIQUE DU SOLDE DESTINATAIRE (Firebase increment)
+      transaction.set(recipientRef, {
+        uid: String(recipientUid),
+        name: recipientName || 'Utilisateur Troco',
+        trocoTokens: increment(amount),
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
     });
 
     // 5. Messages et enregistrement de transaction

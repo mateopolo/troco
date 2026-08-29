@@ -253,6 +253,7 @@ export default function App() {
 
   // ---- NOTIFICATION & ANIMATION DE RÉCEPTION DE JETONS (DESTINATAIRE) ----
   const prevTokensRef = useRef(profile?.trocoTokens);
+  const prevEurosRef = useRef(profile?.euroBalance);
   useEffect(() => {
     if (prevTokensRef.current !== undefined && profile?.trocoTokens !== undefined) {
       const currentVal = Number(profile.trocoTokens);
@@ -860,13 +861,20 @@ export default function App() {
       }, remaining);
     };
 
+    let unsubDoc = null;
+
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (unsubDoc) {
+        unsubDoc();
+        unsubDoc = null;
+      }
+
       if (firebaseUser) {
         const uid = firebaseUser.uid;
         const userDocRef = doc(db, 'users', uid);
 
         // Écoute temps réel des changements de solde, infos et statut CGU du profil
-        const unsubDoc = onSnapshot(userDocRef, async (docSnap) => {
+        unsubDoc = onSnapshot(userDocRef, async (docSnap) => {
           if (docSnap.exists()) {
             const data = docSnap.data();
 
@@ -881,30 +889,54 @@ export default function App() {
               return;
             }
 
+            const newTokens = data.trocoTokens !== undefined ? Number(data.trocoTokens) : null;
+            const newEuros = data.euroBalance !== undefined ? Number(data.euroBalance) : null;
+
+            // Détection de réception temps réel de jetons Troco (+X jetons) & Alerte sonore
+            if (prevTokensRef.current !== undefined && prevTokensRef.current !== null && newTokens !== null && newTokens > prevTokensRef.current) {
+              const gained = newTokens - prevTokensRef.current;
+              playBetclicBalanceSound();
+              setTopUpCelebration({
+                title: `+${gained} Jeton${gained > 1 ? 's' : ''} Troco reçus ! 🪙`,
+                subtitle: `Nouveau solde : ${newTokens} Jetons Troco`,
+              });
+              setTimeout(() => setTopUpCelebration(null), 4500);
+            }
+
+            // Détection de réception temps réel d'euros & Alerte sonore
+            if (prevEurosRef.current !== undefined && prevEurosRef.current !== null && newEuros !== null && newEuros > prevEurosRef.current) {
+              const gained = (newEuros - prevEurosRef.current).toFixed(2);
+              playApplePaySound();
+              setTopUpCelebration({
+                title: `+${gained} € reçus sur votre solde ! 💳`,
+                subtitle: `Nouveau solde : ${Number(newEuros).toFixed(2)} €`,
+              });
+              setTimeout(() => setTopUpCelebration(null), 4500);
+            }
+
+            if (newTokens !== null) prevTokensRef.current = newTokens;
+            if (newEuros !== null) prevEurosRef.current = newEuros;
+
+            // Mise à jour de l'état profil local et persistence
             setProfile(prev => {
-              if (prev && prev.trocoTokens !== undefined && data.trocoTokens > prev.trocoTokens) {
-                const gained = Number(data.trocoTokens) - Number(prev.trocoTokens);
-                playBetclicBalanceSound();
-                setTopUpCelebration({
-                  title: `+${gained} Jeton${gained > 1 ? 's' : ''} Troco reçus ! 🪙`,
-                  subtitle: `Nouveau solde : ${data.trocoTokens} Jetons Troco`,
-                });
-                setTimeout(() => setTopUpCelebration(null), 4500);
-              } else if (prev && prev.euroBalance !== undefined && data.euroBalance > prev.euroBalance) {
-                const gained = (Number(data.euroBalance) - Number(prev.euroBalance)).toFixed(2);
-                playApplePaySound();
-                setTopUpCelebration({
-                  title: `+${gained} € reçus sur votre solde ! 💳`,
-                  subtitle: `Nouveau solde : ${Number(data.euroBalance).toFixed(2)} €`,
-                });
-                setTimeout(() => setTopUpCelebration(null), 4500);
-              }
-              return {
+              const updated = {
                 ...prev,
                 ...data,
                 uid: uid,
               };
+              try {
+                window.localStorage.setItem('troco_user_profile', JSON.stringify(updated));
+              } catch (_) {}
+              return updated;
             });
+
+            // Synchronisation réactive globale avec le store Zustand useWalletStore
+            const walletState = useWalletStore.getState();
+            if (walletState?.setTrocoTokens && newTokens !== null) walletState.setTrocoTokens(newTokens);
+            if (walletState?.setEuroBalance && newEuros !== null) walletState.setEuroBalance(newEuros);
+            if (walletState?.setKycVerified) walletState.setKycVerified(Boolean(data.kycVerified));
+            if (walletState?.setTrocoPlus) walletState.setTrocoPlus(Boolean(data.isTrocoPlus), data.trocoPlusPlan);
+
             if (Array.isArray(data.skills)) setSkills(data.skills);
             if (Array.isArray(data.equipment)) setEquipment(data.equipment);
           } else {
@@ -935,6 +967,8 @@ export default function App() {
             try {
               await setDoc(userDocRef, defaultUserDoc, { merge: true });
               setProfile(prev => ({ ...prev, ...defaultUserDoc }));
+              prevTokensRef.current = 10;
+              prevEurosRef.current = 0;
             } catch (e) {
               console.warn('[Firestore] Failed to init user doc:', e);
             }
@@ -944,8 +978,9 @@ export default function App() {
         setIsAuthenticated(true);
         window.localStorage.setItem('troco_is_authenticated', 'true');
         finishSessionLoading();
-        return () => unsubDoc();
       } else {
+        prevTokensRef.current = null;
+        prevEurosRef.current = null;
         const hasSession = window.localStorage.getItem('troco_is_authenticated') === 'true';
         if (!hasSession) {
           setIsAuthenticated(false);
@@ -954,7 +989,10 @@ export default function App() {
       }
     });
 
-    return () => unsubscribeAuth();
+    return () => {
+      if (unsubDoc) unsubDoc();
+      unsubscribeAuth();
+    };
   }, []);
 
   // ---- ÉCOUTE ET RÉACTUALISATION EN TEMPS RÉEL DES TRADUCTIONS DYNAMIQUES ----
