@@ -33,8 +33,7 @@ import {
 } from './utils/translationHelpers';
 import FilterDrawer from './components/modals/FilterDrawer';
 import LanguageSelectModal from './components/modals/LanguageSelectModal';
-import { motion } from 'framer-motion';
-import { getActiveAnimation } from './config/animations';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   translations,
   ensureLanguageLoaded,
@@ -3211,11 +3210,15 @@ export default function App() {
         }}
       >
 
+      <AnimatePresence mode="wait">
         {/* ONGLET 1 : EXPLORER / FEED */}
         {activeTab === 'feed' && (
           <motion.div
             key="page-feed"
-            {...getActiveAnimation('page')}
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
             style={{ width: '100%' }}
           >
           <div className="feed-layout-container">
@@ -3637,8 +3640,19 @@ export default function App() {
                 </Suspense>
               ) : (
                 <>
-                  <div
+                  <motion.div
                     ref={listingsGridRef}
+                    variants={{
+                      hidden: { opacity: 0 },
+                      show: {
+                        opacity: 1,
+                        transition: {
+                          staggerChildren: 0.05,
+                        },
+                      },
+                    }}
+                    initial="hidden"
+                    animate="show"
                     style={{
                       display: 'grid',
                       gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(290px, 1fr))',
@@ -3734,7 +3748,7 @@ export default function App() {
                         </React.Fragment>
                       );
                     })}
-                  </div>
+                  </motion.div>
 
                   {/* SENTINELLE OBSERVER POUR AUTO INFINITE SCROLL */}
                   {hasMoreListings && (
@@ -3886,7 +3900,10 @@ export default function App() {
       {activeTab === 'community' && (
         <motion.div
           key="page-community"
-          {...getActiveAnimation('page')}
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
           style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', flex: 1 }}
         >
           <SectoralErrorBoundary moduleName="Communauté & Troco Live">
@@ -3923,7 +3940,10 @@ export default function App() {
         return (
           <motion.div
             key="page-chat"
-            {...getActiveAnimation('page')}
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
             style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', flex: 1 }}
           >
             <SectoralErrorBoundary moduleName="Messagerie & Hub Collaboratif">
@@ -3977,7 +3997,10 @@ export default function App() {
       {activeTab === 'post' && (
         <motion.div
           key="page-post"
-          {...getActiveAnimation('page')}
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
           style={{ width: '100%' }}
         >
           <SectoralErrorBoundary featureName="Dépôt d'annonce">
@@ -4025,7 +4048,10 @@ export default function App() {
       {activeTab === 'profile' && (
         <motion.div
           key="page-profile"
-          {...getActiveAnimation('page')}
+          initial={{ opacity: 0, scale: 0.98 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
           style={{ width: '100%' }}
         >
           <Suspense fallback={null}>
@@ -4061,6 +4087,7 @@ export default function App() {
           </Suspense>
         </motion.div>
       )}
+      </AnimatePresence>
     </main>
 
       {/* BARRE DE NAVIGATION EN BAS (CLEAN, TRANSPARENTE, AVEC GESTES DE SWIPE iOS) */}

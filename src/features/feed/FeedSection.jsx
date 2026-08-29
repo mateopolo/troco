@@ -1,5 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { Search, ChevronLeft, ChevronRight, MapPin, Video, Flame } from 'lucide-react';
+import { motion } from 'framer-motion';
 import FeedCardItem from '../../components/FeedCardItem';
 import SponsoredFeedCard from '../../components/SponsoredFeedCard';
 
@@ -357,8 +358,19 @@ export function FeedSection({
             </button>
           </div>
         ) : (
-          <div
+          <motion.div
             ref={listingsGridRef}
+            variants={{
+              hidden: { opacity: 0 },
+              show: {
+                opacity: 1,
+                transition: {
+                  staggerChildren: 0.05,
+                },
+              },
+            }}
+            initial="hidden"
+            animate="show"
             style={{
               display: 'grid',
               gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(290px, 1fr))',
@@ -415,7 +427,7 @@ export function FeedSection({
                 </React.Fragment>
               );
             })}
-          </div>
+          </motion.div>
 
           {/* SENTINELLE OBSERVER POUR AUTO INFINITE SCROLL */}
           {hasMore && (

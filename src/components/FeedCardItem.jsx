@@ -185,10 +185,21 @@ function FeedCardItem({
   return (
     <motion.div
       ref={cardElementRef}
-      initial={{ opacity: 0, y: 30 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: false, amount: 0.1, margin: "0px 0px -50px 0px" }}
-      transition={{ duration: 0.4, ease: "easeOut" }}
+      variants={{
+        hidden: { opacity: 0, y: 20, scale: 0.98 },
+        show: {
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          transition: {
+            duration: 0.35,
+            ease: [0.22, 1, 0.36, 1],
+          },
+        },
+      }}
+      initial="hidden"
+      whileInView="show"
+      viewport={{ once: true, amount: 0.05 }}
       onClick={() => handleOpenListing(item)}
       onTouchStart={() => { if (setHoveredCardId) setHoveredCardId(item.id); }}
       onMouseEnter={() => { if (setHoveredCardId) setHoveredCardId(item.id); }}
