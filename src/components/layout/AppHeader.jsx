@@ -58,18 +58,18 @@ export const AppHeader = React.memo(({
     <header
       style={{
         display: isHiddenOnMobileChat ? 'none' : 'block',
-        backgroundColor: 'var(--bg-glass)',
-        backdropFilter: isScrolled ? 'blur(28px) saturate(200%)' : 'blur(20px) saturate(180%)',
-        WebkitBackdropFilter: isScrolled ? 'blur(28px) saturate(200%)' : 'blur(20px) saturate(180%)',
-        borderBottom: '1px solid var(--border-color)',
+        backgroundColor: darkMode ? 'rgba(26, 22, 19, 0.52)' : 'rgba(250, 247, 242, 0.52)',
+        backdropFilter: isScrolled ? 'blur(24px) saturate(190%)' : 'blur(16px) saturate(180%)',
+        WebkitBackdropFilter: isScrolled ? 'blur(24px) saturate(190%)' : 'blur(16px) saturate(180%)',
+        borderBottom: darkMode ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid rgba(0, 0, 0, 0.06)',
         padding: isScrolled ? '9px 16px' : '12px 16px',
         position: 'sticky',
         top: 0,
         zIndex: 50,
         flexShrink: 0,
         boxShadow: isScrolled
-          ? 'var(--shadow-card)'
-          : '0 1px 24px rgba(0,0,0,0.03)',
+          ? '0 6px 20px rgba(0,0,0,0.04)'
+          : 'none',
         width: '100%',
         boxSizing: 'border-box',
         transition: 'padding 0.3s var(--ease-quiet), background-color 0.3s var(--ease-quiet), box-shadow 0.3s var(--ease-quiet), border-color 0.3s var(--ease-quiet)',
@@ -88,16 +88,20 @@ export const AppHeader = React.memo(({
           boxSizing: 'border-box',
         }}
       >
-        {/* LOGO TROCO CLICKABLE -> RETOUR ACCUEIL */}
+        {/* LOGO TROCO CLICKABLE -> RETOUR ACCUEIL SANS AUCUN FOND RECTANGULAIRE */}
         <button
           type="button"
           onClick={handleLogoClick}
           style={{
             border: 'none',
-            background: 'none',
+            background: 'transparent',
+            backgroundColor: 'transparent',
+            boxShadow: 'none',
+            outline: 'none',
             cursor: 'pointer',
-            padding: '4px 6px',
-            borderRadius: '12px',
+            padding: '2px 4px',
+            margin: 0,
+            borderRadius: '0',
             textAlign: 'left',
             flexShrink: 0,
             display: 'flex',

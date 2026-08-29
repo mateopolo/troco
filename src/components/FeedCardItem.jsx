@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight, Video, Globe, MapPin, Tag, Trash2, ArrowRight, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { getActiveAnimation } from '../config/animations';
 
 function FeedCardItem({
   item,
@@ -186,10 +185,10 @@ function FeedCardItem({
   return (
     <motion.div
       ref={cardElementRef}
-      initial="initial"
-      whileInView="animate"
-      viewport={{ once: false, margin: '10%' }}
-      variants={getActiveAnimation('card')}
+      initial={{ opacity: 0, y: 30 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: false, amount: 0.1, margin: "0px 0px -50px 0px" }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
       onClick={() => handleOpenListing(item)}
       onTouchStart={() => { if (setHoveredCardId) setHoveredCardId(item.id); }}
       onMouseEnter={() => { if (setHoveredCardId) setHoveredCardId(item.id); }}

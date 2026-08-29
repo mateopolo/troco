@@ -1,5 +1,6 @@
 import React from 'react';
 import { Sparkles, ExternalLink } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 const SPONSORED_PARTNERS = [
   {
@@ -73,7 +74,11 @@ export default function SponsoredFeedCard({ index = 0, darkMode = false, onOpenN
   };
 
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0, y: 30 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: false, amount: 0.1, margin: "0px 0px -50px 0px" }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
       className="feed-card-item sponsored-card premium-card"
       onClick={handleAction}
       style={{
@@ -158,64 +163,56 @@ export default function SponsoredFeedCard({ index = 0, darkMode = false, onOpenN
           position: 'absolute',
           bottom: '10px',
           left: '10px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px'
+          backgroundColor: 'rgba(239, 68, 68, 0.92)',
+          color: '#FFFFFF',
+          padding: '4px 10px',
+          borderRadius: '8px',
+          fontSize: '11px',
+          fontWeight: '800',
+          backdropFilter: 'blur(6px)',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+          letterSpacing: '0.02em'
         }}>
-          <span style={{
-            backgroundColor: 'var(--accent-primary)',
-            color: '#FFFFFF',
-            fontSize: '11px',
-            fontWeight: '800',
-            padding: '3px 9px',
-            borderRadius: '8px',
-            boxShadow: 'var(--shadow-accent)'
-          }}>
-            🎁 {partner.perk}
-          </span>
+          {partner.perk}
         </div>
       </div>
 
-      {/* CONTENU DE LA CARTE */}
+      {/* CONTENU SPONSOR */}
       <div style={{
         padding: '16px',
         display: 'flex',
         flexDirection: 'column',
+        gap: '10px',
         flex: 1,
-        justifyContent: 'space-between',
-        gap: '10px'
+        justifyContent: 'space-between'
       }}>
         <div>
           <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: '4px',
             fontSize: '11px',
+            fontWeight: '700',
             color: 'var(--accent-primary)',
-            fontWeight: '700'
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+            marginBottom: '4px'
           }}>
-            <span>{partner.sponsorName}</span>
-            <span>★ {partner.rating} ({partner.reviewsCount})</span>
+            {partner.category}
           </div>
-
-          <h4 style={{
+          <h3 style={{
             margin: '0 0 6px 0',
-            fontSize: '14px',
-            fontWeight: '800',
+            fontSize: '15px',
+            fontWeight: '700',
             color: 'var(--text-main)',
             lineHeight: 1.3
           }}>
             {partner.title}
-          </h4>
-
+          </h3>
           <p style={{
             margin: 0,
             fontSize: '12px',
             color: 'var(--text-secondary)',
             lineHeight: 1.4,
             display: '-webkit-box',
-            WebkitLineClamp: 2,
+            WebkitLineClamp: 3,
             WebkitBoxOrient: 'vertical',
             overflow: 'hidden'
           }}>
@@ -223,28 +220,44 @@ export default function SponsoredFeedCard({ index = 0, darkMode = false, onOpenN
           </p>
         </div>
 
-        {/* BOUTON D'ACTION */}
+        {/* METADONNÉES PARTENAIRE */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingTop: '8px',
+          borderTop: '1px solid var(--border-color)',
+          fontSize: '11px',
+          color: 'var(--text-secondary)'
+        }}>
+          <span style={{ fontWeight: '600', color: 'var(--text-main)' }}>{partner.author}</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+            <span style={{ color: '#F59E0B' }}>★</span>
+            <strong>{partner.rating}</strong>
+            <span>({partner.reviewsCount})</span>
+          </span>
+        </div>
+
+        {/* BOUTON ACTION PARTENAIRE */}
         <button
           type="button"
           onClick={handleAction}
-          className="premium-button"
+          className="premium-btn-accent"
           style={{
-            border: 'none',
+            padding: '8px 14px',
             borderRadius: '12px',
-            padding: '9px 14px',
-            background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
-            color: '#FFFFFF',
             fontSize: '12px',
-            fontWeight: '800',
-            cursor: 'pointer',
+            fontWeight: '700',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             gap: '6px',
             boxShadow: 'var(--shadow-accent)',
-            width: '100%',
-            boxSizing: 'border-box',
-            marginTop: '4px'
+            background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
+            color: '#FFFFFF',
+            border: 'none',
+            cursor: 'pointer',
+            width: '100%'
           }}
         >
           <Sparkles size={13} />
@@ -252,6 +265,6 @@ export default function SponsoredFeedCard({ index = 0, darkMode = false, onOpenN
           <ExternalLink size={12} />
         </button>
       </div>
-    </div>
+    </motion.div>
   );
 }
