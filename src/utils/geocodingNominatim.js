@@ -2,6 +2,9 @@
 // UTILITAIRE DE GÉOLOCALISATION MONDIALE OPEN-SOURCE (OPENSTREETMAP NOMINATIM)
 // =====================================================================
 
+// Cache mémoire des requêtes de géocodage pour éviter les appels réseau redondants
+const nominatimCache = new Map();
+
 /**
  * Recherche d'adresses et villes mondiales via l'API publique OpenStreetMap Nominatim.
  * @param {string} query Terme de recherche (ex: "Paris", "75015", "Tokyo", "Montreal")
@@ -9,8 +12,13 @@
  * @returns {Promise<Array>} Liste d'adresses géocodées
  */
 export async function searchNominatim(query, { limit = 5, lang = 'fr' } = {}) {
-  const cleanQuery = String(query || '').trim();
+  const cleanQuery = String(query || '').trim().toLowerCase();
   if (!cleanQuery || cleanQuery.length < 2) return [];
+
+  const cacheKey = `${cleanQuery}_${limit}_${lang}`;
+  if (nominatimCache.has(cacheKey)) {
+    return nominatimCache.get(cacheKey);
+  }
 
   try {
     const endpoint = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(cleanQuery)}&addressdetails=1&limit=${limit}&accept-language=${lang}`;
@@ -23,7 +31,7 @@ export async function searchNominatim(query, { limit = 5, lang = 'fr' } = {}) {
     if (!response.ok) return [];
     const data = await response.json();
 
-    return data.map((item) => {
+    const results = data.map((item) => {
       const addr = item.address || {};
       const cityName = addr.city || addr.town || addr.village || addr.municipality || addr.county || item.name || '';
       const countryName = addr.country || '';
@@ -43,10 +51,30 @@ export async function searchNominatim(query, { limit = 5, lang = 'fr' } = {}) {
         type: item.type,
       };
     });
+
+    nominatimCache.set(cacheKey, results);
+    return results;
   } catch (error) {
     console.warn('[Nominatim Geocoding] Fetch error:', error);
     return [];
   }
+}
+
+/**
+ * Recherche dynamique de coordonnées GPS pour une adresse ou ville
+ * @param {string} locationQuery Nom de lieu ou adresse
+ * @returns {Promise<[number, number]|null>} [lat, lon] ou null
+ */
+export async function lookupCoordinatesDynamic(locationQuery) {
+  if (!locationQuery || typeof locationQuery !== 'string') return null;
+  const clean = locationQuery.trim();
+  if (clean.length < 2) return null;
+
+  const results = await searchNominatim(clean, { limit: 1 });
+  if (results && results.length > 0 && !isNaN(results[0].lat) && !isNaN(results[0].lon)) {
+    return [results[0].lat, results[0].lon];
+  }
+  return null;
 }
 
 /**

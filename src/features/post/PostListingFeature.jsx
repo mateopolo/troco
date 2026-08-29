@@ -27,6 +27,7 @@ import {
   reverseGeocodeNominatim,
   applyPrivacyBlur,
 } from '../../utils/geocodingNominatim';
+import { encodeGeohash } from '../../utils/geohash';
 import { validateListingContent } from '../../utils/moderationBlacklist';
 import { analyzeContent } from '../../utils/contentModeration';
 import { playApplePaySound } from '../../utils/audioService';
@@ -405,6 +406,11 @@ export default function PostListingFeature({
         Number((baseCoords[1] + blurOffsetLng).toFixed(6))
       ];
 
+      const finalCoords = isEditingListing && editingOriginalListing?.coordinates ? editingOriginalListing.coordinates : resolvedCoords;
+      const computedGeohash = (finalCoords && Array.isArray(finalCoords) && finalCoords.length >= 2)
+        ? encodeGeohash(finalCoords[0], finalCoords[1], 9)
+        : null;
+
       const newListing = {
         ...(isEditingListing ? (editingOriginalListing || {}) : {}),
         id: isEditingListing ? (editingOriginalListing?.id || Date.now()) : Date.now(),
@@ -420,7 +426,10 @@ export default function PostListingFeature({
         status: postDraft.status || 'active',
         location: (postDraft.location || '').trim() || (postDraft.format === 'remote' ? 'À distance' : 'Sur place'),
         locationPrivacy: postDraft.locationPrivacy || 'exact',
-        coordinates: isEditingListing && editingOriginalListing?.coordinates ? editingOriginalListing.coordinates : resolvedCoords,
+        coordinates: finalCoords,
+        latitude: finalCoords?.[0] ?? null,
+        longitude: finalCoords?.[1] ?? null,
+        geohash: computedGeohash,
         type: postDraft.format || 'onsite',
         languages: profile?.languages ? profile.languages.slice(0, 2) : ['FR'],
         compensation: compensationText,

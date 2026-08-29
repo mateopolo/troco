@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback, Suspense, use
 import { Search, MapPin, Video, Globe, Filter, ShieldCheck, CheckCircle, X, Sparkles, Coins, Trash2, Camera, Flame, Check, Lock, CreditCard, Tag, ChevronLeft, ChevronRight, ShieldAlert } from 'lucide-react';
 import { auth, db } from './firebase';
 import { collection, addDoc, doc, updateDoc, serverTimestamp, onSnapshot, query, orderBy, limit, setDoc, deleteDoc, getDoc, getDocs, where, runTransaction } from 'firebase/firestore';
-import { fetchListingsPaginated } from './services/firestoreService';
+import { fetchListingsPaginated, fetchListingsByGeohash } from './services/firestoreService';
 import { isSignInWithEmailLink, signInWithEmailLink, signOut, onAuthStateChanged } from 'firebase/auth';
 import { useWebRTC } from './hooks/useWebRTC';
 import { useTheme } from './contexts/ThemeContext';
@@ -43,6 +43,8 @@ import {
 } from './data/translationsData';
 import {
   calculateHaversineDistance,
+  searchNominatim,
+  lookupCoordinatesDynamic,
 } from './utils/geocodingNominatim';
 
 import { useGlobalContent } from './features/admin/useGlobalContent';
@@ -1546,35 +1548,33 @@ export default function App() {
     return maleAvatars[firstName.length % maleAvatars.length];
   };
 
-  // ---- COORDONNÉES GPS RÉELLES ET RÉSOLUTION MONDIALE (GÉOLOCALISATION DYNAMIQUE) ----
-  const getCoordinatesForLocation = (location = '') => {
+  // ---- COORDONNÉES GPS RÉELLES ET RÉSOLUTION MONDIALE (GÉOLOCALISATION DYNAMIQUE OPENSTREETMAP) ----
+  const locationCoordsCacheRef = useRef(new Map());
+
+  const getCoordinatesForLocation = useCallback((location = '') => {
     if (!location) return [48.8566, 2.3522];
+    const locKey = String(location).trim().toLowerCase();
+    if (locationCoordsCacheRef.current.has(locKey)) {
+      return locationCoordsCacheRef.current.get(locKey);
+    }
 
-    const locLower = String(location).toLowerCase();
-    if (locLower.includes('roissy')) return [49.0022, 2.5153];
-    if (locLower.includes('tokyo') || locLower.includes('shibuya') || locLower.includes('japon')) return [35.6580, 139.7016];
-    if (locLower.includes('new york') || locLower.includes('soho') || locLower.includes('manhattan') || locLower.includes('usa')) return [40.7128, -74.0060];
-    if (locLower.includes('londres') || locLower.includes('london') || locLower.includes('uk')) return [51.5074, -0.1278];
-    if (locLower.includes('barcelone') || locLower.includes('barcelona') || locLower.includes('espagne')) return [41.3851, 2.1734];
-    if (locLower.includes('montréal') || locLower.includes('montreal') || locLower.includes('canada')) return [45.5017, -73.5673];
-    if (locLower.includes('florence') || locLower.includes('italie') || locLower.includes('rome')) return [43.7696, 11.2558];
-    if (locLower.includes('biarritz')) return [43.4832, -1.5586];
-    if (locLower.includes('strasbourg')) return [48.5734, 7.7521];
-    if (locLower.includes('lyon')) return [45.7640, 4.8357];
-    if (locLower.includes('marseille')) return [43.2965, 5.3698];
-    if (locLower.includes('bordeaux')) return [44.8378, -0.5792];
-    if (locLower.includes('toulouse')) return [43.6047, 1.4442];
-    if (locLower.includes('lille')) return [50.6292, 3.0573];
-    if (locLower.includes('nice')) return [43.7102, 7.2620];
-    if (locLower.includes('nantes')) return [47.2184, -1.5536];
+    // Déclenchement de la résolution asynchrone OpenStreetMap Nominatim
+    lookupCoordinatesDynamic(locKey).then(coords => {
+      if (coords && Array.isArray(coords) && coords.length >= 2) {
+        locationCoordsCacheRef.current.set(locKey, coords);
+      }
+    }).catch(() => {});
 
+    // Décalage déterministe pour rendu immédiat fluide sans blocage
     const match = String(location).match(/(\d+(?:\.\d+)?)\s*km/i);
     const dist = match ? parseFloat(match[1]) : 3.0;
     const angle = (dist * 137.5) * (Math.PI / 180);
     const latOffset = (dist / 111) * Math.cos(angle);
     const lngOffset = (dist / (111 * Math.cos(48.8566 * Math.PI / 180))) * Math.sin(angle);
-    return [48.8566 + latOffset, 2.3522 + lngOffset];
-  };
+    const approx = [48.8566 + latOffset, 2.3522 + lngOffset];
+    locationCoordsCacheRef.current.set(locKey, approx);
+    return approx;
+  }, []);
 
   const isAdmin = profile?.email === 'mateopolo91@gmail.com' || auth.currentUser?.email === 'mateopolo91@gmail.com' || profile?.role === 'admin';
 
@@ -1768,15 +1768,21 @@ export default function App() {
     if (isLoadingMoreListings || !hasMoreListings) return;
     setIsLoadingMoreListings(true);
     try {
-      const result = await fetchListingsPaginated({ pageSize: 20, lastDoc: lastVisibleListingDoc });
+      let result;
+      if (userCoords && Array.isArray(userCoords) && userCoords.length >= 2 && !isInfiniteRadius && radiusKm < 2000) {
+        result = await fetchListingsByGeohash({ center: userCoords, radiusKm, pageSize: 25 });
+      } else {
+        result = await fetchListingsPaginated({ pageSize: 20, lastDoc: lastVisibleListingDoc });
+      }
+
       if (result && result.items && result.items.length > 0) {
         setListings(prev => {
           const existingIds = new Set(prev.map(p => p.id));
           const newItems = result.items.filter(item => !existingIds.has(item.id));
           return [...prev, ...newItems];
         });
-        setLastVisibleListingDoc(result.lastVisible);
-        setHasMoreListings(result.hasMore);
+        setLastVisibleListingDoc(result.lastVisible || null);
+        setHasMoreListings(result.hasMore || false);
       } else {
         setHasMoreListings(false);
       }
@@ -1797,39 +1803,38 @@ export default function App() {
     return null;
   };
 
-  const CITY_ALIASES = {
-    'parie': 'paris',
-    'pari': 'paris',
-    'pariss': 'paris',
-    'bordeau': 'bordeaux',
-    'bordeaux': 'bordeaux',
-    'lyons': 'lyon',
-    'lion': 'lyon',
-    'marseiles': 'marseille',
-    'marseil': 'marseille',
-    'biariz': 'biarritz',
-    'strasburg': 'strasbourg',
-    'nantes': 'nantes',
-    'toulouse': 'toulouse',
-    'lille': 'lille',
-    'nice': 'nice',
-    'tokyo': 'tokyo',
-    'london': 'london',
-    'londres': 'london',
-    'nyc': 'new york',
-    'newyork': 'new york',
-  };
-
   const removeAccents = (str = '') => {
     return String(str).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
   };
+
+  // Résolution dynamique des alias géographiques via OpenStreetMap Nominatim
+  const [dynamicSearchAliases, setDynamicSearchAliases] = useState([]);
+
+  useEffect(() => {
+    const raw = (debouncedSearchQuery || '').trim();
+    if (raw.length >= 3) {
+      searchNominatim(raw, { limit: 3 }).then(results => {
+        if (results && results.length > 0) {
+          const names = results
+            .map(r => [r.cityName, r.displayName, r.country])
+            .flat()
+            .filter(Boolean)
+            .map(removeAccents);
+          setDynamicSearchAliases(Array.from(new Set(names)));
+        } else {
+          setDynamicSearchAliases([]);
+        }
+      }).catch(() => setDynamicSearchAliases([]));
+    } else {
+      setDynamicSearchAliases([]);
+    }
+  }, [debouncedSearchQuery]);
 
   const filteredListings = useMemo(() => {
     return listings.filter((item) => {
       const rawQuery = (debouncedSearchQuery || '').trim();
       const cleanQuery = removeAccents(rawQuery);
       const words = cleanQuery.split(/\s+/).filter(Boolean);
-      const expandedWords = words.map(w => CITY_ALIASES[w] || w);
 
       const itemLocationNorm = removeAccents(item.location || '');
       const itemTitleNorm = removeAccents(item.title || '');
@@ -1852,12 +1857,13 @@ export default function App() {
         // 1. Match direct du texte
         if (searchText.includes(cleanQuery)) return true;
 
-        // 2. Match via alias étendu (ex: "parie" -> "paris")
-        const expandedQuery = expandedWords.join(' ');
-        if (searchText.includes(expandedQuery)) return true;
+        // 2. Match via recherche dynamique OpenStreetMap Nominatim (remplace les dictionnaires statiques)
+        if (dynamicSearchAliases.length > 0 && dynamicSearchAliases.some(alias => searchText.includes(alias) || alias.includes(cleanQuery))) {
+          return true;
+        }
 
         // 3. Match mot par mot
-        return expandedWords.every(w => searchText.includes(w));
+        return words.every(w => searchText.includes(w));
       })();
       const matchesFormat = (() => {
         if (formatFilter === 'all' || !formatFilter) return true;

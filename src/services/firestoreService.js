@@ -8,6 +8,8 @@ import {
   where,
   orderBy,
   limit,
+  startAt,
+  endAt,
   startAfter,
   getDocs,
   onSnapshot,
@@ -15,17 +17,19 @@ import {
   runTransaction
 } from 'firebase/firestore';
 import { db } from '../firebase';
+import { encodeGeohash, getGeohashQueryBounds } from '../utils/geohash';
+import { calculateHaversineDistance } from '../utils/geocodingNominatim';
 
 /**
  * ==============================================================================
  * FIRESTORE SERVICE — ENTERPRISE DATA ACCESS LAYER (DAL)
  * ==============================================================================
  * Centralise tous les appels Firestore avec validation de type, gestion d'erreurs
- * atomique et désabonnements propres pour éliminer les fuites mémoire.
+ * atomique et indexation spatiale Geohashing (startAt / endAt).
  */
 
 // ------------------------------------------------------------------------------
-// 1. GESTION DES ANNONCES (LISTINGS & PAGINATION PAR CURSEUR)
+// 1. GESTION DES ANNONCES (LISTINGS & REQUÊTES GÉOSPATIALES SERVEUR)
 // ------------------------------------------------------------------------------
 
 /**
@@ -103,6 +107,180 @@ export const fetchListingsPaginated = async ({ pageSize = 20, lastDoc = null } =
 };
 
 /**
+ * Requête spatiale optimisée par Geohash (startAt / endAt)
+ * Récupère uniquement les annonces dans le périmètre géographique sans surcharger la bande passante.
+ * @param {Object} options
+ * @param {[number, number]} options.center Coordonnées [latitude, longitude]
+ * @param {number} options.radiusKm Rayon de recherche en km (défaut: 20)
+ * @param {number} options.pageSize Limite par requête de plage (défaut: 25)
+ * @returns {Promise<{items: Array, totalFound: number}>}
+ */
+export const fetchListingsByGeohash = async ({ center, radiusKm = 20, pageSize = 25 } = {}) => {
+  if (!db || !Array.isArray(center) || center.length < 2 || isNaN(center[0]) || isNaN(center[1])) {
+    return fetchListingsPaginated({ pageSize });
+  }
+
+  const [centerLat, centerLon] = center;
+  const bounds = getGeohashQueryBounds([centerLat, centerLon], radiusKm);
+
+  if (!bounds || bounds.length === 0) {
+    return fetchListingsPaginated({ pageSize });
+  }
+
+  try {
+    const promises = bounds.map(async ([startHash, endHash]) => {
+      try {
+        const q = query(
+          collection(db, 'listings'),
+          orderBy('geohash'),
+          startAt(startHash),
+          endAt(endHash),
+          limit(pageSize)
+        );
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(docSnap => ({
+          id: docSnap.data().id || docSnap.id,
+          firestoreId: docSnap.id,
+          ...docSnap.data(),
+          status: docSnap.data().status || 'active',
+          isDemo: false,
+          _doc: docSnap,
+        }));
+      } catch (err) {
+        const fallbackQ = query(
+          collection(db, 'listings'),
+          where('geohash', '>=', startHash),
+          where('geohash', '<=', endHash),
+          limit(pageSize)
+        );
+        const snapshot = await getDocs(fallbackQ);
+        return snapshot.docs.map(docSnap => ({
+          id: docSnap.data().id || docSnap.id,
+          firestoreId: docSnap.id,
+          ...docSnap.data(),
+          status: docSnap.data().status || 'active',
+          isDemo: false,
+          _doc: docSnap,
+        }));
+      }
+    });
+
+    const snapshots = await Promise.all(promises);
+    const docMap = new Map();
+
+    for (const snapItems of snapshots) {
+      for (const item of snapItems) {
+        if (!docMap.has(item.id)) {
+          let itemCoords = item.coordinates;
+          if (!itemCoords && item.latitude !== undefined && item.longitude !== undefined) {
+            itemCoords = [item.latitude, item.longitude];
+          }
+
+          if (itemCoords && Array.isArray(itemCoords) && itemCoords.length >= 2) {
+            const dist = calculateHaversineDistance(centerLat, centerLon, Number(itemCoords[0]), Number(itemCoords[1]));
+            item.distanceKm = dist;
+            if (dist !== null && dist <= radiusKm) {
+              docMap.set(item.id, item);
+            }
+          } else {
+            docMap.set(item.id, item);
+          }
+        }
+      }
+    }
+
+    const items = Array.from(docMap.values());
+    items.sort((a, b) => (a.distanceKm || 0) - (b.distanceKm || 0));
+
+    return {
+      items,
+      totalFound: items.length,
+    };
+  } catch (error) {
+    console.error('[FirestoreService] fetchListingsByGeohash error:', error);
+    return fetchListingsPaginated({ pageSize });
+  }
+};
+
+/**
+ * Écoute en temps réel les annonces dans un rayon geohash donné
+ */
+export const subscribeToListingsByGeohash = ({ center, radiusKm = 20, pageSize = 20, onUpdate, onError }) => {
+  if (!db || !Array.isArray(center) || center.length < 2 || isNaN(center[0]) || isNaN(center[1])) {
+    return subscribeToListings(onUpdate, onError, pageSize);
+  }
+
+  const [centerLat, centerLon] = center;
+  const bounds = getGeohashQueryBounds([centerLat, centerLon], radiusKm);
+  if (!bounds || bounds.length === 0) {
+    return subscribeToListings(onUpdate, onError, pageSize);
+  }
+
+  const unsubscribes = [];
+  const resultsByRange = new Map();
+
+  const emitMerged = () => {
+    const combined = new Map();
+    for (const rangeItems of resultsByRange.values()) {
+      for (const item of rangeItems) {
+        if (!combined.has(item.id)) {
+          let itemCoords = item.coordinates;
+          if (!itemCoords && item.latitude !== undefined && item.longitude !== undefined) {
+            itemCoords = [item.latitude, item.longitude];
+          }
+          if (itemCoords && Array.isArray(itemCoords) && itemCoords.length >= 2) {
+            const dist = calculateHaversineDistance(centerLat, centerLon, Number(itemCoords[0]), Number(itemCoords[1]));
+            item.distanceKm = dist;
+            if (dist !== null && dist <= radiusKm) {
+              combined.set(item.id, item);
+            }
+          } else {
+            combined.set(item.id, item);
+          }
+        }
+      }
+    }
+    const finalItems = Array.from(combined.values());
+    finalItems.sort((a, b) => (a.distanceKm || 0) - (b.distanceKm || 0));
+    if (typeof onUpdate === 'function') onUpdate(finalItems);
+  };
+
+  bounds.forEach(([startHash, endHash], index) => {
+    try {
+      const q = query(
+        collection(db, 'listings'),
+        orderBy('geohash'),
+        startAt(startHash),
+        endAt(endHash),
+        limit(pageSize)
+      );
+      const unsub = onSnapshot(q, (snapshot) => {
+        const items = snapshot.docs.map(d => ({
+          id: d.data().id || d.id,
+          firestoreId: d.id,
+          ...d.data(),
+          status: d.data().status || 'active',
+          isDemo: false,
+          _doc: d,
+        }));
+        resultsByRange.set(index, items);
+        emitMerged();
+      }, (err) => {
+        console.warn(`[FirestoreService] subscribeToListingsByGeohash range ${index} error:`, err);
+        if (onError) onError(err);
+      });
+      unsubscribes.push(unsub);
+    } catch (e) {
+      console.warn(`[FirestoreService] subscribeToListingsByGeohash setup range ${index} failed:`, e);
+    }
+  });
+
+  return () => {
+    unsubscribes.forEach(u => typeof u === 'function' && u());
+  };
+};
+
+/**
  * Écoute en temps réel les annonces Firestore avec limite pour éviter la surcharge mémoire
  * @param {Function} onUpdate Callback avec les annonces formatées
  * @param {Function} onError Callback en cas d'erreur
@@ -148,16 +326,39 @@ export const subscribeToListings = (onUpdate, onError, pageSize = 20) => {
 };
 
 /**
- * Crée une nouvelle annonce dans Firestore
+ * Crée une nouvelle annonce dans Firestore avec indexation spatiale Geohash
  */
 export const createListing = async (listingData) => {
   try {
-    const docRef = await addDoc(collection(db, 'listings'), {
+    let lat = null;
+    let lon = null;
+
+    if (Array.isArray(listingData.coordinates) && listingData.coordinates.length >= 2) {
+      lat = Number(listingData.coordinates[0]);
+      lon = Number(listingData.coordinates[1]);
+    } else if (listingData.latitude !== undefined && listingData.longitude !== undefined) {
+      lat = Number(listingData.latitude);
+      lon = Number(listingData.longitude);
+    } else if (listingData.lat !== undefined && listingData.lon !== undefined) {
+      lat = Number(listingData.lat);
+      lon = Number(listingData.lon);
+    }
+
+    let geohash = listingData.geohash || null;
+    if ((lat !== null && lon !== null && !isNaN(lat) && !isNaN(lon)) && !geohash) {
+      geohash = encodeGeohash(lat, lon, 9);
+    }
+
+    const payload = {
       ...listingData,
+      ...(geohash ? { geohash } : {}),
+      ...(lat !== null && lon !== null ? { coordinates: [lat, lon], latitude: lat, longitude: lon } : {}),
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
-    });
-    return { success: true, id: docRef.id };
+    };
+
+    const docRef = await addDoc(collection(db, 'listings'), payload);
+    return { success: true, id: docRef.id, geohash };
   } catch (error) {
     console.error('[FirestoreService] createListing error:', error);
     return { success: false, error };
