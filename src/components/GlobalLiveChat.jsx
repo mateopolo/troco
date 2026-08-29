@@ -103,7 +103,7 @@ export default function GlobalLiveChat({
     setHasNewMessagesBelow(false);
   };
 
-  // Écoute en temps réel des messages dans Firestore avec fallback robuste
+  // Écoute en temps réel des messages dans Firestore avec fallback robuste et fusion d'état
   useEffect(() => {
     if (!db) return;
 
@@ -112,37 +112,45 @@ export default function GlobalLiveChat({
     const setupListener = (useOrderBy = true) => {
       try {
         const q = useOrderBy
-          ? query(collection(db, 'global_chat'), orderBy('createdAt', 'desc'), limit(60))
-          : query(collection(db, 'global_chat'), limit(60));
+          ? query(collection(db, 'global_chat'), orderBy('createdAt', 'desc'), limit(100))
+          : query(collection(db, 'global_chat'), limit(100));
 
         return onSnapshot(q, (snapshot) => {
           if (!snapshot.empty) {
             const fetched = [];
             snapshot.forEach((docSnap) => {
               const data = docSnap.data();
-              fetched.push({
-                id: docSnap.id,
-                author: data.author || 'Membre Troco',
-                authorUsername: data.authorUsername || '@membre',
-                avatar: data.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
-                text: data.text || '',
-                badge: data.badge || (data.verified ? 'VÉRIFIÉ' : 'MEMBRE'),
-                isUrgent: !!data.isUrgent,
-                isEditedByAdmin: !!data.isEditedByAdmin,
-                timestamp: data.timestamp?.toMillis ? data.timestamp.toMillis() : (data.createdAt || Date.now()),
-              });
+              if (data) {
+                fetched.push({
+                  id: docSnap.id,
+                  author: data.author || data.authorName || 'Membre Troco',
+                  authorUsername: data.authorUsername || '@membre',
+                  avatar: data.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
+                  text: data.text || '',
+                  badge: data.badge || (data.verified ? 'VÉRIFIÉ' : 'MEMBRE'),
+                  isUrgent: Boolean(data.isUrgent),
+                  isEditedByAdmin: Boolean(data.isEditedByAdmin),
+                  timestamp: data.timestamp?.toMillis ? data.timestamp.toMillis() : (data.createdAt?.toMillis ? data.createdAt.toMillis() : (data.createdAt || data.timestamp || Date.now())),
+                });
+              }
             });
 
             // Tri chronologique ascendant
             fetched.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
 
-            if (fetched.length < 3) {
-              const existingIds = new Set(fetched.map(m => m.id));
-              const baseList = INITIAL_GLOBAL_MESSAGES.filter(m => !existingIds.has(m.id));
-              setMessages([...baseList, ...fetched]);
-            } else {
-              setMessages(fetched);
-            }
+            setMessages(prev => {
+              const mergedMap = new Map();
+              // Conserver les messages initiaux de démonstration si peu de données
+              INITIAL_GLOBAL_MESSAGES.forEach(m => mergedMap.set(m.id, m));
+              // Ajouter les messages précédemment en mémoire
+              (prev || []).forEach(m => mergedMap.set(m.id, m));
+              // Écraser/ajouter avec les données fraîches de Firestore
+              fetched.forEach(m => mergedMap.set(m.id, m));
+
+              const mergedList = Array.from(mergedMap.values());
+              mergedList.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+              return mergedList;
+            });
 
             if (isAutoScrollEnabled) {
               setTimeout(() => scrollToBottom('smooth'), 50);
@@ -152,9 +160,6 @@ export default function GlobalLiveChat({
           }
         }, (err) => {
           console.error('🚨 [GlobalChat] Firestore listener error:', err);
-          if (err?.message?.includes('index')) {
-            console.error('🔗 [Firebase Composite Index Link]:', err.message);
-          }
           if (useOrderBy) {
             console.warn('[GlobalChat] Essai de la requête de repli sans orderBy...');
             unsubscribe = setupListener(false);
@@ -167,7 +172,9 @@ export default function GlobalLiveChat({
     };
 
     unsubscribe = setupListener(true);
-    return () => unsubscribe();
+    return () => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+    };
   }, [isAutoScrollEnabled]);
 
   // Détection du défilement manuel

@@ -89,9 +89,10 @@ export default function AdminDashboard({
   useEffect(() => {
     if (!db || !isUnlocked) return;
 
+    let unsubscribe = () => {};
     try {
       const usersColl = collection(db, 'users');
-      const unsubscribe = onSnapshot(
+      unsubscribe = onSnapshot(
         usersColl,
         (snapshot) => {
           const list = [];
@@ -111,21 +112,24 @@ export default function AdminDashboard({
           setIsLoadingUsers(false);
         }
       );
-
-      return () => unsubscribe();
     } catch (e) {
       console.warn('[AdminDashboard] Exception users:', e);
       setIsLoadingUsers(false);
     }
+
+    return () => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+    };
   }, [isUnlocked]);
 
   // 2. LISTENER TEMPS RÉEL : ANNONCES
   useEffect(() => {
     if (!db || !isUnlocked) return;
 
+    let unsubscribe = () => {};
     try {
       const listingsColl = collection(db, 'listings');
-      const unsubscribe = onSnapshot(
+      unsubscribe = onSnapshot(
         listingsColl,
         (snapshot) => {
           const list = [];
@@ -144,17 +148,39 @@ export default function AdminDashboard({
           setIsLoadingListings(false);
         }
       );
-
-      return () => unsubscribe();
     } catch (e) {
       console.warn('[AdminDashboard] Exception listings:', e);
       setIsLoadingListings(false);
     }
+
+    return () => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+    };
   }, [isUnlocked]);
 
   // 3. LISTENER TEMPS RÉEL : FLUX COMMUNAUTÉ (global_chat)
   useEffect(() => {
     if (!db || !isUnlocked) return;
+
+    let unsubscribe = () => {};
+
+    const handleSnapshot = (snapshot) => {
+      const list = [];
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        list.push({
+          id: docSnap.id,
+          ...data,
+        });
+      });
+      list.sort((a, b) => {
+        const tA = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.timestamp?.toMillis ? a.timestamp.toMillis() : (a.createdAt || a.timestamp || 0));
+        const tB = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.timestamp?.toMillis ? b.timestamp.toMillis() : (b.createdAt || b.timestamp || 0));
+        return tB - tA;
+      });
+      setCommunityMessages(list);
+      setIsLoadingCommunity(false);
+    };
 
     try {
       const q = query(
@@ -163,31 +189,27 @@ export default function AdminDashboard({
         limit(100)
       );
 
-      const unsubscribe = onSnapshot(
+      unsubscribe = onSnapshot(
         q,
-        (snapshot) => {
-          const list = [];
-          snapshot.forEach((docSnap) => {
-            const data = docSnap.data();
-            list.push({
-              id: docSnap.id,
-              ...data,
-            });
-          });
-          setCommunityMessages(list);
-          setIsLoadingCommunity(false);
-        },
+        handleSnapshot,
         (err) => {
-          console.warn('[AdminDashboard] Erreur écoute global_chat:', err);
-          setIsLoadingCommunity(false);
+          console.warn('[AdminDashboard] Erreur écoute global_chat avec orderBy, fallback sans orderBy:', err);
+          try {
+            const fallbackQ = query(collection(db, 'global_chat'), limit(100));
+            unsubscribe = onSnapshot(fallbackQ, handleSnapshot, () => setIsLoadingCommunity(false));
+          } catch (_) {
+            setIsLoadingCommunity(false);
+          }
         }
       );
-
-      return () => unsubscribe();
     } catch (e) {
       console.warn('[AdminDashboard] Exception global_chat:', e);
       setIsLoadingCommunity(false);
     }
+
+    return () => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+    };
   }, [isUnlocked]);
 
   // ================= ACTIONS UTILISATEURS =================

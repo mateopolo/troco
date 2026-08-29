@@ -27,9 +27,10 @@ export function useGlobalContent(key, fallbackValue = '') {
   useEffect(() => {
     if (!db || !key) return;
 
+    let unsubscribe = () => {};
     try {
       const docRef = doc(db, 'global_content', key);
-      const unsubscribe = onSnapshot(
+      unsubscribe = onSnapshot(
         docRef,
         (docSnap) => {
           if (docSnap.exists()) {
@@ -43,11 +44,13 @@ export function useGlobalContent(key, fallbackValue = '') {
           console.warn(`[useGlobalContent] Erreur écoute '${key}':`, err);
         }
       );
-
-      return () => unsubscribe();
     } catch (e) {
       console.warn(`[useGlobalContent] Exception init '${key}':`, e);
     }
+
+    return () => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+    };
   }, [key, defaultVal]);
 
   return content;
@@ -67,9 +70,10 @@ export function useAllGlobalContent() {
       return;
     }
 
+    let unsubscribe = () => {};
     try {
       const collRef = collection(db, 'global_content');
-      const unsubscribe = onSnapshot(
+      unsubscribe = onSnapshot(
         collRef,
         (snapshot) => {
           const map = { ...DEFAULT_GLOBAL_CONTENT };
@@ -86,12 +90,14 @@ export function useAllGlobalContent() {
           setIsLoading(false);
         }
       );
-
-      return () => unsubscribe();
     } catch (e) {
       console.warn('[useAllGlobalContent] Exception:', e);
       setIsLoading(false);
     }
+
+    return () => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+    };
   }, []);
 
   const saveContent = useCallback(async (key, value, description = '') => {

@@ -204,7 +204,7 @@ export const useChatManager = ({
     } catch (_) { }
   }, []);
 
-  // Synchronisation temps réel des discussions depuis Firestore (CONFIDENTIALITÉ STRICTE : filtrage multi-clés)
+  // Synchronisation temps réel des discussions depuis Firestore (CONFIDENTIALITÉ STRICTE : filtrage multi-clés + tri client)
   useEffect(() => {
     if (!db) return;
     const myName = (profile?.name || '').trim();
@@ -214,9 +214,9 @@ export const useChatManager = ({
 
     // Tous les identifiants possibles de l'utilisateur pour une récupération exhaustive
     const targetSet = new Set([
+      myUid,
       myName,
       myName.toLowerCase(),
-      myUid,
       myUsername,
       myUsername.toLowerCase(),
       myEmail,
@@ -236,11 +236,11 @@ export const useChatManager = ({
     const allDocsMap = new Map();
     let isInitialLoad = true;
 
-    // Helper pour fusionner et mettre à jour la liste des chats
+    // Helper pour fusionner et mettre à jour la liste des chats avec tri client résilient
     const updateMergedChats = () => {
       const firestoreChats = Array.from(allDocsMap.entries()).map(([docId, data]) => {
         const otherUser = Array.isArray(data.participants)
-          ? data.participants.find(p => p && p.trim().toLowerCase() !== myName.toLowerCase() && p !== myUid && p.trim().toLowerCase() !== myEmail.toLowerCase()) || data.user || 'Interlocuteur'
+          ? data.participants.find(p => p && String(p).trim().toLowerCase() !== myName.toLowerCase() && String(p) !== String(myUid) && String(p).trim().toLowerCase() !== myEmail.toLowerCase()) || data.user || 'Interlocuteur'
           : data.user || 'Interlocuteur';
 
         const fChatId = data.id || docId;
@@ -263,11 +263,18 @@ export const useChatManager = ({
         }
       });
 
+      // Tri direct en mémoire par date de dernière activité (évite tout bug d'index manquant Firestore)
+      merged.sort((a, b) => {
+        const timeA = a.updatedAt?.toMillis ? a.updatedAt.toMillis() : (a.updatedAt ? new Date(a.updatedAt).getTime() : (a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt ? new Date(a.createdAt).getTime() : (a.timestamp || 0))));
+        const timeB = b.updatedAt?.toMillis ? b.updatedAt.toMillis() : (b.updatedAt ? new Date(b.updatedAt).getTime() : (b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt ? new Date(b.createdAt).getTime() : (b.timestamp || 0))));
+        return timeB - timeA;
+      });
+
       setChatsList(merged);
       try { useChatStore.getState().setChatsList(merged); } catch (_) { }
     };
 
-    // Écoute des discussions par participants
+    // Écoute des discussions par participants sans orderBy (évite index manquant)
     targets.forEach(targetVal => {
       try {
         const q = query(
@@ -317,9 +324,6 @@ export const useChatManager = ({
           isInitialLoad = false;
         }, (err) => {
           console.error('🚨 [Firestore] chats onSnapshot error for target:', targetVal, err);
-          if (err?.message?.includes('index')) {
-            console.error('🔗 [Firebase Composite Index Required]:', err.message);
-          }
           updateMergedChats();
         });
 
@@ -351,7 +355,7 @@ export const useChatManager = ({
     }
 
     return () => {
-      unsubs.forEach(u => { try { u(); } catch (_) { } });
+      unsubs.forEach(u => { try { if (typeof u === 'function') u(); } catch (_) { } });
     };
   }, [profile?.name, profile?.uid, profile?.username, profile?.email, selectedChat, activeTab, playNotificationSound, auth, db]);
 
@@ -424,16 +428,21 @@ export const useChatManager = ({
     }, 0);
   }, [chatsList, chatThreads, readChats, selectedChat, activeTab, profile?.name, profile?.username, profile?.uid, auth]);
 
-  // ---- SYNC MESSAGES EN TEMPS RÉEL (chat actif) ----
+  // ---- SYNC MESSAGES EN TEMPS RÉEL (chat actif avec tri en mémoire résilient) ----
   useEffect(() => {
     if (!selectedChat?.id || !db) return;
     const chatId = String(selectedChat.id);
-    const q = query(collection(db, 'chats', chatId, 'messages'), orderBy('createdAt', 'asc'));
-    const unsub = onSnapshot(q, (snapshot) => {
+    const myUid = profile?.uid || (auth?.currentUser && auth.currentUser.uid) || null;
+
+    let unsub = () => {};
+
+    const handleSnapshot = (snapshot) => {
       if (snapshot.empty) return;
       const msgs = snapshot.docs.map(d => {
         const data = d.data();
-        const isMe = data.senderName?.trim().toLowerCase() === profile?.name?.trim().toLowerCase();
+        const isMe = (data.senderUid && myUid && String(data.senderUid) === String(myUid)) ||
+          (data.senderName?.trim().toLowerCase() === profile?.name?.trim().toLowerCase()) ||
+          (data.sender === 'me');
         return {
           id: d.id,
           ...data,
@@ -441,10 +450,18 @@ export const useChatManager = ({
           senderName: data.senderName || (isMe ? profile?.name : (selectedChat.user || 'Interlocuteur')),
           text: data.text || '',
           status: data.status || 'sent',
-          createdAt: data.createdAt || data.timestamp || Date.now(),
+          createdAt: data.createdAt?.toMillis ? data.createdAt.toMillis() : (data.createdAt || data.timestamp || Date.now()),
           translations: data.translations || { FR: data.text || '' },
         };
       });
+
+      // Tri chronologique ascendant côté client
+      msgs.sort((a, b) => {
+        const tA = typeof a.createdAt === 'number' ? a.createdAt : new Date(a.createdAt || 0).getTime();
+        const tB = typeof b.createdAt === 'number' ? b.createdAt : new Date(b.createdAt || 0).getTime();
+        return tA - tB;
+      });
+
       setChatThreads(prev => ({
         ...prev,
         [selectedChat.id]: msgs,
@@ -454,7 +471,8 @@ export const useChatManager = ({
       if (activeTab === 'chat' && String(selectedChat.id) === String(chatId)) {
         snapshot.docs.forEach(d => {
           const data = d.data();
-          const isFromThem = data.senderName?.trim().toLowerCase() !== profile?.name?.trim().toLowerCase();
+          const isFromThem = (data.senderUid && myUid && String(data.senderUid) !== String(myUid)) ||
+            (data.senderName?.trim().toLowerCase() !== profile?.name?.trim().toLowerCase());
           if (isFromThem && data.status !== 'read' && !data.read) {
             updateDoc(doc(db, 'chats', chatId, 'messages', d.id), {
               status: 'read',
@@ -480,11 +498,27 @@ export const useChatManager = ({
 
       // Si la conversation est activement consultée, marquer comme lue
       setReadChats(prev => new Set([...prev, selectedChat.id, String(selectedChat.id), Number(selectedChat.id)]));
-    }, (err) => {
-      console.warn('[Firestore] chat messages onSnapshot:', err);
-    });
-    return () => unsub();
-  }, [selectedChat?.id, selectedChat?.user, profile?.name, activeTab, db]);
+    };
+
+    try {
+      const q = query(collection(db, 'chats', chatId, 'messages'), orderBy('createdAt', 'asc'));
+      unsub = onSnapshot(q, handleSnapshot, (err) => {
+        console.warn('[Firestore] chat messages onSnapshot with orderBy failed, fallback without orderBy:', err);
+        try {
+          const fallbackQ = collection(db, 'chats', chatId, 'messages');
+          unsub = onSnapshot(fallbackQ, handleSnapshot, (fallbackErr) => {
+            console.error('[Firestore] chat messages fallback failed:', fallbackErr);
+          });
+        } catch (_) {}
+      });
+    } catch (err) {
+      console.warn('[Firestore] chat messages listener setup failed:', err);
+    }
+
+    return () => {
+      if (typeof unsub === 'function') unsub();
+    };
+  }, [selectedChat?.id, selectedChat?.user, profile?.name, profile?.uid, activeTab, auth, db]);
 
   // ---- GESTION DU TYPING INDICATOR TEMPS RÉEL (DEBOUNCE 2.5S) ----
   const typingTimeoutRef = useRef(null);
@@ -675,12 +709,20 @@ export const useChatManager = ({
     }
   };
 
-  // ---- ISOLATION DES DISCUSSIONS PAR PAIRE D'UTILISATEURS ET ANNONCE (UIDS FIRST) ----
+  // ---- ISOLATION DES DISCUSSIONS PAR PAIRE D'UTILISATEURS ET ANNONCE (STRICT UIDS FIRST) ----
   const buildConversationId = (listingId, userA, userB, uidA = null, uidB = null) => {
+    // Concaténation stricte des UIDs pour préserver l'historique de discussion même en cas de changement de nom
     if (uidA && uidB) {
       const sortedUids = [String(uidA).trim(), String(uidB).trim()].sort().join('_');
       const cleanListingId = listingId ? `_${String(listingId).trim()}` : '';
       return `chat_${sortedUids}${cleanListingId}`.replace(/[^a-zA-Z0-9_-]/g, '_');
+    }
+    if (uidA || uidB) {
+      const availableUid = String(uidA || uidB).trim();
+      const otherName = String(uidA ? userB : userA).trim().toLowerCase();
+      const pair = [availableUid, otherName].sort().join('_');
+      const cleanListingId = listingId ? `_${String(listingId).trim()}` : '';
+      return `chat_${pair}${cleanListingId}`.replace(/[^a-zA-Z0-9_-]/g, '_');
     }
     const uA = String(userA || '').trim().toLowerCase();
     const uB = String(userB || '').trim().toLowerCase();
@@ -706,7 +748,7 @@ export const useChatManager = ({
       lastMessage: `Début de discussion pour ${listing.title}`,
       status: 'Nouvelle discussion',
       terms: listing.compensation || '',
-      participants: [profile?.name, listing.author, myUid, authorUid].filter(Boolean),
+      participants: [myUid, authorUid, profile?.name, listing.author].filter(Boolean),
       participantUids: [myUid, authorUid].filter(Boolean),
     };
 
@@ -728,7 +770,7 @@ export const useChatManager = ({
           lastMessage: `Début de discussion pour ${listing.title}`,
           status: 'Nouvelle discussion',
           terms: listing.compensation || '',
-          participants: [profile?.name, listing.author, myUid, authorUid].filter(Boolean),
+          participants: [myUid, authorUid, profile?.name, listing.author].filter(Boolean),
           participantUids: [myUid, authorUid].filter(Boolean),
           updatedAt: serverTimestamp(),
         }, { merge: true });

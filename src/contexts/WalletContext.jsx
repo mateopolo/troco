@@ -22,13 +22,32 @@ export function WalletProvider({ children }) {
     } catch (_) {}
   }, [transactions]);
 
-  // Écoute des transactions de l'utilisateur connecté dans Firestore
+  // Écoute des transactions de l'utilisateur connecté dans Firestore avec tri client résilient
   useEffect(() => {
     const user = auth.currentUser;
     if (!user) {
       setLoading(false);
       return;
     }
+
+    let unsubscribe = () => {};
+
+    const handleSnapshot = (snapshot) => {
+      const liveTxs = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      // Tri chronologique descendant côté client
+      liveTxs.sort((a, b) => {
+        const tA = a.createdAt?.toMillis ? a.createdAt.toMillis() : (typeof a.createdAt === 'number' ? a.createdAt : new Date(a.createdAt || 0).getTime());
+        const tB = b.createdAt?.toMillis ? b.createdAt.toMillis() : (typeof b.createdAt === 'number' ? b.createdAt : new Date(b.createdAt || 0).getTime());
+        return tB - tA;
+      });
+      if (liveTxs.length > 0) {
+        setTransactions(liveTxs);
+      }
+      setLoading(false);
+    };
 
     try {
       const q = query(
@@ -37,25 +56,29 @@ export function WalletProvider({ children }) {
         orderBy('createdAt', 'desc')
       );
 
-      const unsubscribe = onSnapshot(q, (snapshot) => {
-        const liveTxs = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        if (liveTxs.length > 0) {
-          setTransactions(liveTxs);
+      unsubscribe = onSnapshot(q, handleSnapshot, (err) => {
+        console.warn('[WalletContext] transactions with orderBy failed, fallback without orderBy:', err);
+        try {
+          const fallbackQ = query(
+            collection(db, 'transactions'),
+            where('userId', '==', user.uid)
+          );
+          unsubscribe = onSnapshot(fallbackQ, handleSnapshot, (fallbackErr) => {
+            console.error('[WalletContext] fallback query failed:', fallbackErr);
+            setLoading(false);
+          });
+        } catch (_) {
+          setLoading(false);
         }
-        setLoading(false);
-      }, (err) => {
-        console.warn('[WalletContext] transactions listener error:', err);
-        setLoading(false);
       });
-
-      return () => unsubscribe();
     } catch (e) {
       console.warn('[WalletContext] query initialization error:', e);
       setLoading(false);
     }
+
+    return () => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+    };
   }, []);
 
   const addLocalTransaction = (newTx) => {

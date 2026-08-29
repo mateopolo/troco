@@ -192,7 +192,7 @@ export const buildDeterministicConversationId = (listingId, userAId, userBId) =>
 };
 
 /**
- * Écoute les discussions de l'utilisateur connecté avec tri en mémoire sécurisé
+ * Écoute les discussions de l'utilisateur connecté avec tri en mémoire sécurisé (Zéro dépendance d'index)
  */
 export const subscribeToUserChats = (userNameOrUid, onUpdate, onError) => {
   if (!userNameOrUid || typeof userNameOrUid !== 'string') return () => {};
@@ -207,18 +207,15 @@ export const subscribeToUserChats = (userNameOrUid, onUpdate, onError) => {
         id: d.id,
         ...d.data()
       }));
-      // Tri mémoire par date de dernière activité
+      // Tri mémoire par date de dernière activité (Zéro échec d'index)
       chats.sort((a, b) => {
-        const timeA = a.updatedAt?.toMillis ? a.updatedAt.toMillis() : (a.updatedAt || a.createdAt || 0);
-        const timeB = b.updatedAt?.toMillis ? b.updatedAt.toMillis() : (b.updatedAt || b.createdAt || 0);
+        const timeA = a.updatedAt?.toMillis ? a.updatedAt.toMillis() : (a.updatedAt ? new Date(a.updatedAt).getTime() : (a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt ? new Date(a.createdAt).getTime() : 0)));
+        const timeB = b.updatedAt?.toMillis ? b.updatedAt.toMillis() : (b.updatedAt ? new Date(b.updatedAt).getTime() : (b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt ? new Date(b.createdAt).getTime() : 0)));
         return timeB - timeA;
       });
       onUpdate(chats);
     }, (error) => {
       console.error('🚨 [FirestoreService] subscribeToUserChats error:', error);
-      if (error?.message?.includes('index')) {
-        console.error('🔗 [Firebase Composite Index Link]:', error.message);
-      }
       if (onError) onError(error);
     });
   } catch (err) {
@@ -229,7 +226,7 @@ export const subscribeToUserChats = (userNameOrUid, onUpdate, onError) => {
 };
 
 /**
- * Écoute les messages d'une discussion spécifique
+ * Écoute les messages d'une discussion spécifique avec tri client résilient
  */
 export const subscribeToChatMessages = (chatId, onUpdate, onError) => {
   if (!chatId) return () => {};
@@ -243,10 +240,31 @@ export const subscribeToChatMessages = (chatId, onUpdate, onError) => {
         id: d.id,
         ...d.data()
       }));
+      messages.sort((a, b) => {
+        const tA = a.createdAt?.toMillis ? a.createdAt.toMillis() : (typeof a.createdAt === 'number' ? a.createdAt : new Date(a.createdAt || 0).getTime());
+        const tB = b.createdAt?.toMillis ? b.createdAt.toMillis() : (typeof b.createdAt === 'number' ? b.createdAt : new Date(b.createdAt || 0).getTime());
+        return tA - tB;
+      });
       onUpdate(messages);
     }, (error) => {
-      console.warn('[FirestoreService] subscribeToChatMessages error:', error);
-      if (onError) onError(error);
+      console.warn('[FirestoreService] subscribeToChatMessages with orderBy failed, fallback without orderBy:', error);
+      try {
+        const fallbackQ = collection(db, 'chats', String(chatId), 'messages');
+        return onSnapshot(fallbackQ, (snapshot) => {
+          const messages = snapshot.docs.map(d => ({
+            id: d.id,
+            ...d.data()
+          }));
+          messages.sort((a, b) => {
+            const tA = a.createdAt?.toMillis ? a.createdAt.toMillis() : (typeof a.createdAt === 'number' ? a.createdAt : new Date(a.createdAt || 0).getTime());
+            const tB = b.createdAt?.toMillis ? b.createdAt.toMillis() : (typeof b.createdAt === 'number' ? b.createdAt : new Date(b.createdAt || 0).getTime());
+            return tA - tB;
+          });
+          onUpdate(messages);
+        }, onError);
+      } catch (fallbackErr) {
+        if (onError) onError(fallbackErr);
+      }
     });
   } catch (err) {
     console.warn('[FirestoreService] subscribeToChatMessages setup failed:', err);
