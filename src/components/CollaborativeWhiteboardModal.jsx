@@ -1,28 +1,26 @@
 /**
  * CollaborativeWhiteboardModal.jsx — Moteur de Tableau Blanc Collaboratif Multi-versions (Standard International)
  *
- * Fonctionnalités Clés :
+ * Architecture Technique :
  * 1. Synchronisation temps réel 60 FPS (WebRTC P2P 0ms & Firestore anti-conflits).
  * 2. Séparation stricte localPaths vs remotePaths (Zéro écrasement de traits).
- * 3. Effet Ghosting sur les traits distants et curseurs collaboratifs en direct.
- * 4. Moteur d'historique Undo / Redo complet (Pile d'historique + raccourcis Ctrl+Z / Ctrl+Y / Cmd+Z / Cmd+Shift+Z).
- * 5. Couleurs infinies (Palette rapide + sélecteur natif <input type="color"> + Pipette EyeDropper API).
+ * 3. Effet Ghosting sur les traits distants (opacity: 0.5) et curseurs collaboratifs en direct.
+ * 4. Moteur d'historique Undo / Redo complet (Pile d'historique + raccourcis Ctrl+Z / Ctrl+Y).
+ * 5. Couleurs infinies (Palette rapide + sélecteur natif <input type="color">).
  * 6. Barre d'outils dynamique avec support mobile fluide (touch-action: pan-x, overflow-x: auto).
- * 7. Mode Immersion Absolue (Plein écran avec masquage automatique des outils et bouton flottant de restauration).
- * 8. Redimensionnement du texte avec logique Scale-to-fit proportionnelle.
- * 9. Export Snapshot rogné sur la Bounding Box (DataURL) + Versioning incrémental (V1 -> V2 -> V3) et émission chat.
+ * 7. Navigation Spatiale : Zoom molette centré + Gestes Pinch-to-zoom & Pan à 2 doigts sur mobile.
+ * 8. Export Snapshot rogné sur Bounding Box (DataURL) + Versioning et invitation de chat interactif.
  */
 
-import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  X, Pen, Highlighter, Eraser, Square, Circle, ArrowRight, ArrowLeft,
+  X, Pen, Highlighter, Eraser, Square, Circle, ArrowRight,
   RotateCcw, RotateCw, Trash2, StickyNote,
-  Type, Hand, Brush, Share2, Check, Eye, EyeOff, Maximize2,
-  Pipette, ZoomIn, ZoomOut, Sparkles, Layers,
-  ChevronRight, Download, Move
+  Type, Hand, Brush, Share2, Check, Eye, Maximize2,
+  Sparkles
 } from 'lucide-react';
-import { doc, onSnapshot, setDoc, serverTimestamp, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { whiteboardP2PService } from '../services/whiteboardP2PService';
 import {
@@ -52,12 +50,6 @@ const STICKY_COLORS = [
   { hex: '#E9D5FF', name: 'Lavande' },
 ];
 
-const FONT_FAMILIES = [
-  { id: 'sans', name: 'Sans (Inter)', font: 'Inter, sans-serif' },
-  { id: 'serif', name: 'Éditorial', font: 'Georgia, serif' },
-  { id: 'mono', name: 'Monospace', font: 'monospace' },
-];
-
 export default function CollaborativeWhiteboardModal({
   isOpen,
   onClose,
@@ -81,13 +73,13 @@ export default function CollaborativeWhiteboardModal({
   const containerRef = useRef(null);
   const colorInputRef = useRef(null);
 
-  // 1. Outils Whiteboard : 'pencil' | 'brush' | 'highlighter' | 'eraser' | 'rect' | 'circle' | 'arrow' | 'sticky' | 'text' | 'hand'
+  // 1. Outils Whiteboard
   const [tool, setTool] = useState('pencil');
   const [color, setColor] = useState('#C67D5B');
   const [lineWidth, setLineWidth] = useState(4);
-  const [showGrid, setShowGrid] = useState(true);
+  const [showGrid] = useState(true);
 
-  // 2. Mode Immersion Absolue
+  // 2. Mode Immersion Absolue (Plein écran sans distractions)
   const [isImmersiveMode, setIsImmersiveMode] = useState(false);
 
   // 3. Séparation stricte d'état pour zéro conflit
@@ -97,7 +89,7 @@ export default function CollaborativeWhiteboardModal({
   const [textElements, setTextElements] = useState([]);
   const [currentPath, setCurrentPath] = useState(null);
 
-  // 4. Moteur d'historique Undo / Redo avec ref pour synchronisation immédiate
+  // 4. Moteur d'historique Undo / Redo
   const [history, setHistory] = useState([
     { localPaths: [], stickyNotes: [], textElements: [] }
   ]);
@@ -122,9 +114,8 @@ export default function CollaborativeWhiteboardModal({
   // 8. État d'édition / sélection
   const [editingTextId, setEditingTextId] = useState(null);
   const [selectedStickyId, setSelectedStickyId] = useState(null);
-  const [resizingTextId, setResizingTextId] = useState(null);
 
-  // Références d'interaction rapide & Verrouillage Anti-Écrasement
+  // Références d'interaction rapide
   const isDrawingRef = useRef(false);
   const isPanningRef = useRef(false);
   const startPosRef = useRef({ x: 0, y: 0 });
@@ -136,7 +127,7 @@ export default function CollaborativeWhiteboardModal({
   const p2pBroadcastThrottleRef = useRef(0);
   const lastLocalModificationTimeRef = useRef(0);
 
-  // Verrouillage strict du scroll global du document lors de l'ouverture
+  // Verrouillage strict du scroll global du document
   useEffect(() => {
     if (isOpen) {
       const originalOverflow = document.body.style.overflow;
@@ -245,7 +236,7 @@ export default function CollaborativeWhiteboardModal({
 
     const handleKeyDown = (e) => {
       const isInput = e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA');
-      if (isInput) return; // Ne pas intercepter si l'utilisateur saisit du texte
+      if (isInput) return;
 
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
         e.preventDefault();
@@ -270,10 +261,11 @@ export default function CollaborativeWhiteboardModal({
     ctx.shadowBlur = 0;
     ctx.shadowColor = 'transparent';
 
+    // RÈGLE GHOSTING STRICTE : Opacity 0.5 sur les traits distants pendant qu'ils sont dessinés
     if (brushTool === 'pencil' || brushTool === 'pen') {
       ctx.lineCap = 'butt';
       ctx.lineJoin = 'miter';
-      ctx.globalAlpha = isRemote ? 0.72 : 1.0;
+      ctx.globalAlpha = isRemote ? 0.5 : 1.0;
       ctx.globalCompositeOperation = 'source-over';
       ctx.strokeStyle = brushColor;
       if (isRemote) {
@@ -283,7 +275,7 @@ export default function CollaborativeWhiteboardModal({
     } else if (brushTool === 'brush') {
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
-      ctx.globalAlpha = isRemote ? 0.68 : 0.88;
+      ctx.globalAlpha = isRemote ? 0.5 : 0.88;
       ctx.globalCompositeOperation = 'source-over';
       ctx.shadowBlur = Math.max(2, brushWidth * 0.85);
       ctx.shadowColor = brushColor;
@@ -291,7 +283,7 @@ export default function CollaborativeWhiteboardModal({
     } else if (brushTool === 'highlighter') {
       ctx.lineCap = 'square';
       ctx.lineJoin = 'bevel';
-      ctx.globalAlpha = isRemote ? 0.22 : 0.32;
+      ctx.globalAlpha = isRemote ? 0.2 : 0.32;
       ctx.globalCompositeOperation = 'source-over';
       ctx.strokeStyle = brushColor;
     } else if (brushTool === 'eraser') {
@@ -303,7 +295,7 @@ export default function CollaborativeWhiteboardModal({
     } else {
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
-      ctx.globalAlpha = isRemote ? 0.75 : 1.0;
+      ctx.globalAlpha = isRemote ? 0.5 : 1.0;
       ctx.globalCompositeOperation = 'source-over';
       ctx.strokeStyle = brushColor;
     }
@@ -378,7 +370,7 @@ export default function CollaborativeWhiteboardModal({
     });
   }, [remotePaths, localPaths, currentPath, pan.x, pan.y, zoom]);
 
-  // Mise à jour de la taille du canvas
+  // Redimensionnement fluide du canvas
   const updateCanvasSize = useCallback(() => {
     const canvas = canvasRef.current;
     const container = containerRef.current;
@@ -455,7 +447,6 @@ export default function CollaborativeWhiteboardModal({
   useEffect(() => {
     if (!isOpen || !effectiveId) return;
 
-    // 1. Connexion P2P WebRTC DataChannel (0ms latence)
     whiteboardP2PService.joinRoom(effectiveId, (event) => {
       if (event.authorName) setLastEditor(event.authorName);
 
@@ -488,7 +479,6 @@ export default function CollaborativeWhiteboardModal({
       }
     });
 
-    // 2. Écoute Firestore Snapshot avec protection Anti-Écrasement (Séparation des flux)
     let unsubFirestore = () => {};
     if (db) {
       try {
@@ -500,9 +490,7 @@ export default function CollaborativeWhiteboardModal({
             if (data.versionNumber) setVersionNumber(data.versionNumber);
             if (data.title) setWorkspaceTitle(data.title);
 
-            // RÈGLE CRITIQUE ANTI-CONFLIT :
-            // Si l'utilisateur est en train de dessiner ou vient de modifier localement (< 2s),
-            // on ne met à jour que les traits distants (authorUid !== myUid) pour ne jamais effacer les traits locaux
+            // RÈGLE ANTI-CONFLIT : On ne met à jour que les traits distants pour ne jamais écraser les traits locaux
             if (data.paths && Array.isArray(data.paths)) {
               const onlyRemote = data.paths
                 .filter((p) => p && p.authorUid !== myUid)
@@ -510,12 +498,10 @@ export default function CollaborativeWhiteboardModal({
               setRemotePaths(onlyRemote);
             }
 
-            // Ne pas écraser les post-its ou textes s'ils sont manipulés localement
             if (!isDrawingRef.current && Date.now() - lastLocalModificationTimeRef.current > 2000) {
               if (data.stickyNotes && Array.isArray(data.stickyNotes) && !draggingStickyRef.current) {
                 setStickyNotes(data.stickyNotes);
               }
-
               if (data.textElements && Array.isArray(data.textElements) && !editingTextId && !resizingTextRef.current) {
                 setTextElements(data.textElements);
               }
@@ -537,7 +523,7 @@ export default function CollaborativeWhiteboardModal({
     };
   }, [isOpen, effectiveId, myUid, editingTextId]);
 
-  // Chargement initial des données de la version ou session sélectionnée
+  // Chargement initial des données de la session
   useEffect(() => {
     if (!isOpen || !effectiveId) return;
 
@@ -564,23 +550,6 @@ export default function CollaborativeWhiteboardModal({
 
     loadInitialState();
   }, [isOpen, effectiveId, version, initialVersion, pushToHistory]);
-
-  // ================= 1. GESTION DES COULEURS & PIPETTE =================
-  const handleOpenEyeDropper = async () => {
-    if (window.EyeDropper) {
-      try {
-        const eyeDropper = new window.EyeDropper();
-        const result = await eyeDropper.open();
-        if (result && result.sRGBHex) {
-          setColor(result.sRGBHex);
-        }
-      } catch (e) {
-        // Annulation par l'utilisateur
-      }
-    } else if (colorInputRef.current) {
-      colorInputRef.current.click();
-    }
-  };
 
   // ================= GESTION DES POINTER EVENTS =================
   const handlePointerDown = (e) => {
@@ -731,7 +700,6 @@ export default function CollaborativeWhiteboardModal({
       return;
     }
 
-    // Redimensionnement de zone de texte (Scale-to-fit proportionnel)
     if (resizingTextRef.current) {
       const { id, startX, startY, origW, origH, textStr } = resizingTextRef.current;
       const dw = coords.x - startX;
@@ -739,7 +707,6 @@ export default function CollaborativeWhiteboardModal({
       const newW = Math.max(100, origW + dw);
       const newH = Math.max(40, origH + dh);
 
-      // Calcul dynamique de la taille de police proportionnelle
       const len = Math.max(1, textStr?.length || 1);
       const autoFontSize = Math.max(12, Math.min(84, Math.round((newW / len) * 2.2 + newH * 0.25)));
 
@@ -806,7 +773,7 @@ export default function CollaborativeWhiteboardModal({
       resizingTextRef.current = null;
     }
 
-    // FUSION SYNCHRONE LOCALE IMMÉDIATE (ÉVITE LA RACE CONDITION DE DISPARITION DU TRAIT)
+    // FUSION SYNCHRONE LOCALE IMMÉDIATE & ENREGISTREMENT FORCÉ DANS L'HISTORIQUE
     if (isDrawingRef.current && currentPath) {
       isDrawingRef.current = false;
       lastLocalModificationTimeRef.current = Date.now();
@@ -814,17 +781,11 @@ export default function CollaborativeWhiteboardModal({
       const completedPath = { ...currentPath };
       const nextLocalPaths = [...localPaths, completedPath];
 
-      // 1. Commit synchrone immédiat dans l'état local
       setLocalPaths(nextLocalPaths);
       setCurrentPath(null);
 
-      // 2. Broadcast P2P direct (0ms)
       whiteboardP2PService.broadcastEvent('path_add', { path: completedPath });
-
-      // 3. Empilement immédiat dans l'historique Undo/Redo
       pushToHistory(nextLocalPaths, stickyNotes, textElements);
-
-      // 4. Debounce vers Firestore sans bloquer le rendu
       debouncedSyncToFirestore(nextLocalPaths, remotePaths, stickyNotes, textElements);
     }
   };
@@ -836,7 +797,6 @@ export default function CollaborativeWhiteboardModal({
 
     const allPaths = [...remotePaths, ...localPaths];
 
-    // Calcul de l'emprise réelle du dessin (Bounding Box)
     let minX = Infinity;
     let minY = Infinity;
     let maxX = -Infinity;
@@ -886,11 +846,9 @@ export default function CollaborativeWhiteboardModal({
     tempCanvas.height = targetH;
     const ctx = tempCanvas.getContext('2d');
 
-    // Fond neutre élégant
     ctx.fillStyle = darkMode ? '#181411' : '#FAF8F5';
     ctx.fillRect(0, 0, targetW, targetH);
 
-    // Dessin rogné ou plein écran selon contenu
     if (minX !== Infinity && maxX > minX && maxY > minY) {
       const contentW = maxX - minX + padding * 2;
       const contentH = maxY - minY + padding * 2;
@@ -901,7 +859,6 @@ export default function CollaborativeWhiteboardModal({
       ctx.scale(scale, scale);
       ctx.translate(-minX + padding, -minY + padding);
 
-      // Rendu des chemins
       allPaths.forEach((p) => {
         ctx.save();
         ctx.beginPath();
@@ -935,11 +892,11 @@ export default function CollaborativeWhiteboardModal({
   const handleSaveAndShare = async () => {
     if (isSavingAndSharing) return;
 
-    // 1. Demande du nom de version via prompt natif ou nom par défaut
+    // 1. Demande du nom de version via dialogue
     const defaultVersionLabel = `V${versionNumber + 1}`;
-    const userVersionInput = window.prompt("Nom de cette nouvelle version ? (ex: V3)", defaultVersionLabel);
+    const userVersionInput = window.prompt("Nom de la version (ex: V2)", defaultVersionLabel);
     if (userVersionInput === null) {
-      return; // Annulation par l'utilisateur
+      return;
     }
     const chosenVersion = userVersionInput.trim() || defaultVersionLabel;
 
@@ -965,7 +922,7 @@ export default function CollaborativeWhiteboardModal({
       const nextVersionNum = res.version || versionNumber + 1;
       setVersionNumber(nextVersionNum);
 
-      // 4. Payload d'invitation conforme avec version choisie
+      // 4. Payload d'invitation conforme avec type workspace_invite
       const invitePayload = {
         type: 'workspace_invite',
         kind: 'workspace_invite',
@@ -1018,35 +975,38 @@ export default function CollaborativeWhiteboardModal({
         pointerEvents: 'auto',
       }}
     >
-      {/* BOUTON RETOUR AU CHAT ULTRA-VISIBLE EN HAUT À GAUCHE */}
+      {/* BOUTON FERMER / RETOUR AU CHAT PROÉMINENT EN HAUT À GAUCHE (Z-INDEX MAXIMUM & TOUCH TARGET >= 44px) */}
       <button
         type="button"
         onClick={onClose}
         className="premium-button"
         style={{
           position: 'absolute',
-          top: '12px',
+          top: 'max(12px, env(safe-area-inset-top, 12px))',
           left: '14px',
-          zIndex: 1000002,
+          zIndex: 1000005,
+          minWidth: '44px',
+          minHeight: '44px',
+          padding: '10px 18px',
+          borderRadius: '999px',
+          border: darkMode ? '1px solid rgba(255,255,255,0.22)' : '1px solid rgba(0,0,0,0.15)',
+          backgroundColor: darkMode ? 'rgba(26,22,19,0.95)' : 'rgba(255,255,255,0.95)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          color: 'inherit',
+          fontSize: '13px',
+          fontWeight: '800',
+          cursor: 'pointer',
+          boxShadow: '0 8px 30px rgba(0,0,0,0.25)',
           display: 'flex',
           alignItems: 'center',
           gap: '8px',
-          padding: '8px 16px',
-          borderRadius: '999px',
-          border: darkMode ? '1px solid rgba(255,255,255,0.18)' : '1px solid rgba(0,0,0,0.12)',
-          backgroundColor: darkMode ? 'rgba(26,22,19,0.92)' : 'rgba(255,255,255,0.92)',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
-          color: 'inherit',
-          fontSize: '12.5px',
-          fontWeight: '800',
-          cursor: 'pointer',
-          boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
         }}
         title="Fermer le tableau blanc et revenir au chat"
+        aria-label="Fermer le tableau blanc"
       >
-        <ArrowLeft size={16} />
-        <span>Retour au chat</span>
+        <X size={20} strokeWidth={2.5} />
+        <span>Fermer</span>
       </button>
 
       {/* 1. EN-TÊTE PRINCIPAL (Masqué en mode immersion) */}
@@ -1054,7 +1014,7 @@ export default function CollaborativeWhiteboardModal({
         <header
           style={{
             height: '60px',
-            padding: '0 20px 0 160px',
+            padding: '0 20px 0 130px',
             borderBottom: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
             backgroundColor: darkMode ? 'rgba(21,18,15,0.85)' : 'rgba(255,255,255,0.85)',
             backdropFilter: 'blur(16px)',
@@ -1124,77 +1084,31 @@ export default function CollaborativeWhiteboardModal({
 
           {/* Boutons d'action Header */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            {/* Mode Immersion Absolue */}
-            <button
-              type="button"
-              onClick={() => setIsImmersiveMode(true)}
-              className="premium-button"
-              style={{
-                padding: '8px 14px',
-                borderRadius: '10px',
-                border: '1px solid var(--border-color, rgba(0,0,0,0.1))',
-                backgroundColor: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-                color: 'inherit',
-                fontSize: '12px',
-                fontWeight: '700',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-              }}
-              title="Plein écran (Cacher les outils)"
-            >
-              <EyeOff size={15} />
-              <span className="hide-on-mobile">Immersion</span>
-            </button>
-
-            {/* Sauvegarder & Partager */}
+            {/* Sauvegarder & Partager dans le chat */}
             <button
               type="button"
               disabled={isSavingAndSharing}
               onClick={handleSaveAndShare}
               className="premium-button"
               style={{
-                padding: '8px 16px',
-                borderRadius: '10px',
+                padding: '10px 18px',
+                borderRadius: '12px',
                 border: 'none',
                 background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)',
                 color: '#FFF',
-                fontSize: '12.5px',
+                fontSize: '13px',
                 fontWeight: '800',
                 cursor: isSavingAndSharing ? 'not-allowed' : 'pointer',
                 boxShadow: '0 4px 14px rgba(198,125,91,0.35)',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
+                gap: '8px',
+                minHeight: '40px',
               }}
             >
-              {isSavingAndSharing ? <Sparkles size={15} /> : <Share2 size={15} />}
-              <span>{isSavingAndSharing ? 'Enregistrement...' : 'Sauvegarder & Partager'}</span>
+              {isSavingAndSharing ? <Sparkles size={16} /> : <Share2 size={16} />}
+              <span>{isSavingAndSharing ? 'Enregistrement...' : 'Sauvegarder'}</span>
             </button>
-
-            {/* Fermer */}
-            {onClose && (
-              <button
-                type="button"
-                onClick={onClose}
-                className="premium-button"
-                style={{
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '50%',
-                  border: 'none',
-                  backgroundColor: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
-                  color: 'inherit',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                }}
-              >
-                <X size={18} />
-              </button>
-            )}
           </div>
         </header>
       )}
@@ -1567,7 +1481,7 @@ export default function CollaborativeWhiteboardModal({
         })}
       </div>
 
-      {/* 3. BARRE D'OUTILS PRINCIPALE FLUIDE & DRAGGABLE (Standard Apple HIG) */}
+      {/* 3. BARRE D'OUTILS PRINCIPALE FLUIDE & TACTILE (Standard Apple HIG) */}
       {!isImmersiveMode && (
         <div
           style={{
@@ -1640,7 +1554,7 @@ export default function CollaborativeWhiteboardModal({
 
           <div style={{ width: '1px', height: '24px', backgroundColor: 'var(--border-color, rgba(0,0,0,0.1))', margin: '0 4px', flexShrink: 0 }} />
 
-          {/* PALETTE DE COULEURS INFINIES (Chips + Sélecteur Spectre Complet) */}
+          {/* PALETTE DE COULEURS INFINIES (<input type="color"> natif masqué derrière bouton élégant) */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
             {CURATED_PALETTE.slice(0, 5).map((c) => (
               <button
@@ -1661,7 +1575,7 @@ export default function CollaborativeWhiteboardModal({
               />
             ))}
 
-            {/* Sélecteur de Couleur Spectre Complet (Natif HTML5 Input Color dans un label stylisé) */}
+            {/* Sélecteur de Couleur Spectre Complet */}
             <label
               style={{
                 position: 'relative',
@@ -1745,7 +1659,7 @@ export default function CollaborativeWhiteboardModal({
 
           <div style={{ width: '1px', height: '24px', backgroundColor: 'var(--border-color, rgba(0,0,0,0.1))', margin: '0 4px', flexShrink: 0 }} />
 
-          {/* BOUTONS UNDO / REDO, EFFACER & MODE IMMERSION INTÉGRÉ */}
+          {/* BOUTONS UNDO / REDO, EFFACER & MODE PLEIN ÉCRAN (IMMERSION) DANS LA BARRE */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
             <button
               type="button"
@@ -1819,7 +1733,7 @@ export default function CollaborativeWhiteboardModal({
               <Trash2 size={16} />
             </button>
 
-            {/* Mode Plein Écran / Immersion intégré dans la barre */}
+            {/* Mode Plein Écran (Immersion) DANS la barre d'outils */}
             <button
               type="button"
               onClick={() => setIsImmersiveMode(!isImmersiveMode)}
@@ -1836,7 +1750,7 @@ export default function CollaborativeWhiteboardModal({
                 cursor: 'pointer',
                 flexShrink: 0,
               }}
-              title={isImmersiveMode ? 'Quitter le mode plein écran' : 'Mode Plein Écran / Immersion'}
+              title={isImmersiveMode ? 'Quitter le mode plein écran' : 'Plein écran (Immersion)'}
             >
               {isImmersiveMode ? <Eye size={16} /> : <Maximize2 size={16} />}
             </button>
