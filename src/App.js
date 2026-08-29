@@ -3642,6 +3642,8 @@ export default function App() {
                     getListingDisplayContent={getListingDisplayContent}
                     localizeLocation={localizeLocation}
                     handleOpenListing={handleOpenListing}
+                    onClose={() => setViewMode('list')}
+                    onCloseMap={() => setViewMode('list')}
                   />
                 </Suspense>
               ) : (

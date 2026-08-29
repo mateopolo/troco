@@ -6,7 +6,7 @@ import { MapContainer, TileLayer } from 'react-leaflet';
 import L from 'leaflet';
 import ListingCard from './ListingCard';
 import { SkeletonCard } from './SkeletonLoader';
-import MapClusterTracker from './MapClusterTracker';
+import InteractiveMapView from '../features/map/InteractiveMapView';
 
 const createModernMapIcon = () => {
   return L.divIcon({
@@ -278,32 +278,24 @@ export default function FeedView({
           )}
         </div>
       ) : (
-        /* VUE CARTE CARTE INTERACTIVE LEAFLET */
-        <div style={{ borderRadius: '24px', overflow: 'hidden', height: '620px', boxShadow: 'var(--shadow-card)', border: '1px solid var(--border-color)' }}>
-          <MapContainer center={userCoords || mapCenter} zoom={12} style={{ width: '100%', height: '100%' }}>
-            <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-              url={darkMode ? "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png" : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"}
-            />
-            <MapClusterTracker
-              listings={displayListings}
-              mapCenter={userCoords || mapCenter}
-              mapZoom={12}
-              darkMode={darkMode}
-              currentLang={currentLang}
-              t={t}
-              primaryColor="var(--accent-primary, #C67D5B)"
-              getCoordinatesForLocation={(loc) => {
-                return (userCoords ? [userCoords[0] + (Math.random() - 0.5) * 0.05, userCoords[1] + (Math.random() - 0.5) * 0.05] : [48.8566, 2.3522]);
-              }}
-              getSuggestedMedia={(title, desc, img, vid) => ({ image: img || 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=800&q=80', video: vid })}
-              getListingDisplayContent={(item) => ({ title: item.title, description: item.description })}
-              localizeLocation={(loc) => loc}
-              handleOpenListing={handleOpenListing}
-              createModernMapIcon={createModernMapIcon}
-            />
-          </MapContainer>
-        </div>
+        /* VUE CARTE CARTE INTERACTIVE LEAFLET (AVEC PORTAL MOBILE & GESTES COOPÉRATIFS) */
+        <InteractiveMapView
+          filteredListings={displayListings}
+          mapCenter={userCoords || mapCenter}
+          mapZoom={12}
+          darkMode={darkMode}
+          currentLang={currentLang}
+          t={t}
+          getCoordinatesForLocation={(loc) => {
+            return (userCoords ? [userCoords[0] + (Math.random() - 0.5) * 0.05, userCoords[1] + (Math.random() - 0.5) * 0.05] : [48.8566, 2.3522]);
+          }}
+          getSuggestedMedia={(title, desc, img, vid) => ({ image: img || 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=800&q=80', video: vid })}
+          getListingDisplayContent={(item) => ({ title: item.title, description: item.description })}
+          localizeLocation={(loc) => loc}
+          handleOpenListing={handleOpenListing}
+          createModernMapIcon={createModernMapIcon}
+          onClose={() => setViewMode && setViewMode('list')}
+        />
       )}
     </div>
   );
