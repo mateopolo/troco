@@ -250,7 +250,25 @@ export default function App() {
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
   // ---- ÉTAT ANIMATION CÉLÉBRATION TOP-UP & JETONS ----
   const [topUpCelebration, setTopUpCelebration] = useState(null);
-  // ---- ÉTAT ÉDITEUR VIDÉO INTÉGRÉ (TRIM & CROP) ----
+
+  // ---- NOTIFICATION & ANIMATION DE RÉCEPTION DE JETONS (DESTINATAIRE) ----
+  const prevTokensRef = useRef(profile?.trocoTokens);
+  useEffect(() => {
+    if (prevTokensRef.current !== undefined && profile?.trocoTokens !== undefined) {
+      const currentVal = Number(profile.trocoTokens);
+      const prevVal = Number(prevTokensRef.current);
+      if (currentVal > prevVal) {
+        const gained = currentVal - prevVal;
+        playBetclicBalanceSound();
+        setTopUpCelebration({
+          title: `+${gained} Jeton${gained > 1 ? 's' : ''} Troco reçus ! 🪙`,
+          subtitle: `Nouveau solde : ${currentVal} Jetons Troco`,
+        });
+        setTimeout(() => setTopUpCelebration(null), 4500);
+      }
+    }
+    prevTokensRef.current = profile?.trocoTokens;
+  }, [profile?.trocoTokens]);
 
   const handleKycComplete = async () => {
     const updatedProfile = {

@@ -116,18 +116,21 @@ function ChatView({
     const myUid = profile?.uid || auth?.currentUser?.uid || 'me';
     const myName = profile?.name || 'Moi';
 
-    // Résolution robuste de l'UID destinataire : champs directs → participantUids → participants → fallback lookup Firestore par nom / username / email
-    let partnerUid = activeChatObj?.authorUid || activeChatObj?.partnerUid || activeChatObj?.userId
-      || activeChatObj?.sellerUid || activeChatObj?.buyerUid || activeChatObj?.recipientUid
-      || activeChatObj?.peerUid || selectedChat?.authorUid || selectedChat?.partnerUid || null;
-
-    if (!partnerUid && Array.isArray(activeChatObj?.participantUids)) {
-      partnerUid = activeChatObj.participantUids.find(u => u && u !== myUid) || null;
+    // Résolution infaillible de l'UID destinataire
+    let partnerUid = null;
+    const participantsList = activeChatObj?.participants || selectedChat?.participants;
+    if (Array.isArray(participantsList) && participantsList.length > 0) {
+      partnerUid = participantsList.find(uid => uid && uid !== myUid && uid !== myName) || null;
     }
-
-    if (!partnerUid && Array.isArray(activeChatObj?.participants)) {
-      const candidate = activeChatObj.participants.find(p => p && p !== myName && p !== myUid && (p.length >= 20 || p.includes('_')));
-      if (candidate) partnerUid = candidate;
+    if (!partnerUid && Array.isArray(activeChatObj?.participantUids || selectedChat?.participantUids)) {
+      const uids = activeChatObj?.participantUids || selectedChat?.participantUids;
+      partnerUid = uids.find(u => u && u !== myUid) || null;
+    }
+    if (!partnerUid) {
+      partnerUid = activeChatObj?.authorUid || activeChatObj?.partnerUid || activeChatObj?.userId
+        || activeChatObj?.sellerUid || activeChatObj?.buyerUid || activeChatObj?.recipientUid
+        || activeChatObj?.peerUid || selectedChat?.authorUid || selectedChat?.partnerUid || null;
+      if (partnerUid === myUid) partnerUid = null;
     }
 
     const partnerName = activeChatObj?.user || selectedChat?.user || activeChatObj?.projectTitle || 'Interlocuteur';
@@ -151,19 +154,28 @@ function ChatView({
       } catch (_) {}
     }
 
-    // Fallback ultime d'identifiant déterministe pour ne jamais bloquer la transaction
-    if (!partnerUid) {
-      partnerUid = `user_${String(partnerName).replace(/[^a-zA-Z0-9_-]/g, '_').toLowerCase()}`;
-    }
-
     setIsTransferringTokens(true);
     try {
-      const myUid = profile?.uid || auth?.currentUser?.uid || 'me';
-      const myName = profile?.name || 'Moi';
-      const partnerName = activeChatObj?.user || activeChatObj?.projectTitle || 'Interlocuteur';
-      const updatedTokens = Math.max(0, currentBalance - tokens);
+      // Exécution atomique Firestore (débit expéditeur + crédit destinataire avec fallback de création de portefeuille)
+      const res = await executeDirectTokenTransfer({
+        senderUid: myUid,
+        senderName: myName,
+        recipientUid: partnerUid,
+        recipientName: partnerName,
+        chatId: activeChatObj?.id ? String(activeChatObj.id) : (selectedChat?.id ? String(selectedChat.id) : null),
+        tokenAmount: tokens,
+        comment: transferComment || '',
+        chatData: activeChatObj || selectedChat,
+      });
 
-      // 1. Débit immédiat du solde utilisateur dans l'application
+      if (!res.success) {
+        console.error('🚨 [DirectTransfer] Échec transfert Firestore:', res.error);
+        alert(res.error || 'Erreur lors du transfert de jetons.');
+        return;
+      }
+
+      // Débit du solde utilisateur dans l'application après confirmation du succès
+      const updatedTokens = Math.max(0, currentBalance - tokens);
       if (typeof setProfile === 'function') {
         setProfile(prev => ({ ...prev, trocoTokens: updatedTokens }));
       }
@@ -173,24 +185,7 @@ function ChatView({
         localStorage.setItem('troco_user_profile', JSON.stringify(saved));
       } catch (_) {}
 
-      // 2. Exécution atomique Firestore (débit expéditeur + crédit destinataire)
-      const res = await executeDirectTokenTransfer({
-        senderUid: myUid,
-        senderName: myName,
-        recipientUid: partnerUid,
-        recipientName: partnerName,
-        chatId: activeChatObj?.id ? String(activeChatObj.id) : (selectedChat?.id ? String(selectedChat.id) : null),
-        tokenAmount: tokens,
-        comment: transferComment || '',
-      });
-
-      if (!res.success) {
-        console.error('🚨 [DirectTransfer] Échec transfert Firestore:', res.error);
-        alert(res.error || 'Erreur lors du transfert.');
-        return;
-      }
-
-      // 3. Déclenchement de l'animation festive
+      // Déclenchement de l'animation festive
       setShowConfetti(true);
       setTimeout(() => setShowConfetti(false), 3800);
       setIsDirectTransferOpen(false);

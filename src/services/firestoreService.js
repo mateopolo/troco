@@ -12,6 +12,7 @@ import {
   endAt,
   startAfter,
   getDocs,
+  getDoc,
   onSnapshot,
   serverTimestamp,
   runTransaction
@@ -675,30 +676,90 @@ export const subscribeToTyping = (chatId, currentUserName, onTypingChange) => {
 
 /**
  * Exécute un transfert direct de jetons de façon atomique (débit expéditeur + crédit destinataire)
+ * Supporte aussi bien l'appel par objet que par arguments positionnels executeDirectTokenTransfer(chatId, senderUid, amount, chatData)
  */
-export const executeDirectTokenTransfer = async ({
-  senderUid,
-  senderName,
-  recipientUid,
-  recipientName,
-  chatId,
-  tokenAmount = 1,
-  comment = '',
-}) => {
-  if (!senderUid || tokenAmount <= 0) {
-    console.error('[FirestoreService] executeDirectTokenTransfer: senderUid manquant ou tokenAmount invalide', { senderUid, tokenAmount });
-    return { success: false, error: 'Paramètres invalides pour le transfert.' };
-  }
+export const executeDirectTokenTransfer = async (
+  arg1,
+  arg2,
+  arg3,
+  arg4
+) => {
+  let chatId, senderUid, senderName, recipientUid, recipientName, tokenAmount, comment, chatData;
 
-  if (!recipientUid) {
-    console.error('🚨 [FirestoreService] executeDirectTokenTransfer ERROR: recipientUid est introuvable ou indéfini ! Le destinataire ne peut pas être crédité.', {
+  if (typeof arg1 === 'object' && arg1 !== null) {
+    ({
       senderUid,
       senderName,
+      recipientUid,
       recipientName,
       chatId,
-      tokenAmount
+      tokenAmount = 1,
+      comment = '',
+      chatData,
+    } = arg1);
+  } else {
+    chatId = arg1;
+    senderUid = arg2;
+    tokenAmount = arg3;
+    chatData = arg4;
+    senderName = chatData?.senderName || 'Moi';
+    recipientName = chatData?.recipientName || chatData?.user || 'Interlocuteur';
+    comment = chatData?.comment || '';
+  }
+
+  const amount = Number(tokenAmount || 0);
+
+  // 1. RÉSOLUTION DE L'UID DESTINATAIRE DE MANIÈRE INFAILLIBLE
+  if (!recipientUid && chatData) {
+    if (Array.isArray(chatData.participants)) {
+      recipientUid = chatData.participants.find(uid => uid && uid !== senderUid);
+    }
+    if (!recipientUid && Array.isArray(chatData.participantUids)) {
+      recipientUid = chatData.participantUids.find(uid => uid && uid !== senderUid);
+    }
+    if (!recipientUid) {
+      recipientUid = chatData.authorUid || chatData.partnerUid || chatData.sellerUid || chatData.buyerUid || chatData.peerUid || chatData.recipientUid || null;
+      if (recipientUid === senderUid) recipientUid = null;
+    }
+  }
+
+  // Si non trouvé et chatId fourni, recherche directe dans le document du chat Firestore
+  if (!recipientUid && chatId && db) {
+    try {
+      const chatDocSnap = await getDoc(doc(db, 'chats', String(chatId)));
+      if (chatDocSnap.exists()) {
+        const cData = chatDocSnap.data();
+        if (Array.isArray(cData.participants)) {
+          recipientUid = cData.participants.find(uid => uid && uid !== senderUid);
+        }
+        if (!recipientUid && Array.isArray(cData.participantUids)) {
+          recipientUid = cData.participantUids.find(uid => uid && uid !== senderUid);
+        }
+        if (!recipientUid) {
+          recipientUid = cData.authorUid || cData.partnerUid || cData.sellerUid || cData.buyerUid || null;
+          if (recipientUid === senderUid) recipientUid = null;
+        }
+      }
+    } catch (_) {}
+  }
+
+  // Si !recipientUid, lance une erreur explicite et annule le débit
+  if (!recipientUid) {
+    console.error('🚨 [FirestoreService] executeDirectTokenTransfer ERROR: Destinataire introuvable pour ce transfert.', {
+      chatId,
+      senderUid,
+      amount,
+      chatData,
     });
-    return { success: false, error: 'UID du destinataire manquant. Transfert annulé.' };
+    return {
+      success: false,
+      error: 'Destinataire introuvable pour ce transfert. Le transfert et le débit ont été annulés.',
+    };
+  }
+
+  if (!senderUid || amount <= 0) {
+    console.error('[FirestoreService] executeDirectTokenTransfer: senderUid manquant ou tokenAmount invalide', { senderUid, amount });
+    return { success: false, error: 'Paramètres invalides pour le transfert.' };
   }
 
   try {
@@ -710,7 +771,7 @@ export const executeDirectTokenTransfer = async ({
       const senderDoc = await transaction.get(senderRef);
       const recipientDoc = await transaction.get(recipientRef);
 
-      // 2. VÉRIFICATIONS ET CALCULS
+      // 2. VÉRIFICATIONS DE L'EXPÉDITEUR
       if (!senderDoc.exists()) {
         throw new Error("Le compte expéditeur n'existe pas dans Firestore.");
       }
@@ -718,11 +779,11 @@ export const executeDirectTokenTransfer = async ({
       const senderData = senderDoc.data();
       const currentSenderTokens = Number(senderData.trocoTokens || 0);
 
-      if (currentSenderTokens < tokenAmount) {
+      if (currentSenderTokens < amount) {
         throw new Error(`Solde insuffisant (${currentSenderTokens} jeton(s) disponible(s)).`);
       }
 
-      const newSenderTokens = Math.max(0, currentSenderTokens - tokenAmount);
+      const newSenderTokens = Math.max(0, currentSenderTokens - amount);
 
       // 3. TOUTES LES ÉCRITURES APRÈS LES LECTURES (WRITES)
       transaction.update(senderRef, {
@@ -730,25 +791,34 @@ export const executeDirectTokenTransfer = async ({
         updatedAt: serverTimestamp(),
       });
 
-      // Mise à jour sécurisée du destinataire (merge: true garantit l'écriture même si document partiel ou absent)
-      const recipientData = recipientDoc.exists() ? (recipientDoc.data() || {}) : {};
-      const currentRecipientTokens = Number(recipientData.trocoTokens || 0);
-      const newRecipientTokens = currentRecipientTokens + tokenAmount;
+      // 4. FALLBACK DE CRÉATION DE PORTEFEUILLE DESTINATAIRE
+      if (!recipientDoc.exists()) {
+        transaction.set(recipientRef, {
+          uid: String(recipientUid),
+          name: recipientName || 'Utilisateur Troco',
+          trocoTokens: amount,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+      } else {
+        const recipientData = recipientDoc.data() || {};
+        const currentRecipientTokens = Number(recipientData.trocoTokens || 0);
+        const newRecipientTokens = currentRecipientTokens + amount;
 
-      transaction.set(recipientRef, {
-        name: recipientName || recipientData.name || 'Utilisateur Troco',
-        trocoTokens: newRecipientTokens,
-        updatedAt: serverTimestamp(),
-      }, { merge: true });
+        transaction.set(recipientRef, {
+          trocoTokens: newRecipientTokens,
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+      }
     });
 
-    // 3. Messages et enregistrement de transaction
+    // 5. Messages et enregistrement de transaction
     if (chatId && db) {
-      const transferText = `🪙 ${senderName || 'Moi'} a envoyé ${tokenAmount} Jeton${tokenAmount > 1 ? 's' : ''} Troco à ${recipientName || 'Interlocuteur'}${comment ? ` (« ${comment} »)` : ''} !`;
+      const transferText = `🪙 ${senderName || 'Moi'} a envoyé ${amount} Jeton${amount > 1 ? 's' : ''} Troco à ${recipientName || 'Interlocuteur'}${comment ? ` (« ${comment} »)` : ''} !`;
       await addDoc(collection(db, 'chats', String(chatId), 'messages'), {
         text: transferText,
         type: 'token_transfer',
-        tokenAmount: tokenAmount,
+        tokenAmount: amount,
         transferComment: comment || '',
         sender: senderUid,
         senderName: senderName || 'Moi',
@@ -772,7 +842,7 @@ export const executeDirectTokenTransfer = async ({
         senderName: senderName,
         recipientUid: String(recipientUid),
         recipientName: recipientName || '',
-        tokens: tokenAmount,
+        tokens: amount,
         comment: comment || '',
         createdAt: serverTimestamp(),
       });
@@ -781,7 +851,7 @@ export const executeDirectTokenTransfer = async ({
     return { success: true, targetRecipientUid: recipientUid };
   } catch (error) {
     console.error('🚨 [FirestoreService] executeDirectTokenTransfer transaction failed:', error);
-    return { success: false, error };
+    return { success: false, error: error?.message || error };
   }
 };
 
