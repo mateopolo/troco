@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Search, MapPin, Filter, Grid, Map, Globe, Tag } from 'lucide-react';
@@ -59,14 +59,24 @@ export default function FeedView({
   currentLang = 'FR',
   t = (key) => key,
   darkMode = false,
-  formatCompensation,
-  getListingDisplayContent,
+  formatCompensation = () => {},
+  getListingDisplayContent = (item) => item,
   showingOriginalListings = {},
   toggleOriginalListing = () => {},
   profile = { name: 'MATEO POLO', avatar: '' }
 }) {
   const [realtimeListings, setRealtimeListings] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const mapContainerRef = useRef(null);
+
+  const handleSwitchToMap = () => {
+    setViewMode('map');
+    setTimeout(() => {
+      if (mapContainerRef.current) {
+        mapContainerRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 100);
+  };
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'listings'), (snapshot) => {
@@ -190,7 +200,7 @@ export default function FeedView({
                 <Grid size={15} /> {t('listView') || 'Vue Liste'}
               </button>
               <button
-                onClick={() => setViewMode('map')}
+                onClick={handleSwitchToMap}
                 title="Vue Carte"
                 className="premium-button"
                 style={{
@@ -279,23 +289,25 @@ export default function FeedView({
         </div>
       ) : (
         /* VUE CARTE CARTE INTERACTIVE LEAFLET (AVEC PORTAL MOBILE & GESTES COOPÉRATIFS) */
-        <InteractiveMapView
-          filteredListings={displayListings}
-          mapCenter={userCoords || mapCenter}
-          mapZoom={12}
-          darkMode={darkMode}
-          currentLang={currentLang}
-          t={t}
-          getCoordinatesForLocation={(loc) => {
-            return (userCoords ? [userCoords[0] + (Math.random() - 0.5) * 0.05, userCoords[1] + (Math.random() - 0.5) * 0.05] : [48.8566, 2.3522]);
-          }}
-          getSuggestedMedia={(title, desc, img, vid) => ({ image: img || 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=800&q=80', video: vid })}
-          getListingDisplayContent={(item) => ({ title: item.title, description: item.description })}
-          localizeLocation={(loc) => loc}
-          handleOpenListing={handleOpenListing}
-          createModernMapIcon={createModernMapIcon}
-          onClose={() => setViewMode && setViewMode('list')}
-        />
+        <div ref={mapContainerRef} style={{ width: '100%', position: 'relative' }}>
+          <InteractiveMapView
+            filteredListings={displayListings}
+            mapCenter={userCoords || mapCenter}
+            mapZoom={12}
+            darkMode={darkMode}
+            currentLang={currentLang}
+            t={t}
+            getCoordinatesForLocation={(loc) => {
+              return (userCoords ? [userCoords[0] + (Math.random() - 0.5) * 0.05, userCoords[1] + (Math.random() - 0.5) * 0.05] : [48.8566, 2.3522]);
+            }}
+            getSuggestedMedia={(title, desc, img, vid) => ({ image: img || 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=800&q=80', video: vid })}
+            getListingDisplayContent={(item) => ({ title: item.title, description: item.description })}
+            localizeLocation={(loc) => loc}
+            handleOpenListing={handleOpenListing}
+            createModernMapIcon={createModernMapIcon}
+            onClose={() => setViewMode && setViewMode('list')}
+          />
+        </div>
       )}
     </div>
   );

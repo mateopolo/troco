@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useUIStore } from '../stores';
 
 /**
@@ -93,12 +93,15 @@ export const useAppNavigation = () => {
     return () => window.removeEventListener('popstate', handlePopState);
   }, [ui, activeTab]);
 
-  // 3. Synchronisation de l'historique lorsqu'une modale s'ouvre
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const wasModalOpenRef = useRef(false);
+
+  // 3. Synchronisation de l'historique : pushState UNIQUE au moment où une modale s'ouvre (immunisé contre rotation / resize)
   useEffect(() => {
-    if (ui.hasAnyModalOpen() && typeof window !== 'undefined' && window.history) {
+    const isNowOpen = typeof ui.hasAnyModalOpen === 'function' ? ui.hasAnyModalOpen() : false;
+    if (isNowOpen && !wasModalOpenRef.current && typeof window !== 'undefined' && window.history) {
       window.history.pushState({ modalOpen: true }, '');
     }
+    wasModalOpenRef.current = isNowOpen;
   }, [
     ui.selectedListing,
     ui.selectedPublicUser,

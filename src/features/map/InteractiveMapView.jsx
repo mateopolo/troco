@@ -250,17 +250,19 @@ export function InteractiveMapView({
         backgroundColor: 'var(--bg-global, #0F172A)',
       }}
     >
-      {/* BOUTON FLOTTANT IMPOSANT POUR FERMER LA CARTE (Z-INDEX MAXIMUM) */}
+      {/* BOUTON FLOTTANT IMPOSANT POUR FERMER LA CARTE (POSITION CENTRALE HAUTE, Z-INDEX MAXIMUM, SANS CHEVAUCHEMENT DE ZOOM) */}
       {activeFullScreen ? (
         <div
           style={{
             position: 'absolute',
             top: 'max(16px, env(safe-area-inset-top, 16px))',
-            left: '16px',
+            left: '50%',
+            transform: 'translateX(-50%)',
             zIndex: 100000,
             display: 'flex',
             alignItems: 'center',
             gap: '10px',
+            pointerEvents: 'none',
           }}
         >
           <button
@@ -268,30 +270,34 @@ export function InteractiveMapView({
             onClick={handleClose}
             className="premium-button"
             style={{
+              pointerEvents: 'auto',
               border: darkMode ? '1.5px solid rgba(255,255,255,0.22)' : '1.5px solid rgba(0,0,0,0.14)',
               backgroundColor: darkMode ? 'rgba(24, 20, 18, 0.94)' : 'rgba(255, 255, 255, 0.94)',
               color: 'var(--text-main, #1F2937)',
               borderRadius: '999px',
-              padding: '12px 22px',
-              minHeight: '48px',
+              padding: '10px 22px',
+              minHeight: '44px',
               display: 'flex',
               alignItems: 'center',
-              gap: '10px',
+              gap: '8px',
               cursor: 'pointer',
               boxShadow: '0 12px 36px rgba(0,0,0,0.35)',
               backdropFilter: 'blur(24px)',
               WebkitBackdropFilter: 'blur(24px)',
-              fontSize: '14px',
+              fontSize: '13.5px',
               fontWeight: '900',
               transition: 'transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s ease',
               touchAction: 'manipulation',
               WebkitTapHighlightColor: 'transparent',
+              whiteSpace: 'nowrap',
             }}
             title="Fermer la carte et retourner aux annonces"
             aria-label="Fermer la carte"
           >
-            <X size={20} strokeWidth={2.6} color="var(--accent-primary, #C67D5B)" />
-            <span>{t('closeMap') || 'Fermer la carte'}</span>
+            <X size={18} strokeWidth={2.6} color="var(--accent-primary, #C67D5B)" />
+            <span>
+              {t('closeMap') || (currentLang === 'EN' ? 'Close Map' : currentLang === 'ES' ? 'Cerrar Mapa' : currentLang === 'DE' ? 'Karte Schließen' : currentLang === 'IT' ? 'Chiudi Mappa' : 'Fermer la carte')}
+            </span>
           </button>
         </div>
       ) : (

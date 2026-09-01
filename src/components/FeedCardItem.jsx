@@ -218,8 +218,8 @@ function FeedCardItem({
         transition: 'transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s cubic-bezier(0.22, 1, 0.36, 1)'
       }}
     >
-      {/* BANDEAU ADMINISTRATEUR GOD MODE / GHOST NAVIGATION */}
-      {(isAdmin || isGodModeActive) && (
+      {/* BANDEAU ADMINISTRATEUR GOD MODE / GHOST NAVIGATION (STRICTEMENT RÉSERVÉ AUX ADMINISTRATEURS) */}
+      {(isAdmin && isGodModeActive) && (
         <div
           onClick={(e) => e.stopPropagation()}
           style={{

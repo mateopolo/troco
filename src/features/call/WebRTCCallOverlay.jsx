@@ -153,6 +153,28 @@ export default function WebRTCCallOverlay({
     setIsSwapVideo(prev => !prev);
   };
 
+  // Ajustement fluide de la position de la vidéo flottante lors de la rotation d'écran (Portrait <-> Paysage)
+  useEffect(() => {
+    const handleScreenResize = () => {
+      setLocalVideoPosition(prev => {
+        const vidW = 110;
+        const vidH = 150;
+        const maxX = Math.max(10, (typeof window !== 'undefined' ? window.innerWidth : 400) - vidW - 10);
+        const maxY = Math.max(10, (typeof window !== 'undefined' ? window.innerHeight : 700) - vidH - 80);
+        return {
+          x: Math.max(10, Math.min(maxX, prev.x)),
+          y: Math.max(10, Math.min(maxY, prev.y)),
+        };
+      });
+    };
+    window.addEventListener('resize', handleScreenResize);
+    window.addEventListener('orientationchange', handleScreenResize);
+    return () => {
+      window.removeEventListener('resize', handleScreenResize);
+      window.removeEventListener('orientationchange', handleScreenResize);
+    };
+  }, []);
+
   // ---- MODE IMMERSION & TRANSPARENCE AUTOMATIQUE (INACTIVITÉ 5 SECONDES) ----
   const [isCallInactive, setIsCallInactive] = useState(false);
   const callInactivityTimerRef = useRef(null);
