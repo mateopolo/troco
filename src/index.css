@@ -1678,3 +1678,120 @@ body.dark-mode .ad-card:hover {
   -webkit-overflow-scrolling: touch;
   will-change: transform, opacity;
 }
+
+/* =========================================================
+   APPLE HIG FACETIME CALL STYLING & GLASSMORPHISM DOCK
+   ========================================================= */
+.facetime-controls-dock {
+  position: fixed;
+  bottom: max(32px, env(safe-area-inset-bottom, 32px));
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(28px) saturate(190%);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 999px;
+  padding: 8px 14px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+  z-index: 10000002;
+  touch-action: none;
+  cursor: grab;
+}
+
+.facetime-controls-dock:active {
+  cursor: grabbing;
+}
+
+.facetime-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  cursor: pointer;
+  transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease, box-shadow 0.2s ease;
+  flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
+}
+
+.facetime-btn:hover {
+  transform: scale(1.06);
+  background: rgba(255, 255, 255, 0.26);
+}
+
+.facetime-btn:active {
+  transform: scale(0.94);
+}
+
+.facetime-btn.is-muted,
+.facetime-btn.is-off {
+  background: #ffffff;
+  color: #111111;
+}
+
+.facetime-btn-hangup {
+  width: 54px;
+  height: 54px;
+  background: #ef4444 !important;
+  color: #ffffff !important;
+  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.2) inset;
+}
+
+.facetime-btn-hangup:hover {
+  background: #dc2626 !important;
+  box-shadow: 0 10px 30px rgba(239, 68, 68, 0.7);
+}
+
+.facetime-more-menu {
+  position: absolute;
+  bottom: calc(100% + 14px);
+  right: 0;
+  min-width: 200px;
+  background: rgba(20, 20, 24, 0.88);
+  backdrop-filter: blur(32px) saturate(200%);
+  -webkit-backdrop-filter: blur(32px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 24px;
+  padding: 8px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.75);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 10000005;
+  animation: fadeInScale 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.facetime-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: none;
+  background: transparent;
+  color: #ffffff;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: background 0.15s ease;
+}
+
+.facetime-menu-item:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.facetime-menu-item.active {
+  background: rgba(245, 158, 11, 0.25);
+  color: #fde68a;
+}

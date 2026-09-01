@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronLeft, ChevronRight, Video, Globe, MapPin, Tag, Trash2, ArrowRight, Sparkles } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Video, Globe, MapPin, Tag, ArrowRight, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 function FeedCardItem({
@@ -515,35 +515,6 @@ function FeedCardItem({
             {item.author || 'Membre Troco'}
           </span>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            {isAdmin && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (window.confirm(`[ADMINISTRATEUR]\nVoulez-vous supprimer définitivement l'annonce "${item.title}" ?`)) {
-                    if (typeof safeAdminDelete === 'function') safeAdminDelete(item);
-                  }
-                }}
-                className="premium-button"
-                style={{
-                  border: 'none',
-                  borderRadius: '10px',
-                  padding: '7px 10px',
-                  backgroundColor: 'var(--accent-primary)',
-                  color: '#FFFFFF',
-                  fontSize: '11px',
-                  fontWeight: '800',
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  boxShadow: 'var(--shadow-accent)'
-                }}
-                title="Supprimer immédiatement cette annonce (Admin)"
-              >
-                <Trash2 size={12} /> Modérer
-              </button>
-            )}
             {(!profile?.name || item.author !== profile.name) ? (
               <button onClick={(event) => { event.stopPropagation(); if (typeof handleStartDiscussion === 'function') handleStartDiscussion(item); else if (typeof handleOpenListing === 'function') handleOpenListing(item); }} className="premium-button" style={{ background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)', color: '#FFF', border: 'none', padding: '9px 16px', borderRadius: '999px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', boxShadow: 'var(--shadow-accent)' }}>{typeof t === 'function' ? t('proposeDealButton') : 'Proposer un deal'} <ArrowRight size={12} /></button>
             ) : (

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, Suspense } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Phone,
   PhoneOff,
@@ -10,6 +11,11 @@ import {
   SwitchCamera,
   Minimize2,
   Crown,
+  MoreHorizontal,
+  GripHorizontal,
+  UserPlus,
+  MonitorUp,
+  Globe,
 } from 'lucide-react';
 
 const LiveCallSubtitles = React.lazy(() => import('../../components/LiveCallSubtitles'));
@@ -73,6 +79,7 @@ export default function WebRTCCallOverlay({
   const [isSwapVideo, setIsSwapVideo] = useState(false);
   const [showCallSubtitles, setShowCallSubtitles] = useState(true);
   const [showCallControls, setShowCallControls] = useState(true);
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
 
   // Détection du rôle Professeur / Hôte
   const isTeacher = Boolean(
@@ -174,6 +181,7 @@ export default function WebRTCCallOverlay({
     }
     callInactivityTimerRef.current = setTimeout(() => {
       setIsCallInactive(true);
+      setShowMoreMenu(false);
     }, 5000);
   }, []);
 
@@ -406,12 +414,12 @@ export default function WebRTCCallOverlay({
           <div style={{
             position: 'absolute',
             inset: 0,
-            background: 'linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0) 22%, rgba(0,0,0,0) 72%, rgba(0,0,0,0.75) 100%)',
+            background: 'linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0) 20%, rgba(0,0,0,0) 70%, rgba(0,0,0,0.65) 100%)',
             pointerEvents: 'none',
             zIndex: 3,
           }} />
 
-          {/* PILULE SUPÉRIEURE FACETIME DISCRÈTE (NOM, STATUT, CHRONO) */}
+          {/* PILULE SUPÉRIEURE FACETIME DISCRÈTE ET ÉPURÉE (NOM, STATUT, CHRONO) */}
           <div style={{
             position: 'fixed',
             top: 'max(16px, env(safe-area-inset-top, 16px))',
@@ -421,28 +429,28 @@ export default function WebRTCCallOverlay({
             display: 'flex',
             alignItems: 'center',
             gap: '10px',
-            backgroundColor: 'rgba(24, 24, 27, 0.65)',
-            backdropFilter: 'blur(28px) saturate(180%)',
-            WebkitBackdropFilter: 'blur(28px) saturate(180%)',
-            border: '1px solid rgba(255, 255, 255, 0.16)',
+            backgroundColor: 'rgba(20, 20, 24, 0.45)',
+            backdropFilter: 'blur(24px) saturate(180%)',
+            WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+            border: '1px solid rgba(255, 255, 255, 0.12)',
             borderRadius: '999px',
-            padding: '7px 18px',
-            boxShadow: '0 12px 36px rgba(0, 0, 0, 0.45)',
+            padding: '6px 16px',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.35)',
             transition: 'opacity 0.4s ease',
             opacity: isCallInactive ? 0.35 : 1,
           }}>
-            <div style={{ position: 'relative', width: '28px', height: '28px', flexShrink: 0 }}>
+            <div style={{ position: 'relative', width: '26px', height: '26px', flexShrink: 0 }}>
               <img
                 src={getAuthorAvatar(selectedChat?.user || 'Thomas G.')}
                 alt={selectedChat?.user || 'Thomas G.'}
-                style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover' }}
+                style={{ width: '26px', height: '26px', borderRadius: '50%', objectFit: 'cover' }}
               />
               <div style={{
                 position: 'absolute',
                 bottom: '-1px',
                 right: '-1px',
-                width: '8px',
-                height: '8px',
+                width: '7px',
+                height: '7px',
                 borderRadius: '50%',
                 backgroundColor: '#10B981',
                 border: '1.5px solid #000',
@@ -450,10 +458,10 @@ export default function WebRTCCallOverlay({
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0px' }}>
-              <span style={{ color: '#FFFFFF', fontSize: '13px', fontWeight: '800', lineHeight: 1.2 }}>
+              <span style={{ color: '#FFFFFF', fontSize: '12.5px', fontWeight: '800', lineHeight: 1.2 }}>
                 {selectedChat?.user || 'Interlocuteur'}
               </span>
-              <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '11px', fontWeight: '600', lineHeight: 1 }}>
+              <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '10.5px', fontWeight: '600', lineHeight: 1 }}>
                 {callState.ringing ? 'Sonnerie...' : formatCallTimer(callDuration)}
               </span>
             </div>
@@ -466,119 +474,84 @@ export default function WebRTCCallOverlay({
                 border: '1px solid #F59E0B',
                 color: '#FDE68A',
                 borderRadius: '999px',
-                fontSize: '9.5px',
+                fontSize: '9px',
                 fontWeight: '800',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '3px',
               }}>
-                <Crown size={10} color="#F59E0B" /> Hôte
+                <Crown size={9} color="#F59E0B" /> Hôte
               </span>
             )}
           </div>
 
-          {/* OVERLAY SONNERIE / APPEL EN ATTENTE */}
-          {callState.ringing && (
+          {/* INFORMATIONS DE L'APPELANT : CENTRAGE ABSOLU ET TRANSPARENCE TOTALE (SANS AUCUN CADRE OPAQUE) */}
+          {(callState.ringing || (callState.type === 'audio') || (callState.type === 'video' && !remoteStream && !isSwapVideo && !callState.camOn)) && (
             <div style={{
               position: 'absolute',
-              inset: 0,
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '20px',
+              gap: '18px',
               zIndex: 30,
               pointerEvents: 'none',
-              padding: '24px',
+              width: '100%',
+              maxWidth: '92vw',
+              textAlign: 'center',
             }}>
-              <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '16px',
-                backgroundColor: 'rgba(20, 20, 24, 0.72)',
-                backdropFilter: 'blur(30px) saturate(180%)',
-                WebkitBackdropFilter: 'blur(30px) saturate(180%)',
-                border: '1px solid rgba(255, 255, 255, 0.18)',
-                borderRadius: '32px',
-                padding: '28px 36px',
-                boxShadow: '0 24px 60px rgba(0,0,0,0.7)',
-                maxWidth: '320px',
-                width: '100%',
-                textAlign: 'center',
-              }}>
-                <div style={{ position: 'relative', width: '96px', height: '96px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {[1, 2].map(i => (
-                    <div key={i} style={{
-                      position: 'absolute',
-                      width: `${96 + i * 28}px`,
-                      height: `${96 + i * 28}px`,
-                      borderRadius: '50%',
-                      border: '1.5px solid rgba(255,255,255,0.25)',
-                      opacity: 0.4,
-                      animation: `notifPulse ${1.4 + i * 0.4}s ease-in-out infinite`,
-                      animationDelay: `${i * 0.25}s`,
-                    }} />
-                  ))}
-                  <img
-                    src={getAuthorAvatar(selectedChat?.user || 'Thomas G.')}
-                    alt={selectedChat?.user || 'Thomas G.'}
-                    style={{
-                      width: '90px',
-                      height: '90px',
-                      borderRadius: '50%',
-                      objectFit: 'cover',
-                      border: '2.5px solid rgba(255,255,255,0.4)',
-                      boxShadow: '0 12px 30px rgba(0,0,0,0.5)',
-                      position: 'relative',
-                      zIndex: 2,
-                    }}
-                  />
-                </div>
-
-                <div>
-                  <h3 style={{ color: '#FFF', fontSize: '20px', fontWeight: '800', margin: '0 0 6px 0' }}>
-                    {selectedChat?.user || 'Thomas G.'}
-                  </h3>
-                  <div style={{ color: 'rgba(255,255,255,0.75)', fontSize: '13px', fontWeight: '600' }}>
-                    {callState.type === 'video' ? 'Appel FaceTime vidéo...' : 'Appel FaceTime audio...'}
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ÉCRAN D'APPEL AUDIO OU QUAND LA CAMÉRA DISTANTE EST COUPÉE */}
-          {(callState.type === 'audio' || (callState.type === 'video' && !remoteStream && !isSwapVideo && !callState.camOn)) && !callState.ringing && (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', zIndex: 10 }}>
-              <div style={{ position: 'relative', width: '130px', height: '130px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <div style={{
-                  position: 'absolute',
-                  inset: '-18px',
-                  borderRadius: '50%',
-                  border: '1.5px solid rgba(255,255,255,0.2)',
-                  animation: 'notifPulse 2.4s ease-in-out infinite',
-                }} />
+              <div style={{ position: 'relative', width: '110px', height: '110px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {[1, 2].map(i => (
+                  <div key={i} style={{
+                    position: 'absolute',
+                    width: `${110 + i * 32}px`,
+                    height: `${110 + i * 32}px`,
+                    borderRadius: '50%',
+                    border: '1.5px solid rgba(255,255,255,0.3)',
+                    opacity: 0.35,
+                    animation: `notifPulse ${1.5 + i * 0.4}s ease-in-out infinite`,
+                    animationDelay: `${i * 0.25}s`,
+                  }} />
+                ))}
                 <img
                   src={getAuthorAvatar(selectedChat?.user || 'Thomas G.')}
                   alt={selectedChat?.user || 'Thomas G.'}
                   style={{
-                    width: '130px',
-                    height: '130px',
+                    width: '100px',
+                    height: '100px',
                     borderRadius: '50%',
-                    border: '3px solid rgba(255,255,255,0.35)',
-                    boxShadow: '0 20px 50px rgba(0, 0, 0, 0.65)',
                     objectFit: 'cover',
+                    border: '3px solid rgba(255,255,255,0.7)',
+                    boxShadow: '0 16px 40px rgba(0,0,0,0.6)',
+                    filter: 'drop-shadow(0 10px 20px rgba(0,0,0,0.5))',
+                    position: 'relative',
+                    zIndex: 2,
                   }}
                 />
               </div>
+
               <div style={{ textAlign: 'center' }}>
-                <h2 style={{ color: '#FFFFFF', fontSize: '24px', fontWeight: '800', margin: '0 0 6px 0' }}>
+                <h2 style={{
+                  color: '#FFFFFF',
+                  fontSize: '26px',
+                  fontWeight: '800',
+                  margin: '0 0 6px 0',
+                  textShadow: '0 2px 14px rgba(0,0,0,0.95), 0 0 4px rgba(0,0,0,0.8)',
+                  letterSpacing: '-0.3px',
+                }}>
                   {selectedChat?.user || 'Thomas G.'}
                 </h2>
-                <span style={{ color: 'rgba(255,255,255,0.65)', fontSize: '14px', fontWeight: '600' }}>
-                  {callState.type === 'video' ? 'Caméra distante désactivée' : 'Appel audio sécurisé WebRTC'}
-                </span>
+                <div style={{
+                  color: 'rgba(255,255,255,0.9)',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  textShadow: '0 1px 8px rgba(0,0,0,0.85)',
+                }}>
+                  {callState.ringing ? 'Appel vidéo en cours...' : (callState.type === 'video' ? 'Connexion vidéo chiffrée' : 'Appel audio haute fidélité')}
+                </div>
               </div>
             </div>
           )}
@@ -654,94 +627,152 @@ export default function WebRTCCallOverlay({
             />
           </Suspense>
 
-          {/* CONTRÔLES FLOTTANTS FACETIME (PILULE EN VERRE DÉPOLI UNIQUE EN BAS) */}
+          {/* BARRE D'OUTILS DRAGGABLE & ÉPURÉE (FACETIME GLASSMORPHISM AVEC FRAMER MOTION) */}
           {showCallControls && (
-            <div
-              className="call-controls-dock"
+            <motion.div
+              drag
+              dragMomentum={false}
+              dragElastic={0.08}
+              className="facetime-controls-dock"
               style={{
                 opacity: isCallInactive ? 0.35 : 1,
               }}
             >
+              {/* POIGNÉE DE GLISSEMENT FLUIDE (GRIP) */}
+              <div
+                title="Glisser pour déplacer"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  color: 'rgba(255,255,255,0.6)',
+                  padding: '0 4px 0 2px',
+                  cursor: 'grab',
+                }}
+              >
+                <GripHorizontal size={18} />
+              </div>
+
               {/* 1. MICROPHONE */}
               <button
-                className="call-btn-circle"
+                className={`facetime-btn ${!callState.micOn ? 'is-muted' : ''}`}
                 onClick={toggleMic}
-                style={{
-                  backgroundColor: callState.micOn ? 'rgba(255,255,255,0.18)' : '#FFFFFF',
-                  color: callState.micOn ? '#FFFFFF' : '#000000',
-                }}
                 title={callState.micOn ? 'Couper le micro' : 'Activer le micro'}
               >
                 {callState.micOn ? <Mic size={20} /> : <MicOff size={20} color="#EF4444" />}
               </button>
 
               {/* 2. CAMÉRA */}
-              {callState.type === 'video' && (
-                <button
-                  className="call-btn-circle"
-                  onClick={toggleCam}
-                  style={{
-                    backgroundColor: callState.camOn ? 'rgba(255,255,255,0.18)' : '#FFFFFF',
-                    color: callState.camOn ? '#FFFFFF' : '#000000',
-                  }}
-                  title={callState.camOn ? 'Couper la caméra' : 'Activer la caméra'}
-                >
-                  {callState.camOn ? <Camera size={20} /> : <VideoOff size={20} color="#EF4444" />}
-                </button>
-              )}
-
-              {/* 3. BASCULE CAMÉRA (FLIP) */}
-              {callState.type === 'video' && callState.camOn && hasMultipleCameras && (
-                <button
-                  className="call-btn-circle"
-                  onClick={switchCamera}
-                  style={{
-                    backgroundColor: 'rgba(255,255,255,0.18)',
-                    color: '#FFFFFF',
-                  }}
-                  title="Changer de caméra"
-                >
-                  <SwitchCamera size={19} />
-                </button>
-              )}
-
-              {/* 4. SOUS-TITRES (CC) */}
               <button
-                className="call-btn-circle"
-                onClick={() => setShowCallSubtitles(s => !s)}
-                style={{
-                  backgroundColor: showCallSubtitles ? '#F59E0B' : 'rgba(255,255,255,0.18)',
-                  color: showCallSubtitles ? '#000000' : '#FFFFFF',
-                  fontWeight: '900',
-                  fontSize: '12px',
-                }}
-                title={showCallSubtitles ? 'Désactiver les sous-titres' : 'Activer les sous-titres IA'}
+                className={`facetime-btn ${!callState.camOn ? 'is-off' : ''}`}
+                onClick={toggleCam}
+                title={callState.camOn ? 'Couper la caméra' : 'Activer la caméra'}
               >
-                CC
+                {callState.camOn ? <Camera size={20} /> : <VideoOff size={20} color="#EF4444" />}
               </button>
 
-              {/* 5. RÉDUIRE EN PIP */}
+              {/* 3. BOUTON RACCROCHER (CERCLE ROUGE PROÉMINENT) */}
               <button
-                className="call-btn-circle"
-                onClick={() => setIsCallPip(true)}
-                style={{
-                  backgroundColor: 'rgba(255,255,255,0.18)',
-                  color: '#FFFFFF',
-                }}
-                title="Réduire l'appel (PiP)"
-              >
-                <Minimize2 size={19} />
-              </button>
-
-              {/* 6. BOUTON RACCROCHER (CERCLE ROUGE PROÉMINENT) */}
-              <button
-                className="call-btn-circle call-btn-hangup"
+                className="facetime-btn facetime-btn-hangup"
                 onClick={endCall}
                 title="Raccrocher"
               >
                 <PhoneOff size={22} />
               </button>
-            </div>
+
+              {/* 4. BOUTON "PLUS..." POUR REGROUPER LES OPTIONS */}
+              <div style={{ position: 'relative' }}>
+                <button
+                  className={`facetime-btn ${showMoreMenu ? 'is-muted' : ''}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowMoreMenu(prev => !prev);
+                  }}
+                  title="Plus d'options"
+                >
+                  <MoreHorizontal size={20} />
+                </button>
+
+                {/* MINI-MENU FLOTTANT GLASSMORPHISM */}
+                <AnimatePresence>
+                  {showMoreMenu && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                      transition={{ duration: 0.18, ease: 'easeOut' }}
+                      className="facetime-more-menu"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {/* SOUS-TITRES IA */}
+                      <button
+                        className={`facetime-menu-item ${showCallSubtitles ? 'active' : ''}`}
+                        onClick={() => {
+                          setShowCallSubtitles(s => !s);
+                          setShowMoreMenu(false);
+                        }}
+                      >
+                        <Globe size={16} />
+                        <span>{showCallSubtitles ? 'Désactiver sous-titres' : 'Sous-titres & Traduction IA'}</span>
+                      </button>
+
+                      {/* BASCULE CAMÉRA (FLIP) */}
+                      {callState.type === 'video' && callState.camOn && hasMultipleCameras && (
+                        <button
+                          className="facetime-menu-item"
+                          onClick={() => {
+                            if (switchCamera) switchCamera();
+                            setShowMoreMenu(false);
+                          }}
+                        >
+                          <SwitchCamera size={16} />
+                          <span>Inverser la caméra</span>
+                        </button>
+                      )}
+
+                      {/* PARTAGE D'ÉCRAN */}
+                      {typeof toggleScreenShare === 'function' && (
+                        <button
+                          className="facetime-menu-item"
+                          onClick={() => {
+                            toggleScreenShare();
+                            setShowMoreMenu(false);
+                          }}
+                        >
+                          <MonitorUp size={16} />
+                          <span>Partager l'écran</span>
+                        </button>
+                      )}
+
+                      {/* COPIER LE LIEN D'INVITATION */}
+                      {typeof copyInviteLink === 'function' && (
+                        <button
+                          className="facetime-menu-item"
+                          onClick={() => {
+                            copyInviteLink();
+                            setShowMoreMenu(false);
+                          }}
+                        >
+                          <UserPlus size={16} />
+                          <span>Inviter un participant</span>
+                        </button>
+                      )}
+
+                      {/* RÉDUIRE EN PIP */}
+                      <button
+                        className="facetime-menu-item"
+                        onClick={() => {
+                          setIsCallPip(true);
+                          setShowMoreMenu(false);
+                        }}
+                      >
+                        <Minimize2 size={16} />
+                        <span>Réduire en vignette (PiP)</span>
+                      </button>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </motion.div>
           )}
         </div>
       )}
