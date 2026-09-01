@@ -1787,11 +1787,26 @@ body.dark-mode .ad-card:hover {
   transition: background 0.15s ease;
 }
 
-.facetime-menu-item:hover {
-  background: rgba(255, 255, 255, 0.12);
-}
-
 .facetime-menu-item.active {
   background: rgba(245, 158, 11, 0.25);
   color: #fde68a;
+}
+
+/* Phase 39 — Mobile Chat Scroll & Safe Area Utilities */
+.pb-safe {
+  padding-bottom: max(16px, env(safe-area-inset-bottom, 16px)) !important;
+}
+
+.overscroll-contain {
+  overscroll-behavior: contain !important;
+  overscroll-behavior-y: contain !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+.flex-1 {
+  flex: 1 1 0% !important;
+}
+
+.overflow-y-auto {
+  overflow-y: auto !important;
 }

@@ -43,6 +43,7 @@ export default function CounterOfferModal({
     const tTokens = Number(trocoTokens) || 0;
     const euros = Number(euroAmount) || 0;
     const dVal = durationValue ? String(durationValue) : '1';
+    const hoursNum = durationType === 'hourly' ? (Number(dVal) || 1) : 1;
     const finalConditions = conditions.trim() || `${dVal}h d'échange pour ${tTokens > 0 ? `${tTokens} Jeton(s)` : ''} ${euros > 0 ? `${euros}€` : ''}`.trim() || 'Échange convenu.';
 
     if (typeof onSubmit === 'function') {
@@ -51,7 +52,12 @@ export default function CounterOfferModal({
         euroAmount: euros,
         durationType,
         durationValue: dVal,
-        conditions: finalConditions
+        conditions: finalConditions,
+        expectedHours: hoursNum,
+        expectedTokens: tTokens,
+        fiatAmount: euros,
+        itemId: initialTerms?.itemId || null,
+        itemName: initialTerms?.itemName || listingTitle || 'Prestation Troco',
       });
     }
   };

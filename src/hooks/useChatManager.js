@@ -1165,16 +1165,37 @@ export const useChatManager = ({
     setIsCounterOfferOpen(true);
   };
 
-  // ---- CRÉATION ATOMIQUE D'UNE CONTRE-OFFRE ----
+  // ---- CRÉATION ATOMIQUE D'UNE OFFRE DE DEAL / CONTRE-OFFRE ----
   const handleCounterOfferSubmit = async (terms) => {
     if (!selectedChat) return;
     const chatId = selectedChat.id;
-    const euroAmount = Number(terms.euroAmount) || 0;
-    const trocoTokens = Number(terms.trocoTokens) || 0;
+    const euroAmount = Number(terms.euroAmount !== undefined ? terms.euroAmount : terms.fiatAmount) || 0;
+    const trocoTokens = Number(terms.trocoTokens !== undefined ? terms.trocoTokens : terms.expectedTokens) || 0;
     const durationType = terms.durationType || 'hourly';
-    const durationValue = terms.durationValue ? String(terms.durationValue) : '1';
+    const durationValue = terms.durationValue ? String(terms.durationValue) : (terms.expectedHours ? String(terms.expectedHours) : '1');
+    const expectedHours = durationType === 'hourly' ? (Number(durationValue) || 1) : 1;
+    const expectedTokens = trocoTokens;
+    const fiatAmount = euroAmount;
+    const itemId = (terms.itemId !== undefined && terms.itemId !== null) ? String(terms.itemId) : (selectedChat.listingId ? String(selectedChat.listingId) : null);
+    const itemName = terms.itemName || selectedChat.listing || selectedChat.title || selectedChat.projectTitle || 'Prestation Troco';
     const conditions = (terms.conditions && terms.conditions.trim()) || `${durationValue}h d'échange pour ${trocoTokens > 0 ? `${trocoTokens} Jeton(s)` : ''} ${euroAmount > 0 ? `${euroAmount}€` : ''}`.trim() || 'Échange convenu.';
-    const fullTerms = { euroAmount, trocoTokens, durationType, durationValue, conditions };
+    
+    const dealTerms = {
+      expectedHours: Number(expectedHours) || 0,
+      expectedTokens: Number(expectedTokens) || 0,
+      fiatAmount: Number(fiatAmount) || 0,
+      itemId: itemId || null,
+      itemName: itemName || 'Prestation Troco',
+    };
+
+    const fullTerms = {
+      euroAmount: Number(fiatAmount) || 0,
+      trocoTokens: Number(expectedTokens) || 0,
+      durationType: durationType || 'hourly',
+      durationValue: String(durationValue || '1'),
+      conditions: conditions || 'Nouvelle proposition de troc',
+      ...dealTerms
+    };
 
     if (editingDealId) {
       setChatThreads(prev => ({
@@ -1199,11 +1220,14 @@ export const useChatManager = ({
       id: newDealMsgId,
       sender: 'me',
       senderName: profile?.name || 'Moi',
-      senderUid: profile?.uid || auth?.currentUser?.uid,
+      senderUid: profile?.uid || auth?.currentUser?.uid || null,
+      type: 'deal_offer',
       kind: 'deal',
       dealId: newDealMsgId,
       status: 'pending',
+      dealTerms,
       terms: fullTerms,
+      text: 'Nouvelle proposition de troc',
       createdAt: Date.now(),
     };
 
@@ -1216,27 +1240,44 @@ export const useChatManager = ({
         await addDoc(collection(db, 'chats', String(chatId), 'messages'), {
           sender: 'me',
           senderName: profile?.name || 'Moi',
-          senderUid: profile?.uid || auth?.currentUser?.uid,
+          senderUid: profile?.uid || auth?.currentUser?.uid || null,
+          type: 'deal_offer',
           kind: 'deal',
           dealId: newDealMsgId,
           status: 'pending',
-          terms: fullTerms,
+          dealTerms: {
+            expectedHours: Number(expectedHours) || 0,
+            expectedTokens: Number(expectedTokens) || 0,
+            fiatAmount: Number(fiatAmount) || 0,
+            itemId: itemId || null,
+            itemName: itemName || 'Prestation Troco',
+          },
+          terms: {
+            euroAmount: Number(fiatAmount) || 0,
+            trocoTokens: Number(expectedTokens) || 0,
+            durationType: durationType || 'hourly',
+            durationValue: String(durationValue || '1'),
+            conditions: conditions || 'Nouvelle proposition de troc',
+          },
+          text: 'Nouvelle proposition de troc',
           createdAt: serverTimestamp(),
         });
         await setDoc(doc(db, 'chats', String(chatId)), {
           id: chatId,
-          user: selectedChat.user,
-          listing: selectedChat.listing,
-          lastMessage: `Contre-offre de ${profile?.name || 'Moi'} : ${conditions}`,
+          user: selectedChat.user || 'Interlocuteur',
+          listing: selectedChat.listing || itemName,
+          lastMessage: `Proposition de deal (${conditions})`,
           lastSenderName: profile?.name || 'Moi',
           lastDealStatus: 'pending',
           updatedAt: serverTimestamp(),
         }, { merge: true });
       } catch (e) {
-        console.warn('[Firestore] new counter-deal message write failed:', e);
+        console.warn('[Firestore] new deal_offer message write failed:', e);
       }
     }
   };
+
+  const handleSendDeal = handleCounterOfferSubmit;
 
   // ---- FONCTION PRINCIPALE : EXÉCUTION DE TRANSACTION FIRESTORE ATOMIQUE (FINTECH ENGINE) ----
   const executeDealTransaction = async ({
@@ -1550,8 +1591,8 @@ export const useChatManager = ({
       : (chatsList.find(c => String(c.id) === String(chatId)) || mockChats.find(c => String(c.id) === String(chatId)));
     const partnerName = chat?.user || 'Interlocuteur';
     const partnerUid = chat?.authorUid || chat?.partnerUid || null;
-    const tokensAmount = Number(terms?.trocoTokens) || 0;
-    const euroAmount = Number(terms?.euroAmount) || 0;
+    const tokensAmount = Number(terms?.trocoTokens !== undefined ? terms.trocoTokens : terms?.expectedTokens) || 0;
+    const euroAmount = Number(terms?.euroAmount !== undefined ? terms.euroAmount : terms?.fiatAmount) || 0;
 
     // 1. Troc direct (0€ et 0 jeton) : validation instantanée
     if (euroAmount === 0 && tokensAmount === 0) {
@@ -1749,6 +1790,7 @@ export const useChatManager = ({
     handleAcceptReward,
     openCounterOffer,
     handleCounterOfferSubmit,
+    handleSendDeal,
     executeDealTransaction,
     handleReleaseEscrow,
     handleAcceptDeal,

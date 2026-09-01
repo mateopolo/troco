@@ -402,19 +402,20 @@ function ChatView({
     return currentChatId ? (chatThreads[currentChatId] || []) : [];
   }, [currentChatId, chatThreads]);
 
-  // Phase 25/32 — Virtualisation DOM fluide sans rebond ni vibration
+  // Phase 25/32/39 — Virtualisation DOM fluide avec hauteurs dynamiques et recalcul temps réel
   const chatVirtualizer = useVirtualizer({
     count: messages.length,
     getScrollElement: () => scrollContainerRef.current,
     estimateSize: (index) => {
       const msg = messages[index];
       if (!msg) return 80;
-      if (msg.type === 'workspace_invite' || msg.kind === 'workspace_invite') return isMobile ? 220 : 240;
-      if (msg.type === 'deal' || msg.kind === 'deal') return 190;
-      if (msg.type === 'token_transfer' || msg.kind === 'token_transfer') return 110;
-      if (msg.imageUrl || msg.type === 'image' || msg.kind === 'image') return 230;
-      if (msg.audioUrl || msg.type === 'audio' || msg.kind === 'audio') return 95;
-      return 75;
+      if (msg.type === 'workspace_invite' || msg.kind === 'workspace_invite') return isMobile ? 240 : 260;
+      if (msg.type === 'deal' || msg.kind === 'deal' || msg.type === 'deal_offer' || msg.kind === 'deal_offer') return isMobile ? 380 : 340;
+      if (msg.type === 'reward' || msg.kind === 'reward-proposal') return isMobile ? 260 : 240;
+      if (msg.type === 'token_transfer' || msg.kind === 'token_transfer') return 120;
+      if (msg.imageUrl || msg.type === 'image' || msg.kind === 'image') return 240;
+      if (msg.audioUrl || msg.type === 'audio' || msg.kind === 'audio') return 100;
+      return 85;
     },
     overscan: 8,
   });
@@ -565,7 +566,13 @@ function ChatView({
   const activeChatIsOnline = isUserOnline(activeChatObj?.user, activeChatObj?.authorUid || activeChatObj?.userId);
 
   // Détection d'une proposition de deal en attente émise par l'utilisateur courant (Anti-Spam)
-  const pendingDealFromMe = messages.find(m => (m.type === 'deal' || m.kind === 'deal') && (m.status === 'pending' || !m.status) && m.sender === 'me');
+  const pendingDealFromMe = messages.find(m =>
+    (m.type === 'deal' || m.kind === 'deal' || m.type === 'deal_offer' || m.kind === 'deal_offer') &&
+    (m.status === 'pending' || !m.status) &&
+    ((m.senderUid && profile?.uid && m.senderUid === profile.uid) ||
+     (m.senderName && profile?.name && m.senderName.trim().toLowerCase() === profile.name.trim().toLowerCase()) ||
+     m.sender === 'me')
+  );
 
   const formatMsgTime = (val) => {
     if (!val) return new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
