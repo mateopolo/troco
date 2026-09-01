@@ -82,6 +82,7 @@ export default function WorkspaceMessageCard({
         style={{
           width: '100%',
           maxWidth: isMobile ? '290px' : '320px',
+          minHeight: isMobile ? '220px' : '240px',
           borderRadius: '16px',
           overflow: 'hidden',
           backgroundColor: 'var(--bg-card, #FFFFFF)',
@@ -107,6 +108,7 @@ export default function WorkspaceMessageCard({
           style={{
             width: '100%',
             height: isMobile ? '145px' : '160px',
+            minHeight: isMobile ? '145px' : '160px',
             backgroundColor: darkMode ? '#12100E' : '#181513',
             backgroundImage: 'radial-gradient(rgba(255, 255, 255, 0.12) 1px, transparent 1px)',
             backgroundSize: '14px 14px',
@@ -121,9 +123,11 @@ export default function WorkspaceMessageCard({
             <img
               src={msg.previewUrl}
               alt={displayTitle}
+              loading="eager"
               style={{
                 width: '100%',
                 height: '100%',
+                minHeight: isMobile ? '145px' : '160px',
                 objectFit: 'contain',
                 display: 'block',
               }}

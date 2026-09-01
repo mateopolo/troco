@@ -401,13 +401,56 @@ function ChatView({
     return currentChatId ? (chatThreads[currentChatId] || []) : [];
   }, [currentChatId, chatThreads]);
 
-  // Phase 25 — Virtualisation DOM : seuls ~15 nœuds actifs dans le fil de messages
+  // Phase 25/32 — Virtualisation DOM fluide sans rebond ni vibration
   const chatVirtualizer = useVirtualizer({
     count: messages.length,
     getScrollElement: () => scrollContainerRef.current,
-    estimateSize: () => 80,
-    overscan: 5,
+    estimateSize: (index) => {
+      const msg = messages[index];
+      if (!msg) return 80;
+      if (msg.type === 'workspace_invite' || msg.kind === 'workspace_invite') return isMobile ? 220 : 240;
+      if (msg.type === 'deal' || msg.kind === 'deal') return 190;
+      if (msg.type === 'token_transfer' || msg.kind === 'token_transfer') return 110;
+      if (msg.imageUrl || msg.type === 'image' || msg.kind === 'image') return 230;
+      if (msg.audioUrl || msg.type === 'audio' || msg.kind === 'audio') return 95;
+      return 75;
+    },
+    overscan: 8,
   });
+
+  const prevChatIdRef = useRef(null);
+  const prevMsgCountRef = useRef(0);
+  const isUserNearBottomRef = useRef(true);
+
+  // Écoute du défilement utilisateur : détermine si l'utilisateur consulte l'historique
+  const handleScroll = useCallback((e) => {
+    const el = e.currentTarget;
+    if (!el) return;
+    const distanceToBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    isUserNearBottomRef.current = distanceToBottom < 140;
+  }, []);
+
+  // Auto-scroll fiable : déclenché UNIQUEMENT au changement de conversation ou si l'utilisateur est déjà en bas
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el || !messages.length) return;
+
+    const isNewChat = prevChatIdRef.current !== currentChatId;
+    const isNewMessage = messages.length > prevMsgCountRef.current;
+    const wasNearBottom = isUserNearBottomRef.current;
+
+    prevChatIdRef.current = currentChatId;
+    prevMsgCountRef.current = messages.length;
+
+    if (isNewChat || (isNewMessage && wasNearBottom)) {
+      requestAnimationFrame(() => {
+        if (el) {
+          el.scrollTop = el.scrollHeight;
+          isUserNearBottomRef.current = true;
+        }
+      });
+    }
+  }, [currentChatId, messages.length, mobileSubView]);
 
   // Multi-Board Management (Phase 23) : Récupération dynamique des 3 derniers tableaux blancs modifiés dans ce chat
   const recentBoardsFromMessages = useMemo(() => {
@@ -507,13 +550,6 @@ function ChatView({
       .sort((a, b) => b.timestamp - a.timestamp)
       .slice(0, 3);
   }, [firestoreRecentBoards, recentBoardsFromMessages]);
-
-  // Auto-scroll fiable vers le bas des messages (Mission 3)
-  useEffect(() => {
-    const el = scrollContainerRef.current;
-    if (!el || !messages.length) return;
-    requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; });
-  }, [selectedChat, messages.length, mobileSubView]);
 
   if (activeTab !== 'chat') return null;
 
@@ -1242,6 +1278,7 @@ function ChatView({
             boxSizing: 'border-box'
           }}
           ref={scrollContainerRef}
+          onScroll={handleScroll}
         >
           <div style={{
             height: `${chatVirtualizer.getTotalSize()}px`,

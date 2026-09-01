@@ -60,7 +60,16 @@ export const useChatManager = ({
 
   const [messageDraft, setMessageDraft] = useState('');
   const [chatThreads, setChatThreads] = useState(initialChatThreads);
-  const [chatsList, setChatsList] = useState(mockChats);
+  const [chatsList, setChatsList] = useState(() => {
+    try {
+      const saved = localStorage.getItem('troco_cached_chats');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (_) { }
+    return mockChats;
+  });
   const [chatStatusOverrides, setChatStatusOverrides] = useState({});
   const [editingDealId, setEditingDealId] = useState(null);
   const [isCounterOfferOpen, setIsCounterOfferOpen] = useState(false);
@@ -225,10 +234,9 @@ export const useChatManager = ({
 
     const targets = Array.from(targetSet);
 
-    // Initialisation immédiate des discussions (avec mockChats complets)
+    // Initialisation immédiate des discussions (avec cache local résilient)
     if (targets.length === 0) {
-      setChatsList(mockChats);
-      try { useChatStore.getState().setChatsList(mockChats); } catch (_) { }
+      // Si on n'a pas encore les identifiants utilisateur mais qu'on a des discussions en mémoire, ne JAMAIS les écraser
       return;
     }
 
@@ -271,7 +279,10 @@ export const useChatManager = ({
       });
 
       setChatsList(merged);
-      try { useChatStore.getState().setChatsList(merged); } catch (_) { }
+      try {
+        localStorage.setItem('troco_cached_chats', JSON.stringify(merged));
+        useChatStore.getState().setChatsList(merged);
+      } catch (_) { }
     };
 
     // Écoute des discussions par participants sans orderBy (évite index manquant)

@@ -13,7 +13,7 @@ import {
   onSnapshot,
   serverTimestamp
 } from 'firebase/firestore';
-import { useAuthStore } from '../stores';
+import { useAuthStore, useWalletStore } from '../stores';
 
 /**
  * Hook centralisant l'état d'authentification, la synchronisation du profil Firestore,
@@ -46,10 +46,16 @@ export const useAppAuth = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     let unsubscribeFirestore = () => {};
+    let unsubscribeBalance = () => {};
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       if (user) {
         useAuthStore.setState({ isAuthenticated: true });
+
+        // Abonnement temps réel explicite du solde et jetons dans le store Zustand
+        try {
+          unsubscribeBalance = useWalletStore.getState().subscribeToUserBalance(user.uid);
+        } catch (_) { }
 
         // Vérification de lien email de connexion si applicable
         if (isSignInWithEmailLink(auth, window.location.href)) {
@@ -83,14 +89,27 @@ export const useAppAuth = () => {
             }
 
             // Mise à jour du profil local
+            const newTokens = data.trocoTokens !== undefined ? Number(data.trocoTokens) : 12;
+            const newEuros = data.euroBalance !== undefined ? Number(data.euroBalance) : 100;
+
             setProfile((prev) => ({
               ...prev,
               ...data,
+              trocoTokens: newTokens,
+              euroBalance: newEuros,
               uid: user.uid,
               email: user.email || data.email || prev.email,
               name: data.name || user.displayName || prev.name,
               avatar: data.avatar || user.photoURL || prev.avatar,
             }));
+
+            // Mise à jour atomique du store Zustand Portefeuille
+            try {
+              const { setTrocoTokens, setEuroBalance, setKycVerified } = useWalletStore.getState();
+              if (setTrocoTokens) setTrocoTokens(newTokens);
+              if (setEuroBalance) setEuroBalance(newEuros);
+              if (setKycVerified) setKycVerified(Boolean(data.kycVerified));
+            } catch (_) { }
           } else {
             // Création du profil initial Firestore
             const initialData = {
@@ -115,6 +134,7 @@ export const useAppAuth = () => {
         });
       } else {
         unsubscribeFirestore();
+        unsubscribeBalance();
         setIsLoadingSession(false);
       }
     });
@@ -122,6 +142,7 @@ export const useAppAuth = () => {
     return () => {
       unsubscribeAuth();
       unsubscribeFirestore();
+      unsubscribeBalance();
     };
   }, [setProfile]);
 
