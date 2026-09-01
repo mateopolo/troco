@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
+import Portal from './ui/Portal';
 import { Sparkles, X, Clock, Coins, Euro, ArrowRight } from 'lucide-react';
 
 export default function CounterOfferModal({
@@ -338,7 +338,7 @@ export default function CounterOfferModal({
     </div>
   );
 
-  return typeof document !== 'undefined' ? createPortal(modalElement, document.body) : modalElement;
+  return <Portal>{modalElement}</Portal>;
 }
 
 

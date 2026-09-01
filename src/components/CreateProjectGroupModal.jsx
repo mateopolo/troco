@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { createPortal } from 'react-dom';
+import Portal from './ui/Portal';
 import { X, Users, Sparkles, Plus, Check, Coins } from 'lucide-react';
 
 const SUGGESTED_MEMBERS = [
@@ -508,6 +508,6 @@ export default function CreateProjectGroupModal({
     </div>
   );
 
-  return typeof document !== 'undefined' ? createPortal(modalElement, document.body) : modalElement;
+  return <Portal>{modalElement}</Portal>;
 }
 

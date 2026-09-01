@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback, lazy, Suspense } from 'react';
-import { createPortal } from 'react-dom';
+import { useVirtualizer } from '@tanstack/react-virtual';
+import Portal from './ui/Portal';
 import {
   Send, Phone, Video, Sparkles, Clock, CheckCircle,
   ChevronLeft, Globe, Edit2, Edit3, Trash2, Copy, Check, X,
@@ -36,6 +37,7 @@ function ChatView({
   onTypingChange,
   isThemTyping = false,
   handleSendMessage,
+  handleRetryMessage,
   handleEditMessage,
   handleDeleteMessage,
   openCounterOffer,
@@ -279,18 +281,33 @@ function ChatView({
   const [copiedMsgId, setCopiedMsgId] = useState(null);
   const [, setTranslationRevision] = useState(0);
   const messagesEndRef = useRef(null);
+  const scrollContainerRef = useRef(null);
 
-  // Auto-scroll des messages lors de l'ouverture du clavier mobile
+  const [viewportHeight, setViewportHeight] = useState(() => {
+    if (typeof window !== 'undefined' && window.visualViewport) {
+      return window.visualViewport.height;
+    }
+    return null;
+  });
+
+  // Phase 27 — VisualViewport API : ajustement dynamique de la hauteur et auto-scroll lors de l'ouverture du clavier
   useEffect(() => {
     if (typeof window === 'undefined' || !window.visualViewport) return;
     const handleViewportUpdate = () => {
-      if (messagesEndRef.current) {
-        messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      const vh = window.visualViewport.height;
+      setViewportHeight(vh);
+      const el = scrollContainerRef.current;
+      if (el) {
+        requestAnimationFrame(() => {
+          el.scrollTop = el.scrollHeight;
+        });
       }
     };
     window.visualViewport.addEventListener('resize', handleViewportUpdate);
+    window.visualViewport.addEventListener('scroll', handleViewportUpdate);
     return () => {
       window.visualViewport?.removeEventListener('resize', handleViewportUpdate);
+      window.visualViewport?.removeEventListener('scroll', handleViewportUpdate);
     };
   }, []);
 
@@ -383,6 +400,14 @@ function ChatView({
   const messages = useMemo(() => {
     return currentChatId ? (chatThreads[currentChatId] || []) : [];
   }, [currentChatId, chatThreads]);
+
+  // Phase 25 — Virtualisation DOM : seuls ~15 nœuds actifs dans le fil de messages
+  const chatVirtualizer = useVirtualizer({
+    count: messages.length,
+    getScrollElement: () => scrollContainerRef.current,
+    estimateSize: () => 80,
+    overscan: 5,
+  });
 
   // Multi-Board Management (Phase 23) : Récupération dynamique des 3 derniers tableaux blancs modifiés dans ce chat
   const recentBoardsFromMessages = useMemo(() => {
@@ -485,8 +510,10 @@ function ChatView({
 
   // Auto-scroll fiable vers le bas des messages (Mission 3)
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
-  }, [selectedChat, messages, mobileSubView]);
+    const el = scrollContainerRef.current;
+    if (!el || !messages.length) return;
+    requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; });
+  }, [selectedChat, messages.length, mobileSubView]);
 
   if (activeTab !== 'chat') return null;
 
@@ -673,6 +700,51 @@ function ChatView({
   };
 
   const renderMessageStatus = (msg) => {
+    // Phase 30 — Statuts optimistes : pending (horloge) et error (retry)
+    if (msg.status === 'pending') {
+      return (
+        <span
+          title="Envoi en cours..."
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            fontSize: '11px',
+            color: 'var(--text-secondary)',
+            opacity: 0.8,
+          }}
+        >
+          <Clock size={11} style={{ animation: 'spin 2s linear infinite' }} />
+        </span>
+      );
+    }
+
+    if (msg.status === 'error') {
+      return (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            if (handleRetryMessage) handleRetryMessage(msg);
+          }}
+          title="Échec de l'envoi — Cliquer pour réessayer"
+          style={{
+            background: 'none',
+            border: 'none',
+            cursor: 'pointer',
+            padding: 0,
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '3px',
+            fontSize: '11px',
+            fontWeight: '800',
+            color: '#EF4444',
+          }}
+        >
+          <span>⚠️ Réessayer</span>
+        </button>
+      );
+    }
+
     const isRead = msg.status === 'read' || msg.read === true;
     const isDelivered = msg.status === 'delivered' || msg.delivered === true;
 
@@ -1169,16 +1241,17 @@ function ChatView({
             touchAction: 'pan-y',
             boxSizing: 'border-box'
           }}
+          ref={scrollContainerRef}
         >
           <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '8px',
+            height: `${chatVirtualizer.getTotalSize()}px`,
+            position: 'relative',
             maxWidth: '680px',
             width: '100%',
-            margin: '0 auto'
+            margin: '0 auto',
           }}>
-            {messages.map(msg => {
+            {chatVirtualizer.getVirtualItems().map(virtualRow => {
+              const msg = messages[virtualRow.index];
               const isMsgOriginal = !!showingOriginalMessages[msg.id];
               const translatedText = getChatMessageDisplayContent
                 ? getChatMessageDisplayContent(msg, currentLang, isMsgOriginal)
@@ -2741,31 +2814,34 @@ function ChatView({
         </div>
       </div>
 
-      {/* SALLE DE CONVERSATION MOBILE (PORTAL DÉTACHÉ DIRECTEMENT SUR BODY 100dvh) */}
-      {isMobile && effectiveSelectedChat && mobileSubView === 'room' && createPortal(
-        <div
-          className="mobile-chat-fullscreen-room"
-          style={{
-            position: 'fixed',
-            inset: 0,
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            width: '100vw',
-            height: '100dvh',
-            maxHeight: '100dvh',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-            zIndex: 1000,
-            backgroundColor: 'var(--bg-global)',
-            boxSizing: 'border-box',
-          }}
-        >
-          {renderChatRoom()}
-        </div>,
-        document.body
+      {/* SALLE DE CONVERSATION MOBILE (PORTAL DÉTACHÉ DIRECTEMENT SUR MODAL-ROOT) */}
+      {isMobile && effectiveSelectedChat && mobileSubView === 'room' && (
+        <Portal>
+          <div
+            className="mobile-chat-fullscreen-room"
+            style={{
+              position: 'fixed',
+              inset: 0,
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              width: '100vw',
+              height: viewportHeight ? `${viewportHeight}px` : '100dvh',
+              maxHeight: viewportHeight ? `${viewportHeight}px` : '100dvh',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              zIndex: 1000,
+              backgroundColor: 'var(--bg-global)',
+              boxSizing: 'border-box',
+              paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+              transition: 'height 0.15s ease-out, padding-bottom 0.15s ease-out'
+            }}
+          >
+            {renderChatRoom()}
+          </div>
+        </Portal>
       )}
 
       {/* MODALE CRÉATION GROUPE / HUB DE PROJET (LAZY LOADED) */}
@@ -3295,174 +3371,149 @@ function ChatView({
       )}
 
       {/* MODALE DE TRANSFERT DIRECT DE JETONS (🪙) — Portal pour échapper aux stacking contexts Framer Motion */}
-      {isDirectTransferOpen && activeChatObj && createPortal(
-        <div
-          onClick={() => setIsDirectTransferOpen(false)}
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(0,0,0,0.65)',
-            backdropFilter: 'blur(8px)',
-            WebkitBackdropFilter: 'blur(8px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 999999,
-            padding: '16px',
-            animation: 'fadeIn 0.2s ease',
-          }}
-        >
+      {isDirectTransferOpen && activeChatObj && (
+        <Portal>
           <div
-            onClick={(e) => e.stopPropagation()}
+            onClick={() => setIsDirectTransferOpen(false)}
             style={{
-              backgroundColor: 'var(--bg-card)',
-              color: 'var(--text-main)',
-              borderRadius: '24px',
-              padding: '24px',
-              maxWidth: '380px',
-              width: '100%',
-              boxShadow: 'var(--shadow-modal)',
-              border: '1px solid var(--border-color)',
-              textAlign: 'center',
+              position: 'fixed',
+              inset: 0,
+              backgroundColor: 'rgba(0,0,0,0.65)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
               display: 'flex',
-              flexDirection: 'column',
-              gap: '16px',
-              animation: 'scaleUp 0.2s ease',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 999999,
+              padding: '16px',
+              animation: 'fadeIn 0.2s ease',
             }}
           >
-            <div style={{ width: '52px', height: '52px', borderRadius: '50%', backgroundColor: 'rgba(245, 158, 11, 0.15)', color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', boxShadow: '0 8px 24px rgba(245, 158, 11, 0.25)' }}>
-              <Coins size={28} />
-            </div>
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                backgroundColor: 'var(--bg-card)',
+                color: 'var(--text-main)',
+                borderRadius: '24px',
+                padding: '24px',
+                maxWidth: '380px',
+                width: '100%',
+                boxShadow: 'var(--shadow-modal)',
+                border: '1px solid var(--border-color)',
+                textAlign: 'center',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '16px',
+                animation: 'scaleUp 0.2s ease',
+              }}
+            >
+              <div style={{ width: '52px', height: '52px', borderRadius: '50%', backgroundColor: 'rgba(245, 158, 11, 0.15)', color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto', boxShadow: '0 8px 24px rgba(245, 158, 11, 0.25)' }}>
+                <Coins size={28} />
+              </div>
 
-            <div>
-              <h3 style={{ margin: '0 0 6px 0', fontSize: '18px', fontWeight: '800' }}>
-                Transférer des Jetons Troco
-              </h3>
-              <p style={{ margin: 0, fontSize: '12.5px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                Envoyez instantanément des Jetons Troco à <strong>{activeChatObj.user || 'votre contact'}</strong>.
-              </p>
-            </div>
+              <div>
+                <h3 style={{ margin: '0 0 6px 0', fontSize: '18px', fontWeight: '800' }}>
+                  Transférer des Jetons Troco
+                </h3>
+                <p style={{ margin: 0, fontSize: '12.5px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                  Envoyez instantanément des Jetons Troco à <strong>{activeChatObj.user || 'votre contact'}</strong>.
+                </p>
+              </div>
 
-            {/* SÉLECTEUR RAPIDE DE JETONS */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
-              {[1, 2, 5, 10].map(amt => (
+              {/* SÉLECTEUR RAPIDE DE JETONS */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '8px' }}>
+                {[1, 2, 5, 10].map(amt => (
+                  <button
+                    key={amt}
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setDirectTokensCount(amt); }}
+                    onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setDirectTokensCount(amt); }}
+                    style={{
+                      padding: '10px 4px',
+                      borderRadius: '12px',
+                      border: directTokensCount === amt ? '2px solid #F59E0B' : '1px solid var(--border-color)',
+                      backgroundColor: directTokensCount === amt ? 'rgba(245, 158, 11, 0.15)' : 'var(--bg-subtle)',
+                      color: directTokensCount === amt ? '#F59E0B' : 'var(--text-main)',
+                      fontSize: '13px',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {amt} 🪙
+                  </button>
+                ))}
+              </div>
+
+              <input
+                type="text"
+                placeholder="Message d'accompagnement (optionnel)..."
+                value={transferComment}
+                onChange={(e) => setTransferComment(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '12px 14px',
+                  borderRadius: '12px',
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: 'var(--bg-subtle)',
+                  color: 'var(--text-main)',
+                  fontSize: '13px',
+                  boxSizing: 'border-box',
+                }}
+              />
+
+              <div style={{ display: 'flex', gap: '8px' }}>
                 <button
-                  key={amt}
                   type="button"
-                  onClick={(e) => { e.stopPropagation(); setDirectTokensCount(amt); }}
-                  onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setDirectTokensCount(amt); }}
+                  onClick={() => setIsDirectTransferOpen(false)}
                   style={{
-                    padding: '10px 4px',
+                    flex: 1,
+                    padding: '10px 14px',
                     minHeight: '44px',
                     borderRadius: '12px',
-                    border: directTokensCount === amt ? '2px solid #F59E0B' : '1px solid var(--border-color)',
-                    backgroundColor: directTokensCount === amt ? 'rgba(245, 158, 11, 0.15)' : 'var(--bg-subtle)',
-                    color: directTokensCount === amt ? '#F59E0B' : 'var(--text-main)',
-                    fontSize: '13px',
-                    fontWeight: '800',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: 'var(--bg-subtle)',
+                    color: 'var(--text-main)',
+                    fontSize: '12.5px',
+                    fontWeight: '700',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    transition: 'all 0.15s ease',
-                    pointerEvents: 'auto',
-                    touchAction: 'manipulation',
                   }}
                 >
-                  +{amt} 🪙
+                  Annuler
                 </button>
-              ))}
-            </div>
 
-            {/* INPUT MONTANT PERSONNALISÉ */}
-            <div>
-              <input
-                type="number"
-                min="1"
-                max="100"
-                value={directTokensCount}
-                onChange={(e) => setDirectTokensCount(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  borderRadius: '12px',
-                  border: '1px solid var(--border-color)',
-                  backgroundColor: 'var(--bg-subtle)',
-                  color: 'var(--text-main)',
-                  fontSize: '15px',
-                  fontWeight: '800',
-                  textAlign: 'center',
-                  outline: 'none',
-                  boxSizing: 'border-box',
-                }}
-              />
-            </div>
-
-            {/* BOUTONS D'ACTION */}
-            <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); setIsDirectTransferOpen(false); }}
-                onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setIsDirectTransferOpen(false); }}
-                style={{
-                  flex: 1,
-                  padding: '10px 14px',
-                  minHeight: '44px',
-                  borderRadius: '12px',
-                  border: '1px solid var(--border-color)',
-                  backgroundColor: 'var(--bg-subtle)',
-                  color: 'var(--text-main)',
-                  fontSize: '12.5px',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  pointerEvents: 'auto',
-                  touchAction: 'manipulation',
-                }}
-              >
-                Annuler
-              </button>
-
-              <button
-                type="button"
-                disabled={isTransferringTokens || (profile?.trocoTokens || 0) < directTokensCount}
-                onClick={(e) => { e.stopPropagation(); handleExecuteDirectTokenTransfer(); }}
-                onTouchEnd={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  if (!isTransferringTokens && (profile?.trocoTokens || 0) >= directTokensCount) {
-                    handleExecuteDirectTokenTransfer();
-                  }
-                }}
-                className="premium-button"
-                style={{
-                  flex: 1,
-                  padding: '10px 14px',
-                  minHeight: '44px',
-                  borderRadius: '12px',
-                  border: 'none',
-                  background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
-                  color: '#FFFFFF',
-                  fontSize: '12.5px',
-                  fontWeight: '800',
-                  cursor: (isTransferringTokens || (profile?.trocoTokens || 0) < directTokensCount) ? 'not-allowed' : 'pointer',
-                  opacity: (profile?.trocoTokens || 0) < directTokensCount ? 0.5 : 1,
-                  boxShadow: '0 4px 14px rgba(245, 158, 11, 0.4)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  pointerEvents: 'auto',
-                  touchAction: 'manipulation',
-                }}
-              >
-                {isTransferringTokens ? 'Transfert...' : `Envoyer ${directTokensCount} 🪙`}
-              </button>
+                <button
+                  type="button"
+                  disabled={isTransferringTokens || (profile?.trocoTokens || 0) < directTokensCount}
+                  onClick={(e) => { e.stopPropagation(); handleExecuteDirectTokenTransfer(); }}
+                  className="premium-button"
+                  style={{
+                    flex: 1,
+                    padding: '10px 14px',
+                    minHeight: '44px',
+                    borderRadius: '12px',
+                    border: 'none',
+                    background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
+                    color: '#FFFFFF',
+                    fontSize: '12.5px',
+                    fontWeight: '800',
+                    cursor: (isTransferringTokens || (profile?.trocoTokens || 0) < directTokensCount) ? 'not-allowed' : 'pointer',
+                    opacity: (profile?.trocoTokens || 0) < directTokensCount ? 0.5 : 1,
+                    boxShadow: '0 4px 14px rgba(245, 158, 11, 0.4)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  {isTransferringTokens ? 'Transfert...' : `Envoyer ${directTokensCount} 🪙`}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      , document.body)}
+        </Portal>
+      )}
 
       {/* ANIMATION FESTIVE DE CONFETTIS LORS DES DEALS ET TRANSFERTS */}
       {showConfetti && (

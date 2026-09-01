@@ -625,29 +625,45 @@ export const useChatManager = ({
       }, { merge: true }).catch(() => { });
     }
 
+    const tempId = `temp_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const newMessage = {
-      id: Date.now(),
+      id: tempId,
       sender: 'me',
       senderName: profile?.name || 'Moi',
+      senderUid: profile?.uid || null,
       text,
-      status: 'sent',
+      status: 'pending',
       createdAt: new Date(),
       translations: { FR: text }
     };
+
+    // 1. Optimistic insertion : rendu instantané 0ms avec status pending (icône horloge)
     setChatThreads(prev => ({ ...prev, [chatId]: [...(prev[chatId] || []), newMessage] }));
+    useChatStore.getState().addMessageToThread(chatId, newMessage);
     setMessageDraft('');
 
     setChatsList(prev => prev.map(c => String(c.id) === String(chatId) ? { ...c, lastMessage: text, lastSenderName: profile?.name || 'Moi' } : c));
 
     if (db) {
       try {
-        await addDoc(collection(db, 'chats', String(chatId), 'messages'), {
+        const docRef = await addDoc(collection(db, 'chats', String(chatId), 'messages'), {
           senderName: profile?.name || 'Moi',
+          senderUid: profile?.uid || null,
           text,
           read: false,
           status: 'sent',
           createdAt: serverTimestamp(),
         });
+
+        // Mise à jour optimiste -> sent
+        setChatThreads(prev => {
+          const thread = prev[chatId] || [];
+          return {
+            ...prev,
+            [chatId]: thread.map(m => m.id === tempId ? { ...m, id: docRef.id || tempId, status: 'sent' } : m)
+          };
+        });
+
         await setDoc(doc(db, 'chats', String(chatId)), {
           id: chatId,
           user: selectedChat.user,
@@ -659,7 +675,60 @@ export const useChatManager = ({
           updatedAt: serverTimestamp(),
         }, { merge: true });
       } catch (e) {
-        console.warn('[Firestore] message write failed:', e);
+        console.warn('[Firestore] message write failed, marked as error:', e);
+        // Échec -> statut error avec option Réessayer
+        setChatThreads(prev => {
+          const thread = prev[chatId] || [];
+          return {
+            ...prev,
+            [chatId]: thread.map(m => m.id === tempId ? { ...m, status: 'error' } : m)
+          };
+        });
+      }
+    }
+  };
+
+  // ---- RÉESSAI DE MESSAGE EN CAS D'ÉCHEC OPTIMISTE ----
+  const handleRetryMessage = async (msg) => {
+    if (!msg || !selectedChat) return;
+    const chatId = selectedChat.id;
+    
+    // Remise en statut pending
+    setChatThreads(prev => {
+      const thread = prev[chatId] || [];
+      return {
+        ...prev,
+        [chatId]: thread.map(m => m.id === msg.id ? { ...m, status: 'pending' } : m)
+      };
+    });
+
+    if (db) {
+      try {
+        const docRef = await addDoc(collection(db, 'chats', String(chatId), 'messages'), {
+          senderName: profile?.name || 'Moi',
+          senderUid: profile?.uid || null,
+          text: msg.text,
+          read: false,
+          status: 'sent',
+          createdAt: serverTimestamp(),
+        });
+
+        setChatThreads(prev => {
+          const thread = prev[chatId] || [];
+          return {
+            ...prev,
+            [chatId]: thread.map(m => m.id === msg.id ? { ...m, id: docRef.id || msg.id, status: 'sent' } : m)
+          };
+        });
+      } catch (e) {
+        console.warn('[Firestore] retry failed:', e);
+        setChatThreads(prev => {
+          const thread = prev[chatId] || [];
+          return {
+            ...prev,
+            [chatId]: thread.map(m => m.id === msg.id ? { ...m, status: 'error' } : m)
+          };
+        });
       }
     }
   };
@@ -1621,6 +1690,7 @@ export const useChatManager = ({
     handleSelectChat,
     handleTypingChange,
     handleSendMessage,
+    handleRetryMessage,
     handleEditMessage,
     handleDeleteMessage,
     handleSendAudioMessage,

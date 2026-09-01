@@ -13,7 +13,7 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { createPortal } from 'react-dom';
+import Portal from './ui/Portal';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X, Pen, Highlighter, Eraser, Square, Circle, Minus, ArrowRight,
@@ -2791,5 +2791,5 @@ export default function CollaborativeWhiteboardModal({
     </div>
   );
 
-  return createPortal(modalContent, document.body);
+  return <Portal>{modalContent}</Portal>;
 }

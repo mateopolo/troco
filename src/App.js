@@ -23,6 +23,10 @@ import SponsoredFeedCard from './components/SponsoredFeedCard';
 import SectoralErrorBoundary from './components/SectoralErrorBoundary';
 import AuthScreen from './features/auth/AuthScreen';
 import { useWalletStore } from './stores';
+import { useAppAuth } from './hooks/useAppAuth';
+import { useAppNavigation } from './hooks/useAppNavigation';
+import { useAppModals } from './hooks/useAppModals';
+import Portal from './components/ui/Portal';
 import { getCategoryLabel as getCategoryLabelUtil, formatStatus as formatStatusUtil, formatTokenCount as formatTokenCountUtil, formatCompensation as formatCompensationUtil } from './utils/formatters';
 import { generateTags } from './utils/tagGenerator';
 import {
@@ -86,7 +90,6 @@ export default function App() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
   const [currentLang, setCurrentLang] = useState('FR');
-  const [isLangModalOpen, setIsLangModalOpen] = useState(false);
   const [userCoords, setUserCoords] = useState([48.8566, 2.3522]); // Paris par défaut
   const [isGeolocated, setIsGeolocated] = useState(false);
   const [isGeolocating, setIsGeolocating] = useState(false);
@@ -144,42 +147,94 @@ export default function App() {
     );
   };
 
-  const [activeTab, setActiveTab] = useState('feed');
-  const [isPending, startTransition] = useTransition();
+  // Modular Orchestration Hooks (Phase 26)
+  const {
+    profile,
+    setProfile,
+    profileDraft,
+    setProfileDraft,
+    isEditingProfile,
+    setIsEditingProfile,
+    isAuthenticated,
+    setIsAuthenticated,
+    isLoadingSession,
+    setIsLoadingSession,
+    isUserBanned,
+    setIsUserBanned,
+    bannedReason,
+    setBannedReason,
+    saveMessage,
+    setSaveMessage,
+    handleLogout,
+    handleKycComplete,
+    addSkill,
+    removeSkill,
+    addEquipment,
+    removeEquipment,
+    addPortfolioImage,
+    removePortfolioImage,
+  } = useAppAuth();
 
-  // CMS & Textes Globaux en direct
-  const globalAnnouncement = useGlobalContent('platform_announcement');
-  // eslint-disable-next-line no-unused-vars
-  const globalWelcomeMsg = useGlobalContent('welcome_message');
+  const {
+    activeTab,
+    setActiveTab,
+    navigateToTab,
+  } = useAppNavigation();
 
-  // Sécurité : État de bannissement temps réel
-  const [isUserBanned, setIsUserBanned] = useState(false);
-  const [bannedReason, setBannedReason] = useState('');
+  const ui = useAppModals();
+  const {
+    selectedListing,
+    setSelectedListing,
+    selectedPublicUser,
+    setSelectedPublicUser,
+    selectedMapItem,
+    setSelectedMapItem,
+    editingOriginalListing,
+    setEditingOriginalListing,
+    isEditingListing,
+    setIsEditingListing,
+    boostingListing,
+    setBoostingListing,
+    boostMessage,
+    setBoostMessage,
+    isFilterDrawerOpen,
+    setIsFilterDrawerOpen,
+    isCategoryModalOpen,
+    setIsCategoryModalOpen,
+    isLangModalOpen,
+    setIsLangModalOpen,
+    viewMode,
+    setViewMode,
+    formatFilter,
+    setFormatFilter,
+    isKycModalOpen,
+    setIsKycModalOpen,
+    isOnboardingOpen,
+    setIsOnboardingOpen,
+    isAdminPanelOpen,
+    setIsAdminPanelOpen,
+    isGodModeActive,
+    setIsGodModeActive,
+    isReportModalOpen,
+    setIsReportModalOpen,
+    reportTarget,
+    setReportTarget,
+    isPaymentModalOpen,
+    setIsPaymentModalOpen,
+    paymentModalConfig,
+    setPaymentModalConfig,
+    isTransactionsModalOpen,
+    setIsTransactionsModalOpen,
+    isPrivacyCenterOpen,
+    setIsPrivacyCenterOpen,
+    isCguViewerOpen,
+    setIsCguViewerOpen,
+    isBoostModalOpen,
+    setIsBoostModalOpen,
+    topUpCelebration,
+    setTopUpCelebration,
+  } = ui;
 
-  useEffect(() => {
-    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-  }, [activeTab]);
-  const [profile, setProfile] = useState(() => {
-    const saved = window.localStorage.getItem('troco_user_profile');
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) { }
-    }
-    return {
-      name: 'MATEO POLO',
-      username: '@mateopolo',
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80',
-      bio: 'Créateur de contenus, développeur Python et passionné de musique. Je propose des services flexibles et des échanges de qualité.',
-      location: 'Paris, France',
-      languages: ['FR', 'EN', 'ES', 'IT'],
-      loginMethod: 'Google',
-      euroBalance: 128,
-      trocoTokens: 12,
-    };
-  });
-  const [profileDraft, setProfileDraft] = useState(profile);
-  const [isEditingProfile, setIsEditingProfile] = useState(false);
-  // eslint-disable-next-line no-unused-vars
-  const [saveMessage, setSaveMessage] = useState('');
   const [skills, setSkills] = useState([
     'Prod musicale & Ableton Live',
     'Scripts Python',
@@ -189,44 +244,13 @@ export default function App() {
     'Microphone USB',
   ]);
   const [portfolioImages, setPortfolioImages] = useState(() => profile?.portfolioImages || []);
-  const [formatFilter, setFormatFilter] = useState('all');
-  const [selectedListing, setSelectedListing] = useState(null);
-  const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
-  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
-  const [viewMode, setViewMode] = useState('list');
-
-  // eslint-disable-next-line no-unused-vars
-  const [selectedMapItem, setSelectedMapItem] = useState(null);
-  const [isBoostModalOpen, setIsBoostModalOpen] = useState(false);
-  // eslint-disable-next-line no-unused-vars
-  const [isEditingListing, setIsEditingListing] = useState(false);
-  const [editingOriginalListing, setEditingOriginalListing] = useState(null);
-  const [boostingListing, setBoostingListing] = useState(null);
-  const [boostMessage, setBoostMessage] = useState('');
   const [mapCenter, setMapCenter] = useState([48.8566, 2.3522]);
   const [mapZoom, setMapZoom] = useState(4);
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return window.localStorage.getItem('troco_is_authenticated') === 'true';
-  });
-  const [isLoadingSession, setIsLoadingSession] = useState(true);
-
-  // ---- ÉTATS MODÉRATION & PANEL ADMINISTRATEUR ----
-  const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
-  const [isGodModeActive, setIsGodModeActive] = useState(() => {
-    try {
-      return localStorage.getItem('troco_god_mode') === 'true';
-    } catch (_) {
-      return false;
-    }
-  });
-  const [selectedPublicUser, setSelectedPublicUser] = useState(null);
-  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
-  const [reportTarget, setReportTarget] = useState({ listing: null, user: null });
-  // eslint-disable-next-line no-unused-vars
   const [allReports, setAllReports] = useState([]);
   const [allFirestoreUsers, setAllFirestoreUsers] = useState([]);
-  const categoryScrollRef = useRef(null);
+  const [isPending, startTransition] = useTransition();
 
+  const categoryScrollRef = useRef(null);
   const scrollCategories = (direction) => {
     if (categoryScrollRef.current) {
       const scrollAmount = direction === 'left' ? -220 : 220;
@@ -234,22 +258,10 @@ export default function App() {
     }
   };
 
-  // ---- ÉTATS PAIEMENT & FACTURATION (BLOC 5) ----
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-  const [paymentModalConfig, setPaymentModalConfig] = useState({
-    mode: 'pack-tokens',
-    payload: null,
-  });
-  const [isTransactionsModalOpen, setIsTransactionsModalOpen] = useState(false);
-  // ---- ÉTATS CADRE JURIDIQUE, CGU & RGPD (BLOC 6) ----
-  const [isPrivacyCenterOpen, setIsPrivacyCenterOpen] = useState(false);
-  const [isCguViewerOpen, setIsCguViewerOpen] = useState(false);
-  // ---- ÉTAT VÉRIFICATION D'IDENTITÉ KYC ----
-  const [isKycModalOpen, setIsKycModalOpen] = useState(false);
-  // ---- ÉTAT DU PARCOURS D'ONBOARDING INTERACTIF (CHANTIER 1) ----
-  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
-  // ---- ÉTAT ANIMATION CÉLÉBRATION TOP-UP & JETONS ----
-  const [topUpCelebration, setTopUpCelebration] = useState(null);
+  // CMS & Textes Globaux en direct
+  const globalAnnouncement = useGlobalContent('platform_announcement');
+  // eslint-disable-next-line no-unused-vars
+  const globalWelcomeMsg = useGlobalContent('welcome_message');
 
   // ---- NOTIFICATION & ANIMATION DE RÉCEPTION DE JETONS (DESTINATAIRE) ----
   const prevTokensRef = useRef(profile?.trocoTokens);
@@ -269,163 +281,7 @@ export default function App() {
       }
     }
     prevTokensRef.current = profile?.trocoTokens;
-  }, [profile?.trocoTokens]);
-
-  const handleKycComplete = async () => {
-    const updatedProfile = {
-      ...profile,
-      kycVerified: true,
-      kycVerifiedAt: new Date().toISOString(),
-    };
-    setProfile(updatedProfile);
-    setProfileDraft(updatedProfile);
-    try {
-      localStorage.setItem('troco_user_profile', JSON.stringify(updatedProfile));
-    } catch (_) { }
-    if (auth.currentUser?.uid) {
-      try {
-        await updateDoc(doc(db, 'users', auth.currentUser.uid), {
-          kycVerified: true,
-          kycVerifiedAt: serverTimestamp(),
-        });
-      } catch (err) {
-        console.warn('[Firestore] Update KYC error:', err);
-      }
-    }
-  };
-
-  // ---- INTERCEPTION DE LA TOUCHE RETOUR PHYSIQUE ANDROID (POPSTATE / HISTORY API) ----
-  // Permet de fermer les modales et les vues profondes au lieu de quitter l'application
-  useEffect(() => {
-    const handlePopState = () => {
-      // 1. Fermeture hiérarchique des modales ouvertes
-      if (selectedListing) {
-        setSelectedListing(null);
-        return;
-      }
-      if (selectedPublicUser) {
-        setSelectedPublicUser(null);
-        return;
-      }
-      if (isEditingProfile) {
-        setIsEditingProfile(false);
-        return;
-      }
-      if (isFilterDrawerOpen) {
-        setIsFilterDrawerOpen(false);
-        return;
-      }
-      if (isCategoryModalOpen) {
-        setIsCategoryModalOpen(false);
-        return;
-      }
-      if (isBoostModalOpen) {
-        setIsBoostModalOpen(false);
-        return;
-      }
-      if (isPrivacyCenterOpen) {
-        setIsPrivacyCenterOpen(false);
-        return;
-      }
-      if (isCguViewerOpen) {
-        setIsCguViewerOpen(false);
-        return;
-      }
-      if (isKycModalOpen) {
-        setIsKycModalOpen(false);
-        return;
-      }
-      if (isAdminPanelOpen) {
-        setIsAdminPanelOpen(false);
-        return;
-      }
-      if (isLangModalOpen) {
-        setIsLangModalOpen(false);
-        return;
-      }
-      if (isReportModalOpen) {
-        setIsReportModalOpen(false);
-        return;
-      }
-      if (isTransactionsModalOpen) {
-        setIsTransactionsModalOpen(false);
-        return;
-      }
-      if (isPaymentModalOpen) {
-        setIsPaymentModalOpen(false);
-        return;
-      }
-      if (isOnboardingOpen) {
-        setIsOnboardingOpen(false);
-        return;
-      }
-      // 2. Si aucune modale n'est ouverte mais qu'on est sur un onglet secondaire, retour au Feed
-      if (activeTab !== 'feed') {
-        setActiveTab('feed');
-      }
-    };
-
-    window.addEventListener('popstate', handlePopState);
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, [
-    selectedListing,
-    selectedPublicUser,
-    isEditingProfile,
-    isFilterDrawerOpen,
-    isCategoryModalOpen,
-    isBoostModalOpen,
-    isPrivacyCenterOpen,
-    isCguViewerOpen,
-    isKycModalOpen,
-    isAdminPanelOpen,
-    isLangModalOpen,
-    isReportModalOpen,
-    isTransactionsModalOpen,
-    isPaymentModalOpen,
-    isOnboardingOpen,
-    activeTab,
-  ]);
-
-  // Synchronisation de l'historique de navigation quand une modale s'ouvre
-  useEffect(() => {
-    const hasActiveModal = !!(
-      selectedListing ||
-      selectedPublicUser ||
-      isEditingProfile ||
-      isFilterDrawerOpen ||
-      isCategoryModalOpen ||
-      isBoostModalOpen ||
-      isPrivacyCenterOpen ||
-      isCguViewerOpen ||
-      isKycModalOpen ||
-      isAdminPanelOpen ||
-      isLangModalOpen ||
-      isReportModalOpen ||
-      isTransactionsModalOpen ||
-      isPaymentModalOpen ||
-      isOnboardingOpen
-    );
-
-    if (hasActiveModal && typeof window !== 'undefined' && window.history) {
-      window.history.pushState({ modalOpen: true }, '');
-    }
-  }, [
-    selectedListing,
-    selectedPublicUser,
-    isEditingProfile,
-    isFilterDrawerOpen,
-    isCategoryModalOpen,
-    isBoostModalOpen,
-    isPrivacyCenterOpen,
-    isCguViewerOpen,
-    isKycModalOpen,
-    isAdminPanelOpen,
-    isLangModalOpen,
-    isReportModalOpen,
-    isTransactionsModalOpen,
-    isPaymentModalOpen,
-    isOnboardingOpen,
-  ]);
+  }, [profile?.trocoTokens, setTopUpCelebration]);
 
   const [userTransactions, setUserTransactions] = useState(() => {
     try {

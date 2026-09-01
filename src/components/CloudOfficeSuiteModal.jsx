@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { createPortal } from 'react-dom';
+import Portal from './ui/Portal';
 import {
   X, FileText, Table,
   Bold, Italic, Heading1, Heading2, List, Code,
@@ -525,8 +525,9 @@ export default function CloudOfficeSuiteModal({
 
   if (!isOpen) return null;
 
-  return createPortal(
-    <div
+  return (
+    <Portal>
+      <div
       style={{
         position: 'fixed',
         inset: 0,
@@ -1336,7 +1337,7 @@ export default function CloudOfficeSuiteModal({
           )}
         </div>
       </div>
-    </div>,
-    document.body
+    </div>
+  </Portal>
   );
 }

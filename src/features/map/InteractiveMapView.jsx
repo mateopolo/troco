@@ -1,5 +1,5 @@
 import React, { Suspense, useCallback, useState, useEffect, useRef } from 'react';
-import { createPortal } from 'react-dom';
+import Portal from '../../components/ui/Portal';
 import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -435,8 +435,8 @@ export function InteractiveMapView({
 
   return (
     <SectoralErrorBoundary moduleName="Carte Interactive & Géolocalisation">
-      {activeFullScreen && typeof document !== 'undefined' ? (
-        createPortal(
+      {activeFullScreen ? (
+        <Portal>
           <div
             style={{
               position: 'fixed',
@@ -453,9 +453,8 @@ export function InteractiveMapView({
             }}
           >
             {mapElement}
-          </div>,
-          document.body
-        )
+          </div>
+        </Portal>
       ) : (
         <div
           className="premium-panel"

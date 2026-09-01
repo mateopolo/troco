@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { createPortal } from 'react-dom';
+import Portal from './ui/Portal';
 import {
   X, FileText, Bold, Italic, Heading1, Heading2, Heading3,
   List, CheckSquare, Quote, Code, Download, Printer,
@@ -257,8 +257,9 @@ export default function SharedDocumentModal({
 
   if (!isOpen) return null;
 
-  return createPortal(
-    <div
+  return (
+    <Portal>
+      <div
       style={{
         position: 'fixed',
         inset: 0,
@@ -644,7 +645,7 @@ export default function SharedDocumentModal({
           )}
         </div>
       </div>
-    </div>,
-    document.body
+    </div>
+  </Portal>
   );
 }

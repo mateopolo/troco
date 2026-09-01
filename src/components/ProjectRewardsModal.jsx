@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { createPortal } from 'react-dom';
+import Portal from './ui/Portal';
 import { X, Coins, Sparkles, Plus, Award } from 'lucide-react';
 
 export default function ProjectRewardsModal({
@@ -496,6 +496,6 @@ export default function ProjectRewardsModal({
     </div>
   );
 
-  return typeof document !== 'undefined' ? createPortal(modalElement, document.body) : modalElement;
+  return <Portal>{modalElement}</Portal>;
 }
 

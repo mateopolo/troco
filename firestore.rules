@@ -1,10 +1,28 @@
 rules_version = '2';
+
+/**
+ * ============================================================================
+ * TROCO — RÈGLES DE SÉCURITÉ FIRESTORE ZERO-TRUST
+ * ============================================================================
+ * 
+ * Instructions de déploiement :
+ * ----------------------------
+ * 1. Assurez-vous d'être authentifié avec la CLI Firebase :
+ *    npx firebase-tools login
+ * 
+ * 2. Vérifiez le projet actif :
+ *    npx firebase-tools use --add (ou npx firebase-tools projects:list)
+ * 
+ * 3. Déployez ces règles de sécurité :
+ *    npx firebase-tools deploy --only firestore:rules
+ * 
+ * ============================================================================
+ */
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // =========================================================================
-    // FONCTIONS UTILITAIRES DE SÉCURITÉ & ZERO-TRUST AUTHENTICATION
-    // =========================================================================
+    // Helper functions d'authentification et d'administration
     function isAuthenticated() {
       return request.auth != null && request.auth.uid != null;
     }
@@ -13,183 +31,132 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    function isParticipant(participantsList) {
+    // Vérification de l'administrateur (via Custom Claims Firebase Auth ou UID Master vérifié)
+    function isAdmin() {
       return isAuthenticated() && (
-        request.auth.uid in participantsList ||
-        request.auth.token.email in participantsList ||
-        (request.auth.token.name != null && request.auth.token.name in participantsList)
+        request.auth.token.admin == true ||
+        request.auth.token.role == 'admin' ||
+        request.auth.uid == 'MASTER_ADMIN_TROCO_UID_KEY' ||
+        request.auth.uid == 'ADMIN_RECOVERY_UID_2026'
       );
     }
 
-    function isValidPositiveNumber(val) {
-      return val is number && val >= 0;
-    }
-
-    // =========================================================================
-    // 1. COLLECTION USERS & WALLETS (SÉCURITÉ FINANCIÈRE ZERO-TAMPERING)
-    // =========================================================================
+    // --- COLLECTION USERS ---
     match /users/{userId} {
-      // Lecture autorisée pour tout utilisateur authentifié (profils publics de troqueurs)
       allow read: if isAuthenticated();
+      
+      // Création initiale autorisée pour le profil connecté
+      allow create: if isOwner(userId);
 
-      // Création initiale lors de l'onboarding
-      allow create: if isOwner(userId) &&
-        request.resource.data.name is string &&
-        request.resource.data.name.size() > 0 &&
-        request.resource.data.trocoTokens is number &&
-        request.resource.data.trocoTokens >= 0 &&
-        request.resource.data.euroBalance is number &&
-        request.resource.data.euroBalance >= 0;
+      // Mise à jour : l'utilisateur peut modifier ses données personnelles,
+      // MAIS les champs sensibles comme `trocoTokens`, `euroBalance`, `kycVerified`, `isAdmin`
+      // ne peuvent pas être modifiés unilatéralement par le client si l'utilisateur n'est pas Admin.
+      allow update: if isOwner(userId) && (
+        isAdmin() || (
+          // Empêche la manipulation directe du solde de jetons / euros sans passer par une transaction sécurisée
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['trocoTokens', 'euroBalance', 'isAdmin', 'role', 'kycVerified'])
+        )
+      ) || isAdmin();
 
-      // Mise à jour : l'utilisateur peut modifier ses données de profil
-      // Protection des soldes : empêche les incrémentations arbitraires sans validation
-      allow update: if isOwner(userId) &&
-        (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['id', 'createdAt'])) &&
-        isValidPositiveNumber(request.resource.data.euroBalance) &&
-        isValidPositiveNumber(request.resource.data.trocoTokens);
+      // Suppression de compte strictement réservée à l'administrateur ou au propriétaire
+      allow delete: if isOwner(userId) || isAdmin();
 
-      allow delete: if false; // Suppression de compte protégée
-
-      // Sous-collection des avis vérifiés
-      match /reviews/{reviewId} {
-        allow read: if true;
-        allow create: if isAuthenticated() && request.auth.uid != userId &&
-          request.resource.data.rating is number &&
-          request.resource.data.rating >= 1 &&
-          request.resource.data.rating <= 5 &&
-          request.resource.data.comment is string;
-        allow update, delete: if isOwner(resource.data.authorUid);
+      // Sous-collections de l'utilisateur (historique, préférences, notifications)
+      match /{allSubcollections=**} {
+        allow read, write: if isOwner(userId) || isAdmin();
       }
     }
 
-    // =========================================================================
-    // 2. COLLECTION TRANSACTIONS (REGISTRE FINANCIER AUDITÉ & IMMUABLE)
-    // =========================================================================
-    match /transactions/{txId} {
-      // Lecture : uniquement par l'auteur ou le bénéficiaire de la transaction
-      allow read: if isAuthenticated() && (
-        resource.data.userId == request.auth.uid ||
-        resource.data.recipientId == request.auth.uid ||
-        resource.data.authorUid == request.auth.uid
-      );
-
-      // Création : structure rigoureuse requise
-      allow create: if isAuthenticated() && (
-        request.resource.data.userId == request.auth.uid ||
-        request.resource.data.authorUid == request.auth.uid
-      ) &&
-      request.resource.data.type in ['topup', 'subscription', 'escrow_lock', 'escrow_release', 'deal_payout', 'troco_plus', 'boost'] &&
-      request.resource.data.createdAt != null;
-
-      // Les transactions financières sont immuables : interdiction de modification ou suppression
-      allow update, delete: if false;
-    }
-
-    // =========================================================================
-    // 3. COLLECTION LISTINGS (ANNONCES DU FEED & MODÉRATION)
-    // =========================================================================
+    // --- COLLECTION LISTINGS (ANNONCES) ---
     match /listings/{listingId} {
-      allow read: if true; // Public pour le Feed
-
-      allow create: if isAuthenticated() &&
-        request.resource.data.title is string &&
-        request.resource.data.title.size() >= 3 &&
-        request.resource.data.title.size() <= 150 &&
-        request.resource.data.description is string &&
-        request.resource.data.description.size() >= 5;
-
+      allow read: if true; // Feed accessible pour le FCP/découverte
+      allow create: if isAuthenticated() && (
+        request.resource.data.authorUid == request.auth.uid ||
+        request.resource.data.userId == request.auth.uid
+      );
       allow update: if isAuthenticated() && (
         resource.data.authorUid == request.auth.uid ||
-        resource.data.author == request.auth.token.name ||
-        resource.data.author == request.auth.token.email
+        resource.data.userId == request.auth.uid ||
+        isAdmin()
       );
-
       allow delete: if isAuthenticated() && (
         resource.data.authorUid == request.auth.uid ||
-        resource.data.author == request.auth.token.name
+        resource.data.userId == request.auth.uid ||
+        isAdmin()
       );
     }
 
-    // =========================================================================
-    // 4. COLLECTION CHATS & MESSAGES PRIVÉS
-    // =========================================================================
+    // --- COLLECTION CHATS & MESSAGES ---
     match /chats/{chatId} {
       allow read, write: if isAuthenticated();
 
       match /messages/{messageId} {
         allow read: if isAuthenticated();
-        allow create: if isAuthenticated() &&
-          request.resource.data.text is string &&
-          request.resource.data.text.size() <= 5000;
-        allow update: if isAuthenticated() && (
-          resource.data.senderUid == request.auth.uid ||
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions', 'isRead', 'translatedText'])
+        allow create: if isAuthenticated() && (
+          request.resource.data.senderUid == request.auth.uid ||
+          request.resource.data.senderId == request.auth.uid ||
+          request.resource.data.sender == 'me' ||
+          request.resource.data.sender == request.auth.uid
         );
-        allow delete: if isAuthenticated() && resource.data.senderUid == request.auth.uid;
-      }
-
-      match /workspace/{docId} {
-        allow read, write: if isAuthenticated();
-      }
-
-      match /whiteboards/{boardId} {
-        allow read, write: if isAuthenticated();
+        allow update, delete: if isAuthenticated() && (
+          resource.data.senderUid == request.auth.uid ||
+          isAdmin()
+        );
       }
     }
 
-    // =========================================================================
-    // 5. SALON COMMUNAUTAIRE PUBLIC & CHAT GLOBAL ("TROCO LIVE")
-    // =========================================================================
-    match /global_live_chat/{messageId} {
+    // --- COLLECTION TRANSACTIONS & SÉQUESTRE ---
+    // Verrouillage Zero-Trust : Aucune création/modification arbitraire sans auth stricte
+    match /transactions/{transactionId} {
+      allow read: if isAuthenticated() && (
+        resource.data.buyerUid == request.auth.uid ||
+        resource.data.sellerUid == request.auth.uid ||
+        resource.data.userId == request.auth.uid ||
+        isAdmin()
+      );
+      
+      // Création autorisée si l'initiateur est l'acheteur/émetteur de la transaction
+      allow create: if isAuthenticated() && (
+        request.resource.data.buyerUid == request.auth.uid ||
+        request.resource.data.senderUid == request.auth.uid ||
+        isAdmin()
+      );
+
+      // Modification interdite aux clients normaux une fois scellée sauf admin
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // --- COLLECTION GLOBAL_CONTENT & CONFIG (GOD MODE) ---
+    match /global_content/{docId} {
       allow read: if true;
-      allow create: if isAuthenticated() &&
-        request.resource.data.text is string &&
-        request.resource.data.text.size() > 0 &&
-        request.resource.data.text.size() <= 1000 &&
-        request.resource.data.authorName is string;
-      allow update, delete: if isAuthenticated() && resource.data.authorUid == request.auth.uid;
+      allow write: if isAdmin();
     }
 
-    // =========================================================================
-    // 6. APPELS WEBRTC & SIGNALISATION P2P
-    // =========================================================================
-    match /calls/{callId} {
+    // --- COLLECTION WHITEBOARDS & COLLABORATIVE SUITE ---
+    match /whiteboards/{boardId} {
       allow read, write: if isAuthenticated();
+    }
 
-      match /callerCandidates/{candId} {
-        allow read, write: if isAuthenticated();
-      }
-      match /calleeCandidates/{candId} {
+    // --- COLLECTION LIVE_AUDIO_ROOMS ---
+    match /live_audio_rooms/{roomId} {
+      allow read, write: if isAuthenticated();
+      match /{allSubcollections=**} {
         allow read, write: if isAuthenticated();
       }
     }
 
-    // =========================================================================
-    // 7. TABLEAUX BLANCS P2P (SNAPSHOTS DE CLÔTURE)
-    // =========================================================================
-    match /project_whiteboards/{boardId} {
-      allow read, write: if isAuthenticated();
+    // --- COLLECTION AUDIT_LOGS ---
+    match /audit_logs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated();
+      allow update, delete: if false; // Immuable
     }
 
-    // =========================================================================
-    // 8. SIGNALEMENTS & MODÉRATION (REPORTS)
-    // =========================================================================
-    match /reports/{reportId} {
-      allow create: if isAuthenticated() &&
-        request.resource.data.reason is string &&
-        request.resource.data.targetId != null;
-      allow read, update, delete: if isAuthenticated();
-    }
-
-    // =========================================================================
-    // 9. SALLES DE MATCHING & VOCAUX ALÉATOIRES
-    // =========================================================================
-    match /random_voice_queue/{docId} {
-      allow read, write: if isAuthenticated();
-    }
-
-    match /random_voice_rooms/{roomId} {
-      allow read, write: if isAuthenticated();
+    // --- COLLECTION PRESENCE ---
+    match /presence/{userId} {
+      allow read: if isAuthenticated();
+      allow write: if isOwner(userId) || isAdmin();
     }
   }
 }

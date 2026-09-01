@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { createPortal } from 'react-dom';
+import Portal from './ui/Portal';
 import {
   X, Calendar, Monitor, FileText,
   ExternalLink, Sparkles, Plus, Clock, ShieldCheck,
@@ -670,6 +670,6 @@ export default function ProjectWorkspaceToolsModal({
     </div>
   );
 
-  return typeof document !== 'undefined' ? createPortal(modalElement, document.body) : modalElement;
+  return <Portal>{modalElement}</Portal>;
 }
 
