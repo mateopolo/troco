@@ -35,8 +35,6 @@ function FeedCardItem({
   t = (key) => key
 }) {
   const safeOpenMobileActions = onOpenMobileActions || onMobileActionClick;
-  const safeAdminDelete = onAdminDeleteListing || onAdminDelete;
-  const safeAdminToggleHide = onAdminToggleHideListing || onAdminToggleHide;
 
   const [localImageIndex, setLocalImageIndex] = useState(0);
   const [typedText, setTypedText] = useState('');
@@ -218,78 +216,6 @@ function FeedCardItem({
         transition: 'transform 0.35s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.3s cubic-bezier(0.22, 1, 0.36, 1)'
       }}
     >
-      {/* BANDEAU ADMINISTRATEUR GOD MODE / GHOST NAVIGATION (STRICTEMENT RÉSERVÉ AUX ADMINISTRATEURS) */}
-      {(isAdmin && isGodModeActive) && (
-        <div
-          onClick={(e) => e.stopPropagation()}
-          style={{
-            backgroundColor: 'rgba(28, 24, 22, 0.94)',
-            color: '#FFFFFF',
-            padding: '6px 12px',
-            fontSize: '11px',
-            fontWeight: '800',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            borderBottom: '1px solid rgba(255,255,255,0.15)',
-            zIndex: 20,
-            position: 'relative',
-          }}
-        >
-          <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#F59E0B' }}>
-            🛡️ God Mode #{item.id}
-          </span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-            {safeAdminToggleHide && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (typeof safeAdminToggleHide === 'function') safeAdminToggleHide(item);
-                }}
-                style={{
-                  border: 'none',
-                  backgroundColor: item.isHidden ? '#10B981' : 'rgba(255,255,255,0.2)',
-                  color: '#FFFFFF',
-                  borderRadius: '6px',
-                  padding: '3px 8px',
-                  fontSize: '10px',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                }}
-                title={item.isHidden ? 'Démasquer' : 'Masquer cette annonce'}
-              >
-                {item.isHidden ? '👁️ Visible' : '🚫 Masquer'}
-              </button>
-            )}
-            {safeAdminDelete && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (window.confirm(`[ADMIN GOD MODE]\nSupprimer définitivement "${item.title}" ?`)) {
-                    if (typeof safeAdminDelete === 'function') safeAdminDelete(item);
-                  }
-                }}
-                style={{
-                  border: 'none',
-                  backgroundColor: '#EF4444',
-                  color: '#FFFFFF',
-                  borderRadius: '6px',
-                  padding: '3px 8px',
-                  fontSize: '10px',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                }}
-                title="Supprimer immédiatement l'annonce"
-              >
-                🗑️ Suppr
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* CADRE PHOTO AVEC GESTION DU CARROUSEL, SWIPE ET SURVOL */}
       <div
         onClick={handleCardImageClick}

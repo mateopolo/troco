@@ -1490,16 +1490,7 @@ export default function App() {
 
   const isAdmin = profile?.email === 'mateopolo91@gmail.com' || auth.currentUser?.email === 'mateopolo91@gmail.com' || profile?.role === 'admin';
 
-  // ---- GOD MODE & MODÉRATION ADMINISTRATEUR ----
-  const handleToggleGodMode = () => {
-    setIsGodModeActive(prev => {
-      const next = !prev;
-      try { localStorage.setItem('troco_god_mode', String(next)); } catch (_) {}
-      setSaveMessage(next ? '🛡️ God Mode ADMIN activé — Navigation fantôme déverrouillée' : '🛡️ God Mode désactivé');
-      setTimeout(() => setSaveMessage(''), 4000);
-      return next;
-    });
-  };
+  // ---- MODÉRATION ADMINISTRATEUR ----
 
   const handleAdminToggleHideListing = async (listing) => {
     if (!listing) return;
@@ -4372,51 +4363,6 @@ export default function App() {
             t={t}
           />
         </Suspense>
-      )}
-
-      {/* BOUTON FLOTTANT GHOST NAVIGATION / GOD MODE POUR L'ADMINISTRATEUR */}
-      {isAdmin && (
-        <div
-          style={{
-            position: 'fixed',
-            bottom: '24px',
-            left: '24px',
-            zIndex: 99990,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            backgroundColor: isGodModeActive ? '#1C1816' : 'rgba(28, 24, 22, 0.88)',
-            color: isGodModeActive ? '#F59E0B' : '#FFFFFF',
-            border: isGodModeActive ? '2px solid #F59E0B' : '1px solid var(--border-color)',
-            padding: '7px 14px',
-            borderRadius: '999px',
-            boxShadow: isGodModeActive ? '0 8px 24px rgba(245, 158, 11, 0.45)' : '0 4px 16px rgba(0,0,0,0.2)',
-            backdropFilter: 'blur(12px)',
-            WebkitBackdropFilter: 'blur(12px)',
-          }}
-        >
-          <span style={{ fontSize: '13px' }}>🛡️</span>
-          <span style={{ fontSize: '11.5px', fontWeight: '900', letterSpacing: '0.4px' }}>
-            GOD MODE
-          </span>
-          <button
-            type="button"
-            onClick={handleToggleGodMode}
-            style={{
-              border: 'none',
-              backgroundColor: isGodModeActive ? '#F59E0B' : 'rgba(255,255,255,0.2)',
-              color: isGodModeActive ? '#1C1816' : '#FFFFFF',
-              borderRadius: '999px',
-              padding: '3px 8px',
-              fontSize: '10.5px',
-              fontWeight: '800',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-            }}
-          >
-            {isGodModeActive ? 'ACTIF ⚡' : 'OFF'}
-          </button>
-        </div>
       )}
 
       {/* MODALE DE SIGNALEMENT COMMUNAUTAIRE */}

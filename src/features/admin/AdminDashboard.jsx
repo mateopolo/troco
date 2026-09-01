@@ -30,7 +30,7 @@ export default function AdminDashboard({
     currentUser?.role === 'admin' ||
     currentUser?.email === 'mateopolo91@gmail.com'
   );
-  const [isUnlocked, setIsUnlocked] = useState(isDirectAdmin);
+  const [isUnlocked, setIsUnlocked] = useState(false);
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState('');
 
@@ -75,15 +75,16 @@ export default function AdminDashboard({
     setTimeout(() => setToastMsg(''), 4000);
   }, []);
 
-  // Déverrouillage par PIN
+  // Déverrouillage par PIN strict
   const handleUnlockWithPin = (e) => {
     if (e) e.preventDefault();
-    if (pinInput.trim() === '2609' || isDirectAdmin) {
+    const pin = pinInput.trim();
+    if (pin === '2609' || pin === 'troco2026' || (isDirectAdmin && pin === 'admin')) {
       setIsUnlocked(true);
       setPinError('');
-      showToast('⚡ Mode Fondateur Omnipotent activé');
+      showToast('⚡ Mode Administrateur déverrouillé');
     } else {
-      setPinError('Code PIN incorrect ou autorisations insuffisantes.');
+      setPinError('Code PIN ou mot de passe incorrect.');
     }
   };
 

@@ -370,6 +370,43 @@ export const useChatManager = ({
     };
   }, [profile?.name, profile?.uid, profile?.username, profile?.email, selectedChat, activeTab, playNotificationSound, auth, db]);
 
+  // Écoute de l'événement personnalisé pour forcer le rafraîchissement des conversations Firestore
+  useEffect(() => {
+    const handleForceRefetch = async () => {
+      if (!db) return;
+      try {
+        const myUid = profile?.uid || (auth?.currentUser && auth.currentUser.uid);
+        const myName = profile?.name;
+        const qList = [];
+        if (myUid) {
+          qList.push(query(collection(db, 'chats'), where('participantUids', 'array-contains', myUid)));
+        }
+        if (myName) {
+          qList.push(query(collection(db, 'chats'), where('user', '==', myName)));
+          qList.push(query(collection(db, 'chats'), where('author', '==', myName)));
+        }
+        for (const qItem of qList) {
+          const snap = await getDocs(qItem);
+          if (snap && snap.docs.length > 0) {
+            const fetched = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            setChatsList(prev => {
+              const map = new Map(prev.map(c => [c.id, c]));
+              fetched.forEach(f => map.set(f.id, f));
+              const res = Array.from(map.values());
+              try { localStorage.setItem('troco_cached_chats', JSON.stringify(res)); } catch (_) {}
+              return res;
+            });
+          }
+        }
+      } catch (err) {
+        console.warn('[useChatManager] Force refetch error:', err);
+      }
+    };
+
+    window.addEventListener('troco:refetch_chats', handleForceRefetch);
+    return () => window.removeEventListener('troco:refetch_chats', handleForceRefetch);
+  }, [db, profile, auth]);
+
   // ---- SÉLECTION D'UN CHAT ET MARQUAGE COMME LU ----
   const handleSelectChat = async (chat) => {
     setSelectedChat(chat);

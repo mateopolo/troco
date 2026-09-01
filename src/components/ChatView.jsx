@@ -5,7 +5,8 @@ import {
   Send, Phone, Video, Sparkles, Clock, CheckCircle,
   ChevronLeft, Globe, Edit2, Edit3, Trash2, Copy, Check, X,
   AlertTriangle, Users, Coins, Mic, ShieldAlert, ShieldCheck,
-  Palette, Briefcase, Plus, FileText, Calendar, Table
+  Palette, Briefcase, Plus, FileText, Calendar, Table,
+  MessageSquareDashed, RefreshCw
 } from 'lucide-react';
 import { doc, deleteDoc, addDoc, collection, updateDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
 import { db, auth } from '../firebase';
@@ -2650,8 +2651,63 @@ function ChatView({
                 touchAction: 'pan-y'
               }}>
                 {visibleChats.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '40px 10px', color: 'var(--text-secondary)', fontSize: '13px' }}>
-                    Aucune discussion active
+                  <div style={{
+                    textAlign: 'center',
+                    padding: '48px 16px',
+                    color: 'var(--text-secondary)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '14px',
+                    margin: 'auto 0',
+                  }}>
+                    <div style={{
+                      width: '56px',
+                      height: '56px',
+                      borderRadius: '50%',
+                      backgroundColor: 'var(--bg-subtle)',
+                      border: '1.5px solid var(--border-color)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'var(--accent-primary)',
+                      boxShadow: 'var(--shadow-card)',
+                    }}>
+                      <MessageSquareDashed size={28} />
+                    </div>
+                    <div>
+                      <h4 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: '800', color: 'var(--text-main)' }}>
+                        {t('noChats') || 'Aucune conversation'}
+                      </h4>
+                      <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)', maxWidth: '240px', lineHeight: 1.4 }}>
+                        Vos échanges et propositions de troc apparaîtront ici.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        try {
+                          window.dispatchEvent(new CustomEvent('troco:refetch_chats'));
+                        } catch (_) {}
+                      }}
+                      className="premium-button"
+                      style={{
+                        border: '1px solid var(--border-color)',
+                        backgroundColor: 'var(--bg-subtle)',
+                        color: 'var(--text-main)',
+                        borderRadius: '999px',
+                        padding: '6px 14px',
+                        fontSize: '11.5px',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                      }}
+                    >
+                      <RefreshCw size={12} />
+                      <span>Actualiser</span>
+                    </button>
                   </div>
                 ) : (
                   visibleChats.map(chat => {

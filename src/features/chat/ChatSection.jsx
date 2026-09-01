@@ -41,6 +41,8 @@ export default function ChatSection({
   allListings,
   onOpenListing,
 }) {
+  const safeMockChats = Array.isArray(mockChats) ? mockChats : [];
+
   return (
     <div style={{ width: '100%', height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column', flex: 1, position: 'relative' }}>
       <AnimatePresence mode="wait">
@@ -54,7 +56,7 @@ export default function ChatSection({
         >
           <ChatView
             activeTab={activeTab}
-            mockChats={mockChats}
+            mockChats={safeMockChats}
             selectedChat={selectedChat}
             setSelectedChat={setSelectedChat}
             chatThreads={chatThreads}

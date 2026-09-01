@@ -291,12 +291,25 @@ export function InteractiveMapView({
               WebkitTapHighlightColor: 'transparent',
               whiteSpace: 'nowrap',
             }}
-            title="Fermer la carte et retourner aux annonces"
-            aria-label="Fermer la carte"
+            title={currentLang === 'EN' ? 'Close map' : currentLang === 'ES' ? 'Cerrar mapa' : currentLang === 'IT' ? 'Chiudere mappa' : currentLang === 'DE' ? 'Karte schließen' : 'Fermer la carte'}
+            aria-label={currentLang === 'EN' ? 'Close' : currentLang === 'ES' ? 'Cerrar' : currentLang === 'IT' ? 'Chiudere' : currentLang === 'DE' ? 'Schließen' : 'Fermer'}
           >
             <X size={18} strokeWidth={2.6} color="var(--accent-primary, #C67D5B)" />
             <span>
-              {t('closeMap') || (currentLang === 'EN' ? 'Close Map' : currentLang === 'ES' ? 'Cerrar Mapa' : currentLang === 'DE' ? 'Karte Schließen' : currentLang === 'IT' ? 'Chiudi Mappa' : 'Fermer la carte')}
+              {(() => {
+                const lang = (currentLang || 'FR').toUpperCase();
+                switch (lang) {
+                  case 'EN': return 'Close';
+                  case 'ES': return 'Cerrar';
+                  case 'IT': return 'Chiudere';
+                  case 'DE': return 'Schließen';
+                  case 'JA': return '閉じる';
+                  case 'ZH': return '关闭';
+                  case 'FR':
+                  default:
+                    return 'Fermer';
+                }
+              })()}
             </span>
           </button>
         </div>
