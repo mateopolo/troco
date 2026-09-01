@@ -45,6 +45,7 @@ function ChatView({
   startCall,
   joinActiveCall,
   handleAcceptDeal,
+  onAcceptDeal,
   handleDeclineDeal,
   handleReleaseEscrow,
   onCreateProjectGroup,
@@ -1373,8 +1374,8 @@ function ChatView({
               }
 
               // RENDU DES PROPOSITIONS DE DEAL (ALIGNEMENT BILATÉRAL STRICT DROITE / GAUCHE)
-              if (msg.type === 'deal' || msg.kind === 'deal') {
-                const { terms = {} } = msg;
+              if (msg.type === 'deal' || msg.type === 'deal_offer' || msg.type === 'deal_counter_offer' || msg.kind === 'deal' || msg.dealTerms) {
+                const terms = msg.dealTerms || msg.terms || {};
                 const isMine = Boolean(
                   (msg.senderUid && profile?.uid && msg.senderUid === profile.uid) ||
                   (msg.senderName && profile?.name && msg.senderName.trim().toLowerCase() === profile.name.trim().toLowerCase()) ||
@@ -1383,6 +1384,8 @@ function ChatView({
                 const isIncoming = !isMine;
                 const currentDealStatus = msg.status || 'pending';
                 const isDealPending = (!msg.status || currentDealStatus === 'pending' || currentDealStatus === 'proposed' || currentDealStatus === 'en_attente' || currentDealStatus === 'sent');
+                const isAccepted = (currentDealStatus === 'confirmed' || currentDealStatus === 'accepted');
+                const isRejected = (currentDealStatus === 'declined' || currentDealStatus === 'rejected');
                 const partnerName = activeChatObj?.user || 'l’interlocuteur';
                 const dealConditionsText = getChatMessageDisplayContent
                   ? getChatMessageDisplayContent({ text: terms.conditions }, currentLang, isMsgOriginal)
@@ -1434,14 +1437,14 @@ function ChatView({
                             🛡️ Fonds sous Séquestre
                           </span>
                         )}
-                        {(currentDealStatus === 'confirmed' || currentDealStatus === 'accepted') && (
-                          <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-success)', padding: '3px 8px', borderRadius: '999px', border: '1.5px solid var(--accent-success)' }}>
-                            ✓ Validé & Scellé
+                        {isAccepted && (
+                          <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'rgba(16, 185, 129, 0.12)', color: '#10B981', padding: '3px 8px', borderRadius: '999px', border: '1.5px solid #10B981' }}>
+                            ✓ Deal Accepté
                           </span>
                         )}
-                        {currentDealStatus === 'declined' && (
-                          <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-danger)', padding: '3px 8px', borderRadius: '999px', border: '1px solid var(--border-color)' }}>
-                            ✕ Refusé
+                        {isRejected && (
+                          <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'rgba(239, 68, 68, 0.08)', color: '#EF4444', padding: '3px 8px', borderRadius: '999px', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+                            ✕ Offre Refusée
                           </span>
                         )}
                       </div>
@@ -1486,52 +1489,100 @@ function ChatView({
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', marginTop: '10px' }}>
                           <button
                             type="button"
-                            onClick={() => handleAcceptDeal(currentChatId, msg.id, terms)}
+                            onClick={() => {
+                              if (typeof onAcceptDeal === 'function') {
+                                onAcceptDeal(terms);
+                              } else if (typeof handleAcceptDeal === 'function') {
+                                handleAcceptDeal(currentChatId, msg.id, terms);
+                              }
+                            }}
                             className="premium-button"
                             style={{
-                              border: '1.5px solid var(--accent-primary)', borderRadius: '12px', padding: '9px 4px',
-                              backgroundColor: 'var(--bg-card)',
-                              color: 'var(--accent-primary)',
-                              fontSize: '11.5px', fontWeight: '800', cursor: 'pointer',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px',
-                              boxShadow: 'var(--shadow-accent)',
-                              whiteSpace: 'nowrap'
+                              border: 'none',
+                              borderRadius: '12px',
+                              padding: '10px 4px',
+                              background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                              color: '#FFFFFF',
+                              fontSize: '11.5px',
+                              fontWeight: '800',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '4px',
+                              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.35)',
+                              whiteSpace: 'nowrap',
+                              transition: 'transform 0.15s ease, opacity 0.15s ease'
                             }}
                           >
-                            ✓ Accepter
+                            <Check size={14} strokeWidth={2.5} />
+                            <span>Accepter</span>
                           </button>
                           <button
                             type="button"
                             onClick={() => openCounterOffer(terms, msg.id)}
                             className="premium-button"
                             style={{
-                              border: 'none', borderRadius: '12px', padding: '9px 4px',
+                              border: 'none',
+                              borderRadius: '12px',
+                              padding: '10px 4px',
                               background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
-                              color: '#FFF',
-                              fontSize: '11.5px', fontWeight: '800', cursor: 'pointer',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px',
+                              color: '#FFFFFF',
+                              fontSize: '11.5px',
+                              fontWeight: '800',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '4px',
                               boxShadow: 'var(--shadow-accent)',
-                              whiteSpace: 'nowrap'
+                              whiteSpace: 'nowrap',
+                              transition: 'transform 0.15s ease, opacity 0.15s ease'
                             }}
                           >
-                            🔄 Contre-offre
+                            <RefreshCw size={13} strokeWidth={2.5} />
+                            <span>Contre-offre</span>
                           </button>
                           <button
                             type="button"
                             onClick={() => handleDeclineDeal(currentChatId, msg.id)}
                             className="premium-button"
                             style={{
-                              border: '1px solid var(--border-color)',
-                              borderRadius: '12px', padding: '9px 4px',
-                              backgroundColor: 'var(--bg-subtle)',
-                              color: 'var(--text-main)',
-                              fontSize: '11.5px', fontWeight: '800', cursor: 'pointer',
-                              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '3px',
-                              whiteSpace: 'nowrap'
+                              border: '1px solid rgba(239, 68, 68, 0.28)',
+                              borderRadius: '12px',
+                              padding: '10px 4px',
+                              backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                              color: '#EF4444',
+                              fontSize: '11.5px',
+                              fontWeight: '800',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '4px',
+                              whiteSpace: 'nowrap',
+                              transition: 'transform 0.15s ease, opacity 0.15s ease'
                             }}
                           >
-                            ✕ Refuser
+                            <X size={14} strokeWidth={2.5} />
+                            <span>Refuser</span>
                           </button>
+                        </div>
+                      )}
+
+                      {/* BADGE STATUT CONFIRMÉ / ACCEPTÉ (NON-CLIQUABLE) */}
+                      {isAccepted && currentDealStatus !== 'escrow_locked' && (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', backgroundColor: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.35)', color: '#10B981', borderRadius: '12px', padding: '9px 12px', fontSize: '11.5px', fontWeight: '800', marginTop: '6px' }}>
+                          <Check size={14} strokeWidth={2.5} />
+                          <span>Deal Accepté</span>
+                        </div>
+                      )}
+
+                      {/* BADGE STATUT REFUSÉ (NON-CLIQUABLE) */}
+                      {isRejected && (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', backgroundColor: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.25)', color: '#EF4444', borderRadius: '12px', padding: '9px 12px', fontSize: '11.5px', fontWeight: '800', marginTop: '6px' }}>
+                          <X size={14} strokeWidth={2.5} />
+                          <span>Offre Refusée</span>
                         </div>
                       )}
 

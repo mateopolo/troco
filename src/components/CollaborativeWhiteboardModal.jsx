@@ -350,6 +350,8 @@ export default function CollaborativeWhiteboardModal({
       isDrawingRef.current = false;
       setCurrentPath(null);
     }
+    // Nettoie les textes vides non finalisés
+    setTextElements((prev) => prev.filter((t) => t.text && t.text.trim() !== ''));
 
     setHistory((prevHistory) => {
       const curStep = historyStepRef.current;
@@ -360,7 +362,7 @@ export default function CollaborativeWhiteboardModal({
         setLocalPaths(targetPaths);
         historyStepRef.current = targetStep;
         setHistoryStep(targetStep);
-        debouncedSyncToFirestore(targetPaths, remotePaths, stickyNotes, textElements);
+        debouncedSyncToFirestore(targetPaths, remotePaths, stickyNotes, textElements.filter((t) => t.text && t.text.trim() !== ''));
       }
       return prevHistory;
     });
@@ -824,28 +826,32 @@ export default function CollaborativeWhiteboardModal({
   useEffect(() => {
     if (!isOpen || !effectiveId || !db) return;
 
-    const presenceDocRef = doc(db, 'project_whiteboards', String(effectiveId), 'presence', String(myUid));
+    const presenceColName = 'workspaces';
+    const presenceDocRef = doc(db, presenceColName, String(effectiveId), 'presence', String(myUid));
+    const fallbackDocRef = doc(db, 'project_whiteboards', String(effectiveId), 'presence', String(myUid));
 
     // 1. Heartbeat local périodique
     const updatePresence = () => {
-      setDoc(presenceDocRef, {
+      const payload = {
         uid: myUid,
         name: myName || 'Membre',
         lastSeen: Date.now(),
-      }, { merge: true }).catch(() => {});
+      };
+      setDoc(presenceDocRef, payload, { merge: true }).catch(() => {});
+      setDoc(fallbackDocRef, payload, { merge: true }).catch(() => {});
     };
 
     updatePresence();
-    const heartbeatInterval = setInterval(updatePresence, 12000);
+    const heartbeatInterval = setInterval(updatePresence, 10000);
 
     // 2. Écoute temps réel de tous les utilisateurs actifs sur le document du tableau
-    const presenceColRef = collection(db, 'project_whiteboards', String(effectiveId), 'presence');
+    const presenceColRef = collection(db, presenceColName, String(effectiveId), 'presence');
     const unsubPresence = onSnapshot(presenceColRef, (snapshot) => {
       const now = Date.now();
       let activeCount = 0;
       snapshot.forEach((docSnap) => {
         const data = docSnap.data();
-        if (data && data.lastSeen && (now - Number(data.lastSeen) < 35000)) {
+        if (data && data.lastSeen && (now - Number(data.lastSeen) < 30000)) {
           activeCount++;
         }
       });
@@ -860,6 +866,7 @@ export default function CollaborativeWhiteboardModal({
       clearInterval(heartbeatInterval);
       unsubPresence();
       deleteDoc(presenceDocRef).catch(() => {});
+      deleteDoc(fallbackDocRef).catch(() => {});
     };
   }, [isOpen, effectiveId, myUid, myName, remoteCursors]);
 
