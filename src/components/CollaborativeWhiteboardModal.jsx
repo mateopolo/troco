@@ -19,9 +19,10 @@ import {
   X, Pen, Highlighter, Eraser, Square, Circle, Minus, ArrowRight,
   RotateCcw, RotateCw, Trash2, StickyNote,
   Type, Hand, Brush, Check, Eye, Maximize2, ChevronDown,
-  Sparkles, Save, Send, History, Palette, Clock
+  Sparkles, Save, Send, History, Palette, Clock,
+  Triangle, Hexagon, Star, MessageSquare, Heart
 } from 'lucide-react';
-import { doc, getDoc, onSnapshot, setDoc, serverTimestamp, arrayUnion } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, setDoc, deleteDoc, collection, serverTimestamp, arrayUnion } from 'firebase/firestore';
 import { db } from '../firebase';
 import { whiteboardP2PService } from '../services/whiteboardP2PService';
 import {
@@ -33,9 +34,15 @@ import {
 
 const SHAPE_OPTIONS = [
   { id: 'rect', label: 'Rectangle', icon: Square },
-  { id: 'circle', label: 'Cercle', icon: Circle },
+  { id: 'circle', label: 'Cercle / Ovale', icon: Circle },
   { id: 'line', label: 'Ligne Droite', icon: Minus },
   { id: 'arrow', label: 'Flèche', icon: ArrowRight },
+  { id: 'triangle', label: 'Triangle', icon: Triangle },
+  { id: 'hexagon', label: 'Hexagone', icon: Hexagon },
+  { id: 'star', label: 'Étoile', icon: Star },
+  { id: 'speech_bubble', label: 'Bulle Dialogue', icon: MessageSquare },
+  { id: 'heart', label: 'Cœur', icon: Heart },
+  { id: 'checkmark', label: 'Validation', icon: Check },
 ];
 
 const BG_PRESETS = [
@@ -150,8 +157,9 @@ export default function CollaborativeWhiteboardModal({
   const [versionsList, setVersionsList] = useState([]);
   const [isLoadingVersions, setIsLoadingVersions] = useState(false);
 
-  // 7. Curseur P2P Collaboratif (Ghosting live)
+  // 7. Curseur P2P Collaboratif (Ghosting live) & Présence Multijoueur
   const [remoteCursors, setRemoteCursors] = useState({});
+  const [activeUsersCount, setActiveUsersCount] = useState(1);
 
   // 8. État d'édition / sélection
   const [editingTextId, setEditingTextId] = useState(null);
@@ -335,6 +343,14 @@ export default function CollaborativeWhiteboardModal({
   }, []);
 
   const handleUndo = useCallback(() => {
+    // FIX ATOMIQUE DE L'OUTIL TEXTE (State Reset) : Réinitialise immédiatement l'édition de texte et démonte le textarea flottant
+    setEditingTextId(null);
+    if (resizingTextRef.current) resizingTextRef.current = null;
+    if (isDrawingRef.current && currentPath?.type === 'text_box') {
+      isDrawingRef.current = false;
+      setCurrentPath(null);
+    }
+
     setHistory((prevHistory) => {
       const curStep = historyStepRef.current;
       if (curStep > 0) {
@@ -348,7 +364,7 @@ export default function CollaborativeWhiteboardModal({
       }
       return prevHistory;
     });
-  }, [remotePaths, stickyNotes, textElements, debouncedSyncToFirestore]);
+  }, [remotePaths, stickyNotes, textElements, currentPath, debouncedSyncToFirestore]);
 
   const handleRedo = useCallback(() => {
     setHistory((prevHistory) => {
@@ -462,6 +478,128 @@ export default function CollaborativeWhiteboardModal({
     }
   };
 
+  // Helper de dessin vectoriel pour toutes les formes géométriques
+  const drawVectorShape = (ctx, path) => {
+    if (!path) return;
+    const { type, x = 0, y = 0, width = 0, height = 0, fromX = 0, fromY = 0, toX = 0, toY = 0, lineWidth = 4 } = path;
+
+    if (type === 'rect') {
+      ctx.strokeRect(x, y, width, height);
+    } else if (type === 'circle') {
+      ctx.beginPath();
+      const rx = Math.abs(width) / 2;
+      const ry = Math.abs(height) / 2;
+      const cx = x + width / 2;
+      const cy = y + height / 2;
+      ctx.ellipse(cx, cy, rx, ry, 0, 0, 2 * Math.PI);
+      ctx.stroke();
+    } else if (type === 'line') {
+      ctx.beginPath();
+      ctx.moveTo(fromX, fromY);
+      ctx.lineTo(toX, toY);
+      ctx.stroke();
+    } else if (type === 'arrow') {
+      ctx.beginPath();
+      ctx.moveTo(fromX, fromY);
+      ctx.lineTo(toX, toY);
+      ctx.stroke();
+
+      const headlen = Math.max(12, lineWidth * 2.5);
+      const angle = Math.atan2(toY - fromY, toX - fromX);
+      ctx.beginPath();
+      ctx.moveTo(toX, toY);
+      ctx.lineTo(toX - headlen * Math.cos(angle - Math.PI / 6), toY - headlen * Math.sin(angle - Math.PI / 6));
+      ctx.moveTo(toX, toY);
+      ctx.lineTo(toX - headlen * Math.cos(angle + Math.PI / 6), toY - headlen * Math.sin(angle + Math.PI / 6));
+      ctx.stroke();
+    } else if (type === 'triangle') {
+      ctx.beginPath();
+      ctx.moveTo(x + width / 2, y);
+      ctx.lineTo(x + width, y + height);
+      ctx.lineTo(x, y + height);
+      ctx.closePath();
+      ctx.stroke();
+    } else if (type === 'hexagon') {
+      ctx.beginPath();
+      const cx = x + width / 2;
+      const cy = y + height / 2;
+      const rx = Math.abs(width) / 2;
+      const ry = Math.abs(height) / 2;
+      for (let i = 0; i < 6; i++) {
+        const angle = (i * Math.PI) / 3 - Math.PI / 6;
+        const px = cx + rx * Math.cos(angle);
+        const py = cy + ry * Math.sin(angle);
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.stroke();
+    } else if (type === 'star') {
+      ctx.beginPath();
+      const cx = x + width / 2;
+      const cy = y + height / 2;
+      const outerRx = Math.abs(width) / 2;
+      const outerRy = Math.abs(height) / 2;
+      const innerRx = outerRx * 0.42;
+      const innerRy = outerRy * 0.42;
+      for (let i = 0; i < 10; i++) {
+        const rX = i % 2 === 0 ? outerRx : innerRx;
+        const rY = i % 2 === 0 ? outerRy : innerRy;
+        const angle = (i * Math.PI) / 5 - Math.PI / 2;
+        const px = cx + rX * Math.cos(angle);
+        const py = cy + rY * Math.sin(angle);
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.stroke();
+    } else if (type === 'speech_bubble') {
+      ctx.beginPath();
+      const r = Math.min(14, Math.abs(width) * 0.18, Math.abs(height) * 0.18);
+      const tailW = Math.min(22, Math.abs(width) * 0.22);
+      const tailH = Math.min(16, Math.abs(height) * 0.18);
+      const bodyH = height - tailH;
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + width - r, y);
+      ctx.arcTo(x + width, y, x + width, y + r, r);
+      ctx.lineTo(x + width, y + bodyH - r);
+      ctx.arcTo(x + width, y + bodyH, x + width - r, y + bodyH, r);
+      ctx.lineTo(x + r + tailW * 1.5, y + bodyH);
+      ctx.lineTo(x + r, y + height);
+      ctx.lineTo(x + r + tailW * 0.5, y + bodyH);
+      ctx.lineTo(x + r, y + bodyH);
+      ctx.arcTo(x, y + bodyH, x, y + bodyH - r, r);
+      ctx.lineTo(x, y + r);
+      ctx.arcTo(x, y, x + r, y, r);
+      ctx.closePath();
+      ctx.stroke();
+    } else if (type === 'heart') {
+      ctx.beginPath();
+      const topCurveH = height * 0.32;
+      const cx = x + width / 2;
+      ctx.moveTo(cx, y + topCurveH);
+      ctx.bezierCurveTo(cx, y, x, y, x, y + topCurveH);
+      ctx.bezierCurveTo(x, y + (height + topCurveH) / 2, cx, y + (height + topCurveH) / 2, cx, y + height);
+      ctx.bezierCurveTo(cx, y + (height + topCurveH) / 2, x + width, y + (height + topCurveH) / 2, x + width, y + topCurveH);
+      ctx.bezierCurveTo(x + width, y, cx, y, cx, y + topCurveH);
+      ctx.closePath();
+      ctx.stroke();
+    } else if (type === 'checkmark') {
+      ctx.beginPath();
+      ctx.moveTo(x + width * 0.14, y + height * 0.52);
+      ctx.lineTo(x + width * 0.42, y + height * 0.82);
+      ctx.lineTo(x + width * 0.88, y + height * 0.18);
+      ctx.stroke();
+    } else if (type === 'text_box') {
+      ctx.save();
+      ctx.strokeStyle = '#C67D5B';
+      ctx.setLineDash([4, 4]);
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(x, y, width, height);
+      ctx.restore();
+    }
+  };
+
   // 1. FILTRE DE CULLING VIEWPORT (Optimisation GPU & Mobile Anti-Lag)
   const isPathInViewport = (path, vMinX, vMaxX, vMinY, vMaxY) => {
     if (!path) return false;
@@ -492,7 +630,7 @@ export default function CollaborativeWhiteboardModal({
       );
     }
 
-    if (path.type === 'rect' || path.type === 'circle' || path.type === 'text_box') {
+    if (['rect', 'circle', 'triangle', 'hexagon', 'star', 'speech_bubble', 'heart', 'checkmark', 'text_box'].includes(path.type)) {
       const pMinX = Math.min(path.x, path.x + (path.width || 0));
       const pMaxX = Math.max(path.x, path.x + (path.width || 0));
       const pMinY = Math.min(path.y, path.y + (path.height || 0));
@@ -561,42 +699,8 @@ export default function CollaborativeWhiteboardModal({
           }
           ctx.stroke();
         }
-      } else if (path.type === 'rect') {
-        ctx.strokeRect(path.x, path.y, path.width, path.height);
-      } else if (path.type === 'circle') {
-        ctx.beginPath();
-        const rx = Math.abs(path.width) / 2;
-        const ry = Math.abs(path.height) / 2;
-        const cx = path.x + path.width / 2;
-        const cy = path.y + path.height / 2;
-        ctx.ellipse(cx, cy, rx, ry, 0, 0, 2 * Math.PI);
-        ctx.stroke();
-      } else if (path.type === 'line') {
-        ctx.beginPath();
-        ctx.moveTo(path.fromX, path.fromY);
-        ctx.lineTo(path.toX, path.toY);
-        ctx.stroke();
-      } else if (path.type === 'arrow') {
-        ctx.beginPath();
-        ctx.moveTo(path.fromX, path.fromY);
-        ctx.lineTo(path.toX, path.toY);
-        ctx.stroke();
-
-        const headlen = Math.max(12, path.lineWidth * 2.5);
-        const angle = Math.atan2(path.toY - path.fromY, path.toX - path.fromX);
-        ctx.beginPath();
-        ctx.moveTo(path.toX, path.toY);
-        ctx.lineTo(path.toX - headlen * Math.cos(angle - Math.PI / 6), path.toY - headlen * Math.sin(angle - Math.PI / 6));
-        ctx.moveTo(path.toX, path.toY);
-        ctx.lineTo(path.toX + headlen * Math.cos(angle + Math.PI / 6), path.toY - headlen * Math.sin(angle + Math.PI / 6));
-        ctx.stroke();
-      } else if (path.type === 'text_box') {
-        ctx.save();
-        ctx.strokeStyle = '#C67D5B';
-        ctx.setLineDash([4, 4]);
-        ctx.lineWidth = 1.5;
-        ctx.strokeRect(path.x, path.y, path.width, path.height);
-        ctx.restore();
+      } else {
+        drawVectorShape(ctx, path);
       }
 
       ctx.restore();
@@ -715,6 +819,49 @@ export default function CollaborativeWhiteboardModal({
       whiteboardP2PService.leaveRoom();
     };
   }, [isOpen, effectiveId, myUid, editingTextId]);
+
+  // ================= 3.1 SYSTÈME DE PRÉSENCE FIREBASE & MULTIJOUEUR LIVE =================
+  useEffect(() => {
+    if (!isOpen || !effectiveId || !db) return;
+
+    const presenceDocRef = doc(db, 'project_whiteboards', String(effectiveId), 'presence', String(myUid));
+
+    // 1. Heartbeat local périodique
+    const updatePresence = () => {
+      setDoc(presenceDocRef, {
+        uid: myUid,
+        name: myName || 'Membre',
+        lastSeen: Date.now(),
+      }, { merge: true }).catch(() => {});
+    };
+
+    updatePresence();
+    const heartbeatInterval = setInterval(updatePresence, 12000);
+
+    // 2. Écoute temps réel de tous les utilisateurs actifs sur le document du tableau
+    const presenceColRef = collection(db, 'project_whiteboards', String(effectiveId), 'presence');
+    const unsubPresence = onSnapshot(presenceColRef, (snapshot) => {
+      const now = Date.now();
+      let activeCount = 0;
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        if (data && data.lastSeen && (now - Number(data.lastSeen) < 35000)) {
+          activeCount++;
+        }
+      });
+
+      const p2pPeerCount = Object.keys(remoteCursors).length + 1;
+      setActiveUsersCount(Math.max(1, activeCount, p2pPeerCount));
+    }, (err) => {
+      console.warn('[Presence Whiteboard] Note:', err);
+    });
+
+    return () => {
+      clearInterval(heartbeatInterval);
+      unsubPresence();
+      deleteDoc(presenceDocRef).catch(() => {});
+    };
+  }, [isOpen, effectiveId, myUid, myName, remoteCursors]);
 
   // 1. Chargement initial UNIQUE à l'ouverture du board (Fix 2 & Fix 5 : Zéro boucle infinie, Zéro clignotement)
   const initialLoadDoneForIdRef = useRef(null);
@@ -889,7 +1036,7 @@ export default function CollaborativeWhiteboardModal({
         createdAt: Date.now(),
       };
       setCurrentPath(newPath);
-    } else if (tool === 'rect' || tool === 'circle') {
+    } else if (['rect', 'circle', 'triangle', 'hexagon', 'star', 'speech_bubble', 'heart', 'checkmark'].includes(tool)) {
       const shapePath = {
         id: `s-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
         type: tool,
@@ -1000,7 +1147,7 @@ export default function CollaborativeWhiteboardModal({
         ...prev,
         points: [...prev.points, { x: coords.x, y: coords.y }],
       }));
-    } else if (currentPath.type === 'rect' || currentPath.type === 'circle' || currentPath.type === 'text_box') {
+    } else if (['rect', 'circle', 'triangle', 'hexagon', 'star', 'speech_bubble', 'heart', 'checkmark', 'text_box'].includes(currentPath.type)) {
       const w = coords.x - startPosRef.current.x;
       const h = coords.y - startPosRef.current.y;
       setCurrentPath((prev) => ({
@@ -1149,7 +1296,7 @@ export default function CollaborativeWhiteboardModal({
           if (pt.x > maxX) maxX = pt.x;
           if (pt.y > maxY) maxY = pt.y;
         });
-      } else if (p.type === 'rect' || p.type === 'circle' || p.type === 'text_box') {
+      } else if (['rect', 'circle', 'triangle', 'hexagon', 'star', 'speech_bubble', 'heart', 'checkmark', 'text_box'].includes(p.type)) {
         const xMin = Math.min(p.x, p.x + (p.width || 0));
         const xMax = Math.max(p.x, p.x + (p.width || 0));
         const yMin = Math.min(p.y, p.y + (p.height || 0));
@@ -1247,35 +1394,8 @@ export default function CollaborativeWhiteboardModal({
           ctx.lineTo(p.points[i].x, p.points[i].y);
         }
         ctx.stroke();
-      } else if (p.type === 'rect') {
-        ctx.strokeRect(p.x, p.y, p.width, p.height);
-      } else if (p.type === 'circle') {
-        ctx.beginPath();
-        const rx = Math.abs(p.width) / 2;
-        const ry = Math.abs(p.height) / 2;
-        const cx = p.x + p.width / 2;
-        const cy = p.y + p.height / 2;
-        ctx.ellipse(cx, cy, rx, ry, 0, 0, 2 * Math.PI);
-        ctx.stroke();
-      } else if (p.type === 'line') {
-        ctx.beginPath();
-        ctx.moveTo(p.fromX, p.fromY);
-        ctx.lineTo(p.toX, p.toY);
-        ctx.stroke();
-      } else if (p.type === 'arrow') {
-        ctx.beginPath();
-        ctx.moveTo(p.fromX, p.fromY);
-        ctx.lineTo(p.toX, p.toY);
-        ctx.stroke();
-
-        const headlen = Math.max(12, p.lineWidth * 2.5);
-        const angle = Math.atan2(p.toY - p.fromY, p.toX - p.fromX);
-        ctx.beginPath();
-        ctx.moveTo(p.toX, p.toY);
-        ctx.lineTo(p.toX - headlen * Math.cos(angle - Math.PI / 6), p.toY - headlen * Math.sin(angle - Math.PI / 6));
-        ctx.moveTo(p.toX, p.toY);
-        ctx.lineTo(p.toX - headlen * Math.cos(angle + Math.PI / 6), p.toY - headlen * Math.sin(angle + Math.PI / 6));
-        ctx.stroke();
+      } else {
+        drawVectorShape(ctx, p);
       }
 
       ctx.restore();
@@ -1572,6 +1692,41 @@ export default function CollaborativeWhiteboardModal({
               )}
             </div>
           </div>
+
+          {/* BADGE "🔴 EN DIRECT" MULTIJOUEUR (Affiché si >= 2 utilisateurs connectés) */}
+          {activeUsersCount >= 2 && (
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: isMobile ? '3px 8px' : '4px 12px',
+                borderRadius: '999px',
+                backgroundColor: 'rgba(239, 68, 68, 0.14)',
+                border: '1px solid rgba(239, 68, 68, 0.35)',
+                color: '#EF4444',
+                fontSize: isMobile ? '11px' : '12px',
+                fontWeight: '800',
+                letterSpacing: '0.3px',
+                boxShadow: '0 0 14px rgba(239, 68, 68, 0.25)',
+                animation: 'pulse 2s infinite ease-in-out',
+                flexShrink: 0,
+              }}
+              title={`${activeUsersCount} collaborateurs connectés en direct sur ce tableau`}
+            >
+              <span
+                style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  backgroundColor: '#EF4444',
+                  boxShadow: '0 0 8px #EF4444',
+                  display: 'inline-block',
+                }}
+              />
+              <span>🔴 EN DIRECT ({activeUsersCount})</span>
+            </div>
+          )}
 
           {/* Boutons d'action Header : Versions, Sauvegarder & Envoyer */}
           <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '4px' : '8px', flexShrink: 0 }}>
@@ -2162,12 +2317,12 @@ export default function CollaborativeWhiteboardModal({
               );
             })}
 
-            {/* BOUTON DÉROULANT FORMES GÉOMÉTRIQUES (Rectangle, Cercle, Ligne, Flèche) */}
+            {/* BOUTON DÉROULANT FORMES GÉOMÉTRIQUES & VECTORIELLES */}
             <div style={{ position: 'relative' }}>
               <button
                 type="button"
                 onClick={() => {
-                  if (['rect', 'circle', 'line', 'arrow'].includes(tool)) {
+                  if (['rect', 'circle', 'line', 'arrow', 'triangle', 'hexagon', 'star', 'speech_bubble', 'heart', 'checkmark'].includes(tool)) {
                     setIsShapesMenuOpen((prev) => !prev);
                   } else {
                     setTool(selectedShape);
@@ -2179,10 +2334,10 @@ export default function CollaborativeWhiteboardModal({
                   padding: '0 10px',
                   borderRadius: '12px',
                   border: 'none',
-                  backgroundColor: ['rect', 'circle', 'line', 'arrow'].includes(tool)
+                  backgroundColor: ['rect', 'circle', 'line', 'arrow', 'triangle', 'hexagon', 'star', 'speech_bubble', 'heart', 'checkmark'].includes(tool)
                     ? 'var(--accent-primary, #C67D5B)'
                     : darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-                  color: ['rect', 'circle', 'line', 'arrow'].includes(tool) ? '#FFFFFF' : 'inherit',
+                  color: ['rect', 'circle', 'line', 'arrow', 'triangle', 'hexagon', 'star', 'speech_bubble', 'heart', 'checkmark'].includes(tool) ? '#FFFFFF' : 'inherit',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '4px',
@@ -2190,7 +2345,7 @@ export default function CollaborativeWhiteboardModal({
                   transition: 'all 0.15s ease',
                   flexShrink: 0,
                 }}
-                title="Formes géométriques (Rectangle, Cercle, Ligne, Flèche)"
+                title="Bibliothèque étendue de formes vectorielles"
               >
                 {React.createElement(
                   (SHAPE_OPTIONS.find((s) => s.id === selectedShape) || SHAPE_OPTIONS[0]).icon,
@@ -2199,7 +2354,7 @@ export default function CollaborativeWhiteboardModal({
                 <ChevronDown size={13} style={{ opacity: 0.85 }} />
               </button>
 
-              {/* Sous-menu Popover des Formes (Z-Index massif & pointer-events garantis) */}
+              {/* Sous-menu Popover des Formes : Grille défilante 4 colonnes (Apple HIG Glassmorphism) */}
               <AnimatePresence>
                 {isShapesMenuOpen && (
                   <motion.div
@@ -2214,12 +2369,16 @@ export default function CollaborativeWhiteboardModal({
                       transform: 'translateX(-50%)',
                       backgroundColor: darkMode ? '#1F1B18' : '#FFFFFF',
                       border: darkMode ? '1px solid rgba(255,255,255,0.18)' : '1px solid rgba(0,0,0,0.12)',
-                      borderRadius: '16px',
-                      padding: '8px',
-                      boxShadow: '0 16px 40px rgba(0,0,0,0.45)',
+                      borderRadius: '18px',
+                      padding: '10px',
+                      boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
                       zIndex: 1000005,
-                      display: 'flex',
-                      gap: '6px',
+                      maxHeight: '260px',
+                      overflowY: 'auto',
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+                      gap: '8px',
+                      width: '210px',
                       pointerEvents: 'auto',
                     }}
                   >
@@ -2236,18 +2395,20 @@ export default function CollaborativeWhiteboardModal({
                             setIsShapesMenuOpen(false);
                           }}
                           style={{
-                            width: '38px',
-                            height: '38px',
-                            borderRadius: '10px',
+                            width: '42px',
+                            height: '42px',
+                            borderRadius: '12px',
                             border: 'none',
                             backgroundColor: isCurSelected
                               ? '#C67D5B'
                               : darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
                             color: isCurSelected ? '#FFFFFF' : 'inherit',
                             display: 'flex',
+                            flexDirection: 'column',
                             alignItems: 'center',
                             justifyContent: 'center',
                             cursor: 'pointer',
+                            transition: 'all 0.15s ease',
                           }}
                           title={shape.label}
                         >
