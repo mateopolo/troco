@@ -60,74 +60,68 @@ export default function CallModal({
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 3000,
-      backgroundColor: 'var(--call-bg)',
+      backgroundColor: '#000000',
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      overflow: 'hidden', animation: 'fadeSlideUp 0.3s ease both',
+      overflow: 'hidden', animation: 'fadeSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) both',
       userSelect: 'none'
     }}>
-      <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(circle at 50% 40%, rgba(185, 139, 115, 0.15) 0%, transparent 60%)' }} />
-
-      {/* BANDEAU SUPÉRIEUR */}
       <div style={{
-        position: 'absolute', top: '24px', left: '24px', right: '24px',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 20
+        position: 'absolute',
+        inset: 0,
+        background: 'linear-gradient(180deg, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0) 22%, rgba(0,0,0,0) 72%, rgba(0,0,0,0.75) 100%)',
+        pointerEvents: 'none',
+        zIndex: 2,
+      }} />
+
+      {/* BANDEAU SUPÉRIEUR FACETIME DISCRET */}
+      <div style={{
+        position: 'fixed', top: 'max(16px, env(safe-area-inset-top, 16px))',
+        left: '50%', transform: 'translateX(-50%)',
+        display: 'flex', alignItems: 'center', gap: '10px',
+        backgroundColor: 'rgba(24, 24, 27, 0.65)', backdropFilter: 'blur(28px) saturate(180%)',
+        WebkitBackdropFilter: 'blur(28px) saturate(180%)',
+        padding: '7px 18px', borderRadius: '999px',
+        border: '1px solid rgba(255, 255, 255, 0.16)',
+        boxShadow: '0 12px 36px rgba(0, 0, 0, 0.45)',
+        zIndex: 50
       }}>
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: '12px',
-          backgroundColor: 'var(--bg-glass)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
-          padding: '8px 16px', borderRadius: '999px', border: '1px solid var(--border-color)'
-        }}>
-          {chatAvatar ? (
-            <img src={chatAvatar} alt={chatUser} style={{ width: '34px', height: '34px', borderRadius: '50%', border: '2px solid var(--accent-primary)', objectFit: 'cover' }} />
-          ) : (
-            <div style={{ width: '34px', height: '34px', borderRadius: '50%', backgroundColor: 'var(--call-card)', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '14px', border: '2px solid var(--accent-primary)' }}>
-              {chatUser[0]}
-            </div>
-          )}
-          <div>
-            <div style={{ color: 'var(--text-main)', fontSize: '13px', fontWeight: '800' }}>{chatUser}</div>
-            <div style={{ color: 'var(--accent-primary)', fontSize: '11px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '4px' }}>
-              {callState.type === 'video' ? <Video size={11} /> : <Phone size={11} />}
-              {callState.type === 'video' ? 'Appel vidéo en direct' : 'Appel audio HD'}
-            </div>
+        {chatAvatar ? (
+          <img src={chatAvatar} alt={chatUser} style={{ width: '28px', height: '28px', borderRadius: '50%', objectFit: 'cover' }} />
+        ) : (
+          <div style={{ width: '28px', height: '28px', borderRadius: '50%', backgroundColor: '#27272A', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '12px' }}>
+            {chatUser[0]}
+          </div>
+        )}
+        <div>
+          <div style={{ color: '#FFFFFF', fontSize: '13px', fontWeight: '800', lineHeight: 1.2 }}>{chatUser}</div>
+          <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '11px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            {callState.type === 'video' ? <Video size={11} /> : <Phone size={11} />}
+            {callState.type === 'video' ? 'Appel vidéo FaceTime' : 'Appel audio HD'}
           </div>
         </div>
-
-        <button
-          onClick={endCall}
-          title="Quitter l'appel"
-          style={{
-            border: 'none', width: '42px', height: '42px', borderRadius: '50%',
-            backgroundColor: 'var(--call-button-bg)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
-            color: 'var(--text-main)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer', transition: 'all 0.2s ease'
-          }}
-        >
-          <X size={20} />
-        </button>
       </div>
 
-      {/* FLUX VIDÉO LOCAL (PIP) AVEC ZOOM */}
+      {/* FLUX VIDÉO LOCAL (PIP STYLE FACETIME) */}
       {callState.type === 'video' && localStream && (
         <div style={{
-          position: 'absolute', bottom: '110px', right: '28px',
-          width: localZoom ? '240px' : '160px',
-          height: localZoom ? '160px' : '110px',
-          borderRadius: '20px', overflow: 'hidden',
-          border: '2px solid var(--accent-primary)',
-          boxShadow: 'var(--shadow-modal)',
-          zIndex: 20, backgroundColor: 'var(--call-card)',
+          position: 'fixed', top: '75px', right: '20px',
+          width: localZoom ? '160px' : '116px',
+          height: localZoom ? '220px' : '162px',
+          borderRadius: '24px', overflow: 'hidden',
+          border: '1.5px solid rgba(255, 255, 255, 0.22)',
+          boxShadow: '0 20px 50px rgba(0,0,0,0.65)',
+          zIndex: 40, backgroundColor: '#18181B',
           transition: 'all 0.3s cubic-bezier(0.22, 1, 0.36, 1)'
         }}>
           {callState.camOn ? (
-            <video ref={localVideoRef} muted playsInline autoPlay style={{ width: '100%', height: '100%', objectFit: 'cover', transform: localZoom ? 'scaleX(-1) scale(1.6)' : 'scaleX(-1) scale(1.0)', transition: 'transform 0.3s ease' }} />
+            <video ref={localVideoRef} muted playsInline autoPlay style={{ width: '100%', height: '100%', objectFit: 'cover', transform: localZoom ? 'scaleX(-1) scale(1.4)' : 'scaleX(-1) scale(1.0)', transition: 'transform 0.3s ease' }} />
           ) : (
-            <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--call-card)', color: 'var(--text-secondary)', gap: '6px' }}>
-              <VideoOff size={22} color="var(--accent-danger)" />
+            <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: '#18181B', color: 'rgba(255,255,255,0.6)', gap: '6px' }}>
+              <VideoOff size={22} color="#EF4444" />
               <span style={{ fontSize: '10px', fontWeight: '700' }}>Caméra coupée</span>
             </div>
           )}
-          <button onClick={() => setLocalZoom && setLocalZoom(z => !z)} title={localZoom ? "Zoom arrière" : "Zoom sur ma caméra"} style={{ position: 'absolute', bottom: '8px', right: '8px', border: 'none', borderRadius: '50%', width: '26px', height: '26px', backgroundColor: 'var(--bg-glass)', color: 'var(--accent-primary)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}>
+          <button onClick={() => setLocalZoom && setLocalZoom(z => !z)} title={localZoom ? "Zoom arrière" : "Zoom sur ma caméra"} style={{ position: 'absolute', bottom: '8px', right: '8px', border: 'none', borderRadius: '50%', width: '26px', height: '26px', backgroundColor: 'rgba(0,0,0,0.6)', color: '#FFF', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' }}>
             {localZoom ? <ZoomOut size={13} /> : <ZoomIn size={13} />}
           </button>
         </div>

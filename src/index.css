@@ -1435,83 +1435,93 @@ body.dark-mode .ad-card:hover {
   }
 }
 
-/* ---- CONTRÔLES D'APPEL WEBRTC — DOCK TACTILE STILLPOINT ---- */
+/* ---- CONTRÔLES D'APPEL WEBRTC — FACETIME GLASSMORPHISM PILL ---- */
 .call-controls-dock {
   position: fixed;
-  bottom: max(16px, env(safe-area-inset-bottom, 16px));
-  left: max(16px, env(safe-area-inset-left, 16px));
-  padding: 10px 14px;
-  border-radius: 24px;
+  bottom: max(32px, env(safe-area-inset-bottom, 32px));
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 26px;
+  border-radius: 999px;
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-  background-color: rgba(26, 23, 21, 0.94);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1.5px solid rgba(232, 221, 211, 0.25);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.65), 0 0 30px rgba(198, 125, 91, 0.15);
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  background: rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(32px) saturate(190%);
+  -webkit-backdrop-filter: blur(32px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65), inset 0 1px 1px rgba(255, 255, 255, 0.3);
   z-index: 50;
   box-sizing: border-box;
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
-  animation: fadeSlideUp 0.25s ease both;
+  animation: fadeSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
   max-width: calc(100vw - 32px);
 }
 
 .call-controls-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 14px;
 }
 
 .call-btn-circle {
   border: none;
-  width: 42px;
-  height: 42px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
-  background-color: rgba(255, 255, 255, 0.12);
-  color: #FAF7F2;
+  background-color: rgba(255, 255, 255, 0.16);
+  color: #FFFFFF;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease, box-shadow 0.2s ease;
   flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 }
 
 .call-btn-circle:hover {
   transform: scale(1.08);
-  background-color: rgba(255, 255, 255, 0.2);
+  background-color: rgba(255, 255, 255, 0.26);
 }
 
 .call-btn-circle:active {
-  transform: scale(0.95);
+  transform: scale(0.92);
 }
 
 .call-btn-hangup {
-  background-color: var(--terracotta) !important;
-  color: #FFF !important;
-  box-shadow: 0 4px 14px rgba(198, 125, 91, 0.5) !important;
+  width: 54px !important;
+  height: 54px !important;
+  background-color: #EF4444 !important;
+  color: #FFFFFF !important;
+  box-shadow: 0 8px 24px rgba(239, 68, 68, 0.55), 0 2px 6px rgba(0, 0, 0, 0.4) !important;
+  border: none !important;
 }
 
 .call-btn-hangup:hover {
-  background-color: var(--terracotta-dark) !important;
+  background-color: #DC2626 !important;
+  transform: scale(1.1) !important;
 }
 
 @media (max-width: 600px),
 (orientation: landscape) and (max-height: 520px) {
   .call-controls-dock {
-    bottom: max(10px, env(safe-area-inset-bottom, 10px)) !important;
-    left: max(10px, env(safe-area-inset-left, 10px)) !important;
-    padding: 8px 10px !important;
-    gap: 6px !important;
-    border-radius: 20px !important;
+    bottom: max(20px, env(safe-area-inset-bottom, 20px)) !important;
+    padding: 10px 18px !important;
+    gap: 10px !important;
   }
 
   .call-btn-circle {
-    width: 38px !important;
-    height: 38px !important;
+    width: 42px !important;
+    height: 42px !important;
+  }
+
+  .call-btn-hangup {
+    width: 48px !important;
+    height: 48px !important;
   }
 }
 
