@@ -109,6 +109,59 @@ export default function CollaborativeWhiteboardModal({
   const [backgroundColor, setBackgroundColor] = useState(() => (darkMode ? '#12100E' : '#FFFFFF'));
   const [isShapesMenuOpen, setIsShapesMenuOpen] = useState(false);
   const [selectedShape, setSelectedShape] = useState('rect');
+  const shapeButtonRef = useRef(null);
+  const [shapesMenuCoords, setShapesMenuCoords] = useState({ bottom: 80, left: 100 });
+
+  const updateShapesMenuPosition = useCallback(() => {
+    if (shapeButtonRef.current) {
+      const rect = shapeButtonRef.current.getBoundingClientRect();
+      const menuWidth = 210;
+      const calculatedLeft = Math.max(12, Math.min(window.innerWidth - menuWidth - 12, rect.left + rect.width / 2 - menuWidth / 2));
+      setShapesMenuCoords({
+        left: calculatedLeft,
+        bottom: Math.max(16, window.innerHeight - rect.top + 12),
+      });
+    }
+  }, []);
+
+  const toggleShapesMenu = useCallback(() => {
+    setIsShapesMenuOpen((prev) => {
+      const nextState = !prev;
+      if (nextState) {
+        requestAnimationFrame(() => updateShapesMenuPosition());
+      }
+      return nextState;
+    });
+  }, [updateShapesMenuPosition]);
+
+  useEffect(() => {
+    if (isShapesMenuOpen) {
+      updateShapesMenuPosition();
+      const handleScrollOrResize = () => updateShapesMenuPosition();
+      window.addEventListener('resize', handleScrollOrResize);
+      window.addEventListener('scroll', handleScrollOrResize, true);
+      return () => {
+        window.removeEventListener('resize', handleScrollOrResize);
+        window.removeEventListener('scroll', handleScrollOrResize, true);
+      };
+    }
+  }, [isShapesMenuOpen, updateShapesMenuPosition]);
+
+  useEffect(() => {
+    if (!isShapesMenuOpen) return;
+    const handleClickOutside = (e) => {
+      if (
+        shapeButtonRef.current &&
+        !shapeButtonRef.current.contains(e.target) &&
+        !e.target.closest?.('#shapes-popover-portal')
+      ) {
+        setIsShapesMenuOpen(false);
+      }
+    };
+    document.addEventListener('pointerdown', handleClickOutside);
+    return () => document.removeEventListener('pointerdown', handleClickOutside);
+  }, [isShapesMenuOpen]);
+
   const bgColorInputRef = useRef(null);
 
   // 2. Mode Immersion Absolue (Plein écran sans distractions) & Responsive Mobile
@@ -2396,15 +2449,16 @@ export default function CollaborativeWhiteboardModal({
             })}
 
             {/* BOUTON DÉROULANT FORMES GÉOMÉTRIQUES & VECTORIELLES */}
-            <div style={{ position: 'relative', flexShrink: 0 }}>
+            <div style={{ position: 'relative', flexShrink: 0, overflow: 'visible' }}>
               <button
+                ref={shapeButtonRef}
                 type="button"
                 onClick={() => {
                   if (['rect', 'circle', 'line', 'arrow', 'triangle', 'hexagon', 'star', 'speech_bubble', 'heart', 'checkmark'].includes(tool)) {
-                    setIsShapesMenuOpen((prev) => !prev);
+                    toggleShapesMenu();
                   } else {
                     setTool(selectedShape);
-                    setIsShapesMenuOpen((prev) => !prev);
+                    toggleShapesMenu();
                   }
                 }}
                 style={{
@@ -2431,26 +2485,28 @@ export default function CollaborativeWhiteboardModal({
                 )}
                 <ChevronDown size={13} style={{ opacity: 0.85 }} />
               </button>
+            </div>
 
-              {/* Sous-menu Popover des Formes : Grille défilante 4 colonnes (Apple HIG Glassmorphism) */}
+            {/* 🚨 PHASE 93 : SOUS-MENU POPOVER DES FORMES ÉVADÉ DANS UN PORTAL BODY (ZÉRO CLIPPING PAR LA TOOLBAR) */}
+            {typeof document !== 'undefined' && createPortal(
               <AnimatePresence>
                 {isShapesMenuOpen && (
                   <motion.div
+                    id="shapes-popover-portal"
                     initial={{ opacity: 0, y: 10, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
                     transition={{ duration: 0.15 }}
                     style={{
-                      position: 'absolute',
-                      bottom: 'calc(100% + 14px)',
-                      left: '50%',
-                      transform: 'translateX(-50%)',
+                      position: 'fixed',
+                      bottom: `${shapesMenuCoords.bottom}px`,
+                      left: `${shapesMenuCoords.left}px`,
                       backgroundColor: darkMode ? '#1F1B18' : '#FFFFFF',
                       border: darkMode ? '1px solid rgba(255,255,255,0.18)' : '1px solid rgba(0,0,0,0.12)',
                       borderRadius: '18px',
                       padding: '10px',
                       boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
-                      zIndex: 1000005,
+                      zIndex: 10000000,
                       maxHeight: '260px',
                       overflowY: 'auto',
                       display: 'grid',
@@ -2459,6 +2515,7 @@ export default function CollaborativeWhiteboardModal({
                       width: '210px',
                       pointerEvents: 'auto',
                     }}
+                    onClick={(e) => e.stopPropagation()}
                   >
                     {SHAPE_OPTIONS.map((shape) => {
                       const ShapeIcon = shape.icon;
@@ -2496,8 +2553,9 @@ export default function CollaborativeWhiteboardModal({
                     })}
                   </motion.div>
                 )}
-              </AnimatePresence>
-            </div>
+              </AnimatePresence>,
+              document.body
+            )}
 
             {/* Post-it, Texte & Main Pan */}
             {[
