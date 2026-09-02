@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import Portal from './ui/Portal';
+import { createPortal } from 'react-dom';
 import {
   X, Calendar, Monitor, FileText,
   ExternalLink, Sparkles, Plus, Clock, ShieldCheck,
@@ -62,10 +62,11 @@ export default function ProjectWorkspaceToolsModal({
   };
 
   if (!isOpen) return null;
+  if (typeof document === 'undefined') return null;
 
   const modalElement = (
     <div
-      className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/60 backdrop-blur-sm touch-none"
       style={{
         position: 'fixed',
         inset: 0,
@@ -80,7 +81,11 @@ export default function ProjectWorkspaceToolsModal({
         animation: 'fadeIn 0.2s ease both',
         boxSizing: 'border-box',
       }}
-      onClick={onClose}
+      onClick={(e) => {
+        if (e.target === e.currentTarget && typeof onClose === 'function') {
+          onClose();
+        }
+      }}
     >
       <div
         style={{
@@ -673,6 +678,6 @@ export default function ProjectWorkspaceToolsModal({
     </div>
   );
 
-  return <Portal>{modalElement}</Portal>;
+  return createPortal(modalElement, document.body);
 }
 

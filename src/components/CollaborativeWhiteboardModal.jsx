@@ -13,7 +13,7 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback, Profiler } from 'react';
-import Portal from './ui/Portal';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { onRenderProfilerCallback } from '../utils/performanceProfiler';
 import {
@@ -1584,10 +1584,11 @@ export default function CollaborativeWhiteboardModal({
   };
 
   if (!isOpen) return null;
+  if (typeof document === 'undefined') return null;
 
   const modalContent = (
     <div
-      className="fixed inset-0 z-[999999] flex flex-col bg-black/60 backdrop-blur-sm"
+      className="fixed inset-0 z-[999999] flex flex-col bg-black/60 backdrop-blur-sm touch-none"
       ref={containerRef}
       style={{
         position: 'fixed',
@@ -2995,11 +2996,10 @@ export default function CollaborativeWhiteboardModal({
     </div>
   );
 
-  return (
-    <Portal>
-      <Profiler id="CollaborativeWhiteboardModal" onRender={onRenderProfilerCallback}>
-        {modalContent}
-      </Profiler>
-    </Portal>
+  return createPortal(
+    <Profiler id="CollaborativeWhiteboardModal" onRender={onRenderProfilerCallback}>
+      {modalContent}
+    </Profiler>,
+    document.body
   );
 }

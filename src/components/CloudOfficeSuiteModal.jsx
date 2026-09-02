@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import Portal from './ui/Portal';
+import { createPortal } from 'react-dom';
 import {
   X, FileText, Table,
   Bold, Italic, Heading1, Heading2, List, Code,
@@ -552,25 +552,29 @@ export default function CloudOfficeSuiteModal({
   };
 
   if (!isOpen) return null;
+  if (typeof document === 'undefined') return null;
 
-  return (
-    <Portal>
-      <div
-        className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/60 backdrop-blur-sm"
-        style={{
-          position: 'fixed',
-          inset: 0,
-          backgroundColor: 'rgba(28, 24, 22, 0.75)',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
-          zIndex: 999999,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '16px',
-        }}
-        onClick={onClose}
-      >
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/60 backdrop-blur-sm touch-none"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: 'rgba(28, 24, 22, 0.75)',
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
+        zIndex: 999999,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '16px',
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget && typeof onClose === 'function') {
+          onClose();
+        }
+      }}
+    >
         {/* DIAPORAMA PLEIN ÉCRAN */}
         {isPresenting && (
           <div
@@ -1372,6 +1376,5 @@ export default function CloudOfficeSuiteModal({
         </div>
       </div>
     </div>
-  </Portal>
   );
 }

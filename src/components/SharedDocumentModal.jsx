@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import Portal from './ui/Portal';
+import { createPortal } from 'react-dom';
 import {
   X, FileText, Bold, Italic, Heading1, Heading2, Heading3,
   List, CheckSquare, Quote, Code, Download, Printer,
@@ -269,42 +269,48 @@ export default function SharedDocumentModal({
   const charCount = content.length;
 
   if (!isOpen) return null;
+  if (typeof document === 'undefined') return null;
 
-  return (
-    <Portal>
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/60 backdrop-blur-sm touch-none"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: 'rgba(15, 12, 11, 0.82)',
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
+        zIndex: 999999,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '16px',
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget && typeof onClose === 'function') {
+          onClose();
+        }
+      }}
+    >
       <div
-        className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+        className="relative w-full max-w-4xl max-h-[90dvh] overflow-hidden overscroll-contain rounded-2xl"
+        onClick={(e) => e.stopPropagation()}
         style={{
-          position: 'fixed',
-          inset: 0,
-          backgroundColor: 'rgba(15, 12, 11, 0.82)',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
-          zIndex: 999999,
+          position: 'relative',
+          zIndex: 1000000,
+          width: '100%',
+          maxWidth: '960px',
+          height: '90vh',
+          maxHeight: '90dvh',
+          backgroundColor: darkMode ? '#1C1816' : '#FAF7F2',
+          borderRadius: '24px',
+          border: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-color)',
+          boxShadow: '0 25px 60px rgba(0,0,0,0.35)',
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: '16px',
+          flexDirection: 'column',
+          overflow: 'hidden',
         }}
-        onClick={onClose}
       >
-        <div
-          onClick={(e) => e.stopPropagation()}
-          style={{
-            position: 'relative',
-            zIndex: 1000000,
-            width: '100%',
-            maxWidth: '960px',
-            height: '90vh',
-            backgroundColor: darkMode ? '#1C1816' : '#FAF7F2',
-            borderRadius: '24px',
-            border: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-color)',
-            boxShadow: '0 25px 60px rgba(0,0,0,0.35)',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-          }}
-        >
         {/* HEADER APPLE NOTES */}
         <div
           style={{
@@ -664,6 +670,5 @@ export default function SharedDocumentModal({
         </div>
       </div>
     </div>
-  </Portal>
   );
 }

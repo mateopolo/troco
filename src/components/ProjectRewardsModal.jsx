@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import Portal from './ui/Portal';
+import { createPortal } from 'react-dom';
 import { X, Coins, Sparkles, Plus, Award } from 'lucide-react';
 
 export default function ProjectRewardsModal({
@@ -62,21 +62,32 @@ export default function ProjectRewardsModal({
     onClose?.();
   };
 
+  if (!isOpen || !activeChat) return null;
+  if (typeof document === 'undefined') return null;
+
   const modalElement = (
-    <div style={{
-      position: 'fixed',
-      inset: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.75)',
-      backdropFilter: 'blur(16px)',
-      WebkitBackdropFilter: 'blur(16px)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '16px 16px max(80px, env(safe-area-inset-bottom, 24px)) 16px',
-      zIndex: 2000000,
-      animation: 'fadeIn 0.25s ease',
-      boxSizing: 'border-box'
-    }}>
+    <div
+      className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/60 backdrop-blur-sm touch-none"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.75)',
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '16px 16px max(80px, env(safe-area-inset-bottom, 24px)) 16px',
+        zIndex: 999999,
+        animation: 'fadeIn 0.25s ease',
+        boxSizing: 'border-box'
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget && typeof onClose === 'function') {
+          onClose();
+        }
+      }}
+    >
       <div style={{
         backgroundColor: 'var(--bg-card)',
         borderRadius: '24px',
@@ -496,6 +507,6 @@ export default function ProjectRewardsModal({
     </div>
   );
 
-  return <Portal>{modalElement}</Portal>;
+  return createPortal(modalElement, document.body);
 }
 
