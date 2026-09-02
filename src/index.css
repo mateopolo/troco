@@ -139,18 +139,27 @@ h3 {
   text-transform: uppercase;
 }
 
-/* MICRO-INTERACTIONS HAUT DE GAMME (SIGNATURE CUBIC-BEZIER) */
-.premium-button {
-  transition: transform 0.4s var(--ease-monopo), box-shadow 0.4s var(--ease-monopo), filter 0.3s ease, background-color 0.3s ease, color 0.3s ease !important;
+/* MICRO-INTERACTIONS HAUT DE GAMME & RETOUR HAPTIQUE VISUEL (60 FPS) */
+.premium-button,
+button.premium-button,
+.interactive-btn {
+  transition: transform 0.18s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s ease, filter 0.15s ease, background-color 0.2s ease, color 0.2s ease !important;
   will-change: transform;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.premium-button:hover {
+.premium-button:hover,
+button.premium-button:hover,
+.interactive-btn:hover {
   transform: translateY(-1.5px) scale(1.015);
 }
 
-.premium-button:active {
-  transform: translateY(0.5px) scale(0.975);
+.premium-button:active,
+button.premium-button:active,
+.interactive-btn:active {
+  transform: scale(0.96) !important;
+  filter: brightness(0.95);
 }
 
 .premium-nav-btn {

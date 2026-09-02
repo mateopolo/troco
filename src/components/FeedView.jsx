@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Search, MapPin, Filter, Grid, Map, Globe, Tag } from 'lucide-react';
@@ -264,29 +265,59 @@ export default function FeedView({
       </div>
 
       {viewMode === 'list' ? (
-        /* GRILLE DE CARTES ANNONCES */
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(285px, 1fr))', gap: '22px' }}>
+        /* GRILLE DE CARTES ANNONCES AVEC APPARITION EN CASCADE ORGANIQUE (STAGGER) */
+        <motion.div
+          variants={{
+            hidden: { opacity: 0 },
+            show: {
+              opacity: 1,
+              transition: {
+                staggerChildren: 0.08,
+                delayChildren: 0.04,
+              },
+            },
+          }}
+          initial="hidden"
+          animate="show"
+          style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(285px, 1fr))', gap: '22px' }}
+        >
           {isLoading && realtimeListings.length === 0 ? (
             <SkeletonCard count={6} />
           ) : (
             displayListings.map(item => (
-              <ListingCard
+              <motion.div
                 key={item.id}
-                item={item}
-                handleOpenListing={handleOpenListing}
-                handleStartDiscussion={handleStartDiscussion}
-                currentLang={currentLang}
-                t={t}
-                darkMode={darkMode}
-                formatCompensation={formatCompensation}
-                getListingDisplayContent={getListingDisplayContent}
-                showingOriginalListings={showingOriginalListings}
-                toggleOriginalListing={toggleOriginalListing}
-                profile={profile}
-              />
+                variants={{
+                  hidden: { opacity: 0, y: 30 },
+                  show: {
+                    opacity: 1,
+                    y: 0,
+                    transition: {
+                      type: 'spring',
+                      stiffness: 300,
+                      damping: 24,
+                    },
+                  },
+                }}
+                style={{ height: '100%' }}
+              >
+                <ListingCard
+                  item={item}
+                  handleOpenListing={handleOpenListing}
+                  handleStartDiscussion={handleStartDiscussion}
+                  currentLang={currentLang}
+                  t={t}
+                  darkMode={darkMode}
+                  formatCompensation={formatCompensation}
+                  getListingDisplayContent={getListingDisplayContent}
+                  showingOriginalListings={showingOriginalListings}
+                  toggleOriginalListing={toggleOriginalListing}
+                  profile={profile}
+                />
+              </motion.div>
             ))
           )}
-        </div>
+        </motion.div>
       ) : (
         /* VUE CARTE CARTE INTERACTIVE LEAFLET (AVEC PORTAL MOBILE & GESTES COOPÉRATIFS) */
         <div ref={mapContainerRef} style={{ width: '100%', position: 'relative' }}>
