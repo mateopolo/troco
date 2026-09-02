@@ -1761,7 +1761,7 @@ export default function CollaborativeWhiteboardModal({
 
   const modalContent = (
     <div
-      className="fixed inset-0 z-[999999] flex flex-col bg-black/60 backdrop-blur-sm touch-none"
+      className="fixed inset-0 z-[999999] flex flex-col bg-black/90 md:bg-black/60 md:backdrop-blur-sm touch-none"
       ref={containerRef}
       style={{
         position: 'fixed',

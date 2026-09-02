@@ -93,17 +93,11 @@ export default function ReportModal({
 
   return (
     <div
+      className="fixed inset-0 z-[99999] bg-black/90 md:bg-[rgba(61,53,48,0.72)] md:backdrop-blur-md flex items-center justify-center p-4"
       style={{
         position: 'fixed',
         inset: 0,
         zIndex: 99999,
-        backgroundColor: 'rgba(61, 53, 48, 0.72)',
-        backdropFilter: 'blur(14px)',
-        WebkitBackdropFilter: 'blur(14px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '16px',
         animation: 'fadeSlideUp 0.25s ease both',
       }}
       onClick={onClose}

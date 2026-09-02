@@ -214,15 +214,14 @@ export const AppBottomNav = React.memo(({
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerCancel}
       onPointerLeave={handlePointerCancel}
+      className="bg-[var(--bg-card)] md:bg-[var(--glass-bg)] md:backdrop-blur-xl border-t border-[var(--border-color)]"
       style={{
         display: isHidden ? 'none' : 'block',
         position: 'fixed',
         bottom: 0,
         left: 0,
         right: 0,
-        backgroundColor: darkMode ? 'rgba(24, 21, 19, 0.72)' : 'rgba(250, 247, 242, 0.68)',
-        backdropFilter: 'blur(28px) saturate(200%)',
-        WebkitBackdropFilter: 'blur(28px) saturate(200%)',
+        backgroundColor: darkMode ? '#181513' : '#FAF7F2',
         borderTop: darkMode ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid rgba(0, 0, 0, 0.06)',
         padding: '8px 12px max(8px, env(safe-area-inset-bottom, 8px))',
         zIndex: 99999,
@@ -273,8 +272,6 @@ export const AppBottomNav = React.memo(({
                 background: darkMode
                   ? 'linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0.06) 100%)'
                   : 'linear-gradient(135deg, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0.45) 100%)',
-                backdropFilter: 'blur(16px)',
-                WebkitBackdropFilter: 'blur(16px)',
                 border: darkMode ? '1px solid rgba(255, 255, 255, 0.22)' : '1px solid rgba(255, 255, 255, 0.85)',
                 boxShadow: darkMode
                   ? '0 8px 24px rgba(0, 0, 0, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.35)'

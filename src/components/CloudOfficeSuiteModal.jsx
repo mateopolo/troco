@@ -617,13 +617,10 @@ export default function CloudOfficeSuiteModal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/60 backdrop-blur-sm touch-none"
+      className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/90 md:bg-black/60 md:backdrop-blur-sm touch-none"
       style={{
         position: 'fixed',
         inset: 0,
-        backgroundColor: 'rgba(28, 24, 22, 0.75)',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
         zIndex: 999999,
         display: 'flex',
         alignItems: 'center',

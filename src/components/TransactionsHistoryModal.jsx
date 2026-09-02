@@ -42,14 +42,11 @@ export default function TransactionsHistoryModal({
 
   return (
     <div
-      className="fixed inset-0 z-[999999]"
+      className="fixed inset-0 z-[999999] bg-black/90 md:bg-[var(--overlay-bg)] md:backdrop-blur-md"
       style={{
         position: 'fixed',
         inset: 0,
         zIndex: 999999,
-        backgroundColor: 'var(--overlay-bg)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',

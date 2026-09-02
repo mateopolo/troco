@@ -31,7 +31,13 @@ export default function PublishWizard({
     <>
       {/* MULTI-LANGUAGE PUBLISH SUCCESS MODAL */}
       {isPublishSuccessOpen && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'var(--overlay-bg)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', zIndex: 90 }}>
+        <div
+          className="fixed inset-0 z-[90] bg-black/90 md:bg-[var(--overlay-bg)] md:backdrop-blur-md flex items-center justify-center p-5"
+          style={{
+            position: 'fixed', inset: 0,
+            zIndex: 90
+          }}
+        >
           <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '28px', width: '100%', maxWidth: '440px', padding: '28px', boxShadow: 'var(--shadow-modal)', border: '1px solid var(--border-color)', textAlign: 'center', animation: 'popIn 0.4s cubic-bezier(0.22, 1, 0.36, 1)' }}>
             <div style={{ width: '72px', height: '72px', borderRadius: '50%', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-success)', margin: '0 auto 18px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--shadow-card)' }}>
               <CheckCircle size={38} strokeWidth={2.5} />

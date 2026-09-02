@@ -87,20 +87,11 @@ export default function KycModal({ isOpen, onClose, onComplete, profile, darkMod
   return (
     <div
       onClick={onClose}
+      className="fixed inset-0 z-[99999] bg-black/90 md:bg-[rgba(61,53,48,0.72)] md:backdrop-blur-sm flex items-center justify-center p-5"
       style={{
         position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(61, 53, 48, 0.72)',
-        backdropFilter: 'blur(10px)',
-        WebkitBackdropFilter: 'blur(10px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
+        inset: 0,
         zIndex: 99999,
-        padding: '20px',
         animation: 'fadeIn 0.2s ease-out'
       }}
     >

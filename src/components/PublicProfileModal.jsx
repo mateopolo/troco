@@ -148,13 +148,11 @@ export default function PublicProfileModal({
 
   return (
     <div
+      className="fixed inset-0 z-[10050] bg-black/90 md:bg-black/65 md:backdrop-blur-md"
       style={{
         position: 'fixed',
         inset: 0,
         zIndex: 10050,
-        backgroundColor: 'rgba(0, 0, 0, 0.65)',
-        backdropFilter: 'blur(14px)',
-        WebkitBackdropFilter: 'blur(14px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',

@@ -2680,8 +2680,8 @@ export default function App() {
 
       {/* ---- CHECKOUT / TUNNEL DE PAIEMENT SIMULÉ ---- */}
       {checkout.open && typeof document !== 'undefined' && createPortal(
-        <div className="fixed inset-0 z-[999999]" style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(61,53,48,0.7)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', zIndex: 999999 }}>
-          <div style={{ width: '100%', maxWidth: '460px', backgroundColor: darkMode ? '#231E1B' : '#FAF7F2', backdropFilter: 'blur(28px) saturate(180%)', WebkitBackdropFilter: 'blur(28px) saturate(180%)', borderRadius: '28px', padding: '24px', boxShadow: '0 30px 80px rgba(61,53,48,0.30)', border: darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #E8DDD3', position: 'relative' }}>
+        <div className="fixed inset-0 z-[999999] bg-black/90 md:bg-[rgba(61,53,48,0.7)] md:backdrop-blur-md flex items-center justify-center p-5" style={{ position: 'fixed', inset: 0, zIndex: 999999 }}>
+          <div style={{ width: '100%', maxWidth: '460px', backgroundColor: darkMode ? '#231E1B' : '#FAF7F2', borderRadius: '28px', padding: '24px', boxShadow: '0 30px 80px rgba(61,53,48,0.30)', border: darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #E8DDD3', position: 'relative' }}>
             {checkout.step === 'success' ? (
               <div style={{ textAlign: 'center', padding: '18px 8px' }}>
                 <div style={{ width: '76px', height: '76px', borderRadius: '50%', backgroundColor: '#EBF0E6', color: '#3D4A35', margin: '0 auto 18px', display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'popIn 0.5s cubic-bezier(0.22,1,0.36,1) both' }}>
@@ -2806,23 +2806,21 @@ export default function App() {
       )}
 
       {selectedListing && (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          backgroundColor: 'rgba(28, 24, 22, 0.72)',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
-          zIndex: 100005,
-          overflowY: 'auto',
-          WebkitOverflowScrolling: 'touch',
-          padding: isMobile ? '12px 8px 90px' : '24px 16px 60px'
-        }}>
+        <div
+          className="fixed inset-0 z-[100005] bg-black/90 md:bg-[rgba(28,24,22,0.72)] md:backdrop-blur-md overflow-y-auto"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 100005,
+            overflowY: 'auto',
+            WebkitOverflowScrolling: 'touch',
+            padding: isMobile ? '12px 8px 90px' : '24px 16px 60px'
+          }}
+        >
           <div style={{
             maxWidth: '760px',
             margin: '0 auto',
             backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
-            backdropFilter: 'blur(28px)',
-            WebkitBackdropFilter: 'blur(28px)',
             borderRadius: '28px',
             overflow: 'hidden',
             boxShadow: darkMode ? '0 30px 90px rgba(0,0,0,0.75)' : '0 30px 90px rgba(61,53,48,0.25)',
@@ -4183,7 +4181,8 @@ export default function App() {
       {/* POPUP CONFIRMATION PUBLICATION */}
       {showPublishedPopup && publishedListing && (
         <div
-          style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', zIndex: 9000 }}
+          className="fixed inset-0 z-[9000] bg-black/90 md:bg-[rgba(0,0,0,0.65)] md:backdrop-blur-md flex items-center justify-center p-6"
+          style={{ position: 'fixed', inset: 0, zIndex: 9000 }}
           onClick={() => {
             setShowPublishedPopup(false);
             setSelectedListing(publishedListing);
@@ -4192,7 +4191,7 @@ export default function App() {
         >
           <div
             onClick={e => e.stopPropagation()}
-            style={{ background: 'var(--bg-card)', backdropFilter: 'blur(24px)', borderRadius: '28px', padding: '32px 28px', maxWidth: '380px', width: '100%', boxShadow: 'var(--shadow-modal)', border: '1px solid var(--border-color)', textAlign: 'center', animation: 'popupIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both' }}
+            style={{ background: 'var(--bg-card)', borderRadius: '28px', padding: '32px 28px', maxWidth: '380px', width: '100%', boxShadow: 'var(--shadow-modal)', border: '1px solid var(--border-color)', textAlign: 'center', animation: 'popupIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both' }}
           >
             {/* Icône checkmark animée */}
             <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-success), var(--accent-success))', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', boxShadow: '0 12px 32px rgba(122,143,106,0.3)', animation: 'checkPop 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.15s both' }}>
@@ -4259,10 +4258,10 @@ export default function App() {
       {mobileListingActionTarget && (
         <div
           onClick={() => setMobileListingActionTarget(null)}
+          className="fixed inset-0 z-[4000] bg-black/90 md:bg-[rgba(61,53,48,0.72)] md:backdrop-blur-md flex items-end justify-center p-0"
           style={{
             position: 'fixed', inset: 0,
-            backgroundColor: 'rgba(61, 53, 48, 0.72)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
-            display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '0', zIndex: 4000,
+            zIndex: 4000,
             animation: 'fadeSlideUp 0.25s ease both'
           }}
         >
@@ -4377,8 +4376,11 @@ export default function App() {
       )}
 
       {isLangModalOpen && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(61, 53, 48, 0.72)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', zIndex: 3500 }}>
-          <div style={{ backgroundColor: darkMode ? '#231E1B' : '#FAF7F2', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', borderRadius: '24px', width: '100%', maxWidth: '400px', padding: '24px', boxShadow: '0 24px 60px rgba(61,53,48,0.25)', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', position: 'relative' }}>
+        <div
+          className="fixed inset-0 z-[3500] bg-black/90 md:bg-[rgba(61,53,48,0.72)] md:backdrop-blur-md flex items-center justify-center p-5"
+          style={{ position: 'fixed', inset: 0, zIndex: 3500 }}
+        >
+          <div style={{ backgroundColor: darkMode ? '#231E1B' : '#FAF7F2', borderRadius: '24px', width: '100%', maxWidth: '400px', padding: '24px', boxShadow: '0 24px 60px rgba(61,53,48,0.25)', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', position: 'relative' }}>
             <button onClick={() => setIsLangModalOpen(false)} style={{ position: 'absolute', top: '16px', right: '16px', border: 'none', backgroundColor: darkMode ? 'rgba(232,221,211,0.1)' : '#F5EAE4', color: darkMode ? '#FAF7F2' : '#3D3530', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
               <X size={16} />
             </button>
@@ -4749,8 +4751,6 @@ export default function App() {
             alignItems: 'center',
             justifyContent: 'center',
             padding: '24px',
-            backdropFilter: 'blur(30px)',
-            WebkitBackdropFilter: 'blur(30px)',
           }}
         >
           <div

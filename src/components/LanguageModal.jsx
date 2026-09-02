@@ -22,8 +22,14 @@ export default function LanguageModal({
   ];
 
   return (
-    <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.55)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', zIndex: 5000 }}>
-      <div style={{ backgroundColor: darkMode ? 'rgba(30, 41, 59, 0.95)' : 'rgba(255,255,255,0.85)', backdropFilter: 'blur(24px) saturate(180%)', WebkitBackdropFilter: 'blur(24px) saturate(180%)', borderRadius: '24px', width: '100%', maxWidth: '560px', padding: '22px', boxShadow: '0 24px 60px rgba(0,0,0,0.20)', border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(255,255,255,0.7)', position: 'relative' }}>
+    <div
+      className="fixed inset-0 z-[5000] bg-black/90 md:bg-[rgba(15,23,42,0.55)] md:backdrop-blur-sm flex items-center justify-center p-5"
+      style={{
+        position: 'fixed', inset: 0,
+        zIndex: 5000,
+      }}
+    >
+      <div style={{ backgroundColor: darkMode ? '#1E293B' : '#FFFFFF', borderRadius: '24px', width: '100%', maxWidth: '560px', padding: '22px', boxShadow: '0 24px 60px rgba(0,0,0,0.20)', border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(255,255,255,0.7)', position: 'relative' }}>
         <button onClick={() => onClose?.()} style={{ position: 'absolute', top: '14px', right: '14px', border: 'none', backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : '#F3F4F6', width: '34px', height: '34px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
           <X size={16} color={darkMode ? '#FFF' : '#374151'} />
         </button>

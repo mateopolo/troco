@@ -152,18 +152,14 @@ export default function OnboardingWizardModal({
   const canProceedStep2 = name.trim().length >= 2 && username.trim().length >= 2;
 
   return (
-    <div style={{
-      position: 'fixed',
-      inset: 0,
-      backgroundColor: 'var(--overlay-bg)',
-      backdropFilter: 'blur(16px)',
-      WebkitBackdropFilter: 'blur(16px)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '16px',
-      zIndex: 100,
-    }}>
+    <div
+      className="fixed inset-0 z-[100] bg-black/90 md:bg-[var(--overlay-bg)] md:backdrop-blur-md flex items-center justify-center p-4"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 100,
+      }}
+    >
       <div style={{
         backgroundColor: 'var(--bg-card)',
         color: 'var(--text-main)',

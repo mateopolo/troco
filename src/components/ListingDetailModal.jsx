@@ -80,13 +80,13 @@ export default function ListingDetailModal({
   };
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0,
-      backgroundColor: 'var(--overlay-bg)',
-      backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: '20px', zIndex: 1000, overflowY: 'auto'
-    }}>
+    <div
+      className="fixed inset-0 z-[1000] bg-black/90 md:bg-[var(--overlay-bg)] md:backdrop-blur-md overflow-y-auto flex items-center justify-center p-5"
+      style={{
+        position: 'fixed', inset: 0,
+        zIndex: 1000,
+      }}
+    >
       <div style={{
         backgroundColor: 'var(--bg-card)',
         borderRadius: '28px', width: '100%', maxWidth: '780px',

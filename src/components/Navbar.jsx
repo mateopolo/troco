@@ -19,17 +19,15 @@ export default function Navbar({
   AnimatedTokenBalance,
 }) {
   return (
-    <header style={{
-      backgroundColor: 'var(--bg-glass)',
-      backdropFilter: 'blur(20px) saturate(180%)',
-      WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-      borderBottom: '1px solid var(--border-color)',
-      padding: '14px 20px',
-      position: 'sticky',
-      top: 0,
-      zIndex: 40,
-      boxShadow: 'var(--shadow-card)'
-    }}>
+    <header
+      className="sticky top-0 z-40 bg-[var(--bg-card)] md:bg-[var(--bg-glass)] md:backdrop-blur-xl border-b border-[var(--border-color)] shadow-[var(--shadow-card)]"
+      style={{
+        padding: '14px 20px',
+        position: 'sticky',
+        top: 0,
+        zIndex: 40,
+      }}
+    >
       <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         {/* LOGO TROCO CLICKABLE -> RETOUR ACCUEIL */}
         <button

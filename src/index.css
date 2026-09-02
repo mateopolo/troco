@@ -1834,3 +1834,61 @@ body.dark-mode .ad-card:hover {
     transform: scale(1);
   }
 }
+
+/* ============================================================================
+   🚨 PHASE 98 : FIX FATAL OOM CRASH iOS (CHROME / SAFARI / WEBKIT)
+   Désactivation agressive des backdrop-filters massifs sur mobile (GPU relief)
+   ============================================================================ */
+@media (max-width: 768px) {
+  /* Éléments à forte empreinte mémoire VRAM */
+  .glass-card,
+  .glass-dark,
+  .warm-card,
+  .ad-card,
+  .call-controls-pill,
+  .facetime-controls-dock,
+  .facetime-more-menu,
+  header,
+  nav[aria-label="Navigation principale mobile"],
+  .bottom-nav-container,
+  [data-bottom-nav] {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  /* Remplacement par des fonds solides / semi-opaques nets */
+  .glass-card,
+  .warm-card {
+    background: var(--bg-card, #FAF7F2) !important;
+  }
+  body.dark-mode .glass-card,
+  body.dark-mode .warm-card {
+    background: var(--bg-card, #231E1B) !important;
+  }
+  .glass-dark {
+    background: #181513 !important;
+  }
+
+  /* Header et Nav mobile opaques et légers */
+  header {
+    background-color: var(--bg-card, #FAF7F2) !important;
+  }
+  body.dark-mode header {
+    background-color: var(--bg-card, #231E1B) !important;
+  }
+
+  nav[aria-label="Navigation principale mobile"] {
+    background-color: var(--bg-card, #FAF7F2) !important;
+  }
+  body.dark-mode nav[aria-label="Navigation principale mobile"] {
+    background-color: var(--bg-card, #231E1B) !important;
+  }
+
+  /* Arrière-plans volumétriques ultra-lourds (65px/90px blur) masqués sur mobile */
+  .liquid-iridescence-container,
+  .glow-orb {
+    display: none !important;
+    filter: none !important;
+    -webkit-filter: none !important;
+  }
+}

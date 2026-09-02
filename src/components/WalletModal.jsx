@@ -20,7 +20,14 @@ export default function WalletModal({
   const euroBalance = Number(profile.euroBalance) || 0;
 
   return (
-    <div style={{ position: 'fixed', inset: 0, backgroundColor: 'var(--overlay-bg)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', zIndex: 50 }}>
+    <div
+      className="fixed inset-0 z-50 bg-black/90 md:bg-[var(--overlay-bg)] md:backdrop-blur-sm flex items-center justify-center p-5"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 50,
+      }}
+    >
       <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '24px', width: '100%', maxWidth: '560px', padding: '24px', boxShadow: 'var(--shadow-modal)', border: '1px solid var(--border-color)', position: 'relative' }}>
         <button onClick={() => onClose?.()} style={{ position: 'absolute', top: '16px', right: '16px', border: 'none', backgroundColor: 'var(--bg-subtle)', width: '34px', height: '34px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--text-main)' }}>
           <X size={16} />

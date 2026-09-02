@@ -66,14 +66,11 @@ export default function ProjectWorkspaceToolsModal({
 
   const modalElement = (
     <div
-      className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/60 backdrop-blur-sm touch-none"
+      className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/90 md:bg-black/75 md:backdrop-blur-md touch-none"
       style={{
         position: 'fixed',
         inset: 0,
         zIndex: 999999,
-        backgroundColor: 'rgba(0, 0, 0, 0.75)',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',

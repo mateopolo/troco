@@ -21,11 +21,9 @@ export default function CheckoutModal({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[999999]"
+      className="fixed inset-0 z-[999999] bg-black/90 md:bg-[rgba(2,6,23,0.55)] md:backdrop-blur-md"
       style={{
         position: 'fixed', inset: 0,
-        backgroundColor: 'rgba(2,6,23,0.55)',
-        backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: '20px', zIndex: 999999
       }}

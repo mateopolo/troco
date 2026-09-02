@@ -397,14 +397,11 @@ export default function PaymentModal({
 
   const modalElement = (
     <div
-      className="fixed inset-0 z-[999999]"
+      className="fixed inset-0 z-[999999] bg-black/90 md:bg-[var(--overlay-bg)] md:backdrop-blur-md"
       style={{
         position: 'fixed',
         inset: 0,
         zIndex: 999999,
-        backgroundColor: 'var(--overlay-bg)',
-        backdropFilter: 'blur(14px)',
-        WebkitBackdropFilter: 'blur(14px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',

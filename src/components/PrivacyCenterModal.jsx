@@ -108,19 +108,15 @@ export default function PrivacyCenterModal({
   };
 
   return (
-    <div style={{
-      position: 'fixed',
-      inset: 0,
-      zIndex: 4000,
-      backgroundColor: 'rgba(61, 53, 48, 0.72)',
-      backdropFilter: 'blur(10px)',
-      WebkitBackdropFilter: 'blur(10px)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '16px',
-      animation: 'fadeIn 0.25s ease-out',
-    }}>
+    <div
+      className="fixed inset-0 z-[4000] bg-black/90 md:bg-[rgba(61,53,48,0.72)] md:backdrop-blur-sm flex items-center justify-center p-4"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 4000,
+        animation: 'fadeIn 0.25s ease-out',
+      }}
+    >
       <div style={{
         backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
         borderRadius: '24px',
