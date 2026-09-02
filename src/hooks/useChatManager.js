@@ -1602,14 +1602,6 @@ export const useChatManager = ({
 
   // ---- DÉCLENCHEMENT DE L'ACCEPTATION D'UN DEAL ----
   const handleAcceptDeal = async (chatId, dealId, terms) => {
-    const dealMessage = (chatThreads[chatId] || []).find(m => String(m.id) === String(dealId));
-    const isMe = dealMessage && (
-      (dealMessage.senderName && profile?.name && dealMessage.senderName.trim().toLowerCase() === profile.name.trim().toLowerCase()) ||
-      (dealMessage.senderUid && profile?.uid && dealMessage.senderUid === profile.uid) ||
-      dealMessage.sender === 'me'
-    );
-    if (isMe) return;
-
     hapticSuccess();
     const chat = (selectedChat && String(selectedChat.id) === String(chatId))
       ? selectedChat
@@ -1651,16 +1643,8 @@ export const useChatManager = ({
     });
   };
 
-  // ---- REFUS D'UN DEAL PAR LE DESTINATAIRE ----
+  // ---- REFUS OU ANNULATION D'UN DEAL ----
   const handleDeclineDeal = async (chatId, dealId) => {
-    const dealMessage = (chatThreads[chatId] || []).find(m => String(m.id) === String(dealId));
-    const isMe = dealMessage && (
-      (dealMessage.senderName && profile?.name && dealMessage.senderName.trim().toLowerCase() === profile.name.trim().toLowerCase()) ||
-      (dealMessage.senderUid && profile?.uid && dealMessage.senderUid === profile.uid) ||
-      dealMessage.sender === 'me'
-    );
-    if (isMe) return;
-
     hapticError();
     setChatThreads(prev => ({
       ...prev,

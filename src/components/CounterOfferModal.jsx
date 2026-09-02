@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import Portal from './ui/Portal';
+import { createPortal } from 'react-dom';
 import { Sparkles, X, Clock, Coins, CircleDollarSign, ArrowRight } from 'lucide-react';
 import { useWalletStore } from '../stores';
 
@@ -69,9 +69,12 @@ export default function CounterOfferModal({
     }
   };
 
+  if (!isOpen) return null;
+  if (typeof document === 'undefined') return null;
+
   const modalElement = (
     <div
-      onClick={() => onClose?.()}
+      className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/60 backdrop-blur-sm touch-none"
       style={{
         position: 'fixed',
         inset: 0,
@@ -82,9 +85,14 @@ export default function CounterOfferModal({
         alignItems: 'center',
         justifyContent: 'center',
         padding: '16px 16px max(80px, env(safe-area-inset-bottom, 24px)) 16px',
-        zIndex: 2000000,
+        zIndex: 999999,
         animation: 'fadeIn 0.2s ease-out both',
         boxSizing: 'border-box'
+      }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget && typeof onClose === 'function') {
+          onClose();
+        }
       }}
     >
       <div
@@ -351,7 +359,7 @@ export default function CounterOfferModal({
     </div>
   );
 
-  return <Portal>{modalElement}</Portal>;
+  return createPortal(modalElement, document.body);
 }
 
 

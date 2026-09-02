@@ -1525,16 +1525,15 @@ function ChatView({
                     }}
                   >
                     <div style={{
-                      width: isMobile ? '94%' : '80%',
+                      width: isMobile ? '94%' : '85%',
                       maxWidth: '520px',
-                      minHeight: isMobile ? '180px' : '200px',
                       border: isMine
                         ? '1.5px solid var(--accent-primary)'
                         : '1.5px solid var(--border-color)',
                       borderRadius: '20px',
                       borderBottomRightRadius: isMine ? '4px' : '20px',
                       borderBottomLeftRadius: isIncoming ? '4px' : '20px',
-                      padding: isMobile ? '14px' : '18px',
+                      padding: isMobile ? '14px 14px 12px' : '18px',
                       backgroundColor: 'var(--bg-card)',
                       boxShadow: 'var(--shadow-card)',
                       boxSizing: 'border-box'
@@ -1645,8 +1644,8 @@ function ChatView({
                         )}
                       </div>
 
-                      {/* ACTIONS INTERACTIVES POUR LE DESTINATAIRE : ACCEPTER / REFUSER / CONTRE-OFFRE */}
-                      {isDealPending && isIncoming && (
+                      {/* 3 BOUTONS D'ACTION INTERACTIFS : ACCEPTER / CONTRE-OFFRE / REFUSER OU ANNULER */}
+                      {isDealPending && (
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', marginTop: '10px' }}>
                           <button
                             type="button"
@@ -1679,7 +1678,7 @@ function ChatView({
                             }}
                           >
                             <Check size={14} strokeWidth={2.5} />
-                            <span>Accepter</span>
+                            <span>{isMine ? 'Valider' : 'Accepter'}</span>
                           </button>
                           <button
                             type="button"
@@ -1738,32 +1737,32 @@ function ChatView({
                             }}
                           >
                             <X size={14} strokeWidth={2.5} />
-                            <span>Refuser</span>
+                            <span>{isMine ? 'Annuler' : 'Refuser'}</span>
                           </button>
                         </div>
                       )}
 
                       {/* BADGE STATUT CONFIRMÉ / ACCEPTÉ (NON-CLIQUABLE) */}
                       {isAccepted && currentDealStatus !== 'escrow_locked' && (
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', backgroundColor: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.35)', color: '#10B981', borderRadius: '12px', padding: '9px 12px', fontSize: '11.5px', fontWeight: '800', marginTop: '6px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', backgroundColor: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.35)', color: '#10B981', borderRadius: '12px', padding: '9px 12px', fontSize: '11.5px', fontWeight: '800', marginTop: '8px' }}>
                           <Check size={14} strokeWidth={2.5} />
-                          <span>✓ Deal accepté</span>
+                          <span>✓ Deal accepté et validé</span>
                         </div>
                       )}
 
                       {/* BADGE STATUT REFUSÉ (NON-CLIQUABLE) */}
                       {isRejected && (
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', backgroundColor: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.25)', color: '#EF4444', borderRadius: '12px', padding: '9px 12px', fontSize: '11.5px', fontWeight: '800', marginTop: '6px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', backgroundColor: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.25)', color: '#EF4444', borderRadius: '12px', padding: '9px 12px', fontSize: '11.5px', fontWeight: '800', marginTop: '8px' }}>
                           <X size={14} strokeWidth={2.5} />
-                          <span>✕ Offre déclinée</span>
+                          <span>✕ Offre déclinée / annulée</span>
                         </div>
                       )}
 
-                      {/* STATUT EN ATTENTE POUR L'EXPÉDITEUR (NE PEUT NI ACCEPTER NI REFUSER SA PROPRE OFFRE) */}
+                      {/* STATUT EN ATTENTE POUR L'EXPÉDITEUR AVEC RAPPEL DU STATUT */}
                       {isDealPending && isMine && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'var(--bg-subtle)', border: '1px dashed var(--border-color)', color: 'var(--text-secondary)', borderRadius: '12px', padding: '9px 12px', fontSize: '11.5px', fontWeight: '700', marginTop: '6px' }}>
-                          <Clock size={13} color="var(--accent-primary)" />
-                          <span>Offre envoyée - En attente de réponse...</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'var(--bg-subtle)', border: '1px dashed var(--border-color)', color: 'var(--text-secondary)', borderRadius: '12px', padding: '7px 10px', fontSize: '11px', fontWeight: '700', marginTop: '8px' }}>
+                          <Clock size={12} color="var(--accent-primary)" />
+                          <span>Offre en attente : vous pouvez valider, modifier ou annuler à tout moment.</span>
                         </div>
                       )}
 
