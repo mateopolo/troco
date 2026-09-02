@@ -2364,28 +2364,8 @@ export default function App() {
           padding: '30px',
           animation: 'modalSlideIn 0.8s var(--ease-monopo) both'
         }}>
-          {/* 🚨 PHASE 83 : SUR MOBILE, REMPLACEMENT STRICT DU LOGO 3D PAR UN MONOGRAMME STATIQUE ULTRA-LÉGER (ANTI-CRASH OOM iOS) */}
-          {isMobile ? (
-            <div style={{
-              width: '80px',
-              height: '80px',
-              borderRadius: '22px',
-              background: 'linear-gradient(135deg, var(--accent-primary, #C67D5B) 0%, var(--accent-primary-hover, #A8644A) 100%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#FFFFFF',
-              fontSize: '38px',
-              fontWeight: '900',
-              fontFamily: 'var(--font-editorial, serif)',
-              boxShadow: '0 8px 24px rgba(198, 125, 91, 0.35)',
-              marginBottom: '24px'
-            }}>
-              T
-            </div>
-          ) : (
-            <TrocoLogo3D size={100} animated={true} style={{ marginBottom: '28px' }} />
-          )}
+          {/* 🚨 PHASE 87 : RESTAURATION GLOBALE DE TROCOLOGO3D (GESTION INTELLIGENTE MOBILE DANS LE COMPOSANT) */}
+          <TrocoLogo3D size={100} animated={true} style={{ marginBottom: '28px' }} />
           <div style={{
             fontSize: 'clamp(56px, 14vw, 92px)',
             fontFamily: 'var(--font-editorial)',
