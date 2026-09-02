@@ -82,6 +82,7 @@ function ChatView({
   const [activeSharedDocId, setActiveSharedDocId] = useState(null);
   const [activeWhiteboardBoardId, setActiveWhiteboardBoardId] = useState(null);
   const [activeWhiteboardVersion, setActiveWhiteboardVersion] = useState(null);
+  const [whiteboardInitialView, setWhiteboardInitialView] = useState('lobby');
   const [firestoreRecentBoards, setFirestoreRecentBoards] = useState([]);
   const [isWorkspaceToolsOpen, setIsWorkspaceToolsOpen] = useState(false);
   const [isCloudOfficeOpen, setIsCloudOfficeOpen] = useState(false);
@@ -166,11 +167,12 @@ function ChatView({
   const activeChatObj = effectiveSelectedChat;
   const [mobileSubView, setMobileSubView] = useState(() => (selectedChat && !deletedChatIds.has(selectedChat.id)) ? 'room' : 'list');
 
-  const openWhiteboard = useCallback((boardId, version = null) => {
-    setActiveWhiteboardBoardId(boardId || (effectiveSelectedChat?.id ? `board-${effectiveSelectedChat.id}` : 'default_board'));
+  const openWhiteboard = useCallback((boardId = null, version = null, initialView = null) => {
+    setActiveWhiteboardBoardId(boardId);
     setActiveWhiteboardVersion(version);
+    setWhiteboardInitialView(initialView || (boardId ? 'canvas' : 'lobby'));
     setIsWhiteboardOpen(true);
-  }, [effectiveSelectedChat?.id]);
+  }, []);
 
   // Transfert direct de Jetons Troco avec débit immédiat et confettis
   const handleExecuteDirectTokenTransfer = async () => {
@@ -297,7 +299,13 @@ function ChatView({
     const effectiveDocId = documentId || (targetChat?.id ? `doc-${targetChat.id}` : 'default_shared_doc');
 
     if (toolType === 'whiteboard') {
-      setActiveWhiteboardBoardId(currentBoardId);
+      if (documentId) {
+        setActiveWhiteboardBoardId(documentId);
+        setWhiteboardInitialView('canvas');
+      } else {
+        setActiveWhiteboardBoardId(null);
+        setWhiteboardInitialView('lobby');
+      }
       setIsWhiteboardOpen(true);
     } else if (toolType === 'notes') {
       setActiveSharedDocId(effectiveDocId);
@@ -2602,7 +2610,11 @@ function ChatView({
             onOpenDirectTransfer={() => setIsDirectTransferOpen(true)}
             onStartVoiceRecord={() => setIsRecordingAudio(true)}
             onOpenWorkspaceTool={(tool) => handleOpenWorkspaceTool(tool)}
-            onOpenWhiteboardPicker={() => setIsWhiteboardPickerOpen(true)}
+            onOpenWhiteboardPicker={() => {
+              setActiveWhiteboardBoardId(null);
+              setWhiteboardInitialView('lobby');
+              setIsWhiteboardOpen(true);
+            }}
             onOpenProjectRewards={() => setIsProjectRewardsModalOpen(true)}
           />
         )}
@@ -3345,12 +3357,14 @@ function ChatView({
             onClose={() => {
               setIsWhiteboardOpen(false);
               setActiveWhiteboardVersion(null);
+              setActiveWhiteboardBoardId(null);
             }}
             groupId={selectedChat?.id || activeChatObj?.id || activeChatObj?.firestoreId || 'group_whiteboard'}
-            boardId={activeWhiteboardBoardId || (selectedChat?.id ? `board-${selectedChat.id}` : (activeChatObj?.id ? `board-${activeChatObj.id}` : 'default_board'))}
-            workspaceId={activeWhiteboardBoardId || (selectedChat?.id ? `board-${selectedChat.id}` : (activeChatObj?.id ? `board-${activeChatObj.id}` : 'default_board'))}
+            boardId={activeWhiteboardBoardId}
+            workspaceId={activeWhiteboardBoardId}
             version={activeWhiteboardVersion}
             initialVersion={activeWhiteboardVersion}
+            initialView={whiteboardInitialView}
             projectTitle={selectedChat?.projectTitle || activeChatObj?.projectTitle || activeChatObj?.user || 'Tableau Blanc Collaboratif'}
             currentUser={profile}
             darkMode={darkMode}

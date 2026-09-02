@@ -34,6 +34,7 @@ export async function saveWorkspaceVersion({
   title = 'Tableau Blanc Collaboratif',
   data = { paths: [], stickyNotes: [], textElements: [] },
   previewUrl = '',
+  thumbnailBase64 = '',
   currentUser = null,
   changeSummary = 'Mise à jour collaborative',
 }) {
@@ -86,7 +87,8 @@ export async function saveWorkspaceVersion({
       type,
       title: title || (type === WORKSPACE_TYPES.WHITEBOARD ? 'Tableau Blanc Collaboratif' : 'Workspace'),
       version: nextVersion,
-      previewUrl: previewUrl || '',
+      previewUrl: previewUrl || thumbnailBase64 || '',
+      thumbnailBase64: thumbnailBase64 || previewUrl || '',
       data: {
         paths: (data.paths || []).slice(-450),
         stickyNotes: data.stickyNotes || [],

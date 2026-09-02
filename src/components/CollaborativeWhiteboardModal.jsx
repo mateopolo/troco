@@ -20,7 +20,7 @@ import {
   X, Pen, Highlighter, Eraser, Square, Circle, Minus, ArrowRight,
   RotateCcw, RotateCw, Trash2, StickyNote,
   Type, Hand, Brush, Check, Eye, Maximize2, ChevronDown,
-  Sparkles, Save, Send, History, Palette, Clock,
+  Sparkles, Save, Send, History, Palette, Clock, FolderKanban,
   Triangle, Hexagon, Star, MessageSquare, Heart
 } from 'lucide-react';
 import { doc, getDoc, onSnapshot, setDoc, deleteDoc, collection, serverTimestamp, arrayUnion } from 'firebase/firestore';
@@ -34,6 +34,7 @@ import {
 } from '../features/workspace/workspaceService';
 import { setThemeColorOverride, clearThemeColorOverride } from '../utils/themeColor';
 import { playSwoosh } from '../services/audioService';
+import WhiteboardLobby from './WhiteboardLobby';
 
 const SHAPE_OPTIONS = [
   { id: 'rect', label: 'Rectangle', icon: Square },
@@ -58,15 +59,17 @@ const BG_PRESETS = [
 ];
 
 const CURATED_PALETTE = [
-  { id: 'troco', hex: '#C67D5B', name: 'Terracotta Troco' },
-  { id: 'anthracite', hex: '#1F2937', name: 'Anthracite' },
-  { id: 'white', hex: '#FFFFFF', name: 'Blanc Pur' },
+  { id: 'clay', hex: '#C67D5B', name: 'Argile Troco' },
+  { id: 'charcoal', hex: '#231E1B', name: 'Anthracite' },
+  { id: 'cream', hex: '#FAF7F2', name: 'Écru' },
+  { id: 'sage', hex: '#7A8F6A', name: 'Sauge' },
+  { id: 'terracotta', hex: '#A8644A', name: 'Terre Cuite' },
+  { id: 'gold', hex: '#D4AF37', name: 'Or Monopo' },
   { id: 'red', hex: '#EF4444', name: 'Rouge Corail' },
-  { id: 'blue', hex: '#3B82F6', name: 'Bleu Royal' },
-  { id: 'green', hex: '#10B981', name: 'Vert Émeraude' },
-  { id: 'amber', hex: '#F59E0B', name: 'Jaune Ambre' },
-  { id: 'purple', hex: '#8B5CF6', name: 'Violet Électrique' },
-  { id: 'pink', hex: '#EC4899', name: 'Rose Vif' },
+  { id: 'blue', hex: '#3B82F6', name: 'Bleu Azur' },
+  { id: 'purple', hex: '#8B5CF6', name: 'Violet Néon' },
+  { id: 'emerald', hex: '#10B981', name: 'Émeraude' },
+  { id: 'amber', hex: '#F59E0B', name: 'Ambre Vif' },
   { id: 'cyan', hex: '#06B6D4', name: 'Cyan Lagon' },
 ];
 
@@ -86,6 +89,7 @@ export default function CollaborativeWhiteboardModal({
   workspaceId = null,
   version = null,
   initialVersion = null,
+  initialView = null,
   projectTitle = 'Tableau Blanc Collaboratif',
   currentUser = null,
   darkMode = false,
@@ -93,7 +97,23 @@ export default function CollaborativeWhiteboardModal({
   onSendMessage = null,
   handleSendMessage = null,
 }) {
-  const effectiveId = workspaceId || boardId || `ws_${groupId}_whiteboard`;
+  const [activeBoardId, setActiveBoardId] = useState(
+    () => boardId || workspaceId || null
+  );
+  const [viewMode, setViewMode] = useState(
+    () => initialView || (boardId || workspaceId ? 'canvas' : 'lobby')
+  );
+
+  useEffect(() => {
+    if (boardId || workspaceId) {
+      setActiveBoardId(boardId || workspaceId);
+      setViewMode(initialView || 'canvas');
+    } else if (initialView) {
+      setViewMode(initialView);
+    }
+  }, [boardId, workspaceId, initialView]);
+
+  const effectiveId = activeBoardId || (groupId ? `board-${groupId}` : 'default_board');
   const myUid = currentUser?.uid || currentUser?.id || 'local_user';
   const myName = currentUser?.name || currentUser?.username || 'Moi';
 
@@ -1743,6 +1763,8 @@ export default function CollaborativeWhiteboardModal({
         try {
           const docRef = doc(db, 'project_whiteboards', String(effectiveId));
           await setDoc(docRef, { thumbnailBase64, previewUrl, updatedAt: serverTimestamp() }, { merge: true });
+          const wsRef = doc(db, 'workspaces', String(effectiveId));
+          await setDoc(wsRef, { thumbnailBase64, previewUrl, updatedAt: serverTimestamp() }, { merge: true });
         } catch (_) {}
       }
 
@@ -1758,6 +1780,59 @@ export default function CollaborativeWhiteboardModal({
 
   if (!isOpen) return null;
   if (typeof document === 'undefined') return null;
+
+  // 🚨 PHASE 99 : ÉCRAN INTERMÉDIAIRE LOBBY MULTI-TABLEAUX BLANCS
+  if (viewMode === 'lobby') {
+    return createPortal(
+      <div
+        className="fixed inset-0 z-[999999] flex flex-col bg-black/90 md:bg-black/60 md:backdrop-blur-sm touch-none"
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 999999,
+          width: '100dvw',
+          height: '100dvh',
+          overscrollBehavior: 'none',
+          backgroundColor: darkMode ? '#12100E' : '#FAF7F2',
+          color: darkMode ? '#FAF7F2' : '#231E1B',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+        }}
+      >
+        <WhiteboardLobby
+          chatId={groupId}
+          selectedChat={{ id: groupId, projectTitle }}
+          darkMode={darkMode}
+          projectTitle={projectTitle}
+          onClose={onClose}
+          onCreateNewBoard={() => {
+            const newBoardId = `board_${groupId}_${Date.now()}`;
+            setActiveBoardId(newBoardId);
+            initialLoadDoneForIdRef.current = null;
+            setLocalPaths([]);
+            setRemotePaths([]);
+            setStickyNotes([]);
+            setTextElements([]);
+            setHistory([[]]);
+            setHistoryStep(0);
+            historyStepRef.current = 0;
+            setVersionNumber(1);
+            setWorkspaceTitle('Nouveau Tableau Blanc');
+            setBackgroundColor(darkMode ? '#12100E' : '#FFFFFF');
+            setViewMode('canvas');
+          }}
+          onSelectBoard={(selectedBoardId, boardData) => {
+            setActiveBoardId(selectedBoardId);
+            initialLoadDoneForIdRef.current = null;
+            if (boardData?.title) setWorkspaceTitle(boardData.title);
+            setViewMode('canvas');
+          }}
+        />
+      </div>,
+      document.body
+    );
+  }
 
   const modalContent = (
     <div
@@ -1797,8 +1872,6 @@ export default function CollaborativeWhiteboardModal({
           borderRadius: '999px',
           border: darkMode ? '1px solid rgba(255,255,255,0.22)' : '1px solid rgba(0,0,0,0.15)',
           backgroundColor: darkMode ? 'rgba(26,22,19,0.95)' : 'rgba(255,255,255,0.95)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
           color: 'inherit',
           fontSize: '13px',
           fontWeight: '800',
@@ -1815,12 +1888,46 @@ export default function CollaborativeWhiteboardModal({
         {!isMobile && <span>Fermer</span>}
       </button>
 
+      {/* BOUTON RETOUR À L'HISTORIQUE (LOBBY MULTI-TABLEAUX) SANS FERMER LA MODALE */}
+      <button
+        type="button"
+        onClick={() => {
+          setViewMode('lobby');
+        }}
+        className="premium-button"
+        style={{
+          position: 'absolute',
+          top: 'max(10px, env(safe-area-inset-top, 10px))',
+          left: isMobile ? '50px' : '136px',
+          zIndex: 1000005,
+          minWidth: isMobile ? '38px' : '44px',
+          minHeight: isMobile ? '38px' : '44px',
+          padding: isMobile ? '8px 12px' : '10px 16px',
+          borderRadius: '999px',
+          border: darkMode ? '1px solid rgba(255,255,255,0.22)' : '1px solid rgba(0,0,0,0.15)',
+          backgroundColor: darkMode ? 'rgba(26,22,19,0.95)' : 'rgba(255,255,255,0.95)',
+          color: '#C67D5B',
+          fontSize: '13px',
+          fontWeight: '800',
+          cursor: 'pointer',
+          boxShadow: '0 8px 30px rgba(0,0,0,0.25)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px',
+        }}
+        title="Retour à l'historique des tableaux (Lobby)"
+        aria-label="Retour à l'historique"
+      >
+        <FolderKanban size={isMobile ? 18 : 19} strokeWidth={2.2} />
+        {!isMobile && <span>Historique</span>}
+      </button>
+
       {/* 1. EN-TÊTE PRINCIPAL RESPONSIVE (Masqué en mode immersion) */}
       {!isImmersiveMode && (
         <header
           style={{
             height: '56px',
-            padding: isMobile ? '0 8px 0 62px' : '0 20px 0 130px',
+            padding: isMobile ? '0 8px 0 96px' : '0 20px 0 250px',
             borderBottom: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.08)',
             backgroundColor: darkMode ? 'rgba(21,18,15,0.85)' : 'rgba(255,255,255,0.85)',
             backdropFilter: 'blur(16px)',
