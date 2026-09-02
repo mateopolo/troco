@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Portal from './ui/Portal';
-import { Sparkles, X, Clock, Coins, Euro, ArrowRight } from 'lucide-react';
+import { Sparkles, X, Clock, Coins, CircleDollarSign, ArrowRight } from 'lucide-react';
+import { useWalletStore } from '../stores';
 
 export default function CounterOfferModal({
   isOpen,
@@ -12,6 +13,9 @@ export default function CounterOfferModal({
   listingTitle = '',
   darkMode = false,
 }) {
+  const currency = useWalletStore((state) => state.currency) || 'EUR';
+  const currencySymbol = useWalletStore((state) => state.currencySymbol) || '€';
+
   const [trocoTokens, setTrocoTokens] = useState('1');
   const [euroAmount, setEuroAmount] = useState('');
   const [durationType, setDurationType] = useState('hourly');
@@ -22,7 +26,7 @@ export default function CounterOfferModal({
     if (isOpen) {
       if (initialTerms) {
         setTrocoTokens(initialTerms.trocoTokens !== undefined ? String(initialTerms.trocoTokens) : '1');
-        setEuroAmount(initialTerms.euroAmount !== undefined && initialTerms.euroAmount > 0 ? String(initialTerms.euroAmount) : '');
+        setEuroAmount(initialTerms.euroAmount !== undefined && initialTerms.euroAmount > 0 ? String(initialTerms.euroAmount) : (initialTerms.fiatAmount > 0 ? String(initialTerms.fiatAmount) : ''));
         setDurationType(initialTerms.durationType || 'hourly');
         setDurationValue(initialTerms.durationValue ? String(initialTerms.durationValue) : '1');
         setConditions(initialTerms.conditions || '');
@@ -41,21 +45,24 @@ export default function CounterOfferModal({
   const handleSubmit = (e) => {
     e?.preventDefault?.();
     const tTokens = Number(trocoTokens) || 0;
-    const euros = Number(euroAmount) || 0;
+    const fiatVal = Number(euroAmount) || 0;
     const dVal = durationValue ? String(durationValue) : '1';
     const hoursNum = durationType === 'hourly' ? (Number(dVal) || 1) : 1;
-    const finalConditions = conditions.trim() || `${dVal}h d'échange pour ${tTokens > 0 ? `${tTokens} Jeton(s)` : ''} ${euros > 0 ? `${euros}€` : ''}`.trim() || 'Échange convenu.';
+    const finalConditions = conditions.trim() || `${dVal}h d'échange pour ${tTokens > 0 ? `${tTokens} Jeton(s)` : ''} ${fiatVal > 0 ? `${fiatVal} ${currencySymbol}` : ''}`.trim() || 'Échange convenu.';
 
     if (typeof onSubmit === 'function') {
       onSubmit({
         trocoTokens: tTokens,
-        euroAmount: euros,
+        euroAmount: fiatVal,
+        fiatAmount: fiatVal,
+        currency: initialTerms?.currency || currency,
+        sellerCurrency: initialTerms?.sellerCurrency || initialTerms?.currency || currency,
+        currencySymbol: initialTerms?.currencySymbol || currencySymbol,
         durationType,
         durationValue: dVal,
         conditions: finalConditions,
         expectedHours: hoursNum,
         expectedTokens: tTokens,
-        fiatAmount: euros,
         itemId: initialTerms?.itemId || null,
         itemName: initialTerms?.itemName || listingTitle || 'Prestation Troco',
       });
@@ -207,11 +214,11 @@ export default function CounterOfferModal({
             </div>
           </div>
 
-          {/* COMPLÉMENT FINANCIER EN EUROS (OPTIONNEL) */}
+          {/* COMPLÉMENT FINANCIER EN DEVISE LOCALE (OPTIONNEL) */}
           <div>
             <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '8px' }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Euro size={14} color="var(--accent-primary)" /> Complément en Euros (€)
+                <CircleDollarSign size={14} color="var(--accent-primary)" /> Complément Financier ({currencySymbol})
               </span>
               <span style={{ fontSize: '11px', color: 'var(--accent-primary)', fontWeight: '700' }}>Optionnel</span>
             </label>
@@ -236,7 +243,7 @@ export default function CounterOfferModal({
                   outline: 'none'
                 }}
               />
-              <span style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', fontWeight: '800', color: 'var(--accent-primary)' }}>€</span>
+              <span style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', fontWeight: '800', color: 'var(--accent-primary)' }}>{currencySymbol}</span>
             </div>
           </div>
 

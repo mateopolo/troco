@@ -7,6 +7,8 @@ import {
 import { getLocalizedTrocoPlusPlans, detectUserCountry, PPP_COUNTRY_MATRIX } from '../utils/pricingEngine';
 import { outboxService } from '../services/outboxService';
 import { hapticSuccess, hapticError } from '../utils/haptics';
+import { convertCurrency, formatCurrencyAmount } from '../services/pricingService';
+import { useWalletStore } from '../stores';
 
 // Algorithme de Luhn pour la validation des numéros de carte bancaire
 function isValidLuhn(numStr) {
@@ -1038,7 +1040,7 @@ export default function PaymentModal({
                       </div>
                     )}
 
-                    {/* VÉRIFICATION DU MONTANT EN EUROS */}
+                    {/* VÉRIFICATION DU MONTANT FINANCIER & CONVERSION CROSS-BORDER STRIPE FX */}
                     {dealEuroRequired > 0 && (
                       <div style={{
                         padding: '12px',
@@ -1046,16 +1048,36 @@ export default function PaymentModal({
                         border: '1px solid var(--border-color)',
                         backgroundColor: 'var(--bg-card)',
                         display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center'
+                        flexDirection: 'column',
+                        gap: '6px'
                       }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', fontWeight: '800', color: 'var(--text-main)' }}>
-                          <CreditCard size={16} color="var(--accent-primary)" />
-                          <span>Montant à régler : <strong>{dealEuroRequired.toFixed(2)} €</strong></span>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', fontWeight: '800', color: 'var(--text-main)' }}>
+                            <CreditCard size={16} color="var(--accent-primary)" />
+                            <span>Montant : <strong>{formatCurrencyAmount(dealEuroRequired, 'EUR')}</strong></span>
+                          </div>
+                          <span style={{ fontSize: '11.5px', fontWeight: '700', color: hasEnoughEuro ? 'var(--accent-primary)' : 'var(--text-secondary)' }}>
+                            Solde dispo : {userEuro.toFixed(2)} € {hasEnoughEuro ? '✓' : '(complément requis)'}
+                          </span>
                         </div>
-                        <span style={{ fontSize: '11.5px', fontWeight: '700', color: hasEnoughEuro ? 'var(--accent-primary)' : 'var(--text-secondary)' }}>
-                          Solde dispo : {userEuro.toFixed(2)} € {hasEnoughEuro ? '✓' : '(complément CB requis)'}
-                        </span>
+
+                        {/* 🚨 PHASE 58 : NOTICE DE CONVERSION TEMPS RÉEL SI TRANSACTION CROSS-BORDER */}
+                        {initialPayload?.deal?.terms?.sellerCurrency && initialPayload?.deal?.terms?.sellerCurrency !== 'EUR' && (
+                          <div style={{
+                            padding: '6px 10px',
+                            borderRadius: '8px',
+                            backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                            border: '1px solid rgba(59, 130, 246, 0.2)',
+                            fontSize: '11px',
+                            fontWeight: '600',
+                            color: '#3B82F6',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                          }}>
+                            <span>🌐 Vous allez payer ~{formatCurrencyAmount(convertCurrency(dealEuroRequired, initialPayload.deal.terms.sellerCurrency, 'EUR'), 'EUR')} (Équivalent demandé : {formatCurrencyAmount(dealEuroRequired, initialPayload.deal.terms.sellerCurrency)})</span>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

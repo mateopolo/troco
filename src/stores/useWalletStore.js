@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import { playBetclicBalanceSound, playApplePaySound } from '../utils/audioService';
+import { detectGeoCurrency } from '../services/pricingService';
 
 export const useWalletStore = create(
   persist(
@@ -19,6 +20,26 @@ export const useWalletStore = create(
       isPaymentModalOpen: false,
       paymentModalConfig: { mode: 'pack-tokens', payload: null },
       isTransactionsModalOpen: false,
+
+      // 🚨 PHASE 58 : VERROUILLAGE GÉO-IP IMMUABLE DE LA DEVISE
+      currency: 'EUR',
+      currencySymbol: '€',
+      countryCode: 'FR',
+      isCurrencyLocked: true,
+
+      initializeGeoCurrency: async () => {
+        try {
+          const geoInfo = await detectGeoCurrency();
+          if (geoInfo && geoInfo.currency) {
+            set({
+              currency: geoInfo.currency,
+              currencySymbol: geoInfo.currencySymbol || '€',
+              countryCode: geoInfo.countryCode || 'FR',
+              isCurrencyLocked: true,
+            });
+          }
+        } catch (_) {}
+      },
 
       setEuroBalance: (euroBalance) => set({ euroBalance: Number(Number(euroBalance).toFixed(2)) }),
       setTrocoTokens: (trocoTokens) => set({ trocoTokens: Number(trocoTokens) }),

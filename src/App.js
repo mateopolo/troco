@@ -253,6 +253,13 @@ export default function App() {
   const [allFirestoreUsers, setAllFirestoreUsers] = useState([]);
   const [isPending, startTransition] = useTransition();
 
+  // 🚨 PHASE 58 : INITIALISATION & VERROUILLAGE GÉO-IP DE LA DEVISE
+  useEffect(() => {
+    try {
+      useWalletStore.getState().initializeGeoCurrency?.();
+    } catch (_) {}
+  }, []);
+
   const mapContainerRef = useRef(null);
   const handleSwitchToMap = () => {
     setViewMode('map');
