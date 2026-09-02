@@ -54,6 +54,7 @@ import {
 import { useGlobalContent } from './features/admin/useGlobalContent';
 import { EmptyState } from './components/ui/EmptyState';
 import OfflineBanner from './components/common/OfflineBanner';
+import NotificationPill from './components/ui/NotificationPill';
 
 // Lazy-loaded heavy components & modals (Strict Code-Splitting)
 const AdminDashboard = React.lazy(() => import('./features/admin/AdminDashboard'));
@@ -2418,6 +2419,9 @@ export default function App() {
     }}>
       {/* 🚨 PHASE 49 : BANNIÈRE PERSISTANTE DE DÉCONNEXION RÉSEAU (OFFLINE UI) */}
       <OfflineBanner />
+
+      {/* 🚨 PHASE 55 : NOTIFICATIONS DYNAMIC ISLAND / TOASTS PREMIUM */}
+      <NotificationPill />
 
       {/* CONSTELLATION GÉOMÉTRIQUE FLUIDE EN ARRIÈRE-PLAN */}
       <GeometricBackground darkMode={darkMode} />

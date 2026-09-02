@@ -23,6 +23,7 @@ import { playBetclicBalanceSound, playApplePaySound } from '../utils/audioServic
 import { useChatStore } from '../stores';
 import { hapticLight, hapticSuccess, hapticError } from '../utils/haptics';
 import { playPop, playSuccessChime } from '../services/audioService';
+import { showDynamicIslandNotification } from '../services/notificationService';
 
 /**
  * Hook centralisant le moteur logique de messagerie, négociations et transactions de deals.
