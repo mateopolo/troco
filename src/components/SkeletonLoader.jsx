@@ -352,7 +352,26 @@ export function SkeletonModalFallback({ title = 'Chargement...' }) {
         animation: 'fadeIn 0.2s ease-out',
       }}
     >
-      <TrocoLogo3D animated={true} size={60} />
+      {typeof window !== 'undefined' && window.innerWidth < 768 ? (
+        <div style={{
+          width: '50px',
+          height: '50px',
+          borderRadius: '16px',
+          background: 'linear-gradient(135deg, var(--accent-primary, #C67D5B) 0%, var(--accent-primary-hover, #A8644A) 100%)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#FFFFFF',
+          fontSize: '24px',
+          fontWeight: '900',
+          fontFamily: 'var(--font-editorial, serif)',
+          boxShadow: '0 4px 16px rgba(198, 125, 91, 0.3)'
+        }}>
+          T
+        </div>
+      ) : (
+        <TrocoLogo3D animated={true} size={60} />
+      )}
       <span
         style={{
           fontSize: '13px',
