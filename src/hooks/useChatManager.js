@@ -1328,60 +1328,39 @@ export const useChatManager = ({
       ? selectedChat
       : (chatsList.find(c => String(c.id) === String(chatId)) || mockChats.find(c => String(c.id) === String(chatId)));
 
-    // Résolution du créateur de l'annonce et du partenaire de discussion
-    let listingCreatorUid = chat?.authorUid || chat?.listingAuthorUid || chat?.creatorUid || null;
-    let otherParticipantUid = partnerUid || chat?.partnerUid || null;
-
-    if (!otherParticipantUid && chat) {
+    // 🚨 PHASE 95 : CIBLAGE STRICT DU DESTINATAIRE (RECEIVER UID)
+    let receiverUid = partnerUid || chat?.partnerUid || chat?.authorUid || null;
+    if (receiverUid === currentUid) {
+      receiverUid = (chat?.partnerUid && chat.partnerUid !== currentUid)
+        ? chat.partnerUid
+        : (chat?.authorUid && chat.authorUid !== currentUid ? chat.authorUid : null);
+    }
+    if (!receiverUid && chat) {
       const parts = chat.participants || chat.participantUids;
       if (Array.isArray(parts)) {
-        otherParticipantUid = parts.find(u => u && u !== currentUid && u !== listingCreatorUid) || parts.find(u => u && u !== currentUid);
+        receiverUid = parts.find(u => u && u !== currentUid && u !== 'partner') || null;
       }
     }
-
-    if (!otherParticipantUid && partnerName && db) {
+    if (!receiverUid && partnerName && db) {
       try {
         const uSnap = await getDocs(query(collection(db, 'users'), where('name', '==', partnerName)));
-        if (!uSnap.empty) otherParticipantUid = uSnap.docs[0].id;
+        if (!uSnap.empty) receiverUid = uSnap.docs[0].id;
       } catch (_) { }
     }
 
-    // Détection du type d'annonce liée au chat ('request' vs 'offer')
-    const rawListingType = String(
-      chat?.listingType ||
-      chat?.type ||
-      chat?.listing?.type ||
-      chat?.listingData?.type ||
-      terms?.listingType ||
-      'offer'
-    ).toLowerCase();
-
-    const isRequest = rawListingType.includes('request') || rawListingType.includes('demande') || rawListingType.includes('besoin') || rawListingType.includes('recherche');
-
-    // 🚨 DÉTERMINATION STRICTE DU PAYEUR (BUYER) ET DU RECEVEUR (SELLER) :
-    // - Si l'annonce liée au chat est de type 'request' (Recherche), alors le créateur de l'annonce est le PAYEUR.
-    // - Si c'est une 'offer' (Offre), le créateur de l'annonce est le RECEVEUR.
-    let calculatedBuyerUid;
-    let calculatedSellerUid;
-
-    if (explicitBuyerUid && explicitSellerUid) {
-      calculatedBuyerUid = explicitBuyerUid;
-      calculatedSellerUid = explicitSellerUid;
-    } else if (listingCreatorUid && otherParticipantUid) {
-      if (isRequest) {
-        calculatedBuyerUid = listingCreatorUid;
-        calculatedSellerUid = otherParticipantUid;
-      } else {
-        calculatedBuyerUid = otherParticipantUid;
-        calculatedSellerUid = listingCreatorUid;
-      }
-    } else {
-      calculatedBuyerUid = explicitBuyerUid || (isRequest ? (listingCreatorUid || currentUid) : (otherParticipantUid || partnerUid || currentUid));
-      calculatedSellerUid = explicitSellerUid || (isRequest ? (otherParticipantUid || partnerUid || 'partner') : (listingCreatorUid || currentUid));
+    const buyerUid = String(explicitBuyerUid || currentUid);
+    let sellerUid = explicitSellerUid;
+    if (!sellerUid || sellerUid === 'partner' || sellerUid === buyerUid) {
+      sellerUid = receiverUid;
     }
 
-    const buyerUid = String(calculatedBuyerUid || currentUid);
-    const sellerUid = String(calculatedSellerUid || (partnerUid || 'partner'));
+    // RÈGLE STRICTE : Si le destinataire est indéfini ou 'partner', la transaction DOIT échouer avec une erreur explicite. Ne jamais débiter quelqu'un si la cible est introuvable.
+    if (!sellerUid || sellerUid === 'partner' || sellerUid === 'undefined' || sellerUid === buyerUid) {
+      const errorMsg = 'Transaction annulée : Destinataire (partnerUid/sellerUid) introuvable ou invalide. Aucun débit n\'a été effectué.';
+      console.error('🚨 [Finance] ' + errorMsg, { chatId, dealId, buyerUid, sellerUid, partnerUid, chat });
+      alert(errorMsg);
+      return { success: false, error: errorMsg };
+    }
 
     const shouldDebitWallet = paymentMethod?.includes('Solde') || paymentMethod === 'wallet' || paymentMethod === 'Solde Portefeuille Troco';
     const isCurrentUserBuyer = currentUid === buyerUid;
@@ -1704,7 +1683,24 @@ export const useChatManager = ({
       ? selectedChat
       : (chatsList.find(c => String(c.id) === String(chatId)) || mockChats.find(c => String(c.id) === String(chatId)));
     const partnerName = chat?.user || 'Interlocuteur';
-    const partnerUid = chat?.authorUid || chat?.partnerUid || null;
+    // 🚨 PHASE 95 : CIBLAGE STRICT DU DESTINATAIRE (RECEIVER UID)
+    const currentUid = profile?.uid || auth?.currentUser?.uid;
+    let partnerUid = chat?.partnerUid;
+    if (!partnerUid || partnerUid === currentUid) {
+      partnerUid = chat?.authorUid !== currentUid ? chat?.authorUid : null;
+    }
+    if (!partnerUid && chat) {
+      const parts = chat.participants || chat.participantUids;
+      if (Array.isArray(parts)) {
+        partnerUid = parts.find(u => u && u !== currentUid && u !== 'partner') || null;
+      }
+    }
+    if (!partnerUid && partnerName && db) {
+      try {
+        const uSnap = await getDocs(query(collection(db, 'users'), where('name', '==', partnerName)));
+        if (!uSnap.empty) partnerUid = uSnap.docs[0].id;
+      } catch (_) { }
+    }
     const tokensAmount = Number(terms?.trocoTokens !== undefined ? terms.trocoTokens : terms?.expectedTokens) || 0;
     const euroAmount = Number(terms?.euroAmount !== undefined ? terms.euroAmount : terms?.fiatAmount) || 0;
 

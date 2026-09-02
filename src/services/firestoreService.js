@@ -514,23 +514,45 @@ export const executeDealTransaction = async ({
   dealId,
   buyerUid,
   sellerUid,
+  partnerUid,
   euroAmount = 0,
   trocoTokens = 0,
 }) => {
   try {
+    // 🚨 PHASE 95 : CIBLAGE STRICT DU DESTINATAIRE (RECEIVER UID)
+    const receiverUid = sellerUid || partnerUid;
+    if (!buyerUid || !receiverUid || receiverUid === 'partner' || receiverUid === 'undefined' || receiverUid === buyerUid) {
+      const errorMsg = '[FirestoreService] executeDealTransaction: buyerUid ou destinataire (sellerUid/partnerUid) introuvable ou invalide.';
+      console.error(errorMsg, { buyerUid, sellerUid, partnerUid });
+      return { success: false, error: new Error(errorMsg) };
+    }
+
     await runTransaction(db, async (transaction) => {
       // 1. TOUTES LES LECTURES (transaction.get) EN PREMIER
       const msgRef = doc(db, 'chats', String(chatId), 'messages', String(dealId));
-      let buyerDoc = null;
-      let sellerDoc = null;
-      let buyerRef = null;
-      let sellerRef = null;
+      const buyerRef = doc(db, 'users', String(buyerUid));
+      const sellerRef = doc(db, 'users', String(receiverUid));
 
-      if (buyerUid && sellerUid) {
-        buyerRef = doc(db, 'users', String(buyerUid));
-        sellerRef = doc(db, 'users', String(sellerUid));
-        buyerDoc = await transaction.get(buyerRef);
-        sellerDoc = await transaction.get(sellerRef);
+      const [buyerDoc, sellerDoc] = await Promise.all([
+        transaction.get(buyerRef),
+        transaction.get(sellerRef),
+      ]);
+
+      if (!buyerDoc.exists()) {
+        throw new Error(`Profil acheteur/expéditeur (${buyerUid}) introuvable.`);
+      }
+
+      const buyerData = buyerDoc.data() || {};
+      const sellerData = sellerDoc.exists() ? sellerDoc.data() : {};
+
+      const curBuyerTokens = Number(buyerData.trocoTokens || 0);
+      const curBuyerEuro = Number(buyerData.euroBalance || 0);
+
+      if (trocoTokens > 0 && curBuyerTokens < trocoTokens) {
+        throw new Error(`Solde de jetons insuffisant (${curBuyerTokens} disponible(s), ${trocoTokens} requis).`);
+      }
+      if (euroAmount > 0 && curBuyerEuro < euroAmount) {
+        throw new Error(`Solde d'euros insuffisant (${curBuyerEuro}€ disponible(s), ${euroAmount}€ requis).`);
       }
 
       // 2. TOUTES LES ÉCRITURES (transaction.update / set) APRÈS
@@ -539,27 +561,27 @@ export const executeDealTransaction = async ({
         updatedAt: serverTimestamp(),
       });
 
-      if (buyerDoc?.exists() && sellerDoc?.exists()) {
-        const buyerData = buyerDoc.data();
-        const sellerData = sellerDoc.data();
+      const newBuyerTokens = Math.max(0, curBuyerTokens - trocoTokens);
+      const newBuyerEuro = Math.max(0, curBuyerEuro - euroAmount);
+      const newSellerTokens = Number(sellerData.trocoTokens || 0) + trocoTokens;
+      const newSellerEuro = Number(sellerData.euroBalance || 0) + euroAmount;
 
-        const newBuyerTokens = Math.max(0, (buyerData.trocoTokens || 0) - trocoTokens);
-        const newBuyerEuro = Math.max(0, (buyerData.euroBalance || 0) - euroAmount);
-        const newSellerTokens = (sellerData.trocoTokens || 0) + trocoTokens;
-        const newSellerEuro = (sellerData.euroBalance || 0) + euroAmount;
+      // 3. ÉCRITURES CROISÉES FIRESTORE (DOUBLE UPDATE ATOMIQUE)
+      // Débit expéditeur
+      transaction.set(buyerRef, {
+        trocoTokens: newBuyerTokens,
+        euroBalance: newBuyerEuro,
+        walletBalanceFiat: newBuyerEuro,
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
 
-        transaction.update(buyerRef, {
-          trocoTokens: newBuyerTokens,
-          euroBalance: newBuyerEuro,
-          updatedAt: serverTimestamp(),
-        });
-
-        transaction.update(sellerRef, {
-          trocoTokens: newSellerTokens,
-          euroBalance: newSellerEuro,
-          updatedAt: serverTimestamp(),
-        });
-      }
+      // Crédit destinataire
+      transaction.set(sellerRef, {
+        trocoTokens: newSellerTokens,
+        euroBalance: newSellerEuro,
+        walletBalanceFiat: newSellerEuro,
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
     });
 
     return { success: true };

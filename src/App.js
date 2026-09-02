@@ -498,7 +498,23 @@ export default function App() {
       const dealId = payload.dealId;
       const terms = payload.terms || {};
       const partnerName = payload.partnerName || selectedChat?.user;
-      const partnerUid = payload.partnerUid || selectedChat?.authorUid;
+
+      // 🚨 PHASE 95 : CIBLAGE STRICT DU DESTINATAIRE (RECEIVER UID)
+      let receiverUid = payload?.partnerUid || selectedChat?.authorUid || selectedChat?.partnerUid;
+      if (receiverUid === uid) {
+        receiverUid = payload?.partnerUid && payload.partnerUid !== uid
+          ? payload.partnerUid
+          : (selectedChat?.partnerUid && selectedChat.partnerUid !== uid
+            ? selectedChat.partnerUid
+            : (selectedChat?.authorUid && selectedChat.authorUid !== uid ? selectedChat.authorUid : null));
+      }
+
+      if (!receiverUid) {
+        console.error('🚨 [Finance] Transaction annulée : Destinataire (receiverUid) introuvable.', { payload, selectedChat });
+        alert('Erreur de transaction : Impossible d\'identifier le destinataire du paiement. Aucun montant n\'a été débité.');
+        return;
+      }
+
       const euroAmount = Number(txData.amountTtc ?? payload.euroRequired ?? payload.amount ?? 0);
       const tokensAmount = Number(txData.tokensDeducted ?? payload.tokensRequired ?? payload.tokens ?? 0);
 
@@ -508,7 +524,8 @@ export default function App() {
           dealId,
           terms,
           buyerUid: uid,
-          partnerUid,
+          sellerUid: receiverUid,
+          partnerUid: receiverUid,
           partnerName,
           euroAmount,
           tokensAmount,
@@ -1261,20 +1278,58 @@ export default function App() {
   const handleTransferCallTokens = async ({ tokens, insurance, duration }) => {
     const costTokens = Number(tokens) || 1;
     const insuranceFee = insurance ? 1.99 : 0;
+    const currentUid = profile?.uid || auth.currentUser?.uid;
 
-    setProfile(prev => ({
-      ...prev,
-      trocoTokens: Math.max(0, prev.trocoTokens - costTokens),
-      euroBalance: insuranceFee > 0 ? Number((prev.euroBalance - insuranceFee).toFixed(2)) : prev.euroBalance,
-      dealsCompleted: (prev.dealsCompleted || 0) + 1,
-    }));
+    if (!currentUid) {
+      alert('Veuillez vous connecter pour transférer des jetons.');
+      return;
+    }
 
-    playApplePaySound();
-    playBetclicBalanceSound(true);
+    // 🚨 PHASE 95 : CIBLAGE STRICT DU DESTINATAIRE (RECEIVER UID)
+    let receiverUid = selectedChat?.partnerUid || selectedChat?.authorUid;
+    if (receiverUid === currentUid) {
+      receiverUid = selectedChat?.partnerUid !== currentUid ? selectedChat?.partnerUid : null;
+    }
 
     const partner = selectedChat?.user || 'Interlocuteur';
+
+    if (!receiverUid && partner && db) {
+      try {
+        const userQuery = query(collection(db, 'users'), where('name', '==', partner));
+        const uSnap = await getDocs(userQuery);
+        if (!uSnap.empty) {
+          receiverUid = uSnap.docs[0].id;
+        }
+      } catch (_) { }
+    }
+
+    // RÈGLE STRICTE : Si receiverUid est indéfini, la transaction DOIT échouer avec une erreur explicite. Ne jamais débiter si la cible est introuvable.
+    if (!receiverUid || receiverUid === currentUid) {
+      console.error('🚨 [Finance] Transfert annulé : Destinataire (receiverUid) introuvable ou invalide.', {
+        selectedChat,
+        currentUid,
+        receiverUid
+      });
+      alert('Erreur de transfert : Impossible d\'identifier le destinataire des jetons. Aucun montant n\'a été débité.');
+      return;
+    }
+
+    // Vérification préalable de la solvabilité
+    const curSenderTokens = Number(profile?.trocoTokens ?? 0);
+    const curSenderEuro = Number(profile?.euroBalance ?? 0);
+    if (curSenderTokens < costTokens) {
+      alert(`Solde de jetons insuffisant (${curSenderTokens} disponible(s), ${costTokens} requis).`);
+      return;
+    }
+    if (insuranceFee > 0 && curSenderEuro < insuranceFee) {
+      alert(`Solde d'euros insuffisant pour l'assurance (${curSenderEuro}€ disponible(s), ${insuranceFee}€ requis).`);
+      return;
+    }
+
+    const transactionId = `TRK-CALL-${Date.now().toString().slice(-6)}`;
     const newTx = {
       id: `tx-visio-${Date.now()}`,
+      transactionId,
       title: `Rétribution Visio (${partner})`,
       amount: insuranceFee,
       tokens: costTokens,
@@ -1285,80 +1340,89 @@ export default function App() {
       duration: duration,
       freeServiceFee: true,
     };
-    setUserTransactions(prev => [newTx, ...prev]);
 
     // PERSISTANCE TRANSACTIONNELLE ATOMIQUE FIRESTORE (runTransaction)
-    const uid = profile?.uid || auth.currentUser?.uid;
-    if (uid) {
+    if (db) {
       try {
-        let partnerUid = selectedChat?.authorUid || selectedChat?.partnerUid;
-        if (!partnerUid && partner) {
-          try {
-            const userQuery = query(collection(db, 'users'), where('name', '==', partner));
-            const uSnap = await getDocs(userQuery);
-            if (!uSnap.empty) {
-              partnerUid = uSnap.docs[0].id;
-            }
-          } catch (_) { }
-        }
-
         await runTransaction(db, async (transaction) => {
-          // 1. Lecture atomique du payeur
-          const payerRef = doc(db, 'users', uid);
-          const payerSnap = await transaction.get(payerRef);
+          // 1. Lectures atomiques des deux profils (READS FIRST)
+          const payerRef = doc(db, 'users', currentUid);
+          const receiverRef = doc(db, 'users', receiverUid);
 
-          let currentTokens = profile.trocoTokens || 10;
-          let currentEuro = profile.euroBalance || 0;
-          let currentDeals = profile.dealsCompleted || 0;
+          const [payerSnap, receiverSnap] = await Promise.all([
+            transaction.get(payerRef),
+            transaction.get(receiverRef),
+          ]);
+
+          let pTokens = curSenderTokens;
+          let pEuro = curSenderEuro;
+          let pDeals = Number(profile?.dealsCompleted ?? 0);
 
           if (payerSnap.exists()) {
             const pData = payerSnap.data();
-            currentTokens = pData.trocoTokens !== undefined ? pData.trocoTokens : currentTokens;
-            currentEuro = pData.euroBalance !== undefined ? pData.euroBalance : currentEuro;
-            currentDeals = pData.dealsCompleted !== undefined ? pData.dealsCompleted : currentDeals;
+            pTokens = pData.trocoTokens !== undefined ? Number(pData.trocoTokens) : pTokens;
+            pEuro = pData.euroBalance !== undefined ? Number(pData.euroBalance) : pEuro;
+            pDeals = pData.dealsCompleted !== undefined ? Number(pData.dealsCompleted) : pDeals;
           }
 
-          // 2. Lecture atomique du partenaire (si identifié)
-          let partnerRef = null;
-          let partnerSnap = null;
-          if (partnerUid) {
-            partnerRef = doc(db, 'users', partnerUid);
-            partnerSnap = await transaction.get(partnerRef);
+          if (pTokens < costTokens) {
+            throw new Error(`Solde de jetons insuffisant (${pTokens} disponible(s), ${costTokens} requis).`);
+          }
+          if (insuranceFee > 0 && pEuro < insuranceFee) {
+            throw new Error(`Solde d'euros insuffisant (${pEuro}€ disponible(s), ${insuranceFee}€ requis).`);
           }
 
-          // 3. Écriture atomique débit payeur
+          const recData = receiverSnap.exists() ? receiverSnap.data() : {};
+          const rTokens = Number(recData.trocoTokens ?? 0);
+          const rDeals = Number(recData.dealsCompleted ?? 0);
+
+          // 2. ÉCRITURE CROISÉE SIMULTANÉE (DOUBLE UPDATE ATOMIQUE)
+          // Débit expéditeur
+          const newPayerTokens = Math.max(0, pTokens - costTokens);
+          const newPayerEuro = insuranceFee > 0 ? Number(Math.max(0, pEuro - insuranceFee).toFixed(2)) : pEuro;
+
           transaction.set(payerRef, {
-            trocoTokens: Math.max(0, currentTokens - costTokens),
-            euroBalance: insuranceFee > 0 ? Number(Math.max(0, currentEuro - insuranceFee).toFixed(2)) : currentEuro,
-            dealsCompleted: currentDeals + 1,
+            trocoTokens: newPayerTokens,
+            euroBalance: newPayerEuro,
+            walletBalanceFiat: newPayerEuro,
+            dealsCompleted: pDeals + 1,
             updatedAt: serverTimestamp(),
           }, { merge: true });
 
-          // 4. Écriture atomique crédit partenaire
-          if (partnerRef && partnerSnap && partnerSnap.exists()) {
-            const partData = partnerSnap.data();
-            const partTokens = partData.trocoTokens || 0;
-            const partDeals = partData.dealsCompleted || 0;
+          // Crédit simultané du destinataire
+          const newReceiverTokens = rTokens + costTokens;
+          transaction.set(receiverRef, {
+            trocoTokens: newReceiverTokens,
+            dealsCompleted: rDeals + 1,
+            updatedAt: serverTimestamp(),
+          }, { merge: true });
 
-            transaction.update(partnerRef, {
-              trocoTokens: partTokens + costTokens,
-              dealsCompleted: partDeals + 1,
-              updatedAt: serverTimestamp(),
-            });
-          }
-
-          // 5. Enregistrement atomique de la transaction
+          // 3. Enregistrement atomique de la transaction
           const txDocRef = doc(collection(db, 'transactions'));
           transaction.set(txDocRef, {
             ...newTx,
-            userId: uid,
+            userId: currentUid,
             userName: profile?.name || 'Utilisateur',
-            partnerUid: partnerUid || null,
+            partnerUid: receiverUid,
             createdAt: serverTimestamp(),
           });
         });
+
+        // 4. Mise à jour optimiste locale après validation de la transaction
+        setProfile(prev => ({
+          ...prev,
+          trocoTokens: Math.max(0, (prev?.trocoTokens ?? curSenderTokens) - costTokens),
+          euroBalance: insuranceFee > 0 ? Number(((prev?.euroBalance ?? curSenderEuro) - insuranceFee).toFixed(2)) : (prev?.euroBalance ?? curSenderEuro),
+          dealsCompleted: (prev?.dealsCompleted || 0) + 1,
+        }));
+        setUserTransactions(prev => [newTx, ...prev]);
+
+        playApplePaySound();
+        playBetclicBalanceSound(true);
+        setSaveMessage(`🤝 ${costTokens} Jeton${costTokens > 1 ? 's' : ''} Troco transféré(s) à ${partner} (Frais de service : 0,00 €) !`);
       } catch (e) {
-        console.warn('[Firestore] Atomic runTransaction visio error:', e);
+        console.error('🚨 [Firestore] Erreur transaction transfert jetons:', e);
+        alert(`Échec du transfert : ${e?.message || 'Erreur réseau ou solde insuffisant.'}`);
       }
     }
 
