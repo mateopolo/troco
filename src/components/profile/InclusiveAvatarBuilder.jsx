@@ -1,18 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, Dices, Eye, Check, Palette, Glasses } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Sparkles, Dices, Check, Smile, Glasses, UserCheck } from 'lucide-react';
 
 const SKIN_TONES = [
-  { id: 'edb98a', label: 'Claire', color: '#edb98a' },
-  { id: 'f8d25c', label: 'Dorée', color: '#f8d25c' },
-  { id: 'd08b5b', label: 'Mousse', color: '#d08b5b' },
-  { id: 'ae5d29', label: 'Hâlée', color: '#ae5d29' },
-  { id: '614335', label: 'Ébène', color: '#614335' },
+  { id: 'ffdbac', label: 'Très claire', color: '#ffdbac' },
+  { id: 'f1c27d', label: 'Dorée / Beige', color: '#f1c27d' },
+  { id: 'e0ac69', label: 'Mousse / Hâlée', color: '#e0ac69' },
+  { id: '8d5524', label: 'Brune / Cuivrée', color: '#8d5524' },
+  { id: '3d2218', label: 'Ébène profonde', color: '#3d2218' },
 ];
 
 const HAIR_COLORS = [
-  { id: '2c1b18', label: 'Noir', color: '#2c1b18' },
-  { id: '4a312c', label: 'Brun', color: '#4a312c' },
+  { id: '2c1b18', label: 'Noir ébène', color: '#2c1b18' },
+  { id: '4a312c', label: 'Brun foncé', color: '#4a312c' },
   { id: '724133', label: 'Châtain', color: '#724133' },
   { id: 'a55728', label: 'Roux', color: '#a55728' },
   { id: 'd6b370', label: 'Blond', color: '#d6b370' },
@@ -37,28 +36,29 @@ const HAIR_STYLES = [
 ];
 
 const INCLUSIVE_PRESETS = [
-  { name: 'Fatou', skin: '614335', hair: '2c1b18', top: 'froBand', glasses: true, beard: false },
-  { name: 'Liam', skin: 'edb98a', hair: '4a312c', top: 'shortFlat', glasses: true, beard: false },
-  { name: 'Mei', skin: 'f8d25c', hair: '2c1b18', top: 'straight02', glasses: false, beard: false },
-  { name: 'Carlos', skin: 'ae5d29', hair: '2c1b18', top: 'theCaesar', glasses: false, beard: true },
-  { name: 'Amina', skin: '614335', hair: '2c1b18', top: 'dreads', glasses: false, beard: false },
-  { name: 'Sophie', skin: 'edb98a', hair: 'd6b370', top: 'bob', glasses: true, beard: false },
-  { name: 'Malik', skin: '614335', hair: '2c1b18', top: 'shavedSides', glasses: false, beard: true },
-  { name: 'Zainab', skin: 'd08b5b', hair: '2c1b18', top: 'hijab', glasses: false, beard: false },
+  { name: 'Fatou', skin: '3d2218', hair: '2c1b18', top: 'froBand', glasses: true, beard: false },
+  { name: 'Liam', skin: 'ffdbac', hair: '4a312c', top: 'shortFlat', glasses: true, beard: false },
+  { name: 'Mei', skin: 'f1c27d', hair: '2c1b18', top: 'straight02', glasses: false, beard: false },
+  { name: 'Carlos', skin: 'e0ac69', hair: '2c1b18', top: 'theCaesar', glasses: false, beard: true },
+  { name: 'Amina', skin: '3d2218', hair: '2c1b18', top: 'dreads', glasses: false, beard: false },
+  { name: 'Sophie', skin: 'ffdbac', hair: 'd6b370', top: 'bob', glasses: true, beard: false },
+  { name: 'Malik', skin: '8d5524', hair: '2c1b18', top: 'shavedSides', glasses: false, beard: true },
+  { name: 'Zainab', skin: 'e0ac69', hair: '2c1b18', top: 'hijab', glasses: false, beard: false },
 ];
 
 export default function InclusiveAvatarBuilder({ currentAvatar, onSelectAvatar, initialName = 'Membre' }) {
   const [seed, setSeed] = useState(() => initialName.trim().replace(/\s+/g, '') || 'TrocoUser');
-  const [skinColor, setSkinColor] = useState('d08b5b');
+  const [skinColor, setSkinColor] = useState('e0ac69');
   const [hairColor, setHairColor] = useState('2c1b18');
   const [top, setTop] = useState('curly');
   const [hasGlasses, setHasGlasses] = useState(false);
   const [hasBeard, setHasBeard] = useState(false);
 
+  // Forçage de positivité : expressions souriantes, yeux joyeux et sourcils bienveillants
   const generateUrl = (s, sk, hc, tp, gl, brd) => {
     const accProb = gl ? 100 : 0;
     const beardProb = brd ? 100 : 0;
-    return `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(s)}&skinColor=${sk}&hairColor=${hc}&top=${tp}&accessoriesProbability=${accProb}&facialHairProbability=${beardProb}`;
+    return `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(s)}&skinColor=${sk}&hairColor=${hc}&top=${tp}&accessoriesProbability=${accProb}&facialHairProbability=${beardProb}&mouth=smile,twinkle,default&eyes=happy,default,wink&eyebrows=default,defaultNatural,raisedExcited`;
   };
 
   const currentGeneratedUrl = generateUrl(seed, skinColor, hairColor, top, hasGlasses, hasBeard);
@@ -106,7 +106,7 @@ export default function InclusiveAvatarBuilder({ currentAvatar, onSelectAvatar, 
       flexDirection: 'column',
       gap: '14px',
     }}>
-      {/* EN-TÊTE DU CONSTRUCTEUR D'AVATARS */}
+      {/* EN-TÊTE DU STUDIO D'AVATAR (SIMPLIFIÉ) */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <div style={{
@@ -114,10 +114,10 @@ export default function InclusiveAvatarBuilder({ currentAvatar, onSelectAvatar, 
             backgroundColor: 'var(--accent-primary, #C67D5B)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFF'
           }}>
-            <Sparkles size={16} />
+            <Smile size={16} />
           </div>
           <span style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-main, #1F2937)' }}>
-            Studio d'Avatars Inclusifs & Dynamiques
+            Studio d'avatar
           </span>
         </div>
 
@@ -183,70 +183,88 @@ export default function InclusiveAvatarBuilder({ currentAvatar, onSelectAvatar, 
         </div>
       </div>
 
-      {/* CONTRÔLES PERSONNALISABLES (TEINTE, COIFFURE, ACCESSOIRES) */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '10px' }}>
-        {/* CARNATION / TEINTE DE PEAU */}
+      {/* CONTRÔLES PERSONNALISABLES (PASTILLES ET TOGGLES VISUELS) */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px' }}>
+        {/* CARNATION / PASTILLES DE TEINTE DE PEAU */}
         <div>
-          <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary, #6B7280)', display: 'block', marginBottom: '6px' }}>
+          <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary, #6B7280)', display: 'block', marginBottom: '8px', textTransform: 'uppercase' }}>
             Teinte de peau
           </label>
-          <div style={{ display: 'flex', gap: '6px' }}>
-            {SKIN_TONES.map((st) => (
-              <button
-                key={st.id}
-                type="button"
-                onClick={() => setSkinColor(st.id)}
-                style={{
-                  width: '24px', height: '24px', borderRadius: '50%',
-                  backgroundColor: st.color,
-                  border: skinColor === st.id ? '2.5px solid var(--accent-primary, #C67D5B)' : '1px solid rgba(0,0,0,0.15)',
-                  cursor: 'pointer',
-                  transform: skinColor === st.id ? 'scale(1.15)' : 'scale(1)',
-                }}
-                title={st.label}
-              />
-            ))}
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+            {SKIN_TONES.map((st) => {
+              const isSelected = skinColor === st.id;
+              return (
+                <button
+                  key={st.id}
+                  type="button"
+                  onClick={() => setSkinColor(st.id)}
+                  style={{
+                    width: '28px', height: '28px', borderRadius: '50%',
+                    backgroundColor: st.color,
+                    border: isSelected ? '3px solid var(--text-main, #1F2937)' : '2px solid rgba(0,0,0,0.12)',
+                    cursor: 'pointer',
+                    transform: isSelected ? 'scale(1.15)' : 'scale(1)',
+                    boxShadow: isSelected ? '0 2px 8px rgba(0,0,0,0.2)' : 'none',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: '#FFFFFF',
+                    transition: 'all 0.15s ease',
+                  }}
+                  title={st.label}
+                >
+                  {isSelected && <Check size={14} strokeWidth={3} />}
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        {/* COULEUR DES CHEVEUX */}
+        {/* COULEUR DES CHEVEUX (PASTILLES) */}
         <div>
-          <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary, #6B7280)', display: 'block', marginBottom: '6px' }}>
-            Couleur cheveux
+          <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary, #6B7280)', display: 'block', marginBottom: '8px', textTransform: 'uppercase' }}>
+            Couleur des cheveux
           </label>
-          <div style={{ display: 'flex', gap: '6px' }}>
-            {HAIR_COLORS.map((hc) => (
-              <button
-                key={hc.id}
-                type="button"
-                onClick={() => setHairColor(hc.id)}
-                style={{
-                  width: '24px', height: '24px', borderRadius: '50%',
-                  backgroundColor: hc.color,
-                  border: hairColor === hc.id ? '2.5px solid var(--accent-primary, #C67D5B)' : '1px solid rgba(0,0,0,0.15)',
-                  cursor: 'pointer',
-                  transform: hairColor === hc.id ? 'scale(1.15)' : 'scale(1)',
-                }}
-                title={hc.label}
-              />
-            ))}
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+            {HAIR_COLORS.map((hc) => {
+              const isSelected = hairColor === hc.id;
+              return (
+                <button
+                  key={hc.id}
+                  type="button"
+                  onClick={() => setHairColor(hc.id)}
+                  style={{
+                    width: '28px', height: '28px', borderRadius: '50%',
+                    backgroundColor: hc.color,
+                    border: isSelected ? '3px solid var(--text-main, #1F2937)' : '2px solid rgba(0,0,0,0.12)',
+                    cursor: 'pointer',
+                    transform: isSelected ? 'scale(1.15)' : 'scale(1)',
+                    boxShadow: isSelected ? '0 2px 8px rgba(0,0,0,0.2)' : 'none',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: '#FFFFFF',
+                    transition: 'all 0.15s ease',
+                  }}
+                  title={hc.label}
+                >
+                  {isSelected && <Check size={14} strokeWidth={3} />}
+                </button>
+              );
+            })}
           </div>
         </div>
 
-        {/* COIFFURE */}
+        {/* COUPE / COIFFURE */}
         <div>
-          <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary, #6B7280)', display: 'block', marginBottom: '4px' }}>
-            Coupe / Coiffure
+          <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary, #6B7280)', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
+            Coupe & Style
           </label>
           <select
             value={top}
             onChange={(e) => setTop(e.target.value)}
             style={{
-              width: '100%', padding: '6px 8px', borderRadius: '10px',
+              width: '100%', padding: '8px 10px', borderRadius: '12px',
               border: '1px solid var(--border-color, rgba(0,0,0,0.15))',
               backgroundColor: 'var(--bg-card, #FFFFFF)',
               color: 'var(--text-main, #1F2937)',
-              fontSize: '12px', fontWeight: '700', outline: 'none'
+              fontSize: '12.5px', fontWeight: '700', outline: 'none', cursor: 'pointer'
             }}
           >
             {HAIR_STYLES.map((hs) => (
@@ -255,37 +273,52 @@ export default function InclusiveAvatarBuilder({ currentAvatar, onSelectAvatar, 
           </select>
         </div>
 
-        {/* OPTIONS : LUNETTES ET BARBE */}
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
-          <button
-            type="button"
-            onClick={() => setHasGlasses(prev => !prev)}
-            style={{
-              flex: 1, padding: '7px 8px', borderRadius: '10px',
-              border: hasGlasses ? '1.5px solid var(--accent-primary, #C67D5B)' : '1px solid var(--border-color, rgba(0,0,0,0.15))',
-              backgroundColor: hasGlasses ? 'rgba(198, 125, 91, 0.12)' : 'var(--bg-card, #FFFFFF)',
-              color: hasGlasses ? 'var(--accent-primary, #C67D5B)' : 'var(--text-secondary, #6B7280)',
-              fontSize: '11px', fontWeight: '800', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'
-            }}
-          >
-            👓 {hasGlasses ? 'Avec Lunettes' : 'Sans Lunettes'}
-          </button>
+        {/* BOUTONS À BASCULE (TOGGLE PILLS) : LUNETTES ET PILOSITÉ */}
+        <div>
+          <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary, #6B7280)', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
+            Accessoires & Détails
+          </label>
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <button
+              type="button"
+              onClick={() => setHasGlasses(prev => !prev)}
+              style={{
+                flex: 1,
+                padding: '8px 10px',
+                borderRadius: '999px',
+                border: hasGlasses ? '2px solid var(--accent-primary, #C67D5B)' : '1px solid var(--border-color, rgba(0,0,0,0.15))',
+                backgroundColor: hasGlasses ? 'var(--accent-primary, #C67D5B)' : 'var(--bg-card, #FFFFFF)',
+                color: hasGlasses ? '#FFFFFF' : 'var(--text-secondary, #6B7280)',
+                fontSize: '11.5px', fontWeight: '800', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
+                boxShadow: hasGlasses ? '0 2px 8px rgba(198, 125, 91, 0.3)' : 'none',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <Glasses size={14} />
+              <span>{hasGlasses ? 'Lunettes ✓' : 'Lunettes'}</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setHasBeard(prev => !prev)}
-            style={{
-              flex: 1, padding: '7px 8px', borderRadius: '10px',
-              border: hasBeard ? '1.5px solid var(--accent-primary, #C67D5B)' : '1px solid var(--border-color, rgba(0,0,0,0.15))',
-              backgroundColor: hasBeard ? 'rgba(198, 125, 91, 0.12)' : 'var(--bg-card, #FFFFFF)',
-              color: hasBeard ? 'var(--accent-primary, #C67D5B)' : 'var(--text-secondary, #6B7280)',
-              fontSize: '11px', fontWeight: '800', cursor: 'pointer',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px'
-            }}
-          >
-            🧔 {hasBeard ? 'Avec Barbe' : 'Sans Barbe'}
-          </button>
+            <button
+              type="button"
+              onClick={() => setHasBeard(prev => !prev)}
+              style={{
+                flex: 1,
+                padding: '8px 10px',
+                borderRadius: '999px',
+                border: hasBeard ? '2px solid var(--accent-primary, #C67D5B)' : '1px solid var(--border-color, rgba(0,0,0,0.15))',
+                backgroundColor: hasBeard ? 'var(--accent-primary, #C67D5B)' : 'var(--bg-card, #FFFFFF)',
+                color: hasBeard ? '#FFFFFF' : 'var(--text-secondary, #6B7280)',
+                fontSize: '11.5px', fontWeight: '800', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
+                boxShadow: hasBeard ? '0 2px 8px rgba(198, 125, 91, 0.3)' : 'none',
+                transition: 'all 0.15s ease'
+              }}
+            >
+              <UserCheck size={14} />
+              <span>{hasBeard ? 'Barbe ✓' : 'Barbe'}</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
