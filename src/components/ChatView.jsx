@@ -265,10 +265,13 @@ function ChatView({
   };
 
   // Gestion de l'ouverture d'un outil workspace avec invitation automatique dans la conversation
-  const handleOpenWorkspaceTool = async (toolType) => {
+  const handleOpenWorkspaceTool = async (toolType, documentId = null) => {
     setIsWorkspaceMenuOpen(false);
 
-    const currentBoardId = effectiveSelectedChat?.id ? `board-${effectiveSelectedChat.id}` : 'default_board';
+    const targetChat = effectiveSelectedChat || selectedChat;
+    const currentBoardId = documentId || (targetChat?.id ? `board-${targetChat.id}` : 'default_board');
+    const effectiveDocId = documentId || (targetChat?.id ? `doc-${targetChat.id}` : 'default_shared_doc');
+    const chatId = targetChat?.id ? String(targetChat.id) : null;
 
     if (toolType === 'whiteboard') {
       setActiveWhiteboardBoardId(currentBoardId);
@@ -281,29 +284,46 @@ function ChatView({
     } else if (toolType === 'sheets') {
       setOfficeInitialTab('sheets');
       setIsCloudOfficeOpen(true);
+    } else if (toolType === 'slides') {
+      setOfficeInitialTab('slides');
+      setIsCloudOfficeOpen(true);
+    } else if (toolType === 'planning' || toolType === 'calendar' || toolType === 'drive' || toolType === 'workspace' || toolType === 'tools') {
+      setIsWorkspaceToolsOpen(true);
     }
 
-    if (effectiveSelectedChat?.id && db) {
+    if (chatId && db) {
       const toolIcons = {
         whiteboard: '🎨',
         notes: '📝',
         docs: '📄',
         sheets: '📊',
+        slides: '📽️',
+        planning: '📅',
+        calendar: '📅',
+        drive: '📁',
+        workspace: '💼',
+        tools: '💼',
       };
       const toolLabels = {
-        whiteboard: 'Tableau Blanc Collaboratif (0ms)',
+        whiteboard: 'Tableau Blanc Collaboratif',
         notes: 'Notes Partagées (Apple-Style)',
         docs: 'Document Partagé (Troco Docs)',
         sheets: 'Tableur Collaboratif (Troco Sheets)',
+        slides: 'Présentation (Troco Slides)',
+        planning: 'Planning & Réunions HD',
+        calendar: 'Planning & Réunions HD',
+        drive: 'Cloud Drive Collaboratif',
+        workspace: 'Outils Pro Workspace',
+        tools: 'Outils Pro Workspace',
       };
       const authorName = profile?.name || 'Moi';
+      const authorUid = profile?.uid || profile?.id || 'me';
       const text = `${toolIcons[toolType] || '🚀'} ${authorName} a démarré une session ${toolLabels[toolType] || 'Workspace'}`;
 
       try {
-        const chatDocId = String(effectiveSelectedChat.id);
         const msgPayload = {
           text,
-          sender: profile?.id || profile?.name || 'me',
+          sender: authorUid,
           senderName: authorName,
           senderAvatar: profile?.avatar || '',
           timestamp: serverTimestamp(),
@@ -311,16 +331,19 @@ function ChatView({
           type: 'workspace_invite',
           kind: 'workspace_invite',
           workspaceType: toolType,
-          workspaceTitle: toolLabels[toolType],
+          workspaceTitle: toolLabels[toolType] || 'Workspace',
+          workspaceId: effectiveDocId,
+          boardId: currentBoardId,
+          docId: effectiveDocId,
         };
 
-        await addDoc(collection(db, 'chats', chatDocId, 'messages'), msgPayload);
-        await updateDoc(doc(db, 'chats', chatDocId), {
+        await addDoc(collection(db, 'chats', chatId, 'messages'), msgPayload);
+        await updateDoc(doc(db, 'chats', chatId), {
           lastMessage: text,
           lastMessageTimestamp: serverTimestamp(),
-          lastMessageSender: profile?.id || profile?.name || 'me',
+          lastMessageSender: authorUid,
           updatedAt: serverTimestamp(),
-        });
+        }).catch(() => {});
       } catch (err) {
         console.warn('[ChatView] Send workspace invite notice:', err);
       }
@@ -1964,6 +1987,11 @@ function ChatView({
                       } else if (type === 'sheets') {
                         setOfficeInitialTab('sheets');
                         setIsCloudOfficeOpen(true);
+                      } else if (type === 'slides') {
+                        setOfficeInitialTab('slides');
+                        setIsCloudOfficeOpen(true);
+                      } else if (type === 'planning' || type === 'calendar' || type === 'drive' || type === 'workspace' || type === 'tools') {
+                        setIsWorkspaceToolsOpen(true);
                       } else {
                         const specificBoardId = targetBoardId || targetWsId || msg.boardId || msg.workspaceId;
                         openWhiteboard(specificBoardId, targetVersion || msg.version);
@@ -3165,14 +3193,14 @@ function ChatView({
       )}
 
       {/* MODALE NOTES PARTAGÉES COLLABORATIVES APPLE-STYLE (LAZY LOADED) */}
-      {isSharedDocOpen && activeChatObj && (
+      {isSharedDocOpen && (activeChatObj || selectedChat) && (
         <Suspense fallback={null}>
           <SharedDocumentModal
             isOpen={isSharedDocOpen}
             onClose={() => setIsSharedDocOpen(false)}
-            groupId={activeChatObj.id || activeChatObj.firestoreId || selectedChat?.id || 'group_notes'}
-            docId={activeChatObj.id ? `doc-${activeChatObj.id}` : 'default_shared_doc'}
-            projectTitle={activeChatObj.projectTitle || activeChatObj.user || 'Notes Partagées'}
+            groupId={activeChatObj?.id || activeChatObj?.firestoreId || selectedChat?.id || 'group_notes'}
+            docId={activeChatObj?.id ? `doc-${activeChatObj.id}` : (selectedChat?.id ? `doc-${selectedChat.id}` : 'default_shared_doc')}
+            projectTitle={activeChatObj?.projectTitle || activeChatObj?.user || selectedChat?.projectTitle || selectedChat?.user || 'Notes Partagées'}
             currentUser={profile}
             darkMode={darkMode}
             handleSendMessage={handleSendMessage}
@@ -3187,13 +3215,13 @@ function ChatView({
       )}
 
       {/* MODALE SUITE OFFICE CLOUD & DOCS (LAZY LOADED) */}
-      {isCloudOfficeOpen && activeChatObj && (
+      {isCloudOfficeOpen && (activeChatObj || selectedChat) && (
         <Suspense fallback={null}>
           <CloudOfficeSuiteModal
             isOpen={isCloudOfficeOpen}
             onClose={() => setIsCloudOfficeOpen(false)}
-            groupId={activeChatObj.id || activeChatObj.firestoreId || 'group_office'}
-            projectTitle={activeChatObj.projectTitle || activeChatObj.user || 'Suite Office Cloud'}
+            groupId={activeChatObj?.id || activeChatObj?.firestoreId || selectedChat?.id || 'group_office'}
+            projectTitle={activeChatObj?.projectTitle || activeChatObj?.user || selectedChat?.projectTitle || selectedChat?.user || 'Suite Office Cloud'}
             currentUser={profile}
             darkMode={darkMode}
             initialTab={officeInitialTab}
@@ -3202,13 +3230,13 @@ function ChatView({
       )}
 
       {/* MODALE OUTILS PRO WORKSPACE (DRIVE, CALENDAR, REMOTE) (LAZY LOADED) */}
-      {isWorkspaceToolsOpen && activeChatObj && (
+      {isWorkspaceToolsOpen && (activeChatObj || selectedChat) && (
         <Suspense fallback={null}>
           <ProjectWorkspaceToolsModal
             isOpen={isWorkspaceToolsOpen}
             onClose={() => setIsWorkspaceToolsOpen(false)}
-            projectTitle={activeChatObj.projectTitle || activeChatObj.user || 'Projet Collaboratif'}
-            groupId={activeChatObj.id || activeChatObj.firestoreId || 'group_workspace'}
+            projectTitle={activeChatObj?.projectTitle || activeChatObj?.user || selectedChat?.projectTitle || selectedChat?.user || 'Projet Collaboratif'}
+            groupId={activeChatObj?.id || activeChatObj?.firestoreId || selectedChat?.id || 'group_workspace'}
             onStartVideoCall={() => startCall('video')}
             onStartScreenShare={() => startCall('video')}
             darkMode={darkMode}

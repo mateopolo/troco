@@ -64,6 +64,19 @@ export default function SharedDocumentModal({
             }
           }
           setSaveStatus('Synchronisé en direct 🟢');
+        } else {
+          // Initialisation immédiate par défaut si le document n'existe pas encore
+          const myName = currentUser?.name || 'Moi';
+          const myUid = currentUser?.uid || currentUser?.id || 'me';
+          setDoc(noteDocRef, {
+            docId: effectiveDocId,
+            groupId: String(groupId || 'default_group'),
+            title: title || 'Notes Partagées',
+            content: DEFAULT_NOTE_CONTENT,
+            lastEditor: myName,
+            lastEditorUid: myUid,
+            updatedAt: serverTimestamp(),
+          }, { merge: true }).catch(() => {});
         }
       }, (err) => {
         console.warn('[Firestore Shared Note] Snapshot notice:', err);
@@ -71,7 +84,7 @@ export default function SharedDocumentModal({
 
       return () => unsubscribe();
     } catch (_) {}
-  }, [isOpen, effectiveDocId, currentUser]);
+  }, [isOpen, effectiveDocId, currentUser, groupId, title]);
 
   // Sauvegarde debouncée vers Firestore
   const syncToFirestore = useCallback((newContent, newTitle) => {
@@ -260,33 +273,38 @@ export default function SharedDocumentModal({
   return (
     <Portal>
       <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        backgroundColor: 'rgba(15, 12, 11, 0.82)',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
-        zIndex: 100010,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '16px',
-      }}
-    >
-      <div
+        className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/60 backdrop-blur-sm"
         style={{
-          width: '100%',
-          maxWidth: '960px',
-          height: '90vh',
-          backgroundColor: darkMode ? '#1C1816' : '#FAF7F2',
-          borderRadius: '24px',
-          border: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-color)',
-          boxShadow: '0 25px 60px rgba(0,0,0,0.35)',
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(15, 12, 11, 0.82)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          zIndex: 999999,
           display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '16px',
         }}
+        onClick={onClose}
       >
+        <div
+          onClick={(e) => e.stopPropagation()}
+          style={{
+            position: 'relative',
+            zIndex: 1000000,
+            width: '100%',
+            maxWidth: '960px',
+            height: '90vh',
+            backgroundColor: darkMode ? '#1C1816' : '#FAF7F2',
+            borderRadius: '24px',
+            border: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-color)',
+            boxShadow: '0 25px 60px rgba(0,0,0,0.35)',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+          }}
+        >
         {/* HEADER APPLE NOTES */}
         <div
           style={{

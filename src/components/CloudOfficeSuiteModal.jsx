@@ -168,6 +168,16 @@ export default function CloudOfficeSuiteModal({
             setCollaborators(data.collaborators);
           }
           setSaveStatus('Synchronisé en direct 🟢');
+        } else {
+          // Initialisation immédiate par défaut si non existant
+          const myName = currentUser?.name || 'Moi';
+          setDoc(docRef, {
+            title: docTitle || 'Document Partagé',
+            content: DEFAULT_DOC_TEXT,
+            lastEditor: myName,
+            collaborators: [myName, 'Collaborateur'],
+            updatedAt: serverTimestamp(),
+          }, { merge: true }).catch(() => {});
         }
       }, (err) => {
         console.warn('[TrocoDocs] snapshot error:', err);
@@ -175,7 +185,7 @@ export default function CloudOfficeSuiteModal({
 
       return () => unsubscribe();
     } catch (_) {}
-  }, [isOpen, groupId, currentUser]);
+  }, [isOpen, groupId, currentUser, docTitle]);
 
   // Synchronisation Firestore en temps réel pour Troco Sheets
   useEffect(() => {
@@ -191,6 +201,15 @@ export default function CloudOfficeSuiteModal({
             setSheetData(data.gridData);
           }
           setSaveStatus('Synchronisé en direct 🟢');
+        } else {
+          // Initialisation immédiate par défaut si non existant
+          const myName = currentUser?.name || 'Moi';
+          setDoc(sheetRef, {
+            title: sheetTitle || 'Tableur Collaboratif',
+            gridData: DEFAULT_SHEET_DATA,
+            lastEditor: myName,
+            updatedAt: serverTimestamp(),
+          }, { merge: true }).catch(() => {});
         }
       }, (err) => {
         console.warn('[TrocoSheets] snapshot error:', err);
@@ -198,7 +217,7 @@ export default function CloudOfficeSuiteModal({
 
       return () => unsubscribe();
     } catch (_) {}
-  }, [isOpen, groupId, currentUser]);
+  }, [isOpen, groupId, currentUser, sheetTitle]);
 
   // Synchronisation Firestore en temps réel pour Troco Slides
   useEffect(() => {
@@ -214,6 +233,15 @@ export default function CloudOfficeSuiteModal({
             setSlides(data.slides);
           }
           setSaveStatus('Synchronisé en direct 🟢');
+        } else {
+          // Initialisation immédiate par défaut si non existant
+          const myName = currentUser?.name || 'Moi';
+          setDoc(slidesRef, {
+            title: slidesTitle || 'Présentation Collaboratif',
+            slides: DEFAULT_SLIDES,
+            lastEditor: myName,
+            updatedAt: serverTimestamp(),
+          }, { merge: true }).catch(() => {});
         }
       }, (err) => {
         console.warn('[TrocoSlides] snapshot error:', err);
@@ -221,7 +249,7 @@ export default function CloudOfficeSuiteModal({
 
       return () => unsubscribe();
     } catch (_) {}
-  }, [isOpen, groupId, currentUser]);
+  }, [isOpen, groupId, currentUser, slidesTitle]);
 
   // Sauvegarde des modifications Troco Docs
   const saveDocToFirestore = useCallback(async (newContent, newTitle = docTitle) => {
@@ -528,129 +556,135 @@ export default function CloudOfficeSuiteModal({
   return (
     <Portal>
       <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        backgroundColor: 'rgba(28, 24, 22, 0.75)',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
-        zIndex: 100050,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '16px',
-      }}
-    >
-      {/* DIAPORAMA PLEIN ÉCRAN */}
-      {isPresenting && (
+        className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+        style={{
+          position: 'fixed',
+          inset: 0,
+          backgroundColor: 'rgba(28, 24, 22, 0.75)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          zIndex: 999999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '16px',
+        }}
+        onClick={onClose}
+      >
+        {/* DIAPORAMA PLEIN ÉCRAN */}
+        {isPresenting && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              backgroundColor: slides[currentSlideIndex]?.theme === 'dark' ? '#181513' : slides[currentSlideIndex]?.theme === 'terracotta' ? '#C67D5B' : '#FAF7F2',
+              color: slides[currentSlideIndex]?.theme === 'light' ? '#2D2825' : '#FFFFFF',
+              zIndex: 1000099,
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              padding: '48px',
+              animation: 'fadeIn 0.25s ease',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '13px', fontWeight: '800', opacity: 0.7 }}>
+                Diapo {currentSlideIndex + 1} / {slides.length}
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsPresenting(false)}
+                style={{
+                  border: 'none',
+                  background: 'rgba(255,255,255,0.2)',
+                  color: 'inherit',
+                  borderRadius: '50%',
+                  width: '36px',
+                  height: '36px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ maxWidth: '900px', margin: '0 auto', width: '100%', textAlign: 'center' }}>
+              <h1 className="font-editorial-heading" style={{ fontSize: '48px', fontWeight: '700', marginBottom: '16px', letterSpacing: '-0.02em' }}>
+                {slides[currentSlideIndex]?.title}
+              </h1>
+              <p style={{ fontSize: '20px', opacity: 0.9, marginBottom: '36px', fontStyle: 'italic' }}>
+                {slides[currentSlideIndex]?.subtitle}
+              </p>
+              <div style={{ textAlign: 'left', maxWidth: '600px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                {(slides[currentSlideIndex]?.bullets || []).map((b, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '18px', fontWeight: '600' }}>
+                    <Sparkles size={18} style={{ opacity: 0.8, flexShrink: 0 }} />
+                    <span>{b}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
+              <button
+                disabled={currentSlideIndex === 0}
+                onClick={() => setCurrentSlideIndex(prev => Math.max(0, prev - 1))}
+                style={{
+                  border: 'none',
+                  background: 'rgba(255,255,255,0.2)',
+                  color: 'inherit',
+                  padding: '10px 20px',
+                  borderRadius: '12px',
+                  cursor: currentSlideIndex === 0 ? 'not-allowed' : 'pointer',
+                  opacity: currentSlideIndex === 0 ? 0.4 : 1,
+                  fontWeight: '700',
+                }}
+              >
+                ← Précédent
+              </button>
+              <button
+                disabled={currentSlideIndex === slides.length - 1}
+                onClick={() => setCurrentSlideIndex(prev => Math.min(slides.length - 1, prev + 1))}
+                style={{
+                  border: 'none',
+                  background: 'rgba(255,255,255,0.2)',
+                  color: 'inherit',
+                  padding: '10px 20px',
+                  borderRadius: '12px',
+                  cursor: currentSlideIndex === slides.length - 1 ? 'not-allowed' : 'pointer',
+                  opacity: currentSlideIndex === slides.length - 1 ? 0.4 : 1,
+                  fontWeight: '700',
+                }}
+              >
+                Suivant →
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* CONTENEUR MODALE PRINCIPALE */}
         <div
+          onClick={(e) => e.stopPropagation()}
           style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: slides[currentSlideIndex]?.theme === 'dark' ? '#181513' : slides[currentSlideIndex]?.theme === 'terracotta' ? '#C67D5B' : '#FAF7F2',
-            color: slides[currentSlideIndex]?.theme === 'light' ? '#2D2825' : '#FFFFFF',
-            zIndex: 100099,
+            position: 'relative',
+            zIndex: 1000000,
+            width: '100%',
+            maxWidth: '1100px',
+            height: '90vh',
+            maxHeight: '850px',
+            backgroundColor: 'var(--bg-card)',
+            borderRadius: '24px',
+            border: '1px solid var(--border-color)',
+            boxShadow: 'var(--shadow-modal)',
             display: 'flex',
             flexDirection: 'column',
-            justifyContent: 'space-between',
-            padding: '48px',
-            animation: 'fadeIn 0.25s ease',
+            overflow: 'hidden',
+            animation: 'fadeSlideUp 0.3s ease both',
           }}
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div style={{ fontSize: '13px', fontWeight: '800', opacity: 0.8 }}>
-              Troco Slides • {currentSlideIndex + 1} / {slides.length}
-            </div>
-            <button
-              onClick={() => setIsPresenting(false)}
-              style={{
-                border: 'none',
-                background: 'rgba(255,255,255,0.2)',
-                color: 'inherit',
-                borderRadius: '50%',
-                width: '36px',
-                height: '36px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <X size={20} />
-            </button>
-          </div>
-
-          <div style={{ maxWidth: '900px', margin: '0 auto', width: '100%', textAlign: 'center' }}>
-            <h1 className="font-editorial-heading" style={{ fontSize: '48px', fontWeight: '700', marginBottom: '16px', letterSpacing: '-0.02em' }}>
-              {slides[currentSlideIndex]?.title}
-            </h1>
-            <p style={{ fontSize: '20px', opacity: 0.9, marginBottom: '36px', fontStyle: 'italic' }}>
-              {slides[currentSlideIndex]?.subtitle}
-            </p>
-            <div style={{ textAlign: 'left', maxWidth: '600px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              {(slides[currentSlideIndex]?.bullets || []).map((b, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '18px', fontWeight: '600' }}>
-                  <Sparkles size={18} style={{ opacity: 0.8, flexShrink: 0 }} />
-                  <span>{b}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
-            <button
-              disabled={currentSlideIndex === 0}
-              onClick={() => setCurrentSlideIndex(prev => Math.max(0, prev - 1))}
-              style={{
-                border: 'none',
-                background: 'rgba(255,255,255,0.2)',
-                color: 'inherit',
-                padding: '10px 20px',
-                borderRadius: '12px',
-                cursor: currentSlideIndex === 0 ? 'not-allowed' : 'pointer',
-                opacity: currentSlideIndex === 0 ? 0.4 : 1,
-                fontWeight: '700',
-              }}
-            >
-              ← Précédent
-            </button>
-            <button
-              disabled={currentSlideIndex === slides.length - 1}
-              onClick={() => setCurrentSlideIndex(prev => Math.min(slides.length - 1, prev + 1))}
-              style={{
-                border: 'none',
-                background: 'rgba(255,255,255,0.2)',
-                color: 'inherit',
-                padding: '10px 20px',
-                borderRadius: '12px',
-                cursor: currentSlideIndex === slides.length - 1 ? 'not-allowed' : 'pointer',
-                opacity: currentSlideIndex === slides.length - 1 ? 0.4 : 1,
-                fontWeight: '700',
-              }}
-            >
-              Suivant →
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* CONTENEUR MODALE PRINCIPALE */}
-      <div
-        style={{
-          width: '100%',
-          maxWidth: '1100px',
-          height: '90vh',
-          maxHeight: '850px',
-          backgroundColor: 'var(--bg-card)',
-          borderRadius: '24px',
-          border: '1px solid var(--border-color)',
-          boxShadow: 'var(--shadow-modal)',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-          animation: 'fadeSlideUp 0.3s ease both',
-        }}
-      >
         {/* HEADER MODALE */}
         <div
           style={{
