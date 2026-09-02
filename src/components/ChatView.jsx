@@ -6,7 +6,7 @@ import {
   ChevronLeft, Globe, Edit2, Edit3, Trash2, Copy, Check, X,
   AlertTriangle, Users, Coins, Mic, ShieldAlert, ShieldCheck,
   Palette, Briefcase, Plus, FileText, Calendar, Table,
-  MessageSquareDashed, RefreshCw, MessageSquare, Search
+  MessageSquareDashed, RefreshCw, MessageSquare, Search, Pin
 } from 'lucide-react';
 import { doc, deleteDoc, addDoc, collection, updateDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
 import { db, auth } from '../firebase';
@@ -20,6 +20,7 @@ import WorkspaceMessageCard from '../features/workspace/WorkspaceMessageCard';
 import { hapticLight, hapticSuccess, hapticError } from '../utils/haptics';
 import { EmptyState } from './ui/EmptyState';
 import { playPop, playSwoosh, playSuccessChime } from '../services/audioService';
+import SwipeableChatItem from './SwipeableChatItem';
 
 // Lazy loading des outils collaboratifs & suites vectorielles lourdes pour préserver les performances et la rapidité du build
 const CreateProjectGroupModal = lazy(() => import('./CreateProjectGroupModal'));
@@ -92,7 +93,59 @@ function ChatView({
       return new Set();
     }
   });
+
+  // 🚨 PHASE 53 : ÉPINGLAGE & SUPPRESSION RAPIDE (SWIPE-TO-ACTION)
+  const [pinnedChatIds, setPinnedChatIds] = useState(() => {
+    try {
+      const saved = localStorage.getItem('troco_pinned_chats');
+      return saved ? new Set(JSON.parse(saved)) : new Set();
+    } catch (_) {
+      return new Set();
+    }
+  });
+
+  const togglePinChat = useCallback((chat) => {
+    if (!chat || !chat.id) return;
+    setPinnedChatIds(prev => {
+      const next = new Set(prev);
+      if (next.has(chat.id)) {
+        next.delete(chat.id);
+      } else {
+        next.add(chat.id);
+      }
+      try {
+        localStorage.setItem('troco_pinned_chats', JSON.stringify([...next]));
+      } catch (_) {}
+      return next;
+    });
+  }, []);
+
+  const handleDeleteChat = useCallback(async (chatId, chatObj = null) => {
+    if (!chatId) return;
+    setDeletedChatIds(prev => {
+      const next = new Set(prev);
+      next.add(chatId);
+      try {
+        localStorage.setItem('troco_deleted_chats', JSON.stringify([...next]));
+      } catch (_) {}
+      return next;
+    });
+    if (selectedChat && selectedChat.id === chatId) {
+      if (setSelectedChat) setSelectedChat(null);
+      setMobileSubView('list');
+    }
+    try {
+      const firestoreId = chatObj?.firestoreId || (typeof chatId === 'string' ? chatId : null);
+      if (firestoreId && db) {
+        await deleteDoc(doc(db, 'chats', firestoreId));
+      }
+    } catch (err) {
+      console.warn('[Firestore] Chat delete error:', err);
+    }
+  }, [selectedChat, setSelectedChat]);
+
   const [confirmDeleteChat, setConfirmDeleteChat] = useState(null);
+
   const [isDirectTransferOpen, setIsDirectTransferOpen] = useState(false);
   const [directTokensCount, setDirectTokensCount] = useState(1);
   const [transferComment, setTransferComment] = useState('');
@@ -391,15 +444,19 @@ function ChatView({
     return 0;
   }, [chatThreads]);
 
-  // TRI CHRONOLOGIQUE RIGOUREUX DÉCROISSANT (Le message le plus récent reste toujours au sommet)
+  // TRI CHRONOLOGIQUE RIGOUREUX AVEC PRIORITÉ ABSOLUE AUX CONVERSATIONS ÉPINGLÉES
   const visibleChats = useMemo(() => {
     const list = (mockChats || []).filter(chat => !deletedChatIds.has(chat.id));
     return [...list].sort((a, b) => {
+      const isPinnedA = pinnedChatIds.has(a.id);
+      const isPinnedB = pinnedChatIds.has(b.id);
+      if (isPinnedA && !isPinnedB) return -1;
+      if (!isPinnedA && isPinnedB) return 1;
       const timeA = getChatLatestTimestamp(a);
       const timeB = getChatLatestTimestamp(b);
       return timeB - timeA;
     });
-  }, [mockChats, deletedChatIds, getChatLatestTimestamp]);
+  }, [mockChats, deletedChatIds, pinnedChatIds, getChatLatestTimestamp]);
 
   const currentChatId = effectiveSelectedChat ? effectiveSelectedChat.id : null;
   const messages = useMemo(() => {
@@ -708,30 +765,7 @@ function ChatView({
 
   const handleConfirmDelete = async () => {
     if (!confirmDeleteChat) return;
-    const targetChat = confirmDeleteChat;
-    const targetId = targetChat.id;
-
-    setDeletedChatIds(prev => {
-      const next = new Set([...prev, targetId]);
-      try {
-        localStorage.setItem('troco_deleted_chats', JSON.stringify([...next]));
-      } catch (_) {}
-      return next;
-    });
-
-    if (activeChatObj?.id === targetId || effectiveSelectedChat?.id === targetId) {
-      setSelectedChat(null);
-    }
-
-    try {
-      const firestoreId = targetChat.firestoreId || (typeof targetId === 'string' ? targetId : null);
-      if (firestoreId) {
-        await deleteDoc(doc(db, 'chats', firestoreId));
-      }
-    } catch (err) {
-      console.warn('[Firestore] Chat delete error:', err);
-    }
-
+    await handleDeleteChat(confirmDeleteChat.id, confirmDeleteChat);
     setConfirmDeleteChat(null);
   };
 
@@ -2832,145 +2866,157 @@ function ChatView({
                     const showWaitingBadge = !isUnread && lastSenderIsMe;
 
                     return (
-                      <div
+                      <SwipeableChatItem
                         key={chat.id}
-                        style={{ position: 'relative' }}
-                        className="chat-row-container"
+                        chat={chat}
+                        isPinned={pinnedChatIds.has(chat.id)}
+                        onTogglePin={togglePinChat}
+                        onDelete={() => handleDeleteChat(chat.id)}
                       >
-                        <button
-                          onClick={() => handleSelectChatMobile(chat)}
-                          style={{
-                            display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px',
-                            borderRadius: '16px', cursor: 'pointer', textAlign: 'left',
-                            width: '100%',
-                            backgroundColor: isSelected
-                              ? 'var(--bg-subtle)'
-                              : (isUnread ? 'var(--bg-subtle)' : 'transparent'),
-                            border: isSelected
-                              ? '1px solid var(--border-color)'
-                              : '1px solid transparent',
-                            borderLeft: isSelected
-                              ? '4px solid var(--accent-primary)'
-                              : (isUnread ? '4px solid var(--accent-terracotta)' : '4px solid transparent'),
-                            boxShadow: isSelected ? 'var(--shadow-card)' : 'none',
-                            transition: 'all 0.2s ease'
-                          }}
+                        <div
+                          style={{ position: 'relative' }}
+                          className="chat-row-container"
                         >
-                          <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: chat.isGroup ? 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%)' : 'linear-gradient(135deg, var(--text-main) 0%, var(--text-secondary) 100%)', color: 'var(--bg-card)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: chat.isGroup ? '18px' : '15px', flexShrink: 0, boxShadow: 'var(--shadow-card)', position: 'relative' }}>
-                            {chat.isGroup ? '👥' : (chat.user ? chat.user[0].toUpperCase() : 'T')}
-                            {isUserOnline(chat.user, chat.authorUid || chat.userId) ? (
-                              <span
-                                title="En ligne"
-                                style={{
-                                  position: 'absolute', bottom: '0', right: '0',
-                                  width: '10px', height: '10px',
-                                  backgroundColor: 'var(--accent-success)',
-                                  borderRadius: '50%', border: '2px solid var(--bg-card)',
-                                  boxShadow: '0 0 6px var(--accent-success)'
-                                }}
-                              />
-                            ) : (
-                              <span
-                                title="Hors ligne"
-                                style={{
-                                  position: 'absolute', bottom: '0', right: '0',
-                                  width: '10px', height: '10px',
-                                  backgroundColor: 'var(--text-secondary)',
-                                  opacity: 0.4,
-                                  borderRadius: '50%', border: '2px solid var(--bg-card)'
-                                }}
-                              />
-                            )}
+                          <button
+                            onClick={() => handleSelectChatMobile(chat)}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px',
+                              borderRadius: '16px', cursor: 'pointer', textAlign: 'left',
+                              width: '100%',
+                              backgroundColor: isSelected
+                                ? 'var(--bg-subtle)'
+                                : (isUnread ? 'var(--bg-subtle)' : 'transparent'),
+                              border: isSelected
+                                ? '1px solid var(--border-color)'
+                                : '1px solid transparent',
+                              borderLeft: isSelected
+                                ? '4px solid var(--accent-primary)'
+                                : (isUnread ? '4px solid var(--accent-terracotta)' : (pinnedChatIds.has(chat.id) ? '4px solid #3B82F6' : '4px solid transparent')),
+                              boxShadow: isSelected ? 'var(--shadow-card)' : 'none',
+                              transition: 'all 0.2s ease'
+                            }}
+                          >
+                            <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: chat.isGroup ? 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%)' : 'linear-gradient(135deg, var(--text-main) 0%, var(--text-secondary) 100%)', color: 'var(--bg-card)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: chat.isGroup ? '18px' : '15px', flexShrink: 0, boxShadow: 'var(--shadow-card)', position: 'relative' }}>
+                              {chat.isGroup ? '👥' : (chat.user ? chat.user[0].toUpperCase() : 'T')}
+                              {isUserOnline(chat.user, chat.authorUid || chat.userId) ? (
+                                <span
+                                  title="En ligne"
+                                  style={{
+                                    position: 'absolute', bottom: '0', right: '0',
+                                    width: '10px', height: '10px',
+                                    backgroundColor: 'var(--accent-success)',
+                                    borderRadius: '50%', border: '2px solid var(--bg-card)',
+                                    boxShadow: '0 0 6px var(--accent-success)'
+                                  }}
+                                />
+                              ) : (
+                                <span
+                                  title="Hors ligne"
+                                  style={{
+                                    position: 'absolute', bottom: '0', right: '0',
+                                    width: '10px', height: '10px',
+                                    backgroundColor: 'var(--text-secondary)',
+                                    opacity: 0.4,
+                                    borderRadius: '50%', border: '2px solid var(--bg-card)'
+                                  }}
+                                />
+                              )}
 
-                            {unreadCount > 0 && (
-                              <span style={{
-                                position: 'absolute', top: '-4px', right: '-4px',
-                                minWidth: '18px', height: '18px', padding: '0 5px',
-                                backgroundColor: 'var(--accent-primary)', color: '#FFFFFF',
-                                borderRadius: '999px', border: '1.8px solid var(--bg-card)',
-                                fontSize: '10px', fontWeight: '900',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                boxShadow: 'var(--shadow-card)'
-                              }}>
-                                {unreadCount > 9 ? '+9' : `+${unreadCount}`}
-                              </span>
-                            )}
-                          </div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
-                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: isUnread ? '800' : '600', fontSize: isUnread ? '14.5px' : '14px', color: 'var(--text-main)' }}>
-                                {chat.isGroup ? (chat.projectTitle || chat.user) : chat.user}
-                                {chat.isGroup ? (
-                                  <span style={{ fontSize: '9px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', padding: '1px 6px', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
-                                    🚀 Hub ({chat.participants?.length || chat.members?.length || 2}m)
-                                  </span>
-                                ) : (chat.isDemo || chat.persona || (typeof chat.id === 'number' && chat.id < 300)) ? (
-                                  <span style={{ fontSize: '9px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)', padding: '1px 6px', borderRadius: '6px' }}>
-                                    🤖 IA
-                                  </span>
-                                ) : null}
-                              </span>
-                              <span style={{ fontSize: '10px', color: isUnread ? 'var(--accent-primary)' : 'var(--text-secondary)', fontWeight: isUnread ? '800' : '500', flexShrink: 0, marginLeft: '6px' }}>
-                                {chatTimestampLabel || statusText}
-                              </span>
+                              {unreadCount > 0 && (
+                                <span style={{
+                                  position: 'absolute', top: '-4px', right: '-4px',
+                                  minWidth: '18px', height: '18px', padding: '0 5px',
+                                  backgroundColor: 'var(--accent-primary)', color: '#FFFFFF',
+                                  borderRadius: '999px', border: '1.8px solid var(--bg-card)',
+                                  fontSize: '10px', fontWeight: '900',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  boxShadow: 'var(--shadow-card)'
+                                }}>
+                                  {unreadCount > 9 ? '+9' : `+${unreadCount}`}
+                                </span>
+                              )}
                             </div>
-                            <div style={{ fontSize: '12px', fontWeight: isUnread ? '800' : '500', color: isUnread ? 'var(--accent-primary)' : 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: '2px' }}>
-                              {listingTitleText}
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
-                              <div style={{ fontSize: '11px', fontWeight: isUnread ? '800' : '400', color: isUnread ? 'var(--text-main)' : 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, minWidth: 0 }}>
-                                {lastMsgText}
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: isUnread ? '800' : '600', fontSize: isUnread ? '14.5px' : '14px', color: 'var(--text-main)' }}>
+                                  {chat.isGroup ? (chat.projectTitle || chat.user) : chat.user}
+                                  {pinnedChatIds.has(chat.id) && (
+                                    <span title="Épinglé" style={{ display: 'inline-flex', alignItems: 'center', color: '#3B82F6' }}>
+                                      <Pin size={12} style={{ fill: '#3B82F6' }} />
+                                    </span>
+                                  )}
+                                  {chat.isGroup ? (
+                                    <span style={{ fontSize: '9px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', padding: '1px 6px', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                                      🚀 Hub ({chat.participants?.length || chat.members?.length || 2}m)
+                                    </span>
+                                  ) : (chat.isDemo || chat.persona || (typeof chat.id === 'number' && chat.id < 300)) ? (
+                                    <span style={{ fontSize: '9px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)', padding: '1px 6px', borderRadius: '6px' }}>
+                                      🤖 IA
+                                    </span>
+                                  ) : null}
+                                </span>
+                                <span style={{ fontSize: '10px', color: isUnread ? 'var(--accent-primary)' : 'var(--text-secondary)', fontWeight: isUnread ? '800' : '500', flexShrink: 0, marginLeft: '6px' }}>
+                                  {chatTimestampLabel || statusText}
+                                </span>
                               </div>
-                              {showReplyBadge && (
-                                <span style={{
-                                  flexShrink: 0,
-                                  fontSize: '10px', fontWeight: '800',
-                                  backgroundColor: 'var(--bg-subtle)',
-                                  color: 'var(--accent-primary)',
-                                  padding: '2px 7px', borderRadius: '999px',
-                                  border: '1px solid var(--border-color)',
-                                  whiteSpace: 'nowrap',
-                                  animation: 'pulse 2s infinite'
-                                }}>
-                                  💬 À toi !
-                                </span>
-                              )}
-                              {showWaitingBadge && !isUnread && (
-                                <span style={{
-                                  flexShrink: 0,
-                                  fontSize: '10px', fontWeight: '600',
-                                  color: 'var(--text-secondary)',
-                                  whiteSpace: 'nowrap'
-                                }}>
-                                  ⏳
-                                </span>
-                              )}
+                              <div style={{ fontSize: '12px', fontWeight: isUnread ? '800' : '500', color: isUnread ? 'var(--accent-primary)' : 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: '2px' }}>
+                                {listingTitleText}
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+                                <div style={{ fontSize: '11px', fontWeight: isUnread ? '800' : '400', color: isUnread ? 'var(--text-main)' : 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: 1, minWidth: 0 }}>
+                                  {lastMsgText}
+                                </div>
+                                {showReplyBadge && (
+                                  <span style={{
+                                    flexShrink: 0,
+                                    fontSize: '10px', fontWeight: '800',
+                                    backgroundColor: 'var(--bg-subtle)',
+                                    color: 'var(--accent-primary)',
+                                    padding: '2px 7px', borderRadius: '999px',
+                                    border: '1px solid var(--border-color)',
+                                    whiteSpace: 'nowrap',
+                                    animation: 'pulse 2s infinite'
+                                  }}>
+                                    💬 À toi !
+                                  </span>
+                                )}
+                                {showWaitingBadge && !isUnread && (
+                                  <span style={{
+                                    flexShrink: 0,
+                                    fontSize: '10px', fontWeight: '600',
+                                    color: 'var(--text-secondary)',
+                                    whiteSpace: 'nowrap'
+                                  }}>
+                                    ⏳
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        </button>
+                          </button>
 
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setConfirmDeleteChat(chat);
-                          }}
-                          title="Supprimer cette conversation"
-                          className="chat-delete-btn"
-                          style={{
-                            position: 'absolute', top: '50%', right: '10px',
-                            transform: 'translateY(-50%)',
-                            width: '28px', height: '28px', borderRadius: '50%',
-                            border: 'none',
-                            backgroundColor: 'var(--bg-subtle)',
-                            color: 'var(--accent-primary)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            cursor: 'pointer', opacity: 0, transition: 'opacity 0.2s ease',
-                            zIndex: 2, flexShrink: 0
-                          }}
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setConfirmDeleteChat(chat);
+                            }}
+                            title="Supprimer cette conversation"
+                            className="chat-delete-btn"
+                            style={{
+                              position: 'absolute', top: '50%', right: '10px',
+                              transform: 'translateY(-50%)',
+                              width: '28px', height: '28px', borderRadius: '50%',
+                              border: 'none',
+                              backgroundColor: 'var(--bg-subtle)',
+                              color: 'var(--accent-primary)',
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              cursor: 'pointer', opacity: 0, transition: 'opacity 0.2s ease',
+                              zIndex: 2, flexShrink: 0
+                            }}
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </SwipeableChatItem>
                     );
                   })
                 )}
