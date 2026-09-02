@@ -79,6 +79,14 @@ const WebRTCCallOverlay = React.lazy(() => import('./features/call/WebRTCCallOve
 const PostListingFeature = React.lazy(() => import('./features/post/PostListingFeature'));
 const ProfileFeature = React.lazy(() => import('./features/profile/ProfileFeature'));
 
+// 🚨 PHASE 60 : STANDARDISATION DES TRANSITIONS GLOBAL FRAMER MOTION (Fade + Scale)
+export const pageTransitionVariants = {
+  initial: { opacity: 0, scale: 0.98 },
+  animate: { opacity: 1, scale: 1 },
+  exit: { opacity: 0, scale: 0.98 }
+};
+export const pageTransitionConfig = { duration: 0.2, ease: "easeOut" };
+
 export default function App() {
   const {
     theme,
@@ -3150,10 +3158,11 @@ export default function App() {
         {activeTab === 'feed' && (
           <motion.div
             key="page-feed"
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            variants={pageTransitionVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={pageTransitionConfig}
             style={{ width: '100%' }}
           >
           <div className="feed-layout-container">
@@ -3861,10 +3870,11 @@ export default function App() {
       {activeTab === 'community' && (
         <motion.div
           key="page-community"
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
+          variants={pageTransitionVariants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          transition={pageTransitionConfig}
           style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', flex: 1 }}
         >
           <SectoralErrorBoundary moduleName="Communauté & Troco Live">
@@ -3901,10 +3911,11 @@ export default function App() {
         return (
           <motion.div
             key="page-chat"
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            variants={pageTransitionVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={pageTransitionConfig}
             style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', flex: 1 }}
           >
             <SectoralErrorBoundary moduleName="Messagerie & Hub Collaboratif">
@@ -3958,10 +3969,11 @@ export default function App() {
       {activeTab === 'post' && (
         <motion.div
           key="page-post"
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
+          variants={pageTransitionVariants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          transition={pageTransitionConfig}
           style={{ width: '100%' }}
         >
           <SectoralErrorBoundary featureName="Dépôt d'annonce">
@@ -4009,10 +4021,11 @@ export default function App() {
       {activeTab === 'profile' && (
         <motion.div
           key="page-profile"
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
+          variants={pageTransitionVariants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          transition={pageTransitionConfig}
           style={{ width: '100%' }}
         >
           <Suspense fallback={null}>

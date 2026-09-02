@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import ChatView from '../../components/ChatView';
 import { PullToRefresh } from '../../components/ui/PullToRefresh';
 import { onRenderProfilerCallback } from '../../utils/performanceProfiler';
+import { pageTransitionVariants, pageTransitionConfig } from '../../utils/motionTransitions';
 
 export default function ChatSection({
   activeTab,
@@ -57,10 +58,11 @@ export default function ChatSection({
         <AnimatePresence mode="wait">
           <motion.div
             key={selectedChat ? (selectedChat.id ? `room-${selectedChat.id}` : 'room') : 'list'}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            variants={pageTransitionVariants}
+            initial="initial"
+            animate="animate"
+            exit="exit"
+            transition={pageTransitionConfig}
             style={{ width: '100%', height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column', flex: 1 }}
           >
             <Profiler id="ChatView" onRender={onRenderProfilerCallback}>
