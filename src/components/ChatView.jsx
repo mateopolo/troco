@@ -1503,9 +1503,9 @@ function ChatView({
                 Boolean(msg.proposal)
               ) {
                 const terms = msg.dealTerms || msg.deal || msg.proposal || msg.terms || {};
-                const expectedHours = Number(terms.hours ?? terms.expectedHours ?? (terms.durationValue ? Number(terms.durationValue) : 0)) || 0;
-                const expectedTokens = Number(terms.tokens ?? terms.expectedTokens ?? terms.trocoTokens ?? 0) || 0;
-                const fiatAmount = Number(terms.fiatAmount ?? terms.fiat ?? terms.euroAmount ?? 0) || 0;
+                const expectedHours = typeof terms.hours === 'number' ? terms.hours : (Number(terms.hours ?? terms.expectedHours ?? (terms.durationValue ? Number(terms.durationValue) : 0)) || 0);
+                const expectedTokens = typeof terms.tokens === 'number' ? terms.tokens : (Number(terms.tokens ?? terms.expectedTokens ?? terms.trocoTokens ?? 0) || 0);
+                const fiatAmount = typeof terms.fiatAmount === 'number' ? terms.fiatAmount : (Number(terms.fiatAmount ?? terms.fiat ?? terms.euroAmount ?? 0) || 0);
                 const serviceTitle = terms.title || terms.serviceTitle || terms.itemName || msg.listing || activeChatObj?.listing || "Prestation de service";
                 const rawDescription = terms.conditions || terms.description || terms.notes || msg.text || msg.content || "";
                 const isCounterOffer = Boolean(terms.isCounterOffer || msg.type === 'deal_counter_offer');
@@ -1617,7 +1617,7 @@ function ChatView({
                         </button>
                       )}
 
-                      {/* BADGES DE CONTREPARTIE */}
+                      {/* BADGES DE CONTREPARTIE SÉCURISÉS (VALEURS GARANTIES SANS NaN NI UNDEFINED) */}
                       <div style={{ display: 'flex', gap: '6px', marginBottom: '12px', flexWrap: 'wrap' }}>
                         {(expectedHours > 0 || terms.durationType) && (
                           <span style={{
@@ -1665,108 +1665,52 @@ function ChatView({
                         )}
                       </div>
 
-                      {/* 3 BOUTONS D'ACTION INTERACTIFS POUR LE DESTINATAIRE (ACCEPTER, CONTRE-OFFRE, REFUSER) */}
-                      {isDealPending && isRecipient && (
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', marginTop: '10px' }}>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              hapticSuccess();
-                              playSuccessChime();
-                              if (typeof onAcceptDeal === 'function') {
-                                onAcceptDeal(msg.id, terms);
-                              } else if (typeof handleAcceptDeal === 'function') {
-                                handleAcceptDeal(currentChatId, msg.id, terms);
-                              }
-                            }}
-                            className="premium-button"
-                            style={{
-                              border: 'none',
-                              borderRadius: '12px',
-                              padding: '10px 4px',
-                              background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-                              color: '#FFFFFF',
-                              fontSize: '11.5px',
-                              fontWeight: '800',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '4px',
-                              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.35)',
-                              whiteSpace: 'nowrap',
-                              transition: 'transform 0.15s ease, opacity 0.15s ease'
-                            }}
-                          >
-                            <Check size={14} strokeWidth={2.5} />
-                            <span>Accepter</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              hapticLight();
-                              if (typeof openCounterOffer === 'function') {
-                                openCounterOffer(terms, msg.id);
-                              }
-                            }}
-                            className="premium-button"
-                            style={{
-                              border: 'none',
-                              borderRadius: '12px',
-                              padding: '10px 4px',
-                              background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
-                              color: '#FFFFFF',
-                              fontSize: '11.5px',
-                              fontWeight: '800',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '4px',
-                              boxShadow: 'var(--shadow-accent)',
-                              whiteSpace: 'nowrap',
-                              transition: 'transform 0.15s ease, opacity 0.15s ease'
-                            }}
-                          >
-                            <RefreshCw size={13} strokeWidth={2.5} />
-                            <span>Contre-offre</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              hapticError();
-                              if (typeof handleDeclineDeal === 'function') {
-                                handleDeclineDeal(currentChatId, msg.id);
-                              }
-                            }}
-                            className="premium-button"
-                            style={{
-                              border: '1px solid rgba(239, 68, 68, 0.28)',
-                              borderRadius: '12px',
-                              padding: '10px 4px',
-                              backgroundColor: 'rgba(239, 68, 68, 0.08)',
-                              color: '#EF4444',
-                              fontSize: '11.5px',
-                              fontWeight: '800',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '4px',
-                              whiteSpace: 'nowrap',
-                              transition: 'transform 0.15s ease, opacity 0.15s ease'
-                            }}
-                          >
-                            <X size={14} strokeWidth={2.5} />
-                            <span>Refuser</span>
-                          </button>
-                        </div>
-                      )}
-
-                      {/* ACTIONS DE NÉGOCIATION POUR L'EXPÉDITEUR EN ATTENTE */}
-                      {isDealPending && !isRecipient && (
+                      {/* 🚨 PHASE 81 : LES 3 BOUTONS DE NÉGOCIATION (TOUJOURS RENDUS DANS LE DOM QUAND LE DEAL EST PENDING) */}
+                      {isDealPending && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px' }}>
+                            {/* BOUTON 1 : ACCEPTER */}
+                            <button
+                              type="button"
+                              disabled={!isRecipient}
+                              onClick={() => {
+                                if (!isRecipient) return;
+                                hapticSuccess();
+                                playSuccessChime();
+                                if (typeof onAcceptDeal === 'function') {
+                                  onAcceptDeal(msg.id, terms);
+                                } else if (typeof handleAcceptDeal === 'function') {
+                                  handleAcceptDeal(currentChatId, msg.id, terms);
+                                }
+                              }}
+                              className="premium-button"
+                              style={{
+                                border: 'none',
+                                borderRadius: '12px',
+                                padding: '10px 4px',
+                                background: isRecipient
+                                  ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)'
+                                  : 'var(--bg-subtle)',
+                                color: isRecipient ? '#FFFFFF' : 'var(--text-secondary)',
+                                opacity: isRecipient ? 1 : 0.5,
+                                fontSize: '11.5px',
+                                fontWeight: '800',
+                                cursor: isRecipient ? 'pointer' : 'not-allowed',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '4px',
+                                boxShadow: isRecipient ? '0 4px 12px rgba(16, 185, 129, 0.35)' : 'none',
+                                whiteSpace: 'nowrap',
+                                transition: 'transform 0.15s ease, opacity 0.15s ease'
+                              }}
+                              title={isRecipient ? "Accepter la proposition" : "En attente de la réponse du partenaire..."}
+                            >
+                              <Check size={14} strokeWidth={2.5} />
+                              <span>Accepter</span>
+                            </button>
+
+                            {/* BOUTON 2 : CONTRE-OFFRE */}
                             <button
                               type="button"
                               onClick={() => {
@@ -1779,7 +1723,7 @@ function ChatView({
                               style={{
                                 border: 'none',
                                 borderRadius: '12px',
-                                padding: '9px 4px',
+                                padding: '10px 4px',
                                 background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
                                 color: '#FFFFFF',
                                 fontSize: '11.5px',
@@ -1790,12 +1734,16 @@ function ChatView({
                                 justifyContent: 'center',
                                 gap: '4px',
                                 boxShadow: 'var(--shadow-accent)',
-                                whiteSpace: 'nowrap'
+                                whiteSpace: 'nowrap',
+                                transition: 'transform 0.15s ease, opacity 0.15s ease'
                               }}
+                              title={isRecipient ? "Proposer une contre-offre" : "Modifier la proposition de deal"}
                             >
                               <RefreshCw size={13} strokeWidth={2.5} />
-                              <span>Modifier / Contre-offre</span>
+                              <span>Contre-offre</span>
                             </button>
+
+                            {/* BOUTON 3 : REFUSER / ANNULER */}
                             <button
                               type="button"
                               onClick={() => {
@@ -1808,7 +1756,7 @@ function ChatView({
                               style={{
                                 border: '1px solid rgba(239, 68, 68, 0.28)',
                                 borderRadius: '12px',
-                                padding: '9px 4px',
+                                padding: '10px 4px',
                                 backgroundColor: 'rgba(239, 68, 68, 0.08)',
                                 color: '#EF4444',
                                 fontSize: '11.5px',
@@ -1818,17 +1766,35 @@ function ChatView({
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 gap: '4px',
-                                whiteSpace: 'nowrap'
+                                whiteSpace: 'nowrap',
+                                transition: 'transform 0.15s ease, opacity 0.15s ease'
                               }}
+                              title={isRecipient ? "Refuser l'offre" : "Annuler l'offre"}
                             >
                               <X size={14} strokeWidth={2.5} />
-                              <span>Annuler l'offre</span>
+                              <span>{isRecipient ? 'Refuser' : 'Annuler'}</span>
                             </button>
                           </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'var(--bg-subtle)', border: '1px dashed var(--border-color)', color: 'var(--text-secondary)', borderRadius: '12px', padding: '6px 10px', fontSize: '11px', fontWeight: '700' }}>
-                            <Clock size={12} color="var(--accent-primary)" />
-                            <span>Offre en attente de réponse par votre interlocuteur.</span>
-                          </div>
+
+                          {/* MESSAGE D'ATTENTE INFORMATIF POUR L'EXPÉDITEUR */}
+                          {!isRecipient && (
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px',
+                              backgroundColor: 'var(--bg-subtle)',
+                              border: '1px dashed var(--border-color)',
+                              color: 'var(--text-secondary)',
+                              borderRadius: '12px',
+                              padding: '6px 10px',
+                              fontSize: '11px',
+                              fontWeight: '700'
+                            }}>
+                              <Clock size={12} color="var(--accent-primary)" />
+                              <span>En attente de la réponse du partenaire...</span>
+                            </div>
+                          )}
                         </div>
                       )}
 
