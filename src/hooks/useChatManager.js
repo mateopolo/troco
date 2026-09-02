@@ -15,7 +15,7 @@ import {
   increment,
   runTransaction
 } from 'firebase/firestore';
-import { Clock, Sparkles, ShieldCheck, CheckCircle } from 'lucide-react';
+import { Clock, Sparkles, ShieldCheck, CheckCircle, Check, RefreshCw, X } from 'lucide-react';
 import { mockChats, initialChatThreads } from '../data/mockChatsData';
 import { validateChatMessage } from '../utils/moderationBlacklist';
 import { uploadVoiceNote } from '../services/voiceStorageService';
@@ -1685,9 +1685,27 @@ export const useChatManager = ({
 
   // ---- RENDU DU COMPOSANT CARTE DE DEAL ----
   const renderDealCard = (message, chatId, otherName) => {
-    const { terms, status, sender } = message;
-    const isMine = sender === 'me';
-    const isIncoming = sender === 'them';
+    const terms = message.dealTerms || message.deal || message.proposal || message.terms || {};
+    const expectedHours = Number(terms.expectedHours ?? terms.hours ?? (terms.durationValue ? Number(terms.durationValue) : 0)) || 0;
+    const expectedTokens = Number(terms.expectedTokens ?? terms.tokens ?? terms.trocoTokens ?? 0) || 0;
+    const fiatAmount = Number(terms.fiatAmount ?? terms.fiat ?? terms.euroAmount ?? 0) || 0;
+    const serviceTitle = terms.serviceTitle || terms.title || terms.itemName || message.listing || 'Prestation de service';
+    const conditions = terms.conditions || terms.description || terms.notes || message.text || message.content || '';
+
+    const currentUid = profile?.uid || (auth?.currentUser && auth.currentUser.uid);
+    const currentName = profile?.name ? profile.name.trim().toLowerCase() : '';
+    const isMine = Boolean(
+      (message.senderUid && currentUid && String(message.senderUid) === String(currentUid)) ||
+      (message.senderId && currentUid && String(message.senderId) === String(currentUid)) ||
+      (message.senderName && currentName && message.senderName.trim().toLowerCase() === currentName) ||
+      (message.sender === 'me')
+    );
+    const isIncoming = !isMine;
+    const currentDealStatus = String(message.status || 'pending').toLowerCase();
+    const isDealPending = (!message.status || currentDealStatus === 'pending' || currentDealStatus === 'proposed' || currentDealStatus === 'en_attente' || currentDealStatus === 'sent');
+    const isAccepted = (currentDealStatus === 'confirmed' || currentDealStatus === 'accepted' || currentDealStatus === 'validated');
+    const isRejected = (currentDealStatus === 'declined' || currentDealStatus === 'rejected' || currentDealStatus === 'refused');
+
     const isBuyer = (message.paidBy && profile?.uid && message.paidBy === profile.uid) ||
       (message.escrow?.buyerUid && profile?.uid && message.escrow.buyerUid === profile.uid) ||
       (!message.paidBy && isIncoming);
@@ -1695,59 +1713,79 @@ export const useChatManager = ({
     return (
       <div style={{ width: '100%', border: '1px solid var(--border-color)', borderRadius: '18px', padding: '14px', backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', animation: 'fadeSlideUp 0.35s ease both' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', gap: '8px', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '800', color: 'var(--accent-primary)' }}>
-            <Sparkles size={14} /> {isMine ? 'Ma proposition de deal' : 'Proposition de deal reçue'}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '800', color: 'var(--accent-primary)' }}>
+            <Sparkles size={14} /> {isMine ? 'Ma proposition de deal' : `Proposition de deal reçue`}
           </div>
-          {status === 'pending' && isMine && (
+          {isDealPending && isMine && (
             <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)', padding: '4px 9px', borderRadius: '999px' }}>
-              En attente de la réponse de {otherName}
+              En attente
             </span>
           )}
-          {status === 'pending' && isIncoming && (
+          {isDealPending && isIncoming && (
             <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-warning)', padding: '4px 9px', borderRadius: '999px' }}>
-              ⚡ Action requise
+              ⚡ Réponse attendue
             </span>
           )}
-          {status === 'escrow_locked' && (
+          {currentDealStatus === 'escrow_locked' && (
             <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'rgba(16, 185, 129, 0.15)', color: 'var(--accent-success, #10B981)', padding: '4px 9px', borderRadius: '999px', border: '1px solid var(--accent-success, #10B981)' }}>
               🛡️ Fonds sous Séquestre
             </span>
           )}
-          {(status === 'confirmed' || status === 'accepted') && (
-            <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', padding: '4px 9px', borderRadius: '999px' }}>
-              Deal validé ✓
+          {isAccepted && (
+            <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'rgba(16, 185, 129, 0.12)', color: '#10B981', padding: '4px 9px', borderRadius: '999px' }}>
+              ✓ Deal accepté
             </span>
           )}
-          {(status === 'declined' || status === 'superseded') && (
-            <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)', padding: '4px 9px', borderRadius: '999px' }}>
-              {status === 'superseded' ? 'Remplacée' : 'Refusée'}
+          {isRejected && (
+            <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'rgba(239, 68, 68, 0.08)', color: '#EF4444', padding: '4px 9px', borderRadius: '999px' }}>
+              ✕ Offre déclinée
             </span>
           )}
         </div>
-        <div style={{ fontSize: '13px', color: 'var(--text-main)', lineHeight: 1.5, marginBottom: '10px' }}>{terms.conditions}</div>
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '10px' }}>
-          {terms.durationType && (
-            <span style={{ backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--border-color)', color: 'var(--accent-primary)', borderRadius: '999px', padding: '4px 10px', fontSize: '11px', fontWeight: '800' }}>
-              ⏱️ {terms.durationType === 'hourly' ? `${terms.durationValue || 1}h` : terms.durationType === 'daily' ? `${terms.durationValue || 1}j` : terms.durationType === 'monthly' ? `${terms.durationValue || 1} mois` : terms.durationType === 'fixed' ? 'Forfait' : 'Libre'}
+
+        {/* TITRE ET DESCRIPTION */}
+        <div style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '4px' }}>{serviceTitle}</div>
+        {conditions && <div style={{ fontSize: '12.5px', color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: '10px' }}>{conditions}</div>}
+
+        {/* BADGES */}
+        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '10px' }}>
+          {(expectedHours > 0 || terms.durationType) && (
+            <span style={{ backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--border-color)', color: 'var(--text-main)', borderRadius: '999px', padding: '3px 9px', fontSize: '11px', fontWeight: '800' }}>
+              ⏱️ {expectedHours > 0 ? `${expectedHours}h` : (terms.durationType === 'hourly' ? `${terms.durationValue || 1}h` : terms.durationType === 'daily' ? `${terms.durationValue || 1}j` : terms.durationType === 'monthly' ? `${terms.durationValue || 1} mois` : terms.durationType === 'fixed' ? 'Forfait' : 'Libre')}
             </span>
           )}
-          {terms.euroAmount > 0 && <span style={{ backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--border-color)', color: 'var(--accent-primary)', borderRadius: '999px', padding: '4px 10px', fontSize: '11px', fontWeight: '800' }}>💶 {terms.euroAmount}€</span>}
-          {terms.trocoTokens > 0 && <span style={{ backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--border-color)', color: 'var(--accent-warning)', borderRadius: '999px', padding: '4px 10px', fontSize: '11px', fontWeight: '800' }}>🪙 {terms.trocoTokens} Jeton{terms.trocoTokens > 1 ? 's' : ''}</span>}
-          {terms.euroAmount === 0 && terms.trocoTokens === 0 && <span style={{ backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--border-color)', color: 'var(--accent-primary)', borderRadius: '999px', padding: '4px 10px', fontSize: '11px', fontWeight: '800' }}>🤝 Troc direct</span>}
+          {expectedTokens > 0 && <span style={{ backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--accent-warning)', color: 'var(--accent-warning)', borderRadius: '999px', padding: '3px 9px', fontSize: '11px', fontWeight: '800' }}>🪙 {expectedTokens} Jeton{expectedTokens > 1 ? 's' : ''}</span>}
+          {fiatAmount > 0 && <span style={{ backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--accent-primary)', color: 'var(--accent-primary)', borderRadius: '999px', padding: '3px 9px', fontSize: '11px', fontWeight: '800' }}>💶 + {Number(fiatAmount).toFixed(2).replace('.00', '')} €</span>}
+          {expectedHours === 0 && expectedTokens === 0 && fiatAmount === 0 && <span style={{ backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--accent-primary)', color: 'var(--accent-primary)', borderRadius: '999px', padding: '3px 9px', fontSize: '11px', fontWeight: '800' }}>🤝 Troc direct / Service</span>}
         </div>
-        {status === 'pending' && isIncoming && (
+
+        {/* 3 BOUTONS DE NÉGOCIATION POUR LE DESTINATAIRE */}
+        {isDealPending && isIncoming && (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px' }}>
-            <button onClick={() => handleAcceptDeal(chatId, message.id, terms)} className="premium-button" style={{ border: '1.5px solid var(--accent-primary)', borderRadius: '12px', padding: '8px 4px', backgroundColor: 'var(--bg-card)', color: 'var(--accent-primary)', fontSize: '11.5px', fontWeight: '800', cursor: 'pointer', boxShadow: 'var(--shadow-accent)', whiteSpace: 'nowrap' }}>✓ Accepter</button>
-            <button onClick={() => openCounterOffer(terms, message.id)} className="premium-button" style={{ border: 'none', borderRadius: '12px', padding: '8px 4px', background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)', color: '#FFF', fontSize: '11.5px', fontWeight: '800', cursor: 'pointer', boxShadow: 'var(--shadow-accent)', whiteSpace: 'nowrap' }}>🔄 Contre-offre</button>
-            <button onClick={() => handleDeclineDeal(chatId, message.id)} className="premium-button" style={{ border: '1px solid var(--border-color)', borderRadius: '12px', padding: '8px 4px', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-main)', fontSize: '11.5px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap' }}>✕ Refuser</button>
+            <button onClick={() => handleAcceptDeal(chatId, message.id, terms)} className="premium-button" style={{ border: 'none', borderRadius: '12px', padding: '9px 4px', background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', color: '#FFFFFF', fontSize: '11.5px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.35)', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+              <Check size={14} strokeWidth={2.5} />
+              <span>Accepter</span>
+            </button>
+            <button onClick={() => openCounterOffer(terms, message.id)} className="premium-button" style={{ border: 'none', borderRadius: '12px', padding: '9px 4px', background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)', color: '#FFF', fontSize: '11.5px', fontWeight: '800', cursor: 'pointer', boxShadow: 'var(--shadow-accent)', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+              <RefreshCw size={13} strokeWidth={2.5} />
+              <span>Contre-offre</span>
+            </button>
+            <button onClick={() => handleDeclineDeal(chatId, message.id)} className="premium-button" style={{ border: '1px solid rgba(239, 68, 68, 0.28)', borderRadius: '12px', padding: '9px 4px', backgroundColor: 'rgba(239, 68, 68, 0.08)', color: '#EF4444', fontSize: '11.5px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+              <X size={14} strokeWidth={2.5} />
+              <span>Refuser</span>
+            </button>
           </div>
         )}
-        {status === 'pending' && isMine && (
+
+        {/* INDICATEUR D'ATTENTE POUR L'EXPÉDITEUR */}
+        {isDealPending && isMine && (
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: 'var(--bg-subtle)', border: '1px dashed var(--border-color)', color: 'var(--text-secondary)', borderRadius: '12px', padding: '9px 12px', fontSize: '11.5px', fontWeight: '700' }}>
-            <Clock size={13} color="var(--accent-primary)" /> En attente de la réponse de <strong>{otherName}</strong>
+            <Clock size={13} color="var(--accent-primary)" /> Offre envoyée - En attente de réponse...
           </div>
         )}
-        {status === 'escrow_locked' && (
+
+        {/* SÉQUESTRE FINANCIER */}
+        {currentDealStatus === 'escrow_locked' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', backgroundColor: 'var(--bg-subtle)', border: '1.5px solid var(--accent-primary)', borderRadius: '14px', padding: '12px 14px', marginTop: '6px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '800', color: 'var(--accent-primary)' }}>
               <ShieldCheck size={16} color="var(--accent-success, #10B981)" />
@@ -1770,9 +1808,10 @@ export const useChatManager = ({
             )}
           </div>
         )}
-        {(status === 'confirmed' || status === 'accepted') && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', borderRadius: '12px', padding: '9px 12px', fontSize: '12px', fontWeight: '800' }}>
-            <CheckCircle size={15} color="var(--accent-primary)" /> Deal confirmé et scellé avec {otherName} ✓
+
+        {isAccepted && currentDealStatus !== 'escrow_locked' && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: 'rgba(16, 185, 129, 0.12)', color: '#10B981', borderRadius: '12px', padding: '9px 12px', fontSize: '12px', fontWeight: '800' }}>
+            <CheckCircle size={15} color="#10B981" /> Deal validé ✓
           </div>
         )}
       </div>

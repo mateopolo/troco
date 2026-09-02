@@ -1452,22 +1452,42 @@ function ChatView({
               }
 
               // RENDU DES PROPOSITIONS DE DEAL (ALIGNEMENT BILATÉRAL STRICT DROITE / GAUCHE)
-              if (msg.type === 'deal' || msg.type === 'deal_offer' || msg.type === 'deal_counter_offer' || msg.kind === 'deal' || msg.dealTerms) {
-                const terms = msg.dealTerms || msg.terms || {};
+              if (
+                msg.type === 'deal' ||
+                msg.type === 'deal_offer' ||
+                msg.type === 'deal_proposal' ||
+                msg.type === 'deal_counter_offer' ||
+                msg.kind === 'deal' ||
+                msg.kind === 'deal_offer' ||
+                msg.kind === 'deal_proposal' ||
+                Boolean(msg.dealTerms) ||
+                Boolean(msg.deal) ||
+                Boolean(msg.proposal)
+              ) {
+                const terms = msg.dealTerms || msg.deal || msg.proposal || msg.terms || {};
+                const expectedHours = Number(terms.expectedHours ?? terms.hours ?? (terms.durationValue ? Number(terms.durationValue) : 0)) || 0;
+                const expectedTokens = Number(terms.expectedTokens ?? terms.tokens ?? terms.trocoTokens ?? 0) || 0;
+                const fiatAmount = Number(terms.fiatAmount ?? terms.fiat ?? terms.euroAmount ?? 0) || 0;
+                const serviceTitle = terms.serviceTitle || terms.title || terms.itemName || msg.listing || activeChatObj?.listing || "Prestation de service";
+                const rawDescription = terms.conditions || terms.description || terms.notes || msg.text || msg.content || "";
+
+                const currentUid = profile?.uid || (auth?.currentUser && auth.currentUser.uid);
+                const currentName = profile?.name ? profile.name.trim().toLowerCase() : '';
                 const isMine = Boolean(
-                  (msg.senderUid && profile?.uid && msg.senderUid === profile.uid) ||
-                  (msg.senderName && profile?.name && msg.senderName.trim().toLowerCase() === profile.name.trim().toLowerCase()) ||
+                  (msg.senderUid && currentUid && String(msg.senderUid) === String(currentUid)) ||
+                  (msg.senderId && currentUid && String(msg.senderId) === String(currentUid)) ||
+                  (msg.senderName && currentName && msg.senderName.trim().toLowerCase() === currentName) ||
                   (msg.sender === 'me')
                 );
                 const isIncoming = !isMine;
-                const currentDealStatus = msg.status || 'pending';
+                const currentDealStatus = String(msg.status || 'pending').toLowerCase();
                 const isDealPending = (!msg.status || currentDealStatus === 'pending' || currentDealStatus === 'proposed' || currentDealStatus === 'en_attente' || currentDealStatus === 'sent');
-                const isAccepted = (currentDealStatus === 'confirmed' || currentDealStatus === 'accepted');
-                const isRejected = (currentDealStatus === 'declined' || currentDealStatus === 'rejected');
+                const isAccepted = (currentDealStatus === 'confirmed' || currentDealStatus === 'accepted' || currentDealStatus === 'validated');
+                const isRejected = (currentDealStatus === 'declined' || currentDealStatus === 'rejected' || currentDealStatus === 'refused');
                 const partnerName = activeChatObj?.user || 'l’interlocuteur';
-                const dealConditionsText = getChatMessageDisplayContent
-                  ? getChatMessageDisplayContent({ text: terms.conditions }, currentLang, isMsgOriginal)
-                  : terms.conditions;
+                const dealConditionsText = getChatMessageDisplayContent && rawDescription
+                  ? getChatMessageDisplayContent({ text: rawDescription }, currentLang, isMsgOriginal)
+                  : rawDescription;
 
                 return (
                   <div
@@ -1484,7 +1504,7 @@ function ChatView({
                     <div style={{
                       width: isMobile ? '94%' : '80%',
                       maxWidth: '520px',
-                      minHeight: isMobile ? '200px' : '220px',
+                      minHeight: isMobile ? '180px' : '200px',
                       border: isMine
                         ? '1.5px solid var(--accent-primary)'
                         : '1.5px solid var(--border-color)',
@@ -1528,10 +1548,18 @@ function ChatView({
                         )}
                       </div>
 
-                      <div style={{ fontSize: '13px', color: 'var(--text-main)', marginBottom: '8px', lineHeight: 1.5, fontWeight: '600' }}>
-                        {dealConditionsText}
+                      {/* TITRE DE LA PRESTATION */}
+                      <div style={{ fontSize: '14.5px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '4px' }}>
+                        {serviceTitle}
                       </div>
-                      {currentLang !== 'FR' && (
+
+                      {/* DESCRIPTION OU CONDITIONS */}
+                      {dealConditionsText && (
+                        <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '8px', lineHeight: 1.5, fontWeight: '500' }}>
+                          {dealConditionsText}
+                        </div>
+                      )}
+                      {currentLang !== 'FR' && dealConditionsText && (
                         <button
                           onClick={() => toggleOriginalMessage(msg.id)}
                           className="premium-button"
@@ -1548,19 +1576,50 @@ function ChatView({
 
                       {/* BADGES DE CONTREPARTIE STILLPOINT */}
                       <div style={{ display: 'flex', gap: '6px', marginBottom: '12px', flexWrap: 'wrap' }}>
-                        {terms.durationType && (
+                        {(expectedHours > 0 || terms.durationType) && (
                           <span style={{
                             backgroundColor: 'var(--bg-subtle)',
                             border: '1.5px solid var(--border-color)',
                             color: 'var(--text-main)',
-                            borderRadius: '999px', padding: '3px 9px', fontSize: '11px', fontWeight: '800'
+                            borderRadius: '999px', padding: '3px 9px', fontSize: '11px', fontWeight: '800',
+                            display: 'inline-flex', alignItems: 'center', gap: '4px'
                           }}>
-                            ⏱️ {terms.durationType === 'hourly' ? `${terms.durationValue || 1}h` : terms.durationType === 'daily' ? `${terms.durationValue || 1}j` : terms.durationType === 'monthly' ? `${terms.durationValue || 1} mois` : terms.durationType === 'fixed' ? 'Forfait' : 'Libre'}
+                            ⏱️ {expectedHours > 0 ? `${expectedHours}h` : (terms.durationType === 'hourly' ? `${terms.durationValue || 1}h` : terms.durationType === 'daily' ? `${terms.durationValue || 1}j` : terms.durationType === 'monthly' ? `${terms.durationValue || 1} mois` : terms.durationType === 'fixed' ? 'Forfait' : 'Libre')}
                           </span>
                         )}
-                        {Number(terms.euroAmount) > 0 && <span style={{ backgroundColor: 'var(--bg-subtle)', border: '1.5px solid var(--accent-primary)', color: 'var(--accent-primary)', borderRadius: '999px', padding: '3px 9px', fontSize: '11px', fontWeight: '800' }}>💶 {terms.euroAmount}€</span>}
-                        {Number(terms.trocoTokens) > 0 && <span style={{ backgroundColor: 'var(--bg-subtle)', border: '1.5px solid var(--accent-warning)', color: 'var(--accent-warning)', borderRadius: '999px', padding: '3px 9px', fontSize: '11px', fontWeight: '800' }}>🪙 {terms.trocoTokens} Jetons</span>}
-                        {Number(terms.euroAmount) === 0 && Number(terms.trocoTokens) === 0 && <span style={{ backgroundColor: 'var(--bg-subtle)', border: '1.5px solid var(--accent-primary)', color: 'var(--accent-primary)', borderRadius: '999px', padding: '3px 9px', fontSize: '11px', fontWeight: '800' }}>🤝 Troc direct</span>}
+                        {expectedTokens > 0 && (
+                          <span style={{
+                            backgroundColor: 'var(--bg-subtle)',
+                            border: '1.5px solid var(--accent-warning)',
+                            color: 'var(--accent-warning)',
+                            borderRadius: '999px', padding: '3px 9px', fontSize: '11px', fontWeight: '800',
+                            display: 'inline-flex', alignItems: 'center', gap: '4px'
+                          }}>
+                            🪙 {expectedTokens} Jeton{expectedTokens > 1 ? 's' : ''}
+                          </span>
+                        )}
+                        {fiatAmount > 0 && (
+                          <span style={{
+                            backgroundColor: 'var(--bg-subtle)',
+                            border: '1.5px solid var(--accent-primary)',
+                            color: 'var(--accent-primary)',
+                            borderRadius: '999px', padding: '3px 9px', fontSize: '11px', fontWeight: '800',
+                            display: 'inline-flex', alignItems: 'center', gap: '4px'
+                          }}>
+                            💶 + {Number(fiatAmount).toFixed(2).replace('.00', '')} €
+                          </span>
+                        )}
+                        {expectedHours === 0 && expectedTokens === 0 && fiatAmount === 0 && (
+                          <span style={{
+                            backgroundColor: 'var(--bg-subtle)',
+                            border: '1.5px solid var(--accent-primary)',
+                            color: 'var(--accent-primary)',
+                            borderRadius: '999px', padding: '3px 9px', fontSize: '11px', fontWeight: '800',
+                            display: 'inline-flex', alignItems: 'center', gap: '4px'
+                          }}>
+                            🤝 Troc direct / Service
+                          </span>
+                        )}
                       </div>
 
                       {/* ACTIONS INTERACTIVES POUR LE DESTINATAIRE : ACCEPTER / REFUSER / CONTRE-OFFRE */}
@@ -1572,7 +1631,7 @@ function ChatView({
                               hapticSuccess();
                               playSuccessChime();
                               if (typeof onAcceptDeal === 'function') {
-                                onAcceptDeal(terms);
+                                onAcceptDeal(msg.id, terms);
                               } else if (typeof handleAcceptDeal === 'function') {
                                 handleAcceptDeal(currentChatId, msg.id, terms);
                               }
@@ -1603,7 +1662,9 @@ function ChatView({
                             type="button"
                             onClick={() => {
                               hapticLight();
-                              openCounterOffer(terms, msg.id);
+                              if (typeof openCounterOffer === 'function') {
+                                openCounterOffer(terms, msg.id);
+                              }
                             }}
                             className="premium-button"
                             style={{
@@ -1631,7 +1692,9 @@ function ChatView({
                             type="button"
                             onClick={() => {
                               hapticError();
-                              handleDeclineDeal(currentChatId, msg.id);
+                              if (typeof handleDeclineDeal === 'function') {
+                                handleDeclineDeal(currentChatId, msg.id);
+                              }
                             }}
                             className="premium-button"
                             style={{
@@ -1661,7 +1724,7 @@ function ChatView({
                       {isAccepted && currentDealStatus !== 'escrow_locked' && (
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', backgroundColor: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.35)', color: '#10B981', borderRadius: '12px', padding: '9px 12px', fontSize: '11.5px', fontWeight: '800', marginTop: '6px' }}>
                           <Check size={14} strokeWidth={2.5} />
-                          <span>Deal Accepté</span>
+                          <span>✓ Deal accepté</span>
                         </div>
                       )}
 
@@ -1669,15 +1732,15 @@ function ChatView({
                       {isRejected && (
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', backgroundColor: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.25)', color: '#EF4444', borderRadius: '12px', padding: '9px 12px', fontSize: '11.5px', fontWeight: '800', marginTop: '6px' }}>
                           <X size={14} strokeWidth={2.5} />
-                          <span>Offre Refusée</span>
+                          <span>✕ Offre déclinée</span>
                         </div>
                       )}
 
                       {/* STATUT EN ATTENTE POUR L'EXPÉDITEUR (NE PEUT NI ACCEPTER NI REFUSER SA PROPRE OFFRE) */}
                       {isDealPending && isMine && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'var(--bg-subtle)', border: '1px dashed var(--border-color)', color: 'var(--text-secondary)', borderRadius: '12px', padding: '9px 12px', fontSize: '11.5px', fontWeight: '700' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'var(--bg-subtle)', border: '1px dashed var(--border-color)', color: 'var(--text-secondary)', borderRadius: '12px', padding: '9px 12px', fontSize: '11.5px', fontWeight: '700', marginTop: '6px' }}>
                           <Clock size={13} color="var(--accent-primary)" />
-                          <span>En attente de la réponse de <strong>{partnerName}</strong></span>
+                          <span>Offre envoyée - En attente de réponse...</span>
                         </div>
                       )}
 
