@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback, Suspense, useTransition } from 'react';
+import { createPortal } from 'react-dom';
 import { Search, MapPin, Video, Globe, Filter, ShieldCheck, CheckCircle, X, Sparkles, Coins, Trash2, Camera, Flame, Check, Lock, CreditCard, Tag, ChevronLeft, ChevronRight, ShieldAlert } from 'lucide-react';
 import { auth, db } from './firebase';
 import { collection, addDoc, doc, updateDoc, serverTimestamp, onSnapshot, query, orderBy, limit, setDoc, deleteDoc, getDoc, getDocs, where, runTransaction } from 'firebase/firestore';
@@ -2678,8 +2679,8 @@ export default function App() {
       )}
 
       {/* ---- CHECKOUT / TUNNEL DE PAIEMENT SIMULÉ ---- */}
-      {checkout.open && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(61,53,48,0.7)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', zIndex: 75 }}>
+      {checkout.open && typeof document !== 'undefined' && createPortal(
+        <div className="fixed inset-0 z-[999999]" style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(61,53,48,0.7)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', zIndex: 999999 }}>
           <div style={{ width: '100%', maxWidth: '460px', backgroundColor: darkMode ? '#231E1B' : '#FAF7F2', backdropFilter: 'blur(28px) saturate(180%)', WebkitBackdropFilter: 'blur(28px) saturate(180%)', borderRadius: '28px', padding: '24px', boxShadow: '0 30px 80px rgba(61,53,48,0.30)', border: darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #E8DDD3', position: 'relative' }}>
             {checkout.step === 'success' ? (
               <div style={{ textAlign: 'center', padding: '18px 8px' }}>
@@ -2751,7 +2752,8 @@ export default function App() {
               </>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
 

@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { X, Check, ShieldCheck, Lock, CreditCard, Coins } from 'lucide-react';
 import { hapticSuccess, hapticLight } from '../utils/haptics';
 
@@ -16,15 +17,19 @@ export default function CheckoutModal({
   darkMode
 }) {
   if (!checkout.open) return null;
+  if (typeof document === 'undefined') return null;
 
-  return (
-    <div style={{
-      position: 'fixed', inset: 0,
-      backgroundColor: 'rgba(2,6,23,0.55)',
-      backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: '20px', zIndex: 75
-    }}>
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[999999]"
+      style={{
+        position: 'fixed', inset: 0,
+        backgroundColor: 'rgba(2,6,23,0.55)',
+        backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '20px', zIndex: 999999
+      }}
+    >
       <div style={{
         width: '100%', maxWidth: '460px',
         backgroundColor: darkMode ? 'rgba(30, 41, 59, 0.95)' : 'rgba(255, 255, 255, 0.92)',
@@ -187,6 +192,7 @@ export default function CheckoutModal({
           </>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

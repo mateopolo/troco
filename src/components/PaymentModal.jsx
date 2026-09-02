@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import {
   CreditCard, ShieldCheck, Lock, X,
   Sparkles, Coins, Zap, Smartphone,
@@ -394,25 +395,28 @@ export default function PaymentModal({
     onClose?.();
   };
 
-  return (
-    <div style={{
-      position: 'fixed',
-      inset: 0,
-      zIndex: 99999,
-      backgroundColor: 'var(--overlay-bg)',
-      backdropFilter: 'blur(14px)',
-      WebkitBackdropFilter: 'blur(14px)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '12px',
-      paddingTop: 'max(16px, env(safe-area-inset-top, 16px))',
-      paddingBottom: 'max(16px, env(safe-area-inset-bottom, 16px))',
-      overflowY: 'auto',
-      WebkitOverflowScrolling: 'touch',
-      animation: 'fadeIn 0.2s ease',
-      boxSizing: 'border-box'
-    }}>
+  const modalElement = (
+    <div
+      className="fixed inset-0 z-[999999]"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 999999,
+        backgroundColor: 'var(--overlay-bg)',
+        backdropFilter: 'blur(14px)',
+        WebkitBackdropFilter: 'blur(14px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '12px',
+        paddingTop: 'max(16px, env(safe-area-inset-top, 16px))',
+        paddingBottom: 'max(16px, env(safe-area-inset-bottom, 16px))',
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
+        animation: 'fadeIn 0.2s ease',
+        boxSizing: 'border-box'
+      }}
+    >
       <div style={{
         backgroundColor: 'var(--bg-card)',
         borderRadius: '24px',
@@ -1532,4 +1536,6 @@ export default function PaymentModal({
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalElement, document.body) : modalElement;
 }

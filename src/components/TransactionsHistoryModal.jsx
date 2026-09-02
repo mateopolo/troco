@@ -41,19 +41,22 @@ export default function TransactionsHistoryModal({
   };
 
   return (
-    <div style={{
-      position: 'fixed',
-      inset: 0,
-      zIndex: 5000,
-      backgroundColor: 'var(--overlay-bg)',
-      backdropFilter: 'blur(12px)',
-      WebkitBackdropFilter: 'blur(12px)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '16px',
-      animation: 'fadeIn 0.25s ease-out',
-    }}>
+    <div
+      className="fixed inset-0 z-[999999]"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 999999,
+        backgroundColor: 'var(--overlay-bg)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '16px',
+        animation: 'fadeIn 0.25s ease-out',
+      }}
+    >
       <div style={{
         backgroundColor: 'var(--bg-card)',
         borderRadius: '28px',
