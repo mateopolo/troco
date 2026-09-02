@@ -24,6 +24,7 @@ import { useChatStore } from '../stores';
 import { hapticLight, hapticSuccess, hapticError } from '../utils/haptics';
 import { playPop, playSuccessChime } from '../services/audioService';
 import { showDynamicIslandNotification } from '../services/notificationService';
+import { executeDirectTokenTransfer } from '../services/firestoreService';
 
 /**
  * Hook centralisant le moteur logique de messagerie, négociations et transactions de deals.
@@ -1310,7 +1311,8 @@ export const useChatManager = ({
     chatId,
     dealId,
     terms,
-    buyerUid,
+    buyerUid: explicitBuyerUid,
+    sellerUid: explicitSellerUid,
     partnerUid,
     partnerName,
     euroAmount = 0,
@@ -1319,45 +1321,118 @@ export const useChatManager = ({
   }) => {
     const finalEuro = Number(euroAmount) || 0;
     const finalTokens = Number(tokensAmount) || 0;
-    const myUid = buyerUid || profile?.uid || auth?.currentUser?.uid;
-    const isPaidDeal = finalEuro > 0 || finalTokens > 0;
-    const targetStatus = isPaidDeal ? 'escrow_locked' : 'confirmed';
+    const currentUid = profile?.uid || auth?.currentUser?.uid || 'me';
 
-    // 1. Mise à jour immédiate locale de l'acheteur
-    const updatedProfile = {
-      ...profile,
-      trocoTokens: finalTokens > 0 ? Math.max(0, (profile?.trocoTokens || 0) - finalTokens) : profile?.trocoTokens,
-      euroBalance: (paymentMethod?.includes('Solde') || paymentMethod === 'wallet') ? Number(Math.max(0, (profile?.euroBalance || 0) - finalEuro).toFixed(2)) : (profile?.euroBalance || 0),
-      dealsCompleted: !isPaidDeal ? (profile?.dealsCompleted || 0) + 1 : (profile?.dealsCompleted || 0)
-    };
-    setProfile(updatedProfile);
-    try {
-      localStorage.setItem('troco_user_profile', JSON.stringify(updatedProfile));
-    } catch (_) { }
+    // Récupération de l'objet chat en mémoire
+    const chat = (selectedChat && String(selectedChat.id) === String(chatId))
+      ? selectedChat
+      : (chatsList.find(c => String(c.id) === String(chatId)) || mockChats.find(c => String(c.id) === String(chatId)));
 
-    const escrowData = isPaidDeal ? {
-      status: 'locked',
-      euroAmount: finalEuro,
-      tokensAmount: finalTokens,
-      buyerUid: myUid,
-      buyerName: profile?.name,
-      sellerUid: partnerUid || null,
-      sellerName: partnerName,
-      fundedAt: new Date().toISOString(),
-    } : null;
+    // Résolution du créateur de l'annonce et du partenaire de discussion
+    let listingCreatorUid = chat?.authorUid || chat?.listingAuthorUid || chat?.creatorUid || null;
+    let otherParticipantUid = partnerUid || chat?.partnerUid || null;
+
+    if (!otherParticipantUid && chat) {
+      const parts = chat.participants || chat.participantUids;
+      if (Array.isArray(parts)) {
+        otherParticipantUid = parts.find(u => u && u !== currentUid && u !== listingCreatorUid) || parts.find(u => u && u !== currentUid);
+      }
+    }
+
+    if (!otherParticipantUid && partnerName && db) {
+      try {
+        const uSnap = await getDocs(query(collection(db, 'users'), where('name', '==', partnerName)));
+        if (!uSnap.empty) otherParticipantUid = uSnap.docs[0].id;
+      } catch (_) { }
+    }
+
+    // Détection du type d'annonce liée au chat ('request' vs 'offer')
+    const rawListingType = String(
+      chat?.listingType ||
+      chat?.type ||
+      chat?.listing?.type ||
+      chat?.listingData?.type ||
+      terms?.listingType ||
+      'offer'
+    ).toLowerCase();
+
+    const isRequest = rawListingType.includes('request') || rawListingType.includes('demande') || rawListingType.includes('besoin') || rawListingType.includes('recherche');
+
+    // 🚨 DÉTERMINATION STRICTE DU PAYEUR (BUYER) ET DU RECEVEUR (SELLER) :
+    // - Si l'annonce liée au chat est de type 'request' (Recherche), alors le créateur de l'annonce est le PAYEUR.
+    // - Si c'est une 'offer' (Offre), le créateur de l'annonce est le RECEVEUR.
+    let calculatedBuyerUid;
+    let calculatedSellerUid;
+
+    if (explicitBuyerUid && explicitSellerUid) {
+      calculatedBuyerUid = explicitBuyerUid;
+      calculatedSellerUid = explicitSellerUid;
+    } else if (listingCreatorUid && otherParticipantUid) {
+      if (isRequest) {
+        calculatedBuyerUid = listingCreatorUid;
+        calculatedSellerUid = otherParticipantUid;
+      } else {
+        calculatedBuyerUid = otherParticipantUid;
+        calculatedSellerUid = listingCreatorUid;
+      }
+    } else {
+      calculatedBuyerUid = explicitBuyerUid || (isRequest ? (listingCreatorUid || currentUid) : (otherParticipantUid || partnerUid || currentUid));
+      calculatedSellerUid = explicitSellerUid || (isRequest ? (otherParticipantUid || partnerUid || 'partner') : (listingCreatorUid || currentUid));
+    }
+
+    const buyerUid = String(calculatedBuyerUid || currentUid);
+    const sellerUid = String(calculatedSellerUid || (partnerUid || 'partner'));
+
+    const shouldDebitWallet = paymentMethod?.includes('Solde') || paymentMethod === 'wallet' || paymentMethod === 'Solde Portefeuille Troco';
+    const isCurrentUserBuyer = currentUid === buyerUid;
+    const isCurrentUserSeller = currentUid === sellerUid;
+
+    // 1. Mise à jour optimiste du profil local
+    if (isCurrentUserBuyer) {
+      const updatedTokens = finalTokens > 0 ? Math.max(0, (profile?.trocoTokens || 0) - finalTokens) : (profile?.trocoTokens || 0);
+      const updatedEuro = (finalEuro > 0 && shouldDebitWallet) ? Number(Math.max(0, (profile?.euroBalance || 0) - finalEuro).toFixed(2)) : (profile?.euroBalance || 0);
+      setProfile(prev => ({
+        ...prev,
+        trocoTokens: updatedTokens,
+        euroBalance: updatedEuro,
+        dealsCompleted: (prev?.dealsCompleted || 0) + 1,
+      }));
+      try {
+        const saved = JSON.parse(localStorage.getItem('troco_user_profile') || '{}');
+        saved.trocoTokens = updatedTokens;
+        saved.euroBalance = updatedEuro;
+        saved.dealsCompleted = (saved.dealsCompleted || 0) + 1;
+        localStorage.setItem('troco_user_profile', JSON.stringify(saved));
+      } catch (_) { }
+    } else if (isCurrentUserSeller) {
+      const updatedTokens = (profile?.trocoTokens || 0) + finalTokens;
+      const updatedEuro = Number(((profile?.euroBalance || 0) + finalEuro).toFixed(2));
+      setProfile(prev => ({
+        ...prev,
+        trocoTokens: updatedTokens,
+        euroBalance: updatedEuro,
+        dealsCompleted: (prev?.dealsCompleted || 0) + 1,
+      }));
+      try {
+        const saved = JSON.parse(localStorage.getItem('troco_user_profile') || '{}');
+        saved.trocoTokens = updatedTokens;
+        saved.euroBalance = updatedEuro;
+        saved.dealsCompleted = (saved.dealsCompleted || 0) + 1;
+        localStorage.setItem('troco_user_profile', JSON.stringify(saved));
+      } catch (_) { }
+    }
 
     setChatThreads(prev => ({
       ...prev,
       [chatId]: (prev[chatId] || []).map(m => String(m.id) === String(dealId) ? {
         ...m,
-        status: targetStatus,
-        escrow: escrowData,
-        paidBy: myUid,
-        paidByName: profile?.name,
+        status: 'confirmed',
+        paidBy: buyerUid,
+        paidTo: sellerUid,
         paymentMethod,
       } : m),
     }));
-    setChatStatusOverrides(prev => ({ ...prev, [chatId]: isPaidDeal ? 'Fonds sous Séquestre' : 'Deal Validé' }));
+    setChatStatusOverrides(prev => ({ ...prev, [chatId]: 'Deal Validé' }));
 
     playBetclicBalanceSound(true);
     playApplePaySound();
@@ -1367,101 +1442,89 @@ export const useChatManager = ({
     const newTx = {
       id: `tx-deal-${Date.now()}`,
       transactionId,
-      label: isPaidDeal ? `Séquestre Deal avec ${partnerName || 'Partenaire'} (${terms?.conditions || 'Prestation'})` : `Troc Direct avec ${partnerName || 'Partenaire'}`,
+      label: `Deal avec ${partnerName || 'Partenaire'} (${terms?.conditions || 'Prestation'})`,
       amountTtc: finalEuro,
       tokens: finalTokens,
-      mode: isPaidDeal ? 'escrow_deposit' : 'deal',
-      status: isPaidDeal ? 'held_in_escrow' : 'completed',
+      mode: isCurrentUserBuyer ? 'debit' : 'credit',
+      status: 'completed',
       date: new Date().toISOString(),
       partner: partnerName || 'Partenaire',
-      paymentMethod: paymentMethod,
+      paymentMethod,
       createdAt: new Date().toISOString(),
     };
     setUserTransactions(prev => [newTx, ...prev]);
 
     // 2. TRANSACTION ATOMIQUE SUR FIRESTORE (runTransaction)
-    if (myUid && db) {
+    if (db && buyerUid && sellerUid) {
       try {
-        let resolvedPartnerUid = partnerUid;
-        if (!resolvedPartnerUid && partnerName) {
-          try {
-            const userQuery = query(collection(db, 'users'), where('name', '==', partnerName));
-            const uSnap = await getDocs(userQuery);
-            if (!uSnap.empty) {
-              resolvedPartnerUid = uSnap.docs[0].id;
-            }
-          } catch (_) { }
-        }
-
         await runTransaction(db, async (transaction) => {
-          const buyerRef = doc(db, 'users', myUid);
-          const buyerSnap = await transaction.get(buyerRef);
+          const buyerRef = doc(db, 'users', String(buyerUid));
+          const sellerRef = doc(db, 'users', String(sellerUid));
+          const msgRef = doc(db, 'chats', String(chatId), 'messages', String(dealId));
+          const chatDocRef = doc(db, 'chats', String(chatId));
 
-          let currentBuyerEuro = profile?.euroBalance || 0;
-          let currentBuyerTokens = profile?.trocoTokens || 0;
-          let currentBuyerDeals = profile?.dealsCompleted || 0;
+          // 1. TOUTES LES LECTURES (READS FIRST)
+          const [buyerSnap, sellerSnap, msgSnap] = await Promise.all([
+            transaction.get(buyerRef),
+            transaction.get(sellerRef),
+            transaction.get(msgRef),
+          ]);
 
-          if (buyerSnap.exists()) {
-            const bData = buyerSnap.data();
-            currentBuyerEuro = bData.euroBalance !== undefined ? bData.euroBalance : currentBuyerEuro;
-            currentBuyerTokens = bData.trocoTokens !== undefined ? bData.trocoTokens : currentBuyerTokens;
-            currentBuyerDeals = bData.dealsCompleted !== undefined ? bData.dealsCompleted : currentBuyerDeals;
+          const buyerData = buyerSnap.exists() ? buyerSnap.data() : {};
+          const sellerData = sellerSnap.exists() ? sellerSnap.data() : {};
+
+          const curBuyerEuro = Number(buyerData.euroBalance ?? buyerData.walletBalanceFiat ?? 0);
+          const curBuyerTokens = Number(buyerData.trocoTokens ?? 0);
+          const curBuyerDeals = Number(buyerData.dealsCompleted ?? 0);
+
+          const curSellerEuro = Number(sellerData.euroBalance ?? sellerData.walletBalanceFiat ?? 0);
+          const curSellerTokens = Number(sellerData.trocoTokens ?? 0);
+          const curSellerDeals = Number(sellerData.dealsCompleted ?? 0);
+
+          // Vérification de solvabilité
+          if (finalTokens > 0 && curBuyerTokens < finalTokens) {
+            throw new Error(`Solde de jetons insuffisant (${curBuyerTokens} disponible(s), ${finalTokens} requis).`);
+          }
+          if (finalEuro > 0 && shouldDebitWallet && curBuyerEuro < finalEuro) {
+            throw new Error(`Solde d'euros insuffisant (${curBuyerEuro}€ disponible(s), ${finalEuro}€ requis).`);
           }
 
-          const msgRef = doc(db, 'chats', String(chatId), 'messages', String(dealId));
-          const msgSnap = await transaction.get(msgRef);
+          // 2. CALCUL DES SOLDES : DÉDUCTION BUYER & AJOUT SELLER
+          const newBuyerTokens = Math.max(0, curBuyerTokens - finalTokens);
+          const newBuyerEuro = shouldDebitWallet ? Number(Math.max(0, curBuyerEuro - finalEuro).toFixed(2)) : curBuyerEuro;
 
-          const shouldDebitWallet = paymentMethod?.includes('Solde') || paymentMethod === 'wallet';
-          const calculatedBuyerEuro = shouldDebitWallet ? Number(Math.max(0, currentBuyerEuro - finalEuro).toFixed(2)) : currentBuyerEuro;
-          const calculatedBuyerTokens = finalTokens > 0 ? Math.max(0, currentBuyerTokens - finalTokens) : currentBuyerTokens;
+          const newSellerTokens = curSellerTokens + finalTokens;
+          const newSellerEuro = Number((curSellerEuro + finalEuro).toFixed(2));
 
+          // 3. ÉCRITURES ATOMIQUES (WRITES)
           transaction.set(buyerRef, {
-            euroBalance: calculatedBuyerEuro,
-            trocoTokens: calculatedBuyerTokens,
-            dealsCompleted: !isPaidDeal ? currentBuyerDeals + 1 : currentBuyerDeals,
+            trocoTokens: newBuyerTokens,
+            euroBalance: newBuyerEuro,
+            walletBalanceFiat: newBuyerEuro,
+            dealsCompleted: curBuyerDeals + 1,
             updatedAt: serverTimestamp(),
           }, { merge: true });
 
-          if (!isPaidDeal && resolvedPartnerUid) {
-            const sellerRef = doc(db, 'users', resolvedPartnerUid);
-            const sellerSnap = await transaction.get(sellerRef);
-            if (sellerSnap && sellerSnap.exists()) {
-              const currentSellerDeals = sellerSnap.data().dealsCompleted || 0;
-              transaction.update(sellerRef, {
-                dealsCompleted: currentSellerDeals + 1,
-                updatedAt: serverTimestamp(),
-              });
-            }
-          }
-
-          const txDocRef = doc(collection(db, 'transactions'));
-          transaction.set(txDocRef, {
-            ...newTx,
-            userId: myUid,
-            userName: profile?.name || 'Membre',
-            partnerUid: resolvedPartnerUid || null,
-            dealId: String(dealId),
-            chatId: String(chatId),
-            createdAt: serverTimestamp(),
-          });
+          transaction.set(sellerRef, {
+            trocoTokens: newSellerTokens,
+            euroBalance: newSellerEuro,
+            walletBalanceFiat: newSellerEuro,
+            dealsCompleted: curSellerDeals + 1,
+            updatedAt: serverTimestamp(),
+          }, { merge: true });
 
           const messagePayload = {
-            status: targetStatus,
-            paidBy: myUid,
-            paidByName: profile?.name || 'Membre',
-            paymentMethod: paymentMethod,
-            escrow: isPaidDeal ? {
-              status: 'locked',
-              euroAmount: finalEuro,
-              tokensAmount: finalTokens,
-              buyerUid: myUid,
-              buyerName: profile?.name,
-              sellerUid: resolvedPartnerUid || null,
-              sellerName: partnerName,
-              fundedAt: new Date().toISOString(),
-            } : null,
-            confirmedAt: !isPaidDeal ? serverTimestamp() : null,
-            fundedAt: isPaidDeal ? serverTimestamp() : null,
+            status: 'confirmed',
+            buyerUid,
+            sellerUid,
+            paidBy: buyerUid,
+            paidByName: buyerData.name || profile?.name || 'Acheteur',
+            paidTo: sellerUid,
+            paidToName: sellerData.name || partnerName || 'Vendeur',
+            tokensAmount: finalTokens,
+            euroAmount: finalEuro,
+            paymentMethod,
+            confirmedAt: serverTimestamp(),
             updatedAt: serverTimestamp(),
           };
 
@@ -1471,23 +1534,53 @@ export const useChatManager = ({
             transaction.set(msgRef, messagePayload, { merge: true });
           }
 
-          const chatDocRef = doc(db, 'chats', String(chatId));
           transaction.set(chatDocRef, {
-            lastDealStatus: targetStatus,
-            lastMessage: isPaidDeal ? `🛡️ Fonds sécurisés sous séquestre Troco (${partnerName || 'Partenaire'})` : `🤝 Deal scellé et validé (${partnerName || 'Partenaire'})`,
+            lastDealStatus: 'confirmed',
+            lastMessage: `🤝 Deal validé ! ${finalTokens > 0 ? `${finalTokens}🪙 ` : ''}${finalEuro > 0 ? `${finalEuro}€` : ''}`,
             updatedAt: serverTimestamp(),
           }, { merge: true });
+
+          // Traçabilité des transactions
+          const txBuyerRef = doc(collection(db, 'transactions'));
+          transaction.set(txBuyerRef, {
+            type: 'deal_payment',
+            mode: 'debit',
+            userId: buyerUid,
+            userName: buyerData.name || profile?.name || 'Acheteur',
+            partnerUid: sellerUid,
+            partnerName: sellerData.name || partnerName || 'Vendeur',
+            dealId: String(dealId),
+            chatId: String(chatId),
+            tokens: finalTokens,
+            amountTtc: finalEuro,
+            paymentMethod,
+            status: 'completed',
+            createdAt: serverTimestamp(),
+          });
+
+          const txSellerRef = doc(collection(db, 'transactions'));
+          transaction.set(txSellerRef, {
+            type: 'deal_receipt',
+            mode: 'credit',
+            userId: sellerUid,
+            userName: sellerData.name || partnerName || 'Vendeur',
+            partnerUid: buyerUid,
+            partnerName: buyerData.name || profile?.name || 'Acheteur',
+            dealId: String(dealId),
+            chatId: String(chatId),
+            tokens: finalTokens,
+            amountTtc: finalEuro,
+            paymentMethod,
+            status: 'completed',
+            createdAt: serverTimestamp(),
+          });
         });
       } catch (err) {
-        console.warn('[Firestore] Atomic runTransaction deal escrow error:', err);
+        console.error('🚨 [Firestore] Erreur transaction atomique deal:', err);
       }
     }
 
-    if (isPaidDeal) {
-      setSaveMessage(`🛡️ Deal sécurisé ! Les fonds (${finalEuro > 0 ? `${finalEuro}€ ` : ''}${finalTokens > 0 ? `${finalTokens} Jeton(s)` : ''}) sont sous séquestre Troco.`);
-    } else {
-      setSaveMessage(`🤝 Deal validé avec succès ! Troc direct scellé.`);
-    }
+    setSaveMessage(`🤝 Deal validé avec succès ! ${finalTokens > 0 ? `${finalTokens}🪙 ` : ''}${finalEuro > 0 ? `${finalEuro}€ ` : ''}transféré(s).`);
     setTimeout(() => setSaveMessage(''), 5000);
   };
 
@@ -1669,6 +1762,68 @@ export const useChatManager = ({
         console.warn('[Firestore] deal decline write failed:', e);
       }
     }
+  };
+
+  // ---- 🚨 PHASE 89 : TRANSFERT DE JETONS DIRECT (FINTECH ENGINE ATOMIQUE) ----
+  const handleSendToken = async (chatId, tokenAmount = 1, comment = '', customPartnerUid = null) => {
+    const senderUid = profile?.uid || auth?.currentUser?.uid;
+    if (!senderUid) return { success: false, error: 'Non authentifié' };
+
+    const chat = (selectedChat && String(selectedChat.id) === String(chatId))
+      ? selectedChat
+      : (chatsList.find(c => String(c.id) === String(chatId)) || mockChats.find(c => String(c.id) === String(chatId)));
+
+    let partnerUid = customPartnerUid || chat?.authorUid || chat?.partnerUid || null;
+    if (!partnerUid && chat) {
+      const parts = chat.participants || chat.participantUids;
+      if (Array.isArray(parts)) {
+        partnerUid = parts.find(u => u && u !== senderUid);
+      }
+    }
+
+    if (!partnerUid && chat?.user && db) {
+      try {
+        const uSnap = await getDocs(query(collection(db, 'users'), where('name', '==', chat.user)));
+        if (!uSnap.empty) {
+          partnerUid = uSnap.docs[0].id;
+        }
+      } catch (_) {}
+    }
+
+    const amount = Number(tokenAmount) || 1;
+    const currentBalance = Number(profile?.trocoTokens || 0);
+
+    if (currentBalance < amount) {
+      alert(`Solde insuffisant : vous disposez de ${currentBalance} Jeton(s) Troco.`);
+      return { success: false, error: `Solde insuffisant : vous disposez de ${currentBalance} Jeton(s).` };
+    }
+
+    const res = await executeDirectTokenTransfer({
+      chatId,
+      senderUid,
+      senderName: profile?.name || 'Moi',
+      recipientUid: partnerUid,
+      recipientName: chat?.user || 'Interlocuteur',
+      tokenAmount: amount,
+      comment,
+      chatData: chat,
+    });
+
+    if (res?.success) {
+      const updatedTokens = Math.max(0, currentBalance - amount);
+      setProfile(prev => ({ ...prev, trocoTokens: updatedTokens }));
+      try {
+        const saved = JSON.parse(localStorage.getItem('troco_user_profile') || '{}');
+        saved.trocoTokens = updatedTokens;
+        localStorage.setItem('troco_user_profile', JSON.stringify(saved));
+      } catch (_) {}
+
+      hapticSuccess();
+      playBetclicBalanceSound(true);
+      setSaveMessage(`🪙 ${amount} Jeton(s) Troco envoyé(s) avec succès !`);
+      setTimeout(() => setSaveMessage(''), 4000);
+    }
+    return res;
   };
 
   // ---- RENDU DU COMPOSANT CARTE DE DEAL ----
@@ -1871,6 +2026,7 @@ export const useChatManager = ({
     handleReleaseEscrow,
     handleAcceptDeal,
     handleDeclineDeal,
+    handleSendToken,
     renderDealCard,
   };
 };

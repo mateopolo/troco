@@ -24,6 +24,7 @@ export default function ChatSection({
   joinActiveCall,
   handleAcceptDeal,
   handleDeclineDeal,
+  handleSendToken,
   handleReleaseEscrow,
   onCreateProjectGroup,
   onProposeReward,
@@ -87,6 +88,7 @@ export default function ChatSection({
                 joinActiveCall={joinActiveCall}
                 handleAcceptDeal={handleAcceptDeal}
                 handleDeclineDeal={handleDeclineDeal}
+                handleSendToken={handleSendToken}
                 handleReleaseEscrow={handleReleaseEscrow}
                 onCreateProjectGroup={onCreateProjectGroup}
                 onProposeReward={onProposeReward}

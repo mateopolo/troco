@@ -6,7 +6,7 @@ import {
   ShieldCheck, UserX, UserCheck, Plus, Key, Save
 } from 'lucide-react';
 import {
-  collection, doc, onSnapshot, updateDoc, deleteDoc,
+  collection, doc, onSnapshot, updateDoc, setDoc, deleteDoc,
   serverTimestamp, query, orderBy, limit, addDoc, getDoc
 } from 'firebase/firestore';
 import { db } from '../../firebase';
@@ -378,13 +378,21 @@ export default function AdminDashboard({
     try {
       const targetUserId = String(balanceModalUser.id || balanceModalUser.uid);
       const userRef = doc(db, 'users', targetUserId);
-      await updateDoc(userRef, {
+      const updatePayload = {
         trocoTokens: finalTok,
         walletBalanceFiat: finalEur,
         euroBalance: finalEur,
         balance: finalEur,
         updatedAt: serverTimestamp(),
-      });
+      };
+
+      try {
+        await updateDoc(userRef, updatePayload);
+      } catch (_) {
+        await setDoc(userRef, updatePayload, { merge: true });
+      }
+
+      setUsersList(prev => prev.map(u => String(u.id || u.uid) === targetUserId ? { ...u, trocoTokens: finalTok, euroBalance: finalEur, walletBalanceFiat: finalEur, balance: finalEur } : u));
 
       // Enregistrer une transaction administrative d'audit
       await addDoc(collection(db, 'transactions'), {

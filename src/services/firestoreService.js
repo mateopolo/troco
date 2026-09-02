@@ -770,7 +770,7 @@ export const executeDirectTokenTransfer = async (
       const recipientRef = doc(db, 'users', String(recipientUid));
 
       const senderDoc = await transaction.get(senderRef);
-      await transaction.get(recipientRef);
+      const recipientDoc = await transaction.get(recipientRef);
 
       // 2. VÉRIFICATIONS DE L'EXPÉDITEUR
       if (!senderDoc.exists()) {
@@ -786,17 +786,21 @@ export const executeDirectTokenTransfer = async (
 
       const newSenderTokens = Math.max(0, currentSenderTokens - amount);
 
+      const recipientData = recipientDoc.exists() ? recipientDoc.data() : {};
+      const currentRecipientTokens = Number(recipientData.trocoTokens || 0);
+      const newRecipientTokens = currentRecipientTokens + amount;
+
       // 3. TOUTES LES ÉCRITURES APRÈS LES LECTURES (WRITES)
       transaction.update(senderRef, {
         trocoTokens: newSenderTokens,
         updatedAt: serverTimestamp(),
       });
 
-      // 4. INCRÉMENTATION ATOMIQUE DU SOLDE DESTINATAIRE (Firebase increment)
+      // 4. CRÉDIT ATOMIQUE DU SOLDE DESTINATAIRE
       transaction.set(recipientRef, {
         uid: String(recipientUid),
-        name: recipientName || 'Utilisateur Troco',
-        trocoTokens: increment(amount),
+        name: recipientName || recipientData.name || 'Utilisateur Troco',
+        trocoTokens: newRecipientTokens,
         updatedAt: serverTimestamp(),
       }, { merge: true });
     });

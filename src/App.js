@@ -430,6 +430,7 @@ export default function App() {
     handleReleaseEscrow,
     handleAcceptDeal,
     handleDeclineDeal,
+    handleSendToken,
   } = chatManager;
 
   const switchTab = useCallback((newTab) => {
@@ -3967,6 +3968,7 @@ export default function App() {
                   joinActiveCall={joinActiveCall}
                   handleAcceptDeal={handleAcceptDeal}
                   handleDeclineDeal={handleDeclineDeal}
+                  handleSendToken={handleSendToken}
                   handleReleaseEscrow={handleReleaseEscrow}
                   onCreateProjectGroup={handleCreateProjectGroup}
                   onProposeReward={handleProposeReward}

@@ -51,6 +51,7 @@ function ChatView({
   handleAcceptDeal,
   onAcceptDeal,
   handleDeclineDeal,
+  handleSendToken: handleSendTokenProp,
   handleReleaseEscrow,
   onCreateProjectGroup,
   onProposeReward,
@@ -177,6 +178,26 @@ function ChatView({
     if (currentBalance < tokens) {
       alert(`Solde insuffisant : vous disposez de ${currentBalance} Jeton(s) Troco.`);
       return;
+    }
+
+    if (typeof handleSendTokenProp === 'function') {
+      const cid = activeChatObj?.id ? String(activeChatObj.id) : (selectedChat?.id ? String(selectedChat.id) : null);
+      setIsTransferringTokens(true);
+      try {
+        const res = await handleSendTokenProp(cid, tokens, transferComment || '');
+        if (res?.success) {
+          setShowConfetti(true);
+          setTimeout(() => setShowConfetti(false), 3800);
+          setIsDirectTransferOpen(false);
+          setTransferComment('');
+          setDirectTokensCount(1);
+          return;
+        }
+      } catch (err) {
+        console.warn('[DirectTransfer] via handleSendTokenProp error:', err);
+      } finally {
+        setIsTransferringTokens(false);
+      }
     }
 
     const myUid = profile?.uid || auth?.currentUser?.uid || 'me';
