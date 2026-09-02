@@ -2055,9 +2055,24 @@ function ChatView({
                             return null;
                           })()}
 
-                          <div style={{ fontSize: '13.5px', lineHeight: 1.45, fontWeight: '500' }}>
-                            {translatedText}
-                          </div>
+                          {Boolean(msg.image || (typeof msg.text === 'string' && (msg.text.startsWith('data:image/') || (msg.text.startsWith('http') && (msg.text.includes('.png') || msg.text.includes('.jpg') || msg.text.includes('.jpeg') || msg.text.includes('.webp')))))) ? (
+                            <img
+                              src={msg.image || msg.text}
+                              alt="Image partagée"
+                              style={{
+                                maxWidth: '100%',
+                                maxHeight: '240px',
+                                borderRadius: '12px',
+                                objectFit: 'cover',
+                                display: 'block',
+                                marginBottom: '4px',
+                              }}
+                            />
+                          ) : (
+                            <div style={{ fontSize: '13.5px', lineHeight: 1.45, fontWeight: '500' }}>
+                              {translatedText}
+                            </div>
+                          )}
 
                           {/* BASCULE DE TRADUCTION INSTANTANÉE */}
                           {currentLang !== 'FR' && (

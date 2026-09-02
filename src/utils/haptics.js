@@ -5,8 +5,8 @@
  */
 
 export const HAPTIC_PATTERNS = {
-  light: 10,
-  success: [15, 50, 15],
+  light: 15,
+  success: [20, 50, 20],
   error: [50, 50, 50],
 };
 
@@ -54,11 +54,13 @@ export const hapticSuccess = () => triggerHaptic('success');
  */
 export const hapticError = () => triggerHaptic('error');
 
-export default {
-  HAPTIC_PATTERNS,
-  isHapticSupported,
-  triggerHaptic,
-  hapticLight,
-  hapticSuccess,
-  hapticError,
+export const haptics = {
+  light: hapticLight,
+  success: hapticSuccess,
+  error: hapticError,
+  trigger: triggerHaptic,
+  isSupported: isHapticSupported,
+  PATTERNS: HAPTIC_PATTERNS,
 };
+
+export default haptics;

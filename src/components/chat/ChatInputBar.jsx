@@ -12,7 +12,9 @@ import {
   Check,
   X,
   CornerDownRight,
+  Image as ImageIcon,
 } from 'lucide-react';
+import { haptics } from '../../utils/haptics';
 
 /**
  * ChatInputBar — Composant de saisie isolé et mémoïsé (Phase 63)
@@ -40,6 +42,23 @@ function ChatInputBar({
   const [localText, setLocalText] = useState(editingMsg ? (editingMsg.text || '') : '');
   const [isWorkspaceMenuOpen, setIsWorkspaceMenuOpen] = useState(false);
   const typingTimerRef = useRef(null);
+  const imageInputRef = useRef(null);
+
+  const handleImageSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const base64 = event.target?.result;
+        if (base64 && typeof onSendMessage === 'function') {
+          haptics.success();
+          onSendMessage(base64);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+    if (e.target) e.target.value = '';
+  };
 
   // Synchronisation lors de l'activation/désactivation du mode édition
   useEffect(() => {
@@ -511,6 +530,51 @@ function ChatInputBar({
             title="Transférer des Jetons Troco instantanément"
           >
             <Coins size={18} />
+          </button>
+        )}
+
+        {/* INPUT FICHIER IMAGE CACHÉ */}
+        <input
+          type="file"
+          accept="image/*"
+          ref={imageInputRef}
+          onChange={handleImageSelect}
+          style={{ display: 'none' }}
+        />
+
+        {/* BOUTON ENVOI PHOTO / IMAGE */}
+        {!editingMsg && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (imageInputRef.current) imageInputRef.current.click();
+            }}
+            onTouchEnd={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (imageInputRef.current) imageInputRef.current.click();
+            }}
+            className="premium-button"
+            style={{
+              border: '1px solid var(--border-color)',
+              borderRadius: '50%',
+              width: '44px',
+              height: '44px',
+              minWidth: '44px',
+              minHeight: '44px',
+              backgroundColor: 'var(--bg-card)',
+              color: 'var(--accent-primary)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: 'var(--shadow-card)',
+              flexShrink: 0,
+            }}
+            title="Envoyer une photo / image"
+          >
+            <ImageIcon size={18} />
           </button>
         )}
 

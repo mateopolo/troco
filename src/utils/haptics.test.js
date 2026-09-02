@@ -21,12 +21,12 @@ describe('Phase 46 : Utilitaire Haptique & Vibration API', () => {
   });
 
   describe('Définition des Patterns de Vibration', () => {
-    it('définit le pattern "light" à 10ms', () => {
-      expect(HAPTIC_PATTERNS.light).toBe(10);
+    it('définit le pattern "light" à 15ms', () => {
+      expect(HAPTIC_PATTERNS.light).toBe(15);
     });
 
-    it('définit le pattern "success" à [15, 50, 15]', () => {
-      expect(HAPTIC_PATTERNS.success).toEqual([15, 50, 15]);
+    it('définit le pattern "success" à [20, 50, 20]', () => {
+      expect(HAPTIC_PATTERNS.success).toEqual([20, 50, 20]);
     });
 
     it('définit le pattern "error" à [50, 50, 50]', () => {
@@ -58,7 +58,7 @@ describe('Phase 46 : Utilitaire Haptique & Vibration API', () => {
   });
 
   describe('Déclenchement Sécurisé des Vibrations (triggerHaptic & raccourcis)', () => {
-    it('exécute navigator.vibrate avec le pattern "light" (10ms)', () => {
+    it('exécute navigator.vibrate avec le pattern "light" (15ms)', () => {
       const mockVibrate = jest.fn().mockReturnValue(true);
       Object.defineProperty(window, 'navigator', {
         value: { ...originalNavigator, vibrate: mockVibrate },
@@ -67,11 +67,11 @@ describe('Phase 46 : Utilitaire Haptique & Vibration API', () => {
       });
 
       const result = hapticLight();
-      expect(mockVibrate).toHaveBeenCalledWith(10);
+      expect(mockVibrate).toHaveBeenCalledWith(15);
       expect(result).toBe(true);
     });
 
-    it('exécute navigator.vibrate avec le pattern "success" ([15, 50, 15])', () => {
+    it('exécute navigator.vibrate avec le pattern "success" ([20, 50, 20])', () => {
       const mockVibrate = jest.fn().mockReturnValue(true);
       Object.defineProperty(window, 'navigator', {
         value: { ...originalNavigator, vibrate: mockVibrate },
@@ -80,7 +80,7 @@ describe('Phase 46 : Utilitaire Haptique & Vibration API', () => {
       });
 
       const result = hapticSuccess();
-      expect(mockVibrate).toHaveBeenCalledWith([15, 50, 15]);
+      expect(mockVibrate).toHaveBeenCalledWith([20, 50, 20]);
       expect(result).toBe(true);
     });
 
