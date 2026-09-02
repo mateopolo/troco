@@ -1489,18 +1489,19 @@ function ChatView({
                 );
               }
 
-              // RENDU DES PROPOSITIONS DE DEAL (ALIGNEMENT BILATÉRAL STRICT DROITE / GAUCHE)
+              // RENDU DES PROPOSITIONS DE DEAL (FORÇAGE ABSOLU PHASE 84)
               if (
-                msg.type === 'deal' ||
                 msg.type === 'deal_offer' ||
                 msg.type === 'deal_proposal' ||
+                msg.type === 'deal' ||
                 msg.type === 'deal_counter_offer' ||
                 msg.kind === 'deal' ||
                 msg.kind === 'deal_offer' ||
                 msg.kind === 'deal_proposal' ||
                 Boolean(msg.dealTerms) ||
                 Boolean(msg.deal) ||
-                Boolean(msg.proposal)
+                Boolean(msg.proposal) ||
+                Boolean(msg.dealId)
               ) {
                 const terms = msg.dealTerms || msg.deal || msg.proposal || msg.terms || {};
                 const expectedHours = typeof terms.hours === 'number' ? terms.hours : (Number(terms.hours ?? terms.expectedHours ?? (terms.durationValue ? Number(terms.durationValue) : 0)) || 0);
@@ -1512,15 +1513,16 @@ function ChatView({
 
                 const currentUid = profile?.uid || (auth?.currentUser && auth.currentUser.uid);
                 const senderId = msg.senderId || msg.senderUid || (msg.sender === 'me' ? currentUid : null);
-                const isRecipient = Boolean(currentUid && senderId ? String(currentUid) !== String(senderId) : msg.sender !== 'me');
-                const isMine = !isRecipient;
+                const isMyOffer = Boolean(currentUid && senderId ? String(currentUid) === String(senderId) : msg.sender === 'me');
+                const isRecipient = !isMyOffer;
+                const isMine = isMyOffer;
                 const isIncoming = isRecipient;
 
                 const currentDealStatus = String(msg.status || 'pending').toLowerCase();
-                const isDealPending = (!msg.status || currentDealStatus === 'pending' || currentDealStatus === 'proposed' || currentDealStatus === 'en_attente' || currentDealStatus === 'sent');
-                const isCountered = (currentDealStatus === 'countered' || currentDealStatus === 'superseded');
                 const isAccepted = (currentDealStatus === 'confirmed' || currentDealStatus === 'accepted' || currentDealStatus === 'validated');
                 const isRejected = (currentDealStatus === 'declined' || currentDealStatus === 'rejected' || currentDealStatus === 'refused' || currentDealStatus === 'cancelled');
+                const isCountered = (currentDealStatus === 'countered' || currentDealStatus === 'superseded');
+                const isDealPending = !isAccepted && !isRejected;
                 const partnerName = activeChatObj?.user || 'l’interlocuteur';
                 const dealConditionsText = getChatMessageDisplayContent && rawDescription
                   ? getChatMessageDisplayContent({ text: rawDescription }, currentLang, isMsgOriginal)
@@ -1564,7 +1566,7 @@ function ChatView({
                             ⚡ Réponse attendue
                           </span>
                         )}
-                        {isDealPending && !isRecipient && (
+                        {isDealPending && isMyOffer && (
                           <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)', padding: '3px 8px', borderRadius: '999px', border: '1px solid var(--border-color)' }}>
                             {t('waitingResponse') || 'En attente'}
                           </span>
@@ -1665,16 +1667,22 @@ function ChatView({
                         )}
                       </div>
 
-                      {/* 🚨 PHASE 81 : LES 3 BOUTONS DE NÉGOCIATION (TOUJOURS RENDUS DANS LE DOM QUAND LE DEAL EST PENDING) */}
-                      {isDealPending && (
+                      {/* 🚨 PHASE 84 : FORÇAGE ABSOLU DES 3 BOUTONS DE NÉGOCIATION */}
+                      {!isAccepted && !isRejected && (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px' }}>
+                          <div style={{
+                            display: 'grid',
+                            gridTemplateColumns: '1fr 1fr 1fr',
+                            gap: '6px',
+                            opacity: isMyOffer ? 0.55 : 1,
+                            pointerEvents: isMyOffer ? 'none' : 'auto'
+                          }}>
                             {/* BOUTON 1 : ACCEPTER */}
                             <button
                               type="button"
-                              disabled={!isRecipient}
+                              disabled={isMyOffer}
                               onClick={() => {
-                                if (!isRecipient) return;
+                                if (isMyOffer) return;
                                 hapticSuccess();
                                 playSuccessChime();
                                 if (typeof onAcceptDeal === 'function') {
@@ -1692,7 +1700,6 @@ function ChatView({
                                   ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)'
                                   : 'var(--bg-subtle)',
                                 color: isRecipient ? '#FFFFFF' : 'var(--text-secondary)',
-                                opacity: isRecipient ? 1 : 0.5,
                                 fontSize: '11.5px',
                                 fontWeight: '800',
                                 cursor: isRecipient ? 'pointer' : 'not-allowed',
@@ -1704,7 +1711,7 @@ function ChatView({
                                 whiteSpace: 'nowrap',
                                 transition: 'transform 0.15s ease, opacity 0.15s ease'
                               }}
-                              title={isRecipient ? "Accepter la proposition" : "En attente de la réponse du partenaire..."}
+                              title={isRecipient ? "Accepter la proposition" : "En attente du partenaire..."}
                             >
                               <Check size={14} strokeWidth={2.5} />
                               <span>Accepter</span>
@@ -1713,7 +1720,9 @@ function ChatView({
                             {/* BOUTON 2 : CONTRE-OFFRE */}
                             <button
                               type="button"
+                              disabled={isMyOffer}
                               onClick={() => {
+                                if (isMyOffer) return;
                                 hapticLight();
                                 if (typeof openCounterOffer === 'function') {
                                   openCounterOffer(terms, msg.id);
@@ -1728,7 +1737,7 @@ function ChatView({
                                 color: '#FFFFFF',
                                 fontSize: '11.5px',
                                 fontWeight: '800',
-                                cursor: 'pointer',
+                                cursor: isRecipient ? 'pointer' : 'not-allowed',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
@@ -1737,16 +1746,18 @@ function ChatView({
                                 whiteSpace: 'nowrap',
                                 transition: 'transform 0.15s ease, opacity 0.15s ease'
                               }}
-                              title={isRecipient ? "Proposer une contre-offre" : "Modifier la proposition de deal"}
+                              title={isRecipient ? "Proposer une contre-offre" : "En attente du partenaire..."}
                             >
                               <RefreshCw size={13} strokeWidth={2.5} />
                               <span>Contre-offre</span>
                             </button>
 
-                            {/* BOUTON 3 : REFUSER / ANNULER */}
+                            {/* BOUTON 3 : REFUSER */}
                             <button
                               type="button"
+                              disabled={isMyOffer}
                               onClick={() => {
+                                if (isMyOffer) return;
                                 hapticError();
                                 if (typeof handleDeclineDeal === 'function') {
                                   handleDeclineDeal(currentChatId, msg.id);
@@ -1761,7 +1772,7 @@ function ChatView({
                                 color: '#EF4444',
                                 fontSize: '11.5px',
                                 fontWeight: '800',
-                                cursor: 'pointer',
+                                cursor: isRecipient ? 'pointer' : 'not-allowed',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
@@ -1769,15 +1780,15 @@ function ChatView({
                                 whiteSpace: 'nowrap',
                                 transition: 'transform 0.15s ease, opacity 0.15s ease'
                               }}
-                              title={isRecipient ? "Refuser l'offre" : "Annuler l'offre"}
+                              title={isRecipient ? "Refuser l'offre" : "En attente du partenaire..."}
                             >
                               <X size={14} strokeWidth={2.5} />
-                              <span>{isRecipient ? 'Refuser' : 'Annuler'}</span>
+                              <span>Refuser</span>
                             </button>
                           </div>
 
                           {/* MESSAGE D'ATTENTE INFORMATIF POUR L'EXPÉDITEUR */}
-                          {!isRecipient && (
+                          {isMyOffer && (
                             <div style={{
                               display: 'flex',
                               alignItems: 'center',
