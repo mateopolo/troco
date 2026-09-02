@@ -1,4 +1,6 @@
 import React, { useState, useRef } from 'react';
+import { ProgressiveImage } from '../../components/ui/ProgressiveImage';
+import { EmptyState } from '../../components/ui/EmptyState';
 import {
   ShieldCheck,
   Pencil,
@@ -35,6 +37,7 @@ import {
   getReviewTranslation as getReviewTranslationUtil,
   getListingTitleTranslation as getListingTitleTranslationUtil,
 } from '../../utils/translationHelpers';
+import { SocialLinksDisplay, SocialLinksEditor } from '../../components/UserProfile';
 
 export default function ProfileFeature({
   profile = {},
@@ -157,12 +160,17 @@ export default function ProfileFeature({
   };
 
   const handleSaveProfile = async () => {
+    const socialLinksToSave = profileDraft.socialLinks !== undefined 
+      ? profileDraft.socialLinks 
+      : (profile.socialLinks || []);
+
     const profileCheck = validateProfileContent({
       name: profileDraft.name,
       username: profileDraft.username,
       bio: profileDraft.bio,
       skills,
       equipment,
+      socialLinks: socialLinksToSave,
     });
     if (!profileCheck.isValid) {
       alert(profileCheck.errorMessage);
@@ -174,6 +182,7 @@ export default function ProfileFeature({
       ...profileDraft,
       skills,
       equipment,
+      socialLinks: socialLinksToSave,
       portfolioImages,
       updatedAt: serverTimestamp(),
     };
@@ -470,6 +479,13 @@ export default function ProfileFeature({
             </div>
             <textarea value={profileDraft.bio} onChange={(e) => setProfileDraft(prev => ({ ...prev, bio: e.target.value }))} rows={3} style={{ width: '100%', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-subtle)', borderRadius: '14px', padding: '12px 14px', resize: 'vertical', fontSize: '13px', color: 'var(--text-main)' }} />
             <input value={profileDraft.location} onChange={(e) => setProfileDraft(prev => ({ ...prev, location: e.target.value }))} style={{ width: '100%', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-subtle)', borderRadius: '14px', padding: '12px 14px', fontSize: '13px', color: 'var(--text-main)' }} />
+            
+            {/* Gestionnaire d'édition des Réseaux Sociaux & Portfolio Sécurisés */}
+            <SocialLinksEditor
+              socialLinks={profileDraft.socialLinks !== undefined ? profileDraft.socialLinks : (profile.socialLinks || [])}
+              onChange={(newLinks) => setProfileDraft(prev => ({ ...prev, socialLinks: newLinks }))}
+              darkMode={darkMode}
+            />
           </>
         ) : (
           <>
@@ -488,6 +504,14 @@ export default function ProfileFeature({
                 </button>
               )}
             </div>
+            
+            {/* Affichage des badges de réseaux sociaux officiels */}
+            {profile.socialLinks && profile.socialLinks.length > 0 && (
+              <div style={{ marginTop: '2px', marginBottom: '2px' }}>
+                <SocialLinksDisplay links={profile.socialLinks} size="medium" />
+              </div>
+            )}
+
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: 'var(--text-secondary)' }}><MapPin size={14} color="var(--accent-primary)" /> {profile.location}</div>
           </>
         )}
@@ -689,7 +713,12 @@ export default function ProfileFeature({
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '14px' }}>
             {portfolioImages.map((src, idx) => (
               <div key={idx} style={{ position: 'relative', aspectRatio: '1', borderRadius: '12px', overflow: 'hidden', boxShadow: 'var(--shadow-card)' }}>
-                <img src={src} alt={`Portfolio ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} onError={(e) => { e.target.style.display = 'none'; }} />
+                <ProgressiveImage
+                  src={src}
+                  alt={`Portfolio ${idx + 1}`}
+                  style={{ width: '100%', height: '100%' }}
+                  imgStyle={{ objectFit: 'cover' }}
+                />
                 <button
                   onClick={() => handleRemovePortfolioImage(idx)}
                   style={{
@@ -697,7 +726,8 @@ export default function ProfileFeature({
                     border: 'none', width: '24px', height: '24px', borderRadius: '50%',
                     backgroundColor: 'var(--overlay-bg)', color: '#FFF', cursor: 'pointer',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    backdropFilter: 'blur(4px)', fontSize: '12px', fontWeight: '800'
+                    backdropFilter: 'blur(4px)', fontSize: '12px', fontWeight: '800',
+                    zIndex: 10
                   }}
                   title="Supprimer"
                 >✕</button>
@@ -705,14 +735,13 @@ export default function ProfileFeature({
             ))}
           </div>
         ) : (
-          <div style={{
-            textAlign: 'center', padding: '24px 16px', marginBottom: '14px',
-            borderRadius: '14px',
-            border: '2px dashed var(--border-color)',
-            backgroundColor: 'var(--bg-subtle)',
-            color: 'var(--text-secondary)', fontSize: '13px', fontWeight: '600'
-          }}>
-            Aucune photo — ajoute des images pour te démarquer 📷
+          <div style={{ padding: '12px 0', marginBottom: '14px' }}>
+            <EmptyState
+              compact={true}
+              icon={<ImageIcon size={24} strokeWidth={2.2} />}
+              title="Aucune photo dans ton portfolio"
+              description="Ajoute des photos authentiques pour mettre en valeur ton savoir-faire et tes compétences."
+            />
           </div>
         )}
 

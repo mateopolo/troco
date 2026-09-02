@@ -52,6 +52,8 @@ import {
 } from './utils/geocodingNominatim';
 
 import { useGlobalContent } from './features/admin/useGlobalContent';
+import { EmptyState } from './components/ui/EmptyState';
+import OfflineBanner from './components/common/OfflineBanner';
 
 // Lazy-loaded heavy components & modals (Strict Code-Splitting)
 const AdminDashboard = React.lazy(() => import('./features/admin/AdminDashboard'));
@@ -249,6 +251,17 @@ export default function App() {
   const [allReports, setAllReports] = useState([]);
   const [allFirestoreUsers, setAllFirestoreUsers] = useState([]);
   const [isPending, startTransition] = useTransition();
+
+  const mapContainerRef = useRef(null);
+  const handleSwitchToMap = () => {
+    setViewMode('map');
+    setIsInfiniteRadius(true);
+    setTimeout(() => {
+      if (mapContainerRef.current) {
+        mapContainerRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 60);
+  };
 
   const categoryScrollRef = useRef(null);
   const scrollCategories = (direction) => {
@@ -2400,10 +2413,12 @@ export default function App() {
       overflowX: 'hidden',
       transition: 'background-color 0.3s ease, color 0.3s ease',
       paddingBottom: activeTab === 'chat' ? '0' : '90px',
-      WebkitFontSmoothing: 'antialiased',
       position: 'relative',
       fontFamily: 'var(--font-family-main)'
     }}>
+      {/* 🚨 PHASE 49 : BANNIÈRE PERSISTANTE DE DÉCONNEXION RÉSEAU (OFFLINE UI) */}
+      <OfflineBanner />
+
       {/* CONSTELLATION GÉOMÉTRIQUE FLUIDE EN ARRIÈRE-PLAN */}
       <GeometricBackground darkMode={darkMode} />
 
@@ -3281,7 +3296,7 @@ export default function App() {
                 {/* Sélecteur de vue (Liste / Carte) dédié et étanche */}
                 <div className="premium-panel" style={{ display: 'inline-flex', flexShrink: 0, border: '1px solid var(--border-color)', borderRadius: '999px', padding: '3px', backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-card)' }}>
                   <button onClick={() => setViewMode('list')} className="premium-nav-btn" style={{ border: 'none', borderRadius: '999px', padding: '8px 14px', backgroundColor: viewMode === 'list' ? 'var(--accent-primary)' : 'transparent', color: viewMode === 'list' ? '#FFF' : 'var(--text-secondary)', fontWeight: '700', cursor: 'pointer', fontSize: '12px' }}>{t('viewList')}</button>
-                  <button onClick={() => { setViewMode('map'); setIsInfiniteRadius(true); }} className="premium-nav-btn" style={{ border: 'none', borderRadius: '999px', padding: '8px 14px', backgroundColor: viewMode === 'map' ? 'var(--accent-primary)' : 'transparent', color: viewMode === 'map' ? '#FFF' : 'var(--text-secondary)', fontWeight: '700', cursor: 'pointer', fontSize: '12px' }}>{t('viewMap')}</button>
+                  <button onClick={handleSwitchToMap} className="premium-nav-btn" style={{ border: 'none', borderRadius: '999px', padding: '8px 14px', backgroundColor: viewMode === 'map' ? 'var(--accent-primary)' : 'transparent', color: viewMode === 'map' ? '#FFF' : 'var(--text-secondary)', fontWeight: '700', cursor: 'pointer', fontSize: '12px' }}>{t('viewMap')}</button>
                 </div>
               </div>
 
@@ -3516,39 +3531,63 @@ export default function App() {
               </div>
 
               {filteredListings.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '60px 20px', backgroundColor: 'var(--bg-card)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', borderRadius: '24px', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-card)', animation: 'fadeSlideUp 0.3s ease both' }}>
-                  <div style={{ width: '64px', height: '64px', borderRadius: '50%', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', boxShadow: 'var(--shadow-accent)' }}>
-                    <Search size={28} />
-                  </div>
-                  <h3 className="font-editorial-heading" style={{ fontSize: '20px', fontWeight: '600', color: 'var(--text-main)', margin: '0 0 8px' }}>Aucune annonce ne correspond à ta recherche</h3>
-                  <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '0 0 20px', maxWidth: '420px', marginInline: 'auto', lineHeight: 1.6 }}>Essaie d'élargir ton rayon de recherche, de changer de catégorie ou de réinitialiser tes filtres pour découvrir les annonces des membres Troco.</p>
-                  <button
-                    onClick={() => { setSearchQuery(''); setSelectedCategory('all'); setRadiusKm(100); setIsInfiniteRadius(true); setSelectedLanguages([]); setSelectedPayment('all'); setFormatFilter('all'); }}
-                    className="premium-button"
-                    style={{ border: 'none', borderRadius: '999px', padding: '10px 22px', background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)', color: '#FFF', fontWeight: '800', fontSize: '13px', cursor: 'pointer', boxShadow: 'var(--shadow-accent)' }}
-                  >
-                    Réinitialiser tous les filtres
-                  </button>
+                <div style={{ width: '100%', padding: '40px 0', display: 'flex', justifyContent: 'center' }}>
+                  <EmptyState
+                    icon={<Search size={30} strokeWidth={2.2} />}
+                    title="Aucune annonce ne correspond à ta recherche"
+                    description="Essaie d'élargir ton rayon de recherche, de changer de catégorie ou de réinitialiser tes filtres pour découvrir les annonces des membres Troco."
+                    action={(
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSearchQuery('');
+                          setSelectedCategory('all');
+                          setRadiusKm(100);
+                          setIsInfiniteRadius(true);
+                          setSelectedLanguages([]);
+                          setSelectedPayment('all');
+                          setFormatFilter('all');
+                        }}
+                        className="premium-button"
+                        style={{
+                          border: 'none',
+                          borderRadius: '999px',
+                          padding: '12px 24px',
+                          background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
+                          color: '#FFF',
+                          fontWeight: '800',
+                          fontSize: '13px',
+                          cursor: 'pointer',
+                          boxShadow: 'var(--shadow-accent)',
+                        }}
+                      >
+                        Réinitialiser tous les filtres
+                      </button>
+                    )}
+                  />
                 </div>
               ) : viewMode === 'map' ? (
-                <Suspense fallback={null}>
-                  <MapSection
-                    filteredListings={filteredListings}
-                    mapCenter={mapCenter}
-                    mapZoom={mapZoom}
-                    darkMode={darkMode}
-                    currentLang={currentLang}
-                    t={t}
-                    theme={theme}
-                    getCoordinatesForLocation={getCoordinatesForLocation}
-                    getSuggestedMedia={getSuggestedMedia}
-                    getListingDisplayContent={getListingDisplayContent}
-                    localizeLocation={localizeLocation}
-                    handleOpenListing={handleOpenListing}
-                    onClose={() => setViewMode('list')}
-                    onCloseMap={() => setViewMode('list')}
-                  />
-                </Suspense>
+                <div ref={mapContainerRef} style={{ width: '100%', position: 'relative' }}>
+                  <Suspense fallback={null}>
+                    <MapSection
+                      filteredListings={filteredListings}
+                      mapCenter={mapCenter}
+                      mapZoom={mapZoom}
+                      darkMode={darkMode}
+                      currentLang={currentLang}
+                      t={t}
+                      theme={theme}
+                      getCoordinatesForLocation={getCoordinatesForLocation}
+                      getSuggestedMedia={getSuggestedMedia}
+                      getListingDisplayContent={getListingDisplayContent}
+                      localizeLocation={localizeLocation}
+                      handleOpenListing={handleOpenListing}
+                      onClose={() => setViewMode('list')}
+                      onCloseMap={() => setViewMode('list')}
+                      mapContainerRef={mapContainerRef}
+                    />
+                  </Suspense>
+                </div>
               ) : (
                 <>
                   <motion.div

@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Globe, MessageSquare, PlusCircle, User } from 'lucide-react';
+import { hapticLight } from '../../utils/haptics';
 
 export const AppBottomNav = React.memo(({
   isMobile = false,
@@ -112,9 +113,7 @@ export const AppBottomNav = React.memo(({
     } else {
       switchTab?.(tabId);
     }
-    if (typeof navigator !== 'undefined' && navigator.vibrate) {
-      try { navigator.vibrate(12); } catch (_) { }
-    }
+    hapticLight();
   }, [handlePostButtonClick, switchTab]);
 
   // Calcul de l'onglet cible selon la position X
@@ -164,9 +163,7 @@ export const AppBottomNav = React.memo(({
     const targetTabId = getTabFromX(e.clientX);
     if (targetTabId !== hoveredTabId) {
       setHoveredTabId(targetTabId);
-      if (typeof navigator !== 'undefined' && navigator.vibrate) {
-        try { navigator.vibrate(8); } catch (_) { }
-      }
+      hapticLight();
     }
   }, [hoveredTabId, getTabFromX]);
 

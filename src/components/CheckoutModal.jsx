@@ -1,5 +1,6 @@
 import React from 'react';
 import { X, Check, ShieldCheck, Lock, CreditCard, Coins } from 'lucide-react';
+import { hapticSuccess, hapticLight } from '../utils/haptics';
 
 export default function CheckoutModal({
   checkout,
@@ -124,7 +125,11 @@ export default function CheckoutModal({
               {paymentMethods.map(method => (
                 <button
                   key={method.key}
-                  onClick={() => setCheckout(prev => ({ ...prev, method: method.key }))}
+                  type="button"
+                  onClick={() => {
+                    hapticLight();
+                    setCheckout(prev => ({ ...prev, method: method.key }));
+                  }}
                   style={{
                     display: 'flex', alignItems: 'center', gap: '12px',
                     border: checkout.method === method.key ? (darkMode ? '1.5px solid #60A5FA' : '1.5px solid #04265A') : (darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid #E2E8F0'),
@@ -163,7 +168,12 @@ export default function CheckoutModal({
             )}
 
             <button
-              onClick={handleConfirmPayment}
+              onClick={() => {
+                hapticSuccess();
+                if (typeof handleConfirmPayment === 'function') {
+                  handleConfirmPayment();
+                }
+              }}
               className="premium-button"
               style={{
                 width: '100%', border: 'none', borderRadius: '16px', padding: '14px',

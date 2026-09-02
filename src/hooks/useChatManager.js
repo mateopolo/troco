@@ -21,6 +21,7 @@ import { validateChatMessage } from '../utils/moderationBlacklist';
 import { uploadVoiceNote } from '../services/voiceStorageService';
 import { playBetclicBalanceSound, playApplePaySound } from '../utils/audioService';
 import { useChatStore } from '../stores';
+import { hapticLight, hapticSuccess, hapticError } from '../utils/haptics';
 
 /**
  * Hook centralisant le moteur logique de messagerie, négociations et transactions de deals.
@@ -596,6 +597,7 @@ export const useChatManager = ({
   // ---- ENVOI DE MESSAGE (TEXTE OU PAYLOAD OBJET PERSONNALISÉ / WHITEBOARD) ----
   const handleSendMessage = async (customPayload = null) => {
     if (!selectedChat) return;
+    hapticLight();
 
     if (customPayload && typeof customPayload === 'object') {
       const chatId = selectedChat.id;
@@ -1335,6 +1337,7 @@ export const useChatManager = ({
 
     playBetclicBalanceSound(true);
     playApplePaySound();
+    hapticSuccess();
 
     const transactionId = `TRK-DEAL-${Date.now().toString().slice(-6)}`;
     const newTx = {
@@ -1466,6 +1469,7 @@ export const useChatManager = ({
 
   // ---- LIBÉRATION DU SÉQUESTRE FINANCIER ----
   const handleReleaseEscrow = async (chatId, dealId, escrowData) => {
+    hapticSuccess();
     const cid = String(chatId);
     const mid = String(dealId);
     const dealMsg = (chatThreads[cid] || []).find(m => String(m.id) === mid);
@@ -1586,6 +1590,7 @@ export const useChatManager = ({
     );
     if (isMe) return;
 
+    hapticSuccess();
     const chat = (selectedChat && String(selectedChat.id) === String(chatId))
       ? selectedChat
       : (chatsList.find(c => String(c.id) === String(chatId)) || mockChats.find(c => String(c.id) === String(chatId)));
@@ -1636,6 +1641,7 @@ export const useChatManager = ({
     );
     if (isMe) return;
 
+    hapticError();
     setChatThreads(prev => ({
       ...prev,
       [chatId]: (prev[chatId] || []).map(m => String(m.id) === String(dealId) ? { ...m, status: 'declined' } : m),

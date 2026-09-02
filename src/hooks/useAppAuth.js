@@ -35,7 +35,10 @@ export const useAppAuth = () => {
     addEquipment,
     removeEquipment,
     addPortfolioImage,
-    removePortfolioImage
+    removePortfolioImage,
+    addSocialLink,
+    removeSocialLink,
+    setSocialLinks,
   } = useAuthStore();
 
   const [isLoadingSession, setIsLoadingSession] = useState(true);
@@ -119,6 +122,7 @@ export const useAppAuth = () => {
               avatar: user.photoURL || profile.avatar || '',
               trocoTokens: profile.trocoTokens || 12,
               euroBalance: profile.euroBalance || 100,
+              socialLinks: profile.socialLinks || ['https://github.com/mateopolo', 'https://linkedin.com/in/mateopolo'],
               kycVerified: false,
               isBanned: false,
               createdAt: serverTimestamp(),
@@ -205,6 +209,9 @@ export const useAppAuth = () => {
     removeEquipment,
     addPortfolioImage,
     removePortfolioImage,
+    addSocialLink,
+    removeSocialLink,
+    setSocialLinks,
   };
 };
 

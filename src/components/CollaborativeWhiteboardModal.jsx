@@ -31,6 +31,7 @@ import {
   fetchWorkspaceVersions,
   WORKSPACE_TYPES,
 } from '../features/workspace/workspaceService';
+import { setThemeColorOverride, clearThemeColorOverride } from '../utils/themeColor';
 
 const SHAPE_OPTIONS = [
   { id: 'rect', label: 'Rectangle', icon: Square },
@@ -121,6 +122,16 @@ export default function CollaborativeWhiteboardModal({
       window.removeEventListener('orientationchange', handleResize);
     };
   }, []);
+
+  // 🚨 PHASE 50 : SYNCHRONISATION IMMERSIVE DE LA BARRE DE STATUT SUR LA COULEUR DU CANVAS
+  useEffect(() => {
+    if (isOpen) {
+      setThemeColorOverride(backgroundColor);
+      return () => {
+        clearThemeColorOverride();
+      };
+    }
+  }, [isOpen, backgroundColor]);
 
   // 3. Séparation stricte d'état pour zéro conflit
   const [localPaths, setLocalPaths] = useState([]);

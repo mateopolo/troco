@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight, Video, Globe, MapPin, Tag, ArrowRight, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { ProgressiveImage } from './ui/ProgressiveImage';
 
 function FeedCardItem({
   item,
@@ -228,19 +229,18 @@ function FeedCardItem({
         {gallery.map((imgSrc, idx) => {
           const isActive = idx === currentSlideIndex;
           return (
-            <img
+            <ProgressiveImage
               key={idx}
               src={imgSrc}
+              fallbackSrc={getFallbackImage(item.category, item.title)}
               alt={item.title}
               draggable={false}
               className="ken-burns-img"
-              onError={(e) => { e.target.src = getFallbackImage(item.category, item.title); }}
               style={{
                 position: 'absolute',
                 inset: 0,
                 width: '100%',
                 height: '100%',
-                objectFit: 'cover',
                 opacity: isActive ? 1 : 0,
                 transition: 'opacity 0.4s ease, transform 900ms var(--ease-quiet)',
                 transform: isHovered && isActive ? 'scale(1.05)' : (isActive ? 'scale(1)' : 'scale(1.02)'),
@@ -249,6 +249,9 @@ function FeedCardItem({
                 userSelect: 'none',
                 WebkitUserSelect: 'none',
                 zIndex: isActive ? 2 : 1
+              }}
+              imgStyle={{
+                objectFit: 'cover',
               }}
             />
           );

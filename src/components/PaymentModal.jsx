@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { getLocalizedTrocoPlusPlans, detectUserCountry, PPP_COUNTRY_MATRIX } from '../utils/pricingEngine';
 import { outboxService } from '../services/outboxService';
+import { hapticSuccess, hapticError } from '../utils/haptics';
 
 // Algorithme de Luhn pour la validation des numéros de carte bancaire
 function isValidLuhn(numStr) {
@@ -233,6 +234,7 @@ export default function PaymentModal({
   const handleInitiatePayment = () => {
     if (isDealMode) {
       if (dealTokensRequired > 0 && !hasEnoughTokens) {
+        hapticError();
         alert('Solde de Jetons Troco insuffisant pour finaliser ce deal.');
         return;
       }
@@ -251,7 +253,10 @@ export default function PaymentModal({
     if (amountToPay <= 0) return;
 
     if (paymentMethod === 'card') {
-      if (!validateCardForm()) return;
+      if (!validateCardForm()) {
+        hapticError();
+        return;
+      }
       setIsProcessing(true);
       // Simulation appel passerelle Stripe / 3D Secure
       setTimeout(() => {
@@ -274,6 +279,7 @@ export default function PaymentModal({
 
     if (paymentMethod === 'wallet') {
       if ((currentUser?.euroBalance || 0) < amountToPay) {
+        hapticError();
         alert('Solde Euros insuffisant dans votre portefeuille.');
         return;
       }
@@ -290,6 +296,7 @@ export default function PaymentModal({
   // Validation 3D Secure
   const handleVerify3DS = () => {
     if (otpCode.trim() !== '1234' && otpCode.trim().length !== 4) {
+      hapticError();
       setOtpError('Code OTP incorrect (Pour la démo, utilisez : 1234)');
       return;
     }
@@ -307,6 +314,7 @@ export default function PaymentModal({
   // Finalisation du paiement et retour au parent
   const finalizePayment = (paymentMeta) => {
     setIsProcessing(false);
+    hapticSuccess();
     if (playApplePaySound && paymentMeta.method.includes('Apple')) {
       playApplePaySound();
     } else if (playBetclicSound) {

@@ -3,26 +3,41 @@ import Portal from '../../components/ui/Portal';
 import { MapContainer, TileLayer, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { Navigation, Loader2, Maximize, X, Hand } from 'lucide-react';
+import { Navigation, Loader2, Maximize, X, Hand, MapPin } from 'lucide-react';
 import SectoralErrorBoundary from '../../components/SectoralErrorBoundary';
 import useMediaQuery from '../../hooks/useMediaQuery';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 const MapClusterTracker = React.lazy(() => import('../../components/MapClusterTracker'));
 
+import { MAP_I18N, getMapTranslation } from './mapTranslations';
+export { MAP_I18N, getMapTranslation };
+
 /**
- * Gestionnaire de redimensionnement et de cycle de vie Leaflet
- * Invalide la taille après le montage pour garantir un rendu parfait (pas de tuiles grises)
- * et nettoie les écouteurs au démontage.
+ * Gestionnaire de redimensionnement, de déblocage des contrôles et du cycle de vie Leaflet
  */
-function MapLifecycleManager({ isFullScreen }) {
+function MapLifecycleManager({ isFullScreen, isMobile }) {
   const map = useMap();
 
   useEffect(() => {
+    if (!map) return;
+
+    // Déblocage complet du drag et du zoom molette sur ordinateur et mobile
+    try {
+      map.dragging.enable();
+      map.scrollWheelZoom.enable();
+      map.touchZoom.enable();
+      map.doubleClickZoom.enable();
+      map.boxZoom.enable();
+      map.keyboard.enable();
+    } catch (_) {}
+
     const timer = setTimeout(() => {
       if (map) map.invalidateSize();
     }, 150);
+
     return () => clearTimeout(timer);
-  }, [isFullScreen, map]);
+  }, [isFullScreen, isMobile, map]);
 
   useEffect(() => {
     return () => {
@@ -49,7 +64,7 @@ function MapLifecycleManager({ isFullScreen }) {
 /**
  * Bouton de recentrage GPS "Me localiser"
  */
-function MapLocateControl({ onLocated }) {
+function MapLocateControl({ onLocated, currentLang = 'FR' }) {
   const map = useMap();
   const [isLocating, setIsLocating] = useState(false);
 
@@ -58,7 +73,7 @@ function MapLocateControl({ onLocated }) {
     e.stopPropagation();
 
     if (!navigator.geolocation) {
-      alert("La géolocalisation n'est pas prise en charge par votre navigateur.");
+      alert(getMapTranslation(currentLang, 'unsupportedGeo'));
       return;
     }
 
@@ -117,15 +132,19 @@ function MapLocateControl({ onLocated }) {
           WebkitBackdropFilter: 'blur(16px)',
           transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
         }}
-        title="Me localiser instantanément sur la carte"
-        aria-label="Me localiser"
+        title={getMapTranslation(currentLang, 'locateMe')}
+        aria-label={getMapTranslation(currentLang, 'locateMe')}
       >
         {isLocating ? (
           <Loader2 size={18} className="animate-spin" />
         ) : (
           <Navigation size={18} />
         )}
-        <span>{isLocating ? 'Localisation...' : '🎯 Me localiser'}</span>
+        <span>
+          {isLocating
+            ? getMapTranslation(currentLang, 'locating')
+            : getMapTranslation(currentLang, 'locateMe')}
+        </span>
       </button>
     </div>
   );
@@ -134,10 +153,9 @@ function MapLocateControl({ onLocated }) {
 /**
  * InteractiveMapView.jsx
  * Carte interactive Leaflet haute performance :
- * 1. Sur Mobile : Montée automatiquement dans un React Portal (document.body) en plein écran (100dvh)
- *    avec un imposant bouton flottant "Fermer la carte" pour libérer l'utilisateur.
- * 2. Sur Desktop ou Inline : Cooperative Gesture Handling (gestes à 2 doigts pour scroller sur la carte)
- *    permettant le défilement normal de la page avec un seul doigt sans piéger l'utilisateur.
+ * 1. Scroll & Centrage automatique au milieu de l'écran.
+ * 2. Déblocage complet du drag et du zoom molette sur Desktop.
+ * 3. Localisation stricte multilingue du bouton ("Fermer la carte" / "Close map" / "Cerrar el mapa" / "Chiudi la mappa").
  */
 export function InteractiveMapView({
   filteredListings = [],
@@ -155,14 +173,28 @@ export function InteractiveMapView({
   createModernMapIcon,
   onClose,
   onCloseMap,
+  mapContainerRef: externalMapContainerRef,
 }) {
   const isMobile = useMediaQuery('(max-width: 768px)');
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [showTwoFingerHelper, setShowTwoFingerHelper] = useState(false);
   const touchHelperTimeoutRef = useRef(null);
+  const internalContainerRef = useRef(null);
 
-  // Sur mobile, la carte est toujours affichée en mode immersif plein écran
+  const containerRef = externalMapContainerRef || internalContainerRef;
   const activeFullScreen = isMobile || isFullScreen;
+
+  // 1. SCROLL ET CENTRAGE AUTOMATIQUE AU MONTAGE
+  useEffect(() => {
+    if (!activeFullScreen && containerRef.current) {
+      const scrollTimer = setTimeout(() => {
+        try {
+          containerRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } catch (_) {}
+      }, 60);
+      return () => clearTimeout(scrollTimer);
+    }
+  }, [activeFullScreen, containerRef]);
 
   // Verrouillage du scroll du body en mode plein écran / portail mobile
   useEffect(() => {
@@ -175,7 +207,7 @@ export function InteractiveMapView({
     }
   }, [activeFullScreen]);
 
-  // Détection des interactions tactiles pour le cooperative gesture handling
+  // Détection des interactions tactiles sur mobile pour le cooperative gesture handling si non-fullscreen
   const handleTouchStart = (e) => {
     if (!activeFullScreen) {
       if (e.touches && e.touches.length === 1) {
@@ -236,9 +268,13 @@ export function InteractiveMapView({
 
   const mapIconFn = createModernMapIcon || defaultCreateModernMapIcon;
 
+  // Libellé traduit strict pour le bouton de fermeture
+  const closeMapText = getMapTranslation(currentLang, 'closeMap');
+
   // Élément interactif de la carte
   const mapElement = (
     <div
+      ref={containerRef}
       onTouchStart={handleTouchStart}
       style={{
         position: 'relative',
@@ -250,7 +286,7 @@ export function InteractiveMapView({
         backgroundColor: 'var(--bg-global, #0F172A)',
       }}
     >
-      {/* BOUTON FLOTTANT IMPOSANT POUR FERMER LA CARTE (POSITION CENTRALE HAUTE, Z-INDEX MAXIMUM, SANS CHEVAUCHEMENT DE ZOOM) */}
+      {/* BOUTON FLOTTANT IMPOSANT POUR FERMER LA CARTE (LOCALISATION STRICTE) */}
       {activeFullScreen ? (
         <div
           style={{
@@ -291,26 +327,11 @@ export function InteractiveMapView({
               WebkitTapHighlightColor: 'transparent',
               whiteSpace: 'nowrap',
             }}
-            title={currentLang === 'EN' ? 'Close map' : currentLang === 'ES' ? 'Cerrar mapa' : currentLang === 'IT' ? 'Chiudere mappa' : currentLang === 'DE' ? 'Karte schließen' : 'Fermer la carte'}
-            aria-label={currentLang === 'EN' ? 'Close' : currentLang === 'ES' ? 'Cerrar' : currentLang === 'IT' ? 'Chiudere' : currentLang === 'DE' ? 'Schließen' : 'Fermer'}
+            title={closeMapText}
+            aria-label={closeMapText}
           >
             <X size={18} strokeWidth={2.6} color="var(--accent-primary, #C67D5B)" />
-            <span>
-              {(() => {
-                const lang = (currentLang || 'FR').toUpperCase();
-                switch (lang) {
-                  case 'EN': return 'Close';
-                  case 'ES': return 'Cerrar';
-                  case 'IT': return 'Chiudere';
-                  case 'DE': return 'Schließen';
-                  case 'JA': return '閉じる';
-                  case 'ZH': return '关闭';
-                  case 'FR':
-                  default:
-                    return 'Fermer';
-                }
-              })()}
-            </span>
+            <span>{closeMapText}</span>
           </button>
         </div>
       ) : (
@@ -349,8 +370,8 @@ export function InteractiveMapView({
               WebkitBackdropFilter: 'blur(12px)',
               transition: 'all 0.2s ease',
             }}
-            title="Carte en plein écran (Vue immersive)"
-            aria-label="Agrandir la carte"
+            title={getMapTranslation(currentLang, 'immersiveView')}
+            aria-label={getMapTranslation(currentLang, 'expandMap')}
           >
             <Maximize size={18} />
           </button>
@@ -381,7 +402,7 @@ export function InteractiveMapView({
         >
           <Hand size={42} color="#FBBF24" style={{ marginBottom: '12px' }} />
           <p style={{ margin: '0 0 16px', fontSize: '15px', fontWeight: '800', lineHeight: 1.45, maxWidth: '300px' }}>
-            Utilisez 2 doigts pour déplacer la carte, ou ouvrez en Plein Écran.
+            {getMapTranslation(currentLang, 'twoFingerHelp')}
           </p>
           <button
             type="button"
@@ -403,11 +424,59 @@ export function InteractiveMapView({
               boxShadow: '0 4px 18px rgba(198,125,91,0.45)',
             }}
           >
-            Ouvrir en Plein Écran
+            {getMapTranslation(currentLang, 'openFullscreen')}
           </button>
         </div>
       )}
 
+      {/* OVERLAY EMPTY STATE SUR LA CARTE SI AUCUN RÉSULTAT */}
+      {filteredListings.length === 0 && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            zIndex: 1000,
+            width: '90%',
+            maxWidth: '380px',
+            pointerEvents: 'auto',
+          }}
+        >
+          <EmptyState
+            compact={true}
+            icon={<MapPin size={26} strokeWidth={2.2} />}
+            title="Aucun troc dans cette zone"
+            description="Élargissez votre zone de recherche géographique ou réinitialisez vos filtres pour découvrir des annonces."
+            action={(
+              <button
+                type="button"
+                onClick={() => {
+                  try {
+                    window.dispatchEvent(new CustomEvent('troco:reset_filters'));
+                  } catch (_) {}
+                }}
+                className="premium-button"
+                style={{
+                  border: 'none',
+                  borderRadius: '999px',
+                  padding: '10px 20px',
+                  background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
+                  color: '#FFFFFF',
+                  fontWeight: '800',
+                  fontSize: '12.5px',
+                  cursor: 'pointer',
+                  boxShadow: 'var(--shadow-accent)',
+                }}
+              >
+                Réinitialiser les filtres
+              </button>
+            )}
+          />
+        </div>
+      )}
+
+      {/* 2. DÉBLOCAGE COMPLET DU DRAG ET DU ZOOM MOLETTE */}
       <MapContainer
         center={mapCenter || [49.0022, 2.5153]}
         zoom={mapZoom || 12}
@@ -415,12 +484,13 @@ export function InteractiveMapView({
         maxBounds={[[-85, -180], [85, 180]]}
         maxBoundsViscosity={1.0}
         worldCopyJump={true}
-        dragging={activeFullScreen}
+        dragging={true}
         touchZoom={true}
-        scrollWheelZoom={activeFullScreen}
+        scrollWheelZoom={true}
+        doubleClickZoom={true}
         style={{ width: '100%', height: '100%' }}
       >
-        <MapLifecycleManager isFullScreen={activeFullScreen} />
+        <MapLifecycleManager isFullScreen={activeFullScreen} isMobile={isMobile} />
 
         <TileLayer
           noWrap={true}
@@ -429,7 +499,7 @@ export function InteractiveMapView({
           url={`https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}&hl=${(currentLang || 'FR').toLowerCase()}`}
         />
 
-        <MapLocateControl />
+        <MapLocateControl onLocated={() => {}} currentLang={currentLang} />
 
         <Suspense fallback={null}>
           <MapClusterTracker

@@ -1,12 +1,13 @@
 /**
  * Troco Service Worker
- * Gestion du cache offline, des requêtes statiques et de l'installation PWA mobile.
+ * Gestion du cache offline, des requêtes statiques, page offline brandée et installation PWA mobile.
  */
 
-const CACHE_NAME = 'troco-pwa-v1';
+const CACHE_NAME = 'troco-pwa-v2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
+  '/offline.html',
   '/manifest.json',
   '/favicon.ico',
   '/logo192.png',
@@ -79,7 +80,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 2. Navigation HTML -> Network First avec fallback sur cache
+  // 2. Navigation HTML -> Network First avec fallback sur offline.html ou index.html
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetch(event.request).then((networkResponse) => {
@@ -90,7 +91,9 @@ self.addEventListener('fetch', (event) => {
           });
         }
         return networkResponse;
-      }).catch(() => {
+      }).catch(async () => {
+        const cachedOffline = await caches.match('/offline.html');
+        if (cachedOffline) return cachedOffline;
         return caches.match('/index.html') || caches.match('/');
       })
     );

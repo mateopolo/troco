@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import {
   X, Star, ShieldCheck, MapPin, Sparkles, MessageSquare,
-  CheckCircle, Briefcase, Award, Camera, Wrench, ExternalLink
+  CheckCircle, Briefcase, Award, Camera, Wrench, ExternalLink, Link as LinkIcon
 } from 'lucide-react';
 import MobileHeader from './common/MobileHeader';
+import { SocialLinksDisplay } from './UserProfile';
+import { ProgressiveImage } from './ui/ProgressiveImage';
 
 export default function PublicProfileModal({
   isOpen,
@@ -31,6 +33,14 @@ export default function PublicProfileModal({
 
   // Bio par défaut intelligente selon le persona / contact
   const defaultBio = targetUser.bio || `Passionné d'échange et d'entraide sur Troco ! N'hésitez pas à me contacter via le chat pour discuter d'un troc, d'un prêt de matériel ou d'un coup de main mutuel.`;
+
+  // Liens sociaux vérifiés
+  const socialLinks = Array.isArray(targetUser.socialLinks) && targetUser.socialLinks.length > 0
+    ? targetUser.socialLinks
+    : (targetUser.socialUrl ? [targetUser.socialUrl] : [
+        `https://linkedin.com/in/${userName.toLowerCase().replace(/[^a-z0-9]/g, '')}`,
+        `https://github.com/${userName.toLowerCase().replace(/[^a-z0-9]/g, '')}`
+      ]);
 
   // Compétences & Matériel
   const skills = targetUser.skills || [
@@ -281,6 +291,13 @@ export default function PublicProfileModal({
                 {username}
               </div>
 
+              {/* LIENS SOCIAUX VÉRIFIÉS DU PROFIL */}
+              {socialLinks.length > 0 && (
+                <div style={{ marginBottom: '10px' }}>
+                  <SocialLinksDisplay links={socialLinks} size="small" />
+                </div>
+              )}
+
               {/* STATS DE CONFIANCE & LOCALISATION */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap', fontSize: '12px', color: 'var(--text-secondary)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontWeight: '700', color: '#F59E0B' }}>
@@ -387,10 +404,11 @@ export default function PublicProfileModal({
                     }}
                   >
                     <div style={{ position: 'relative', width: '100%', height: '140px' }}>
-                      <img
+                      <ProgressiveImage
                         src={item.image || 'https://images.unsplash.com/photo-1533105079780-92b9be482077?auto=format&fit=crop&w=600&q=80'}
                         alt={item.title}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        style={{ width: '100%', height: '100%' }}
+                        imgStyle={{ objectFit: 'cover' }}
                       />
                       {item.location && (
                         <div
@@ -461,6 +479,17 @@ export default function PublicProfileModal({
                   {defaultBio}
                 </p>
               </div>
+
+              {/* RÉSEAUX SOCIAUX & LIENS EXTERNES */}
+              {socialLinks.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <LinkIcon size={15} color="var(--accent-primary)" />
+                    <span>Réseaux sociaux & Profils vérifiés :</span>
+                  </div>
+                  <SocialLinksDisplay links={socialLinks} size="medium" />
+                </div>
+              )}
 
               {/* COMPÉTENCES & ÉQUIPEMENTS */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -538,10 +567,11 @@ export default function PublicProfileModal({
                       border: '1px solid var(--border-color)',
                     }}
                   >
-                    <img
+                    <ProgressiveImage
                       src={imgUrl}
                       alt={`Portfolio ${idx + 1}`}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      style={{ width: '100%', height: '100%' }}
+                      imgStyle={{ objectFit: 'cover' }}
                     />
                   </div>
                 ))}

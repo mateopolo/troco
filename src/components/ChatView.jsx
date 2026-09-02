@@ -6,7 +6,7 @@ import {
   ChevronLeft, Globe, Edit2, Edit3, Trash2, Copy, Check, X,
   AlertTriangle, Users, Coins, Mic, ShieldAlert, ShieldCheck,
   Palette, Briefcase, Plus, FileText, Calendar, Table,
-  MessageSquareDashed, RefreshCw
+  MessageSquareDashed, RefreshCw, MessageSquare, Search
 } from 'lucide-react';
 import { doc, deleteDoc, addDoc, collection, updateDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
 import { db, auth } from '../firebase';
@@ -17,6 +17,8 @@ import VoiceNotePlayer from './VoiceNotePlayer';
 import VoiceNoteRecorder from './VoiceNoteRecorder';
 import PublicProfileModal from './PublicProfileModal';
 import WorkspaceMessageCard from '../features/workspace/WorkspaceMessageCard';
+import { hapticLight, hapticSuccess, hapticError } from '../utils/haptics';
+import { EmptyState } from './ui/EmptyState';
 
 // Lazy loading des outils collaboratifs & suites vectorielles lourdes pour préserver les performances et la rapidité du build
 const CreateProjectGroupModal = lazy(() => import('./CreateProjectGroupModal'));
@@ -733,6 +735,7 @@ function ChatView({
   };
 
   const onSubmitMessage = () => {
+    hapticLight();
     if (editingMsg) {
       if (handleEditMessage) {
         handleEditMessage(currentChatId, editingMsg.id, chatInputText);
@@ -851,14 +854,38 @@ function ChatView({
   const renderChatRoom = () => {
     if (!activeChatObj) {
       return (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '16px', padding: '40px 20px', textAlign: 'center' }}>
-          <div style={{ width: '72px', height: '72px', borderRadius: '50%', backgroundColor: 'var(--bg-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid var(--border-color)' }}>
-            <span style={{ fontSize: '32px' }}>💬</span>
-          </div>
-          <div>
-            <p className="font-editorial-heading" style={{ margin: '0 0 6px', fontWeight: '600', fontSize: '20px', color: 'var(--text-main)' }}>Aucune discussion</p>
-            <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>Sélectionnez une discussion ou contactez un membre pour démarrer un échange.</p>
-          </div>
+        <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 20px', width: '100%', height: '100%', boxSizing: 'border-box' }}>
+          <EmptyState
+            icon={<MessageSquare size={32} strokeWidth={2.2} />}
+            title={t('noChats') || "Vous n'avez pas encore de conversation"}
+            description="Sélectionnez une discussion ou découvrez les annonces pour initier votre premier troc !"
+            action={(
+              <button
+                type="button"
+                onClick={() => {
+                  try { window.dispatchEvent(new CustomEvent('troco:switch_tab', { detail: 'feed' })); } catch (_) {}
+                }}
+                className="premium-button"
+                style={{
+                  border: 'none',
+                  borderRadius: '999px',
+                  padding: '12px 24px',
+                  background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
+                  color: '#FFFFFF',
+                  fontWeight: '800',
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                  boxShadow: 'var(--shadow-accent)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
+                }}
+              >
+                <Search size={15} />
+                <span>Découvrir les annonces</span>
+              </button>
+            )}
+          />
         </div>
       );
     }
@@ -1490,6 +1517,7 @@ function ChatView({
                           <button
                             type="button"
                             onClick={() => {
+                              hapticSuccess();
                               if (typeof onAcceptDeal === 'function') {
                                 onAcceptDeal(terms);
                               } else if (typeof handleAcceptDeal === 'function') {
@@ -1520,7 +1548,10 @@ function ChatView({
                           </button>
                           <button
                             type="button"
-                            onClick={() => openCounterOffer(terms, msg.id)}
+                            onClick={() => {
+                              hapticLight();
+                              openCounterOffer(terms, msg.id);
+                            }}
                             className="premium-button"
                             style={{
                               border: 'none',
@@ -1545,7 +1576,10 @@ function ChatView({
                           </button>
                           <button
                             type="button"
-                            onClick={() => handleDeclineDeal(currentChatId, msg.id)}
+                            onClick={() => {
+                              hapticError();
+                              handleDeclineDeal(currentChatId, msg.id);
+                            }}
                             className="premium-button"
                             style={{
                               border: '1px solid rgba(239, 68, 68, 0.28)',
@@ -2709,63 +2743,66 @@ function ChatView({
                 touchAction: 'pan-y'
               }}>
                 {visibleChats.length === 0 ? (
-                  <div style={{
-                    textAlign: 'center',
-                    padding: '48px 16px',
-                    color: 'var(--text-secondary)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '14px',
-                    margin: 'auto 0',
-                  }}>
-                    <div style={{
-                      width: '56px',
-                      height: '56px',
-                      borderRadius: '50%',
-                      backgroundColor: 'var(--bg-subtle)',
-                      border: '1.5px solid var(--border-color)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'var(--accent-primary)',
-                      boxShadow: 'var(--shadow-card)',
-                    }}>
-                      <MessageSquareDashed size={28} />
-                    </div>
-                    <div>
-                      <h4 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: '800', color: 'var(--text-main)' }}>
-                        {t('noChats') || 'Aucune conversation'}
-                      </h4>
-                      <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)', maxWidth: '240px', lineHeight: 1.4 }}>
-                        Vos échanges et propositions de troc apparaîtront ici.
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        try {
-                          window.dispatchEvent(new CustomEvent('troco:refetch_chats'));
-                        } catch (_) {}
-                      }}
-                      className="premium-button"
-                      style={{
-                        border: '1px solid var(--border-color)',
-                        backgroundColor: 'var(--bg-subtle)',
-                        color: 'var(--text-main)',
-                        borderRadius: '999px',
-                        padding: '6px 14px',
-                        fontSize: '11.5px',
-                        fontWeight: '700',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                      }}
-                    >
-                      <RefreshCw size={12} />
-                      <span>Actualiser</span>
-                    </button>
+                  <div style={{ padding: '32px 12px', display: 'flex', justifyContent: 'center', width: '100%', boxSizing: 'border-box' }}>
+                    <EmptyState
+                      compact={true}
+                      icon={<MessageSquareDashed size={28} strokeWidth={2.2} />}
+                      title={t('noChats') || "Vous n'avez pas encore de conversation"}
+                      description="Découvrez les annonces et échangez avec les membres de la communauté !"
+                      action={(
+                        <button
+                          type="button"
+                          onClick={() => {
+                            try { window.dispatchEvent(new CustomEvent('troco:switch_tab', { detail: 'feed' })); } catch (_) {}
+                          }}
+                          className="premium-button"
+                          style={{
+                            border: 'none',
+                            borderRadius: '999px',
+                            padding: '10px 18px',
+                            background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
+                            color: '#FFFFFF',
+                            fontWeight: '800',
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                            boxShadow: 'var(--shadow-accent)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px'
+                          }}
+                        >
+                          <Search size={13} />
+                          <span>Découvrir les annonces</span>
+                        </button>
+                      )}
+                      secondaryAction={(
+                        <button
+                          type="button"
+                          onClick={() => {
+                            try {
+                              window.dispatchEvent(new CustomEvent('troco:refetch_chats'));
+                            } catch (_) {}
+                          }}
+                          className="premium-button"
+                          style={{
+                            border: '1px solid var(--border-color)',
+                            backgroundColor: 'transparent',
+                            color: 'var(--text-secondary)',
+                            borderRadius: '999px',
+                            padding: '8px 14px',
+                            fontSize: '11px',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                          }}
+                        >
+                          <RefreshCw size={11} />
+                          <span>Actualiser</span>
+                        </button>
+                      )}
+                    />
                   </div>
                 ) : (
                   visibleChats.map(chat => {

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import { applyGlobalThemeColor } from '../utils/themeColor';
 
 // ============================================================================
 // CHROMATIC INTELLIGENCE & HSL / RGB / YIQ MATH UTILITIES
@@ -919,6 +920,9 @@ export function ThemeProvider({ children }) {
     // Contrast text on primary button
     const contrastOnPrimary = getContrastColor(vars['--accent-primary'] || customColors.primary);
     root.style.setProperty('--accent-contrast-text', contrastOnPrimary);
+
+    // 🚨 PHASE 50 : SYNCHRONISATION DYNAMIQUE DU META THEME-COLOR & BARRE DE STATUT MOBILE
+    applyGlobalThemeColor(isDark);
   }, [theme, isDark, typography, borderRadius, baseZoom, customColors]);
 
   const allThemes = useMemo(() => {

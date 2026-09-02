@@ -2,6 +2,9 @@ import React, { useState, useRef } from 'react';
 import { Star, ShieldCheck, Camera, Pencil, Check, Plus, Trash2, History, Image as ImageIcon, X, Upload } from 'lucide-react';
 import KycModal from './KycModal';
 import { PWAInstallProfileCard } from './PWAInstallBanner';
+import { SocialLinksDisplay, SocialLinksEditor } from './UserProfile';
+import { ProgressiveImage } from './ui/ProgressiveImage';
+import { EmptyState } from './ui/EmptyState';
 
 export default function ProfileView({
   activeTab,
@@ -157,6 +160,13 @@ export default function ProfileView({
                   {profile?.bio || ''}
                 </div>
 
+                {/* Liens Réseaux Sociaux & Portfolio Sécurisés */}
+                {profile?.socialLinks && profile.socialLinks.length > 0 && (
+                  <div style={{ marginBottom: '14px' }}>
+                    <SocialLinksDisplay links={profile.socialLinks} size="medium" />
+                  </div>
+                )}
+
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '14px', fontWeight: '800', color: 'var(--accent-warning)' }}>
                     {closedDealsCount > 0 && averageRating !== '—' ? (
@@ -212,12 +222,19 @@ export default function ProfileView({
                 <div style={{ display: 'flex', gap: '10px' }}>
                   <input
                     type="text"
-                    value={profileDraft.location}
+                    value={profileDraft?.location || ''}
                     onChange={(e) => setProfileDraft(prev => ({ ...prev, location: e.target.value }))}
                     placeholder="Localisation"
                     style={{ flex: 1, padding: '10px 12px', border: '1px solid var(--border-color)', borderRadius: '12px', fontSize: '13px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', outline: 'none' }}
                   />
                 </div>
+
+                {/* Gestionnaire d'édition des réseaux sociaux */}
+                <SocialLinksEditor
+                  socialLinks={profileDraft?.socialLinks !== undefined ? profileDraft.socialLinks : (profile?.socialLinks || [])}
+                  onChange={(newLinks) => setProfileDraft(prev => ({ ...prev, socialLinks: newLinks }))}
+                  darkMode={darkMode}
+                />
               </div>
             )}
 
@@ -394,11 +411,11 @@ export default function ProfileView({
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '18px' }}>
             {portfolioImages.map((src, idx) => (
               <div key={idx} style={{ position: 'relative', aspectRatio: '1', borderRadius: '14px', overflow: 'hidden', boxShadow: 'var(--shadow-card)', border: '1px solid var(--border-color)' }}>
-                <img
+                <ProgressiveImage
                   src={src}
                   alt={`Portfolio ${idx + 1}`}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                  onError={(e) => { e.target.style.display = 'none'; }}
+                  style={{ width: '100%', height: '100%' }}
+                  imgStyle={{ objectFit: 'cover' }}
                 />
                 <button
                   onClick={() => onRemovePortfolioImage && onRemovePortfolioImage(idx)}
@@ -408,7 +425,8 @@ export default function ProfileView({
                     backgroundColor: 'var(--overlay-bg)',
                     color: '#FFF', cursor: 'pointer',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    backdropFilter: 'blur(4px)', boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+                    backdropFilter: 'blur(4px)', boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                    zIndex: 10
                   }}
                   title="Supprimer cette photo"
                 >
@@ -418,16 +436,13 @@ export default function ProfileView({
             ))}
           </div>
         ) : (
-          <div style={{
-            textAlign: 'center', padding: '32px 16px', marginBottom: '16px',
-            borderRadius: '16px',
-            border: '2px dashed var(--border-color)',
-            color: 'var(--text-secondary)',
-            fontSize: '13px', fontWeight: '600', lineHeight: 1.5
-          }}>
-            <ImageIcon size={32} style={{ marginBottom: '10px', opacity: 0.4 }} color="var(--accent-primary)" />
-            <div>Aucune photo dans ton portfolio pour l'instant.</div>
-            <div style={{ fontSize: '12px', marginTop: '4px', opacity: 0.7 }}>Ajoute des photos pour mettre en valeur ton travail.</div>
+          <div style={{ padding: '12px 0', marginBottom: '16px' }}>
+            <EmptyState
+              compact={true}
+              icon={<ImageIcon size={24} strokeWidth={2.2} />}
+              title="Aucune photo dans ton portfolio"
+              description="Ajoute des photos authentiques pour mettre en valeur ton savoir-faire et tes compétences."
+            />
           </div>
         )}
 

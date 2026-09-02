@@ -22,6 +22,7 @@ const DEFAULT_PROFILE = {
   cguAcceptedAt: new Date().toISOString(),
   skills: ['Prod musicale & Ableton Live', 'Scripts Python'],
   equipment: ['MacBook Pro 14', 'Microphone USB'],
+  socialLinks: ['https://github.com/mateopolo', 'https://linkedin.com/in/mateopolo'],
   portfolioImages: [],
   swapHistory: [],
   dealsCompleted: 6,
@@ -118,6 +119,36 @@ export const useAuthStore = create(
         return {
           profile: { ...state.profile, portfolioImages: nextImages },
           profileDraft: { ...state.profileDraft, portfolioImages: nextImages }
+        };
+      }),
+
+      addSocialLink: (url) => set((state) => {
+        const val = (url || '').trim();
+        const current = Array.isArray(state.profile.socialLinks) ? state.profile.socialLinks : [];
+        if (!val || current.includes(val)) return state;
+        const nextLinks = [...current, val];
+        return {
+          profile: { ...state.profile, socialLinks: nextLinks },
+          profileDraft: { ...state.profileDraft, socialLinks: nextLinks }
+        };
+      }),
+
+      removeSocialLink: (indexOrUrl) => set((state) => {
+        const current = Array.isArray(state.profile.socialLinks) ? state.profile.socialLinks : [];
+        const nextLinks = typeof indexOrUrl === 'number'
+          ? current.filter((_, i) => i !== indexOrUrl)
+          : current.filter((link) => link !== indexOrUrl);
+        return {
+          profile: { ...state.profile, socialLinks: nextLinks },
+          profileDraft: { ...state.profileDraft, socialLinks: nextLinks }
+        };
+      }),
+
+      setSocialLinks: (socialLinks) => set((state) => {
+        const nextLinks = Array.isArray(socialLinks) ? socialLinks : [];
+        return {
+          profile: { ...state.profile, socialLinks: nextLinks },
+          profileDraft: { ...state.profileDraft, socialLinks: nextLinks }
         };
       }),
 

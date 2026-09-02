@@ -306,6 +306,7 @@ export default function FeedView({
             handleOpenListing={handleOpenListing}
             createModernMapIcon={createModernMapIcon}
             onClose={() => setViewMode && setViewMode('list')}
+            mapContainerRef={mapContainerRef}
           />
         </div>
       )}

@@ -6,6 +6,7 @@
  */
 
 import { analyzeContent } from './contentModeration.js';
+import { validateSocialLink } from './socialSecurity.js';
 
 // Utilitaire d'échappement regex
 const escapeRegex = (str) => (str ? str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') : '');
@@ -460,12 +461,28 @@ export const validateChatMessage = (messageText) => {
 };
 
 /**
- * Valide les informations de profil utilisateur (Nom, Pseudo, Bio, Compétences, Matériel)
- * @param {{ name?: string, username?: string, bio?: string, skills?: string[], equipment?: string[] }} profileDraft
+ * Valide les informations de profil utilisateur (Nom, Pseudo, Bio, Compétences, Matériel, Liens Sociaux)
+ * @param {{ name?: string, username?: string, bio?: string, skills?: string[], equipment?: string[], socialLinks?: string[] }} profileDraft
  * @returns {{ isValid: boolean, errorMessage?: string }}
  */
 export const validateProfileContent = (profileDraft) => {
   if (!profileDraft) return { isValid: true };
+
+  // Validation des liens sociaux avec blocage NSFW strict
+  if (Array.isArray(profileDraft.socialLinks)) {
+    for (const link of profileDraft.socialLinks) {
+      if (link && typeof link === 'string') {
+        const socialCheck = validateSocialLink(link);
+        if (!socialCheck.isValid) {
+          return {
+            isValid: false,
+            errorMessage: socialCheck.errorMessage || "Ce type de plateforme n'est pas autorisé sur Troco"
+          };
+        }
+      }
+    }
+  }
+
   const combined = [
     profileDraft.name || '',
     profileDraft.username || '',
