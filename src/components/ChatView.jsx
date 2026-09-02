@@ -341,6 +341,11 @@ function ChatView({
   const messagesEndRef = useRef(null);
   const scrollContainerRef = useRef(null);
 
+  // 🚨 PHASE 59 : ÉTATS ET RÉFÉRENCES SMART SCROLL
+  const [hasNewUnseenMessages, setHasNewUnseenMessages] = useState(false);
+  const [isScrolledUp, setIsScrolledUp] = useState(false);
+  const userJustSentMessageRef = useRef(false);
+
   const [viewportHeight, setViewportHeight] = useState(() => {
     if (typeof window !== 'undefined' && window.visualViewport) {
       return window.visualViewport.height;
@@ -348,24 +353,16 @@ function ChatView({
     return null;
   });
 
-  // Phase 27 — VisualViewport API : ajustement dynamique de la hauteur et auto-scroll lors de l'ouverture du clavier
+  // Phase 27 & 59 — VisualViewport API : ajustement dynamique de la hauteur SANS forcer de scroll aveugle
   useEffect(() => {
     if (typeof window === 'undefined' || !window.visualViewport) return;
     const handleViewportUpdate = () => {
       const vh = window.visualViewport.height;
       setViewportHeight(vh);
-      const el = scrollContainerRef.current;
-      if (el) {
-        requestAnimationFrame(() => {
-          el.scrollTop = el.scrollHeight;
-        });
-      }
     };
     window.visualViewport.addEventListener('resize', handleViewportUpdate);
-    window.visualViewport.addEventListener('scroll', handleViewportUpdate);
     return () => {
       window.visualViewport?.removeEventListener('resize', handleViewportUpdate);
-      window.visualViewport?.removeEventListener('scroll', handleViewportUpdate);
     };
   }, []);
 
@@ -490,28 +487,54 @@ function ChatView({
     const el = e.currentTarget;
     if (!el) return;
     const distanceToBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-    isUserNearBottomRef.current = distanceToBottom < 140;
+    const isNearBottom = distanceToBottom < 120;
+    isUserNearBottomRef.current = isNearBottom;
+    setIsScrolledUp(!isNearBottom);
+    if (isNearBottom) {
+      setHasNewUnseenMessages(false);
+    }
   }, []);
 
-  // Auto-scroll fiable : déclenché UNIQUEMENT au changement de conversation ou si l'utilisateur est déjà en bas
+  // Défilement doux vers le bas lors du clic sur la pilule flottante
+  const scrollToBottomSmooth = useCallback(() => {
+    const el = scrollContainerRef.current;
+    if (el) {
+      el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+      isUserNearBottomRef.current = true;
+      setIsScrolledUp(false);
+      setHasNewUnseenMessages(false);
+    }
+  }, []);
+
+  // 🚨 PHASE 59 : AUTO-SCROLL DÉCOUPLÉ & SMART SCROLL
   useEffect(() => {
     const el = scrollContainerRef.current;
     if (!el || !messages.length) return;
 
     const isNewChat = prevChatIdRef.current !== currentChatId;
     const isNewMessage = messages.length > prevMsgCountRef.current;
-    const wasNearBottom = isUserNearBottomRef.current;
+    const userSentMsg = userJustSentMessageRef.current;
 
     prevChatIdRef.current = currentChatId;
     prevMsgCountRef.current = messages.length;
+    userJustSentMessageRef.current = false;
 
-    if (isNewChat || (isNewMessage && wasNearBottom)) {
+    // Déclenchement automatique UNIQUEMENT :
+    // A. Au chargement initial ou changement de conversation
+    // B. Quand l'utilisateur lui-même envoie un message
+    // C. Si un nouveau message arrive alors que l'utilisateur est déjà tout en bas
+    if (isNewChat || userSentMsg || (isNewMessage && isUserNearBottomRef.current)) {
       requestAnimationFrame(() => {
         if (el) {
           el.scrollTop = el.scrollHeight;
           isUserNearBottomRef.current = true;
+          setIsScrolledUp(false);
+          setHasNewUnseenMessages(false);
         }
       });
+    } else if (isNewMessage && !isUserNearBottomRef.current) {
+      // L'utilisateur est remonté pour lire l'historique : NE PAS FORCER LE SCROLL, afficher l'indicateur
+      setHasNewUnseenMessages(true);
     }
   }, [currentChatId, messages.length, mobileSubView]);
 
@@ -771,6 +794,7 @@ function ChatView({
 
   const onSubmitMessage = () => {
     hapticLight();
+    userJustSentMessageRef.current = true;
     if (editingMsg) {
       if (handleEditMessage) {
         handleEditMessage(currentChatId, editingMsg.id, chatInputText);
@@ -1338,6 +1362,7 @@ function ChatView({
             flex: '1 1 0%',
             minHeight: 0,
             overflowY: 'auto',
+            overflowAnchor: 'auto',
             padding: isMobile ? '12px 10px' : '16px 20px',
             backgroundColor: 'transparent',
             display: 'flex',
@@ -1347,7 +1372,8 @@ function ChatView({
             overscrollBehaviorY: 'contain',
             WebkitOverflowScrolling: 'touch',
             touchAction: 'pan-y',
-            boxSizing: 'border-box'
+            boxSizing: 'border-box',
+            position: 'relative',
           }}
           ref={scrollContainerRef}
           onScroll={handleScroll}
@@ -1469,6 +1495,7 @@ function ChatView({
                     <div style={{
                       width: isMobile ? '94%' : '80%',
                       maxWidth: '520px',
+                      minHeight: isMobile ? '200px' : '220px',
                       border: isMine
                         ? '1.5px solid var(--accent-primary)'
                         : '1.5px solid var(--border-color)',
@@ -2216,6 +2243,47 @@ function ChatView({
           </div>
         </div>
 
+        {/* 🚨 PHASE 59 : BOUTON FLOTTANT "NOUVEAU MESSAGE ↓" (SMART SCROLL) */}
+        {hasNewUnseenMessages && (
+          <div style={{
+            position: 'relative',
+            width: '100%',
+            maxWidth: '680px',
+            margin: '0 auto',
+            pointerEvents: 'none',
+          }}>
+            <button
+              type="button"
+              onClick={scrollToBottomSmooth}
+              className="premium-button"
+              style={{
+                position: 'absolute',
+                bottom: '12px',
+                right: '16px',
+                pointerEvents: 'auto',
+                zIndex: 40,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 16px',
+                borderRadius: '999px',
+                backgroundColor: 'rgba(15, 23, 42, 0.92)',
+                backdropFilter: 'blur(16px)',
+                WebkitBackdropFilter: 'blur(16px)',
+                border: '1px solid rgba(59, 130, 246, 0.4)',
+                color: '#FFFFFF',
+                fontSize: '12px',
+                fontWeight: '800',
+                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.35), 0 0 12px rgba(59, 130, 246, 0.25)',
+                cursor: 'pointer',
+              }}
+            >
+              <span>Nouveau message ↓</span>
+              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#3B82F6', display: 'inline-block' }} />
+            </button>
+          </div>
+        )}
+
         {/* 3. BARRE DE SAISIE FIXE EN BAS (ANCRÉE AU-DESSUS DE LA ZONE DE GESTES) */}
         <div style={{
           display: 'flex', flexDirection: 'column', gap: '6px',
@@ -2262,6 +2330,7 @@ function ChatView({
                 isRecording={isRecordingAudio}
                 onCancel={() => setIsRecordingAudio(false)}
                 onSendVoiceNote={async (blob, dur) => {
+                  userJustSentMessageRef.current = true;
                   if (onSendAudioMessage) {
                     await onSendAudioMessage(blob, dur);
                   }
