@@ -15,6 +15,7 @@ import {
   Crown,
   CheckCircle,
   Check,
+  Palette,
   Image as ImageIcon,
   Plus,
   History,
@@ -85,6 +86,7 @@ export default function ProfileFeature({
     setBorderRadius,
     brandColor,
     applyBrandColor,
+    globalColorAmbiances,
     resetDesignStudio,
   } = useTheme();
 
@@ -1318,49 +1320,136 @@ export default function ProfileFeature({
         <div style={{
           backgroundColor: 'var(--bg-card)',
           borderRadius: 'var(--border-radius-main, 14px)',
-          padding: '16px',
+          padding: '18px 20px',
           border: '1px solid var(--border-color)',
           boxShadow: 'var(--shadow-card)',
-          marginBottom: '20px'
+          marginBottom: '20px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '18px',
         }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
-            <Sliders size={16} color="var(--accent-primary)" />
-            <strong style={{ fontSize: '13px', color: 'var(--text-main)' }}>Contrôles Avancés & Typographie</strong>
+          {/* EN-TÊTE DU STUDIO */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Sliders size={18} color="var(--accent-primary)" />
+              <strong style={{ fontSize: '14px', color: 'var(--text-main)', fontWeight: '800' }}>
+                Studio Design, Ambiances & Typographie
+              </strong>
+            </div>
+            <button
+              type="button"
+              onClick={resetDesignStudio}
+              className="premium-button"
+              style={{
+                border: 'none',
+                backgroundColor: 'var(--bg-subtle)',
+                color: 'var(--text-secondary)',
+                fontSize: '11px',
+                fontWeight: '700',
+                padding: '4px 10px',
+                borderRadius: '8px',
+                cursor: 'pointer',
+              }}
+            >
+              Réinitialiser
+            </button>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: '16px', marginBottom: '16px' }}>
-            {/* SÉLECTEUR DE TYPOGRAPHIE */}
-            <div>
-              <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '6px' }}>
-                Police de Caractères
+          {/* SÉLECTEUR D'AMBIANCE DE COULEURS GLOBALES (ACCENT COLORS) */}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+              <Palette size={14} color="var(--accent-primary)" />
+              <label style={{ fontSize: '11.5px', fontWeight: '800', color: 'var(--text-main)', textTransform: 'uppercase' }}>
+                Ambiance & Couleur d'Accentuation Globale
               </label>
-              <select
-                value={typography || 'editorial'}
-                onChange={(e) => setTypography(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '10px 12px',
-                  borderRadius: 'var(--border-radius-main, 14px)',
-                  border: '1px solid var(--border-color)',
-                  backgroundColor: 'var(--bg-subtle)',
-                  color: 'var(--text-main)',
-                  fontSize: '12.5px',
-                  fontWeight: '700',
-                  outline: 'none',
-                  cursor: 'pointer'
-                }}
-              >
-                {Object.values(typographyOptions || TYPOGRAPHY_OPTIONS).map((opt) => (
-                  <option key={opt.id} value={opt.id}>
-                    {opt.name}
-                  </option>
-                ))}
-              </select>
-              <div style={{ fontSize: '10px', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                {typographyOptions?.[typography]?.description || 'Rendu visuel haute précision'}
-              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+              {(globalColorAmbiances || []).map((amb) => {
+                const isActive = (brandColor && (brandColor === amb.id || brandColor.toLowerCase() === amb.color.toLowerCase())) || (!brandColor && amb.isDefault);
+                return (
+                  <button
+                    key={amb.id}
+                    type="button"
+                    onClick={() => applyBrandColor(amb.id)}
+                    style={{
+                      width: '36px',
+                      height: '36px',
+                      borderRadius: '50%',
+                      backgroundColor: amb.color,
+                      border: isActive ? '3px solid var(--text-main)' : '2px solid transparent',
+                      cursor: 'pointer',
+                      transform: isActive ? 'scale(1.15)' : 'scale(1)',
+                      boxShadow: isActive ? `0 4px 14px ${amb.color}66` : '0 2px 6px rgba(0,0,0,0.1)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#FFFFFF',
+                      transition: 'all 0.15s ease',
+                    }}
+                    title={amb.name}
+                  >
+                    {isActive && <Check size={18} strokeWidth={3} />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* SÉLECTEUR DE TYPOGRAPHIE (12+ GOOGLE FONTS AVEC RENDU RÉEL) */}
+          <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '14px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <label style={{ fontSize: '11.5px', fontWeight: '800', color: 'var(--text-main)', textTransform: 'uppercase' }}>
+                Typographie Globale (12+ Polices Google Fonts)
+              </label>
+              <span style={{ fontSize: '11px', color: 'var(--accent-primary)', fontWeight: '800', fontFamily: typographyOptions?.[typography]?.fontFamily }}>
+                Actif : {typographyOptions?.[typography]?.name || typography}
+              </span>
             </div>
 
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+              gap: '8px',
+              maxHeight: '220px',
+              overflowY: 'auto',
+              paddingRight: '4px',
+            }}>
+              {Object.values(typographyOptions || TYPOGRAPHY_OPTIONS).map((opt) => {
+                const isSelected = typography === opt.id || (!typography && opt.id === 'inter');
+                return (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => setTypography(opt.id)}
+                    style={{
+                      padding: '8px 10px',
+                      borderRadius: '12px',
+                      border: isSelected ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                      backgroundColor: isSelected ? 'var(--bg-subtle)' : 'transparent',
+                      color: isSelected ? 'var(--accent-primary)' : 'var(--text-main)',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '2px',
+                      fontFamily: opt.fontFamily,
+                      boxShadow: isSelected ? '0 2px 8px rgba(0,0,0,0.06)' : 'none',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <span style={{ fontSize: '13px', fontWeight: '700', lineHeight: 1.2 }}>
+                      {opt.name}
+                    </span>
+                    <span style={{ fontSize: '9.5px', color: 'var(--text-secondary)', fontFamily: "'Inter', sans-serif" }}>
+                      {opt.category || 'Google Font'}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: '16px', borderTop: '1px solid var(--border-color)', paddingTop: '14px' }}>
             {/* CURSEUR DE ZOOM GLOBAL */}
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
@@ -1386,79 +1475,79 @@ export default function ProfileFeature({
                 <span>Grand (110%)</span>
               </div>
             </div>
-          </div>
 
-          {/* CURSEUR DE FORME */}
-          <div style={{ marginBottom: '16px', borderTop: '1px solid var(--border-color)', paddingTop: '14px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-              <label style={{ fontSize: '11.5px', fontWeight: '800', color: 'var(--text-main)' }}>
-                Forme des Boutons & Cartes
-              </label>
-              <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--accent-primary)', fontFamily: 'monospace' }}>
-                {borderRadius >= 900 ? 'Pilule (999px • Cartes max 32px)' : `${borderRadius || 14}px`}
-              </span>
-            </div>
-            <input
-              type="range"
-              min="0"
-              max="32"
-              step="2"
-              value={borderRadius > 32 ? 32 : (borderRadius ?? 14)}
-              onChange={(e) => setBorderRadius(Number(e.target.value))}
-              style={{ width: '100%', marginBottom: '8px' }}
-            />
-            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-              <button
-                type="button"
-                onClick={() => setBorderRadius(0)}
-                className="premium-button"
-                style={{
-                  padding: '4px 10px',
-                  borderRadius: '0px',
-                  border: '1px solid var(--border-color)',
-                  backgroundColor: borderRadius === 0 ? 'var(--accent-primary)' : 'var(--bg-subtle)',
-                  color: borderRadius === 0 ? 'var(--accent-contrast-text, #FFF)' : 'var(--text-secondary)',
-                  fontSize: '10.5px',
-                  fontWeight: '700',
-                  cursor: 'pointer'
-                }}
-              >
-                Carré (0px)
-              </button>
-              <button
-                type="button"
-                onClick={() => setBorderRadius(14)}
-                className="premium-button"
-                style={{
-                  padding: '4px 10px',
-                  borderRadius: '14px',
-                  border: '1px solid var(--border-color)',
-                  backgroundColor: borderRadius === 14 ? 'var(--accent-primary)' : 'var(--bg-subtle)',
-                  color: borderRadius === 14 ? 'var(--accent-contrast-text, #FFF)' : 'var(--text-secondary)',
-                  fontSize: '10.5px',
-                  fontWeight: '700',
-                  cursor: 'pointer'
-                }}
-              >
-                Doux (14px)
-              </button>
-              <button
-                type="button"
-                onClick={() => setBorderRadius(999)}
-                className="premium-button"
-                style={{
-                  padding: '4px 10px',
-                  borderRadius: '999px',
-                  border: '1px solid var(--border-color)',
-                  backgroundColor: borderRadius >= 900 ? 'var(--accent-primary)' : 'var(--bg-subtle)',
-                  color: borderRadius >= 900 ? 'var(--accent-contrast-text, #FFF)' : 'var(--text-secondary)',
-                  fontSize: '10.5px',
-                  fontWeight: '700',
-                  cursor: 'pointer'
-                }}
-              >
-                Pilule (999px)
-              </button>
+            {/* CURSEUR DE FORME */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <label style={{ fontSize: '11.5px', fontWeight: '800', color: 'var(--text-main)' }}>
+                  Forme des Boutons & Cartes
+                </label>
+                <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--accent-primary)', fontFamily: 'monospace' }}>
+                  {borderRadius >= 900 ? 'Pilule (999px • Cartes max 32px)' : `${borderRadius || 14}px`}
+                </span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="32"
+                step="2"
+                value={borderRadius > 32 ? 32 : (borderRadius ?? 14)}
+                onChange={(e) => setBorderRadius(Number(e.target.value))}
+                style={{ width: '100%', marginBottom: '8px' }}
+              />
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={() => setBorderRadius(0)}
+                  className="premium-button"
+                  style={{
+                    padding: '4px 10px',
+                    borderRadius: '0px',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: borderRadius === 0 ? 'var(--accent-primary)' : 'var(--bg-subtle)',
+                    color: borderRadius === 0 ? 'var(--accent-contrast-text, #FFF)' : 'var(--text-secondary)',
+                    fontSize: '10.5px',
+                    fontWeight: '700',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Carré (0px)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBorderRadius(14)}
+                  className="premium-button"
+                  style={{
+                    padding: '4px 10px',
+                    borderRadius: '14px',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: borderRadius === 14 ? 'var(--accent-primary)' : 'var(--bg-subtle)',
+                    color: borderRadius === 14 ? 'var(--accent-contrast-text, #FFF)' : 'var(--text-secondary)',
+                    fontSize: '10.5px',
+                    fontWeight: '700',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Doux (14px)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBorderRadius(999)}
+                  className="premium-button"
+                  style={{
+                    padding: '4px 10px',
+                    borderRadius: '999px',
+                    border: '1px solid var(--border-color)',
+                    backgroundColor: borderRadius >= 900 ? 'var(--accent-primary)' : 'var(--bg-subtle)',
+                    color: borderRadius >= 900 ? 'var(--accent-contrast-text, #FFF)' : 'var(--text-secondary)',
+                    fontSize: '10.5px',
+                    fontWeight: '700',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Pilule (999px)
+                </button>
+              </div>
             </div>
           </div>
 

@@ -278,23 +278,119 @@ export function generateCustomThemeVariables(primary = '#B98B73', bg = '#FAF7F2'
   };
 }
 
+export const GLOBAL_COLOR_AMBIANCES = [
+  { id: 'rust', name: 'Troco Rust (Défaut)', color: '#C67D5B', hover: '#B56F4F', secondary: '#DDBEA9', isDefault: true },
+  { id: 'ocean', name: 'Ocean Blue', color: '#0EA5E9', hover: '#0284C7', secondary: '#BAE6FD' },
+  { id: 'emerald', name: 'Emerald', color: '#10B981', hover: '#059669', secondary: '#A7F3D0' },
+  { id: 'amethyst', name: 'Amethyst', color: '#8B5CF6', hover: '#7C3AED', secondary: '#DDD6FE' },
+  { id: 'rose', name: 'Rose', color: '#F43F5E', hover: '#E11D48', secondary: '#FECDD3' },
+  { id: 'midnight', name: 'Midnight', color: '#64748B', hover: '#475569', secondary: '#CBD5E1' },
+];
+
 export const TYPOGRAPHY_OPTIONS = {
+  inter: {
+    id: 'inter',
+    name: 'Inter',
+    category: 'Moderne & Neutre',
+    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+    description: 'Typographie épurée, ultra-lisible et contemporaine',
+  },
+  poppins: {
+    id: 'poppins',
+    name: 'Poppins',
+    category: 'Rond & Dynamique',
+    fontFamily: "'Poppins', sans-serif",
+    description: 'Typographie géométrique aux formes douces et chaleureuses',
+  },
+  montserrat: {
+    id: 'montserrat',
+    name: 'Montserrat',
+    category: 'Géométrique & Audacieux',
+    fontFamily: "'Montserrat', sans-serif",
+    description: 'Typographie urbaine, affirmée et élégante',
+  },
+  roboto: {
+    id: 'roboto',
+    name: 'Roboto',
+    category: 'Épuré & Universel',
+    fontFamily: "'Roboto', sans-serif",
+    description: 'Typographie moderne aux courbes agréables et neutres',
+  },
+  playfair: {
+    id: 'playfair',
+    name: 'Playfair Display',
+    category: 'Serif Éditorial & Luxueux',
+    fontFamily: "'Playfair Display', Georgia, serif",
+    description: 'Typographie noble inspirée du siècle des Lumières',
+  },
+  space_grotesk: {
+    id: 'space_grotesk',
+    name: 'Space Grotesk',
+    category: 'Tech & Futuriste',
+    fontFamily: "'Space Grotesk', sans-serif",
+    description: 'Typographie d’ingénierie tech aux détails géométriques',
+  },
+  caveat: {
+    id: 'caveat',
+    name: 'Caveat',
+    category: 'Manuscrit & Créatif',
+    fontFamily: "'Caveat', cursive",
+    description: 'Écriture manuscrite fluide, chaleureuse et humaine',
+  },
+  lora: {
+    id: 'lora',
+    name: 'Lora',
+    category: 'Littéraire & Poétique',
+    fontFamily: "'Lora', Georgia, serif",
+    description: 'Sérif contemporain aux courbes calligraphiques équilibrées',
+  },
+  quicksand: {
+    id: 'quicksand',
+    name: 'Quicksand',
+    category: 'Rond & Doux',
+    fontFamily: "'Quicksand', sans-serif",
+    description: 'Typographie amicale aux terminaisons parfaitement arrondies',
+  },
+  oswald: {
+    id: 'oswald',
+    name: 'Oswald',
+    category: 'Condensé & Impactant',
+    fontFamily: "'Oswald', sans-serif",
+    description: 'Typographie compacte, audacieuse et percutante',
+  },
+  lato: {
+    id: 'lato',
+    name: 'Lato',
+    category: 'Stable & Professionnel',
+    fontFamily: "'Lato', sans-serif",
+    description: 'Harmonie parfaite entre rigueur classique et chaleur humaine',
+  },
+  nunito: {
+    id: 'nunito',
+    name: 'Nunito',
+    category: 'Arrondi & Équilibré',
+    fontFamily: "'Nunito', sans-serif",
+    description: 'Sans-serif moderne très bien proportionné et reposant pour les yeux',
+  },
   editorial: {
     id: 'editorial',
-    name: 'Élégant (Cormorant Garamond)',
+    name: 'Élégant (Cormorant)',
+    category: 'Classique & Prestige',
     fontFamily: "'Cormorant Garamond', Georgia, serif",
     description: 'Typographie noble et soignée pour un rendu boutique de luxe',
   },
   modern: {
     id: 'modern',
     name: 'Moderne (Inter)',
+    category: 'Épuré & Tech',
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
     description: 'Typographie épurée, ultra-lisible et contemporaine',
   },
   techno: {
     id: 'techno',
     name: 'Techno (Roboto Mono)',
-    fontFamily: "'Roboto Mono', 'Fira Code', Menlo, Consolas, monospace",
+    category: 'Code & Monospace',
+    fontFamily: "'Roboto Mono', 'Fira Code', monospace",
     description: 'Typographie futuriste et technique à espacement fixe',
   },
 };
@@ -921,9 +1017,23 @@ export function ThemeProvider({ children }) {
     const contrastOnPrimary = getContrastColor(vars['--accent-primary'] || customColors.primary);
     root.style.setProperty('--accent-contrast-text', contrastOnPrimary);
 
+    // Application de l'ambiance de couleur globale si définie
+    if (brandColor) {
+      const ambiance = GLOBAL_COLOR_AMBIANCES.find(a => a.id === brandColor || a.color.toLowerCase() === brandColor.toLowerCase());
+      const accentColor = ambiance ? ambiance.color : brandColor;
+      const accentHover = ambiance ? ambiance.hover : adjustBrightness(accentColor, isDark ? 15 : -15);
+      const accentSecondary = ambiance?.secondary || adjustBrightness(accentColor, 25);
+
+      root.style.setProperty('--accent-primary', accentColor);
+      root.style.setProperty('--accent-primary-hover', accentHover);
+      root.style.setProperty('--accent-secondary', accentSecondary);
+      root.style.setProperty('--shadow-accent', `0 8px 24px ${accentColor}40`);
+      root.style.setProperty('--accent-contrast-text', getContrastColor(accentColor));
+    }
+
     // 🚨 PHASE 50 : SYNCHRONISATION DYNAMIQUE DU META THEME-COLOR & BARRE DE STATUT MOBILE
     applyGlobalThemeColor(isDark);
-  }, [theme, isDark, typography, borderRadius, baseZoom, customColors]);
+  }, [theme, isDark, typography, borderRadius, baseZoom, customColors, brandColor]);
 
   const allThemes = useMemo(() => {
     const presets = Object.values(THEMES_CONFIG).map((cfg) => ({
@@ -969,9 +1079,12 @@ export function ThemeProvider({ children }) {
     setBaseZoom,
     brandColor,
     applyBrandColor,
+    setBrandColor: applyBrandColor,
     resetDesignStudio,
     allThemes,
     typographyOptions: TYPOGRAPHY_OPTIONS,
+    globalColorAmbiances: GLOBAL_COLOR_AMBIANCES,
+    GLOBAL_COLOR_AMBIANCES,
   }), [
     themeId,
     theme,
