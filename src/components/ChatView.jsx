@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback, lazy, Suspense } from 'react';
-import { useVirtualizer } from '@tanstack/react-virtual';
 import Portal from './ui/Portal';
 import {
   Send, Phone, Video, Sparkles, Clock, CheckCircle,
@@ -460,24 +459,6 @@ function ChatView({
     return currentChatId ? (chatThreads[currentChatId] || []) : [];
   }, [currentChatId, chatThreads]);
 
-  // Phase 25/32/39 — Virtualisation DOM fluide avec hauteurs dynamiques et recalcul temps réel
-  const chatVirtualizer = useVirtualizer({
-    count: messages.length,
-    getScrollElement: () => scrollContainerRef.current,
-    estimateSize: (index) => {
-      const msg = messages[index];
-      if (!msg) return 80;
-      if (msg.type === 'workspace_invite' || msg.kind === 'workspace_invite') return isMobile ? 240 : 260;
-      if (msg.type === 'deal' || msg.kind === 'deal' || msg.type === 'deal_offer' || msg.kind === 'deal_offer') return isMobile ? 380 : 340;
-      if (msg.type === 'reward' || msg.kind === 'reward-proposal') return isMobile ? 260 : 240;
-      if (msg.type === 'token_transfer' || msg.kind === 'token_transfer') return 120;
-      if (msg.imageUrl || msg.type === 'image' || msg.kind === 'image') return 240;
-      if (msg.audioUrl || msg.type === 'audio' || msg.kind === 'audio') return 100;
-      return 85;
-    },
-    overscan: 8,
-  });
-
   const prevChatIdRef = useRef(null);
   const prevMsgCountRef = useRef(0);
   const isUserNearBottomRef = useRef(true);
@@ -506,7 +487,7 @@ function ChatView({
     }
   }, []);
 
-  // 🚨 PHASE 59 : AUTO-SCROLL DÉCOUPLÉ & SMART SCROLL
+  // AUTO-SCROLL ULTRA-STABLE ET GARANTI SANS SAUT NI PATINAGE
   useEffect(() => {
     const el = scrollContainerRef.current;
     if (!el || !messages.length) return;
@@ -520,18 +501,19 @@ function ChatView({
     userJustSentMessageRef.current = false;
 
     // Déclenchement automatique UNIQUEMENT :
-    // A. Au chargement initial ou changement de conversation
+    // A. Au chargement initial ou changement de conversation (garantit d'arriver tout en bas)
     // B. Quand l'utilisateur lui-même envoie un message
     // C. Si un nouveau message arrive alors que l'utilisateur est déjà tout en bas
     if (isNewChat || userSentMsg || (isNewMessage && isUserNearBottomRef.current)) {
-      requestAnimationFrame(() => {
+      const timer = setTimeout(() => {
         if (el) {
           el.scrollTop = el.scrollHeight;
           isUserNearBottomRef.current = true;
           setIsScrolledUp(false);
           setHasNewUnseenMessages(false);
         }
-      });
+      }, isNewChat ? 40 : 0);
+      return () => clearTimeout(timer);
     } else if (isNewMessage && !isUserNearBottomRef.current) {
       // L'utilisateur est remonté pour lire l'historique : NE PAS FORCER LE SCROLL, afficher l'indicateur
       setHasNewUnseenMessages(true);
@@ -1379,14 +1361,16 @@ function ChatView({
           onScroll={handleScroll}
         >
           <div style={{
-            height: `${chatVirtualizer.getTotalSize()}px`,
-            position: 'relative',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '10px',
             maxWidth: '680px',
             width: '100%',
             margin: '0 auto',
+            minHeight: '100%',
+            boxSizing: 'border-box',
           }}>
-            {chatVirtualizer.getVirtualItems().map(virtualRow => {
-              const msg = messages[virtualRow.index];
+            {messages.map((msg) => {
               const isMsgOriginal = !!showingOriginalMessages[msg.id];
               const translatedText = getChatMessageDisplayContent
                 ? getChatMessageDisplayContent(msg, currentLang, isMsgOriginal)
@@ -2952,15 +2936,17 @@ function ChatView({
                               display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px',
                               borderRadius: '16px', cursor: 'pointer', textAlign: 'left',
                               width: '100%',
+                              minHeight: '72px',
+                              boxSizing: 'border-box',
                               backgroundColor: isSelected
                                 ? 'var(--bg-subtle)'
-                                : (isUnread ? 'var(--bg-subtle)' : 'transparent'),
+                                : (isUnread ? 'var(--bg-subtle)' : 'var(--bg-card)'),
                               border: isSelected
-                                ? '1px solid var(--border-color)'
-                                : '1px solid transparent',
+                                ? '1.5px solid var(--accent-primary)'
+                                : '1px solid var(--border-color)',
                               borderLeft: isSelected
                                 ? '4px solid var(--accent-primary)'
-                                : (isUnread ? '4px solid var(--accent-terracotta)' : (pinnedChatIds.has(chat.id) ? '4px solid #3B82F6' : '4px solid transparent')),
+                                : (isUnread ? '4px solid var(--accent-terracotta)' : (pinnedChatIds.has(chat.id) ? '4px solid #3B82F6' : '1px solid var(--border-color)')),
                               boxShadow: isSelected ? 'var(--shadow-card)' : 'none',
                               transition: 'all 0.2s ease'
                             }}

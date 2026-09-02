@@ -79,7 +79,6 @@ export function SwipeableChatItem({
     <AnimatePresence>
       {!isDeleting && (
         <motion.div
-          layout
           initial={{ opacity: 1, height: 'auto' }}
           exit={{
             opacity: 0,
@@ -91,8 +90,10 @@ export function SwipeableChatItem({
             position: 'relative',
             overflow: 'hidden',
             borderRadius: '16px',
-            marginBottom: '4px',
+            marginBottom: '6px',
             touchAction: 'pan-y',
+            width: '100%',
+            boxSizing: 'border-box',
           }}
           className="swipeable-chat-item-wrapper"
         >
@@ -168,8 +169,10 @@ export function SwipeableChatItem({
           {/* ITEM DE CONVERSATION EN PREMIER PLAN AVEC GESTURE HORIZONTAL */}
           <motion.div
             drag="x"
+            dragDirectionLock={true}
             dragConstraints={{ left: -136, right: 0 }}
             dragElastic={0.15}
+            dragMomentum={false}
             onDrag={handleDrag}
             onDragEnd={handleDragEnd}
             style={{
@@ -178,6 +181,8 @@ export function SwipeableChatItem({
               zIndex: 2,
               backgroundColor: 'var(--bg-card)',
               borderRadius: '16px',
+              width: '100%',
+              boxSizing: 'border-box',
             }}
           >
             {children}
