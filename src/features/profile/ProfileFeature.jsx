@@ -10,6 +10,7 @@ import {
   MapPin,
   Globe,
   FileText,
+  ExternalLink,
   Sparkles,
   Crown,
   CheckCircle,
@@ -493,6 +494,29 @@ export default function ProfileFeature({
             <textarea value={profileDraft.bio} onChange={(e) => setProfileDraft(prev => ({ ...prev, bio: e.target.value }))} rows={3} style={{ width: '100%', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-subtle)', borderRadius: '14px', padding: '12px 14px', resize: 'vertical', fontSize: '13px', color: 'var(--text-main)' }} />
             <input value={profileDraft.location} onChange={(e) => setProfileDraft(prev => ({ ...prev, location: e.target.value }))} style={{ width: '100%', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-subtle)', borderRadius: '14px', padding: '12px 14px', fontSize: '13px', color: 'var(--text-main)' }} />
             
+            {/* Champ CV / Resume */}
+            <div>
+              <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px', textTransform: 'uppercase' }}>
+                <FileText size={13} color="var(--accent-primary)" /> Lien vers votre CV (PDF, Drive, Notion, Portfolio)
+              </label>
+              <input
+                type="url"
+                value={profileDraft.cvUrl !== undefined ? profileDraft.cvUrl : (profile.cvUrl || '')}
+                onChange={(e) => setProfileDraft(prev => ({ ...prev, cvUrl: e.target.value }))}
+                placeholder="Ex : https://drive.google.com/... ou https://notion.so/mon-cv"
+                style={{
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  border: '1px solid var(--border-color)',
+                  backgroundColor: 'var(--bg-subtle)',
+                  borderRadius: '12px',
+                  padding: '10px 12px',
+                  fontSize: '13px',
+                  color: 'var(--text-main)'
+                }}
+              />
+            </div>
+
             {/* Gestionnaire d'édition des Réseaux Sociaux & Portfolio Sécurisés */}
             <SocialLinksEditor
               socialLinks={profileDraft.socialLinks !== undefined ? profileDraft.socialLinks : (profile.socialLinks || [])}
@@ -526,6 +550,37 @@ export default function ProfileFeature({
               )}
             </div>
             
+            {/* Bouton de consultation du CV */}
+            {profile.cvUrl && (
+              <div style={{ marginTop: '2px', marginBottom: '2px' }}>
+                <a
+                  href={profile.cvUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="premium-button"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '8px 16px',
+                    borderRadius: '12px',
+                    backgroundColor: 'var(--bg-subtle)',
+                    border: '1.5px solid var(--accent-primary)',
+                    color: 'var(--accent-primary)',
+                    fontSize: '12.5px',
+                    fontWeight: '800',
+                    textDecoration: 'none',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <FileText size={15} />
+                  <span>📄 Consulter le CV</span>
+                  <ExternalLink size={12} style={{ opacity: 0.7 }} />
+                </a>
+              </div>
+            )}
+
             {/* Affichage des badges de réseaux sociaux officiels */}
             {profile.socialLinks && profile.socialLinks.length > 0 && (
               <div style={{ marginTop: '2px', marginBottom: '2px' }}>

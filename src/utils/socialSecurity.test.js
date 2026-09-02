@@ -97,6 +97,28 @@ describe('Phase 45 : Sécurité des Réseaux Sociaux & Filtre NSFW', () => {
       expect(parsed.platform).toBe('website');
       expect(parsed.label).toBe('mateopolo.design');
     });
+
+    it('supporte les objets de liens avec platform Autre et label personnalisé', () => {
+      const parsed = parseSocialLink({
+        platform: 'Autre',
+        label: 'Mon Blog',
+        url: 'https://monblog.fr/posts'
+      });
+      expect(parsed.platform).toBe('website');
+      expect(parsed.label).toBe('Mon Blog');
+      expect(parsed.cleanUrl).toBe('https://monblog.fr/posts');
+    });
+
+    it('préserve le label personnalisé même pour une URL reconnue', () => {
+      const parsed = parseSocialLink({
+        platform: 'github',
+        label: 'Mon Portfolio Open Source',
+        url: 'https://github.com/mateopolo'
+      });
+      expect(parsed.platform).toBe('github');
+      expect(parsed.label).toBe('Mon Portfolio Open Source');
+      expect(parsed.cleanUrl).toBe('https://github.com/mateopolo');
+    });
   });
 
   describe('Intégration avec validateProfileContent', () => {

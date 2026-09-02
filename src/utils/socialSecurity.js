@@ -73,8 +73,8 @@ export const validateSocialLink = (rawUrl) => {
  *   brandBorder: string
  * }}
  */
-export const parseSocialLink = (url) => {
-  if (!url || typeof url !== 'string') {
+export const parseSocialLink = (input) => {
+  if (!input) {
     return {
       platform: 'website',
       label: 'Site Web',
@@ -87,7 +87,25 @@ export const parseSocialLink = (url) => {
     };
   }
 
-  const trimmed = url.trim();
+  const isObject = typeof input === 'object' && input !== null;
+  const rawUrl = isObject ? (input.url || '') : String(input || '');
+  const customLabel = isObject && input.label ? input.label : null;
+  const customPlatform = isObject && input.platform ? input.platform : null;
+
+  if (!rawUrl || typeof rawUrl !== 'string') {
+    return {
+      platform: 'website',
+      label: customLabel || 'Site Web',
+      handle: '',
+      cleanUrl: '#',
+      domain: '',
+      brandColor: 'var(--accent-primary)',
+      brandBg: 'var(--bg-subtle)',
+      brandBorder: 'var(--border-color)',
+    };
+  }
+
+  const trimmed = rawUrl.trim();
   const validProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
 
   let hostname = '';
@@ -101,13 +119,30 @@ export const parseSocialLink = (url) => {
     hostname = trimmed.toLowerCase();
   }
 
+  let result;
+
+  // Si c'est explicitement étiqueté "Autre" avec un label personnalisé
+  if (customPlatform === 'Autre') {
+    const cleanDomain = hostname.replace(/\/.*$/, '');
+    return {
+      platform: 'website',
+      label: customLabel || cleanDomain || 'Site Web',
+      handle: cleanDomain || 'Lien externe',
+      cleanUrl: validProtocol,
+      domain: cleanDomain,
+      brandColor: 'var(--accent-primary)',
+      brandBg: 'var(--bg-subtle)',
+      brandBorder: 'var(--border-color)',
+    };
+  }
+
   // Détection GitHub
   if (hostname.includes('github.com')) {
     const match = pathname.match(/^\/([a-zA-Z0-9-_]+)/);
     const user = match ? `@${match[1]}` : 'GitHub';
-    return {
+    result = {
       platform: 'github',
-      label: 'GitHub',
+      label: customLabel || 'GitHub',
       handle: user,
       cleanUrl: validProtocol,
       domain: 'github.com',
@@ -115,6 +150,7 @@ export const parseSocialLink = (url) => {
       brandBg: 'rgba(36, 41, 46, 0.08)',
       brandBorder: 'rgba(36, 41, 46, 0.25)',
     };
+    return result;
   }
 
   // Détection LinkedIn

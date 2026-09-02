@@ -10,6 +10,7 @@ import {
   Star,
   MapPin,
   Pencil,
+  FileText,
   Link as LinkIcon
 } from 'lucide-react';
 import { validateSocialLink, parseSocialLink } from '../utils/socialSecurity';
@@ -188,6 +189,8 @@ export function SocialLinksEditor({
   onRemove,
   darkMode = false,
 }) {
+  const [selectedPlatform, setSelectedPlatform] = useState('auto');
+  const [customLabel, setCustomLabel] = useState('');
   const [inputUrl, setInputUrl] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
@@ -195,15 +198,16 @@ export function SocialLinksEditor({
 
   // Suggestions rapides pour inciter à ajouter des plateformes professionnelles
   const quickPlatforms = [
-    { name: 'LinkedIn', domain: 'https://linkedin.com/in/', icon: 'linkedin' },
-    { name: 'GitHub', domain: 'https://github.com/', icon: 'github' },
-    { name: 'Instagram', domain: 'https://instagram.com/', icon: 'instagram' },
-    { name: 'X / Twitter', domain: 'https://x.com/', icon: 'twitter' },
-    { name: 'Portfolio', domain: 'https://', icon: 'website' },
+    { name: 'LinkedIn', domain: 'https://linkedin.com/in/', icon: 'linkedin', id: 'linkedin' },
+    { name: 'GitHub', domain: 'https://github.com/', icon: 'github', id: 'github' },
+    { name: 'Instagram', domain: 'https://instagram.com/', icon: 'instagram', id: 'instagram' },
+    { name: 'X / Twitter', domain: 'https://x.com/', icon: 'twitter', id: 'twitter' },
+    { name: 'Portfolio', domain: 'https://', icon: 'website', id: 'website' },
+    { name: '🌐 Autre / Site Web', domain: 'https://', icon: 'website', id: 'Autre' },
   ];
 
-  const handleAddLink = (rawUrlToAdd) => {
-    const url = (rawUrlToAdd || inputUrl).trim();
+  const handleAddLink = () => {
+    const url = inputUrl.trim();
     if (!url) {
       setErrorMessage('Veuillez renseigner une adresse URL.');
       return;
@@ -218,19 +222,29 @@ export function SocialLinksEditor({
     }
 
     const sanitized = validation.sanitizedUrl;
+    const parsed = parseSocialLink(sanitized);
 
-    // Éviter les doublons
-    if (socialLinks.includes(sanitized)) {
+    const linkPayload = {
+      platform: selectedPlatform === 'Autre' ? 'Autre' : parsed.platform,
+      label: customLabel.trim() || (selectedPlatform === 'Autre' ? 'Site Web' : parsed.label),
+      url: sanitized,
+    };
+
+    // Éviter les doublons par URL
+    const alreadyExists = socialLinks.some(l => (typeof l === 'object' ? l.url : l) === sanitized);
+    if (alreadyExists) {
       setErrorMessage('Ce lien est déjà ajouté à votre profil.');
       setIsSuccess(false);
       return;
     }
 
-    const nextLinks = [...socialLinks, sanitized];
+    const nextLinks = [...socialLinks, linkPayload];
     if (onChange) onChange(nextLinks);
-    if (onAdd) onAdd(sanitized);
+    if (onAdd) onAdd(linkPayload);
 
     setInputUrl('');
+    setCustomLabel('');
+    setSelectedPlatform('auto');
     setErrorMessage('');
     setIsSuccess(true);
     setTimeout(() => setIsSuccess(false), 2500);
@@ -242,7 +256,11 @@ export function SocialLinksEditor({
     if (onRemove) onRemove(indexToRemove);
   };
 
-  const currentPreview = inputUrl.trim() ? parseSocialLink(inputUrl.trim()) : null;
+  const currentPreview = inputUrl.trim() ? parseSocialLink({
+    url: inputUrl.trim(),
+    platform: selectedPlatform === 'Autre' ? 'Autre' : undefined,
+    label: customLabel.trim() || undefined,
+  }) : null;
 
   return (
     <div
@@ -268,7 +286,7 @@ export function SocialLinksEditor({
             gap: '8px',
           }}
         >
-          <LinkIcon size={16} color="var(--accent-primary)" /> Réseaux Sociaux & Portfolio Sécurisés
+          <LinkIcon size={16} color="var(--accent-primary)" /> Réseaux Sociaux, Portfolio & Liens Web
         </label>
         <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '600' }}>
           {socialLinks.length} lien{socialLinks.length !== 1 ? 's' : ''} actif{socialLinks.length !== 1 ? 's' : ''}
@@ -276,7 +294,7 @@ export function SocialLinksEditor({
       </div>
 
       <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-        Ajoutez vos profils (LinkedIn, GitHub, Portfolio...) pour instaurer la confiance avec vos futurs partenaires d'échange sur Troco.
+        Ajoutez vos profils (LinkedIn, GitHub, Portfolio, Blog, Calendly...) pour instaurer la confiance avec vos futurs partenaires sur Troco.
       </div>
 
       {/* Raccourcis de plateformes recommandées */}
@@ -286,7 +304,11 @@ export function SocialLinksEditor({
             key={qp.name}
             type="button"
             onClick={() => {
-              if (!inputUrl.startsWith(qp.domain)) {
+              setSelectedPlatform(qp.id);
+              if (qp.id === 'Autre') {
+                if (!customLabel) setCustomLabel('Mon Blog');
+                if (!inputUrl) setInputUrl('https://');
+              } else if (!inputUrl.startsWith(qp.domain)) {
                 setInputUrl(qp.domain);
                 setErrorMessage('');
               }
@@ -299,25 +321,61 @@ export function SocialLinksEditor({
               borderRadius: '8px',
               fontSize: '11px',
               fontWeight: '700',
-              backgroundColor: 'var(--bg-subtle)',
-              border: '1px solid var(--border-color)',
-              color: 'var(--text-secondary)',
+              backgroundColor: selectedPlatform === qp.id ? 'var(--bg-card)' : 'var(--bg-subtle)',
+              border: selectedPlatform === qp.id ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-color)',
+              color: selectedPlatform === qp.id ? 'var(--accent-primary)' : 'var(--text-secondary)',
               cursor: 'pointer',
               transition: 'all 0.15s ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.color = 'var(--text-main)';
-              e.currentTarget.style.borderColor = 'var(--accent-primary)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.color = 'var(--text-secondary)';
-              e.currentTarget.style.borderColor = 'var(--border-color)';
             }}
           >
             <SocialIcon platform={qp.icon} size={12} />
             + {qp.name}
           </button>
         ))}
+      </div>
+
+      {/* Sélection de type + Titre personnalisé si Autre */}
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+        <select
+          value={selectedPlatform}
+          onChange={(e) => setSelectedPlatform(e.target.value)}
+          style={{
+            flex: '1 1 140px',
+            padding: '8px 10px',
+            borderRadius: '12px',
+            border: '1px solid var(--border-color)',
+            backgroundColor: 'var(--bg-subtle)',
+            color: 'var(--text-main)',
+            fontSize: '12px',
+            fontWeight: '700',
+            outline: 'none',
+          }}
+        >
+          <option value="auto">Détection Auto</option>
+          <option value="linkedin">LinkedIn</option>
+          <option value="github">GitHub</option>
+          <option value="instagram">Instagram</option>
+          <option value="twitter">X / Twitter</option>
+          <option value="website">Portfolio</option>
+          <option value="Autre">🌐 Autre / Site Web</option>
+        </select>
+
+        <input
+          type="text"
+          value={customLabel}
+          onChange={(e) => setCustomLabel(e.target.value)}
+          placeholder="Titre personnalisé (ex: Mon Blog, Calendly, Substack)"
+          style={{
+            flex: '2 1 200px',
+            padding: '8px 12px',
+            borderRadius: '12px',
+            border: '1px solid var(--border-color)',
+            backgroundColor: 'var(--bg-subtle)',
+            color: 'var(--text-main)',
+            fontSize: '12px',
+            outline: 'none',
+          }}
+        />
       </div>
 
       {/* Champ d'ajout de lien avec détection temps réel */}
@@ -337,7 +395,7 @@ export function SocialLinksEditor({
                 handleAddLink();
               }
             }}
-            placeholder="Ex : https://linkedin.com/in/monprofil ou github.com/username"
+            placeholder="Ex : https://linkedin.com/in/nom ou https://monblog.fr"
             style={{
               width: '100%',
               boxSizing: 'border-box',
@@ -652,6 +710,37 @@ export default function UserProfile({
                   {profile.bio || 'Aucune biographie renseignée.'}
                 </p>
 
+                {/* Bouton de consultation du CV */}
+                {profile.cvUrl && (
+                  <div style={{ marginBottom: '14px' }}>
+                    <a
+                      href={profile.cvUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="premium-button"
+                      style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '6px 14px',
+                        borderRadius: '999px',
+                        backgroundColor: 'var(--bg-subtle)',
+                        border: '1.5px solid var(--accent-primary)',
+                        color: 'var(--accent-primary)',
+                        fontSize: '12px',
+                        fontWeight: '800',
+                        textDecoration: 'none',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                        transition: 'all 0.15s ease'
+                      }}
+                    >
+                      <FileText size={14} />
+                      <span>📄 Consulter le CV</span>
+                      <ExternalLink size={12} style={{ opacity: 0.7 }} />
+                    </a>
+                  </div>
+                )}
+
                 {/* Liens sociaux avec icônes officielles */}
                 <div style={{ marginBottom: '14px' }}>
                   <SocialLinksDisplay links={profile.socialLinks || []} size="medium" />
@@ -717,6 +806,29 @@ export default function UserProfile({
                     resize: 'vertical',
                   }}
                 />
+
+                {/* Champ CV / Resume */}
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px', textTransform: 'uppercase' }}>
+                    <FileText size={13} color="var(--accent-primary)" /> Lien vers votre CV (PDF, Drive, Notion, Portfolio)
+                  </label>
+                  <input
+                    type="url"
+                    value={draft.cvUrl || ''}
+                    onChange={(e) => setDraft((prev) => ({ ...prev, cvUrl: e.target.value }))}
+                    placeholder="https://drive.google.com/... ou https://notion.so/mon-cv"
+                    style={{
+                      width: '100%',
+                      boxSizing: 'border-box',
+                      padding: '10px 12px',
+                      borderRadius: '12px',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: 'var(--bg-card)',
+                      color: 'var(--text-main)',
+                      fontSize: '13px',
+                    }}
+                  />
+                </div>
 
                 {/* Gestionnaire de réseaux sociaux en mode édition */}
                 <SocialLinksEditor

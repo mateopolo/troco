@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   X, Star, ShieldCheck, MapPin, Sparkles, MessageSquare,
-  CheckCircle, Briefcase, Award, Camera, Wrench, ExternalLink, Link as LinkIcon
+  CheckCircle, Briefcase, Award, Camera, Wrench, ExternalLink, FileText, Link as LinkIcon
 } from 'lucide-react';
 import MobileHeader from './common/MobileHeader';
 import { SocialLinksDisplay } from './UserProfile';
@@ -312,6 +312,37 @@ export default function PublicProfileModal({
               <div style={{ fontSize: '12px', fontWeight: '700', color: 'var(--accent-primary)', marginBottom: '8px' }}>
                 {username}
               </div>
+
+              {/* BOUTON PROÉMINENT CV / RESUME SI PRÉSENT */}
+              {targetUser.cvUrl && (
+                <div style={{ marginBottom: '10px' }}>
+                  <a
+                    href={targetUser.cvUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="premium-button"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '7px',
+                      padding: '8px 16px',
+                      borderRadius: '12px',
+                      backgroundColor: 'var(--bg-subtle)',
+                      border: '1.5px solid var(--accent-primary)',
+                      color: 'var(--accent-primary)',
+                      fontSize: '12.5px',
+                      fontWeight: '800',
+                      textDecoration: 'none',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+                      transition: 'all 0.15s ease'
+                    }}
+                  >
+                    <FileText size={15} />
+                    <span>📄 Consulter le CV</span>
+                    <ExternalLink size={12} style={{ opacity: 0.7 }} />
+                  </a>
+                </div>
+              )}
 
               {/* LIENS SOCIAUX VÉRIFIÉS DU PROFIL */}
               {socialLinks.length > 0 && (
