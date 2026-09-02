@@ -1903,6 +1903,7 @@ export default function App() {
 
   // ---- INFINITE SCROLL AUTOMATIQUE VIA INTERSECTION OBSERVER ----
   useEffect(() => {
+    if (typeof window === 'undefined' || typeof IntersectionObserver === 'undefined') return;
     if (!hasMoreListings || isLoadingMoreListings || activeTab !== 'feed') return;
     const observer = new IntersectionObserver(
       (entries) => {

@@ -1068,7 +1068,7 @@ function ChatView({
                 )}
               </div>
               <div style={{ minWidth: 0, flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, flexWrap: 'wrap' }}>
                   <span style={{ fontWeight: '800', fontSize: isMobile ? '14px' : '14.5px', color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {activeChatObj?.isGroup ? (activeChatObj.projectTitle || activeChatObj.user) : activeChatObj?.user}
                   </span>
@@ -1082,12 +1082,61 @@ function ChatView({
                     </span>
                   ) : null}
                   {!activeChatObj?.isGroup && (activeChatIsOnline ? (
-                    <span style={{ fontSize: '8.5px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-success)', padding: '1px 5px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                      <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: 'var(--accent-success)' }} /> En ligne
+                    <span
+                      className="inline-flex items-center justify-center text-center leading-none"
+                      style={{
+                        fontSize: '9px',
+                        fontWeight: '800',
+                        backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                        color: 'var(--accent-success)',
+                        padding: '2.5px 6.5px',
+                        borderRadius: '6px',
+                        border: '1px solid rgba(16, 185, 129, 0.25)',
+                        gap: '4px',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: '6px',
+                          height: '6px',
+                          borderRadius: '50%',
+                          backgroundColor: 'var(--accent-success)',
+                          boxShadow: '0 0 4px rgba(16, 185, 129, 0.6)',
+                          flexShrink: 0,
+                          display: 'inline-block',
+                        }}
+                      />
+                      <span>En ligne</span>
                     </span>
                   ) : (
-                    <span style={{ fontSize: '8.5px', fontWeight: '700', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)', padding: '1px 5px', borderRadius: '4px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                      <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: 'var(--text-secondary)', opacity: 0.45 }} /> Hors ligne
+                    <span
+                      className="inline-flex items-center justify-center text-center leading-none"
+                      style={{
+                        fontSize: '9px',
+                        fontWeight: '700',
+                        backgroundColor: 'var(--bg-subtle)',
+                        color: 'var(--text-secondary)',
+                        padding: '2.5px 6.5px',
+                        borderRadius: '6px',
+                        border: '1px solid var(--border-color)',
+                        gap: '4px',
+                        flexShrink: 0,
+                        opacity: 0.8,
+                      }}
+                    >
+                      <span
+                        style={{
+                          width: '6px',
+                          height: '6px',
+                          borderRadius: '50%',
+                          backgroundColor: 'var(--text-secondary)',
+                          opacity: 0.45,
+                          flexShrink: 0,
+                          display: 'inline-block',
+                        }}
+                      />
+                      <span>Hors ligne</span>
                     </span>
                   ))}
                 </div>
@@ -2505,6 +2554,7 @@ function ChatView({
             editingMsg={editingMsg}
             replyingTo={null}
             isGroupChat={activeChatObj?.isGroup}
+            handleSendMessage={handleSendMessage}
             onSendMessage={(text) => {
               userJustSentMessageRef.current = true;
               if (handleSendMessage) {

@@ -2,6 +2,9 @@ import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
 import {
   Send,
   Sparkles,
+  LayoutGrid,
+  Plus,
+  Paperclip,
   Mic,
   Coins,
   Palette,
@@ -17,7 +20,7 @@ import {
 import { haptics } from '../../utils/haptics';
 
 /**
- * ChatInputBar — Composant de saisie isolé et mémoïsé (Phase 63)
+ * ChatInputBar — Composant de saisie isolé et mémoïsé (Phase 63 & 90)
  * Gère son propre état local de saisie pendant la frappe pour garantir un coût de rendu O(1),
  * évitant ainsi le re-rendu de la liste complète des messages dans ChatView.
  */
@@ -28,6 +31,7 @@ function ChatInputBar({
   editingMsg = null,
   replyingTo = null,
   onSendMessage,
+  handleSendMessage,
   onEditMessage,
   onCancelEdit,
   onCancelReply,
@@ -90,10 +94,18 @@ function ChatInputBar({
       e.stopPropagation();
     }
     const trimmed = localText.trim();
-    if (!trimmed) return;
+    if (!trimmed) {
+      if (typeof handleSendMessage === 'function') {
+        handleSendMessage();
+      }
+      return;
+    }
 
     if (editingMsg && typeof onEditMessage === 'function') {
       onEditMessage(trimmed);
+      setLocalText('');
+    } else if (typeof handleSendMessage === 'function') {
+      handleSendMessage(trimmed);
       setLocalText('');
     } else if (typeof onSendMessage === 'function') {
       onSendMessage(trimmed);
@@ -103,7 +115,7 @@ function ChatInputBar({
     if (onTypingChange) {
       onTypingChange('');
     }
-  }, [localText, editingMsg, onEditMessage, onSendMessage, onTypingChange]);
+  }, [localText, editingMsg, onEditMessage, handleSendMessage, onSendMessage, onTypingChange]);
 
   const handleKeyDown = useCallback((e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -229,9 +241,9 @@ function ChatInputBar({
                 flexShrink: 0,
                 transition: 'all 0.15s ease',
               }}
-              title="Outils Collaboratifs Workspace (Tableau blanc, Documents, Feuilles)"
+              title="Outils Collaboratifs Workspace (Tableau blanc, Documents, Feuilles, Notes)"
             >
-              <Sparkles size={18} />
+              <LayoutGrid size={isMobile ? 16 : 18} />
             </button>
 
             {/* MENU POPOVER WORKSPACE */}
@@ -437,7 +449,41 @@ function ChatInputBar({
                   </div>
                 </button>
 
-                {/* 6. GESTION DES RÉCOMPENSES JETONS */}
+                {/* 6. TRANSFERT DIRECT DE JETONS */}
+                {onOpenDirectTransfer && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsWorkspaceMenuOpen(false);
+                      onOpenDirectTransfer();
+                    }}
+                    className="hover-subtle"
+                    style={{
+                      border: 'none',
+                      backgroundColor: 'transparent',
+                      borderRadius: '12px',
+                      padding: '8px 10px',
+                      minHeight: '44px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                      width: '100%',
+                    }}
+                  >
+                    <div style={{ width: '34px', height: '34px', borderRadius: '10px', backgroundColor: 'rgba(245, 158, 11, 0.15)', color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <Coins size={16} />
+                    </div>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ fontSize: '12.5px', fontWeight: '700', color: 'var(--text-main)' }}>Transférer des Jetons</div>
+                      <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>Envoi direct de Jetons Troco</div>
+                    </div>
+                  </button>
+                )}
+
+                {/* 7. GESTION DES RÉCOMPENSES JETONS */}
                 {isGroupChat && (
                   <button
                     type="button"
@@ -475,29 +521,53 @@ function ChatInputBar({
           </div>
         )}
 
-        {/* CHAMP DE SAISIE DU TEXTE */}
+        {/* INPUT FICHIER IMAGE CACHÉ */}
         <input
-          type="text"
-          value={localText}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          placeholder={editingMsg ? 'Modifie ton message...' : (t('typeYourMessage') || t('writeToInterlocutor') || 'Écris ton message...')}
-          style={{
-            flex: 1,
-            padding: '11px 16px',
-            borderRadius: '24px',
-            border: '1px solid var(--border-color)',
-            backgroundColor: 'var(--bg-card)',
-            color: 'var(--text-main)',
-            fontSize: isMobile ? '16px' : '14px',
-            WebkitTextSizeAdjust: '100%',
-            outline: 'none',
-            boxSizing: 'border-box',
-          }}
+          type="file"
+          accept="image/*"
+          ref={imageInputRef}
+          onChange={handleImageSelect}
+          style={{ display: 'none' }}
         />
 
-        {/* BOUTON TRANSFERT DIRECT DE JETONS (🪙) */}
-        {!editingMsg && onOpenDirectTransfer && (
+        {/* BOUTON ENVOI PHOTO / IMAGE */}
+        {!editingMsg && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (imageInputRef.current) imageInputRef.current.click();
+            }}
+            onTouchEnd={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (imageInputRef.current) imageInputRef.current.click();
+            }}
+            className="premium-button"
+            style={{
+              border: '1px solid var(--border-color)',
+              borderRadius: '50%',
+              width: isMobile ? '40px' : '44px',
+              height: isMobile ? '40px' : '44px',
+              minWidth: isMobile ? '40px' : '44px',
+              minHeight: isMobile ? '40px' : '44px',
+              backgroundColor: 'var(--bg-card)',
+              color: 'var(--accent-primary)',
+              cursor: 'pointer',
+              display: (isMobile && localText.trim()) ? 'none' : 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: 'var(--shadow-card)',
+              flexShrink: 0,
+            }}
+            title="Envoyer une photo / image"
+          >
+            <ImageIcon size={isMobile ? 16 : 18} />
+          </button>
+        )}
+
+        {/* BOUTON TRANSFERT DIRECT DE JETONS (🪙) (Desktop) */}
+        {!editingMsg && onOpenDirectTransfer && !isMobile && (
           <button
             type="button"
             onClick={(e) => {
@@ -533,53 +603,8 @@ function ChatInputBar({
           </button>
         )}
 
-        {/* INPUT FICHIER IMAGE CACHÉ */}
-        <input
-          type="file"
-          accept="image/*"
-          ref={imageInputRef}
-          onChange={handleImageSelect}
-          style={{ display: 'none' }}
-        />
-
-        {/* BOUTON ENVOI PHOTO / IMAGE */}
-        {!editingMsg && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (imageInputRef.current) imageInputRef.current.click();
-            }}
-            onTouchEnd={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              if (imageInputRef.current) imageInputRef.current.click();
-            }}
-            className="premium-button"
-            style={{
-              border: '1px solid var(--border-color)',
-              borderRadius: '50%',
-              width: '44px',
-              height: '44px',
-              minWidth: '44px',
-              minHeight: '44px',
-              backgroundColor: 'var(--bg-card)',
-              color: 'var(--accent-primary)',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: 'var(--shadow-card)',
-              flexShrink: 0,
-            }}
-            title="Envoyer une photo / image"
-          >
-            <ImageIcon size={18} />
-          </button>
-        )}
-
-        {/* BOUTON MICROPHONE / MESSAGE VOCAL */}
-        {!editingMsg && onStartVoiceRecord && (
+        {/* BOUTON MICROPHONE / MESSAGE VOCAL (Masqué si texte en cours de frappe sur mobile) */}
+        {!editingMsg && onStartVoiceRecord && !localText.trim() && (
           <button
             type="button"
             onClick={(e) => {
@@ -595,10 +620,10 @@ function ChatInputBar({
             style={{
               border: '1px solid var(--border-color)',
               borderRadius: '50%',
-              width: '44px',
-              height: '44px',
-              minWidth: '44px',
-              minHeight: '44px',
+              width: isMobile ? '40px' : '44px',
+              height: isMobile ? '40px' : '44px',
+              minWidth: isMobile ? '40px' : '44px',
+              minHeight: isMobile ? '40px' : '44px',
               backgroundColor: 'var(--bg-card)',
               color: 'var(--accent-primary)',
               cursor: 'pointer',
@@ -610,23 +635,55 @@ function ChatInputBar({
             }}
             title="Enregistrer une note vocale"
           >
-            <Mic size={18} />
+            <Mic size={isMobile ? 16 : 18} />
           </button>
         )}
 
-        {/* BOUTON ENVOYER / VALIDER MODIFICATION */}
+        {/* CHAMP DE SAISIE DU TEXTE */}
+        <input
+          type="text"
+          value={localText}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+          placeholder={editingMsg ? 'Modifie ton message...' : (t('typeYourMessage') || t('writeToInterlocutor') || 'Écris ton message...')}
+          style={{
+            flex: 1,
+            minWidth: 0,
+            padding: isMobile ? '10px 14px' : '11px 16px',
+            borderRadius: '24px',
+            border: '1px solid var(--border-color)',
+            backgroundColor: 'var(--bg-card)',
+            color: 'var(--text-main)',
+            fontSize: isMobile ? '16px' : '14px',
+            WebkitTextSizeAdjust: '100%',
+            outline: 'none',
+            boxSizing: 'border-box',
+          }}
+        />
+
+        {/* BOUTON ENVOYER / SOUMISSION (ACCOMPAGNE DIRECTEMENT L'INPUT À SA DROITE) */}
         <button
           type="button"
-          onClick={handleSubmit}
-          onTouchEnd={handleSubmit}
+          onClick={(e) => {
+            if (typeof handleSendMessage === 'function') {
+              handleSendMessage(localText);
+            }
+            handleSubmit(e);
+          }}
+          onTouchEnd={(e) => {
+            if (typeof handleSendMessage === 'function') {
+              handleSendMessage(localText);
+            }
+            handleSubmit(e);
+          }}
           className="premium-button"
           style={{
             border: 'none',
             borderRadius: '50%',
-            width: '44px',
-            height: '44px',
-            minWidth: '44px',
-            minHeight: '44px',
+            width: isMobile ? '40px' : '44px',
+            height: isMobile ? '40px' : '44px',
+            minWidth: isMobile ? '40px' : '44px',
+            minHeight: isMobile ? '40px' : '44px',
             background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
             color: '#FFF',
             cursor: 'pointer',
@@ -635,10 +692,11 @@ function ChatInputBar({
             justifyContent: 'center',
             boxShadow: 'var(--shadow-accent)',
             flexShrink: 0,
+            transition: 'transform 0.15s ease',
           }}
           title={editingMsg ? 'Valider la modification' : 'Envoyer'}
         >
-          {editingMsg ? <Check size={18} /> : <Send size={18} />}
+          {editingMsg ? <Check size={isMobile ? 16 : 18} /> : <Send size={isMobile ? 16 : 18} style={{ transform: 'translateX(-1px)' }} />}
         </button>
       </div>
     </div>
