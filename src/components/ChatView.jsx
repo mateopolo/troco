@@ -19,6 +19,7 @@ import PublicProfileModal from './PublicProfileModal';
 import WorkspaceMessageCard from '../features/workspace/WorkspaceMessageCard';
 import { hapticLight, hapticSuccess, hapticError } from '../utils/haptics';
 import { EmptyState } from './ui/EmptyState';
+import { playPop, playSwoosh, playSuccessChime } from '../services/audioService';
 
 // Lazy loading des outils collaboratifs & suites vectorielles lourdes pour préserver les performances et la rapidité du build
 const CreateProjectGroupModal = lazy(() => import('./CreateProjectGroupModal'));
@@ -743,6 +744,7 @@ function ChatView({
       setEditingMsg(null);
       setChatInputText('');
     } else {
+      playPop();
       handleSendMessage();
     }
   };
@@ -1518,6 +1520,7 @@ function ChatView({
                             type="button"
                             onClick={() => {
                               hapticSuccess();
+                              playSuccessChime();
                               if (typeof onAcceptDeal === 'function') {
                                 onAcceptDeal(terms);
                               } else if (typeof handleAcceptDeal === 'function') {

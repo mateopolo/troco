@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import FeedCardItem from '../../components/FeedCardItem';
 import SponsoredFeedCard from '../../components/SponsoredFeedCard';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { PullToRefresh } from '../../components/ui/PullToRefresh';
 
 export function FeedSection({
   filteredListings,
@@ -79,8 +80,18 @@ export function FeedSection({
       if (el) observer.unobserve(el);
     };
   }, [hasMore, isLoadingMore, onLoadMore]);
+  const handleRefresh = async () => {
+    try {
+      window.dispatchEvent(new CustomEvent('troco:refetch_listings'));
+      if (typeof onLoadMore === 'function') {
+        await new Promise((res) => setTimeout(res, 400));
+      }
+    } catch (_) {}
+  };
+
   return (
-    <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-start', width: '100%' }}>
+    <PullToRefresh onRefresh={handleRefresh} disabled={viewMode === 'map'}>
+      <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-start', width: '100%' }}>
       <div style={{ flex: 1, minWidth: 0 }}>
         {/* Titre éditorial discret et sélecteur de vue */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
@@ -609,6 +620,7 @@ export function FeedSection({
         </div>
       </aside>
     </div>
+    </PullToRefresh>
   );
 }
 

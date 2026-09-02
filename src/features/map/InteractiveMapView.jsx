@@ -7,10 +7,10 @@ import { Navigation, Loader2, Maximize, X, Hand, MapPin } from 'lucide-react';
 import SectoralErrorBoundary from '../../components/SectoralErrorBoundary';
 import useMediaQuery from '../../hooks/useMediaQuery';
 import { EmptyState } from '../../components/ui/EmptyState';
+import { MAP_I18N, getMapTranslation } from './mapTranslations';
 
 const MapClusterTracker = React.lazy(() => import('../../components/MapClusterTracker'));
 
-import { MAP_I18N, getMapTranslation } from './mapTranslations';
 export { MAP_I18N, getMapTranslation };
 
 /**

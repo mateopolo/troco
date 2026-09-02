@@ -1,76 +1,189 @@
-// ---- SYNTHÉTISEURS SONORES WEB AUDIO API (100% EMBARQUÉS - SINGLETON AUDIO CONTEXT) ----
-let audioCtxInstance = null;
+/**
+ * audioService.js
+ * Moteur de Sound Design & Micro-Audio UI à 0ms de latence basé sur l'API Web Audio
+ * 
+ * - Synthèse sonore temps réel sans dépendance externe ni fichier réseau
+ * - Profils sonores Apple-grade : Pop, Swoosh, Success-Chime
+ * - Contrôle de volume maître (par défaut 20% / 0.20)
+ * - Gestion automatique de la politique d'autoplay navigateur (resume on user gesture)
+ */
 
-const getAudioContext = () => {
-  if (typeof window === 'undefined') return null;
-  const AudioCtx = window.AudioContext || window.webkitAudioContext;
-  if (!AudioCtx) return null;
-  if (!audioCtxInstance || audioCtxInstance.state === 'closed') {
-    audioCtxInstance = new AudioCtx();
-  } else if (audioCtxInstance.state === 'suspended') {
-    audioCtxInstance.resume();
+class AudioService {
+  constructor() {
+    this.ctx = null;
+    this.masterGain = null;
+    this.volume = 0.20; // 20% par défaut pour un feedback discret
+    this.isEnabled = true;
+
+    if (typeof window !== 'undefined') {
+      try {
+        const savedVolume = localStorage.getItem('troco_sound_volume');
+        if (savedVolume !== null) {
+          const parsed = parseFloat(savedVolume);
+          if (!isNaN(parsed) && parsed >= 0 && parsed <= 1) {
+            this.volume = parsed;
+          }
+        }
+        const savedEnabled = localStorage.getItem('troco_sound_enabled');
+        if (savedEnabled !== null) {
+          this.isEnabled = savedEnabled === 'true';
+        }
+      } catch (_) {}
+    }
   }
-  return audioCtxInstance;
-};
 
-export const playApplePaySound = () => {
-  try {
-    const ctx = getAudioContext();
+  /**
+   * Initialisation fainéante (lazy) du contexte audio pour respecter les règles d'autoplay
+   */
+  initContext() {
+    if (typeof window === 'undefined') return null;
+    if (!this.ctx) {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return null;
+      this.ctx = new AudioCtx();
+      this.masterGain = this.ctx.createGain();
+      this.masterGain.gain.setValueAtTime(this.volume, this.ctx.currentTime);
+      this.masterGain.connect(this.ctx.destination);
+    }
+    if (this.ctx.state === 'suspended') {
+      this.ctx.resume().catch(() => {});
+    }
+    return this.ctx;
+  }
+
+  /**
+   * Modifie le volume général (0.0 à 1.0)
+   * @param {number} vol 
+   */
+  setMasterVolume(vol) {
+    const clamped = Math.max(0, Math.min(1, vol));
+    this.volume = clamped;
+    if (this.masterGain && this.ctx) {
+      this.masterGain.gain.setValueAtTime(clamped, this.ctx.currentTime);
+    }
+    try {
+      localStorage.setItem('troco_sound_volume', String(clamped));
+    } catch (_) {}
+  }
+
+  /**
+   * Active ou désactive le feedback sonore
+   * @param {boolean} enabled 
+   */
+  setSoundEnabled(enabled) {
+    this.isEnabled = Boolean(enabled);
+    try {
+      localStorage.setItem('troco_sound_enabled', String(this.isEnabled));
+    } catch (_) {}
+  }
+
+  /**
+   * Son 1 : POP (Envoi de message, like, tap léger)
+   * Balayage rapide de fréquence avec enveloppe percussive ultra-courte (45ms)
+   */
+  playPop() {
+    if (!this.isEnabled) return;
+    const ctx = this.initContext();
     if (!ctx) return;
 
-    const now = ctx.currentTime;
-
-    // Double carillon cristallin style Apple Pay / iOS
-    const osc1 = ctx.createOscillator();
-    const gain1 = ctx.createGain();
-    osc1.type = 'sine';
-    osc1.frequency.setValueAtTime(1046.50, now); // Note C6
-    gain1.gain.setValueAtTime(0.45, now);
-    gain1.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
-    osc1.connect(gain1);
-    gain1.connect(ctx.destination);
-    osc1.start(now);
-    osc1.stop(now + 0.35);
-
-    const osc2 = ctx.createOscillator();
-    const gain2 = ctx.createGain();
-    osc2.type = 'sine';
-    osc2.frequency.setValueAtTime(2093.00, now + 0.07); // Note C7
-    gain2.gain.setValueAtTime(0.55, now + 0.07);
-    gain2.gain.exponentialRampToValueAtTime(0.0001, now + 0.5);
-    osc2.connect(gain2);
-    gain2.connect(ctx.destination);
-    osc2.start(now + 0.07);
-    osc2.stop(now + 0.5);
-  } catch (e) {
-    console.warn('Web Audio Context désactivé ou non supporté', e);
-  }
-};
-
-export const playBetclicBalanceSound = (isIncrease = false) => {
-  try {
-    const ctx = getAudioContext();
-    if (!ctx) return;
-
-    const now = ctx.currentTime;
-    const freqs = isIncrease
-      ? [523.25, 659.25, 783.99, 1046.50]
-      : [1046.50, 880.00, 698.46, 523.25];
-
-    freqs.forEach((freq, idx) => {
-      const startTime = now + (idx * 0.065);
+    try {
+      const now = ctx.currentTime;
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(freq, startTime);
-      gain.gain.setValueAtTime(0.22, startTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.12);
+
+      osc.type = 'sine';
+      // Descente de fréquence rapide type bulle / pop
+      osc.frequency.setValueAtTime(640, now);
+      osc.frequency.exponentialRampToValueAtTime(160, now + 0.05);
+
+      gain.gain.setValueAtTime(0.7, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+
       osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(startTime);
-      osc.stop(startTime + 0.12);
-    });
-  } catch (e) {
-    console.warn('Web Audio Context désactivé ou non supporté', e);
+      gain.connect(this.masterGain);
+
+      osc.start(now);
+      osc.stop(now + 0.05);
+    } catch (e) {
+      console.warn('[AudioService] Pop playback error:', e);
+    }
   }
-};
+
+  /**
+   * Son 2 : SWOOSH (Ouverture de modale, Whiteboard, panel God Mode)
+   * Balayage sinusoidal fluide avec enveloppe d'expansion spatiale (130ms)
+   */
+  playSwoosh() {
+    if (!this.isEnabled) return;
+    const ctx = this.initContext();
+    if (!ctx) return;
+
+    try {
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sine';
+      // Montée puis descente douce
+      osc.frequency.setValueAtTime(140, now);
+      osc.frequency.exponentialRampToValueAtTime(520, now + 0.07);
+      osc.frequency.exponentialRampToValueAtTime(260, now + 0.14);
+
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(0.5, now + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+
+      osc.start(now);
+      osc.stop(now + 0.14);
+    } catch (e) {
+      console.warn('[AudioService] Swoosh playback error:', e);
+    }
+  }
+
+  /**
+   * Son 3 : SUCCESS-CHIME (Validation d'offre, deal conclu, paiement réussi)
+   * Accord cristallin ascendant à 3 harmoniques (C5 -> E5 -> G5)
+   */
+  playSuccessChime() {
+    if (!this.isEnabled) return;
+    const ctx = this.initContext();
+    if (!ctx) return;
+
+    try {
+      const now = ctx.currentTime;
+      const frequencies = [523.25, 659.25, 783.99]; // Do5, Mi5, Sol5
+      const delays = [0, 0.06, 0.12];
+
+      frequencies.forEach((freq, idx) => {
+        const startTime = now + delays[idx];
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, startTime);
+
+        gain.gain.setValueAtTime(0.001, startTime);
+        gain.gain.linearRampToValueAtTime(0.55, startTime + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, startTime + 0.35);
+
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+
+        osc.start(startTime);
+        osc.stop(startTime + 0.35);
+      });
+    } catch (e) {
+      console.warn('[AudioService] Success chime playback error:', e);
+    }
+  }
+}
+
+export const audioService = new AudioService();
+export const playPop = () => audioService.playPop();
+export const playSwoosh = () => audioService.playSwoosh();
+export const playSuccessChime = () => audioService.playSuccessChime();
+
+export default audioService;

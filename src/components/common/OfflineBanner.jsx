@@ -9,7 +9,7 @@ import { hapticError, hapticSuccess } from '../../utils/haptics';
  * de la perte de connexion internet, avec transition douce de reconnexion.
  */
 export function OfflineBanner() {
-  const { isOnline, isOffline, wasOffline } = useNetworkStatus();
+  const { isOffline, wasOffline } = useNetworkStatus();
   const [showReconnectedToast, setShowReconnectedToast] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
 

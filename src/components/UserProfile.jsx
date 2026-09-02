@@ -10,10 +10,7 @@ import {
   Star,
   MapPin,
   Pencil,
-  Check,
-  X,
-  Link as LinkIcon,
-  Sparkles
+  Link as LinkIcon
 } from 'lucide-react';
 import { validateSocialLink, parseSocialLink } from '../utils/socialSecurity';
 

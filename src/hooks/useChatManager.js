@@ -22,6 +22,7 @@ import { uploadVoiceNote } from '../services/voiceStorageService';
 import { playBetclicBalanceSound, playApplePaySound } from '../utils/audioService';
 import { useChatStore } from '../stores';
 import { hapticLight, hapticSuccess, hapticError } from '../utils/haptics';
+import { playPop, playSuccessChime } from '../services/audioService';
 
 /**
  * Hook centralisant le moteur logique de messagerie, négociations et transactions de deals.
@@ -598,6 +599,7 @@ export const useChatManager = ({
   const handleSendMessage = async (customPayload = null) => {
     if (!selectedChat) return;
     hapticLight();
+    playPop();
 
     if (customPayload && typeof customPayload === 'object') {
       const chatId = selectedChat.id;

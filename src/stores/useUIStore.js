@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { playSwoosh } from '../services/audioService';
 
 /**
  * Centralized UI Store for all modals, drawers, popovers, and overlays across Troco.
@@ -79,8 +80,12 @@ export const useUIStore = create((set, get) => ({
   setIsKycModalOpen: (isKycModalOpen) => set({ isKycModalOpen }),
   setIsOnboardingOpen: (isOnboardingOpen) => set({ isOnboardingOpen }),
 
-  setIsAdminPanelOpen: (isAdminPanelOpen) => set({ isAdminPanelOpen }),
+  setIsAdminPanelOpen: (isAdminPanelOpen) => {
+    if (isAdminPanelOpen) playSwoosh();
+    set({ isAdminPanelOpen });
+  },
   setIsGodModeActive: (isGodModeActive) => {
+    if (isGodModeActive) playSwoosh();
     try {
       localStorage.setItem('troco_god_mode', isGodModeActive ? 'true' : 'false');
     } catch (_) {}

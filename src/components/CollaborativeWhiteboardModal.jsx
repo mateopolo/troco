@@ -32,6 +32,7 @@ import {
   WORKSPACE_TYPES,
 } from '../features/workspace/workspaceService';
 import { setThemeColorOverride, clearThemeColorOverride } from '../utils/themeColor';
+import { playSwoosh } from '../services/audioService';
 
 const SHAPE_OPTIONS = [
   { id: 'rect', label: 'Rectangle', icon: Square },
@@ -123,9 +124,10 @@ export default function CollaborativeWhiteboardModal({
     };
   }, []);
 
-  // 🚨 PHASE 50 : SYNCHRONISATION IMMERSIVE DE LA BARRE DE STATUT SUR LA COULEUR DU CANVAS
+  // 🚨 PHASE 50 & 52 : SYNCHRONISATION IMMERSIVE STATUT & EFFET SONORE SWOOSH
   useEffect(() => {
     if (isOpen) {
+      playSwoosh();
       setThemeColorOverride(backgroundColor);
       return () => {
         clearThemeColorOverride();
