@@ -81,16 +81,16 @@ export function WalletProvider({ children }) {
     };
   }, []);
 
-  const addLocalTransaction = (newTx) => {
+  const addLocalTransaction = useCallback((newTx) => {
     setTransactions(prev => [newTx, ...prev]);
-  };
+  }, []);
 
-  const value = {
+  const value = useMemo(() => ({
     transactions,
     setTransactions,
     addLocalTransaction,
     loading,
-  };
+  }), [transactions, loading, addLocalTransaction]);
 
   return (
     <WalletContext.Provider value={value}>

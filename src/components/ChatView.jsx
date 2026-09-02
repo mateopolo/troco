@@ -20,6 +20,7 @@ import { hapticLight, hapticSuccess, hapticError } from '../utils/haptics';
 import { EmptyState } from './ui/EmptyState';
 import { playPop, playSwoosh, playSuccessChime } from '../services/audioService';
 import SwipeableChatItem from './SwipeableChatItem';
+import ChatInputBar from './chat/ChatInputBar';
 
 // Lazy loading des outils collaboratifs & suites vectorielles lourdes pour préserver les performances et la rapidité du build
 const CreateProjectGroupModal = lazy(() => import('./CreateProjectGroupModal'));
@@ -2268,470 +2269,60 @@ function ChatView({
           </div>
         )}
 
-        {/* 3. BARRE DE SAISIE FIXE EN BAS (ANCRÉE AU-DESSUS DE LA ZONE DE GESTES) */}
-        <div style={{
-          display: 'flex', flexDirection: 'column', gap: '6px',
-          padding: isMobile ? '8px 12px' : '8px 16px',
-          paddingBottom: isMobile ? 'max(10px, env(safe-area-inset-bottom, 10px))' : '10px',
-          borderTop: '1px solid var(--border-color)',
-          backgroundColor: 'var(--bg-glass)',
-          backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
-          flexShrink: 0, zIndex: 50, width: '100%', boxSizing: 'border-box'
-        }}>
+        {/* 3. BARRE DE SAISIE FIXE ISOLÉE ET MÉMOÏSÉE (Phase 63 - Rendu O(1)) */}
+        {isRecordingAudio ? (
           <div style={{
-            maxWidth: '680px',
+            padding: isMobile ? '8px 12px' : '8px 16px',
+            paddingBottom: isMobile ? 'max(10px, env(safe-area-inset-bottom, 10px))' : '10px',
+            borderTop: '1px solid var(--border-color)',
+            backgroundColor: 'var(--bg-card)',
+            flexShrink: 0,
+            zIndex: 50,
             width: '100%',
-            margin: '0 auto',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '6px'
+            boxSizing: 'border-box'
           }}>
-            {editingMsg && (
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '6px 12px',
-                backgroundColor: 'var(--bg-subtle)',
-                borderRadius: '10px',
-                borderLeft: '3px solid var(--accent-primary)',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', color: 'var(--accent-primary)', fontWeight: '700' }}>
-                  <Edit2 size={12} />
-                  <span>Modification du message</span>
-                </div>
-                <button
-                  onClick={() => { setEditingMsg(null); setChatInputText(''); }}
-                  style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center' }}
-                >
-                  <X size={14} />
-                </button>
-              </div>
-            )}
-
-            {isRecordingAudio ? (
-              <VoiceNoteRecorder
-                isRecording={isRecordingAudio}
-                onCancel={() => setIsRecordingAudio(false)}
-                onSendVoiceNote={async (blob, dur) => {
-                  userJustSentMessageRef.current = true;
-                  if (onSendAudioMessage) {
-                    await onSendAudioMessage(blob, dur);
-                  }
-                  setIsRecordingAudio(false);
-                }}
-              />
-            ) : (
-              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', position: 'relative' }}>
-                {/* BOUTON "➕" MENU PREMIUM WORKSPACE */}
-                {!editingMsg && (
-                  <div style={{ position: 'relative', flexShrink: 0 }}>
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); setIsWorkspaceMenuOpen(prev => !prev); }}
-                      onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setIsWorkspaceMenuOpen(prev => !prev); }}
-                      className="premium-button"
-                      style={{
-                        border: '1px solid var(--border-color)',
-                        borderRadius: '50%',
-                        width: '44px',
-                        height: '44px',
-                        minWidth: '44px',
-                        minHeight: '44px',
-                        backgroundColor: isWorkspaceMenuOpen ? 'var(--accent-primary)' : 'var(--bg-card)',
-                        color: isWorkspaceMenuOpen ? '#FFFFFF' : 'var(--accent-primary)',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        boxShadow: 'var(--shadow-card)',
-                        flexShrink: 0,
-                        position: 'relative',
-                        zIndex: 100,
-                        pointerEvents: 'auto',
-                        touchAction: 'manipulation',
-                        transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
-                        transform: isWorkspaceMenuOpen ? 'rotate(45deg)' : 'none',
-                      }}
-                      title="Outils Collaboratifs & Workspace Premium"
-                    >
-                      <Plus size={20} />
-                    </button>
-
-                    {/* POPOVER MENU WORKSPACE PREMIUM */}
-                    {isWorkspaceMenuOpen && (
-                      <div
-                        onClick={(e) => e.stopPropagation()}
-                        style={{
-                          position: 'absolute',
-                          bottom: '54px',
-                          left: 0,
-                          backgroundColor: 'var(--bg-card)',
-                          borderRadius: '20px',
-                          padding: '12px',
-                          boxShadow: 'var(--shadow-modal)',
-                          border: '1px solid var(--border-color)',
-                          width: '280px',
-                          zIndex: 1000,
-                          display: 'flex',
-                          flexDirection: 'column',
-                          gap: '6px',
-                          animation: 'fadeSlideUp 0.2s ease-out both',
-                          pointerEvents: 'auto',
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 8px', borderBottom: '1px solid var(--border-color)', marginBottom: '4px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: '800', color: 'var(--accent-primary)' }}>
-                            <Sparkles size={13} />
-                            <span>WORKSPACE PREMIUM</span>
-                          </div>
-                          <span style={{ fontSize: '9px', fontWeight: '800', backgroundColor: 'rgba(198, 125, 91, 0.15)', color: 'var(--accent-primary)', padding: '2px 6px', borderRadius: '999px' }}>
-                            PRO
-                          </span>
-                        </div>
-
-                        {/* 1. TABLEAU BLANC COLLABORATIF MULTIJOUEUR */}
-                        <button
-                          type="button"
-                          onClick={(e) => { e.stopPropagation(); setIsWorkspaceMenuOpen(false); setIsWhiteboardPickerOpen(true); }}
-                          onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setIsWorkspaceMenuOpen(false); setIsWhiteboardPickerOpen(true); }}
-                          className="hover-subtle"
-                          style={{
-                            border: 'none',
-                            backgroundColor: 'transparent',
-                            borderRadius: '12px',
-                            padding: '8px 10px',
-                            minHeight: '44px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '10px',
-                            cursor: 'pointer',
-                            textAlign: 'left',
-                            width: '100%',
-                            transition: 'background-color 0.15s ease',
-                            pointerEvents: 'auto',
-                            touchAction: 'manipulation',
-                          }}
-                        >
-                          <div style={{ width: '34px', height: '34px', borderRadius: '10px', backgroundColor: 'rgba(198, 125, 91, 0.15)', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <Palette size={16} />
-                          </div>
-                          <div style={{ minWidth: 0, flex: 1 }}>
-                            <div style={{ fontSize: '12.5px', fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <span>Tableau Blanc</span>
-                              <span style={{ fontSize: '9px', fontWeight: '800', color: '#10B981', backgroundColor: 'rgba(16, 185, 129, 0.15)', padding: '1px 5px', borderRadius: '4px' }}>0ms</span>
-                            </div>
-                            <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>Créer un nouveau projet ou reprendre un board</div>
-                          </div>
-                        </button>
-
-                        {/* 2. NOTES PARTAGÉES (RICH TEXT STYLE APPLE NOTES) */}
-                        <button
-                          type="button"
-                          onClick={(e) => { e.stopPropagation(); handleOpenWorkspaceTool('notes'); }}
-                          onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); handleOpenWorkspaceTool('notes'); }}
-                          className="hover-subtle"
-                          style={{
-                            border: 'none',
-                            backgroundColor: 'transparent',
-                            borderRadius: '12px',
-                            padding: '8px 10px',
-                            minHeight: '44px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '10px',
-                            cursor: 'pointer',
-                            textAlign: 'left',
-                            width: '100%',
-                            transition: 'background-color 0.15s ease',
-                            pointerEvents: 'auto',
-                            touchAction: 'manipulation',
-                          }}
-                        >
-                          <div style={{ width: '34px', height: '34px', borderRadius: '10px', backgroundColor: 'rgba(245, 158, 11, 0.15)', color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <Edit3 size={16} />
-                          </div>
-                          <div style={{ minWidth: 0, flex: 1 }}>
-                            <div style={{ fontSize: '12.5px', fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <span>Notes Partagées</span>
-                              <span style={{ fontSize: '9px', fontWeight: '800', color: '#F59E0B', backgroundColor: 'rgba(245, 158, 11, 0.15)', padding: '1px 5px', borderRadius: '4px' }}>NOTES</span>
-                            </div>
-                            <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>Notes de session & checklist Apple-Style</div>
-                          </div>
-                        </button>
-
-                        {/* 3. TROCO DOCS (ALTERNATIVE NOTION / WORD OPEN-SOURCE) */}
-                        <button
-                          type="button"
-                          onClick={(e) => { e.stopPropagation(); handleOpenWorkspaceTool('docs'); }}
-                          onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); handleOpenWorkspaceTool('docs'); }}
-                          className="hover-subtle"
-                          style={{
-                            border: 'none',
-                            backgroundColor: 'transparent',
-                            borderRadius: '12px',
-                            padding: '8px 10px',
-                            minHeight: '44px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '10px',
-                            cursor: 'pointer',
-                            textAlign: 'left',
-                            width: '100%',
-                            transition: 'background-color 0.15s ease',
-                            pointerEvents: 'auto',
-                            touchAction: 'manipulation',
-                          }}
-                        >
-                          <div style={{ width: '34px', height: '34px', borderRadius: '10px', backgroundColor: 'rgba(59, 130, 246, 0.15)', color: '#3B82F6', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <FileText size={16} />
-                          </div>
-                          <div style={{ minWidth: 0, flex: 1 }}>
-                            <div style={{ fontSize: '12.5px', fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <span>Troco Docs</span>
-                              <span style={{ fontSize: '9px', fontWeight: '800', color: '#3B82F6', backgroundColor: 'rgba(59, 130, 246, 0.15)', padding: '1px 5px', borderRadius: '4px' }}>DOCS</span>
-                            </div>
-                            <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>Éditeur texte Markdown collaboratif</div>
-                          </div>
-                        </button>
-
-                        {/* 3. TROCO SHEETS (ALTERNATIVE EXCEL OPEN-SOURCE) */}
-                        <button
-                          type="button"
-                          onClick={(e) => { e.stopPropagation(); handleOpenWorkspaceTool('sheets'); }}
-                          onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); handleOpenWorkspaceTool('sheets'); }}
-                          className="hover-subtle"
-                          style={{
-                            border: 'none',
-                            backgroundColor: 'transparent',
-                            borderRadius: '12px',
-                            padding: '8px 10px',
-                            minHeight: '44px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '10px',
-                            cursor: 'pointer',
-                            textAlign: 'left',
-                            width: '100%',
-                            transition: 'background-color 0.15s ease',
-                            pointerEvents: 'auto',
-                            touchAction: 'manipulation',
-                          }}
-                        >
-                          <div style={{ width: '34px', height: '34px', borderRadius: '10px', backgroundColor: 'rgba(16, 185, 129, 0.15)', color: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <Table size={16} />
-                          </div>
-                          <div style={{ minWidth: 0, flex: 1 }}>
-                            <div style={{ fontSize: '12.5px', fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <span>Troco Sheets</span>
-                              <span style={{ fontSize: '9px', fontWeight: '800', color: '#10B981', backgroundColor: 'rgba(16, 185, 129, 0.15)', padding: '1px 5px', borderRadius: '4px' }}>SHEETS</span>
-                            </div>
-                            <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>Tableur & formules en temps réel</div>
-                          </div>
-                        </button>
-
-                        {/* 4. CALENDRIER & RÉUNIONS */}
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setIsWorkspaceMenuOpen(false);
-                            setIsWorkspaceToolsOpen(true);
-                          }}
-                          onTouchEnd={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setIsWorkspaceMenuOpen(false);
-                            setIsWorkspaceToolsOpen(true);
-                          }}
-                          className="hover-subtle"
-                          style={{
-                            border: 'none',
-                            backgroundColor: 'transparent',
-                            borderRadius: '12px',
-                            padding: '8px 10px',
-                            minHeight: '44px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '10px',
-                            cursor: 'pointer',
-                            textAlign: 'left',
-                            width: '100%',
-                            transition: 'background-color 0.15s ease',
-                            pointerEvents: 'auto',
-                            touchAction: 'manipulation',
-                          }}
-                        >
-                          <div style={{ width: '34px', height: '34px', borderRadius: '10px', backgroundColor: 'rgba(234, 67, 53, 0.15)', color: '#EA4335', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                            <Calendar size={16} />
-                          </div>
-                          <div style={{ minWidth: 0, flex: 1 }}>
-                            <div style={{ fontSize: '12.5px', fontWeight: '700', color: 'var(--text-main)' }}>Planning & Visios HD</div>
-                            <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>Calendrier de projet & réunions</div>
-                          </div>
-                        </button>
-
-                        {/* 5. GESTION DES RÉCOMPENSES JETONS (SI GROUPE PROJET) */}
-                        {activeChatObj?.isGroup && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setIsWorkspaceMenuOpen(false);
-                              setIsProjectRewardsModalOpen(true);
-                            }}
-                            onTouchEnd={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setIsWorkspaceMenuOpen(false);
-                              setIsProjectRewardsModalOpen(true);
-                            }}
-                            className="hover-subtle"
-                            style={{
-                              border: 'none',
-                              backgroundColor: 'transparent',
-                              borderRadius: '12px',
-                              padding: '8px 10px',
-                              minHeight: '44px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '10px',
-                              cursor: 'pointer',
-                              textAlign: 'left',
-                              width: '100%',
-                              transition: 'background-color 0.15s ease',
-                              pointerEvents: 'auto',
-                              touchAction: 'manipulation',
-                            }}
-                          >
-                            <div style={{ width: '34px', height: '34px', borderRadius: '10px', backgroundColor: 'rgba(245, 158, 11, 0.15)', color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                              <Coins size={16} />
-                            </div>
-                            <div style={{ minWidth: 0, flex: 1 }}>
-                              <div style={{ fontSize: '12.5px', fontWeight: '700', color: 'var(--text-main)' }}>Rétribution en Jetons</div>
-                              <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>Attribuer les gains du projet</div>
-                            </div>
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                <input
-                  type="text"
-                  value={chatInputText}
-                  onChange={(e) => {
-                    if (onTypingChange) {
-                      onTypingChange(e.target.value);
-                    } else {
-                      setChatInputText(e.target.value);
-                    }
-                  }}
-                  onKeyDown={(e) => e.key === 'Enter' && onSubmitMessage()}
-                  placeholder={editingMsg ? 'Modifie ton message...' : (t('typeYourMessage') || t('writeToInterlocutor') || 'Écris ton message...')}
-                  style={{
-                    flex: 1, padding: '11px 16px', borderRadius: '24px',
-                    border: '1px solid var(--border-color)',
-                    backgroundColor: 'var(--bg-card)',
-                    color: 'var(--text-main)',
-                    fontSize: isMobile ? '16px' : '14px',
-                    WebkitTextSizeAdjust: '100%',
-                    outline: 'none',
-                    boxSizing: 'border-box'
-                  }}
-                />
-
-                {/* BOUTON TRANSFERT DIRECT DE JETONS (🪙) */}
-                {!editingMsg && (
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); setIsDirectTransferOpen(true); }}
-                    onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setIsDirectTransferOpen(true); }}
-                    className="premium-button"
-                    style={{
-                      border: '1.5px solid #F59E0B',
-                      borderRadius: '50%',
-                      width: '44px',
-                      height: '44px',
-                      minWidth: '44px',
-                      minHeight: '44px',
-                      backgroundColor: 'rgba(245, 158, 11, 0.12)',
-                      color: '#F59E0B',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      boxShadow: '0 4px 12px rgba(245, 158, 11, 0.2)',
-                      flexShrink: 0,
-                      position: 'relative',
-                      zIndex: 100,
-                      pointerEvents: 'auto',
-                      touchAction: 'manipulation',
-                      transition: 'transform 0.15s ease',
-                    }}
-                    title="Transférer des Jetons Troco instantanément"
-                  >
-                    <Coins size={18} />
-                  </button>
-                )}
-
-                {/* BOUTON MICROPHONE / MESSAGE VOCAL */}
-                {!editingMsg && (
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); setIsRecordingAudio(true); }}
-                    onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setIsRecordingAudio(true); }}
-                    className="premium-button"
-                    style={{
-                      border: '1px solid var(--border-color)',
-                      borderRadius: '50%',
-                      width: '44px',
-                      height: '44px',
-                      minWidth: '44px',
-                      minHeight: '44px',
-                      backgroundColor: 'var(--bg-card)',
-                      color: 'var(--accent-primary)',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      boxShadow: 'var(--shadow-card)',
-                      flexShrink: 0,
-                      position: 'relative',
-                      zIndex: 100,
-                      pointerEvents: 'auto',
-                      touchAction: 'manipulation',
-                    }}
-                    title="Enregistrer une note vocale"
-                  >
-                    <Mic size={18} />
-                  </button>
-                )}
-
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); onSubmitMessage(); }}
-                  onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); onSubmitMessage(); }}
-                  className="premium-button"
-                  style={{
-                    border: 'none', borderRadius: '50%',
-                    width: '44px', height: '44px',
-                    minWidth: '44px', minHeight: '44px',
-                    background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
-                    color: '#FFF', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    boxShadow: 'var(--shadow-accent)', flexShrink: 0,
-                    position: 'relative', zIndex: 100, pointerEvents: 'auto', touchAction: 'manipulation'
-                  }}
-                  title="Envoyer"
-                >
-                  {editingMsg ? <Check size={18} /> : <Send size={18} />}
-                </button>
-              </div>
-            )}
+            <VoiceNoteRecorder
+              isRecording={isRecordingAudio}
+              onCancel={() => setIsRecordingAudio(false)}
+              onSendVoiceNote={async (blob, dur) => {
+                userJustSentMessageRef.current = true;
+                if (onSendAudioMessage) {
+                  await onSendAudioMessage(blob, dur);
+                }
+                setIsRecordingAudio(false);
+              }}
+            />
           </div>
-        </div>
+        ) : (
+          <ChatInputBar
+            isMobile={isMobile}
+            darkMode={darkMode}
+            t={t}
+            editingMsg={editingMsg}
+            replyingTo={null}
+            isGroupChat={activeChatObj?.isGroup}
+            onSendMessage={(text) => {
+              userJustSentMessageRef.current = true;
+              if (handleSendMessage) {
+                handleSendMessage(text);
+              }
+            }}
+            onEditMessage={(text) => {
+              if (currentChatId && editingMsg) {
+                handleEditMessage(currentChatId, editingMsg.id, text);
+                setEditingMsg(null);
+              }
+            }}
+            onCancelEdit={() => setEditingMsg(null)}
+            onCancelReply={() => {}}
+            onTypingChange={onTypingChange}
+            onOpenDirectTransfer={() => setIsDirectTransferOpen(true)}
+            onStartVoiceRecord={() => setIsRecordingAudio(true)}
+            onOpenWorkspaceTool={(tool) => handleOpenWorkspaceTool(tool)}
+            onOpenWhiteboardPicker={() => setIsWhiteboardPickerOpen(true)}
+            onOpenProjectRewards={() => setIsProjectRewardsModalOpen(true)}
+          />
+        )}
       </div>
     );
   };
@@ -3457,8 +3048,8 @@ function ChatView({
         </div>
       )}
 
-      {/* MODALE TABLEAU BLANC COLLABORATIF 100% CANVAS (LAZY LOADED) */}
-      {isWhiteboardOpen && activeChatObj && (
+      {/* MODALE TABLEAU BLANC COLLABORATIF 100% CANVAS (LAZY LOADED - PERSISTANT SOUS ROTATION) */}
+      {isWhiteboardOpen && (activeChatObj || selectedChat) && (
         <Suspense fallback={null}>
           <CollaborativeWhiteboard
             isOpen={isWhiteboardOpen}
@@ -3466,12 +3057,12 @@ function ChatView({
               setIsWhiteboardOpen(false);
               setActiveWhiteboardVersion(null);
             }}
-            groupId={selectedChat?.id || activeChatObj.id || activeChatObj.firestoreId || 'group_whiteboard'}
-            boardId={activeWhiteboardBoardId || (activeChatObj.id ? `board-${activeChatObj.id}` : 'default_board')}
-            workspaceId={activeWhiteboardBoardId || (activeChatObj.id ? `board-${activeChatObj.id}` : 'default_board')}
+            groupId={selectedChat?.id || activeChatObj?.id || activeChatObj?.firestoreId || 'group_whiteboard'}
+            boardId={activeWhiteboardBoardId || (selectedChat?.id ? `board-${selectedChat.id}` : (activeChatObj?.id ? `board-${activeChatObj.id}` : 'default_board'))}
+            workspaceId={activeWhiteboardBoardId || (selectedChat?.id ? `board-${selectedChat.id}` : (activeChatObj?.id ? `board-${activeChatObj.id}` : 'default_board'))}
             version={activeWhiteboardVersion}
             initialVersion={activeWhiteboardVersion}
-            projectTitle={activeChatObj.projectTitle || activeChatObj.user || 'Tableau Blanc Collaboratif'}
+            projectTitle={selectedChat?.projectTitle || activeChatObj?.projectTitle || activeChatObj?.user || 'Tableau Blanc Collaboratif'}
             currentUser={profile}
             darkMode={darkMode}
             onSendMessage={handleSendMessage}

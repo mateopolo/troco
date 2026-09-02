@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import {
   signInWithPopup,
   GoogleAuthProvider,
@@ -577,7 +577,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const value = {
+  const value = useMemo(() => ({
     user,
     isAuthenticated,
     setIsAuthenticated,
@@ -640,7 +640,47 @@ export const AuthProvider = ({ children }) => {
     handleSendSms,
     handleVerifySmsCode,
     handleSendEmailLink,
-  };
+  }), [
+    user,
+    isAuthenticated,
+    profile,
+    isDemoProfile,
+    isAdmin,
+    isLoadingSession,
+    authModalOpen,
+    authStep,
+    authPhoneNumber,
+    authEmail,
+    authPassword,
+    authModeEmail,
+    authSmsCode,
+    confirmationResult,
+    authError,
+    authLoading,
+    authTab,
+    signupName,
+    signupUsername,
+    signupEmailOrPhone,
+    signupPassword,
+    signupLocation,
+    signupBio,
+    signupAvatar,
+    signupSkills,
+    signupLanguages,
+    signupSkillInput,
+    handleSignOut,
+    handleAcceptCgu,
+    handleGoogleSignIn,
+    handleMicrosoftSignIn,
+    handleFacebookSignIn,
+    handleGithubSignIn,
+    handleEmailPasswordSignIn,
+    handleSignupSubmit,
+    handleConfirmDemoAuth,
+    handleSendSms,
+    handleVerifySmsCode,
+    handleSendEmailLink,
+  ]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

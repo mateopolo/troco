@@ -191,6 +191,7 @@ export default function CollaborativeWhiteboardModal({
   const firestoreDebounceTimerRef = useRef(null);
   const p2pBroadcastThrottleRef = useRef(0);
   const lastLocalModificationTimeRef = useRef(0);
+  const pendingRemotePathsRafRef = useRef(null);
 
   // Récupération de l'historique complet des versions depuis Firestore
   const fetchVersions = useCallback(async () => {
@@ -802,12 +803,18 @@ export default function CollaborativeWhiteboardModal({
             if (data.title) setWorkspaceTitle(data.title);
             if (data.backgroundColor) setBackgroundColor(data.backgroundColor);
 
-            // RÈGLE ANTI-CONFLIT STRICTE (Fix 1) : On ne met à jour QUE les traits distants sans JAMAIS écraser localPaths ou currentPath
+            // RÈGLE ANTI-CONFLIT STRICTE & ANTI-FREEZE AU CHARGEMENT (Phase 62)
             if (data.paths && Array.isArray(data.paths)) {
-              const onlyRemote = data.paths
-                .filter((p) => p && p.authorUid && p.authorUid !== myUid)
-                .map((p) => ({ ...p, isRemote: true }));
-              setRemotePaths(onlyRemote);
+              if (pendingRemotePathsRafRef.current) {
+                cancelAnimationFrame(pendingRemotePathsRafRef.current);
+              }
+              pendingRemotePathsRafRef.current = requestAnimationFrame(() => {
+                const onlyRemote = data.paths
+                  .slice(-350)
+                  .filter((p) => p && p.authorUid && p.authorUid !== myUid)
+                  .map((p) => ({ ...p, isRemote: true }));
+                setRemotePaths(onlyRemote);
+              });
             }
 
             // Protège les post-its et textes contre tout écrasement pendant le dessin ou la manipulation locale
@@ -831,6 +838,9 @@ export default function CollaborativeWhiteboardModal({
     }
 
     return () => {
+      if (pendingRemotePathsRafRef.current) {
+        cancelAnimationFrame(pendingRemotePathsRafRef.current);
+      }
       unsubFirestore();
       whiteboardP2PService.leaveRoom();
     };
@@ -1582,8 +1592,9 @@ export default function CollaborativeWhiteboardModal({
         position: 'fixed',
         inset: 0,
         zIndex: 999999,
-        width: '100vw',
+        width: '100dvw',
         height: '100dvh',
+        overscrollBehavior: 'none',
         backgroundColor: darkMode ? '#12100E' : '#FDFBF7',
         color: darkMode ? '#FAF7F2' : '#1F2937',
         display: 'flex',

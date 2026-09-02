@@ -124,13 +124,13 @@ export default function App() {
   const mainContainerRef = useRef(null);
   const toggleOriginalMessage = (id) => setShowingOriginalMessages(prev => ({ ...prev, [id]: !prev[id] }));
 
-  const toggleOriginalListing = (id, event) => {
+  const toggleOriginalListing = useCallback((id, event) => {
     if (event) event.stopPropagation();
     setShowingOriginalListings(prev => ({
       ...prev,
       [id]: !prev[id]
     }));
-  };
+  }, []);
 
 
   // ---- GEOPRIVACY : FLOUTAGE ET TRONCATURE DE SÉCURITÉ DE LA POSITION GPS ----
@@ -2033,9 +2033,9 @@ export default function App() {
     return generic;
   };
 
-  const handleOpenListing = (listing) => {
+  const handleOpenListing = useCallback((listing) => {
     setSelectedListing(getListingDetail(listing));
-  };
+  }, [getListingDetail]);
 
   const handleViewOnMap = (listing) => {
     if (!listing) return;
