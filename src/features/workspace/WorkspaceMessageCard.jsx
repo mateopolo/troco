@@ -103,7 +103,7 @@ export default function WorkspaceMessageCard({
           e.currentTarget.style.boxShadow = '0 4px 18px rgba(0, 0, 0, 0.07)';
         }}
       >
-        {/* HAUT DE LA CARTE : APERÇU MEDIA (OBJECT-FIT CONTAIN + FOND SOMBRE / GRILLE SUBTILE) */}
+        {/* HAUT DE LA CARTE : APERÇU MEDIA (IMAGE BASE64 OU SNIPPET TEXTUEL LÉGER) */}
         <div
           style={{
             width: '100%',
@@ -119,11 +119,12 @@ export default function WorkspaceMessageCard({
             overflow: 'hidden',
           }}
         >
-          {msg.previewUrl ? (
+          {isWhiteboard && (msg.thumbnailBase64 || msg.previewUrl) ? (
             <img
-              src={msg.previewUrl}
+              src={msg.thumbnailBase64 || msg.previewUrl}
               alt={displayTitle}
               loading="eager"
+              decoding="async"
               style={{
                 width: '100%',
                 height: '100%',
@@ -132,6 +133,39 @@ export default function WorkspaceMessageCard({
                 display: 'block',
               }}
             />
+          ) : (msg.snippet || msg.summary) ? (
+            <div
+              style={{
+                padding: '14px 16px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+                height: '100%',
+                width: '100%',
+                boxSizing: 'border-box',
+                justifyContent: 'center',
+                backgroundColor: 'rgba(0, 0, 0, 0.25)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: accentColor, fontSize: '11.5px', fontWeight: '800' }}>
+                {typeIcon}
+                <span>{isNotes ? 'Note Partagée' : isDocs ? 'Troco Docs' : isSheets ? 'Troco Sheets' : 'Workspace'}</span>
+              </div>
+              <div
+                style={{
+                  fontSize: '12px',
+                  color: 'rgba(255, 255, 255, 0.78)',
+                  fontStyle: 'italic',
+                  lineHeight: 1.45,
+                  overflow: 'hidden',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 4,
+                  WebkitBoxOrient: 'vertical',
+                }}
+              >
+                "{msg.snippet || msg.summary}"
+              </div>
+            </div>
           ) : (
             <div
               style={{

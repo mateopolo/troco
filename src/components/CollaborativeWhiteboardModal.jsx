@@ -1361,11 +1361,12 @@ export default function CollaborativeWhiteboardModal({
     });
 
     const bgToUse = backgroundColor || (darkMode ? '#12100E' : '#FFFFFF');
+    const maxThumbDim = 300;
 
     // Cas d'un tableau vide
     if (minX === Infinity || maxX <= minX || maxY <= minY) {
-      const emptyW = 400;
-      const emptyH = 260;
+      const emptyW = 300;
+      const emptyH = 180;
       const tempCanvas = document.createElement('canvas');
       tempCanvas.width = emptyW;
       tempCanvas.height = emptyH;
@@ -1374,12 +1375,12 @@ export default function CollaborativeWhiteboardModal({
         ctx.fillStyle = bgToUse;
         ctx.fillRect(0, 0, emptyW, emptyH);
         ctx.fillStyle = darkMode ? '#A8998C' : '#9CA3AF';
-        ctx.font = 'bold 14px Inter, sans-serif';
+        ctx.font = 'bold 13px Inter, sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText('🎨 Tableau Blanc Vierge', emptyW / 2, emptyH / 2);
       }
-      return tempCanvas.toDataURL('image/png');
+      return tempCanvas.toDataURL('image/jpeg', 0.5);
     }
 
     const margin = 28;
@@ -1395,12 +1396,12 @@ export default function CollaborativeWhiteboardModal({
 
     if (!ctx) return '';
 
-    // 1. CORRECTION DE L'EXPORT CANVAS (Image Noire) : Remplissage explicite et net du fond
+    // 1. Remplissage explicite et net du fond
     ctx.fillStyle = bgToUse;
     ctx.fillRect(0, 0, cropWidth, cropHeight);
 
     ctx.save();
-    // 2. Décalage (Offset) pour centrer le contenu exactement dans la miniature
+    // 2. Décalage pour centrer le contenu
     ctx.translate(-minX + margin, -minY + margin);
 
     // Dessine tous les traits dans le canvas rogné
@@ -1454,7 +1455,31 @@ export default function CollaborativeWhiteboardModal({
 
     ctx.restore();
 
-    return tempCanvas.toDataURL('image/png');
+    // 3. Redimensionnement sur un thumbnail Canvas léger (max 300px)
+    let targetW = cropWidth;
+    let targetH = cropHeight;
+    if (targetW > maxThumbDim || targetH > maxThumbDim) {
+      if (targetW > targetH) {
+        targetH = Math.round((targetH * maxThumbDim) / targetW);
+        targetW = maxThumbDim;
+      } else {
+        targetW = Math.round((targetW * maxThumbDim) / targetH);
+        targetH = maxThumbDim;
+      }
+    }
+
+    const thumbCanvas = document.createElement('canvas');
+    thumbCanvas.width = targetW;
+    thumbCanvas.height = targetH;
+    const thumbCtx = thumbCanvas.getContext('2d');
+    if (thumbCtx) {
+      thumbCtx.fillStyle = bgToUse;
+      thumbCtx.fillRect(0, 0, targetW, targetH);
+      thumbCtx.drawImage(tempCanvas, 0, 0, targetW, targetH);
+      return thumbCanvas.toDataURL('image/jpeg', 0.5);
+    }
+
+    return tempCanvas.toDataURL('image/jpeg', 0.5);
   }, [remotePaths, localPaths, stickyNotes, textElements, backgroundColor, darkMode]);
 
   // 1. Bouton "Sauvegarder" (Firestore avec prompt de nommage de version et archivage)
@@ -1477,7 +1502,8 @@ export default function CollaborativeWhiteboardModal({
     try {
       const docRef = doc(db, 'project_whiteboards', String(effectiveId));
       const combinedPaths = [...remotePaths, ...localPaths].slice(-400);
-      const previewUrl = generateBoundingBoxPreview();
+      const thumbnailBase64 = generateBoundingBoxPreview();
+      const previewUrl = thumbnailBase64;
 
       const versionEntry = {
         version: nextVersion,
@@ -1486,6 +1512,7 @@ export default function CollaborativeWhiteboardModal({
         savedAt: new Date().toISOString(),
         savedByUid: myUid,
         savedByName: myName,
+        thumbnailBase64,
         previewUrl,
         backgroundColor,
         data: {
@@ -1505,6 +1532,8 @@ export default function CollaborativeWhiteboardModal({
         stickyNotes,
         textElements,
         backgroundColor,
+        thumbnailBase64,
+        previewUrl,
         updatedAt: serverTimestamp(),
         lastEditor: myName,
         lastEditorUid: myUid,
@@ -1519,6 +1548,7 @@ export default function CollaborativeWhiteboardModal({
         type: WORKSPACE_TYPES.WHITEBOARD,
         title: workspaceTitle,
         data: { paths: combinedPaths, stickyNotes, textElements, backgroundColor },
+        thumbnailBase64,
         previewUrl,
         currentUser,
         changeSummary: versionName,
@@ -1537,13 +1567,14 @@ export default function CollaborativeWhiteboardModal({
     }
   };
 
-  // 2. Bouton "Envoyer" (Publication dans le chat avec snapshot Bounding Box)
+  // 2. Bouton "Envoyer" (Publication dans le chat avec snapshot Bounding Box JPEG 0.5)
   const handleSend = async () => {
     if (isSending) return;
     setIsSending(true);
 
     try {
-      const previewUrl = generateBoundingBoxPreview();
+      const thumbnailBase64 = generateBoundingBoxPreview();
+      const previewUrl = thumbnailBase64;
 
       const invitePayload = {
         type: 'workspace_invite',
@@ -1551,6 +1582,7 @@ export default function CollaborativeWhiteboardModal({
         workspaceType: 'whiteboard',
         boardId: effectiveId,
         workspaceId: effectiveId,
+        thumbnailBase64,
         previewUrl,
         title: workspaceTitle,
         workspaceTitle,
@@ -1568,16 +1600,22 @@ export default function CollaborativeWhiteboardModal({
         console.warn('⚠️ [CollaborativeWhiteboard] Aucune fonction onSendMessage trouvée !', {
           onSendMessage,
           handleSendMessage,
-          onSendToChat
+          onSendToChat,
         });
       }
 
+      if (db) {
+        try {
+          const docRef = doc(db, 'project_whiteboards', String(effectiveId));
+          await setDoc(docRef, { thumbnailBase64, previewUrl, updatedAt: serverTimestamp() }, { merge: true });
+        } catch (_) {}
+      }
+
       setShareSuccessToast(true);
-      setTimeout(() => setShareSuccessToast(false), 3500);
       setSaveStatus('Envoyé dans le chat 💬');
+      setTimeout(() => setShareSuccessToast(false), 3500);
     } catch (err) {
-      console.warn('[CollaborativeWhiteboard] Send error:', err);
-      alert("Erreur lors de l'envoi : " + (err.message || 'Échec'));
+      console.warn('[CollaborativeWhiteboard] Send to chat error:', err);
     } finally {
       setIsSending(false);
     }

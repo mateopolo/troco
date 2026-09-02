@@ -20,6 +20,17 @@ const DEFAULT_NOTE_CONTENT = `# 📝 Notes de Session & Objectifs Collaboratifs
 
 Partagez ici vos comptes-rendus, listes de tâches et spécifications en direct avec vos collaborateurs.`;
 
+// Helper pour extraire les 150 premiers caractères sans balises HTML ni Markdown
+const extractSnippet = (textOrHtml, maxChars = 150) => {
+  if (!textOrHtml) return '';
+  const clean = String(textOrHtml)
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/[#*`_~\[\]()]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return clean.slice(0, maxChars) + (clean.length > maxChars ? '...' : '');
+};
+
 /**
  * SharedDocumentModal — Outil autonome de Notes Partagées Collaboratives (Apple-Style)
  * Séparé du Whiteboard pour une immersion et une ergonomie 100% dédiées à la prise de notes.
@@ -98,12 +109,15 @@ export default function SharedDocumentModal({
       try {
         const myName = currentUser?.name || 'Moi';
         const myUid = currentUser?.uid || currentUser?.id || 'me';
+        const snippet = extractSnippet(newContent, 150);
         const noteDocRef = doc(db, 'project_shared_notes', String(effectiveDocId));
         await setDoc(noteDocRef, {
           docId: effectiveDocId,
           groupId,
           title: newTitle,
           content: newContent,
+          snippet,
+          summary: snippet,
           lastEditor: myName,
           lastEditorUid: myUid,
           updatedAt: serverTimestamp(),
@@ -114,6 +128,8 @@ export default function SharedDocumentModal({
           await setDoc(chatDocRef, {
             title: newTitle,
             content: newContent,
+            snippet,
+            summary: snippet,
             lastEditor: myName,
             lastEditorUid: myUid,
             updatedAt: serverTimestamp(),
@@ -226,6 +242,7 @@ export default function SharedDocumentModal({
 
     try {
       const authorName = currentUser?.name || 'Moi';
+      const snippet = extractSnippet(content, 150);
       const msgPayload = {
         text: `📝 ${authorName} a mis à jour les Notes Partagées : "${title}"`,
         sender: currentUser?.uid || currentUser?.id || 'me',
@@ -238,7 +255,8 @@ export default function SharedDocumentModal({
         workspaceType: 'notes',
         workspaceTitle: title,
         docId: effectiveDocId,
-        summary: content.slice(0, 160) + (content.length > 160 ? '...' : ''),
+        snippet,
+        summary: snippet,
       };
 
       if (db && groupId && groupId !== 'demo_group_notes') {

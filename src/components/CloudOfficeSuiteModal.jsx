@@ -257,10 +257,19 @@ export default function CloudOfficeSuiteModal({
     try {
       setSaveStatus('Sauvegarde en cours...');
       const myName = currentUser?.name || 'Moi';
+      const snippet = (newContent || '')
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/[#*`_~\[\]()]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 150);
+
       const docRef = doc(db, 'chats', String(groupId), 'workspace', 'document');
       await setDoc(docRef, {
         title: newTitle,
         content: newContent,
+        snippet,
+        summary: snippet,
         lastEditor: myName,
         updatedAt: serverTimestamp(),
       }, { merge: true });
@@ -272,6 +281,7 @@ export default function CloudOfficeSuiteModal({
           type: 'doc',
           title: newTitle,
           content: newContent,
+          snippet,
           timestamp: new Date().toLocaleTimeString(),
           author: myName,
         },
@@ -291,10 +301,18 @@ export default function CloudOfficeSuiteModal({
     try {
       setSaveStatus('Sauvegarde en cours...');
       const myName = currentUser?.name || 'Moi';
+      const snippet = Object.entries(newGridData || {})
+        .filter(([_, v]) => v)
+        .map(([k, v]) => `${k}: ${v}`)
+        .slice(0, 8)
+        .join(' | ') || 'Feuille de calcul Troco';
+
       const sheetRef = doc(db, 'chats', String(groupId), 'workspace', 'spreadsheet');
       await setDoc(sheetRef, {
         title: newTitle,
         gridData: newGridData,
+        snippet,
+        summary: snippet,
         lastEditor: myName,
         updatedAt: serverTimestamp(),
       }, { merge: true });
@@ -306,6 +324,7 @@ export default function CloudOfficeSuiteModal({
           type: 'sheet',
           title: newTitle,
           gridData: newGridData,
+          snippet,
           timestamp: new Date().toLocaleTimeString(),
           author: myName,
         },
@@ -325,10 +344,17 @@ export default function CloudOfficeSuiteModal({
     try {
       setSaveStatus('Sauvegarde en cours...');
       const myName = currentUser?.name || 'Moi';
+      const snippet = (newSlides || [])
+        .map((s, idx) => `D${idx + 1}: ${s.title || 'Diapositive'}`)
+        .slice(0, 4)
+        .join(' • ') || 'Présentation Troco';
+
       const slidesRef = doc(db, 'chats', String(groupId), 'workspace', 'slides');
       await setDoc(slidesRef, {
         title: newTitle,
         slides: newSlides,
+        snippet,
+        summary: snippet,
         lastEditor: myName,
         updatedAt: serverTimestamp(),
       }, { merge: true });
@@ -340,6 +366,7 @@ export default function CloudOfficeSuiteModal({
           type: 'slides',
           title: newTitle,
           slides: newSlides,
+          snippet,
           timestamp: new Date().toLocaleTimeString(),
           author: myName,
         },
