@@ -39,4 +39,58 @@ describe('Phase 53 : SwipeableChatItem Component', () => {
     fireEvent.click(pinBtn);
     expect(onTogglePinMock).toHaveBeenCalledWith(dummyChat);
   });
+
+  it('demande confirmation avant de supprimer la conversation', () => {
+    jest.useFakeTimers();
+    const onDeleteMock = jest.fn();
+    const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(true);
+
+    render(
+      <SwipeableChatItem
+        chat={dummyChat}
+        isPinned={false}
+        onTogglePin={jest.fn()}
+        onDelete={onDeleteMock}
+      >
+        <div>Contenu</div>
+      </SwipeableChatItem>
+    );
+
+    const deleteBtn = screen.getByText('Supprimer');
+    fireEvent.click(deleteBtn);
+
+    expect(confirmSpy).toHaveBeenCalledWith(
+      "Êtes-vous sûr de vouloir supprimer définitivement cette discussion ? L'historique sera perdu pour vous."
+    );
+
+    jest.advanceTimersByTime(200);
+    expect(onDeleteMock).toHaveBeenCalledWith(dummyChat);
+
+    confirmSpy.mockRestore();
+    jest.useRealTimers();
+  });
+
+  it('n\'appelle pas onDelete si l\'utilisateur annule la confirmation', () => {
+    const onDeleteMock = jest.fn();
+    const confirmSpy = jest.spyOn(window, 'confirm').mockReturnValue(false);
+
+    render(
+      <SwipeableChatItem
+        chat={dummyChat}
+        isPinned={false}
+        onTogglePin={jest.fn()}
+        onDelete={onDeleteMock}
+      >
+        <div>Contenu</div>
+      </SwipeableChatItem>
+    );
+
+    const deleteBtn = screen.getByText('Supprimer');
+    fireEvent.click(deleteBtn);
+
+    expect(confirmSpy).toHaveBeenCalled();
+    expect(onDeleteMock).not.toHaveBeenCalled();
+
+    confirmSpy.mockRestore();
+  });
 });

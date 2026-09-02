@@ -249,20 +249,29 @@ export const useChatManager = ({
 
     // Helper pour fusionner et mettre à jour la liste des chats avec tri client résilient
     const updateMergedChats = () => {
-      const firestoreChats = Array.from(allDocsMap.entries()).map(([docId, data]) => {
-        const otherUser = Array.isArray(data.participants)
-          ? data.participants.find(p => p && String(p).trim().toLowerCase() !== myName.toLowerCase() && String(p) !== String(myUid) && String(p).trim().toLowerCase() !== myEmail.toLowerCase()) || data.user || 'Interlocuteur'
-          : data.user || 'Interlocuteur';
+      const firestoreChats = Array.from(allDocsMap.entries())
+        .filter(([docId, data]) => {
+          if (!data) return false;
+          if (Array.isArray(data.deletedBy)) {
+            if (myUid && data.deletedBy.includes(myUid)) return false;
+            if (myName && data.deletedBy.includes(myName)) return false;
+          }
+          return true;
+        })
+        .map(([docId, data]) => {
+          const otherUser = Array.isArray(data.participants)
+            ? data.participants.find(p => p && String(p).trim().toLowerCase() !== myName.toLowerCase() && String(p) !== String(myUid) && String(p).trim().toLowerCase() !== myEmail.toLowerCase()) || data.user || 'Interlocuteur'
+            : data.user || 'Interlocuteur';
 
-        const fChatId = data.id || docId;
+          const fChatId = data.id || docId;
 
-        return {
-          id: fChatId,
-          firestoreId: docId,
-          ...data,
-          user: otherUser,
-        };
-      });
+          return {
+            id: fChatId,
+            firestoreId: docId,
+            ...data,
+            user: otherUser,
+          };
+        });
 
       const merged = [...mockChats];
       firestoreChats.forEach(fChat => {
@@ -391,7 +400,15 @@ export const useChatManager = ({
         for (const qItem of qList) {
           const snap = await getDocs(qItem);
           if (snap && snap.docs.length > 0) {
-            const fetched = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            const fetched = snap.docs
+              .map(d => ({ id: d.id, ...d.data() }))
+              .filter(d => {
+                if (Array.isArray(d.deletedBy)) {
+                  if (myUid && d.deletedBy.includes(myUid)) return false;
+                  if (myName && d.deletedBy.includes(myName)) return false;
+                }
+                return true;
+              });
             setChatsList(prev => {
               const map = new Map(prev.map(c => [c.id, c]));
               fetched.forEach(f => map.set(f.id, f));

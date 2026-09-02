@@ -7,7 +7,7 @@ import {
   Palette, Briefcase, Plus, FileText, Calendar, Table,
   MessageSquareDashed, RefreshCw, MessageSquare, Search, Pin
 } from 'lucide-react';
-import { doc, deleteDoc, addDoc, collection, updateDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
+import { doc, deleteDoc, addDoc, collection, updateDoc, serverTimestamp, query, where, getDocs, arrayUnion } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { executeDirectTokenTransfer } from '../services/firestoreService';
 import { subscribeTranslations } from '../utils/translator';
@@ -125,24 +125,28 @@ function ChatView({
     setDeletedChatIds(prev => {
       const next = new Set(prev);
       next.add(chatId);
+      next.add(String(chatId));
       try {
         localStorage.setItem('troco_deleted_chats', JSON.stringify([...next]));
       } catch (_) {}
       return next;
     });
-    if (selectedChat && selectedChat.id === chatId) {
+    if (selectedChat && (String(selectedChat.id) === String(chatId) || selectedChat.id === chatId)) {
       if (setSelectedChat) setSelectedChat(null);
       setMobileSubView('list');
     }
     try {
       const firestoreId = chatObj?.firestoreId || (typeof chatId === 'string' ? chatId : null);
-      if (firestoreId && db) {
-        await deleteDoc(doc(db, 'chats', firestoreId));
+      const myUid = profile?.uid || (auth?.currentUser && auth.currentUser.uid);
+      if (firestoreId && db && myUid) {
+        await updateDoc(doc(db, 'chats', firestoreId), {
+          deletedBy: arrayUnion(myUid),
+        });
       }
     } catch (err) {
-      console.warn('[Firestore] Chat delete error:', err);
+      console.warn('[Firestore] Chat soft delete error:', err);
     }
-  }, [selectedChat, setSelectedChat]);
+  }, [selectedChat, setSelectedChat, profile?.uid]);
 
   const [confirmDeleteChat, setConfirmDeleteChat] = useState(null);
 
@@ -2427,17 +2431,20 @@ function ChatView({
                 </button>
               </div>
 
-              <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '6px',
-                overflowY: 'auto',
-                flex: 1,
-                padding: '12px',
-                overscrollBehavior: 'contain',
-                WebkitOverflowScrolling: 'touch',
-                touchAction: 'pan-y'
-              }}>
+              <div
+                className="flex flex-col flex-1 overflow-y-auto pb-safe"
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '6px',
+                  overflowY: 'auto',
+                  flex: 1,
+                  padding: '12px',
+                  overscrollBehavior: 'contain',
+                  WebkitOverflowScrolling: 'touch',
+                  touchAction: 'pan-y'
+                }}
+              >
                 {visibleChats.length === 0 ? (
                   <div style={{ padding: '32px 12px', display: 'flex', justifyContent: 'center', width: '100%', boxSizing: 'border-box' }}>
                     <EmptyState
@@ -2533,8 +2540,8 @@ function ChatView({
                         onDelete={() => handleDeleteChat(chat.id)}
                       >
                         <div
-                          style={{ position: 'relative' }}
-                          className="chat-row-container"
+                          style={{ position: 'relative', width: '100%', height: '88px' }}
+                          className="chat-row-container shrink-0 flex-shrink-0 h-[88px]"
                         >
                           <button
                             onClick={() => handleSelectChatMobile(chat)}
@@ -2542,7 +2549,10 @@ function ChatView({
                               display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 14px',
                               borderRadius: '16px', cursor: 'pointer', textAlign: 'left',
                               width: '100%',
-                              minHeight: '72px',
+                              height: '88px',
+                              minHeight: '88px',
+                              maxHeight: '88px',
+                              flexShrink: 0,
                               boxSizing: 'border-box',
                               backgroundColor: isSelected
                                 ? 'var(--bg-subtle)'
@@ -3199,11 +3209,11 @@ function ChatView({
             <div>
               <h3 className="font-editorial-heading" style={{
                 margin: '0 0 8px 0',
-                fontSize: '20px',
+                fontSize: '19px',
                 fontWeight: '600',
                 color: 'var(--text-main)'
               }}>
-                Supprimer cette discussion ?
+                Supprimer la discussion
               </h3>
               <p style={{
                 margin: 0,
@@ -3211,7 +3221,7 @@ function ChatView({
                 lineHeight: 1.5,
                 color: 'var(--text-secondary)'
               }}>
-                Es-tu sûr de vouloir supprimer la conversation avec <strong style={{ color: 'var(--text-main)' }}>{confirmDeleteChat.user}</strong> ? Cette action est irréversible.
+                Êtes-vous sûr de vouloir supprimer définitivement cette discussion ? L'historique sera perdu pour vous.
               </p>
             </div>
 

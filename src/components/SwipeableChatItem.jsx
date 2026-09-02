@@ -52,17 +52,25 @@ export function SwipeableChatItem({
     // Swipe long automatique
     if (info.offset.x < -120) {
       triggerDelete();
+    } else {
+      x.set(0);
     }
   };
 
   const triggerDelete = () => {
-    setIsDeleting(true);
     hapticError();
-    if (typeof onDelete === 'function') {
-      // Petite latence pour laisser l'animation de swipe se lancer
-      setTimeout(() => {
-        onDelete(chat);
-      }, 180);
+    const confirmed = window.confirm(
+      "Êtes-vous sûr de vouloir supprimer définitivement cette discussion ? L'historique sera perdu pour vous."
+    );
+    if (confirmed) {
+      setIsDeleting(true);
+      if (typeof onDelete === 'function') {
+        setTimeout(() => {
+          onDelete(chat);
+        }, 180);
+      }
+    } else {
+      x.set(0);
     }
   };
 
@@ -79,7 +87,7 @@ export function SwipeableChatItem({
     <AnimatePresence>
       {!isDeleting && (
         <motion.div
-          initial={{ opacity: 1, height: 'auto' }}
+          initial={{ opacity: 1, height: 88 }}
           exit={{
             opacity: 0,
             height: 0,
@@ -93,9 +101,13 @@ export function SwipeableChatItem({
             marginBottom: '6px',
             touchAction: 'pan-y',
             width: '100%',
+            height: '88px',
+            minHeight: '88px',
+            maxHeight: '88px',
+            flexShrink: 0,
             boxSizing: 'border-box',
           }}
-          className="swipeable-chat-item-wrapper"
+          className="swipeable-chat-item-wrapper shrink-0 flex-shrink-0 h-[88px] min-h-[88px] w-full"
         >
           {/* FOND D'ACTIONS RÉVÉLÉES AU GLISSEMENT */}
           <motion.div
@@ -109,6 +121,9 @@ export function SwipeableChatItem({
               zIndex: 1,
               borderRadius: '16px',
               overflow: 'hidden',
+              height: '88px',
+              minHeight: '88px',
+              maxHeight: '88px',
             }}
           >
             {/* BOUTON ÉPINGLER (BLEU) */}
@@ -182,8 +197,15 @@ export function SwipeableChatItem({
               backgroundColor: 'var(--bg-card)',
               borderRadius: '16px',
               width: '100%',
+              height: '88px',
+              minHeight: '88px',
+              maxHeight: '88px',
+              flexShrink: 0,
               boxSizing: 'border-box',
+              display: 'flex',
+              alignItems: 'stretch',
             }}
+            className="shrink-0 flex-shrink-0 h-[88px] min-h-[88px] w-full"
           >
             {children}
           </motion.div>
