@@ -1,4 +1,4 @@
-import React, { useCallback, Profiler } from 'react';
+import React, { useCallback, Profiler, useRef, useLayoutEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ChatView from '../../components/ChatView';
 import { PullToRefresh } from '../../components/ui/PullToRefresh';
@@ -46,6 +46,26 @@ export default function ChatSection({
   onOpenListing,
 }) {
   const safeMockChats = Array.isArray(mockChats) ? mockChats : [];
+  const messagesContainerRef = useRef(null);
+
+  // 🚨 PHASE 97 : AUTO-SCROLL BRUTAL AU MONTAGE & SUR CHANGEMENT DE CHAT
+  useLayoutEffect(() => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTo({
+        top: messagesContainerRef.current.scrollHeight,
+        behavior: 'auto',
+      });
+    }
+    const timer = setTimeout(() => {
+      if (messagesContainerRef.current) {
+        messagesContainerRef.current.scrollTo({
+          top: messagesContainerRef.current.scrollHeight,
+          behavior: 'auto',
+        });
+      }
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [selectedChat?.id]);
 
   const handleRefresh = useCallback(async () => {
     try {
@@ -72,6 +92,7 @@ export default function ChatSection({
                 mockChats={safeMockChats}
                 selectedChat={selectedChat}
                 setSelectedChat={setSelectedChat}
+                messagesContainerRef={messagesContainerRef}
                 chatThreads={chatThreads}
                 readChats={readChats}
                 chatInputText={chatInputText}

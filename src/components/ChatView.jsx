@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback, lazy, Suspense } from 'react';
 import Portal from './ui/Portal';
 import {
   Send, Phone, Video, Sparkles, Clock, CheckCircle,
@@ -70,7 +70,8 @@ function ChatView({
   isMobile: isMobileProp = undefined,
   presenceMap = {},
   allListings = [],
-  onOpenListing = () => {}
+  onOpenListing = () => {},
+  messagesContainerRef: externalMessagesContainerRef = null,
 }) {
   const [isRecordingAudio, setIsRecordingAudio] = useState(false);
   const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
@@ -403,7 +404,7 @@ function ChatView({
   const [, setTranslationRevision] = useState(0);
   const messagesEndRef = useRef(null);
   const scrollContainerRef = useRef(null);
-  const messagesContainerRef = scrollContainerRef;
+  const messagesContainerRef = externalMessagesContainerRef || scrollContainerRef;
 
   // 🚨 PHASE 59 & 80 : ÉTATS ET RÉFÉRENCES SMART SCROLL
   const [hasNewUnseenMessages, setHasNewUnseenMessages] = useState(false);
@@ -551,6 +552,25 @@ function ChatView({
       setHasNewUnseenMessages(false);
     }
   }, []);
+
+  // 🚨 PHASE 97 : AUTO-SCROLL BRUTAL AU MONTAGE & SUR CHANGEMENT DE CHAT
+  useLayoutEffect(() => {
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTo({
+        top: messagesContainerRef.current.scrollHeight,
+        behavior: 'auto',
+      });
+    }
+    const timer = setTimeout(() => {
+      if (messagesContainerRef.current) {
+        messagesContainerRef.current.scrollTo({
+          top: messagesContainerRef.current.scrollHeight,
+          behavior: 'auto',
+        });
+      }
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [selectedChat?.id, currentChatId]);
 
   // 🚨 PHASE 86 : AUTO-SCROLL SÉCURISÉ SANS BOUCLE INFINIE (CSS + RÉF SUR LE DERNIER MESSAGE)
   useEffect(() => {
@@ -1443,7 +1463,12 @@ function ChatView({
             boxSizing: 'border-box',
             position: 'relative',
           }}
-          ref={scrollContainerRef}
+          ref={(el) => {
+            scrollContainerRef.current = el;
+            if (externalMessagesContainerRef) {
+              externalMessagesContainerRef.current = el;
+            }
+          }}
           onScroll={handleScroll}
         >
           <div style={{

@@ -4,6 +4,7 @@ import {
   Palette, Sliders, Mic
 } from 'lucide-react';
 import { liveTranscriptionService } from '../services/liveTranscriptionService';
+import { translateText } from '../utils/translator';
 
 const AVAILABLE_LANGUAGES = [
   { code: 'FR', label: 'Français', flag: '🇫🇷', bcp47: 'fr-FR' },
@@ -65,6 +66,13 @@ export default function LiveCallSubtitles({
     };
   });
 
+  // Synchronisation dynamique du targetLang avec le currentLang actif de l'application
+  useEffect(() => {
+    if (currentLang && currentLang !== settings.targetLang) {
+      setSettings(prev => ({ ...prev, targetLang: currentLang }));
+    }
+  }, [currentLang, settings.targetLang]);
+
   // Position drag & drop
   const [posOffset, setPosOffset] = useState({ x: 0, y: 0 });
   const isDraggingRef = useRef(false);
@@ -92,15 +100,46 @@ export default function LiveCallSubtitles({
     }
 
     const sourceBcp = AVAILABLE_LANGUAGES.find(l => l.code === settings.sourceLang)?.bcp47 || 'fr-FR';
-    const targetCode = settings.targetLang || 'FR';
+    const targetCode = (currentLang || settings.targetLang || 'FR').toUpperCase();
 
     liveTranscriptionService.startListening(sourceBcp, targetCode, speakerName);
 
-    const unsubscribe = liveTranscriptionService.subscribe((data) => {
-      setCurrentSubtitle(data);
-      if (data.isFinal && data.translatedText) {
+    const unsubscribe = liveTranscriptionService.subscribe(async (data) => {
+      if (!data) return;
+      const rawText = (data.originalText || data.text || data.translatedText || '').trim();
+      if (!rawText) return;
+
+      const activeTargetLang = (currentLang || settings.targetLang || 'FR').toUpperCase();
+      const detectedSourceLang = (data.sourceLang || settings.sourceLang || 'FR').toUpperCase();
+
+      let translated = data.translatedText;
+
+      // 🚨 PHASE 97 : INTERCEPTION SYSTÉMATIQUE & TRADUCTION ACTIVE AVANT AFFICHAGE
+      if (detectedSourceLang !== activeTargetLang) {
+        if (!translated || translated.trim() === rawText || data.targetLang !== activeTargetLang) {
+          try {
+            translated = await translateText(rawText, activeTargetLang, detectedSourceLang.toLowerCase());
+          } catch (err) {
+            console.warn('[LiveCallSubtitles] Erreur traduction en direct:', err);
+            translated = rawText;
+          }
+        }
+      } else {
+        translated = rawText;
+      }
+
+      const enrichedData = {
+        ...data,
+        originalText: rawText,
+        translatedText: translated || rawText,
+        sourceLang: detectedSourceLang,
+        targetLang: activeTargetLang,
+      };
+
+      setCurrentSubtitle(enrichedData);
+      if (data.isFinal && translated) {
         setRecentSentences(prev => {
-          const next = [...prev, data.translatedText];
+          const next = [...prev, translated];
           return next.slice(-2); // Conserve les 2 phrases les plus récentes pour un défilement cinéma fluide
         });
       }
@@ -110,7 +149,7 @@ export default function LiveCallSubtitles({
       unsubscribe();
       liveTranscriptionService.stopListening();
     };
-  }, [isActive, settings.sourceLang, settings.targetLang, speakerName]);
+  }, [isActive, settings.sourceLang, settings.targetLang, currentLang, speakerName]);
 
   // DRAG AND DROP AVEC POINTER EVENTS
   const handlePointerDown = (e) => {
