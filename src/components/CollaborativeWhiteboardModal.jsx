@@ -2276,6 +2276,7 @@ export default function CollaborativeWhiteboardModal({
       {/* 3. BARRE D'OUTILS PRINCIPALE FLUIDE & TACTILE (Standard Apple HIG) */}
       {!isImmersiveMode && (
         <div
+          className="flex flex-row flex-nowrap overflow-x-auto overflow-y-hidden overscroll-x-contain touch-pan-x scrollbar-hide"
           style={{
             position: 'absolute',
             bottom: '20px',
@@ -2291,14 +2292,19 @@ export default function CollaborativeWhiteboardModal({
             padding: '8px 14px',
             boxShadow: '0 20px 40px -10px rgba(0,0,0,0.25)',
             display: 'flex',
+            flexDirection: 'row',
+            flexWrap: 'nowrap',
             alignItems: 'center',
             gap: '8px',
-            overflow: 'visible',
-            touchAction: 'manipulation',
+            overflowX: 'auto',
+            overflowY: 'hidden',
+            overscrollBehaviorX: 'contain',
+            touchAction: 'pan-x',
+            WebkitOverflowScrolling: 'touch',
           }}
         >
           {/* Outils de dessin libres */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
             {[
               { id: 'pencil', icon: Pen, title: 'Crayon' },
               { id: 'brush', icon: Brush, title: 'Pinceau Artistique' },
@@ -2339,7 +2345,7 @@ export default function CollaborativeWhiteboardModal({
             })}
 
             {/* BOUTON DÉROULANT FORMES GÉOMÉTRIQUES & VECTORIELLES */}
-            <div style={{ position: 'relative' }}>
+            <div style={{ position: 'relative', flexShrink: 0 }}>
               <button
                 type="button"
                 onClick={() => {
