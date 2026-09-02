@@ -7,6 +7,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { ErrorBoundary } from './ErrorBoundary';
 import * as serviceWorkerRegistration from './serviceWorkerRegistration';
 import reportWebVitals from './reportWebVitals';
+import { logWebVitalMetric } from './utils/performanceProfiler';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
@@ -24,4 +25,5 @@ root.render(
 // Enregistrement PWA du Service Worker pour support offline et installation mobile
 serviceWorkerRegistration.register();
 
-reportWebVitals();
+// Tracking actif des Web Vitals (LCP, FID/INP, CLS, TTFB, FCP)
+reportWebVitals(logWebVitalMetric);

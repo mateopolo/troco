@@ -1,10 +1,11 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, Profiler } from 'react';
 import { Search, ChevronLeft, ChevronRight, MapPin, Video, Flame } from 'lucide-react';
 import { motion } from 'framer-motion';
 import FeedCardItem from '../../components/FeedCardItem';
 import SponsoredFeedCard from '../../components/SponsoredFeedCard';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { PullToRefresh } from '../../components/ui/PullToRefresh';
+import { onRenderProfilerCallback } from '../../utils/performanceProfiler';
 
 export function FeedSection({
   filteredListings,
@@ -90,8 +91,9 @@ export function FeedSection({
   };
 
   return (
-    <PullToRefresh onRefresh={handleRefresh} disabled={viewMode === 'map'}>
-      <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-start', width: '100%' }}>
+    <Profiler id="FeedView" onRender={onRenderProfilerCallback}>
+      <PullToRefresh onRefresh={handleRefresh} disabled={viewMode === 'map'}>
+        <div style={{ display: 'flex', gap: '24px', alignItems: 'flex-start', width: '100%' }}>
       <div style={{ flex: 1, minWidth: 0 }}>
         {/* Titre éditorial discret et sélecteur de vue */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
@@ -619,8 +621,9 @@ export function FeedSection({
           </button>
         </div>
       </aside>
-    </div>
-    </PullToRefresh>
+      </div>
+      </PullToRefresh>
+    </Profiler>
   );
 }
 

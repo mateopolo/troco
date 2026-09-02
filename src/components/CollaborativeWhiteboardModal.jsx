@@ -12,9 +12,10 @@
  * 8. Export Snapshot rogné sur Bounding Box (DataURL) + Versioning et invitation de chat interactif.
  */
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, Profiler } from 'react';
 import Portal from './ui/Portal';
 import { motion, AnimatePresence } from 'framer-motion';
+import { onRenderProfilerCallback } from '../utils/performanceProfiler';
 import {
   X, Pen, Highlighter, Eraser, Square, Circle, Minus, ArrowRight,
   RotateCcw, RotateCw, Trash2, StickyNote,
@@ -2976,5 +2977,11 @@ export default function CollaborativeWhiteboardModal({
     </div>
   );
 
-  return <Portal>{modalContent}</Portal>;
+  return (
+    <Portal>
+      <Profiler id="CollaborativeWhiteboardModal" onRender={onRenderProfilerCallback}>
+        {modalContent}
+      </Profiler>
+    </Portal>
+  );
 }

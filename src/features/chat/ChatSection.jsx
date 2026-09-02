@@ -1,7 +1,8 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, Profiler } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ChatView from '../../components/ChatView';
 import { PullToRefresh } from '../../components/ui/PullToRefresh';
+import { onRenderProfilerCallback } from '../../utils/performanceProfiler';
 
 export default function ChatSection({
   activeTab,
@@ -62,47 +63,49 @@ export default function ChatSection({
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
             style={{ width: '100%', height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column', flex: 1 }}
           >
-            <ChatView
-              activeTab={activeTab}
-              mockChats={safeMockChats}
-              selectedChat={selectedChat}
-              setSelectedChat={setSelectedChat}
-              chatThreads={chatThreads}
-              readChats={readChats}
-              chatInputText={chatInputText}
-              setChatInputText={setChatInputText}
-              onTypingChange={onTypingChange}
-              isThemTyping={isThemTyping}
-              handleSendMessage={handleSendMessage}
-              onSendMessage={handleSendMessage}
-              groupId={selectedChat?.id}
-              handleEditMessage={handleEditMessage}
-              handleDeleteMessage={handleDeleteMessage}
-              openCounterOffer={openCounterOffer}
-              startCall={startCall}
-              joinActiveCall={joinActiveCall}
-              handleAcceptDeal={handleAcceptDeal}
-              handleDeclineDeal={handleDeclineDeal}
-              handleReleaseEscrow={handleReleaseEscrow}
-              onCreateProjectGroup={onCreateProjectGroup}
-              onProposeReward={onProposeReward}
-              onAcceptReward={onAcceptReward}
-              onSendAudioMessage={onSendAudioMessage}
-              profile={profile}
-              setProfile={setProfile}
-              currentLang={currentLang}
-              t={t}
-              darkMode={darkMode}
-              getChatMessageDisplayContent={getChatMessageDisplayContent}
-              getListingTitleTranslation={getListingTitleTranslation}
-              formatStatus={formatStatus}
-              showingOriginalMessages={showingOriginalMessages}
-              toggleOriginalMessage={toggleOriginalMessage}
-              isMobile={isMobile}
-              presenceMap={presenceMap}
-              allListings={allListings}
-              onOpenListing={onOpenListing}
-            />
+            <Profiler id="ChatView" onRender={onRenderProfilerCallback}>
+              <ChatView
+                activeTab={activeTab}
+                mockChats={safeMockChats}
+                selectedChat={selectedChat}
+                setSelectedChat={setSelectedChat}
+                chatThreads={chatThreads}
+                readChats={readChats}
+                chatInputText={chatInputText}
+                setChatInputText={setChatInputText}
+                onTypingChange={onTypingChange}
+                isThemTyping={isThemTyping}
+                handleSendMessage={handleSendMessage}
+                onSendMessage={handleSendMessage}
+                groupId={selectedChat?.id}
+                handleEditMessage={handleEditMessage}
+                handleDeleteMessage={handleDeleteMessage}
+                openCounterOffer={openCounterOffer}
+                startCall={startCall}
+                joinActiveCall={joinActiveCall}
+                handleAcceptDeal={handleAcceptDeal}
+                handleDeclineDeal={handleDeclineDeal}
+                handleReleaseEscrow={handleReleaseEscrow}
+                onCreateProjectGroup={onCreateProjectGroup}
+                onProposeReward={onProposeReward}
+                onAcceptReward={onAcceptReward}
+                onSendAudioMessage={onSendAudioMessage}
+                profile={profile}
+                setProfile={setProfile}
+                currentLang={currentLang}
+                t={t}
+                darkMode={darkMode}
+                getChatMessageDisplayContent={getChatMessageDisplayContent}
+                getListingTitleTranslation={getListingTitleTranslation}
+                formatStatus={formatStatus}
+                showingOriginalMessages={showingOriginalMessages}
+                toggleOriginalMessage={toggleOriginalMessage}
+                isMobile={isMobile}
+                presenceMap={presenceMap}
+                allListings={allListings}
+                onOpenListing={onOpenListing}
+              />
+            </Profiler>
           </motion.div>
         </AnimatePresence>
       </PullToRefresh>
