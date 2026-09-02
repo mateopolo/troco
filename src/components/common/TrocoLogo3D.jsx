@@ -19,13 +19,15 @@ export default function TrocoLogo3D({
 }) {
   const rawId = useId();
   const uid = rawId.replace(/[^a-zA-Z0-9]/g, '');
+  const isMobile = typeof window !== 'undefined' ? window.innerWidth < 768 : false;
+  const shouldAnimate = animated && !isMobile;
 
   const computedWidth = typeof size === 'number' ? `${size * 1.3}px` : size;
   const computedHeight = typeof size === 'number' ? `${size * 0.85}px` : size;
 
   return (
     <div
-      className={`troco-infinity-wrapper ${animated ? 'troco-infinity-animated' : ''} ${className}`}
+      className={`troco-infinity-wrapper ${shouldAnimate ? 'troco-infinity-animated' : ''} ${className}`}
       style={{
         display: 'inline-flex',
         alignItems: 'center',
@@ -44,7 +46,7 @@ export default function TrocoLogo3D({
         style={{
           width: '100%',
           height: '100%',
-          filter: 'drop-shadow(0 6px 14px rgba(0, 0, 0, 0.28)) drop-shadow(0 0 18px var(--accent-primary, #C67D5B))',
+          filter: isMobile ? 'none' : 'drop-shadow(0 6px 14px rgba(0, 0, 0, 0.28)) drop-shadow(0 0 18px var(--accent-primary, #C67D5B))',
           overflow: 'visible'
         }}
       >

@@ -367,8 +367,9 @@ function ChatView({
   const [, setTranslationRevision] = useState(0);
   const messagesEndRef = useRef(null);
   const scrollContainerRef = useRef(null);
+  const messagesContainerRef = scrollContainerRef;
 
-  // 🚨 PHASE 59 : ÉTATS ET RÉFÉRENCES SMART SCROLL
+  // 🚨 PHASE 59 & 80 : ÉTATS ET RÉFÉRENCES SMART SCROLL
   const [hasNewUnseenMessages, setHasNewUnseenMessages] = useState(false);
   const [isScrolledUp, setIsScrolledUp] = useState(false);
   const userJustSentMessageRef = useRef(false);
@@ -515,9 +516,23 @@ function ChatView({
     }
   }, []);
 
-  // AUTO-SCROLL ULTRA-STABLE ET GARANTI SANS SAUT NI PATINAGE
+  // 🚨 PHASE 80 : RESTAURATION SÉCURISÉE DU SCROLL CHAT À L'OUVERTURE D'UNE CONVERSATION
   useEffect(() => {
-    const el = scrollContainerRef.current;
+    if (!selectedChat?.id) return;
+    const timer = setTimeout(() => {
+      if (messagesContainerRef.current) {
+        messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+        isUserNearBottomRef.current = true;
+        setIsScrolledUp(false);
+        setHasNewUnseenMessages(false);
+      }
+    }, 50);
+    return () => clearTimeout(timer);
+  }, [selectedChat?.id]);
+
+  // AUTO-SCROLL ULTRA-STABLE LORS DE L'ARRIVÉE DE NOUVEAUX MESSAGES
+  useEffect(() => {
+    const el = messagesContainerRef.current;
     if (!el || !messages.length) return;
 
     const isNewChat = prevChatIdRef.current !== currentChatId;

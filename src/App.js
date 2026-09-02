@@ -2336,12 +2336,22 @@ export default function App() {
         fontFamily: 'var(--font-family-main)',
         zIndex: 999999
       }}>
-        {/* LIQUID IRIDESCENT MOLTEN LIGHT BACKGROUND */}
-        <div className="liquid-iridescence-container" style={{ opacity: 0.92, background: 'radial-gradient(circle at 50% 50%, var(--bg-subtle) 0%, var(--bg-global) 100%)' }}>
-          <div className="liquid-blob liquid-blob-1" style={{ width: '750px', height: '750px' }} />
-          <div className="liquid-blob liquid-blob-2" style={{ width: '800px', height: '800px' }} />
-          <div className="liquid-blob liquid-blob-3" style={{ width: '680px', height: '680px' }} />
-        </div>
+        {/* FOND LIQUIDE IRIDESCENT : DÉGRADÉ STATIQUE LÉGER SUR MOBILE POUR ÉVITER LE CRASH iOS */}
+        {isMobile ? (
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'radial-gradient(circle at top right, var(--bg-subtle), var(--bg-global))',
+            pointerEvents: 'none',
+            zIndex: 0
+          }} />
+        ) : (
+          <div className="liquid-iridescence-container" style={{ opacity: 0.92, background: 'radial-gradient(circle at 50% 50%, var(--bg-subtle) 0%, var(--bg-global) 100%)' }}>
+            <div className="liquid-blob liquid-blob-1" style={{ width: '750px', height: '750px' }} />
+            <div className="liquid-blob liquid-blob-2" style={{ width: '800px', height: '800px' }} />
+            <div className="liquid-blob liquid-blob-3" style={{ width: '680px', height: '680px' }} />
+          </div>
+        )}
 
         <div style={{
           position: 'relative',
@@ -2353,7 +2363,7 @@ export default function App() {
           padding: '30px',
           animation: 'modalSlideIn 0.8s var(--ease-monopo) both'
         }}>
-          <TrocoLogo3D size={100} animated={true} style={{ marginBottom: '28px' }} />
+          <TrocoLogo3D size={100} animated={!isMobile} style={{ marginBottom: '28px' }} />
           <div style={{
             fontSize: 'clamp(56px, 14vw, 92px)',
             fontFamily: 'var(--font-editorial)',
@@ -2446,12 +2456,22 @@ export default function App() {
       {/* CONSTELLATION GÉOMÉTRIQUE FLUIDE EN ARRIÈRE-PLAN */}
       <GeometricBackground darkMode={darkMode} />
 
-      {/* FOND LIQUIDE IRIDESCENT (PASTEL EDITION) */}
-      <div className="liquid-iridescence-container">
-        <div className="liquid-blob liquid-blob-1" />
-        <div className="liquid-blob liquid-blob-2" />
-        <div className="liquid-blob liquid-blob-3" />
-      </div>
+      {/* FOND LIQUIDE IRIDESCENT : DÉGRADÉ STATIQUE SUR MOBILE POUR ÉVITER LE DÉPASSEMENT VRAM iOS */}
+      {isMobile ? (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'radial-gradient(circle at top right, var(--bg-subtle), var(--bg-global))',
+          pointerEvents: 'none',
+          zIndex: 0
+        }} />
+      ) : (
+        <div className="liquid-iridescence-container">
+          <div className="liquid-blob liquid-blob-1" />
+          <div className="liquid-blob liquid-blob-2" />
+          <div className="liquid-blob liquid-blob-3" />
+        </div>
+      )}
 
       {/* MODALE BLOQUANTE CGU & RGPD OBLIGATOIRE */}
       {isAuthenticated && !profile.cguAcceptedAt && (
