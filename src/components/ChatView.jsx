@@ -516,52 +516,10 @@ function ChatView({
     }
   }, []);
 
-  // 🚨 PHASE 80 : RESTAURATION SÉCURISÉE DU SCROLL CHAT À L'OUVERTURE D'UNE CONVERSATION
+  // 🚨 PHASE 86 : AUTO-SCROLL SÉCURISÉ SANS BOUCLE INFINIE (CSS + RÉF SUR LE DERNIER MESSAGE)
   useEffect(() => {
-    if (!selectedChat?.id) return;
-    const timer = setTimeout(() => {
-      if (messagesContainerRef.current) {
-        messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
-        isUserNearBottomRef.current = true;
-        setIsScrolledUp(false);
-        setHasNewUnseenMessages(false);
-      }
-    }, 50);
-    return () => clearTimeout(timer);
-  }, [selectedChat?.id]);
-
-  // AUTO-SCROLL ULTRA-STABLE LORS DE L'ARRIVÉE DE NOUVEAUX MESSAGES
-  useEffect(() => {
-    const el = messagesContainerRef.current;
-    if (!el || !messages.length) return;
-
-    const isNewChat = prevChatIdRef.current !== currentChatId;
-    const isNewMessage = messages.length > prevMsgCountRef.current;
-    const userSentMsg = userJustSentMessageRef.current;
-
-    prevChatIdRef.current = currentChatId;
-    prevMsgCountRef.current = messages.length;
-    userJustSentMessageRef.current = false;
-
-    // Déclenchement automatique UNIQUEMENT :
-    // A. Au chargement initial ou changement de conversation (garantit d'arriver tout en bas)
-    // B. Quand l'utilisateur lui-même envoie un message
-    // C. Si un nouveau message arrive alors que l'utilisateur est déjà tout en bas
-    if (isNewChat || userSentMsg || (isNewMessage && isUserNearBottomRef.current)) {
-      const timer = setTimeout(() => {
-        if (el) {
-          el.scrollTop = el.scrollHeight;
-          isUserNearBottomRef.current = true;
-          setIsScrolledUp(false);
-          setHasNewUnseenMessages(false);
-        }
-      }, isNewChat ? 40 : 0);
-      return () => clearTimeout(timer);
-    } else if (isNewMessage && !isUserNearBottomRef.current) {
-      // L'utilisateur est remonté pour lire l'historique : NE PAS FORCER LE SCROLL, afficher l'indicateur
-      setHasNewUnseenMessages(true);
-    }
-  }, [currentChatId, messages.length, mobileSubView]);
+    messagesEndRef.current?.scrollIntoView();
+  }, [messages?.length]);
 
   // Multi-Board Management (Phase 23) : Récupération dynamique des 3 derniers tableaux blancs modifiés dans ce chat
   const recentBoardsFromMessages = useMemo(() => {
