@@ -194,7 +194,13 @@ export default function CollaborativeWhiteboardModal({
   const [remotePaths, setRemotePaths] = useState([]);
   const [stickyNotes, setStickyNotes] = useState([]);
   const [textElements, setTextElements] = useState([]);
-  const [currentPath, setCurrentPath] = useState(null);
+  // 🚨 PHASE 94 : Moteur de tracé natif sans React State Thrashing
+  const currentPathRef = useRef(null);
+  const rafDrawRef = useRef(null);
+  const pendingRemotePathsDataRef = useRef(null);
+  const setCurrentPath = useCallback((val) => {
+    currentPathRef.current = typeof val === 'function' ? val(currentPathRef.current) : val;
+  }, []);
 
   // 4. Moteur d'historique Undo / Redo Local (Trait par trait)
   const [history, setHistory] = useState([[]]);
@@ -414,9 +420,9 @@ export default function CollaborativeWhiteboardModal({
     // FIX ATOMIQUE DE L'OUTIL TEXTE (State Reset) : Réinitialise immédiatement l'édition de texte et démonte le textarea flottant
     setEditingTextId(null);
     if (resizingTextRef.current) resizingTextRef.current = null;
-    if (isDrawingRef.current && currentPath?.type === 'text_box') {
+    if (isDrawingRef.current && currentPathRef.current?.type === 'text_box') {
       isDrawingRef.current = false;
-      setCurrentPath(null);
+      currentPathRef.current = null;
     }
     // Nettoie les textes vides non finalisés
     setTextElements((prev) => prev.filter((t) => t.text && t.text.trim() !== ''));
@@ -434,7 +440,7 @@ export default function CollaborativeWhiteboardModal({
       }
       return prevHistory;
     });
-  }, [remotePaths, stickyNotes, textElements, currentPath, debouncedSyncToFirestore]);
+  }, [remotePaths, stickyNotes, textElements, debouncedSyncToFirestore]);
 
   const handleRedo = useCallback(() => {
     setHistory((prevHistory) => {
@@ -744,11 +750,11 @@ export default function CollaborativeWhiteboardModal({
     const vMaxX = (rect.width - pan.x + margin) / zoom;
     const vMaxY = (rect.height - pan.y + margin) / zoom;
 
-    // Tous les traits combinés (Distants avec ghosting + Locaux + Trait en cours)
+    // Tous les traits combinés (Distants avec ghosting + Locaux + Trait actif dans currentPathRef)
     const allPathsToRender = [
       ...remotePaths,
       ...localPaths,
-      ...(currentPath ? [currentPath] : [])
+      ...(currentPathRef.current ? [currentPathRef.current] : [])
     ];
 
     allPathsToRender.forEach((path) => {
@@ -775,7 +781,7 @@ export default function CollaborativeWhiteboardModal({
 
       ctx.restore();
     });
-  }, [remotePaths, localPaths, currentPath, pan.x, pan.y, zoom]);
+  }, [remotePaths, localPaths, pan.x, pan.y, zoom]);
 
   // Redimensionnement fluide du canvas
   const updateCanvasSize = useCallback(() => {
@@ -856,18 +862,28 @@ export default function CollaborativeWhiteboardModal({
             if (data.title) setWorkspaceTitle(data.title);
             if (data.backgroundColor) setBackgroundColor(data.backgroundColor);
 
-            // RÈGLE ANTI-CONFLIT STRICTE & ANTI-FREEZE AU CHARGEMENT (Phase 62)
+            // RÈGLE ANTI-CONFLIT STRICTE & ANTI-FREEZE AU CHARGEMENT (Phase 62 & 94)
             if (data.paths && Array.isArray(data.paths)) {
-              if (pendingRemotePathsRafRef.current) {
-                cancelAnimationFrame(pendingRemotePathsRafRef.current);
+              if (isDrawingRef.current) {
+                // Pendant qu'on dessine activement, on ne bloque JAMAIS le thread UI : réhydratation différée au onPointerUp
+                pendingRemotePathsDataRef.current = data.paths;
+              } else {
+                if (pendingRemotePathsRafRef.current) {
+                  cancelAnimationFrame(pendingRemotePathsRafRef.current);
+                }
+                pendingRemotePathsRafRef.current = requestAnimationFrame(() => {
+                  const onlyRemote = data.paths
+                    .slice(-350)
+                    .filter((p) => p && p.authorUid && p.authorUid !== myUid)
+                    .map((p) => ({ ...p, isRemote: true }));
+                  setRemotePaths((prev) => {
+                    if (prev.length === onlyRemote.length && prev[prev.length - 1]?.id === onlyRemote[onlyRemote.length - 1]?.id) {
+                      return prev;
+                    }
+                    return onlyRemote;
+                  });
+                });
               }
-              pendingRemotePathsRafRef.current = requestAnimationFrame(() => {
-                const onlyRemote = data.paths
-                  .slice(-350)
-                  .filter((p) => p && p.authorUid && p.authorUid !== myUid)
-                  .map((p) => ({ ...p, isRemote: true }));
-                setRemotePaths(onlyRemote);
-              });
             }
 
             // Protège les post-its et textes contre tout écrasement pendant le dessin ou la manipulation locale
@@ -1091,7 +1107,7 @@ export default function CollaborativeWhiteboardModal({
     if (tool === 'text') {
       isDrawingRef.current = true;
       lastLocalModificationTimeRef.current = Date.now();
-      setCurrentPath({
+      currentPathRef.current = {
         type: 'text_box',
         tool: 'text',
         color: color === '#FFFFFF' && ['#FFFFFF', '#FDFBF7', '#FEF9C3', '#E0F2FE'].includes(backgroundColor) ? '#1F2937' : color,
@@ -1099,7 +1115,7 @@ export default function CollaborativeWhiteboardModal({
         y: coords.y,
         width: 0,
         height: 0,
-      });
+      };
       return;
     }
 
@@ -1119,7 +1135,26 @@ export default function CollaborativeWhiteboardModal({
         authorUid: myUid,
         createdAt: Date.now(),
       };
-      setCurrentPath(newPath);
+      currentPathRef.current = newPath;
+
+      // Dessin direct immédiat sur le canvas (0ms de latence, zéro setState React)
+      const canvas = canvasRef.current;
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          const dpr = window.devicePixelRatio || 1;
+          ctx.save();
+          ctx.setTransform(1, 0, 0, 1, 0, 0);
+          ctx.scale(dpr, dpr);
+          ctx.translate(pan.x, pan.y);
+          ctx.scale(zoom, zoom);
+          applyBrushStyleToContext(ctx, tool, color, lineWidth, false);
+          ctx.beginPath();
+          ctx.arc(coords.x, coords.y, Math.max(1, lineWidth / 4), 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+      }
     } else if (['rect', 'circle', 'triangle', 'hexagon', 'star', 'speech_bubble', 'heart', 'checkmark'].includes(tool)) {
       const shapePath = {
         id: `s-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
@@ -1135,7 +1170,7 @@ export default function CollaborativeWhiteboardModal({
         authorUid: myUid,
         createdAt: Date.now(),
       };
-      setCurrentPath(shapePath);
+      currentPathRef.current = shapePath;
     } else if (tool === 'line') {
       const linePath = {
         id: `l-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
@@ -1151,7 +1186,7 @@ export default function CollaborativeWhiteboardModal({
         authorUid: myUid,
         createdAt: Date.now(),
       };
-      setCurrentPath(linePath);
+      currentPathRef.current = linePath;
     } else if (tool === 'arrow') {
       const arrowPath = {
         id: `a-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
@@ -1167,7 +1202,7 @@ export default function CollaborativeWhiteboardModal({
         authorUid: myUid,
         createdAt: Date.now(),
       };
-      setCurrentPath(arrowPath);
+      currentPathRef.current = arrowPath;
     }
   };
 
@@ -1224,29 +1259,59 @@ export default function CollaborativeWhiteboardModal({
       return;
     }
 
-    if (!isDrawingRef.current || !currentPath) return;
+    if (!isDrawingRef.current || !currentPathRef.current) return;
 
-    if (currentPath.type === 'freehand') {
-      setCurrentPath((prev) => ({
-        ...prev,
-        points: [...prev.points, { x: coords.x, y: coords.y }],
-      }));
-    } else if (['rect', 'circle', 'triangle', 'hexagon', 'star', 'speech_bubble', 'heart', 'checkmark', 'text_box'].includes(currentPath.type)) {
+    const activePath = currentPathRef.current;
+
+    if (activePath.type === 'freehand') {
+      const prevPoint = activePath.points[activePath.points.length - 1];
+      const newPoint = { x: coords.x, y: coords.y };
+      activePath.points.push(newPoint);
+
+      // 🚨 PHASE 94 : DESSIN DIRECT 60 FPS SUR LE CONTEXTE 2D SANS AUCUN SETSTATE REACT
+      const canvas = canvasRef.current;
+      if (canvas && prevPoint) {
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          const dpr = window.devicePixelRatio || 1;
+          ctx.save();
+          ctx.setTransform(1, 0, 0, 1, 0, 0);
+          ctx.scale(dpr, dpr);
+          ctx.translate(pan.x, pan.y);
+          ctx.scale(zoom, zoom);
+          applyBrushStyleToContext(ctx, activePath.tool, activePath.color, activePath.lineWidth, false);
+          ctx.beginPath();
+          ctx.moveTo(prevPoint.x, prevPoint.y);
+          ctx.lineTo(newPoint.x, newPoint.y);
+          ctx.stroke();
+          ctx.restore();
+        }
+      }
+    } else if (['rect', 'circle', 'triangle', 'hexagon', 'star', 'speech_bubble', 'heart', 'checkmark', 'text_box'].includes(activePath.type)) {
       const w = coords.x - startPosRef.current.x;
       const h = coords.y - startPosRef.current.y;
-      setCurrentPath((prev) => ({
-        ...prev,
-        x: w < 0 ? coords.x : startPosRef.current.x,
-        y: h < 0 ? coords.y : startPosRef.current.y,
-        width: Math.abs(w),
-        height: Math.abs(h),
-      }));
-    } else if (currentPath.type === 'line' || currentPath.type === 'arrow') {
-      setCurrentPath((prev) => ({
-        ...prev,
-        toX: coords.x,
-        toY: coords.y,
-      }));
+      activePath.x = w < 0 ? coords.x : startPosRef.current.x;
+      activePath.y = h < 0 ? coords.y : startPosRef.current.y;
+      activePath.width = Math.abs(w);
+      activePath.height = Math.abs(h);
+
+      // Redessin GPU via RequestAnimationFrame SANS AUCUN SETSTATE
+      if (!rafDrawRef.current) {
+        rafDrawRef.current = requestAnimationFrame(() => {
+          redrawCanvas();
+          rafDrawRef.current = null;
+        });
+      }
+    } else if (activePath.type === 'line' || activePath.type === 'arrow') {
+      activePath.toX = coords.x;
+      activePath.toY = coords.y;
+
+      if (!rafDrawRef.current) {
+        rafDrawRef.current = requestAnimationFrame(() => {
+          redrawCanvas();
+          rafDrawRef.current = null;
+        });
+      }
     }
   };
 
@@ -1280,7 +1345,7 @@ export default function CollaborativeWhiteboardModal({
     }
 
     // GESTION DU TEXTE : Création par tracé, calcul proportionnel diagonale et bascule automatique en édition
-    if (isDrawingRef.current && currentPath?.type === 'text_box') {
+    if (isDrawingRef.current && currentPathRef.current?.type === 'text_box') {
       isDrawingRef.current = false;
       const coords = getCanvasCoords(e || {});
       const startX = startPosRef.current.x;
@@ -1324,7 +1389,7 @@ export default function CollaborativeWhiteboardModal({
 
       const nextTexts = [...textElements, newText];
       setTextElements(nextTexts);
-      setCurrentPath(null);
+      currentPathRef.current = null;
       setEditingTextId(newText.id);
 
       whiteboardP2PService.broadcastEvent('text_add', { text: newText });
@@ -1334,15 +1399,21 @@ export default function CollaborativeWhiteboardModal({
     }
 
     // FUSION SYNCHRONE LOCALE IMMÉDIATE & ENREGISTREMENT DANS L'HISTORIQUE LOCAL TRAIT PAR TRAIT
-    if (isDrawingRef.current && currentPath) {
+    if (isDrawingRef.current && currentPathRef.current) {
       isDrawingRef.current = false;
       lastLocalModificationTimeRef.current = Date.now();
 
-      const completedPath = { ...currentPath };
+      const completedPath = { ...currentPathRef.current };
+      currentPathRef.current = null;
+
+      if (rafDrawRef.current) {
+        cancelAnimationFrame(rafDrawRef.current);
+        rafDrawRef.current = null;
+      }
+
       const nextLocalPaths = [...localPaths, completedPath];
 
       setLocalPaths(nextLocalPaths);
-      setCurrentPath(null);
 
       // Clone les traits actuels, ajoute-les à history (en coupant l'historique futur si on avait fait "Undo"), et incrémente historyStep
       setHistory((prevHistory) => {
@@ -1358,6 +1429,17 @@ export default function CollaborativeWhiteboardModal({
 
       whiteboardP2PService.broadcastEvent('path_add', { path: completedPath });
       debouncedSyncToFirestore(nextLocalPaths, remotePaths, stickyNotes, textElements);
+
+      // Si des données distantes Firebase ont été mises en attente pendant le tracé, on les traite maintenant
+      if (pendingRemotePathsDataRef.current) {
+        const dataPaths = pendingRemotePathsDataRef.current;
+        pendingRemotePathsDataRef.current = null;
+        const onlyRemote = dataPaths
+          .slice(-350)
+          .filter((p) => p && p.authorUid && p.authorUid !== myUid)
+          .map((p) => ({ ...p, isRemote: true }));
+        setRemotePaths(onlyRemote);
+      }
     }
   };
 
@@ -2082,7 +2164,11 @@ export default function CollaborativeWhiteboardModal({
               origZoom: zoom,
             };
             isDrawingRef.current = false;
-            setCurrentPath(null);
+            currentPathRef.current = null;
+            if (rafDrawRef.current) {
+              cancelAnimationFrame(rafDrawRef.current);
+              rafDrawRef.current = null;
+            }
           }
         }}
         onTouchMove={(e) => {
