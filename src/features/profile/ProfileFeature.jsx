@@ -29,10 +29,10 @@ import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../../firebase';
 import { useTheme, TYPOGRAPHY_OPTIONS } from '../../contexts/ThemeContext';
 import { validateProfileContent } from '../../utils/moderationBlacklist';
-import { DIVERSE_AVATARS } from '../../data/categoriesData';
 import { AnimatedEuroBalance, AnimatedTokenBalance } from '../../components/AnimatedBalances';
 import MobileHeader from '../../components/common/MobileHeader';
 import InclusiveAvatarBuilder from '../../components/profile/InclusiveAvatarBuilder';
+import ProfileAppearanceCustomizer from '../../components/profile/ProfileAppearanceCustomizer';
 import {
   getBioTranslation as getBioTranslationUtil,
   getReviewTranslation as getReviewTranslationUtil,
@@ -498,6 +498,14 @@ export default function ProfileFeature({
               socialLinks={profileDraft.socialLinks !== undefined ? profileDraft.socialLinks : (profile.socialLinks || [])}
               onChange={(newLinks) => setProfileDraft(prev => ({ ...prev, socialLinks: newLinks }))}
               darkMode={darkMode}
+            />
+
+            {/* PERSONNALISATION DE L'APPARENCE DU PROFIL (POLICE & COULEUR DU THÈME) */}
+            <ProfileAppearanceCustomizer
+              customFont={profileDraft.customFont || profile.customFont || 'Inter'}
+              customThemeColor={profileDraft.customThemeColor || profile.customThemeColor || '#C67D5B'}
+              onFontChange={(font) => setProfileDraft(prev => ({ ...prev, customFont: font }))}
+              onColorChange={(color) => setProfileDraft(prev => ({ ...prev, customThemeColor: color }))}
             />
           </>
         ) : (

@@ -132,6 +132,20 @@ export default function PublicProfileModal({
     }
   ];
 
+  const customFont = targetUser.customFont || 'Inter';
+  const customThemeColor = targetUser.customThemeColor || '#C67D5B';
+  const customFontFamily = customFont === 'Inter' ? "'Inter', sans-serif"
+    : customFont === 'Playfair Display' ? "'Playfair Display', serif"
+    : customFont === 'Roboto' ? "'Roboto', sans-serif"
+    : customFont === 'Montserrat' ? "'Montserrat', sans-serif"
+    : customFont === 'Poppins' ? "'Poppins', sans-serif"
+    : customFont === 'Space Grotesk' ? "'Space Grotesk', sans-serif"
+    : customFont === 'Caveat' ? "'Caveat', cursive"
+    : customFont === 'Lora' ? "'Lora', serif"
+    : customFont === 'Outfit' ? "'Outfit', sans-serif"
+    : customFont === 'Plus Jakarta Sans' ? "'Plus Jakarta Sans', sans-serif"
+    : `${customFont}, sans-serif`;
+
   return (
     <div
       style={{
@@ -164,7 +178,11 @@ export default function PublicProfileModal({
           flexDirection: 'column',
           overflow: 'hidden',
           animation: 'fadeSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) both',
-          boxSizing: 'border-box'
+          boxSizing: 'border-box',
+          fontFamily: customFontFamily,
+          '--accent-primary': customThemeColor,
+          '--accent-primary-hover': customThemeColor,
+          '--shadow-accent': `0 4px 14px ${customThemeColor}33`,
         }}
         onClick={(e) => e.stopPropagation()}
       >

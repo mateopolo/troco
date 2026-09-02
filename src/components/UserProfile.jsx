@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { validateSocialLink, parseSocialLink } from '../utils/socialSecurity';
 import InclusiveAvatarBuilder from './profile/InclusiveAvatarBuilder';
+import ProfileAppearanceCustomizer from './profile/ProfileAppearanceCustomizer';
 
 /**
  * Composant d'icône officielle pour les réseaux sociaux avec rendu SVG ultra-précis
@@ -722,6 +723,14 @@ export default function UserProfile({
                   socialLinks={draft.socialLinks}
                   onChange={(newLinks) => setDraft((prev) => ({ ...prev, socialLinks: newLinks }))}
                   darkMode={darkMode}
+                />
+
+                {/* Personnalisation de l'ambiance et typographie */}
+                <ProfileAppearanceCustomizer
+                  customFont={draft.customFont || profile.customFont || 'Inter'}
+                  customThemeColor={draft.customThemeColor || profile.customThemeColor || '#C67D5B'}
+                  onFontChange={(font) => setDraft((prev) => ({ ...prev, customFont: font }))}
+                  onColorChange={(color) => setDraft((prev) => ({ ...prev, customThemeColor: color }))}
                 />
               </div>
             )}
