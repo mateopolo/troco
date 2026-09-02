@@ -4,11 +4,14 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import { playBetclicBalanceSound, playApplePaySound } from '../utils/audioService';
 import { detectGeoCurrency } from '../services/pricingService';
+import { hapticSuccess } from '../utils/haptics';
 
 export const useWalletStore = create(
   persist(
     (set, get) => ({
       euroBalance: 128.00,
+      balance: 128.00,
+      walletBalanceFiat: 128.00,
       trocoTokens: 12,
       isTrocoPlus: false,
       subscriptionPlan: null,
@@ -41,7 +44,14 @@ export const useWalletStore = create(
         } catch (_) {}
       },
 
-      setEuroBalance: (euroBalance) => set({ euroBalance: Number(Number(euroBalance).toFixed(2)) }),
+      setEuroBalance: (euroBalance) => {
+        const val = Number(Number(euroBalance).toFixed(2));
+        set({ euroBalance: val, balance: val, walletBalanceFiat: val });
+      },
+      setBalance: (balance) => {
+        const val = Number(Number(balance).toFixed(2));
+        set({ euroBalance: val, balance: val, walletBalanceFiat: val });
+      },
       setTrocoTokens: (trocoTokens) => set({ trocoTokens: Number(trocoTokens) }),
       setKycVerified: (kycVerified) => set({ kycVerified: Boolean(kycVerified) }),
       setTrocoPlus: (isTrocoPlus, planKey = null) => set({ isTrocoPlus: Boolean(isTrocoPlus), subscriptionPlan: planKey || null }),
@@ -68,17 +78,29 @@ export const useWalletStore = create(
 
       setIsTransactionsModalOpen: (isOpen) => set({ isTransactionsModalOpen: isOpen }),
 
-      creditBalance: (euroDelta = 0, tokensDelta = 0) => set((state) => ({
-        euroBalance: Number(Math.max(0, state.euroBalance + Number(euroDelta)).toFixed(2)),
-        trocoTokens: Math.max(0, state.trocoTokens + Number(tokensDelta)),
-      })),
+      creditBalance: (euroDelta = 0, tokensDelta = 0) => set((state) => {
+        const newEuros = Number(Math.max(0, state.euroBalance + Number(euroDelta)).toFixed(2));
+        const newTokens = Math.max(0, state.trocoTokens + Number(tokensDelta));
+        return {
+          euroBalance: newEuros,
+          balance: newEuros,
+          walletBalanceFiat: newEuros,
+          trocoTokens: newTokens,
+        };
+      }),
 
-      debitBalance: (euroDelta = 0, tokensDelta = 0) => set((state) => ({
-        euroBalance: Number(Math.max(0, state.euroBalance - Number(euroDelta)).toFixed(2)),
-        trocoTokens: Math.max(0, state.trocoTokens - Number(tokensDelta)),
-      })),
+      debitBalance: (euroDelta = 0, tokensDelta = 0) => set((state) => {
+        const newEuros = Number(Math.max(0, state.euroBalance - Number(euroDelta)).toFixed(2));
+        const newTokens = Math.max(0, state.trocoTokens - Number(tokensDelta));
+        return {
+          euroBalance: newEuros,
+          balance: newEuros,
+          walletBalanceFiat: newEuros,
+          trocoTokens: newTokens,
+        };
+      }),
 
-      // Listener temps réel du solde utilisateur Firestore avec détection d'incrément et alerte sonore
+      // Listener temps réel du solde utilisateur Firestore avec détection d'incrément, haptique et alerte sonore
       subscribeToUserBalance: (uid) => {
         if (!uid || !db) return () => {};
         const userDocRef = doc(db, 'users', String(uid));
@@ -88,11 +110,15 @@ export const useWalletStore = create(
         const unsubscribe = onSnapshot(userDocRef, (docSnap) => {
           if (!docSnap.exists()) return;
           const data = docSnap.data() || {};
-          const newTokens = data.trocoTokens !== undefined ? Number(data.trocoTokens) : null;
-          const newEuros = data.euroBalance !== undefined ? Number(data.euroBalance) : null;
+          const rawTokens = data.trocoTokens ?? data.tokens;
+          const rawEuros = data.walletBalanceFiat ?? data.euroBalance ?? data.balance;
+
+          const newTokens = rawTokens !== undefined && rawTokens !== null ? Number(rawTokens) : null;
+          const newEuros = rawEuros !== undefined && rawEuros !== null ? Number(Number(rawEuros).toFixed(2)) : null;
 
           if (prevTokens !== null && newTokens !== null && newTokens > prevTokens) {
             const gained = newTokens - prevTokens;
+            hapticSuccess();
             playBetclicBalanceSound();
             set({
               topUpCelebration: {
@@ -107,6 +133,7 @@ export const useWalletStore = create(
             }, 4500);
           } else if (prevEuros !== null && newEuros !== null && newEuros > prevEuros) {
             const gained = (newEuros - prevEuros).toFixed(2);
+            hapticSuccess();
             playApplePaySound();
             set({
               topUpCelebration: {
@@ -126,7 +153,7 @@ export const useWalletStore = create(
 
           set({
             ...(newTokens !== null ? { trocoTokens: newTokens } : {}),
-            ...(newEuros !== null ? { euroBalance: Number(newEuros.toFixed(2)) } : {}),
+            ...(newEuros !== null ? { euroBalance: newEuros, balance: newEuros, walletBalanceFiat: newEuros } : {}),
             kycVerified: Boolean(data.kycVerified),
             isTrocoPlus: Boolean(data.isTrocoPlus),
             subscriptionPlan: data.trocoPlusPlan || null,

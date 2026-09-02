@@ -369,31 +369,40 @@ export default function AdminDashboard({
     const addTok = parseInt(deltaTokens, 10) || 0;
     const addEur = parseFloat(deltaEuros) || 0;
 
-    const curTok = Number(balanceModalUser.trocoTokens) || 0;
-    const curEur = Number(balanceModalUser.euroBalance) || 0;
+    const curTok = Number(balanceModalUser.trocoTokens ?? balanceModalUser.tokens) || 0;
+    const curEur = Number(balanceModalUser.walletBalanceFiat ?? balanceModalUser.euroBalance ?? balanceModalUser.balance) || 0;
 
     const finalTok = Math.max(0, curTok + addTok);
-    const finalEur = Math.max(0, curEur + addEur);
+    const finalEur = Number(Math.max(0, curEur + addEur).toFixed(2));
 
     try {
-      const userRef = doc(db, 'users', balanceModalUser.id);
+      const targetUserId = String(balanceModalUser.id || balanceModalUser.uid);
+      const userRef = doc(db, 'users', targetUserId);
       await updateDoc(userRef, {
         trocoTokens: finalTok,
+        walletBalanceFiat: finalEur,
         euroBalance: finalEur,
+        balance: finalEur,
         updatedAt: serverTimestamp(),
       });
 
       // Enregistrer une transaction administrative d'audit
       await addDoc(collection(db, 'transactions'), {
         type: 'admin_adjustment',
-        userId: balanceModalUser.id,
+        adminUid: currentUser?.uid || currentUser?.id || 'admin',
+        adminEmail: currentUser?.email || 'admin',
+        targetUid: targetUserId,
+        userId: targetUserId,
         userName: balanceModalUser.name || 'Membre',
+        tokenDelta: addTok,
+        fiatDelta: addEur,
         deltaTokens: addTok,
         deltaEuros: addEur,
         newTokens: finalTok,
         newEuros: finalEur,
-        adminEmail: currentUser?.email || 'admin',
+        reason: 'Ajustement Administrateur God Mode',
         createdAt: serverTimestamp(),
+        timestamp: serverTimestamp(),
       });
 
       showToast(`Solde de ${balanceModalUser.name} ajusté (${addTok >= 0 ? '+' : ''}${addTok}🪙, ${addEur >= 0 ? '+' : ''}${addEur}€)`);

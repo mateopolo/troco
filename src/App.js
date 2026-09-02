@@ -23,6 +23,7 @@ import SponsoredFeedCard from './components/SponsoredFeedCard';
 import SectoralErrorBoundary from './components/SectoralErrorBoundary';
 import AuthScreen from './features/auth/AuthScreen';
 import { useWalletStore } from './stores';
+import haptics from './utils/haptics';
 import { useAppAuth } from './hooks/useAppAuth';
 import { useAppNavigation } from './hooks/useAppNavigation';
 import { useAppModals } from './hooks/useAppModals';
@@ -774,12 +775,15 @@ export default function App() {
               return;
             }
 
-            const newTokens = data.trocoTokens !== undefined ? Number(data.trocoTokens) : null;
-            const newEuros = data.euroBalance !== undefined ? Number(data.euroBalance) : null;
+            const rawTokens = data.trocoTokens ?? data.tokens;
+            const rawEuros = data.walletBalanceFiat ?? data.euroBalance ?? data.balance;
+            const newTokens = rawTokens !== undefined && rawTokens !== null ? Number(rawTokens) : null;
+            const newEuros = rawEuros !== undefined && rawEuros !== null ? Number(Number(rawEuros).toFixed(2)) : null;
 
             // Détection de réception temps réel de jetons Troco (+X jetons) & Alerte sonore
             if (prevTokensRef.current !== undefined && prevTokensRef.current !== null && newTokens !== null && newTokens > prevTokensRef.current) {
               const gained = newTokens - prevTokensRef.current;
+              haptics.success();
               playBetclicBalanceSound();
               setTopUpCelebration({
                 title: `+${gained} Jeton${gained > 1 ? 's' : ''} Troco reçus ! 🪙`,
@@ -791,6 +795,7 @@ export default function App() {
             // Détection de réception temps réel d'euros & Alerte sonore
             if (prevEurosRef.current !== undefined && prevEurosRef.current !== null && newEuros !== null && newEuros > prevEurosRef.current) {
               const gained = (newEuros - prevEurosRef.current).toFixed(2);
+              haptics.success();
               playApplePaySound();
               setTopUpCelebration({
                 title: `+${gained} € reçus sur votre solde ! 💳`,
