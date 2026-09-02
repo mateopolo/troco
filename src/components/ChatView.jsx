@@ -1413,436 +1413,448 @@ function ChatView({
             minHeight: '100%',
             boxSizing: 'border-box',
           }}>
-            {messages.map((msg) => {
-              const isMsgOriginal = !!showingOriginalMessages[msg.id];
-              const translatedText = getChatMessageDisplayContent
-                ? getChatMessageDisplayContent(msg, currentLang, isMsgOriginal)
-                : (msg.text || '');
+            {messages.map((msg, msgIdx) => {
+              try {
+                if (!msg || typeof msg !== 'object') return null;
+                const isMsgOriginal = !!showingOriginalMessages[msg?.id];
+                const translatedText = getChatMessageDisplayContent
+                  ? getChatMessageDisplayContent(msg, currentLang, isMsgOriginal)
+                  : (msg?.text || '');
 
-              // RENDU DES MESSAGES SYSTÈME / JOURNAUX D'APPEL
-              if (msg.sender === 'system' || msg.kind === 'call-log' || msg.type === 'call-log') {
-                return (
-                  <div key={msg.id} style={{ textAlign: 'center', margin: '8px 0' }}>
-                    <div style={{
-                      fontSize: '11px',
-                      fontWeight: '700',
-                      color: 'var(--text-secondary)',
-                      backgroundColor: 'var(--bg-subtle)',
-                      border: '1px solid var(--border-color)',
-                      padding: '4px 12px',
-                      borderRadius: '999px',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      boxShadow: 'var(--shadow-card)',
-                    }}>
-                      <span>{translatedText || msg.text}</span>
-                    </div>
-                  </div>
-                );
-              }
-
-              // RENDU DES TRANSFERTS DE JETONS INSTANTANÉS (CARD STYLE GOLD TROCO)
-              if (msg.type === 'token_transfer' || msg.kind === 'token_transfer') {
-                const count = msg.tokenAmount || 1;
-                const isMine = Boolean(
-                  (msg.senderUid && profile?.uid && msg.senderUid === profile.uid) ||
-                  (msg.senderName && profile?.name && msg.senderName.trim().toLowerCase() === profile.name.trim().toLowerCase()) ||
-                  (msg.sender === 'me')
-                );
-
-                return (
-                  <div
-                    key={msg.id}
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: isMine ? 'flex-end' : 'flex-start',
-                      width: '100%',
-                      margin: '8px 0',
-                    }}
-                  >
-                    <div style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '10px',
-                      padding: '12px 18px',
-                      borderRadius: '20px',
-                      backgroundColor: 'var(--bg-card)',
-                      border: '1.5px solid #F59E0B',
-                      boxShadow: '0 8px 24px rgba(245, 158, 11, 0.2)',
-                      animation: 'fadeSlideUp 0.25s ease',
-                    }}>
-                      <div style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: 'rgba(245, 158, 11, 0.2)', color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                        <Coins size={20} />
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-main)' }}>
-                          🪙 Transfert de {count} Jeton{count > 1 ? 's' : ''} Troco
-                        </div>
-                        <div style={{ fontSize: '11px', color: '#F59E0B', fontWeight: '700' }}>
-                          {isMine ? `Transféré avec succès à ${activeChatObj?.user || 'votre contact'}` : `Reçu de ${msg.senderName || 'votre contact'} !`} ✓
-                        </div>
+                // RENDU DES MESSAGES SYSTÈME / JOURNAUX D'APPEL
+                if (msg?.sender === 'system' || msg?.kind === 'call-log' || msg?.type === 'call-log') {
+                  return (
+                    <div key={msg?.id || `sys-${msgIdx}`} style={{ textAlign: 'center', margin: '8px 0' }}>
+                      <div style={{
+                        fontSize: '11px',
+                        fontWeight: '700',
+                        color: 'var(--text-secondary)',
+                        backgroundColor: 'var(--bg-subtle)',
+                        border: '1px solid var(--border-color)',
+                        padding: '4px 12px',
+                        borderRadius: '999px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        boxShadow: 'var(--shadow-card)',
+                      }}>
+                        <span>{translatedText || msg?.text || ''}</span>
                       </div>
                     </div>
-                  </div>
-                );
-              }
+                  );
+                }
 
-              // RENDU DES PROPOSITIONS DE DEAL (FORÇAGE ABSOLU PHASE 84)
-              if (
-                msg.type === 'deal_offer' ||
-                msg.type === 'deal_proposal' ||
-                msg.type === 'deal' ||
-                msg.type === 'deal_counter_offer' ||
-                msg.kind === 'deal' ||
-                msg.kind === 'deal_offer' ||
-                msg.kind === 'deal_proposal' ||
-                Boolean(msg.dealTerms) ||
-                Boolean(msg.deal) ||
-                Boolean(msg.proposal) ||
-                Boolean(msg.dealId)
-              ) {
-                const terms = msg.dealTerms || msg.deal || msg.proposal || msg.terms || {};
-                const expectedHours = typeof terms.hours === 'number' ? terms.hours : (Number(terms.hours ?? terms.expectedHours ?? (terms.durationValue ? Number(terms.durationValue) : 0)) || 0);
-                const expectedTokens = typeof terms.tokens === 'number' ? terms.tokens : (Number(terms.tokens ?? terms.expectedTokens ?? terms.trocoTokens ?? 0) || 0);
-                const fiatAmount = typeof terms.fiatAmount === 'number' ? terms.fiatAmount : (Number(terms.fiatAmount ?? terms.fiat ?? terms.euroAmount ?? 0) || 0);
-                const serviceTitle = terms.title || terms.serviceTitle || terms.itemName || msg.listing || activeChatObj?.listing || "Prestation de service";
-                const rawDescription = terms.conditions || terms.description || terms.notes || msg.text || msg.content || "";
-                const isCounterOffer = Boolean(terms.isCounterOffer || msg.type === 'deal_counter_offer');
+                // RENDU DES TRANSFERTS DE JETONS INSTANTANÉS (CARD STYLE GOLD TROCO)
+                if (msg?.type === 'token_transfer' || msg?.kind === 'token_transfer') {
+                  const count = Number(msg?.tokenAmount) || 1;
+                  const isMine = Boolean(
+                    (msg?.senderUid && profile?.uid && msg.senderUid === profile.uid) ||
+                    (msg?.senderName && profile?.name && msg.senderName.trim().toLowerCase() === profile.name.trim().toLowerCase()) ||
+                    (msg?.sender === 'me')
+                  );
 
-                const currentUid = profile?.uid || (auth?.currentUser && auth.currentUser.uid);
-                const senderId = msg.senderId || msg.senderUid || (msg.sender === 'me' ? currentUid : null);
-                const isMyOffer = Boolean(currentUid && senderId ? String(currentUid) === String(senderId) : msg.sender === 'me');
-                const isRecipient = !isMyOffer;
-                const isMine = isMyOffer;
-                const isIncoming = isRecipient;
-
-                const currentDealStatus = String(msg.status || 'pending').toLowerCase();
-                const isAccepted = (currentDealStatus === 'confirmed' || currentDealStatus === 'accepted' || currentDealStatus === 'validated');
-                const isRejected = (currentDealStatus === 'declined' || currentDealStatus === 'rejected' || currentDealStatus === 'refused' || currentDealStatus === 'cancelled');
-                const isCountered = (currentDealStatus === 'countered' || currentDealStatus === 'superseded');
-                const isDealPending = !isAccepted && !isRejected;
-                const partnerName = activeChatObj?.user || 'l’interlocuteur';
-                const dealConditionsText = getChatMessageDisplayContent && rawDescription
-                  ? getChatMessageDisplayContent({ text: rawDescription }, currentLang, isMsgOriginal)
-                  : rawDescription;
-
-                return (
-                  <div
-                    key={msg.id}
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: isMine ? 'flex-end' : 'flex-start',
-                      width: '100%',
-                      margin: '8px 0',
-                      boxSizing: 'border-box'
-                    }}
-                  >
-                    <div style={{
-                      width: isMobile ? '94%' : '85%',
-                      maxWidth: '520px',
-                      border: isMine
-                        ? '1.5px solid var(--accent-primary)'
-                        : '1.5px solid var(--border-color)',
-                      borderRadius: '20px',
-                      borderBottomRightRadius: isMine ? '4px' : '20px',
-                      borderBottomLeftRadius: isIncoming ? '4px' : '20px',
-                      padding: isMobile ? '14px 14px 12px' : '18px',
-                      backgroundColor: 'var(--bg-card)',
-                      boxShadow: 'var(--shadow-card)',
-                      boxSizing: 'border-box'
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', flexWrap: 'wrap', gap: '6px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13.5px', fontWeight: '800', color: 'var(--accent-primary)' }}>
-                          <Sparkles size={15} color="var(--accent-primary)" />
-                          {isMine
-                            ? (isCounterOffer ? 'Ma contre-proposition de Deal' : (t('myDealProposal') || 'Ma proposition de Deal'))
-                            : (isCounterOffer ? `Contre-offre reçue de ${msg.senderName || partnerName}` : `Proposition de Deal reçue de ${msg.senderName || partnerName}`)}
+                  return (
+                    <div
+                      key={msg?.id || `token-${msgIdx}`}
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: isMine ? 'flex-end' : 'flex-start',
+                        width: '100%',
+                        margin: '8px 0',
+                      }}
+                    >
+                      <div style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        padding: '12px 18px',
+                        borderRadius: '20px',
+                        backgroundColor: 'var(--bg-card)',
+                        border: '1.5px solid #F59E0B',
+                        boxShadow: '0 8px 24px rgba(245, 158, 11, 0.2)',
+                        animation: 'fadeSlideUp 0.25s ease',
+                      }}>
+                        <div style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: 'rgba(245, 158, 11, 0.2)', color: '#F59E0B', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <Coins size={20} />
                         </div>
-                        {isDealPending && isRecipient && (
-                          <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', padding: '3px 8px', borderRadius: '999px', border: '1.5px solid var(--accent-primary)' }}>
-                            ⚡ Réponse attendue
-                          </span>
-                        )}
-                        {isDealPending && isMyOffer && (
-                          <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)', padding: '3px 8px', borderRadius: '999px', border: '1px solid var(--border-color)' }}>
-                            {t('waitingResponse') || 'En attente'}
-                          </span>
-                        )}
-                        {isCountered && (
-                          <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)', padding: '3px 8px', borderRadius: '999px', border: '1px dashed var(--border-color)' }}>
-                            🔄 Contre-offre émise
-                          </span>
-                        )}
-                        {currentDealStatus === 'escrow_locked' && (
-                          <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'rgba(16, 185, 129, 0.15)', color: 'var(--accent-success, #10B981)', padding: '3px 8px', borderRadius: '999px', border: '1.5px solid var(--accent-success, #10B981)', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                            🛡️ Fonds sous Séquestre
-                          </span>
-                        )}
-                        {isAccepted && (
-                          <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'rgba(16, 185, 129, 0.12)', color: '#10B981', padding: '3px 8px', borderRadius: '999px', border: '1.5px solid #10B981' }}>
-                            ✓ Deal Accepté
-                          </span>
-                        )}
-                        {isRejected && (
-                          <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'rgba(239, 68, 68, 0.08)', color: '#EF4444', padding: '3px 8px', borderRadius: '999px', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
-                            ✕ Offre Refusée
-                          </span>
-                        )}
-                      </div>
-
-                      {/* TITRE DE LA PRESTATION */}
-                      <div style={{ fontSize: '14.5px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '4px' }}>
-                        {serviceTitle}
-                      </div>
-
-                      {/* DESCRIPTION OU CONDITIONS */}
-                      {dealConditionsText && (
-                        <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '8px', lineHeight: 1.5, fontWeight: '500' }}>
-                          {dealConditionsText}
-                        </div>
-                      )}
-                      {currentLang !== 'FR' && dealConditionsText && (
-                        <button
-                          onClick={() => toggleOriginalMessage(msg.id)}
-                          className="premium-button"
-                          style={{
-                            border: 'none', background: 'none', cursor: 'pointer',
-                            color: 'var(--accent-primary)', fontSize: '11px',
-                            fontWeight: '800', display: 'inline-flex', alignItems: 'center',
-                            gap: '4px', marginBottom: '10px', padding: 0
-                          }}
-                        >
-                          <Globe size={11} style={{ flexShrink: 0 }} /> <span>{isMsgOriginal ? t('showTranslation') : t('showOriginal')}</span>
-                        </button>
-                      )}
-
-                      {/* BADGES DE CONTREPARTIE SÉCURISÉS (VALEURS GARANTIES SANS NaN NI UNDEFINED) */}
-                      <div style={{ display: 'flex', gap: '6px', marginBottom: '12px', flexWrap: 'wrap' }}>
-                        {(expectedHours > 0 || terms.durationType) && (
-                          <span style={{
-                            backgroundColor: 'var(--bg-subtle)',
-                            border: '1.5px solid var(--border-color)',
-                            color: 'var(--text-main)',
-                            borderRadius: '999px', padding: '3px 9px', fontSize: '11px', fontWeight: '800',
-                            display: 'inline-flex', alignItems: 'center', gap: '4px'
-                          }}>
-                            ⏱️ {expectedHours > 0 ? `${expectedHours}h` : (terms.durationType === 'hourly' ? `${terms.durationValue || 1}h` : terms.durationType === 'daily' ? `${terms.durationValue || 1}j` : terms.durationType === 'monthly' ? `${terms.durationValue || 1} mois` : terms.durationType === 'fixed' ? 'Forfait' : 'Libre')}
-                          </span>
-                        )}
-                        {expectedTokens > 0 && (
-                          <span style={{
-                            backgroundColor: 'var(--bg-subtle)',
-                            border: '1.5px solid var(--accent-warning)',
-                            color: 'var(--accent-warning)',
-                            borderRadius: '999px', padding: '3px 9px', fontSize: '11px', fontWeight: '800',
-                            display: 'inline-flex', alignItems: 'center', gap: '4px'
-                          }}>
-                            🪙 {expectedTokens} Jeton{expectedTokens > 1 ? 's' : ''}
-                          </span>
-                        )}
-                        {fiatAmount > 0 && (
-                          <span style={{
-                            backgroundColor: 'var(--bg-subtle)',
-                            border: '1.5px solid var(--accent-primary)',
-                            color: 'var(--accent-primary)',
-                            borderRadius: '999px', padding: '3px 9px', fontSize: '11px', fontWeight: '800',
-                            display: 'inline-flex', alignItems: 'center', gap: '4px'
-                          }}>
-                            💶 + {Number(fiatAmount).toFixed(2).replace('.00', '')} €
-                          </span>
-                        )}
-                        {expectedHours === 0 && expectedTokens === 0 && fiatAmount === 0 && (
-                          <span style={{
-                            backgroundColor: 'var(--bg-subtle)',
-                            border: '1.5px solid var(--accent-primary)',
-                            color: 'var(--accent-primary)',
-                            borderRadius: '999px', padding: '3px 9px', fontSize: '11px', fontWeight: '800',
-                            display: 'inline-flex', alignItems: 'center', gap: '4px'
-                          }}>
-                            🤝 Troc direct / Service
-                          </span>
-                        )}
-                      </div>
-
-                      {/* 🚨 PHASE 84 : FORÇAGE ABSOLU DES 3 BOUTONS DE NÉGOCIATION */}
-                      {!isAccepted && !isRejected && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
-                          <div style={{
-                            display: 'grid',
-                            gridTemplateColumns: '1fr 1fr 1fr',
-                            gap: '6px',
-                            opacity: isMyOffer ? 0.55 : 1,
-                            pointerEvents: isMyOffer ? 'none' : 'auto'
-                          }}>
-                            {/* BOUTON 1 : ACCEPTER */}
-                            <button
-                              type="button"
-                              disabled={isMyOffer}
-                              onClick={() => {
-                                if (isMyOffer) return;
-                                hapticSuccess();
-                                playSuccessChime();
-                                if (typeof onAcceptDeal === 'function') {
-                                  onAcceptDeal(msg.id, terms);
-                                } else if (typeof handleAcceptDeal === 'function') {
-                                  handleAcceptDeal(currentChatId, msg.id, terms);
-                                }
-                              }}
-                              className="premium-button"
-                              style={{
-                                border: 'none',
-                                borderRadius: '12px',
-                                padding: '10px 4px',
-                                background: isRecipient
-                                  ? 'linear-gradient(135deg, #10B981 0%, #059669 100%)'
-                                  : 'var(--bg-subtle)',
-                                color: isRecipient ? '#FFFFFF' : 'var(--text-secondary)',
-                                fontSize: '11.5px',
-                                fontWeight: '800',
-                                cursor: isRecipient ? 'pointer' : 'not-allowed',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '4px',
-                                boxShadow: isRecipient ? '0 4px 12px rgba(16, 185, 129, 0.35)' : 'none',
-                                whiteSpace: 'nowrap',
-                                transition: 'transform 0.15s ease, opacity 0.15s ease'
-                              }}
-                              title={isRecipient ? "Accepter la proposition" : "En attente du partenaire..."}
-                            >
-                              <Check size={14} strokeWidth={2.5} />
-                              <span>Accepter</span>
-                            </button>
-
-                            {/* BOUTON 2 : CONTRE-OFFRE */}
-                            <button
-                              type="button"
-                              disabled={isMyOffer}
-                              onClick={() => {
-                                if (isMyOffer) return;
-                                hapticLight();
-                                if (typeof openCounterOffer === 'function') {
-                                  openCounterOffer(terms, msg.id);
-                                }
-                              }}
-                              className="premium-button"
-                              style={{
-                                border: 'none',
-                                borderRadius: '12px',
-                                padding: '10px 4px',
-                                background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
-                                color: '#FFFFFF',
-                                fontSize: '11.5px',
-                                fontWeight: '800',
-                                cursor: isRecipient ? 'pointer' : 'not-allowed',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '4px',
-                                boxShadow: 'var(--shadow-accent)',
-                                whiteSpace: 'nowrap',
-                                transition: 'transform 0.15s ease, opacity 0.15s ease'
-                              }}
-                              title={isRecipient ? "Proposer une contre-offre" : "En attente du partenaire..."}
-                            >
-                              <RefreshCw size={13} strokeWidth={2.5} />
-                              <span>Contre-offre</span>
-                            </button>
-
-                            {/* BOUTON 3 : REFUSER */}
-                            <button
-                              type="button"
-                              disabled={isMyOffer}
-                              onClick={() => {
-                                if (isMyOffer) return;
-                                hapticError();
-                                if (typeof handleDeclineDeal === 'function') {
-                                  handleDeclineDeal(currentChatId, msg.id);
-                                }
-                              }}
-                              className="premium-button"
-                              style={{
-                                border: '1px solid rgba(239, 68, 68, 0.28)',
-                                borderRadius: '12px',
-                                padding: '10px 4px',
-                                backgroundColor: 'rgba(239, 68, 68, 0.08)',
-                                color: '#EF4444',
-                                fontSize: '11.5px',
-                                fontWeight: '800',
-                                cursor: isRecipient ? 'pointer' : 'not-allowed',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '4px',
-                                whiteSpace: 'nowrap',
-                                transition: 'transform 0.15s ease, opacity 0.15s ease'
-                              }}
-                              title={isRecipient ? "Refuser l'offre" : "En attente du partenaire..."}
-                            >
-                              <X size={14} strokeWidth={2.5} />
-                              <span>Refuser</span>
-                            </button>
+                        <div>
+                          <div style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-main)' }}>
+                            🪙 Transfert de {count} Jeton{count > 1 ? 's' : ''} Troco
                           </div>
+                          <div style={{ fontSize: '11px', color: '#F59E0B', fontWeight: '700' }}>
+                            {isMine ? `Transféré avec succès à ${activeChatObj?.user || 'votre contact'}` : `Reçu de ${msg?.senderName || 'votre contact'} !`} ✓
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
 
-                          {/* MESSAGE D'ATTENTE INFORMATIF POUR L'EXPÉDITEUR */}
-                          {isMyOffer && (
-                            <div style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '6px',
-                              backgroundColor: 'var(--bg-subtle)',
-                              border: '1px dashed var(--border-color)',
-                              color: 'var(--text-secondary)',
-                              borderRadius: '12px',
-                              padding: '6px 10px',
-                              fontSize: '11px',
-                              fontWeight: '700'
-                            }}>
-                              <Clock size={12} color="var(--accent-primary)" />
-                              <span>En attente de la réponse du partenaire...</span>
-                            </div>
+                // 🚨 PHASE 85 : RENDU DÉFENSIF DES PROPOSITIONS DE DEAL
+                const isDeal = Boolean(
+                  msg?.type === 'deal_offer' ||
+                  msg?.type === 'deal_proposal' ||
+                  msg?.type === 'deal' ||
+                  msg?.type === 'deal_counter_offer' ||
+                  msg?.kind === 'deal' ||
+                  msg?.kind === 'deal_offer' ||
+                  msg?.kind === 'deal_proposal' ||
+                  msg?.dealTerms ||
+                  msg?.terms ||
+                  msg?.deal ||
+                  msg?.proposal ||
+                  msg?.dealId
+                );
+
+                if (isDeal) {
+                  const terms = (msg && (msg.dealTerms || msg.terms || msg.proposal || msg.deal)) || {};
+                  const expectedHours = typeof terms?.hours === 'number'
+                    ? terms.hours
+                    : (Number(terms?.hours ?? terms?.expectedHours ?? (terms?.durationValue ? Number(terms.durationValue) : 0)) || 0);
+                  const expectedTokens = typeof terms?.tokens === 'number'
+                    ? terms.tokens
+                    : (Number(terms?.tokens ?? terms?.expectedTokens ?? terms?.trocoTokens ?? 0) || 0);
+                  const fiatAmount = typeof terms?.fiatAmount === 'number'
+                    ? terms.fiatAmount
+                    : (Number(terms?.fiatAmount ?? terms?.fiat ?? terms?.euroAmount ?? 0) || 0);
+                  const serviceTitle = terms?.title || terms?.serviceTitle || terms?.itemName || msg?.listing || activeChatObj?.listing || "Prestation de service";
+                  const rawDescription = terms?.conditions || terms?.description || terms?.notes || msg?.text || msg?.content || "";
+                  const isCounterOffer = Boolean(terms?.isCounterOffer || msg?.type === 'deal_counter_offer');
+
+                  const currentUid = profile?.uid || (auth?.currentUser && auth.currentUser.uid) || '';
+                  const senderId = msg?.senderId || msg?.authorUid || msg?.senderUid || (msg?.sender === 'me' ? currentUid : '');
+                  const isSender = Boolean(currentUid && senderId ? String(currentUid) === String(senderId) : msg?.sender === 'me');
+                  const isRecipient = !isSender;
+                  const isMine = isSender;
+                  const isIncoming = isRecipient;
+
+                  const currentDealStatus = String(msg?.status || 'pending').toLowerCase();
+                  const isAccepted = (currentDealStatus === 'confirmed' || currentDealStatus === 'accepted' || currentDealStatus === 'validated');
+                  const isRejected = (currentDealStatus === 'declined' || currentDealStatus === 'rejected' || currentDealStatus === 'refused' || currentDealStatus === 'cancelled');
+                  const isCountered = (currentDealStatus === 'countered' || currentDealStatus === 'superseded');
+                  const isDealPending = !isAccepted && !isRejected;
+                  const partnerName = activeChatObj?.user || 'l’interlocuteur';
+                  const dealConditionsText = getChatMessageDisplayContent && rawDescription
+                    ? getChatMessageDisplayContent({ text: rawDescription }, currentLang, isMsgOriginal)
+                    : rawDescription;
+
+                  return (
+                    <div
+                      key={msg?.id || `deal-${msgIdx}`}
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: isMine ? 'flex-end' : 'flex-start',
+                        width: '100%',
+                        margin: '8px 0',
+                        boxSizing: 'border-box'
+                      }}
+                    >
+                      <div style={{
+                        width: isMobile ? '94%' : '85%',
+                        maxWidth: '520px',
+                        border: isMine
+                          ? '1.5px solid var(--accent-primary)'
+                          : '1.5px solid var(--border-color)',
+                        borderRadius: '20px',
+                        borderBottomRightRadius: isMine ? '4px' : '20px',
+                        borderBottomLeftRadius: isIncoming ? '4px' : '20px',
+                        padding: isMobile ? '14px 14px 12px' : '18px',
+                        backgroundColor: 'var(--bg-card)',
+                        boxShadow: 'var(--shadow-card)',
+                        boxSizing: 'border-box'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', flexWrap: 'wrap', gap: '6px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13.5px', fontWeight: '800', color: 'var(--accent-primary)' }}>
+                            <Sparkles size={15} color="var(--accent-primary)" />
+                            {isMine
+                              ? (isCounterOffer ? 'Ma contre-proposition de Deal' : (t('myDealProposal') || 'Ma proposition de Deal'))
+                              : (isCounterOffer ? `Contre-offre reçue de ${msg?.senderName || partnerName}` : `Proposition de Deal reçue de ${msg?.senderName || partnerName}`)}
+                          </div>
+                          {isDealPending && isRecipient && (
+                            <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', padding: '3px 8px', borderRadius: '999px', border: '1.5px solid var(--accent-primary)' }}>
+                              ⚡ Réponse attendue
+                            </span>
+                          )}
+                          {isDealPending && isSender && (
+                            <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)', padding: '3px 8px', borderRadius: '999px', border: '1px solid var(--border-color)' }}>
+                              {t('waitingResponse') || 'En attente'}
+                            </span>
+                          )}
+                          {isCountered && (
+                            <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)', padding: '3px 8px', borderRadius: '999px', border: '1px dashed var(--border-color)' }}>
+                              🔄 Contre-offre émise
+                            </span>
+                          )}
+                          {currentDealStatus === 'escrow_locked' && (
+                            <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'rgba(16, 185, 129, 0.15)', color: 'var(--accent-success, #10B981)', padding: '3px 8px', borderRadius: '999px', border: '1.5px solid var(--accent-success, #10B981)', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                              🛡️ Fonds sous Séquestre
+                            </span>
+                          )}
+                          {isAccepted && (
+                            <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'rgba(16, 185, 129, 0.12)', color: '#10B981', padding: '3px 8px', borderRadius: '999px', border: '1.5px solid #10B981' }}>
+                              ✓ Deal Accepté
+                            </span>
+                          )}
+                          {isRejected && (
+                            <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'rgba(239, 68, 68, 0.08)', color: '#EF4444', padding: '3px 8px', borderRadius: '999px', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+                              ✕ Offre Refusée
+                            </span>
                           )}
                         </div>
-                      )}
 
-                      {/* BADGE OFFRE REMPLACÉE PAR UNE CONTRE-OFFRE */}
-                      {isCountered && (
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', backgroundColor: 'var(--bg-subtle)', border: '1px dashed var(--border-color)', color: 'var(--text-secondary)', borderRadius: '12px', padding: '8px 12px', fontSize: '11.5px', fontWeight: '700', marginTop: '8px' }}>
-                          <RefreshCw size={13} strokeWidth={2} />
-                          <span>🔄 Offre remplacée par une contre-proposition</span>
+                        {/* TITRE DE LA PRESTATION */}
+                        <div style={{ fontSize: '14.5px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '4px' }}>
+                          {serviceTitle}
                         </div>
-                      )}
 
-                      {/* BADGE STATUT CONFIRMÉ / ACCEPTÉ (NON-CLIQUABLE) */}
-                      {isAccepted && currentDealStatus !== 'escrow_locked' && (
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', backgroundColor: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.35)', color: '#10B981', borderRadius: '12px', padding: '9px 12px', fontSize: '11.5px', fontWeight: '800', marginTop: '8px' }}>
-                          <Check size={14} strokeWidth={2.5} />
-                          <span>✓ Deal accepté et validé</span>
+                        {/* DESCRIPTION OU CONDITIONS */}
+                        {dealConditionsText && (
+                          <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '8px', lineHeight: 1.5, fontWeight: '500' }}>
+                            {dealConditionsText}
+                          </div>
+                        )}
+                        {currentLang !== 'FR' && dealConditionsText && (
+                          <button
+                            onClick={() => toggleOriginalMessage(msg?.id)}
+                            className="premium-button"
+                            style={{
+                              border: 'none', background: 'none', cursor: 'pointer',
+                              color: 'var(--accent-primary)', fontSize: '11px',
+                              fontWeight: '800', display: 'inline-flex', alignItems: 'center',
+                              gap: '4px', marginBottom: '10px', padding: 0
+                            }}
+                          >
+                            <Globe size={11} style={{ flexShrink: 0 }} /> <span>{isMsgOriginal ? t('showTranslation') : t('showOriginal')}</span>
+                          </button>
+                        )}
+
+                        {/* BADGES DE CONTREPARTIE SÉCURISÉS (VALEURS GARANTIES SANS NaN NI UNDEFINED) */}
+                        <div style={{ display: 'flex', gap: '6px', marginBottom: '12px', flexWrap: 'wrap' }}>
+                          {(expectedHours > 0 || terms?.durationType) && (
+                            <span style={{
+                              backgroundColor: 'var(--bg-subtle)',
+                              border: '1.5px solid var(--border-color)',
+                              color: 'var(--text-main)',
+                              borderRadius: '999px', padding: '3px 9px', fontSize: '11px', fontWeight: '800',
+                              display: 'inline-flex', alignItems: 'center', gap: '4px'
+                            }}>
+                              ⏱️ {expectedHours > 0 ? `${expectedHours}h` : (terms?.durationType === 'hourly' ? `${terms?.durationValue || 1}h` : terms?.durationType === 'daily' ? `${terms?.durationValue || 1}j` : terms?.durationType === 'monthly' ? `${terms?.durationValue || 1} mois` : terms?.durationType === 'fixed' ? 'Forfait' : 'Libre')}
+                            </span>
+                          )}
+                          {expectedTokens > 0 && (
+                            <span style={{
+                              backgroundColor: 'var(--bg-subtle)',
+                              border: '1.5px solid var(--accent-warning)',
+                              color: 'var(--accent-warning)',
+                              borderRadius: '999px', padding: '3px 9px', fontSize: '11px', fontWeight: '800',
+                              display: 'inline-flex', alignItems: 'center', gap: '4px'
+                            }}>
+                              🪙 {expectedTokens} Jeton{expectedTokens > 1 ? 's' : ''}
+                            </span>
+                          )}
+                          {fiatAmount > 0 && (
+                            <span style={{
+                              backgroundColor: 'var(--bg-subtle)',
+                              border: '1.5px solid var(--accent-primary)',
+                              color: 'var(--accent-primary)',
+                              borderRadius: '999px', padding: '3px 9px', fontSize: '11px', fontWeight: '800',
+                              display: 'inline-flex', alignItems: 'center', gap: '4px'
+                            }}>
+                              💶 + {Number(fiatAmount).toFixed(2).replace('.00', '')} €
+                            </span>
+                          )}
+                          {expectedHours === 0 && expectedTokens === 0 && fiatAmount === 0 && (
+                            <span style={{
+                              backgroundColor: 'var(--bg-subtle)',
+                              border: '1.5px solid var(--accent-primary)',
+                              color: 'var(--accent-primary)',
+                              borderRadius: '999px', padding: '3px 9px', fontSize: '11px', fontWeight: '800',
+                              display: 'inline-flex', alignItems: 'center', gap: '4px'
+                            }}>
+                              🤝 Troc direct / Service
+                            </span>
+                          )}
                         </div>
-                      )}
 
-                      {/* BADGE STATUT REFUSÉ (NON-CLIQUABLE) */}
-                      {isRejected && (
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', backgroundColor: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.25)', color: '#EF4444', borderRadius: '12px', padding: '9px 12px', fontSize: '11.5px', fontWeight: '800', marginTop: '8px' }}>
-                          <X size={14} strokeWidth={2.5} />
-                          <span>✕ Offre déclinée / annulée</span>
-                        </div>
-                      )}
+                        {/* 🚨 PHASE 85 : FORÇAGE DES BOUTONS DE NÉGOCIATION SANS CRASH */}
+                        {!isAccepted && !isRejected && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
+                            {isSender ? (
+                              /* ÉTAT EXPÉDITEUR : BOUTON EN ATTENTE DU PARTENAIRE (DISABLED) */
+                              <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px',
+                                backgroundColor: 'var(--bg-subtle)',
+                                border: '1px dashed var(--border-color)',
+                                color: 'var(--text-secondary)',
+                                borderRadius: '12px',
+                                padding: '10px 14px',
+                                fontSize: '12px',
+                                fontWeight: '700',
+                                opacity: 0.85,
+                                cursor: 'not-allowed'
+                              }}>
+                                <Clock size={14} color="var(--accent-primary)" />
+                                <span>En attente de la réponse du partenaire...</span>
+                              </div>
+                            ) : (
+                              /* ÉTAT DESTINATAIRE : LES 3 BOUTONS ACTIFS AVEC CALLBACKS SÉCURISÉS */
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px' }}>
+                                {/* BOUTON 1 : ACCEPTER */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    try {
+                                      hapticSuccess();
+                                      playSuccessChime();
+                                      if (typeof onAcceptDeal === 'function') {
+                                        onAcceptDeal(msg?.id, terms);
+                                      } else if (typeof handleAcceptDeal === 'function') {
+                                        handleAcceptDeal(currentChatId, msg?.id, terms);
+                                      }
+                                    } catch (err) {
+                                      console.warn('[ChatView] Accept deal error:', err);
+                                    }
+                                  }}
+                                  className="premium-button"
+                                  style={{
+                                    border: 'none',
+                                    borderRadius: '12px',
+                                    padding: '10px 4px',
+                                    background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                                    color: '#FFFFFF',
+                                    fontSize: '11.5px',
+                                    fontWeight: '800',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '4px',
+                                    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.35)',
+                                    whiteSpace: 'nowrap',
+                                    transition: 'transform 0.15s ease, opacity 0.15s ease'
+                                  }}
+                                  title="Accepter la proposition de deal"
+                                >
+                                  <Check size={14} strokeWidth={2.5} />
+                                  <span>Accepter</span>
+                                </button>
 
-                      {/* STATUT EN ATTENTE POUR L'EXPÉDITEUR AVEC RAPPEL DU STATUT */}
-                      {isDealPending && isMine && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'var(--bg-subtle)', border: '1px dashed var(--border-color)', color: 'var(--text-secondary)', borderRadius: '12px', padding: '7px 10px', fontSize: '11px', fontWeight: '700', marginTop: '8px' }}>
-                          <Clock size={12} color="var(--accent-primary)" />
-                          <span>Offre en attente : vous pouvez valider, modifier ou annuler à tout moment.</span>
-                        </div>
-                      )}
+                                {/* BOUTON 2 : CONTRE-OFFRE */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    try {
+                                      hapticLight();
+                                      if (typeof openCounterOffer === 'function') {
+                                        openCounterOffer(terms, msg?.id);
+                                      }
+                                    } catch (err) {
+                                      console.warn('[ChatView] Counter offer error:', err);
+                                    }
+                                  }}
+                                  className="premium-button"
+                                  style={{
+                                    border: 'none',
+                                    borderRadius: '12px',
+                                    padding: '10px 4px',
+                                    background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
+                                    color: '#FFFFFF',
+                                    fontSize: '11.5px',
+                                    fontWeight: '800',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '4px',
+                                    boxShadow: 'var(--shadow-accent)',
+                                    whiteSpace: 'nowrap',
+                                    transition: 'transform 0.15s ease, opacity 0.15s ease'
+                                  }}
+                                  title="Faire une contre-proposition"
+                                >
+                                  <RefreshCw size={13} strokeWidth={2.5} />
+                                  <span>Contre-offre</span>
+                                </button>
 
-                      {/* BLOC SÉQUESTRE FINANCIER & LIBÉRATION DES FONDS */}
-                      {currentDealStatus === 'escrow_locked' && (
+                                {/* BOUTON 3 : REFUSER */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    try {
+                                      hapticError();
+                                      if (typeof handleDeclineDeal === 'function') {
+                                        handleDeclineDeal(currentChatId, msg?.id);
+                                      }
+                                    } catch (err) {
+                                      console.warn('[ChatView] Decline deal error:', err);
+                                    }
+                                  }}
+                                  className="premium-button"
+                                  style={{
+                                    border: '1px solid rgba(239, 68, 68, 0.28)',
+                                    borderRadius: '12px',
+                                    padding: '10px 4px',
+                                    backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                                    color: '#EF4444',
+                                    fontSize: '11.5px',
+                                    fontWeight: '800',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    gap: '4px',
+                                    whiteSpace: 'nowrap',
+                                    transition: 'transform 0.15s ease, opacity 0.15s ease'
+                                  }}
+                                  title="Refuser cette offre"
+                                >
+                                  <X size={14} strokeWidth={2.5} />
+                                  <span>Refuser</span>
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* BADGE OFFRE REMPLACÉE PAR UNE CONTRE-OFFRE */}
+                        {isCountered && (
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', backgroundColor: 'var(--bg-subtle)', border: '1px dashed var(--border-color)', color: 'var(--text-secondary)', borderRadius: '12px', padding: '8px 12px', fontSize: '11.5px', fontWeight: '700', marginTop: '8px' }}>
+                            <RefreshCw size={13} strokeWidth={2} />
+                            <span>🔄 Offre remplacée par une contre-proposition</span>
+                          </div>
+                        )}
+
+                        {/* BADGE STATUT CONFIRMÉ / ACCEPTÉ (NON-CLIQUABLE) */}
+                        {isAccepted && currentDealStatus !== 'escrow_locked' && (
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', backgroundColor: 'rgba(16, 185, 129, 0.12)', border: '1px solid rgba(16, 185, 129, 0.35)', color: '#10B981', borderRadius: '12px', padding: '9px 12px', fontSize: '11.5px', fontWeight: '800', marginTop: '8px' }}>
+                            <Check size={14} strokeWidth={2.5} />
+                            <span>✓ Deal accepté et validé</span>
+                          </div>
+                        )}
+
+                        {/* BADGE STATUT REFUSÉ (NON-CLIQUABLE) */}
+                        {isRejected && (
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', backgroundColor: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.25)', color: '#EF4444', borderRadius: '12px', padding: '9px 12px', fontSize: '11.5px', fontWeight: '800', marginTop: '8px' }}>
+                            <X size={14} strokeWidth={2.5} />
+                            <span>✕ Offre déclinée / annulée</span>
+                          </div>
+                        )}
+
+                        {/* STATUT EN ATTENTE POUR L'EXPÉDITEUR AVEC RAPPEL DU STATUT */}
+                        {isDealPending && isMine && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'var(--bg-subtle)', border: '1px dashed var(--border-color)', color: 'var(--text-secondary)', borderRadius: '12px', padding: '7px 10px', fontSize: '11px', fontWeight: '700', marginTop: '8px' }}>
+                            <Clock size={12} color="var(--accent-primary)" />
+                            <span>Offre en attente : vous pouvez valider, modifier ou annuler à tout moment.</span>
+                          </div>
+                        )}
+
+                        {/* BLOC SÉQUESTRE FINANCIER & LIBÉRATION DES FONDS */}
+                        {currentDealStatus === 'escrow_locked' && (
                         <div style={{
                           display: 'flex',
                           flexDirection: 'column',
@@ -2381,6 +2393,35 @@ function ChatView({
                   </div>
                 </div>
               );
+              } catch (renderError) {
+                console.warn('[ChatView] Safe render message fallback:', renderError, msg);
+                return (
+                  <div
+                    key={msg?.id || `msg-error-${msgIdx}`}
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'center',
+                      width: '100%',
+                      margin: '6px 0',
+                    }}
+                  >
+                    <div style={{
+                      fontSize: '11px',
+                      fontWeight: '700',
+                      color: '#EF4444',
+                      backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                      border: '1px solid rgba(239, 68, 68, 0.25)',
+                      borderRadius: '12px',
+                      padding: '6px 14px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px'
+                    }}>
+                      <span>⚠️ Erreur d'affichage du message</span>
+                    </div>
+                  </div>
+                );
+              }
             })}
 
             {isThemTyping && (
