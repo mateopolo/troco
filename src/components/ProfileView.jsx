@@ -5,6 +5,7 @@ import { PWAInstallProfileCard } from './PWAInstallBanner';
 import { SocialLinksDisplay, SocialLinksEditor } from './UserProfile';
 import { ProgressiveImage } from './ui/ProgressiveImage';
 import { EmptyState } from './ui/EmptyState';
+import InclusiveAvatarBuilder from './profile/InclusiveAvatarBuilder';
 
 export default function ProfileView({
   activeTab,
@@ -199,6 +200,11 @@ export default function ProfileView({
               </>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <InclusiveAvatarBuilder
+                  currentAvatar={profileDraft?.avatar || profile?.avatar}
+                  initialName={profileDraft?.name || profile?.name || 'Membre'}
+                  onSelectAvatar={(avatarUrl) => setProfileDraft(prev => ({ ...prev, avatar: avatarUrl }))}
+                />
                 <div style={{ display: 'flex', gap: '10px' }}>
                   <input
                     type="text"

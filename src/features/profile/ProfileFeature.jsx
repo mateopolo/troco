@@ -32,6 +32,7 @@ import { validateProfileContent } from '../../utils/moderationBlacklist';
 import { DIVERSE_AVATARS } from '../../data/categoriesData';
 import { AnimatedEuroBalance, AnimatedTokenBalance } from '../../components/AnimatedBalances';
 import MobileHeader from '../../components/common/MobileHeader';
+import InclusiveAvatarBuilder from '../../components/profile/InclusiveAvatarBuilder';
 import {
   getBioTranslation as getBioTranslationUtil,
   getReviewTranslation as getReviewTranslationUtil,
@@ -92,8 +93,6 @@ export default function ProfileFeature({
   const [showingOriginalReviews, setShowingOriginalReviews] = useState({});
 
   const profileAvatarFileInputRef = useRef(null);
-
-  const avatarOptions = DIVERSE_AVATARS || [];
 
   const toggleOriginalReview = (id) => {
     setShowingOriginalReviews((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -426,19 +425,28 @@ export default function ProfileFeature({
 
       {isEditingProfile && (
         <>
-          <div style={{ marginBottom: "14px" }}>
+          {/* GÉNÉRATEUR D'AVATARS INCLUSIF DYNAMIQUE (DICEBEAR AVATAAARS) */}
+          <InclusiveAvatarBuilder
+            currentAvatar={profileDraft.avatar || profile.avatar}
+            initialName={profileDraft.name || profile.name || 'Membre'}
+            onSelectAvatar={(avatarUrl) => setProfileDraft(prev => ({ ...prev, avatar: avatarUrl }))}
+          />
+
+          {/* OPTION UPLOAD PHOTO PERSONNELLE OU URL */}
+          <div style={{ display: "flex", gap: "10px", alignItems: "center", marginBottom: "14px", flexWrap: "wrap" }}>
             <button
+              type="button"
               onClick={() => profileAvatarFileInputRef.current && profileAvatarFileInputRef.current.click()}
               className="premium-button"
               style={{
-                width: "100%",
+                flex: "1 1 200px",
                 border: "1.5px dashed var(--accent-primary)",
                 borderRadius: "14px",
-                padding: "12px 14px",
+                padding: "10px 14px",
                 backgroundColor: "var(--bg-subtle)",
                 color: "var(--accent-primary)",
                 fontWeight: "800",
-                fontSize: "13px",
+                fontSize: "12px",
                 cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
@@ -447,19 +455,24 @@ export default function ProfileFeature({
                 boxShadow: "var(--shadow-card)"
               }}
             >
-              <Upload size={16} /> {t("uploadProfilePhoto")}
+              <Upload size={15} /> Importer ma propre photo
             </button>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(8, 1fr)", gap: "8px", maxHeight: "120px", overflowY: "auto", padding: "4px", marginBottom: "12px" }}>
-            {avatarOptions.map((avatar) => (
-              <button key={avatar} onClick={() => setProfileDraft(prev => ({ ...prev, avatar }))} style={{ border: profileDraft.avatar === avatar ? "2.5px solid var(--accent-primary)" : "2px solid transparent", borderRadius: "50%", padding: 0, background: "none", cursor: "pointer", transform: profileDraft.avatar === avatar ? "scale(1.08)" : "scale(1)", transition: "all 0.2s" }}>
-                <img src={avatar} alt="avatar option" style={{ width: "42px", height: "42px", borderRadius: "50%", objectFit: "cover" }} />
-              </button>
-            ))}
-          </div>
-          <div style={{ marginBottom: "14px" }}>
-            <label style={{ fontSize: "12px", fontWeight: "800", color: "var(--text-secondary)" }}>URL de ta photo de profil (aperçu instantané)</label>
-            <input value={profileDraft.avatar} onChange={(e) => setProfileDraft(prev => ({ ...prev, avatar: e.target.value }))} placeholder="https://exemple.com/avatar.jpg" style={{ width: "100%", padding: "10px 12px", marginTop: "6px", border: "1px solid var(--border-color)", backgroundColor: "var(--bg-subtle)", color: "var(--text-main)", borderRadius: "12px", fontSize: "13px" }} />
+            <div style={{ flex: "2 1 240px" }}>
+              <input
+                value={profileDraft.avatar || ''}
+                onChange={(e) => setProfileDraft(prev => ({ ...prev, avatar: e.target.value }))}
+                placeholder="https://exemple.com/avatar.jpg ou lien DiceBear"
+                style={{
+                  width: "100%",
+                  padding: "9px 12px",
+                  border: "1px solid var(--border-color)",
+                  backgroundColor: "var(--bg-subtle)",
+                  color: "var(--text-main)",
+                  borderRadius: "12px",
+                  fontSize: "12px"
+                }}
+              />
+            </div>
           </div>
         </>
       )}

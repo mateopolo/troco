@@ -17,7 +17,7 @@ export default function InteractiveButton({
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className={premium-button \}
+      className={`premium-button ${className}`}
       whileTap={!disabled ? whileTap : undefined}
       whileHover={!disabled ? whileHover : undefined}
       transition={{ type: 'spring', stiffness: 400, damping: 20 }}

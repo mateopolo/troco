@@ -13,6 +13,7 @@ import {
   Link as LinkIcon
 } from 'lucide-react';
 import { validateSocialLink, parseSocialLink } from '../utils/socialSecurity';
+import InclusiveAvatarBuilder from './profile/InclusiveAvatarBuilder';
 
 /**
  * Composant d'icône officielle pour les réseaux sociaux avec rendu SVG ultra-précis
@@ -604,10 +605,11 @@ export default function UserProfile({
                 overflow: 'hidden',
                 border: '3px solid var(--accent-primary)',
                 boxShadow: 'var(--shadow-accent)',
+                backgroundColor: '#FFFFFF',
               }}
             >
               <img
-                src={profile.avatar || 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80'}
+                src={isEditing ? (draft.avatar || profile.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=TrocoUser&skinColor=d08b5b&hairColor=2c1b18') : (profile.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=TrocoUser&skinColor=d08b5b&hairColor=2c1b18')}
                 alt={profile.name || 'Profil'}
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
@@ -665,6 +667,11 @@ export default function UserProfile({
               </>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <InclusiveAvatarBuilder
+                  currentAvatar={draft.avatar || profile.avatar}
+                  initialName={draft.name || profile.name || 'Membre'}
+                  onSelectAvatar={(avatarUrl) => setDraft((prev) => ({ ...prev, avatar: avatarUrl }))}
+                />
                 <input
                   type="text"
                   value={draft.name}

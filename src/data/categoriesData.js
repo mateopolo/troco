@@ -205,44 +205,22 @@ export const ACCOUNT_TYPES = [
   },
 ];
 
-// Collection inclusive et diversifiée d'avatars haute définition — Toutes ethnicités, teintes de peau, cheveux (Unsplash)
+// Collection inclusive et diversifiée d'avatars haute définition — Toutes ethnicités, teintes de peau, cheveux et accessoires (DiceBear Avataaars)
 export const DIVERSE_AVATARS = [
-  // Femmes — Teintes claires à foncées
-  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80', // Femme brune souriante
-  'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&w=300&q=80', // Femme asiatique
-  'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=300&q=80', // Femme blonde tech
-  'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=300&q=80', // Femme rousse dynamique
-  'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=300&q=80', // Femme brune élégante
-  'https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?auto=format&fit=crop&w=300&q=80', // Femme afro naturelle
-  'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=300&q=80', // Femme afro pro
-  'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=300&q=80', // Femme peau dorée
-  'https://images.unsplash.com/photo-1488426862026-3ee34a7d66df?auto=format&fit=crop&w=300&q=80', // Femme nordique claire
-  'https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?auto=format&fit=crop&w=300&q=80', // Femme latine joyeuse
-  'https://images.unsplash.com/photo-1527980965255-d3b416303d12?auto=format&fit=crop&w=300&q=80', // Femme cheveux bouclés
-  'https://images.unsplash.com/photo-1614898522651-a5e2bcef4e4e?auto=format&fit=crop&w=300&q=80', // Femme tresses africaines
-  'https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&w=300&q=80', // Femme indienne douce
-  'https://images.unsplash.com/photo-1464863979621-258859e62245?auto=format&fit=crop&w=300&q=80', // Femme cheveux longs
-  'https://images.unsplash.com/photo-1548142813-c348350df52b?auto=format&fit=crop&w=300&q=80', // Femme asiat. cheveux raides
-  'https://images.unsplash.com/photo-1542206395-9feb3edaa68d?auto=format&fit=crop&w=300&q=80', // Femme courte frange
-  'https://images.unsplash.com/photo-1595152452543-e5fc28ebc2b8?auto=format&fit=crop&w=300&q=80', // Femme peau ébène élégante
-  'https://images.unsplash.com/photo-1601412436967-49900e38d53a?auto=format&fit=crop&w=300&q=80', // Femme voilée hijab
-  // Hommes — Toutes teintes
-  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80', // Homme souriant pro
-  'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=300&q=80', // Homme barbe jeune
-  'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=300&q=80', // Homme métis moderne
-  'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?auto=format&fit=crop&w=300&q=80', // Homme créatif lunettes
-  'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=300&q=80', // Homme charismatique
-  'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=300&q=80', // Homme mature pro
-  'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=300&q=80', // Homme exécutif
-  'https://images.unsplash.com/photo-1624561172888-ac93c696e10c?auto=format&fit=crop&w=300&q=80', // Homme afro souriant
-  'https://images.unsplash.com/photo-1618701030732-d7da9c8f9b74?auto=format&fit=crop&w=300&q=80', // Homme asiatique urbain
-  'https://images.unsplash.com/photo-1571800955791-53394e9e6d97?auto=format&fit=crop&w=300&q=80', // Homme indien pro
-  'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=300&q=80', // Homme costume décontracté
-  'https://images.unsplash.com/photo-1546961342-ea5f62d5a27b?auto=format&fit=crop&w=300&q=80', // Homme barbu moyen-orient
-  'https://images.unsplash.com/photo-1463453091185-61582044d556?auto=format&fit=crop&w=300&q=80', // Homme afro décontracté
-  'https://images.unsplash.com/photo-1583864697784-a0efc8379f70?auto=format&fit=crop&w=300&q=80', // Homme cheveux longs
-  'https://images.unsplash.com/photo-1655720828018-edd2daec9349?auto=format&fit=crop&w=300&q=80', // Homme sourire solaire
-  // Avatars numériques & Ados
-  'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=300&q=80', // Avatar moderne 3D/Tech
-  'https://images.unsplash.com/photo-1628157582853-a796fa650a6a?auto=format&fit=crop&w=300&q=80', // Avatar 3D épuré
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Fatou&skinColor=614335&top=froBand&hairColor=2c1b18&accessoriesProbability=100',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Liam&skinColor=edb98a&top=shortFlat&hairColor=4a312c&accessoriesProbability=100',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Mei&skinColor=f8d25c&top=straight02&hairColor=2c1b18',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Carlos&skinColor=ae5d29&top=theCaesar&facialHairProbability=100&hairColor=2c1b18',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Amina&skinColor=614335&top=dreads&hairColor=2c1b18',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Sophie&skinColor=edb98a&top=bob&hairColor=d6b370&accessoriesProbability=100',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Malik&skinColor=614335&top=shavedSides&facialHairProbability=100&hairColor=2c1b18',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Zainab&skinColor=d08b5b&top=hijab&hairColor=2c1b18',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Alex&skinColor=edb98a&top=curly&hairColor=a55728',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Kavita&skinColor=ae5d29&top=longButNotTooLong&hairColor=2c1b18',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Antoine&skinColor=edb98a&top=theCaesarAndSidePart&hairColor=b58143',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Kenji&skinColor=f8d25c&top=shortCurly&hairColor=2c1b18',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Nia&skinColor=614335&top=bigHair&hairColor=2c1b18',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Lucas&skinColor=edb98a&top=sides&hairColor=4a312c&facialHairProbability=100',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Elena&skinColor=d08b5b&top=curvy&hairColor=724133',
+  'https://api.dicebear.com/7.x/avataaars/svg?seed=Tariq&skinColor=ae5d29&top=shortWaved&hairColor=2c1b18&accessoriesProbability=100',
 ];
