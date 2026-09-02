@@ -510,10 +510,11 @@ function FeedCardItem({
             }}
             style={{ display: 'flex', alignItems: 'center', gap: '7px', fontWeight: '700', fontSize: '13px', color: 'var(--text-main)', cursor: onAuthorProfileClick ? 'pointer' : 'default' }}
           >
-            <img
+            <ProgressiveImage
               src={(profile?.name && item.author === profile.name) ? (profile?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80') : (typeof getAuthorAvatar === 'function' ? getAuthorAvatar(item.author) : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80')}
               alt={item.author || 'Auteur'}
-              style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover', border: '1px solid var(--border-color)' }}
+              style={{ width: '24px', height: '24px', borderRadius: '50%', flexShrink: 0, border: '1px solid var(--border-color)', overflow: 'hidden' }}
+              imgStyle={{ borderRadius: '50%', objectFit: 'cover' }}
             />
             {item.author || 'Membre Troco'}
           </span>

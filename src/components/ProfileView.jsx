@@ -103,7 +103,12 @@ export default function ProfileView({
           {/* AVATAR AVEC UPLOAD */}
           <div style={{ position: 'relative' }}>
             <div style={{ width: '96px', height: '96px', borderRadius: '50%', overflow: 'hidden', border: '3px solid var(--accent-primary)', boxShadow: 'var(--shadow-accent)' }}>
-              <img src={isEditingProfile ? (profileDraft?.avatar || profile?.avatar) : (profile?.avatar || '')} alt={profile?.name || 'Profil'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              <ProgressiveImage
+                src={isEditingProfile ? (profileDraft?.avatar || profile?.avatar) : (profile?.avatar || '')}
+                alt={profile?.name || 'Profil'}
+                style={{ width: '100%', height: '100%' }}
+                imgStyle={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
             </div>
 
             {isEditingProfile && (

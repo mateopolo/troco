@@ -225,16 +225,20 @@ export default function PublicProfileModal({
           >
             {/* AVATAR AVEC BADGE EN LIGNE */}
             <div style={{ position: 'relative', flexShrink: 0 }}>
-              <img
+              <ProgressiveImage
                 src={avatar}
                 alt={userName}
                 style={{
                   width: '84px',
                   height: '84px',
                   borderRadius: '50%',
-                  objectFit: 'cover',
                   border: '3px solid var(--accent-primary)',
                   boxShadow: 'var(--shadow-accent)',
+                  overflow: 'hidden',
+                }}
+                imgStyle={{
+                  borderRadius: '50%',
+                  objectFit: 'cover',
                 }}
               />
               <div
@@ -597,10 +601,11 @@ export default function PublicProfileModal({
                 >
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <img
+                      <ProgressiveImage
                         src={rev.avatar}
                         alt={rev.author}
-                        style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover' }}
+                        style={{ width: '32px', height: '32px', borderRadius: '50%', flexShrink: 0, overflow: 'hidden' }}
+                        imgStyle={{ borderRadius: '50%', objectFit: 'cover' }}
                       />
                       <div>
                         <div style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-main)' }}>
