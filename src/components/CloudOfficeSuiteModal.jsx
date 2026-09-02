@@ -130,18 +130,27 @@ export default function CloudOfficeSuiteModal({
   isOpen,
   onClose,
   groupId = 'demo_group_office',
+  documentId = null,
+  docId = null,
+  document: propDoc = null,
+  doc: propDocAlias = null,
+  note = null,
   projectTitle = 'Suite Collaborative Troco',
   currentUser = null,
   darkMode = false,
   initialTab = 'docs',
 }) {
-  const [activeTab, setActiveTab] = useState(initialTab); // 'docs' | 'sheets' | 'slides' | 'history'
-  const [docTitle, setDocTitle] = useState('Spécifications & Notes - ' + projectTitle);
-  const [docContent, setDocContent] = useState(DEFAULT_DOC_TEXT);
-  const [sheetTitle, setSheetTitle] = useState('Budget & Planning - ' + projectTitle);
-  const [sheetData, setSheetData] = useState(DEFAULT_SHEET_DATA);
-  const [slidesTitle, setSlidesTitle] = useState('Présentation - ' + projectTitle);
-  const [slides, setSlides] = useState(DEFAULT_SLIDES);
+  const effectiveDoc = propDoc || propDocAlias || note || null;
+  const effectiveGroupId = String(groupId?.id || groupId || 'demo_group_office');
+  const effectiveDocId = String(documentId || docId || effectiveDoc?.id || effectiveDoc?.documentId || 'document');
+
+  const [activeTab, setActiveTab] = useState(initialTab || 'docs'); // 'docs' | 'sheets' | 'slides' | 'history'
+  const [docTitle, setDocTitle] = useState(() => effectiveDoc?.title || effectiveDoc?.name || (projectTitle ? `Spécifications & Notes - ${projectTitle}` : 'Spécifications & Notes'));
+  const [docContent, setDocContent] = useState(() => (typeof effectiveDoc?.content === 'string' ? effectiveDoc.content : (typeof effectiveDoc?.text === 'string' ? effectiveDoc.text : DEFAULT_DOC_TEXT)));
+  const [sheetTitle, setSheetTitle] = useState(() => effectiveDoc?.sheetTitle || (projectTitle ? `Budget & Planning - ${projectTitle}` : 'Budget & Planning'));
+  const [sheetData, setSheetData] = useState(() => effectiveDoc?.gridData || effectiveDoc?.sheetData || DEFAULT_SHEET_DATA);
+  const [slidesTitle, setSlidesTitle] = useState(() => effectiveDoc?.slidesTitle || (projectTitle ? `Présentation - ${projectTitle}` : 'Présentation'));
+  const [slides, setSlides] = useState(() => (Array.isArray(effectiveDoc?.slides) ? effectiveDoc.slides : DEFAULT_SLIDES));
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [isPresenting, setIsPresenting] = useState(false);
   const [versionHistory, setVersionHistory] = useState([]);
@@ -153,31 +162,35 @@ export default function CloudOfficeSuiteModal({
 
   // Synchronisation Firestore en temps réel pour Troco Docs
   useEffect(() => {
-    if (!isOpen || !groupId || !db) return;
+    if (!isOpen || !effectiveGroupId || !db) return;
 
     try {
-      const docRef = doc(db, 'chats', String(groupId), 'workspace', 'document');
+      const docRef = doc(db, 'chats', effectiveGroupId, 'workspace', effectiveDocId);
       const unsubscribe = onSnapshot(docRef, (snapshot) => {
-        if (snapshot.exists()) {
-          const data = snapshot.data();
-          if (data.title) setDocTitle(data.title);
-          if (data.content && data.lastEditor !== (currentUser?.name || currentUser?.id)) {
-            setDocContent(data.content);
+        try {
+          if (snapshot?.exists?.()) {
+            const data = snapshot.data() || {};
+            if (data?.title) setDocTitle(data.title || '');
+            if (data?.content !== undefined && data?.lastEditor !== (currentUser?.name || currentUser?.id)) {
+              setDocContent(String(data.content || ''));
+            }
+            if (data?.collaborators && Array.isArray(data.collaborators)) {
+              setCollaborators(data.collaborators);
+            }
+            setSaveStatus('Synchronisé en direct 🟢');
+          } else {
+            // Initialisation immédiate par défaut si non existant
+            const myName = currentUser?.name || 'Moi';
+            setDoc(docRef, {
+              title: docTitle || 'Document Partagé',
+              content: DEFAULT_DOC_TEXT,
+              lastEditor: myName,
+              collaborators: [myName, 'Collaborateur'],
+              updatedAt: serverTimestamp(),
+            }, { merge: true }).catch(() => {});
           }
-          if (data.collaborators && Array.isArray(data.collaborators)) {
-            setCollaborators(data.collaborators);
-          }
-          setSaveStatus('Synchronisé en direct 🟢');
-        } else {
-          // Initialisation immédiate par défaut si non existant
-          const myName = currentUser?.name || 'Moi';
-          setDoc(docRef, {
-            title: docTitle || 'Document Partagé',
-            content: DEFAULT_DOC_TEXT,
-            lastEditor: myName,
-            collaborators: [myName, 'Collaborateur'],
-            updatedAt: serverTimestamp(),
-          }, { merge: true }).catch(() => {});
+        } catch (err) {
+          console.warn('[TrocoDocs] snapshot parse error:', err);
         }
       }, (err) => {
         console.warn('[TrocoDocs] snapshot error:', err);
@@ -185,31 +198,35 @@ export default function CloudOfficeSuiteModal({
 
       return () => unsubscribe();
     } catch (_) {}
-  }, [isOpen, groupId, currentUser, docTitle]);
+  }, [isOpen, effectiveGroupId, effectiveDocId, currentUser, docTitle]);
 
   // Synchronisation Firestore en temps réel pour Troco Sheets
   useEffect(() => {
-    if (!isOpen || !groupId || !db) return;
+    if (!isOpen || !effectiveGroupId || !db) return;
 
     try {
-      const sheetRef = doc(db, 'chats', String(groupId), 'workspace', 'spreadsheet');
+      const sheetRef = doc(db, 'chats', effectiveGroupId, 'workspace', 'spreadsheet');
       const unsubscribe = onSnapshot(sheetRef, (snapshot) => {
-        if (snapshot.exists()) {
-          const data = snapshot.data();
-          if (data.title) setSheetTitle(data.title);
-          if (data.gridData && data.lastEditor !== (currentUser?.name || currentUser?.id)) {
-            setSheetData(data.gridData);
+        try {
+          if (snapshot?.exists?.()) {
+            const data = snapshot.data() || {};
+            if (data?.title) setSheetTitle(data.title || '');
+            if (data?.gridData && data?.lastEditor !== (currentUser?.name || currentUser?.id)) {
+              setSheetData(data.gridData || {});
+            }
+            setSaveStatus('Synchronisé en direct 🟢');
+          } else {
+            // Initialisation immédiate par défaut si non existant
+            const myName = currentUser?.name || 'Moi';
+            setDoc(sheetRef, {
+              title: sheetTitle || 'Tableur Collaboratif',
+              gridData: DEFAULT_SHEET_DATA,
+              lastEditor: myName,
+              updatedAt: serverTimestamp(),
+            }, { merge: true }).catch(() => {});
           }
-          setSaveStatus('Synchronisé en direct 🟢');
-        } else {
-          // Initialisation immédiate par défaut si non existant
-          const myName = currentUser?.name || 'Moi';
-          setDoc(sheetRef, {
-            title: sheetTitle || 'Tableur Collaboratif',
-            gridData: DEFAULT_SHEET_DATA,
-            lastEditor: myName,
-            updatedAt: serverTimestamp(),
-          }, { merge: true }).catch(() => {});
+        } catch (err) {
+          console.warn('[TrocoSheets] snapshot parse error:', err);
         }
       }, (err) => {
         console.warn('[TrocoSheets] snapshot error:', err);
@@ -217,31 +234,35 @@ export default function CloudOfficeSuiteModal({
 
       return () => unsubscribe();
     } catch (_) {}
-  }, [isOpen, groupId, currentUser, sheetTitle]);
+  }, [isOpen, effectiveGroupId, currentUser, sheetTitle]);
 
   // Synchronisation Firestore en temps réel pour Troco Slides
   useEffect(() => {
-    if (!isOpen || !groupId || !db) return;
+    if (!isOpen || !effectiveGroupId || !db) return;
 
     try {
-      const slidesRef = doc(db, 'chats', String(groupId), 'workspace', 'slides');
+      const slidesRef = doc(db, 'chats', effectiveGroupId, 'workspace', 'slides');
       const unsubscribe = onSnapshot(slidesRef, (snapshot) => {
-        if (snapshot.exists()) {
-          const data = snapshot.data();
-          if (data.title) setSlidesTitle(data.title);
-          if (data.slides && data.lastEditor !== (currentUser?.name || currentUser?.id)) {
-            setSlides(data.slides);
+        try {
+          if (snapshot?.exists?.()) {
+            const data = snapshot.data() || {};
+            if (data?.title) setSlidesTitle(data.title || '');
+            if (data?.slides && Array.isArray(data.slides) && data?.lastEditor !== (currentUser?.name || currentUser?.id)) {
+              setSlides(data.slides);
+            }
+            setSaveStatus('Synchronisé en direct 🟢');
+          } else {
+            // Initialisation immédiate par défaut si non existant
+            const myName = currentUser?.name || 'Moi';
+            setDoc(slidesRef, {
+              title: slidesTitle || 'Présentation Collaboratif',
+              slides: DEFAULT_SLIDES,
+              lastEditor: myName,
+              updatedAt: serverTimestamp(),
+            }, { merge: true }).catch(() => {});
           }
-          setSaveStatus('Synchronisé en direct 🟢');
-        } else {
-          // Initialisation immédiate par défaut si non existant
-          const myName = currentUser?.name || 'Moi';
-          setDoc(slidesRef, {
-            title: slidesTitle || 'Présentation Collaboratif',
-            slides: DEFAULT_SLIDES,
-            lastEditor: myName,
-            updatedAt: serverTimestamp(),
-          }, { merge: true }).catch(() => {});
+        } catch (err) {
+          console.warn('[TrocoSlides] snapshot parse error:', err);
         }
       }, (err) => {
         console.warn('[TrocoSlides] snapshot error:', err);
@@ -249,25 +270,25 @@ export default function CloudOfficeSuiteModal({
 
       return () => unsubscribe();
     } catch (_) {}
-  }, [isOpen, groupId, currentUser, slidesTitle]);
+  }, [isOpen, effectiveGroupId, currentUser, slidesTitle]);
 
   // Sauvegarde des modifications Troco Docs
   const saveDocToFirestore = useCallback(async (newContent, newTitle = docTitle) => {
-    if (!groupId || !db) return;
+    if (!effectiveGroupId || !db) return;
     try {
       setSaveStatus('Sauvegarde en cours...');
       const myName = currentUser?.name || 'Moi';
-      const snippet = (newContent || '')
+      const snippet = String(newContent || '')
         .replace(/<[^>]*>/g, ' ')
         .replace(/[#*`_~\[\]()]/g, '')
         .replace(/\s+/g, ' ')
         .trim()
         .slice(0, 150);
 
-      const docRef = doc(db, 'chats', String(groupId), 'workspace', 'document');
+      const docRef = doc(db, 'chats', effectiveGroupId, 'workspace', effectiveDocId);
       await setDoc(docRef, {
-        title: newTitle,
-        content: newContent,
+        title: String(newTitle || 'Document Partagé'),
+        content: String(newContent || ''),
         snippet,
         summary: snippet,
         lastEditor: myName,
@@ -279,13 +300,13 @@ export default function CloudOfficeSuiteModal({
         {
           id: 'v_' + Date.now(),
           type: 'doc',
-          title: newTitle,
-          content: newContent,
+          title: newTitle || 'Document',
+          content: newContent || '',
           snippet,
           timestamp: new Date().toLocaleTimeString(),
           author: myName,
         },
-        ...prev.slice(0, 19),
+        ...(prev || []).slice(0, 19),
       ]);
 
       setSaveStatus('Synchronisé en direct 🟢');
@@ -293,7 +314,7 @@ export default function CloudOfficeSuiteModal({
       console.warn('[TrocoDocs] Save error:', err);
       setSaveStatus('Mode hors-ligne');
     }
-  }, [groupId, currentUser, docTitle]);
+  }, [effectiveGroupId, effectiveDocId, currentUser, docTitle]);
 
   // Sauvegarde des modifications Troco Sheets
   const saveSheetToFirestore = useCallback(async (newGridData, newTitle = sheetTitle) => {
@@ -446,28 +467,34 @@ export default function CloudOfficeSuiteModal({
   // ==========================================
 
   // 1. Export PDF (Moteur d'impression natif stylé)
+  // 1. Export PDF Imprimable HD
   const handleDownloadPDF = () => {
     let contentHtml = '';
+    const safeDocTitle = String(docTitle || 'Document');
+    const safeDocContent = String(docContent || '');
+    const safeSheetTitle = String(sheetTitle || 'Feuille de calcul');
+    const safeSlidesTitle = String(slidesTitle || 'Présentation');
+
     if (activeTab === 'docs') {
-      contentHtml = `<h1>${docTitle}</h1><pre style="white-space: pre-wrap; font-family: inherit; font-size: 14px; line-height: 1.6;">${docContent}</pre>`;
+      contentHtml = `<h1>${safeDocTitle}</h1><pre style="white-space: pre-wrap; font-family: inherit; font-size: 14px; line-height: 1.6;">${safeDocContent}</pre>`;
     } else if (activeTab === 'sheets') {
       const cols = ['A', 'B', 'C', 'D', 'E', 'F'];
       const rowsHtml = [];
       for (let r = 1; r <= 10; r++) {
         const cellsHtml = cols.map(c => {
-          const val = evaluateCellFormula(sheetData[`${c}${r}`] || '', sheetData);
+          const val = evaluateCellFormula(sheetData?.[`${c}${r}`] || '', sheetData);
           return r === 1 ? `<th style="background:#FAF7F2;">${val}</th>` : `<td>${val}</td>`;
         }).join('');
         rowsHtml.push(`<tr>${cellsHtml}</tr>`);
       }
       const tableHtml = `<table border="1" cellpadding="8" style="border-collapse: collapse; width: 100%;">${rowsHtml.join('')}</table>`;
-      contentHtml = `<h1>${sheetTitle}</h1>${tableHtml}`;
+      contentHtml = `<h1>${safeSheetTitle}</h1>${tableHtml}`;
     } else {
-      contentHtml = `<h1>${slidesTitle}</h1>` + slides.map((s, idx) => `
+      contentHtml = `<h1>${safeSlidesTitle}</h1>` + (slides || []).map((s, idx) => `
         <div style="page-break-after: always; padding: 24px; border: 1px solid #ddd; margin-bottom: 20px; border-radius: 12px;">
-          <h2>Diapo ${idx + 1} : ${s.title}</h2>
-          <p style="color: #666; font-style: italic;">${s.subtitle}</p>
-          <ul>${(s.bullets || []).map(b => `<li>${b}</li>`).join('')}</ul>
+          <h2>Diapo ${idx + 1} : ${s?.title || ''}</h2>
+          <p style="color: #666; font-style: italic;">${s?.subtitle || ''}</p>
+          <ul>${(s?.bullets || []).map(b => `<li>${b || ''}</li>`).join('')}</ul>
         </div>
       `).join('');
     }
@@ -478,7 +505,7 @@ export default function CloudOfficeSuiteModal({
       <!DOCTYPE html>
       <html>
         <head>
-          <title>${docTitle} - Export PDF</title>
+          <title>${safeDocTitle} - Export PDF</title>
           <style>
             body { font-family: 'Inter', sans-serif; padding: 32px; color: #2D2825; }
             h1 { color: #C67D5B; border-bottom: 2px solid #C67D5B; padding-bottom: 8px; }
@@ -500,26 +527,29 @@ export default function CloudOfficeSuiteModal({
 
   // 2. Export Word (.docx / HTML Word Document)
   const handleDownloadDOCX = () => {
+    const safeDocTitle = String(docTitle || 'Document');
+    const safeDocContent = String(docContent || '');
     const header = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-    <head><meta charset='utf-8'><title>${docTitle}</title></head><body>`;
+    <head><meta charset='utf-8'><title>${safeDocTitle}</title></head><body>`;
     const footer = `</body></html>`;
-    const body = `<h1>${docTitle}</h1><p>${docContent.replace(/\n/g, '<br/>')}</p>`;
+    const body = `<h1>${safeDocTitle}</h1><p>${safeDocContent.replace(/\n/g, '<br/>')}</p>`;
     const blob = new Blob(['\ufeff', header + body + footer], { type: 'application/msword' });
     const link = document.createElement('a');
-    link.download = `${docTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.docx`;
+    link.download = `${safeDocTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.docx`;
     link.href = URL.createObjectURL(blob);
     link.click();
   };
 
   // 3. Export Excel (.xlsx / XML Spreadsheet)
   const handleDownloadXLSX = () => {
+    const safeSheetTitle = String(sheetTitle || 'Feuille_de_calcul');
     const cols = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
     let rowsXml = '';
     for (let r = 1; r <= 15; r++) {
       let cellsXml = '';
       cols.forEach(c => {
-        const val = evaluateCellFormula(sheetData[`${c}${r}`] || '', sheetData);
-        cellsXml += `<Cell><Data ss:Type="String">${val.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</Data></Cell>`;
+        const val = evaluateCellFormula(sheetData?.[`${c}${r}`] || '', sheetData);
+        cellsXml += `<Cell><Data ss:Type="String">${String(val).replace(/&/g, '&amp;').replace(/</g, '&lt;')}</Data></Cell>`;
       });
       rowsXml += `<Row>${cellsXml}</Row>`;
     }
@@ -533,47 +563,51 @@ export default function CloudOfficeSuiteModal({
     </Workbook>`;
     const blob = new Blob([excelXml], { type: 'application/vnd.ms-excel;charset=utf-8' });
     const link = document.createElement('a');
-    link.download = `${sheetTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.xlsx`;
+    link.download = `${safeSheetTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.xlsx`;
     link.href = URL.createObjectURL(blob);
     link.click();
   };
 
   // 4. Export PowerPoint (.pptx / HTML Slide Presentation Package)
   const handleDownloadPPTX = () => {
-    const slidesHtml = slides.map((s, idx) => `
+    const safeSlidesTitle = String(slidesTitle || 'Presentation');
+    const slidesHtml = (slides || []).map((s, idx) => `
       <section style="page-break-after: always; padding: 40px; border: 2px solid #C67D5B; border-radius: 16px; margin-bottom: 24px;">
-        <h1 style="color: #C67D5B; font-size: 28px;">Diapositive ${idx + 1} : ${s.title}</h1>
-        <h3 style="color: #6B5E54;">${s.subtitle}</h3>
-        <ul>${(s.bullets || []).map(b => `<li style="font-size: 16px; margin-bottom: 8px;">${b}</li>`).join('')}</ul>
+        <h1 style="color: #C67D5B; font-size: 28px;">Diapositive ${idx + 1} : ${s?.title || ''}</h1>
+        <h3 style="color: #6B5E54;">${s?.subtitle || ''}</h3>
+        <ul>${(s?.bullets || []).map(b => `<li style="font-size: 16px; margin-bottom: 8px;">${b || ''}</li>`).join('')}</ul>
       </section>
     `).join('');
-    const fullHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${slidesTitle}</title></head><body>${slidesHtml}</body></html>`;
+    const fullHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${safeSlidesTitle}</title></head><body>${slidesHtml}</body></html>`;
     const blob = new Blob([fullHtml], { type: 'application/vnd.ms-powerpoint;charset=utf-8' });
     const link = document.createElement('a');
-    link.download = `${slidesTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pptx`;
+    link.download = `${safeSlidesTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.pptx`;
     link.href = URL.createObjectURL(blob);
     link.click();
   };
 
   // 5. Export Markdown & CSV
   const handleDownloadMarkdown = () => {
-    const blob = new Blob([docContent], { type: 'text/markdown;charset=utf-8' });
+    const safeDocTitle = String(docTitle || 'Document');
+    const safeDocContent = String(docContent || '');
+    const blob = new Blob([safeDocContent], { type: 'text/markdown;charset=utf-8' });
     const link = document.createElement('a');
-    link.download = `${docTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.md`;
+    link.download = `${safeDocTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.md`;
     link.href = URL.createObjectURL(blob);
     link.click();
   };
 
   const handleDownloadCSV = () => {
+    const safeSheetTitle = String(sheetTitle || 'Feuille_de_calcul');
     const cols = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
     let csv = '';
     for (let r = 1; r <= 15; r++) {
-      const rowVals = cols.map(c => `"${(evaluateCellFormula(sheetData[`${c}${r}`] || '', sheetData)).replace(/"/g, '""')}"`);
+      const rowVals = cols.map(c => `"${(evaluateCellFormula(sheetData?.[`${c}${r}`] || '', sheetData)).replace(/"/g, '""')}"`);
       csv += rowVals.join(',') + '\n';
     }
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
     const link = document.createElement('a');
-    link.download = `${sheetTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.csv`;
+    link.download = `${safeSheetTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.csv`;
     link.href = URL.createObjectURL(blob);
     link.click();
   };

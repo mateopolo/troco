@@ -15,10 +15,12 @@ export default function WorkspaceMessageCard({
   isMine = false,
   isMobile = false,
   onOpenWorkspace,
+  openWorkspaceTool,
   darkMode = false,
 }) {
-  const wType = msg.workspaceType || 'whiteboard';
-  const versionNumber = Number(msg.version?.toString().replace(/\D/g, '')) || 1;
+  const safeMsg = msg || {};
+  const wType = safeMsg?.workspaceType || safeMsg?.type || 'whiteboard';
+  const versionNumber = Number(safeMsg?.version?.toString?.()?.replace(/\D/g, '')) || 1;
   const isNotes = wType === 'notes';
   const isDocs = wType === 'docs';
   const isSheets = wType === 'sheets';
@@ -42,22 +44,27 @@ export default function WorkspaceMessageCard({
     <Paintbrush size={16} />
   );
 
-  const displayTitle = msg.workspaceTitle || msg.title || (isWhiteboard ? 'Tableau Blanc collaboratif' : isNotes ? 'Notes Partagées' : isDocs ? 'Troco Doc' : 'Troco Sheet');
+  const documentId = safeMsg?.documentId || safeMsg?.docId || safeMsg?.workspaceId || safeMsg?.boardId || safeMsg?.document?.id || '';
+  const displayTitle = safeMsg?.workspaceTitle || safeMsg?.title || safeMsg?.document?.title || (isWhiteboard ? 'Tableau Blanc collaboratif' : isNotes ? 'Notes Partagées' : isDocs ? 'Troco Doc' : 'Troco Sheet');
   const buttonLabel = isMine ? 'Ouvrir' : 'Rejoindre';
-  const rawSnippet = (msg.snippet || msg.summary || msg.text || msg.content || "Document collaboratif partagé dans l'espace de travail.");
+  const rawSnippet = String(safeMsg?.snippet || safeMsg?.summary || safeMsg?.text || safeMsg?.content || safeMsg?.document?.content || "Document collaboratif partagé dans l'espace de travail.");
   const truncatedSnippet = rawSnippet.slice(0, 100) + (rawSnippet.length > 100 ? '...' : '');
 
   const handleCardClick = (e) => {
     e?.preventDefault?.();
     e?.stopPropagation?.();
-    if (typeof onOpenWorkspace === 'function') {
+    const targetDocId = documentId || safeMsg?.workspaceId || safeMsg?.boardId || '';
+    if (typeof openWorkspaceTool === 'function') {
+      openWorkspaceTool(wType, targetDocId);
+    } else if (typeof onOpenWorkspace === 'function') {
       onOpenWorkspace({
         type: wType,
-        workspaceId: msg.workspaceId || msg.boardId,
-        boardId: msg.boardId || msg.workspaceId,
+        documentId: targetDocId,
+        workspaceId: targetDocId,
+        boardId: safeMsg?.boardId || targetDocId,
         title: displayTitle,
         version: versionNumber,
-      });
+      }, targetDocId);
     }
   };
 
@@ -282,7 +289,7 @@ export default function WorkspaceMessageCard({
                 marginTop: '1px',
               }}
             >
-              {msg.senderName ? `Par ${msg.senderName}` : isMine ? 'Par Vous' : 'Tableau partagé'}
+              {safeMsg?.senderName ? `Par ${safeMsg.senderName}` : isMine ? 'Par Vous' : 'Document partagé'}
             </div>
           </div>
 

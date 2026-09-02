@@ -40,16 +40,21 @@ export default function SharedDocumentModal({
   onClose,
   groupId = 'demo_group_notes',
   docId = null,
+  documentId = null,
+  document: propDoc = null,
+  doc: propDocAlias = null,
+  note = null,
   projectTitle = 'Notes Partagées',
   currentUser = null,
   darkMode = false,
   onSendToChat = null,
   handleSendMessage = null,
 }) {
-  const effectiveDocId = docId || groupId || 'default_shared_doc';
+  const effectiveDoc = propDoc || propDocAlias || note || null;
+  const effectiveDocId = docId || documentId || effectiveDoc?.id || effectiveDoc?.docId || (typeof groupId === 'string' ? groupId : groupId?.id) || 'default_shared_doc';
 
-  const [title, setTitle] = useState(projectTitle ? `Notes - ${projectTitle}` : 'Note de collaboration');
-  const [content, setContent] = useState(DEFAULT_NOTE_CONTENT);
+  const [title, setTitle] = useState(() => effectiveDoc?.title || effectiveDoc?.name || (projectTitle ? `Notes - ${projectTitle}` : 'Note de collaboration'));
+  const [content, setContent] = useState(() => (typeof effectiveDoc?.content === 'string' ? effectiveDoc.content : (typeof effectiveDoc?.text === 'string' ? effectiveDoc.text : DEFAULT_NOTE_CONTENT)));
   const [saveStatus, setSaveStatus] = useState('Synchronisé en direct 🟢');
   const [previewMode, setPreviewMode] = useState(false);
   const [isSendingToChat, setIsSendingToChat] = useState(false);
@@ -66,28 +71,32 @@ export default function SharedDocumentModal({
     try {
       const noteDocRef = doc(db, 'project_shared_notes', String(effectiveDocId));
       const unsubscribe = onSnapshot(noteDocRef, (snapshot) => {
-        if (snapshot.exists()) {
-          const data = snapshot.data();
-          if (data.title) setTitle(data.title);
-          if (data.content !== undefined && data.lastEditorUid !== (currentUser?.uid || currentUser?.id)) {
-            if (!isTypingRef.current) {
-              setContent(data.content);
+        try {
+          if (snapshot?.exists?.()) {
+            const data = snapshot.data() || {};
+            if (data?.title) setTitle(data.title || '');
+            if (data?.content !== undefined && data?.lastEditorUid !== (currentUser?.uid || currentUser?.id)) {
+              if (!isTypingRef.current) {
+                setContent(String(data.content || ''));
+              }
             }
+            setSaveStatus('Synchronisé en direct 🟢');
+          } else {
+            // Initialisation immédiate par défaut si le document n'existe pas encore
+            const myName = currentUser?.name || 'Moi';
+            const myUid = currentUser?.uid || currentUser?.id || 'me';
+            setDoc(noteDocRef, {
+              docId: effectiveDocId,
+              groupId: String(groupId?.id || groupId || 'default_group'),
+              title: title || 'Notes Partagées',
+              content: DEFAULT_NOTE_CONTENT,
+              lastEditor: myName,
+              lastEditorUid: myUid,
+              updatedAt: serverTimestamp(),
+            }, { merge: true }).catch(() => {});
           }
-          setSaveStatus('Synchronisé en direct 🟢');
-        } else {
-          // Initialisation immédiate par défaut si le document n'existe pas encore
-          const myName = currentUser?.name || 'Moi';
-          const myUid = currentUser?.uid || currentUser?.id || 'me';
-          setDoc(noteDocRef, {
-            docId: effectiveDocId,
-            groupId: String(groupId || 'default_group'),
-            title: title || 'Notes Partagées',
-            content: DEFAULT_NOTE_CONTENT,
-            lastEditor: myName,
-            lastEditorUid: myUid,
-            updatedAt: serverTimestamp(),
-          }, { merge: true }).catch(() => {});
+        } catch (snapshotErr) {
+          console.warn('[SharedDocumentModal] onSnapshot processing error:', snapshotErr);
         }
       }, (err) => {
         console.warn('[Firestore Shared Note] Snapshot notice:', err);
@@ -593,17 +602,18 @@ export default function SharedDocumentModal({
                 fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif',
               }}
             >
-              {content.split('\n').map((line, idx) => {
-                if (line.startsWith('# ')) {
-                  return <h1 key={idx} style={{ color: '#C67D5B', margin: '16px 0 8px', fontSize: '26px' }}>{line.replace('# ', '')}</h1>;
+              {String(content || '').split('\n').map((line, idx) => {
+                const safeLine = String(line || '');
+                if (safeLine.startsWith('# ')) {
+                  return <h1 key={idx} style={{ color: '#C67D5B', margin: '16px 0 8px', fontSize: '26px' }}>{safeLine.replace('# ', '')}</h1>;
                 }
-                if (line.startsWith('## ')) {
-                  return <h2 key={idx} style={{ color: darkMode ? '#FAF7F2' : '#2D2520', margin: '14px 0 6px', fontSize: '20px' }}>{line.replace('## ', '')}</h2>;
+                if (safeLine.startsWith('## ')) {
+                  return <h2 key={idx} style={{ color: darkMode ? '#FAF7F2' : '#2D2520', margin: '14px 0 6px', fontSize: '20px' }}>{safeLine.replace('## ', '')}</h2>;
                 }
-                if (line.startsWith('### ')) {
-                  return <h3 key={idx} style={{ color: darkMode ? '#E5DCD3' : '#4D423A', margin: '12px 0 4px', fontSize: '16px' }}>{line.replace('### ', '')}</h3>;
+                if (safeLine.startsWith('### ')) {
+                  return <h3 key={idx} style={{ color: darkMode ? '#E5DCD3' : '#4D423A', margin: '12px 0 4px', fontSize: '16px' }}>{safeLine.replace('### ', '')}</h3>;
                 }
-                if (line.startsWith('> ')) {
+                if (safeLine.startsWith('> ')) {
                   return (
                     <blockquote
                       key={idx}
@@ -615,13 +625,13 @@ export default function SharedDocumentModal({
                         fontStyle: 'italic',
                       }}
                     >
-                      {line.replace('> ', '')}
+                      {safeLine.replace('> ', '')}
                     </blockquote>
                   );
                 }
-                if (line.startsWith('- [x] ') || line.startsWith('- [ ] ')) {
-                  const isChecked = line.startsWith('- [x] ');
-                  const taskText = line.replace(/- \[[ x]\] /, '');
+                if (safeLine.startsWith('- [x] ') || safeLine.startsWith('- [ ] ')) {
+                  const isChecked = safeLine.startsWith('- [x] ');
+                  const taskText = safeLine.replace(/- \[[ x]\] /, '');
                   return (
                     <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: '4px 0' }}>
                       <input type="checkbox" checked={isChecked} readOnly style={{ accentColor: '#C67D5B' }} />
