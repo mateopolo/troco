@@ -1488,25 +1488,24 @@ function ChatView({
                 Boolean(msg.proposal)
               ) {
                 const terms = msg.dealTerms || msg.deal || msg.proposal || msg.terms || {};
-                const expectedHours = Number(terms.expectedHours ?? terms.hours ?? (terms.durationValue ? Number(terms.durationValue) : 0)) || 0;
-                const expectedTokens = Number(terms.expectedTokens ?? terms.tokens ?? terms.trocoTokens ?? 0) || 0;
+                const expectedHours = Number(terms.hours ?? terms.expectedHours ?? (terms.durationValue ? Number(terms.durationValue) : 0)) || 0;
+                const expectedTokens = Number(terms.tokens ?? terms.expectedTokens ?? terms.trocoTokens ?? 0) || 0;
                 const fiatAmount = Number(terms.fiatAmount ?? terms.fiat ?? terms.euroAmount ?? 0) || 0;
-                const serviceTitle = terms.serviceTitle || terms.title || terms.itemName || msg.listing || activeChatObj?.listing || "Prestation de service";
+                const serviceTitle = terms.title || terms.serviceTitle || terms.itemName || msg.listing || activeChatObj?.listing || "Prestation de service";
                 const rawDescription = terms.conditions || terms.description || terms.notes || msg.text || msg.content || "";
+                const isCounterOffer = Boolean(terms.isCounterOffer || msg.type === 'deal_counter_offer');
 
                 const currentUid = profile?.uid || (auth?.currentUser && auth.currentUser.uid);
-                const currentName = profile?.name ? profile.name.trim().toLowerCase() : '';
-                const isMine = Boolean(
-                  (msg.senderUid && currentUid && String(msg.senderUid) === String(currentUid)) ||
-                  (msg.senderId && currentUid && String(msg.senderId) === String(currentUid)) ||
-                  (msg.senderName && currentName && msg.senderName.trim().toLowerCase() === currentName) ||
-                  (msg.sender === 'me')
-                );
-                const isIncoming = !isMine;
+                const senderId = msg.senderId || msg.senderUid || (msg.sender === 'me' ? currentUid : null);
+                const isRecipient = Boolean(currentUid && senderId ? String(currentUid) !== String(senderId) : msg.sender !== 'me');
+                const isMine = !isRecipient;
+                const isIncoming = isRecipient;
+
                 const currentDealStatus = String(msg.status || 'pending').toLowerCase();
                 const isDealPending = (!msg.status || currentDealStatus === 'pending' || currentDealStatus === 'proposed' || currentDealStatus === 'en_attente' || currentDealStatus === 'sent');
+                const isCountered = (currentDealStatus === 'countered' || currentDealStatus === 'superseded');
                 const isAccepted = (currentDealStatus === 'confirmed' || currentDealStatus === 'accepted' || currentDealStatus === 'validated');
-                const isRejected = (currentDealStatus === 'declined' || currentDealStatus === 'rejected' || currentDealStatus === 'refused');
+                const isRejected = (currentDealStatus === 'declined' || currentDealStatus === 'rejected' || currentDealStatus === 'refused' || currentDealStatus === 'cancelled');
                 const partnerName = activeChatObj?.user || 'l’interlocuteur';
                 const dealConditionsText = getChatMessageDisplayContent && rawDescription
                   ? getChatMessageDisplayContent({ text: rawDescription }, currentLang, isMsgOriginal)
@@ -1541,16 +1540,23 @@ function ChatView({
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', flexWrap: 'wrap', gap: '6px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13.5px', fontWeight: '800', color: 'var(--accent-primary)' }}>
                           <Sparkles size={15} color="var(--accent-primary)" />
-                          {isMine ? (t('myDealProposal') || 'Ma proposition de Deal') : `Proposition de Deal reçue de ${msg.senderName || partnerName}`}
+                          {isMine
+                            ? (isCounterOffer ? 'Ma contre-proposition de Deal' : (t('myDealProposal') || 'Ma proposition de Deal'))
+                            : (isCounterOffer ? `Contre-offre reçue de ${msg.senderName || partnerName}` : `Proposition de Deal reçue de ${msg.senderName || partnerName}`)}
                         </div>
-                        {isDealPending && isIncoming && (
+                        {isDealPending && isRecipient && (
                           <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', padding: '3px 8px', borderRadius: '999px', border: '1.5px solid var(--accent-primary)' }}>
                             ⚡ Réponse attendue
                           </span>
                         )}
-                        {isDealPending && isMine && (
+                        {isDealPending && !isRecipient && (
                           <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)', padding: '3px 8px', borderRadius: '999px', border: '1px solid var(--border-color)' }}>
                             {t('waitingResponse') || 'En attente'}
+                          </span>
+                        )}
+                        {isCountered && (
+                          <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)', padding: '3px 8px', borderRadius: '999px', border: '1px dashed var(--border-color)' }}>
+                            🔄 Contre-offre émise
                           </span>
                         )}
                         {currentDealStatus === 'escrow_locked' && (
@@ -1596,7 +1602,7 @@ function ChatView({
                         </button>
                       )}
 
-                      {/* BADGES DE CONTREPARTIE STILLPOINT */}
+                      {/* BADGES DE CONTREPARTIE */}
                       <div style={{ display: 'flex', gap: '6px', marginBottom: '12px', flexWrap: 'wrap' }}>
                         {(expectedHours > 0 || terms.durationType) && (
                           <span style={{
@@ -1644,8 +1650,8 @@ function ChatView({
                         )}
                       </div>
 
-                      {/* 3 BOUTONS D'ACTION INTERACTIFS : ACCEPTER / CONTRE-OFFRE / REFUSER OU ANNULER */}
-                      {isDealPending && (
+                      {/* 3 BOUTONS D'ACTION INTERACTIFS POUR LE DESTINATAIRE (ACCEPTER, CONTRE-OFFRE, REFUSER) */}
+                      {isDealPending && isRecipient && (
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px', marginTop: '10px' }}>
                           <button
                             type="button"
@@ -1678,7 +1684,7 @@ function ChatView({
                             }}
                           >
                             <Check size={14} strokeWidth={2.5} />
-                            <span>{isMine ? 'Valider' : 'Accepter'}</span>
+                            <span>Accepter</span>
                           </button>
                           <button
                             type="button"
@@ -1737,8 +1743,85 @@ function ChatView({
                             }}
                           >
                             <X size={14} strokeWidth={2.5} />
-                            <span>{isMine ? 'Annuler' : 'Refuser'}</span>
+                            <span>Refuser</span>
                           </button>
+                        </div>
+                      )}
+
+                      {/* ACTIONS DE NÉGOCIATION POUR L'EXPÉDITEUR EN ATTENTE */}
+                      {isDealPending && !isRecipient && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '10px' }}>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                hapticLight();
+                                if (typeof openCounterOffer === 'function') {
+                                  openCounterOffer(terms, msg.id);
+                                }
+                              }}
+                              className="premium-button"
+                              style={{
+                                border: 'none',
+                                borderRadius: '12px',
+                                padding: '9px 4px',
+                                background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
+                                color: '#FFFFFF',
+                                fontSize: '11.5px',
+                                fontWeight: '800',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '4px',
+                                boxShadow: 'var(--shadow-accent)',
+                                whiteSpace: 'nowrap'
+                              }}
+                            >
+                              <RefreshCw size={13} strokeWidth={2.5} />
+                              <span>Modifier / Contre-offre</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                hapticError();
+                                if (typeof handleDeclineDeal === 'function') {
+                                  handleDeclineDeal(currentChatId, msg.id);
+                                }
+                              }}
+                              className="premium-button"
+                              style={{
+                                border: '1px solid rgba(239, 68, 68, 0.28)',
+                                borderRadius: '12px',
+                                padding: '9px 4px',
+                                backgroundColor: 'rgba(239, 68, 68, 0.08)',
+                                color: '#EF4444',
+                                fontSize: '11.5px',
+                                fontWeight: '800',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '4px',
+                                whiteSpace: 'nowrap'
+                              }}
+                            >
+                              <X size={14} strokeWidth={2.5} />
+                              <span>Annuler l'offre</span>
+                            </button>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'var(--bg-subtle)', border: '1px dashed var(--border-color)', color: 'var(--text-secondary)', borderRadius: '12px', padding: '6px 10px', fontSize: '11px', fontWeight: '700' }}>
+                            <Clock size={12} color="var(--accent-primary)" />
+                            <span>Offre en attente de réponse par votre interlocuteur.</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* BADGE OFFRE REMPLACÉE PAR UNE CONTRE-OFFRE */}
+                      {isCountered && (
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', backgroundColor: 'var(--bg-subtle)', border: '1px dashed var(--border-color)', color: 'var(--text-secondary)', borderRadius: '12px', padding: '8px 12px', fontSize: '11.5px', fontWeight: '700', marginTop: '8px' }}>
+                          <RefreshCw size={13} strokeWidth={2} />
+                          <span>🔄 Offre remplacée par une contre-proposition</span>
                         </div>
                       )}
 

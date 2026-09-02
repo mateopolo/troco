@@ -1191,48 +1191,62 @@ export const useChatManager = ({
   const handleCounterOfferSubmit = async (terms) => {
     if (!selectedChat) return;
     const chatId = selectedChat.id;
+    const currentUserId = profile?.uid || (auth?.currentUser && auth.currentUser.uid) || 'user_anon';
+    const isCounterOffer = Boolean(editingDealId);
+
     const euroAmount = Number(terms.euroAmount !== undefined ? terms.euroAmount : terms.fiatAmount) || 0;
-    const trocoTokens = Number(terms.trocoTokens !== undefined ? terms.trocoTokens : terms.expectedTokens) || 0;
+    const trocoTokens = Number(terms.trocoTokens !== undefined ? terms.trocoTokens : (terms.tokens !== undefined ? terms.tokens : terms.expectedTokens)) || 0;
     const durationType = terms.durationType || 'hourly';
-    const durationValue = terms.durationValue ? String(terms.durationValue) : (terms.expectedHours ? String(terms.expectedHours) : '1');
+    const durationValue = terms.durationValue ? String(terms.durationValue) : (terms.hours ? String(terms.hours) : (terms.expectedHours ? String(terms.expectedHours) : '1'));
     const expectedHours = durationType === 'hourly' ? (Number(durationValue) || 1) : 1;
     const expectedTokens = trocoTokens;
     const fiatAmount = euroAmount;
     const itemId = (terms.itemId !== undefined && terms.itemId !== null) ? String(terms.itemId) : (selectedChat.listingId ? String(selectedChat.listingId) : null);
-    const itemName = terms.itemName || selectedChat.listing || selectedChat.title || selectedChat.projectTitle || 'Prestation Troco';
+    const itemName = terms.title || terms.itemName || selectedChat.listing || selectedChat.title || selectedChat.projectTitle || 'Prestation Troco';
     const conditions = (terms.conditions && terms.conditions.trim()) || `${durationValue}h d'échange pour ${trocoTokens > 0 ? `${trocoTokens} Jeton(s)` : ''} ${euroAmount > 0 ? `${euroAmount}€` : ''}`.trim() || 'Échange convenu.';
     
+    // Contrat strict standardisé
     const dealTerms = {
+      title: itemName,
+      hours: Number(expectedHours) || 0,
+      tokens: Number(expectedTokens) || 0,
+      fiatAmount: Number(fiatAmount) || 0,
+      conditions: conditions,
+      isCounterOffer: Boolean(isCounterOffer),
       expectedHours: Number(expectedHours) || 0,
       expectedTokens: Number(expectedTokens) || 0,
-      fiatAmount: Number(fiatAmount) || 0,
+      trocoTokens: Number(expectedTokens) || 0,
+      euroAmount: Number(fiatAmount) || 0,
+      durationType: durationType || 'hourly',
+      durationValue: String(durationValue || '1'),
       itemId: itemId || null,
       itemName: itemName || 'Prestation Troco',
     };
 
     const fullTerms = {
+      ...dealTerms,
       euroAmount: Number(fiatAmount) || 0,
       trocoTokens: Number(expectedTokens) || 0,
       durationType: durationType || 'hourly',
       durationValue: String(durationValue || '1'),
       conditions: conditions || 'Nouvelle proposition de troc',
-      ...dealTerms
     };
 
+    // Si c'est une contre-offre, passer l'ancienne offre en statut 'countered'
     if (editingDealId) {
       setChatThreads(prev => ({
         ...prev,
-        [chatId]: (prev[chatId] || []).map(m => String(m.id) === String(editingDealId) ? { ...m, status: 'superseded', updatedAt: new Date().toISOString() } : m)
+        [chatId]: (prev[chatId] || []).map(m => String(m.id) === String(editingDealId) ? { ...m, status: 'countered', updatedAt: new Date().toISOString() } : m)
       }));
 
       if (db) {
         try {
           await updateDoc(doc(db, 'chats', String(chatId), 'messages', String(editingDealId)), {
-            status: 'superseded',
+            status: 'countered',
             updatedAt: serverTimestamp(),
           });
         } catch (e) {
-          console.warn('[Firestore] previous deal supersede failed:', e);
+          console.warn('[Firestore] previous deal countered status update failed:', e);
         }
       }
     }
@@ -1241,15 +1255,16 @@ export const useChatManager = ({
     const dealMessage = {
       id: newDealMsgId,
       sender: 'me',
-      senderName: profile?.name || 'Moi',
-      senderUid: profile?.uid || auth?.currentUser?.uid || null,
+      senderId: currentUserId,
+      senderUid: currentUserId,
+      senderName: profile?.name || auth?.currentUser?.displayName || 'Moi',
       type: 'deal_offer',
       kind: 'deal',
       dealId: newDealMsgId,
       status: 'pending',
       dealTerms,
       terms: fullTerms,
-      text: 'Nouvelle proposition de troc',
+      text: isCounterOffer ? 'Nouvelle contre-proposition de troc' : 'Nouvelle proposition de troc',
       createdAt: Date.now(),
     };
 
@@ -1260,35 +1275,24 @@ export const useChatManager = ({
     if (db) {
       try {
         await addDoc(collection(db, 'chats', String(chatId), 'messages'), {
-          sender: 'me',
-          senderName: profile?.name || 'Moi',
-          senderUid: profile?.uid || auth?.currentUser?.uid || null,
           type: 'deal_offer',
           kind: 'deal',
-          dealId: newDealMsgId,
           status: 'pending',
-          dealTerms: {
-            expectedHours: Number(expectedHours) || 0,
-            expectedTokens: Number(expectedTokens) || 0,
-            fiatAmount: Number(fiatAmount) || 0,
-            itemId: itemId || null,
-            itemName: itemName || 'Prestation Troco',
-          },
-          terms: {
-            euroAmount: Number(fiatAmount) || 0,
-            trocoTokens: Number(expectedTokens) || 0,
-            durationType: durationType || 'hourly',
-            durationValue: String(durationValue || '1'),
-            conditions: conditions || 'Nouvelle proposition de troc',
-          },
-          text: 'Nouvelle proposition de troc',
+          senderId: currentUserId,
+          senderUid: currentUserId,
+          sender: 'me',
+          senderName: profile?.name || auth?.currentUser?.displayName || 'Moi',
+          dealId: newDealMsgId,
+          dealTerms,
+          terms: fullTerms,
+          text: isCounterOffer ? 'Nouvelle contre-proposition de troc' : 'Nouvelle proposition de troc',
           createdAt: serverTimestamp(),
         });
         await setDoc(doc(db, 'chats', String(chatId)), {
           id: chatId,
           user: selectedChat.user || 'Interlocuteur',
           listing: selectedChat.listing || itemName,
-          lastMessage: `Proposition de deal (${conditions})`,
+          lastMessage: isCounterOffer ? `Contre-offre (${conditions})` : `Proposition de deal (${conditions})`,
           lastSenderName: profile?.name || 'Moi',
           lastDealStatus: 'pending',
           updatedAt: serverTimestamp(),
@@ -1670,25 +1674,24 @@ export const useChatManager = ({
   // ---- RENDU DU COMPOSANT CARTE DE DEAL ----
   const renderDealCard = (message, chatId, otherName) => {
     const terms = message.dealTerms || message.deal || message.proposal || message.terms || {};
-    const expectedHours = Number(terms.expectedHours ?? terms.hours ?? (terms.durationValue ? Number(terms.durationValue) : 0)) || 0;
-    const expectedTokens = Number(terms.expectedTokens ?? terms.tokens ?? terms.trocoTokens ?? 0) || 0;
+    const expectedHours = Number(terms.hours ?? terms.expectedHours ?? (terms.durationValue ? Number(terms.durationValue) : 0)) || 0;
+    const expectedTokens = Number(terms.tokens ?? terms.expectedTokens ?? terms.trocoTokens ?? 0) || 0;
     const fiatAmount = Number(terms.fiatAmount ?? terms.fiat ?? terms.euroAmount ?? 0) || 0;
-    const serviceTitle = terms.serviceTitle || terms.title || terms.itemName || message.listing || 'Prestation de service';
+    const serviceTitle = terms.title || terms.serviceTitle || terms.itemName || message.listing || 'Prestation de service';
     const conditions = terms.conditions || terms.description || terms.notes || message.text || message.content || '';
+    const isCounterOffer = Boolean(terms.isCounterOffer || message.type === 'deal_counter_offer');
 
     const currentUid = profile?.uid || (auth?.currentUser && auth.currentUser.uid);
-    const currentName = profile?.name ? profile.name.trim().toLowerCase() : '';
-    const isMine = Boolean(
-      (message.senderUid && currentUid && String(message.senderUid) === String(currentUid)) ||
-      (message.senderId && currentUid && String(message.senderId) === String(currentUid)) ||
-      (message.senderName && currentName && message.senderName.trim().toLowerCase() === currentName) ||
-      (message.sender === 'me')
-    );
-    const isIncoming = !isMine;
+    const senderId = message.senderId || message.senderUid || (message.sender === 'me' ? currentUid : null);
+    const isRecipient = Boolean(currentUid && senderId ? String(currentUid) !== String(senderId) : message.sender !== 'me');
+    const isMine = !isRecipient;
+    const isIncoming = isRecipient;
+
     const currentDealStatus = String(message.status || 'pending').toLowerCase();
     const isDealPending = (!message.status || currentDealStatus === 'pending' || currentDealStatus === 'proposed' || currentDealStatus === 'en_attente' || currentDealStatus === 'sent');
+    const isCountered = (currentDealStatus === 'countered' || currentDealStatus === 'superseded');
     const isAccepted = (currentDealStatus === 'confirmed' || currentDealStatus === 'accepted' || currentDealStatus === 'validated');
-    const isRejected = (currentDealStatus === 'declined' || currentDealStatus === 'rejected' || currentDealStatus === 'refused');
+    const isRejected = (currentDealStatus === 'declined' || currentDealStatus === 'rejected' || currentDealStatus === 'refused' || currentDealStatus === 'cancelled');
 
     const isBuyer = (message.paidBy && profile?.uid && message.paidBy === profile.uid) ||
       (message.escrow?.buyerUid && profile?.uid && message.escrow.buyerUid === profile.uid) ||
@@ -1698,7 +1701,7 @@ export const useChatManager = ({
       <div style={{ width: '100%', border: '1px solid var(--border-color)', borderRadius: '18px', padding: '14px', backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-card)', animation: 'fadeSlideUp 0.35s ease both' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', gap: '8px', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', fontWeight: '800', color: 'var(--accent-primary)' }}>
-            <Sparkles size={14} /> {isMine ? 'Ma proposition de deal' : `Proposition de deal reçue`}
+            <Sparkles size={14} /> {isMine ? (isCounterOffer ? 'Ma contre-proposition' : 'Ma proposition de deal') : (isCounterOffer ? 'Contre-offre reçue' : 'Proposition de deal reçue')}
           </div>
           {isDealPending && isMine && (
             <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)', padding: '4px 9px', borderRadius: '999px' }}>
@@ -1706,8 +1709,13 @@ export const useChatManager = ({
             </span>
           )}
           {isDealPending && isIncoming && (
-            <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-warning)', padding: '4px 9px', borderRadius: '999px' }}>
+            <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', padding: '4px 9px', borderRadius: '999px' }}>
               ⚡ Réponse attendue
+            </span>
+          )}
+          {isCountered && (
+            <span style={{ fontSize: '10px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)', padding: '4px 9px', borderRadius: '999px', border: '1px dashed var(--border-color)' }}>
+              🔄 Contre-offre émise
             </span>
           )}
           {currentDealStatus === 'escrow_locked' && (
@@ -1744,7 +1752,7 @@ export const useChatManager = ({
         </div>
 
         {/* 3 BOUTONS DE NÉGOCIATION POUR LE DESTINATAIRE */}
-        {isDealPending && isIncoming && (
+        {isDealPending && isRecipient && (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px' }}>
             <button onClick={() => handleAcceptDeal(chatId, message.id, terms)} className="premium-button" style={{ border: 'none', borderRadius: '12px', padding: '9px 4px', background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', color: '#FFFFFF', fontSize: '11.5px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.35)', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
               <Check size={14} strokeWidth={2.5} />
@@ -1761,10 +1769,29 @@ export const useChatManager = ({
           </div>
         )}
 
-        {/* INDICATEUR D'ATTENTE POUR L'EXPÉDITEUR */}
-        {isDealPending && isMine && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: 'var(--bg-subtle)', border: '1px dashed var(--border-color)', color: 'var(--text-secondary)', borderRadius: '12px', padding: '9px 12px', fontSize: '11.5px', fontWeight: '700' }}>
-            <Clock size={13} color="var(--accent-primary)" /> Offre envoyée - En attente de réponse...
+        {/* INDICATEUR D'ATTENTE POUR L'EXPÉDITEUR AVEC ACTIONS */}
+        {isDealPending && !isRecipient && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+              <button onClick={() => openCounterOffer(terms, message.id)} className="premium-button" style={{ border: 'none', borderRadius: '12px', padding: '8px 4px', background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)', color: '#FFF', fontSize: '11px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                <RefreshCw size={12} />
+                <span>Modifier</span>
+              </button>
+              <button onClick={() => handleDeclineDeal(chatId, message.id)} className="premium-button" style={{ border: '1px solid rgba(239, 68, 68, 0.28)', borderRadius: '12px', padding: '8px 4px', backgroundColor: 'rgba(239, 68, 68, 0.08)', color: '#EF4444', fontSize: '11px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                <X size={12} />
+                <span>Annuler</span>
+              </button>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'var(--bg-subtle)', border: '1px dashed var(--border-color)', color: 'var(--text-secondary)', borderRadius: '10px', padding: '6px 10px', fontSize: '11px', fontWeight: '700' }}>
+              <Clock size={12} color="var(--accent-primary)" /> En attente de réponse...
+            </div>
+          </div>
+        )}
+
+        {/* BADGE CONTRE-OFFRE */}
+        {isCountered && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', backgroundColor: 'var(--bg-subtle)', border: '1px dashed var(--border-color)', color: 'var(--text-secondary)', borderRadius: '10px', padding: '6px 10px', fontSize: '11px', fontWeight: '700' }}>
+            <RefreshCw size={12} /> Offre remplacée par une contre-proposition
           </div>
         )}
 
