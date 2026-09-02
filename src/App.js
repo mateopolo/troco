@@ -18,6 +18,7 @@ import { getSuggestedMedia, getSuggestedImage, getFallbackImage } from './utils/
 import FeedCardItem from './components/FeedCardItem';
 import { generateInvoiceRef } from './components/InvoiceCalculator';
 import TrocoLogo3D from './components/common/TrocoLogo3D';
+import OfflineScreen from './components/common/OfflineScreen';
 import PWAInstallBanner from './components/PWAInstallBanner';
 import SponsoredFeedCard from './components/SponsoredFeedCard';
 import SectoralErrorBoundary from './components/SectoralErrorBoundary';
@@ -2447,8 +2448,9 @@ export default function App() {
       position: 'relative',
       fontFamily: 'var(--font-family-main)'
     }}>
-      {/* 🚨 PHASE 49 : BANNIÈRE PERSISTANTE DE DÉCONNEXION RÉSEAU (OFFLINE UI) */}
+      {/* 🚨 PHASE 49 & 82 : ÉCRAN & BANNIÈRE HORS-LIGNE INTERACTIFS */}
       <OfflineBanner />
+      <OfflineScreen />
 
       {/* 🚨 PHASE 55 : NOTIFICATIONS DYNAMIC ISLAND / TOASTS PREMIUM */}
       <NotificationPill />

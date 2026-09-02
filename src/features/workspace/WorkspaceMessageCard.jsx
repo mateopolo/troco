@@ -8,7 +8,7 @@
  */
 
 import React from 'react';
-import { Palette, FileText, Table } from 'lucide-react';
+import { FileText, Table, Paintbrush } from 'lucide-react';
 
 export default function WorkspaceMessageCard({
   msg = {},
@@ -39,11 +39,13 @@ export default function WorkspaceMessageCard({
   ) : isSheets ? (
     <Table size={16} />
   ) : (
-    <Palette size={16} />
+    <Paintbrush size={16} />
   );
 
   const displayTitle = msg.workspaceTitle || msg.title || (isWhiteboard ? 'Tableau Blanc collaboratif' : isNotes ? 'Notes Partagées' : isDocs ? 'Troco Doc' : 'Troco Sheet');
   const buttonLabel = isMine ? 'Ouvrir' : 'Rejoindre';
+  const rawSnippet = (msg.snippet || msg.summary || msg.text || msg.content || "Document collaboratif partagé dans l'espace de travail.");
+  const truncatedSnippet = rawSnippet.slice(0, 100) + (rawSnippet.length > 100 ? '...' : '');
 
   const handleCardClick = (e) => {
     e?.preventDefault?.();
@@ -103,15 +105,13 @@ export default function WorkspaceMessageCard({
           e.currentTarget.style.boxShadow = '0 4px 18px rgba(0, 0, 0, 0.07)';
         }}
       >
-        {/* HAUT DE LA CARTE : APERÇU MEDIA (IMAGE BASE64 OU SNIPPET TEXTUEL LÉGER) */}
+        {/* HAUT DE LA CARTE : APERÇU MEDIA (IMAGE THUMBNAIL OU FAUSSE PAGE DE DOCUMENT CSS) */}
         <div
           style={{
             width: '100%',
             height: isMobile ? '145px' : '160px',
             minHeight: isMobile ? '145px' : '160px',
             backgroundColor: darkMode ? '#12100E' : '#181513',
-            backgroundImage: 'radial-gradient(rgba(255, 255, 255, 0.12) 1px, transparent 1px)',
-            backgroundSize: '14px 14px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -119,81 +119,104 @@ export default function WorkspaceMessageCard({
             overflow: 'hidden',
           }}
         >
-          {isWhiteboard && (msg.thumbnailBase64 || msg.previewUrl) ? (
-            <img
-              src={msg.thumbnailBase64 || msg.previewUrl}
-              alt={displayTitle}
-              loading="eager"
-              decoding="async"
-              style={{
-                width: '100%',
-                height: '100%',
-                minHeight: isMobile ? '145px' : '160px',
-                objectFit: 'contain',
-                display: 'block',
-              }}
-            />
-          ) : (msg.snippet || msg.summary) ? (
-            <div
-              style={{
-                padding: '14px 16px',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: '8px',
-                height: '100%',
-                width: '100%',
-                boxSizing: 'border-box',
-                justifyContent: 'center',
-                backgroundColor: 'rgba(0, 0, 0, 0.25)',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: accentColor, fontSize: '11.5px', fontWeight: '800' }}>
-                {typeIcon}
-                <span>{isNotes ? 'Note Partagée' : isDocs ? 'Troco Docs' : isSheets ? 'Troco Sheets' : 'Workspace'}</span>
-              </div>
-              <div
+          {/* 1. APERÇU TABLEAU BLANC (IMAGE OU FOND COLORÉ AVEC PINCEAU GÉANT) */}
+          {isWhiteboard ? (
+            (msg.thumbnailBase64 || msg.previewUrl) ? (
+              <img
+                src={msg.thumbnailBase64 || msg.previewUrl}
+                alt={displayTitle}
+                loading="eager"
+                decoding="async"
                 style={{
-                  fontSize: '12px',
-                  color: 'rgba(255, 255, 255, 0.78)',
-                  fontStyle: 'italic',
-                  lineHeight: 1.45,
-                  overflow: 'hidden',
-                  display: '-webkit-box',
-                  WebkitLineClamp: 4,
-                  WebkitBoxOrient: 'vertical',
+                  width: '100%',
+                  height: '100%',
+                  minHeight: isMobile ? '145px' : '160px',
+                  objectFit: 'cover',
+                  display: 'block',
                 }}
-              >
-                "{msg.snippet || msg.summary}"
-              </div>
-            </div>
-          ) : (
-            <div
-              style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                color: 'rgba(255, 255, 255, 0.45)',
-              }}
-            >
+              />
+            ) : (
               <div
                 style={{
-                  width: '44px',
-                  height: '44px',
-                  borderRadius: '12px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                  width: '100%',
+                  height: '100%',
+                  background: 'radial-gradient(circle at 50% 50%, rgba(198, 125, 91, 0.25) 0%, rgba(24, 21, 19, 0.95) 100%)',
                   display: 'flex',
+                  flexDirection: 'column',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  color: accentColor,
+                  gap: '10px',
                 }}
               >
-                {typeIcon}
+                <div
+                  style={{
+                    width: '64px',
+                    height: '64px',
+                    borderRadius: '50%',
+                    backgroundColor: 'rgba(198, 125, 91, 0.2)',
+                    border: '1.5px solid var(--accent-primary, #C67D5B)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: 'var(--accent-primary, #C67D5B)',
+                    boxShadow: '0 4px 16px rgba(198, 125, 91, 0.3)',
+                  }}
+                >
+                  <Paintbrush size={32} />
+                </div>
+                <span style={{ fontSize: '11px', fontWeight: '700', color: 'rgba(255, 255, 255, 0.7)' }}>
+                  Tableau Blanc Collaboratif
+                </span>
               </div>
-              <span style={{ fontSize: '11px', fontWeight: '600', color: 'rgba(255, 255, 255, 0.6)' }}>
+            )
+          ) : (
+            /* 2. APERÇU DOCUMENT / NOTE (FAUSSE PAGE DE DOCUMENT CSS AVEC FADE-OUT) */
+            <div
+              style={{
+                width: '100%',
+                height: '100%',
+                backgroundColor: '#FFFFFF',
+                color: '#1F2937',
+                padding: '14px 16px',
+                boxSizing: 'border-box',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '6px',
+                position: 'relative',
+                overflow: 'hidden',
+                boxShadow: 'inset 0 0 12px rgba(0,0,0,0.04)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: accentColor, fontSize: '11px', fontWeight: '800', textTransform: 'uppercase' }}>
+                {typeIcon}
+                <span>{isNotes ? 'Note Partagée' : isDocs ? 'Troco Doc' : isSheets ? 'Troco Sheet' : 'Document'}</span>
+              </div>
+              <div style={{ fontSize: '13px', fontWeight: '800', color: '#111827', lineHeight: 1.25 }}>
                 {displayTitle}
-              </span>
+              </div>
+              <div
+                style={{
+                  fontSize: '11.5px',
+                  color: '#4B5563',
+                  lineHeight: 1.4,
+                  fontWeight: '500',
+                  marginTop: '2px',
+                }}
+              >
+                {truncatedSnippet}
+              </div>
+              {/* EFFET DE FADE-OUT VERS LE BAS */}
+              <div
+                style={{
+                  position: 'absolute',
+                  bottom: 0,
+                  left: 0,
+                  right: 0,
+                  height: '36px',
+                  background: 'linear-gradient(to top, #FFFFFF 0%, rgba(255,255,255,0) 100%)',
+                  pointerEvents: 'none',
+                }}
+              />
             </div>
           )}
 
