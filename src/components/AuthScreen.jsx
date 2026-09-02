@@ -1,5 +1,6 @@
 import React from 'react';
 import { Sparkles, Phone } from 'lucide-react';
+import TrocoLogo from './common/TrocoLogo';
 
 export default function AuthScreen({
   authError,
@@ -35,6 +36,28 @@ export default function AuthScreen({
         border: '1px solid rgba(255,255,255,0.7)', overflow: 'hidden'
       }}>
         <div style={{ padding: '32px 28px 18px' }}>
+          {/* LOGO DYNAMIQUE TROCO */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '20px' }}>
+            <TrocoLogo size={42} style={{ color: 'var(--accent-primary, #C67D5B)' }} />
+            <div>
+              <span
+                style={{
+                  fontSize: '26px',
+                  fontWeight: '800',
+                  color: '#111827',
+                  letterSpacing: '-0.02em',
+                  display: 'block',
+                  lineHeight: 1.1,
+                }}
+              >
+                Troco
+              </span>
+              <span style={{ fontSize: '11px', color: '#64748B', letterSpacing: '0.04em' }}>
+                Plateforme d'échanges & savoir-faire
+              </span>
+            </div>
+          </div>
+
           <div style={{
             display: 'inline-flex', alignItems: 'center', padding: '8px 12px',
             borderRadius: '999px', backgroundColor: '#EFF6FF', color: '#04265A',

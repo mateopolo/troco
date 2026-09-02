@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Sparkles, Sun, Moon, Phone, Mail, X } from 'lucide-react';
+import TrocoLogo from '../../components/common/TrocoLogo';
 import { auth, db } from '../../firebase';
 import {
   RecaptchaVerifier,
@@ -500,6 +501,29 @@ export default function AuthScreen({
         </div>
 
         <div style={{ padding: '28px 28px 18px' }}>
+          {/* 🚨 PHASE 92 : LOGO DYNAMIQUE TROCO ADAPTÉ AU THÈME */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', marginBottom: '20px' }}>
+            <TrocoLogo size={42} style={{ color: 'var(--accent-primary, #C67D5B)' }} />
+            <div>
+              <span
+                className="font-editorial-heading"
+                style={{
+                  fontSize: '26px',
+                  fontWeight: '700',
+                  color: darkMode ? '#FAF7F2' : '#3D3530',
+                  letterSpacing: '-0.02em',
+                  display: 'block',
+                  lineHeight: 1.1,
+                }}
+              >
+                Troco
+              </span>
+              <span style={{ fontSize: '11px', color: darkMode ? '#9A8E84' : '#6B5E54', letterSpacing: '0.04em' }}>
+                Plateforme d'échanges & savoir-faire
+              </span>
+            </div>
+          </div>
+
           <div style={{ display: 'inline-flex', alignItems: 'center', padding: '8px 12px', borderRadius: '999px', backgroundColor: darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4', color: darkMode ? '#FAF7F2' : '#A8644A', fontSize: '12px', fontWeight: '700', marginBottom: '14px' }}>
             <Sparkles size={14} style={{ marginRight: '6px' }} />
             {authTab === 'login' ? 'Bienvenue sur Troco' : 'Rejoindre la communauté'}
