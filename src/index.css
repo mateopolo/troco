@@ -1910,3 +1910,15 @@ body.dark-mode .ad-card:hover {
     -webkit-filter: none !important;
   }
 }
+
+/* ============================================================================
+   🚨 PHASE 106 : KILL-SWITCH CSS POUR OOM CRASH iOS
+   Annulation absolue de tous les backdrop-filters et shaders lourds sur mobile
+   ============================================================================ */
+@media (max-width: 768px) {
+  * {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+  .liquid-iridescence-container { display: none !important; }
+}

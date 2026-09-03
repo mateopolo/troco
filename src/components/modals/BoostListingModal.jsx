@@ -13,19 +13,19 @@ export default function BoostListingModal({
   if (!isOpen || !boostingListing) return null;
 
   return (
-    <div style={{
-      position: 'fixed',
-      inset: 0,
-      backgroundColor: 'rgba(61,53,48,0.72)',
-      backdropFilter: 'blur(10px)',
-      WebkitBackdropFilter: 'blur(10px)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '20px',
-      zIndex: 80,
-      animation: 'fadeIn 0.2s ease-out'
-    }}>
+    <div
+      className="fixed inset-0 z-[80] bg-black/95 md:bg-[rgba(61,53,48,0.72)] md:backdrop-blur-md flex items-center justify-center p-5"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '20px',
+        zIndex: 80,
+        animation: 'fadeIn 0.2s ease-out'
+      }}
+    >
       <div style={{
         width: '100%',
         maxWidth: '440px',

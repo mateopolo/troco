@@ -11,19 +11,19 @@ export default function CguConsentModal({
   if (!isOpen) return null;
 
   return (
-    <div style={{
-      position: 'fixed',
-      inset: 0,
-      zIndex: 99999,
-      backgroundColor: 'var(--overlay-bg, rgba(28, 24, 22, 0.72))',
-      backdropFilter: 'blur(16px)',
-      WebkitBackdropFilter: 'blur(16px)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '20px',
-      animation: 'fadeSlideUp 0.3s ease both'
-    }}>
+    <div
+      className="fixed inset-0 z-[99999] bg-black/95 md:bg-[var(--overlay-bg,rgba(28,24,22,0.72))] md:backdrop-blur-md flex items-center justify-center p-5"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 99999,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '20px',
+        animation: 'fadeSlideUp 0.3s ease both'
+      }}
+    >
       <div style={{
         maxWidth: '560px',
         width: '100%',

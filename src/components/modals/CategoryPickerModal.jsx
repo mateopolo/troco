@@ -13,19 +13,19 @@ export default function CategoryPickerModal({
   if (!isOpen) return null;
 
   return (
-    <div style={{
-      position: 'fixed',
-      inset: 0,
-      backgroundColor: 'rgba(61,53,48,0.65)',
-      backdropFilter: 'blur(12px)',
-      WebkitBackdropFilter: 'blur(12px)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '20px',
-      zIndex: 100005,
-      animation: 'fadeIn 0.2s ease-out'
-    }}>
+    <div
+      className="fixed inset-0 z-[100005] bg-black/95 md:bg-[rgba(61,53,48,0.65)] md:backdrop-blur-md flex items-center justify-center p-5"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '20px',
+        zIndex: 100005,
+        animation: 'fadeIn 0.2s ease-out'
+      }}
+    >
       <div style={{
         backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
         backdropFilter: 'blur(24px)',
