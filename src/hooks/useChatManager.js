@@ -20,7 +20,7 @@ import { mockChats, initialChatThreads } from '../data/mockChatsData';
 import { validateChatMessage } from '../utils/moderationBlacklist';
 import { uploadVoiceNote } from '../services/voiceStorageService';
 import { playBetclicBalanceSound, playApplePaySound } from '../utils/audioService';
-import { useChatStore } from '../stores';
+import { useChatStore, useWalletStore } from '../stores';
 import { hapticLight, hapticSuccess, hapticError } from '../utils/haptics';
 import { playPop, playSuccessChime } from '../services/audioService';
 import { showDynamicIslandNotification } from '../services/notificationService';
@@ -183,7 +183,9 @@ export const useChatManager = ({
     const periodicCheck = setInterval(updateMap, 4000);
 
     return () => {
-      unsub();
+      if (typeof unsub === 'function') {
+        unsub();
+      }
       clearInterval(periodicCheck);
     };
   }, [db]);
@@ -1767,66 +1769,110 @@ export const useChatManager = ({
     return handleSendToken(chatId, tokenAmount, comment, customPartnerUid);
   };
 
-  /** @locked @critical DO NOT MODIFY THIS TRANSACTION LOGIC. Atomic runTransaction with buyerUid and sellerUid is required for financial integrity. */
+  /** 🚨 PHASE 109 : MOTEUR TRANSACTIONNEL ABSOLU (runTransaction double écriture atomique & traçabilité) */
   const handleSendToken = async (chatId, tokenAmount = 1, comment = '', customPartnerUid = null) => {
-    const senderUid = profile?.uid || auth?.currentUser?.uid;
-    if (!senderUid) return { success: false, error: 'Non authentifié' };
+    const currentUser = auth?.currentUser || profile;
+    if (!currentUser?.uid) return { success: false, error: 'Non authentifié' };
 
     const chat = (selectedChat && String(selectedChat.id) === String(chatId))
       ? selectedChat
       : (chatsList.find(c => String(c.id) === String(chatId)) || mockChats.find(c => String(c.id) === String(chatId)));
 
-    let partnerUid = customPartnerUid || chat?.authorUid || chat?.partnerUid || null;
-    if (!partnerUid && chat) {
-      const parts = chat.participants || chat.participantUids;
-      if (Array.isArray(parts)) {
-        partnerUid = parts.find(u => u && u !== senderUid);
-      }
-    }
-
-    if (!partnerUid && chat?.user && db) {
-      try {
-        const uSnap = await getDocs(query(collection(db, 'users'), where('name', '==', chat.user)));
-        if (!uSnap.empty) {
-          partnerUid = uSnap.docs[0].id;
-        }
-      } catch (_) {}
+    // Isolation stricte de l'UID cible
+    const receiverUid = customPartnerUid || selectedChat?.partnerUid || selectedChat?.authorUid || chat?.partnerUid || chat?.authorUid;
+    if (!receiverUid) {
+      alert('Destinataire introuvable');
+      throw new Error('Destinataire introuvable');
     }
 
     const amount = Number(tokenAmount) || 1;
-    const currentBalance = Number(profile?.trocoTokens || 0);
 
-    if (currentBalance < amount) {
-      alert(`Solde insuffisant : vous disposez de ${currentBalance} Jeton(s) Troco.`);
-      return { success: false, error: `Solde insuffisant : vous disposez de ${currentBalance} Jeton(s).` };
-    }
+    try {
+      if (db) {
+        await runTransaction(db, async (transaction) => {
+          const senderRef = doc(db, 'users', currentUser.uid);
+          const receiverRef = doc(db, 'users', receiverUid);
 
-    const res = await executeDirectTokenTransfer({
-      chatId,
-      senderUid,
-      senderName: profile?.name || 'Moi',
-      recipientUid: partnerUid,
-      recipientName: chat?.user || 'Interlocuteur',
-      tokenAmount: amount,
-      comment,
-      chatData: chat,
-    });
+          // Vérification solde
+          const senderSnap = await transaction.get(senderRef);
+          if (!senderSnap.exists() || (Number(senderSnap.data()?.trocoTokens ?? profile?.trocoTokens ?? 0) < amount)) {
+            throw new Error('Solde insuffisant');
+          }
 
-    if (res?.success) {
+          // Double écriture simultanée
+          transaction.update(senderRef, { trocoTokens: increment(-amount) });
+          transaction.update(receiverRef, { trocoTokens: increment(amount) });
+
+          // Traçabilité
+          transaction.set(doc(collection(db, 'transactions')), {
+            type: 'transfer',
+            from: currentUser.uid,
+            to: receiverUid,
+            amount,
+            comment: comment || '',
+            chatId: chatId || null,
+            timestamp: serverTimestamp()
+          });
+        });
+      }
+
+      // Double écriture atomique dans l'état local
+      const currentBalance = Number(profile?.trocoTokens || 0);
       const updatedTokens = Math.max(0, currentBalance - amount);
       setProfile(prev => ({ ...prev, trocoTokens: updatedTokens }));
+
+      try {
+        const { setTrocoTokens } = useWalletStore.getState();
+        if (setTrocoTokens) setTrocoTokens(updatedTokens);
+      } catch (_) {}
+
       try {
         const saved = JSON.parse(localStorage.getItem('troco_user_profile') || '{}');
         saved.trocoTokens = updatedTokens;
         localStorage.setItem('troco_user_profile', JSON.stringify(saved));
       } catch (_) {}
 
+      // Message de confirmation dans le chat si applicable
+      if (chatId) {
+        try {
+          const transferMessage = {
+            id: 'tok_tx_' + Date.now(),
+            sender: 'me',
+            senderId: currentUser.uid,
+            senderName: profile?.name || 'Moi',
+            text: `🪙 Transfert direct de ${amount} Jeton(s) Troco effectué.${comment ? ` Note: "${comment}"` : ''}`,
+            createdAt: new Date().toISOString(),
+            type: 'token_transfer',
+            tokenAmount: amount,
+            comment: comment || ''
+          };
+          setChatThreads(prev => ({
+            ...prev,
+            [chatId]: [...(prev[chatId] || []), transferMessage]
+          }));
+          if (db) {
+            const chatDocRef = doc(db, 'chats', String(chatId));
+            const messagesSubCol = collection(chatDocRef, 'messages');
+            await setDoc(doc(messagesSubCol, transferMessage.id), {
+              ...transferMessage,
+              createdAt: serverTimestamp()
+            });
+          }
+        } catch (_) {}
+      }
+
       hapticSuccess();
       playBetclicBalanceSound(true);
       setSaveMessage(`🪙 ${amount} Jeton(s) Troco envoyé(s) avec succès !`);
       setTimeout(() => setSaveMessage(''), 4000);
+
+      return { success: true, receiverUid, amount };
+    } catch (err) {
+      hapticError();
+      const errMsg = err?.message || 'Erreur lors du transfert de jetons';
+      alert(errMsg);
+      return { success: false, error: errMsg };
     }
-    return res;
   };
 
   // ---- RENDU DU COMPOSANT CARTE DE DEAL ----

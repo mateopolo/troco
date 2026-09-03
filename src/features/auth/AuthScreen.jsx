@@ -24,6 +24,7 @@ import {
   where,
   serverTimestamp,
 } from 'firebase/firestore';
+import { useWalletStore } from '../../stores';
 
 export default function AuthScreen({
   setProfile,
@@ -330,17 +331,18 @@ export default function AuthScreen({
     }
   };
 
-  // ---- ACCÈS DÉMO RAPIDE ----
-  const handleConfirmDemoAuth = (method) => {
+  // ---- ACCÈS DÉMO RAPIDE (PERSISTANCE INTELLIGENTE PHASE 109) ----
+  const handleConfirmDemoAuth = async (method) => {
     const pin = window.prompt('Entrez le code administrateur :');
     if (pin !== '2609') {
       alert('Accès refusé.');
       return;
     }
 
+    const demoUid = 'demo_mateopolo';
     const loginMethodName = (typeof method === 'string' && method.trim()) ? method : 'Démo Rapide';
-    const demoProfile = {
-      uid: 'demo_mateopolo',
+    let baseDemoProfile = {
+      uid: demoUid,
       name: 'MATEO POLO',
       username: '@mateopolo',
       avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80',
@@ -360,14 +362,48 @@ export default function AuthScreen({
       onboardingCompleted: true,
       cguAcceptedAt: new Date().toISOString(),
     };
+
+    let finalProfile = baseDemoProfile;
+
     try {
-      window.localStorage.setItem('troco_user_profile', JSON.stringify(demoProfile));
+      if (db) {
+        // 🚨 PHASE 109 : INTERROGATION FIRESTORE AVANT HYDRATATION LOCALE
+        const userDoc = await getDoc(doc(db, 'users', demoUid));
+        const docExists = userDoc && (typeof userDoc.exists === 'function' ? userDoc.exists() : Boolean(userDoc.exists));
+        if (docExists) {
+          const remoteData = (typeof userDoc.data === 'function' ? userDoc.data() : userDoc.data) || {};
+          finalProfile = {
+            ...baseDemoProfile,
+            ...remoteData,
+            uid: demoUid,
+            isDemo: true,
+            loginMethod: loginMethodName,
+          };
+        } else {
+          // Initialisation initiale dans Firestore
+          await setDoc(doc(db, 'users', demoUid), baseDemoProfile, { merge: true });
+        }
+      }
+    } catch (err) {
+      console.warn('Erreur de synchronisation Firestore profil démo:', err);
+    }
+
+    try {
+      window.localStorage.setItem('troco_user_profile', JSON.stringify(finalProfile));
       window.localStorage.setItem('troco_is_authenticated', 'true');
     } catch (e) {
       console.warn('Storage error on demo auth:', e);
     }
-    setProfile(demoProfile);
-    if (setProfileDraft) setProfileDraft(demoProfile);
+
+    setProfile(finalProfile);
+    if (setProfileDraft) setProfileDraft(finalProfile);
+
+    try {
+      const { setTrocoTokens, setEuroBalance } = useWalletStore.getState();
+      if (setTrocoTokens && finalProfile.trocoTokens !== undefined) setTrocoTokens(Number(finalProfile.trocoTokens));
+      if (setEuroBalance && finalProfile.euroBalance !== undefined) setEuroBalance(Number(finalProfile.euroBalance));
+    } catch (_) {}
+
     setIsAuthenticated(true);
     setAuthError('');
   };

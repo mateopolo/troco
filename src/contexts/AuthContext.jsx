@@ -425,17 +425,18 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Connexion Démo
-  const handleConfirmDemoAuth = (method) => {
+  // Connexion Démo (Persistance intelligente Phase 109)
+  const handleConfirmDemoAuth = async (method) => {
     const pin = window.prompt('Entrez le code administrateur :');
     if (pin !== '2609') {
       alert('Accès refusé.');
       return;
     }
 
+    const demoUid = 'demo_mateopolo';
     const loginMethodName = (typeof method === 'string' && method.trim()) ? method : 'Démo Rapide';
-    const demoProfile = {
-      uid: 'demo_mateopolo',
+    let baseDemoProfile = {
+      uid: demoUid,
       name: 'MATEO POLO',
       username: '@mateopolo',
       avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80',
@@ -455,13 +456,37 @@ export const AuthProvider = ({ children }) => {
       onboardingCompleted: true,
       cguAcceptedAt: new Date().toISOString(),
     };
+
+    let finalProfile = baseDemoProfile;
+
     try {
-      window.localStorage.setItem('troco_user_profile', JSON.stringify(demoProfile));
+      if (db) {
+        const userDoc = await getDoc(doc(db, 'users', demoUid));
+        const docExists = userDoc && (typeof userDoc.exists === 'function' ? userDoc.exists() : Boolean(userDoc.exists));
+        if (docExists) {
+          const remoteData = (typeof userDoc.data === 'function' ? userDoc.data() : userDoc.data) || {};
+          finalProfile = {
+            ...baseDemoProfile,
+            ...remoteData,
+            uid: demoUid,
+            isDemo: true,
+            loginMethod: loginMethodName,
+          };
+        } else {
+          await setDoc(doc(db, 'users', demoUid), baseDemoProfile, { merge: true });
+        }
+      }
+    } catch (e) {
+      console.warn('[DemoAuth Context] Firestore sync error:', e);
+    }
+
+    try {
+      window.localStorage.setItem('troco_user_profile', JSON.stringify(finalProfile));
       window.localStorage.setItem('troco_is_authenticated', 'true');
     } catch (e) {
       console.warn('Storage error on demo auth:', e);
     }
-    setProfile(demoProfile);
+    setProfile(finalProfile);
     setIsAuthenticated(true);
     setAuthError('');
   };
