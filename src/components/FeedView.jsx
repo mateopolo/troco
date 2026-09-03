@@ -3,40 +3,11 @@ import { motion } from 'framer-motion';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Search, MapPin, Filter, Grid, Map, Globe, Tag } from 'lucide-react';
-import { MapContainer, TileLayer } from 'react-leaflet';
-import L from 'leaflet';
 import ListingCard from './ListingCard';
 import { SkeletonCard } from './SkeletonLoader';
-import InteractiveMapView from '../features/map/InteractiveMapView';
 
-const createModernMapIcon = () => {
-  return L.divIcon({
-    className: 'custom-modern-pin',
-    html: `
-      <div style="
-        position: relative;
-        width: 24px;
-        height: 30px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        filter: drop-shadow(0 4px 10px var(--shadow-accent));
-        cursor: pointer;
-      ">
-        <svg width="24" height="30" viewBox="0 0 24 30" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M12 0C5.37 0 0 5.37 0 12C0 21 12 30 12 30C12 30 24 21 24 12C24 5.37 18.63 0 12 0Z" 
-                fill="var(--accent-primary, #B98B73)" 
-                stroke="#FFFFFF" 
-                stroke-width="1.8" />
-          <circle cx="12" cy="11" r="4.5" fill="var(--bg-global, #FAF7F2)" />
-        </svg>
-      </div>
-    `,
-    iconSize: [24, 30],
-    iconAnchor: [12, 30],
-    popupAnchor: [0, -28],
-  });
-};
+// 🚨 PHASE 115 : CODE-SPLITTING STRICT DE LEAFLET (INTERACTIVEMAPVIEW LAZY LOADÉ)
+const InteractiveMapView = React.lazy(() => import('./InteractiveMapView'));
 
 
 export default function FeedView({
@@ -298,6 +269,7 @@ export default function FeedView({
                       damping: 24,
                     },
                   },
+                }}
                 style={{
                   height: '100%',
                   contentVisibility: 'auto',
@@ -324,24 +296,29 @@ export default function FeedView({
       ) : (
         /* VUE CARTE CARTE INTERACTIVE LEAFLET (AVEC PORTAL MOBILE & GESTES COOPÉRATIFS) */
         <div ref={mapContainerRef} style={{ width: '100%', position: 'relative' }}>
-          <InteractiveMapView
-            filteredListings={displayListings}
-            mapCenter={userCoords || mapCenter}
-            mapZoom={12}
-            darkMode={darkMode}
-            currentLang={currentLang}
-            t={t}
-            getCoordinatesForLocation={(loc) => {
-              return (userCoords ? [userCoords[0] + (Math.random() - 0.5) * 0.05, userCoords[1] + (Math.random() - 0.5) * 0.05] : [48.8566, 2.3522]);
-            }}
-            getSuggestedMedia={(title, desc, img, vid) => ({ image: img || 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=800&q=80', video: vid })}
-            getListingDisplayContent={(item) => ({ title: item.title, description: item.description })}
-            localizeLocation={(loc) => loc}
-            handleOpenListing={handleOpenListing}
-            createModernMapIcon={createModernMapIcon}
-            onClose={() => setViewMode && setViewMode('list')}
-            mapContainerRef={mapContainerRef}
-          />
+          <React.Suspense fallback={
+            <div style={{ height: '600px', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: 'var(--bg-card)', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
+              <SkeletonCard count={1} />
+            </div>
+          }>
+            <InteractiveMapView
+              filteredListings={displayListings}
+              mapCenter={userCoords || mapCenter}
+              mapZoom={12}
+              darkMode={darkMode}
+              currentLang={currentLang}
+              t={t}
+              getCoordinatesForLocation={(loc) => {
+                return (userCoords ? [userCoords[0] + (Math.random() - 0.5) * 0.05, userCoords[1] + (Math.random() - 0.5) * 0.05] : [48.8566, 2.3522]);
+              }}
+              getSuggestedMedia={(title, desc, img, vid) => ({ image: img || 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=800&q=80', video: vid })}
+              getListingDisplayContent={(item) => ({ title: item.title, description: item.description })}
+              localizeLocation={(loc) => loc}
+              handleOpenListing={handleOpenListing}
+              onClose={() => setViewMode && setViewMode('list')}
+              mapContainerRef={mapContainerRef}
+            />
+          </React.Suspense>
         </div>
       )}
     </div>

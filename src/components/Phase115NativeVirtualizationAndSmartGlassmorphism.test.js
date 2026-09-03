@@ -2,6 +2,8 @@ import React from 'react';
 import { render } from '@testing-library/react';
 import ListingCard from './ListingCard';
 import FeedCardItem from './FeedCardItem';
+import fs from 'fs';
+import path from 'path';
 
 // Mock Lucide icons
 jest.mock('lucide-react', () => ({
@@ -79,7 +81,7 @@ describe('Phase 115 : Virtualisation Native & Smart Glassmorphism (Feed OOM Fix)
     expect(cardWrapper.style.containIntrinsicSize).toMatch(/0(px)? 420px/);
   });
 
-  test('2. ListingCard has zero backdropFilter or backdrop-blur in its rendered DOM', () => {
+  test('2. ListingCard has zero backdropFilter or backdrop-blur in its rendered DOM and uses solid alphas', () => {
     const { container } = render(
       <ListingCard
         item={dummyItem}
@@ -94,6 +96,10 @@ describe('Phase 115 : Virtualisation Native & Smart Glassmorphism (Feed OOM Fix)
       expect(inlineStyle).not.toContain('backdropFilter');
       expect(inlineStyle).not.toContain('backdrop-blur');
     });
+
+    const listingCardContent = fs.readFileSync(path.join(__dirname, 'ListingCard.jsx'), 'utf-8');
+    expect(listingCardContent).toContain('rgba(26, 22, 19, 0.92)');
+    expect(listingCardContent).toContain('1px solid rgba(255, 255, 255, 0.08)');
   });
 
   test('3. FeedCardItem wrapper injects contentVisibility: auto and containIntrinsicSize: 0 420px', () => {
@@ -113,7 +119,7 @@ describe('Phase 115 : Virtualisation Native & Smart Glassmorphism (Feed OOM Fix)
     expect(cardWrapper.style.containIntrinsicSize).toMatch(/0(px)? 420px/);
   });
 
-  test('4. FeedCardItem has zero backdropFilter or backdrop-blur in its rendered DOM', () => {
+  test('4. FeedCardItem has zero backdropFilter or backdrop-blur in its rendered DOM and uses solid alphas', () => {
     const { container } = render(
       <FeedCardItem
         item={dummyItem}
@@ -131,5 +137,24 @@ describe('Phase 115 : Virtualisation Native & Smart Glassmorphism (Feed OOM Fix)
       expect(inlineStyle).not.toContain('backdropFilter');
       expect(inlineStyle).not.toContain('backdrop-blur');
     });
+
+    const feedCardItemContent = fs.readFileSync(path.join(__dirname, 'FeedCardItem.jsx'), 'utf-8');
+    expect(feedCardItemContent).toContain('rgba(26, 22, 19, 0.92)');
+    expect(feedCardItemContent).toContain('1px solid rgba(255, 255, 255, 0.08)');
+  });
+
+  test('5. FeedView.jsx lazy loads InteractiveMapView via React.lazy and has zero synchronous Leaflet imports', () => {
+    const feedViewContent = fs.readFileSync(path.join(__dirname, 'FeedView.jsx'), 'utf-8');
+
+    // Vérifie l'import paresseux
+    expect(feedViewContent).toContain("React.lazy(() => import('./InteractiveMapView'))");
+
+    // Vérifie l'absence d'import synchrone de leaflet ou react-leaflet
+    expect(feedViewContent).not.toMatch(/import\s+.*\s+from\s+['"]react-leaflet['"]/);
+    expect(feedViewContent).not.toMatch(/import\s+L\s+from\s+['"]leaflet['"]/);
+
+    // Vérifie que le wrapper motion.div a la virtualisation native
+    expect(feedViewContent).toContain("contentVisibility: 'auto'");
+    expect(feedViewContent).toContain("containIntrinsicSize: '0 420px'");
   });
 });

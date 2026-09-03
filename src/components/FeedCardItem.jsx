@@ -279,8 +279,8 @@ function FeedCardItem({
               }}
               style={{
                 position: 'absolute', top: '50%', left: '8px', transform: 'translateY(-50%)',
-                border: '1px solid rgba(255, 255, 255, 0.12)', borderRadius: '50%', width: '28px', height: '28px',
-                backgroundColor: 'rgba(26, 22, 19, 0.95)', color: '#FFF',
+                border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '50%', width: '28px', height: '28px',
+                backgroundColor: 'rgba(26, 22, 19, 0.92)', color: '#FFF',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer', zIndex: 10,
                 pointerEvents: 'auto',
@@ -297,8 +297,8 @@ function FeedCardItem({
               }}
               style={{
                 position: 'absolute', top: '50%', right: '8px', transform: 'translateY(-50%)',
-                border: '1px solid rgba(255, 255, 255, 0.12)', borderRadius: '50%', width: '28px', height: '28px',
-                backgroundColor: 'rgba(26, 22, 19, 0.95)', color: '#FFF',
+                border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '50%', width: '28px', height: '28px',
+                backgroundColor: 'rgba(26, 22, 19, 0.92)', color: '#FFF',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 cursor: 'pointer', zIndex: 10,
                 pointerEvents: 'auto',
@@ -318,7 +318,7 @@ function FeedCardItem({
             style={{
               position: 'absolute', bottom: '8px', left: '50%', transform: 'translateX(-50%)',
               display: 'flex', alignItems: 'center', gap: '4px', zIndex: 10,
-              backgroundColor: 'rgba(26, 22, 19, 0.92)', border: '1px solid rgba(255, 255, 255, 0.1)', padding: '3px 8px', borderRadius: '999px',
+              backgroundColor: 'rgba(26, 22, 19, 0.92)', border: '1px solid rgba(255, 255, 255, 0.08)', padding: '3px 8px', borderRadius: '999px',
               pointerEvents: 'auto'
             }}
           >
@@ -391,7 +391,7 @@ function FeedCardItem({
             top: '12px',
             left: item.urgent ? 'auto' : '12px',
             right: item.urgent ? '12px' : 'auto',
-            backgroundColor: 'rgba(26, 22, 19, 0.95)',
+            backgroundColor: 'rgba(26, 22, 19, 0.92)',
             color: '#FAF7F2',
             fontSize: '10px',
             fontWeight: '750',
@@ -403,7 +403,7 @@ function FeedCardItem({
             display: 'inline-flex',
             alignItems: 'center',
             gap: '5px',
-            border: '1px solid rgba(255, 255, 255, 0.16)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
             textTransform: 'uppercase'
           }}>
             <Sparkles size={11} color="var(--accent-primary)" />
@@ -417,7 +417,7 @@ function FeedCardItem({
           </span>
         )}
 
-        <span style={{ position: 'absolute', bottom: '12px', right: '12px', backgroundColor: 'rgba(26, 22, 19, 0.95)', border: '1px solid var(--border-color)', color: '#FFFFFF', fontSize: '11px', fontWeight: 'bold', padding: '5px 9px', borderRadius: '10px', zIndex: 4 }}>
+        <span style={{ position: 'absolute', bottom: '12px', right: '12px', backgroundColor: 'rgba(26, 22, 19, 0.92)', border: '1px solid rgba(255, 255, 255, 0.08)', color: '#FFFFFF', fontSize: '11px', fontWeight: 'bold', padding: '5px 9px', borderRadius: '10px', zIndex: 4 }}>
           {formatCompensation(item.compensation)}
         </span>
       </div>

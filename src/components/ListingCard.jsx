@@ -206,8 +206,8 @@ export default function ListingCard({
                 width: '28px',
                 height: '28px',
                 borderRadius: '50%',
-                backgroundColor: 'rgba(26, 22, 19, 0.95)',
-                border: '1px solid rgba(255, 255, 255, 0.12)',
+                backgroundColor: 'rgba(26, 22, 19, 0.92)',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
                 color: '#FFF',
                 display: 'flex',
                 alignItems: 'center',
@@ -233,8 +233,8 @@ export default function ListingCard({
                 width: '28px',
                 height: '28px',
                 borderRadius: '50%',
-                backgroundColor: 'rgba(26, 22, 19, 0.95)',
-                border: '1px solid rgba(255, 255, 255, 0.12)',
+                backgroundColor: 'rgba(26, 22, 19, 0.92)',
+                border: '1px solid rgba(255, 255, 255, 0.08)',
                 color: '#FFF',
                 display: 'flex',
                 alignItems: 'center',
@@ -262,7 +262,7 @@ export default function ListingCard({
               gap: '5px',
               zIndex: 3,
               backgroundColor: 'rgba(26, 22, 19, 0.92)',
-              border: '1px solid rgba(255, 255, 255, 0.1)',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
               padding: '3px 8px',
               borderRadius: '999px'
             }}
@@ -322,7 +322,7 @@ export default function ListingCard({
             position: 'absolute',
             top: item.urgent ? '42px' : '12px',
             left: '12px',
-            backgroundColor: 'rgba(26, 22, 19, 0.95)',
+            backgroundColor: 'rgba(26, 22, 19, 0.92)',
             color: '#FAF7F2',
             fontSize: '10px',
             fontWeight: '750',
@@ -334,7 +334,7 @@ export default function ListingCard({
             display: 'inline-flex',
             alignItems: 'center',
             gap: '5px',
-            border: '1px solid rgba(255, 255, 255, 0.16)',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
             textTransform: 'uppercase'
           }}>
             <Sparkles size={11} color="var(--accent-primary)" />
@@ -343,12 +343,12 @@ export default function ListingCard({
         )}
 
         {media.video && (
-          <span style={{ position: 'absolute', bottom: '12px', left: '12px', backgroundColor: 'rgba(26, 22, 19, 0.95)', border: '1px solid rgba(255, 255, 255, 0.12)', color: 'var(--accent-primary)', fontSize: '10px', fontWeight: '800', padding: '5px 9px', borderRadius: '10px', zIndex: 4, display: 'flex', alignItems: 'center', gap: '4px', transition: 'all 0.3s ease' }}>
+          <span style={{ position: 'absolute', bottom: '12px', left: '12px', backgroundColor: 'rgba(26, 22, 19, 0.92)', border: '1px solid rgba(255, 255, 255, 0.08)', color: 'var(--accent-primary)', fontSize: '10px', fontWeight: '800', padding: '5px 9px', borderRadius: '10px', zIndex: 4, display: 'flex', alignItems: 'center', gap: '4px', transition: 'all 0.3s ease' }}>
             <Video size={12} color="var(--accent-primary)" /> {isHovered ? (t('livePlayback') || 'Lecture') : (t('demoVideo') || 'Vidéo')}
           </span>
         )}
 
-        <span style={{ position: 'absolute', bottom: '12px', right: '12px', backgroundColor: 'rgba(26, 22, 19, 0.95)', border: '1px solid var(--border-color)', color: '#FAF7F2', fontSize: '11px', fontWeight: '800', padding: '5px 10px', borderRadius: '999px', zIndex: 4 }}>
+        <span style={{ position: 'absolute', bottom: '12px', right: '12px', backgroundColor: 'rgba(26, 22, 19, 0.92)', border: '1px solid rgba(255, 255, 255, 0.08)', color: '#FAF7F2', fontSize: '11px', fontWeight: '800', padding: '5px 10px', borderRadius: '999px', zIndex: 4 }}>
           {safeFormatCompensation(item.compensation)}
         </span>
       </div>
