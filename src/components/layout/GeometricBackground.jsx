@@ -13,7 +13,16 @@ import React, { useEffect, useRef } from 'react';
 export default function GeometricBackground({ darkMode = false }) {
   const canvasRef = useRef(null);
 
+  // 🚨 PHASE 114 : DÉTECTION MATÉRIELLE TACTILE / IOS (ZÉRO CANVAS EN VRAM SUR TOUCH/IOS)
+  const isTouchDevice = typeof window !== 'undefined' && (
+    ('ontouchstart' in window) ||
+    (navigator.maxTouchPoints > 0) ||
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  );
+
   useEffect(() => {
+    if (isTouchDevice) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -245,7 +254,24 @@ export default function GeometricBackground({ darkMode = false }) {
       window.removeEventListener('mouseleave', handleMouseLeave);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [darkMode]);
+  }, [darkMode, isTouchDevice]);
+
+  if (isTouchDevice) {
+    return (
+      <div
+        data-testid="ios-touch-geometric-fallback"
+        style={{
+          position: 'fixed',
+          inset: 0,
+          background: darkMode
+            ? 'radial-gradient(circle at 50% 10%, rgba(198, 125, 91, 0.18) 0%, rgba(26, 22, 19, 0.95) 60%, #12100E 100%)'
+            : 'radial-gradient(circle at 50% 10%, rgba(198, 125, 91, 0.14) 0%, rgba(250, 247, 242, 0.95) 65%, #FAF7F2 100%)',
+          pointerEvents: 'none',
+          zIndex: -100,
+        }}
+      />
+    );
+  }
 
   return (
     <canvas

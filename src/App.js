@@ -100,10 +100,32 @@ export default function App() {
     isDark: darkMode,
     toggleTheme: toggleDarkMode,
   } = useTheme();
-  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+
+  // 🚨 PHASE 114 : DÉTECTION MATÉRIELLE TACTILE ROBUSTE (ZÉRO CANVAS / ZÉRO WEBGL SUR IOS & TACTILE)
+  const isTouchDevice = typeof window !== 'undefined' && (
+    ('ontouchstart' in window) ||
+    (navigator.maxTouchPoints > 0) ||
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  );
+
+  const [isMobileDevice, setIsMobileDevice] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    const hasTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    return hasTouch || window.innerWidth < 768;
+  });
+  const isMobile = isMobileDevice; // Rétrocompatibilité totale pour les composants enfants
 
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    const handleResize = () => {
+      const hasTouch = typeof window !== 'undefined' && (
+        ('ontouchstart' in window) ||
+        (navigator.maxTouchPoints > 0) ||
+        /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+      );
+      setIsMobileDevice(hasTouch || window.innerWidth < 768);
+    };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
@@ -2408,8 +2430,8 @@ export default function App() {
         fontFamily: 'var(--font-family-main)',
         zIndex: 999999
       }}>
-        {/* FOND LIQUIDE IRIDESCENT : DÉGRADÉ STATIQUE LÉGER SUR MOBILE POUR ÉVITER LE CRASH iOS */}
-        {isMobile ? (
+        {/* FOND LIQUIDE IRIDESCENT : DÉGRADÉ STATIQUE LÉGER SUR MOBILE & TACTILE POUR ÉVITER LE CRASH iOS */}
+        {(isTouchDevice || isMobileDevice) ? (
           <div style={{
             position: 'absolute',
             inset: 0,
@@ -2435,8 +2457,8 @@ export default function App() {
           padding: '30px',
           animation: 'modalSlideIn 0.8s var(--ease-monopo) both'
         }}>
-          {/* 🚨 PHASE 108 : ÉRADICATION DU CRASH OOM iOS (LAZY LOADING & DÉMONTAGE WEBGL STRICT) */}
-          {(!isMobile) ? (
+          {/* 🚨 PHASE 108 & 114 : ÉRADICATION DU CRASH OOM iOS (LAZY LOADING & DÉMONTAGE WEBGL STRICT) */}
+          {(!isTouchDevice && !isMobileDevice) ? (
             <Suspense fallback={null}>
               <TrocoLogo3D size={100} animated={true} style={{ marginBottom: '28px' }} />
             </Suspense>
@@ -2533,15 +2555,29 @@ export default function App() {
       {/* 🚨 PHASE 55 : NOTIFICATIONS DYNAMIC ISLAND / TOASTS PREMIUM */}
       <NotificationPill />
 
-      {/* 🚨 PHASE 108 : CONSTELLATION GÉOMÉTRIQUE FLUIDE (DESKTOP UNIQUEMENT, ZÉRO CANVAS SUR MOBILE) */}
-      {!isMobile && (
+      {/* 🚨 PHASE 114 : NEUTRALISATION MATÉRIELLE DU CANVAS / WEBGL SUR TOUT TERMINAL TACTILE & IOS (VRAM FIX) */}
+      {!isTouchDevice ? (
         <Suspense fallback={null}>
           <GeometricBackground darkMode={darkMode} />
         </Suspense>
+      ) : (
+        /* FALLBACK CSS PREMIUM POUR LE BACKGROUND : DÉGRADÉ RADIAL RICHE SANS AUCUN CANVAS */
+        <div
+          data-testid="ios-touch-background-fallback"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: darkMode
+              ? 'radial-gradient(circle at 50% 10%, rgba(198, 125, 91, 0.18) 0%, rgba(26, 22, 19, 0.95) 60%, #12100E 100%)'
+              : 'radial-gradient(circle at 50% 10%, rgba(198, 125, 91, 0.14) 0%, rgba(250, 247, 242, 0.95) 65%, #FAF7F2 100%)',
+            pointerEvents: 'none',
+            zIndex: -100,
+          }}
+        />
       )}
 
-      {/* FOND LIQUIDE IRIDESCENT : DÉGRADÉ STATIQUE SUR MOBILE POUR ÉVITER LE DÉPASSEMENT VRAM iOS */}
-      {isMobile ? (
+      {/* FOND LIQUIDE IRIDESCENT : DÉGRADÉ STATIQUE SUR MOBILE / TACTILE POUR ÉVITER LE DÉPASSEMENT VRAM iOS */}
+      {(isTouchDevice || isMobileDevice) ? (
         <div style={{
           position: 'fixed',
           inset: 0,
