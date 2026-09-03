@@ -21,7 +21,8 @@ import {
   RotateCcw, RotateCw, Trash2, StickyNote,
   Type, Hand, Brush, Check, Eye, Maximize2, ChevronDown,
   Sparkles, Save, Send, History, Palette, Clock, FolderKanban,
-  Triangle, Hexagon, Star, MessageSquare, Heart
+  Triangle, Hexagon, Star, MessageSquare, Heart,
+  MousePointer, Copy, Clipboard
 } from 'lucide-react';
 import { doc, getDoc, onSnapshot, setDoc, deleteDoc, collection, serverTimestamp, arrayUnion } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -220,6 +221,19 @@ export default function CollaborativeWhiteboardModal({
   const [remotePaths, setRemotePaths] = useState([]);
   const [stickyNotes, setStickyNotes] = useState([]);
   const [textElements, setTextElements] = useState([]);
+
+  // 🚨 PHASE 110 : ÉTATS GLOBAUX DU MOTEUR WHITEBOARD PRO (Object Model & Presse-papier)
+  const [toolMode, setToolMode] = useState('draw'); // 'draw' | 'text' | 'shape' | 'select'
+  const [selectedObjectId, setSelectedObjectId] = useState(null);
+  const [clipboardObject, setClipboardObject] = useState(null);
+  const [canvasObjects, setCanvasObjects] = useState([]);
+  const [rotationTooltip, setRotationTooltip] = useState(null); // { degrees, screenX, screenY }
+
+  const activeSnapGuidesRef = useRef({ vertical: null, horizontal: null });
+  const isRotatingRef = useRef(null);
+  const isResizingObjectRef = useRef(null);
+  const isDraggingObjectRef = useRef(null);
+
   // 🚨 PHASE 94 : Moteur de tracé natif sans React State Thrashing
   const currentPathRef = useRef(null);
   const rafDrawRef = useRef(null);
@@ -484,6 +498,266 @@ export default function CollaborativeWhiteboardModal({
     });
   }, [remotePaths, stickyNotes, textElements, debouncedSyncToFirestore]);
 
+  // 🚨 PHASE 110 : MOTEUR ORIENTÉ OBJET — Helpers Object Model & Bounding Box
+  const toCanvasObject = useCallback((item) => {
+    if (!item) return null;
+    if (item.data && (item.type === 'path' || item.type === 'text' || item.type === 'shape')) {
+      return {
+        id: item.id || `obj-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+        type: item.type,
+        x: typeof item.x === 'number' ? item.x : 0,
+        y: typeof item.y === 'number' ? item.y : 0,
+        width: typeof item.width === 'number' ? item.width : 50,
+        height: typeof item.height === 'number' ? item.height : 50,
+        rotation: typeof item.rotation === 'number' ? item.rotation : 0,
+        data: item.data,
+        tool: item.tool || item.data?.tool,
+        color: item.color || item.data?.color,
+        lineWidth: item.lineWidth || item.data?.lineWidth,
+        points: item.points || item.data?.points,
+      };
+    }
+
+    const isFreehand = item.type === 'freehand' || (!item.type && item.points);
+    const isText = item.type === 'text_box' || item.type === 'text' || !!item.text;
+    const isShape = !isFreehand && !isText;
+
+    let x = item.x || 0;
+    let y = item.y || 0;
+    let width = item.width || 0;
+    let height = item.height || 0;
+
+    if (isFreehand && item.points && item.points.length > 0) {
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      item.points.forEach((p) => {
+        if (p.x < minX) minX = p.x;
+        if (p.x > maxX) maxX = p.x;
+        if (p.y < minY) minY = p.y;
+        if (p.y > maxY) maxY = p.y;
+      });
+      x = minX;
+      y = minY;
+      width = Math.max(16, maxX - minX);
+      height = Math.max(16, maxY - minY);
+    } else if (item.type === 'line' || item.type === 'arrow') {
+      x = Math.min(item.fromX ?? 0, item.toX ?? 0);
+      y = Math.min(item.fromY ?? 0, item.toY ?? 0);
+      width = Math.max(16, Math.abs((item.toX ?? 0) - (item.fromX ?? 0)));
+      height = Math.max(16, Math.abs((item.toY ?? 0) - (item.fromY ?? 0)));
+    }
+
+    return {
+      id: item.id || `obj-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+      type: isText ? 'text' : (isShape ? 'shape' : 'path'),
+      x,
+      y,
+      width: width || (isText ? 220 : 50),
+      height: height || (isText ? 50 : 50),
+      rotation: item.rotation || 0,
+      data: {
+        ...item,
+        tool: item.tool || item.type,
+        shapeType: isShape ? item.type : undefined,
+      },
+      tool: item.tool || item.type,
+      color: item.color,
+      lineWidth: item.lineWidth,
+      points: item.points,
+      fromX: item.fromX,
+      fromY: item.fromY,
+      toX: item.toX,
+      toY: item.toY,
+    };
+  }, []);
+
+  const getObjectBoundingBox = useCallback((obj) => {
+    if (!obj) return { x: 0, y: 0, width: 50, height: 50 };
+
+    if (typeof obj.x === 'number' && typeof obj.y === 'number' && obj.width > 0 && obj.height > 0) {
+      return { x: obj.x, y: obj.y, width: obj.width, height: obj.height };
+    }
+
+    const pts = obj.points || obj.data?.points;
+    if (pts && pts.length > 0) {
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      pts.forEach((p) => {
+        if (p.x < minX) minX = p.x;
+        if (p.x > maxX) maxX = p.x;
+        if (p.y < minY) minY = p.y;
+        if (p.y > maxY) maxY = p.y;
+      });
+      return {
+        x: minX,
+        y: minY,
+        width: Math.max(16, maxX - minX),
+        height: Math.max(16, maxY - minY),
+      };
+    }
+
+    if (typeof obj.fromX === 'number' && typeof obj.toX === 'number') {
+      const minX = Math.min(obj.fromX, obj.toX);
+      const maxX = Math.max(obj.fromX, obj.toX);
+      const minY = Math.min(obj.fromY, obj.toY);
+      const maxY = Math.max(obj.fromY, obj.toY);
+      return {
+        x: minX,
+        y: minY,
+        width: Math.max(16, maxX - minX),
+        height: Math.max(16, maxY - minY),
+      };
+    }
+
+    return {
+      x: obj.x || obj.data?.x || 0,
+      y: obj.y || obj.data?.y || 0,
+      width: obj.width || obj.data?.width || 60,
+      height: obj.height || obj.data?.height || 60,
+    };
+  }, []);
+
+  const drawSelectionBoundingBox = useCallback((ctx, obj, currentZoom) => {
+    if (!obj) return;
+    const box = getObjectBoundingBox(obj);
+    const rot = obj.rotation || obj.data?.rotation || 0;
+    const cx = box.x + box.width / 2;
+    const cy = box.y + box.height / 2;
+
+    ctx.save();
+    if (rot) {
+      ctx.translate(cx, cy);
+      ctx.rotate((rot * Math.PI) / 180);
+      ctx.translate(-cx, -cy);
+    }
+
+    // 1. Bordure bleue de sélection en pointillé
+    ctx.strokeStyle = '#3B82F6';
+    ctx.lineWidth = 1.5 / currentZoom;
+    ctx.setLineDash([4 / currentZoom, 3 / currentZoom]);
+    ctx.strokeRect(box.x, box.y, box.width, box.height);
+    ctx.setLineDash([]);
+
+    // 2. 4 poignées aux coins pour le redimensionnement
+    const handleR = 5 / currentZoom;
+    const corners = [
+      { x: box.x, y: box.y }, // NW
+      { x: box.x + box.width, y: box.y }, // NE
+      { x: box.x + box.width, y: box.y + box.height }, // SE
+      { x: box.x, y: box.y + box.height }, // SW
+    ];
+
+    corners.forEach((c) => {
+      ctx.fillStyle = '#FFFFFF';
+      ctx.strokeStyle = '#3B82F6';
+      ctx.lineWidth = 1.5 / currentZoom;
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, handleR, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    });
+
+    // 3. Poignée de rotation au-dessus du centre haut
+    const stemLen = 24 / currentZoom;
+    const rotHandleX = cx;
+    const rotHandleY = box.y - stemLen;
+
+    ctx.beginPath();
+    ctx.moveTo(cx, box.y);
+    ctx.lineTo(rotHandleX, rotHandleY);
+    ctx.strokeStyle = '#3B82F6';
+    ctx.lineWidth = 1.5 / currentZoom;
+    ctx.stroke();
+
+    ctx.fillStyle = '#3B82F6';
+    ctx.beginPath();
+    ctx.arc(rotHandleX, rotHandleY, handleR + 1 / currentZoom, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#FFFFFF';
+    ctx.lineWidth = 1 / currentZoom;
+    ctx.stroke();
+
+    ctx.restore();
+  }, [getObjectBoundingBox]);
+
+  // 🚨 PHASE 110 : Système de Presse-papier (Copier / Coller & Suppression)
+  const handleCopy = useCallback(() => {
+    if (!selectedObjectId) return;
+    const selectedObj = localPaths.find((o) => o && o.id === selectedObjectId);
+    if (selectedObj) {
+      setClipboardObject({ ...selectedObj });
+    }
+  }, [selectedObjectId, localPaths]);
+
+  const handlePaste = useCallback(() => {
+    if (!clipboardObject) return;
+    const newId = `obj-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+    const newX = (clipboardObject.x || 0) + 20;
+    const newY = (clipboardObject.y || 0) + 20;
+
+    const shiftPoints = (pts) =>
+      Array.isArray(pts) ? pts.map((p) => ({ x: p.x + 20, y: p.y + 20 })) : undefined;
+
+    const duplicated = {
+      ...clipboardObject,
+      id: newId,
+      x: newX,
+      y: newY,
+      points: shiftPoints(clipboardObject.points || clipboardObject.data?.points),
+      fromX: typeof clipboardObject.fromX === 'number' ? clipboardObject.fromX + 20 : undefined,
+      toX: typeof clipboardObject.toX === 'number' ? clipboardObject.toX + 20 : undefined,
+      fromY: typeof clipboardObject.fromY === 'number' ? clipboardObject.fromY + 20 : undefined,
+      toY: typeof clipboardObject.toY === 'number' ? clipboardObject.toY + 20 : undefined,
+      data: {
+        ...(clipboardObject.data || {}),
+        x: newX,
+        y: newY,
+        points: shiftPoints(clipboardObject.data?.points || clipboardObject.points),
+      },
+    };
+
+    const nextPaths = [...localPaths, duplicated];
+    setLocalPaths(nextPaths);
+    setCanvasObjects(nextPaths.map(toCanvasObject));
+    setSelectedObjectId(newId);
+    setToolMode('select');
+    setTool('select');
+    pushToHistory(nextPaths);
+    whiteboardP2PService.broadcastEvent('path_add', { path: duplicated });
+    debouncedSyncToFirestore(nextPaths, remotePaths, stickyNotes, textElements);
+  }, [clipboardObject, localPaths, remotePaths, stickyNotes, textElements, pushToHistory, debouncedSyncToFirestore, toCanvasObject]);
+
+  const handleDeleteSelected = useCallback(() => {
+    if (!selectedObjectId) return;
+    const nextPaths = localPaths.filter((o) => o && o.id !== selectedObjectId);
+    setLocalPaths(nextPaths);
+    setCanvasObjects(nextPaths.map(toCanvasObject));
+    setSelectedObjectId(null);
+    pushToHistory(nextPaths);
+    debouncedSyncToFirestore(nextPaths, remotePaths, stickyNotes, textElements);
+  }, [selectedObjectId, localPaths, remotePaths, stickyNotes, textElements, pushToHistory, debouncedSyncToFirestore, toCanvasObject]);
+
+  // Raccourcis clavier Ctrl+C, Ctrl+V, Delete
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e) => {
+      if (['INPUT', 'TEXTAREA'].includes(e.target?.tagName)) return;
+
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c') {
+        e.preventDefault();
+        handleCopy();
+      } else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v') {
+        e.preventDefault();
+        handlePaste();
+      } else if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (selectedObjectId) {
+          e.preventDefault();
+          handleDeleteSelected();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, selectedObjectId, clipboardObject, handleCopy, handlePaste, handleDeleteSelected]);
+
   // Gestion du zoom à la molette de la souris avec throttle 16ms (60 FPS) et centrage sur le curseur
   const lastWheelTimeRef = useRef(0);
   const handleWheel = useCallback((e) => {
@@ -583,7 +857,15 @@ export default function CollaborativeWhiteboardModal({
   // Helper de dessin vectoriel pour toutes les formes géométriques
   const drawVectorShape = (ctx, path) => {
     if (!path) return;
-    const { type, x = 0, y = 0, width = 0, height = 0, fromX = 0, fromY = 0, toX = 0, toY = 0, lineWidth = 4 } = path;
+    const type = path.data?.shapeType || path.shapeType || path.tool || path.type;
+    const x = typeof path.x === 'number' ? path.x : (path.data?.x || 0);
+    const y = typeof path.y === 'number' ? path.y : (path.data?.y || 0);
+    const width = typeof path.width === 'number' ? path.width : (path.data?.width || 0);
+    const height = typeof path.height === 'number' ? path.height : (path.data?.height || 0);
+    const fromX = typeof path.fromX === 'number' ? path.fromX : (path.data?.fromX || x);
+    const fromY = typeof path.fromY === 'number' ? path.fromY : (path.data?.fromY || y);
+    const toX = typeof path.toX === 'number' ? path.toX : (path.data?.toX || x + width);
+    const toY = typeof path.toY === 'number' ? path.toY : (path.data?.toY || y + height);
 
     if (type === 'rect') {
       ctx.strokeRect(x, y, width, height);
@@ -790,14 +1072,27 @@ export default function CollaborativeWhiteboardModal({
       if (!isPathInViewport(path, vMinX, vMaxX, vMinY, vMaxY)) return;
 
       ctx.save();
-      ctx.beginPath();
-      applyBrushStyleToContext(ctx, path.tool, path.color, path.lineWidth, !!path.isRemote);
+      const objRot = path.rotation || path.data?.rotation || 0;
+      const box = getObjectBoundingBox(path);
+      const cx = box.x + box.width / 2;
+      const cy = box.y + box.height / 2;
 
-      if (path.type === 'freehand') {
-        if (path.points && path.points.length > 0) {
-          ctx.moveTo(path.points[0].x, path.points[0].y);
-          for (let i = 1; i < path.points.length; i++) {
-            ctx.lineTo(path.points[i].x, path.points[i].y);
+      if (objRot) {
+        ctx.translate(cx, cy);
+        ctx.rotate((objRot * Math.PI) / 180);
+        ctx.translate(-cx, -cy);
+      }
+
+      ctx.beginPath();
+      applyBrushStyleToContext(ctx, path.tool || path.data?.tool, path.color || path.data?.color, path.lineWidth || path.data?.lineWidth, !!path.isRemote);
+
+      const pathType = path.type === 'path' ? (path.data?.tool === 'freehand' || path.points ? 'freehand' : 'path') : path.type;
+      if (pathType === 'freehand' || path.points || path.data?.points) {
+        const pts = path.points || path.data?.points;
+        if (pts && pts.length > 0) {
+          ctx.moveTo(pts[0].x, pts[0].y);
+          for (let i = 1; i < pts.length; i++) {
+            ctx.lineTo(pts[i].x, pts[i].y);
           }
           ctx.stroke();
         }
@@ -807,7 +1102,40 @@ export default function CollaborativeWhiteboardModal({
 
       ctx.restore();
     });
-  }, [remotePaths, localPaths, pan.x, pan.y, zoom]);
+
+    // 🚨 PHASE 110 : Bounding Box de sélection & Poignées de rotation et redimensionnement
+    if (selectedObjectId) {
+      const selObj = allPathsToRender.find((p) => p && p.id === selectedObjectId);
+      if (selObj) {
+        drawSelectionBoundingBox(ctx, selObj, zoom);
+      }
+    }
+
+    // 🚨 PHASE 110 : Assistance au centrage (Lignes repères magenta 1px)
+    if (activeSnapGuidesRef.current) {
+      const { vertical, horizontal } = activeSnapGuidesRef.current;
+      if (vertical != null) {
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255, 0, 255, 0.5)';
+        ctx.lineWidth = 1 / zoom;
+        ctx.beginPath();
+        ctx.moveTo(vertical, vMinY);
+        ctx.lineTo(vertical, vMaxY);
+        ctx.stroke();
+        ctx.restore();
+      }
+      if (horizontal != null) {
+        ctx.save();
+        ctx.strokeStyle = 'rgba(255, 0, 255, 0.5)';
+        ctx.lineWidth = 1 / zoom;
+        ctx.beginPath();
+        ctx.moveTo(vMinX, horizontal);
+        ctx.lineTo(vMaxX, horizontal);
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+  }, [remotePaths, localPaths, pan.x, pan.y, zoom, selectedObjectId, drawSelectionBoundingBox, getObjectBoundingBox]);
 
   // Redimensionnement fluide du canvas
   const updateCanvasSize = useCallback(() => {
@@ -1096,6 +1424,108 @@ export default function CollaborativeWhiteboardModal({
     const coords = getCanvasCoords(e);
     startPosRef.current = coords;
 
+    // 🚨 PHASE 110 : MODE SÉLECTION (Curseur ↖️) — Hit-testing Boîte englobante & Poignées
+    if (tool === 'select' || toolMode === 'select') {
+      if (selectedObjectId) {
+        const selObj = localPaths.find((p) => p && p.id === selectedObjectId);
+        if (selObj) {
+          const box = getObjectBoundingBox(selObj);
+          const rot = selObj.rotation || selObj.data?.rotation || 0;
+          const cx = box.x + box.width / 2;
+          const cy = box.y + box.height / 2;
+          const rad = (rot * Math.PI) / 180;
+          const handleHitRadius = 14 / zoom;
+
+          // Poignée de rotation (au-dessus du centre haut)
+          const stemLen = 24 / zoom;
+          const rotHx = cx + 0 * Math.cos(rad) - (-box.height / 2 - stemLen) * Math.sin(rad);
+          const rotHy = cy + 0 * Math.sin(rad) + (-box.height / 2 - stemLen) * Math.cos(rad);
+
+          if (Math.hypot(coords.x - rotHx, coords.y - rotHy) <= handleHitRadius) {
+            isRotatingRef.current = {
+              id: selObj.id,
+              cx,
+              cy,
+              startAngle: rot,
+            };
+            return;
+          }
+
+          // 4 poignées de redimensionnement aux coins
+          const halfW = box.width / 2;
+          const halfH = box.height / 2;
+          const cornerDefs = [
+            { name: 'nw', rx: -halfW, ry: -halfH },
+            { name: 'ne', rx: halfW, ry: -halfH },
+            { name: 'se', rx: halfW, ry: halfH },
+            { name: 'sw', rx: -halfW, ry: halfH },
+          ];
+
+          for (const c of cornerDefs) {
+            const chx = cx + c.rx * Math.cos(rad) - c.ry * Math.sin(rad);
+            const chy = cy + c.rx * Math.sin(rad) + c.ry * Math.cos(rad);
+            if (Math.hypot(coords.x - chx, coords.y - chy) <= handleHitRadius) {
+              isResizingObjectRef.current = {
+                id: selObj.id,
+                corner: c.name,
+                startCoords: coords,
+                origBox: { ...box },
+              };
+              return;
+            }
+          }
+
+          // Clic à l'intérieur de la Bounding Box de l'objet sélectionné -> Démarrer le drag
+          const unX = cx + (coords.x - cx) * Math.cos(-rad) - (coords.y - cy) * Math.sin(-rad);
+          const unY = cy + (coords.x - cx) * Math.sin(-rad) + (coords.y - cy) * Math.cos(-rad);
+          if (unX >= box.x && unX <= box.x + box.width && unY >= box.y && unY <= box.y + box.height) {
+            isDraggingObjectRef.current = {
+              id: selObj.id,
+              startCoords: coords,
+              origX: box.x,
+              origY: box.y,
+              width: box.width,
+              height: box.height,
+            };
+            return;
+          }
+        }
+      }
+
+      // Parcourir tous les objets en ordre inverse (top-to-bottom) pour détecter un nouvel objet
+      for (let i = localPaths.length - 1; i >= 0; i--) {
+        const obj = localPaths[i];
+        if (!obj) continue;
+        const box = getObjectBoundingBox(obj);
+        const rot = obj.rotation || obj.data?.rotation || 0;
+        const cx = box.x + box.width / 2;
+        const cy = box.y + box.height / 2;
+        const rad = (rot * Math.PI) / 180;
+        const unX = cx + (coords.x - cx) * Math.cos(-rad) - (coords.y - cy) * Math.sin(-rad);
+        const unY = cy + (coords.x - cx) * Math.sin(-rad) + (coords.y - cy) * Math.cos(-rad);
+        const pad = 8 / zoom;
+
+        if (unX >= box.x - pad && unX <= box.x + box.width + pad && unY >= box.y - pad && unY <= box.y + box.height + pad) {
+          setSelectedObjectId(obj.id);
+          isDraggingObjectRef.current = {
+            id: obj.id,
+            startCoords: coords,
+            origX: box.x,
+            origY: box.y,
+            width: box.width,
+            height: box.height,
+          };
+          redrawCanvas();
+          return;
+        }
+      }
+
+      // Clic dans le vide -> désélectionner
+      setSelectedObjectId(null);
+      redrawCanvas();
+      return;
+    }
+
     if (tool === 'hand') {
       isPanningRef.current = true;
       panStartRef.current = {
@@ -1285,6 +1715,170 @@ export default function CollaborativeWhiteboardModal({
       return;
     }
 
+    // 🚨 PHASE 110 : MOTEUR DE ROTATION (Avec tooltip degrés Math.atan2)
+    if (isRotatingRef.current) {
+      const { id, cx, cy } = isRotatingRef.current;
+      const angleRad = Math.atan2(coords.y - cy, coords.x - cx);
+      let degrees = Math.round(((angleRad + Math.PI / 2) * 180) / Math.PI);
+      degrees = ((degrees % 360) + 360) % 360;
+
+      setRotationTooltip({ degrees, screenX: e.clientX, screenY: e.clientY });
+
+      setLocalPaths((prev) =>
+        prev.map((obj) =>
+          obj.id === id
+            ? { ...obj, rotation: degrees, data: { ...(obj.data || {}), rotation: degrees } }
+            : obj
+        )
+      );
+      setCanvasObjects((prev) =>
+        prev.map((obj) =>
+          obj.id === id
+            ? { ...obj, rotation: degrees, data: { ...(obj.data || {}), rotation: degrees } }
+            : obj
+        )
+      );
+
+      redrawCanvas();
+      return;
+    }
+
+    // 🚨 PHASE 110 : REDIMENSIONNEMENT DES FORMES (4 coins)
+    if (isResizingObjectRef.current) {
+      const { id, corner, startCoords, origBox } = isResizingObjectRef.current;
+      const dx = coords.x - startCoords.x;
+      const dy = coords.y - startCoords.y;
+
+      let newX = origBox.x;
+      let newY = origBox.y;
+      let newW = origBox.width;
+      let newH = origBox.height;
+
+      if (corner === 'se') {
+        newW = Math.max(16, origBox.width + dx);
+        newH = Math.max(16, origBox.height + dy);
+      } else if (corner === 'sw') {
+        newW = Math.max(16, origBox.width - dx);
+        newX = origBox.x + (origBox.width - newW);
+        newH = Math.max(16, origBox.height + dy);
+      } else if (corner === 'ne') {
+        newW = Math.max(16, origBox.width + dx);
+        newH = Math.max(16, origBox.height - dy);
+        newY = origBox.y + (origBox.height - newH);
+      } else if (corner === 'nw') {
+        newW = Math.max(16, origBox.width - dx);
+        newX = origBox.x + (origBox.width - newW);
+        newH = Math.max(16, origBox.height - dy);
+        newY = origBox.y + (origBox.height - newH);
+      }
+
+      setLocalPaths((prev) =>
+        prev.map((obj) =>
+          obj.id === id
+            ? {
+                ...obj,
+                x: newX,
+                y: newY,
+                width: newW,
+                height: newH,
+                data: { ...(obj.data || {}), x: newX, y: newY, width: newW, height: newH },
+              }
+            : obj
+        )
+      );
+      setCanvasObjects((prev) =>
+        prev.map((obj) =>
+          obj.id === id
+            ? {
+                ...obj,
+                x: newX,
+                y: newY,
+                width: newW,
+                height: newH,
+                data: { ...(obj.data || {}), x: newX, y: newY, width: newW, height: newH },
+              }
+            : obj
+        )
+      );
+
+      redrawCanvas();
+      return;
+    }
+
+    // 🚨 PHASE 110 : ASSISTANCE AU CENTRAGE (Snapping / Magnétisme 10px & Drag)
+    if (isDraggingObjectRef.current) {
+      const { id, startCoords, origX, origY, width, height } = isDraggingObjectRef.current;
+      let newX = origX + (coords.x - startCoords.x);
+      let newY = origY + (coords.y - startCoords.y);
+
+      const objCenterX = newX + width / 2;
+      const objCenterY = newY + height / 2;
+
+      const canvas = canvasRef.current;
+      const canvasWorldCenterX = (-pan.x + (canvas ? canvas.clientWidth / 2 : 400)) / zoom;
+      const canvasWorldCenterY = (-pan.y + (canvas ? canvas.clientHeight / 2 : 300)) / zoom;
+      const canvasRawCenterX = canvas ? canvas.width / 2 : 400;
+      const canvasRawCenterY = canvas ? canvas.height / 2 : 300;
+
+      let snappedVertical = null;
+      let snappedHorizontal = null;
+
+      // Magnétisme X (< 10px du centre)
+      if (Math.abs(objCenterX - canvasWorldCenterX) < 10) {
+        newX = canvasWorldCenterX - width / 2;
+        snappedVertical = canvasWorldCenterX;
+      } else if (Math.abs(objCenterX - canvasRawCenterX) < 10) {
+        newX = canvasRawCenterX - width / 2;
+        snappedVertical = canvasRawCenterX;
+      }
+
+      // Magnétisme Y (< 10px du centre)
+      if (Math.abs(objCenterY - canvasWorldCenterY) < 10) {
+        newY = canvasWorldCenterY - height / 2;
+        snappedHorizontal = canvasWorldCenterY;
+      } else if (Math.abs(objCenterY - canvasRawCenterY) < 10) {
+        newY = canvasRawCenterY - height / 2;
+        snappedHorizontal = canvasRawCenterY;
+      }
+
+      activeSnapGuidesRef.current = { vertical: snappedVertical, horizontal: snappedHorizontal };
+
+      setLocalPaths((prev) =>
+        prev.map((obj) => {
+          if (obj.id !== id) return obj;
+          const prevX = typeof obj.x === 'number' ? obj.x : origX;
+          const prevY = typeof obj.y === 'number' ? obj.y : origY;
+          const dxShift = newX - prevX;
+          const dyShift = newY - prevY;
+          const rawPts = obj.points || obj.data?.points;
+          const updatedPoints = rawPts ? rawPts.map((p) => ({ x: p.x + dxShift, y: p.y + dyShift })) : undefined;
+
+          return {
+            ...obj,
+            x: newX,
+            y: newY,
+            points: updatedPoints || obj.points,
+            fromX: typeof obj.fromX === 'number' ? obj.fromX + dxShift : undefined,
+            toX: typeof obj.toX === 'number' ? obj.toX + dxShift : undefined,
+            fromY: typeof obj.fromY === 'number' ? obj.fromY + dyShift : undefined,
+            toY: typeof obj.toY === 'number' ? obj.toY + dyShift : undefined,
+            data: {
+              ...(obj.data || {}),
+              x: newX,
+              y: newY,
+              points: updatedPoints || obj.data?.points,
+            },
+          };
+        })
+      );
+      setCanvasObjects((prev) =>
+        prev.map((obj) => (obj.id === id ? { ...obj, x: newX, y: newY } : obj))
+      );
+
+      redrawCanvas();
+      return;
+    }
+
     if (!isDrawingRef.current || !currentPathRef.current) return;
 
     const activePath = currentPathRef.current;
@@ -1342,6 +1936,19 @@ export default function CollaborativeWhiteboardModal({
   };
 
   const handlePointerUp = (e) => {
+    // 🚨 PHASE 110 : Clôture des interactions de sélection, rotation, redimensionnement et drag
+    if (isRotatingRef.current || isResizingObjectRef.current || isDraggingObjectRef.current) {
+      isRotatingRef.current = null;
+      isResizingObjectRef.current = null;
+      isDraggingObjectRef.current = null;
+      activeSnapGuidesRef.current = { vertical: null, horizontal: null };
+      setRotationTooltip(null);
+      pushToHistory(localPaths);
+      debouncedSyncToFirestore(localPaths, remotePaths, stickyNotes, textElements);
+      redrawCanvas();
+      return;
+    }
+
     if (isPanningRef.current) {
       isPanningRef.current = false;
     }
@@ -1398,8 +2005,9 @@ export default function CollaborativeWhiteboardModal({
 
       const textColor = color === '#FFFFFF' && ['#FFFFFF', '#FDFBF7', '#FEF9C3', '#E0F2FE'].includes(backgroundColor) ? '#1F2937' : color;
 
-      const newText = {
+      const newText = toCanvasObject({
         id: `text-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+        type: 'text',
         x: finalX,
         y: finalY,
         width: finalW,
@@ -1411,7 +2019,7 @@ export default function CollaborativeWhiteboardModal({
         authorName: myName,
         authorUid: myUid,
         createdAt: Date.now(),
-      };
+      });
 
       const nextTexts = [...textElements, newText];
       setTextElements(nextTexts);
@@ -1429,7 +2037,7 @@ export default function CollaborativeWhiteboardModal({
       isDrawingRef.current = false;
       lastLocalModificationTimeRef.current = Date.now();
 
-      const completedPath = { ...currentPathRef.current };
+      const rawCompletedPath = { ...currentPathRef.current };
       currentPathRef.current = null;
 
       if (rafDrawRef.current) {
@@ -1437,9 +2045,12 @@ export default function CollaborativeWhiteboardModal({
         rafDrawRef.current = null;
       }
 
+      // 🚨 PHASE 110 : Conversion en format Objet Model unifié
+      const completedPath = toCanvasObject(rawCompletedPath);
       const nextLocalPaths = [...localPaths, completedPath];
 
       setLocalPaths(nextLocalPaths);
+      setCanvasObjects(nextLocalPaths);
 
       // Clone les traits actuels, ajoute-les à history (en coupant l'historique futur si on avait fait "Undo"), et incrémente historyStep
       setHistory((prevHistory) => {
@@ -2342,10 +2953,35 @@ export default function CollaborativeWhiteboardModal({
             inset: 0,
             width: '100%',
             height: '100%',
-            cursor: tool === 'hand' ? 'grab' : tool === 'eraser' ? 'cell' : 'crosshair',
+            cursor: tool === 'hand' ? 'grab' : tool === 'eraser' ? 'cell' : (tool === 'select' || toolMode === 'select' ? 'default' : 'crosshair'),
             touchAction: 'none',
           }}
         />
+
+        {/* 🚨 PHASE 110 : TOOLTIP FLOTTANT ROTATION (DEGRÉS EN TEMPS RÉEL) */}
+        {rotationTooltip && (
+          <div
+            style={{
+              position: 'fixed',
+              left: `${rotationTooltip.screenX + 16}px`,
+              top: `${rotationTooltip.screenY - 28}px`,
+              backgroundColor: 'rgba(15, 23, 42, 0.92)',
+              color: '#FFFFFF',
+              fontSize: '11px',
+              fontWeight: '800',
+              padding: '4px 8px',
+              borderRadius: '6px',
+              pointerEvents: 'none',
+              zIndex: 10000000,
+              boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+              fontFamily: 'monospace',
+              border: '1px solid rgba(255,255,255,0.18)',
+              backdropFilter: 'blur(4px)',
+            }}
+          >
+            {rotationTooltip.degrees}°
+          </div>
+        )}
 
         {/* POST-ITS (STICKY NOTES) */}
         {stickyNotes.map((sticky) => (
@@ -2472,6 +3108,10 @@ export default function CollaborativeWhiteboardModal({
                       debouncedSyncToFirestore(localPaths, remotePaths, stickyNotes, filtered);
                     }
                     setEditingTextId(null);
+                    // 🚨 PHASE 110 : Fix mode texte -> bascule forcée en mode sélection (Curseur ↖️)
+                    setToolMode('select');
+                    setTool('select');
+                    setSelectedObjectId(t.id);
                   }}
                   onChange={(e) => {
                     const nextTexts = textElements.map((item) =>
@@ -2597,7 +3237,7 @@ export default function CollaborativeWhiteboardModal({
       {/* 3. BARRE D'OUTILS PRINCIPALE FLUIDE & TACTILE (Standard Apple HIG) */}
       {!isImmersiveMode && (
         <div
-          className="flex flex-row flex-nowrap overflow-x-auto overflow-y-hidden overscroll-x-contain touch-pan-x scrollbar-hide"
+          className="flex flex-row overflow-x-auto overflow-y-hidden snap-x snap-mandatory touch-pan-x no-scrollbar items-center justify-start md:justify-center max-w-full px-4 py-2 space-x-3"
           style={{
             position: 'absolute',
             bottom: '20px',
@@ -2610,22 +3250,41 @@ export default function CollaborativeWhiteboardModal({
             WebkitBackdropFilter: 'blur(20px)',
             border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.1)',
             borderRadius: '24px',
-            padding: '8px 14px',
             boxShadow: '0 20px 40px -10px rgba(0,0,0,0.25)',
-            display: 'flex',
-            flexDirection: 'row',
-            flexWrap: 'nowrap',
-            alignItems: 'center',
-            gap: '8px',
-            overflowX: 'auto',
-            overflowY: 'hidden',
-            overscrollBehaviorX: 'contain',
-            touchAction: 'pan-x',
-            WebkitOverflowScrolling: 'touch',
           }}
         >
           {/* Outils de dessin libres */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+            {/* 🚨 PHASE 110 : Outil Curseur de sélection (↖️) */}
+            <button
+              type="button"
+              className="snap-center"
+              onClick={() => {
+                setTool('select');
+                setToolMode('select');
+                setIsShapesMenuOpen(false);
+              }}
+              style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '12px',
+                border: 'none',
+                backgroundColor: (tool === 'select' || toolMode === 'select')
+                  ? 'var(--accent-primary, #C67D5B)'
+                  : darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                color: (tool === 'select' || toolMode === 'select') ? '#FFFFFF' : 'inherit',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+                flexShrink: 0,
+              }}
+              title="Sélectionner & Manipuler (Curseur)"
+            >
+              <MousePointer size={18} />
+            </button>
+
             {[
               { id: 'pencil', icon: Pen, title: 'Crayon' },
               { id: 'brush', icon: Brush, title: 'Pinceau Artistique' },
@@ -2633,13 +3292,16 @@ export default function CollaborativeWhiteboardModal({
               { id: 'eraser', icon: Eraser, title: 'Gomme' },
             ].map((btn) => {
               const Icon = btn.icon;
-              const isSelected = tool === btn.id;
+              const isSelected = tool === btn.id && toolMode !== 'select';
               return (
                 <button
                   key={btn.id}
                   type="button"
+                  className="snap-center"
                   onClick={() => {
                     setTool(btn.id);
+                    setToolMode('draw');
+                    setSelectedObjectId(null);
                     setIsShapesMenuOpen(false);
                   }}
                   style={{
@@ -2670,7 +3332,10 @@ export default function CollaborativeWhiteboardModal({
               <button
                 ref={shapeButtonRef}
                 type="button"
+                className="snap-center"
                 onClick={() => {
+                  setToolMode('shape');
+                  setSelectedObjectId(null);
                   if (['rect', 'circle', 'line', 'arrow', 'triangle', 'hexagon', 'star', 'speech_bubble', 'heart', 'checkmark'].includes(tool)) {
                     toggleShapesMenu();
                   } else {
@@ -2683,10 +3348,10 @@ export default function CollaborativeWhiteboardModal({
                   padding: '0 10px',
                   borderRadius: '12px',
                   border: 'none',
-                  backgroundColor: ['rect', 'circle', 'line', 'arrow', 'triangle', 'hexagon', 'star', 'speech_bubble', 'heart', 'checkmark'].includes(tool)
+                  backgroundColor: ['rect', 'circle', 'line', 'arrow', 'triangle', 'hexagon', 'star', 'speech_bubble', 'heart', 'checkmark'].includes(tool) && toolMode !== 'select'
                     ? 'var(--accent-primary, #C67D5B)'
                     : darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-                  color: ['rect', 'circle', 'line', 'arrow', 'triangle', 'hexagon', 'star', 'speech_bubble', 'heart', 'checkmark'].includes(tool) ? '#FFFFFF' : 'inherit',
+                  color: ['rect', 'circle', 'line', 'arrow', 'triangle', 'hexagon', 'star', 'speech_bubble', 'heart', 'checkmark'].includes(tool) && toolMode !== 'select' ? '#FFFFFF' : 'inherit',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '4px',
@@ -2709,34 +3374,31 @@ export default function CollaborativeWhiteboardModal({
               <AnimatePresence>
                 {isShapesMenuOpen && (
                   <motion.div
-                    id="shapes-popover-portal"
-                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                    transition={{ duration: 0.15 }}
+                    initial={{ opacity: 0, scale: 0.92, y: 10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.92, y: 10 }}
+                    transition={{ duration: 0.16, ease: 'easeOut' }}
                     style={{
                       position: 'fixed',
-                      bottom: `${shapesMenuCoords.bottom}px`,
                       left: `${shapesMenuCoords.left}px`,
-                      backgroundColor: darkMode ? '#1F1B18' : '#FFFFFF',
-                      border: darkMode ? '1px solid rgba(255,255,255,0.18)' : '1px solid rgba(0,0,0,0.12)',
-                      borderRadius: '18px',
-                      padding: '10px',
-                      boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
+                      bottom: `${shapesMenuCoords.bottom}px`,
                       zIndex: 10000000,
-                      maxHeight: '260px',
-                      overflowY: 'auto',
+                      backgroundColor: darkMode ? 'rgba(26,22,19,0.96)' : 'rgba(255,255,255,0.96)',
+                      backdropFilter: 'blur(20px)',
+                      WebkitBackdropFilter: 'blur(20px)',
+                      border: darkMode ? '1px solid rgba(255,255,255,0.14)' : '1px solid rgba(0,0,0,0.12)',
+                      borderRadius: '16px',
+                      padding: '8px',
                       display: 'grid',
-                      gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-                      gap: '8px',
-                      width: '210px',
+                      gridTemplateColumns: 'repeat(5, 1fr)',
+                      gap: '6px',
+                      boxShadow: '0 16px 36px -8px rgba(0,0,0,0.35)',
                       pointerEvents: 'auto',
                     }}
-                    onClick={(e) => e.stopPropagation()}
                   >
                     {SHAPE_OPTIONS.map((shape) => {
-                      const ShapeIcon = shape.icon;
-                      const isCurSelected = tool === shape.id;
+                      const Icon = shape.icon;
+                      const isSel = tool === shape.id;
                       return (
                         <button
                           key={shape.id}
@@ -2744,27 +3406,28 @@ export default function CollaborativeWhiteboardModal({
                           onClick={() => {
                             setSelectedShape(shape.id);
                             setTool(shape.id);
+                            setToolMode('shape');
+                            setSelectedObjectId(null);
                             setIsShapesMenuOpen(false);
                           }}
                           style={{
-                            width: '42px',
-                            height: '42px',
-                            borderRadius: '12px',
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '10px',
                             border: 'none',
-                            backgroundColor: isCurSelected
-                              ? '#C67D5B'
-                              : darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
-                            color: isCurSelected ? '#FFFFFF' : 'inherit',
+                            backgroundColor: isSel
+                              ? 'var(--accent-primary, #C67D5B)'
+                              : darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                            color: isSel ? '#FFFFFF' : 'inherit',
                             display: 'flex',
-                            flexDirection: 'column',
                             alignItems: 'center',
                             justifyContent: 'center',
                             cursor: 'pointer',
                             transition: 'all 0.15s ease',
                           }}
-                          title={shape.label}
+                          title={shape.title}
                         >
-                          <ShapeIcon size={18} />
+                          <Icon size={17} />
                         </button>
                       );
                     })}
@@ -2776,18 +3439,21 @@ export default function CollaborativeWhiteboardModal({
 
             {/* Post-it, Texte & Main Pan */}
             {[
-              { id: 'sticky', icon: StickyNote, title: 'Post-it' },
-              { id: 'text', icon: Type, title: 'Texte' },
-              { id: 'hand', icon: Hand, title: 'Déplacer (Pan)' },
+              { id: 'sticky', icon: StickyNote, title: 'Post-it', mode: 'shape' },
+              { id: 'text', icon: Type, title: 'Texte', mode: 'text' },
+              { id: 'hand', icon: Hand, title: 'Déplacer (Pan)', mode: 'pan' },
             ].map((btn) => {
               const Icon = btn.icon;
-              const isSelected = tool === btn.id;
+              const isSelected = tool === btn.id && toolMode !== 'select';
               return (
                 <button
                   key={btn.id}
                   type="button"
+                  className="snap-center"
                   onClick={() => {
                     setTool(btn.id);
+                    setToolMode(btn.mode || 'draw');
+                    setSelectedObjectId(null);
                     setIsShapesMenuOpen(false);
                   }}
                   style={{
@@ -2988,8 +3654,58 @@ export default function CollaborativeWhiteboardModal({
 
           <div style={{ width: '1px', height: '24px', backgroundColor: 'var(--border-color, rgba(0,0,0,0.1))', margin: '0 4px', flexShrink: 0 }} />
 
-          {/* BOUTONS UNDO / REDO, EFFACER & MODE PLEIN ÉCRAN (IMMERSION) DANS LA BARRE */}
+          {/* 🚨 PHASE 110 : BOUTONS COPIER / COLLER & UNDO / REDO, EFFACER & PLEIN ÉCRAN */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+            {/* Copier */}
+            <button
+              type="button"
+              disabled={!selectedObjectId}
+              onClick={handleCopy}
+              className="snap-center"
+              style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '10px',
+                border: 'none',
+                backgroundColor: selectedObjectId ? (darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)') : 'transparent',
+                color: !selectedObjectId ? (darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)') : 'inherit',
+                cursor: !selectedObjectId ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: !selectedObjectId ? 0.35 : 1,
+                transition: 'all 0.15s ease',
+              }}
+              title="Copier l'élément sélectionné (Ctrl+C)"
+            >
+              <Copy size={16} />
+            </button>
+
+            {/* Coller */}
+            <button
+              type="button"
+              disabled={!clipboardObject}
+              onClick={handlePaste}
+              className="snap-center"
+              style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '10px',
+                border: 'none',
+                backgroundColor: clipboardObject ? (darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)') : 'transparent',
+                color: !clipboardObject ? (darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)') : 'inherit',
+                cursor: !clipboardObject ? 'not-allowed' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: !clipboardObject ? 0.35 : 1,
+                transition: 'all 0.15s ease',
+              }}
+              title="Coller l'élément copié (Ctrl+V)"
+            >
+              <Clipboard size={16} />
+            </button>
+
             <button
               type="button"
               disabled={historyStep <= 0}
