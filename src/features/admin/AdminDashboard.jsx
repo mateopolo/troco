@@ -7,7 +7,8 @@ import {
 } from 'lucide-react';
 import {
   collection, doc, onSnapshot, updateDoc, setDoc, deleteDoc,
-  serverTimestamp, query, orderBy, limit, addDoc, getDoc
+  serverTimestamp, query, orderBy, limit, addDoc, getDoc,
+  where, getDocs, writeBatch
 } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAllGlobalContent } from './useGlobalContent';
@@ -58,6 +59,8 @@ export default function AdminDashboard({
 
   // Modales d'action
   const [editingUser, setEditingUser] = useState(null); // Utilisateur complet à éditer
+  const [factoryResetUser, setFactoryResetUser] = useState(null); // 🚨 PHASE 111 : Utilisateur cible pour Réinitialisation Usine God Mode
+  const [isResetting, setIsResetting] = useState(false);
   const [editingListing, setEditingListing] = useState(null); // Document annonce à éditer
   const [balanceModalUser, setBalanceModalUser] = useState(null); // Utilisateur pour ajustement de solde
   const [deltaTokens, setDeltaTokens] = useState('');
@@ -430,6 +433,144 @@ export default function AdminDashboard({
       showToast(`Compte de ${user.name} supprimé définitivement.`);
     } catch (err) {
       alert('Erreur suppression : ' + err.message);
+    }
+  };
+
+  // 🚨 PHASE 111 : ROUTINE DE NETTOYAGE EN CASCADE (GOD MODE FACTORY RESET)
+  const executeFactoryReset = async (userToReset) => {
+    if (!userToReset) return;
+    const targetUid = String(userToReset.id || userToReset.uid);
+    setIsResetting(true);
+
+    try {
+      // 1. Restauration de l'état originel sur users/{uid}
+      const userRef = doc(db, 'users', targetUid);
+      await setDoc(userRef, {
+        euroBalance: 0.00,
+        trocoTokens: 10,
+        onboardingCompleted: false,
+        skills: [],
+        portfolioImages: [],
+        dealsCompleted: 0,
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+
+      // 2. Suppression en cascade des annonces (listings où authorUid === uid)
+      try {
+        const listingsRef = collection(db, 'listings');
+        const qListingsAuthor = query(listingsRef, where('authorUid', '==', targetUid));
+        const listingsSnapAuthor = await getDocs(qListingsAuthor);
+
+        const qListingsUserId = query(listingsRef, where('userId', '==', targetUid));
+        const listingsSnapUserId = await getDocs(qListingsUserId);
+
+        const allListingsMap = new Map();
+        listingsSnapAuthor.forEach((d) => allListingsMap.set(d.id, d));
+        listingsSnapUserId.forEach((d) => allListingsMap.set(d.id, d));
+
+        if (allListingsMap.size > 0) {
+          const batch = writeBatch(db);
+          allListingsMap.forEach((listingDoc) => {
+            batch.delete(listingDoc.ref);
+          });
+          await batch.commit();
+        }
+      } catch (errListings) {
+        console.warn('[AdminDashboard] Erreur suppression cascade annonces:', errListings);
+      }
+
+      // 3. Suppression en cascade des messages et inscription du log système
+      try {
+        const chatsRef = collection(db, 'chats');
+        let chatsSnap;
+        try {
+          const qChats = query(chatsRef, where('participantUids', 'array-contains', targetUid));
+          chatsSnap = await getDocs(qChats);
+        } catch (_) {
+          chatsSnap = await getDocs(chatsRef);
+        }
+
+        for (const chatDoc of chatsSnap.docs) {
+          const chatData = chatDoc.data() || {};
+          const isParticipant =
+            (Array.isArray(chatData.participantUids) && chatData.participantUids.includes(targetUid)) ||
+            chatData.authorUid === targetUid ||
+            chatData.userId === targetUid ||
+            chatData.peerUid === targetUid;
+
+          if (isParticipant || chatsSnap.size <= 50) {
+            const msgsRef = collection(db, 'chats', chatDoc.id, 'messages');
+            let msgsSnap;
+            try {
+              msgsSnap = await getDocs(msgsRef);
+            } catch (_) {
+              continue;
+            }
+
+            let userHadMessages = false;
+            const msgBatch = writeBatch(db);
+            let deletedCount = 0;
+
+            msgsSnap.forEach((mDoc) => {
+              const mData = mDoc.data() || {};
+              if (
+                mData.senderId === targetUid ||
+                mData.senderUid === targetUid ||
+                mData.sender === targetUid ||
+                mData.authorUid === targetUid
+              ) {
+                userHadMessages = true;
+                msgBatch.delete(mDoc.ref);
+                deletedCount++;
+              }
+            });
+
+            if (deletedCount > 0) {
+              await msgBatch.commit();
+            }
+
+            if (userHadMessages || isParticipant) {
+              await addDoc(msgsRef, {
+                sender: 'system',
+                senderName: 'Système',
+                text: 'Système: Ce compte a été réinitialisé',
+                system: true,
+                createdAt: serverTimestamp(),
+                timestamp: Date.now(),
+              });
+            }
+          }
+        }
+
+        // Vérification de chatThreads
+        try {
+          const chatThreadsRef = collection(db, 'chatThreads');
+          const qThreads = query(chatThreadsRef, where('senderId', '==', targetUid));
+          const threadsSnap = await getDocs(qThreads);
+          if (!threadsSnap.empty) {
+            const tBatch = writeBatch(db);
+            threadsSnap.forEach((tDoc) => {
+              tBatch.delete(tDoc.ref);
+            });
+            await tBatch.commit();
+          }
+        } catch (_) {
+          // ignore si chatThreads absent
+        }
+      } catch (errMessages) {
+        console.warn('[AdminDashboard] Erreur suppression cascade messages:', errMessages);
+      }
+
+      showToast(`🧨 Réinitialisation usine terminée pour ${userToReset.name || targetUid}`);
+      setFactoryResetUser(null);
+      if (editingUser?.id === targetUid) {
+        setEditingUser(null);
+      }
+    } catch (err) {
+      console.error('[AdminDashboard] Erreur factory reset:', err);
+      alert('Erreur lors de la réinitialisation usine : ' + err.message);
+    } finally {
+      setIsResetting(false);
     }
   };
 
@@ -1301,6 +1442,30 @@ export default function AdminDashboard({
                                 title="Supprimer le compte Firestore"
                               >
                                 <Trash2 size={13} />
+                              </button>
+
+                              {/* 🚨 PHASE 111 : Bouton Réinitialisation Usine du Compte (God Mode) */}
+                              <button
+                                type="button"
+                                onClick={() => setFactoryResetUser(user)}
+                                className="premium-button"
+                                style={{
+                                  padding: '6px 10px',
+                                  borderRadius: '8px',
+                                  border: '1px solid rgba(239,68,68,0.5)',
+                                  backgroundColor: 'rgba(239,68,68,0.18)',
+                                  color: '#EF4444',
+                                  fontSize: '11px',
+                                  fontWeight: '800',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  whiteSpace: 'nowrap',
+                                }}
+                                title="🧨 Réinitialisation Usine du Compte"
+                              >
+                                🧨 Reset Usine
                               </button>
                             </div>
                           </td>
@@ -2806,7 +2971,54 @@ export default function AdminDashboard({
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '8px' }}>
+            {/* 🚨 PHASE 111 : ZONE DANGER GOD MODE DANS LA MODALE D'ÉDITION */}
+            <div
+              style={{
+                marginTop: '20px',
+                paddingTop: '16px',
+                borderTop: darkMode ? '1px solid rgba(239, 68, 68, 0.25)' : '1px solid rgba(239, 68, 68, 0.2)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '12px',
+                backgroundColor: darkMode ? 'rgba(239, 68, 68, 0.08)' : 'rgba(239, 68, 68, 0.04)',
+                borderRadius: '12px',
+                padding: '14px 16px',
+              }}
+            >
+              <div>
+                <span style={{ fontSize: '13px', fontWeight: '800', color: '#EF4444', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <AlertTriangle size={15} /> God Mode · Zone d'Alerte Rouge
+                </span>
+                <p style={{ margin: '2px 0 0', fontSize: '11px', opacity: 0.75 }}>
+                  Wipe intégral : annonces supprimées, messages purgés et soldes réinitialisés.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setFactoryResetUser(editingUser)}
+                className="premium-button"
+                style={{
+                  padding: '8px 14px',
+                  borderRadius: '10px',
+                  border: '1px solid #EF4444',
+                  backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                  color: '#EF4444',
+                  fontWeight: '800',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                🧨 Réinitialisation Usine du Compte
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', marginTop: '16px' }}>
               <button
                 type="button"
                 onClick={() => setEditingUser(null)}
@@ -2840,6 +3052,141 @@ export default function AdminDashboard({
                 }}
               >
                 <Save size={16} /> Enregistrer les modifications
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🚨 PHASE 111 : MODALE DE CONFIRMATION DOUBLE OPT-IN (RÉINITIALISATION USINE GOD MODE) */}
+      {factoryResetUser && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999999,
+            backgroundColor: 'rgba(0,0,0,0.78)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+          }}
+          onClick={() => !isResetting && setFactoryResetUser(null)}
+        >
+          <div
+            style={{
+              width: '100%',
+              maxWidth: '500px',
+              backgroundColor: darkMode ? '#181512' : '#FFFFFF',
+              borderRadius: '20px',
+              border: '2px solid #EF4444',
+              padding: '24px',
+              boxShadow: '0 25px 60px -15px rgba(239, 68, 68, 0.45)',
+              color: darkMode ? '#FDFBF7' : '#181512',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+              <div
+                style={{
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '14px',
+                  backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '24px',
+                  flexShrink: 0,
+                }}
+              >
+                🧨
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: '#EF4444' }}>
+                  Réinitialisation Usine du Compte
+                </h3>
+                <p style={{ margin: '2px 0 0', fontSize: '12px', opacity: 0.7 }}>
+                  God Mode · Utilisateur : <strong>{factoryResetUser.name || factoryResetUser.email || factoryResetUser.id}</strong>
+                </p>
+              </div>
+            </div>
+
+            <div
+              style={{
+                backgroundColor: darkMode ? 'rgba(239,68,68,0.1)' : 'rgba(239,68,68,0.06)',
+                border: '1px solid rgba(239,68,68,0.25)',
+                borderRadius: '12px',
+                padding: '16px',
+                marginBottom: '20px',
+                fontSize: '13px',
+                lineHeight: 1.5,
+              }}
+            >
+              <p style={{ margin: 0, fontWeight: '800', color: '#EF4444', marginBottom: '8px' }}>
+                ⚠️ Avertissement irréversible (Double Opt-In) :
+              </p>
+              <p style={{ margin: 0, fontWeight: '600' }}>
+                Cette action effacera toutes les annonces, messages et soldes de cet utilisateur. Poursuivre ?
+              </p>
+              <ul style={{ margin: '10px 0 0', paddingLeft: '18px', fontSize: '12px', opacity: 0.85 }}>
+                <li>Restauration du solde originel : <strong>0.00 €</strong> et <strong>10 Jetons Troco</strong></li>
+                <li>Suppression en lot (Batch) de toutes les annonces publiées par cet utilisateur</li>
+                <li>Purge des messages et ajout automatique du log système d'audit</li>
+                <li>Réinitialisation du statut d'onboarding, compétences et portfolio</li>
+              </ul>
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                disabled={isResetting}
+                onClick={() => setFactoryResetUser(null)}
+                style={{
+                  padding: '10px 18px',
+                  borderRadius: '10px',
+                  border: '1px solid var(--border-color, rgba(0,0,0,0.15))',
+                  background: 'none',
+                  color: 'inherit',
+                  fontWeight: '700',
+                  fontSize: '13px',
+                  cursor: isResetting ? 'not-allowed' : 'pointer',
+                  opacity: isResetting ? 0.5 : 1,
+                }}
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                disabled={isResetting}
+                onClick={() => executeFactoryReset(factoryResetUser)}
+                className="premium-button"
+                style={{
+                  padding: '10px 20px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  backgroundColor: '#EF4444',
+                  color: '#FFFFFF',
+                  fontWeight: '800',
+                  fontSize: '13px',
+                  cursor: isResetting ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: '0 4px 14px rgba(239, 68, 68, 0.4)',
+                }}
+              >
+                {isResetting ? (
+                  <>
+                    <RefreshCw size={14} className="animate-spin" />
+                    Wipe & Réinitialisation en cours...
+                  </>
+                ) : (
+                  <>
+                    🧨 Réinitialisation Usine du Compte
+                  </>
+                )}
               </button>
             </div>
           </div>
