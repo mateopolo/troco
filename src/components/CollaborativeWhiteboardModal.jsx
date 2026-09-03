@@ -234,8 +234,14 @@ export default function CollaborativeWhiteboardModal({
   const isResizingObjectRef = useRef(null);
   const isDraggingObjectRef = useRef(null);
 
-  // 🚨 PHASE 94 : Moteur de tracé natif sans React State Thrashing
+  // 🚨 PHASE 94 & 116 : Moteur de tracé natif et découplage absolu sans React State Thrashing
   const currentPathRef = useRef(null);
+  const currentDrawRef = useRef([]);
+  const localPathsRef = useRef(localPaths);
+  useEffect(() => {
+    localPathsRef.current = localPaths;
+  }, [localPaths]);
+
   const rafDrawRef = useRef(null);
   const pendingRemotePathsDataRef = useRef(null);
   const setCurrentPath = useCallback((val) => {
@@ -272,6 +278,10 @@ export default function CollaborativeWhiteboardModal({
 
   // 7. Curseur P2P Collaboratif (Ghosting live) & Présence Multijoueur
   const [remoteCursors, setRemoteCursors] = useState({});
+  const remoteCursorsRef = useRef(remoteCursors);
+  useEffect(() => {
+    remoteCursorsRef.current = remoteCursors;
+  }, [remoteCursors]);
   const [activeUsersCount, setActiveUsersCount] = useState(1);
 
   // 8. État d'édition / sélection
@@ -1061,7 +1071,7 @@ export default function CollaborativeWhiteboardModal({
     // Tous les traits combinés (Distants avec ghosting + Locaux + Trait actif dans currentPathRef)
     const allPathsToRender = [
       ...remotePaths,
-      ...localPaths,
+      ...(localPathsRef.current || localPaths),
       ...(currentPathRef.current ? [currentPathRef.current] : [])
     ];
 
@@ -1303,7 +1313,7 @@ export default function CollaborativeWhiteboardModal({
         }
       });
 
-      const p2pPeerCount = Object.keys(remoteCursors).length + 1;
+      const p2pPeerCount = Object.keys(remoteCursorsRef.current || {}).length + 1;
       setActiveUsersCount(Math.max(1, activeCount, p2pPeerCount));
     }, (err) => {
       console.warn('[Presence Whiteboard] Note:', err);
@@ -1315,7 +1325,7 @@ export default function CollaborativeWhiteboardModal({
       deleteDoc(presenceDocRef).catch(() => {});
       deleteDoc(fallbackDocRef).catch(() => {});
     };
-  }, [isOpen, effectiveId, currentBoardId, myUid, myName, remoteCursors]);
+  }, [isOpen, effectiveId, currentBoardId, myUid, myName]);
 
   // 1. Chargement initial UNIQUE à l'ouverture du board (Fix 2 & Fix 5 : Zéro boucle infinie, Zéro clignotement)
   const initialLoadDoneForIdRef = useRef(null);
@@ -1580,13 +1590,15 @@ export default function CollaborativeWhiteboardModal({
     lastLocalModificationTimeRef.current = Date.now();
 
     if (tool === 'pencil' || tool === 'brush' || tool === 'highlighter' || tool === 'eraser') {
+      const initialPoint = { x: coords.x, y: coords.y };
+      currentDrawRef.current = [initialPoint];
       const newPath = {
         id: `p-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
         type: 'freehand',
         tool,
         color,
         lineWidth,
-        points: [{ x: coords.x, y: coords.y }],
+        points: currentDrawRef.current,
         authorName: myName,
         authorUid: myUid,
         createdAt: Date.now(),
@@ -1715,7 +1727,7 @@ export default function CollaborativeWhiteboardModal({
       return;
     }
 
-    // 🚨 PHASE 110 : MOTEUR DE ROTATION (Avec tooltip degrés Math.atan2)
+    // 🚨 PHASE 110 & 116 : MOTEUR DE ROTATION (Avec tooltip degrés Math.atan2 - Sans setState thrashing)
     if (isRotatingRef.current) {
       const { id, cx, cy } = isRotatingRef.current;
       const angleRad = Math.atan2(coords.y - cy, coords.x - cx);
@@ -1724,26 +1736,22 @@ export default function CollaborativeWhiteboardModal({
 
       setRotationTooltip({ degrees, screenX: e.clientX, screenY: e.clientY });
 
-      setLocalPaths((prev) =>
-        prev.map((obj) =>
-          obj.id === id
-            ? { ...obj, rotation: degrees, data: { ...(obj.data || {}), rotation: degrees } }
-            : obj
-        )
-      );
-      setCanvasObjects((prev) =>
-        prev.map((obj) =>
-          obj.id === id
-            ? { ...obj, rotation: degrees, data: { ...(obj.data || {}), rotation: degrees } }
-            : obj
-        )
+      localPathsRef.current = localPathsRef.current.map((obj) =>
+        obj.id === id
+          ? { ...obj, rotation: degrees, data: { ...(obj.data || {}), rotation: degrees } }
+          : obj
       );
 
-      redrawCanvas();
+      if (!rafDrawRef.current) {
+        rafDrawRef.current = requestAnimationFrame(() => {
+          redrawCanvas();
+          rafDrawRef.current = null;
+        });
+      }
       return;
     }
 
-    // 🚨 PHASE 110 : REDIMENSIONNEMENT DES FORMES (4 coins)
+    // 🚨 PHASE 110 & 116 : REDIMENSIONNEMENT DES FORMES (4 coins - Sans setState thrashing)
     if (isResizingObjectRef.current) {
       const { id, corner, startCoords, origBox } = isResizingObjectRef.current;
       const dx = coords.x - startCoords.x;
@@ -1772,40 +1780,29 @@ export default function CollaborativeWhiteboardModal({
         newY = origBox.y + (origBox.height - newH);
       }
 
-      setLocalPaths((prev) =>
-        prev.map((obj) =>
-          obj.id === id
-            ? {
-                ...obj,
-                x: newX,
-                y: newY,
-                width: newW,
-                height: newH,
-                data: { ...(obj.data || {}), x: newX, y: newY, width: newW, height: newH },
-              }
-            : obj
-        )
-      );
-      setCanvasObjects((prev) =>
-        prev.map((obj) =>
-          obj.id === id
-            ? {
-                ...obj,
-                x: newX,
-                y: newY,
-                width: newW,
-                height: newH,
-                data: { ...(obj.data || {}), x: newX, y: newY, width: newW, height: newH },
-              }
-            : obj
-        )
+      localPathsRef.current = localPathsRef.current.map((obj) =>
+        obj.id === id
+          ? {
+              ...obj,
+              x: newX,
+              y: newY,
+              width: newW,
+              height: newH,
+              data: { ...(obj.data || {}), x: newX, y: newY, width: newW, height: newH },
+            }
+          : obj
       );
 
-      redrawCanvas();
+      if (!rafDrawRef.current) {
+        rafDrawRef.current = requestAnimationFrame(() => {
+          redrawCanvas();
+          rafDrawRef.current = null;
+        });
+      }
       return;
     }
 
-    // 🚨 PHASE 110 : ASSISTANCE AU CENTRAGE (Snapping / Magnétisme 10px & Drag)
+    // 🚨 PHASE 110 & 116 : ASSISTANCE AU CENTRAGE (Snapping / Magnétisme 10px & Drag - Sans setState thrashing)
     if (isDraggingObjectRef.current) {
       const { id, startCoords, origX, origY, width, height } = isDraggingObjectRef.current;
       let newX = origX + (coords.x - startCoords.x);
@@ -1843,39 +1840,39 @@ export default function CollaborativeWhiteboardModal({
 
       activeSnapGuidesRef.current = { vertical: snappedVertical, horizontal: snappedHorizontal };
 
-      setLocalPaths((prev) =>
-        prev.map((obj) => {
-          if (obj.id !== id) return obj;
-          const prevX = typeof obj.x === 'number' ? obj.x : origX;
-          const prevY = typeof obj.y === 'number' ? obj.y : origY;
-          const dxShift = newX - prevX;
-          const dyShift = newY - prevY;
-          const rawPts = obj.points || obj.data?.points;
-          const updatedPoints = rawPts ? rawPts.map((p) => ({ x: p.x + dxShift, y: p.y + dyShift })) : undefined;
+      localPathsRef.current = localPathsRef.current.map((obj) => {
+        if (obj.id !== id) return obj;
+        const prevX = typeof obj.x === 'number' ? obj.x : origX;
+        const prevY = typeof obj.y === 'number' ? obj.y : origY;
+        const dxShift = newX - prevX;
+        const dyShift = newY - prevY;
+        const rawPts = obj.points || obj.data?.points;
+        const updatedPoints = rawPts ? rawPts.map((p) => ({ x: p.x + dxShift, y: p.y + dyShift })) : undefined;
 
-          return {
-            ...obj,
+        return {
+          ...obj,
+          x: newX,
+          y: newY,
+          points: updatedPoints || obj.points,
+          fromX: typeof obj.fromX === 'number' ? obj.fromX + dxShift : undefined,
+          toX: typeof obj.toX === 'number' ? obj.toX + dxShift : undefined,
+          fromY: typeof obj.fromY === 'number' ? obj.fromY + dyShift : undefined,
+          toY: typeof obj.toY === 'number' ? obj.toY + dyShift : undefined,
+          data: {
+            ...(obj.data || {}),
             x: newX,
             y: newY,
-            points: updatedPoints || obj.points,
-            fromX: typeof obj.fromX === 'number' ? obj.fromX + dxShift : undefined,
-            toX: typeof obj.toX === 'number' ? obj.toX + dxShift : undefined,
-            fromY: typeof obj.fromY === 'number' ? obj.fromY + dyShift : undefined,
-            toY: typeof obj.toY === 'number' ? obj.toY + dyShift : undefined,
-            data: {
-              ...(obj.data || {}),
-              x: newX,
-              y: newY,
-              points: updatedPoints || obj.data?.points,
-            },
-          };
-        })
-      );
-      setCanvasObjects((prev) =>
-        prev.map((obj) => (obj.id === id ? { ...obj, x: newX, y: newY } : obj))
-      );
+            points: updatedPoints || obj.data?.points,
+          },
+        };
+      });
 
-      redrawCanvas();
+      if (!rafDrawRef.current) {
+        rafDrawRef.current = requestAnimationFrame(() => {
+          redrawCanvas();
+          rafDrawRef.current = null;
+        });
+      }
       return;
     }
 
@@ -1884,28 +1881,34 @@ export default function CollaborativeWhiteboardModal({
     const activePath = currentPathRef.current;
 
     if (activePath.type === 'freehand') {
-      const prevPoint = activePath.points[activePath.points.length - 1];
+      const prevPoint = currentDrawRef.current[currentDrawRef.current.length - 1] || activePath.points[activePath.points.length - 1];
       const newPoint = { x: coords.x, y: coords.y };
-      activePath.points.push(newPoint);
+      currentDrawRef.current.push(newPoint);
+      activePath.points = currentDrawRef.current;
 
-      // 🚨 PHASE 94 : DESSIN DIRECT 60 FPS SUR LE CONTEXTE 2D SANS AUCUN SETSTATE REACT
-      const canvas = canvasRef.current;
-      if (canvas && prevPoint) {
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          const dpr = window.devicePixelRatio || 1;
-          ctx.save();
-          ctx.setTransform(1, 0, 0, 1, 0, 0);
-          ctx.scale(dpr, dpr);
-          ctx.translate(pan.x, pan.y);
-          ctx.scale(zoom, zoom);
-          applyBrushStyleToContext(ctx, activePath.tool, activePath.color, activePath.lineWidth, false);
-          ctx.beginPath();
-          ctx.moveTo(prevPoint.x, prevPoint.y);
-          ctx.lineTo(newPoint.x, newPoint.y);
-          ctx.stroke();
-          ctx.restore();
-        }
+      // 🚨 PHASE 116 : DESSIN DIRECT VIA REQUESTANIMATIONFRAME SUR LE CONTEXTE 2D SANS AUCUN SETSTATE REACT
+      if (!rafDrawRef.current) {
+        rafDrawRef.current = requestAnimationFrame(() => {
+          const canvas = canvasRef.current;
+          if (canvas && prevPoint) {
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              const dpr = window.devicePixelRatio || 1;
+              ctx.save();
+              ctx.setTransform(1, 0, 0, 1, 0, 0);
+              ctx.scale(dpr, dpr);
+              ctx.translate(pan.x, pan.y);
+              ctx.scale(zoom, zoom);
+              applyBrushStyleToContext(ctx, activePath.tool, activePath.color, activePath.lineWidth, false);
+              ctx.beginPath();
+              ctx.moveTo(prevPoint.x, prevPoint.y);
+              ctx.lineTo(newPoint.x, newPoint.y);
+              ctx.stroke();
+              ctx.restore();
+            }
+          }
+          rafDrawRef.current = null;
+        });
       }
     } else if (['rect', 'circle', 'triangle', 'hexagon', 'star', 'speech_bubble', 'heart', 'checkmark', 'text_box'].includes(activePath.type)) {
       const w = coords.x - startPosRef.current.x;
@@ -1936,15 +1939,18 @@ export default function CollaborativeWhiteboardModal({
   };
 
   const handlePointerUp = (e) => {
-    // 🚨 PHASE 110 : Clôture des interactions de sélection, rotation, redimensionnement et drag
+    // 🚨 PHASE 110 & 116 : Clôture des interactions de sélection, rotation, redimensionnement et drag
     if (isRotatingRef.current || isResizingObjectRef.current || isDraggingObjectRef.current) {
       isRotatingRef.current = null;
       isResizingObjectRef.current = null;
       isDraggingObjectRef.current = null;
       activeSnapGuidesRef.current = { vertical: null, horizontal: null };
       setRotationTooltip(null);
-      pushToHistory(localPaths);
-      debouncedSyncToFirestore(localPaths, remotePaths, stickyNotes, textElements);
+      const updatedPaths = [...(localPathsRef.current || localPaths)];
+      setLocalPaths(updatedPaths);
+      setCanvasObjects(updatedPaths);
+      pushToHistory(updatedPaths);
+      debouncedSyncToFirestore(updatedPaths, remotePaths, stickyNotes, textElements);
       redrawCanvas();
       return;
     }
@@ -2038,16 +2044,21 @@ export default function CollaborativeWhiteboardModal({
       lastLocalModificationTimeRef.current = Date.now();
 
       const rawCompletedPath = { ...currentPathRef.current };
+      if (currentDrawRef.current && currentDrawRef.current.length > 0) {
+        rawCompletedPath.points = [...currentDrawRef.current];
+      }
       currentPathRef.current = null;
+      currentDrawRef.current = [];
 
       if (rafDrawRef.current) {
         cancelAnimationFrame(rafDrawRef.current);
         rafDrawRef.current = null;
       }
 
-      // 🚨 PHASE 110 : Conversion en format Objet Model unifié
+      // 🚨 PHASE 110 & 116 : Conversion en format Objet Model unifié et appel différé de setState
       const completedPath = toCanvasObject(rawCompletedPath);
-      const nextLocalPaths = [...localPaths, completedPath];
+      const nextLocalPaths = [...(localPathsRef.current || localPaths), completedPath];
+      localPathsRef.current = nextLocalPaths;
 
       setLocalPaths(nextLocalPaths);
       setCanvasObjects(nextLocalPaths);

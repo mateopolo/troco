@@ -174,6 +174,26 @@ function CloudOfficeSuiteModalContent({
 
   const textareaRef = useRef(null);
 
+  // Verrouillage des états mutables via des refs pour éviter les reconnexions Firestore à chaque frappe
+  const docContentRef = useRef(docContent);
+  const docTitleRef = useRef(docTitle);
+  useEffect(() => {
+    docContentRef.current = docContent;
+  }, [docContent]);
+  useEffect(() => {
+    docTitleRef.current = docTitle;
+  }, [docTitle]);
+
+  const sheetTitleRef = useRef(sheetTitle);
+  useEffect(() => {
+    sheetTitleRef.current = sheetTitle;
+  }, [sheetTitle]);
+
+  const slidesTitleRef = useRef(slidesTitle);
+  useEffect(() => {
+    slidesTitleRef.current = slidesTitle;
+  }, [slidesTitle]);
+
   // Synchronisation Firestore en temps réel pour Troco Docs
   useEffect(() => {
     if (!isOpen || !effectiveGroupId || !db) return;
@@ -196,8 +216,8 @@ function CloudOfficeSuiteModalContent({
             // Initialisation immédiate par défaut si non existant
             const myName = currentUser?.name || currentUser?.displayName || 'Moi';
             setDoc(docRef, {
-              title: docTitle || defaultDoc.title,
-              content: docContent || defaultDoc.content,
+              title: docTitleRef.current || defaultDoc.title,
+              content: docContentRef.current || defaultDoc.content,
               cells: defaultDoc.cells,
               lastUpdated: Date.now(),
               lastEditor: myName,
@@ -216,7 +236,7 @@ function CloudOfficeSuiteModalContent({
         if (typeof unsubscribe === 'function') unsubscribe();
       };
     } catch (_) {}
-  }, [isOpen, effectiveGroupId, effectiveDocId, currentUser, docTitle, docContent]);
+  }, [isOpen, effectiveGroupId, effectiveDocId, currentUser?.id, currentUser?.name]);
 
   // Synchronisation Firestore en temps réel pour Troco Sheets
   useEffect(() => {
@@ -237,7 +257,7 @@ function CloudOfficeSuiteModalContent({
             // Initialisation immédiate par défaut si non existant
             const myName = currentUser?.name || currentUser?.displayName || 'Moi';
             setDoc(sheetRef, {
-              title: sheetTitle || 'Tableur Collaboratif',
+              title: sheetTitleRef.current || 'Tableur Collaboratif',
               gridData: DEFAULT_SHEET_DATA,
               cells: DEFAULT_SHEET_DATA,
               lastUpdated: Date.now(),
@@ -256,7 +276,7 @@ function CloudOfficeSuiteModalContent({
         if (typeof unsubscribe === 'function') unsubscribe();
       };
     } catch (_) {}
-  }, [isOpen, effectiveGroupId, currentUser, sheetTitle]);
+  }, [isOpen, effectiveGroupId, currentUser?.id, currentUser?.name]);
 
   // Synchronisation Firestore en temps réel pour Troco Slides
   useEffect(() => {
@@ -277,7 +297,7 @@ function CloudOfficeSuiteModalContent({
             // Initialisation immédiate par défaut si non existant
             const myName = currentUser?.name || currentUser?.displayName || 'Moi';
             setDoc(slidesRef, {
-              title: slidesTitle || 'Présentation Collaboratif',
+              title: slidesTitleRef.current || 'Présentation Collaboratif',
               slides: DEFAULT_SLIDES,
               lastUpdated: Date.now(),
               lastEditor: myName,
@@ -295,7 +315,7 @@ function CloudOfficeSuiteModalContent({
         if (typeof unsubscribe === 'function') unsubscribe();
       };
     } catch (_) {}
-  }, [isOpen, effectiveGroupId, currentUser, slidesTitle]);
+  }, [isOpen, effectiveGroupId, currentUser?.id, currentUser?.name]);
 
   // Sauvegarde des modifications Troco Docs
   const saveDocToFirestore = useCallback(async (newContent, newTitle = docTitle) => {

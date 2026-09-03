@@ -26,6 +26,18 @@ import { playPop, playSuccessChime } from '../services/audioService';
 import { showDynamicIslandNotification } from '../services/notificationService';
 import { executeDirectTokenTransfer } from '../services/firestoreService';
 
+// Singleton audio context pour éviter la saturation des threads WebKit audio sur iOS
+let sharedChatAudioCtx = null;
+export const getChatAudioContext = () => {
+  if (typeof window === 'undefined') return null;
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  if (!AudioCtx) return null;
+  if (!sharedChatAudioCtx || sharedChatAudioCtx.state === 'closed') {
+    sharedChatAudioCtx = new AudioCtx();
+  }
+  return sharedChatAudioCtx;
+};
+
 /**
  * Hook centralisant le moteur logique de messagerie, négociations et transactions de deals.
  */
@@ -193,9 +205,8 @@ export const useChatManager = ({
   // Synthèse sonore douce d'arrivée de message en temps réel (API Web Audio sans dépendance externe)
   const playNotificationSound = useCallback(() => {
     try {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (!AudioCtx) return;
-      const ctx = new AudioCtx();
+      const ctx = getChatAudioContext();
+      if (!ctx) return;
       if (ctx.state === 'suspended') {
         ctx.resume().catch(() => { });
       }
