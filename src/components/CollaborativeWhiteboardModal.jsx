@@ -97,6 +97,9 @@ export default function CollaborativeWhiteboardModal({
   onSendMessage = null,
   handleSendMessage = null,
 }) {
+  const [currentBoardId, setCurrentBoardId] = useState(
+    () => boardId || workspaceId || null
+  );
   const [activeBoardId, setActiveBoardId] = useState(
     () => boardId || workspaceId || null
   );
@@ -106,14 +109,17 @@ export default function CollaborativeWhiteboardModal({
 
   useEffect(() => {
     if (boardId || workspaceId) {
+      setCurrentBoardId(boardId || workspaceId);
       setActiveBoardId(boardId || workspaceId);
       setViewMode(initialView || 'canvas');
-    } else if (initialView) {
-      setViewMode(initialView);
+    } else {
+      setCurrentBoardId(null);
+      setActiveBoardId(null);
+      setViewMode('lobby');
     }
   }, [boardId, workspaceId, initialView]);
 
-  const effectiveId = activeBoardId || (groupId ? `board-${groupId}` : 'default_board');
+  const effectiveId = currentBoardId || activeBoardId || (groupId ? `board-${groupId}` : 'default_board');
   const myUid = currentUser?.uid || currentUser?.id || 'local_user';
   const myName = currentUser?.name || currentUser?.username || 'Moi';
 
@@ -834,7 +840,7 @@ export default function CollaborativeWhiteboardModal({
 
   // ================= 3. SYNCHRONISATION MULTIJOUEUR (P2P + Firestore) =================
   useEffect(() => {
-    if (!isOpen || !effectiveId) return;
+    if (!isOpen || !effectiveId || !currentBoardId) return;
 
     whiteboardP2PService.joinRoom(effectiveId, (event) => {
       if (event.authorName) setLastEditor(event.authorName);
@@ -937,7 +943,7 @@ export default function CollaborativeWhiteboardModal({
 
   // ================= 3.1 SYSTÈME DE PRÉSENCE FIREBASE & MULTIJOUEUR LIVE =================
   useEffect(() => {
-    if (!isOpen || !effectiveId || !db) return;
+    if (!isOpen || !effectiveId || !currentBoardId || !db) return;
 
     const presenceColName = 'workspaces';
     const presenceDocRef = doc(db, presenceColName, String(effectiveId), 'presence', String(myUid));
@@ -981,13 +987,13 @@ export default function CollaborativeWhiteboardModal({
       deleteDoc(presenceDocRef).catch(() => {});
       deleteDoc(fallbackDocRef).catch(() => {});
     };
-  }, [isOpen, effectiveId, myUid, myName, remoteCursors]);
+  }, [isOpen, effectiveId, currentBoardId, myUid, myName, remoteCursors]);
 
   // 1. Chargement initial UNIQUE à l'ouverture du board (Fix 2 & Fix 5 : Zéro boucle infinie, Zéro clignotement)
   const initialLoadDoneForIdRef = useRef(null);
 
   useEffect(() => {
-    if (!isOpen || !effectiveId) {
+    if (!isOpen || !effectiveId || !currentBoardId) {
       initialLoadDoneForIdRef.current = null;
       return;
     }
@@ -1781,57 +1787,75 @@ export default function CollaborativeWhiteboardModal({
   if (!isOpen) return null;
   if (typeof document === 'undefined') return null;
 
-  // 🚨 PHASE 99 : ÉCRAN INTERMÉDIAIRE LOBBY MULTI-TABLEAUX BLANCS
-  if (viewMode === 'lobby') {
-    return createPortal(
-      <div
-        className="fixed inset-0 z-[999999] flex flex-col bg-black/90 md:bg-black/60 md:backdrop-blur-sm touch-none"
-        style={{
-          position: 'fixed',
-          inset: 0,
-          zIndex: 999999,
-          width: '100dvw',
-          height: '100dvh',
-          overscrollBehavior: 'none',
-          backgroundColor: darkMode ? '#12100E' : '#FAF7F2',
-          color: darkMode ? '#FAF7F2' : '#231E1B',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
+  const createNewBoard = () => {
+    const newBoardId = `board_${groupId || 'chat'}_${Date.now()}`;
+    setCurrentBoardId(newBoardId);
+    setActiveBoardId(newBoardId);
+    initialLoadDoneForIdRef.current = null;
+    setLocalPaths([]);
+    setRemotePaths([]);
+    setStickyNotes([]);
+    setTextElements([]);
+    setHistory([[]]);
+    setHistoryStep(0);
+    historyStepRef.current = 0;
+    setVersionNumber(1);
+    setWorkspaceTitle('Nouveau Tableau Blanc');
+    setBackgroundColor(darkMode ? '#12100E' : '#FFFFFF');
+    setViewMode('canvas');
+  };
+
+  // 🚨 PHASE 102 : FORÇAGE DE LA CONDITION AU MONTAGE DU LOBBY
+  if (!currentBoardId || viewMode === 'lobby') {
+    const lobbyView = (
+      <WhiteboardLobby
+        onSelect={(selectedId) => {
+          setCurrentBoardId(selectedId);
+          setActiveBoardId(selectedId);
+          initialLoadDoneForIdRef.current = null;
+          setViewMode('canvas');
         }}
-      >
-        <WhiteboardLobby
-          chatId={groupId}
-          selectedChat={{ id: groupId, projectTitle }}
-          darkMode={darkMode}
-          projectTitle={projectTitle}
-          onClose={onClose}
-          onCreateNewBoard={() => {
-            const newBoardId = `board_${groupId}_${Date.now()}`;
-            setActiveBoardId(newBoardId);
-            initialLoadDoneForIdRef.current = null;
-            setLocalPaths([]);
-            setRemotePaths([]);
-            setStickyNotes([]);
-            setTextElements([]);
-            setHistory([[]]);
-            setHistoryStep(0);
-            historyStepRef.current = 0;
-            setVersionNumber(1);
-            setWorkspaceTitle('Nouveau Tableau Blanc');
-            setBackgroundColor(darkMode ? '#12100E' : '#FFFFFF');
-            setViewMode('canvas');
-          }}
-          onSelectBoard={(selectedBoardId, boardData) => {
-            setActiveBoardId(selectedBoardId);
-            initialLoadDoneForIdRef.current = null;
-            if (boardData?.title) setWorkspaceTitle(boardData.title);
-            setViewMode('canvas');
-          }}
-        />
-      </div>,
-      document.body
+        onCreateNew={createNewBoard}
+        onSelectBoard={(selectedBoardId, boardData) => {
+          setCurrentBoardId(selectedBoardId);
+          setActiveBoardId(selectedBoardId);
+          initialLoadDoneForIdRef.current = null;
+          if (boardData?.title) setWorkspaceTitle(boardData.title);
+          setViewMode('canvas');
+        }}
+        onCreateNewBoard={createNewBoard}
+        onClose={onClose}
+        chatId={groupId}
+        selectedChat={{ id: groupId, projectTitle }}
+        darkMode={darkMode}
+        projectTitle={projectTitle}
+      />
     );
+
+    // @guard DO NOT REMOVE PORTAL. Required to escape chat overflow and z-index stacking context on mobile.
+    return typeof document !== 'undefined' && document.body
+      ? createPortal(
+          <div
+            className="fixed inset-0 z-[999999] flex flex-col bg-black/90 md:bg-black/60 md:backdrop-blur-sm touch-none"
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 999999,
+              width: '100dvw',
+              height: '100dvh',
+              overscrollBehavior: 'none',
+              backgroundColor: darkMode ? '#12100E' : '#FAF7F2',
+              color: darkMode ? '#FAF7F2' : '#231E1B',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+            }}
+          >
+            {lobbyView}
+          </div>,
+          document.body
+        )
+      : lobbyView;
   }
 
   const modalContent = (

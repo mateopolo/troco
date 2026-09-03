@@ -1,22 +1,21 @@
 /**
- * WhiteboardLobby.jsx — Écran d'accueil & Historique multi-tableaux blancs (Phase 99)
- * 
- * Permet de :
- * 1. Créer un nouveau tableau blanc avec ID isolé.
- * 2. Visualiser l'historique complet des tableaux de la discussion avec prévisualisation Base64.
- * 3. Reprendre un projet existant avec isolation stricte des données de session.
+ * WhiteboardLobby.jsx — Écran d'accueil & Historique multi-tableaux blancs (Phase 102)
+ *
+ * 2 gros boutons centrés :
+ * 1. "Créer un nouveau tableau"
+ * 2. "Reprendre le dernier tableau"
+ * + Liste et recherche des projets créatifs de la conversation.
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   X,
   Plus,
+  RotateCcw,
   Sparkles,
-  Clock,
   Palette,
   FolderKanban,
-  Calendar,
-  User,
+  Clock,
   ArrowRight,
   Search,
   RefreshCw,
@@ -44,11 +43,13 @@ function formatRelativeTime(timestamp) {
 }
 
 export default function WhiteboardLobby({
-  chatId,
-  selectedChat = null,
+  onSelect,
+  onCreateNew,
   onSelectBoard,
   onCreateNewBoard,
-  onClose,
+  onClose = () => {},
+  chatId,
+  selectedChat = null,
   darkMode = false,
   projectTitle = 'Tableaux Blancs Collaboratifs',
 }) {
@@ -59,6 +60,23 @@ export default function WhiteboardLobby({
   const effectiveChatId = String(
     chatId || selectedChat?.id || selectedChat?.firestoreId || ''
   );
+
+  const handleCreate = () => {
+    if (typeof onCreateNew === 'function') {
+      onCreateNew();
+    } else if (typeof onCreateNewBoard === 'function') {
+      onCreateNewBoard();
+    }
+  };
+
+  const handleSelect = (boardId, boardData = null) => {
+    if (typeof onSelect === 'function') {
+      onSelect(boardId);
+    }
+    if (typeof onSelectBoard === 'function') {
+      onSelectBoard(boardId, boardData);
+    }
+  };
 
   // Synchronisation temps réel Firestore : interrogation de 'workspaces' et 'project_whiteboards'
   useEffect(() => {
@@ -71,14 +89,12 @@ export default function WhiteboardLobby({
     let isMounted = true;
     const boardsMap = new Map();
 
-    // 1. Requête principale exigée : collection 'workspaces' (chatId == selectedChat.id && type == 'whiteboard')
     const qWorkspaces = query(
       collection(db, 'workspaces'),
       where('chatId', '==', effectiveChatId),
       where('type', '==', 'whiteboard')
     );
 
-    // 2. Requête miroir héritée : collection 'project_whiteboards' (groupId == effectiveChatId)
     const qLegacy = query(
       collection(db, 'project_whiteboards'),
       where('groupId', '==', effectiveChatId)
@@ -96,7 +112,7 @@ export default function WhiteboardLobby({
       qWorkspaces,
       (snapshot) => {
         snapshot.forEach((docSnap) => {
-          const data = docSnap.data();
+          const data = docSnap.data() || {};
           const docId = data.id || data.workspaceId || docSnap.id;
           const ts = data.updatedAt?.toMillis
             ? data.updatedAt.toMillis()
@@ -108,22 +124,17 @@ export default function WhiteboardLobby({
             id: docId,
             boardId: docId,
             title: data.title || 'Tableau Blanc Collaboratif',
-            version: data.version ? `V${data.version}` : 'V1',
+            version: data.versionNumber ? `V${data.versionNumber}` : (data.version || 'V1'),
             updatedAt: ts,
-            thumbnail:
-              data.thumbnailBase64 ||
-              data.previewUrl ||
-              data.data?.thumbnailBase64 ||
-              null,
-            lastEditor:
-              data.lastModifiedByName || data.lastEditor || 'Collaborateur',
+            thumbnail: data.thumbnailBase64 || data.previewUrl || null,
+            lastEditor: data.lastEditor || data.lastModifiedByName || 'Collaborateur',
             source: 'workspaces',
           });
         });
         updateCombinedBoards();
       },
       (err) => {
-        console.warn('[WhiteboardLobby] workspaces onSnapshot note:', err);
+        console.warn('[WhiteboardLobby] workspaces onSnapshot notice:', err);
         setIsLoading(false);
       }
     );
@@ -132,7 +143,7 @@ export default function WhiteboardLobby({
       qLegacy,
       (snapshot) => {
         snapshot.forEach((docSnap) => {
-          const data = docSnap.data();
+          const data = docSnap.data() || {};
           const docId = data.boardId || data.id || docSnap.id;
           const ts = data.updatedAt?.toMillis
             ? data.updatedAt.toMillis()
@@ -140,7 +151,6 @@ export default function WhiteboardLobby({
             ? data.updatedAt.seconds * 1000
             : data.timestamp || Date.now();
 
-          // Si pas encore présent ou version plus récente
           const existing = boardsMap.get(docId);
           if (!existing || ts >= (existing.updatedAt || 0)) {
             boardsMap.set(docId, {
@@ -158,7 +168,7 @@ export default function WhiteboardLobby({
         updateCombinedBoards();
       },
       (err) => {
-        console.warn('[WhiteboardLobby] legacy onSnapshot note:', err);
+        console.warn('[WhiteboardLobby] legacy onSnapshot notice:', err);
       }
     );
 
@@ -169,7 +179,8 @@ export default function WhiteboardLobby({
     };
   }, [effectiveChatId]);
 
-  // Filtrage selon terme de recherche
+  const lastBoard = boards && boards.length > 0 ? boards[0] : null;
+
   const filteredBoards = useMemo(() => {
     if (!searchQuery.trim()) return boards;
     const q = searchQuery.toLowerCase().trim();
@@ -221,26 +232,25 @@ export default function WhiteboardLobby({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              boxShadow: '0 4px 14px rgba(198,125,91,0.3)',
               flexShrink: 0,
+              boxShadow: '0 4px 12px rgba(198,125,91,0.3)',
             }}
           >
-            <FolderKanban size={20} />
+            <Palette size={20} />
           </div>
           <div style={{ minWidth: 0 }}>
             <h1
-              className="font-editorial-heading"
               style={{
                 margin: 0,
-                fontSize: '18px',
-                fontWeight: '700',
-                letterSpacing: '-0.2px',
+                fontSize: '17px',
+                fontWeight: '800',
+                letterSpacing: '-0.3px',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',
               }}
             >
-              Tableaux Blancs
+              Tableaux Blancs Collaboratifs
             </h1>
             <p
               style={{
@@ -252,458 +262,404 @@ export default function WhiteboardLobby({
                 whiteSpace: 'nowrap',
               }}
             >
-              {selectedChat?.projectTitle || projectTitle || 'Projets créatifs de la conversation'}
+              {selectedChat?.projectTitle || projectTitle || 'Espace de co-création visuelle'}
             </p>
           </div>
         </div>
 
         {/* Bouton Fermer */}
-        <button
-          type="button"
-          onClick={onClose}
-          className="premium-button"
-          style={{
-            width: '40px',
-            height: '40px',
-            borderRadius: '50%',
-            border: 'none',
-            backgroundColor: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
-            color: 'inherit',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            cursor: 'pointer',
-            transition: 'transform 0.15s ease',
-          }}
-          title="Fermer et revenir au chat"
-          aria-label="Fermer la modale"
-        >
-          <X size={20} strokeWidth={2.5} />
-        </button>
+        {typeof onClose === 'function' && (
+          <button
+            type="button"
+            onClick={onClose}
+            className="premium-button"
+            style={{
+              width: '40px',
+              height: '40px',
+              borderRadius: '50%',
+              border: 'none',
+              backgroundColor: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+              color: 'inherit',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              transition: 'transform 0.15s ease',
+            }}
+            title="Fermer et revenir au chat"
+            aria-label="Fermer la modale"
+          >
+            <X size={20} strokeWidth={2.5} />
+          </button>
+        )}
       </header>
 
-      {/* 2. ZONE DE DÉFILEMENT CONTENANT LES DEUX SECTIONS */}
+      {/* 2. ZONE CENTRALE AVEC LES 2 GROS BOUTONS CENTRÉS */}
       <div
         style={{
           flex: 1,
           overflowY: 'auto',
           WebkitOverflowScrolling: 'touch',
-          padding: '20px',
-          maxWidth: '1200px',
+          padding: '24px 20px',
+          maxWidth: '1000px',
           margin: '0 auto',
           width: '100%',
           boxSizing: 'border-box',
           display: 'flex',
           flexDirection: 'column',
-          gap: '24px',
+          gap: '32px',
         }}
       >
-        {/* SECTION A : BOUTON D'ACTION PRINCIPAL "CRÉER UN NOUVEAU TABLEAU BLANC" */}
-        <section>
-          <button
-            type="button"
-            onClick={onCreateNewBoard}
-            className="premium-button"
-            style={{
-              width: '100%',
-              padding: '18px 24px',
-              borderRadius: '20px',
-              border: 'none',
-              background: 'linear-gradient(135deg, #C67D5B 0%, #B26A4A 50%, #9E583A 100%)',
-              color: '#FFFFFF',
-              boxShadow: '0 8px 24px rgba(198,125,91,0.32), 0 2px 6px rgba(0,0,0,0.1)',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '16px',
-              textAlign: 'left',
-              transition: 'transform 0.15s ease, box-shadow 0.15s ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-2px)';
-              e.currentTarget.style.boxShadow = '0 12px 30px rgba(198,125,91,0.42)';
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)';
-              e.currentTarget.style.boxShadow = '0 8px 24px rgba(198,125,91,0.32)';
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', minWidth: 0 }}>
-              <div
-                style={{
-                  width: '48px',
-                  height: '48px',
-                  borderRadius: '14px',
-                  backgroundColor: 'rgba(255,255,255,0.22)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                }}
-              >
-                <Plus size={26} strokeWidth={3} />
-              </div>
-              <div>
-                <div
-                  style={{
-                    fontSize: '16px',
-                    fontWeight: '800',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    letterSpacing: '-0.2px',
-                  }}
-                >
-                  <span>✨ Créer un nouveau tableau blanc</span>
-                  <Sparkles size={16} color="#FEF08A" />
-                </div>
-                <div style={{ fontSize: '12.5px', opacity: 0.9, marginTop: '3px' }}>
-                  Générer un tableau vierge isolé avec synchronisation temps réel
-                </div>
-              </div>
-            </div>
-
-            <div
+        {/* SECTION DES 2 GROS BOUTONS CENTRÉS */}
+        <section
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            textAlign: 'center',
+            padding: '16px 0 8px',
+          }}
+        >
+          <div style={{ maxWidth: '600px', marginBottom: '24px' }}>
+            <h2
               style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '50%',
-                backgroundColor: 'rgba(255,255,255,0.2)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
+                fontSize: '22px',
+                fontWeight: '900',
+                letterSpacing: '-0.4px',
+                color: darkMode ? '#FAF7F2' : '#2D2520',
+                margin: '0 0 8px',
               }}
             >
-              <ArrowRight size={18} strokeWidth={2.5} />
-            </div>
-          </button>
-        </section>
-
-        {/* SECTION B : GRILLE "HISTORIQUE DES PROJETS" */}
-        <section style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          {/* Barre d'outils de section : Titre + Recherche */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '12px',
-              flexWrap: 'wrap',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Clock size={16} color="#C67D5B" />
-              <h2
-                style={{
-                  margin: 0,
-                  fontSize: '14px',
-                  fontWeight: '800',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.6px',
-                  color: darkMode ? '#D4C5B5' : '#6B5E54',
-                }}
-              >
-                Historique des projets ({boards.length})
-              </h2>
-            </div>
-
-            {/* Barre de recherche si plus de 2 tableaux */}
-            {boards.length > 2 && (
-              <div
-                style={{
-                  position: 'relative',
-                  width: '100%',
-                  maxWidth: '240px',
-                }}
-              >
-                <Search
-                  size={14}
-                  style={{
-                    position: 'absolute',
-                    left: '10px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    color: darkMode ? '#A89F91' : '#7C7267',
-                    pointerEvents: 'none',
-                  }}
-                />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Rechercher..."
-                  style={{
-                    width: '100%',
-                    padding: '6px 10px 6px 30px',
-                    borderRadius: '10px',
-                    fontSize: '12px',
-                    border: darkMode
-                      ? '1px solid rgba(255,255,255,0.12)'
-                      : '1px solid rgba(0,0,0,0.12)',
-                    backgroundColor: darkMode ? '#1E1916' : '#FFFFFF',
-                    color: 'inherit',
-                    outline: 'none',
-                    boxSizing: 'border-box',
-                  }}
-                />
-              </div>
-            )}
+              Bienvenue dans votre Studio Whiteboard
+            </h2>
+            <p
+              style={{
+                fontSize: '14px',
+                color: darkMode ? '#B8ABA0' : '#6B5E54',
+                margin: 0,
+                lineHeight: 1.5,
+              }}
+            >
+              Dessinez, brainstormez et concevez vos projets en direct avec votre partenaire de troc.
+            </p>
           </div>
 
-          {/* États : Chargement / Vide / Grille de projets */}
-          {isLoading ? (
-            <div
+          {/* LES 2 GROS BOUTONS CENTRÉS */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+              gap: '16px',
+              width: '100%',
+              maxWidth: '680px',
+            }}
+          >
+            {/* BOUTON 1 : CRÉER UN NOUVEAU TABLEAU */}
+            <button
+              type="button"
+              onClick={handleCreate}
+              className="premium-button"
               style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
-                gap: '16px',
-              }}
-            >
-              {[1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  style={{
-                    height: '200px',
-                    borderRadius: '18px',
-                    backgroundColor: darkMode
-                      ? 'rgba(255,255,255,0.03)'
-                      : 'rgba(0,0,0,0.04)',
-                    border: darkMode
-                      ? '1px solid rgba(255,255,255,0.06)'
-                      : '1px solid rgba(0,0,0,0.06)',
-                    animation: 'pulse 1.5s infinite ease-in-out',
-                  }}
-                />
-              ))}
-            </div>
-          ) : filteredBoards.length === 0 ? (
-            <div
-              style={{
-                padding: '48px 24px',
+                padding: '24px 20px',
                 borderRadius: '20px',
-                textAlign: 'center',
-                backgroundColor: darkMode ? '#181412' : '#FFFFFF',
-                border: darkMode
-                  ? '1px solid rgba(255,255,255,0.08)'
-                  : '1px solid rgba(0,0,0,0.06)',
+                border: 'none',
+                background: 'linear-gradient(135deg, #C67D5B 0%, #B26A4A 50%, #9E583A 100%)',
+                color: '#FFFFFF',
+                boxShadow: '0 10px 28px rgba(198,125,91,0.38), 0 2px 6px rgba(0,0,0,0.12)',
+                cursor: 'pointer',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '14px',
+                gap: '12px',
+                textAlign: 'center',
+                transition: 'transform 0.18s ease, box-shadow 0.18s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-3px)';
+                e.currentTarget.style.boxShadow = '0 14px 34px rgba(198,125,91,0.48)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = '0 10px 28px rgba(198,125,91,0.38)';
               }}
             >
               <div
                 style={{
                   width: '56px',
                   height: '56px',
-                  borderRadius: '50%',
-                  backgroundColor: darkMode
-                    ? 'rgba(198,125,91,0.15)'
-                    : 'rgba(198,125,91,0.1)',
+                  borderRadius: '16px',
+                  backgroundColor: 'rgba(255,255,255,0.24)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Plus size={32} strokeWidth={3} />
+              </div>
+              <div>
+                <div style={{ fontSize: '17px', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                  <span>Créer un nouveau tableau blanc</span>
+                  <Sparkles size={16} color="#FEF08A" />
+                </div>
+                <div style={{ fontSize: '12.5px', opacity: 0.9, marginTop: '4px', lineHeight: 1.4 }}>
+                  Page blanche vierge isolée
+                </div>
+              </div>
+            </button>
+
+            {/* BOUTON 2 : REPRENDRE LE DERNIER TABLEAU */}
+            <button
+              type="button"
+              onClick={() => {
+                if (lastBoard) {
+                  handleSelect(lastBoard.boardId || lastBoard.id, lastBoard);
+                } else {
+                  handleSelect('latest', null);
+                }
+              }}
+              className="premium-button"
+              style={{
+                padding: '24px 20px',
+                borderRadius: '20px',
+                border: darkMode ? '1.5px solid rgba(198,125,91,0.5)' : '1.5px solid #C67D5B',
+                backgroundColor: darkMode ? '#1A1614' : '#FFFFFF',
+                color: darkMode ? '#FAF7F2' : '#2D2520',
+                boxShadow: darkMode
+                  ? '0 10px 28px rgba(0,0,0,0.4)'
+                  : '0 10px 28px rgba(198,125,91,0.12)',
+                cursor: 'pointer',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '12px',
+                textAlign: 'center',
+                transition: 'transform 0.18s ease, box-shadow 0.18s ease',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-3px)';
+                e.currentTarget.style.boxShadow = '0 14px 34px rgba(198,125,91,0.22)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)';
+                e.currentTarget.style.boxShadow = darkMode
+                  ? '0 10px 28px rgba(0,0,0,0.4)'
+                  : '0 10px 28px rgba(198,125,91,0.12)';
+              }}
+            >
+              <div
+                style={{
+                  width: '56px',
+                  height: '56px',
+                  borderRadius: '16px',
+                  backgroundColor: 'rgba(198,125,91,0.15)',
                   color: '#C67D5B',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                 }}
               >
-                <Palette size={26} />
+                <RotateCcw size={28} strokeWidth={2.5} />
               </div>
               <div>
-                <h3
-                  style={{
-                    margin: '0 0 6px',
-                    fontSize: '15px',
-                    fontWeight: '700',
-                  }}
-                >
-                  {searchQuery ? 'Aucun résultat trouvé' : 'Aucun tableau blanc pour le moment'}
-                </h3>
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: '12.5px',
-                    color: darkMode ? '#A89F91' : '#7C7267',
-                    maxWidth: '360px',
-                  }}
-                >
-                  {searchQuery
-                    ? "Essayez d'autres mots-clés pour retrouver votre projet."
-                    : 'Créez votre premier espace de dessin pour collaborer, faire des croquis ou planifier des deals.'}
-                </p>
+                <div style={{ fontSize: '17px', fontWeight: '800', color: '#C67D5B' }}>
+                  Reprendre le dernier tableau
+                </div>
+                <div style={{ fontSize: '12.5px', color: darkMode ? '#A89F91' : '#7C7267', marginTop: '4px', lineHeight: 1.4 }}>
+                  {lastBoard ? `${lastBoard.title || 'Tableau actif'} (${lastBoard.version})` : 'Continuer sur le tableau actif'}
+                </div>
               </div>
+            </button>
+          </div>
+        </section>
+
+        {/* SECTION HISTORIQUE & LISTE DES TABLEAUX DE LA CONVERSATION */}
+        <section
+          style={{
+            backgroundColor: darkMode ? '#1A1614' : '#FFFFFF',
+            borderRadius: '20px',
+            padding: '20px',
+            border: darkMode
+              ? '1px solid rgba(255,255,255,0.08)'
+              : '1px solid rgba(0,0,0,0.08)',
+            boxShadow: darkMode
+              ? '0 4px 20px rgba(0,0,0,0.3)'
+              : '0 4px 20px rgba(0,0,0,0.04)',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: '16px',
+              flexWrap: 'wrap',
+              gap: '10px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <FolderKanban size={18} color="#C67D5B" />
+              <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '800' }}>
+                Historique des Tableaux ({boards.length})
+              </h3>
+            </div>
+
+            {/* Barre de recherche */}
+            {boards.length > 2 && (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '6px 12px',
+                  borderRadius: '10px',
+                  backgroundColor: darkMode ? 'rgba(255,255,255,0.06)' : '#F3EFEA',
+                  fontSize: '13px',
+                }}
+              >
+                <Search size={14} color="#888" />
+                <input
+                  type="text"
+                  placeholder="Rechercher un tableau..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  style={{
+                    border: 'none',
+                    background: 'transparent',
+                    color: 'inherit',
+                    outline: 'none',
+                    fontSize: '12px',
+                    width: '140px',
+                  }}
+                />
+              </div>
+            )}
+          </div>
+
+          {isLoading ? (
+            <div style={{ padding: '30px 0', textAlign: 'center', color: '#888', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+              <RefreshCw size={16} className="animate-spin" />
+              <span>Chargement des tableaux blancs...</span>
+            </div>
+          ) : filteredBoards.length === 0 ? (
+            <div
+              style={{
+                padding: '30px 20px',
+                textAlign: 'center',
+                color: darkMode ? '#8E857B' : '#8A7E73',
+                backgroundColor: darkMode ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)',
+                borderRadius: '14px',
+              }}
+            >
+              <p style={{ margin: '0 0 6px', fontWeight: '700', fontSize: '14px' }}>
+                {searchQuery ? 'Aucun tableau ne correspond à votre recherche.' : 'Aucun tableau blanc archivé pour l’instant.'}
+              </p>
+              <p style={{ margin: 0, fontSize: '12px' }}>
+                Cliquez sur "Créer un nouveau tableau" ci-dessus pour lancer votre premier atelier graphique.
+              </p>
             </div>
           ) : (
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
-                gap: '16px',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+                gap: '14px',
               }}
             >
               {filteredBoards.map((board) => (
                 <div
                   key={board.id}
-                  onClick={() => onSelectBoard(board.id, board)}
-                  className="whiteboard-card hover-subtle"
+                  className="whiteboard-card"
+                  onClick={() => handleSelect(board.boardId || board.id, board)}
                   style={{
-                    borderRadius: '18px',
-                    overflow: 'hidden',
-                    backgroundColor: darkMode ? '#191513' : '#FFFFFF',
+                    padding: '14px',
+                    borderRadius: '14px',
                     border: darkMode
                       ? '1px solid rgba(255,255,255,0.08)'
                       : '1px solid rgba(0,0,0,0.08)',
-                    boxShadow: darkMode
-                      ? '0 6px 20px rgba(0,0,0,0.35)'
-                      : '0 6px 18px rgba(61,53,48,0.06)',
+                    backgroundColor: darkMode ? '#12100E' : '#FAF7F2',
                     cursor: 'pointer',
                     display: 'flex',
                     flexDirection: 'column',
-                    transition: 'transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease',
+                    gap: '10px',
+                    transition: 'all 0.15s ease',
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-3px)';
                     e.currentTarget.style.borderColor = '#C67D5B';
+                    e.currentTarget.style.transform = 'translateY(-2px)';
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
                     e.currentTarget.style.borderColor = darkMode
                       ? 'rgba(255,255,255,0.08)'
                       : 'rgba(0,0,0,0.08)';
+                    e.currentTarget.style.transform = 'translateY(0)';
                   }}
                 >
-                  {/* Miniature Bounding Box (Phase 73 Base64) ou Placeholder élégant */}
-                  <div
-                    style={{
-                      height: '135px',
-                      width: '100%',
-                      backgroundColor: darkMode ? '#0F0D0B' : '#F4EFEB',
-                      position: 'relative',
-                      overflow: 'hidden',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      borderBottom: darkMode
-                        ? '1px solid rgba(255,255,255,0.06)'
-                        : '1px solid rgba(0,0,0,0.06)',
-                    }}
-                  >
-                    {board.thumbnail ? (
-                      <img
-                        src={board.thumbnail}
-                        alt={board.title}
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'contain',
-                          backgroundColor: darkMode ? '#12100E' : '#FFFFFF',
-                        }}
-                      />
-                    ) : (
-                      <div
-                        style={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          gap: '8px',
-                          color: darkMode ? '#5A5046' : '#C4B5A5',
-                        }}
-                      >
-                        <Palette size={28} strokeWidth={1.5} />
-                        <span style={{ fontSize: '11px', fontWeight: '600' }}>
-                          Aperçu vectoriel
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Badge de Version */}
+                  {/* Thumbnail si dispo */}
+                  {board.thumbnail ? (
                     <div
                       style={{
-                        position: 'absolute',
-                        top: '8px',
-                        left: '8px',
-                        padding: '2px 8px',
-                        borderRadius: '999px',
-                        backgroundColor: 'rgba(198, 125, 91, 0.92)',
-                        color: '#FFFFFF',
-                        fontSize: '10px',
-                        fontWeight: '800',
-                        letterSpacing: '0.4px',
-                        boxShadow: '0 2px 6px rgba(0,0,0,0.25)',
-                      }}
-                    >
-                      {board.version}
-                    </div>
-
-                    {/* Badge Date relative */}
-                    <div
-                      style={{
-                        position: 'absolute',
-                        bottom: '8px',
-                        right: '8px',
-                        padding: '2px 8px',
-                        borderRadius: '999px',
-                        backgroundColor: darkMode ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.85)',
-                        backdropFilter: 'blur(8px)',
-                        color: darkMode ? '#FAF7F2' : '#231E1B',
-                        fontSize: '10px',
-                        fontWeight: '700',
+                        width: '100%',
+                        height: '110px',
+                        borderRadius: '10px',
+                        overflow: 'hidden',
+                        backgroundColor: '#FFFFFF',
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '4px',
+                        justifyContent: 'center',
                       }}
                     >
-                      <Clock size={10} />
-                      <span>{formatRelativeTime(board.updatedAt)}</span>
+                      <img
+                        src={board.thumbnail}
+                        alt="Aperçu du tableau"
+                        style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                      />
                     </div>
-                  </div>
-
-                  {/* Corps de la carte */}
-                  <div style={{ padding: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    <h3
+                  ) : (
+                    <div
                       style={{
-                        margin: 0,
+                        width: '100%',
+                        height: '70px',
+                        borderRadius: '10px',
+                        backgroundColor: 'rgba(198,125,91,0.08)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: '#C67D5B',
+                      }}
+                    >
+                      <Palette size={24} />
+                    </div>
+                  )}
+
+                  <div>
+                    <div
+                      style={{
                         fontSize: '13.5px',
-                        fontWeight: '700',
-                        color: 'inherit',
+                        fontWeight: '800',
+                        color: darkMode ? '#FAF7F2' : '#2D2520',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
                       }}
-                      title={board.title}
                     >
-                      {board.title}
-                    </h3>
-
+                      {board.title || 'Tableau sans titre'}
+                    </div>
                     <div
                       style={{
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'space-between',
+                        marginTop: '6px',
                         fontSize: '11px',
-                        color: darkMode ? '#A89F91' : '#7C7267',
+                        color: darkMode ? '#8E857B' : '#8A7E73',
                       }}
                     >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <User size={12} />
-                        <span style={{ maxWidth: '110px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {board.lastEditor}
-                        </span>
-                      </div>
-
-                      <span
-                        style={{
-                          color: '#C67D5B',
-                          fontWeight: '700',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '2px',
-                        }}
-                      >
-                        Ouvrir
-                        <ArrowRight size={11} />
+                      <span style={{ fontWeight: '700', color: '#C67D5B' }}>{board.version}</span>
+                      <span>{board.lastEditor}</span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                        <Clock size={11} /> {formatRelativeTime(board.updatedAt)}
                       </span>
                     </div>
                   </div>

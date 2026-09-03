@@ -283,7 +283,11 @@ function ChatInputBar({
                   onClick={(e) => {
                     e.stopPropagation();
                     setIsWorkspaceMenuOpen(false);
-                    if (onOpenWhiteboardPicker) onOpenWhiteboardPicker();
+                    if (onOpenWhiteboardPicker) {
+                      onOpenWhiteboardPicker();
+                    } else if (onOpenWorkspaceTool) {
+                      onOpenWorkspaceTool('whiteboard');
+                    }
                   }}
                   className="hover-subtle"
                   style={{

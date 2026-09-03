@@ -333,6 +333,13 @@ function ChatView({
   const handleOpenWorkspaceTool = async (toolType, documentId = null) => {
     const targetChat = effectiveSelectedChat || selectedChat;
     const resolvedChatId = String(targetChat?.id || targetChat?.firestoreId || activeChatObj?.id || 'default_chat');
+
+    // 🚨 PHASE 102 : Le clic sur Whiteboard ouvre impérativement le Lobby sans ID spécifique
+    if (toolType === 'whiteboard') {
+      openWorkspaceTool('whiteboard', documentId || null, resolvedChatId);
+      return;
+    }
+
     const effectiveDocId = String(documentId || `doc_${resolvedChatId}_${toolType || 'workspace'}`);
     const currentBoardId = String(documentId || `board-${resolvedChatId}`);
 
@@ -565,29 +572,12 @@ function ChatView({
     }
   }, []);
 
-  // 🚨 PHASE 97 : AUTO-SCROLL BRUTAL AU MONTAGE & SUR CHANGEMENT DE CHAT
-  useLayoutEffect(() => {
-    if (messagesContainerRef.current) {
-      messagesContainerRef.current.scrollTo({
-        top: messagesContainerRef.current.scrollHeight,
-        behavior: 'auto',
-      });
-    }
-    const timer = setTimeout(() => {
-      if (messagesContainerRef.current) {
-        messagesContainerRef.current.scrollTo({
-          top: messagesContainerRef.current.scrollHeight,
-          behavior: 'auto',
-        });
-      }
-    }, 100);
-    return () => clearTimeout(timer);
-  }, [selectedChat?.id, currentChatId]);
-
-  // 🚨 PHASE 86 : AUTO-SCROLL SÉCURISÉ SANS BOUCLE INFINIE (CSS + RÉF SUR LE DERNIER MESSAGE)
+  // 🚨 PHASE 102 : LE MUR PORTEUR DU SCROLL (HOOK INDESTRUCTIBLE)
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView();
-  }, [messages?.length]);
+    const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' });
+    scrollToBottom();
+    setTimeout(scrollToBottom, 150); // Fallback post-render
+  }, [selectedChat?.id, messages?.length]);
 
   // Multi-Board Management (Phase 23) : Récupération dynamique des 3 derniers tableaux blancs modifiés dans ce chat
   const recentBoardsFromMessages = useMemo(() => {
@@ -2519,7 +2509,7 @@ function ChatView({
               </div>
             )}
 
-            <div ref={messagesEndRef} style={{ height: '1px' }} />
+            <div ref={messagesEndRef} className="h-1" />
           </div>
         </div>
 
