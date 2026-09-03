@@ -3,7 +3,7 @@ import {
   Shield, Users, FileText, MessageSquare, Globe, Search,
   Trash2, Edit3, CheckCircle, AlertTriangle, X,
   Coins, Sparkles, Check, RefreshCw, ShieldAlert,
-  ShieldCheck, UserX, UserCheck, Plus, Key, Save
+  ShieldCheck, UserX, UserCheck, Plus, Key, Save, Eye
 } from 'lucide-react';
 import {
   collection, doc, onSnapshot, updateDoc, setDoc, deleteDoc,
@@ -11,6 +11,7 @@ import {
   where, getDocs, writeBatch
 } from 'firebase/firestore';
 import { db } from '../../firebase';
+import { useFeedStore } from '../../stores/useFeedStore';
 import { useAllGlobalContent } from './useGlobalContent';
 import AdminCommunityTab from './AdminCommunityTab';
 import AdminChatsTab from './AdminChatsTab';
@@ -37,6 +38,7 @@ export default function AdminDashboard({
 
   // États des données temps réel
   const [usersList, setUsersList] = useState([]);
+  const allFirestoreUsers = usersList; // 🚨 PHASE 112 : Alias standard allFirestoreUsers pour accès direct
   const [listingsList, setListingsList] = useState([]);
   const [communityMessages, setCommunityMessages] = useState([]);
   const [transactionsList, setTransactionsList] = useState([]);
@@ -111,6 +113,10 @@ export default function AdminDashboard({
             });
           });
           setUsersList(list);
+          try {
+            const setAll = useFeedStore.getState()?.setAllFirestoreUsers;
+            if (typeof setAll === 'function') setAll(list);
+          } catch (_) {}
           setIsLoadingUsers(false);
         },
         (err) => {
@@ -286,6 +292,22 @@ export default function AdminDashboard({
   }, [isUnlocked]);
 
   // ================= ACTIONS UTILISATEURS =================
+  // 🚨 PHASE 112 : PASSERELLE D'INSPECTION MODÉRATEUR VERS LE PROFIL PUBLIC
+  const handleInspectPublicProfile = useCallback((targetUser) => {
+    if (!targetUser) return;
+    if (typeof onInspectUser === 'function') {
+      onInspectUser(targetUser);
+    } else {
+      if (typeof onClose === 'function') onClose();
+      try {
+        const { setSelectedPublicUser } = useFeedStore.getState?.() || {};
+        if (typeof setSelectedPublicUser === 'function') {
+          setSelectedPublicUser(targetUser);
+        }
+      } catch (_) {}
+    }
+  }, [onInspectUser, onClose]);
+
   const handleSaveUserEdit = async () => {
     if (!editingUser) return;
     try {
@@ -736,7 +758,7 @@ export default function AdminDashboard({
 
   // Filtrage des utilisateurs
   const filteredUsers = useMemo(() => {
-    return usersList.filter((u) => {
+    return allFirestoreUsers.filter((u) => {
       const q = userSearch.toLowerCase();
       const matchSearch =
         !q ||
@@ -1313,7 +1335,18 @@ export default function AdminDashboard({
 
                           {/* Actions */}
                           <td style={{ padding: '14px 18px', textAlign: 'right' }}>
-                            <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                            <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end', flexWrap: 'wrap', alignItems: 'center' }}>
+                              {/* 🚨 PHASE 112 : Bouton d'inspection modérateur vers profil public */}
+                              <button
+                                type="button"
+                                onClick={() => handleInspectPublicProfile(user)}
+                                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-100 text-indigo-700 hover:bg-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400 font-bold text-xs transition-colors"
+                                title="Inspecter le profil public"
+                              >
+                                <Eye size={13} />
+                                <span>Inspecter le profil public</span>
+                              </button>
+
                               {/* Bouton Bannir / Débannir */}
                               <button
                                 type="button"
@@ -2770,17 +2803,28 @@ export default function AdminDashboard({
             }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
               <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '900' }}>
                 ✏️ Éditer le profil de {editingUser.name || 'l\'utilisateur'}
               </h3>
-              <button
-                type="button"
-                onClick={() => setEditingUser(null)}
-                style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer' }}
-              >
-                <X size={20} />
-              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => handleInspectPublicProfile(editingUser)}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-indigo-100 text-indigo-700 hover:bg-indigo-200 dark:bg-indigo-900/30 dark:text-indigo-400 font-bold text-xs transition-colors"
+                  title="Inspecter le profil public"
+                >
+                  <Eye size={14} />
+                  <span>Inspecter le profil public</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingUser(null)}
+                  style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer' }}
+                >
+                  <X size={20} />
+                </button>
+              </div>
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
