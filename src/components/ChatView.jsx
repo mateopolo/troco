@@ -290,13 +290,14 @@ function ChatView({
     }
   };
 
-  // 🚨 PHASE 91 : Ouverture directe d'un outil workspace (depuis une carte de chat ou un lien direct)
-  const openWorkspaceTool = useCallback((toolType, documentId = null) => {
+  // 🚨 PHASE 100 : Verrouillage du chemin d'ouverture et programmation défensive
+  const openWorkspaceTool = useCallback((toolType, documentId = null, forcedChatId = null) => {
     setIsWorkspaceMenuOpen(false);
 
     const targetChat = effectiveSelectedChat || selectedChat;
-    const currentBoardId = documentId || (targetChat?.id ? `board-${targetChat.id}` : 'default_board');
-    const effectiveDocId = documentId || (targetChat?.id ? `doc-${targetChat.id}` : 'default_shared_doc');
+    const resolvedChatId = String(forcedChatId || targetChat?.id || targetChat?.firestoreId || activeChatObj?.id || 'default_chat');
+    const effectiveBoardId = String(documentId || `board-${resolvedChatId}`);
+    const effectiveDocId = String(documentId || `doc_${resolvedChatId}_${toolType || 'workspace'}`);
 
     if (toolType === 'whiteboard') {
       if (documentId) {
@@ -325,16 +326,18 @@ function ChatView({
     } else if (toolType === 'planning' || toolType === 'calendar' || toolType === 'drive' || toolType === 'workspace' || toolType === 'tools') {
       setIsWorkspaceToolsOpen(true);
     }
-  }, [effectiveSelectedChat, selectedChat]);
+  }, [effectiveSelectedChat, selectedChat, activeChatObj]);
 
   // Gestion de l'ouverture d'un outil workspace avec invitation automatique dans la conversation
   const handleOpenWorkspaceTool = async (toolType, documentId = null) => {
-    openWorkspaceTool(toolType, documentId);
-
     const targetChat = effectiveSelectedChat || selectedChat;
-    const currentBoardId = documentId || (targetChat?.id ? `board-${targetChat.id}` : 'default_board');
-    const effectiveDocId = documentId || (targetChat?.id ? `doc-${targetChat.id}` : 'default_shared_doc');
-    const chatId = targetChat?.id ? String(targetChat.id) : null;
+    const resolvedChatId = String(targetChat?.id || targetChat?.firestoreId || activeChatObj?.id || 'default_chat');
+    const effectiveDocId = String(documentId || `doc_${resolvedChatId}_${toolType || 'workspace'}`);
+    const currentBoardId = String(documentId || `board-${resolvedChatId}`);
+
+    openWorkspaceTool(toolType, effectiveDocId, resolvedChatId);
+
+    const chatId = resolvedChatId !== 'default_chat' ? resolvedChatId : null;
 
     if (chatId && db) {
       const toolIcons = {
@@ -3388,12 +3391,12 @@ function ChatView({
               setIsSharedDocOpen(false);
               setActiveSharedDocId(null);
             }}
-            groupId={activeChatObj?.id || activeChatObj?.firestoreId || selectedChat?.id || 'group_notes'}
-            docId={activeSharedDocId || (activeChatObj?.id ? `doc-${activeChatObj.id}` : (selectedChat?.id ? `doc-${selectedChat.id}` : 'default_shared_doc'))}
-            documentId={activeSharedDocId || (activeChatObj?.id ? `doc-${activeChatObj.id}` : (selectedChat?.id ? `doc-${selectedChat.id}` : 'default_shared_doc'))}
+            groupId={String(activeChatObj?.id || activeChatObj?.firestoreId || selectedChat?.id || 'group_notes')}
+            docId={String(activeSharedDocId || `doc_${activeChatObj?.id || selectedChat?.id || 'chat'}_notes`)}
+            documentId={String(activeSharedDocId || `doc_${activeChatObj?.id || selectedChat?.id || 'chat'}_notes`)}
             projectTitle={activeChatObj?.projectTitle || activeChatObj?.user || selectedChat?.projectTitle || selectedChat?.user || 'Notes Partagées'}
-            currentUser={profile}
-            darkMode={darkMode}
+            currentUser={profile || { name: 'Moi', uid: 'me' }}
+            darkMode={Boolean(darkMode)}
             handleSendMessage={handleSendMessage}
             onSendToChat={(sentDocId, msgPayload) => {
               if (typeof handleSendMessage === 'function' && msgPayload) {
@@ -3414,13 +3417,13 @@ function ChatView({
               setIsCloudOfficeOpen(false);
               setActiveOfficeDocId(null);
             }}
-            groupId={activeChatObj?.id || activeChatObj?.firestoreId || selectedChat?.id || 'group_office'}
-            docId={activeOfficeDocId || (activeChatObj?.id ? `doc-${activeChatObj.id}` : (selectedChat?.id ? `doc-${selectedChat.id}` : 'default_shared_doc'))}
-            documentId={activeOfficeDocId || (activeChatObj?.id ? `doc-${activeChatObj.id}` : (selectedChat?.id ? `doc-${selectedChat.id}` : 'default_shared_doc'))}
+            groupId={String(activeChatObj?.id || activeChatObj?.firestoreId || selectedChat?.id || 'group_office')}
+            docId={String(activeOfficeDocId || `doc_${activeChatObj?.id || selectedChat?.id || 'chat'}_office`)}
+            documentId={String(activeOfficeDocId || `doc_${activeChatObj?.id || selectedChat?.id || 'chat'}_office`)}
             projectTitle={activeChatObj?.projectTitle || activeChatObj?.user || selectedChat?.projectTitle || selectedChat?.user || 'Suite Office Cloud'}
-            currentUser={profile}
-            darkMode={darkMode}
-            initialTab={officeInitialTab}
+            currentUser={profile || { name: 'Moi', uid: 'me' }}
+            darkMode={Boolean(darkMode)}
+            initialTab={officeInitialTab || 'docs'}
           />
         </Suspense>
       )}

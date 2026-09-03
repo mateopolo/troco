@@ -20,6 +20,14 @@ const DEFAULT_NOTE_CONTENT = `# 📝 Notes de Session & Objectifs Collaboratifs
 
 Partagez ici vos comptes-rendus, listes de tâches et spécifications en direct avec vos collaborateurs.`;
 
+// Squelette local sécurisé par défaut garantissant zéro crash
+const defaultDoc = {
+  title: 'Nouveau Document',
+  content: '',
+  cells: {},
+  lastUpdated: Date.now(),
+};
+
 // Helper pour extraire les 150 premiers caractères sans balises HTML ni Markdown
 const extractSnippet = (textOrHtml, maxChars = 150) => {
   if (!textOrHtml) return '';
@@ -50,11 +58,12 @@ export default function SharedDocumentModal({
   onSendToChat = null,
   handleSendMessage = null,
 }) {
-  const effectiveDoc = propDoc || propDocAlias || note || null;
-  const effectiveDocId = docId || documentId || effectiveDoc?.id || effectiveDoc?.docId || (typeof groupId === 'string' ? groupId : groupId?.id) || 'default_shared_doc';
+  const effectiveDoc = propDoc || propDocAlias || note || defaultDoc;
+  const effectiveGroupId = String(groupId?.id || groupId || 'demo_group_notes');
+  const effectiveDocId = String(docId || documentId || effectiveDoc?.id || effectiveDoc?.docId || `doc_${effectiveGroupId}_notes`);
 
-  const [title, setTitle] = useState(() => effectiveDoc?.title || effectiveDoc?.name || (projectTitle ? `Notes - ${projectTitle}` : 'Note de collaboration'));
-  const [content, setContent] = useState(() => (typeof effectiveDoc?.content === 'string' ? effectiveDoc.content : (typeof effectiveDoc?.text === 'string' ? effectiveDoc.text : DEFAULT_NOTE_CONTENT)));
+  const [title, setTitle] = useState(() => effectiveDoc?.title || effectiveDoc?.name || (projectTitle ? `Notes - ${projectTitle}` : defaultDoc.title));
+  const [content, setContent] = useState(() => (typeof effectiveDoc?.content === 'string' ? effectiveDoc.content : (typeof effectiveDoc?.text === 'string' ? effectiveDoc.text : defaultDoc.content)) || '');
   const [saveStatus, setSaveStatus] = useState('Synchronisé en direct 🟢');
   const [previewMode, setPreviewMode] = useState(false);
   const [isSendingToChat, setIsSendingToChat] = useState(false);
@@ -74,22 +83,24 @@ export default function SharedDocumentModal({
         try {
           if (snapshot?.exists?.()) {
             const data = snapshot.data() || {};
-            if (data?.title) setTitle(data.title || '');
+            if (data?.title) setTitle(data?.title || defaultDoc.title);
             if (data?.content !== undefined && data?.lastEditorUid !== (currentUser?.uid || currentUser?.id)) {
               if (!isTypingRef.current) {
-                setContent(String(data.content || ''));
+                setContent(data?.content != null ? String(data.content) : defaultDoc.content);
               }
             }
             setSaveStatus('Synchronisé en direct 🟢');
           } else {
             // Initialisation immédiate par défaut si le document n'existe pas encore
-            const myName = currentUser?.name || 'Moi';
+            const myName = currentUser?.name || currentUser?.displayName || 'Moi';
             const myUid = currentUser?.uid || currentUser?.id || 'me';
             setDoc(noteDocRef, {
               docId: effectiveDocId,
-              groupId: String(groupId?.id || groupId || 'default_group'),
-              title: title || 'Notes Partagées',
-              content: DEFAULT_NOTE_CONTENT,
+              groupId: effectiveGroupId,
+              title: title || defaultDoc.title,
+              content: content || defaultDoc.content,
+              cells: defaultDoc.cells,
+              lastUpdated: Date.now(),
               lastEditor: myName,
               lastEditorUid: myUid,
               updatedAt: serverTimestamp(),
@@ -102,9 +113,11 @@ export default function SharedDocumentModal({
         console.warn('[Firestore Shared Note] Snapshot notice:', err);
       });
 
-      return () => unsubscribe();
+      return () => {
+        if (typeof unsubscribe === 'function') unsubscribe();
+      };
     } catch (_) {}
-  }, [isOpen, effectiveDocId, currentUser, groupId, title]);
+  }, [isOpen, effectiveDocId, currentUser, effectiveGroupId, title, content]);
 
   // Sauvegarde debouncée vers Firestore
   const syncToFirestore = useCallback((newContent, newTitle) => {
@@ -116,15 +129,17 @@ export default function SharedDocumentModal({
 
     debounceTimerRef.current = setTimeout(async () => {
       try {
-        const myName = currentUser?.name || 'Moi';
+        const myName = currentUser?.name || currentUser?.displayName || 'Moi';
         const myUid = currentUser?.uid || currentUser?.id || 'me';
-        const snippet = extractSnippet(newContent, 150);
+        const snippet = extractSnippet(newContent ?? content ?? '', 150);
         const noteDocRef = doc(db, 'project_shared_notes', String(effectiveDocId));
         await setDoc(noteDocRef, {
           docId: effectiveDocId,
-          groupId,
-          title: newTitle,
-          content: newContent,
+          groupId: effectiveGroupId,
+          title: newTitle || title || defaultDoc.title,
+          content: newContent ?? content ?? '',
+          cells: defaultDoc.cells,
+          lastUpdated: Date.now(),
           snippet,
           summary: snippet,
           lastEditor: myName,
@@ -132,11 +147,13 @@ export default function SharedDocumentModal({
           updatedAt: serverTimestamp(),
         }, { merge: true });
 
-        if (groupId && groupId !== 'demo_group_notes') {
-          const chatDocRef = doc(db, 'chats', String(groupId), 'workspace', 'shared_note');
+        if (effectiveGroupId && effectiveGroupId !== 'demo_group_notes') {
+          const chatDocRef = doc(db, 'chats', effectiveGroupId, 'workspace', 'shared_note');
           await setDoc(chatDocRef, {
-            title: newTitle,
-            content: newContent,
+            title: newTitle || title || defaultDoc.title,
+            content: newContent ?? content ?? '',
+            cells: defaultDoc.cells,
+            lastUpdated: Date.now(),
             snippet,
             summary: snippet,
             lastEditor: myName,
@@ -298,7 +315,7 @@ export default function SharedDocumentModal({
   if (!isOpen) return null;
   if (typeof document === 'undefined') return null;
 
-  return createPortal(
+  const modalContent = (
     <div
       className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/90 md:bg-[rgba(15,12,11,0.82)] md:backdrop-blur-md touch-none"
       style={{
@@ -636,17 +653,17 @@ export default function SharedDocumentModal({
                     </div>
                   );
                 }
-                if (line.startsWith('- ')) {
-                  return <li key={idx} style={{ marginLeft: '20px', margin: '3px 0' }}>{line.replace('- ', '')}</li>;
+                if (safeLine.startsWith('- ')) {
+                  return <li key={idx} style={{ marginLeft: '20px', margin: '3px 0' }}>{safeLine.replace('- ', '')}</li>;
                 }
-                if (!line.trim()) return <div key={idx} style={{ height: '8px' }} />;
-                return <p key={idx} style={{ margin: '4px 0' }}>{line}</p>;
+                if (!safeLine.trim()) return <div key={idx} style={{ height: '8px' }} />;
+                return <p key={idx} style={{ margin: '4px 0' }}>{safeLine}</p>;
               })}
             </div>
           ) : (
             <textarea
               ref={textareaRef}
-              value={content}
+              value={content || ''}
               onChange={handleContentChange}
               placeholder="Rédigez vos notes partagées ici en Markdown..."
               style={{
@@ -696,4 +713,8 @@ export default function SharedDocumentModal({
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' && document.body
+    ? createPortal(modalContent, document.body)
+    : modalContent;
 }

@@ -9,12 +9,21 @@ import {
 import { doc, setDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 
+// Squelette local sécurisé par défaut garantissant zéro crash
+const defaultDoc = {
+  title: 'Nouveau Document',
+  content: '',
+  cells: {},
+  lastUpdated: Date.now(),
+};
+
 // Helper pour évaluer des formules simples de tableur (=SUM(A1:A5), =AVERAGE(A1:A5), =A1+B1, etc.)
 const evaluateCellFormula = (val, gridData) => {
   if (typeof val !== 'string' || !val.startsWith('=')) {
-    return val;
+    return val != null ? String(val) : '';
   }
 
+  const safeGrid = (gridData && typeof gridData === 'object') ? gridData : {};
   const expr = val.slice(1).trim().toUpperCase();
 
   try {
@@ -30,7 +39,7 @@ const evaluateCellFormula = (val, gridData) => {
       for (let r = Math.min(rowStart, rowEnd); r <= Math.max(rowStart, rowEnd); r++) {
         for (let c = Math.min(colStart, colEnd); c <= Math.max(colStart, colEnd); c++) {
           const key = `${String.fromCharCode(65 + c)}${r + 1}`;
-          const num = parseFloat(gridData[key]);
+          const num = parseFloat(safeGrid[key]);
           if (!isNaN(num)) sum += num;
         }
       }
@@ -50,7 +59,7 @@ const evaluateCellFormula = (val, gridData) => {
       for (let r = Math.min(rowStart, rowEnd); r <= Math.max(rowStart, rowEnd); r++) {
         for (let c = Math.min(colStart, colEnd); c <= Math.max(colStart, colEnd); c++) {
           const key = `${String.fromCharCode(65 + c)}${r + 1}`;
-          const num = parseFloat(gridData[key]);
+          const num = parseFloat(safeGrid[key]);
           if (!isNaN(num)) {
             sum += num;
             count++;
@@ -62,7 +71,7 @@ const evaluateCellFormula = (val, gridData) => {
 
     // 3. Remplacement simple des références de cellules (ex: A1 + B2)
     const sanitized = expr.replace(/([A-Z])(\d+)/g, (match) => {
-      const cellVal = gridData[match];
+      const cellVal = safeGrid[match];
       const num = parseFloat(cellVal);
       return !isNaN(num) ? String(num) : '0';
     });
@@ -70,7 +79,7 @@ const evaluateCellFormula = (val, gridData) => {
     if (/^[0-9+\-*/().\s]+$/.test(sanitized)) {
       // eslint-disable-next-line no-new-func
       const result = Function(`"use strict"; return (${sanitized});`)();
-      return String(typeof result === 'number' ? Math.round(result * 100) / 100 : result);
+      return String(typeof result === 'number' ? Math.round(result * 100) / 100 : (result ?? ''));
     }
   } catch (err) {
     return '#ERREUR!';
@@ -140,15 +149,15 @@ export default function CloudOfficeSuiteModal({
   darkMode = false,
   initialTab = 'docs',
 }) {
-  const effectiveDoc = propDoc || propDocAlias || note || null;
+  const effectiveDoc = propDoc || propDocAlias || note || defaultDoc;
   const effectiveGroupId = String(groupId?.id || groupId || 'demo_group_office');
-  const effectiveDocId = String(documentId || docId || effectiveDoc?.id || effectiveDoc?.documentId || 'document');
+  const effectiveDocId = String(documentId || docId || effectiveDoc?.id || effectiveDoc?.documentId || `doc_${effectiveGroupId}_office`);
 
   const [activeTab, setActiveTab] = useState(initialTab || 'docs'); // 'docs' | 'sheets' | 'slides' | 'history'
-  const [docTitle, setDocTitle] = useState(() => effectiveDoc?.title || effectiveDoc?.name || (projectTitle ? `Spécifications & Notes - ${projectTitle}` : 'Spécifications & Notes'));
-  const [docContent, setDocContent] = useState(() => (typeof effectiveDoc?.content === 'string' ? effectiveDoc.content : (typeof effectiveDoc?.text === 'string' ? effectiveDoc.text : DEFAULT_DOC_TEXT)));
+  const [docTitle, setDocTitle] = useState(() => effectiveDoc?.title || effectiveDoc?.name || (projectTitle ? `Spécifications & Notes - ${projectTitle}` : defaultDoc.title));
+  const [docContent, setDocContent] = useState(() => (typeof effectiveDoc?.content === 'string' ? effectiveDoc.content : (typeof effectiveDoc?.text === 'string' ? effectiveDoc.text : defaultDoc.content)) || '');
   const [sheetTitle, setSheetTitle] = useState(() => effectiveDoc?.sheetTitle || (projectTitle ? `Budget & Planning - ${projectTitle}` : 'Budget & Planning'));
-  const [sheetData, setSheetData] = useState(() => effectiveDoc?.gridData || effectiveDoc?.sheetData || DEFAULT_SHEET_DATA);
+  const [sheetData, setSheetData] = useState(() => (effectiveDoc?.gridData || effectiveDoc?.sheetData || effectiveDoc?.cells || DEFAULT_SHEET_DATA || {}));
   const [slidesTitle, setSlidesTitle] = useState(() => effectiveDoc?.slidesTitle || (projectTitle ? `Présentation - ${projectTitle}` : 'Présentation'));
   const [slides, setSlides] = useState(() => (Array.isArray(effectiveDoc?.slides) ? effectiveDoc.slides : DEFAULT_SLIDES));
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
@@ -170,9 +179,9 @@ export default function CloudOfficeSuiteModal({
         try {
           if (snapshot?.exists?.()) {
             const data = snapshot.data() || {};
-            if (data?.title) setDocTitle(data.title || '');
-            if (data?.content !== undefined && data?.lastEditor !== (currentUser?.name || currentUser?.id)) {
-              setDocContent(String(data.content || ''));
+            if (data?.title) setDocTitle(data?.title || defaultDoc.title);
+            if (data?.content !== undefined && data?.lastEditor !== (currentUser?.name || currentUser?.displayName || currentUser?.id)) {
+              setDocContent(data?.content != null ? String(data.content) : defaultDoc.content);
             }
             if (data?.collaborators && Array.isArray(data.collaborators)) {
               setCollaborators(data.collaborators);
@@ -180,10 +189,12 @@ export default function CloudOfficeSuiteModal({
             setSaveStatus('Synchronisé en direct 🟢');
           } else {
             // Initialisation immédiate par défaut si non existant
-            const myName = currentUser?.name || 'Moi';
+            const myName = currentUser?.name || currentUser?.displayName || 'Moi';
             setDoc(docRef, {
-              title: docTitle || 'Document Partagé',
-              content: DEFAULT_DOC_TEXT,
+              title: docTitle || defaultDoc.title,
+              content: docContent || defaultDoc.content,
+              cells: defaultDoc.cells,
+              lastUpdated: Date.now(),
               lastEditor: myName,
               collaborators: [myName, 'Collaborateur'],
               updatedAt: serverTimestamp(),
@@ -196,9 +207,11 @@ export default function CloudOfficeSuiteModal({
         console.warn('[TrocoDocs] snapshot error:', err);
       });
 
-      return () => unsubscribe();
+      return () => {
+        if (typeof unsubscribe === 'function') unsubscribe();
+      };
     } catch (_) {}
-  }, [isOpen, effectiveGroupId, effectiveDocId, currentUser, docTitle]);
+  }, [isOpen, effectiveGroupId, effectiveDocId, currentUser, docTitle, docContent]);
 
   // Synchronisation Firestore en temps réel pour Troco Sheets
   useEffect(() => {
@@ -210,17 +223,19 @@ export default function CloudOfficeSuiteModal({
         try {
           if (snapshot?.exists?.()) {
             const data = snapshot.data() || {};
-            if (data?.title) setSheetTitle(data.title || '');
-            if (data?.gridData && data?.lastEditor !== (currentUser?.name || currentUser?.id)) {
-              setSheetData(data.gridData || {});
+            if (data?.title) setSheetTitle(data?.title || 'Tableur Collaboratif');
+            if ((data?.gridData || data?.cells) && data?.lastEditor !== (currentUser?.name || currentUser?.displayName || currentUser?.id)) {
+              setSheetData((data?.gridData || data?.cells || {}) || {});
             }
             setSaveStatus('Synchronisé en direct 🟢');
           } else {
             // Initialisation immédiate par défaut si non existant
-            const myName = currentUser?.name || 'Moi';
+            const myName = currentUser?.name || currentUser?.displayName || 'Moi';
             setDoc(sheetRef, {
               title: sheetTitle || 'Tableur Collaboratif',
               gridData: DEFAULT_SHEET_DATA,
+              cells: DEFAULT_SHEET_DATA,
+              lastUpdated: Date.now(),
               lastEditor: myName,
               updatedAt: serverTimestamp(),
             }, { merge: true }).catch(() => {});
@@ -232,7 +247,9 @@ export default function CloudOfficeSuiteModal({
         console.warn('[TrocoSheets] snapshot error:', err);
       });
 
-      return () => unsubscribe();
+      return () => {
+        if (typeof unsubscribe === 'function') unsubscribe();
+      };
     } catch (_) {}
   }, [isOpen, effectiveGroupId, currentUser, sheetTitle]);
 
@@ -246,17 +263,18 @@ export default function CloudOfficeSuiteModal({
         try {
           if (snapshot?.exists?.()) {
             const data = snapshot.data() || {};
-            if (data?.title) setSlidesTitle(data.title || '');
-            if (data?.slides && Array.isArray(data.slides) && data?.lastEditor !== (currentUser?.name || currentUser?.id)) {
+            if (data?.title) setSlidesTitle(data?.title || 'Présentation Collaboratif');
+            if (data?.slides && Array.isArray(data.slides) && data?.lastEditor !== (currentUser?.name || currentUser?.displayName || currentUser?.id)) {
               setSlides(data.slides);
             }
             setSaveStatus('Synchronisé en direct 🟢');
           } else {
             // Initialisation immédiate par défaut si non existant
-            const myName = currentUser?.name || 'Moi';
+            const myName = currentUser?.name || currentUser?.displayName || 'Moi';
             setDoc(slidesRef, {
               title: slidesTitle || 'Présentation Collaboratif',
               slides: DEFAULT_SLIDES,
+              lastUpdated: Date.now(),
               lastEditor: myName,
               updatedAt: serverTimestamp(),
             }, { merge: true }).catch(() => {});
@@ -268,7 +286,9 @@ export default function CloudOfficeSuiteModal({
         console.warn('[TrocoSlides] snapshot error:', err);
       });
 
-      return () => unsubscribe();
+      return () => {
+        if (typeof unsubscribe === 'function') unsubscribe();
+      };
     } catch (_) {}
   }, [isOpen, effectiveGroupId, currentUser, slidesTitle]);
 
@@ -277,7 +297,7 @@ export default function CloudOfficeSuiteModal({
     if (!effectiveGroupId || !db) return;
     try {
       setSaveStatus('Sauvegarde en cours...');
-      const myName = currentUser?.name || 'Moi';
+      const myName = currentUser?.name || currentUser?.displayName || 'Moi';
       const snippet = String(newContent || '')
         .replace(/<[^>]*>/g, ' ')
         .replace(/[#*`_~\[\]()]/g, '')
@@ -287,8 +307,10 @@ export default function CloudOfficeSuiteModal({
 
       const docRef = doc(db, 'chats', effectiveGroupId, 'workspace', effectiveDocId);
       await setDoc(docRef, {
-        title: String(newTitle || 'Document Partagé'),
-        content: String(newContent || ''),
+        title: String(newTitle || docTitle || defaultDoc.title),
+        content: String(newContent ?? docContent ?? ''),
+        cells: defaultDoc.cells,
+        lastUpdated: Date.now(),
         snippet,
         summary: snippet,
         lastEditor: myName,
@@ -314,24 +336,26 @@ export default function CloudOfficeSuiteModal({
       console.warn('[TrocoDocs] Save error:', err);
       setSaveStatus('Mode hors-ligne');
     }
-  }, [effectiveGroupId, effectiveDocId, currentUser, docTitle]);
+  }, [effectiveGroupId, effectiveDocId, currentUser, docTitle, docContent]);
 
   // Sauvegarde des modifications Troco Sheets
   const saveSheetToFirestore = useCallback(async (newGridData, newTitle = sheetTitle) => {
-    if (!groupId || !db) return;
+    if (!effectiveGroupId || !db) return;
     try {
       setSaveStatus('Sauvegarde en cours...');
-      const myName = currentUser?.name || 'Moi';
+      const myName = currentUser?.name || currentUser?.displayName || 'Moi';
       const snippet = Object.entries(newGridData || {})
         .filter(([_, v]) => v)
         .map(([k, v]) => `${k}: ${v}`)
         .slice(0, 8)
         .join(' | ') || 'Feuille de calcul Troco';
 
-      const sheetRef = doc(db, 'chats', String(groupId), 'workspace', 'spreadsheet');
+      const sheetRef = doc(db, 'chats', effectiveGroupId, 'workspace', 'spreadsheet');
       await setDoc(sheetRef, {
-        title: newTitle,
-        gridData: newGridData,
+        title: newTitle || sheetTitle || 'Tableur Collaboratif',
+        gridData: newGridData || {},
+        cells: newGridData || {},
+        lastUpdated: Date.now(),
         snippet,
         summary: snippet,
         lastEditor: myName,
@@ -349,7 +373,7 @@ export default function CloudOfficeSuiteModal({
           timestamp: new Date().toLocaleTimeString(),
           author: myName,
         },
-        ...prev.slice(0, 19),
+        ...(prev || []).slice(0, 19),
       ]);
 
       setSaveStatus('Synchronisé en direct 🟢');
@@ -357,30 +381,30 @@ export default function CloudOfficeSuiteModal({
       console.warn('[TrocoSheets] Save error:', err);
       setSaveStatus('Mode hors-ligne');
     }
-  }, [groupId, currentUser, sheetTitle]);
+  }, [effectiveGroupId, currentUser, sheetTitle]);
 
   // Sauvegarde des modifications Troco Slides
   const saveSlidesToFirestore = useCallback(async (newSlides, newTitle = slidesTitle) => {
-    if (!groupId || !db) return;
+    if (!effectiveGroupId || !db) return;
     try {
       setSaveStatus('Sauvegarde en cours...');
-      const myName = currentUser?.name || 'Moi';
+      const myName = currentUser?.name || currentUser?.displayName || 'Moi';
       const snippet = (newSlides || [])
-        .map((s, idx) => `D${idx + 1}: ${s.title || 'Diapositive'}`)
+        .map((s, idx) => `D${idx + 1}: ${s?.title || 'Diapositive'}`)
         .slice(0, 4)
         .join(' • ') || 'Présentation Troco';
 
-      const slidesRef = doc(db, 'chats', String(groupId), 'workspace', 'slides');
+      const slidesRef = doc(db, 'chats', effectiveGroupId, 'workspace', 'slides');
       await setDoc(slidesRef, {
-        title: newTitle,
-        slides: newSlides,
+        title: newTitle || slidesTitle || 'Présentation Collaboratif',
+        slides: newSlides || DEFAULT_SLIDES,
+        lastUpdated: Date.now(),
         snippet,
         summary: snippet,
         lastEditor: myName,
         updatedAt: serverTimestamp(),
       }, { merge: true });
 
-      // Ajout à l'historique des versions
       setVersionHistory(prev => [
         {
           id: 'v_' + Date.now(),
@@ -391,7 +415,7 @@ export default function CloudOfficeSuiteModal({
           timestamp: new Date().toLocaleTimeString(),
           author: myName,
         },
-        ...prev.slice(0, 19),
+        ...(prev || []).slice(0, 19),
       ]);
 
       setSaveStatus('Synchronisé en direct 🟢');
@@ -399,7 +423,7 @@ export default function CloudOfficeSuiteModal({
       console.warn('[TrocoSlides] Save error:', err);
       setSaveStatus('Mode hors-ligne');
     }
-  }, [groupId, currentUser, slidesTitle]);
+  }, [effectiveGroupId, currentUser, slidesTitle]);
 
   // Formatage Markdown pour Troco Docs
   const insertMarkdownFormatting = (prefix, suffix = '') => {
@@ -615,7 +639,7 @@ export default function CloudOfficeSuiteModal({
   if (!isOpen) return null;
   if (typeof document === 'undefined') return null;
 
-  return createPortal(
+  const modalContent = (
     <div
       className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/90 md:bg-black/60 md:backdrop-blur-sm touch-none"
       style={{
@@ -997,10 +1021,11 @@ export default function CloudOfficeSuiteModal({
 
               <textarea
                 ref={textareaRef}
-                value={docContent}
+                value={docContent || ''}
                 onChange={(e) => {
-                  setDocContent(e.target.value);
-                  saveDocToFirestore(e.target.value);
+                  const val = e.target.value || '';
+                  setDocContent(val);
+                  saveDocToFirestore(val);
                 }}
                 placeholder="Rédigez ici vos comptes-rendus..."
                 style={{
@@ -1027,10 +1052,11 @@ export default function CloudOfficeSuiteModal({
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px', overflow: 'hidden' }}>
               <input
                 type="text"
-                value={sheetTitle}
+                value={sheetTitle || ''}
                 onChange={(e) => {
-                  setSheetTitle(e.target.value);
-                  saveSheetToFirestore(sheetData, e.target.value);
+                  const val = e.target.value || '';
+                  setSheetTitle(val);
+                  saveSheetToFirestore(sheetData || {}, val);
                 }}
                 style={{
                   fontSize: '18px',
@@ -1052,8 +1078,8 @@ export default function CloudOfficeSuiteModal({
                 </span>
                 <input
                   type="text"
-                  value={sheetData[selectedCell] || ''}
-                  onChange={(e) => handleCellChange(selectedCell, e.target.value)}
+                  value={(sheetData && sheetData[selectedCell]) || ''}
+                  onChange={(e) => handleCellChange(selectedCell, e.target.value || '')}
                   placeholder="Valeur ou Formule (=SUM(A1:A5), =A1+B1)..."
                   style={{
                     flex: 1,
@@ -1092,8 +1118,8 @@ export default function CloudOfficeSuiteModal({
                           </td>
                           {['A', 'B', 'C', 'D', 'E', 'F', 'G'].map(col => {
                             const cellKey = `${col}${rowNum}`;
-                            const rawVal = sheetData[cellKey] || '';
-                            const evaluated = evaluateCellFormula(rawVal, sheetData);
+                            const rawVal = (sheetData && sheetData[cellKey]) != null ? String(sheetData[cellKey]) : '';
+                            const evaluated = evaluateCellFormula(rawVal, sheetData || {});
                             const isSelected = selectedCell === cellKey;
                             return (
                               <td
@@ -1107,7 +1133,7 @@ export default function CloudOfficeSuiteModal({
                               >
                                 <input
                                   type="text"
-                                  value={isSelected ? rawVal : evaluated}
+                                  value={(isSelected ? rawVal : evaluated) || ''}
                                   onChange={(e) => handleCellChange(cellKey, e.target.value)}
                                   onFocus={() => setSelectedCell(cellKey)}
                                   style={{
@@ -1118,7 +1144,7 @@ export default function CloudOfficeSuiteModal({
                                     background: 'transparent',
                                     color: 'var(--text-main)',
                                     fontSize: '12.5px',
-                                    fontWeight: rawVal.startsWith('=') || rowNum === 1 ? '700' : '400',
+                                    fontWeight: String(rawVal || '').startsWith('=') || rowNum === 1 ? '700' : '400',
                                     textAlign: !isNaN(parseFloat(evaluated)) ? 'right' : 'left',
                                     boxSizing: 'border-box',
                                   }}
@@ -1384,27 +1410,30 @@ export default function CloudOfficeSuiteModal({
                     >
                       <div>
                         <div style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-main)' }}>
-                          {v.type === 'doc' ? '📄 Document' : v.type === 'sheet' ? '📊 Tableur' : '📽️ Diaporama'} • {v.title}
+                          {v?.type === 'doc' ? '📄 Document' : v?.type === 'sheet' ? '📊 Tableur' : '📽️ Diaporama'} • {v?.title || 'Sans titre'}
                         </div>
                         <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                          Modifié à {v.timestamp} par <strong>{v.author}</strong>
+                          Modifié à {v?.timestamp || 'Date inconnue'} par <strong>{v?.author || 'Collaborateur'}</strong>
                         </div>
                       </div>
 
                       <button
                         type="button"
                         onClick={() => {
-                          if (v.type === 'doc' && v.content) {
-                            setDocContent(v.content);
-                            saveDocToFirestore(v.content);
+                          if (v?.type === 'doc') {
+                            const c = v?.content || '';
+                            setDocContent(c);
+                            saveDocToFirestore(c);
                             setActiveTab('docs');
-                          } else if (v.type === 'sheet' && v.gridData) {
-                            setSheetData(v.gridData);
-                            saveSheetToFirestore(v.gridData);
+                          } else if (v?.type === 'sheet') {
+                            const g = v?.gridData || v?.cells || {};
+                            setSheetData(g);
+                            saveSheetToFirestore(g);
                             setActiveTab('sheets');
-                          } else if (v.type === 'slides' && v.slides) {
-                            setSlides(v.slides);
-                            saveSlidesToFirestore(v.slides);
+                          } else if (v?.type === 'slides') {
+                            const s = Array.isArray(v?.slides) ? v.slides : DEFAULT_SLIDES;
+                            setSlides(s);
+                            saveSlidesToFirestore(s);
                             setActiveTab('slides');
                           }
                         }}
@@ -1435,4 +1464,8 @@ export default function CloudOfficeSuiteModal({
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' && document.body
+    ? createPortal(modalContent, document.body)
+    : modalContent;
 }
