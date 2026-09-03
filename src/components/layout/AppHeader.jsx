@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Coins, Sparkles, Sun, Moon, Globe } from 'lucide-react';
 import TrocoLogo3D from '../common/TrocoLogo3D';
+import TrocoLogoNativeSvg from '../common/TrocoLogoNativeSvg';
 import { AnimatedEuroBalance, AnimatedTokenBalance } from '../AnimatedBalances';
 import { formatTokenCount as formatTokenCountUtil } from '../../utils/formatters';
 
@@ -109,7 +110,11 @@ export const AppHeader = React.memo(({
             gap: '8px',
           }}
         >
-          <TrocoLogo3D size={isScrolled ? 24 : 28} animated={false} />
+          {isMobile ? (
+            <TrocoLogoNativeSvg size={isScrolled ? 24 : 28} animated={false} />
+          ) : (
+            <TrocoLogo3D size={isScrolled ? 24 : 28} animated={false} />
+          )}
           <div>
             <h1
               className="font-editorial-heading"

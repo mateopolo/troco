@@ -8,6 +8,8 @@ export const AnimatedEuroBalance = ({ value, style, prefix = '', suffix = ' €'
   const prevValueRef = useRef(value);
 
   useEffect(() => {
+    let rafId = null;
+    let timerId = null;
     const prev = prevValueRef.current;
     if (typeof value === 'number' && !isNaN(value) && prev !== value) {
       const diff = Number((value - prev).toFixed(2));
@@ -22,17 +24,21 @@ export const AnimatedEuroBalance = ({ value, style, prefix = '', suffix = ' €'
         const ease = 1 - Math.pow(1 - progress, 3);
         setDisplayValue(Number((prev + diff * ease).toFixed(2)));
         if (progress < 1) {
-          requestAnimationFrame(animate);
+          rafId = requestAnimationFrame(animate);
         } else {
           setDisplayValue(value);
-          setTimeout(() => setBadgeInfo(null), 1900);
+          timerId = setTimeout(() => setBadgeInfo(null), 1900);
         }
       };
-      requestAnimationFrame(animate);
+      rafId = requestAnimationFrame(animate);
       prevValueRef.current = value;
     } else {
       setDisplayValue(value);
     }
+    return () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      if (timerId) clearTimeout(timerId);
+    };
   }, [value]);
 
   return (
@@ -72,6 +78,8 @@ export const AnimatedTokenBalance = ({ value, style, formatFn }) => {
   const prevValueRef = useRef(value);
 
   useEffect(() => {
+    let rafId = null;
+    let timerId = null;
     const prev = prevValueRef.current;
     if (typeof value === 'number' && !isNaN(value) && prev !== value) {
       const diff = value - prev;
@@ -86,17 +94,21 @@ export const AnimatedTokenBalance = ({ value, style, formatFn }) => {
         const ease = 1 - Math.pow(1 - progress, 3);
         setDisplayValue(Math.round(prev + diff * ease));
         if (progress < 1) {
-          requestAnimationFrame(animate);
+          rafId = requestAnimationFrame(animate);
         } else {
           setDisplayValue(value);
-          setTimeout(() => setBadgeInfo(null), 2000);
+          timerId = setTimeout(() => setBadgeInfo(null), 2000);
         }
       };
-      requestAnimationFrame(animate);
+      rafId = requestAnimationFrame(animate);
       prevValueRef.current = value;
     } else {
       setDisplayValue(value);
     }
+    return () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      if (timerId) clearTimeout(timerId);
+    };
   }, [value]);
 
   const formatted = formatFn ? formatFn(displayValue) : `${displayValue} Jetons`;

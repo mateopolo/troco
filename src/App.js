@@ -13,12 +13,12 @@ import { TROCO_CATEGORIES } from './data/categoriesData';
 import { subscribeTranslations } from './utils/translator';
 import { playApplePaySound, playBetclicBalanceSound, playWelcomeGiftFanfare } from './utils/audioService';
 import { useChatManager } from './hooks/useChatManager';
-import { AppHeader, AppBottomNav, GeometricBackground } from './components/layout';
+import { AppHeader, AppBottomNav } from './components/layout';
 import MobileHeader from './components/common/MobileHeader';
 import { getSuggestedMedia, getSuggestedImage, getFallbackImage } from './utils/mediaHelpers';
 import FeedCardItem from './components/FeedCardItem';
 import { generateInvoiceRef } from './components/InvoiceCalculator';
-import TrocoLogo3D from './components/common/TrocoLogo3D';
+import TrocoLogoNativeSvg from './components/common/TrocoLogoNativeSvg';
 import OfflineScreen from './components/common/OfflineScreen';
 import PWAInstallBanner from './components/PWAInstallBanner';
 import SponsoredFeedCard from './components/SponsoredFeedCard';
@@ -81,6 +81,10 @@ const CallFeature = React.lazy(() => import('./features/call'));
 const WebRTCCallOverlay = React.lazy(() => import('./features/call/WebRTCCallOverlay'));
 const PostListingFeature = React.lazy(() => import('./features/post/PostListingFeature'));
 const ProfileFeature = React.lazy(() => import('./features/profile/ProfileFeature'));
+
+// 🚨 PHASE 108 : ISOLATION DES COMPOSANTS LOURDS 3D / CANVAS (ÉRADICATION CRASH OOM iOS)
+const TrocoLogo3D = React.lazy(() => import('./components/common/TrocoLogo3D'));
+const GeometricBackground = React.lazy(() => import('./components/layout/GeometricBackground'));
 
 // 🚨 PHASE 60 : STANDARDISATION DES TRANSITIONS GLOBAL FRAMER MOTION (Fade + Scale)
 export const pageTransitionVariants = {
@@ -2431,8 +2435,14 @@ export default function App() {
           padding: '30px',
           animation: 'modalSlideIn 0.8s var(--ease-monopo) both'
         }}>
-          {/* 🚨 PHASE 87 : RESTAURATION GLOBALE DE TROCOLOGO3D (GESTION INTELLIGENTE MOBILE DANS LE COMPOSANT) */}
-          <TrocoLogo3D size={100} animated={true} style={{ marginBottom: '28px' }} />
+          {/* 🚨 PHASE 108 : ÉRADICATION DU CRASH OOM iOS (LAZY LOADING & DÉMONTAGE WEBGL STRICT) */}
+          {(!isMobile) ? (
+            <Suspense fallback={null}>
+              <TrocoLogo3D size={100} animated={true} style={{ marginBottom: '28px' }} />
+            </Suspense>
+          ) : (
+            <TrocoLogoNativeSvg size={100} animated={true} style={{ marginBottom: '28px' }} />
+          )}
           <div style={{
             fontSize: 'clamp(56px, 14vw, 92px)',
             fontFamily: 'var(--font-editorial)',
@@ -2523,8 +2533,12 @@ export default function App() {
       {/* 🚨 PHASE 55 : NOTIFICATIONS DYNAMIC ISLAND / TOASTS PREMIUM */}
       <NotificationPill />
 
-      {/* CONSTELLATION GÉOMÉTRIQUE FLUIDE EN ARRIÈRE-PLAN */}
-      <GeometricBackground darkMode={darkMode} />
+      {/* 🚨 PHASE 108 : CONSTELLATION GÉOMÉTRIQUE FLUIDE (DESKTOP UNIQUEMENT, ZÉRO CANVAS SUR MOBILE) */}
+      {!isMobile && (
+        <Suspense fallback={null}>
+          <GeometricBackground darkMode={darkMode} />
+        </Suspense>
+      )}
 
       {/* FOND LIQUIDE IRIDESCENT : DÉGRADÉ STATIQUE SUR MOBILE POUR ÉVITER LE DÉPASSEMENT VRAM iOS */}
       {isMobile ? (
@@ -2612,8 +2626,7 @@ export default function App() {
         input, select, textarea { font-family: inherit; }
       `}</style>
 
-      {/* 1. FOND GÉOMÉTRIQUE UNIFIÉ DESKTOP & MOBILE */}
-      <GeometricBackground darkMode={darkMode} />
+
 
       {/* MICRO-INDICATEUR DE PROGRESSION (React 18 useTransition — barre YouTube-style) */}
       <div
