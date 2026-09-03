@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import {
   CreditCard, ShieldCheck, Lock, X,
   Sparkles, Coins, Zap, Smartphone,
-  Check, CheckCircle, Loader2, Award, Globe
+  Check, CheckCircle, Loader2, Award
 } from 'lucide-react';
 import { getLocalizedTrocoPlusPlans, detectUserCountry, PPP_COUNTRY_MATRIX } from '../utils/pricingEngine';
 import { outboxService } from '../services/outboxService';
@@ -65,12 +65,22 @@ export default function PaymentModal({
   const [cardCvc, setCardCvc] = useState('');
   const [formErrors, setFormErrors] = useState({});
 
-  // Détection & sélection du pays pour la tarification dynamique PPP
-  const [selectedCountry, setSelectedCountry] = useState(() => detectUserCountry());
-  const trocoPlusPlans = useMemo(() => getLocalizedTrocoPlusPlans(selectedCountry), [selectedCountry]);
-  const [selectedTrocoPlusPlan, setSelectedTrocoPlusPlan] = useState(() => getLocalizedTrocoPlusPlans(detectUserCountry())[0]);
+  // 🚨 PHASE 107 : VERROUILLAGE DE LA DEVISE SUR LA GÉOLOCALISATION STORE (IMMUTABLE)
+  const currency = useWalletStore(state => state.currency);
+  const storeCountryCode = useWalletStore(state => state.countryCode);
+  const selectedCountry = useMemo(() => {
+    if (storeCountryCode && PPP_COUNTRY_MATRIX[storeCountryCode]) {
+      return storeCountryCode;
+    }
+    const matched = Object.entries(PPP_COUNTRY_MATRIX).find(([_, cData]) => cData.currency === currency);
+    if (matched) return matched[0];
+    return detectUserCountry();
+  }, [storeCountryCode, currency]);
 
-  // Synchronisation si le plan sélectionné change lors du switch de pays
+  const trocoPlusPlans = useMemo(() => getLocalizedTrocoPlusPlans(selectedCountry), [selectedCountry]);
+  const [selectedTrocoPlusPlan, setSelectedTrocoPlusPlan] = useState(() => getLocalizedTrocoPlusPlans(selectedCountry)[0]);
+
+  // Synchronisation si le plan sélectionné change lors de la mise à jour de la devise
   useEffect(() => {
     const updated = trocoPlusPlans.find(p => p.id === selectedTrocoPlusPlan?.id) || trocoPlusPlans[0];
     setSelectedTrocoPlusPlan(updated);
@@ -631,47 +641,10 @@ export default function PaymentModal({
               {/* ÉTAPE 1 : SÉLECTION DE L'OFFRE / DU MONTANT */}
               {(mode === 'troco-plus' || mode === 'pack-tokens') && (
                 <div style={{ marginBottom: '22px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', flexWrap: 'wrap', gap: '6px' }}>
-                    <label style={{ display: 'block', fontSize: '13px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>
+                  <div style={{ marginBottom: '14px' }}>
+                    <label style={{ display: 'block', fontSize: '13.5px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>
                       1. Choisissez votre abonnement mensuel Troco Plus
                     </label>
-
-                    {/* SÉLECTEUR DE PAYS PPP */}
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: 'var(--bg-subtle)', padding: '2px 8px', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
-                      <Globe size={13} color="var(--accent-primary)" />
-                      <select
-                        value={selectedCountry}
-                        onChange={(e) => setSelectedCountry(e.target.value)}
-                        style={{
-                          border: 'none',
-                          backgroundColor: 'transparent',
-                          color: 'var(--text-main)',
-                          fontSize: '11px',
-                          fontWeight: '700',
-                          outline: 'none',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        {Object.entries(PPP_COUNTRY_MATRIX).map(([code, cData]) => (
-                          <option key={code} value={code}>
-                            {cData.countryName} ({cData.currency})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  {/* BANNIÈRE D'ÉQUITÉ TARIFAIRE MONDIALE PPP */}
-                  <div style={{ padding: '8px 12px', borderRadius: '12px', backgroundColor: 'rgba(198, 125, 91, 0.1)', border: '1px dashed var(--accent-primary)', marginBottom: '12px', fontSize: '11.5px', color: 'var(--text-main)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <Sparkles size={14} color="var(--accent-primary)" />
-                      <span>🌍 <strong>Tarification Mondiale Équitable (PPP) :</strong> Prix indexé sur le coût de la vie en <strong>{PPP_COUNTRY_MATRIX[selectedCountry]?.countryName || selectedCountry}</strong>.</span>
-                    </div>
-                    {trocoPlusPlans[0]?.pppApplied && (
-                      <span style={{ fontSize: '10px', fontWeight: '900', backgroundColor: '#10B981', color: '#FFF', padding: '2px 6px', borderRadius: '6px', whiteSpace: 'nowrap' }}>
-                        -{trocoPlusPlans[0].pppDiscountPercent}% PPP
-                      </span>
-                    )}
                   </div>
 
                   {/* BANNIÈRE DE STATUT D'ABONNEMENT SI DÉJÀ ACTIF */}
