@@ -24,6 +24,7 @@ export default function TrocoDocs(props) {
     `doc_${groupId}_docs`
   );
 
+  // @guard DO NOT REMOVE PORTAL. Required to escape chat overflow and z-index stacking context on mobile.
   return (
     <CloudOfficeSuiteModal
       isOpen={Boolean(safeProps.isOpen)}

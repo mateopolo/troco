@@ -175,6 +175,7 @@ function ChatView({
   }, []);
 
   // Transfert direct de Jetons Troco avec débit immédiat et confettis
+  /** @locked @critical DO NOT MODIFY THIS TRANSACTION LOGIC. Atomic runTransaction with buyerUid and sellerUid is required for financial integrity. */
   const handleExecuteDirectTokenTransfer = async () => {
     const tokens = Number(directTokensCount) || 1;
     if (tokens <= 0) return;
@@ -1782,6 +1783,7 @@ function ChatView({
                               </div>
                             ) : (
                               /* ÉTAT DESTINATAIRE : LES 3 BOUTONS ACTIFS AVEC CALLBACKS SÉCURISÉS */
+                              // @guard ANTI-REGRESSION: The 3 negotiation buttons MUST ALWAYS be rendered in the DOM. Disabled state logic dictates interactability, not unmounting.
                               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px' }}>
                                 {/* BOUTON 1 : ACCEPTER */}
                                 <button

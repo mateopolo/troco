@@ -18,6 +18,7 @@ export default function NotesModal(props) {
   const groupId = String(safeProps.groupId?.id || safeProps.groupId || safeProps.chatId || 'demo_group_notes');
   const docId = String(safeProps.docId || safeProps.documentId || safeProps.document?.id || safeProps.note?.id || `doc_${groupId}_notes`);
 
+  // @guard DO NOT REMOVE PORTAL. Required to escape chat overflow and z-index stacking context on mobile.
   return (
     <SharedDocumentModal
       isOpen={Boolean(safeProps.isOpen)}

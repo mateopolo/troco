@@ -675,6 +675,7 @@ export default function ProjectWorkspaceToolsModal({
     </div>
   );
 
+  // @guard DO NOT REMOVE PORTAL. Required to escape chat overflow and z-index stacking context on mobile.
   return createPortal(modalElement, document.body);
 }
 

@@ -1465,6 +1465,7 @@ export default function CloudOfficeSuiteModal({
     </div>
   );
 
+  // @guard DO NOT REMOVE PORTAL. Required to escape chat overflow and z-index stacking context on mobile.
   return typeof document !== 'undefined' && document.body
     ? createPortal(modalContent, document.body)
     : modalContent;

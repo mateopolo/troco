@@ -509,6 +509,7 @@ export const sendChatMessage = async (chatId, messageData) => {
 /**
  * Valide un deal et exécute le transfert de soldes de façon atomique
  */
+/** @locked @critical DO NOT MODIFY THIS TRANSACTION LOGIC. Atomic runTransaction with buyerUid and sellerUid is required for financial integrity. */
 export const executeDealTransaction = async ({
   chatId,
   dealId,
@@ -701,6 +702,7 @@ export const subscribeToTyping = (chatId, currentUserName, onTypingChange) => {
  * Exécute un transfert direct de jetons de façon atomique (débit expéditeur + crédit destinataire)
  * Supporte aussi bien l'appel par objet que par arguments positionnels executeDirectTokenTransfer(chatId, senderUid, amount, chatData)
  */
+/** @locked @critical DO NOT MODIFY THIS TRANSACTION LOGIC. Atomic runTransaction with buyerUid and sellerUid is required for financial integrity. */
 export const executeDirectTokenTransfer = async (
   arg1,
   arg2,

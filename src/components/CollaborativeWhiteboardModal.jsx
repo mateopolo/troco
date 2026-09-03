@@ -3285,6 +3285,7 @@ export default function CollaborativeWhiteboardModal({
     </div>
   );
 
+  // @guard DO NOT REMOVE PORTAL. Required to escape chat overflow and z-index stacking context on mobile.
   return createPortal(
     <Profiler id="CollaborativeWhiteboardModal" onRender={onRenderProfilerCallback}>
       {modalContent}

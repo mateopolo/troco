@@ -1307,6 +1307,7 @@ export const useChatManager = ({
   const handleSendDeal = handleCounterOfferSubmit;
 
   // ---- FONCTION PRINCIPALE : EXÉCUTION DE TRANSACTION FIRESTORE ATOMIQUE (FINTECH ENGINE) ----
+  /** @locked @critical DO NOT MODIFY THIS TRANSACTION LOGIC. Atomic runTransaction with buyerUid and sellerUid is required for financial integrity. */
   const executeDealTransaction = async ({
     chatId,
     dealId,
@@ -1761,6 +1762,12 @@ export const useChatManager = ({
   };
 
   // ---- 🚨 PHASE 89 : TRANSFERT DE JETONS DIRECT (FINTECH ENGINE ATOMIQUE) ----
+  /** @locked @critical DO NOT MODIFY THIS TRANSACTION LOGIC. Atomic runTransaction with buyerUid and sellerUid is required for financial integrity. */
+  const handleTransferToken = async (chatId, tokenAmount = 1, comment = '', customPartnerUid = null) => {
+    return handleSendToken(chatId, tokenAmount, comment, customPartnerUid);
+  };
+
+  /** @locked @critical DO NOT MODIFY THIS TRANSACTION LOGIC. Atomic runTransaction with buyerUid and sellerUid is required for financial integrity. */
   const handleSendToken = async (chatId, tokenAmount = 1, comment = '', customPartnerUid = null) => {
     const senderUid = profile?.uid || auth?.currentUser?.uid;
     if (!senderUid) return { success: false, error: 'Non authentifié' };
@@ -2023,6 +2030,7 @@ export const useChatManager = ({
     handleAcceptDeal,
     handleDeclineDeal,
     handleSendToken,
+    handleTransferToken,
     renderDealCard,
   };
 };
