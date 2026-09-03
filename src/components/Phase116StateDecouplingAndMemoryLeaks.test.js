@@ -92,4 +92,24 @@ describe('Phase 116 : Découplage du State (Whiteboard) et Fix des Memory Leaks'
     expect(pointerMoveBody).toContain('currentDrawRef.current.push(newPoint)');
     expect(content).toContain('const currentDrawRef = useRef([]);');
   });
+
+  test('5. CollaborativeWhiteboardModal.jsx stocke les mutations dans activeTransformRef.current et les réinitialise sur onPointerUp', () => {
+    const filePath = path.join(__dirname, 'CollaborativeWhiteboardModal.jsx');
+    const content = fs.readFileSync(filePath, 'utf-8');
+
+    expect(content).toContain('const activeTransformRef = useRef(null);');
+    expect(content).toContain("activeTransformRef.current = { type: 'rotate', id, degrees };");
+    expect(content).toContain("activeTransformRef.current = { type: 'resize', id, x: newX, y: newY, width: newW, height: newH };");
+    expect(content).toContain("activeTransformRef.current = { type: 'drag', id, x: newX, y: newY };");
+    expect(content).toContain('activeTransformRef.current = null;');
+  });
+
+  test('6. useWebRTC.js restreint l\'écouteur avec where targetParticipants array-contains et limit 10', () => {
+    const filePath = path.join(__dirname, '..', 'hooks', 'useWebRTC.js');
+    const content = fs.readFileSync(filePath, 'utf-8');
+
+    expect(content).toContain("where('targetParticipants', 'array-contains', myUid)");
+    expect(content).toContain('limit(10)');
+    expect(content).toContain('const callsQuery = query(');
+  });
 });

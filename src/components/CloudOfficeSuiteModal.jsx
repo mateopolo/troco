@@ -332,8 +332,8 @@ function CloudOfficeSuiteModalContent({
 
       const docRef = doc(db, 'chats', effectiveGroupId, 'workspace', effectiveDocId);
       await setDoc(docRef, {
-        title: String(newTitle || docTitle || defaultDoc.title),
-        content: String(newContent ?? docContent ?? ''),
+        title: String(newTitle || docTitleRef.current || defaultDoc.title),
+        content: String(newContent ?? docContentRef.current ?? ''),
         cells: defaultDoc.cells,
         lastUpdated: Date.now(),
         snippet,
@@ -361,7 +361,7 @@ function CloudOfficeSuiteModalContent({
       console.warn('[TrocoDocs] Save error:', err);
       setSaveStatus('Mode hors-ligne');
     }
-  }, [effectiveGroupId, effectiveDocId, currentUser, docTitle, docContent]);
+  }, [effectiveGroupId, effectiveDocId, currentUser?.id, currentUser?.name]);
 
   // Sauvegarde des modifications Troco Sheets
   const saveSheetToFirestore = useCallback(async (newGridData, newTitle = sheetTitle) => {

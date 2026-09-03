@@ -11,7 +11,7 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import {
   doc, collection, addDoc, setDoc, updateDoc, deleteDoc,
-  onSnapshot, getDoc, serverTimestamp,
+  onSnapshot, getDoc, serverTimestamp, query, where, limit,
 } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { liveTranscriptionService } from '../services/liveTranscriptionService';
@@ -760,8 +760,17 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
     if (!profileName && !profileUid && !auth.currentUser?.uid) return;
     const normalizedProfile = (profileName || '').trim().toLowerCase();
     const currentUid = profileUid || (auth.currentUser && auth.currentUser.uid);
+    const myUid = currentUid ? String(currentUid) : (profileName ? String(profileName) : null);
+    if (!myUid) return;
 
-    const unsub = onSnapshot(collection(db, 'calls'), (snap) => {
+    // 🚨 PHASE 116 : RESTRICTION DE L'ÉCOUTEUR FIRESTORE (ZÉRO FOUILLE GLOBALE / ZÉRO MEMORY LEAK)
+    const callsQuery = query(
+      collection(db, 'calls'),
+      where('targetParticipants', 'array-contains', myUid),
+      limit(10)
+    );
+
+    const unsub = onSnapshot(callsQuery, (snap) => {
       snap.docChanges().forEach(change => {
         const data = change.doc.data();
         if (!data) return;

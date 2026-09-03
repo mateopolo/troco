@@ -233,6 +233,7 @@ export default function CollaborativeWhiteboardModal({
   const isRotatingRef = useRef(null);
   const isResizingObjectRef = useRef(null);
   const isDraggingObjectRef = useRef(null);
+  const activeTransformRef = useRef(null);
 
   // 🚨 PHASE 94 & 116 : Moteur de tracé natif et découplage absolu sans React State Thrashing
   const currentPathRef = useRef(null);
@@ -1735,6 +1736,7 @@ export default function CollaborativeWhiteboardModal({
       degrees = ((degrees % 360) + 360) % 360;
 
       setRotationTooltip({ degrees, screenX: e.clientX, screenY: e.clientY });
+      activeTransformRef.current = { type: 'rotate', id, degrees };
 
       localPathsRef.current = localPathsRef.current.map((obj) =>
         obj.id === id
@@ -1779,6 +1781,8 @@ export default function CollaborativeWhiteboardModal({
         newH = Math.max(16, origBox.height - dy);
         newY = origBox.y + (origBox.height - newH);
       }
+
+      activeTransformRef.current = { type: 'resize', id, x: newX, y: newY, width: newW, height: newH };
 
       localPathsRef.current = localPathsRef.current.map((obj) =>
         obj.id === id
@@ -1839,6 +1843,7 @@ export default function CollaborativeWhiteboardModal({
       }
 
       activeSnapGuidesRef.current = { vertical: snappedVertical, horizontal: snappedHorizontal };
+      activeTransformRef.current = { type: 'drag', id, x: newX, y: newY };
 
       localPathsRef.current = localPathsRef.current.map((obj) => {
         if (obj.id !== id) return obj;
@@ -1946,6 +1951,7 @@ export default function CollaborativeWhiteboardModal({
       isDraggingObjectRef.current = null;
       activeSnapGuidesRef.current = { vertical: null, horizontal: null };
       setRotationTooltip(null);
+      activeTransformRef.current = null;
       const updatedPaths = [...(localPathsRef.current || localPaths)];
       setLocalPaths(updatedPaths);
       setCanvasObjects(updatedPaths);
