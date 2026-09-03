@@ -95,11 +95,12 @@ function FeedCardItem({
   }, [isHovered, displayContent.description]);
   
   // Galerie complète : priorité aux photos utilisateurs (gallery), puis médias suggérés, puis fallback
+  const safeMedia = media || {};
   const gallery = (item.gallery && item.gallery.length > 0)
     ? item.gallery
-    : (media.gallery && media.gallery.length > 0
-      ? media.gallery
-      : [item.image || media.image || getFallbackImage(item.category, item.title)]);
+    : (safeMedia.gallery && safeMedia.gallery.length > 0
+      ? safeMedia.gallery
+      : [item.image || safeMedia.image || (getFallbackImage ? getFallbackImage(item.category, item.title) : 'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=400&q=80')]);
   
   const galleryLength = gallery.length;
 
@@ -205,6 +206,8 @@ function FeedCardItem({
       onMouseLeave={() => { if (setHoveredCardId) setHoveredCardId(null); }}
       className="feed-card-item premium-card"
       style={{
+        contentVisibility: 'auto',
+        containIntrinsicSize: '0 420px',
         backgroundColor: 'var(--bg-card)',
         border: item.isBoosted ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
         borderRadius: '20px',
@@ -276,10 +279,10 @@ function FeedCardItem({
               }}
               style={{
                 position: 'absolute', top: '50%', left: '8px', transform: 'translateY(-50%)',
-                border: 'none', borderRadius: '50%', width: '28px', height: '28px',
-                backgroundColor: 'rgba(0,0,0,0.65)', color: '#FFF',
+                border: '1px solid rgba(255, 255, 255, 0.12)', borderRadius: '50%', width: '28px', height: '28px',
+                backgroundColor: 'rgba(26, 22, 19, 0.95)', color: '#FFF',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', zIndex: 10, backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
+                cursor: 'pointer', zIndex: 10,
                 pointerEvents: 'auto',
                 transition: 'transform 0.2s var(--ease-quiet), background-color 0.2s ease'
               }}
@@ -294,10 +297,10 @@ function FeedCardItem({
               }}
               style={{
                 position: 'absolute', top: '50%', right: '8px', transform: 'translateY(-50%)',
-                border: 'none', borderRadius: '50%', width: '28px', height: '28px',
-                backgroundColor: 'rgba(0,0,0,0.65)', color: '#FFF',
+                border: '1px solid rgba(255, 255, 255, 0.12)', borderRadius: '50%', width: '28px', height: '28px',
+                backgroundColor: 'rgba(26, 22, 19, 0.95)', color: '#FFF',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', zIndex: 10, backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)',
+                cursor: 'pointer', zIndex: 10,
                 pointerEvents: 'auto',
                 transition: 'transform 0.2s var(--ease-quiet), background-color 0.2s ease'
               }}
@@ -315,8 +318,8 @@ function FeedCardItem({
             style={{
               position: 'absolute', bottom: '8px', left: '50%', transform: 'translateX(-50%)',
               display: 'flex', alignItems: 'center', gap: '4px', zIndex: 10,
-              backgroundColor: 'rgba(0,0,0,0.6)', padding: '3px 8px', borderRadius: '999px',
-              backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', pointerEvents: 'auto'
+              backgroundColor: 'rgba(26, 22, 19, 0.92)', border: '1px solid rgba(255, 255, 255, 0.1)', padding: '3px 8px', borderRadius: '999px',
+              pointerEvents: 'auto'
             }}
           >
             {gallery.map((_, idx) => (
@@ -388,7 +391,7 @@ function FeedCardItem({
             top: '12px',
             left: item.urgent ? 'auto' : '12px',
             right: item.urgent ? '12px' : 'auto',
-            backgroundColor: 'rgba(20, 18, 16, 0.75)',
+            backgroundColor: 'rgba(26, 22, 19, 0.95)',
             color: '#FAF7F2',
             fontSize: '10px',
             fontWeight: '750',
@@ -400,9 +403,7 @@ function FeedCardItem({
             display: 'inline-flex',
             alignItems: 'center',
             gap: '5px',
-            backdropFilter: 'blur(12px)',
-            WebkitBackdropFilter: 'blur(12px)',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
+            border: '1px solid rgba(255, 255, 255, 0.16)',
             textTransform: 'uppercase'
           }}>
             <Sparkles size={11} color="var(--accent-primary)" />
@@ -416,7 +417,7 @@ function FeedCardItem({
           </span>
         )}
 
-        <span style={{ position: 'absolute', bottom: '12px', right: '12px', backgroundColor: 'rgba(0,0,0,0.82)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', color: '#FFFFFF', fontSize: '11px', fontWeight: 'bold', padding: '5px 9px', borderRadius: '10px', zIndex: 4 }}>
+        <span style={{ position: 'absolute', bottom: '12px', right: '12px', backgroundColor: 'rgba(26, 22, 19, 0.95)', border: '1px solid var(--border-color)', color: '#FFFFFF', fontSize: '11px', fontWeight: 'bold', padding: '5px 9px', borderRadius: '10px', zIndex: 4 }}>
           {formatCompensation(item.compensation)}
         </span>
       </div>

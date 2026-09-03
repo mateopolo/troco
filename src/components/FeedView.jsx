@@ -298,8 +298,11 @@ export default function FeedView({
                       damping: 24,
                     },
                   },
+                style={{
+                  height: '100%',
+                  contentVisibility: 'auto',
+                  containIntrinsicSize: '0 420px'
                 }}
-                style={{ height: '100%' }}
               >
                 <ListingCard
                   item={item}

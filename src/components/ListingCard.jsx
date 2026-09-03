@@ -56,7 +56,9 @@ export default function ListingCard({
   const safeLocalizeLocation = localizeLocation || defaultLocalizeLocation;
   const safeLocalizeTags = localizeTags || defaultLocalizeTags;
   const safeGenerateTags = generateTags || defaultGenerateTags;
-  const safeGetAuthorAvatar = getAuthorAvatar || defaultGetAuthorAvatar;
+  const safeGetAuthorAvatar = typeof getAuthorAvatar === 'function'
+    ? getAuthorAvatar
+    : (typeof defaultGetAuthorAvatar === 'function' ? defaultGetAuthorAvatar : () => 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80');
   const safeProfile = profile || { name: 'MATEO POLO', avatar: '' };
 
   const media = safeGetSuggestedMedia(item.title, item.description || '', item.image, item.video);
@@ -142,6 +144,8 @@ export default function ListingCard({
       onMouseLeave={() => setHoveredCardId(null)}
       className="premium-card"
       style={{
+        contentVisibility: 'auto',
+        containIntrinsicSize: '0 420px',
         display: 'flex',
         flexDirection: 'column',
         height: '100%',
@@ -202,9 +206,8 @@ export default function ListingCard({
                 width: '28px',
                 height: '28px',
                 borderRadius: '50%',
-                backgroundColor: 'rgba(0,0,0,0.6)',
-                backdropFilter: 'blur(4px)',
-                border: 'none',
+                backgroundColor: 'rgba(26, 22, 19, 0.95)',
+                border: '1px solid rgba(255, 255, 255, 0.12)',
                 color: '#FFF',
                 display: 'flex',
                 alignItems: 'center',
@@ -230,9 +233,8 @@ export default function ListingCard({
                 width: '28px',
                 height: '28px',
                 borderRadius: '50%',
-                backgroundColor: 'rgba(0,0,0,0.6)',
-                backdropFilter: 'blur(4px)',
-                border: 'none',
+                backgroundColor: 'rgba(26, 22, 19, 0.95)',
+                border: '1px solid rgba(255, 255, 255, 0.12)',
                 color: '#FFF',
                 display: 'flex',
                 alignItems: 'center',
@@ -259,8 +261,8 @@ export default function ListingCard({
               display: 'flex',
               gap: '5px',
               zIndex: 3,
-              backgroundColor: 'rgba(0,0,0,0.4)',
-              backdropFilter: 'blur(4px)',
+              backgroundColor: 'rgba(26, 22, 19, 0.92)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
               padding: '3px 8px',
               borderRadius: '999px'
             }}
@@ -320,7 +322,7 @@ export default function ListingCard({
             position: 'absolute',
             top: item.urgent ? '42px' : '12px',
             left: '12px',
-            backgroundColor: 'rgba(20, 18, 16, 0.75)',
+            backgroundColor: 'rgba(26, 22, 19, 0.95)',
             color: '#FAF7F2',
             fontSize: '10px',
             fontWeight: '750',
@@ -332,9 +334,7 @@ export default function ListingCard({
             display: 'inline-flex',
             alignItems: 'center',
             gap: '5px',
-            backdropFilter: 'blur(12px)',
-            WebkitBackdropFilter: 'blur(12px)',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
+            border: '1px solid rgba(255, 255, 255, 0.16)',
             textTransform: 'uppercase'
           }}>
             <Sparkles size={11} color="var(--accent-primary)" />
@@ -343,12 +343,12 @@ export default function ListingCard({
         )}
 
         {media.video && (
-          <span style={{ position: 'absolute', bottom: '12px', left: '12px', backgroundColor: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', color: 'var(--accent-primary)', fontSize: '10px', fontWeight: '800', padding: '5px 9px', borderRadius: '10px', zIndex: 4, display: 'flex', alignItems: 'center', gap: '4px', transition: 'all 0.3s ease' }}>
+          <span style={{ position: 'absolute', bottom: '12px', left: '12px', backgroundColor: 'rgba(26, 22, 19, 0.95)', border: '1px solid rgba(255, 255, 255, 0.12)', color: 'var(--accent-primary)', fontSize: '10px', fontWeight: '800', padding: '5px 9px', borderRadius: '10px', zIndex: 4, display: 'flex', alignItems: 'center', gap: '4px', transition: 'all 0.3s ease' }}>
             <Video size={12} color="var(--accent-primary)" /> {isHovered ? (t('livePlayback') || 'Lecture') : (t('demoVideo') || 'Vidéo')}
           </span>
         )}
 
-        <span style={{ position: 'absolute', bottom: '12px', right: '12px', backgroundColor: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(6px)', WebkitBackdropFilter: 'blur(6px)', border: '1px solid var(--border-color)', color: '#FAF7F2', fontSize: '11px', fontWeight: '800', padding: '5px 10px', borderRadius: '999px', zIndex: 4 }}>
+        <span style={{ position: 'absolute', bottom: '12px', right: '12px', backgroundColor: 'rgba(26, 22, 19, 0.95)', border: '1px solid var(--border-color)', color: '#FAF7F2', fontSize: '11px', fontWeight: '800', padding: '5px 10px', borderRadius: '999px', zIndex: 4 }}>
           {safeFormatCompensation(item.compensation)}
         </span>
       </div>

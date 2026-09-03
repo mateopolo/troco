@@ -93,6 +93,8 @@ export default function SponsoredFeedCard({ index = 0, darkMode = false, onOpenN
       className="feed-card-item sponsored-card premium-card"
       onClick={handleAction}
       style={{
+        contentVisibility: 'auto',
+        containIntrinsicSize: '0 420px',
         backgroundColor: 'var(--bg-card)',
         border: '1.5px solid var(--accent-primary)',
         borderRadius: '20px',
@@ -143,9 +145,7 @@ export default function SponsoredFeedCard({ index = 0, darkMode = false, onOpenN
           <span style={{
             fontSize: '10px',
             fontWeight: '800',
-            backgroundColor: 'var(--bg-glass)',
-            backdropFilter: 'blur(8px)',
-            WebkitBackdropFilter: 'blur(8px)',
+            backgroundColor: 'rgba(26, 22, 19, 0.95)',
             color: 'var(--accent-primary)',
             padding: '4px 10px',
             borderRadius: '999px',
@@ -159,11 +159,11 @@ export default function SponsoredFeedCard({ index = 0, darkMode = false, onOpenN
             fontWeight: '700',
             textTransform: 'uppercase',
             letterSpacing: '0.05em',
-            backgroundColor: 'rgba(0,0,0,0.6)',
+            backgroundColor: 'rgba(26, 22, 19, 0.95)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
             color: '#FFFFFF',
             padding: '3px 8px',
-            borderRadius: '6px',
-            backdropFilter: 'blur(6px)'
+            borderRadius: '6px'
           }}>
             Sponsorisé
           </span>
@@ -174,13 +174,12 @@ export default function SponsoredFeedCard({ index = 0, darkMode = false, onOpenN
           position: 'absolute',
           bottom: '10px',
           left: '10px',
-          backgroundColor: 'rgba(239, 68, 68, 0.92)',
+          backgroundColor: 'rgba(220, 38, 38, 0.95)',
           color: '#FFFFFF',
           padding: '4px 10px',
           borderRadius: '8px',
           fontSize: '11px',
           fontWeight: '800',
-          backdropFilter: 'blur(6px)',
           boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
           letterSpacing: '0.02em'
         }}>
