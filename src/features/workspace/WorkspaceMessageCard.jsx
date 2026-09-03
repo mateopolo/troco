@@ -1,26 +1,23 @@
 /**
  * WorkspaceMessageCard.jsx — Carte Média Interactive Workspace pour les messages de chat
- * Refonte Visuelle Phase 16 : Conteneur structuré façon WhatsApp/iMessage
- * - Haut de la carte : Image previewUrl (object-fit: contain, fond sombre avec grille subtile)
- * - Bas de la carte : Encart avec le nom du tableau + badge statut
- * - Bouton compact : Icône <Palette size={16} /> et texte "Ouvrir" ou "Rejoindre"
- * - Clic sur le composant global ou sur le bouton déclenche l'ouverture de la modale openWhiteboard(msg.boardId)
+ * Phase 103 : Défense absolue contre les TypeError et crashs Error Boundary
  */
 
 import React from 'react';
 import { FileText, Table, Paintbrush } from 'lucide-react';
 
-export default function WorkspaceMessageCard({
-  msg = {},
-  isMine = false,
-  isMobile = false,
-  onOpenWorkspace,
-  openWorkspaceTool,
-  darkMode = false,
-}) {
-  const safeMsg = msg || {};
-  const wType = safeMsg?.workspaceType || safeMsg?.type || 'whiteboard';
-  const versionNumber = Number(safeMsg?.version?.toString?.()?.replace(/\D/g, '')) || 1;
+export default function WorkspaceMessageCard(props) {
+  const message = props?.message || props?.msg;
+  if (!message) return <div className="p-4 bg-red-50 text-red-500 rounded-xl">Document indisponible</div>;
+
+  const isMine = Boolean(props?.isMine);
+  const isMobile = Boolean(props?.isMobile);
+  const onOpenWorkspace = props?.onOpenWorkspace;
+  const openWorkspaceTool = props?.openWorkspaceTool;
+  const darkMode = Boolean(props?.darkMode);
+
+  const wType = message?.workspaceType || message?.type || 'whiteboard';
+  const versionNumber = Number(message?.version?.toString?.()?.replace(/\D/g, '')) || 1;
   const isNotes = wType === 'notes';
   const isDocs = wType === 'docs';
   const isSheets = wType === 'sheets';
@@ -44,16 +41,23 @@ export default function WorkspaceMessageCard({
     <Paintbrush size={16} />
   );
 
-  const documentId = safeMsg?.documentId || safeMsg?.docId || safeMsg?.workspaceId || safeMsg?.boardId || safeMsg?.document?.id || '';
-  const displayTitle = safeMsg?.workspaceTitle || safeMsg?.title || safeMsg?.document?.title || (isWhiteboard ? 'Tableau Blanc collaboratif' : isNotes ? 'Notes Partagées' : isDocs ? 'Troco Doc' : 'Troco Sheet');
+  const documentId = message?.documentId || message?.docId || message?.workspaceId || message?.boardId || message?.document?.id || '';
   const buttonLabel = isMine ? 'Ouvrir' : 'Rejoindre';
-  const rawSnippet = String(safeMsg?.snippet || safeMsg?.summary || safeMsg?.text || safeMsg?.content || safeMsg?.document?.content || "Document collaboratif partagé dans l'espace de travail.");
+
+  // 🚨 PHASE 103 : FALLBACKS DE TITRE ET SNIPPET SÉCURISÉS
+  const safeTitle = message?.title || message?.dealTerms?.title || 'Document partagé';
+  const safeSnippet = message?.snippet || 'Cliquez pour ouvrir le document...';
+
+  const displayTitle = message?.workspaceTitle || safeTitle || message?.document?.title || (isWhiteboard ? 'Tableau Blanc collaboratif' : isNotes ? 'Notes Partagées' : isDocs ? 'Troco Doc' : 'Troco Sheet');
+  const rawSnippet = String(message?.snippet || safeSnippet || message?.summary || message?.text || message?.content || message?.document?.content || "Document collaboratif partagé dans l'espace de travail.");
   const truncatedSnippet = rawSnippet.slice(0, 100) + (rawSnippet.length > 100 ? '...' : '');
+
+  const thumbnail = message?.thumbnailBase64 || message?.previewUrl || null;
 
   const handleCardClick = (e) => {
     e?.preventDefault?.();
     e?.stopPropagation?.();
-    const targetDocId = documentId || safeMsg?.workspaceId || safeMsg?.boardId || '';
+    const targetDocId = documentId || message?.workspaceId || message?.boardId || '';
     if (typeof openWorkspaceTool === 'function') {
       openWorkspaceTool(wType, targetDocId);
     } else if (typeof onOpenWorkspace === 'function') {
@@ -61,7 +65,7 @@ export default function WorkspaceMessageCard({
         type: wType,
         documentId: targetDocId,
         workspaceId: targetDocId,
-        boardId: safeMsg?.boardId || targetDocId,
+        boardId: message?.boardId || targetDocId,
         title: displayTitle,
         version: versionNumber,
       }, targetDocId);
@@ -128,9 +132,9 @@ export default function WorkspaceMessageCard({
         >
           {/* 1. APERÇU TABLEAU BLANC (IMAGE OU FOND COLORÉ AVEC PINCEAU GÉANT) */}
           {isWhiteboard ? (
-            (msg.thumbnailBase64 || msg.previewUrl) ? (
+            thumbnail ? (
               <img
-                src={msg.thumbnailBase64 || msg.previewUrl}
+                src={thumbnail}
                 alt={displayTitle}
                 loading="eager"
                 decoding="async"
@@ -289,11 +293,11 @@ export default function WorkspaceMessageCard({
                 marginTop: '1px',
               }}
             >
-              {safeMsg?.senderName ? `Par ${safeMsg.senderName}` : isMine ? 'Par Vous' : 'Document partagé'}
+              {message?.senderName ? `Par ${message.senderName}` : isMine ? 'Par Vous' : 'Document partagé'}
             </div>
           </div>
 
-          {/* LE BOUTON COMPACT AVEC ICÔNE PALETTE ET TEXTE "OUVRIR" / "REJOINDRE" */}
+          {/* LE BOUTON COMPACT AVEC ICÔNE ET TEXTE "OUVRIR" / "REJOINDRE" */}
           <button
             type="button"
             onClick={handleCardClick}
@@ -326,4 +330,3 @@ export default function WorkspaceMessageCard({
     </div>
   );
 }
-

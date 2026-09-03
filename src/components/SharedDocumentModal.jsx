@@ -43,7 +43,7 @@ const extractSnippet = (textOrHtml, maxChars = 150) => {
  * SharedDocumentModal — Outil autonome de Notes Partagées Collaboratives (Apple-Style)
  * Séparé du Whiteboard pour une immersion et une ergonomie 100% dédiées à la prise de notes.
  */
-export default function SharedDocumentModal({
+function SharedDocumentModalContent({
   isOpen,
   onClose,
   groupId = 'demo_group_notes',
@@ -52,18 +52,23 @@ export default function SharedDocumentModal({
   document: propDoc = null,
   doc: propDocAlias = null,
   note = null,
+  documentData = null,
+  defaultContent = '',
   projectTitle = 'Notes Partagées',
   currentUser = null,
   darkMode = false,
   onSendToChat = null,
   handleSendMessage = null,
 }) {
-  const effectiveDoc = propDoc || propDocAlias || note || defaultDoc;
+  const effectiveDoc = propDoc || propDocAlias || note || documentData || defaultDoc;
   const effectiveGroupId = String(groupId?.id || groupId || 'demo_group_notes');
   const effectiveDocId = String(docId || documentId || effectiveDoc?.id || effectiveDoc?.docId || `doc_${effectiveGroupId}_notes`);
 
+  // 🚨 PHASE 103 : Initialisation avec fallback sécurisé
+  const contentValue = documentData?.content ?? defaultContent ?? (typeof effectiveDoc?.content === 'string' ? effectiveDoc.content : (typeof effectiveDoc?.text === 'string' ? effectiveDoc.text : defaultDoc.content)) ?? '';
+
   const [title, setTitle] = useState(() => effectiveDoc?.title || effectiveDoc?.name || (projectTitle ? `Notes - ${projectTitle}` : defaultDoc.title));
-  const [content, setContent] = useState(() => (typeof effectiveDoc?.content === 'string' ? effectiveDoc.content : (typeof effectiveDoc?.text === 'string' ? effectiveDoc.text : defaultDoc.content)) || '');
+  const [content, setContent] = useState(() => contentValue);
   const [saveStatus, setSaveStatus] = useState('Synchronisé en direct 🟢');
   const [previewMode, setPreviewMode] = useState(false);
   const [isSendingToChat, setIsSendingToChat] = useState(false);
@@ -719,3 +724,21 @@ export default function SharedDocumentModal({
     ? createPortal(modalContent, document.body)
     : modalContent;
 }
+
+export default function SharedDocumentModal(props) {
+  // 🚨 PHASE 103 : La première ligne du composant DOIT être if (!isOpen) return null;
+  if (!props?.isOpen) return null;
+
+  const documentData = props?.document || props?.documentData || props?.note || defaultDoc;
+  // 🚨 PHASE 103 : Initialise les objets avec des valeurs par défaut pour éviter le crash de l'éditeur de texte
+  const content = documentData?.content ?? '';
+
+  return (
+    <SharedDocumentModalContent
+      {...props}
+      documentData={documentData}
+      defaultContent={content}
+    />
+  );
+}
+

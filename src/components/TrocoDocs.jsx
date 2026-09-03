@@ -1,6 +1,6 @@
 /**
  * TrocoDocs.jsx — Composant défensif dédié pour Troco Docs / Suite Office Cloud
- * Protection absolue contre les TypeError et initialisation immédiate avec defaultDoc.
+ * Phase 103 : Sécurisation absolue de l'ouverture et fallback sur documentData.content
  */
 
 import React from 'react';
@@ -14,13 +14,20 @@ const defaultDoc = {
 };
 
 export default function TrocoDocs(props) {
+  // 🚨 PHASE 103 : La première ligne du composant DOIT être if (!isOpen) return null;
+  if (!props?.isOpen) return null;
+
   const safeProps = props || {};
+  const documentData = safeProps.document || safeProps.documentData || defaultDoc;
+  // 🚨 PHASE 103 : Initialisation avec fallback sécurisé
+  const content = documentData?.content ?? '';
+
   const groupId = String(safeProps.groupId?.id || safeProps.groupId || safeProps.chatId || 'demo_group_office');
   const documentId = String(
     safeProps.documentId ||
     safeProps.docId ||
-    safeProps.document?.id ||
-    safeProps.document?.documentId ||
+    documentData?.id ||
+    documentData?.documentId ||
     `doc_${groupId}_docs`
   );
 
@@ -32,8 +39,10 @@ export default function TrocoDocs(props) {
       groupId={groupId}
       documentId={documentId}
       docId={documentId}
-      document={safeProps.document || defaultDoc}
-      projectTitle={safeProps.projectTitle || safeProps.document?.title || defaultDoc.title}
+      document={documentData}
+      documentData={documentData}
+      content={content}
+      projectTitle={safeProps.projectTitle || documentData?.title || defaultDoc.title}
       currentUser={safeProps.currentUser || { name: 'Moi', uid: 'me' }}
       darkMode={Boolean(safeProps.darkMode)}
       initialTab={safeProps.initialTab || 'docs'}

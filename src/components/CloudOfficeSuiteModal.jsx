@@ -135,7 +135,7 @@ const DEFAULT_SLIDES = [
   }
 ];
 
-export default function CloudOfficeSuiteModal({
+function CloudOfficeSuiteModalContent({
   isOpen,
   onClose,
   groupId = 'demo_group_office',
@@ -144,18 +144,23 @@ export default function CloudOfficeSuiteModal({
   document: propDoc = null,
   doc: propDocAlias = null,
   note = null,
+  documentData = null,
+  defaultContent = '',
   projectTitle = 'Suite Collaborative Troco',
   currentUser = null,
   darkMode = false,
   initialTab = 'docs',
 }) {
-  const effectiveDoc = propDoc || propDocAlias || note || defaultDoc;
+  const effectiveDoc = propDoc || propDocAlias || note || documentData || defaultDoc;
   const effectiveGroupId = String(groupId?.id || groupId || 'demo_group_office');
   const effectiveDocId = String(documentId || docId || effectiveDoc?.id || effectiveDoc?.documentId || `doc_${effectiveGroupId}_office`);
 
+  // 🚨 PHASE 103 : Initialisation avec fallback sécurisé
+  const content = documentData?.content ?? defaultContent ?? (typeof effectiveDoc?.content === 'string' ? effectiveDoc.content : (typeof effectiveDoc?.text === 'string' ? effectiveDoc.text : defaultDoc.content)) ?? '';
+
   const [activeTab, setActiveTab] = useState(initialTab || 'docs'); // 'docs' | 'sheets' | 'slides' | 'history'
   const [docTitle, setDocTitle] = useState(() => effectiveDoc?.title || effectiveDoc?.name || (projectTitle ? `Spécifications & Notes - ${projectTitle}` : defaultDoc.title));
-  const [docContent, setDocContent] = useState(() => (typeof effectiveDoc?.content === 'string' ? effectiveDoc.content : (typeof effectiveDoc?.text === 'string' ? effectiveDoc.text : defaultDoc.content)) || '');
+  const [docContent, setDocContent] = useState(() => content);
   const [sheetTitle, setSheetTitle] = useState(() => effectiveDoc?.sheetTitle || (projectTitle ? `Budget & Planning - ${projectTitle}` : 'Budget & Planning'));
   const [sheetData, setSheetData] = useState(() => (effectiveDoc?.gridData || effectiveDoc?.sheetData || effectiveDoc?.cells || DEFAULT_SHEET_DATA || {}));
   const [slidesTitle, setSlidesTitle] = useState(() => effectiveDoc?.slidesTitle || (projectTitle ? `Présentation - ${projectTitle}` : 'Présentation'));
@@ -1470,3 +1475,21 @@ export default function CloudOfficeSuiteModal({
     ? createPortal(modalContent, document.body)
     : modalContent;
 }
+
+export default function CloudOfficeSuiteModal(props) {
+  // 🚨 PHASE 103 : La première ligne du composant DOIT être if (!isOpen) return null;
+  if (!props?.isOpen) return null;
+
+  const documentData = props?.document || props?.documentData || props?.note || defaultDoc;
+  // 🚨 PHASE 103 : Initialise les objets avec des valeurs par défaut pour éviter le crash de l'éditeur de texte
+  const content = documentData?.content ?? '';
+
+  return (
+    <CloudOfficeSuiteModalContent
+      {...props}
+      documentData={documentData}
+      defaultContent={content}
+    />
+  );
+}
+
