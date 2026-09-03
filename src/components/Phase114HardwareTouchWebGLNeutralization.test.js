@@ -1,10 +1,12 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render } from '@testing-library/react';
 import GeometricBackground from './layout/GeometricBackground';
+import { isIosOrTouchDevice } from '../utils/deviceDetection';
 
 describe('Phase 114 : Neutralisation matérielle du WebGL / Canvas sur iOS (VRAM Fix)', () => {
   const originalUserAgent = navigator.userAgent;
   const originalMaxTouchPoints = navigator.maxTouchPoints;
+  const originalPlatform = navigator.platform;
 
   afterEach(() => {
     Object.defineProperty(navigator, 'userAgent', {
@@ -15,17 +17,28 @@ describe('Phase 114 : Neutralisation matérielle du WebGL / Canvas sur iOS (VRAM
       value: originalMaxTouchPoints,
       configurable: true,
     });
-  });
-
-  test('1. Touch device detection triggers on maxTouchPoints > 0 (e.g. iPad, iPhone)', () => {
-    Object.defineProperty(navigator, 'maxTouchPoints', { value: 5, configurable: true });
-    Object.defineProperty(navigator, 'userAgent', {
-      value: 'Mozilla/5.0 (iPad; CPU OS 16_5 like Mac OS X) AppleWebKit/605.1.15',
+    Object.defineProperty(navigator, 'platform', {
+      value: originalPlatform,
       configurable: true,
     });
+    delete window.ontouchstart;
+  });
 
-    const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || /iPad|iPhone|iPod/.test(navigator.userAgent);
-    expect(isTouchDevice).toBe(true);
+  test('1. isIosOrTouchDevice triggers on ontouchstart, maxTouchPoints > 0, iOS user agents, or MacIntel with touch', () => {
+    // Cas ontouchstart
+    window.ontouchstart = () => {};
+    expect(isIosOrTouchDevice()).toBe(true);
+    delete window.ontouchstart;
+
+    // Cas maxTouchPoints > 0
+    Object.defineProperty(navigator, 'maxTouchPoints', { value: 5, configurable: true });
+    expect(isIosOrTouchDevice()).toBe(true);
+
+    // Cas iPad identifié comme MacIntel avec maxTouchPoints > 1
+    Object.defineProperty(navigator, 'maxTouchPoints', { value: 2, configurable: true });
+    Object.defineProperty(navigator, 'platform', { value: 'MacIntel', configurable: true });
+    Object.defineProperty(navigator, 'userAgent', { value: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)', configurable: true });
+    expect(isIosOrTouchDevice()).toBe(true);
   });
 
   test('2. iPad with desktop-size viewport (e.g. 1024px) is identified as touch device and NEVER mounts canvas', () => {
@@ -67,12 +80,15 @@ describe('Phase 114 : Neutralisation matérielle du WebGL / Canvas sur iOS (VRAM
 
   test('4. Non-touch desktop without touch points renders canvas on desktop', () => {
     Object.defineProperty(navigator, 'maxTouchPoints', { value: 0, configurable: true });
+    Object.defineProperty(navigator, 'platform', { value: 'Win32', configurable: true });
     Object.defineProperty(navigator, 'userAgent', {
       value: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       configurable: true,
     });
     delete window.ontouchstart;
     window.HTMLCanvasElement.prototype.getContext = jest.fn(() => null);
+
+    expect(isIosOrTouchDevice()).toBe(false);
 
     const { container } = render(<GeometricBackground darkMode={false} />);
 

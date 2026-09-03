@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { isIosOrTouchDevice } from '../../utils/deviceDetection';
 
 /**
  * GeometricBackground.jsx — Fond "Gemini Cosmic Sand" Ultra-Premium (Desktop & Mobile)
@@ -14,12 +15,7 @@ export default function GeometricBackground({ darkMode = false }) {
   const canvasRef = useRef(null);
 
   // 🚨 PHASE 114 : DÉTECTION MATÉRIELLE TACTILE / IOS (ZÉRO CANVAS EN VRAM SUR TOUCH/IOS)
-  const isTouchDevice = typeof window !== 'undefined' && (
-    ('ontouchstart' in window) ||
-    (navigator.maxTouchPoints > 0) ||
-    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-  );
+  const isTouchDevice = isIosOrTouchDevice();
 
   useEffect(() => {
     if (isTouchDevice) return;
@@ -36,9 +32,8 @@ export default function GeometricBackground({ darkMode = false }) {
     let isPaused = false;
     let mouse = { x: -1000, y: -1000, active: false };
 
-    const isMobileDevice = typeof window !== 'undefined' && window.innerWidth < 768;
-    const PARTICLE_COUNT = isMobileDevice ? 42 : 75;
-    const MAX_DISTANCE = isMobileDevice ? 115 : 155;
+    const PARTICLE_COUNT = 75;
+    const MAX_DISTANCE = 155;
 
     const resizeCanvas = () => {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);

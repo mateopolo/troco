@@ -58,6 +58,8 @@ import { useGlobalContent } from './features/admin/useGlobalContent';
 import { EmptyState } from './components/ui/EmptyState';
 import OfflineBanner from './components/common/OfflineBanner';
 import NotificationPill from './components/ui/NotificationPill';
+import { isIosOrTouchDevice } from './utils/deviceDetection';
+export { isIosOrTouchDevice };
 
 // Lazy-loaded heavy components & modals (Strict Code-Splitting)
 const AdminDashboard = React.lazy(() => import('./features/admin/AdminDashboard'));
@@ -102,29 +104,14 @@ export default function App() {
   } = useTheme();
 
   // 🚨 PHASE 114 : DÉTECTION MATÉRIELLE TACTILE ROBUSTE (ZÉRO CANVAS / ZÉRO WEBGL SUR IOS & TACTILE)
-  const isTouchDevice = typeof window !== 'undefined' && (
-    ('ontouchstart' in window) ||
-    (navigator.maxTouchPoints > 0) ||
-    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-  );
+  const isTouchDevice = isIosOrTouchDevice();
 
-  const [isMobileDevice, setIsMobileDevice] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    const hasTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0) || /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    return hasTouch || window.innerWidth < 768;
-  });
+  const [isMobileDevice, setIsMobileDevice] = useState(() => isIosOrTouchDevice());
   const isMobile = isMobileDevice; // Rétrocompatibilité totale pour les composants enfants
 
   useEffect(() => {
     const handleResize = () => {
-      const hasTouch = typeof window !== 'undefined' && (
-        ('ontouchstart' in window) ||
-        (navigator.maxTouchPoints > 0) ||
-        /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-      );
-      setIsMobileDevice(hasTouch || window.innerWidth < 768);
+      setIsMobileDevice(isIosOrTouchDevice());
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -2555,8 +2542,8 @@ export default function App() {
       {/* 🚨 PHASE 55 : NOTIFICATIONS DYNAMIC ISLAND / TOASTS PREMIUM */}
       <NotificationPill />
 
-      {/* 🚨 PHASE 114 : NEUTRALISATION MATÉRIELLE DU CANVAS / WEBGL SUR TOUT TERMINAL TACTILE & IOS (VRAM FIX) */}
-      {!isTouchDevice ? (
+      {/* 🚨 PHASE 114 : EXTINCTION DU CANVAS WEBRGL SUR IOS (VRAM FIX) */}
+      {!isIosOrTouchDevice() ? (
         <Suspense fallback={null}>
           <GeometricBackground darkMode={darkMode} />
         </Suspense>
