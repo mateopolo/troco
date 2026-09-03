@@ -4375,57 +4375,6 @@ export default function App() {
         </div>
       )}
 
-      {isLangModalOpen && (
-        <div
-          className="fixed inset-0 z-[3500] bg-black/90 md:bg-[rgba(61,53,48,0.72)] md:backdrop-blur-md flex items-center justify-center p-5"
-          style={{ position: 'fixed', inset: 0, zIndex: 3500 }}
-        >
-          <div style={{ backgroundColor: darkMode ? '#231E1B' : '#FAF7F2', borderRadius: '24px', width: '100%', maxWidth: '400px', padding: '24px', boxShadow: '0 24px 60px rgba(61,53,48,0.25)', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', position: 'relative' }}>
-            <button onClick={() => setIsLangModalOpen(false)} style={{ position: 'absolute', top: '16px', right: '16px', border: 'none', backgroundColor: darkMode ? 'rgba(232,221,211,0.1)' : '#F5EAE4', color: darkMode ? '#FAF7F2' : '#3D3530', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-              <X size={16} />
-            </button>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-              <Globe size={20} color="#C67D5B" />
-              <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{t('selectLanguage')}</h3>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {[
-                { code: 'FR', label: 'Français', flag: '🇫🇷' },
-                { code: 'EN', label: 'English', flag: '🇬🇧' },
-                { code: 'ES', label: 'Español', flag: '🇪🇸' },
-                { code: 'IT', label: 'Italiano', flag: '🇮🇹' },
-                { code: 'DE', label: 'Deutsch', flag: '🇩🇪' },
-                { code: 'JA', label: '日本語', flag: '🇯🇵' },
-                { code: 'ZH', label: '中文', flag: '🇨🇳' },
-              ].map(lang => (
-                <button
-                  key={lang.code}
-                  onClick={() => { setCurrentLang(lang.code); setIsLangModalOpen(false); }}
-                  className="premium-button"
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    padding: '12px 16px',
-                    borderRadius: '14px',
-                    border: currentLang === lang.code ? '1.5px solid #C67D5B' : (darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3'),
-                    backgroundColor: currentLang === lang.code ? (darkMode ? 'rgba(198,125,91,0.25)' : '#F5EAE4') : (darkMode ? '#1A1715' : '#FFF'),
-                    color: darkMode ? '#FAF7F2' : '#3D3530',
-                    fontWeight: '700',
-                    fontSize: '14px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ fontSize: '18px' }}>{lang.flag}</span> {lang.label}
-                  </span>
-                  {currentLang === lang.code && <Check size={18} color="#C67D5B" />}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* ---- OVERLAY WEBRTC APPELS (SONNERIE ENTRANTE & MODAL PLEIN ÉCRAN) ---- */}
       <Suspense fallback={null}>

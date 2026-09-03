@@ -3,30 +3,17 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import WhiteboardLobby from './WhiteboardLobby';
 import CollaborativeWhiteboardModal from './CollaborativeWhiteboardModal';
 
+import { onSnapshot } from 'firebase/firestore';
+
 jest.mock('../firebase', () => ({
-  db: {},
+  db: { type: 'mock-db' },
 }));
 
 jest.mock('firebase/firestore', () => ({
   collection: jest.fn(),
   query: jest.fn(),
   where: jest.fn(),
-  onSnapshot: jest.fn((q, cb) => {
-    cb({
-      forEach: (fn) => {
-        fn({
-          id: 'test_recent_board',
-          data: () => ({
-            id: 'test_recent_board',
-            title: 'Dernier Croquis Validé',
-            version: 'V3',
-            updatedAt: { toMillis: () => Date.now() - 60000 },
-          }),
-        });
-      },
-    });
-    return jest.fn();
-  }),
+  onSnapshot: jest.fn(),
   doc: jest.fn(),
   getDoc: jest.fn(() => Promise.resolve({ exists: () => false })),
   setDoc: jest.fn(() => Promise.resolve()),
@@ -34,6 +21,24 @@ jest.mock('firebase/firestore', () => ({
 }));
 
 describe('PHASE 102 : Scroll & Whiteboard Lobby Routing', () => {
+  beforeEach(() => {
+    onSnapshot.mockImplementation((q, cb) => {
+      cb({
+        forEach: (fn) => {
+          fn({
+            id: 'test_recent_board',
+            data: () => ({
+              id: 'test_recent_board',
+              title: 'Dernier Croquis Validé',
+              version: 'V3',
+              updatedAt: { toMillis: () => Date.now() - 60000 },
+            }),
+          });
+        },
+      });
+      return jest.fn();
+    });
+  });
   test('WhiteboardLobby renders 2 big centered buttons: Créer un nouveau tableau and Reprendre le dernier tableau', async () => {
     const handleSelect = jest.fn();
     const handleCreate = jest.fn();
@@ -51,10 +56,11 @@ describe('PHASE 102 : Scroll & Whiteboard Lobby Routing', () => {
     fireEvent.click(createBtn);
     expect(handleCreate).toHaveBeenCalledTimes(1);
 
+    await screen.findAllByText(/Dernier Croquis Validé/i);
     const resumeBtn = screen.getByText(/Reprendre le dernier tableau/i);
     expect(resumeBtn).toBeInTheDocument();
     fireEvent.click(resumeBtn);
-    expect(handleSelect).toHaveBeenCalledTimes(1);
+    expect(handleSelect).toHaveBeenCalledWith('test_recent_board');
   });
 
   test('CollaborativeWhiteboardModal forces Lobby when currentBoardId is null', () => {

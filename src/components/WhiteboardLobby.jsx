@@ -43,8 +43,8 @@ function formatRelativeTime(timestamp) {
 }
 
 export default function WhiteboardLobby({
-  onSelect,
-  onCreateNew,
+  onSelect: propOnSelect,
+  onCreateNew: propOnCreateNew,
   onSelectBoard,
   onCreateNewBoard,
   onClose = () => {},
@@ -61,20 +61,35 @@ export default function WhiteboardLobby({
     chatId || selectedChat?.id || selectedChat?.firestoreId || ''
   );
 
-  const handleCreate = () => {
-    if (typeof onCreateNew === 'function') {
-      onCreateNew();
-    } else if (typeof onCreateNewBoard === 'function') {
+  const onCreateNew = () => {
+    if (typeof propOnCreateNew === 'function') {
+      propOnCreateNew();
+    }
+    if (typeof onCreateNewBoard === 'function') {
       onCreateNewBoard();
     }
   };
 
-  const handleSelect = (boardId, boardData = null) => {
-    if (typeof onSelect === 'function') {
-      onSelect(boardId);
+  const onSelect = (boardId) => {
+    if (typeof propOnSelect === 'function') {
+      propOnSelect(boardId);
     }
     if (typeof onSelectBoard === 'function') {
-      onSelectBoard(boardId, boardData);
+      const bData = boards.find(b => b.id === boardId || b.boardId === boardId) || null;
+      onSelectBoard(boardId, bData);
+    }
+  };
+
+  const handleCreate = () => {
+    onCreateNew();
+  };
+
+  const handleSelect = (boardId, boardData = null) => {
+    if (typeof propOnSelect === 'function') {
+      propOnSelect(boardId);
+    }
+    if (typeof onSelectBoard === 'function') {
+      onSelectBoard(boardId, boardData || boards.find(b => b.id === boardId || b.boardId === boardId) || null);
     }
   };
 
@@ -103,7 +118,7 @@ export default function WhiteboardLobby({
     const updateCombinedBoards = () => {
       if (!isMounted) return;
       const combined = Array.from(boardsMap.values());
-      combined.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+      combined.sort((a, b) => (Number(b.lastModified || b.updatedAt || 0)) - (Number(a.lastModified || a.updatedAt || 0)));
       setBoards(combined);
       setIsLoading(false);
     };
@@ -125,6 +140,7 @@ export default function WhiteboardLobby({
             boardId: docId,
             title: data.title || 'Tableau Blanc Collaboratif',
             version: data.versionNumber ? `V${data.versionNumber}` : (data.version || 'V1'),
+            lastModified: ts,
             updatedAt: ts,
             thumbnail: data.thumbnailBase64 || data.previewUrl || null,
             lastEditor: data.lastEditor || data.lastModifiedByName || 'Collaborateur',
@@ -158,6 +174,7 @@ export default function WhiteboardLobby({
               boardId: docId,
               title: data.title || 'Tableau Blanc Collaboratif',
               version: data.versionNumber ? `V${data.versionNumber}` : 'V1',
+              lastModified: ts,
               updatedAt: ts,
               thumbnail: data.thumbnailBase64 || data.previewUrl || null,
               lastEditor: data.lastEditor || data.lastModifiedByName || 'Collaborateur',
@@ -179,18 +196,27 @@ export default function WhiteboardLobby({
     };
   }, [effectiveChatId]);
 
-  const lastBoard = boards && boards.length > 0 ? boards[0] : null;
+  // 🚨 PHASE 105 : Liste history triée par date décroissante (lastModified)
+  const history = useMemo(() => {
+    return [...boards].sort((a, b) => {
+      const timeA = Number(a.lastModified || a.updatedAt || 0);
+      const timeB = Number(b.lastModified || b.updatedAt || 0);
+      return timeB - timeA;
+    });
+  }, [boards]);
+
+  const lastBoard = history.length > 0 ? history[0] : null;
 
   const filteredBoards = useMemo(() => {
-    if (!searchQuery.trim()) return boards;
+    if (!searchQuery.trim()) return history;
     const q = searchQuery.toLowerCase().trim();
-    return boards.filter(
+    return history.filter(
       (b) =>
         b.title?.toLowerCase().includes(q) ||
         b.lastEditor?.toLowerCase().includes(q) ||
         b.version?.toLowerCase().includes(q)
     );
-  }, [boards, searchQuery]);
+  }, [history, searchQuery]);
 
   return (
     <div
@@ -411,13 +437,7 @@ export default function WhiteboardLobby({
             {/* BOUTON 2 : REPRENDRE LE DERNIER TABLEAU */}
             <button
               type="button"
-              onClick={() => {
-                if (lastBoard) {
-                  handleSelect(lastBoard.boardId || lastBoard.id, lastBoard);
-                } else {
-                  handleSelect('latest', null);
-                }
-              }}
+              onClick={() => history.length > 0 ? onSelect(history[0].id) : onCreateNew()}
               className="premium-button"
               style={{
                 padding: '24px 20px',
