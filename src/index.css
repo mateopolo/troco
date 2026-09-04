@@ -1170,6 +1170,15 @@ header {
   display: none;
 }
 
+/* Utilitaires de masquage de scrollbar (Balayage horizontal swipe fluide) */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 .category-pill {
   flex-shrink: 0 !important;
   padding: 8px 18px !important;

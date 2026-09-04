@@ -3253,23 +3253,14 @@ export default function CollaborativeWhiteboardModal({
 
       {/* 3. BARRE D'OUTILS PRINCIPALE FLUIDE & TACTILE (Standard Apple HIG) */}
       {!isImmersiveMode && (
-        <div
-          className="flex flex-row overflow-x-auto overflow-y-hidden snap-x snap-mandatory touch-pan-x no-scrollbar items-center justify-start md:justify-center max-w-full px-4 py-2 space-x-3"
-          style={{
-            position: 'absolute',
-            bottom: '20px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 1000000,
-            maxWidth: '96vw',
-            backgroundColor: darkMode ? 'rgba(26,22,19,0.92)' : 'rgba(255,255,255,0.92)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-            border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.1)',
-            borderRadius: '24px',
-            boxShadow: '0 20px 40px -10px rgba(0,0,0,0.25)',
-          }}
-        >
+        <div className="absolute bottom-4 left-0 right-0 z-[1000] flex justify-center pb-[env(safe-area-inset-bottom)] px-2 landscape:bottom-2 pointer-events-none">
+          <div
+            className="flex flex-nowrap items-center gap-3 overflow-x-auto overflow-y-hidden snap-x snap-mandatory touch-pan-x no-scrollbar w-full max-w-[95vw] md:max-w-2xl mx-auto px-4 py-2 bg-[#2A2624]/90 rounded-2xl border border-white/10 shadow-lg h-14 landscape:h-14 text-white pointer-events-auto"
+            style={{
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+            }}
+          >
           {/* Outils de dessin libres */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
             {/* 🚨 PHASE 110 : Outil Curseur de sélection (↖️) */}
@@ -3822,7 +3813,8 @@ export default function CollaborativeWhiteboardModal({
             </button>
           </div>
         </div>
-      )}
+      </div>
+    )}
 
       {/* 4. MENU LATÉRAL DES VERSIONS ANIMÉ (FRAMER MOTION) */}
       <AnimatePresence>
