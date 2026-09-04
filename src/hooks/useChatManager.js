@@ -1789,11 +1789,29 @@ export const useChatManager = ({
       ? selectedChat
       : (chatsList.find(c => String(c.id) === String(chatId)) || mockChats.find(c => String(c.id) === String(chatId)));
 
-    // Isolation stricte de l'UID cible
-    const receiverUid = customPartnerUid || selectedChat?.partnerUid || selectedChat?.authorUid || chat?.partnerUid || chat?.authorUid;
+    // 🚨 PHASE 122 : Résolution robuste multi-fallback du receveur
+    // Priorité 1 : UID explicite passé en paramètre (ex: depuis ChatView)
+    // Priorité 2 : Tableau participants[] — filtre l'UID de l'expéditeur
+    // Priorité 3 : Champs legacy partnerUid / authorUid sur le document chat
+    const myUid = currentUser.uid;
+    const chatObj = chat || selectedChat;
+
+    const receiverUid =
+      customPartnerUid ||
+      (Array.isArray(chatObj?.participants)
+        ? chatObj.participants.find((uid) => uid && String(uid) !== String(myUid)) || null
+        : null) ||
+      (Array.isArray(chatObj?.participantUids)
+        ? chatObj.participantUids.find((uid) => uid && String(uid) !== String(myUid)) || null
+        : null) ||
+      chatObj?.partnerUid ||
+      chatObj?.authorUid ||
+      null;
+
     if (!receiverUid) {
-      alert('Destinataire introuvable');
-      throw new Error('Destinataire introuvable');
+      console.error('[handleSendToken] Impossible de résoudre le partnerUid — objet chat reçu :', chatObj);
+      alert('Destinataire introuvable. Vérifiez que la conversation est bien chargée et réessayez.');
+      throw new Error('Destinataire introuvable — partnerUid absent du chat');
     }
 
     const amount = Number(tokenAmount) || 1;
