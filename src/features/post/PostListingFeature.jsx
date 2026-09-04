@@ -1398,35 +1398,24 @@ export default function PostListingFeature({
       {/* MODAL DE SUCCÈS / FÉLICITATIONS AVEC REDIRECTION FEED */}
       {publishedSuccessListing && (
         <div
+          className="fixed inset-0 z-[999999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
           style={{
             position: 'fixed',
             inset: 0,
             zIndex: 999999,
-            backgroundColor: 'rgba(26, 22, 19, 0.75)',
-            backdropFilter: 'blur(16px)',
-            WebkitBackdropFilter: 'blur(16px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '20px',
-            boxSizing: 'border-box',
           }}
         >
           <div
+            className="relative w-full max-w-md mx-auto bg-[var(--bg-card)] rounded-3xl shadow-2xl flex flex-col items-center text-center overflow-hidden p-6 md:p-8"
             style={{
               backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
-              borderRadius: '28px',
               border: darkMode ? '1px solid rgba(232,221,211,0.18)' : '1px solid #E8DDD3',
               boxShadow: '0 25px 60px -15px rgba(0,0,0,0.3)',
-              padding: '28px 24px',
-              maxWidth: '440px',
-              width: '100%',
-              textAlign: 'center',
+              boxSizing: 'border-box',
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
               gap: '16px',
-              boxSizing: 'border-box',
             }}
           >
             <div

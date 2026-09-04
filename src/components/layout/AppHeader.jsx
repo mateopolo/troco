@@ -147,11 +147,14 @@ export const AppHeader = React.memo(({
 
         {/* ACTIONS HEADER */}
         <div
-          className="header-actions"
+          className="header-actions flex items-center justify-end gap-2 flex-shrink-0 max-w-[50%]"
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: '6px',
+            justifyContent: 'flex-end',
+            gap: isMobile ? '4px' : '8px',
+            flexShrink: 0,
+            maxWidth: '50%',
             flexWrap: 'nowrap',
           }}
         >
@@ -160,11 +163,11 @@ export const AppHeader = React.memo(({
             type="button"
             onClick={() => handleOpenPayment('topup-cash')}
             title="Recharger mon solde Euros"
-            className="premium-button balance-badge"
+            className="premium-button balance-badge flex-shrink-0"
             style={{
               border: '1px solid var(--border-color)',
               borderRadius: '999px',
-              padding: isScrolled ? '5px 10px' : '6px 12px',
+              padding: isScrolled ? (isMobile ? '4px 6px' : '5px 10px') : (isMobile ? '5px 8px' : '6px 12px'),
               backgroundColor: 'var(--bg-subtle)',
               color: 'var(--accent-primary)',
               fontWeight: '700',
@@ -183,7 +186,7 @@ export const AppHeader = React.memo(({
             <Coins size={13} style={{ flexShrink: 0 }} />
             <AnimatedEuroBalance
               value={profile?.euroBalance || 0}
-              prefix="€ "
+              prefix={isMobile ? '€' : '€ '}
               suffix=""
               style={{ fontSize: '11px', fontWeight: '700', whiteSpace: 'nowrap' }}
             />
@@ -194,11 +197,11 @@ export const AppHeader = React.memo(({
             type="button"
             onClick={() => handleOpenPayment('troco-plus')}
             title="S'abonner à Troco Plus"
-            className="premium-button balance-badge"
+            className="premium-button balance-badge flex-shrink-0"
             style={{
               border: '1px solid var(--accent-primary)',
               borderRadius: '999px',
-              padding: isScrolled ? '5px 10px' : '6px 12px',
+              padding: isScrolled ? (isMobile ? '4px 6px' : '5px 10px') : (isMobile ? '5px 8px' : '6px 12px'),
               backgroundColor: 'var(--bg-subtle)',
               color: 'var(--accent-primary)',
               fontWeight: '800',
@@ -217,7 +220,7 @@ export const AppHeader = React.memo(({
             <Sparkles size={13} color="var(--accent-primary)" style={{ flexShrink: 0 }} />
             <AnimatedTokenBalance
               value={profile?.trocoTokens || 0}
-              formatFn={(v) => (formatTokenCount ? formatTokenCount(v, currentLang) : formatTokenCountUtil(v, currentLang))}
+              formatFn={(v) => (isMobile ? `${v}` : (formatTokenCount ? formatTokenCount(v, currentLang) : formatTokenCountUtil(v, currentLang)))}
               style={{ fontSize: '11px', fontWeight: '800', whiteSpace: 'nowrap' }}
             />
           </button>
@@ -227,12 +230,12 @@ export const AppHeader = React.memo(({
             type="button"
             onClick={toggleDarkMode}
             title={darkMode ? 'Activer le mode clair' : 'Activer le mode sombre'}
-            className="premium-button darkmode-btn"
+            className="premium-button darkmode-btn flex-shrink-0"
             style={{
               border: '1px solid var(--border-color)',
               borderRadius: '50%',
-              width: isScrolled ? '32px' : '34px',
-              height: isScrolled ? '32px' : '34px',
+              width: isScrolled ? '30px' : (isMobile ? '30px' : '34px'),
+              height: isScrolled ? '30px' : (isMobile ? '30px' : '34px'),
               backgroundColor: 'var(--bg-card)',
               color: 'var(--text-secondary)',
               cursor: 'pointer',
@@ -243,18 +246,20 @@ export const AppHeader = React.memo(({
               flexShrink: 0,
             }}
           >
-            {darkMode ? <Sun size={15} /> : <Moon size={15} />}
+            {darkMode ? <Sun size={14} /> : <Moon size={14} />}
           </button>
 
           {/* Language Selector */}
           <button
             type="button"
             onClick={() => setIsLangModalOpen(true)}
-            className="premium-button lang-btn"
+            className="premium-button lang-btn flex-shrink-0"
+            aria-label="Changer de langue"
+            data-testid="language-selector"
             style={{
               border: '1px solid var(--border-color)',
               borderRadius: '20px',
-              padding: isScrolled ? '4px 9px' : '5px 10px',
+              padding: isScrolled ? (isMobile ? '4px 6px' : '4px 9px') : (isMobile ? '4px 8px' : '5px 10px'),
               backgroundColor: 'var(--bg-card)',
               color: 'var(--text-main)',
               fontWeight: '700',
@@ -269,7 +274,7 @@ export const AppHeader = React.memo(({
             }}
           >
             <Globe size={13} color="var(--accent-primary)" style={{ flexShrink: 0 }} />
-            <span>
+            <span className="flex-shrink-0">
               {currentLang === 'FR'
                 ? '🇫🇷 FR'
                 : currentLang === 'EN'

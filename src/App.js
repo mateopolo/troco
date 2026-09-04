@@ -4217,8 +4217,8 @@ export default function App() {
       {/* POPUP CONFIRMATION PUBLICATION */}
       {showPublishedPopup && publishedListing && (
         <div
-          className="fixed inset-0 z-[9000] bg-black/90 md:bg-[rgba(0,0,0,0.65)] md:backdrop-blur-md flex items-center justify-center p-6"
-          style={{ position: 'fixed', inset: 0, zIndex: 9000 }}
+          className="fixed inset-0 z-[999999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          style={{ position: 'fixed', inset: 0, zIndex: 999999 }}
           onClick={() => {
             setShowPublishedPopup(false);
             setSelectedListing(publishedListing);
@@ -4227,7 +4227,8 @@ export default function App() {
         >
           <div
             onClick={e => e.stopPropagation()}
-            style={{ background: 'var(--bg-card)', borderRadius: '28px', padding: '32px 28px', maxWidth: '380px', width: '100%', boxShadow: 'var(--shadow-modal)', border: '1px solid var(--border-color)', textAlign: 'center', animation: 'popupIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both' }}
+            className="relative w-full max-w-md mx-auto bg-[var(--bg-card)] rounded-3xl shadow-2xl flex flex-col items-center text-center overflow-hidden p-6 md:p-8"
+            style={{ border: '1px solid var(--border-color)', animation: 'popupIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both' }}
           >
             {/* Icône checkmark animée */}
             <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-success), var(--accent-success))', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', boxShadow: '0 12px 32px rgba(122,143,106,0.3)', animation: 'checkPop 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.15s both' }}>

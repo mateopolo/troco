@@ -32,13 +32,16 @@ export default function PublishWizard({
       {/* MULTI-LANGUAGE PUBLISH SUCCESS MODAL */}
       {isPublishSuccessOpen && (
         <div
-          className="fixed inset-0 z-[90] bg-black/90 md:bg-[var(--overlay-bg)] md:backdrop-blur-md flex items-center justify-center p-5"
+          className="fixed inset-0 z-[999999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
           style={{
             position: 'fixed', inset: 0,
-            zIndex: 90
+            zIndex: 999999
           }}
         >
-          <div style={{ backgroundColor: 'var(--bg-card)', borderRadius: '28px', width: '100%', maxWidth: '440px', padding: '28px', boxShadow: 'var(--shadow-modal)', border: '1px solid var(--border-color)', textAlign: 'center', animation: 'popIn 0.4s cubic-bezier(0.22, 1, 0.36, 1)' }}>
+          <div
+            className="relative w-full max-w-md mx-auto bg-[var(--bg-card)] rounded-3xl shadow-2xl flex flex-col items-center text-center overflow-hidden p-6 md:p-8"
+            style={{ border: '1px solid var(--border-color)', animation: 'popIn 0.4s cubic-bezier(0.22, 1, 0.36, 1)' }}
+          >
             <div style={{ width: '72px', height: '72px', borderRadius: '50%', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-success)', margin: '0 auto 18px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--shadow-card)' }}>
               <CheckCircle size={38} strokeWidth={2.5} />
             </div>

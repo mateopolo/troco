@@ -125,6 +125,7 @@ export default function MobileHeader({
 
       {/* ACTION DROITE (OU PLACEHOLDER 44px POUR L'ALIGNEMENT SYMÉTRIQUE) */}
       <div
+        className="flex items-center justify-end gap-2 flex-shrink-0 max-w-[50%]"
         style={{
           minWidth: '44px',
           minHeight: '44px',
@@ -132,6 +133,7 @@ export default function MobileHeader({
           alignItems: 'center',
           justifyContent: 'flex-end',
           flexShrink: 0,
+          maxWidth: '50%',
         }}
       >
         {rightAction || <div style={{ width: '44px', height: '44px' }} />}

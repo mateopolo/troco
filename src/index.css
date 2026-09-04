@@ -1120,7 +1120,9 @@ header {
 
   .header-actions {
     gap: 3px !important;
-    max-width: 100% !important;
+    max-width: 50% !important;
+    flex-shrink: 0 !important;
+    justify-content: flex-end !important;
   }
 
   .balance-badge {
