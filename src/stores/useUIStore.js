@@ -16,6 +16,13 @@ export const useUIStore = create((set, get) => ({
   boostMessage: '',
 
   // Filter & Navigation Drawers
+  currentLang: (() => {
+    try {
+      return localStorage.getItem('troco_language') || localStorage.getItem('troco_lang') || 'FR';
+    } catch (_) {
+      return 'FR';
+    }
+  })(),
   isFilterDrawerOpen: false,
   isCategoryModalOpen: false,
   isLangModalOpen: false,
@@ -73,6 +80,21 @@ export const useUIStore = create((set, get) => ({
   setIsFilterDrawerOpen: (isFilterDrawerOpen) => set({ isFilterDrawerOpen }),
   setIsCategoryModalOpen: (isCategoryModalOpen) => set({ isCategoryModalOpen }),
   setIsLangModalOpen: (isLangModalOpen) => set({ isLangModalOpen }),
+  setCurrentLang: (lang) => {
+    const normalized = (lang || 'FR').toUpperCase();
+    try {
+      localStorage.setItem('troco_language', normalized);
+      localStorage.setItem('troco_lang', normalized);
+      if (typeof document !== 'undefined') {
+        document.documentElement.lang = normalized.toLowerCase();
+      }
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('languagechange', { detail: { lang: normalized } }));
+      }
+    } catch (_) {}
+    set({ currentLang: normalized });
+  },
+  setLang: (lang) => get().setCurrentLang(lang),
   setViewMode: (viewMode) => set({ viewMode }),
   setFormatFilter: (formatFilter) => set({ formatFilter }),
 
@@ -166,3 +188,12 @@ export const useUIStore = create((set, get) => ({
     );
   },
 }));
+
+export const i18n = {
+  get language() {
+    return useUIStore.getState().currentLang || 'FR';
+  },
+  changeLanguage: (lang) => {
+    useUIStore.getState().setCurrentLang(lang);
+  },
+};

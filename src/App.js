@@ -40,6 +40,7 @@ import {
 } from './utils/translationHelpers';
 import FilterDrawer from './components/modals/FilterDrawer';
 import LanguageSelectModal from './components/modals/LanguageSelectModal';
+import { LanguageContext } from './contexts/LanguageContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   translations,
@@ -116,19 +117,65 @@ export default function App() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-  const [currentLang, setCurrentLang] = useState('FR');
+  const [currentLang, setCurrentLangState] = useState(() => {
+    try {
+      return localStorage.getItem('troco_language') || localStorage.getItem('troco_lang') || 'FR';
+    } catch (_) {
+      return 'FR';
+    }
+  });
+
+  const setLang = useCallback((langCode) => {
+    if (!langCode) return;
+    const normalized = String(langCode).toUpperCase();
+    setCurrentLangState(normalized);
+    try {
+      localStorage.setItem('troco_language', normalized);
+      localStorage.setItem('troco_lang', normalized);
+      if (typeof document !== 'undefined') {
+        document.documentElement.lang = normalized.toLowerCase();
+      }
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('languagechange', { detail: { lang: normalized } }));
+      }
+    } catch (_) {}
+  }, []);
+
+  const setCurrentLang = setLang;
+  const changeLanguage = setLang;
+
+  useEffect(() => {
+    const handleLangChange = (e) => {
+      const code = e.detail?.lang;
+      if (code && code !== currentLang) {
+        setCurrentLangState(code);
+      }
+    };
+    window.addEventListener('languagechange', handleLangChange);
+    return () => window.removeEventListener('languagechange', handleLangChange);
+  }, [currentLang]);
+
   const [userCoords, setUserCoords] = useState([48.8566, 2.3522]); // Paris par défaut
   const [isGeolocated, setIsGeolocated] = useState(false);
   const [isGeolocating, setIsGeolocating] = useState(false);
-  // Chargement différé et dynamique du pack de langue sélectionné
-  useEffect(() => {
-    if (currentLang && currentLang !== 'FR') {
-      ensureLanguageLoaded(currentLang);
-    }
-  }, [currentLang]);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const t = useCallback((key) => (translations?.[currentLang]?.[key]) || (translations?.['FR']?.[key]) || key, [currentLang]);
+
+  const i18n = useMemo(() => ({
+    language: currentLang,
+    changeLanguage: setLang,
+    t
+  }), [currentLang, setLang, t]);
+
+  const langContextValue = useMemo(() => ({
+    currentLang,
+    setCurrentLang: setLang,
+    setLang,
+    changeLanguage: setLang,
+    t,
+    i18n
+  }), [currentLang, setLang, t, i18n]);
 
   const getCategoryLabel = useCallback((categoryKey) => getCategoryLabelUtil(categoryKey, t), [t]);
   const formatStatus = useCallback((st) => formatStatusUtil(st, t), [t]);
@@ -2511,19 +2558,22 @@ export default function App() {
 
   if (!isAuthenticated) {
     return (
-      <AuthScreen
-        setProfile={setProfile}
-        setIsAuthenticated={setIsAuthenticated}
-        setProfileDraft={setProfileDraft}
-        setSkills={setSkills}
-        darkMode={darkMode}
-        toggleDarkMode={toggleDarkMode}
-      />
+      <LanguageContext.Provider value={langContextValue}>
+        <AuthScreen
+          setProfile={setProfile}
+          setIsAuthenticated={setIsAuthenticated}
+          setProfileDraft={setProfileDraft}
+          setSkills={setSkills}
+          darkMode={darkMode}
+          toggleDarkMode={toggleDarkMode}
+        />
+      </LanguageContext.Provider>
     );
   }
 
   return (
-    <div style={{
+    <LanguageContext.Provider value={langContextValue}>
+      <div style={{
       backgroundColor: 'var(--bg-global)',
       color: 'var(--text-main)',
       minHeight: '100vh',
@@ -2799,7 +2849,7 @@ export default function App() {
         onClose={() => setIsLangModalOpen(false)}
         currentLang={currentLang}
         onSelectLanguage={(code) => {
-          setCurrentLang(code);
+          setLang(code);
           setIsLangModalOpen(false);
         }}
         darkMode={darkMode}
@@ -4812,6 +4862,7 @@ export default function App() {
         </div>
       )}
 
-    </div>
+      </div>
+    </LanguageContext.Provider>
   );
 }

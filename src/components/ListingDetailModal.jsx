@@ -1,6 +1,11 @@
 import React, { useState, useRef } from 'react';
 import { X, Star, MapPin, Video, Globe, ShieldCheck, MessageSquare, Flame, Pencil, Trash2, Tag, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getSuggestedMedia } from '../utils/mediaUtils';
+import {
+  parseAndTranslateDynamicText,
+  parseAndTranslateListing,
+  cleanLanguageTag,
+} from '../utils/dynamicTranslation';
 
 export default function ListingDetailModal({
   selectedListing,
@@ -38,7 +43,7 @@ export default function ListingDetailModal({
   const isDetailShowingOriginal = !!showingOriginalListings[selectedListing.id];
   const displayContent = getListingDisplayContent
     ? getListingDisplayContent(selectedListing, currentLang, isDetailShowingOriginal)
-    : { title: selectedListing.title, description: selectedListing.description };
+    : parseAndTranslateListing(selectedListing, currentLang, isDetailShowingOriginal);
   const nativeLang = selectedListing.nativeLang || 'FR';
 
   const handleTouchStart = (e) => {
@@ -143,7 +148,7 @@ export default function ListingDetailModal({
           </div>
 
           <h2 className="font-editorial-heading" style={{ margin: '0 0 6px', fontSize: '28px', fontWeight: '600', color: 'var(--text-main)', lineHeight: 1.25 }}>
-            {displayContent.title}
+            {parseAndTranslateDynamicText(displayContent.title, currentLang, { forceOriginal: isDetailShowingOriginal })}
           </h2>
           {currentLang !== nativeLang && (
             <button
@@ -353,7 +358,7 @@ export default function ListingDetailModal({
             {t('description') || 'Description'}
           </h4>
           <p style={{ margin: '0 0 16px', fontSize: '14.5px', lineHeight: 1.7, color: 'var(--text-secondary)' }}>
-            {displayContent.description}
+            {parseAndTranslateDynamicText(displayContent.description, currentLang, { forceOriginal: isDetailShowingOriginal })}
           </p>
 
           {selectedListing.tags && selectedListing.tags.length > 0 && (

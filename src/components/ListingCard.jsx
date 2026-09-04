@@ -5,17 +5,17 @@ import { getActiveAnimation } from '../config/animations';
 import { getSuggestedMedia as defaultGetSuggestedMedia, getFallbackImage as defaultGetFallbackImage } from '../utils/mediaUtils';
 import { localizeLocation as defaultLocalizeLocation, localizeTags as defaultLocalizeTags } from '../locales/translations';
 import { getAuthorAvatar as defaultGetAuthorAvatar } from '../data/mockData';
+import {
+  parseAndTranslateDynamicText,
+  parseAndTranslateListing,
+  cleanLanguageTag,
+} from '../utils/dynamicTranslation';
 
 const defaultGenerateTags = (title = '', description = '') => ['Échange', 'Service'];
 const defaultFormatCompensation = (comp) => comp || '';
 const defaultGetListingDisplayContent = (item, targetLang, forceOriginal = false) => {
   if (!item) return { title: '', description: '' };
-  const nativeLang = item.nativeLang || 'FR';
-  if (forceOriginal) return { title: item.title, description: item.description || '' };
-  if (item.translations && item.translations[targetLang] && item.translations[targetLang].title) return item.translations[targetLang];
-  if (targetLang === nativeLang) return { title: item.title, description: item.description || '' };
-  if (item.translations && item.translations['EN'] && item.translations['EN'].title) return item.translations['EN'];
-  return { title: item.title, description: item.description || '' };
+  return parseAndTranslateListing(item, targetLang, forceOriginal);
 };
 
 export default function ListingCard({
@@ -357,7 +357,7 @@ export default function ListingCard({
         <div>
           <div>
             <h3 className="font-sans" style={{ fontSize: '15.5px', fontWeight: '800', color: 'var(--text-main)', margin: '0 0 4px 0', lineHeight: 1.35, letterSpacing: '-0.02em' }}>
-              {displayContent.title}
+              {parseAndTranslateDynamicText(displayContent.title, currentLang, { forceOriginal: !!showingOriginalListings[item.id] })}
             </h3>
             {currentLang !== (item.nativeLang || 'FR') && (
               <button
@@ -406,7 +406,7 @@ export default function ListingCard({
                 transition: 'max-height 0.3s var(--ease-quiet), color 0.3s ease'
               }}
             >
-              {displayContent.description}
+              {parseAndTranslateDynamicText(displayContent.description, currentLang, { forceOriginal: !!showingOriginalListings[item.id] })}
             </div>
           )}
 

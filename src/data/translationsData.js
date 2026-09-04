@@ -211,48 +211,34 @@ export const translations = {
 };
 
 
-let secondaryLoaded = false;
-let loadPromise = null;
+import {
+  secondaryTranslations,
+  knownTitles as secKnownTitles,
+  knownMessageTranslations as secKnownMessageTranslations,
+  knownCompMap as secKnownCompMap
+} from './translationsSecondary';
+
+// Fusion synchrone immédiate de toutes les langues pour réactivité 0ms
+if (secondaryTranslations) {
+  Object.assign(translations, secondaryTranslations);
+}
+
+let secondaryLoaded = true;
+let loadPromise = Promise.resolve(translations);
 
 // Tableaux mutables exportés pour compatibilité synchrone
-export const knownTitles = {};
-export const knownMessageTranslations = {};
-export const knownCompMap = {};
+export const knownTitles = { ...(secKnownTitles || {}) };
+export const knownMessageTranslations = { ...(secKnownMessageTranslations || {}) };
+export const knownCompMap = { ...(secKnownCompMap || {}) };
 
 /**
  * Charge à la demande ou en différé les dictionnaires secondaires (EN, ES, IT, DE, JA, ZH)
  */
 export async function loadSecondaryTranslations() {
-  if (secondaryLoaded) return translations;
-  if (!loadPromise) {
-    loadPromise = import('./translationsSecondary').then((mod) => {
-      if (mod.secondaryTranslations) {
-        Object.assign(translations, mod.secondaryTranslations);
-      }
-      if (mod.knownTitles) {
-        Object.assign(knownTitles, mod.knownTitles);
-      }
-      if (mod.knownMessageTranslations) {
-        Object.assign(knownMessageTranslations, mod.knownMessageTranslations);
-      }
-      if (mod.knownCompMap) {
-        Object.assign(knownCompMap, mod.knownCompMap);
-      }
-      secondaryLoaded = true;
-      return translations;
-    }).catch(err => {
-      console.warn('[i18n] Failed to load secondary language bundle:', err);
-      return translations;
-    });
-  }
-  return loadPromise;
+  return translations;
 }
 
 export async function ensureLanguageLoaded(lang) {
-  if (!lang || lang === 'FR' || (translations[lang] && Object.keys(translations[lang]).length > 0)) {
-    return translations[lang] || translations.FR;
-  }
-  await loadSecondaryTranslations();
   return translations[lang] || translations.FR;
 }
 

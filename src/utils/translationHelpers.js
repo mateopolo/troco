@@ -1,16 +1,32 @@
 import { getInstantOrQueueTranslation } from './translator';
 import { knownTitles, knownMessageTranslations } from '../data/translationsData';
+import {
+  extractLanguageTag,
+  cleanLanguageTag,
+  parseAndTranslateDynamicText,
+  parseAndTranslateListing,
+} from './dynamicTranslation';
+
+export {
+  extractLanguageTag,
+  cleanLanguageTag,
+  parseAndTranslateDynamicText,
+  parseAndTranslateListing,
+};
 
 /**
- * Traduction d'un titre d'annonce via le dictionnaire ou retour du titre natif.
+ * Traduction d'un titre d'annonce via le dictionnaire ou parsing dynamique.
  */
 export const getListingTitleTranslation = (title, targetLang) => {
   if (!title) return '';
-  if (targetLang === 'FR' || !targetLang) return title;
+  const clean = cleanLanguageTag(title);
   if (knownTitles[title] && knownTitles[title][targetLang]) {
     return knownTitles[title][targetLang];
   }
-  return title;
+  if (knownTitles[clean] && knownTitles[clean][targetLang]) {
+    return knownTitles[clean][targetLang];
+  }
+  return parseAndTranslateDynamicText(title, targetLang);
 };
 
 /**
@@ -225,39 +241,9 @@ export const getReviewTranslation = (reviewText, targetLang, forceOriginal = fal
 
 /**
  * Traduction universelle d'une annonce (Titre, Description, Contrepartie).
+ * Parse automatiquement les balises de langue (ex: [EN]), nettoie et traduit si nécessaire.
  */
 export const getListingDisplayContent = (item, targetLang, forceOriginal = false) => {
   if (!item) return { title: '', description: '', compensation: '' };
-  const nativeLang = item.nativeLang || 'FR';
-
-  // Mode "voir l'original" forcé -> renvoyer immédiatement les textes natifs
-  if (forceOriginal) {
-    return { title: item.title, description: item.description || '', compensation: item.compensation || '' };
-  }
-
-  const trans = item.translations;
-  // Si une traduction existe pour la langue actuelle de l'interface -> l'utiliser
-  if (trans && trans[targetLang] && trans[targetLang].title) {
-    return {
-      title: trans[targetLang].title,
-      description: trans[targetLang].description || item.description || '',
-      compensation: trans[targetLang].compensation || item.compensation || ''
-    };
-  }
-
-  // Si la langue de l'interface est la langue native de l'annonce -> texte natif
-  if (targetLang === nativeLang) {
-    return { title: item.title, description: item.description || '', compensation: item.compensation || '' };
-  }
-
-  // Traduction automatique dynamique en temps réel pour toute annonce
-  const dynamicTitle = getInstantOrQueueTranslation(item.title, targetLang, nativeLang);
-  const dynamicDesc = item.description ? getInstantOrQueueTranslation(item.description, targetLang, nativeLang) : '';
-  const dynamicComp = item.compensation ? getInstantOrQueueTranslation(item.compensation, targetLang, nativeLang) : '';
-
-  return {
-    title: dynamicTitle || item.title,
-    description: dynamicDesc || item.description || '',
-    compensation: dynamicComp || item.compensation || ''
-  };
+  return parseAndTranslateListing(item, targetLang, forceOriginal);
 };
