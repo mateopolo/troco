@@ -1708,20 +1708,22 @@ export default function CollaborativeWhiteboardModal({
     }
 
     if (resizingTextRef.current) {
-      const { id, startX, startY, origW, origH } = resizingTextRef.current;
-      const dw = coords.x - startX;
-      const dh = coords.y - startY;
-      const newW = Math.max(120, origW + dw);
-      const newH = Math.max(40, origH + dh);
+      const { id, startX, startY, origFontSize } = resizingTextRef.current;
+      // Calcul purement diagonal : on mesure le vecteur depuis l'origine du drag
+      // vers le bas-droite = agrandir, vers le haut-gauche = réduire
+      // Le signe est donné par la composante diagonale (dx + dy) normalisée
+      const dx = coords.x - startX;
+      const dy = coords.y - startY;
+      const signedDelta = (dx + dy) / 2; // px en coords monde
+      // 1 px de déplacement diagonal = ~0.4pt de taille de police
+      const SCALE_SENSITIVITY = 0.4;
+      const newFontSize = Math.max(8, Math.min(180, Math.round(origFontSize + signedDelta * SCALE_SENSITIVITY)));
 
-      // Calcule la taille de police proportionnellement sur tous les axes en utilisant la diagonale :
-      const diag = Math.hypot(coords.x - startX, coords.y - startY);
-      const autoFontSize = Math.max(12, Math.min(120, Math.round(diag * 0.5)));
-
+      // On ne touche PAS à width/height : la boîte garde sa taille, seule la police change
       setTextElements((prev) =>
         prev.map((t) =>
           t.id === id
-            ? { ...t, width: newW, height: newH, fontSize: autoFontSize }
+            ? { ...t, fontSize: newFontSize }
             : t
         )
       );
@@ -1976,17 +1978,23 @@ export default function CollaborativeWhiteboardModal({
       draggingStickyRef.current = null;
     }
 
-    // Clôture IMMÉDIATE du mode redimensionnement texte
+    // Clôture IMMÉDIATE du mode redimensionnement texte (🚨 PHASE 121 : State Trap Fix)
     if (resizingTextRef.current) {
       lastLocalModificationTimeRef.current = Date.now();
-      const resized = textElements.find((t) => t.id === resizingTextRef.current.id);
+      const resizedId = resizingTextRef.current.id;
+      // Nettoyage immédiat du ref AVANT le setState pour éviter tout re-trigger
+      resizingTextRef.current = null;
+      isDrawingRef.current = false;
+
+      const resized = textElements.find((t) => t.id === resizedId);
       if (resized) {
         whiteboardP2PService.broadcastEvent('text_update', { text: resized });
         pushToHistory(localPaths);
         debouncedSyncToFirestore(localPaths, remotePaths, stickyNotes, textElements);
       }
-      resizingTextRef.current = null;
-      isDrawingRef.current = false;
+      // 🔑 Libère la main en basculant vers l'outil Sélection
+      setTool('select');
+      setToolMode('select');
     }
 
     // GESTION DU TEXTE : Création par tracé, calcul proportionnel diagonale et bascule automatique en édition
@@ -3176,6 +3184,7 @@ export default function CollaborativeWhiteboardModal({
               <div
                 onPointerDown={(e) => {
                   e.stopPropagation();
+                  e.currentTarget.setPointerCapture(e.pointerId);
                   const coords = getCanvasCoords(e);
                   resizingTextRef.current = {
                     id: t.id,
@@ -3183,6 +3192,8 @@ export default function CollaborativeWhiteboardModal({
                     startY: coords.y,
                     origW: t.width || 220,
                     origH: t.height || 50,
+                    origFontSize: t.fontSize || 24,
+                    origDiag: 1, // baseline — will be used as reference for scale ratio
                     textStr: t.text,
                   };
                 }}
