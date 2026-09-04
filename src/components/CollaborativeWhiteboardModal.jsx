@@ -3255,14 +3255,16 @@ export default function CollaborativeWhiteboardModal({
       {!isImmersiveMode && (
         <div className="absolute bottom-4 left-0 right-0 z-[1000] flex justify-center pb-[env(safe-area-inset-bottom)] px-2 landscape:bottom-2 pointer-events-none">
           <div
-            className="flex flex-nowrap items-center gap-3 overflow-x-auto overflow-y-hidden snap-x snap-mandatory touch-pan-x no-scrollbar w-full max-w-[95vw] md:max-w-2xl mx-auto px-4 py-2 bg-[#2A2624]/90 rounded-2xl border border-white/10 shadow-lg h-14 landscape:h-14 text-white pointer-events-auto"
+            className="flex flex-row flex-nowrap items-center gap-3 overflow-x-auto overflow-y-visible snap-x snap-mandatory touch-pan-x no-scrollbar w-full max-w-[95vw] md:max-w-2xl mx-auto px-4 py-2 bg-[#2A2624]/90 rounded-2xl border border-white/10 shadow-lg h-14 landscape:h-14 text-white pointer-events-auto"
             style={{
               backdropFilter: 'blur(20px)',
               WebkitBackdropFilter: 'blur(20px)',
+              minHeight: '56px',
+              maxHeight: '56px',
             }}
           >
           {/* Outils de dessin libres */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, flexWrap: 'nowrap' }}>
             {/* 🚨 PHASE 110 : Outil Curseur de sélection (↖️) */}
             <button
               type="button"
@@ -3377,11 +3379,12 @@ export default function CollaborativeWhiteboardModal({
               </button>
             </div>
 
-            {/* 🚨 PHASE 93 : SOUS-MENU POPOVER DES FORMES ÉVADÉ DANS UN PORTAL BODY (ZÉRO CLIPPING PAR LA TOOLBAR) */}
+            {/* 🚨 PHASE 93 & 120 : SOUS-MENU POPOVER DES FORMES ÉVADÉ DANS UN PORTAL BODY (ZÉRO CLIPPING PAR LA TOOLBAR) */}
             {typeof document !== 'undefined' && createPortal(
               <AnimatePresence>
                 {isShapesMenuOpen && (
                   <motion.div
+                    id="shapes-popover-portal"
                     initial={{ opacity: 0, scale: 0.92, y: 10 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.92, y: 10 }}
@@ -3491,7 +3494,7 @@ export default function CollaborativeWhiteboardModal({
           <div style={{ width: '1px', height: '24px', backgroundColor: 'var(--border-color, rgba(0,0,0,0.1))', margin: '0 4px', flexShrink: 0 }} />
 
           {/* PALETTE DE COULEURS INFINIES (<input type="color"> masqué derrière bouton élégant) */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0, flexWrap: 'nowrap' }}>
             {CURATED_PALETTE.slice(0, 5).map((c) => (
               <button
                 key={c.id}
@@ -3562,7 +3565,7 @@ export default function CollaborativeWhiteboardModal({
           <div style={{ width: '1px', height: '24px', backgroundColor: 'var(--border-color, rgba(0,0,0,0.1))', margin: '0 4px', flexShrink: 0 }} />
 
           {/* SÉLECTEUR DE COULEUR DE FOND DU CANVAS (Indépendant du thème global) */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }} title="Couleur d'arrière-plan du tableau">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0, flexWrap: 'nowrap' }} title="Couleur d'arrière-plan du tableau">
             <div style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '11px', fontWeight: '800', opacity: 0.8, marginRight: '2px' }}>
               <Palette size={14} color="#C67D5B" />
               <span>Fond</span>
@@ -3628,7 +3631,7 @@ export default function CollaborativeWhiteboardModal({
           <div style={{ width: '1px', height: '24px', backgroundColor: 'var(--border-color, rgba(0,0,0,0.1))', margin: '0 4px', flexShrink: 0 }} />
 
           {/* ÉPAISSEUR DU TRAIT */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, flexWrap: 'nowrap' }}>
             {[2, 4, 8, 16].map((w) => (
               <button
                 key={w}
@@ -3662,8 +3665,8 @@ export default function CollaborativeWhiteboardModal({
 
           <div style={{ width: '1px', height: '24px', backgroundColor: 'var(--border-color, rgba(0,0,0,0.1))', margin: '0 4px', flexShrink: 0 }} />
 
-          {/* 🚨 PHASE 110 : BOUTONS COPIER / COLLER & UNDO / REDO, EFFACER & PLEIN ÉCRAN */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
+          {/* 🚨 PHASE 110 & 120 : BOUTONS COPIER / COLLER & UNDO / REDO, EFFACER & PLEIN ÉCRAN */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, flexWrap: 'nowrap' }}>
             {/* Copier */}
             <button
               type="button"
