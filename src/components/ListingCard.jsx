@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Video, MapPin, Tag, ArrowRight, Globe, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { TextEffect } from './core/text-effect';
 import { getActiveAnimation } from '../config/animations';
 import { getSuggestedMedia as defaultGetSuggestedMedia, getFallbackImage as defaultGetFallbackImage } from '../utils/mediaUtils';
 import { localizeLocation as defaultLocalizeLocation, localizeTags as defaultLocalizeTags } from '../locales/translations';
@@ -357,7 +358,9 @@ export default function ListingCard({
         <div>
           <div>
             <h3 className="font-sans" style={{ fontSize: '15.5px', fontWeight: '800', color: 'var(--text-main)', margin: '0 0 4px 0', lineHeight: 1.35, letterSpacing: '-0.02em' }}>
-              {parseAndTranslateDynamicText(displayContent.title, currentLang, { forceOriginal: !!showingOriginalListings[item.id] })}
+              <TextEffect preset="fade-in-blur" speedReveal={1.1} speedSegment={0.3} once>
+                {parseAndTranslateDynamicText(displayContent.title, currentLang, { forceOriginal: !!showingOriginalListings[item.id] })}
+              </TextEffect>
             </h3>
             {currentLang !== (item.nativeLang || 'FR') && (
               <button

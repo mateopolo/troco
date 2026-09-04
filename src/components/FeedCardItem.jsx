@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight, Video, Globe, MapPin, Tag, ArrowRight, Sparkles } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { TextEffect } from './core/text-effect';
 import { ProgressiveImage } from './ui/ProgressiveImage';
 
 function FeedCardItem({
@@ -426,7 +427,9 @@ function FeedCardItem({
       <div style={{ padding: '16px 18px' }}>
         <div>
           <h3 className="font-editorial-heading" style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-main)', margin: '0 0 4px 0', lineHeight: 1.3, letterSpacing: '-0.015em', cursor: 'pointer' }}>
-            {displayContent.title}
+            <TextEffect preset="fade-in-blur" speedReveal={1.1} speedSegment={0.3} once>
+              {displayContent.title}
+            </TextEffect>
           </h3>
           {currentLang !== (item.nativeLang || 'FR') && (
             <button
