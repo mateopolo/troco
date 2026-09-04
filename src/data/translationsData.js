@@ -1,4 +1,10 @@
 import { getInstantOrQueueTranslation } from '../utils/translator';
+import {
+  secondaryTranslations,
+  knownTitles as secKnownTitles,
+  knownMessageTranslations as secKnownMessageTranslations,
+  knownCompMap as secKnownCompMap
+} from './translationsSecondary';
 
 // ---- DICTIONNAIRE I18N BASE (FR immédiat pour FCP optimal à 0ms) ----
 export const translations = {
@@ -211,20 +217,10 @@ export const translations = {
 };
 
 
-import {
-  secondaryTranslations,
-  knownTitles as secKnownTitles,
-  knownMessageTranslations as secKnownMessageTranslations,
-  knownCompMap as secKnownCompMap
-} from './translationsSecondary';
-
 // Fusion synchrone immédiate de toutes les langues pour réactivité 0ms
 if (secondaryTranslations) {
   Object.assign(translations, secondaryTranslations);
 }
-
-let secondaryLoaded = true;
-let loadPromise = Promise.resolve(translations);
 
 // Tableaux mutables exportés pour compatibilité synchrone
 export const knownTitles = { ...(secKnownTitles || {}) };
