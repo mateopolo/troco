@@ -17,6 +17,9 @@ import {
   CornerDownRight,
   Image as ImageIcon,
 } from 'lucide-react';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { collection, addDoc, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { storage, db } from '../../firebase';
 import { haptics } from '../../utils/haptics';
 
 /**
@@ -42,11 +45,14 @@ function ChatInputBar({
   onOpenWhiteboardPicker,
   onOpenProjectRewards,
   isGroupChat = false,
+  chatId = null,
+  onAudioUpload = null,
 }) {
   const [localText, setLocalText] = useState(editingMsg ? (editingMsg.text || '') : '');
   const [isWorkspaceMenuOpen, setIsWorkspaceMenuOpen] = useState(false);
   const typingTimerRef = useRef(null);
   const imageInputRef = useRef(null);
+  const audioInputRef = useRef(null);
 
   const handleImageSelect = (e) => {
     const file = e.target.files?.[0];
@@ -62,6 +68,87 @@ function ChatInputBar({
       reader.readAsDataURL(file);
     }
     if (e.target) e.target.value = '';
+  };
+
+  const handleAudioUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      haptics.impact();
+      let downloadUrl = '';
+
+      if (storage) {
+        const cleanName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+        const storageRef = ref(storage, `chat_audios/${cleanName}`);
+        const snapshot = await uploadBytes(storageRef, file, {
+          contentType: file.type || 'audio/mpeg',
+        });
+        downloadUrl = await getDownloadURL(snapshot.ref);
+      } else {
+        downloadUrl = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      }
+
+      const audioMessageData = {
+        type: 'audio',
+        audioUrl: downloadUrl,
+        fileName: file.name,
+      };
+
+      if (typeof onAudioUpload === 'function') {
+        await onAudioUpload(audioMessageData);
+      } else if (chatId && db) {
+        await addDoc(collection(db, 'chats', String(chatId), 'messages'), {
+          ...audioMessageData,
+          senderName: 'Moi',
+          read: false,
+          status: 'sent',
+          createdAt: serverTimestamp(),
+        });
+        await setDoc(doc(db, 'chats', String(chatId)), {
+          lastMessage: `🎵 ${file.name}`,
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+      } else if (typeof onSendMessage === 'function') {
+        onSendMessage(audioMessageData);
+      }
+      haptics.success();
+    } catch (err) {
+      console.error('[ChatInputBar] handleAudioUpload error:', err);
+      try {
+        const dataUrl = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        const fallbackMsg = {
+          type: 'audio',
+          audioUrl: dataUrl,
+          fileName: file.name,
+        };
+        if (typeof onAudioUpload === 'function') {
+          await onAudioUpload(fallbackMsg);
+        } else if (chatId && db) {
+          await addDoc(collection(db, 'chats', String(chatId), 'messages'), {
+            ...fallbackMsg,
+            senderName: 'Moi',
+            read: false,
+            status: 'sent',
+            createdAt: serverTimestamp(),
+          });
+        } else if (typeof onSendMessage === 'function') {
+          onSendMessage(fallbackMsg);
+        }
+      } catch (_) {}
+    } finally {
+      if (e.target) e.target.value = '';
+    }
   };
 
   // Synchronisation lors de l'activation/désactivation du mode édition
@@ -533,6 +620,51 @@ function ChatInputBar({
           onChange={handleImageSelect}
           style={{ display: 'none' }}
         />
+
+        {/* INPUT FICHIER AUDIO CACHÉ */}
+        <input
+          type="file"
+          accept="audio/*"
+          ref={audioInputRef}
+          onChange={handleAudioUpload}
+          style={{ display: 'none' }}
+        />
+
+        {/* BOUTON ATTACHEMENT AUDIO (Trombone / Audio) */}
+        {!editingMsg && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (audioInputRef.current) audioInputRef.current.click();
+            }}
+            onTouchEnd={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (audioInputRef.current) audioInputRef.current.click();
+            }}
+            className="premium-button"
+            style={{
+              border: '1px solid var(--border-color)',
+              borderRadius: '50%',
+              width: isMobile ? '40px' : '44px',
+              height: isMobile ? '40px' : '44px',
+              minWidth: isMobile ? '40px' : '44px',
+              minHeight: isMobile ? '40px' : '44px',
+              backgroundColor: 'var(--bg-card)',
+              color: 'var(--accent-primary)',
+              cursor: 'pointer',
+              display: (isMobile && localText.trim()) ? 'none' : 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: 'var(--shadow-card)',
+              flexShrink: 0,
+            }}
+            title="Joindre un fichier audio (.mp3, .wav)"
+          >
+            <Paperclip size={isMobile ? 16 : 18} />
+          </button>
+        )}
 
         {/* BOUTON ENVOI PHOTO / IMAGE */}
         {!editingMsg && (

@@ -119,7 +119,7 @@ export const useWalletStore = create(
           if (prevTokens !== null && newTokens !== null && newTokens > prevTokens) {
             const gained = newTokens - prevTokens;
             hapticSuccess();
-            playBetclicBalanceSound();
+            playBetclicBalanceSound(true);
             set({
               topUpCelebration: {
                 title: `+${gained} Jeton${gained > 1 ? 's' : ''} Troco reçus ! 🪙`,

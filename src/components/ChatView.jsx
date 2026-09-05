@@ -2254,7 +2254,16 @@ function ChatView({
                         </div>
                       )}
 
-                      {(msg.type === 'audio' || msg.kind === 'audio' || msg.audioUrl) ? (
+                      {msg.type === 'audio' ? (
+                        <div className="p-2">
+                          {msg.fileName && (
+                            <div style={{ fontSize: '11px', fontWeight: '800', marginBottom: '4px', opacity: 0.9 }}>
+                              🎵 {msg.fileName}
+                            </div>
+                          )}
+                          <audio controls src={msg.audioUrl} className="max-w-[200px] md:max-w-xs" />
+                        </div>
+                      ) : (msg.kind === 'audio' || msg.audioUrl) ? (
                         <div style={{ width: '100%', maxWidth: '260px', minWidth: 0, boxSizing: 'border-box', overflow: 'hidden' }}>
                           <VoiceNotePlayer
                             audioUrl={msg.audioUrl}
@@ -2611,6 +2620,13 @@ function ChatView({
               setIsWhiteboardOpen(true);
             }}
             onOpenProjectRewards={() => setIsProjectRewardsModalOpen(true)}
+            chatId={currentChatId}
+            onAudioUpload={(audioPayload) => {
+              userJustSentMessageRef.current = true;
+              if (typeof handleSendMessage === 'function') {
+                handleSendMessage(audioPayload);
+              }
+            }}
           />
         )}
       </div>

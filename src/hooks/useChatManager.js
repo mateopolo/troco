@@ -19,7 +19,7 @@ import { Clock, Sparkles, ShieldCheck, CheckCircle, Check, RefreshCw, X } from '
 import { mockChats, initialChatThreads } from '../data/mockChatsData';
 import { validateChatMessage } from '../utils/moderationBlacklist';
 import { uploadVoiceNote } from '../services/voiceStorageService';
-import { playBetclicBalanceSound, playApplePaySound } from '../utils/audioService';
+import { playBetclicBalanceSound, playApplePaySound, playSwooshSound } from '../utils/audioService';
 import { useChatStore, useWalletStore } from '../stores';
 import { hapticLight, hapticSuccess, hapticError } from '../utils/haptics';
 import { playPop, playSuccessChime } from '../services/audioService';
@@ -646,7 +646,7 @@ export const useChatManager = ({
         status: 'sent',
         createdAt: new Date(),
         ...customPayload,
-        text: customPayload.text || `🎨 ${myName} a partagé le Tableau Blanc : "${customPayload.workspaceTitle || customPayload.title || 'Tableau Blanc'}"`,
+        text: customPayload.text || (customPayload.type === 'audio' ? `🎵 ${customPayload.fileName || 'Fichier audio'}` : `🎨 ${myName} a partagé le Tableau Blanc : "${customPayload.workspaceTitle || customPayload.title || 'Tableau Blanc'}"`),
       };
 
       setChatThreads(prev => ({
@@ -1811,7 +1811,7 @@ export const useChatManager = ({
     if (!receiverUid) {
       console.error('[handleSendToken] Impossible de résoudre le partnerUid — objet chat reçu :', chatObj);
       alert('Destinataire introuvable. Vérifiez que la conversation est bien chargée et réessayez.');
-      throw new Error('Destinataire introuvable — partnerUid absent du chat');
+      throw new Error('Destinataire introuvable');
     }
 
     const amount = Number(tokenAmount) || 1;
@@ -1891,7 +1891,10 @@ export const useChatManager = ({
       }
 
       hapticSuccess();
-      playBetclicBalanceSound(true);
+      // FIX DU SON DES JETONS :
+      // L'expéditeur ne doit PAS entendre le son de gain / réception.
+      // Seul le listener onSnapshot du receveur déclenche le son "plus vert".
+      playSwooshSound();
       setSaveMessage(`🪙 ${amount} Jeton(s) Troco envoyé(s) avec succès !`);
       setTimeout(() => setSaveMessage(''), 4000);
 

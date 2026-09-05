@@ -105,3 +105,28 @@ export const playWelcomeGiftFanfare = () => {
     console.warn('[AudioService] Welcome fanfare error:', e);
   }
 };
+
+// Son swoosh aérien discret pour l'envoi de jetons / messages (expéditeur)
+export const playSwooshSound = () => {
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    const now = ctx.currentTime;
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(440, now);
+    osc.frequency.exponentialRampToValueAtTime(880, now + 0.05);
+    osc.frequency.exponentialRampToValueAtTime(260, now + 0.18);
+    gain.gain.setValueAtTime(0.01, now);
+    gain.gain.linearRampToValueAtTime(0.12, now + 0.04);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.2);
+  } catch (e) {
+    console.warn('[AudioService] Swoosh sound error:', e);
+  }
+};
+

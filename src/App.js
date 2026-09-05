@@ -364,7 +364,7 @@ export default function App() {
       const prevVal = Number(prevTokensRef.current);
       if (currentVal > prevVal) {
         const gained = currentVal - prevVal;
-        playBetclicBalanceSound();
+        playBetclicBalanceSound(true);
         setTopUpCelebration({
           title: `+${gained} Jeton${gained > 1 ? 's' : ''} Troco reçus ! 🪙`,
           subtitle: `Nouveau solde : ${currentVal} Jetons Troco`,
@@ -864,7 +864,7 @@ export default function App() {
             if (prevTokensRef.current !== undefined && prevTokensRef.current !== null && newTokens !== null && newTokens > prevTokensRef.current) {
               const gained = newTokens - prevTokensRef.current;
               haptics.success();
-              playBetclicBalanceSound();
+              playBetclicBalanceSound(true);
               setTopUpCelebration({
                 title: `+${gained} Jeton${gained > 1 ? 's' : ''} Troco reçus ! 🪙`,
                 subtitle: `Nouveau solde : ${newTokens} Jetons Troco`,
