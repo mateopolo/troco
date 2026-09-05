@@ -52,7 +52,17 @@ export default function LiveCallSubtitles({
     try {
       const saved = localStorage.getItem('troco_subtitles_settings_v2');
       if (saved) {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object') {
+          return {
+            sourceLang: parsed.sourceLang || 'FR',
+            targetLang: parsed.targetLang || currentLang || 'EN',
+            fontSize: parsed.fontSize || 'lg',
+            fontColor: parsed.fontColor || 'white',
+            bgStyle: parsed.bgStyle || 'cinema',
+            showDual: parsed.showDual !== undefined ? parsed.showDual : true,
+          };
+        }
       }
     } catch (_) {}
 
@@ -66,19 +76,6 @@ export default function LiveCallSubtitles({
     };
   });
 
-  // Synchronisation dynamique du targetLang avec le currentLang actif de l'application
-  useEffect(() => {
-    if (currentLang && currentLang !== settings.targetLang) {
-      setSettings(prev => ({ ...prev, targetLang: currentLang }));
-    }
-  }, [currentLang, settings.targetLang]);
-
-  // Position drag & drop
-  const [posOffset, setPosOffset] = useState({ x: 0, y: 0 });
-  const isDraggingRef = useRef(false);
-  const dragStartRef = useRef({ x: 0, y: 0, startX: 0, startY: 0 });
-  const containerRef = useRef(null);
-
   // Sauvegarde des préférences locales uniquement
   const updateSettings = useCallback((newSettings) => {
     setSettings(prev => {
@@ -90,6 +87,28 @@ export default function LiveCallSubtitles({
     });
   }, []);
 
+  // Getters & Setters indépendants pour la langue parlée (micro) et la langue des sous-titres (cible)
+  const currentSubtitleLang = (settings.targetLang || currentLang || 'FR').toUpperCase();
+  const currentSourceLang = (settings.sourceLang || 'FR').toUpperCase();
+
+  const setTargetLanguage = useCallback((langCode) => {
+    const code = (langCode || 'FR').toUpperCase();
+    updateSettings({ targetLang: code });
+  }, [updateSettings]);
+
+  const setSubtitleLanguage = setTargetLanguage;
+
+  const setSourceLanguage = useCallback((langCode) => {
+    const code = (langCode || 'FR').toUpperCase();
+    updateSettings({ sourceLang: code });
+  }, [updateSettings]);
+
+  // Position drag & drop
+  const [posOffset, setPosOffset] = useState({ x: 0, y: 0 });
+  const isDraggingRef = useRef(false);
+  const dragStartRef = useRef({ x: 0, y: 0, startX: 0, startY: 0 });
+  const containerRef = useRef(null);
+
   // Synchronisation avec le moteur de transcription en direct
   useEffect(() => {
     if (!isActive) {
@@ -99,8 +118,8 @@ export default function LiveCallSubtitles({
       return;
     }
 
-    const sourceBcp = AVAILABLE_LANGUAGES.find(l => l.code === settings.sourceLang)?.bcp47 || 'fr-FR';
-    const targetCode = (currentLang || settings.targetLang || 'FR').toUpperCase();
+    const sourceBcp = AVAILABLE_LANGUAGES.find(l => l.code === currentSourceLang)?.bcp47 || 'fr-FR';
+    const targetCode = currentSubtitleLang;
 
     liveTranscriptionService.startListening(sourceBcp, targetCode, speakerName);
 
@@ -109,12 +128,12 @@ export default function LiveCallSubtitles({
       const rawText = (data.originalText || data.text || data.translatedText || '').trim();
       if (!rawText) return;
 
-      const activeTargetLang = (currentLang || settings.targetLang || 'FR').toUpperCase();
-      const detectedSourceLang = (data.sourceLang || settings.sourceLang || 'FR').toUpperCase();
+      const activeTargetLang = currentSubtitleLang;
+      const detectedSourceLang = (data.sourceLang || currentSourceLang).toUpperCase();
 
       let translated = data.translatedText;
 
-      // 🚨 PHASE 97 : INTERCEPTION SYSTÉMATIQUE & TRADUCTION ACTIVE AVANT AFFICHAGE
+      // Traduction dynamique si la langue source diffère de la langue des sous-titres choisie
       if (detectedSourceLang !== activeTargetLang) {
         if (!translated || translated.trim() === rawText || data.targetLang !== activeTargetLang) {
           try {
@@ -146,10 +165,10 @@ export default function LiveCallSubtitles({
     });
 
     return () => {
-      unsubscribe();
+      if (typeof unsubscribe === 'function') unsubscribe();
       liveTranscriptionService.stopListening();
     };
-  }, [isActive, settings.sourceLang, settings.targetLang, currentLang, speakerName]);
+  }, [isActive, currentSourceLang, currentSubtitleLang, speakerName]);
 
   // DRAG AND DROP AVEC POINTER EVENTS
   const handlePointerDown = (e) => {
@@ -187,8 +206,8 @@ export default function LiveCallSubtitles({
   const currentFontColor = FONT_COLORS.find(c => c.id === settings.fontColor) || FONT_COLORS[0];
   const currentBgStyle = BG_STYLES.find(b => b.id === settings.bgStyle) || BG_STYLES[0];
 
-  const sourceLangObj = AVAILABLE_LANGUAGES.find(l => l.code === settings.sourceLang) || AVAILABLE_LANGUAGES[0];
-  const targetLangObj = AVAILABLE_LANGUAGES.find(l => l.code === settings.targetLang) || AVAILABLE_LANGUAGES[1];
+  const sourceLangObj = AVAILABLE_LANGUAGES.find(l => l.code === currentSourceLang) || AVAILABLE_LANGUAGES[0];
+  const targetLangObj = AVAILABLE_LANGUAGES.find(l => l.code === currentSubtitleLang) || AVAILABLE_LANGUAGES[1];
 
   const activeTranslation = currentSubtitle?.translatedText || currentSubtitle?.originalText || '';
   const activeOriginal = currentSubtitle?.originalText || '';
@@ -457,15 +476,20 @@ export default function LiveCallSubtitles({
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '5px' }}>
                 {AVAILABLE_LANGUAGES.map((lang) => {
-                  const isSelected = settings.sourceLang === lang.code;
+                  const isSelected = currentSourceLang === lang.code;
                   return (
                     <button
                       key={`src-${lang.code}`}
                       type="button"
-                      onClick={() => updateSettings({ sourceLang: lang.code })}
+                      onClick={() => setSourceLanguage(lang.code)}
+                      className={`px-2 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer border ${
+                        isSelected
+                          ? 'bg-emerald-600 text-white font-bold border-emerald-500 shadow-md shadow-emerald-950/40'
+                          : 'bg-gray-800 text-gray-300 border-white/10 hover:bg-gray-700'
+                      }`}
                       style={{
                         border: isSelected ? '1.5px solid #10B981' : '1px solid rgba(255, 255, 255, 0.1)',
-                        backgroundColor: isSelected ? 'rgba(16, 185, 129, 0.25)' : 'rgba(255, 255, 255, 0.07)',
+                        backgroundColor: isSelected ? '#059669' : 'rgba(255, 255, 255, 0.07)',
                         color: '#FFFFFF',
                         borderRadius: '10px',
                         padding: '6px 4px',
@@ -490,20 +514,25 @@ export default function LiveCallSubtitles({
             {/* 2. LANGUE CIBLE DES SOUS-TITRES (DÉCOUPLÉE DU GLOBALE) */}
             <div>
               <div style={{ fontSize: '11px', fontWeight: '700', color: 'rgba(255, 255, 255, 0.75)', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                <Globe size={12} color="var(--accent-primary, #C67D5B)" />
+                <Globe size={12} color="#A855F7" />
                 <span>Langue de vos sous-titres (Traduction à l'écran) :</span>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '5px' }}>
                 {AVAILABLE_LANGUAGES.map((lang) => {
-                  const isSelected = settings.targetLang === lang.code;
+                  const isSelected = currentSubtitleLang === lang.code;
                   return (
                     <button
                       key={`tgt-${lang.code}`}
                       type="button"
-                      onClick={() => updateSettings({ targetLang: lang.code })}
+                      onClick={() => setTargetLanguage(lang.code)}
+                      className={`px-2 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer border ${
+                        currentSubtitleLang === lang.code
+                          ? 'bg-purple-600 text-white font-bold border-purple-500 shadow-md shadow-purple-950/40'
+                          : 'bg-gray-800 text-gray-300 border-white/10 hover:bg-gray-700'
+                      }`}
                       style={{
-                        border: isSelected ? '1.5px solid var(--accent-primary, #C67D5B)' : '1px solid rgba(255, 255, 255, 0.1)',
-                        backgroundColor: isSelected ? 'var(--accent-primary, #C67D5B)' : 'rgba(255, 255, 255, 0.07)',
+                        border: isSelected ? '1.5px solid #A855F7' : '1px solid rgba(255, 255, 255, 0.1)',
+                        backgroundColor: isSelected ? '#7C3AED' : 'rgba(255, 255, 255, 0.07)',
                         color: '#FFFFFF',
                         borderRadius: '10px',
                         padding: '6px 4px',
