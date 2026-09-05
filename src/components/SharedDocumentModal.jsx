@@ -322,7 +322,7 @@ function SharedDocumentModalContent({
 
   const modalContent = (
     <div
-      className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/90 md:bg-[rgba(15,12,11,0.82)] md:backdrop-blur-md touch-none"
+      className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/90 md:bg-[rgba(15,12,11,0.82)] md:backdrop-blur-md p-3 sm:p-4 touch-none"
       style={{
         position: 'fixed',
         inset: 0,
@@ -330,7 +330,7 @@ function SharedDocumentModalContent({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '16px',
+        padding: '12px',
       }}
       onClick={(e) => {
         if (e.target === e.currentTarget && typeof onClose === 'function') {
@@ -339,94 +339,84 @@ function SharedDocumentModalContent({
       }}
     >
       <div
-        className="relative w-full max-w-4xl max-h-[90dvh] overflow-hidden overscroll-contain rounded-2xl"
+        className="relative w-full max-w-4xl max-h-[90dvh] overflow-y-auto overscroll-contain rounded-2xl flex flex-col shadow-2xl border transition-all"
         onClick={(e) => e.stopPropagation()}
         style={{
           position: 'relative',
           zIndex: 1000000,
           width: '100%',
           maxWidth: '960px',
-          height: '90vh',
           maxHeight: '90dvh',
           backgroundColor: darkMode ? '#1C1816' : '#FAF7F2',
-          borderRadius: '24px',
-          border: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-color)',
+          borderRadius: '20px',
+          border: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-color, #E8DDD3)',
           boxShadow: '0 25px 60px rgba(0,0,0,0.35)',
           display: 'flex',
           flexDirection: 'column',
-          overflow: 'hidden',
         }}
       >
-        {/* HEADER APPLE NOTES */}
+        {/* HEADER NOTES PARTAGÉES (MARKDOWN) */}
         <div
-          style={{
-            padding: '14px 20px',
-            borderBottom: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid #E8DDD3',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '12px',
-            backgroundColor: darkMode ? 'rgba(28,24,22,0.95)' : 'rgba(250,247,242,0.95)',
-          }}
+          className={`p-4 sm:p-5 flex flex-col w-full border-b ${
+            darkMode ? 'bg-[#1C1816] border-white/10' : 'bg-[#FAF7F2] border-stone-200'
+          }`}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1, minWidth: 0 }}>
-            <div
-              style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '10px',
-                backgroundColor: 'rgba(198,125,91,0.15)',
-                color: '#C67D5B',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                flexShrink: 0,
-              }}
-            >
-              <FileText size={18} />
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
+          {/* LIGNE 1 : TITRE & BOUTON FERMER */}
+          <div className="flex justify-between items-center w-full mb-3 gap-3">
+            <div className="flex items-center gap-2.5 min-w-0 flex-1">
+              <div
+                style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '10px',
+                  backgroundColor: 'rgba(198,125,91,0.15)',
+                  color: '#C67D5B',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <FileText size={18} />
+              </div>
               <input
                 type="text"
                 value={title}
                 onChange={handleTitleChange}
                 placeholder="Titre de la note..."
+                className="w-full bg-transparent border-0 outline-none font-bold text-base sm:text-lg min-w-0"
                 style={{
-                  width: '100%',
-                  background: 'transparent',
-                  border: 'none',
-                  outline: 'none',
-                  fontSize: '16px',
-                  fontWeight: '700',
                   color: darkMode ? '#FAF7F2' : '#3D3530',
                   fontFamily: 'inherit',
                 }}
               />
-              <div style={{ fontSize: '11px', color: '#10B981', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span>{saveStatus}</span>
-                <span style={{ color: darkMode ? '#8E857E' : '#A89E95' }}>• {wordCount} mots ({charCount} caractères)</span>
-              </div>
             </div>
+
+            <button
+              type="button"
+              onClick={onClose}
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-bold text-xs shrink-0 transition-all cursor-pointer shadow-sm ${
+                darkMode
+                  ? 'bg-white/10 hover:bg-white/15 text-[#FAF7F2]'
+                  : 'bg-stone-200/90 hover:bg-stone-300 text-[#3D3530]'
+              }`}
+              title="Fermer la note"
+            >
+              <X size={16} />
+              <span>Fermer</span>
+            </button>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* LIGNE 2 : ACTIONS DOCUMENT (FLEX-WRAP MOBILE-FRIENDLY) */}
+          <div className="flex flex-wrap items-center gap-2 w-full mb-2">
             <button
               type="button"
               onClick={() => setPreviewMode(!previewMode)}
-              style={{
-                border: 'none',
-                backgroundColor: previewMode ? '#C67D5B' : (darkMode ? 'rgba(255,255,255,0.08)' : '#EFE8DE'),
-                color: previewMode ? '#FFFFFF' : (darkMode ? '#FAF7F2' : '#3D3530'),
-                borderRadius: '10px',
-                padding: '7px 12px',
-                fontSize: '12px',
-                fontWeight: '700',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                transition: 'all 0.15s ease',
-              }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm ${
+                previewMode
+                  ? 'bg-[#C67D5B] text-white'
+                  : (darkMode ? 'bg-white/10 text-[#FAF7F2] hover:bg-white/15' : 'bg-stone-200/90 text-[#3D3530] hover:bg-stone-300')
+              }`}
             >
               {previewMode ? <Edit3 size={14} /> : <Eye size={14} />}
               <span>{previewMode ? 'Éditer' : 'Aperçu'}</span>
@@ -435,185 +425,170 @@ function SharedDocumentModalContent({
             <button
               type="button"
               onClick={handleExportMarkdown}
-              style={{
-                border: 'none',
-                backgroundColor: darkMode ? 'rgba(255,255,255,0.08)' : '#EFE8DE',
-                color: darkMode ? '#FAF7F2' : '#3D3530',
-                borderRadius: '10px',
-                padding: '7px 10px',
-                fontSize: '12px',
-                fontWeight: '700',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-              }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm ${
+                darkMode ? 'bg-white/10 text-[#FAF7F2] hover:bg-white/15' : 'bg-stone-200/90 text-[#3D3530] hover:bg-stone-300'
+              }`}
               title="Exporter au format Markdown (.md)"
             >
               <Download size={14} />
-              <span className="hidden-mobile">.md</span>
+              <span>.md</span>
             </button>
 
             <button
               type="button"
               onClick={handleExportPrint}
-              style={{
-                border: 'none',
-                backgroundColor: darkMode ? 'rgba(255,255,255,0.08)' : '#EFE8DE',
-                color: darkMode ? '#FAF7F2' : '#3D3530',
-                borderRadius: '10px',
-                padding: '7px 10px',
-                fontSize: '12px',
-                fontWeight: '700',
-                cursor: 'pointer',
-              }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm ${
+                darkMode ? 'bg-white/10 text-[#FAF7F2] hover:bg-white/15' : 'bg-stone-200/90 text-[#3D3530] hover:bg-stone-300'
+              }`}
               title="Imprimer / Exporter PDF"
             >
               <Printer size={14} />
+              <span>Imprimer</span>
             </button>
 
             <button
               type="button"
               onClick={handleSendNoteToChat}
               disabled={isSendingToChat}
-              className="premium-button"
+              className="premium-button flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold text-white transition-all cursor-pointer shadow-sm"
               style={{
-                border: 'none',
                 background: 'linear-gradient(135deg, #C67D5B 0%, #B86B49 100%)',
-                color: '#FFFFFF',
-                borderRadius: '10px',
-                padding: '7px 14px',
-                fontSize: '12px',
-                fontWeight: '800',
-                cursor: isSendingToChat ? 'wait' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
                 boxShadow: '0 4px 14px rgba(198,125,91,0.3)',
+                cursor: isSendingToChat ? 'wait' : 'pointer',
               }}
             >
               <Share2 size={14} />
               <span>{isSendingToChat ? 'Envoi...' : 'Partager au Chat'}</span>
             </button>
+          </div>
 
-            <button
-              type="button"
-              onClick={onClose}
-              style={{
-                border: 'none',
-                backgroundColor: 'transparent',
-                color: darkMode ? '#A89E95' : '#6B5E54',
-                width: '32px',
-                height: '32px',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-              }}
-            >
-              <X size={18} />
-            </button>
+          {/* LIGNE 3 : STATUTS ET BARRE DE FORMATAGE */}
+          <div
+            className={`flex items-center gap-3 overflow-x-auto no-scrollbar w-full py-2 border-y ${
+              darkMode ? 'border-white/10' : 'border-stone-200'
+            }`}
+          >
+            {/* STATUTS */}
+            <div className="flex items-center gap-2 text-xs shrink-0 whitespace-nowrap">
+              <span className="font-semibold text-emerald-500 flex items-center gap-1.5">
+                <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                {saveStatus}
+              </span>
+              <span style={{ color: darkMode ? '#8E857E' : '#A89E95' }}>
+                • {wordCount} mots ({charCount} caractères)
+              </span>
+            </div>
+
+            {/* BARRE DE FORMATAGE H1, H2, B, I, etc. */}
+            {!previewMode && (
+              <>
+                <div
+                  className="w-[1px] h-4 shrink-0"
+                  style={{ backgroundColor: darkMode ? 'rgba(255,255,255,0.12)' : '#E0D4C5' }}
+                />
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => insertFormatting('# ')}
+                    className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                    style={{ color: darkMode ? '#FAF7F2' : '#3D3530' }}
+                    title="Titre 1"
+                  >
+                    <Heading1 size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => insertFormatting('## ')}
+                    className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                    style={{ color: darkMode ? '#FAF7F2' : '#3D3530' }}
+                    title="Titre 2"
+                  >
+                    <Heading2 size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => insertFormatting('### ')}
+                    className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                    style={{ color: darkMode ? '#FAF7F2' : '#3D3530' }}
+                    title="Titre 3"
+                  >
+                    <Heading3 size={16} />
+                  </button>
+                  <div
+                    className="w-[1px] h-4 shrink-0 mx-0.5"
+                    style={{ backgroundColor: darkMode ? 'rgba(255,255,255,0.12)' : '#E0D4C5' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => insertFormatting('**', '**')}
+                    className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                    style={{ color: darkMode ? '#FAF7F2' : '#3D3530' }}
+                    title="Gras"
+                  >
+                    <Bold size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => insertFormatting('*', '*')}
+                    className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                    style={{ color: darkMode ? '#FAF7F2' : '#3D3530' }}
+                    title="Italique"
+                  >
+                    <Italic size={16} />
+                  </button>
+                  <div
+                    className="w-[1px] h-4 shrink-0 mx-0.5"
+                    style={{ backgroundColor: darkMode ? 'rgba(255,255,255,0.12)' : '#E0D4C5' }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => insertFormatting('- [ ] ')}
+                    className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer text-emerald-500"
+                    title="Case à cocher / Tâche"
+                  >
+                    <CheckSquare size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => insertFormatting('- ')}
+                    className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                    style={{ color: darkMode ? '#FAF7F2' : '#3D3530' }}
+                    title="Liste à puces"
+                  >
+                    <List size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => insertFormatting('> ')}
+                    className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                    style={{ color: darkMode ? '#FAF7F2' : '#3D3530' }}
+                    title="Citation"
+                  >
+                    <Quote size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => insertFormatting('```javascript\n', '\n```')}
+                    className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                    style={{ color: darkMode ? '#FAF7F2' : '#3D3530' }}
+                    title="Bloc de code"
+                  >
+                    <Code size={16} />
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
-        {/* BARRE D'OUTILS MARKDOWN */}
-        {!previewMode && (
-          <div
-            style={{
-              padding: '8px 16px',
-              borderBottom: darkMode ? '1px solid rgba(255,255,255,0.06)' : '1px solid #ECE3D8',
-              backgroundColor: darkMode ? '#221D1A' : '#F4ECE1',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              flexWrap: 'wrap',
-            }}
-          >
-            <button
-              type="button"
-              onClick={() => insertFormatting('# ')}
-              style={{ padding: '6px 9px', borderRadius: '6px', border: 'none', background: 'transparent', cursor: 'pointer', color: darkMode ? '#FAF7F2' : '#3D3530' }}
-              title="Titre 1"
-            >
-              <Heading1 size={16} />
-            </button>
-            <button
-              type="button"
-              onClick={() => insertFormatting('## ')}
-              style={{ padding: '6px 9px', borderRadius: '6px', border: 'none', background: 'transparent', cursor: 'pointer', color: darkMode ? '#FAF7F2' : '#3D3530' }}
-              title="Titre 2"
-            >
-              <Heading2 size={16} />
-            </button>
-            <button
-              type="button"
-              onClick={() => insertFormatting('### ')}
-              style={{ padding: '6px 9px', borderRadius: '6px', border: 'none', background: 'transparent', cursor: 'pointer', color: darkMode ? '#FAF7F2' : '#3D3530' }}
-              title="Titre 3"
-            >
-              <Heading3 size={16} />
-            </button>
-            <div style={{ width: '1px', height: '18px', backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : '#E0D4C5', margin: '0 4px' }} />
-            <button
-              type="button"
-              onClick={() => insertFormatting('**', '**')}
-              style={{ padding: '6px 9px', borderRadius: '6px', border: 'none', background: 'transparent', cursor: 'pointer', color: darkMode ? '#FAF7F2' : '#3D3530' }}
-              title="Gras"
-            >
-              <Bold size={16} />
-            </button>
-            <button
-              type="button"
-              onClick={() => insertFormatting('*', '*')}
-              style={{ padding: '6px 9px', borderRadius: '6px', border: 'none', background: 'transparent', cursor: 'pointer', color: darkMode ? '#FAF7F2' : '#3D3530' }}
-              title="Italique"
-            >
-              <Italic size={16} />
-            </button>
-            <div style={{ width: '1px', height: '18px', backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : '#E0D4C5', margin: '0 4px' }} />
-            <button
-              type="button"
-              onClick={() => insertFormatting('- [ ] ')}
-              style={{ padding: '6px 9px', borderRadius: '6px', border: 'none', background: 'transparent', cursor: 'pointer', color: '#10B981' }}
-              title="Case à cocher / Tâche"
-            >
-              <CheckSquare size={16} />
-            </button>
-            <button
-              type="button"
-              onClick={() => insertFormatting('- ')}
-              style={{ padding: '6px 9px', borderRadius: '6px', border: 'none', background: 'transparent', cursor: 'pointer', color: darkMode ? '#FAF7F2' : '#3D3530' }}
-              title="Liste à puces"
-            >
-              <List size={16} />
-            </button>
-            <button
-              type="button"
-              onClick={() => insertFormatting('> ')}
-              style={{ padding: '6px 9px', borderRadius: '6px', border: 'none', background: 'transparent', cursor: 'pointer', color: darkMode ? '#FAF7F2' : '#3D3530' }}
-              title="Citation"
-            >
-              <Quote size={16} />
-            </button>
-            <button
-              type="button"
-              onClick={() => insertFormatting('```javascript\n', '\n```')}
-              style={{ padding: '6px 9px', borderRadius: '6px', border: 'none', background: 'transparent', cursor: 'pointer', color: darkMode ? '#FAF7F2' : '#3D3530' }}
-              title="Bloc de code"
-            >
-              <Code size={16} />
-            </button>
-          </div>
-        )}
-
         {/* ZONE DE CONTENU / ÉDITEUR */}
-        <div style={{ flex: 1, display: 'flex', minHeight: 0, position: 'relative' }}>
+        <div className="flex-1 min-h-[300px] flex flex-col relative" style={{ flex: 1, display: 'flex', minHeight: '300px', position: 'relative' }}>
           {previewMode ? (
             <div
+              className="flex-1 p-4 sm:p-6 overflow-y-auto text-[15px] leading-relaxed font-sans"
               style={{
                 flex: 1,
-                padding: '24px 32px',
+                padding: '20px 24px',
                 overflowY: 'auto',
                 fontSize: '15px',
                 lineHeight: 1.7,
@@ -671,11 +646,12 @@ function SharedDocumentModalContent({
               value={content || ''}
               onChange={handleContentChange}
               placeholder="Rédigez vos notes partagées ici en Markdown..."
+              className="flex-1 w-full h-full p-4 sm:p-6 bg-transparent border-0 outline-none resize-none text-[15px] leading-relaxed font-sans box-border"
               style={{
                 flex: 1,
                 width: '100%',
                 height: '100%',
-                padding: '24px 32px',
+                padding: '20px 24px',
                 backgroundColor: 'transparent',
                 color: darkMode ? '#FAF7F2' : '#3D3530',
                 border: 'none',
