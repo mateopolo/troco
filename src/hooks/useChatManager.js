@@ -519,6 +519,8 @@ export const useChatManager = ({
 
     const handleSnapshot = (snapshot) => {
       if (snapshot.empty) return;
+      const firestoreIds = new Set(snapshot.docs.map(d => d.id));
+
       const msgs = snapshot.docs.map(d => {
         const data = d.data();
         const isMe = (data.senderUid && myUid && String(data.senderUid) === String(myUid)) ||
@@ -536,17 +538,38 @@ export const useChatManager = ({
         };
       });
 
-      // Tri chronologique ascendant côté client
-      msgs.sort((a, b) => {
-        const tA = typeof a.createdAt === 'number' ? a.createdAt : new Date(a.createdAt || 0).getTime();
-        const tB = typeof b.createdAt === 'number' ? b.createdAt : new Date(b.createdAt || 0).getTime();
-        return tA - tB;
-      });
+      // Fusionner avec les messages optimistes en vol (temp_*) dont l'ID Firestore n'est pas encore connu.
+      // Cela évite le doublon : le temp_ reste visible jusqu'à ce que le vrai doc Firestore arrive.
+      setChatThreads(prev => {
+        const currentThread = prev[selectedChat.id] || [];
+        const inFlightOptimistic = currentThread.filter(
+          m => typeof m.id === 'string' && m.id.startsWith('temp_') && !firestoreIds.has(m.id)
+        );
 
-      setChatThreads(prev => ({
-        ...prev,
-        [selectedChat.id]: msgs,
-      }));
+        // Union : vrais messages Firestore + messages optimistes encore non confirmés
+        const combined = [...msgs, ...inFlightOptimistic];
+
+        // Déduplication stricte par ID (les doublons éventuels sont éliminés)
+        const seen = new Set();
+        const unique = combined.filter(m => {
+          const key = String(m.id);
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+
+        // Tri chronologique ascendant côté client
+        unique.sort((a, b) => {
+          const tA = typeof a.createdAt === 'number' ? a.createdAt : new Date(a.createdAt || 0).getTime();
+          const tB = typeof b.createdAt === 'number' ? b.createdAt : new Date(b.createdAt || 0).getTime();
+          return tA - tB;
+        });
+
+        return {
+          ...prev,
+          [selectedChat.id]: unique,
+        };
+      });
 
       // Si le chat est ouvert dans l'onglet 'chat', marquer automatiquement les messages reçus comme "lu"
       if (activeTab === 'chat' && String(selectedChat.id) === String(chatId)) {
@@ -637,47 +660,66 @@ export const useChatManager = ({
       const myUid = profile?.uid || auth?.currentUser?.uid || 'me';
       const myName = profile?.name || 'Moi';
 
+      // Utiliser un tempId préfixé pour que handleSnapshot puisse l'identifier comme optimiste
+      // et ne pas le doubler lorsque Firestore confirme l'écriture.
+      const tempId = `temp_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      const preview = customPayload.text || (customPayload.type === 'audio'
+        ? `🎵 ${customPayload.fileName || 'Fichier audio'}`
+        : `🎨 ${myName} a partagé le Tableau Blanc : "${customPayload.workspaceTitle || customPayload.title || 'Tableau Blanc'}"`);
+
       const payload = {
-        id: Date.now(),
+        id: tempId,
         sender: 'me',
         senderUid: myUid,
         senderName: myName,
-        status: 'sent',
+        status: 'pending',
         createdAt: new Date(),
         ...customPayload,
-        text: customPayload.text || (customPayload.type === 'audio' ? `🎵 ${customPayload.fileName || 'Fichier audio'}` : `🎨 ${myName} a partagé le Tableau Blanc : "${customPayload.workspaceTitle || customPayload.title || 'Tableau Blanc'}"`),
+        text: preview,
       };
 
+      // 1. Insertion optimiste immédiate
       setChatThreads(prev => ({
         ...prev,
         [chatId]: [...(prev[chatId] || []), payload]
       }));
 
-      const lastMessagePreview = payload.text;
       setChatsList(prev => prev.map(c => String(c.id) === String(chatId) ? {
         ...c,
-        lastMessage: lastMessagePreview,
+        lastMessage: preview,
         lastSenderName: myName
       } : c));
 
       if (db) {
         try {
-          await addDoc(collection(db, 'chats', String(chatId), 'messages'), {
+          // 2. Écriture Firestore atomique (audioUrl DOIT être présent avant cet appel)
+          const docRef = await addDoc(collection(db, 'chats', String(chatId), 'messages'), {
             ...customPayload,
             sender: myUid,
             senderUid: myUid,
             senderName: myName,
-            text: payload.text,
+            text: preview,
             read: false,
             status: 'sent',
             createdAt: serverTimestamp(),
+          });
+
+          // 3. Promouvoir le tempId vers l'ID Firestore réel → handleSnapshot ignorera le doublon
+          setChatThreads(prev => {
+            const thread = prev[chatId] || [];
+            return {
+              ...prev,
+              [chatId]: thread.map(m =>
+                m.id === tempId ? { ...m, id: docRef.id, status: 'sent' } : m
+              ),
+            };
           });
 
           await setDoc(doc(db, 'chats', String(chatId)), {
             id: chatId,
             user: selectedChat.user,
             listing: selectedChat.listing,
-            lastMessage: payload.text,
+            lastMessage: preview,
             lastSenderName: myName,
             unreadCount: increment(1),
             participants: selectedChat.participants || [myName, selectedChat.user],
@@ -685,6 +727,14 @@ export const useChatManager = ({
           }, { merge: true });
         } catch (e) {
           console.warn('[Firestore] custom message write failed:', e);
+          // Marquer le message optimiste comme erreur
+          setChatThreads(prev => {
+            const thread = prev[chatId] || [];
+            return {
+              ...prev,
+              [chatId]: thread.map(m => m.id === tempId ? { ...m, status: 'error' } : m),
+            };
+          });
         }
       }
       return;
