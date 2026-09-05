@@ -1,10 +1,10 @@
 /**
- * CookieBanner.jsx — Bannière Cookies & Traceurs CNIL/RGPD (Phase 104)
- * Centrage global absolu, flexbox responsive et boutons sans wrapping disgracieux
+ * CookieBanner.jsx — Bannière Cookies & Traceurs CNIL/RGPD
+ * Modale compacte flottante parfaitement centrée avec boutons sur une seule ligne
  */
 
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, X, Sliders } from 'lucide-react';
+import { X, Sliders } from 'lucide-react';
 
 export default function CookieBanner({
   darkMode = false,
@@ -55,94 +55,38 @@ export default function CookieBanner({
 
   return (
     <div
-      className="fixed bottom-0 inset-x-0 mx-auto max-w-4xl p-4 md:p-6 bg-white dark:bg-[#1A1715] rounded-t-2xl shadow-2xl z-[999999] flex flex-col items-center text-center"
+      className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[999999] w-[90%] max-w-2xl bg-white dark:bg-[#1A1715] rounded-2xl shadow-2xl border border-gray-200 dark:border-white/10 p-5 flex flex-col gap-3 items-center text-center animate-fadeIn"
       style={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        margin: '0 auto',
-        maxWidth: '896px',
-        width: '100%',
-        boxSizing: 'border-box',
-        zIndex: 999999,
-        backgroundColor: darkMode ? '#1A1715' : '#FFFFFF',
-        color: darkMode ? '#FAF7F2' : '#2D2520',
-        borderTop: darkMode ? '1.5px solid rgba(255,255,255,0.08)' : '1.5px solid rgba(0,0,0,0.08)',
-        borderLeft: darkMode ? '1.5px solid rgba(255,255,255,0.08)' : '1.5px solid rgba(0,0,0,0.08)',
-        borderRight: darkMode ? '1.5px solid rgba(255,255,255,0.08)' : '1.5px solid rgba(0,0,0,0.08)',
-        borderTopLeftRadius: '20px',
-        borderTopRightLeftRadius: '20px',
-        boxShadow: '0 -10px 40px rgba(0,0,0,0.18)',
-        animation: 'slideUp 0.3s ease-out',
+        boxShadow: '0 20px 50px -10px rgba(0, 0, 0, 0.25)',
       }}
     >
       {/* Bouton fermeture discret en coin supérieur droit */}
       <button
         type="button"
         onClick={() => setIsVisible(false)}
-        style={{
-          position: 'absolute',
-          top: '12px',
-          right: '12px',
-          border: 'none',
-          background: 'transparent',
-          color: darkMode ? '#A89F91' : '#8A7E73',
-          cursor: 'pointer',
-          padding: '6px',
-          borderRadius: '50%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-        }}
+        className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
         aria-label="Fermer la bannière"
       >
         <X size={18} />
       </button>
 
-      {/* En-tête centré */}
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', maxWidth: '640px', width: '100%' }}>
-        <div
-          style={{
-            width: '42px',
-            height: '42px',
-            borderRadius: '12px',
-            background: 'linear-gradient(135deg, rgba(198,125,91,0.2) 0%, rgba(198,125,91,0.1) 100%)',
-            color: 'var(--accent-primary, #C67D5B)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginBottom: '4px',
-          }}
-        >
-          <ShieldCheck size={24} />
-        </div>
+      {/* Titre discret et centré */}
+      <h3 className="text-lg font-semibold flex items-center justify-center gap-2 text-gray-900 dark:text-gray-100 m-0">
+        <span>🍪</span>
+        <span>Respect de votre vie privée & Cookies</span>
+      </h3>
 
-        <div className="font-editorial-heading" style={{ fontSize: '18px', fontWeight: '700', letterSpacing: '-0.3px', margin: 0 }}>
-          🍪 Respect de votre vie privée & Cookies
-        </div>
+      {/* Texte explicatif petit et lisible */}
+      <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 m-0 max-w-xl leading-relaxed">
+        Troco utilise des traceurs strictement nécessaires au fonctionnement du service et à la mesure anonyme d'audience. Vous pouvez faire votre choix ou personnaliser à tout moment.
+      </p>
 
-        <p style={{ margin: 0, fontSize: '13px', color: darkMode ? '#B8ABA0' : '#6B5E54', lineHeight: 1.5 }}>
-          Troco utilise des traceurs strictement nécessaires au fonctionnement du service et à la mesure anonyme d'audience. Vous pouvez faire votre choix ou personnaliser à tout moment.
-        </p>
-      </div>
-
-      {/* Conteneur des boutons centré Flexbox */}
-      <div className="flex flex-row flex-wrap items-center justify-center gap-3 w-full mt-4" style={{ display: 'flex', flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '12px', width: '100%', marginTop: '16px' }}>
+      {/* Boutons compacts sur une seule ligne */}
+      <div className="flex flex-row flex-nowrap items-center justify-center gap-2 w-full mt-2">
         <button
           type="button"
           onClick={handleAcceptAll}
-          className="premium-button whitespace-nowrap text-sm md:text-base px-4 py-2 flex-1 min-w-[120px] max-w-[200px] text-center justify-center"
-          style={{
-            border: 'none',
-            borderRadius: '999px',
-            padding: '10px 20px',
-            background: 'linear-gradient(135deg, var(--accent-primary, #C67D5B) 0%, var(--accent-primary-hover, #A8644A) 100%)',
-            color: '#FFFFFF',
-            fontWeight: '800',
-            cursor: 'pointer',
-            boxShadow: '0 4px 14px rgba(198,125,91,0.3)',
-          }}
+          className="px-4 py-2 text-sm font-medium bg-[var(--accent-primary,#C67D5B)] text-white rounded-full whitespace-nowrap hover:opacity-90 transition-opacity"
         >
           Tout accepter
         </button>
@@ -150,16 +94,7 @@ export default function CookieBanner({
         <button
           type="button"
           onClick={handleDeclineAll}
-          className="premium-button whitespace-nowrap text-sm md:text-base px-4 py-2 flex-1 min-w-[120px] max-w-[200px] text-center justify-center"
-          style={{
-            border: darkMode ? '1.5px solid rgba(255,255,255,0.15)' : '1.5px solid rgba(0,0,0,0.12)',
-            borderRadius: '999px',
-            padding: '10px 20px',
-            backgroundColor: 'transparent',
-            color: 'inherit',
-            fontWeight: '700',
-            cursor: 'pointer',
-          }}
+          className="px-4 py-2 text-sm font-medium bg-transparent border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-full whitespace-nowrap hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
         >
           Continuer sans accepter
         </button>
@@ -171,21 +106,10 @@ export default function CookieBanner({
               setIsVisible(false);
               onOpenPrivacyCenter();
             }}
-            className="premium-button whitespace-nowrap text-sm md:text-base px-4 py-2 flex-1 min-w-[120px] max-w-[200px] text-center justify-center"
-            style={{
-              border: 'none',
-              borderRadius: '999px',
-              padding: '10px 18px',
-              backgroundColor: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
-              color: 'var(--accent-primary, #C67D5B)',
-              fontWeight: '700',
-              cursor: 'pointer',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-            }}
+            className="px-4 py-2 text-sm font-medium bg-transparent border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-full whitespace-nowrap hover:bg-gray-100 dark:hover:bg-white/5 transition-colors flex items-center gap-1.5"
           >
-            <Sliders size={14} /> Personnaliser
+            <Sliders size={14} />
+            <span>Personnaliser</span>
           </button>
         )}
       </div>
