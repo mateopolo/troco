@@ -480,8 +480,9 @@ export default function App() {
           snapshot.docChanges().forEach((change) => {
             if (change.type === 'added' || change.type === 'modified') {
               const notifData = change.doc.data();
-              if (notifData && notifData.type === 'payment_received' && notifData.read === false) {
-                const partner = notifData.senderName || notifData.fromName || notifData.userName || '';
+              const TOKEN_NOTIF_TYPES = ['payment_received', 'tokens_received'];
+              if (notifData && TOKEN_NOTIF_TYPES.includes(notifData.type) && notifData.read === false) {
+                const partner = notifData.fromName || notifData.senderName || notifData.userName || '';
                 setTransactionSuccessModalConfig({
                   isOpen: true,
                   type: 'received',

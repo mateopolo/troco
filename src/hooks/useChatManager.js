@@ -1867,10 +1867,27 @@ export const useChatManager = ({
       return { success: false, error: errorMsg };
     }
 
-    // Isole le UID cible DE FAÇON IMPÉRATIVE :
-    const partnerUid = targetUid || selectedChat?.participants?.find(uid => uid && uid !== currentUser.uid) || selectedChat?.partnerUid;
+    // 🚨 Résolution BLINDÉE du UID destinataire.
+    // ORDRE IMPÉRATIF : participantUids (UIDs purs) > explicit targetUid > participants (peut contenir des noms) > partnerUid chat
+    // NE PAS utiliser participants[] en premier : ce tableau peut contenir des display names, pas des UIDs.
+    const currentUid = String(currentUser.uid);
+    const isValidUid = (v) => typeof v === 'string' && v.length >= 20 && v !== currentUid && v !== 'partner' && v !== 'undefined';
 
-    if (!partnerUid || partnerUid === currentUser.uid) {
+    let partnerUid = targetUid && isValidUid(targetUid) ? targetUid : null;
+
+    if (!partnerUid) {
+      // 1. Priorité absolue : participantUids (seuls vrais UIDs Firebase)
+      const pUids = selectedChat?.participantUids;
+      if (Array.isArray(pUids)) partnerUid = pUids.find(u => isValidUid(u)) || null;
+    }
+    if (!partnerUid && isValidUid(selectedChat?.partnerUid)) partnerUid = selectedChat.partnerUid;
+    if (!partnerUid) {
+      // 2. participants[] — accepté uniquement si la valeur passe la validation UID
+      const parts = selectedChat?.participants;
+      if (Array.isArray(parts)) partnerUid = parts.find(u => isValidUid(u)) || null;
+    }
+
+    if (!partnerUid || partnerUid === currentUid) {
       const errorMsg = 'Destinataire introuvable pour le pourboire post-appel.';
       console.error('🚨 [sendPostCallTip] ' + errorMsg, { targetUid, partnerUid, selectedChat });
       alert(errorMsg);
@@ -1882,23 +1899,36 @@ export const useChatManager = ({
     try {
       if (db) {
         await runTransaction(db, async (transaction) => {
-          const senderRef = doc(db, 'users', currentUser.uid);
+          const senderRef = doc(db, 'users', currentUid);
           const receiverRef = doc(db, 'users', partnerUid);
 
-          const senderSnap = await transaction.get(senderRef);
+          // Lecture atomique des deux docs (obligatoire avant tout write dans runTransaction)
+          const [senderSnap, receiverSnap] = await Promise.all([
+            transaction.get(senderRef),
+            transaction.get(receiverRef),
+          ]);
           if (!senderSnap.exists() || (Number(senderSnap.data()?.trocoTokens ?? profile?.trocoTokens ?? 0) < costTokens)) {
             throw new Error('Solde insuffisant');
           }
 
+          // Débit expéditeur
           transaction.update(senderRef, { trocoTokens: increment(-costTokens) });
-          transaction.update(receiverRef, { trocoTokens: increment(costTokens) });
 
+          // Crédit destinataire — set+merge si le doc n'existe pas encore (évite 'No document to update')
+          if (receiverSnap.exists()) {
+            transaction.update(receiverRef, { trocoTokens: increment(costTokens) });
+          } else {
+            transaction.set(receiverRef, { trocoTokens: costTokens }, { merge: true });
+          }
+
+          // Trace & notification avec type 'tokens_received' pour déclencher l'animation ciblée
           const notifRef = doc(collection(db, 'users', partnerUid, 'notifications'));
           transaction.set(notifRef, {
-            type: 'payment_received',
+            type: 'tokens_received',
             amount: costTokens,
             currency: 'tokens',
-            from: currentUser.uid,
+            from: currentUid,
+            fromName: profile?.name || '',
             comment: comment || '',
             duration: duration || 0,
             insurance: !!insurance,
@@ -1960,14 +1990,54 @@ export const useChatManager = ({
       ? selectedChat
       : (chatsList.find(c => String(c.id) === String(chatId)) || mockChats.find(c => String(c.id) === String(chatId)));
 
-    // 🚨 Isole le UID cible DE FAÇON IMPÉRATIVE :
+    // 🚨 Résolution BLINDÉE du UID destinataire.
+    // ORDRE IMPÉRATIF : participantUids (UIDs purs) > explicit targetUid > participants (peut contenir des noms) > fallback Firestore.
+    // Ne jamais utiliser participants[] en premier : ce tableau peut contenir des display names.
     const chatObj = chat || selectedChat;
-    const partnerUid = targetUid || selectedChat?.participants?.find(uid => uid && uid !== currentUser.uid) || selectedChat?.partnerUid || chatObj?.participants?.find(uid => uid && uid !== currentUser.uid) || chatObj?.participantUids?.find(uid => uid && uid !== currentUser.uid) || chatObj?.partnerUid || chatObj?.authorUid;
+    const currentUid = String(currentUser.uid);
+
+    // Valide qu'une valeur ressemble à un UID Firebase (≥20 chars, pas un nom affiché)
+    const isValidUid = (v) => typeof v === 'string' && v.length >= 20 && v !== currentUid && v !== 'partner' && v !== 'undefined';
+
+    let partnerUid = targetUid && isValidUid(targetUid) ? targetUid : null;
 
     if (!partnerUid) {
-      console.error('[handleSendToken] Impossible de résoudre le partnerUid — objet chat reçu :', chatObj);
-      alert('Destinataire introuvable. Vérifiez que la conversation est bien chargée et réessayez.');
-      throw new Error('Destinataire introuvable');
+      // 1. Priorité absolue : participantUids (seuls vrais UIDs Firebase)
+      const pUids = chatObj?.participantUids || selectedChat?.participantUids;
+      if (Array.isArray(pUids)) partnerUid = pUids.find(u => isValidUid(u)) || null;
+    }
+
+    if (!partnerUid) {
+      // 2. partnerUid explicite dans le document chat
+      const explicit = chatObj?.partnerUid || selectedChat?.partnerUid;
+      if (isValidUid(explicit)) partnerUid = explicit;
+    }
+
+    if (!partnerUid) {
+      // 3. participants[] — accepté uniquement si la valeur passe la validation UID
+      const parts = chatObj?.participants || selectedChat?.participants;
+      if (Array.isArray(parts)) partnerUid = parts.find(u => isValidUid(u)) || null;
+    }
+
+    if (!partnerUid) {
+      // 4. authorUid (créateur de l'annonce)
+      if (isValidUid(chatObj?.authorUid)) partnerUid = chatObj.authorUid;
+    }
+
+    if (!partnerUid && chatObj?.user && db) {
+      // 5. Fallback Firestore : lookup par display name
+      try {
+        const qUser = query(collection(db, 'users'), where('name', '==', chatObj.user));
+        const snap = await getDocs(qUser);
+        if (!snap.empty) partnerUid = snap.docs[0].id;
+      } catch (_) {}
+    }
+
+    if (!partnerUid || partnerUid === currentUid) {
+      const errorMsg = "Impossible d'identifier le destinataire dans cette conversation.";
+      console.error('🚨 [handleSendToken] ' + errorMsg, { chatId, currentUid, chatObj });
+      alert(errorMsg);
+      throw new Error(errorMsg);
     }
 
     const amount = Number(tokenAmount) || 1;
@@ -1975,26 +2045,37 @@ export const useChatManager = ({
     try {
       if (db) {
         await runTransaction(db, async (transaction) => {
-          const senderRef = doc(db, 'users', currentUser.uid);
+          const senderRef = doc(db, 'users', currentUid);
           const receiverRef = doc(db, 'users', partnerUid);
 
-          // Vérification solde
-          const senderSnap = await transaction.get(senderRef);
+          // Lecture atomique des deux docs (obligatoire avant tout write dans runTransaction)
+          const [senderSnap, receiverSnap] = await Promise.all([
+            transaction.get(senderRef),
+            transaction.get(receiverRef),
+          ]);
+
           if (!senderSnap.exists() || (Number(senderSnap.data()?.trocoTokens ?? profile?.trocoTokens ?? 0) < amount)) {
             throw new Error('Solde insuffisant');
           }
 
-          // Double écriture simultanée
+          // Débit expéditeur
           transaction.update(senderRef, { trocoTokens: increment(-amount) });
-          transaction.update(receiverRef, { trocoTokens: increment(amount) });
 
-          // Traçabilité & notification destinataire
+          // Crédit destinataire — set+merge si le doc n'existe pas encore (évite 'No document to update')
+          if (receiverSnap.exists()) {
+            transaction.update(receiverRef, { trocoTokens: increment(amount) });
+          } else {
+            transaction.set(receiverRef, { trocoTokens: amount }, { merge: true });
+          }
+
+          // Traçabilité & notification destinataire (type 'tokens_received' pour le listener App.js)
           const notifRef = doc(collection(db, 'users', partnerUid, 'notifications'));
           transaction.set(notifRef, {
-            type: 'payment_received',
+            type: 'tokens_received',
             amount,
             currency: 'tokens',
-            from: currentUser.uid,
+            from: currentUid,
+            fromName: profile?.name || '',
             read: false,
             timestamp: serverTimestamp(),
           });
