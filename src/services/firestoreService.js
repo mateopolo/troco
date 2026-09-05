@@ -568,21 +568,46 @@ export const executeDealTransaction = async ({
       const newSellerEuro = Number(sellerData.euroBalance || 0) + euroAmount;
 
       // 3. ÉCRITURES CROISÉES FIRESTORE (DOUBLE UPDATE ATOMIQUE)
-      // Débit expéditeur
-      transaction.set(buyerRef, {
-        trocoTokens: newBuyerTokens,
-        euroBalance: newBuyerEuro,
-        walletBalanceFiat: newBuyerEuro,
-        updatedAt: serverTimestamp(),
-      }, { merge: true });
+      if (trocoTokens > 0) {
+        transaction.update(buyerRef, {
+          trocoTokens: increment(-trocoTokens),
+          euroBalance: newBuyerEuro,
+          walletBalanceFiat: newBuyerEuro,
+          updatedAt: serverTimestamp(),
+        });
 
-      // Crédit destinataire
-      transaction.set(sellerRef, {
-        trocoTokens: newSellerTokens,
-        euroBalance: newSellerEuro,
-        walletBalanceFiat: newSellerEuro,
-        updatedAt: serverTimestamp(),
-      }, { merge: true });
+        transaction.update(sellerRef, {
+          trocoTokens: increment(trocoTokens),
+          euroBalance: newSellerEuro,
+          walletBalanceFiat: newSellerEuro,
+          updatedAt: serverTimestamp(),
+        });
+      } else {
+        transaction.set(buyerRef, {
+          trocoTokens: newBuyerTokens,
+          euroBalance: newBuyerEuro,
+          walletBalanceFiat: newBuyerEuro,
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+
+        transaction.set(sellerRef, {
+          trocoTokens: newSellerTokens,
+          euroBalance: newSellerEuro,
+          walletBalanceFiat: newSellerEuro,
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+      }
+
+      // 4. NOTIFICATION EN TEMPS RÉEL POUR LE DESTINATAIRE
+      const notifRef = doc(collection(db, 'users', String(receiverUid), 'notifications'));
+      transaction.set(notifRef, {
+        type: 'payment_received',
+        amount: trocoTokens > 0 ? trocoTokens : euroAmount,
+        currency: trocoTokens > 0 ? 'tokens' : 'EUR',
+        from: buyerUid,
+        read: false,
+        timestamp: serverTimestamp(),
+      });
     });
 
     return { success: true };
@@ -808,28 +833,44 @@ export const executeDirectTokenTransfer = async (
         throw new Error(`Solde insuffisant (${currentSenderTokens} jeton(s) disponible(s)).`);
       }
 
-      const newSenderTokens = Math.max(0, currentSenderTokens - amount);
-
       const recipientData = recipientDoc.exists() ? recipientDoc.data() : {};
       const currentRecipientTokens = Number(recipientData.trocoTokens || 0);
       const newRecipientTokens = currentRecipientTokens + amount;
 
       // 3. TOUTES LES ÉCRITURES APRÈS LES LECTURES (WRITES)
       transaction.update(senderRef, {
-        trocoTokens: newSenderTokens,
+        trocoTokens: increment(-amount),
         updatedAt: serverTimestamp(),
       });
 
       // 4. CRÉDIT ATOMIQUE DU SOLDE DESTINATAIRE
-      transaction.set(recipientRef, {
-        uid: String(recipientUid),
-        name: recipientName || recipientData.name || 'Utilisateur Troco',
-        trocoTokens: newRecipientTokens,
-        updatedAt: serverTimestamp(),
-      }, { merge: true });
+      if (recipientDoc.exists()) {
+        transaction.update(recipientRef, {
+          trocoTokens: increment(amount),
+          updatedAt: serverTimestamp(),
+        });
+      } else {
+        transaction.set(recipientRef, {
+          uid: String(recipientUid),
+          name: recipientName || 'Utilisateur Troco',
+          trocoTokens: newRecipientTokens,
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+      }
+
+      // 5. NOTIFICATION EN TEMPS RÉEL DU DESTINATAIRE
+      const notifRef = doc(collection(db, 'users', String(recipientUid), 'notifications'));
+      transaction.set(notifRef, {
+        type: 'payment_received',
+        amount,
+        currency: 'tokens',
+        from: senderUid,
+        read: false,
+        timestamp: serverTimestamp(),
+      });
     });
 
-    // 5. Messages et enregistrement de transaction
+    // 6. Messages et enregistrement de transaction
     if (chatId && db) {
       const transferText = `🪙 ${senderName || 'Moi'} a envoyé ${amount} Jeton${amount > 1 ? 's' : ''} Troco à ${recipientName || 'Interlocuteur'}${comment ? ` (« ${comment} »)` : ''} !`;
       await addDoc(collection(db, 'chats', String(chatId), 'messages'), {
@@ -870,5 +911,50 @@ export const executeDirectTokenTransfer = async (
     console.error('🚨 [FirestoreService] executeDirectTokenTransfer transaction failed:', error);
     return { success: false, error: error?.message || error };
   }
+};
+
+/**
+ * Envoi de pourboire ou rétribution atomique post-appel
+ */
+export const sendPostCallTip = async ({
+  targetUid,
+  partnerUid: explicitPartnerUid,
+  senderUid,
+  amount = 1,
+  selectedChat,
+  comment = '',
+}) => {
+  const partnerUid = targetUid || explicitPartnerUid || selectedChat?.participants?.find(uid => uid && uid !== senderUid) || selectedChat?.partnerUid;
+  if (!partnerUid || partnerUid === senderUid) {
+    const errorMsg = '[FirestoreService] sendPostCallTip: partnerUid introuvable ou identique à senderUid.';
+    console.error(errorMsg, { targetUid, partnerUid, senderUid, selectedChat });
+    throw new Error(errorMsg);
+  }
+
+  const costTokens = Number(amount) || 1;
+  const senderRef = doc(db, 'users', String(senderUid));
+  const receiverRef = doc(db, 'users', String(partnerUid));
+
+  await runTransaction(db, async (transaction) => {
+    const senderSnap = await transaction.get(senderRef);
+    if (!senderSnap.exists() || (Number(senderSnap.data()?.trocoTokens || 0) < costTokens)) {
+      throw new Error('Solde insuffisant');
+    }
+
+    transaction.update(senderRef, { trocoTokens: increment(-costTokens) });
+    transaction.update(receiverRef, { trocoTokens: increment(costTokens) });
+
+    const notifRef = doc(collection(db, 'users', String(partnerUid), 'notifications'));
+    transaction.set(notifRef, {
+      type: 'payment_received',
+      amount: costTokens,
+      currency: 'tokens',
+      from: senderUid,
+      read: false,
+      timestamp: serverTimestamp(),
+    });
+  });
+
+  return { success: true, partnerUid, amount: costTokens };
 };
 

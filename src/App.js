@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo, useCallback, Suspense, use
 import { createPortal } from 'react-dom';
 import { Search, MapPin, Video, Globe, Filter, ShieldCheck, CheckCircle, X, Sparkles, Coins, Trash2, Camera, Flame, Check, Lock, CreditCard, Tag, ChevronLeft, ChevronRight, ShieldAlert } from 'lucide-react';
 import { auth, db } from './firebase';
-import { collection, addDoc, doc, updateDoc, serverTimestamp, onSnapshot, query, orderBy, limit, setDoc, deleteDoc, getDoc, getDocs, where, runTransaction } from 'firebase/firestore';
+import { collection, addDoc, doc, updateDoc, serverTimestamp, onSnapshot, query, orderBy, limit, setDoc, deleteDoc, getDoc, getDocs, where, runTransaction, increment } from 'firebase/firestore';
 import { fetchListingsPaginated, fetchListingsByGeohash } from './services/firestoreService';
 import { isSignInWithEmailLink, signInWithEmailLink, signOut, onAuthStateChanged } from 'firebase/auth';
 import { useWebRTC } from './hooks/useWebRTC';
@@ -492,6 +492,7 @@ export default function App() {
     handleAcceptDeal,
     handleDeclineDeal,
     handleSendToken,
+    sendPostCallTip,
   } = chatManager;
 
   const switchTab = useCallback((newTab) => {
@@ -1346,30 +1347,17 @@ export default function App() {
       return;
     }
 
-    // 🚨 PHASE 95 : CIBLAGE STRICT DU DESTINATAIRE (RECEIVER UID)
-    let receiverUid = selectedChat?.partnerUid || selectedChat?.authorUid;
-    if (receiverUid === currentUid) {
-      receiverUid = selectedChat?.partnerUid !== currentUid ? selectedChat?.partnerUid : null;
-    }
+    // 🚨 Isole le UID cible DE FAÇON IMPÉRATIVE :
+    const partnerUid = selectedChat?.participants?.find(uid => uid && uid !== currentUid) || selectedChat?.partnerUid || selectedChat?.authorUid;
 
     const partner = selectedChat?.user || 'Interlocuteur';
 
-    if (!receiverUid && partner && db) {
-      try {
-        const userQuery = query(collection(db, 'users'), where('name', '==', partner));
-        const uSnap = await getDocs(userQuery);
-        if (!uSnap.empty) {
-          receiverUid = uSnap.docs[0].id;
-        }
-      } catch (_) { }
-    }
-
-    // RÈGLE STRICTE : Si receiverUid est indéfini, la transaction DOIT échouer avec une erreur explicite. Ne jamais débiter si la cible est introuvable.
-    if (!receiverUid || receiverUid === currentUid) {
-      console.error('🚨 [Finance] Transfert annulé : Destinataire (receiverUid) introuvable ou invalide.', {
+    // RÈGLE STRICTE : Si partnerUid est indéfini, la transaction DOIT échouer avec une erreur explicite. Ne jamais débiter si la cible est introuvable.
+    if (!partnerUid || partnerUid === currentUid) {
+      console.error('🚨 [Finance] Transfert annulé : Destinataire (partnerUid) introuvable ou invalide.', {
         selectedChat,
         currentUid,
-        receiverUid
+        partnerUid
       });
       alert('Erreur de transfert : Impossible d\'identifier le destinataire des jetons. Aucun montant n\'a été débité.');
       return;
@@ -1408,7 +1396,7 @@ export default function App() {
         await runTransaction(db, async (transaction) => {
           // 1. Lectures atomiques des deux profils (READS FIRST)
           const payerRef = doc(db, 'users', currentUid);
-          const receiverRef = doc(db, 'users', receiverUid);
+          const receiverRef = doc(db, 'users', partnerUid);
 
           const [payerSnap, receiverSnap] = await Promise.all([
             transaction.get(payerRef),
@@ -1434,37 +1422,44 @@ export default function App() {
           }
 
           const recData = receiverSnap.exists() ? receiverSnap.data() : {};
-          const rTokens = Number(recData.trocoTokens ?? 0);
           const rDeals = Number(recData.dealsCompleted ?? 0);
 
           // 2. ÉCRITURE CROISÉE SIMULTANÉE (DOUBLE UPDATE ATOMIQUE)
-          // Débit expéditeur
-          const newPayerTokens = Math.max(0, pTokens - costTokens);
           const newPayerEuro = insuranceFee > 0 ? Number(Math.max(0, pEuro - insuranceFee).toFixed(2)) : pEuro;
 
-          transaction.set(payerRef, {
-            trocoTokens: newPayerTokens,
+          transaction.update(payerRef, {
+            trocoTokens: increment(-costTokens),
             euroBalance: newPayerEuro,
             walletBalanceFiat: newPayerEuro,
             dealsCompleted: pDeals + 1,
             updatedAt: serverTimestamp(),
-          }, { merge: true });
+          });
 
           // Crédit simultané du destinataire
-          const newReceiverTokens = rTokens + costTokens;
-          transaction.set(receiverRef, {
-            trocoTokens: newReceiverTokens,
+          transaction.update(receiverRef, {
+            trocoTokens: increment(costTokens),
             dealsCompleted: rDeals + 1,
             updatedAt: serverTimestamp(),
-          }, { merge: true });
+          });
 
-          // 3. Enregistrement atomique de la transaction
+          // 3. Notification en temps réel pour le destinataire
+          const notifRef = doc(collection(db, 'users', partnerUid, 'notifications'));
+          transaction.set(notifRef, {
+            type: 'payment_received',
+            amount: costTokens,
+            currency: 'tokens',
+            from: currentUid,
+            read: false,
+            timestamp: serverTimestamp(),
+          });
+
+          // 4. Enregistrement atomique de la transaction
           const txDocRef = doc(collection(db, 'transactions'));
           transaction.set(txDocRef, {
             ...newTx,
             userId: currentUid,
             userName: profile?.name || 'Utilisateur',
-            partnerUid: receiverUid,
+            partnerUid: partnerUid,
             createdAt: serverTimestamp(),
           });
         });

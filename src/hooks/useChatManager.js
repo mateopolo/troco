@@ -1327,7 +1327,8 @@ export const useChatManager = ({
     terms,
     buyerUid: explicitBuyerUid,
     sellerUid: explicitSellerUid,
-    partnerUid,
+    targetUid,
+    partnerUid: inputPartnerUid,
     partnerName,
     euroAmount = 0,
     tokensAmount = 0,
@@ -1335,46 +1336,27 @@ export const useChatManager = ({
   }) => {
     const finalEuro = Number(euroAmount) || 0;
     const finalTokens = Number(tokensAmount) || 0;
-    const currentUid = profile?.uid || auth?.currentUser?.uid || 'me';
+    const currentUser = auth?.currentUser || profile;
+    const currentUid = currentUser?.uid || 'me';
 
     // Récupération de l'objet chat en mémoire
     const chat = (selectedChat && String(selectedChat.id) === String(chatId))
       ? selectedChat
       : (chatsList.find(c => String(c.id) === String(chatId)) || mockChats.find(c => String(c.id) === String(chatId)));
 
-    // 🚨 PHASE 95 : CIBLAGE STRICT DU DESTINATAIRE (RECEIVER UID)
-    let receiverUid = partnerUid || chat?.partnerUid || chat?.authorUid || null;
-    if (receiverUid === currentUid) {
-      receiverUid = (chat?.partnerUid && chat.partnerUid !== currentUid)
-        ? chat.partnerUid
-        : (chat?.authorUid && chat.authorUid !== currentUid ? chat.authorUid : null);
-    }
-    if (!receiverUid && chat) {
-      const parts = chat.participants || chat.participantUids;
-      if (Array.isArray(parts)) {
-        receiverUid = parts.find(u => u && u !== currentUid && u !== 'partner') || null;
-      }
-    }
-    if (!receiverUid && partnerName && db) {
-      try {
-        const uSnap = await getDocs(query(collection(db, 'users'), where('name', '==', partnerName)));
-        if (!uSnap.empty) receiverUid = uSnap.docs[0].id;
-      } catch (_) { }
-    }
+    // 🚨 Isole le UID cible DE FAÇON IMPÉRATIVE
+    const partnerUid = targetUid || inputPartnerUid || explicitSellerUid || selectedChat?.participants?.find(uid => uid && uid !== currentUser?.uid) || selectedChat?.partnerUid || chat?.participants?.find(uid => uid && uid !== currentUser?.uid) || chat?.partnerUid;
 
-    const buyerUid = String(explicitBuyerUid || currentUid);
-    let sellerUid = explicitSellerUid;
-    if (!sellerUid || sellerUid === 'partner' || sellerUid === buyerUid) {
-      sellerUid = receiverUid;
-    }
-
-    // RÈGLE STRICTE : Si le destinataire est indéfini ou 'partner', la transaction DOIT échouer avec une erreur explicite. Ne jamais débiter quelqu'un si la cible est introuvable.
-    if (!sellerUid || sellerUid === 'partner' || sellerUid === 'undefined' || sellerUid === buyerUid) {
+    // Si partnerUid est indéfini, STOPPE la fonction et affiche une erreur.
+    if (!partnerUid || partnerUid === 'partner' || partnerUid === 'undefined' || partnerUid === currentUid) {
       const errorMsg = 'Transaction annulée : Destinataire (partnerUid/sellerUid) introuvable ou invalide. Aucun débit n\'a été effectué.';
-      console.error('🚨 [Finance] ' + errorMsg, { chatId, dealId, buyerUid, sellerUid, partnerUid, chat });
+      console.error('🚨 [Finance] ' + errorMsg, { chatId, dealId, currentUid, partnerUid, chat });
       alert(errorMsg);
       return { success: false, error: errorMsg };
     }
+
+    const buyerUid = String(explicitBuyerUid || currentUid);
+    const sellerUid = partnerUid;
 
     const shouldDebitWallet = paymentMethod?.includes('Solde') || paymentMethod === 'wallet' || paymentMethod === 'Solde Portefeuille Troco';
     const isCurrentUserBuyer = currentUid === buyerUid;
@@ -1427,9 +1409,11 @@ export const useChatManager = ({
     }));
     setChatStatusOverrides(prev => ({ ...prev, [chatId]: 'Deal Validé' }));
 
-    playBetclicBalanceSound(true);
-    playApplePaySound();
-    hapticSuccess();
+    try {
+      playBetclicBalanceSound(true);
+      playApplePaySound();
+      hapticSuccess();
+    } catch (_) {}
 
     const transactionId = `TRK-DEAL-${Date.now().toString().slice(-6)}`;
     const newTx = {
@@ -1490,21 +1474,49 @@ export const useChatManager = ({
           const newSellerEuro = Number((curSellerEuro + finalEuro).toFixed(2));
 
           // 3. ÉCRITURES ATOMIQUES (WRITES)
-          transaction.set(buyerRef, {
-            trocoTokens: newBuyerTokens,
-            euroBalance: newBuyerEuro,
-            walletBalanceFiat: newBuyerEuro,
-            dealsCompleted: curBuyerDeals + 1,
-            updatedAt: serverTimestamp(),
-          }, { merge: true });
+          if (finalTokens > 0) {
+            transaction.update(buyerRef, {
+              trocoTokens: increment(-finalTokens),
+              euroBalance: newBuyerEuro,
+              walletBalanceFiat: newBuyerEuro,
+              dealsCompleted: curBuyerDeals + 1,
+              updatedAt: serverTimestamp(),
+            });
+            transaction.update(sellerRef, {
+              trocoTokens: increment(finalTokens),
+              euroBalance: newSellerEuro,
+              walletBalanceFiat: newSellerEuro,
+              dealsCompleted: curSellerDeals + 1,
+              updatedAt: serverTimestamp(),
+            });
+          } else {
+            transaction.set(buyerRef, {
+              trocoTokens: newBuyerTokens,
+              euroBalance: newBuyerEuro,
+              walletBalanceFiat: newBuyerEuro,
+              dealsCompleted: curBuyerDeals + 1,
+              updatedAt: serverTimestamp(),
+            }, { merge: true });
 
-          transaction.set(sellerRef, {
-            trocoTokens: newSellerTokens,
-            euroBalance: newSellerEuro,
-            walletBalanceFiat: newSellerEuro,
-            dealsCompleted: curSellerDeals + 1,
-            updatedAt: serverTimestamp(),
-          }, { merge: true });
+            transaction.set(sellerRef, {
+              trocoTokens: newSellerTokens,
+              euroBalance: newSellerEuro,
+              walletBalanceFiat: newSellerEuro,
+              dealsCompleted: curSellerDeals + 1,
+              updatedAt: serverTimestamp(),
+            }, { merge: true });
+          }
+
+          // 🚨 NOTIFICATION DE TRANSACTION EN TEMPS RÉEL POUR LE DESTINATAIRE
+          const notifRef = doc(collection(db, 'users', partnerUid, 'notifications'));
+          transaction.set(notifRef, {
+            type: 'payment_received',
+            amount: finalTokens > 0 ? finalTokens : finalEuro,
+            currency: finalTokens > 0 ? 'tokens' : 'EUR',
+            from: currentUser.uid,
+            read: false,
+            timestamp: serverTimestamp(),
+          });
 
           const messagePayload = {
             status: 'confirmed',
@@ -1774,6 +1786,98 @@ export const useChatManager = ({
     }
   };
 
+  // ---- 🚨 TRANSACTION DE FIN D'APPEL / POURBOIRE POST-APPEL ----
+  const sendPostCallTip = async (arg1, arg2, arg3) => {
+    let targetUid, amount, comment = '', duration = 0, insurance = false;
+    if (typeof arg1 === 'object' && arg1 !== null) {
+      targetUid = arg1.targetUid || arg1.partnerUid;
+      amount = Number(arg1.amount ?? arg1.tokens ?? 1);
+      comment = arg1.comment || '';
+      duration = arg1.duration || 0;
+      insurance = !!arg1.insurance;
+    } else {
+      amount = Number(arg1) || 1;
+      targetUid = arg2;
+      comment = arg3 || '';
+    }
+
+    const currentUser = auth?.currentUser || profile;
+    if (!currentUser?.uid) {
+      const errorMsg = 'Non authentifié';
+      alert(errorMsg);
+      return { success: false, error: errorMsg };
+    }
+
+    // Isole le UID cible DE FAÇON IMPÉRATIVE :
+    const partnerUid = targetUid || selectedChat?.participants?.find(uid => uid && uid !== currentUser.uid) || selectedChat?.partnerUid;
+
+    if (!partnerUid || partnerUid === currentUser.uid) {
+      const errorMsg = 'Destinataire introuvable pour le pourboire post-appel.';
+      console.error('🚨 [sendPostCallTip] ' + errorMsg, { targetUid, partnerUid, selectedChat });
+      alert(errorMsg);
+      throw new Error(errorMsg);
+    }
+
+    const costTokens = amount;
+
+    try {
+      if (db) {
+        await runTransaction(db, async (transaction) => {
+          const senderRef = doc(db, 'users', currentUser.uid);
+          const receiverRef = doc(db, 'users', partnerUid);
+
+          const senderSnap = await transaction.get(senderRef);
+          if (!senderSnap.exists() || (Number(senderSnap.data()?.trocoTokens ?? profile?.trocoTokens ?? 0) < costTokens)) {
+            throw new Error('Solde insuffisant');
+          }
+
+          transaction.update(senderRef, { trocoTokens: increment(-costTokens) });
+          transaction.update(receiverRef, { trocoTokens: increment(costTokens) });
+
+          const notifRef = doc(collection(db, 'users', partnerUid, 'notifications'));
+          transaction.set(notifRef, {
+            type: 'payment_received',
+            amount: costTokens,
+            currency: 'tokens',
+            from: currentUser.uid,
+            comment: comment || '',
+            duration: duration || 0,
+            insurance: !!insurance,
+            read: false,
+            timestamp: serverTimestamp(),
+          });
+        });
+      }
+
+      const currentBalance = Number(profile?.trocoTokens || 0);
+      const updatedTokens = Math.max(0, currentBalance - costTokens);
+      setProfile(prev => ({ ...prev, trocoTokens: updatedTokens }));
+
+      try {
+        const { setTrocoTokens } = useWalletStore.getState();
+        if (setTrocoTokens) setTrocoTokens(updatedTokens);
+      } catch (_) {}
+
+      try {
+        const saved = JSON.parse(localStorage.getItem('troco_user_profile') || '{}');
+        saved.trocoTokens = updatedTokens;
+        localStorage.setItem('troco_user_profile', JSON.stringify(saved));
+      } catch (_) {}
+
+      hapticSuccess();
+      playSwooshSound();
+      setSaveMessage(`🪙 ${costTokens} Jeton(s) Troco envoyé(s) avec succès !`);
+      setTimeout(() => setSaveMessage(''), 4000);
+
+      return { success: true, receiverUid: partnerUid, partnerUid, amount: costTokens };
+    } catch (err) {
+      hapticError();
+      const errMsg = err?.message || 'Erreur lors de l\'envoi du pourboire';
+      alert(errMsg);
+      return { success: false, error: errMsg };
+    }
+  };
+
   // ---- 🚨 PHASE 89 : TRANSFERT DE JETONS DIRECT (FINTECH ENGINE ATOMIQUE) ----
   /** @locked @critical DO NOT MODIFY THIS TRANSACTION LOGIC. Atomic runTransaction with buyerUid and sellerUid is required for financial integrity. */
   const handleTransferToken = async (chatId, tokenAmount = 1, comment = '', customPartnerUid = null) => {
@@ -1781,7 +1885,7 @@ export const useChatManager = ({
   };
 
   /** 🚨 PHASE 109 : MOTEUR TRANSACTIONNEL ABSOLU (runTransaction double écriture atomique & traçabilité) */
-  const handleSendToken = async (chatId, tokenAmount = 1, comment = '', customPartnerUid = null) => {
+  const handleSendToken = async (chatId, tokenAmount = 1, comment = '', targetUid = null) => {
     const currentUser = auth?.currentUser || profile;
     if (!currentUser?.uid) return { success: false, error: 'Non authentifié' };
 
@@ -1789,26 +1893,11 @@ export const useChatManager = ({
       ? selectedChat
       : (chatsList.find(c => String(c.id) === String(chatId)) || mockChats.find(c => String(c.id) === String(chatId)));
 
-    // 🚨 PHASE 122 : Résolution robuste multi-fallback du receveur
-    // Priorité 1 : UID explicite passé en paramètre (ex: depuis ChatView)
-    // Priorité 2 : Tableau participants[] — filtre l'UID de l'expéditeur
-    // Priorité 3 : Champs legacy partnerUid / authorUid sur le document chat
-    const myUid = currentUser.uid;
+    // 🚨 Isole le UID cible DE FAÇON IMPÉRATIVE :
     const chatObj = chat || selectedChat;
+    const partnerUid = targetUid || selectedChat?.participants?.find(uid => uid && uid !== currentUser.uid) || selectedChat?.partnerUid || chatObj?.participants?.find(uid => uid && uid !== currentUser.uid) || chatObj?.participantUids?.find(uid => uid && uid !== currentUser.uid) || chatObj?.partnerUid || chatObj?.authorUid;
 
-    const receiverUid =
-      customPartnerUid ||
-      (Array.isArray(chatObj?.participants)
-        ? chatObj.participants.find((uid) => uid && String(uid) !== String(myUid)) || null
-        : null) ||
-      (Array.isArray(chatObj?.participantUids)
-        ? chatObj.participantUids.find((uid) => uid && String(uid) !== String(myUid)) || null
-        : null) ||
-      chatObj?.partnerUid ||
-      chatObj?.authorUid ||
-      null;
-
-    if (!receiverUid) {
+    if (!partnerUid) {
       console.error('[handleSendToken] Impossible de résoudre le partnerUid — objet chat reçu :', chatObj);
       alert('Destinataire introuvable. Vérifiez que la conversation est bien chargée et réessayez.');
       throw new Error('Destinataire introuvable');
@@ -1820,7 +1909,7 @@ export const useChatManager = ({
       if (db) {
         await runTransaction(db, async (transaction) => {
           const senderRef = doc(db, 'users', currentUser.uid);
-          const receiverRef = doc(db, 'users', receiverUid);
+          const receiverRef = doc(db, 'users', partnerUid);
 
           // Vérification solde
           const senderSnap = await transaction.get(senderRef);
@@ -1832,15 +1921,15 @@ export const useChatManager = ({
           transaction.update(senderRef, { trocoTokens: increment(-amount) });
           transaction.update(receiverRef, { trocoTokens: increment(amount) });
 
-          // Traçabilité
-          transaction.set(doc(collection(db, 'transactions')), {
-            type: 'transfer',
-            from: currentUser.uid,
-            to: receiverUid,
+          // Traçabilité & notification destinataire
+          const notifRef = doc(collection(db, 'users', partnerUid, 'notifications'));
+          transaction.set(notifRef, {
+            type: 'payment_received',
             amount,
-            comment: comment || '',
-            chatId: chatId || null,
-            timestamp: serverTimestamp()
+            currency: 'tokens',
+            from: currentUser.uid,
+            read: false,
+            timestamp: serverTimestamp(),
           });
         });
       }
@@ -1898,7 +1987,7 @@ export const useChatManager = ({
       setSaveMessage(`🪙 ${amount} Jeton(s) Troco envoyé(s) avec succès !`);
       setTimeout(() => setSaveMessage(''), 4000);
 
-      return { success: true, receiverUid, amount };
+      return { success: true, receiverUid: partnerUid, partnerUid, amount };
     } catch (err) {
       hapticError();
       const errMsg = err?.message || 'Erreur lors du transfert de jetons';
@@ -2109,6 +2198,7 @@ export const useChatManager = ({
     handleDeclineDeal,
     handleSendToken,
     handleTransferToken,
+    sendPostCallTip,
     renderDealCard,
   };
 };

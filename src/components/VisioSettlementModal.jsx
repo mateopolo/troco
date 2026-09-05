@@ -17,6 +17,8 @@ export default function VisioSettlementModal({
     const minutes = Math.ceil(callDuration / 60);
     return Math.max(1, Math.min(5, Math.ceil(minutes / 30)));
   });
+  const [isCustom, setIsCustom] = useState(false);
+  const [customAmount, setCustomAmount] = useState('');
   const [includeInsurance, setIncludeInsurance] = useState(false);
   const [isTransferred, setIsTransferred] = useState(false);
 
@@ -33,11 +35,21 @@ export default function VisioSettlementModal({
   // Équivalence recommandée en jetons (1h = 1 jeton)
   const calculatedTokens = Math.max(1, Math.ceil(callDuration / 3600) || 1);
 
+  // Montant effectif (boutons pré-définis ou saisie libre)
+  const parsedCustom = parseInt(customAmount, 10);
+  const effectiveTokens = isCustom
+    ? (Number.isFinite(parsedCustom) && parsedCustom >= 1 ? parsedCustom : (customAmount === '' ? '' : 1))
+    : selectedTokens;
+  const finalTokensToTransfer = typeof effectiveTokens === 'number' && effectiveTokens >= 1 ? effectiveTokens : 1;
+  const isValidAmount = isCustom ? (Number.isFinite(parsedCustom) && parsedCustom >= 1) : true;
+  const canTransfer = isValidAmount && currentUserTokens >= finalTokensToTransfer && !isTransferred;
+
   const handleConfirmTransfer = () => {
+    if (!canTransfer) return;
     if (typeof onTransferTokens === 'function') {
       try {
         onTransferTokens({
-          tokens: selectedTokens,
+          tokens: finalTokensToTransfer,
           insurance: includeInsurance,
           duration: callDuration,
         });
@@ -166,29 +178,90 @@ export default function VisioSettlementModal({
           <label style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-main)', display: 'block', marginBottom: '8px' }}>
             Nombre de Jetons Troco à transférer :
           </label>
-          <div style={{ display: 'flex', gap: '8px' }}>
-            {[1, 2, 3, 4, 5].map(num => (
-              <button
-                key={num}
-                type="button"
-                onClick={() => setSelectedTokens(num)}
-                style={{
-                  flex: 1,
-                  padding: '10px 0',
-                  borderRadius: '12px',
-                  border: selectedTokens === num ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
-                  backgroundColor: selectedTokens === num ? 'var(--bg-subtle)' : 'var(--bg-card)',
-                  color: selectedTokens === num ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                  fontWeight: '800',
-                  fontSize: '13px',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                }}
-              >
-                {num} 🪙
-              </button>
-            ))}
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            {[1, 2, 3, 5].map(num => {
+              const isSelected = !isCustom && selectedTokens === num;
+              return (
+                <button
+                  key={num}
+                  type="button"
+                  onClick={() => {
+                    setIsCustom(false);
+                    setSelectedTokens(num);
+                  }}
+                  style={{
+                    flex: 1,
+                    minWidth: '45px',
+                    padding: '10px 0',
+                    borderRadius: '12px',
+                    border: isSelected ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                    backgroundColor: isSelected ? 'var(--bg-subtle)' : 'var(--bg-card)',
+                    color: isSelected ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                    fontWeight: '800',
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  {num} 🪙
+                </button>
+              );
+            })}
+            <button
+              type="button"
+              onClick={() => {
+                setIsCustom(true);
+                if (!customAmount) setCustomAmount(String(selectedTokens || 1));
+              }}
+              style={{
+                flex: 1,
+                minWidth: '65px',
+                padding: '10px 0',
+                borderRadius: '12px',
+                border: isCustom ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                backgroundColor: isCustom ? 'var(--bg-subtle)' : 'var(--bg-card)',
+                color: isCustom ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                fontWeight: '800',
+                fontSize: '13px',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+              }}
+            >
+              Autre
+            </button>
           </div>
+
+          {/* SAISIE DU MONTANT PERSONNALISÉ */}
+          {isCustom && (
+            <div style={{ marginTop: '10px', animation: 'fadeIn 0.2s ease' }}>
+              <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                <input
+                  type="number"
+                  min="1"
+                  value={customAmount}
+                  onChange={(e) => setCustomAmount(e.target.value)}
+                  placeholder="Tapez le montant exact..."
+                  aria-label="Montant exact en jetons"
+                  style={{
+                    width: '100%',
+                    padding: '10px 42px 10px 14px',
+                    borderRadius: '12px',
+                    border: '2px solid var(--accent-primary)',
+                    backgroundColor: 'var(--bg-card)',
+                    color: 'var(--text-main)',
+                    fontWeight: '800',
+                    fontSize: '14px',
+                    outline: 'none',
+                    boxSizing: 'border-box',
+                  }}
+                  autoFocus
+                />
+                <span style={{ position: 'absolute', right: '14px', fontSize: '15px', pointerEvents: 'none' }}>
+                  🪙
+                </span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* STRUCTURE DE FRAIS TRANSPARENTE */}
@@ -209,7 +282,7 @@ export default function VisioSettlementModal({
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12px', marginBottom: '8px' }}>
             <span style={{ color: 'var(--text-secondary)' }}>Transfert de Jetons solidaire :</span>
-            <span style={{ fontWeight: '800', color: 'var(--accent-warning)' }}>-{selectedTokens} Jeton{selectedTokens > 1 ? 's' : ''}</span>
+            <span style={{ fontWeight: '800', color: 'var(--accent-warning)' }}>-{finalTokensToTransfer} Jeton{finalTokensToTransfer > 1 ? 's' : ''}</span>
           </div>
 
           {/* OPTION MICRO-ASSURANCE OPTIONNELLE */}
@@ -251,23 +324,23 @@ export default function VisioSettlementModal({
         {/* BOUTON D'ACTION PRINCIPAL */}
         <button
           onClick={handleConfirmTransfer}
-          disabled={currentUserTokens < selectedTokens}
+          disabled={!canTransfer}
           className="premium-button"
           style={{
             width: '100%',
-            background: currentUserTokens < selectedTokens ? 'var(--border-color)' : (isTransferred ? 'linear-gradient(135deg, var(--accent-success) 0%, var(--accent-success) 100%)' : 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)'),
+            background: !canTransfer ? 'var(--border-color)' : (isTransferred ? 'linear-gradient(135deg, var(--accent-success) 0%, var(--accent-success) 100%)' : 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)'),
             color: '#FFFFFF',
             border: 'none',
             borderRadius: '16px',
             padding: '14px',
             fontWeight: '800',
             fontSize: '14px',
-            cursor: currentUserTokens < selectedTokens ? 'not-allowed' : 'pointer',
+            cursor: !canTransfer ? 'not-allowed' : 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             gap: '8px',
-            boxShadow: currentUserTokens < selectedTokens ? 'none' : 'var(--shadow-accent)',
+            boxShadow: !canTransfer ? 'none' : 'var(--shadow-accent)',
             transition: 'all 0.2s ease',
           }}
         >
@@ -277,7 +350,7 @@ export default function VisioSettlementModal({
             </>
           ) : (
             <>
-              <Sparkles size={18} /> Transférer {selectedTokens} Jeton{selectedTokens > 1 ? 's' : ''} à {partnerName}
+              <Sparkles size={18} /> Transférer {finalTokensToTransfer} Jeton{finalTokensToTransfer > 1 ? 's' : ''} à {partnerName}
             </>
           )}
         </button>
