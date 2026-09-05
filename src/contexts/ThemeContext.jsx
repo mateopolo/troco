@@ -470,7 +470,7 @@ export const THEMES_CONFIG = {
     id: 'sakura',
     name: 'Soft Sakura',
     description: 'Blanc rosé panna cotta, rose poudré, bordeaux velours',
-    previewColors: ['#FFF5F8', '#F5C6D4', '#D6456E', '#3A1822'],
+    previewColors: ['#FFF5F8', '#F5C6D4', '#FFB7C5', '#3A1822'],
     lightVariables: {
       '--bg-global': '#FFF5F8',
       '--bg-card': '#FFFFFF',
@@ -482,17 +482,17 @@ export const THEMES_CONFIG = {
       '--text-secondary': '#754352',
       '--text-muted': '#A37382',
       '--border-color': '#F2CAD6',
-      '--border-dark': '#D6456E',
-      '--accent-primary': '#D6456E',
-      '--accent-primary-hover': '#BF325A',
-      '--accent-secondary': '#E87093',
-      '--accent-contrast-text': '#FFFFFF',
-      '--accent-terracotta': '#D6456E',
+      '--border-dark': '#FFB7C5',
+      '--accent-primary': '#FFB7C5',
+      '--accent-primary-hover': '#F5A3B3',
+      '--accent-secondary': '#FFD1DC',
+      '--accent-contrast-text': '#3A1822',
+      '--accent-terracotta': '#FFB7C5',
       '--accent-success': '#689F63',
       '--accent-danger': '#E11D48',
       '--accent-warning': '#D97706',
       '--shadow-card': '0 10px 30px rgba(58, 24, 34, 0.07)',
-      '--shadow-accent': '0 8px 24px rgba(214, 69, 110, 0.35)',
+      '--shadow-accent': '0 8px 24px rgba(255, 183, 197, 0.35)',
       '--shadow-modal': '0 24px 60px rgba(58, 24, 34, 0.18)',
       '--glass-bg': 'rgba(255, 245, 248, 0.92)',
       '--glass-border': 'rgba(242, 202, 214, 0.75)',
@@ -536,7 +536,7 @@ export const THEMES_CONFIG = {
     id: 'emerald',
     name: 'Botanical Sage',
     description: 'Sauge pastel, vert sous-bois, nuit émeraude profonde',
-    previewColors: ['#F4F8F5', '#C7DBCF', '#2D6A4F', '#1B4332'],
+    previewColors: ['#F4F8F5', '#C7DBCF', '#8B9A80', '#1B4332'],
     lightVariables: {
       '--bg-global': '#F4F8F5',
       '--bg-card': '#FFFFFF',
@@ -548,17 +548,17 @@ export const THEMES_CONFIG = {
       '--text-secondary': '#406A56',
       '--text-muted': '#729884',
       '--border-color': '#CDE0D4',
-      '--border-dark': '#2D6A4F',
-      '--accent-primary': '#2D6A4F',
-      '--accent-primary-hover': '#1B4332',
-      '--accent-secondary': '#40916C',
+      '--border-dark': '#8B9A80',
+      '--accent-primary': '#8B9A80',
+      '--accent-primary-hover': '#7A8970',
+      '--accent-secondary': '#A3B298',
       '--accent-contrast-text': '#FFFFFF',
-      '--accent-terracotta': '#2D6A4F',
+      '--accent-terracotta': '#8B9A80',
       '--accent-success': '#52B788',
       '--accent-danger': '#E63946',
       '--accent-warning': '#D97706',
       '--shadow-card': '0 10px 30px rgba(27, 67, 50, 0.07)',
-      '--shadow-accent': '0 8px 24px rgba(45, 106, 79, 0.35)',
+      '--shadow-accent': '0 8px 24px rgba(139, 154, 128, 0.35)',
       '--shadow-modal': '0 24px 60px rgba(27, 67, 50, 0.18)',
       '--glass-bg': 'rgba(244, 248, 245, 0.92)',
       '--glass-border': 'rgba(205, 224, 212, 0.75)',
@@ -732,6 +732,30 @@ export const THEMES_CONFIG = {
   }
 };
 
+// ============================================================================
+// VALEURS EXACTES DES COULEURS PRIMAIRES DES THÈMES PRÉDÉFINIS
+// ============================================================================
+export const PRESET_THEME_PRIMARY_HEX = {
+  sakura: '#FFB7C5',
+  emerald: '#8B9A80',
+  botanical: '#8B9A80',
+  earthy: '#B98B73',
+  lavender: '#7C3AED',
+  monochrome: '#000000',
+};
+
+export const RESOLVE_PRESET_ID = (themeName) => {
+  if (!themeName || typeof themeName !== 'string') return 'earthy';
+  const lower = themeName.trim().toLowerCase();
+  if (THEMES_CONFIG[lower]) return lower;
+  if (lower === 'botanical' || lower === 'botanical sage' || lower === 'sage') return 'emerald';
+  if (lower === 'sakura' || lower === 'soft sakura') return 'sakura';
+  if (lower === 'earthy' || lower === 'earthy pastel') return 'earthy';
+  if (lower === 'lavender' || lower === 'pastel lavender') return 'lavender';
+  if (lower === 'monochrome' || lower === 'minimalist titanium' || lower === 'titanium') return 'monochrome';
+  return THEMES_CONFIG[themeName] ? themeName : 'earthy';
+};
+
 const DEFAULT_CUSTOM_COLORS = {
   primary: '#B98B73',
   bg: '#FAF7F2',
@@ -751,6 +775,7 @@ const ThemeContext = createContext({
   theme: THEMES_CONFIG.earthy,
   isDark: false,
   setThemeId: () => { },
+  applyPresetTheme: () => { },
   toggleTheme: () => { },
   customColors: DEFAULT_CUSTOM_COLORS,
   setCustomColors: () => { },
@@ -760,8 +785,11 @@ const ThemeContext = createContext({
   setBorderRadius: () => { },
   baseZoom: 1.0,
   setBaseZoom: () => { },
-  brandColor: '#B98B73',
+  brandColor: null,
+  customBrandColor: null,
+  setCustomBrandColor: () => { },
   applyBrandColor: () => { },
+  setBrandColor: () => { },
   resetDesignStudio: () => { },
   allThemes: Object.values(THEMES_CONFIG),
   typographyOptions: TYPOGRAPHY_OPTIONS,
@@ -826,13 +854,24 @@ export function ThemeProvider({ children }) {
     return DEFAULT_STUDIO_SETTINGS.baseZoom;
   });
 
-  const [brandColor, setBrandColorState] = useState(() => {
+  const [customBrandColor, setCustomBrandColorState] = useState(() => {
     try {
-      const saved = localStorage.getItem('troco_studio_brand_color');
-      if (saved) return saved;
-    } catch (e) { }
-    return DEFAULT_STUDIO_SETTINGS.brandColor;
+      const savedTheme = localStorage.getItem('troco_theme_base') || localStorage.getItem('troco_theme');
+      if (savedTheme && savedTheme !== 'custom' && THEMES_CONFIG[savedTheme]) {
+        return null;
+      }
+      return (
+        localStorage.getItem('troco_custom_color') ||
+        localStorage.getItem('troco_studio_brand_color') ||
+        null
+      );
+    } catch (e) {
+      return null;
+    }
   });
+
+  const brandColor = customBrandColor;
+  const setBrandColorState = setCustomBrandColorState;
 
   const setCustomColors = useCallback((newColors) => {
     setCustomColorsState((prev) => {
@@ -870,11 +909,78 @@ export function ThemeProvider({ children }) {
     } catch (e) { }
   }, []);
 
+  // 1. APPLICATION D'UN THÈME PRÉDÉFINI ET RÉINITIALISATION DE LA COULEUR CUSTOM
+  const applyPresetTheme = useCallback((themeName) => {
+    const targetId = RESOLVE_PRESET_ID(themeName);
+    const targetConfig = THEMES_CONFIG[targetId] || THEMES_CONFIG.earthy;
+
+    // A. Vider / Écraser IMMÉDIATEMENT la couleur magique stockée
+    setCustomBrandColorState(null);
+    setBrandColorState(null);
+    try {
+      localStorage.removeItem('troco_custom_color');
+      localStorage.removeItem('troco_studio_brand_color');
+      localStorage.removeItem('troco_custom_colors');
+    } catch (e) {
+      console.warn('Could not remove custom color from localStorage', e);
+    }
+
+    // B. Mettre à jour l'état du thème
+    setThemeIdState(targetId);
+    try {
+      localStorage.setItem('troco_theme_base', targetId);
+      localStorage.setItem('troco_theme', targetId);
+    } catch (e) {
+      console.warn('Could not persist theme to localStorage', e);
+    }
+
+    // C. Force la redéfinition immédiate de la variable CSS --accent-primary pour qu'elle utilise
+    // la valeur HEX exacte associée au thème prédéfini choisi (ex: Sakura = #FFB7C5, Botanical = #8B9A80)
+    const exactHex = PRESET_THEME_PRIMARY_HEX[targetId] ||
+      (isDark ? targetConfig.darkVariables['--accent-primary'] : targetConfig.lightVariables['--accent-primary']);
+
+    if (typeof document !== 'undefined' && document.documentElement) {
+      const activeVars = isDark ? targetConfig.darkVariables : targetConfig.lightVariables;
+      document.documentElement.style.setProperty('--accent-primary', exactHex);
+      document.documentElement.style.setProperty(
+        '--accent-primary-hover',
+        activeVars['--accent-primary-hover'] || adjustBrightness(exactHex, isDark ? 15 : -15)
+      );
+      document.documentElement.style.setProperty(
+        '--accent-secondary',
+        activeVars['--accent-secondary'] || adjustBrightness(exactHex, 20)
+      );
+      document.documentElement.style.setProperty(
+        '--shadow-accent',
+        activeVars['--shadow-accent'] || `0 8px 24px ${exactHex}40`
+      );
+      document.documentElement.style.setProperty(
+        '--accent-contrast-text',
+        activeVars['--accent-contrast-text'] || getContrastColor(exactHex)
+      );
+    }
+  }, [isDark]);
+
+  const setThemeId = useCallback((newId) => {
+    if (newId === 'custom') {
+      setThemeIdState('custom');
+      try {
+        localStorage.setItem('troco_theme_base', 'custom');
+        localStorage.setItem('troco_theme', 'custom');
+      } catch (e) { }
+    } else {
+      applyPresetTheme(newId);
+    }
+  }, [applyPresetTheme]);
+
+  // APPLICATION D'UNE COULEUR DE MARQUE PERSONNALISÉE (GÉNÉRATEUR MAGIQUE EN 1 CLIC)
   const applyBrandColor = useCallback((hex) => {
     if (!hex) return;
     setBrandColorState(hex);
+    setCustomBrandColorState(hex);
     try {
       localStorage.setItem('troco_studio_brand_color', hex);
+      localStorage.setItem('troco_custom_color', hex);
     } catch (e) { }
 
     const palette = generateHarmonicPalette(hex);
@@ -897,25 +1003,27 @@ export function ThemeProvider({ children }) {
   }, []);
 
   const resetDesignStudio = useCallback(() => {
-    setThemeIdState('earthy');
+    applyPresetTheme('earthy');
     setIsDarkState(false);
     setCustomColorsState(DEFAULT_CUSTOM_COLORS);
     setTypographyState(DEFAULT_STUDIO_SETTINGS.typography);
     setBorderRadiusState(DEFAULT_STUDIO_SETTINGS.borderRadius);
     setBaseZoomState(DEFAULT_STUDIO_SETTINGS.baseZoom);
-    setBrandColorState(DEFAULT_STUDIO_SETTINGS.brandColor);
+    setBrandColorState(null);
+    setCustomBrandColorState(null);
 
     try {
       localStorage.removeItem('troco_theme_base');
       localStorage.removeItem('troco_theme');
       localStorage.removeItem('troco_is_dark');
       localStorage.removeItem('troco_custom_colors');
+      localStorage.removeItem('troco_custom_color');
+      localStorage.removeItem('troco_studio_brand_color');
       localStorage.removeItem('troco_studio_typography');
       localStorage.removeItem('troco_studio_radius');
       localStorage.removeItem('troco_studio_zoom');
-      localStorage.removeItem('troco_studio_brand_color');
     } catch (e) { }
-  }, []);
+  }, [applyPresetTheme]);
 
   // CALCUL DE LA PALETTE CHROMATIQUE ACTIVE (ADAPTEE AU MODE JOUR / NUIT DU THEME SELECTIONNE)
   const theme = useMemo(() => {
@@ -953,17 +1061,6 @@ export function ThemeProvider({ children }) {
     };
   }, [themeId, isDark, customColors]);
 
-  const setThemeId = useCallback((newId) => {
-    if (newId !== 'custom' && !THEMES_CONFIG[newId]) return;
-    setThemeIdState(newId);
-    try {
-      localStorage.setItem('troco_theme_base', newId);
-      localStorage.setItem('troco_theme', newId);
-    } catch (e) {
-      console.warn('Could not persist theme to localStorage', e);
-    }
-  }, []);
-
   // BASCULE DU MODE SOMBRE SANS MODIFIER LE THEME CHOISI
   const toggleTheme = useCallback(() => {
     setIsDarkState((prev) => {
@@ -991,7 +1088,7 @@ export function ThemeProvider({ children }) {
       document.body.classList.remove('dark-mode');
     }
 
-    // Palette variables
+    // Palette variables de base
     Object.entries(vars).forEach(([prop, val]) => {
       root.style.setProperty(prop, val);
     });
@@ -1013,14 +1110,14 @@ export function ThemeProvider({ children }) {
     root.style.setProperty('--base-zoom', `${baseZoom}`);
     root.style.zoom = `${baseZoom}`;
 
-    // Contrast text on primary button
-    const contrastOnPrimary = getContrastColor(vars['--accent-primary'] || customColors.primary);
-    root.style.setProperty('--accent-contrast-text', contrastOnPrimary);
+    // 2. PRIORITÉ DU CSS :
+    // Si customBrandColor existe ET qu'aucun thème prédéfini n'est explicitement actif, utilise customBrandColor.
+    // SINON, utilise la couleur primaire stricte du thème prédéfini.
+    const isPresetThemeActive = themeId !== 'custom' && !!THEMES_CONFIG[themeId];
 
-    // Application de l'ambiance de couleur globale si définie
-    if (brandColor) {
-      const ambiance = GLOBAL_COLOR_AMBIANCES.find(a => a.id === brandColor || a.color.toLowerCase() === brandColor.toLowerCase());
-      const accentColor = ambiance ? ambiance.color : brandColor;
+    if (customBrandColor && !isPresetThemeActive) {
+      const ambiance = GLOBAL_COLOR_AMBIANCES.find(a => a.id === customBrandColor || a.color.toLowerCase() === customBrandColor.toLowerCase());
+      const accentColor = ambiance ? ambiance.color : customBrandColor;
       const accentHover = ambiance ? ambiance.hover : adjustBrightness(accentColor, isDark ? 15 : -15);
       const accentSecondary = ambiance?.secondary || adjustBrightness(accentColor, 25);
 
@@ -1029,11 +1126,25 @@ export function ThemeProvider({ children }) {
       root.style.setProperty('--accent-secondary', accentSecondary);
       root.style.setProperty('--shadow-accent', `0 8px 24px ${accentColor}40`);
       root.style.setProperty('--accent-contrast-text', getContrastColor(accentColor));
+    } else {
+      const targetPresetConfig = THEMES_CONFIG[themeId] || THEMES_CONFIG.earthy;
+      const activePresetVars = isDark ? targetPresetConfig.darkVariables : targetPresetConfig.lightVariables;
+      const strictPrimary = PRESET_THEME_PRIMARY_HEX[themeId] || activePresetVars['--accent-primary'];
+      const strictHover = activePresetVars['--accent-primary-hover'] || adjustBrightness(strictPrimary, isDark ? 15 : -15);
+      const strictSecondary = activePresetVars['--accent-secondary'] || adjustBrightness(strictPrimary, 20);
+      const strictShadow = activePresetVars['--shadow-accent'] || `0 8px 24px ${strictPrimary}40`;
+      const strictContrast = activePresetVars['--accent-contrast-text'] || getContrastColor(strictPrimary);
+
+      root.style.setProperty('--accent-primary', strictPrimary);
+      root.style.setProperty('--accent-primary-hover', strictHover);
+      root.style.setProperty('--accent-secondary', strictSecondary);
+      root.style.setProperty('--shadow-accent', strictShadow);
+      root.style.setProperty('--accent-contrast-text', strictContrast);
     }
 
     // 🚨 PHASE 50 : SYNCHRONISATION DYNAMIQUE DU META THEME-COLOR & BARRE DE STATUT MOBILE
     applyGlobalThemeColor(isDark);
-  }, [theme, isDark, typography, borderRadius, baseZoom, customColors, brandColor]);
+  }, [theme, themeId, isDark, typography, borderRadius, baseZoom, customColors, customBrandColor]);
 
   const allThemes = useMemo(() => {
     const presets = Object.values(THEMES_CONFIG).map((cfg) => ({
@@ -1068,6 +1179,7 @@ export function ThemeProvider({ children }) {
     theme,
     isDark,
     setThemeId,
+    applyPresetTheme,
     toggleTheme,
     customColors,
     setCustomColors,
@@ -1077,7 +1189,9 @@ export function ThemeProvider({ children }) {
     setBorderRadius,
     baseZoom,
     setBaseZoom,
-    brandColor,
+    brandColor: customBrandColor,
+    customBrandColor,
+    setCustomBrandColor: setCustomBrandColorState,
     applyBrandColor,
     setBrandColor: applyBrandColor,
     resetDesignStudio,
@@ -1085,11 +1199,14 @@ export function ThemeProvider({ children }) {
     typographyOptions: TYPOGRAPHY_OPTIONS,
     globalColorAmbiances: GLOBAL_COLOR_AMBIANCES,
     GLOBAL_COLOR_AMBIANCES,
+    PRESET_THEME_PRIMARY_HEX,
+    resolvePresetId: RESOLVE_PRESET_ID,
   }), [
     themeId,
     theme,
     isDark,
     setThemeId,
+    applyPresetTheme,
     toggleTheme,
     customColors,
     setCustomColors,
@@ -1099,7 +1216,7 @@ export function ThemeProvider({ children }) {
     setBorderRadius,
     baseZoom,
     setBaseZoom,
-    brandColor,
+    customBrandColor,
     applyBrandColor,
     resetDesignStudio,
     allThemes,

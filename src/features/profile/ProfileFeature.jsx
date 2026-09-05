@@ -74,6 +74,7 @@ export default function ProfileFeature({
   const {
     themeId,
     setThemeId,
+    applyPresetTheme,
     allThemes,
     customColors,
     setCustomColors,
@@ -1173,7 +1174,7 @@ export default function ProfileFeature({
                 <button
                   key={tItem.id}
                   type="button"
-                  onClick={() => setThemeId(tItem.id)}
+                  onClick={() => (applyPresetTheme ? applyPresetTheme(tItem.id) : setThemeId(tItem.id))}
                   className="premium-button"
                   style={{
                     display: 'flex',
