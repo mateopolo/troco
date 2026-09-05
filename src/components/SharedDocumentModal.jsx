@@ -361,37 +361,9 @@ function SharedDocumentModalContent({
             darkMode ? 'bg-[#1C1816] border-white/10' : 'bg-[#FAF7F2] border-stone-200'
           }`}
         >
-          {/* LIGNE 1 : TITRE & BOUTON FERMER */}
+          {/* LIGNE 1 : BOUTON FERMER À GAUCHE, TITRE AU CENTRE, STATUT DE SYNCHRONISATION À DROITE */}
           <div className="flex justify-between items-center w-full mb-3 gap-3">
-            <div className="flex items-center gap-2.5 min-w-0 flex-1">
-              <div
-                style={{
-                  width: '36px',
-                  height: '36px',
-                  borderRadius: '10px',
-                  backgroundColor: 'rgba(198,125,91,0.15)',
-                  color: '#C67D5B',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                }}
-              >
-                <FileText size={18} />
-              </div>
-              <input
-                type="text"
-                value={title}
-                onChange={handleTitleChange}
-                placeholder="Titre de la note..."
-                className="w-full bg-transparent border-0 outline-none font-bold text-base sm:text-lg min-w-0"
-                style={{
-                  color: darkMode ? '#FAF7F2' : '#3D3530',
-                  fontFamily: 'inherit',
-                }}
-              />
-            </div>
-
+            {/* Bouton "X Fermer" (gros et visible, appelant onClose) à gauche */}
             <button
               type="button"
               onClick={onClose}
@@ -405,6 +377,44 @@ function SharedDocumentModalContent({
               <X size={16} />
               <span>Fermer</span>
             </button>
+
+            {/* Titre du document au centre */}
+            <div className="flex items-center justify-center gap-2.5 min-w-0 flex-1 max-w-md mx-auto">
+              <div
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '8px',
+                  backgroundColor: 'rgba(198,125,91,0.15)',
+                  color: '#C67D5B',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                <FileText size={16} />
+              </div>
+              <input
+                type="text"
+                value={title}
+                onChange={handleTitleChange}
+                placeholder="Titre de la note..."
+                className="w-full bg-transparent border-0 outline-none font-bold text-center text-base sm:text-lg min-w-0"
+                style={{
+                  color: darkMode ? '#FAF7F2' : '#3D3530',
+                  fontFamily: 'inherit',
+                }}
+              />
+            </div>
+
+            {/* Statut de synchronisation à droite */}
+            <div className="flex items-center gap-2 text-xs shrink-0 whitespace-nowrap justify-end">
+              <span className="font-semibold text-emerald-500 flex items-center gap-1.5">
+                <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                {saveStatus}
+              </span>
+            </div>
           </div>
 
           {/* LIGNE 2 : ACTIONS DOCUMENT (FLEX-WRAP MOBILE-FRIENDLY) */}
@@ -468,14 +478,10 @@ function SharedDocumentModalContent({
               darkMode ? 'border-white/10' : 'border-stone-200'
             }`}
           >
-            {/* STATUTS */}
+            {/* COMPTEUR DE MOTS */}
             <div className="flex items-center gap-2 text-xs shrink-0 whitespace-nowrap">
-              <span className="font-semibold text-emerald-500 flex items-center gap-1.5">
-                <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                {saveStatus}
-              </span>
               <span style={{ color: darkMode ? '#8E857E' : '#A89E95' }}>
-                • {wordCount} mots ({charCount} caractères)
+                {wordCount} mots ({charCount} caractères)
               </span>
             </div>
 

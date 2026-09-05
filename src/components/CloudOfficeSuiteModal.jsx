@@ -6,9 +6,10 @@ import {
   AlignLeft, AlignCenter, AlignRight, AlignJustify,
   Presentation, History, Plus, Trash2,
   Play, RotateCcw, Sparkles, Image as ImageIcon,
-  RemoveFormatting, Undo, Redo
+  RemoveFormatting, Undo, Redo,
+  Download, Printer, Share2, Baseline, Highlighter
 } from 'lucide-react';
-import { doc, setDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, onSnapshot, serverTimestamp, collection, addDoc } from 'firebase/firestore';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../firebase';
 
@@ -226,6 +227,8 @@ function CloudOfficeSuiteModalContent({
   currentUser = null,
   darkMode = false,
   initialTab = 'docs',
+  onSendToChat = null,
+  handleSendMessage = null,
 }) {
   const effectiveDoc = propDoc || propDocAlias || note || documentData || defaultDoc;
   const effectiveGroupId = String(groupId?.id || groupId || 'demo_group_office');
@@ -892,6 +895,80 @@ function CloudOfficeSuiteModalContent({
     link.click();
   };
 
+  const [isSendingToChat, setIsSendingToChat] = useState(false);
+  const [sendSuccessToast, setSendSuccessToast] = useState(false);
+
+  // Partager le document dans le chat collaboratif
+  const handleShareToChat = async () => {
+    if (isSendingToChat) return;
+    setIsSendingToChat(true);
+
+    try {
+      const authorName = currentUser?.name || currentUser?.displayName || 'Moi';
+      const authorUid = currentUser?.uid || currentUser?.id || 'me';
+      let title = docTitle;
+      let snippet = 'Document partagé';
+      let icon = '📄';
+
+      if (activeTab === 'docs') {
+        title = docTitle || 'Document sans titre';
+        snippet = docContent
+          ? (docContent.replace(/<[^>]*>/g, ' ').replace(/[#*`_~\[\]()]/g, '').replace(/\s+/g, ' ').trim().slice(0, 150) + (docContent.length > 150 ? '...' : ''))
+          : 'Document vide';
+        icon = '📝';
+      } else if (activeTab === 'sheets') {
+        title = sheetTitle || 'Feuille de calcul sans titre';
+        snippet = Object.entries(sheetData || {})
+          .filter(([_, v]) => v)
+          .map(([k, v]) => `${k}: ${v}`)
+          .slice(0, 6)
+          .join(' | ') || 'Feuille de calcul';
+        icon = '📊';
+      } else if (activeTab === 'slides') {
+        title = slidesTitle || 'Présentation sans titre';
+        snippet = (slides || []).map((s, idx) => `D${idx + 1}: ${s?.title || 'Diapo'}`).slice(0, 4).join(' • ') || 'Présentation';
+        icon = '📽️';
+      }
+
+      const msgPayload = {
+        text: `${icon} **${title}** (${activeTab.toUpperCase()})\n\n${snippet}`,
+        sender: authorName,
+        senderId: authorUid,
+        senderName: authorName,
+        createdAt: new Date().toISOString(),
+        timestamp: Date.now(),
+        type: `office_${activeTab}`,
+        docId: effectiveDocId,
+        title,
+        summary: snippet,
+      };
+
+      if (db && effectiveGroupId && effectiveGroupId !== 'demo_group_office' && effectiveGroupId !== 'demo_group_notes') {
+        await addDoc(collection(db, 'chats', String(effectiveGroupId), 'messages'), msgPayload);
+        await setDoc(doc(db, 'chats', String(effectiveGroupId)), {
+          lastMessage: `${icon} Workspace : "${title}"`,
+          lastSenderName: authorName,
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+      }
+
+      if (typeof handleSendMessage === 'function') {
+        handleSendMessage(msgPayload);
+      }
+
+      if (typeof onSendToChat === 'function') {
+        onSendToChat(effectiveDocId, msgPayload);
+      }
+
+      setSendSuccessToast(true);
+      setTimeout(() => setSendSuccessToast(false), 3500);
+    } catch (err) {
+      console.warn('[Cloud Suite] Share to chat error:', err);
+    } finally {
+      setIsSendingToChat(false);
+    }
+  };
+
   if (!isOpen) return null;
   if (typeof document === 'undefined') return null;
 
@@ -1027,233 +1104,529 @@ function CloudOfficeSuiteModalContent({
         {/* CONTENEUR MODALE PRINCIPALE */}
         <div
           onClick={(e) => e.stopPropagation()}
+          className="relative w-full max-w-6xl max-h-[90dvh] overflow-y-auto overscroll-contain rounded-2xl flex flex-col shadow-2xl border transition-all"
           style={{
             position: 'relative',
             zIndex: 1000000,
             width: '100%',
             maxWidth: '1100px',
-            height: '90vh',
-            maxHeight: '850px',
+            maxHeight: '90dvh',
             backgroundColor: 'var(--bg-card)',
             borderRadius: '24px',
             border: '1px solid var(--border-color)',
             boxShadow: 'var(--shadow-modal)',
             display: 'flex',
             flexDirection: 'column',
-            overflow: 'hidden',
+            overflowY: 'auto',
             animation: 'fadeSlideUp 0.3s ease both',
           }}
         >
-        {/* HEADER MODALE */}
+        {/* HEADER UNIFIÉ WORKSPACE (DOCS, SHEETS, SLIDES) */}
         <div
+          className={`p-3 sm:p-4 flex flex-col w-full border-b ${
+            darkMode ? 'bg-[#1C1816] border-white/10' : 'bg-[#FAF7F2] border-stone-200'
+          }`}
           style={{
-            padding: '12px 18px',
-            borderBottom: '1px solid var(--border-color)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
             backgroundColor: 'var(--bg-subtle)',
-            gap: '12px',
-            flexWrap: 'wrap',
+            borderBottom: '1px solid var(--border-color)',
           }}
         >
-          {/* SÉLECTEUR D'ONGLETS / OUTILS BUREAUTIQUES */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <button
-              type="button"
-              onClick={() => setActiveTab('docs')}
-              className="premium-button"
-              style={{
-                border: activeTab === 'docs' ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-color)',
-                backgroundColor: activeTab === 'docs' ? 'rgba(198, 125, 91, 0.15)' : 'var(--bg-card)',
-                color: activeTab === 'docs' ? 'var(--accent-primary)' : 'var(--text-main)',
-                borderRadius: '10px',
-                padding: '6px 12px',
-                fontSize: '12.5px',
-                fontWeight: '800',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                cursor: 'pointer',
-              }}
-            >
-              <FileText size={15} />
-              <span>Troco Docs</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('sheets')}
-              className="premium-button"
-              style={{
-                border: activeTab === 'sheets' ? '1.5px solid #10B981' : '1px solid var(--border-color)',
-                backgroundColor: activeTab === 'sheets' ? 'rgba(16, 185, 129, 0.15)' : 'var(--bg-card)',
-                color: activeTab === 'sheets' ? '#10B981' : 'var(--text-main)',
-                borderRadius: '10px',
-                padding: '6px 12px',
-                fontSize: '12.5px',
-                fontWeight: '800',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                cursor: 'pointer',
-              }}
-            >
-              <Table size={15} />
-              <span>Troco Sheets</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('slides')}
-              className="premium-button"
-              style={{
-                border: activeTab === 'slides' ? '1.5px solid #3B82F6' : '1px solid var(--border-color)',
-                backgroundColor: activeTab === 'slides' ? 'rgba(59, 130, 246, 0.15)' : 'var(--bg-card)',
-                color: activeTab === 'slides' ? '#3B82F6' : 'var(--text-main)',
-                borderRadius: '10px',
-                padding: '6px 12px',
-                fontSize: '12.5px',
-                fontWeight: '800',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                cursor: 'pointer',
-              }}
-            >
-              <Presentation size={15} />
-              <span>Troco Slides</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('history')}
-              className="premium-button"
-              style={{
-                border: activeTab === 'history' ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-color)',
-                backgroundColor: activeTab === 'history' ? 'var(--bg-subtle)' : 'transparent',
-                color: 'var(--text-secondary)',
-                borderRadius: '10px',
-                padding: '6px 10px',
-                fontSize: '12px',
-                fontWeight: '700',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '5px',
-                cursor: 'pointer',
-              }}
-              title="Historique des versions"
-            >
-              <History size={14} />
-              <span>Versions ({versionHistory.length})</span>
-            </button>
-          </div>
-
-          {/* ACTIONS & EXPORTS */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-              👥 {collaborators.join(', ')} • {saveStatus}
-            </span>
-
-            {/* BOUTONS D'EXPORTS MULTI-FORMATS */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              <button
-                type="button"
-                onClick={handleDownloadPDF}
-                className="premium-button"
-                style={{
-                  border: '1px solid var(--border-color)',
-                  backgroundColor: 'var(--bg-card)',
-                  color: 'var(--text-main)',
-                  borderRadius: '8px',
-                  padding: '5px 8px',
-                  fontSize: '11px',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                }}
-                title="Exporter en PDF imprimable"
-              >
-                📄 PDF
-              </button>
-
-              <button
-                type="button"
-                onClick={handleDownloadDOCX}
-                className="premium-button"
-                style={{
-                  border: '1px solid var(--border-color)',
-                  backgroundColor: 'var(--bg-card)',
-                  color: 'var(--text-main)',
-                  borderRadius: '8px',
-                  padding: '5px 8px',
-                  fontSize: '11px',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                }}
-                title="Exporter au format Word (.docx)"
-              >
-                📝 DOCX
-              </button>
-
-              <button
-                type="button"
-                onClick={handleDownloadXLSX}
-                className="premium-button"
-                style={{
-                  border: '1px solid var(--border-color)',
-                  backgroundColor: 'var(--bg-card)',
-                  color: 'var(--text-main)',
-                  borderRadius: '8px',
-                  padding: '5px 8px',
-                  fontSize: '11px',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                }}
-                title="Exporter au format Excel (.xlsx)"
-              >
-                📊 XLSX
-              </button>
-
-              <button
-                type="button"
-                onClick={handleDownloadPPTX}
-                className="premium-button"
-                style={{
-                  border: '1px solid var(--border-color)',
-                  backgroundColor: 'var(--bg-card)',
-                  color: 'var(--text-main)',
-                  borderRadius: '8px',
-                  padding: '5px 8px',
-                  fontSize: '11px',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                }}
-                title="Exporter au format PowerPoint (.pptx)"
-              >
-                📽️ PPTX
-              </button>
-            </div>
-
+          {/* LIGNE 1 : BOUTON FERMER À GAUCHE, TITRE AU CENTRE, STATUT DE SYNCHRONISATION À DROITE */}
+          <div className="flex justify-between items-center w-full mb-3 gap-3">
+            {/* Bouton "X Fermer" (gros et visible, appelant onClose) à gauche */}
             <button
               type="button"
               onClick={onClose}
-              className="premium-button"
+              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-bold text-xs shrink-0 transition-all cursor-pointer shadow-sm ${
+                darkMode
+                  ? 'bg-white/10 hover:bg-white/15 text-[#FAF7F2]'
+                  : 'bg-stone-200/90 hover:bg-stone-300 text-[#3D3530]'
+              }`}
               style={{
                 border: '1px solid var(--border-color)',
-                backgroundColor: 'var(--bg-card)',
-                color: 'var(--text-main)',
-                borderRadius: '8px',
-                width: '32px',
-                height: '32px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
               }}
+              title="Fermer"
             >
               <X size={16} />
+              <span>Fermer</span>
             </button>
+
+            {/* Titre du document au centre */}
+            <div className="flex items-center justify-center gap-2 min-w-0 flex-1 max-w-md mx-auto">
+              <div
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '8px',
+                  backgroundColor: activeTab === 'docs' ? 'rgba(198,125,91,0.15)' : activeTab === 'sheets' ? 'rgba(16,185,129,0.15)' : activeTab === 'slides' ? 'rgba(59,130,246,0.15)' : 'rgba(100,116,139,0.15)',
+                  color: activeTab === 'docs' ? '#C67D5B' : activeTab === 'sheets' ? '#10B981' : activeTab === 'slides' ? '#3B82F6' : '#64748B',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+              >
+                {activeTab === 'docs' && <FileText size={16} />}
+                {activeTab === 'sheets' && <Table size={16} />}
+                {activeTab === 'slides' && <Presentation size={16} />}
+                {activeTab === 'history' && <History size={16} />}
+              </div>
+
+              {activeTab === 'docs' && (
+                <input
+                  type="text"
+                  value={docTitle}
+                  onChange={(e) => {
+                    setDocTitle(e.target.value);
+                    saveDocToFirestore(docContent, e.target.value);
+                  }}
+                  placeholder="Titre du document..."
+                  className="w-full bg-transparent border-0 outline-none font-bold text-center text-sm sm:text-base min-w-0 text-slate-800 dark:text-slate-100"
+                  style={{ color: 'var(--text-main)' }}
+                />
+              )}
+              {activeTab === 'sheets' && (
+                <input
+                  type="text"
+                  value={sheetTitle || ''}
+                  onChange={(e) => {
+                    const val = e.target.value || '';
+                    setSheetTitle(val);
+                    saveSheetToFirestore(sheetData || {}, val);
+                  }}
+                  placeholder="Titre de la feuille de calcul..."
+                  className="w-full bg-transparent border-0 outline-none font-bold text-center text-sm sm:text-base min-w-0 text-slate-800 dark:text-slate-100"
+                  style={{ color: 'var(--text-main)' }}
+                />
+              )}
+              {activeTab === 'slides' && (
+                <input
+                  type="text"
+                  value={slidesTitle || ''}
+                  onChange={(e) => {
+                    const val = e.target.value || '';
+                    setSlidesTitle(val);
+                    saveSlidesToFirestore(slides || DEFAULT_SLIDES, val);
+                  }}
+                  placeholder="Titre de la présentation..."
+                  className="w-full bg-transparent border-0 outline-none font-bold text-center text-sm sm:text-base min-w-0 text-slate-800 dark:text-slate-100"
+                  style={{ color: 'var(--text-main)' }}
+                />
+              )}
+              {activeTab === 'history' && (
+                <span className="font-bold text-sm sm:text-base text-slate-800 dark:text-slate-100 truncate text-center" style={{ color: 'var(--text-main)' }}>
+                  Historique des versions
+                </span>
+              )}
+            </div>
+
+            {/* Statut de synchronisation à droite */}
+            <div className="flex items-center gap-2 text-xs shrink-0 whitespace-nowrap justify-end">
+              <span className="font-semibold text-emerald-500 flex items-center gap-1.5">
+                <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                {saveStatus}
+              </span>
+            </div>
           </div>
+
+          {/* LIGNE 2 : ONGLETS BUREAUTIQUES ET BOUTONS D'ACTION (FLEX-WRAP GAP-2) */}
+          <div className="flex flex-wrap items-center justify-between gap-2 w-full mb-2">
+            {/* SÉLECTEUR D'ONGLETS */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <button
+                type="button"
+                onClick={() => setActiveTab('docs')}
+                className="premium-button flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm"
+                style={{
+                  border: activeTab === 'docs' ? '1.5px solid var(--accent-primary, #C67D5B)' : '1px solid var(--border-color)',
+                  backgroundColor: activeTab === 'docs' ? 'rgba(198, 125, 91, 0.15)' : 'var(--bg-card)',
+                  color: activeTab === 'docs' ? 'var(--accent-primary, #C67D5B)' : 'var(--text-main)',
+                }}
+              >
+                <FileText size={14} />
+                <span>Troco Docs</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('sheets')}
+                className="premium-button flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm"
+                style={{
+                  border: activeTab === 'sheets' ? '1.5px solid #10B981' : '1px solid var(--border-color)',
+                  backgroundColor: activeTab === 'sheets' ? 'rgba(16, 185, 129, 0.15)' : 'var(--bg-card)',
+                  color: activeTab === 'sheets' ? '#10B981' : 'var(--text-main)',
+                }}
+              >
+                <Table size={14} />
+                <span>Troco Sheets</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('slides')}
+                className="premium-button flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm"
+                style={{
+                  border: activeTab === 'slides' ? '1.5px solid #3B82F6' : '1px solid var(--border-color)',
+                  backgroundColor: activeTab === 'slides' ? 'rgba(59, 130, 246, 0.15)' : 'var(--bg-card)',
+                  color: activeTab === 'slides' ? '#3B82F6' : 'var(--text-main)',
+                }}
+              >
+                <Presentation size={14} />
+                <span>Troco Slides</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setActiveTab('history')}
+                className="premium-button flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm"
+                style={{
+                  border: activeTab === 'history' ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                  backgroundColor: activeTab === 'history' ? 'var(--bg-subtle)' : 'transparent',
+                  color: 'var(--text-secondary)',
+                }}
+                title="Historique des versions"
+              >
+                <History size={13} />
+                <span>Versions ({versionHistory.length})</span>
+              </button>
+            </div>
+
+            {/* BOUTONS D'ACTION : TÉLÉCHARGER, IMPRIMER, PARTAGER AU CHAT */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              {activeTab === 'docs' && (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleDownloadPDF}
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer shadow-sm bg-stone-100 hover:bg-stone-200 dark:bg-white/10 dark:hover:bg-white/15"
+                    style={{ border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
+                    title="Exporter en PDF imprimable"
+                  >
+                    <Download size={13} />
+                    <span>📄 PDF</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDownloadDOCX}
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer shadow-sm bg-stone-100 hover:bg-stone-200 dark:bg-white/10 dark:hover:bg-white/15"
+                    style={{ border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
+                    title="Exporter au format Word (.docx)"
+                  >
+                    <Download size={13} />
+                    <span>📝 DOCX</span>
+                  </button>
+                </>
+              )}
+
+              {activeTab === 'sheets' && (
+                <>
+                  <button
+                    type="button"
+                    onClick={handleDownloadXLSX}
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer shadow-sm bg-stone-100 hover:bg-stone-200 dark:bg-white/10 dark:hover:bg-white/15"
+                    style={{ border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
+                    title="Exporter au format Excel (.xlsx)"
+                  >
+                    <Download size={13} />
+                    <span>📊 XLSX</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDownloadCSV}
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer shadow-sm bg-stone-100 hover:bg-stone-200 dark:bg-white/10 dark:hover:bg-white/15"
+                    style={{ border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
+                    title="Exporter en CSV"
+                  >
+                    <Download size={13} />
+                    <span>CSV</span>
+                  </button>
+                </>
+              )}
+
+              {activeTab === 'slides' && (
+                <button
+                  type="button"
+                  onClick={handleDownloadPPTX}
+                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer shadow-sm bg-stone-100 hover:bg-stone-200 dark:bg-white/10 dark:hover:bg-white/15"
+                  style={{ border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
+                  title="Exporter au format PowerPoint (.pptx)"
+                >
+                  <Download size={13} />
+                  <span>📽️ PPTX</span>
+                </button>
+              )}
+
+              {/* Bouton Imprimer */}
+              <button
+                type="button"
+                onClick={handleDownloadPDF}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer shadow-sm bg-stone-100 hover:bg-stone-200 dark:bg-white/10 dark:hover:bg-white/15"
+                style={{ border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
+                title="Imprimer le document"
+              >
+                <Printer size={13} />
+                <span>Imprimer</span>
+              </button>
+
+              {/* Bouton Partager au Chat */}
+              <button
+                type="button"
+                onClick={handleShareToChat}
+                disabled={isSendingToChat}
+                className="premium-button flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-white transition-all cursor-pointer shadow-sm"
+                style={{
+                  background: 'linear-gradient(135deg, #C67D5B 0%, #B86B49 100%)',
+                  boxShadow: '0 4px 14px rgba(198,125,91,0.3)',
+                  cursor: isSendingToChat ? 'wait' : 'pointer',
+                }}
+                title="Partager au chat"
+              >
+                <Share2 size={13} />
+                <span>{isSendingToChat ? 'Envoi...' : 'Partager au Chat'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* LIGNE 3 : BARRE DE FORMATAGE / OUTILS EN OVERFLOW-X-AUTO NO-SCROLLBAR */}
+          {activeTab === 'docs' && (
+            <div
+              className="flex items-center gap-2 overflow-x-auto no-scrollbar w-full py-2 border-y border-stone-200 dark:border-white/10"
+              style={{
+                borderColor: 'var(--border-color)',
+              }}
+            >
+              {/* SÉLECTEUR DE STYLE / TITRES */}
+              <select
+                onChange={(e) => handleFormat('formatBlock', e.target.value)}
+                defaultValue="<p>"
+                style={{
+                  padding: '4px 8px',
+                  borderRadius: '6px',
+                  border: '1px solid #CBD5E1',
+                  backgroundColor: 'var(--bg-card)',
+                  color: 'var(--text-main)',
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  outline: 'none',
+                }}
+                title="Style de paragraphe"
+              >
+                <option value="<p>">Normal</option>
+                <option value="<h1>">Titre 1 (H1)</option>
+                <option value="<h2>">Titre 2 (H2)</option>
+                <option value="<h3>">Titre 3 (H3)</option>
+              </select>
+
+              {/* SÉLECTEUR DE TAILLE DE POLICE */}
+              <select
+                onChange={(e) => handleFormat('fontSize', e.target.value)}
+                defaultValue="3"
+                style={{
+                  padding: '4px 6px',
+                  borderRadius: '6px',
+                  border: '1px solid #CBD5E1',
+                  backgroundColor: 'var(--bg-card)',
+                  color: 'var(--text-main)',
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  outline: 'none',
+                }}
+                title="Taille de police"
+              >
+                <option value="1">10px - Très petit</option>
+                <option value="2">12px - Petit</option>
+                <option value="3">14px - Normal</option>
+                <option value="4">16px - Moyen</option>
+                <option value="5">18px - Grand</option>
+                <option value="6">24px - Très Grand</option>
+                <option value="7">32px - Titre géant</option>
+              </select>
+
+              <div style={{ width: '1px', height: '18px', backgroundColor: 'var(--border-color)', margin: '0 2px' }} />
+
+              {/* FORMATAGE DU TEXTE : B, I, U, S */}
+              <button
+                type="button"
+                onClick={() => handleFormat('bold')}
+                className="hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+                style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-main)' }}
+                title="Gras (Ctrl+B)"
+              >
+                <Bold size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleFormat('italic')}
+                className="hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+                style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-main)' }}
+                title="Italique (Ctrl+I)"
+              >
+                <Italic size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleFormat('underline')}
+                className="hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+                style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-main)' }}
+                title="Souligné (Ctrl+U)"
+              >
+                <Underline size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleFormat('strikeThrough')}
+                className="hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+                style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-main)' }}
+                title="Barré"
+              >
+                <Strikethrough size={14} />
+              </button>
+
+              <div style={{ width: '1px', height: '18px', backgroundColor: 'var(--border-color)', margin: '0 2px' }} />
+
+              {/* COULEURS : TEXTE & SURLIGNAGE */}
+              <label
+                style={{ display: 'flex', alignItems: 'center', gap: '2px', cursor: 'pointer', padding: '2px 4px', borderRadius: '4px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)' }}
+                title="Couleur du texte"
+              >
+                <Baseline size={13} style={{ color: 'var(--text-main)' }} />
+                <input
+                  type="color"
+                  defaultValue="#1E293B"
+                  onChange={(e) => handleFormat('foreColor', e.target.value)}
+                  style={{ width: '14px', height: '14px', border: 'none', cursor: 'pointer', background: 'none', padding: 0 }}
+                />
+              </label>
+
+              <label
+                style={{ display: 'flex', alignItems: 'center', gap: '2px', cursor: 'pointer', padding: '2px 4px', borderRadius: '4px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)' }}
+                title="Couleur de surlignage"
+              >
+                <Highlighter size={13} style={{ color: 'var(--text-main)' }} />
+                <input
+                  type="color"
+                  defaultValue="#FEF08A"
+                  onChange={(e) => handleFormat('hiliteColor', e.target.value)}
+                  style={{ width: '14px', height: '14px', border: 'none', cursor: 'pointer', background: 'none', padding: 0 }}
+                />
+              </label>
+
+              <div style={{ width: '1px', height: '18px', backgroundColor: 'var(--border-color)', margin: '0 2px' }} />
+
+              {/* ALIGNEMENTS */}
+              <button
+                type="button"
+                onClick={() => handleFormat('justifyLeft')}
+                className="hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+                style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-main)' }}
+                title="Aligner à gauche"
+              >
+                <AlignLeft size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleFormat('justifyCenter')}
+                className="hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+                style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-main)' }}
+                title="Centrer"
+              >
+                <AlignCenter size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleFormat('justifyRight')}
+                className="hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+                style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-main)' }}
+                title="Aligner à droite"
+              >
+                <AlignRight size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleFormat('justifyFull')}
+                className="hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+                style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-main)' }}
+                title="Justifier"
+              >
+                <AlignJustify size={14} />
+              </button>
+
+              <div style={{ width: '1px', height: '18px', backgroundColor: 'var(--border-color)', margin: '0 2px' }} />
+
+              {/* LISTES */}
+              <button
+                type="button"
+                onClick={() => handleFormat('insertUnorderedList')}
+                className="hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+                style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-main)' }}
+                title="Liste à puces"
+              >
+                <List size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleFormat('insertOrderedList')}
+                className="hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+                style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-main)' }}
+                title="Liste numérotée"
+              >
+                <ListOrdered size={14} />
+              </button>
+
+              <div style={{ width: '1px', height: '18px', backgroundColor: 'var(--border-color)', margin: '0 2px' }} />
+
+              {/* ANNULER / RÉTABLIR / NETTOYER */}
+              <button
+                type="button"
+                onClick={() => handleFormat('undo')}
+                className="hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+                style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-main)' }}
+                title="Annuler (Ctrl+Z)"
+              >
+                <Undo size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleFormat('redo')}
+                className="hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+                style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-main)' }}
+                title="Rétablir (Ctrl+Y)"
+              >
+                <Redo size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={() => handleFormat('removeFormat')}
+                className="hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
+                style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-main)' }}
+                title="Effacer le formatage"
+              >
+                <RemoveFormatting size={14} />
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDownloadMarkdown}
+                style={{
+                  border: '1px solid #CBD5E1',
+                  borderRadius: '6px',
+                  padding: '3px 7px',
+                  backgroundColor: 'var(--bg-card)',
+                  color: 'var(--text-secondary)',
+                  fontSize: '11px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  marginLeft: 'auto',
+                }}
+                title="Exporter en Markdown (.md)"
+              >
+                Export .md
+              </button>
+            </div>
+          )}
+
         </div>
 
         {/* CONTENU PRINCIPAL DE L'ONGLET SÉLECTIONNÉ */}
@@ -1270,248 +1643,6 @@ function CloudOfficeSuiteModalContent({
                 padding: '20px 16px',
               }}
             >
-              {/* TITRE DU DOCUMENT */}
-              <div style={{ maxWidth: '21cm', width: '100%', margin: '0 auto 12px auto' }}>
-                <input
-                  type="text"
-                  value={docTitle}
-                  onChange={(e) => {
-                    setDocTitle(e.target.value);
-                    saveDocToFirestore(docContent, e.target.value);
-                  }}
-                  placeholder="Titre du document..."
-                  style={{
-                    fontSize: '22px',
-                    fontWeight: '800',
-                    border: 'none',
-                    outline: 'none',
-                    backgroundColor: 'transparent',
-                    color: '#1E293B',
-                    width: '100%',
-                    paddingBottom: '4px',
-                    borderBottom: '2px solid rgba(0,0,0,0.1)',
-                  }}
-                />
-              </div>
-
-              {/* TOOLBAR COMPLÈTE COLLÉE EN HAUT (WORD / LIBREOFFICE) */}
-              <div
-                className="sticky top-0 z-10"
-                style={{
-                  maxWidth: '21cm',
-                  width: '100%',
-                  margin: '0 auto 16px auto',
-                  backgroundColor: '#FFFFFF',
-                  borderRadius: '12px',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-                  border: '1px solid #E2E8F0',
-                  padding: '6px 10px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  flexWrap: 'wrap',
-                }}
-              >
-                {/* SÉLECTEUR DE STYLE / TITRES */}
-                <select
-                  onChange={(e) => handleFormat('formatBlock', e.target.value)}
-                  defaultValue="<p>"
-                  style={{
-                    padding: '4px 8px',
-                    borderRadius: '6px',
-                    border: '1px solid #CBD5E1',
-                    backgroundColor: '#F8FAFC',
-                    fontSize: '12px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    outline: 'none',
-                  }}
-                  title="Style de paragraphe"
-                >
-                  <option value="<p>">Normal</option>
-                  <option value="<h1>">Titre 1 (H1)</option>
-                  <option value="<h2>">Titre 2 (H2)</option>
-                  <option value="<h3>">Titre 3 (H3)</option>
-                </select>
-
-                {/* SÉLECTEUR DE TAILLE DE POLICE */}
-                <select
-                  onChange={(e) => handleFormat('fontSize', e.target.value)}
-                  defaultValue="3"
-                  style={{
-                    padding: '4px 6px',
-                    borderRadius: '6px',
-                    border: '1px solid #CBD5E1',
-                    backgroundColor: '#F8FAFC',
-                    fontSize: '12px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    outline: 'none',
-                  }}
-                  title="Taille de police"
-                >
-                  <option value="1">8 pt</option>
-                  <option value="2">10 pt</option>
-                  <option value="3">12 pt</option>
-                  <option value="4">14 pt</option>
-                  <option value="5">18 pt</option>
-                  <option value="6">24 pt</option>
-                  <option value="7">36 pt</option>
-                </select>
-
-                <div style={{ width: '1px', height: '18px', backgroundColor: '#E2E8F0', margin: '0 3px' }} />
-
-                {/* FORMATAGE DU TEXTE : GRAS, ITALIQUE, SOULIGNÉ, BARRÉ */}
-                <button
-                  type="button"
-                  onClick={() => handleFormat('bold')}
-                  className="hover:bg-gray-100 transition-colors"
-                  style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#334155' }}
-                  title="Gras (Ctrl+B)"
-                >
-                  <Bold size={14} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleFormat('italic')}
-                  className="hover:bg-gray-100 transition-colors"
-                  style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#334155' }}
-                  title="Italique (Ctrl+I)"
-                >
-                  <Italic size={14} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleFormat('underline')}
-                  className="hover:bg-gray-100 transition-colors"
-                  style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#334155' }}
-                  title="Souligné (Ctrl+U)"
-                >
-                  <Underline size={14} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleFormat('strikeThrough')}
-                  className="hover:bg-gray-100 transition-colors"
-                  style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#334155' }}
-                  title="Barré"
-                >
-                  <Strikethrough size={14} />
-                </button>
-
-                <div style={{ width: '1px', height: '18px', backgroundColor: '#E2E8F0', margin: '0 3px' }} />
-
-                {/* ALIGNEMENT DU TEXTE */}
-                <button
-                  type="button"
-                  onClick={() => handleFormat('justifyLeft')}
-                  className="hover:bg-gray-100 transition-colors"
-                  style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#334155' }}
-                  title="Aligner à gauche"
-                >
-                  <AlignLeft size={14} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleFormat('justifyCenter')}
-                  className="hover:bg-gray-100 transition-colors"
-                  style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#334155' }}
-                  title="Centrer"
-                >
-                  <AlignCenter size={14} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleFormat('justifyRight')}
-                  className="hover:bg-gray-100 transition-colors"
-                  style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#334155' }}
-                  title="Aligner à droite"
-                >
-                  <AlignRight size={14} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleFormat('justifyFull')}
-                  className="hover:bg-gray-100 transition-colors"
-                  style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#334155' }}
-                  title="Justifier"
-                >
-                  <AlignJustify size={14} />
-                </button>
-
-                <div style={{ width: '1px', height: '18px', backgroundColor: '#E2E8F0', margin: '0 3px' }} />
-
-                {/* LISTES */}
-                <button
-                  type="button"
-                  onClick={() => handleFormat('insertUnorderedList')}
-                  className="hover:bg-gray-100 transition-colors"
-                  style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#334155' }}
-                  title="Liste à puces"
-                >
-                  <List size={14} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleFormat('insertOrderedList')}
-                  className="hover:bg-gray-100 transition-colors"
-                  style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#334155' }}
-                  title="Liste numérotée"
-                >
-                  <ListOrdered size={14} />
-                </button>
-
-                <div style={{ width: '1px', height: '18px', backgroundColor: '#E2E8F0', margin: '0 3px' }} />
-
-                {/* ANNULER / RÉTABLIR / NETTOYER */}
-                <button
-                  type="button"
-                  onClick={() => handleFormat('undo')}
-                  className="hover:bg-gray-100 transition-colors"
-                  style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#334155' }}
-                  title="Annuler (Ctrl+Z)"
-                >
-                  <Undo size={14} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleFormat('redo')}
-                  className="hover:bg-gray-100 transition-colors"
-                  style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#334155' }}
-                  title="Rétablir (Ctrl+Y)"
-                >
-                  <Redo size={14} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleFormat('removeFormat')}
-                  className="hover:bg-gray-100 transition-colors"
-                  style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#334155' }}
-                  title="Effacer le formatage"
-                >
-                  <RemoveFormatting size={14} />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleDownloadMarkdown}
-                  style={{
-                    border: '1px solid #CBD5E1',
-                    borderRadius: '6px',
-                    padding: '3px 7px',
-                    backgroundColor: '#F8FAFC',
-                    color: '#475569',
-                    fontSize: '11px',
-                    fontWeight: '700',
-                    cursor: 'pointer',
-                    marginLeft: 'auto',
-                  }}
-                  title="Exporter en Markdown (.md)"
-                >
-                  Export .md
-                </button>
-              </div>
-
               {/* DOCUMENT FEUILLE DE PAPIER A4 CENTRÉE */}
               <div
                 ref={setEditorRef}
@@ -1519,7 +1650,7 @@ function CloudOfficeSuiteModalContent({
                 suppressContentEditableWarning
                 placeholder="Rédigez ici vos comptes-rendus..."
                 onInput={handleEditorInput}
-                className="bg-white w-[21cm] min-h-[29.7cm] mx-auto shadow-md p-[2cm] text-black focus:outline-none"
+                className="bg-white w-[21cm] min-h-[29.7cm] mx-auto shadow-md p-4 md:p-8 p-[2cm] text-black focus:outline-none"
                 style={{
                   boxSizing: 'border-box',
                   fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
@@ -1536,28 +1667,7 @@ function CloudOfficeSuiteModalContent({
           {/* 2. TROCO SHEETS : LIGNES ET COLONNES DYNAMIQUES */}
           {activeTab === 'sheets' && (
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px', overflow: 'hidden' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '12px' }}>
-                <input
-                  type="text"
-                  value={sheetTitle || ''}
-                  onChange={(e) => {
-                    const val = e.target.value || '';
-                    setSheetTitle(val);
-                    saveSheetToFirestore(sheetData || {}, val);
-                  }}
-                  placeholder="Titre de la feuille de calcul..."
-                  style={{
-                    flex: 1,
-                    fontSize: '18px',
-                    fontWeight: '700',
-                    border: 'none',
-                    outline: 'none',
-                    backgroundColor: 'transparent',
-                    color: 'var(--text-main)',
-                    paddingBottom: '4px',
-                    borderBottom: '1px solid var(--border-color)',
-                  }}
-                />
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '8px', marginBottom: '12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <button
                     type="button"
