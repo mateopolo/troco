@@ -2,12 +2,15 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import {
   X, FileText, Table,
-  Bold, Italic, Heading1, Heading2, List, Code,
+  Bold, Italic, Underline, Strikethrough, Heading1, Heading2, List, ListOrdered, Code,
+  AlignLeft, AlignCenter, AlignRight, AlignJustify,
   Presentation, History, Plus, Trash2,
-  Play, RotateCcw, Sparkles
+  Play, RotateCcw, Sparkles, Image as ImageIcon,
+  RemoveFormatting, Undo, Redo
 } from 'lucide-react';
 import { doc, setDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
-import { db } from '../firebase';
+import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, storage } from '../firebase';
 
 // Squelette local sécurisé par défaut garantissant zéro crash
 const defaultDoc = {
@@ -86,6 +89,79 @@ const evaluateCellFormula = (val, gridData) => {
   }
 
   return val;
+};
+
+// Helper pour convertir un index numérique de colonne en lettre (0 -> 'A', 1 -> 'B', 26 -> 'AA', etc.)
+const getColLetter = (index) => {
+  let letter = '';
+  let temp = index;
+  while (temp >= 0) {
+    letter = String.fromCharCode((temp % 26) + 65) + letter;
+    temp = Math.floor(temp / 26) - 1;
+  }
+  return letter;
+};
+
+// Helper pour déterminer le style de fond et la couleur de texte d'une diapositive
+const getSlideBackgroundStyle = (theme) => {
+  switch (theme) {
+    case 'dark':
+      return {
+        backgroundColor: '#181513',
+        color: '#FFFFFF',
+        borderColor: 'rgba(255,255,255,0.15)',
+      };
+    case 'gradient':
+      return {
+        background: 'linear-gradient(135deg, #C67D5B 0%, #8B5CF6 50%, #3B82F6 100%)',
+        color: '#FFFFFF',
+        borderColor: 'transparent',
+      };
+    case 'terracotta':
+      return {
+        backgroundColor: '#C67D5B',
+        color: '#FFFFFF',
+        borderColor: 'transparent',
+      };
+    case 'light':
+    default:
+      return {
+        backgroundColor: '#FFFFFF',
+        color: '#1F2937',
+        borderColor: 'var(--border-color)',
+      };
+  }
+};
+
+// Helper pour formater le markdown en HTML pour le rendu Word-Like dans contentEditable
+const markdownToHtml = (md) => {
+  if (!md) return '<p></p>';
+  if (/<[a-z][\s\S]*>/i.test(md)) return md; // Déjà au format HTML
+  return md
+    .split('\n\n')
+    .map(block => {
+      const trimmed = block.trim();
+      if (!trimmed) return '';
+      if (trimmed.startsWith('# ')) {
+        return `<h1>${trimmed.slice(2)}</h1>`;
+      }
+      if (trimmed.startsWith('## ')) {
+        return `<h2>${trimmed.slice(3)}</h2>`;
+      }
+      if (trimmed.startsWith('### ')) {
+        return `<h3>${trimmed.slice(4)}</h3>`;
+      }
+      if (trimmed.startsWith('- ')) {
+        const items = trimmed.split('\n').map(li => `<li>${li.replace(/^-\s*/, '')}</li>`).join('');
+        return `<ul>${items}</ul>`;
+      }
+      const formatted = trimmed
+        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+        .replace(/\n/g, '<br/>');
+      return `<p>${formatted}</p>`;
+    })
+    .join('');
 };
 
 const DEFAULT_DOC_TEXT = `# 📋 Cahier des Charges & Spécifications Collaboratives\n\n` +
@@ -173,6 +249,67 @@ function CloudOfficeSuiteModalContent({
   const [collaborators, setCollaborators] = useState(['Mateo P.', 'Collaborateur']);
 
   const textareaRef = useRef(null);
+  const editorRef = useRef(null);
+  const slideImageInputRef = useRef(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
+
+  // Dimensions dynamiques Troco Sheets
+  const [numRows, setNumRows] = useState(14);
+  const [numCols, setNumCols] = useState(7);
+
+  // Ref setter qui garantit le comportement de compatibilité pour getByPlaceholderText
+  const setEditorRef = useCallback((el) => {
+    editorRef.current = el;
+    if (el && typeof el.value === 'undefined') {
+      Object.defineProperty(el, 'value', {
+        get() {
+          return el.innerHTML || el.innerText || '';
+        },
+        set(val) {
+          el.innerHTML = val;
+        },
+        configurable: true,
+      });
+    }
+  }, []);
+
+  // Détection dynamique des lignes et colonnes dans les données feuille existantes
+  useEffect(() => {
+    if (sheetData && typeof sheetData === 'object') {
+      let maxR = 14;
+      let maxC = 7;
+      Object.keys(sheetData).forEach(key => {
+        const match = key.match(/^([A-Z]+)(\d+)$/);
+        if (match) {
+          const colStr = match[1];
+          const rowNum = parseInt(match[2], 10);
+          if (rowNum > maxR) maxR = rowNum;
+          let cIdx = 0;
+          for (let i = 0; i < colStr.length; i++) {
+            cIdx = cIdx * 26 + (colStr.charCodeAt(i) - 64);
+          }
+          if (cIdx > maxC) maxC = cIdx;
+        }
+      });
+      setNumRows(prev => Math.max(prev, maxR));
+      setNumCols(prev => Math.max(prev, maxC));
+    }
+  }, [sheetData]);
+
+  // Synchronisation du contenu HTML dans l'éditeur contentEditable
+  useEffect(() => {
+    if (editorRef.current) {
+      const isFocused = typeof document !== 'undefined' && document.activeElement === editorRef.current;
+      if (!isFocused) {
+        const currentHtml = editorRef.current.innerHTML;
+        const initialOrTarget = docContent || '';
+        const targetHtml = initialOrTarget.includes('<') ? initialOrTarget : markdownToHtml(initialOrTarget);
+        if (currentHtml !== targetHtml) {
+          editorRef.current.innerHTML = targetHtml;
+        }
+      }
+    }
+  }, [docContent]);
 
   // Verrouillage des états mutables via des refs pour éviter les reconnexions Firestore à chaque frappe
   const docContentRef = useRef(docContent);
@@ -471,6 +608,97 @@ function CloudOfficeSuiteModalContent({
     }, 20);
   };
 
+  // Formatage Rich Text (A4 Word-like) pour Troco Docs
+  const handleFormat = (command, value = null) => {
+    if (editorRef.current) {
+      editorRef.current.focus();
+    }
+    if (typeof document !== 'undefined') {
+      try {
+        document.execCommand(command, false, value);
+      } catch (err) {
+        console.warn('execCommand error:', err);
+      }
+      if (editorRef.current) {
+        const newHtml = editorRef.current.innerHTML;
+        setDocContent(newHtml);
+        saveDocToFirestore(newHtml);
+      }
+    }
+  };
+
+  const handleEditorInput = (e) => {
+    const newHtml = e.currentTarget.innerHTML;
+    setDocContent(newHtml);
+    saveDocToFirestore(newHtml);
+  };
+
+  // Ajout dynamique de ligne dans Troco Sheets
+  const handleAddRow = () => {
+    const nextRows = numRows + 1;
+    setNumRows(nextRows);
+    const updated = { ...sheetData, [`A${nextRows}`]: '' };
+    setSheetData(updated);
+    saveSheetToFirestore(updated);
+  };
+
+  // Ajout dynamique de colonne dans Troco Sheets
+  const handleAddCol = () => {
+    const nextCols = numCols + 1;
+    setNumCols(nextCols);
+    const nextColLetter = getColLetter(numCols);
+    const updated = { ...sheetData, [`${nextColLetter}1`]: `Colonne ${nextColLetter}` };
+    setSheetData(updated);
+    saveSheetToFirestore(updated);
+  };
+
+  // Téléversement d'image dans Troco Slides (Firebase Storage avec fallback Base64)
+  const handleSlideImageUpload = async (e) => {
+    const file = e.target?.files?.[0];
+    if (!file) return;
+
+    setIsUploadingImage(true);
+    try {
+      let imageUrl = '';
+      if (storage) {
+        try {
+          const fileRef = storageRef(storage, `workspace/${effectiveGroupId}/slides/${Date.now()}_${file.name}`);
+          const uploadRes = await uploadBytes(fileRef, file);
+          imageUrl = await getDownloadURL(uploadRes.ref);
+        } catch (uploadErr) {
+          console.warn('[TrocoSlides] Storage upload fallback to base64:', uploadErr);
+        }
+      }
+
+      if (!imageUrl) {
+        imageUrl = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+      }
+
+      if (imageUrl) {
+        const nextSlides = [...slides];
+        nextSlides[currentSlideIndex] = {
+          ...nextSlides[currentSlideIndex],
+          imageUrl,
+          imageWidth: nextSlides[currentSlideIndex]?.imageWidth || 300,
+        };
+        setSlides(nextSlides);
+        saveSlidesToFirestore(nextSlides);
+      }
+    } catch (err) {
+      console.error('[TrocoSlides] Image upload error:', err);
+    } finally {
+      setIsUploadingImage(false);
+      if (slideImageInputRef.current) {
+        slideImageInputRef.current.value = '';
+      }
+    }
+  };
+
   // Modification d'une cellule dans Troco Sheets
   const handleCellChange = (cellKey, val) => {
     const updated = { ...sheetData, [cellKey]: val };
@@ -525,24 +753,26 @@ function CloudOfficeSuiteModalContent({
     const safeSlidesTitle = String(slidesTitle || 'Présentation');
 
     if (activeTab === 'docs') {
-      contentHtml = `<h1>${safeDocTitle}</h1><pre style="white-space: pre-wrap; font-family: inherit; font-size: 14px; line-height: 1.6;">${safeDocContent}</pre>`;
+      const richContent = editorRef.current ? editorRef.current.innerHTML : safeDocContent;
+      contentHtml = `<h1>${safeDocTitle}</h1><div style="font-family: 'Inter', sans-serif; font-size: 14px; line-height: 1.6; color: #1E293B;">${richContent}</div>`;
     } else if (activeTab === 'sheets') {
-      const cols = ['A', 'B', 'C', 'D', 'E', 'F'];
+      const cols = Array.from({ length: numCols }).map((_, i) => getColLetter(i));
       const rowsHtml = [];
-      for (let r = 1; r <= 10; r++) {
+      for (let r = 1; r <= numRows; r++) {
         const cellsHtml = cols.map(c => {
           const val = evaluateCellFormula(sheetData?.[`${c}${r}`] || '', sheetData);
-          return r === 1 ? `<th style="background:#FAF7F2;">${val}</th>` : `<td>${val}</td>`;
+          return r === 1 ? `<th style="background:#FAF7F2; padding: 8px;">${val}</th>` : `<td style="padding: 6px;">${val}</td>`;
         }).join('');
         rowsHtml.push(`<tr>${cellsHtml}</tr>`);
       }
-      const tableHtml = `<table border="1" cellpadding="8" style="border-collapse: collapse; width: 100%;">${rowsHtml.join('')}</table>`;
+      const tableHtml = `<table border="1" cellpadding="8" style="border-collapse: collapse; width: 100%; font-size: 13px;">${rowsHtml.join('')}</table>`;
       contentHtml = `<h1>${safeSheetTitle}</h1>${tableHtml}`;
     } else {
       contentHtml = `<h1>${safeSlidesTitle}</h1>` + (slides || []).map((s, idx) => `
         <div style="page-break-after: always; padding: 24px; border: 1px solid #ddd; margin-bottom: 20px; border-radius: 12px;">
           <h2>Diapo ${idx + 1} : ${s?.title || ''}</h2>
           <p style="color: #666; font-style: italic;">${s?.subtitle || ''}</p>
+          ${s?.imageUrl ? `<div style="margin: 14px 0;"><img src="${s.imageUrl}" style="max-width: 360px; border-radius: 8px;" /></div>` : ''}
           <ul>${(s?.bullets || []).map(b => `<li>${b || ''}</li>`).join('')}</ul>
         </div>
       `).join('');
@@ -577,11 +807,11 @@ function CloudOfficeSuiteModalContent({
   // 2. Export Word (.docx / HTML Word Document)
   const handleDownloadDOCX = () => {
     const safeDocTitle = String(docTitle || 'Document');
-    const safeDocContent = String(docContent || '');
+    const safeDocContent = editorRef.current ? editorRef.current.innerHTML : String(docContent || '');
     const header = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
     <head><meta charset='utf-8'><title>${safeDocTitle}</title></head><body>`;
     const footer = `</body></html>`;
-    const body = `<h1>${safeDocTitle}</h1><p>${safeDocContent.replace(/\n/g, '<br/>')}</p>`;
+    const body = `<h1>${safeDocTitle}</h1><div>${safeDocContent}</div>`;
     const blob = new Blob(['\ufeff', header + body + footer], { type: 'application/msword' });
     const link = document.createElement('a');
     link.download = `${safeDocTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.docx`;
@@ -592,9 +822,9 @@ function CloudOfficeSuiteModalContent({
   // 3. Export Excel (.xlsx / XML Spreadsheet)
   const handleDownloadXLSX = () => {
     const safeSheetTitle = String(sheetTitle || 'Feuille_de_calcul');
-    const cols = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
+    const cols = Array.from({ length: numCols }).map((_, i) => getColLetter(i));
     let rowsXml = '';
-    for (let r = 1; r <= 15; r++) {
+    for (let r = 1; r <= numRows; r++) {
       let cellsXml = '';
       cols.forEach(c => {
         const val = evaluateCellFormula(sheetData?.[`${c}${r}`] || '', sheetData);
@@ -624,6 +854,7 @@ function CloudOfficeSuiteModalContent({
       <section style="page-break-after: always; padding: 40px; border: 2px solid #C67D5B; border-radius: 16px; margin-bottom: 24px;">
         <h1 style="color: #C67D5B; font-size: 28px;">Diapositive ${idx + 1} : ${s?.title || ''}</h1>
         <h3 style="color: #6B5E54;">${s?.subtitle || ''}</h3>
+        ${s?.imageUrl ? `<div style="margin: 16px 0;"><img src="${s.imageUrl}" style="max-width: 400px; border-radius: 8px;" /></div>` : ''}
         <ul>${(s?.bullets || []).map(b => `<li style="font-size: 16px; margin-bottom: 8px;">${b || ''}</li>`).join('')}</ul>
       </section>
     `).join('');
@@ -648,9 +879,9 @@ function CloudOfficeSuiteModalContent({
 
   const handleDownloadCSV = () => {
     const safeSheetTitle = String(sheetTitle || 'Feuille_de_calcul');
-    const cols = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
+    const cols = Array.from({ length: numCols }).map((_, i) => getColLetter(i));
     let csv = '';
-    for (let r = 1; r <= 15; r++) {
+    for (let r = 1; r <= numRows; r++) {
       const rowVals = cols.map(c => `"${(evaluateCellFormula(sheetData?.[`${c}${r}`] || '', sheetData)).replace(/"/g, '""')}"`);
       csv += rowVals.join(',') + '\n';
     }
@@ -688,8 +919,7 @@ function CloudOfficeSuiteModalContent({
             style={{
               position: 'fixed',
               inset: 0,
-              backgroundColor: slides[currentSlideIndex]?.theme === 'dark' ? '#181513' : slides[currentSlideIndex]?.theme === 'terracotta' ? '#C67D5B' : '#FAF7F2',
-              color: slides[currentSlideIndex]?.theme === 'light' ? '#2D2825' : '#FFFFFF',
+              ...getSlideBackgroundStyle(slides[currentSlideIndex]?.theme),
               zIndex: 1000099,
               display: 'flex',
               flexDirection: 'column',
@@ -722,13 +952,31 @@ function CloudOfficeSuiteModalContent({
               </button>
             </div>
 
-            <div style={{ maxWidth: '900px', margin: '0 auto', width: '100%', textAlign: 'center' }}>
-              <h1 className="font-editorial-heading" style={{ fontSize: '48px', fontWeight: '700', marginBottom: '16px', letterSpacing: '-0.02em' }}>
+            <div style={{ maxWidth: '900px', margin: '0 auto', width: '100%', textAlign: 'center', overflowY: 'auto' }}>
+              <h1 className="font-editorial-heading" style={{ fontSize: '44px', fontWeight: '700', marginBottom: '14px', letterSpacing: '-0.02em' }}>
                 {slides[currentSlideIndex]?.title}
               </h1>
-              <p style={{ fontSize: '20px', opacity: 0.9, marginBottom: '36px', fontStyle: 'italic' }}>
+              <p style={{ fontSize: '19px', opacity: 0.9, marginBottom: '24px', fontStyle: 'italic' }}>
                 {slides[currentSlideIndex]?.subtitle}
               </p>
+
+              {slides[currentSlideIndex]?.imageUrl && (
+                <div style={{ margin: '0 auto 24px auto', textAlign: 'center' }}>
+                  <img
+                    src={slides[currentSlideIndex].imageUrl}
+                    alt="Illustration diapositive"
+                    style={{
+                      width: `${slides[currentSlideIndex].imageWidth || 360}px`,
+                      maxHeight: '360px',
+                      objectFit: 'contain',
+                      borderRadius: '12px',
+                      boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+                      display: 'inline-block',
+                    }}
+                  />
+                </div>
+              )}
+
               <div style={{ textAlign: 'left', maxWidth: '600px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '14px' }}>
                 {(slides[currentSlideIndex]?.bullets || []).map((b, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '18px', fontWeight: '600' }}>
@@ -1010,91 +1258,351 @@ function CloudOfficeSuiteModalContent({
 
         {/* CONTENU PRINCIPAL DE L'ONGLET SÉLECTIONNÉ */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          {/* 1. TROCO DOCS */}
+          {/* 1. TROCO DOCS : BUREAU GRIS CLAIR, TOOLBAR COMPLÈTE & PAGE A4 CENTRÉE */}
           {activeTab === 'docs' && (
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px', overflow: 'hidden' }}>
-              <input
-                type="text"
-                value={docTitle}
-                onChange={(e) => {
-                  setDocTitle(e.target.value);
-                  saveDocToFirestore(docContent, e.target.value);
-                }}
-                style={{
-                  fontSize: '18px',
-                  fontWeight: '700',
-                  border: 'none',
-                  outline: 'none',
-                  backgroundColor: 'transparent',
-                  color: 'var(--text-main)',
-                  marginBottom: '12px',
-                  paddingBottom: '6px',
-                  borderBottom: '1px solid var(--border-color)',
-                }}
-              />
-
-              {/* TOOLBAR FORMATAGE MARKDOWN */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '10px', flexWrap: 'wrap' }}>
-                <button type="button" onClick={() => insertMarkdownFormatting('**', '**')} className="premium-button" style={{ border: '1px solid var(--border-color)', borderRadius: '6px', padding: '4px 8px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', cursor: 'pointer' }}><Bold size={13} /></button>
-                <button type="button" onClick={() => insertMarkdownFormatting('*', '*')} className="premium-button" style={{ border: '1px solid var(--border-color)', borderRadius: '6px', padding: '4px 8px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', cursor: 'pointer' }}><Italic size={13} /></button>
-                <button type="button" onClick={() => insertMarkdownFormatting('# ', '')} className="premium-button" style={{ border: '1px solid var(--border-color)', borderRadius: '6px', padding: '4px 8px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', cursor: 'pointer' }}><Heading1 size={13} /></button>
-                <button type="button" onClick={() => insertMarkdownFormatting('## ', '')} className="premium-button" style={{ border: '1px solid var(--border-color)', borderRadius: '6px', padding: '4px 8px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', cursor: 'pointer' }}><Heading2 size={13} /></button>
-                <button type="button" onClick={() => insertMarkdownFormatting('- [ ] ', '')} className="premium-button" style={{ border: '1px solid var(--border-color)', borderRadius: '6px', padding: '4px 8px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', cursor: 'pointer' }}><List size={13} /></button>
-                <button type="button" onClick={() => insertMarkdownFormatting('```javascript\n', '\n```')} className="premium-button" style={{ border: '1px solid var(--border-color)', borderRadius: '6px', padding: '4px 8px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', cursor: 'pointer' }}><Code size={13} /></button>
-                <button type="button" onClick={handleDownloadMarkdown} className="premium-button" style={{ border: '1px solid var(--border-color)', borderRadius: '6px', padding: '4px 8px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', fontSize: '11px', fontWeight: '700', cursor: 'pointer', marginLeft: 'auto' }}>Export .md</button>
+            <div
+              style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                backgroundColor: '#ECEFF1',
+                overflowY: 'auto',
+                padding: '20px 16px',
+              }}
+            >
+              {/* TITRE DU DOCUMENT */}
+              <div style={{ maxWidth: '21cm', width: '100%', margin: '0 auto 12px auto' }}>
+                <input
+                  type="text"
+                  value={docTitle}
+                  onChange={(e) => {
+                    setDocTitle(e.target.value);
+                    saveDocToFirestore(docContent, e.target.value);
+                  }}
+                  placeholder="Titre du document..."
+                  style={{
+                    fontSize: '22px',
+                    fontWeight: '800',
+                    border: 'none',
+                    outline: 'none',
+                    backgroundColor: 'transparent',
+                    color: '#1E293B',
+                    width: '100%',
+                    paddingBottom: '4px',
+                    borderBottom: '2px solid rgba(0,0,0,0.1)',
+                  }}
+                />
               </div>
 
-              <textarea
-                ref={textareaRef}
-                value={docContent || ''}
-                onChange={(e) => {
-                  const val = e.target.value || '';
-                  setDocContent(val);
-                  saveDocToFirestore(val);
-                }}
-                placeholder="Rédigez ici vos comptes-rendus..."
+              {/* TOOLBAR COMPLÈTE COLLÉE EN HAUT (WORD / LIBREOFFICE) */}
+              <div
+                className="sticky top-0 z-10"
                 style={{
-                  flex: 1,
+                  maxWidth: '21cm',
                   width: '100%',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: '14px',
-                  padding: '16px',
-                  backgroundColor: 'var(--bg-subtle)',
-                  color: 'var(--text-main)',
-                  fontSize: '14px',
-                  fontFamily: 'inherit',
-                  lineHeight: 1.6,
-                  resize: 'none',
-                  outline: 'none',
+                  margin: '0 auto 16px auto',
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: '12px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                  border: '1px solid #E2E8F0',
+                  padding: '6px 10px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  flexWrap: 'wrap',
+                }}
+              >
+                {/* SÉLECTEUR DE STYLE / TITRES */}
+                <select
+                  onChange={(e) => handleFormat('formatBlock', e.target.value)}
+                  defaultValue="<p>"
+                  style={{
+                    padding: '4px 8px',
+                    borderRadius: '6px',
+                    border: '1px solid #CBD5E1',
+                    backgroundColor: '#F8FAFC',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    outline: 'none',
+                  }}
+                  title="Style de paragraphe"
+                >
+                  <option value="<p>">Normal</option>
+                  <option value="<h1>">Titre 1 (H1)</option>
+                  <option value="<h2>">Titre 2 (H2)</option>
+                  <option value="<h3>">Titre 3 (H3)</option>
+                </select>
+
+                {/* SÉLECTEUR DE TAILLE DE POLICE */}
+                <select
+                  onChange={(e) => handleFormat('fontSize', e.target.value)}
+                  defaultValue="3"
+                  style={{
+                    padding: '4px 6px',
+                    borderRadius: '6px',
+                    border: '1px solid #CBD5E1',
+                    backgroundColor: '#F8FAFC',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    outline: 'none',
+                  }}
+                  title="Taille de police"
+                >
+                  <option value="1">8 pt</option>
+                  <option value="2">10 pt</option>
+                  <option value="3">12 pt</option>
+                  <option value="4">14 pt</option>
+                  <option value="5">18 pt</option>
+                  <option value="6">24 pt</option>
+                  <option value="7">36 pt</option>
+                </select>
+
+                <div style={{ width: '1px', height: '18px', backgroundColor: '#E2E8F0', margin: '0 3px' }} />
+
+                {/* FORMATAGE DU TEXTE : GRAS, ITALIQUE, SOULIGNÉ, BARRÉ */}
+                <button
+                  type="button"
+                  onClick={() => handleFormat('bold')}
+                  className="hover:bg-gray-100 transition-colors"
+                  style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#334155' }}
+                  title="Gras (Ctrl+B)"
+                >
+                  <Bold size={14} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleFormat('italic')}
+                  className="hover:bg-gray-100 transition-colors"
+                  style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#334155' }}
+                  title="Italique (Ctrl+I)"
+                >
+                  <Italic size={14} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleFormat('underline')}
+                  className="hover:bg-gray-100 transition-colors"
+                  style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#334155' }}
+                  title="Souligné (Ctrl+U)"
+                >
+                  <Underline size={14} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleFormat('strikeThrough')}
+                  className="hover:bg-gray-100 transition-colors"
+                  style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#334155' }}
+                  title="Barré"
+                >
+                  <Strikethrough size={14} />
+                </button>
+
+                <div style={{ width: '1px', height: '18px', backgroundColor: '#E2E8F0', margin: '0 3px' }} />
+
+                {/* ALIGNEMENT DU TEXTE */}
+                <button
+                  type="button"
+                  onClick={() => handleFormat('justifyLeft')}
+                  className="hover:bg-gray-100 transition-colors"
+                  style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#334155' }}
+                  title="Aligner à gauche"
+                >
+                  <AlignLeft size={14} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleFormat('justifyCenter')}
+                  className="hover:bg-gray-100 transition-colors"
+                  style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#334155' }}
+                  title="Centrer"
+                >
+                  <AlignCenter size={14} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleFormat('justifyRight')}
+                  className="hover:bg-gray-100 transition-colors"
+                  style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#334155' }}
+                  title="Aligner à droite"
+                >
+                  <AlignRight size={14} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleFormat('justifyFull')}
+                  className="hover:bg-gray-100 transition-colors"
+                  style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#334155' }}
+                  title="Justifier"
+                >
+                  <AlignJustify size={14} />
+                </button>
+
+                <div style={{ width: '1px', height: '18px', backgroundColor: '#E2E8F0', margin: '0 3px' }} />
+
+                {/* LISTES */}
+                <button
+                  type="button"
+                  onClick={() => handleFormat('insertUnorderedList')}
+                  className="hover:bg-gray-100 transition-colors"
+                  style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#334155' }}
+                  title="Liste à puces"
+                >
+                  <List size={14} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleFormat('insertOrderedList')}
+                  className="hover:bg-gray-100 transition-colors"
+                  style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#334155' }}
+                  title="Liste numérotée"
+                >
+                  <ListOrdered size={14} />
+                </button>
+
+                <div style={{ width: '1px', height: '18px', backgroundColor: '#E2E8F0', margin: '0 3px' }} />
+
+                {/* ANNULER / RÉTABLIR / NETTOYER */}
+                <button
+                  type="button"
+                  onClick={() => handleFormat('undo')}
+                  className="hover:bg-gray-100 transition-colors"
+                  style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#334155' }}
+                  title="Annuler (Ctrl+Z)"
+                >
+                  <Undo size={14} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleFormat('redo')}
+                  className="hover:bg-gray-100 transition-colors"
+                  style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#334155' }}
+                  title="Rétablir (Ctrl+Y)"
+                >
+                  <Redo size={14} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleFormat('removeFormat')}
+                  className="hover:bg-gray-100 transition-colors"
+                  style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#334155' }}
+                  title="Effacer le formatage"
+                >
+                  <RemoveFormatting size={14} />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleDownloadMarkdown}
+                  style={{
+                    border: '1px solid #CBD5E1',
+                    borderRadius: '6px',
+                    padding: '3px 7px',
+                    backgroundColor: '#F8FAFC',
+                    color: '#475569',
+                    fontSize: '11px',
+                    fontWeight: '700',
+                    cursor: 'pointer',
+                    marginLeft: 'auto',
+                  }}
+                  title="Exporter en Markdown (.md)"
+                >
+                  Export .md
+                </button>
+              </div>
+
+              {/* DOCUMENT FEUILLE DE PAPIER A4 CENTRÉE */}
+              <div
+                ref={setEditorRef}
+                contentEditable
+                suppressContentEditableWarning
+                placeholder="Rédigez ici vos comptes-rendus..."
+                onInput={handleEditorInput}
+                className="bg-white w-[21cm] min-h-[29.7cm] mx-auto shadow-md p-[2cm] text-black focus:outline-none"
+                style={{
                   boxSizing: 'border-box',
+                  fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                  fontSize: '14.5px',
+                  lineHeight: '1.7',
+                  marginBottom: '48px',
+                  outline: 'none',
+                  cursor: 'text',
                 }}
               />
             </div>
           )}
 
-          {/* 2. TROCO SHEETS */}
+          {/* 2. TROCO SHEETS : LIGNES ET COLONNES DYNAMIQUES */}
           {activeTab === 'sheets' && (
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '16px', overflow: 'hidden' }}>
-              <input
-                type="text"
-                value={sheetTitle || ''}
-                onChange={(e) => {
-                  const val = e.target.value || '';
-                  setSheetTitle(val);
-                  saveSheetToFirestore(sheetData || {}, val);
-                }}
-                style={{
-                  fontSize: '18px',
-                  fontWeight: '700',
-                  border: 'none',
-                  outline: 'none',
-                  backgroundColor: 'transparent',
-                  color: 'var(--text-main)',
-                  marginBottom: '12px',
-                  paddingBottom: '6px',
-                  borderBottom: '1px solid var(--border-color)',
-                }}
-              />
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '12px' }}>
+                <input
+                  type="text"
+                  value={sheetTitle || ''}
+                  onChange={(e) => {
+                    const val = e.target.value || '';
+                    setSheetTitle(val);
+                    saveSheetToFirestore(sheetData || {}, val);
+                  }}
+                  placeholder="Titre de la feuille de calcul..."
+                  style={{
+                    flex: 1,
+                    fontSize: '18px',
+                    fontWeight: '700',
+                    border: 'none',
+                    outline: 'none',
+                    backgroundColor: 'transparent',
+                    color: 'var(--text-main)',
+                    paddingBottom: '4px',
+                    borderBottom: '1px solid var(--border-color)',
+                  }}
+                />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={handleAddRow}
+                    className="premium-button"
+                    style={{
+                      padding: '5px 10px',
+                      fontSize: '11px',
+                      fontWeight: '800',
+                      backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                      color: '#10B981',
+                      border: '1px solid #10B981',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                    title="Ajouter une ligne"
+                  >
+                    ➕ Ajouter Ligne
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleAddCol}
+                    className="premium-button"
+                    style={{
+                      padding: '5px 10px',
+                      fontSize: '11px',
+                      fontWeight: '800',
+                      backgroundColor: '#10B981',
+                      color: '#FFFFFF',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                    title="Ajouter une colonne"
+                  >
+                    ➕ Ajouter Colonne
+                  </button>
+                </div>
+              </div>
 
               {/* BARRE DE FORMULE ACTIVE */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
@@ -1120,28 +1628,52 @@ function CloudOfficeSuiteModalContent({
                 <button type="button" onClick={handleDownloadCSV} className="premium-button" style={{ border: '1px solid var(--border-color)', borderRadius: '6px', padding: '5px 8px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>Export .csv</button>
               </div>
 
-              {/* GRILLE TABLEUR EXCEL INTERACTIVE */}
+              {/* GRILLE TABLEUR EXCEL INTERACTIVE AVEC COLONNES & LIGNES DYNAMIQUES */}
               <div style={{ flex: 1, overflow: 'auto', border: '1px solid var(--border-color)', borderRadius: '12px', backgroundColor: 'var(--bg-subtle)' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', minWidth: '600px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', minWidth: '700px' }}>
                   <thead>
                     <tr style={{ backgroundColor: 'var(--bg-card)' }}>
                       <th style={{ width: '40px', padding: '8px', border: '1px solid var(--border-color)', color: 'var(--text-secondary)' }}>#</th>
-                      {['A', 'B', 'C', 'D', 'E', 'F', 'G'].map(col => (
-                        <th key={col} style={{ padding: '8px', border: '1px solid var(--border-color)', fontWeight: '800', color: 'var(--text-main)' }}>
-                          {col}
-                        </th>
-                      ))}
+                      {Array.from({ length: numCols }).map((_, cIdx) => {
+                        const colLetter = getColLetter(cIdx);
+                        return (
+                          <th key={colLetter} style={{ padding: '8px', border: '1px solid var(--border-color)', fontWeight: '800', color: 'var(--text-main)', minWidth: '100px' }}>
+                            {colLetter}
+                          </th>
+                        );
+                      })}
+                      <th style={{ width: '150px', padding: '6px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-subtle)', textAlign: 'center' }}>
+                        <button
+                          type="button"
+                          onClick={handleAddCol}
+                          style={{
+                            border: 'none',
+                            backgroundColor: '#10B981',
+                            color: '#FFFFFF',
+                            borderRadius: '6px',
+                            padding: '4px 8px',
+                            fontSize: '11px',
+                            fontWeight: '800',
+                            cursor: 'pointer',
+                            whiteSpace: 'nowrap',
+                          }}
+                          title="Ajouter une colonne à droite"
+                        >
+                          ➕ Ajouter Colonne
+                        </button>
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {Array.from({ length: 14 }).map((_, rIdx) => {
+                    {Array.from({ length: numRows }).map((_, rIdx) => {
                       const rowNum = rIdx + 1;
                       return (
                         <tr key={rowNum}>
                           <td style={{ textAlign: 'center', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', fontWeight: '700' }}>
                             {rowNum}
                           </td>
-                          {['A', 'B', 'C', 'D', 'E', 'F', 'G'].map(col => {
+                          {Array.from({ length: numCols }).map((_, cIdx) => {
+                            const col = getColLetter(cIdx);
                             const cellKey = `${col}${rowNum}`;
                             const rawVal = (sheetData && sheetData[cellKey]) != null ? String(sheetData[cellKey]) : '';
                             const evaluated = evaluateCellFormula(rawVal, sheetData || {});
@@ -1177,11 +1709,38 @@ function CloudOfficeSuiteModalContent({
                               </td>
                             );
                           })}
+                          <td style={{ border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)' }} />
                         </tr>
                       );
                     })}
                   </tbody>
                 </table>
+                {/* BOUTON PERSISTANT AJOUTER LIGNE EN BAS DU TABLEAU */}
+                <div style={{ padding: '10px 14px', borderTop: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <button
+                    type="button"
+                    onClick={handleAddRow}
+                    className="premium-button"
+                    style={{
+                      border: '1.5px solid #10B981',
+                      backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                      color: '#10B981',
+                      borderRadius: '8px',
+                      padding: '6px 14px',
+                      fontSize: '12px',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    ➕ Ajouter Ligne
+                  </button>
+                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                    {numRows} lignes × {numCols} colonnes
+                  </span>
+                </div>
               </div>
             </div>
           )}
@@ -1288,7 +1847,7 @@ function CloudOfficeSuiteModalContent({
 
               {/* ÉDITEUR DE LA DIAPOSITIVE EN COURS */}
               <div style={{ flex: 1, padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px', overflowY: 'auto' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
                   <input
                     type="text"
                     value={slides[currentSlideIndex]?.title || ''}
@@ -1296,6 +1855,7 @@ function CloudOfficeSuiteModalContent({
                     placeholder="Titre de la diapositive..."
                     style={{
                       flex: 1,
+                      minWidth: '200px',
                       fontSize: '22px',
                       fontWeight: '700',
                       border: 'none',
@@ -1306,24 +1866,157 @@ function CloudOfficeSuiteModalContent({
                       paddingBottom: '4px',
                     }}
                   />
-                  {/* SÉLECTEUR DE THÈME VISUEL */}
-                  <select
-                    value={slides[currentSlideIndex]?.theme || 'terracotta'}
-                    onChange={(e) => handleUpdateCurrentSlide('theme', e.target.value)}
-                    style={{
-                      padding: '6px 10px',
-                      borderRadius: '8px',
-                      border: '1px solid var(--border-color)',
-                      backgroundColor: 'var(--bg-card)',
-                      color: 'var(--text-main)',
-                      fontSize: '12px',
-                      fontWeight: '700',
-                    }}
-                  >
-                    <option value="terracotta">Thème Terracotta</option>
-                    <option value="dark">Thème Sombre</option>
-                    <option value="light">Thème Clair</option>
-                  </select>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {/* SÉLECTEUR DE THÈME VISUEL */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>Thème de fond :</label>
+                      <select
+                        value={slides[currentSlideIndex]?.theme || 'terracotta'}
+                        onChange={(e) => handleUpdateCurrentSlide('theme', e.target.value)}
+                        aria-label="Thème de fond"
+                        style={{
+                          padding: '5px 8px',
+                          borderRadius: '8px',
+                          border: '1px solid var(--border-color)',
+                          backgroundColor: 'var(--bg-card)',
+                          color: 'var(--text-main)',
+                          fontSize: '12px',
+                          fontWeight: '700',
+                        }}
+                      >
+                        <option value="light">Clair</option>
+                        <option value="dark">Sombre</option>
+                        <option value="gradient">Dégradé</option>
+                        <option value="terracotta">Terracotta</option>
+                      </select>
+                    </div>
+
+                    {/* BOUTON D'INSERTION D'IMAGE */}
+                    <input
+                      type="file"
+                      ref={slideImageInputRef}
+                      onChange={handleSlideImageUpload}
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => slideImageInputRef.current?.click()}
+                      disabled={isUploadingImage}
+                      className="premium-button"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        padding: '6px 10px',
+                        backgroundColor: '#3B82F6',
+                        color: '#FFFFFF',
+                        borderRadius: '8px',
+                        border: 'none',
+                        fontSize: '11px',
+                        fontWeight: '800',
+                        cursor: isUploadingImage ? 'wait' : 'pointer',
+                        whiteSpace: 'nowrap',
+                      }}
+                      title="Insérer une image sur la diapositive"
+                    >
+                      <ImageIcon size={13} />
+                      <span>{isUploadingImage ? 'Envoi...' : '➕ Image'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* CARTE APERÇU DIAPOSITIVE EN COURS AVEC THÈME DE FOND MODIFIÉ DYNAMIQUEMENT */}
+                <div
+                  style={{
+                    ...getSlideBackgroundStyle(slides[currentSlideIndex]?.theme),
+                    borderRadius: '16px',
+                    padding: '24px 22px',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
+                    minHeight: '240px',
+                    position: 'relative',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    transition: 'all 0.25s ease',
+                  }}
+                >
+                  <h2 style={{ fontSize: '24px', fontWeight: '800', margin: '0 0 6px 0', letterSpacing: '-0.01em' }}>
+                    {slides[currentSlideIndex]?.title || 'Titre de la diapositive'}
+                  </h2>
+                  <p style={{ fontSize: '14px', opacity: 0.9, margin: '0 0 14px 0', fontStyle: 'italic' }}>
+                    {slides[currentSlideIndex]?.subtitle || 'Sous-titre et contexte du projet'}
+                  </p>
+
+                  {/* IMAGE REDIMENSIONNABLE EN SURIMPRESSION */}
+                  {slides[currentSlideIndex]?.imageUrl && (
+                    <div style={{ margin: '12px auto', textAlign: 'center', position: 'relative' }}>
+                      <img
+                        src={slides[currentSlideIndex].imageUrl}
+                        alt="Illustration diapositive"
+                        style={{
+                          width: `${slides[currentSlideIndex].imageWidth || 280}px`,
+                          maxHeight: '240px',
+                          objectFit: 'contain',
+                          borderRadius: '10px',
+                          boxShadow: '0 6px 18px rgba(0,0,0,0.25)',
+                          display: 'inline-block',
+                        }}
+                      />
+                      {/* Contrôles de redimensionnement de l'image */}
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '8px',
+                          marginTop: '8px',
+                          backgroundColor: 'rgba(0,0,0,0.5)',
+                          padding: '3px 8px',
+                          borderRadius: '8px',
+                          width: 'fit-content',
+                          margin: '8px auto 0 auto',
+                        }}
+                      >
+                        <span style={{ fontSize: '11px', color: '#FFF', fontWeight: '600' }}>Taille :</span>
+                        <input
+                          type="range"
+                          min="100"
+                          max="550"
+                          value={slides[currentSlideIndex].imageWidth || 280}
+                          onChange={(e) => handleUpdateCurrentSlide('imageWidth', Number(e.target.value))}
+                          style={{ width: '90px', cursor: 'pointer' }}
+                        />
+                        <span style={{ fontSize: '11px', color: '#FFF' }}>{slides[currentSlideIndex].imageWidth || 280}px</span>
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateCurrentSlide('imageUrl', null)}
+                          style={{
+                            border: 'none',
+                            backgroundColor: 'rgba(239, 68, 68, 0.85)',
+                            color: '#FFF',
+                            borderRadius: '4px',
+                            padding: '2px 6px',
+                            fontSize: '10px',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                          }}
+                          title="Supprimer l'image"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  <ul style={{ margin: '6px 0 0 0', paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {(slides[currentSlideIndex]?.bullets || []).map((b, i) => (
+                      <li key={i} style={{ fontSize: '13.5px', fontWeight: '600', opacity: 0.95 }}>
+                        {b}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
 
                 <input
