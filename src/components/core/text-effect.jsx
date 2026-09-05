@@ -60,6 +60,8 @@ const PRESETS = {
  * @param {boolean} [props.once]          - If true, animate only the first time in view.
  * @param {number}  [props.delay]         - Extra initial delay before stagger starts.
  */
+const useMotionPreference = typeof useReducedMotion === 'function' ? useReducedMotion : () => false;
+
 export function TextEffect({
   children,
   preset = 'fade-in-blur',
@@ -71,7 +73,7 @@ export function TextEffect({
   once = true,
   delay = 0,
 }) {
-  const prefersReducedMotion = useReducedMotion();
+  const prefersReducedMotion = useMotionPreference();
 
   const text = typeof children === 'string' ? children : String(children ?? '');
   const segments = useMemo(() => {
@@ -110,32 +112,57 @@ export function TextEffect({
     },
   };
 
-  const MotionTag = motion[Tag] ?? motion.span;
+  const isMotionComponent = Boolean(motion && motion[Tag]);
+  const MotionTag = isMotionComponent ? motion[Tag] : (Tag || 'span');
+  const isMotionSpan = Boolean(motion && motion.span);
+  const MotionSpan = isMotionSpan ? motion.span : 'span';
+
+  const motionProps = isMotionComponent
+    ? {
+        variants: containerVariants,
+        initial: 'hidden',
+        whileInView: 'show',
+        viewport: { once, amount: 0.2 },
+      }
+    : {};
 
   return (
     <MotionTag
       className={cn ? cn('inline', className) : `inline ${className}`}
-      variants={containerVariants}
-      initial="hidden"
-      whileInView="show"
-      viewport={{ once, amount: 0.2 }}
+      {...motionProps}
       aria-label={text}
     >
-      {segments.map((segment, i) => {
-        if (/^\s+$/.test(segment)) {
-          return <span key={i} aria-hidden="true">{segment}</span>;
-        }
-        return (
-          <motion.span
-            key={i}
-            variants={segmentVariants}
-            style={{ display: 'inline-block' }}
-            aria-hidden="true"
-          >
-            {segment}
-          </motion.span>
-        );
-      })}
+      <span
+        style={{
+          position: 'absolute',
+          width: '1px',
+          height: '1px',
+          padding: 0,
+          margin: '-1px',
+          overflow: 'hidden',
+          clip: 'rect(0, 0, 0, 0)',
+          whiteSpace: 'nowrap',
+          border: 0,
+        }}
+      >
+        {text}
+      </span>
+      <span aria-hidden="true">
+        {segments.map((segment, i) => {
+          if (/^\s+$/.test(segment)) {
+            return <span key={i}>{segment}</span>;
+          }
+          return (
+            <MotionSpan
+              key={i}
+              {...(isMotionSpan ? { variants: segmentVariants } : {})}
+              style={{ display: 'inline-block' }}
+            >
+              {segment}
+            </MotionSpan>
+          );
+        })}
+      </span>
     </MotionTag>
   );
 }

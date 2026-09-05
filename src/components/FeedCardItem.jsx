@@ -236,7 +236,7 @@ function FeedCardItem({
             <ProgressiveImage
               key={idx}
               src={imgSrc}
-              fallbackSrc={getFallbackImage(item.category, item.title)}
+              fallbackSrc={typeof getFallbackImage === 'function' ? getFallbackImage(item.category, item.title) : ''}
               alt={item.title}
               draggable={false}
               className="ken-burns-img"
@@ -458,7 +458,7 @@ function FeedCardItem({
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '12.5px', color: 'var(--text-secondary)', marginBottom: '8px' }}>
           <span className="font-editorial" style={{ display: 'flex', alignItems: 'center', gap: '4px', fontStyle: 'italic' }}>
             {item.type === 'remote' ? <Video size={13} color="var(--accent-primary)" /> : <MapPin size={13} color="var(--accent-primary)" />}
-            {localizeLocation(item.location, currentLang)}
+            {typeof localizeLocation === 'function' ? localizeLocation(item.location, currentLang) : (item.location || '')}
           </span>
         </div>
 
