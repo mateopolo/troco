@@ -24,6 +24,7 @@ import PWAInstallBanner from './components/PWAInstallBanner';
 import SponsoredFeedCard from './components/SponsoredFeedCard';
 import SectoralErrorBoundary from './components/SectoralErrorBoundary';
 import AuthScreen from './features/auth/AuthScreen';
+import TransactionSuccessModal from './components/TransactionSuccessModal';
 import { useWalletStore } from './stores';
 import haptics from './utils/haptics';
 import { useAppAuth } from './hooks/useAppAuth';
@@ -438,6 +439,71 @@ export default function App() {
     }
   }, [profile?.uid]);
 
+  // ---- MODALE DE CONFIRMATION DE TRANSACTION FINTECH IMMERSIVE ----
+  const [transactionSuccessModalConfig, setTransactionSuccessModalConfig] = useState({
+    isOpen: false,
+    type: 'sent', // 'sent' | 'received'
+    amount: 1,
+    currency: 'tokens', // 'tokens' | 'fiat'
+    partnerName: '',
+    notificationId: null,
+  });
+
+  const handleCloseTransactionSuccessModal = useCallback(async () => {
+    const notifId = transactionSuccessModalConfig.notificationId;
+    const currentUid = profile?.uid || profile?.id || auth.currentUser?.uid;
+    if (notifId && currentUid && db) {
+      try {
+        const notifRef = doc(db, 'users', currentUid, 'notifications', notifId);
+        await updateDoc(notifRef, {
+          read: true,
+          readAt: serverTimestamp(),
+        });
+      } catch (err) {
+        console.warn('Erreur marquage notification lue:', err);
+      }
+    }
+    setTransactionSuccessModalConfig(prev => ({ ...prev, isOpen: false, notificationId: null }));
+  }, [transactionSuccessModalConfig.notificationId, profile?.uid, profile?.id]);
+
+  // ---- DÉCLENCHEMENT GLOBAL DES NOTIFICATIONS (POUR LE RECEVEUR) ----
+  useEffect(() => {
+    const currentUid = profile?.uid || profile?.id || auth.currentUser?.uid;
+    if (!currentUid || !db) return;
+
+    try {
+      const notifsCol = collection(db, 'users', currentUid, 'notifications');
+      const qNotifs = query(notifsCol, where('read', '==', false));
+
+      const unsubNotifs = onSnapshot(qNotifs, (snapshot) => {
+        if (!snapshot.empty) {
+          snapshot.docChanges().forEach((change) => {
+            if (change.type === 'added' || change.type === 'modified') {
+              const notifData = change.doc.data();
+              if (notifData && notifData.type === 'payment_received' && notifData.read === false) {
+                const partner = notifData.senderName || notifData.fromName || notifData.userName || '';
+                setTransactionSuccessModalConfig({
+                  isOpen: true,
+                  type: 'received',
+                  amount: notifData.amount || 1,
+                  currency: notifData.currency === 'fiat' || notifData.currency === 'EUR' ? 'fiat' : 'tokens',
+                  partnerName: partner,
+                  notificationId: change.doc.id,
+                });
+              }
+            }
+          });
+        }
+      }, (err) => {
+        console.warn('[Notifications] Erreur écoute notifications temps réel:', err);
+      });
+
+      return () => unsubNotifs();
+    } catch (e) {
+      console.warn('[Notifications] Listener setup error:', e);
+    }
+  }, [profile?.uid, profile?.id]);
+
   // Handler d'ouverture du module de paiement
   const handleOpenPayment = useCallback((mode = 'pack-tokens', payload = null) => {
     setPaymentModalConfig({ mode, payload });
@@ -456,6 +522,16 @@ export default function App() {
     setActiveTab,
     setSelectedListing,
     setSaveMessage,
+    onTransactionSuccess: (config) => {
+      setTransactionSuccessModalConfig({
+        isOpen: true,
+        type: config.type || 'sent',
+        amount: config.amount,
+        currency: config.currency || 'tokens',
+        partnerName: config.partnerName || '',
+        notificationId: null,
+      });
+    },
   });
 
   const {
@@ -1449,6 +1525,7 @@ export default function App() {
             amount: costTokens,
             currency: 'tokens',
             from: currentUid,
+            senderName: profile?.name || 'Membre Troco',
             read: false,
             timestamp: serverTimestamp(),
           });
@@ -1475,6 +1552,14 @@ export default function App() {
 
         playApplePaySound();
         playBetclicBalanceSound(true);
+        setTransactionSuccessModalConfig({
+          isOpen: true,
+          type: 'sent',
+          amount: costTokens,
+          currency: 'tokens',
+          partnerName: partner,
+          notificationId: null,
+        });
         setSaveMessage(`🤝 ${costTokens} Jeton${costTokens > 1 ? 's' : ''} Troco transféré(s) à ${partner} (Frais de service : 0,00 €) !`);
       } catch (e) {
         console.error('🚨 [Firestore] Erreur transaction transfert jetons:', e);
@@ -4768,6 +4853,16 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* MODALE DE CONFIRMATION DE TRANSACTION FINTECH IMMERSIVE (EXPÉDITEUR & DESTINATAIRE) */}
+      <TransactionSuccessModal
+        isOpen={Boolean(transactionSuccessModalConfig?.isOpen)}
+        type={transactionSuccessModalConfig?.type || 'sent'}
+        amount={transactionSuccessModalConfig?.amount || 1}
+        currency={transactionSuccessModalConfig?.currency || 'tokens'}
+        partnerName={transactionSuccessModalConfig?.partnerName || ''}
+        onClose={handleCloseTransactionSuccessModal}
+      />
 
       {/* ÉCRAN D'EXCLUSION TOTAL EN CAS DE BANNISSEMENT TEMPS RÉEL */}
       {isUserBanned && (

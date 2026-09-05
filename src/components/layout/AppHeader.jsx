@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Coins, Sparkles, Sun, Moon, Globe } from 'lucide-react';
 import TrocoLogo3D from '../common/TrocoLogo3D';
 import TrocoLogoNativeSvg from '../common/TrocoLogoNativeSvg';
 import { AnimatedEuroBalance, AnimatedTokenBalance } from '../AnimatedBalances';
 import { formatTokenCount as formatTokenCountUtil } from '../../utils/formatters';
+import { playBetclicBalanceSound } from '../../utils/audioService';
 
 export const AppHeader = React.memo(({
   isMobile = false,
@@ -25,6 +26,49 @@ export const AppHeader = React.memo(({
 }) => {
   // Condensation et élévation du header supérieur au défilement (Micro-interactions avec RAF)
   const [isScrolled, setIsScrolled] = useState(false);
+
+  // 🚨 ANIMATION DU SOLDE FAÇON "BETCLIC" (Gain flottant +X sur Jetons et Euros)
+  const [floatingGain, setFloatingGain] = useState(null); // { amount, type: 'token' }
+  const [floatingEuroGain, setFloatingEuroGain] = useState(null); // { amount, type: 'fiat' }
+
+  const prevTokensRef = useRef(profile?.trocoTokens);
+  const prevEuroRef = useRef(profile?.euroBalance);
+
+  useEffect(() => {
+    const curTokens = Number(profile?.trocoTokens);
+    const prevTokens = Number(prevTokensRef.current);
+    if (!isNaN(curTokens) && !isNaN(prevTokens) && curTokens > prevTokens) {
+      const diff = curTokens - prevTokens;
+      setFloatingGain({ amount: diff, type: 'token' });
+      try {
+        playBetclicBalanceSound(true);
+      } catch (_) {}
+      const timer = setTimeout(() => {
+        setFloatingGain(null);
+      }, 2000);
+      prevTokensRef.current = curTokens;
+      return () => clearTimeout(timer);
+    }
+    prevTokensRef.current = curTokens;
+  }, [profile?.trocoTokens]);
+
+  useEffect(() => {
+    const curEuro = Number(profile?.euroBalance);
+    const prevEuro = Number(prevEuroRef.current);
+    if (!isNaN(curEuro) && !isNaN(prevEuro) && curEuro > prevEuro) {
+      const diff = Number((curEuro - prevEuro).toFixed(2));
+      setFloatingEuroGain({ amount: diff, type: 'fiat' });
+      try {
+        playBetclicBalanceSound(true);
+      } catch (_) {}
+      const timer = setTimeout(() => {
+        setFloatingEuroGain(null);
+      }, 2000);
+      prevEuroRef.current = curEuro;
+      return () => clearTimeout(timer);
+    }
+    prevEuroRef.current = curEuro;
+  }, [profile?.euroBalance]);
 
   useEffect(() => {
     let rafId = null;
@@ -183,6 +227,14 @@ export const AppHeader = React.memo(({
               transition: 'padding 0.3s var(--ease-quiet)',
             }}
           >
+            {floatingEuroGain && (
+              <div
+                className="absolute -top-6 left-0 text-green-500 font-bold text-lg animate-float-up-fade pointer-events-none select-none z-50 flex items-center gap-0.5"
+                style={{ textShadow: '0 2px 8px rgba(34, 197, 94, 0.4)' }}
+              >
+                +{floatingEuroGain.amount}€
+              </div>
+            )}
             <Coins size={13} style={{ flexShrink: 0 }} />
             <AnimatedEuroBalance
               value={profile?.euroBalance || 0}
@@ -217,6 +269,14 @@ export const AppHeader = React.memo(({
               transition: 'padding 0.3s var(--ease-quiet)',
             }}
           >
+            {floatingGain && (
+              <div
+                className="absolute -top-6 left-0 text-green-500 font-bold text-lg animate-float-up-fade pointer-events-none select-none z-50 flex items-center gap-0.5"
+                style={{ textShadow: '0 2px 8px rgba(34, 197, 94, 0.4)' }}
+              >
+                +{floatingGain.amount}
+              </div>
+            )}
             <Sparkles size={13} color="var(--accent-primary)" style={{ flexShrink: 0 }} />
             <AnimatedTokenBalance
               value={profile?.trocoTokens || 0}

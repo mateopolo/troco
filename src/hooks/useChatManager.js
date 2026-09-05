@@ -22,9 +22,7 @@ import { uploadVoiceNote } from '../services/voiceStorageService';
 import { playBetclicBalanceSound, playApplePaySound, playSwooshSound } from '../utils/audioService';
 import { useChatStore, useWalletStore } from '../stores';
 import { hapticLight, hapticSuccess, hapticError } from '../utils/haptics';
-import { playPop, playSuccessChime } from '../services/audioService';
-import { showDynamicIslandNotification } from '../services/notificationService';
-import { executeDirectTokenTransfer } from '../services/firestoreService';
+import { playPop } from '../services/audioService';
 
 // Singleton audio context pour éviter la saturation des threads WebKit audio sur iOS
 let sharedChatAudioCtx = null;
@@ -54,6 +52,7 @@ export const useChatManager = ({
   callState,
   endCall,
   setSaveMessage = () => { },
+  onTransactionSuccess = () => { },
 }) => {
   // ---- ÉTATS DE MESSAGERIE & DEALS ----
   const [selectedChat, setSelectedChat] = useState(null);
@@ -1585,6 +1584,15 @@ export const useChatManager = ({
       }
     }
 
+    if (typeof onTransactionSuccess === 'function') {
+      onTransactionSuccess({
+        type: 'sent',
+        amount: finalTokens > 0 ? finalTokens : finalEuro,
+        currency: finalTokens > 0 ? 'tokens' : 'fiat',
+        partnerName: partnerName || 'Vendeur',
+      });
+    }
+
     setSaveMessage(`🤝 Deal validé avec succès ! ${finalTokens > 0 ? `${finalTokens}🪙 ` : ''}${finalEuro > 0 ? `${finalEuro}€ ` : ''}transféré(s).`);
     setTimeout(() => setSaveMessage(''), 5000);
   };
@@ -1788,13 +1796,14 @@ export const useChatManager = ({
 
   // ---- 🚨 TRANSACTION DE FIN D'APPEL / POURBOIRE POST-APPEL ----
   const sendPostCallTip = async (arg1, arg2, arg3) => {
-    let targetUid, amount, comment = '', duration = 0, insurance = false;
+    let targetUid, amount, comment = '', duration = 0, insurance = false, partnerName = '';
     if (typeof arg1 === 'object' && arg1 !== null) {
       targetUid = arg1.targetUid || arg1.partnerUid;
       amount = Number(arg1.amount ?? arg1.tokens ?? 1);
       comment = arg1.comment || '';
       duration = arg1.duration || 0;
       insurance = !!arg1.insurance;
+      partnerName = arg1.partnerName || '';
     } else {
       amount = Number(arg1) || 1;
       targetUid = arg2;
@@ -1866,6 +1875,14 @@ export const useChatManager = ({
 
       hapticSuccess();
       playSwooshSound();
+      if (typeof onTransactionSuccess === 'function') {
+        onTransactionSuccess({
+          type: 'sent',
+          amount: costTokens,
+          currency: 'tokens',
+          partnerName: partnerName || selectedChat?.user || 'Interlocuteur',
+        });
+      }
       setSaveMessage(`🪙 ${costTokens} Jeton(s) Troco envoyé(s) avec succès !`);
       setTimeout(() => setSaveMessage(''), 4000);
 
@@ -1984,6 +2001,14 @@ export const useChatManager = ({
       // L'expéditeur ne doit PAS entendre le son de gain / réception.
       // Seul le listener onSnapshot du receveur déclenche le son "plus vert".
       playSwooshSound();
+      if (typeof onTransactionSuccess === 'function') {
+        onTransactionSuccess({
+          type: 'sent',
+          amount,
+          currency: 'tokens',
+          partnerName: chatObj?.user || 'Interlocuteur',
+        });
+      }
       setSaveMessage(`🪙 ${amount} Jeton(s) Troco envoyé(s) avec succès !`);
       setTimeout(() => setSaveMessage(''), 4000);
 
