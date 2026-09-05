@@ -193,6 +193,8 @@ export default function CollaborativeWhiteboardModal({
 
   // 2. Mode Immersion Absolue (Plein écran sans distractions) & Responsive Mobile
   const [isImmersiveMode, setIsImmersiveMode] = useState(false);
+  const [isToolbarVisible, setIsToolbarVisible] = useState(true);
+  const [isResizing, setIsResizing] = useState(false);
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
 
   useEffect(() => {
@@ -739,11 +741,15 @@ export default function CollaborativeWhiteboardModal({
   const handleDeleteSelected = useCallback(() => {
     if (!selectedObjectId) return;
     const nextPaths = localPaths.filter((o) => o && o.id !== selectedObjectId);
+    const nextTexts = textElements.filter((t) => t && t.id !== selectedObjectId);
+    const nextStickies = stickyNotes.filter((s) => s && s.id !== selectedObjectId);
     setLocalPaths(nextPaths);
+    setTextElements(nextTexts);
+    setStickyNotes(nextStickies);
     setCanvasObjects(nextPaths.map(toCanvasObject));
     setSelectedObjectId(null);
     pushToHistory(nextPaths);
-    debouncedSyncToFirestore(nextPaths, remotePaths, stickyNotes, textElements);
+    debouncedSyncToFirestore(nextPaths, remotePaths, nextStickies, nextTexts);
   }, [selectedObjectId, localPaths, remotePaths, stickyNotes, textElements, pushToHistory, debouncedSyncToFirestore, toCanvasObject]);
 
   // Raccourcis clavier Ctrl+C, Ctrl+V, Delete
@@ -1429,8 +1435,10 @@ export default function CollaborativeWhiteboardModal({
 
   // ================= GESTION DES POINTER EVENTS =================
   const handlePointerDown = (e) => {
-    // Empêche la création de nouveaux textes ou tracés tant qu'un texte est en cours d'édition
-    if (editingTextId) return;
+    // Si un texte est en cours d'édition, ce clic en dehors valide et ferme l'édition
+    if (editingTextId) {
+      setEditingTextId(null);
+    }
 
     const coords = getCanvasCoords(e);
     startPosRef.current = coords;
@@ -1571,7 +1579,7 @@ export default function CollaborativeWhiteboardModal({
       return;
     }
 
-    if (tool === 'text') {
+    if (tool === 'text' || toolMode === 'text') {
       isDrawingRef.current = true;
       lastLocalModificationTimeRef.current = Date.now();
       currentPathRef.current = {
@@ -1708,18 +1716,12 @@ export default function CollaborativeWhiteboardModal({
     }
 
     if (resizingTextRef.current) {
-      const { id, startX, startY, origFontSize } = resizingTextRef.current;
-      // Calcul purement diagonal : on mesure le vecteur depuis l'origine du drag
-      // vers le bas-droite = agrandir, vers le haut-gauche = réduire
-      // Le signe est donné par la composante diagonale (dx + dy) normalisée
-      const dx = coords.x - startX;
-      const dy = coords.y - startY;
-      const signedDelta = (dx + dy) / 2; // px en coords monde
-      // 1 px de déplacement diagonal = ~0.4pt de taille de police
-      const SCALE_SENSITIVITY = 0.4;
-      const newFontSize = Math.max(8, Math.min(180, Math.round(origFontSize + signedDelta * SCALE_SENSITIVITY)));
+      const { id, startX, startFontSize } = resizingTextRef.current;
+      const currentX = e.clientX !== undefined ? e.clientX : (e.touches?.[0]?.clientX || coords.x || 0);
+      const dx = currentX - startX;
+      const scale = Math.max(0.1, 1 + (dx * 0.005)); // Facteur de sensibilité ultra-doux
+      const newFontSize = Math.max(8, Math.round(startFontSize * scale));
 
-      // On ne touche PAS à width/height : la boîte garde sa taille, seule la police change
       setTextElements((prev) =>
         prev.map((t) =>
           t.id === id
@@ -1978,12 +1980,13 @@ export default function CollaborativeWhiteboardModal({
       draggingStickyRef.current = null;
     }
 
-    // Clôture IMMÉDIATE du mode redimensionnement texte (🚨 PHASE 121 : State Trap Fix)
+    // Clôture IMMÉDIATE du mode redimensionnement texte (🚨 PHASE 121 : State Trap Fix & Libération)
     if (resizingTextRef.current) {
       lastLocalModificationTimeRef.current = Date.now();
       const resizedId = resizingTextRef.current.id;
       // Nettoyage immédiat du ref AVANT le setState pour éviter tout re-trigger
       resizingTextRef.current = null;
+      setIsResizing(false);
       isDrawingRef.current = false;
 
       const resized = textElements.find((t) => t.id === resizedId);
@@ -1992,9 +1995,6 @@ export default function CollaborativeWhiteboardModal({
         pushToHistory(localPaths);
         debouncedSyncToFirestore(localPaths, remotePaths, stickyNotes, textElements);
       }
-      // 🔑 Libère la main en basculant vers l'outil Sélection
-      setTool('select');
-      setToolMode('select');
     }
 
     // GESTION DU TEXTE : Création par tracé, calcul proportionnel diagonale et bascule automatique en édition
@@ -2104,6 +2104,18 @@ export default function CollaborativeWhiteboardModal({
       }
     }
   };
+
+  // 🚨 PHASE 121 : Sécurité libération de capture pointeur globale
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleGlobalPointerUp = (e) => {
+      if (resizingTextRef.current) {
+        handlePointerUp(e);
+      }
+    };
+    window.addEventListener('pointerup', handleGlobalPointerUp);
+    return () => window.removeEventListener('pointerup', handleGlobalPointerUp);
+  }, [isOpen, handlePointerUp]);
 
   // ================= 4. GESTION DES VERSIONS & EXPORT CHAT (Auto-Crop Bounding Box) =================
   // ================= 4. GESTION DES VERSIONS & EXPORT CHAT (Auto-Crop Bounding Box) =================
@@ -3133,10 +3145,7 @@ export default function CollaborativeWhiteboardModal({
                       debouncedSyncToFirestore(localPaths, remotePaths, stickyNotes, filtered);
                     }
                     setEditingTextId(null);
-                    // 🚨 PHASE 110 : Fix mode texte -> bascule forcée en mode sélection (Curseur ↖️)
-                    setToolMode('select');
-                    setTool('select');
-                    setSelectedObjectId(t.id);
+                    // 🚨 PHASE 121 : On ne force plus setToolMode('select') pour permettre l'insertion de textes multiples en continu
                   }}
                   onChange={(e) => {
                     const nextTexts = textElements.map((item) =>
@@ -3180,36 +3189,37 @@ export default function CollaborativeWhiteboardModal({
                 </div>
               )}
 
-              {/* Poignée de redimensionnement Scale-to-fit */}
+              {/* Poignée de redimensionnement Scale-to-fit proportionnel (Touch & Souris) */}
               <div
                 onPointerDown={(e) => {
                   e.stopPropagation();
                   e.currentTarget.setPointerCapture(e.pointerId);
-                  const coords = getCanvasCoords(e);
+                  const currentX = e.clientX !== undefined ? e.clientX : (e.touches?.[0]?.clientX || 0);
+                  const currentY = e.clientY !== undefined ? e.clientY : (e.touches?.[0]?.clientY || 0);
                   resizingTextRef.current = {
                     id: t.id,
-                    startX: coords.x,
-                    startY: coords.y,
-                    origW: t.width || 220,
-                    origH: t.height || 50,
-                    origFontSize: t.fontSize || 24,
-                    origDiag: 1, // baseline — will be used as reference for scale ratio
-                    textStr: t.text,
+                    startX: currentX,
+                    startY: currentY,
+                    startFontSize: t.fontSize || 24,
                   };
+                  setIsResizing(true);
                 }}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
                 style={{
                   position: 'absolute',
                   bottom: '-6px',
                   right: '-6px',
-                  width: '14px',
-                  height: '14px',
+                  width: '18px',
+                  height: '18px',
                   borderRadius: '50%',
                   backgroundColor: 'var(--accent-primary, #C67D5B)',
                   cursor: 'nwse-resize',
                   zIndex: 30,
                   boxShadow: '0 2px 6px rgba(0,0,0,0.3)',
+                  touchAction: 'none',
                 }}
-                title="Redimensionner la zone et ajuster la police"
+                title="Redimensionner la police (Tactile / Souris)"
               />
             </div>
           );
@@ -3262,573 +3272,711 @@ export default function CollaborativeWhiteboardModal({
         })}
       </div>
 
-      {/* 3. BARRE D'OUTILS PRINCIPALE FLUIDE & TACTILE (Standard Apple HIG) */}
-      {!isImmersiveMode && (
+      {/* 3. BARRE D'OUTILS PRINCIPALE FLUIDE & TACTILE (Standard Apple HIG & Phase 120 Swipe Toolbar) */}
+      {!isImmersiveMode && !isToolbarVisible && (
+        <div className="absolute bottom-4 left-0 right-0 z-[1000] flex justify-center pb-[env(safe-area-inset-bottom)] px-2 landscape:bottom-2 pointer-events-none">
+          <button
+            type="button"
+            onClick={() => setIsToolbarVisible(true)}
+            className="pointer-events-auto flex items-center gap-2 px-4 py-2.5 bg-[#2A2624]/95 text-white rounded-full shadow-2xl border border-white/15 hover:bg-[#3A3430] active:scale-95 transition-all text-xs font-semibold backdrop-blur-xl"
+            title="Afficher la barre d'outils"
+          >
+            <Eye size={16} color="var(--accent-primary, #C67D5B)" />
+            <span>👁️ Afficher les outils</span>
+          </button>
+        </div>
+      )}
+
+      {!isImmersiveMode && isToolbarVisible && (
         <div className="absolute bottom-4 left-0 right-0 z-[1000] flex justify-center pb-[env(safe-area-inset-bottom)] px-2 landscape:bottom-2 pointer-events-none">
           <div
-            className="flex flex-row flex-nowrap items-center gap-3 overflow-x-auto overflow-y-visible snap-x snap-mandatory touch-pan-x no-scrollbar w-full max-w-[95vw] md:max-w-2xl mx-auto px-4 py-2 bg-[#2A2624]/90 rounded-2xl border border-white/10 shadow-lg h-14 landscape:h-14 text-white pointer-events-auto"
+            className="flex flex-row flex-nowrap items-center gap-4 overflow-x-auto overflow-y-visible touch-pan-x no-scrollbar w-full max-w-[95vw] md:max-w-3xl mx-auto px-4 py-3 snap-x scroll-smooth landscape:h-14 bg-[#2A2624]/95 rounded-2xl border border-white/10 shadow-lg text-white pointer-events-auto"
             style={{
               backdropFilter: 'blur(20px)',
               WebkitBackdropFilter: 'blur(20px)',
               minHeight: '56px',
-              maxHeight: '56px',
             }}
           >
-          {/* Outils de dessin libres */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, flexWrap: 'nowrap' }}>
-            {/* 🚨 PHASE 110 : Outil Curseur de sélection (↖️) */}
-            <button
-              type="button"
-              className="snap-center"
-              onClick={() => {
-                setTool('select');
-                setToolMode('select');
-                setIsShapesMenuOpen(false);
-              }}
-              style={{
-                width: '40px',
-                height: '40px',
-                borderRadius: '12px',
-                border: 'none',
-                backgroundColor: (tool === 'select' || toolMode === 'select')
-                  ? 'var(--accent-primary, #C67D5B)'
-                  : darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-                color: (tool === 'select' || toolMode === 'select') ? '#FFFFFF' : 'inherit',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                transition: 'all 0.15s ease',
-                flexShrink: 0,
-              }}
-              title="Sélectionner & Manipuler (Curseur)"
-            >
-              <MousePointer size={18} />
-            </button>
-
-            {[
-              { id: 'pencil', icon: Pen, title: 'Crayon' },
-              { id: 'brush', icon: Brush, title: 'Pinceau Artistique' },
-              { id: 'highlighter', icon: Highlighter, title: 'Surligneur' },
-              { id: 'eraser', icon: Eraser, title: 'Gomme' },
-            ].map((btn) => {
-              const Icon = btn.icon;
-              const isSelected = tool === btn.id && toolMode !== 'select';
-              return (
-                <button
-                  key={btn.id}
-                  type="button"
-                  className="snap-center"
-                  onClick={() => {
-                    setTool(btn.id);
-                    setToolMode('draw');
-                    setSelectedObjectId(null);
-                    setIsShapesMenuOpen(false);
-                  }}
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '12px',
-                    border: 'none',
-                    backgroundColor: isSelected
-                      ? 'var(--accent-primary, #C67D5B)'
-                      : darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-                    color: isSelected ? '#FFFFFF' : 'inherit',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    flexShrink: 0,
-                  }}
-                  title={btn.title}
-                >
-                  <Icon size={18} />
-                </button>
-              );
-            })}
-
-            {/* BOUTON DÉROULANT FORMES GÉOMÉTRIQUES & VECTORIELLES */}
-            <div style={{ position: 'relative', flexShrink: 0, overflow: 'visible' }}>
+            {/* 1. Historique : Undo (↩️) et Redo (↪️) */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, flexWrap: 'nowrap' }}>
               <button
-                ref={shapeButtonRef}
                 type="button"
+                disabled={historyStep <= 0}
+                onClick={handleUndo}
                 className="snap-center"
-                onClick={() => {
-                  setToolMode('shape');
-                  setSelectedObjectId(null);
-                  if (['rect', 'circle', 'line', 'arrow', 'triangle', 'hexagon', 'star', 'speech_bubble', 'heart', 'checkmark'].includes(tool)) {
-                    toggleShapesMenu();
-                  } else {
-                    setTool(selectedShape);
-                    toggleShapesMenu();
-                  }
-                }}
                 style={{
-                  height: '40px',
-                  padding: '0 10px',
-                  borderRadius: '12px',
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '10px',
                   border: 'none',
-                  backgroundColor: ['rect', 'circle', 'line', 'arrow', 'triangle', 'hexagon', 'star', 'speech_bubble', 'heart', 'checkmark'].includes(tool) && toolMode !== 'select'
-                    ? 'var(--accent-primary, #C67D5B)'
-                    : darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-                  color: ['rect', 'circle', 'line', 'arrow', 'triangle', 'hexagon', 'star', 'speech_bubble', 'heart', 'checkmark'].includes(tool) && toolMode !== 'select' ? '#FFFFFF' : 'inherit',
+                  backgroundColor: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                  color: historyStep <= 0 ? (darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)') : 'inherit',
+                  cursor: historyStep <= 0 ? 'not-allowed' : 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '4px',
-                  cursor: 'pointer',
+                  justifyContent: 'center',
+                  opacity: historyStep <= 0 ? 0.35 : 1,
                   transition: 'all 0.15s ease',
                   flexShrink: 0,
                 }}
-                title="Bibliothèque étendue de formes vectorielles"
+                title="Annuler (Ctrl+Z)"
               >
-                {React.createElement(
-                  (SHAPE_OPTIONS.find((s) => s.id === selectedShape) || SHAPE_OPTIONS[0]).icon,
-                  { size: 18 }
-                )}
-                <ChevronDown size={13} style={{ opacity: 0.85 }} />
+                <RotateCcw size={17} />
+              </button>
+
+              <button
+                type="button"
+                disabled={historyStep >= history.length - 1}
+                onClick={handleRedo}
+                className="snap-center"
+                style={{
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  backgroundColor: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                  color: historyStep >= history.length - 1 ? (darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)') : 'inherit',
+                  cursor: historyStep >= history.length - 1 ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  opacity: historyStep >= history.length - 1 ? 0.35 : 1,
+                  transition: 'all 0.15s ease',
+                  flexShrink: 0,
+                }}
+                title="Rétablir (Ctrl+Y)"
+              >
+                <RotateCw size={17} />
               </button>
             </div>
 
-            {/* 🚨 PHASE 93 & 120 : SOUS-MENU POPOVER DES FORMES ÉVADÉ DANS UN PORTAL BODY (ZÉRO CLIPPING PAR LA TOOLBAR) */}
-            {typeof document !== 'undefined' && createPortal(
-              <AnimatePresence>
-                {isShapesMenuOpen && (
-                  <motion.div
-                    id="shapes-popover-portal"
-                    initial={{ opacity: 0, scale: 0.92, y: 10 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.92, y: 10 }}
-                    transition={{ duration: 0.16, ease: 'easeOut' }}
-                    style={{
-                      position: 'fixed',
-                      left: `${shapesMenuCoords.left}px`,
-                      bottom: `${shapesMenuCoords.bottom}px`,
-                      zIndex: 10000000,
-                      backgroundColor: darkMode ? 'rgba(26,22,19,0.96)' : 'rgba(255,255,255,0.96)',
-                      backdropFilter: 'blur(20px)',
-                      WebkitBackdropFilter: 'blur(20px)',
-                      border: darkMode ? '1px solid rgba(255,255,255,0.14)' : '1px solid rgba(0,0,0,0.12)',
-                      borderRadius: '16px',
-                      padding: '8px',
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(5, 1fr)',
-                      gap: '6px',
-                      boxShadow: '0 16px 36px -8px rgba(0,0,0,0.35)',
-                      pointerEvents: 'auto',
-                    }}
-                  >
-                    {SHAPE_OPTIONS.map((shape) => {
-                      const Icon = shape.icon;
-                      const isSel = tool === shape.id;
-                      return (
-                        <button
-                          key={shape.id}
-                          type="button"
-                          onClick={() => {
-                            setSelectedShape(shape.id);
-                            setTool(shape.id);
-                            setToolMode('shape');
-                            setSelectedObjectId(null);
-                            setIsShapesMenuOpen(false);
-                          }}
-                          style={{
-                            width: '36px',
-                            height: '36px',
-                            borderRadius: '10px',
-                            border: 'none',
-                            backgroundColor: isSel
-                              ? 'var(--accent-primary, #C67D5B)'
-                              : darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-                            color: isSel ? '#FFFFFF' : 'inherit',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            cursor: 'pointer',
-                            transition: 'all 0.15s ease',
-                          }}
-                          title={shape.title}
-                        >
-                          <Icon size={17} />
-                        </button>
-                      );
-                    })}
-                  </motion.div>
-                )}
-              </AnimatePresence>,
-              document.body
-            )}
+            <div style={{ width: '1px', height: '24px', backgroundColor: 'rgba(255,255,255,0.15)', flexShrink: 0 }} />
 
-            {/* Post-it, Texte & Main Pan */}
-            {[
-              { id: 'sticky', icon: StickyNote, title: 'Post-it', mode: 'shape' },
-              { id: 'text', icon: Type, title: 'Texte', mode: 'text' },
-              { id: 'hand', icon: Hand, title: 'Déplacer (Pan)', mode: 'pan' },
-            ].map((btn) => {
-              const Icon = btn.icon;
-              const isSelected = tool === btn.id && toolMode !== 'select';
-              return (
-                <button
-                  key={btn.id}
-                  type="button"
-                  className="snap-center"
-                  onClick={() => {
-                    setTool(btn.id);
-                    setToolMode(btn.mode || 'draw');
-                    setSelectedObjectId(null);
-                    setIsShapesMenuOpen(false);
-                  }}
-                  style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '12px',
-                    border: 'none',
-                    backgroundColor: isSelected
-                      ? 'var(--accent-primary, #C67D5B)'
-                      : darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-                    color: isSelected ? '#FFFFFF' : 'inherit',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s ease',
-                    flexShrink: 0,
-                  }}
-                  title={btn.title}
-                >
-                  <Icon size={18} />
-                </button>
-              );
-            })}
-          </div>
-
-          <div style={{ width: '1px', height: '24px', backgroundColor: 'var(--border-color, rgba(0,0,0,0.1))', margin: '0 4px', flexShrink: 0 }} />
-
-          {/* PALETTE DE COULEURS INFINIES (<input type="color"> masqué derrière bouton élégant) */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0, flexWrap: 'nowrap' }}>
-            {CURATED_PALETTE.slice(0, 5).map((c) => (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => setColor(c.hex)}
-                style={{
-                  width: '24px',
-                  height: '24px',
-                  borderRadius: '50%',
-                  backgroundColor: c.hex,
-                  border: color === c.hex ? '3px solid #C67D5B' : '2px solid rgba(0,0,0,0.1)',
-                  cursor: 'pointer',
-                  boxShadow: color === c.hex ? '0 0 10px rgba(198,125,91,0.5)' : 'none',
-                  flexShrink: 0,
-                }}
-                title={c.name}
-              />
-            ))}
-
-            {/* Sélecteur de Couleur Spectre Complet */}
-            <label
-              className="premium-button"
+            {/* 2. Suppression : Supprimer l'élément sélectionné (🗑️) */}
+            <button
+              type="button"
+              disabled={!selectedObjectId}
+              onClick={handleDeleteSelected}
+              className="snap-center"
               style={{
-                position: 'relative',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '4px 10px',
-                borderRadius: '999px',
-                border: darkMode ? '1.5px solid rgba(255,255,255,0.15)' : '1.5px solid rgba(0,0,0,0.15)',
-                backgroundColor: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-                cursor: 'pointer',
-                flexShrink: 0,
-              }}
-              title="Ouvrir le spectre de couleurs complet"
-            >
-              <Brush size={14} color="#C67D5B" />
-              <div
-                style={{
-                  width: '16px',
-                  height: '16px',
-                  borderRadius: '50%',
-                  backgroundColor: color,
-                  border: '1.5px solid #FFF',
-                  boxShadow: '0 2px 6px rgba(0,0,0,0.25)',
-                }}
-              />
-              <span style={{ fontSize: '11px', fontWeight: '800', fontFamily: 'monospace', color: 'inherit' }}>
-                {color.toUpperCase()}
-              </span>
-              <input
-                ref={colorInputRef}
-                type="color"
-                value={color}
-                onChange={(e) => setColor(e.target.value)}
-                className="opacity-0 absolute w-0 h-0 pointer-events-none"
-                style={{
-                  position: 'absolute',
-                  opacity: 0,
-                  width: 0,
-                  height: 0,
-                  pointerEvents: 'none',
-                }}
-              />
-            </label>
-          </div>
-
-          <div style={{ width: '1px', height: '24px', backgroundColor: 'var(--border-color, rgba(0,0,0,0.1))', margin: '0 4px', flexShrink: 0 }} />
-
-          {/* SÉLECTEUR DE COULEUR DE FOND DU CANVAS (Indépendant du thème global) */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0, flexWrap: 'nowrap' }} title="Couleur d'arrière-plan du tableau">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '11px', fontWeight: '800', opacity: 0.8, marginRight: '2px' }}>
-              <Palette size={14} color="#C67D5B" />
-              <span>Fond</span>
-            </div>
-
-            {BG_PRESETS.slice(0, 4).map((bg) => (
-              <button
-                key={bg.id}
-                type="button"
-                onClick={() => handleChangeBackgroundColor(bg.hex)}
-                style={{
-                  width: '22px',
-                  height: '22px',
-                  borderRadius: '6px',
-                  backgroundColor: bg.hex,
-                  border: backgroundColor === bg.hex ? '2.5px solid #C67D5B' : '1.5px solid rgba(0,0,0,0.15)',
-                  cursor: 'pointer',
-                  boxShadow: backgroundColor === bg.hex ? '0 0 8px rgba(198,125,91,0.5)' : 'none',
-                  flexShrink: 0,
-                  transition: 'all 0.15s ease',
-                }}
-                title={`Fond ${bg.name}`}
-              />
-            ))}
-
-            {/* Custom Background Color Picker */}
-            <label
-              className="premium-button"
-              style={{
-                position: 'relative',
+                width: '38px',
+                height: '38px',
+                borderRadius: '10px',
+                border: 'none',
+                backgroundColor: selectedObjectId ? 'rgba(239,68,68,0.2)' : (darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'),
+                color: selectedObjectId ? '#EF4444' : (darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'),
+                cursor: selectedObjectId ? 'pointer' : 'not-allowed',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                width: '26px',
-                height: '26px',
-                borderRadius: '8px',
-                border: darkMode ? '1.5px solid rgba(255,255,255,0.2)' : '1.5px solid rgba(0,0,0,0.2)',
-                backgroundColor: backgroundColor,
-                cursor: 'pointer',
+                opacity: selectedObjectId ? 1 : 0.4,
+                transition: 'all 0.15s ease',
                 flexShrink: 0,
-                boxShadow: '0 2px 5px rgba(0,0,0,0.15)',
               }}
-              title="Personnaliser la couleur d'arrière-plan"
+              title="Supprimer l'élément sélectionné (Suppr / Backspace)"
             >
-              <Palette size={14} color={['#FFFFFF', '#FDFBF7', '#FEF9C3', '#E0F2FE'].includes(backgroundColor) ? '#1F2937' : '#FFFFFF'} />
-              <input
-                ref={bgColorInputRef}
-                type="color"
-                value={backgroundColor}
-                onChange={(e) => handleChangeBackgroundColor(e.target.value)}
-                className="opacity-0 absolute w-0 h-0 pointer-events-none"
-                style={{
-                  position: 'absolute',
-                  opacity: 0,
-                  width: 0,
-                  height: 0,
-                  pointerEvents: 'none',
-                }}
-              />
-            </label>
-          </div>
+              <Trash2 size={17} />
+            </button>
 
-          <div style={{ width: '1px', height: '24px', backgroundColor: 'var(--border-color, rgba(0,0,0,0.1))', margin: '0 4px', flexShrink: 0 }} />
+            <div style={{ width: '1px', height: '24px', backgroundColor: 'rgba(255,255,255,0.15)', flexShrink: 0 }} />
 
-          {/* ÉPAISSEUR DU TRAIT */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, flexWrap: 'nowrap' }}>
-            {[2, 4, 8, 16].map((w) => (
+            {/* 3. Outils principaux : Sélection (↖️), Pinceau (✏️), Texte (T), Formes (⬜/⭕) */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, flexWrap: 'nowrap' }}>
+              {/* Curseur de sélection */}
               <button
-                key={w}
                 type="button"
-                onClick={() => setLineWidth(w)}
+                className="snap-center"
+                onClick={() => {
+                  setTool('select');
+                  setToolMode('select');
+                  setIsShapesMenuOpen(false);
+                }}
                 style={{
-                  width: '28px',
-                  height: '28px',
-                  borderRadius: '8px',
-                  border: lineWidth === w ? '1.5px solid #C67D5B' : '1px solid transparent',
-                  backgroundColor: lineWidth === w ? 'rgba(198,125,91,0.15)' : 'transparent',
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  backgroundColor: (tool === 'select' || toolMode === 'select')
+                    ? 'var(--accent-primary, #C67D5B)'
+                    : darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                  color: (tool === 'select' || toolMode === 'select') ? '#FFFFFF' : 'inherit',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   cursor: 'pointer',
-                  color: 'inherit',
+                  transition: 'all 0.15s ease',
+                  flexShrink: 0,
                 }}
-                title={`Épaisseur ${w}px`}
+                title="Sélectionner & Manipuler (Curseur)"
               >
+                <MousePointer size={17} />
+              </button>
+
+              {/* Outils de dessin */}
+              {[
+                { id: 'pencil', icon: Pen, title: 'Crayon' },
+                { id: 'brush', icon: Brush, title: 'Pinceau Artistique' },
+                { id: 'highlighter', icon: Highlighter, title: 'Surligneur' },
+                { id: 'eraser', icon: Eraser, title: 'Gomme' },
+              ].map((btn) => {
+                const Icon = btn.icon;
+                const isSelected = tool === btn.id && toolMode !== 'select';
+                return (
+                  <button
+                    key={btn.id}
+                    type="button"
+                    className="snap-center"
+                    onClick={() => {
+                      setTool(btn.id);
+                      setToolMode('draw');
+                      setSelectedObjectId(null);
+                      setIsShapesMenuOpen(false);
+                    }}
+                    style={{
+                      width: '38px',
+                      height: '38px',
+                      borderRadius: '10px',
+                      border: 'none',
+                      backgroundColor: isSelected
+                        ? 'var(--accent-primary, #C67D5B)'
+                        : darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                      color: isSelected ? '#FFFFFF' : 'inherit',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      flexShrink: 0,
+                    }}
+                    title={btn.title}
+                  >
+                    <Icon size={17} />
+                  </button>
+                );
+              })}
+
+              {/* Texte (T) */}
+              {(() => {
+                const textTool = { id: 'text', icon: Type, title: 'Texte', mode: 'text' };
+                const Icon = textTool.icon;
+                return (
+                  <button
+                    key={textTool.id}
+                    type="button"
+                    className="snap-center"
+                    onClick={() => {
+                      setTool('text');
+                      setToolMode('text');
+                      setSelectedObjectId(null);
+                      setIsShapesMenuOpen(false);
+                    }}
+                    style={{
+                      width: '38px',
+                      height: '38px',
+                      borderRadius: '10px',
+                      border: 'none',
+                      backgroundColor: (tool === 'text' || toolMode === 'text')
+                        ? 'var(--accent-primary, #C67D5B)'
+                        : darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                      color: (tool === 'text' || toolMode === 'text') ? '#FFFFFF' : 'inherit',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      flexShrink: 0,
+                    }}
+                    title={textTool.title}
+                  >
+                    <Icon size={17} />
+                  </button>
+                );
+              })()}
+
+              {/* Formes vectorielles avec popover portal */}
+              <div style={{ position: 'relative', flexShrink: 0, overflow: 'visible' }}>
+                <button
+                  ref={shapeButtonRef}
+                  type="button"
+                  className="snap-center"
+                  onClick={() => {
+                    setToolMode('shape');
+                    setSelectedObjectId(null);
+                    if (['rect', 'circle', 'line', 'arrow', 'triangle', 'hexagon', 'star', 'speech_bubble', 'heart', 'checkmark'].includes(tool)) {
+                      toggleShapesMenu();
+                    } else {
+                      setTool(selectedShape);
+                      toggleShapesMenu();
+                    }
+                  }}
+                  style={{
+                    height: '38px',
+                    padding: '0 8px',
+                    borderRadius: '10px',
+                    border: 'none',
+                    backgroundColor: ['rect', 'circle', 'line', 'arrow', 'triangle', 'hexagon', 'star', 'speech_bubble', 'heart', 'checkmark'].includes(tool) && toolMode !== 'select'
+                      ? 'var(--accent-primary, #C67D5B)'
+                      : darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                    color: ['rect', 'circle', 'line', 'arrow', 'triangle', 'hexagon', 'star', 'speech_bubble', 'heart', 'checkmark'].includes(tool) && toolMode !== 'select' ? '#FFFFFF' : 'inherit',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    flexShrink: 0,
+                  }}
+                  title="Bibliothèque étendue de formes vectorielles"
+                >
+                  {React.createElement(
+                    (SHAPE_OPTIONS.find((s) => s.id === selectedShape) || SHAPE_OPTIONS[0]).icon,
+                    { size: 17 }
+                  )}
+                  <ChevronDown size={12} style={{ opacity: 0.85 }} />
+                </button>
+              </div>
+
+              {/* Sous-menu Popover des Formes évadé dans un Portal body */}
+              {typeof document !== 'undefined' && createPortal(
+                <AnimatePresence>
+                  {isShapesMenuOpen && (
+                    <motion.div
+                      id="shapes-popover-portal"
+                      initial={{ opacity: 0, scale: 0.92, y: 10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.92, y: 10 }}
+                      transition={{ duration: 0.16, ease: 'easeOut' }}
+                      style={{
+                        position: 'fixed',
+                        left: `${shapesMenuCoords.left}px`,
+                        bottom: `${shapesMenuCoords.bottom}px`,
+                        zIndex: 10000000,
+                        backgroundColor: darkMode ? 'rgba(26,22,19,0.96)' : 'rgba(255,255,255,0.96)',
+                        backdropFilter: 'blur(20px)',
+                        WebkitBackdropFilter: 'blur(20px)',
+                        border: darkMode ? '1px solid rgba(255,255,255,0.14)' : '1px solid rgba(0,0,0,0.12)',
+                        borderRadius: '16px',
+                        padding: '8px',
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(5, 1fr)',
+                        gap: '6px',
+                        boxShadow: '0 16px 36px -8px rgba(0,0,0,0.35)',
+                        pointerEvents: 'auto',
+                      }}
+                    >
+                      {SHAPE_OPTIONS.map((shape) => {
+                        const Icon = shape.icon;
+                        const isSel = tool === shape.id;
+                        return (
+                          <button
+                            key={shape.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedShape(shape.id);
+                              setTool(shape.id);
+                              setToolMode('shape');
+                              setSelectedObjectId(null);
+                              setIsShapesMenuOpen(false);
+                            }}
+                            style={{
+                              width: '36px',
+                              height: '36px',
+                              borderRadius: '10px',
+                              border: 'none',
+                              backgroundColor: isSel
+                                ? 'var(--accent-primary, #C67D5B)'
+                                : darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                              color: isSel ? '#FFFFFF' : 'inherit',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'pointer',
+                              transition: 'all 0.15s ease',
+                            }}
+                            title={shape.title || shape.label}
+                          >
+                            <Icon size={17} />
+                          </button>
+                        );
+                      })}
+                    </motion.div>
+                  )}
+                </AnimatePresence>,
+                document.body
+              )}
+
+              {/* Post-it & Main (Pan) */}
+              {[
+                { id: 'sticky', icon: StickyNote, title: 'Post-it', mode: 'shape' },
+                { id: 'hand', icon: Hand, title: 'Déplacer (Pan)', mode: 'pan' },
+              ].map((btn) => {
+                const Icon = btn.icon;
+                const isSelected = tool === btn.id && toolMode !== 'select';
+                return (
+                  <button
+                    key={btn.id}
+                    type="button"
+                    className="snap-center"
+                    onClick={() => {
+                      setTool(btn.id);
+                      setToolMode(btn.mode || 'draw');
+                      setSelectedObjectId(null);
+                      setIsShapesMenuOpen(false);
+                    }}
+                    style={{
+                      width: '38px',
+                      height: '38px',
+                      borderRadius: '10px',
+                      border: 'none',
+                      backgroundColor: isSelected
+                        ? 'var(--accent-primary, #C67D5B)'
+                        : darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                      color: isSelected ? '#FFFFFF' : 'inherit',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      transition: 'all 0.15s ease',
+                      flexShrink: 0,
+                    }}
+                    title={btn.title}
+                  >
+                    <Icon size={17} />
+                  </button>
+                );
+              })}
+            </div>
+
+            <div style={{ width: '1px', height: '24px', backgroundColor: 'rgba(255,255,255,0.15)', flexShrink: 0 }} />
+
+            {/* 4. Styles : Palette de couleurs (Fonds et Contours) et Sélecteur d'épaisseur de trait (Range/Slider) */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0, flexWrap: 'nowrap' }}>
+              {/* Contours / Palette rapide */}
+              {CURATED_PALETTE.slice(0, 5).map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => setColor(c.hex)}
+                  style={{
+                    width: '22px',
+                    height: '22px',
+                    borderRadius: '50%',
+                    backgroundColor: c.hex,
+                    border: color === c.hex ? '3px solid #C67D5B' : '2px solid rgba(0,0,0,0.1)',
+                    cursor: 'pointer',
+                    boxShadow: color === c.hex ? '0 0 10px rgba(198,125,91,0.5)' : 'none',
+                    flexShrink: 0,
+                  }}
+                  title={c.name}
+                />
+              ))}
+
+              {/* Sélecteur de Couleur Spectre Complet */}
+              <label
+                className="premium-button"
+                style={{
+                  position: 'relative',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  padding: '4px 8px',
+                  borderRadius: '999px',
+                  border: darkMode ? '1.5px solid rgba(255,255,255,0.15)' : '1.5px solid rgba(0,0,0,0.15)',
+                  backgroundColor: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                }}
+                title="Ouvrir le spectre de couleurs complet"
+              >
+                <Brush size={13} color="#C67D5B" />
                 <div
                   style={{
-                    width: `${Math.min(18, w * 1.8)}px`,
-                    height: `${Math.min(18, w * 1.8)}px`,
+                    width: '14px',
+                    height: '14px',
                     borderRadius: '50%',
                     backgroundColor: color,
+                    border: '1.5px solid #FFF',
+                    boxShadow: '0 2px 5px rgba(0,0,0,0.25)',
                   }}
                 />
+                <span style={{ fontSize: '10px', fontWeight: '800', fontFamily: 'monospace', color: 'inherit' }}>
+                  {color.toUpperCase()}
+                </span>
+                <input
+                  ref={colorInputRef}
+                  type="color"
+                  value={color}
+                  onChange={(e) => setColor(e.target.value)}
+                  className="opacity-0 absolute w-0 h-0 pointer-events-none"
+                  style={{
+                    position: 'absolute',
+                    opacity: 0,
+                    width: 0,
+                    height: 0,
+                    pointerEvents: 'none',
+                  }}
+                />
+              </label>
+            </div>
+
+            <div style={{ width: '1px', height: '24px', backgroundColor: 'rgba(255,255,255,0.15)', flexShrink: 0 }} />
+
+            {/* Palette de couleurs (Fond du canvas) */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0, flexWrap: 'nowrap' }} title="Couleur d'arrière-plan du tableau">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '11px', fontWeight: '800', opacity: 0.8, marginRight: '2px' }}>
+                <Palette size={13} color="#C67D5B" />
+                <span>Fond</span>
+              </div>
+
+              {BG_PRESETS.slice(0, 4).map((bg) => (
+                <button
+                  key={bg.id}
+                  type="button"
+                  onClick={() => handleChangeBackgroundColor(bg.hex)}
+                  style={{
+                    width: '20px',
+                    height: '20px',
+                    borderRadius: '6px',
+                    backgroundColor: bg.hex,
+                    border: backgroundColor === bg.hex ? '2.5px solid #C67D5B' : '1.5px solid rgba(0,0,0,0.15)',
+                    cursor: 'pointer',
+                    boxShadow: backgroundColor === bg.hex ? '0 0 8px rgba(198,125,91,0.5)' : 'none',
+                    flexShrink: 0,
+                    transition: 'all 0.15s ease',
+                  }}
+                  title={`Fond ${bg.name}`}
+                />
+              ))}
+
+              <label
+                className="premium-button"
+                style={{
+                  position: 'relative',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: '24px',
+                  height: '24px',
+                  borderRadius: '7px',
+                  border: darkMode ? '1.5px solid rgba(255,255,255,0.2)' : '1.5px solid rgba(0,0,0,0.2)',
+                  backgroundColor: backgroundColor,
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                  boxShadow: '0 2px 5px rgba(0,0,0,0.15)',
+                }}
+                title="Personnaliser la couleur d'arrière-plan"
+              >
+                <Palette size={13} color={['#FFFFFF', '#FDFBF7', '#FEF9C3', '#E0F2FE'].includes(backgroundColor) ? '#1F2937' : '#FFFFFF'} />
+                <input
+                  ref={bgColorInputRef}
+                  type="color"
+                  value={backgroundColor}
+                  onChange={(e) => handleChangeBackgroundColor(e.target.value)}
+                  className="opacity-0 absolute w-0 h-0 pointer-events-none"
+                  style={{
+                    position: 'absolute',
+                    opacity: 0,
+                    width: 0,
+                    height: 0,
+                    pointerEvents: 'none',
+                  }}
+                />
+              </label>
+            </div>
+
+            <div style={{ width: '1px', height: '24px', backgroundColor: 'rgba(255,255,255,0.15)', flexShrink: 0 }} />
+
+            {/* Sélecteur d'épaisseur de trait (Range/Slider) & Boutons Rapides */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0, flexWrap: 'nowrap' }} title={`Épaisseur du trait : ${lineWidth}px`}>
+              <input
+                type="range"
+                min="1"
+                max="32"
+                value={lineWidth}
+                onChange={(e) => setLineWidth(Number(e.target.value))}
+                style={{
+                  width: '56px',
+                  accentColor: 'var(--accent-primary, #C67D5B)',
+                  cursor: 'pointer',
+                }}
+                title={`Épaisseur: ${lineWidth}px`}
+              />
+              <span style={{ fontSize: '11px', fontWeight: '800', fontFamily: 'monospace', minWidth: '22px' }}>
+                {lineWidth}px
+              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+                {[2, 4, 8, 16].map((w) => (
+                  <button
+                    key={w}
+                    type="button"
+                    onClick={() => setLineWidth(w)}
+                    style={{
+                      width: '26px',
+                      height: '26px',
+                      borderRadius: '6px',
+                      border: lineWidth === w ? '1.5px solid #C67D5B' : '1px solid transparent',
+                      backgroundColor: lineWidth === w ? 'rgba(198,125,91,0.2)' : 'transparent',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      color: 'inherit',
+                      padding: 0,
+                    }}
+                    title={`Épaisseur ${w}px`}
+                  >
+                    <div
+                      style={{
+                        width: `${Math.min(16, w * 1.5)}px`,
+                        height: `${Math.min(16, w * 1.5)}px`,
+                        borderRadius: '50%',
+                        backgroundColor: color,
+                      }}
+                    />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ width: '1px', height: '24px', backgroundColor: 'rgba(255,255,255,0.15)', flexShrink: 0 }} />
+
+            {/* 5. Actions complémentaires : Copier, Coller, Tout effacer, Plein écran */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, flexWrap: 'nowrap' }}>
+              {/* Copier */}
+              <button
+                type="button"
+                disabled={!selectedObjectId}
+                onClick={handleCopy}
+                className="snap-center"
+                style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  backgroundColor: selectedObjectId ? (darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)') : 'transparent',
+                  color: !selectedObjectId ? (darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)') : 'inherit',
+                  cursor: !selectedObjectId ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  opacity: !selectedObjectId ? 0.35 : 1,
+                  transition: 'all 0.15s ease',
+                  flexShrink: 0,
+                }}
+                title="Copier l'élément sélectionné (Ctrl+C)"
+              >
+                <Copy size={16} />
               </button>
-            ))}
-          </div>
 
-          <div style={{ width: '1px', height: '24px', backgroundColor: 'var(--border-color, rgba(0,0,0,0.1))', margin: '0 4px', flexShrink: 0 }} />
+              {/* Coller */}
+              <button
+                type="button"
+                disabled={!clipboardObject}
+                onClick={handlePaste}
+                className="snap-center"
+                style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  backgroundColor: clipboardObject ? (darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)') : 'transparent',
+                  color: !clipboardObject ? (darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)') : 'inherit',
+                  cursor: !clipboardObject ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  opacity: !clipboardObject ? 0.35 : 1,
+                  transition: 'all 0.15s ease',
+                  flexShrink: 0,
+                }}
+                title="Coller l'élément copié (Ctrl+V)"
+              >
+                <Clipboard size={16} />
+              </button>
 
-          {/* 🚨 PHASE 110 & 120 : BOUTONS COPIER / COLLER & UNDO / REDO, EFFACER & PLEIN ÉCRAN */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0, flexWrap: 'nowrap' }}>
-            {/* Copier */}
-            <button
-              type="button"
-              disabled={!selectedObjectId}
-              onClick={handleCopy}
-              className="snap-center"
-              style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '10px',
-                border: 'none',
-                backgroundColor: selectedObjectId ? (darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)') : 'transparent',
-                color: !selectedObjectId ? (darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)') : 'inherit',
-                cursor: !selectedObjectId ? 'not-allowed' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                opacity: !selectedObjectId ? 0.35 : 1,
-                transition: 'all 0.15s ease',
-              }}
-              title="Copier l'élément sélectionné (Ctrl+C)"
-            >
-              <Copy size={16} />
-            </button>
+              {/* Tout effacer */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm('Effacer la totalité du tableau blanc ?')) {
+                    setLocalPaths([]);
+                    setRemotePaths([]);
+                    setStickyNotes([]);
+                    setTextElements([]);
+                    pushToHistory([]);
+                    whiteboardP2PService.broadcastEvent('clear', {});
+                    debouncedSyncToFirestore([], [], [], []);
+                  }
+                }}
+                style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  backgroundColor: 'rgba(239,68,68,0.1)',
+                  color: '#EF4444',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
+                }}
+                title="Tout effacer"
+              >
+                <Trash2 size={16} />
+              </button>
 
-            {/* Coller */}
-            <button
-              type="button"
-              disabled={!clipboardObject}
-              onClick={handlePaste}
-              className="snap-center"
-              style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '10px',
-                border: 'none',
-                backgroundColor: clipboardObject ? (darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)') : 'transparent',
-                color: !clipboardObject ? (darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)') : 'inherit',
-                cursor: !clipboardObject ? 'not-allowed' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                opacity: !clipboardObject ? 0.35 : 1,
-                transition: 'all 0.15s ease',
-              }}
-              title="Coller l'élément copié (Ctrl+V)"
-            >
-              <Clipboard size={16} />
-            </button>
+              {/* Mode Plein Écran (Immersion) */}
+              <button
+                type="button"
+                onClick={() => setIsImmersiveMode(!isImmersiveMode)}
+                style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  backgroundColor: isImmersiveMode ? 'var(--accent-primary, #C67D5B)' : darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                  color: isImmersiveMode ? '#FFFFFF' : 'inherit',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                }}
+                title={isImmersiveMode ? 'Quitter le mode plein écran' : 'Plein écran (Immersion)'}
+              >
+                {isImmersiveMode ? <Eye size={16} /> : <Maximize2 size={16} />}
+              </button>
 
-            <button
-              type="button"
-              disabled={historyStep <= 0}
-              onClick={handleUndo}
-              style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '10px',
-                border: 'none',
-                backgroundColor: 'transparent',
-                color: historyStep <= 0 ? (darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)') : 'inherit',
-                cursor: historyStep <= 0 ? 'not-allowed' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                opacity: historyStep <= 0 ? 0.35 : 1,
-                transition: 'all 0.15s ease',
-              }}
-              title="Annuler (Ctrl+Z)"
-            >
-              <RotateCcw size={16} />
-            </button>
+              <div style={{ width: '1px', height: '24px', backgroundColor: 'rgba(255,255,255,0.15)', flexShrink: 0 }} />
 
-            <button
-              type="button"
-              disabled={historyStep >= history.length - 1}
-              onClick={handleRedo}
-              style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '10px',
-                border: 'none',
-                backgroundColor: 'transparent',
-                color: historyStep >= history.length - 1 ? (darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)') : 'inherit',
-                cursor: historyStep >= history.length - 1 ? 'not-allowed' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                opacity: historyStep >= history.length - 1 ? 0.35 : 1,
-                transition: 'all 0.15s ease',
-              }}
-              title="Rétablir (Ctrl+Y)"
-            >
-              <RotateCw size={16} />
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                if (window.confirm('Effacer la totalité du tableau blanc ?')) {
-                  setLocalPaths([]);
-                  setRemotePaths([]);
-                  setStickyNotes([]);
-                  setTextElements([]);
-                  pushToHistory([]);
-                  whiteboardP2PService.broadcastEvent('clear', {});
-                  debouncedSyncToFirestore([], [], [], []);
-                }
-              }}
-              style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '10px',
-                border: 'none',
-                backgroundColor: 'rgba(239,68,68,0.1)',
-                color: '#EF4444',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-              title="Tout effacer"
-            >
-              <Trash2 size={16} />
-            </button>
-
-            {/* Mode Plein Écran (Immersion) DANS la barre d'outils */}
-            <button
-              type="button"
-              onClick={() => setIsImmersiveMode(!isImmersiveMode)}
-              style={{
-                width: '36px',
-                height: '36px',
-                borderRadius: '10px',
-                border: 'none',
-                backgroundColor: isImmersiveMode ? 'var(--accent-primary, #C67D5B)' : darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-                color: isImmersiveMode ? '#FFFFFF' : 'inherit',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                flexShrink: 0,
-              }}
-              title={isImmersiveMode ? 'Quitter le mode plein écran' : 'Plein écran (Immersion)'}
-            >
-              {isImmersiveMode ? <Eye size={16} /> : <Maximize2 size={16} />}
-            </button>
+              {/* 6. Bouton "🔽 Masquer" intégré à l'extrémité de la barre */}
+              <button
+                type="button"
+                onClick={() => setIsToolbarVisible(false)}
+                className="snap-center"
+                style={{
+                  height: '36px',
+                  padding: '0 10px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  backgroundColor: darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+                  color: 'inherit',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  transition: 'all 0.15s ease',
+                  flexShrink: 0,
+                }}
+                title="Masquer la barre d'outils"
+              >
+                <ChevronDown size={15} />
+                <span style={{ fontSize: '11px', fontWeight: '700' }}>Masquer</span>
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-    )}
+      )}
 
       {/* 4. MENU LATÉRAL DES VERSIONS ANIMÉ (FRAMER MOTION) */}
       <AnimatePresence>

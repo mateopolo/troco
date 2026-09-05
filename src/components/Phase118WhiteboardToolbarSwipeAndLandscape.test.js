@@ -12,19 +12,19 @@ describe('Phase 118 : Reformatage de la barre d\'outils Whiteboard (Swipe & Pays
     );
   });
 
-  test('2. Wrapper principal de la barre d\'outils contraint sur une seule ligne (flex-nowrap, h-14, swipe)', () => {
-    // Vérifie les classes exactes obligatoires
+  test('2. Wrapper principal de la barre d\'outils contraint sur une seule ligne (flex-nowrap, swipe)', () => {
+    // Vérifie les classes exactes obligatoires (Phase 120)
     expect(whiteboardContent).toContain(
-      'flex flex-nowrap items-center gap-3 overflow-x-auto overflow-y-hidden snap-x snap-mandatory touch-pan-x no-scrollbar w-full max-w-[95vw] md:max-w-2xl mx-auto px-4 py-2 bg-[#2A2624]/90 rounded-2xl border border-white/10 shadow-lg h-14'
+      'flex flex-row flex-nowrap items-center gap-4 overflow-x-auto overflow-y-visible touch-pan-x no-scrollbar w-full'
     );
   });
 
   test('3. Aucune classe flex-wrap ou grid sur le wrapper principal de la toolbar', () => {
     const toolbarMatch = whiteboardContent.match(
-      /<div\s+className="flex flex-nowrap items-center[^"]*"/
+      /<div\s+className="flex flex-row flex-nowrap items-center[^"]*"/
     );
     expect(toolbarMatch).toBeTruthy();
-    expect(toolbarMatch[0]).not.toContain('flex-wrap');
+    expect(toolbarMatch[0]).not.toMatch(/\bflex-wrap\b/);
     expect(toolbarMatch[0]).not.toContain('grid');
   });
 
