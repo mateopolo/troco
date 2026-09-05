@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Palette } from 'lucide-react';
 
 /**
  * MobileHeader.jsx — En-tête Mobile Natif (Standard Apple HIG / Material 3)
@@ -10,6 +10,9 @@ export default function MobileHeader({
   subtitle = null,
   onBack,
   rightAction = null,
+  showWhiteboard = false,
+  onOpenWhiteboard = null,
+  openWorkspaceTool = null,
   darkMode = false,
   style = {},
 }) {
@@ -136,7 +139,45 @@ export default function MobileHeader({
           maxWidth: '50%',
         }}
       >
-        {rightAction || <div style={{ width: '44px', height: '44px' }} />}
+        {(showWhiteboard || onOpenWhiteboard || openWorkspaceTool) && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e?.preventDefault?.();
+              e?.stopPropagation?.();
+              try {
+                if (typeof openWorkspaceTool === 'function') {
+                  openWorkspaceTool('whiteboard');
+                } else if (typeof onOpenWhiteboard === 'function') {
+                  onOpenWhiteboard();
+                }
+              } catch (err) {
+                console.error('[MobileHeader] Erreur lors de l\'ouverture du Whiteboard:', err);
+              }
+            }}
+            className="premium-button"
+            style={{
+              minWidth: '44px',
+              minHeight: '44px',
+              width: '44px',
+              height: '44px',
+              borderRadius: '50%',
+              border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.08)',
+              backgroundColor: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+              color: 'var(--accent-primary, #C67D5B)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              flexShrink: 0,
+            }}
+            title="Créer ou ouvrir un Tableau Blanc"
+            aria-label="Créer un nouveau tableau blanc"
+          >
+            <Palette size={18} />
+          </button>
+        )}
+        {rightAction || (!showWhiteboard && !onOpenWhiteboard && !openWorkspaceTool ? <div style={{ width: '44px', height: '44px' }} /> : null)}
       </div>
     </header>
   );

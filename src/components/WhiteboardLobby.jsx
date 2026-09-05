@@ -53,6 +53,7 @@ export default function WhiteboardLobby({
   darkMode = false,
   projectTitle = 'Tableaux Blancs Collaboratifs',
 }) {
+  const [currentBoardId, setCurrentBoardId] = useState(null);
   const [boards, setBoards] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -61,35 +62,97 @@ export default function WhiteboardLobby({
     chatId || selectedChat?.id || selectedChat?.firestoreId || ''
   );
 
-  const onCreateNew = () => {
-    if (typeof propOnCreateNew === 'function') {
-      propOnCreateNew();
-    }
-    if (typeof onCreateNewBoard === 'function') {
-      onCreateNewBoard();
-    }
-  };
-
-  const onSelect = (boardId) => {
-    if (typeof propOnSelect === 'function') {
-      propOnSelect(boardId);
-    }
-    if (typeof onSelectBoard === 'function') {
-      const bData = boards.find(b => b.id === boardId || b.boardId === boardId) || null;
-      onSelectBoard(boardId, bData);
+  const onCreateNew = (forcedId = null) => {
+    try {
+      const newBoardId = (typeof forcedId === 'string' && forcedId) ? forcedId : `board_${effectiveChatId || 'chat'}_${Date.now()}`;
+      setCurrentBoardId(newBoardId);
+      if (typeof propOnCreateNew === 'function') {
+        propOnCreateNew(newBoardId);
+      }
+      if (typeof onCreateNewBoard === 'function' && propOnCreateNew !== onCreateNewBoard) {
+        onCreateNewBoard(newBoardId);
+      }
+    } catch (err) {
+      console.error('[WhiteboardLobby] Erreur dans onCreateNew:', err);
     }
   };
 
-  const handleCreate = () => {
-    onCreateNew();
+  const onSelect = (boardId, bData = null) => {
+    try {
+      setCurrentBoardId(boardId);
+      if (typeof propOnSelect === 'function') {
+        propOnSelect(boardId);
+      }
+      if (typeof onSelectBoard === 'function') {
+        const data = bData || boards.find(b => b.id === boardId || b.boardId === boardId) || null;
+        onSelectBoard(boardId, data);
+      }
+    } catch (err) {
+      console.error('[WhiteboardLobby] Erreur dans onSelect:', err);
+    }
+  };
+
+  const handleCreate = (e) => {
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
+    try {
+      // 🚨 PHASE FIX : Génération obligatoire d'un ID unique pour isoler le nouveau canvas
+      const newBoardId = `board_${effectiveChatId || 'chat'}_${Date.now()}`;
+      setCurrentBoardId(newBoardId);
+      let handled = false;
+      if (typeof propOnCreateNew === 'function') {
+        propOnCreateNew(newBoardId);
+        handled = true;
+      }
+      if (typeof onCreateNewBoard === 'function' && (!handled || propOnCreateNew !== onCreateNewBoard)) {
+        onCreateNewBoard(newBoardId);
+        handled = true;
+      }
+      if (!handled) {
+        if (typeof propOnSelect === 'function') {
+          propOnSelect(newBoardId);
+        } else if (typeof onSelectBoard === 'function') {
+          onSelectBoard(newBoardId, { id: newBoardId, title: 'Nouveau Tableau Blanc' });
+        }
+      }
+    } catch (err) {
+      console.error('[WhiteboardLobby] Erreur lors de la création d\'un nouveau tableau blanc:', err);
+    }
+  };
+
+  const handleResume = (e) => {
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
+    try {
+      if (history.length > 0) {
+        const targetBoard = history[0];
+        const targetId = targetBoard.id || targetBoard.boardId;
+        setCurrentBoardId(targetId);
+        if (typeof propOnSelect === 'function') {
+          propOnSelect(targetId);
+        }
+        if (typeof onSelectBoard === 'function' && propOnSelect !== onSelectBoard) {
+          onSelectBoard(targetId, targetBoard);
+        }
+      } else {
+        handleCreate(e);
+      }
+    } catch (err) {
+      console.error('[WhiteboardLobby] Erreur lors de la reprise du dernier tableau:', err);
+    }
   };
 
   const handleSelect = (boardId, boardData = null) => {
-    if (typeof propOnSelect === 'function') {
-      propOnSelect(boardId);
-    }
-    if (typeof onSelectBoard === 'function') {
-      onSelectBoard(boardId, boardData || boards.find(b => b.id === boardId || b.boardId === boardId) || null);
+    try {
+      setCurrentBoardId(boardId);
+      if (typeof propOnSelect === 'function') {
+        propOnSelect(boardId);
+      }
+      if (typeof onSelectBoard === 'function') {
+        onSelectBoard(boardId, boardData || boards.find(b => b.id === boardId || b.boardId === boardId) || null);
+      }
+    } catch (err) {
+      console.error('[WhiteboardLobby] Erreur lors de la sélection du tableau:', err);
     }
   };
 
@@ -385,6 +448,7 @@ export default function WhiteboardLobby({
               type="button"
               onClick={handleCreate}
               className="premium-button"
+              aria-label="Créer un nouveau tableau blanc"
               style={{
                 padding: '24px 20px',
                 borderRadius: '20px',
@@ -437,8 +501,9 @@ export default function WhiteboardLobby({
             {/* BOUTON 2 : REPRENDRE LE DERNIER TABLEAU */}
             <button
               type="button"
-              onClick={() => history.length > 0 ? onSelect(history[0].id) : onCreateNew()}
+              onClick={handleResume}
               className="premium-button"
+              aria-label="Reprendre le dernier tableau"
               style={{
                 padding: '24px 20px',
                 borderRadius: '20px',

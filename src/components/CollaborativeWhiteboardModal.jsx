@@ -2435,22 +2435,28 @@ export default function CollaborativeWhiteboardModal({
   if (!isOpen) return null;
   if (typeof document === 'undefined') return null;
 
-  const createNewBoard = () => {
-    const newBoardId = `board_${groupId || 'chat'}_${Date.now()}`;
-    setCurrentBoardId(newBoardId);
-    setActiveBoardId(newBoardId);
-    initialLoadDoneForIdRef.current = null;
-    setLocalPaths([]);
-    setRemotePaths([]);
-    setStickyNotes([]);
-    setTextElements([]);
-    setHistory([[]]);
-    setHistoryStep(0);
-    historyStepRef.current = 0;
-    setVersionNumber(1);
-    setWorkspaceTitle('Nouveau Tableau Blanc');
-    setBackgroundColor(darkMode ? '#12100E' : '#FFFFFF');
-    setViewMode('canvas');
+  const createNewBoard = (forcedBoardId = null) => {
+    try {
+      const newBoardId = (typeof forcedBoardId === 'string' && forcedBoardId)
+        ? forcedBoardId
+        : `board_${groupId || 'chat'}_${Date.now()}`;
+      setCurrentBoardId(newBoardId);
+      setActiveBoardId(newBoardId);
+      initialLoadDoneForIdRef.current = null;
+      setLocalPaths([]);
+      setRemotePaths([]);
+      setStickyNotes([]);
+      setTextElements([]);
+      setHistory([[]]);
+      setHistoryStep(0);
+      historyStepRef.current = 0;
+      setVersionNumber(1);
+      setWorkspaceTitle('Nouveau Tableau Blanc');
+      setBackgroundColor(darkMode ? '#12100E' : '#FFFFFF');
+      setViewMode('canvas');
+    } catch (err) {
+      console.error('[CollaborativeWhiteboardModal] Erreur dans createNewBoard:', err);
+    }
   };
 
   // 🚨 PHASE 102 : FORÇAGE DE LA CONDITION AU MONTAGE DU LOBBY

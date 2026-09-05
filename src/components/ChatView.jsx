@@ -329,6 +329,25 @@ function ChatView({
     }
   }, [effectiveSelectedChat, selectedChat, activeChatObj]);
 
+  const handleOpenWhiteboard = useCallback((e) => {
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
+    try {
+      if (typeof openWorkspaceTool === 'function') {
+        openWorkspaceTool('whiteboard');
+      } else {
+        openWhiteboard(null, null, 'lobby');
+      }
+    } catch (err) {
+      console.error('[ChatView] Erreur lors de l\'ouverture du Whiteboard depuis l\'en-tête:', err);
+      try {
+        openWhiteboard(null, null, 'lobby');
+      } catch (fallbackErr) {
+        console.error('[ChatView] Erreur de secours ouverture Whiteboard:', fallbackErr);
+      }
+    }
+  }, [openWorkspaceTool, openWhiteboard]);
+
   // Gestion de l'ouverture d'un outil workspace avec invitation automatique dans la conversation
   const handleOpenWorkspaceTool = async (toolType, documentId = null) => {
     const targetChat = effectiveSelectedChat || selectedChat;
@@ -1193,8 +1212,8 @@ function ChatView({
                 {/* BOUTON TABLEAU BLANC COLLABORATIF (GROUPE) */}
                 <button
                   type="button"
-                  onClick={(e) => { e.stopPropagation(); setIsWhiteboardPickerOpen(true); }}
-                  onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setIsWhiteboardPickerOpen(true); }}
+                  onClick={handleOpenWhiteboard}
+                  onTouchEnd={handleOpenWhiteboard}
                   className="premium-button"
                   style={{
                     border: '1px solid var(--border-color)',
@@ -1210,7 +1229,8 @@ function ChatView({
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
                     position: 'relative', zIndex: 100, pointerEvents: 'auto', touchAction: 'manipulation'
                   }}
-                  title="Gérer ou créer des Tableaux Blancs Collaboratifs"
+                  title="Créer un nouveau tableau blanc"
+                  aria-label="Créer un nouveau tableau blanc"
                 >
                   <Palette size={15} color="var(--accent-primary)" />
                   {!isMobile && <span>Whiteboard</span>}
@@ -1310,8 +1330,8 @@ function ChatView({
                 {/* BOUTON TABLEAU BLANC COLLABORATIF 1-TO-1 */}
                 <button
                   type="button"
-                  onClick={(e) => { e.stopPropagation(); setIsWhiteboardPickerOpen(true); }}
-                  onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); setIsWhiteboardPickerOpen(true); }}
+                  onClick={handleOpenWhiteboard}
+                  onTouchEnd={handleOpenWhiteboard}
                   className="premium-button"
                   style={{
                     border: '1px solid var(--border-color)',
@@ -1327,7 +1347,8 @@ function ChatView({
                     display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
                     position: 'relative', zIndex: 100, pointerEvents: 'auto', touchAction: 'manipulation'
                   }}
-                  title="Gérer ou créer des Tableaux Blancs Collaboratifs"
+                  title="Créer un nouveau tableau blanc"
+                  aria-label="Créer un nouveau tableau blanc"
                 >
                   <Palette size={15} color="var(--accent-primary)" />
                   {!isMobile && <span>Whiteboard</span>}
