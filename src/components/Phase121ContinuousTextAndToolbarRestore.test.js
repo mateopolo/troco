@@ -16,9 +16,11 @@ describe('Phase 120 & 121 : Restauration Barre Whiteboard (Swipe) & Mode Texte C
 
     test('2. Classes exactes sur le wrapper principal de la barre d\'outils (flex-row, flex-nowrap, swipe)', () => {
       expect(whiteboardContent).toContain(
-        'flex flex-row flex-nowrap items-center gap-4 overflow-x-auto overflow-y-visible touch-pan-x no-scrollbar w-full'
+        'absolute bottom-6 left-1/2 -translate-x-1/2 z-[1000] w-[95vw] max-w-3xl bg-[#2A2624]/95 backdrop-blur-md border border-white/10 rounded-2xl shadow-2xl flex flex-row items-center p-2'
       );
-      expect(whiteboardContent).toContain('snap-x scroll-smooth');
+      expect(whiteboardContent).toContain(
+        'flex flex-row flex-nowrap items-center gap-2 overflow-x-auto overflow-y-hidden touch-pan-x no-scrollbar w-full px-2 h-12 scroll-smooth'
+      );
     });
 
     test('3. Ordre obligatoire des contrôles dans la barre', () => {

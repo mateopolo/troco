@@ -5,17 +5,17 @@ describe('Phase 118 : Reformatage de la barre d\'outils Whiteboard (Swipe & Pays
   const whiteboardPath = path.join(__dirname, 'CollaborativeWhiteboardModal.jsx');
   const whiteboardContent = fs.readFileSync(whiteboardPath, 'utf-8');
 
-  test('1. Conteneur externe de positionnement paysage et zone de sécurité iOS', () => {
-    // Vérifie le conteneur positionné en bas avec safe-area-inset-bottom
+  test('1. Conteneur externe de positionnement paysage et zone de sécurité', () => {
+    // Vérifie le conteneur parent centré en bas
     expect(whiteboardContent).toContain(
-      'absolute bottom-4 left-0 right-0 z-[1000] flex justify-center pb-[env(safe-area-inset-bottom)] px-2'
+      'absolute bottom-6 left-1/2 -translate-x-1/2 z-[1000] w-[95vw] max-w-3xl bg-[#2A2624]/95 backdrop-blur-md border border-white/10 rounded-2xl shadow-2xl flex flex-row items-center p-2'
     );
   });
 
   test('2. Wrapper principal de la barre d\'outils contraint sur une seule ligne (flex-nowrap, swipe)', () => {
-    // Vérifie les classes exactes obligatoires (Phase 120)
+    // Vérifie les classes exactes obligatoires
     expect(whiteboardContent).toContain(
-      'flex flex-row flex-nowrap items-center gap-4 overflow-x-auto overflow-y-visible touch-pan-x no-scrollbar w-full'
+      'flex flex-row flex-nowrap items-center gap-2 overflow-x-auto overflow-y-hidden touch-pan-x no-scrollbar w-full px-2 h-12 scroll-smooth'
     );
   });
 
@@ -57,9 +57,9 @@ describe('Phase 118 : Reformatage de la barre d\'outils Whiteboard (Swipe & Pays
     expect(whiteboardContent).toContain("setIsImmersiveMode");
   });
 
-  test('5. Support du mode paysage (landscape:) préservant une hauteur fine et collé au centre bas', () => {
-    expect(whiteboardContent).toContain('landscape:bottom-2');
-    expect(whiteboardContent).toContain('landscape:h-14');
+  test('5. Hauteur fine constante et boutons d\'outils en taille fixe (w-10 h-10)', () => {
+    expect(whiteboardContent).toContain('h-12');
+    expect(whiteboardContent).toContain('flex-shrink-0 w-10 h-10');
   });
 
   test('6. Classe no-scrollbar définie dans index.css pour un swipe sans ascenseur visuel', () => {
