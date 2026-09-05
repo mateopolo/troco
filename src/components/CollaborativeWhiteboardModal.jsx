@@ -3292,8 +3292,8 @@ export default function CollaborativeWhiteboardModal({
       )}
 
       {!isImmersiveMode && isToolbarVisible && (
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[1000] w-[95vw] max-w-3xl bg-[#2A2624]/95 backdrop-blur-md border border-white/10 rounded-2xl shadow-2xl flex flex-row items-center p-2 text-white">
-          <div className="flex flex-row flex-nowrap items-center gap-2 overflow-x-auto overflow-y-hidden touch-pan-x no-scrollbar w-full px-2 h-12 scroll-smooth">
+        <div className="absolute bottom-4 left-0 right-0 z-[9999] mx-auto w-[96vw] max-w-4xl h-14 bg-[var(--bg-card)]/95 backdrop-blur-md border border-white/10 rounded-full shadow-2xl flex flex-row items-center px-2 text-white">
+          <div className="flex flex-row flex-nowrap items-center gap-2 overflow-x-auto overflow-y-hidden touch-pan-x no-scrollbar w-full h-full scroll-smooth">
             {/* 1. Historique : Undo (↩️) et Redo (↪️) */}
             <div className="flex flex-row flex-nowrap items-center gap-1 flex-shrink-0">
               <button
