@@ -372,6 +372,17 @@ function SharedDocumentModalContent({
                   ? 'bg-white/10 hover:bg-white/15 text-[#FAF7F2]'
                   : 'bg-stone-200/90 hover:bg-stone-300 text-[#3D3530]'
               }`}
+              style={{
+                border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid var(--border-color, #E8DDD3)',
+                borderRadius: '12px',
+                padding: '6px 14px',
+                backgroundColor: darkMode ? 'rgba(255,255,255,0.08)' : '#EFE8DE',
+                color: darkMode ? '#FAF7F2' : '#3D3530',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
               title="Fermer la note"
             >
               <X size={16} />
@@ -402,6 +413,13 @@ function SharedDocumentModalContent({
                 placeholder="Titre de la note..."
                 className="w-full bg-transparent border-0 outline-none font-bold text-center text-base sm:text-lg min-w-0"
                 style={{
+                  width: '100%',
+                  background: 'transparent',
+                  border: 'none',
+                  outline: 'none',
+                  fontSize: '16px',
+                  fontWeight: '700',
+                  textAlign: 'center',
                   color: darkMode ? '#FAF7F2' : '#3D3530',
                   fontFamily: 'inherit',
                 }}
@@ -477,9 +495,24 @@ function SharedDocumentModalContent({
             className={`flex items-center gap-3 overflow-x-auto no-scrollbar w-full py-2 border-y ${
               darkMode ? 'border-white/10' : 'border-stone-200'
             }`}
+            style={{
+              display: 'flex',
+              flexDirection: 'row',
+              flexWrap: 'nowrap',
+              alignItems: 'center',
+              gap: '8px',
+              overflowX: 'auto',
+              overflowY: 'hidden',
+              width: '100%',
+              padding: '6px 0',
+              borderTop: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid #E8DDD3',
+              borderBottom: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid #E8DDD3',
+              boxSizing: 'border-box',
+              whiteSpace: 'nowrap',
+            }}
           >
             {/* COMPTEUR DE MOTS */}
-            <div className="flex items-center gap-2 text-xs shrink-0 whitespace-nowrap">
+            <div className="flex items-center gap-2 text-xs shrink-0 whitespace-nowrap" style={{ flexShrink: 0 }}>
               <span style={{ color: darkMode ? '#8E857E' : '#A89E95' }}>
                 {wordCount} mots ({charCount} caractères)
               </span>
@@ -490,14 +523,14 @@ function SharedDocumentModalContent({
               <>
                 <div
                   className="w-[1px] h-4 shrink-0"
-                  style={{ backgroundColor: darkMode ? 'rgba(255,255,255,0.12)' : '#E0D4C5' }}
+                  style={{ backgroundColor: darkMode ? 'rgba(255,255,255,0.12)' : '#E0D4C5', flexShrink: 0 }}
                 />
-                <div className="flex items-center gap-1 shrink-0">
+                <div className="flex items-center gap-1 shrink-0" style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
                   <button
                     type="button"
                     onClick={() => insertFormatting('# ')}
                     className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
-                    style={{ color: darkMode ? '#FAF7F2' : '#3D3530' }}
+                    style={{ border: 'none', background: 'transparent', borderRadius: '6px', padding: '4px 6px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: darkMode ? '#FAF7F2' : '#3D3530', flexShrink: 0 }}
                     title="Titre 1"
                   >
                     <Heading1 size={16} />
@@ -506,7 +539,7 @@ function SharedDocumentModalContent({
                     type="button"
                     onClick={() => insertFormatting('## ')}
                     className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
-                    style={{ color: darkMode ? '#FAF7F2' : '#3D3530' }}
+                    style={{ border: 'none', background: 'transparent', borderRadius: '6px', padding: '4px 6px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: darkMode ? '#FAF7F2' : '#3D3530', flexShrink: 0 }}
                     title="Titre 2"
                   >
                     <Heading2 size={16} />
@@ -515,20 +548,20 @@ function SharedDocumentModalContent({
                     type="button"
                     onClick={() => insertFormatting('### ')}
                     className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
-                    style={{ color: darkMode ? '#FAF7F2' : '#3D3530' }}
+                    style={{ border: 'none', background: 'transparent', borderRadius: '6px', padding: '4px 6px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: darkMode ? '#FAF7F2' : '#3D3530', flexShrink: 0 }}
                     title="Titre 3"
                   >
                     <Heading3 size={16} />
                   </button>
                   <div
                     className="w-[1px] h-4 shrink-0 mx-0.5"
-                    style={{ backgroundColor: darkMode ? 'rgba(255,255,255,0.12)' : '#E0D4C5' }}
+                    style={{ backgroundColor: darkMode ? 'rgba(255,255,255,0.12)' : '#E0D4C5', flexShrink: 0 }}
                   />
                   <button
                     type="button"
                     onClick={() => insertFormatting('**', '**')}
                     className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
-                    style={{ color: darkMode ? '#FAF7F2' : '#3D3530' }}
+                    style={{ border: 'none', background: 'transparent', borderRadius: '6px', padding: '4px 6px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: darkMode ? '#FAF7F2' : '#3D3530', flexShrink: 0 }}
                     title="Gras"
                   >
                     <Bold size={16} />
@@ -537,19 +570,20 @@ function SharedDocumentModalContent({
                     type="button"
                     onClick={() => insertFormatting('*', '*')}
                     className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
-                    style={{ color: darkMode ? '#FAF7F2' : '#3D3530' }}
+                    style={{ border: 'none', background: 'transparent', borderRadius: '6px', padding: '4px 6px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: darkMode ? '#FAF7F2' : '#3D3530', flexShrink: 0 }}
                     title="Italique"
                   >
                     <Italic size={16} />
                   </button>
                   <div
                     className="w-[1px] h-4 shrink-0 mx-0.5"
-                    style={{ backgroundColor: darkMode ? 'rgba(255,255,255,0.12)' : '#E0D4C5' }}
+                    style={{ backgroundColor: darkMode ? 'rgba(255,255,255,0.12)' : '#E0D4C5', flexShrink: 0 }}
                   />
                   <button
                     type="button"
                     onClick={() => insertFormatting('- [ ] ')}
                     className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer text-emerald-500"
+                    style={{ border: 'none', background: 'transparent', borderRadius: '6px', padding: '4px 6px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#10B981', flexShrink: 0 }}
                     title="Case à cocher / Tâche"
                   >
                     <CheckSquare size={16} />
@@ -558,7 +592,7 @@ function SharedDocumentModalContent({
                     type="button"
                     onClick={() => insertFormatting('- ')}
                     className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
-                    style={{ color: darkMode ? '#FAF7F2' : '#3D3530' }}
+                    style={{ border: 'none', background: 'transparent', borderRadius: '6px', padding: '4px 6px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: darkMode ? '#FAF7F2' : '#3D3530', flexShrink: 0 }}
                     title="Liste à puces"
                   >
                     <List size={16} />
@@ -567,7 +601,7 @@ function SharedDocumentModalContent({
                     type="button"
                     onClick={() => insertFormatting('> ')}
                     className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
-                    style={{ color: darkMode ? '#FAF7F2' : '#3D3530' }}
+                    style={{ border: 'none', background: 'transparent', borderRadius: '6px', padding: '4px 6px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: darkMode ? '#FAF7F2' : '#3D3530', flexShrink: 0 }}
                     title="Citation"
                   >
                     <Quote size={16} />
@@ -576,7 +610,7 @@ function SharedDocumentModalContent({
                     type="button"
                     onClick={() => insertFormatting('```javascript\n', '\n```')}
                     className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
-                    style={{ color: darkMode ? '#FAF7F2' : '#3D3530' }}
+                    style={{ border: 'none', background: 'transparent', borderRadius: '6px', padding: '4px 6px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: darkMode ? '#FAF7F2' : '#3D3530', flexShrink: 0 }}
                     title="Bloc de code"
                   >
                     <Code size={16} />

@@ -1,6 +1,6 @@
 /**
  * CookieBanner.jsx — Bannière Cookies & Traceurs CNIL/RGPD
- * Phase 125 : Refonte thème global — variables CSS app, glassmorphism, pills, dark-first.
+ * Modale compacte flottante parfaitement centrée avec boutons sur une seule ligne
  */
 
 import React, { useState, useEffect } from 'react';
@@ -16,6 +16,7 @@ export default function CookieBanner({
     try {
       const consent = localStorage.getItem('troco_cookie_consent');
       if (!consent) {
+        // Afficher avec un léger délai pour une entrée fluide
         const timer = setTimeout(() => setIsVisible(true), 1200);
         return () => clearTimeout(timer);
       }
@@ -54,65 +55,63 @@ export default function CookieBanner({
 
   return (
     <div
-      className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90vw] max-w-md z-[999999] rounded-3xl p-5 shadow-2xl flex flex-col gap-4 backdrop-blur-xl"
+      className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[999999] w-[90%] max-w-2xl bg-white dark:bg-[#1A1715] rounded-2xl shadow-2xl border border-gray-200 dark:border-white/10 p-5 flex flex-col gap-3 items-center text-center animate-fadeIn"
       style={{
-        background: 'rgba(26, 23, 21, 0.90)',
-        border: '1px solid rgba(255, 255, 255, 0.10)',
-        boxShadow: '0 24px 60px -12px rgba(0, 0, 0, 0.5)',
+        boxShadow: '0 20px 50px -10px rgba(0, 0, 0, 0.25)',
+        backgroundColor: darkMode ? '#1A1715' : '#FFFFFF',
       }}
     >
       {/* Bouton fermeture discret en coin supérieur droit */}
       <button
         type="button"
         onClick={() => setIsVisible(false)}
-        className="absolute top-3 right-3 p-1.5 rounded-full transition-colors"
+        className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
         style={{
-          color: 'var(--text-secondary)',
-          background: 'rgba(255, 255, 255, 0.06)',
-          border: '1px solid rgba(255, 255, 255, 0.10)',
+          background: 'transparent',
+          border: 'none',
+          cursor: 'pointer',
         }}
         aria-label="Fermer la bannière"
       >
-        <X size={16} />
+        <X size={18} />
       </button>
 
-      {/* Titre */}
-      <h3
-        className="font-editorial-heading flex items-center gap-2 m-0"
-        style={{
-          fontSize: '15px',
-          fontWeight: '700',
-          color: 'var(--text-main, #FAF7F2)',
-          letterSpacing: '-0.01em',
-        }}
-      >
+      {/* Titre discret et centré */}
+      <h3 className="text-lg font-semibold flex items-center justify-center gap-2 text-gray-900 dark:text-gray-100 m-0">
         <span>🍪</span>
-        <span>Respect de votre vie privée</span>
+        <span>Respect de votre vie privée & Cookies</span>
       </h3>
 
-      {/* Texte explicatif */}
-      <p
-        className="m-0 leading-relaxed"
-        style={{
-          fontSize: '12px',
-          color: 'var(--text-secondary, rgba(250,247,242,0.55))',
-          lineHeight: '1.6',
-        }}
-      >
-        Troco utilise des traceurs strictement nécessaires au fonctionnement du service
-        et à la mesure anonyme d'audience. Vous pouvez faire votre choix ou personnaliser
-        à tout moment.
+      {/* Texte explicatif petit et lisible */}
+      <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 m-0 max-w-xl leading-relaxed">
+        Troco utilise des traceurs strictement nécessaires au fonctionnement du service et à la mesure anonyme d'audience. Vous pouvez faire votre choix ou personnaliser à tout moment.
       </p>
 
-      {/* Boutons */}
-      <div className="flex flex-row flex-wrap items-center gap-2">
+      {/* Boutons compacts sur une seule ligne */}
+      <div
+        className="flex flex-row flex-nowrap items-center justify-center gap-2 w-full mt-2"
+        style={{
+          display: 'flex',
+          flexDirection: 'row',
+          flexWrap: 'nowrap',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '8px',
+          width: '100%',
+        }}
+      >
         <button
           type="button"
           onClick={handleAcceptAll}
-          className="px-6 py-2.5 rounded-full font-semibold text-sm shadow-lg hover:opacity-90 transition-all whitespace-nowrap"
+          className="px-4 py-2 text-sm font-medium bg-[var(--accent-primary,#C67D5B)] text-white rounded-full whitespace-nowrap hover:opacity-90 transition-opacity"
           style={{
             background: 'var(--accent-primary, #C67D5B)',
-            color: '#fff',
+            color: '#ffffff',
+            borderRadius: '999px',
+            padding: '8px 18px',
+            border: 'none',
+            fontWeight: '600',
+            cursor: 'pointer',
           }}
         >
           Tout accepter
@@ -121,11 +120,15 @@ export default function CookieBanner({
         <button
           type="button"
           onClick={handleDeclineAll}
-          className="px-6 py-2.5 rounded-full font-semibold text-sm hover:bg-white/5 transition-all whitespace-nowrap"
+          className="px-4 py-2 text-sm font-medium bg-transparent border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-full whitespace-nowrap hover:bg-gray-100 dark:hover:bg-white/5 transition-colors"
           style={{
             background: 'transparent',
-            border: '1px solid rgba(255, 255, 255, 0.20)',
-            color: 'var(--text-secondary, rgba(250,247,242,0.7))',
+            border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB',
+            color: darkMode ? '#FAF7F2' : '#374151',
+            borderRadius: '999px',
+            padding: '8px 16px',
+            fontWeight: '600',
+            cursor: 'pointer',
           }}
         >
           Continuer sans accepter
@@ -138,14 +141,21 @@ export default function CookieBanner({
               setIsVisible(false);
               onOpenPrivacyCenter();
             }}
-            className="px-6 py-2.5 rounded-full font-semibold text-sm hover:bg-white/5 transition-all flex items-center gap-1.5 whitespace-nowrap"
+            className="px-4 py-2 text-sm font-medium bg-transparent border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-full whitespace-nowrap hover:bg-gray-100 dark:hover:bg-white/5 transition-colors flex items-center gap-1.5"
             style={{
               background: 'transparent',
-              border: '1px solid rgba(255, 255, 255, 0.20)',
-              color: 'var(--text-secondary, rgba(250,247,242,0.7))',
+              border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid #D1D5DB',
+              color: darkMode ? '#FAF7F2' : '#374151',
+              borderRadius: '999px',
+              padding: '8px 16px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
             }}
           >
-            <Sliders size={13} />
+            <Sliders size={14} />
             <span>Personnaliser</span>
           </button>
         )}

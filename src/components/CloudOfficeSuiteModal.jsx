@@ -1139,13 +1139,22 @@ function CloudOfficeSuiteModalContent({
               onClick={onClose}
               className="flex items-center gap-1.5 px-4 py-2 rounded-full font-medium text-sm shrink-0 transition-colors cursor-pointer"
               style={{
-                background: 'rgba(239, 68, 68, 0.10)',
-                color: 'rgb(239, 68, 68)',
-                border: 'none',
+                background: 'var(--bg-card)',
+                color: 'var(--text-main)',
+                border: '1px solid var(--border-color)',
+                borderRadius: '999px',
+                padding: '6px 14px',
+                fontSize: '12.5px',
+                fontWeight: '700',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                cursor: 'pointer',
+                boxShadow: '0 2px 6px rgba(0,0,0,0.05)',
               }}
               title="Fermer"
             >
-              <X size={16} />
+              <X size={15} />
               <span>Fermer</span>
             </button>
 
@@ -1390,7 +1399,20 @@ function CloudOfficeSuiteModalContent({
             <div
               className="flex items-center gap-2 overflow-x-auto no-scrollbar w-full py-2 border-y border-stone-200 dark:border-white/10"
               style={{
+                display: 'flex',
+                flexDirection: 'row',
+                flexWrap: 'nowrap',
+                alignItems: 'center',
+                gap: '6px',
+                overflowX: 'auto',
+                overflowY: 'hidden',
+                width: '100%',
+                padding: '6px 0',
+                borderTop: '1px solid var(--border-color)',
+                borderBottom: '1px solid var(--border-color)',
                 borderColor: 'var(--border-color)',
+                boxSizing: 'border-box',
+                whiteSpace: 'nowrap',
               }}
             >
               {/* SÉLECTEUR DE STYLE / TITRES */}
@@ -1648,6 +1670,7 @@ function CloudOfficeSuiteModalContent({
                   setDocContent(val);
                   saveDocToFirestore(val);
                 }}
+                className="p-4 md:p-8"
                 placeholder="Rédigez ici vos comptes-rendus, spécifications et notes collaboratives..."
                 style={{
                   flex: 1,

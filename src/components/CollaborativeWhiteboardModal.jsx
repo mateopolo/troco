@@ -3292,8 +3292,47 @@ export default function CollaborativeWhiteboardModal({
       )}
 
       {!isImmersiveMode && isToolbarVisible && (
-        <div className="absolute bottom-4 left-0 right-0 z-[9999] mx-auto w-[96vw] max-w-4xl h-14 bg-[var(--bg-card)]/95 backdrop-blur-md border border-white/10 rounded-full shadow-2xl flex flex-row items-center px-2 text-white">
-          <div className="flex flex-row flex-nowrap items-center gap-2 overflow-x-auto overflow-y-hidden touch-pan-x no-scrollbar w-full h-full scroll-smooth">
+        <div
+          className="absolute bottom-6 left-1/2 -translate-x-1/2 z-[1000] w-[95vw] max-w-3xl bg-[#2A2624]/95 backdrop-blur-md border border-white/10 rounded-2xl shadow-2xl flex flex-row items-center p-2 text-white"
+          style={{
+            position: 'absolute',
+            bottom: '24px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 1000,
+            width: 'min(95vw, 768px)',
+            height: '52px',
+            backgroundColor: 'rgba(42, 38, 36, 0.95)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            border: '1px solid rgba(255, 255, 255, 0.12)',
+            borderRadius: '16px',
+            boxShadow: '0 20px 40px -10px rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            flexDirection: 'row',
+            flexWrap: 'nowrap',
+            alignItems: 'center',
+            padding: '4px 8px',
+            boxSizing: 'border-box',
+          }}
+        >
+          <div
+            className="flex flex-row flex-nowrap items-center gap-2 overflow-x-auto overflow-y-hidden touch-pan-x no-scrollbar w-full px-2 h-12 scroll-smooth"
+            style={{
+              display: 'flex',
+              flexDirection: 'row',
+              flexWrap: 'nowrap',
+              alignItems: 'center',
+              gap: '8px',
+              overflowX: 'auto',
+              overflowY: 'hidden',
+              touchAction: 'pan-x',
+              WebkitOverflowScrolling: 'touch',
+              scrollbarWidth: 'none',
+              width: '100%',
+              height: '44px',
+            }}
+          >
             {/* 1. Historique : Undo (↩️) et Redo (↪️) */}
             <div className="flex flex-row flex-nowrap items-center gap-1 flex-shrink-0">
               <button
@@ -3682,6 +3721,7 @@ export default function CollaborativeWhiteboardModal({
                 value={lineWidth}
                 onChange={(e) => setLineWidth(Number(e.target.value))}
                 className="w-14 accent-[#C67D5B] cursor-pointer flex-shrink-0"
+                style={{ width: '56px', flexShrink: 0, accentColor: '#C67D5B', cursor: 'pointer' }}
                 title={`Épaisseur: ${lineWidth}px`}
               />
               <span className="text-[11px] font-mono font-bold min-w-[22px] text-white flex-shrink-0">
