@@ -70,7 +70,7 @@ export function TextEffect({
   speedSegment = 0.35,
   className = '',
   as: Tag = 'span',
-  once = true,
+  once = false,
   delay = 0,
 }) {
   const prefersReducedMotion = useMotionPreference();
@@ -122,7 +122,7 @@ export function TextEffect({
         variants: containerVariants,
         initial: 'hidden',
         whileInView: 'show',
-        viewport: { once, amount: 0.2 },
+        viewport: { once, amount: 0.1 },
       }
     : {};
 

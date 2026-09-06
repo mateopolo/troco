@@ -1104,7 +1104,7 @@ function CloudOfficeSuiteModalContent({
         {/* CONTENEUR MODALE PRINCIPALE */}
         <div
           onClick={(e) => e.stopPropagation()}
-          className="relative w-full max-w-6xl max-h-[90dvh] overflow-y-auto overscroll-contain rounded-2xl flex flex-col shadow-2xl border transition-all"
+          className="relative w-full max-w-6xl max-h-[90dvh] overflow-y-auto overscroll-contain rounded-3xl flex flex-col shadow-2xl border transition-all"
           style={{
             position: 'relative',
             zIndex: 1000000,
@@ -1112,8 +1112,8 @@ function CloudOfficeSuiteModalContent({
             maxWidth: '1100px',
             maxHeight: '90dvh',
             backgroundColor: 'var(--bg-card)',
-            borderRadius: '24px',
-            border: '1px solid var(--border-color)',
+            borderRadius: '28px',
+            border: '1px solid rgba(255,255,255,0.10)',
             boxShadow: 'var(--shadow-modal)',
             display: 'flex',
             flexDirection: 'column',
@@ -1137,13 +1137,11 @@ function CloudOfficeSuiteModalContent({
             <button
               type="button"
               onClick={onClose}
-              className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl font-bold text-xs shrink-0 transition-all cursor-pointer shadow-sm ${
-                darkMode
-                  ? 'bg-white/10 hover:bg-white/15 text-[#FAF7F2]'
-                  : 'bg-stone-200/90 hover:bg-stone-300 text-[#3D3530]'
-              }`}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-full font-medium text-sm shrink-0 transition-colors cursor-pointer"
               style={{
-                border: '1px solid var(--border-color)',
+                background: 'rgba(239, 68, 68, 0.10)',
+                color: 'rgb(239, 68, 68)',
+                border: 'none',
               }}
               title="Fermer"
             >
@@ -1298,8 +1296,8 @@ function CloudOfficeSuiteModalContent({
                   <button
                     type="button"
                     onClick={handleDownloadPDF}
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer shadow-sm bg-stone-100 hover:bg-stone-200 dark:bg-white/10 dark:hover:bg-white/15"
-                    style={{ border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
+                    className="flex items-center gap-1 px-4 py-2 rounded-full text-xs font-medium transition-colors cursor-pointer whitespace-nowrap"
+                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)', color: 'var(--text-main)' }}
                     title="Exporter en PDF imprimable"
                   >
                     <Download size={13} />
@@ -1308,8 +1306,8 @@ function CloudOfficeSuiteModalContent({
                   <button
                     type="button"
                     onClick={handleDownloadDOCX}
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer shadow-sm bg-stone-100 hover:bg-stone-200 dark:bg-white/10 dark:hover:bg-white/15"
-                    style={{ border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
+                    className="flex items-center gap-1 px-4 py-2 rounded-full text-xs font-medium transition-colors cursor-pointer whitespace-nowrap"
+                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)', color: 'var(--text-main)' }}
                     title="Exporter au format Word (.docx)"
                   >
                     <Download size={13} />
@@ -1323,8 +1321,8 @@ function CloudOfficeSuiteModalContent({
                   <button
                     type="button"
                     onClick={handleDownloadXLSX}
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer shadow-sm bg-stone-100 hover:bg-stone-200 dark:bg-white/10 dark:hover:bg-white/15"
-                    style={{ border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
+                    className="flex items-center gap-1 px-4 py-2 rounded-full text-xs font-medium transition-colors cursor-pointer whitespace-nowrap"
+                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)', color: 'var(--text-main)' }}
                     title="Exporter au format Excel (.xlsx)"
                   >
                     <Download size={13} />
@@ -1333,8 +1331,8 @@ function CloudOfficeSuiteModalContent({
                   <button
                     type="button"
                     onClick={handleDownloadCSV}
-                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer shadow-sm bg-stone-100 hover:bg-stone-200 dark:bg-white/10 dark:hover:bg-white/15"
-                    style={{ border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
+                    className="flex items-center gap-1 px-4 py-2 rounded-full text-xs font-medium transition-colors cursor-pointer whitespace-nowrap"
+                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)', color: 'var(--text-main)' }}
                     title="Exporter en CSV"
                   >
                     <Download size={13} />
@@ -1347,8 +1345,8 @@ function CloudOfficeSuiteModalContent({
                 <button
                   type="button"
                   onClick={handleDownloadPPTX}
-                  className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer shadow-sm bg-stone-100 hover:bg-stone-200 dark:bg-white/10 dark:hover:bg-white/15"
-                  style={{ border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
+                  className="flex items-center gap-1 px-4 py-2 rounded-full text-xs font-medium transition-colors cursor-pointer whitespace-nowrap"
+                  style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)', color: 'var(--text-main)' }}
                   title="Exporter au format PowerPoint (.pptx)"
                 >
                   <Download size={13} />
@@ -1360,8 +1358,8 @@ function CloudOfficeSuiteModalContent({
               <button
                 type="button"
                 onClick={handleDownloadPDF}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer shadow-sm bg-stone-100 hover:bg-stone-200 dark:bg-white/10 dark:hover:bg-white/15"
-                style={{ border: '1px solid var(--border-color)', color: 'var(--text-main)' }}
+                className="flex items-center gap-1 px-4 py-2 rounded-full text-xs font-medium transition-colors cursor-pointer whitespace-nowrap"
+                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)', color: 'var(--text-main)' }}
                 title="Imprimer le document"
               >
                 <Printer size={13} />
@@ -1638,27 +1636,34 @@ function CloudOfficeSuiteModalContent({
                 flex: 1,
                 display: 'flex',
                 flexDirection: 'column',
-                backgroundColor: '#ECEFF1',
-                overflowY: 'auto',
-                padding: '20px 16px',
+                backgroundColor: 'var(--bg-card)',
+                overflow: 'hidden',
               }}
             >
-              {/* DOCUMENT FEUILLE DE PAPIER A4 CENTRÉE */}
-              <div
-                ref={setEditorRef}
-                contentEditable
-                suppressContentEditableWarning
-                placeholder="Rédigez ici vos comptes-rendus..."
-                onInput={handleEditorInput}
-                className="bg-white w-[21cm] min-h-[29.7cm] mx-auto shadow-md p-4 md:p-8 p-[2cm] text-black focus:outline-none"
+              <textarea
+                ref={textareaRef}
+                value={docContent}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setDocContent(val);
+                  saveDocToFirestore(val);
+                }}
+                placeholder="Rédigez ici vos comptes-rendus, spécifications et notes collaboratives..."
                 style={{
-                  boxSizing: 'border-box',
-                  fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-                  fontSize: '14.5px',
-                  lineHeight: '1.7',
-                  marginBottom: '48px',
+                  flex: 1,
+                  width: '100%',
+                  resize: 'none',
+                  border: 'none',
                   outline: 'none',
-                  cursor: 'text',
+                  padding: '24px 28px',
+                  backgroundColor: 'var(--bg-card)',
+                  color: 'var(--text-main)',
+                  fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                  fontSize: '14px',
+                  lineHeight: '1.75',
+                  letterSpacing: '0.01em',
+                  boxSizing: 'border-box',
+                  minHeight: '400px',
                 }}
               />
             </div>

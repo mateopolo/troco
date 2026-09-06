@@ -27,9 +27,9 @@ export default function PublicProfileModal({
   const isKycVerified = targetUser.kycVerified ?? true;
   const username = targetUser.username || `@${userName.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
   const location = targetUser.location || 'Paris, France';
-  const rating = targetUser.rating || 4.9;
-  const reviewsCount = targetUser.reviewsCount || 18;
-  const completedSwaps = targetUser.completedSwaps || 12;
+  const rating = targetUser.rating ?? null;
+  const reviewsCount = targetUser.reviewsCount ?? 0;
+  const completedSwaps = targetUser.completedSwaps ?? 0;
 
   // Bio par défaut intelligente selon le persona / contact
   const defaultBio = targetUser.bio || `Passionné d'échange et d'entraide sur Troco ! N'hésitez pas à me contacter via le chat pour discuter d'un troc, d'un prêt de matériel ou d'un coup de main mutuel.`;
@@ -351,20 +351,28 @@ export default function PublicProfileModal({
 
               {/* STATS DE CONFIANCE & LOCALISATION */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap', fontSize: '12px', color: 'var(--text-secondary)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontWeight: '700', color: '#F59E0B' }}>
-                  <Star size={14} fill="#F59E0B" />
-                  <span>{rating}</span>
-                  <span style={{ color: 'var(--text-secondary)', fontWeight: '500' }}>({reviewsCount} avis)</span>
-                </div>
+                {/* Note : affichée uniquement si l'utilisateur a des avis réels */}
+                {reviewsCount > 0 && rating !== null ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontWeight: '700', color: '#F59E0B' }}>
+                    <Star size={14} fill="#F59E0B" />
+                    <span>{typeof rating === 'number' ? rating.toFixed(1) : rating}</span>
+                    <span style={{ color: 'var(--text-secondary)', fontWeight: '500' }}>({reviewsCount} avis)</span>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
+                    <Star size={13} style={{ opacity: 0.35 }} />
+                    <span style={{ fontSize: '11px' }}>Pas encore d'évaluation</span>
+                  </div>
+                )}
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <MapPin size={13} color="var(--accent-primary)" />
                   <span>{location}</span>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--accent-success)', fontWeight: '700' }}>
-                  <CheckCircle size={13} />
-                  <span>{completedSwaps} échanges réussis</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: completedSwaps > 0 ? 'var(--accent-success)' : 'var(--text-secondary)', fontWeight: completedSwaps > 0 ? '700' : '400' }}>
+                  <CheckCircle size={13} style={{ opacity: completedSwaps > 0 ? 1 : 0.35 }} />
+                  <span>{completedSwaps} échange{completedSwaps !== 1 ? 's' : ''} réussi{completedSwaps !== 1 ? 's' : ''}</span>
                 </div>
               </div>
             </div>
