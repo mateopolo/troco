@@ -21,7 +21,7 @@ import {
   RotateCcw, RotateCw, Trash2, StickyNote,
   Type, Hand, Brush, Check, Eye, Maximize2, ChevronDown,
   Sparkles, Save, Send, History, Palette, Clock, FolderKanban,
-  Triangle, Hexagon, Star, MessageSquare, Heart
+  Triangle, Hexagon, Star, MessageSquare, Heart, Diamond
 } from 'lucide-react';
 import { doc, getDoc, onSnapshot, setDoc, deleteDoc, collection, serverTimestamp, arrayUnion } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -37,11 +37,12 @@ import { playSwoosh } from '../services/audioService';
 import WhiteboardLobby from './WhiteboardLobby';
 
 const SHAPE_OPTIONS = [
-  { id: 'rect', label: 'Rectangle', icon: Square },
+  { id: 'rectangle', label: 'Rectangle', icon: Square },
   { id: 'circle', label: 'Cercle / Ovale', icon: Circle },
-  { id: 'line', label: 'Ligne Droite', icon: Minus },
-  { id: 'arrow', label: 'Flèche', icon: ArrowRight },
   { id: 'triangle', label: 'Triangle', icon: Triangle },
+  { id: 'diamond', label: 'Losange', icon: Diamond },
+  { id: 'arrow', label: 'Flèche', icon: ArrowRight },
+  { id: 'line', label: 'Ligne Droite', icon: Minus },
   { id: 'hexagon', label: 'Hexagone', icon: Hexagon },
   { id: 'star', label: 'Étoile', icon: Star },
   { id: 'speech_bubble', label: 'Bulle Dialogue', icon: MessageSquare },
@@ -633,7 +634,7 @@ export default function CollaborativeWhiteboardModal({
     if (!path) return;
     const { type, x = 0, y = 0, width = 0, height = 0, fromX = 0, fromY = 0, toX = 0, toY = 0, lineWidth = 4 } = path;
 
-    if (type === 'rect') {
+    if (type === 'rect' || type === 'rectangle') {
       ctx.strokeRect(x, y, width, height);
     } else if (type === 'circle') {
       ctx.beginPath();
@@ -642,6 +643,14 @@ export default function CollaborativeWhiteboardModal({
       const cx = x + width / 2;
       const cy = y + height / 2;
       ctx.ellipse(cx, cy, rx, ry, 0, 0, 2 * Math.PI);
+      ctx.stroke();
+    } else if (type === 'diamond') {
+      ctx.beginPath();
+      ctx.moveTo(x + width / 2, y);
+      ctx.lineTo(x + width, y + height / 2);
+      ctx.lineTo(x + width / 2, y + height);
+      ctx.lineTo(x, y + height / 2);
+      ctx.closePath();
       ctx.stroke();
     } else if (type === 'line') {
       ctx.beginPath();
@@ -1308,7 +1317,7 @@ export default function CollaborativeWhiteboardModal({
           ctx.restore();
         }
       }
-    } else if (['rect', 'circle', 'triangle', 'hexagon', 'star', 'speech_bubble', 'heart', 'checkmark'].includes(tool)) {
+    } else if (['rect', 'rectangle', 'circle', 'triangle', 'diamond', 'hexagon', 'star', 'speech_bubble', 'heart', 'checkmark'].includes(tool)) {
       const shapePath = {
         id: `s-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
         type: tool,
@@ -1497,7 +1506,7 @@ export default function CollaborativeWhiteboardModal({
           ctx.restore();
         }
       }
-    } else if (['rect', 'circle', 'triangle', 'hexagon', 'star', 'speech_bubble', 'heart', 'checkmark', 'text_box'].includes(activePath.type)) {
+    } else if (['rect', 'rectangle', 'circle', 'triangle', 'diamond', 'hexagon', 'star', 'speech_bubble', 'heart', 'checkmark', 'text_box'].includes(activePath.type)) {
       const w = coords.x - startPosRef.current.x;
       const h = coords.y - startPosRef.current.y;
       activePath.x = w < 0 ? coords.x : startPosRef.current.x;
@@ -2975,7 +2984,7 @@ export default function CollaborativeWhiteboardModal({
                 ref={shapeButtonRef}
                 type="button"
                 onClick={() => {
-                  if (['rect', 'circle', 'line', 'arrow', 'triangle', 'hexagon', 'star', 'speech_bubble', 'heart', 'checkmark'].includes(tool)) {
+                  if (['rect', 'rectangle', 'circle', 'line', 'arrow', 'triangle', 'diamond', 'hexagon', 'star', 'speech_bubble', 'heart', 'checkmark'].includes(tool)) {
                     toggleShapesMenu();
                   } else {
                     setTool(selectedShape);
@@ -2987,10 +2996,10 @@ export default function CollaborativeWhiteboardModal({
                   padding: '0 10px',
                   borderRadius: '12px',
                   border: 'none',
-                  backgroundColor: ['rect', 'circle', 'line', 'arrow', 'triangle', 'hexagon', 'star', 'speech_bubble', 'heart', 'checkmark'].includes(tool)
+                  backgroundColor: ['rect', 'rectangle', 'circle', 'line', 'arrow', 'triangle', 'diamond', 'hexagon', 'star', 'speech_bubble', 'heart', 'checkmark'].includes(tool)
                     ? 'var(--accent-primary, #C67D5B)'
                     : darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-                  color: ['rect', 'circle', 'line', 'arrow', 'triangle', 'hexagon', 'star', 'speech_bubble', 'heart', 'checkmark'].includes(tool) ? '#FFFFFF' : 'inherit',
+                  color: ['rect', 'rectangle', 'circle', 'line', 'arrow', 'triangle', 'diamond', 'hexagon', 'star', 'speech_bubble', 'heart', 'checkmark'].includes(tool) ? '#FFFFFF' : 'inherit',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '4px',
@@ -3018,6 +3027,7 @@ export default function CollaborativeWhiteboardModal({
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 10, scale: 0.95 }}
                     transition={{ duration: 0.15 }}
+                    className="flex flex-col gap-2 max-h-48 overflow-y-auto no-scrollbar py-2 px-1"
                     style={{
                       position: 'fixed',
                       bottom: `${shapesMenuCoords.bottom}px`,
@@ -3025,15 +3035,9 @@ export default function CollaborativeWhiteboardModal({
                       backgroundColor: darkMode ? '#1F1B18' : '#FFFFFF',
                       border: darkMode ? '1px solid rgba(255,255,255,0.18)' : '1px solid rgba(0,0,0,0.12)',
                       borderRadius: '18px',
-                      padding: '10px',
                       boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
                       zIndex: 10000000,
-                      maxHeight: '260px',
-                      overflowY: 'auto',
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-                      gap: '8px',
-                      width: '210px',
+                      width: '200px',
                       pointerEvents: 'auto',
                     }}
                     onClick={(e) => e.stopPropagation()}
@@ -3051,24 +3055,29 @@ export default function CollaborativeWhiteboardModal({
                             setIsShapesMenuOpen(false);
                           }}
                           style={{
-                            width: '42px',
-                            height: '42px',
-                            borderRadius: '12px',
+                            width: '100%',
+                            height: '38px',
+                            borderRadius: '10px',
                             border: 'none',
                             backgroundColor: isCurSelected
                               ? '#C67D5B'
                               : darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
                             color: isCurSelected ? '#FFFFFF' : 'inherit',
                             display: 'flex',
-                            flexDirection: 'column',
+                            flexDirection: 'row',
                             alignItems: 'center',
-                            justifyContent: 'center',
+                            gap: '10px',
+                            padding: '0 12px',
                             cursor: 'pointer',
                             transition: 'all 0.15s ease',
+                            flexShrink: 0,
                           }}
                           title={shape.label}
                         >
-                          <ShapeIcon size={18} />
+                          <ShapeIcon size={18} style={{ flexShrink: 0 }} />
+                          <span style={{ fontSize: '12px', fontWeight: '600', whiteSpace: 'nowrap' }}>
+                            {shape.label}
+                          </span>
                         </button>
                       );
                     })}
