@@ -16,6 +16,7 @@ import {
   X,
   CornerDownRight,
   Image as ImageIcon,
+  Presentation,
 } from 'lucide-react';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { collection, addDoc, doc, setDoc, serverTimestamp } from 'firebase/firestore';
@@ -507,6 +508,41 @@ function ChatInputBar({
                       <span style={{ fontSize: '9px', fontWeight: '800', color: '#10B981', backgroundColor: 'rgba(16, 185, 129, 0.15)', padding: '1px 5px', borderRadius: '4px' }}>SHEETS</span>
                     </div>
                     <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>Tableur & formules en temps réel</div>
+                  </div>
+                </button>
+
+                {/* 5. TROCO SLIDES */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsWorkspaceMenuOpen(false);
+                    if (onOpenWorkspaceTool) onOpenWorkspaceTool('slides');
+                  }}
+                  className="hover-subtle"
+                  style={{
+                    border: 'none',
+                    backgroundColor: 'transparent',
+                    borderRadius: '12px',
+                    padding: '8px 10px',
+                    minHeight: '44px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    width: '100%',
+                  }}
+                >
+                  <div style={{ width: '34px', height: '34px', borderRadius: '10px', backgroundColor: 'rgba(234, 88, 12, 0.15)', color: '#EA580C', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Presentation size={16} />
+                  </div>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ fontSize: '12.5px', fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span>Troco Slides</span>
+                      <span style={{ fontSize: '9px', fontWeight: '800', color: '#EA580C', backgroundColor: 'rgba(234, 88, 12, 0.15)', padding: '1px 5px', borderRadius: '4px' }}>SLIDES</span>
+                    </div>
+                    <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>Présentations interactives & pitchs</div>
                   </div>
                 </button>
 
