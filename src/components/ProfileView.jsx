@@ -1,11 +1,12 @@
 import React, { useState, useRef } from 'react';
-import { Star, ShieldCheck, Camera, Pencil, Check, Plus, Trash2, History, Image as ImageIcon, X, Upload } from 'lucide-react';
+import { Star, ShieldCheck, Camera, Pencil, Check, Plus, Trash2, History, Image as ImageIcon, X, Upload, Settings, Palette, Sparkles } from 'lucide-react';
 import KycModal from './KycModal';
 import { PWAInstallProfileCard } from './PWAInstallBanner';
 import { SocialLinksDisplay, SocialLinksEditor } from './UserProfile';
 import { ProgressiveImage } from './ui/ProgressiveImage';
 import { EmptyState } from './ui/EmptyState';
 import InclusiveAvatarBuilder from './profile/InclusiveAvatarBuilder';
+import ProfileAppearanceCustomizer from './profile/ProfileAppearanceCustomizer';
 import DesignStudioModal from './DesignStudioModal';
 import ReviewsSection from './ReviewsSection';
 import { auth } from '../firebase';
@@ -56,6 +57,24 @@ export default function ProfileView({
   const [isDesignStudioOpen, setIsDesignStudioOpen] = useState(false);
   const [portfolioUrlInput, setPortfolioUrlInput] = useState('');
   const portfolioFileInputRef = useRef(null);
+  const fallbackAvatarInputRef = useRef(null);
+  const effectiveAvatarInputRef = profileAvatarFileInputRef || fallbackAvatarInputRef;
+
+  const onAvatarFileChange = (e) => {
+    if (handleAvatarFileUpload) {
+      handleAvatarFileUpload(e);
+    } else {
+      const file = e.target.files?.[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          if (setProfileDraft) setProfileDraft(prev => ({ ...prev, avatar: ev.target.result }));
+          if (setProfile) setProfile(prev => ({ ...prev, avatar: ev.target.result }));
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+  };
 
   const rawUser = userProp || profile || {};
   const user = {
@@ -117,21 +136,22 @@ export default function ProfileView({
         )}
 
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: '24px', flexWrap: 'wrap' }}>
-          {/* AVATAR AVEC UPLOAD */}
-          <div style={{ position: 'relative' }}>
-            <div style={{ width: '96px', height: '96px', borderRadius: '50%', overflow: 'hidden', border: '3px solid var(--accent-primary)', boxShadow: 'var(--shadow-accent)' }}>
-              <ProgressiveImage
-                src={isEditingProfile ? (profileDraft?.avatar || profile?.avatar) : (profile?.avatar || '')}
-                alt={profile?.name || 'Profil'}
-                style={{ width: '100%', height: '100%' }}
-                imgStyle={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              />
-            </div>
+          {/* AVATAR AVEC UPLOAD ET BOUTON CLAIR DIRECTEMENT SOUS LA PHOTO */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+            <div style={{ position: 'relative' }}>
+              <div style={{ width: '96px', height: '96px', borderRadius: '50%', overflow: 'hidden', border: '3px solid var(--accent-primary)', boxShadow: 'var(--shadow-accent)' }}>
+                <ProgressiveImage
+                  src={isEditingProfile ? (profileDraft?.avatar || profile?.avatar) : (profile?.avatar || '')}
+                  alt={profile?.name || 'Profil'}
+                  style={{ width: '100%', height: '100%' }}
+                  imgStyle={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              </div>
 
-            {isEditingProfile && (
-              <>
+              {isEditingProfile && (
                 <button
-                  onClick={() => profileAvatarFileInputRef.current?.click()}
+                  type="button"
+                  onClick={() => effectiveAvatarInputRef.current?.click()}
                   style={{
                     position: 'absolute', bottom: '0', right: '0',
                     border: 'none', background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)', color: '#FFF',
@@ -143,15 +163,34 @@ export default function ProfileView({
                 >
                   <Camera size={16} />
                 </button>
-                <input
-                  type="file"
-                  ref={profileAvatarFileInputRef}
-                  onChange={handleAvatarFileUpload}
-                  accept="image/*"
-                  style={{ display: 'none' }}
-                />
-              </>
-            )}
+              )}
+            </div>
+
+            {/* BOUTON CLAIR "Changer mon avatar" DIRECTEMENT SOUS LA PHOTO DE PROFIL */}
+            <button
+              type="button"
+              onClick={() => effectiveAvatarInputRef.current?.click()}
+              className="flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all duration-200 cursor-pointer shadow-sm hover:scale-105 active:scale-95"
+              style={{
+                backgroundColor: 'var(--bg-subtle)',
+                color: 'var(--accent-primary)',
+                border: '1.5px solid var(--accent-primary)',
+                whiteSpace: 'nowrap',
+              }}
+              title="Changer mon avatar"
+            >
+              <Camera size={13} />
+              <span>Changer mon avatar</span>
+            </button>
+
+            <input
+              type="file"
+              ref={effectiveAvatarInputRef}
+              onChange={onAvatarFileChange}
+              accept="image/*"
+              style={{ display: 'none' }}
+              aria-label="Changer mon avatar"
+            />
           </div>
 
           {/* DÉTAILS PROFIL ET ÉDITION */}
@@ -277,13 +316,6 @@ export default function ProfileView({
                     style={{ border: '1px solid var(--border-color)', borderRadius: '14px', padding: '10px 18px', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-main)', fontWeight: '800', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
                   >
                     <Pencil size={15} /> Modifier le profil
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setIsDesignStudioOpen(true)}
-                    className="flex items-center gap-2 px-4 py-2 rounded-full bg-[var(--bg-card)] border border-white/10 hover:bg-white/5 transition-colors text-sm font-medium cursor-pointer"
-                  >
-                    🎨 Personnaliser l'apparence
                   </button>
                 </>
               ) : (
@@ -636,6 +668,57 @@ export default function ProfileView({
             })}
           </div>
         )}
+      </div>
+
+      {/* ⚙️ PARAMÈTRES DU PROFIL (STUDIO DE DESIGN & FUSION DE TOUTES LES OPTIONS DE THÈME ET COULEURS D'ACCENTUATION) */}
+      <div style={{ ...cardStyle, borderRadius: '24px', padding: '24px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{
+              width: '38px', height: '38px', borderRadius: '12px',
+              backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              border: '1px solid var(--border-color)'
+            }}>
+              <Settings size={20} />
+            </div>
+            <div>
+              <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                Paramètres & Apparence
+              </h3>
+              <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>
+                Personnalisez votre expérience visuelle, votre typographie et vos couleurs d'accentuation
+              </p>
+            </div>
+          </div>
+
+          {/* Ancien bouton 🎨 Personnaliser l'apparence renommé en Studio de Design et déplacé dans les paramètres */}
+          <button
+            type="button"
+            onClick={() => setIsDesignStudioOpen(true)}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-[var(--bg-card)] border border-[var(--border-color)] hover:bg-[var(--bg-subtle)] text-[var(--text-main)] transition-all duration-200 text-sm font-bold cursor-pointer shadow-sm hover:scale-[1.02] active:scale-[0.98]"
+            title="Ouvrir le Studio de Design"
+            aria-label="Studio de Design"
+          >
+            <Palette size={16} className="text-[var(--accent-primary)]" />
+            <span>Studio de Design</span>
+            <Sparkles size={14} className="text-[var(--accent-warning)] ml-1" />
+          </button>
+        </div>
+
+        {/* FUSION DE TOUTES LES OPTIONS DE THÈME ET COULEURS D'ACCENTUATION */}
+        <ProfileAppearanceCustomizer
+          customFont={profileDraft?.customFont || profile?.customFont || 'Inter'}
+          customThemeColor={profileDraft?.customThemeColor || profile?.customThemeColor || '#C67D5B'}
+          onFontChange={(font) => {
+            if (setProfileDraft) setProfileDraft(prev => ({ ...prev, customFont: font }));
+            if (setProfile) setProfile(prev => ({ ...prev, customFont: font }));
+          }}
+          onColorChange={(color) => {
+            if (setProfileDraft) setProfileDraft(prev => ({ ...prev, customThemeColor: color }));
+            if (setProfile) setProfile(prev => ({ ...prev, customThemeColor: color }));
+          }}
+        />
       </div>
 
       {/* SECTION AVIS ET ÉVALUATIONS EN BAS DU PROFIL */}
