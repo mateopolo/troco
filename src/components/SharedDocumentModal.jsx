@@ -339,20 +339,24 @@ function SharedDocumentModalContent({
       }}
     >
       <div
-        className="relative w-full max-w-4xl max-h-[90dvh] overflow-y-auto overscroll-contain rounded-2xl flex flex-col shadow-2xl border transition-all"
+        className="fixed inset-0 md:inset-4 z-[9999] max-h-[90dvh] overflow-y-auto overscroll-contain md:rounded-3xl flex flex-col shadow-2xl border transition-all"
         onClick={(e) => e.stopPropagation()}
         style={{
-          position: 'relative',
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
           zIndex: 1000000,
           width: '100%',
-          maxWidth: '960px',
-          maxHeight: '90dvh',
+          height: '100%',
           backgroundColor: darkMode ? '#1C1816' : '#FAF7F2',
-          borderRadius: '20px',
+          borderRadius: window.innerWidth < 768 ? '0px' : '24px',
           border: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid var(--border-color, #E8DDD3)',
           boxShadow: '0 25px 60px rgba(0,0,0,0.35)',
           display: 'flex',
           flexDirection: 'column',
+          overflow: 'hidden',
         }}
       >
         {/* HEADER NOTES PARTAGÉES (MARKDOWN) */}

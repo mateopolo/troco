@@ -26,6 +26,7 @@ import ChatInputBar from './chat/ChatInputBar';
 const CreateProjectGroupModal = lazy(() => import('./CreateProjectGroupModal'));
 const ProjectRewardsModal = lazy(() => import('./ProjectRewardsModal'));
 const CollaborativeWhiteboard = lazy(() => import('../features/workspace/CollaborativeWhiteboard'));
+const NotesModal = lazy(() => import('./NotesModal'));
 const SharedDocumentModal = lazy(() => import('./SharedDocumentModal'));
 const ProjectWorkspaceToolsModal = lazy(() => import('./ProjectWorkspaceToolsModal'));
 const CloudOfficeSuiteModal = lazy(() => import('./CloudOfficeSuiteModal'));
@@ -3414,7 +3415,7 @@ function ChatView({
       {/* MODALE NOTES PARTAGÉES COLLABORATIVES APPLE-STYLE (LAZY LOADED) */}
       {isSharedDocOpen && (activeChatObj || selectedChat) && (
         <Suspense fallback={null}>
-          <SharedDocumentModal
+          <NotesModal
             isOpen={isSharedDocOpen}
             onClose={() => {
               setIsSharedDocOpen(false);

@@ -1172,7 +1172,18 @@ function CloudOfficeSuiteModalContent({
           onClick={(e) => e.stopPropagation()}
           className="fixed inset-0 md:inset-4 z-[9999] bg-[var(--bg-global)] md:rounded-3xl shadow-2xl border border-white/10 flex flex-col overflow-hidden"
           style={{
-            backgroundColor: 'var(--bg-global)',
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            width: '100%',
+            height: '100%',
+            backgroundColor: 'var(--bg-global, #FAF7F2)',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            boxShadow: '0 25px 60px rgba(0,0,0,0.3)',
             animation: 'fadeSlideUp 0.3s ease both',
           }}
         >
@@ -1180,8 +1191,16 @@ function CloudOfficeSuiteModalContent({
           <div
             className="flex items-center justify-between p-4 border-b border-white/10 bg-[var(--bg-card)] shrink-0 gap-3"
             style={{
-              backgroundColor: 'var(--bg-card)',
-              borderBottom: '1px solid var(--border-color)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '12px 20px',
+              backgroundColor: darkMode ? '#1E1B18' : 'var(--bg-card, #FFFFFF)',
+              borderBottom: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid var(--border-color, rgba(0,0,0,0.08))',
+              flexShrink: 0,
+              gap: '12px',
+              width: '100%',
+              boxSizing: 'border-box',
             }}
           >
             {/* BOUTON FERMER À GAUCHE */}
@@ -1189,6 +1208,21 @@ function CloudOfficeSuiteModalContent({
               type="button"
               onClick={onClose}
               className="flex items-center gap-2 px-4 py-2 bg-white text-black dark:bg-[#2A2624] dark:text-white rounded-full shadow-md hover:bg-gray-100 dark:hover:bg-white/10 transition-colors font-medium text-sm shrink-0 cursor-pointer"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '8px 18px',
+                backgroundColor: darkMode ? '#2A2624' : '#FFFFFF',
+                color: darkMode ? '#FFFFFF' : '#12100E',
+                borderRadius: '9999px',
+                border: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.08)',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                outline: 'none',
+              }}
               title="Fermer"
             >
               <X size={15} />
@@ -1196,7 +1230,22 @@ function CloudOfficeSuiteModalContent({
             </button>
 
             {/* SÉLECTEUR D'ONGLETS GLASSMORPHISM AU CENTRE */}
-            <div className="flex items-center gap-1 p-1 bg-black/5 dark:bg-white/5 backdrop-blur-md border border-black/10 dark:border-white/10 rounded-full max-w-full overflow-x-auto no-scrollbar shadow-sm">
+            <div
+              className="flex items-center gap-1 p-1 bg-black/5 dark:bg-white/5 backdrop-blur-md border border-black/10 dark:border-white/10 rounded-full max-w-full overflow-x-auto no-scrollbar shadow-sm"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                padding: '4px',
+                backgroundColor: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+                borderRadius: '9999px',
+                border: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.06)',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                overflowX: 'auto',
+              }}
+            >
               <button
                 type="button"
                 onClick={() => setActiveTab('docs')}
@@ -1205,6 +1254,23 @@ function CloudOfficeSuiteModalContent({
                     ? 'bg-white text-black dark:bg-[#2A2624] dark:text-white shadow-sm font-bold'
                     : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white bg-transparent'
                 }`}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '6px 16px',
+                  borderRadius: '9999px',
+                  fontSize: '13px',
+                  fontWeight: activeTab === 'docs' ? '700' : '500',
+                  border: 'none',
+                  cursor: 'pointer',
+                  backgroundColor: activeTab === 'docs' ? (darkMode ? '#2A2624' : '#FFFFFF') : 'transparent',
+                  color: activeTab === 'docs' ? (darkMode ? '#FFFFFF' : '#12100E') : (darkMode ? '#A8998C' : '#6B705C'),
+                  boxShadow: activeTab === 'docs' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none',
+                  transition: 'all 0.15s ease',
+                  whiteSpace: 'nowrap',
+                  outline: 'none',
+                }}
               >
                 <FileText size={15} />
                 <span>Troco Docs</span>
@@ -1218,6 +1284,23 @@ function CloudOfficeSuiteModalContent({
                     ? 'bg-white text-black dark:bg-[#2A2624] dark:text-white shadow-sm font-bold'
                     : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white bg-transparent'
                 }`}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '6px 16px',
+                  borderRadius: '9999px',
+                  fontSize: '13px',
+                  fontWeight: activeTab === 'sheets' ? '700' : '500',
+                  border: 'none',
+                  cursor: 'pointer',
+                  backgroundColor: activeTab === 'sheets' ? (darkMode ? '#2A2624' : '#FFFFFF') : 'transparent',
+                  color: activeTab === 'sheets' ? (darkMode ? '#FFFFFF' : '#12100E') : (darkMode ? '#A8998C' : '#6B705C'),
+                  boxShadow: activeTab === 'sheets' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none',
+                  transition: 'all 0.15s ease',
+                  whiteSpace: 'nowrap',
+                  outline: 'none',
+                }}
               >
                 <Table size={15} />
                 <span>Troco Sheets</span>
@@ -1231,6 +1314,23 @@ function CloudOfficeSuiteModalContent({
                     ? 'bg-white text-black dark:bg-[#2A2624] dark:text-white shadow-sm font-bold'
                     : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white bg-transparent'
                 }`}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '6px 16px',
+                  borderRadius: '9999px',
+                  fontSize: '13px',
+                  fontWeight: activeTab === 'slides' ? '700' : '500',
+                  border: 'none',
+                  cursor: 'pointer',
+                  backgroundColor: activeTab === 'slides' ? (darkMode ? '#2A2624' : '#FFFFFF') : 'transparent',
+                  color: activeTab === 'slides' ? (darkMode ? '#FFFFFF' : '#12100E') : (darkMode ? '#A8998C' : '#6B705C'),
+                  boxShadow: activeTab === 'slides' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none',
+                  transition: 'all 0.15s ease',
+                  whiteSpace: 'nowrap',
+                  outline: 'none',
+                }}
               >
                 <Presentation size={15} />
                 <span>Troco Slides</span>
@@ -1244,6 +1344,23 @@ function CloudOfficeSuiteModalContent({
                     ? 'bg-white text-black dark:bg-[#2A2624] dark:text-white shadow-sm font-bold'
                     : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white bg-transparent'
                 }`}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '6px 16px',
+                  borderRadius: '9999px',
+                  fontSize: '13px',
+                  fontWeight: activeTab === 'history' ? '700' : '500',
+                  border: 'none',
+                  cursor: 'pointer',
+                  backgroundColor: activeTab === 'history' ? (darkMode ? '#2A2624' : '#FFFFFF') : 'transparent',
+                  color: activeTab === 'history' ? (darkMode ? '#FFFFFF' : '#12100E') : (darkMode ? '#A8998C' : '#6B705C'),
+                  boxShadow: activeTab === 'history' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none',
+                  transition: 'all 0.15s ease',
+                  whiteSpace: 'nowrap',
+                  outline: 'none',
+                }}
                 title="Historique des versions"
               >
                 <History size={15} />
@@ -1252,22 +1369,59 @@ function CloudOfficeSuiteModalContent({
             </div>
 
             {/* BOUTON PARTAGER AU CHAT À DROITE & STATUT DE SYNCHRONISATION */}
-            <div className="flex items-center gap-3 shrink-0">
-              <div className="flex items-center gap-2 text-xs shrink-0 whitespace-nowrap">
-                <span className={`font-semibold flex items-center gap-1.5 ${
-                  saveStatus.includes('Sauvegarde')
-                    ? 'text-amber-500'
-                    : saveStatus.includes('hors-ligne')
-                    ? 'text-rose-500'
-                    : 'text-emerald-500'
-                }`}>
-                  <span className={`inline-block w-2 h-2 rounded-full ${
+            <div
+              className="flex items-center gap-3 shrink-0"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                flexShrink: 0,
+              }}
+            >
+              <div
+                className="flex items-center gap-2 text-xs shrink-0 whitespace-nowrap"
+                style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', whiteSpace: 'nowrap' }}
+              >
+                <span
+                  className={`font-semibold flex items-center gap-1.5 ${
                     saveStatus.includes('Sauvegarde')
-                      ? 'bg-amber-500 animate-pulse'
+                      ? 'text-amber-500'
                       : saveStatus.includes('hors-ligne')
-                      ? 'bg-rose-500'
-                      : 'bg-emerald-500 animate-pulse'
-                  }`} />
+                      ? 'text-rose-500'
+                      : 'text-emerald-500'
+                  }`}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    fontWeight: '600',
+                    color: saveStatus.includes('Sauvegarde')
+                      ? '#F59E0B'
+                      : saveStatus.includes('hors-ligne')
+                      ? '#EF4444'
+                      : '#10B981',
+                  }}
+                >
+                  <span
+                    className={`inline-block w-2 h-2 rounded-full ${
+                      saveStatus.includes('Sauvegarde')
+                        ? 'bg-amber-500 animate-pulse'
+                        : saveStatus.includes('hors-ligne')
+                        ? 'bg-rose-500'
+                        : 'bg-emerald-500 animate-pulse'
+                    }`}
+                    style={{
+                      display: 'inline-block',
+                      width: '8px',
+                      height: '8px',
+                      borderRadius: '50%',
+                      backgroundColor: saveStatus.includes('Sauvegarde')
+                        ? '#F59E0B'
+                        : saveStatus.includes('hors-ligne')
+                        ? '#EF4444'
+                        : '#10B981',
+                    }}
+                  />
                   {saveStatus}
                 </span>
               </div>
@@ -1278,9 +1432,20 @@ function CloudOfficeSuiteModalContent({
                 disabled={isSendingToChat}
                 className="px-6 py-2.5 rounded-full bg-[var(--accent-primary)] text-white font-bold shadow-lg hover:opacity-90 transition-opacity whitespace-nowrap flex items-center gap-2 cursor-pointer"
                 style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  padding: '10px 24px',
+                  borderRadius: '9999px',
                   backgroundColor: 'var(--accent-primary, #C67D5B)',
                   color: '#FFFFFF',
+                  border: 'none',
+                  fontWeight: '700',
+                  fontSize: '14px',
+                  boxShadow: '0 4px 14px rgba(198, 125, 91, 0.35)',
                   cursor: isSendingToChat ? 'wait' : 'pointer',
+                  whiteSpace: 'nowrap',
+                  outline: 'none',
                 }}
                 title="Partager au chat"
               >
@@ -1752,6 +1917,10 @@ function CloudOfficeSuiteModalContent({
                 display: 'flex',
                 flexDirection: 'column',
                 overflowY: 'auto',
+                backgroundColor: darkMode ? '#12100F' : '#E5E7EB',
+                padding: '32px 16px',
+                cursor: 'text',
+                boxSizing: 'border-box',
               }}
             >
               {/* DOCUMENT FEUILLE DE PAPIER A4 CENTRÉE */}
@@ -1765,10 +1934,18 @@ function CloudOfficeSuiteModalContent({
                 className="w-full max-w-[21cm] md:w-[21cm] min-h-[29.7cm] mx-auto bg-white text-black p-4 md:p-8 p-[2cm] shadow-md shadow-xl outline-none focus:ring-2 focus:ring-[var(--accent-primary)]/50 transition-shadow"
                 style={{
                   boxSizing: 'border-box',
+                  width: '100%',
+                  maxWidth: '21cm',
+                  minHeight: '29.7cm',
+                  margin: '0 auto 48px auto',
+                  backgroundColor: '#FFFFFF',
+                  color: '#000000',
+                  padding: '2cm',
+                  borderRadius: '4px',
+                  boxShadow: '0 8px 30px rgba(0, 0, 0, 0.12)',
                   fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
                   fontSize: '14.5px',
                   lineHeight: '1.7',
-                  marginBottom: '48px',
                   outline: 'none',
                   cursor: 'text',
                 }}

@@ -27,10 +27,7 @@ const extractSnippet = (text, maxChars = 150) => {
   return clean.slice(0, maxChars) + (clean.length > maxChars ? '...' : '');
 };
 
-export default function NotesModal(props) {
-  // 🚨 PHASE 103 : La première ligne du composant DOIT être if (!isOpen) return null;
-  if (!props?.isOpen) return null;
-
+function NotesModalContent(props) {
   const safeProps = props || {};
   const {
     isOpen,
@@ -265,15 +262,18 @@ export default function NotesModal(props) {
 
   const modalContent = (
     <div
-      className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/80 md:bg-black/50 md:backdrop-blur-sm p-3 sm:p-6 touch-none"
+      className="fixed inset-0 z-[999999] flex flex-col bg-black/90 md:bg-black/60 md:backdrop-blur-sm touch-none"
       style={{
         position: 'fixed',
         inset: 0,
         zIndex: 999999,
+        width: '100dvw',
+        height: '100dvh',
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '16px',
+        padding: '0px',
       }}
       onClick={(e) => {
         // Bloque la fermeture accidentelle au clic sur le backdrop
@@ -281,29 +281,60 @@ export default function NotesModal(props) {
       }}
     >
       <div
-        className="relative w-full max-w-4xl h-[90dvh] max-h-[90dvh] overflow-y-auto overscroll-contain rounded-3xl flex flex-col shadow-2xl border transition-all bg-[#F9F9F9] dark:bg-[#1A1A1A] text-gray-900 dark:text-gray-100 border-black/5 dark:border-white/10"
+        className="fixed inset-0 md:inset-4 z-[9999] max-h-[90dvh] overflow-y-auto bg-[#F9F9F9] dark:bg-[#1A1A1A] md:rounded-3xl shadow-2xl border border-white/10 flex flex-col overflow-hidden text-gray-900 dark:text-gray-100"
         onClick={(e) => e.stopPropagation()}
         style={{
-          position: 'relative',
-          zIndex: 1000000,
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
           width: '100%',
-          maxWidth: '920px',
-          maxHeight: '90dvh',
-          height: '90dvh',
-          borderRadius: '24px',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+          height: '100%',
+          backgroundColor: darkMode ? '#1A1A1A' : '#F9F9F9',
+          color: darkMode ? '#FAF7F2' : '#12100E',
           display: 'flex',
           flexDirection: 'column',
-          overflowY: 'auto',
+          overflow: 'hidden',
+          boxShadow: '0 25px 60px rgba(0, 0, 0, 0.35)',
+          zIndex: 1000000,
         }}
       >
         {/* 1. HARMONISATION DU HEADER (STRUCTURE & BOUTONS IDENTIQUES À TROCO DOCS) */}
-        <header className="flex justify-between items-center p-4 border-b border-white/10 shrink-0">
+        <header
+          className="flex justify-between items-center p-4 border-b border-white/10 shrink-0"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            padding: '14px 24px',
+            backgroundColor: darkMode ? '#1E1B18' : '#FFFFFF',
+            borderBottom: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid rgba(0,0,0,0.06)',
+            flexShrink: 0,
+            width: '100%',
+            boxSizing: 'border-box',
+          }}
+        >
           {/* Bouton Fermer */}
           <button
             type="button"
             onClick={onClose}
             className="flex items-center gap-2 px-4 py-2 bg-white text-black dark:bg-[#2A2624] dark:text-white rounded-full shadow-md hover:bg-gray-100 transition-colors font-medium text-sm cursor-pointer"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '8px 18px',
+              backgroundColor: darkMode ? '#2A2624' : '#FFFFFF',
+              color: darkMode ? '#FFFFFF' : '#12100E',
+              borderRadius: '9999px',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+              border: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.08)',
+              fontSize: '14px',
+              fontWeight: '600',
+              cursor: 'pointer',
+              outline: 'none',
+            }}
             title="Fermer la note"
           >
             <ChevronLeft size={16} />
@@ -311,9 +342,15 @@ export default function NotesModal(props) {
           </button>
 
           {/* Indicateur de sauvegarde & Bouton Partager/Sauvegarder */}
-          <div className="flex items-center gap-3">
+          <div
+            className="flex items-center gap-3"
+            style={{ display: 'flex', alignItems: 'center', gap: '12px' }}
+          >
             {/* Indicateur de sauvegarde */}
-            <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 font-medium">
+            <div
+              className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 font-medium"
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}
+            >
               <span
                 className={`inline-block w-2 h-2 rounded-full ${
                   saveStatus.includes('Enregistrement') || saveStatus.includes('Sauvegarde')
@@ -322,6 +359,18 @@ export default function NotesModal(props) {
                     ? 'bg-rose-500'
                     : 'bg-emerald-500'
                 }`}
+                style={{
+                  display: 'inline-block',
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  backgroundColor:
+                    saveStatus.includes('Enregistrement') || saveStatus.includes('Sauvegarde')
+                      ? '#F59E0B'
+                      : saveStatus.includes('hors-ligne')
+                      ? '#EF4444'
+                      : '#10B981',
+                }}
               />
               <span className="hidden sm:inline">{saveStatus}</span>
             </div>
@@ -333,8 +382,20 @@ export default function NotesModal(props) {
               disabled={isSendingToChat}
               className="px-6 py-2.5 rounded-full bg-[var(--accent-primary)] text-white font-bold shadow-lg hover:opacity-90 transition-opacity whitespace-nowrap flex items-center gap-2 cursor-pointer"
               style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '10px 24px',
+                borderRadius: '9999px',
                 backgroundColor: 'var(--accent-primary, #C67D5B)',
                 color: '#FFFFFF',
+                border: 'none',
+                fontWeight: '700',
+                fontSize: '14px',
+                boxShadow: '0 4px 14px rgba(198, 125, 91, 0.35)',
+                cursor: isSendingToChat ? 'wait' : 'pointer',
+                whiteSpace: 'nowrap',
+                outline: 'none',
               }}
               title="Partager au Chat"
             >
@@ -345,9 +406,15 @@ export default function NotesModal(props) {
         </header>
 
         {/* 2. ZONE DE TEXTE ÉPURÉE SANS BORDURES DISGRACIEUSES */}
-        <main className="flex-1 flex flex-col w-full overflow-hidden">
+        <main
+          className="flex-1 flex flex-col w-full overflow-hidden"
+          style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
+        >
           {/* Titre épuré de la note */}
-          <div className="px-6 pt-4 md:px-8 md:pt-6">
+          <div
+            className="px-6 pt-4 md:px-8 md:pt-6"
+            style={{ padding: '16px 32px 8px 32px' }}
+          >
             <input
               type="text"
               value={title}
@@ -357,6 +424,13 @@ export default function NotesModal(props) {
               style={{
                 fontFamily:
                   "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', 'Segoe UI', Roboto, sans-serif",
+                background: 'transparent',
+                border: 'none',
+                outline: 'none',
+                width: '100%',
+                fontSize: '28px',
+                fontWeight: '700',
+                color: darkMode ? '#FAF7F2' : '#12100E',
               }}
             />
           </div>
@@ -371,6 +445,18 @@ export default function NotesModal(props) {
             style={{
               fontFamily:
                 "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Inter', 'Segoe UI', Roboto, sans-serif",
+              width: '100%',
+              height: '100%',
+              flex: 1,
+              background: 'transparent',
+              color: darkMode ? '#FAF7F2' : '#1F2937',
+              padding: '24px 32px',
+              border: 'none',
+              outline: 'none',
+              resize: 'none',
+              fontSize: '18px',
+              lineHeight: '1.7',
+              boxSizing: 'border-box',
             }}
           />
         </main>
@@ -407,6 +493,13 @@ export default function NotesModal(props) {
   return typeof document !== 'undefined' && document.body
     ? createPortal(modalContent, document.body)
     : modalContent;
+}
+
+export default function NotesModal(props) {
+  // 🚨 PHASE 103 : La première ligne du composant DOIT être if (!isOpen) return null;
+  if (!props?.isOpen) return null;
+
+  return <NotesModalContent {...props} />;
 }
 
 export { NotesModal, defaultDoc };
