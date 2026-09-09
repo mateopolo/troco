@@ -1178,27 +1178,13 @@ function CloudOfficeSuiteModalContent({
             borderBottom: '1px solid var(--border-color)',
           }}
         >
-          {/* LIGNE 1 : BOUTON FERMER À GAUCHE, TITRE AU CENTRE, STATUT DE SYNCHRONISATION À DROITE */}
-          <div className="flex justify-between items-center w-full mb-3 gap-3">
-            {/* Bouton "X Fermer" (gros et visible, appelant onClose) à gauche */}
+          {/* LIGNE 1 : BOUTON FERMER À GAUCHE (PILULE ROUGE), TITRE AU CENTRE, STATUT DE SYNCHRONISATION À DROITE */}
+          <div className="flex justify-between items-center w-full mb-3 gap-3 flex-wrap sm:flex-nowrap">
+            {/* Bouton "X Fermer" (belle pilule discrète) en haut à gauche */}
             <button
               type="button"
               onClick={onClose}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-full font-medium text-sm shrink-0 transition-colors cursor-pointer"
-              style={{
-                background: 'var(--bg-card)',
-                color: 'var(--text-main)',
-                border: '1px solid var(--border-color)',
-                borderRadius: '999px',
-                padding: '6px 14px',
-                fontSize: '12.5px',
-                fontWeight: '700',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                cursor: 'pointer',
-                boxShadow: '0 2px 6px rgba(0,0,0,0.05)',
-              }}
+              className="flex items-center gap-2 px-4 py-2 rounded-full bg-red-500/10 text-red-500 hover:bg-red-500/20 text-sm font-bold transition-colors shrink-0 cursor-pointer"
               title="Fermer"
             >
               <X size={15} />
@@ -1211,7 +1197,7 @@ function CloudOfficeSuiteModalContent({
                 style={{
                   width: '32px',
                   height: '32px',
-                  borderRadius: '8px',
+                  borderRadius: '999px',
                   backgroundColor: activeTab === 'docs' ? 'rgba(198,125,91,0.15)' : activeTab === 'sheets' ? 'rgba(16,185,129,0.15)' : activeTab === 'slides' ? 'rgba(59,130,246,0.15)' : 'rgba(100,116,139,0.15)',
                   color: activeTab === 'docs' ? '#C67D5B' : activeTab === 'sheets' ? '#10B981' : activeTab === 'slides' ? '#3B82F6' : '#64748B',
                   display: 'flex',
@@ -1295,77 +1281,73 @@ function CloudOfficeSuiteModalContent({
             </div>
           </div>
 
-          {/* LIGNE 2 : ONGLETS BUREAUTIQUES ET BOUTONS D'ACTION (FLEX-WRAP GAP-2) */}
-          <div className="flex flex-wrap items-center justify-between gap-2 w-full mb-2">
-            {/* SÉLECTEUR D'ONGLETS */}
-            <div className="flex items-center gap-1.5 flex-wrap">
+          {/* LIGNE 2 : SÉLECTEUR D'ONGLETS GLASSMORPHISM & ACTIONS */}
+          <div className="flex flex-col md:flex-row items-center justify-between gap-3 w-full mb-2">
+            {/* 1. NAVIGATION ENTRE OUTILS (DOCS / SHEETS / SLIDES) EN MODE GLASSMORPHISM */}
+            <div className="flex items-center gap-1 p-1 bg-white/10 dark:bg-black/20 backdrop-blur-md border border-white/10 rounded-full mx-auto md:mx-0 w-max max-w-full overflow-x-auto no-scrollbar shadow-sm">
               <button
                 type="button"
                 onClick={() => setActiveTab('docs')}
-                className="premium-button flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm"
-                style={{
-                  border: activeTab === 'docs' ? '1.5px solid var(--accent-primary, #C67D5B)' : '1px solid var(--border-color)',
-                  backgroundColor: activeTab === 'docs' ? 'rgba(198, 125, 91, 0.15)' : 'var(--bg-card)',
-                  color: activeTab === 'docs' ? 'var(--accent-primary, #C67D5B)' : 'var(--text-main)',
-                }}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+                  activeTab === 'docs'
+                    ? 'bg-[var(--bg-card)] shadow-md text-[var(--accent-primary)] font-bold'
+                    : 'text-gray-400 hover:text-white'
+                }`}
               >
-                <FileText size={14} />
+                <FileText size={15} />
                 <span>Troco Docs</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setActiveTab('sheets')}
-                className="premium-button flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm"
-                style={{
-                  border: activeTab === 'sheets' ? '1.5px solid #10B981' : '1px solid var(--border-color)',
-                  backgroundColor: activeTab === 'sheets' ? 'rgba(16, 185, 129, 0.15)' : 'var(--bg-card)',
-                  color: activeTab === 'sheets' ? '#10B981' : 'var(--text-main)',
-                }}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+                  activeTab === 'sheets'
+                    ? 'bg-[var(--bg-card)] shadow-md text-[var(--accent-primary)] font-bold'
+                    : 'text-gray-400 hover:text-white'
+                }`}
               >
-                <Table size={14} />
+                <Table size={15} />
                 <span>Troco Sheets</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setActiveTab('slides')}
-                className="premium-button flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm"
-                style={{
-                  border: activeTab === 'slides' ? '1.5px solid #3B82F6' : '1px solid var(--border-color)',
-                  backgroundColor: activeTab === 'slides' ? 'rgba(59, 130, 246, 0.15)' : 'var(--bg-card)',
-                  color: activeTab === 'slides' ? '#3B82F6' : 'var(--text-main)',
-                }}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+                  activeTab === 'slides'
+                    ? 'bg-[var(--bg-card)] shadow-md text-[var(--accent-primary)] font-bold'
+                    : 'text-gray-400 hover:text-white'
+                }`}
               >
-                <Presentation size={14} />
+                <Presentation size={15} />
                 <span>Troco Slides</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setActiveTab('history')}
-                className="premium-button flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-sm"
-                style={{
-                  border: activeTab === 'history' ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-color)',
-                  backgroundColor: activeTab === 'history' ? 'var(--bg-subtle)' : 'transparent',
-                  color: 'var(--text-secondary)',
-                }}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+                  activeTab === 'history'
+                    ? 'bg-[var(--bg-card)] shadow-md text-[var(--accent-primary)] font-bold'
+                    : 'text-gray-400 hover:text-white'
+                }`}
                 title="Historique des versions"
               >
-                <History size={13} />
+                <History size={15} />
                 <span>Versions ({versionHistory.length})</span>
               </button>
             </div>
 
-            {/* BOUTONS D'ACTION : TÉLÉCHARGER, IMPRIMER, PARTAGER AU CHAT */}
-            <div className="flex flex-wrap items-center gap-1.5">
+            {/* BOUTONS D'ACTION : EXPORTS ET ACTION PRINCIPALE "PARTAGER AU CHAT" */}
+            <div className="flex items-center gap-2 flex-wrap justify-center md:justify-end shrink-0 w-full md:w-auto">
               {activeTab === 'docs' && (
                 <>
                   <button
                     type="button"
                     onClick={handleDownloadPDF}
-                    className="flex items-center gap-1 px-4 py-2 rounded-full text-xs font-medium transition-colors cursor-pointer whitespace-nowrap"
-                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)', color: 'var(--text-main)' }}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold bg-white/5 hover:bg-white/10 border border-white/10 transition-colors cursor-pointer whitespace-nowrap"
+                    style={{ color: 'var(--text-main)' }}
                     title="Exporter en PDF imprimable"
                   >
                     <Download size={13} />
@@ -1374,8 +1356,8 @@ function CloudOfficeSuiteModalContent({
                   <button
                     type="button"
                     onClick={handleDownloadDOCX}
-                    className="flex items-center gap-1 px-4 py-2 rounded-full text-xs font-medium transition-colors cursor-pointer whitespace-nowrap"
-                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)', color: 'var(--text-main)' }}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold bg-white/5 hover:bg-white/10 border border-white/10 transition-colors cursor-pointer whitespace-nowrap"
+                    style={{ color: 'var(--text-main)' }}
                     title="Exporter au format Word (.docx)"
                   >
                     <Download size={13} />
@@ -1389,8 +1371,8 @@ function CloudOfficeSuiteModalContent({
                   <button
                     type="button"
                     onClick={handleDownloadXLSX}
-                    className="flex items-center gap-1 px-4 py-2 rounded-full text-xs font-medium transition-colors cursor-pointer whitespace-nowrap"
-                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)', color: 'var(--text-main)' }}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold bg-white/5 hover:bg-white/10 border border-white/10 transition-colors cursor-pointer whitespace-nowrap"
+                    style={{ color: 'var(--text-main)' }}
                     title="Exporter au format Excel (.xlsx)"
                   >
                     <Download size={13} />
@@ -1399,8 +1381,8 @@ function CloudOfficeSuiteModalContent({
                   <button
                     type="button"
                     onClick={handleDownloadCSV}
-                    className="flex items-center gap-1 px-4 py-2 rounded-full text-xs font-medium transition-colors cursor-pointer whitespace-nowrap"
-                    style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)', color: 'var(--text-main)' }}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold bg-white/5 hover:bg-white/10 border border-white/10 transition-colors cursor-pointer whitespace-nowrap"
+                    style={{ color: 'var(--text-main)' }}
                     title="Exporter en CSV"
                   >
                     <Download size={13} />
@@ -1413,8 +1395,8 @@ function CloudOfficeSuiteModalContent({
                 <button
                   type="button"
                   onClick={handleDownloadPPTX}
-                  className="flex items-center gap-1 px-4 py-2 rounded-full text-xs font-medium transition-colors cursor-pointer whitespace-nowrap"
-                  style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)', color: 'var(--text-main)' }}
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold bg-white/5 hover:bg-white/10 border border-white/10 transition-colors cursor-pointer whitespace-nowrap"
+                  style={{ color: 'var(--text-main)' }}
                   title="Exporter au format PowerPoint (.pptx)"
                 >
                   <Download size={13} />
@@ -1426,28 +1408,29 @@ function CloudOfficeSuiteModalContent({
               <button
                 type="button"
                 onClick={handleDownloadPDF}
-                className="flex items-center gap-1 px-4 py-2 rounded-full text-xs font-medium transition-colors cursor-pointer whitespace-nowrap"
-                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)', color: 'var(--text-main)' }}
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold bg-white/5 hover:bg-white/10 border border-white/10 transition-colors cursor-pointer whitespace-nowrap"
+                style={{ color: 'var(--text-main)' }}
                 title="Imprimer le document"
               >
                 <Printer size={13} />
                 <span>Imprimer</span>
               </button>
 
-              {/* Bouton Partager au Chat */}
+              {/* 2. LE BOUTON D'ACTION PRINCIPAL ("PARTAGER AU CHAT") MASSIF ET OVALE */}
               <button
                 type="button"
                 onClick={handleShareToChat}
                 disabled={isSendingToChat}
-                className="premium-button flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-white transition-all cursor-pointer shadow-sm"
+                className="px-6 py-2.5 rounded-full bg-[var(--accent-primary)] text-white font-bold shadow-lg hover:opacity-90 transition-opacity whitespace-nowrap flex items-center gap-2 cursor-pointer"
                 style={{
-                  background: 'linear-gradient(135deg, #C67D5B 0%, #B86B49 100%)',
-                  boxShadow: '0 4px 14px rgba(198,125,91,0.3)',
+                  backgroundColor: 'var(--accent-primary, #C67D5B)',
+                  color: '#FFFFFF',
                   cursor: isSendingToChat ? 'wait' : 'pointer',
+                  boxShadow: '0 4px 14px rgba(198, 125, 91, 0.35)',
                 }}
                 title="Partager au chat"
               >
-                <Share2 size={13} />
+                <Share2 size={15} />
                 <span>{isSendingToChat ? 'Envoi...' : 'Partager au Chat'}</span>
               </button>
             </div>
