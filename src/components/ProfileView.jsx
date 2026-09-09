@@ -40,7 +40,7 @@ export default function ProfileView({
   openCheckout,
   setIsCreditModalOpen,
   currentLang,
-  t,
+  t = (k, defaultVal) => defaultVal || k,
   darkMode,
   AnimatedEuroBalance,
   AnimatedTokenBalance,
@@ -48,11 +48,23 @@ export default function ProfileView({
   portfolioImages = [],
   onAddPortfolioImage,
   onRemovePortfolioImage,
+  user: userProp,
 }) {
   const [isKycModalOpen, setIsKycModalOpen] = useState(false);
   const [isDesignStudioOpen, setIsDesignStudioOpen] = useState(false);
   const [portfolioUrlInput, setPortfolioUrlInput] = useState('');
   const portfolioFileInputRef = useRef(null);
+
+  const rawUser = userProp || profile || {};
+  const user = {
+    ...rawUser,
+    dealsCompleted: rawUser.dealsCompleted ?? closedDealsCount ?? 0,
+    activeDeals: rawUser.activeDeals ?? rawUser.dealsInProgress ?? inProgressCount ?? 0,
+    reviewsCount: rawUser.reviewsCount ?? 0,
+    averageRating: rawUser.averageRating !== undefined
+      ? rawUser.averageRating
+      : (rawUser.rating ?? (averageRating && averageRating !== '—' ? Number(averageRating) : 0)),
+  };
 
   if (activeTab !== 'profile') return null;
 
@@ -177,19 +189,22 @@ export default function ProfileView({
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '14px', fontWeight: '800', color: 'var(--accent-warning)' }}>
-                    {closedDealsCount > 0 && averageRating !== '—' ? (
+                    {user.reviewsCount > 0 ? (
                       <>
-                        <Star size={18} fill="var(--accent-warning)" /> {averageRating}
-                        <span style={{ color: 'var(--text-secondary)', fontWeight: '600', fontSize: '12px' }}>({closedDealsCount} deals)</span>
+                        <Star size={18} fill="var(--accent-warning)" /> {(Math.round(user.averageRating * 10) / 10).toFixed(1)} ⭐
+                        <span style={{ color: 'var(--text-secondary)', fontWeight: '600', fontSize: '12px' }}>({user.reviewsCount} avis)</span>
                       </>
                     ) : (
-                      <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>
-                        Nouveau membre • Aucun échange
+                      <span style={{ fontSize: '12px', fontStyle: 'italic', fontWeight: '500', color: 'var(--text-secondary)' }}>
+                        {t('profile.no_reviews', 'Pas d\'évaluation pour l\'instant')}
                       </span>
                     )}
                   </div>
                   <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600' }}>
-                    📍 {profile?.location || 'France'}
+                    📍 {user?.location || 'France'}
+                  </div>
+                  <div style={{ fontSize: '12px', color: (user.dealsCompleted || 0) > 0 ? 'var(--accent-success)' : 'var(--text-secondary)', fontWeight: '700' }}>
+                    🤝 Deal clôturé: {user.dealsCompleted || 0}
                   </div>
                   <div style={{ display: 'flex', gap: '4px' }}>
                     {profile?.languages?.map(lang => (
@@ -525,13 +540,40 @@ export default function ProfileView({
 
       {/* HISTORIQUE DES DEALS */}
       <div style={{ ...cardStyle, borderRadius: '24px', padding: '24px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px', flexWrap: 'wrap', gap: '8px' }}>
           <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '22px', fontWeight: '600', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <History size={20} color="var(--accent-primary)" /> Historique des Deals & Évaluations
+            <History size={20} color="var(--accent-primary)" /> Historique des swaps et deals
           </h3>
           <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)' }}>
-            {closedDealsCount} clôturés • {inProgressCount} en cours
+            Deal clôturé: {user.dealsCompleted || 0} • En cours planifié: {user.activeDeals || 0}
           </span>
+        </div>
+
+        {/* STATISTIQUES DYNAMIQUES DEALS & NOTE MOYENNE */}
+        <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' }}>
+          {/* DEAL CLÔTURÉ */}
+          <div style={{ flex: 1, minWidth: '130px', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '12px 14px', backgroundColor: 'var(--bg-subtle)' }}>
+            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Deal clôturé</div>
+            <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-main)' }}>
+              {user.dealsCompleted || 0}
+            </div>
+          </div>
+
+          {/* NOTE MOYENNE */}
+          <div style={{ flex: 1, minWidth: '140px', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '12px 14px', backgroundColor: 'var(--bg-subtle)' }}>
+            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Note moyenne</div>
+            <div style={{ fontSize: user.reviewsCount > 0 ? '20px' : '12.5px', fontWeight: user.reviewsCount > 0 ? '800' : '500', color: user.reviewsCount > 0 ? '#F59E0B' : 'var(--text-secondary)', fontStyle: user.reviewsCount > 0 ? 'normal' : 'italic', display: 'flex', alignItems: 'center', gap: '4px', minHeight: '28px' }}>
+              {user.reviewsCount > 0 ? (Math.round(user.averageRating * 10) / 10).toFixed(1) + ' ⭐' : t('profile.no_reviews', 'Pas d\'évaluation pour l\'instant')}
+            </div>
+          </div>
+
+          {/* EN COURS PLANIFIÉ */}
+          <div style={{ flex: 1, minWidth: '130px', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '12px 14px', backgroundColor: 'var(--bg-subtle)' }}>
+            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>En cours planifié</div>
+            <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--accent-primary)' }}>
+              {user.activeDeals || 0}
+            </div>
+          </div>
         </div>
 
         {swapHistory.length === 0 ? (

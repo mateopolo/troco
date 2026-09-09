@@ -166,6 +166,7 @@ export const translations = {
     swapHistorySub: "Toutes vos transactions passées et en cours avec statut et avis détaillés.",
     closedDeals: "Deals clôturés",
     averageRating: "Note moyenne",
+    "profile.no_reviews": "Pas d'évaluation pour l'instant",
     inProgressPlanned: "En cours / Planifié",
     guidedPath: "Parcours guidé",
     chooseAdTypePrompt: "Choisis le type d'annonce que tu souhaites publier.",

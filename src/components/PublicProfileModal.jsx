@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   X, Star, ShieldCheck, MapPin, Sparkles, MessageSquare,
-  CheckCircle, Briefcase, Award, Camera, Wrench, ExternalLink, FileText, Link as LinkIcon
+  CheckCircle, Briefcase, Award, Camera, Wrench, ExternalLink, FileText, Link as LinkIcon, History
 } from 'lucide-react';
 import MobileHeader from './common/MobileHeader';
 import { SocialLinksDisplay } from './UserProfile';
@@ -11,25 +11,35 @@ export default function PublicProfileModal({
   isOpen,
   onClose,
   targetUser,
+  user: userProp,
   allListings = [],
   onOpenListing,
   onStartDiscussion,
   currentLang = 'FR',
   darkMode = false,
-  t = (k) => k,
+  t = (k, defaultVal) => defaultVal || k,
 }) {
-  const [activeTab, setActiveTab] = useState('listings'); // 'listings' | 'bio' | 'portfolio' | 'reviews'
+  const [activeTab, setActiveTab] = useState('listings'); // 'listings' | 'history' | 'bio' | 'portfolio' | 'reviews'
 
-  if (!isOpen || !targetUser) return null;
+  if (!isOpen || (!targetUser && !userProp)) return null;
 
-  const userName = targetUser.name || targetUser.user || 'Membre Troco';
-  const avatar = targetUser.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(userName)}`;
-  const isKycVerified = targetUser.kycVerified ?? true;
-  const username = targetUser.username || `@${userName.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
-  const location = targetUser.location || 'Paris, France';
-  const rating = targetUser.rating ?? null;
-  const reviewsCount = targetUser.reviewsCount ?? 0;
-  const completedSwaps = targetUser.completedSwaps ?? 0;
+  const rawUser = targetUser || userProp || {};
+  const user = {
+    ...rawUser,
+    dealsCompleted: rawUser.dealsCompleted || 0,
+    activeDeals: rawUser.activeDeals ?? rawUser.dealsInProgress ?? 0,
+    reviewsCount: rawUser.reviewsCount || 0,
+    averageRating: rawUser.averageRating !== undefined ? rawUser.averageRating : (rawUser.rating || 0),
+  };
+
+  const userName = user.name || user.user || 'Membre Troco';
+  const avatar = user.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(userName)}`;
+  const isKycVerified = user.kycVerified ?? true;
+  const username = user.username || `@${userName.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+  const location = user.location || 'Paris, France';
+  const rating = user.averageRating || user.rating || null;
+  const reviewsCount = user.reviewsCount || 0;
+  const completedSwaps = user.dealsCompleted || 0;
 
   // Bio par défaut intelligente selon le persona / contact
   const defaultBio = targetUser.bio || `Passionné d'échange et d'entraide sur Troco ! N'hésitez pas à me contacter via le chat pour discuter d'un troc, d'un prêt de matériel ou d'un coup de main mutuel.`;
@@ -351,28 +361,29 @@ export default function PublicProfileModal({
 
               {/* STATS DE CONFIANCE & LOCALISATION */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap', fontSize: '12px', color: 'var(--text-secondary)' }}>
-                {/* Note : affichée uniquement si l'utilisateur a des avis réels */}
-                {reviewsCount > 0 && rating !== null ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontWeight: '700', color: '#F59E0B' }}>
-                    <Star size={14} fill="#F59E0B" />
-                    <span>{typeof rating === 'number' ? rating.toFixed(1) : rating}</span>
-                    <span style={{ color: 'var(--text-secondary)', fontWeight: '500' }}>({reviewsCount} avis)</span>
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
-                    <Star size={13} style={{ opacity: 0.35 }} />
-                    <span style={{ fontSize: '11px' }}>Pas encore d'évaluation</span>
-                  </div>
-                )}
+                {/* Note moyenne : affichée uniquement si l'utilisateur a des avis réels */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontWeight: user.reviewsCount > 0 ? '700' : '400', color: user.reviewsCount > 0 ? '#F59E0B' : 'var(--text-secondary)', fontStyle: user.reviewsCount > 0 ? 'normal' : 'italic' }}>
+                  {user.reviewsCount > 0 && <Star size={14} fill="#F59E0B" />}
+                  <span>
+                    {user.reviewsCount > 0 ? (Math.round(user.averageRating * 10) / 10).toFixed(1) + ' ⭐' : t('profile.no_reviews', 'Pas d\'évaluation pour l\'instant')}
+                  </span>
+                  {user.reviewsCount > 0 && (
+                    <span style={{ color: 'var(--text-secondary)', fontWeight: '500' }}>({user.reviewsCount} avis)</span>
+                  )}
+                </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <MapPin size={13} color="var(--accent-primary)" />
                   <span>{location}</span>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: completedSwaps > 0 ? 'var(--accent-success)' : 'var(--text-secondary)', fontWeight: completedSwaps > 0 ? '700' : '400' }}>
-                  <CheckCircle size={13} style={{ opacity: completedSwaps > 0 ? 1 : 0.35 }} />
-                  <span>{completedSwaps} échange{completedSwaps !== 1 ? 's' : ''} réussi{completedSwaps !== 1 ? 's' : ''}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: (user.dealsCompleted || 0) > 0 ? 'var(--accent-success)' : 'var(--text-secondary)', fontWeight: (user.dealsCompleted || 0) > 0 ? '700' : '400' }}>
+                  <CheckCircle size={13} style={{ opacity: (user.dealsCompleted || 0) > 0 ? 1 : 0.35 }} />
+                  <span>Deal clôturé: {user.dealsCompleted || 0}</span>
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: (user.activeDeals || 0) > 0 ? 'var(--accent-primary)' : 'var(--text-secondary)', fontWeight: (user.activeDeals || 0) > 0 ? '700' : '400' }}>
+                  <span>En cours planifié: {user.activeDeals || 0}</span>
                 </div>
               </div>
             </div>
@@ -391,6 +402,7 @@ export default function PublicProfileModal({
           >
             {[
               { id: 'listings', label: `Annonces (${displayListings.length})`, icon: Sparkles },
+              { id: 'history', label: `Historique des swaps & deals`, icon: History },
               { id: 'bio', label: 'Présentation & Infos', icon: Briefcase },
               { id: 'portfolio', label: `Portfolio & Photos (${portfolio.length})`, icon: Camera },
               { id: 'reviews', label: `Avis vérifiés (${reviews.length})`, icon: Star },
@@ -683,6 +695,46 @@ export default function PublicProfileModal({
                   </p>
                 </div>
               ))}
+            </div>
+          )}
+
+          {/* 5. HISTORIQUE DES SWAPS ET DEALS */}
+          {activeTab === 'history' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <History size={18} color="var(--accent-primary)" /> Historique des swaps et deals
+              </div>
+
+              {/* STATISTIQUES DYNAMIQUES DEALS & NOTE MOYENNE */}
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                {/* DEAL CLÔTURÉ */}
+                <div style={{ flex: 1, minWidth: '130px', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '12px 14px', backgroundColor: 'var(--bg-subtle)' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Deal clôturé</div>
+                  <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-main)' }}>
+                    {user.dealsCompleted || 0}
+                  </div>
+                </div>
+
+                {/* NOTE MOYENNE */}
+                <div style={{ flex: 1, minWidth: '140px', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '12px 14px', backgroundColor: 'var(--bg-subtle)' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Note moyenne</div>
+                  <div style={{ fontSize: user.reviewsCount > 0 ? '20px' : '12.5px', fontWeight: user.reviewsCount > 0 ? '800' : '500', color: user.reviewsCount > 0 ? '#F59E0B' : 'var(--text-secondary)', fontStyle: user.reviewsCount > 0 ? 'normal' : 'italic', display: 'flex', alignItems: 'center', gap: '4px', minHeight: '28px' }}>
+                    {user.reviewsCount > 0 ? (Math.round(user.averageRating * 10) / 10).toFixed(1) + ' ⭐' : t('profile.no_reviews', 'Pas d\'évaluation pour l\'instant')}
+                  </div>
+                </div>
+
+                {/* EN COURS PLANIFIÉ */}
+                <div style={{ flex: 1, minWidth: '130px', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '12px 14px', backgroundColor: 'var(--bg-subtle)' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>En cours planifié</div>
+                  <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--accent-primary)' }}>
+                    {user.activeDeals || 0}
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ padding: '20px', textAlign: 'center', borderRadius: '18px', backgroundColor: 'var(--bg-subtle)', border: '1px dashed var(--border-color)', color: 'var(--text-secondary)', fontSize: '12.5px' }}>
+                <span>Transactions réelles vérifiées par le tiers de confiance Troco.</span>
+              </div>
             </div>
           )}
         </div>

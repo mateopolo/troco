@@ -161,7 +161,7 @@ export default function App() {
   const [isGeolocating, setIsGeolocating] = useState(false);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const t = useCallback((key) => (translations?.[currentLang]?.[key]) || (translations?.['FR']?.[key]) || key, [currentLang]);
+  const t = useCallback((key, defaultVal) => (translations?.[currentLang]?.[key]) || (translations?.['FR']?.[key]) || defaultVal || key, [currentLang]);
 
   const i18n = useMemo(() => ({
     language: currentLang,
