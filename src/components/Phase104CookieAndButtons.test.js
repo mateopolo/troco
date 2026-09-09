@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, act } from '@testing-library/react';
 import CookieBanner from './CookieBanner';
 
-describe('PHASE 104 : Centrage Global & Reformatage Bannière Cookies (Modale Flottante Compacte)', () => {
+describe('PHASE 104 : Reformatage Bannière Cookies (Modale Flottante Compacte Photo 2)', () => {
   beforeEach(() => {
     localStorage.clear();
     jest.useFakeTimers();
@@ -12,24 +12,25 @@ describe('PHASE 104 : Centrage Global & Reformatage Bannière Cookies (Modale Fl
     jest.useRealTimers();
   });
 
-  test('CookieBanner renders compact centered floating modal and single-line flexbox buttons', () => {
+  test('CookieBanner renders compact centered floating card and pill buttons', () => {
     render(<CookieBanner onOpenPrivacyCenter={jest.fn()} />);
 
     act(() => {
       jest.advanceTimersByTime(1500);
     });
 
-    const overlay = document.body.querySelector('.fixed.inset-0');
-    expect(overlay).toBeInTheDocument();
-
-    const card = document.body.querySelector('.relative.w-full.max-w-lg');
-    expect(card).toBeInTheDocument();
-    expect(card).toHaveClass('rounded-3xl', 'shadow-2xl', 'flex', 'flex-col', 'items-center', 'text-center');
+    const banner = document.body.querySelector('#troco-cookie-banner');
+    expect(banner).toBeInTheDocument();
+    expect(banner).toHaveStyle({
+      position: 'fixed',
+      bottom: '86px',
+      borderRadius: '24px',
+    });
 
     const acceptBtn = screen.getByText('Tout accepter');
-    expect(acceptBtn).toHaveClass('rounded-full');
+    expect(acceptBtn).toBeInTheDocument();
 
-    const declineBtn = screen.getByText('Décliner');
-    expect(declineBtn).toHaveClass('rounded-full');
+    const declineBtn = screen.getByText('Continuer sans accepter');
+    expect(declineBtn).toBeInTheDocument();
   });
 });
