@@ -333,9 +333,9 @@ function SharedDocumentModalContent({
         padding: '12px',
       }}
       onClick={(e) => {
-        if (e.target === e.currentTarget && typeof onClose === 'function') {
-          onClose();
-        }
+        // Bloque la fermeture accidentelle sur le backdrop
+        // L'utilisateur DOIT obligatoirement cliquer sur le bouton explicite "Fermer" (X) pour quitter.
+        e.stopPropagation();
       }}
     >
       <div

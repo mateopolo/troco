@@ -9,7 +9,7 @@ import {
   RemoveFormatting, Undo, Redo,
   Download, Printer, Share2, Baseline, Highlighter
 } from 'lucide-react';
-import { doc, setDoc, onSnapshot, serverTimestamp, collection, addDoc } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, onSnapshot, serverTimestamp, collection, addDoc } from 'firebase/firestore';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../firebase';
 
@@ -240,6 +240,8 @@ function CloudOfficeSuiteModalContent({
   const [activeTab, setActiveTab] = useState(initialTab || 'docs'); // 'docs' | 'sheets' | 'slides' | 'history'
   const [docTitle, setDocTitle] = useState(() => effectiveDoc?.title || effectiveDoc?.name || (projectTitle ? `Spécifications & Notes - ${projectTitle}` : defaultDoc.title));
   const [docContent, setDocContent] = useState(() => content);
+  const [initialContent, setInitialContent] = useState(() => content);
+  const initialContentRef = useRef(content);
   const [sheetTitle, setSheetTitle] = useState(() => effectiveDoc?.sheetTitle || (projectTitle ? `Budget & Planning - ${projectTitle}` : 'Budget & Planning'));
   const [sheetData, setSheetData] = useState(() => (effectiveDoc?.gridData || effectiveDoc?.sheetData || effectiveDoc?.cells || DEFAULT_SHEET_DATA || {}));
   const [slidesTitle, setSlidesTitle] = useState(() => effectiveDoc?.slidesTitle || (projectTitle ? `Présentation - ${projectTitle}` : 'Présentation'));
@@ -334,6 +336,49 @@ function CloudOfficeSuiteModalContent({
     slidesTitleRef.current = slidesTitle;
   }, [slidesTitle]);
 
+  // 2. IMPLÉMENTATION DE LA SAUVEGARDE EN TEMPS RÉEL (DEBOUNCE 1500MS)
+  useEffect(() => {
+    if (!effectiveGroupId || !db) return;
+    const docRef = doc(db, 'chats', effectiveGroupId, 'workspace', effectiveDocId);
+
+    if (docContent !== initialContent) {
+      setSaveStatus('Sauvegarde... ⏳');
+    }
+
+    const timer = setTimeout(() => {
+      if (docContent !== initialContent) {
+        updateDoc(docRef, {
+          content: docContent,
+          lastEdited: serverTimestamp(),
+        })
+          .then(() => {
+            setInitialContent(docContent);
+            initialContentRef.current = docContent;
+            setSaveStatus('Synchronisé en direct 🟢');
+          })
+          .catch((err) => {
+            // Fallback setDoc si le document initial n'existe pas encore dans Firestore
+            setDoc(
+              docRef,
+              {
+                content: docContent,
+                lastEdited: serverTimestamp(),
+              },
+              { merge: true }
+            )
+              .then(() => {
+                setInitialContent(docContent);
+                initialContentRef.current = docContent;
+                setSaveStatus('Synchronisé en direct 🟢');
+              })
+              .catch(() => setSaveStatus('Mode hors-ligne'));
+          });
+      }
+    }, 1500);
+
+    return () => clearTimeout(timer);
+  }, [docContent]);
+
   // Synchronisation Firestore en temps réel pour Troco Docs
   useEffect(() => {
     if (!isOpen || !effectiveGroupId || !db) return;
@@ -346,7 +391,10 @@ function CloudOfficeSuiteModalContent({
             const data = snapshot.data() || {};
             if (data?.title) setDocTitle(data?.title || defaultDoc.title);
             if (data?.content !== undefined && data?.lastEditor !== (currentUser?.name || currentUser?.displayName || currentUser?.id)) {
-              setDocContent(data?.content != null ? String(data.content) : defaultDoc.content);
+              const remoteContent = data?.content != null ? String(data.content) : defaultDoc.content;
+              setDocContent(remoteContent);
+              setInitialContent(remoteContent);
+              initialContentRef.current = remoteContent;
             }
             if (data?.collaborators && Array.isArray(data.collaborators)) {
               setCollaborators(data.collaborators);
@@ -633,7 +681,6 @@ function CloudOfficeSuiteModalContent({
   const handleEditorInput = (e) => {
     const newHtml = e.currentTarget.innerHTML;
     setDocContent(newHtml);
-    saveDocToFirestore(newHtml);
   };
 
   // Ajout dynamique de ligne dans Troco Sheets
@@ -985,9 +1032,9 @@ function CloudOfficeSuiteModalContent({
         padding: '16px',
       }}
       onClick={(e) => {
-        if (e.target === e.currentTarget && typeof onClose === 'function') {
-          onClose();
-        }
+        // Bloque la fermeture accidentelle lors d'un clic extérieur sur le backdrop
+        // L'utilisateur DOIT obligatoirement cliquer sur le bouton explicite "Fermer" (X) pour quitter.
+        e.stopPropagation();
       }}
     >
         {/* DIAPORAMA PLEIN ÉCRAN */}
@@ -1229,8 +1276,20 @@ function CloudOfficeSuiteModalContent({
 
             {/* Statut de synchronisation à droite */}
             <div className="flex items-center gap-2 text-xs shrink-0 whitespace-nowrap justify-end">
-              <span className="font-semibold text-emerald-500 flex items-center gap-1.5">
-                <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span className={`font-semibold flex items-center gap-1.5 ${
+                saveStatus.includes('Sauvegarde')
+                  ? 'text-amber-500'
+                  : saveStatus.includes('hors-ligne')
+                  ? 'text-rose-500'
+                  : 'text-emerald-500'
+              }`}>
+                <span className={`inline-block w-2 h-2 rounded-full ${
+                  saveStatus.includes('Sauvegarde')
+                    ? 'bg-amber-500 animate-pulse'
+                    : saveStatus.includes('hors-ligne')
+                    ? 'bg-rose-500'
+                    : 'bg-emerald-500 animate-pulse'
+                }`} />
                 {saveStatus}
               </span>
             </div>
@@ -1668,7 +1727,6 @@ function CloudOfficeSuiteModalContent({
                 onChange={(e) => {
                   const val = e.target.value;
                   setDocContent(val);
-                  saveDocToFirestore(val);
                 }}
                 className="p-4 md:p-8"
                 placeholder="Rédigez ici vos comptes-rendus, spécifications et notes collaboratives..."
