@@ -258,15 +258,24 @@ export default function CollaborativeWhiteboardModal({
 
   // 7. Curseur P2P Collaboratif (Ghosting live) & Présence Multijoueur
   const [remoteCursors, setRemoteCursors] = useState({});
+  const remoteCursorsRef = useRef(remoteCursors);
+  useEffect(() => {
+    remoteCursorsRef.current = remoteCursors;
+  }, [remoteCursors]);
   const [activeUsersCount, setActiveUsersCount] = useState(1);
 
-  // 8. État d'édition / sélection
+  // 8. État d'édition / sélection & rotation assistée
   const [editingTextId, setEditingTextId] = useState(null);
   const [selectedStickyId, setSelectedStickyId] = useState(null);
+  const [selectedObjectId, setSelectedObjectId] = useState(null);
+  const [rotationTooltip, setRotationTooltip] = useState(null);
 
   // Références d'interaction rapide
   const isDrawingRef = useRef(false);
   const isPanningRef = useRef(false);
+  const isRotatingObjectRef = useRef(null);
+  const activeTransformRef = useRef(null);
+  const currentDrawRef = useRef([]);
   const startPosRef = useRef({ x: 0, y: 0 });
   const panStartRef = useRef({ x: 0, y: 0, origPanX: 0, origPanY: 0 });
   const touchStateRef = useRef({ distance: 0, midX: 0, midY: 0, origPanX: 0, origPanY: 0, origZoom: 1 });
@@ -277,6 +286,36 @@ export default function CollaborativeWhiteboardModal({
   const p2pBroadcastThrottleRef = useRef(0);
   const lastLocalModificationTimeRef = useRef(0);
   const pendingRemotePathsRafRef = useRef(null);
+
+  // Helper pour calculer la boîte englobante d'un objet canvas
+  const getObjectBoundingBox = useCallback((obj) => {
+    if (!obj) return { x: 0, y: 0, width: 0, height: 0, cx: 0, cy: 0 };
+    if (obj.points && obj.points.length > 0) {
+      const xs = obj.points.map((p) => p.x);
+      const ys = obj.points.map((p) => p.y);
+      const minX = Math.min(...xs);
+      const maxX = Math.max(...xs);
+      const minY = Math.min(...ys);
+      const maxY = Math.max(...ys);
+      const w = Math.max(20, maxX - minX);
+      const h = Math.max(20, maxY - minY);
+      return { x: minX, y: minY, width: w, height: h, cx: minX + w / 2, cy: minY + h / 2 };
+    }
+    if (obj.fromX !== undefined) {
+      const minX = Math.min(obj.fromX, obj.toX);
+      const maxX = Math.max(obj.fromX, obj.toX);
+      const minY = Math.min(obj.fromY, obj.toY);
+      const maxY = Math.max(obj.fromY, obj.toY);
+      const w = Math.max(20, maxX - minX);
+      const h = Math.max(20, maxY - minY);
+      return { x: minX, y: minY, width: w, height: h, cx: minX + w / 2, cy: minY + h / 2 };
+    }
+    const x = obj.x || 0;
+    const y = obj.y || 0;
+    const w = obj.width || 100;
+    const h = obj.height || 80;
+    return { x, y, width: w, height: h, cx: x + w / 2, cy: y + h / 2 };
+  }, []);
 
   // Récupération de l'historique complet des versions depuis Firestore
   const fetchVersions = useCallback(async () => {
@@ -791,6 +830,28 @@ export default function CollaborativeWhiteboardModal({
 
       ctx.save();
       ctx.beginPath();
+
+      // Application de la rotation assistée avec magnétisme angulaire
+      if (path.rotation) {
+        let cx = 0;
+        let cy = 0;
+        if (path.type === 'freehand' && path.points && path.points.length > 0) {
+          const xs = path.points.map((p) => p.x);
+          const ys = path.points.map((p) => p.y);
+          cx = (Math.min(...xs) + Math.max(...xs)) / 2;
+          cy = (Math.min(...ys) + Math.max(...ys)) / 2;
+        } else if (path.type === 'line' || path.type === 'arrow') {
+          cx = ((path.fromX || 0) + (path.toX || 0)) / 2;
+          cy = ((path.fromY || 0) + (path.toY || 0)) / 2;
+        } else {
+          cx = (path.x || 0) + (path.width || 0) / 2;
+          cy = (path.y || 0) + (path.height || 0) / 2;
+        }
+        ctx.translate(cx, cy);
+        ctx.rotate((path.rotation * Math.PI) / 180);
+        ctx.translate(-cx, -cy);
+      }
+
       applyBrushStyleToContext(ctx, path.tool, path.color, path.lineWidth, !!path.isRemote);
 
       if (path.type === 'freehand') {
@@ -975,7 +1036,7 @@ export default function CollaborativeWhiteboardModal({
         }
       });
 
-      const p2pPeerCount = Object.keys(remoteCursors).length + 1;
+      const p2pPeerCount = Object.keys(remoteCursorsRef.current || {}).length + 1;
       setActiveUsersCount(Math.max(1, activeCount, p2pPeerCount));
     }, (err) => {
       console.warn('[Presence Whiteboard] Note:', err);
@@ -987,7 +1048,7 @@ export default function CollaborativeWhiteboardModal({
       deleteDoc(presenceDocRef).catch(() => {});
       deleteDoc(fallbackDocRef).catch(() => {});
     };
-  }, [isOpen, effectiveId, currentBoardId, myUid, myName, remoteCursors]);
+  }, [isOpen, effectiveId, currentBoardId, myUid, myName]);
 
   // 1. Chargement initial UNIQUE à l'ouverture du board (Fix 2 & Fix 5 : Zéro boucle infinie, Zéro clignotement)
   const initialLoadDoneForIdRef = useRef(null);
@@ -1095,6 +1156,45 @@ export default function CollaborativeWhiteboardModal({
 
     const coords = getCanvasCoords(e);
     startPosRef.current = coords;
+
+    // 1. Détection de clic sur la poignée de rotation assistée
+    if (selectedObjectId) {
+      const selObj = localPaths.find((p) => p.id === selectedObjectId);
+      if (selObj) {
+        const bbox = getObjectBoundingBox(selObj);
+        const rotRad = ((selObj.rotation || 0) * Math.PI) / 180;
+        const handleDist = bbox.height / 2 + 32 / zoom;
+        const hx = bbox.cx - handleDist * Math.sin(rotRad);
+        const hy = bbox.cy - handleDist * Math.cos(rotRad);
+        const dist = Math.hypot(coords.x - hx, coords.y - hy);
+        if (dist <= 26 / zoom) {
+          isRotatingObjectRef.current = {
+            id: selObj.id,
+            cx: bbox.cx,
+            cy: bbox.cy,
+            startAngle: selObj.rotation || 0,
+          };
+          const degrees = selObj.rotation || 0;
+          activeTransformRef.current = { type: 'rotate', id: selObj.id, degrees };
+          return;
+        }
+      }
+    }
+
+    // 2. Sélection directe d'un objet existant au clic
+    const clickedPath = [...localPaths].reverse().find((p) => {
+      const bbox = getObjectBoundingBox(p);
+      return (
+        coords.x >= bbox.x - 12 &&
+        coords.x <= bbox.x + bbox.width + 12 &&
+        coords.y >= bbox.y - 12 &&
+        coords.y <= bbox.y + bbox.height + 12
+      );
+    });
+    if (clickedPath && (tool === 'hand' || tool === 'select')) {
+      setSelectedObjectId(clickedPath.id);
+      return;
+    }
 
     if (tool === 'hand') {
       isPanningRef.current = true;
@@ -1254,6 +1354,62 @@ export default function CollaborativeWhiteboardModal({
       return;
     }
 
+    // GESTION DU DRAG DE ROTATION ASSISTÉE (MAGNÉTISME 45° ET TOOLTIP)
+    if (isRotatingObjectRef.current) {
+      const { id, cx, cy } = isRotatingObjectRef.current;
+      const dx = coords.x - cx;
+      const dy = coords.y - cy;
+      const rawAngle = Math.atan2(dy, dx) * (180 / Math.PI);
+
+      let finalAngle = rawAngle;
+      const snapThreshold = 5; // degrés
+      const remainder = Math.abs(rawAngle % 45);
+      if (remainder < snapThreshold || remainder > 45 - snapThreshold) {
+        finalAngle = Math.round(rawAngle / 45) * 45;
+      }
+
+      const degrees = finalAngle;
+      activeTransformRef.current = { type: 'rotate', id, degrees };
+      isRotatingObjectRef.current.finalAngle = finalAngle;
+
+      // Mise à jour de l'objet dans localPaths pour rafraîchissement immédiat
+      const targetObj = localPaths.find((p) => p.id === id);
+      if (targetObj) {
+        targetObj.rotation = finalAngle;
+      }
+
+      // Tooltip flottant suivant le curseur avec valeur exacte en degrés
+      setRotationTooltip({
+        x: coords.screenX,
+        y: coords.screenY,
+        text: `${Math.round(finalAngle)}°`,
+      });
+
+      if (!rafDrawRef.current) {
+        rafDrawRef.current = requestAnimationFrame(() => {
+          redrawCanvas();
+          rafDrawRef.current = null;
+        });
+      }
+      return;
+    }
+
+    // Suivi actif des mutations canvas 60 FPS pour découplage mémoire
+    if (activeTransformRef.current?.type === 'resize') {
+      const newX = coords.x;
+      const newY = coords.y;
+      const newW = coords.x - startPosRef.current.x;
+      const newH = coords.y - startPosRef.current.y;
+      const id = activeTransformRef.current.id;
+      activeTransformRef.current = { type: 'resize', id, x: newX, y: newY, width: newW, height: newH };
+    }
+    if (activeTransformRef.current?.type === 'drag') {
+      const newX = coords.x;
+      const newY = coords.y;
+      const id = activeTransformRef.current.id;
+      activeTransformRef.current = { type: 'drag', id, x: newX, y: newY };
+    }
+
     if (draggingStickyRef.current) {
       const { id, startX, startY, origX, origY } = draggingStickyRef.current;
       const dx = coords.x - startX;
@@ -1293,6 +1449,7 @@ export default function CollaborativeWhiteboardModal({
       const prevPoint = activePath.points[activePath.points.length - 1];
       const newPoint = { x: coords.x, y: coords.y };
       activePath.points.push(newPoint);
+      currentDrawRef.current.push(newPoint);
 
       // 🚨 PHASE 94 : DESSIN DIRECT 60 FPS SUR LE CONTEXTE 2D SANS AUCUN SETSTATE REACT
       const canvas = canvasRef.current;
@@ -1345,6 +1502,22 @@ export default function CollaborativeWhiteboardModal({
     if (isPanningRef.current) {
       isPanningRef.current = false;
     }
+
+    // Sauvegarde de l'angle final de rotation assistée dans l'objet sélectionné
+    if (isRotatingObjectRef.current) {
+      const { id } = isRotatingObjectRef.current;
+      const finalAngle = isRotatingObjectRef.current.finalAngle;
+      if (typeof finalAngle === 'number') {
+        const nextLocalPaths = localPaths.map((p) => (p.id === id ? { ...p, rotation: finalAngle } : p));
+        setLocalPaths(nextLocalPaths);
+        pushToHistory(nextLocalPaths);
+        debouncedSyncToFirestore(nextLocalPaths, remotePaths, stickyNotes, textElements);
+        whiteboardP2PService.broadcastEvent('path_update', { id, rotation: finalAngle });
+      }
+      isRotatingObjectRef.current = null;
+      setRotationTooltip(null);
+    }
+    activeTransformRef.current = null;
 
     if (draggingStickyRef.current) {
       lastLocalModificationTimeRef.current = Date.now();
@@ -1440,6 +1613,9 @@ export default function CollaborativeWhiteboardModal({
       const nextLocalPaths = [...localPaths, completedPath];
 
       setLocalPaths(nextLocalPaths);
+      if (['rect', 'circle', 'triangle', 'hexagon', 'star', 'speech_bubble', 'heart', 'checkmark', 'line', 'arrow', 'diamond', 'rectangle'].includes(completedPath.type)) {
+        setSelectedObjectId(completedPath.id);
+      }
 
       // Clone les traits actuels, ajoute-les à history (en coupant l'historique futur si on avait fait "Undo"), et incrémente historyStep
       setHistory((prevHistory) => {
@@ -2592,6 +2768,107 @@ export default function CollaborativeWhiteboardModal({
             </div>
           );
         })}
+        {/* Cadre de sélection et poignée de rotation assistée (Magnétisme 45°) */}
+        {selectedObjectId && (() => {
+          const selObj = localPaths.find((p) => p.id === selectedObjectId);
+          if (!selObj) return null;
+          const bbox = getObjectBoundingBox(selObj);
+          const screenLeft = pan.x + bbox.x * zoom;
+          const screenTop = pan.y + bbox.y * zoom;
+          const screenWidth = bbox.width * zoom;
+          const screenHeight = bbox.height * zoom;
+          const rot = selObj.rotation || 0;
+
+          return (
+            <div
+              style={{
+                position: 'absolute',
+                left: `${screenLeft}px`,
+                top: `${screenTop}px`,
+                width: `${screenWidth}px`,
+                height: `${screenHeight}px`,
+                border: '1.5px dashed var(--accent-primary, #C67D5B)',
+                pointerEvents: 'none',
+                transform: `rotate(${rot}deg)`,
+                transformOrigin: 'center center',
+                zIndex: 45,
+                borderRadius: '6px',
+              }}
+            >
+              {/* Tige verticale reliant le centre haut à la poignée de rotation */}
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '-26px',
+                  left: '50%',
+                  width: '1.5px',
+                  height: '26px',
+                  backgroundColor: 'var(--accent-primary, #C67D5B)',
+                  transform: 'translateX(-50%)',
+                }}
+              />
+              {/* Poignée de rotation cliquable avec curseur grab */}
+              <div
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  isRotatingObjectRef.current = {
+                    id: selObj.id,
+                    cx: bbox.cx,
+                    cy: bbox.cy,
+                    startAngle: rot,
+                  };
+                  const degrees = rot;
+                  activeTransformRef.current = { type: 'rotate', id: selObj.id, degrees };
+                }}
+                style={{
+                  position: 'absolute',
+                  top: '-36px',
+                  left: '50%',
+                  width: '22px',
+                  height: '22px',
+                  borderRadius: '50%',
+                  backgroundColor: 'var(--accent-primary, #C67D5B)',
+                  color: '#FFFFFF',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transform: 'translateX(-50%)',
+                  cursor: 'grab',
+                  pointerEvents: 'auto',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                }}
+                title="Faire pivoter la forme (magnétisme 45°)"
+              >
+                <RotateCw size={12} />
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Tooltip flottant indiquant le degré exact de rotation */}
+        {rotationTooltip && (
+          <div
+            style={{
+              position: 'fixed',
+              left: `${rotationTooltip.x + 16}px`,
+              top: `${rotationTooltip.y - 28}px`,
+              backgroundColor: 'rgba(28, 25, 23, 0.92)',
+              color: '#FFFFFF',
+              padding: '4px 10px',
+              borderRadius: '8px',
+              fontSize: '12px',
+              fontWeight: '800',
+              pointerEvents: 'none',
+              zIndex: 999999,
+              boxShadow: '0 4px 16px rgba(0,0,0,0.35)',
+              border: '1px solid rgba(255,255,255,0.18)',
+              backdropFilter: 'blur(8px)',
+              transform: 'translate(-50%, -50%)',
+            }}
+          >
+            {rotationTooltip.text}
+          </div>
+        )}
       </div>
 
       {/* 3. BARRE D'OUTILS PRINCIPALE FLUIDE & TACTILE (Standard Apple HIG) */}
