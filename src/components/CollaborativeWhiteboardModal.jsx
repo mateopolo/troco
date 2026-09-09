@@ -1457,20 +1457,30 @@ export default function CollaborativeWhiteboardModal({
     }
 
     if (resizingTextRef.current) {
-      const { id, startX, startY, origW, origH } = resizingTextRef.current;
-      const dw = coords.x - startX;
-      const dh = coords.y - startY;
-      const newW = Math.max(120, origW + dw);
-      const newH = Math.max(40, origH + dh);
+      const { id, startX, startY, origW, origH, startFontSize = 24 } = resizingTextRef.current;
+      const currentX = coords.x;
+      const currentY = coords.y;
 
-      // Calcule la taille de police proportionnellement sur tous les axes en utilisant la diagonale :
-      const diag = Math.hypot(coords.x - startX, coords.y - startY);
-      const autoFontSize = Math.max(12, Math.min(120, Math.round(diag * 0.5)));
+      // startX, startY enregistrés au onPointerDown
+      const deltaX = currentX - startX;
+      const deltaY = currentY - startY;
+      // Une simple addition des deltas donne la direction générale (Sensitif pour mobile)
+      const combinedDelta = deltaX + deltaY; 
+      
+      // Appliquer le scale avec une limite minimale stricte pour éviter l'inversion
+      const scale = Math.max(0.2, 1 + (combinedDelta * 0.005)); 
+      let newFontSize = Math.round(startFontSize * scale);
+      
+      // Forcer une taille minimale pour empêcher le texte de disparaître ou s'inverser
+      if (newFontSize < 8) newFontSize = 8;
+
+      const newW = Math.max(80, Math.round(origW * scale));
+      const newH = Math.max(30, Math.round(origH * scale));
 
       setTextElements((prev) =>
         prev.map((t) =>
           t.id === id
-            ? { ...t, width: newW, height: newH, fontSize: autoFontSize }
+            ? { ...t, width: newW, height: newH, fontSize: newFontSize }
             : t
         )
       );
@@ -2738,6 +2748,7 @@ export default function CollaborativeWhiteboardModal({
                     startY: coords.y,
                     origW: t.width || 220,
                     origH: t.height || 50,
+                    startFontSize: t.fontSize || 24,
                     textStr: t.text,
                   };
                 }}
