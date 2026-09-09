@@ -297,26 +297,26 @@ export default function NotesModal(props) {
           overflowY: 'auto',
         }}
       >
-        {/* 2. EN-TÊTE ÉPURÉ CONTENANT STRICTEMENT DEUX ÉLÉMENTS (GAUCHE & DROITE) */}
-        <header className="flex items-center justify-between w-full px-6 py-4 md:px-10 border-b border-black/5 dark:border-white/10 shrink-0">
-          {/* À GAUCHE : Bouton retour/fermer sous forme de pilule discrète */}
+        {/* 1. HARMONISATION DU HEADER (STRUCTURE & BOUTONS IDENTIQUES À TROCO DOCS) */}
+        <header className="flex justify-between items-center p-4 border-b border-white/10 shrink-0">
+          {/* Bouton Fermer */}
           <button
             type="button"
             onClick={onClose}
-            className="flex items-center gap-2 px-4 py-2 rounded-full bg-black/5 dark:bg-white/10 text-gray-700 dark:text-gray-300 hover:bg-black/10 dark:hover:bg-white/15 text-sm font-medium transition-colors cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2 bg-white text-black dark:bg-[#2A2624] dark:text-white rounded-full shadow-md hover:bg-gray-100 transition-colors font-medium text-sm cursor-pointer"
             title="Fermer la note"
           >
             <ChevronLeft size={16} />
             <span>Fermer</span>
           </button>
 
-          {/* À DROITE : Indicateur de sauvegarde discret + Bouton ovale Partager au Chat */}
-          <div className="flex items-center gap-3 sm:gap-4">
+          {/* Indicateur de sauvegarde & Bouton Partager/Sauvegarder */}
+          <div className="flex items-center gap-3">
             {/* Indicateur de sauvegarde */}
             <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 font-medium">
               <span
                 className={`inline-block w-2 h-2 rounded-full ${
-                  saveStatus.includes('Enregistrement')
+                  saveStatus.includes('Enregistrement') || saveStatus.includes('Sauvegarde')
                     ? 'bg-amber-500 animate-pulse'
                     : saveStatus.includes('hors-ligne')
                     ? 'bg-rose-500'
@@ -326,47 +326,48 @@ export default function NotesModal(props) {
               <span className="hidden sm:inline">{saveStatus}</span>
             </div>
 
-            {/* Bouton d'action principal ovale "Partager au Chat" */}
+            {/* Bouton Partager/Sauvegarder */}
             <button
               type="button"
               onClick={handleSendNoteToChat}
               disabled={isSendingToChat}
-              className="px-5 py-2 rounded-full bg-[var(--accent-primary)] text-white font-bold text-sm shadow-md hover:opacity-90 transition-opacity whitespace-nowrap flex items-center gap-2 cursor-pointer"
+              className="px-6 py-2.5 rounded-full bg-[var(--accent-primary)] text-white font-bold shadow-lg hover:opacity-90 transition-opacity whitespace-nowrap flex items-center gap-2 cursor-pointer"
               style={{
                 backgroundColor: 'var(--accent-primary, #C67D5B)',
                 color: '#FFFFFF',
-                boxShadow: '0 4px 14px rgba(198, 125, 91, 0.35)',
               }}
               title="Partager au Chat"
             >
-              <Share2 size={14} />
+              <Share2 size={15} />
               <span>{isSendingToChat ? 'Envoi...' : 'Partager au Chat'}</span>
             </button>
           </div>
         </header>
 
-        {/* 1. ZONE DE SAISIE MINIMALISTE OCCUPANT 90% DE L'ESPACE */}
-        <main className="flex-1 flex flex-col w-full p-6 md:p-10 overflow-y-auto">
+        {/* 2. ZONE DE TEXTE ÉPURÉE SANS BORDURES DISGRACIEUSES */}
+        <main className="flex-1 flex flex-col w-full overflow-hidden">
           {/* Titre épuré de la note */}
-          <input
-            type="text"
-            value={title}
-            onChange={handleTitleChange}
-            placeholder="Titre de la note..."
-            className="font-sans font-bold text-2xl md:text-3xl text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 bg-transparent border-none outline-none mb-4 w-full"
-            style={{
-              fontFamily:
-                "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', 'Segoe UI', Roboto, sans-serif",
-            }}
-          />
+          <div className="px-6 pt-4 md:px-8 md:pt-6">
+            <input
+              type="text"
+              value={title}
+              onChange={handleTitleChange}
+              placeholder="Titre de la note..."
+              className="font-sans font-bold text-2xl md:text-3xl text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 bg-transparent border-none outline-none w-full"
+              style={{
+                fontFamily:
+                  "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Inter', 'Segoe UI', Roboto, sans-serif",
+              }}
+            />
+          </div>
 
-          {/* Saisie de texte avec typographie système ultra-lisible */}
+          {/* Textarea pleine largeur et hauteur sans bordures sombres */}
           <textarea
             ref={textareaRef}
             value={content}
             onChange={handleContentChange}
             placeholder="Rédigez vos notes partagées ici..."
-            className="flex-1 w-full h-full outline-none border-none resize-none bg-transparent font-sans text-lg md:text-xl leading-relaxed text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 box-border min-h-[350px]"
+            className="w-full h-full bg-transparent text-[var(--text-primary)] p-6 md:p-8 outline-none border-none resize-none text-lg leading-relaxed font-sans placeholder-gray-400 dark:placeholder-gray-500 box-border flex-1"
             style={{
               fontFamily:
                 "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Inter', 'Segoe UI', Roboto, sans-serif",
