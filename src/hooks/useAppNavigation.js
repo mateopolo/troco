@@ -1,17 +1,52 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useUIStore } from '../stores';
 
+const LEGAL_TABS = ['legal-notice', 'privacy-policy', 'cookie-policy', 'refund-policy'];
+const MAIN_TABS = ['feed', 'community', 'chat', 'post', 'profile'];
+
+const getTabFromHash = () => {
+  if (typeof window === 'undefined' || !window.location.hash) return null;
+  const rawHash = window.location.hash.replace('#', '').trim();
+  if (LEGAL_TABS.includes(rawHash) || MAIN_TABS.includes(rawHash)) {
+    return rawHash;
+  }
+  return null;
+};
+
 /**
  * Hook centralisant la navigation par onglets, l'historique popstate (back button Android/iOS),
- * et la synchronisation fluide des transitions.
+ * les routes légales par hash et la synchronisation fluide des transitions.
  */
 export const useAppNavigation = () => {
-  const [activeTab, setActiveTab] = useState('feed');
+  const [activeTab, setActiveTab] = useState(() => {
+    const initialFromHash = getTabFromHash();
+    return initialFromHash || 'feed';
+  });
   const ui = useUIStore();
 
   // 1. Défilement instantané vers le haut à chaque changement d'onglet
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+    if (LEGAL_TABS.includes(activeTab)) {
+      if (window.location.hash !== `#${activeTab}`) {
+        window.history.replaceState(null, '', `#${activeTab}`);
+      }
+    } else if (window.location.hash && LEGAL_TABS.includes(window.location.hash.replace('#', ''))) {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+  }, [activeTab]);
+
+  // 2. Synchronisation de la navigation via Hash (deep-linking, footer, favoris)
+  useEffect(() => {
+    const handleHashChange = () => {
+      const tabFromHash = getTabFromHash();
+      if (tabFromHash && tabFromHash !== activeTab) {
+        setActiveTab(tabFromHash);
+      }
+    };
+
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
   }, [activeTab]);
 
   // 2. Gestion de l'historique pour la touche retour physique Android / swipe back iOS

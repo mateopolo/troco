@@ -85,6 +85,11 @@ const CallFeature = React.lazy(() => import('./features/call'));
 const WebRTCCallOverlay = React.lazy(() => import('./features/call/WebRTCCallOverlay'));
 const PostListingFeature = React.lazy(() => import('./features/post/PostListingFeature'));
 const ProfileFeature = React.lazy(() => import('./features/profile/ProfileFeature'));
+const LegalNotice = React.lazy(() => import('./components/LegalNotice'));
+const PrivacyPolicy = React.lazy(() => import('./components/PrivacyPolicy'));
+const CookiePolicy = React.lazy(() => import('./components/CookiePolicy'));
+const RefundPolicy = React.lazy(() => import('./components/RefundPolicy'));
+const Footer = React.lazy(() => import('./components/Footer'));
 
 // 🚨 PHASE 108 : ISOLATION DES COMPOSANTS LOURDS 3D / CANVAS (ÉRADICATION CRASH OOM iOS)
 const TrocoLogo3D = React.lazy(() => import('./components/common/TrocoLogo3D'));
@@ -4323,7 +4328,128 @@ export default function App() {
           </Suspense>
         </motion.div>
       )}
+
+      {/* ONGLET LÉGAL : MENTIONS LÉGALES (CONFORMITÉ LCEN & DSA) */}
+      {activeTab === 'legal-notice' && (
+        <motion.div
+          key="page-legal-notice"
+          variants={pageTransitionVariants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          transition={pageTransitionConfig}
+          style={{ width: '100%' }}
+        >
+          <Suspense fallback={<div style={{ minHeight: '60vh' }} />}>
+            <LegalNotice
+              onBack={() => setActiveTab('feed')}
+              onNavigate={(tab) => {
+                if (typeof window !== 'undefined') window.location.hash = tab;
+                setActiveTab(tab);
+              }}
+              darkMode={darkMode}
+            />
+          </Suspense>
+        </motion.div>
+      )}
+
+      {/* ONGLET LÉGAL : POLITIQUE DE CONFIDENTIALITÉ (RGPD / CNIL) */}
+      {activeTab === 'privacy-policy' && (
+        <motion.div
+          key="page-privacy-policy"
+          variants={pageTransitionVariants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          transition={pageTransitionConfig}
+          style={{ width: '100%' }}
+        >
+          <Suspense fallback={<div style={{ minHeight: '60vh' }} />}>
+            <PrivacyPolicy
+              onBack={() => setActiveTab('feed')}
+              onNavigate={(tab) => {
+                if (typeof window !== 'undefined') window.location.hash = tab;
+                setActiveTab(tab);
+              }}
+              onOpenPrivacyCenter={() => setIsPrivacyCenterOpen(true)}
+              darkMode={darkMode}
+            />
+          </Suspense>
+        </motion.div>
+      )}
+
+      {/* ONGLET LÉGAL : POLITIQUE DES COOKIES & TRACEURS */}
+      {activeTab === 'cookie-policy' && (
+        <motion.div
+          key="page-cookie-policy"
+          variants={pageTransitionVariants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          transition={pageTransitionConfig}
+          style={{ width: '100%' }}
+        >
+          <Suspense fallback={<div style={{ minHeight: '60vh' }} />}>
+            <CookiePolicy
+              onBack={() => setActiveTab('feed')}
+              onNavigate={(tab) => {
+                if (typeof window !== 'undefined') window.location.hash = tab;
+                setActiveTab(tab);
+              }}
+              onOpenCookieSettings={() => {
+                try {
+                  localStorage.removeItem('troco_cookie_consent');
+                  window.location.reload();
+                } catch (e) {
+                  window.location.reload();
+                }
+              }}
+              darkMode={darkMode}
+            />
+          </Suspense>
+        </motion.div>
+      )}
+
+      {/* ONGLET LÉGAL : POLITIQUE DE REMBOURSEMENT & DEALS P2P */}
+      {activeTab === 'refund-policy' && (
+        <motion.div
+          key="page-refund-policy"
+          variants={pageTransitionVariants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          transition={pageTransitionConfig}
+          style={{ width: '100%' }}
+        >
+          <Suspense fallback={<div style={{ minHeight: '60vh' }} />}>
+            <RefundPolicy
+              onBack={() => setActiveTab('feed')}
+              onNavigate={(tab) => {
+                if (typeof window !== 'undefined') window.location.hash = tab;
+                setActiveTab(tab);
+              }}
+              darkMode={darkMode}
+            />
+          </Suspense>
+        </motion.div>
+      )}
       </AnimatePresence>
+
+      {/* PIED DE PAGE GLOBAL & LIENS DE CONFORMITÉ LÉGALE */}
+      {activeTab !== 'chat' && activeTab !== 'community' && (
+        <Suspense fallback={null}>
+          <Footer
+            onNavigate={(tab) => {
+              if (typeof window !== 'undefined') window.location.hash = tab;
+              setActiveTab(tab);
+            }}
+            onOpenCgu={() => setIsCguViewerOpen(true)}
+            onOpenPrivacyCenter={() => setIsPrivacyCenterOpen(true)}
+            darkMode={darkMode}
+            currentLang={currentLang}
+          />
+        </Suspense>
+      )}
     </main>
 
       {/* BARRE DE NAVIGATION EN BAS (CLEAN, TRANSPARENTE, AVEC GESTES DE SWIPE iOS) */}

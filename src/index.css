@@ -2015,3 +2015,103 @@ body.dark-mode .ad-card:hover {
 .border-none { border: none !important; }
 .cursor-pointer { cursor: pointer !important; }
 .cursor-text { cursor: text !important; }
+
+/* ============================================================================
+   PROSE TYPOGRAPHY STYLES (LEGAL PAGES, PRIVACY, RGPD & DOCUMENTATION)
+   ============================================================================ */
+.prose {
+  color: var(--text-main, #3D3530);
+  max-width: 100%;
+  font-size: 0.95rem;
+  line-height: 1.75;
+}
+.prose h1, .prose h2, .prose h3, .prose h4 {
+  color: var(--text-main, #231E1B);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.prose h1 {
+  font-size: 2rem;
+  margin-top: 0;
+  margin-bottom: 1.25rem;
+  line-height: 1.25;
+}
+.prose h2 {
+  font-size: 1.35rem;
+  margin-top: 1.75rem;
+  margin-bottom: 0.75rem;
+  line-height: 1.35;
+}
+.prose h3 {
+  font-size: 1.15rem;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+  line-height: 1.4;
+}
+.prose p {
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+.prose strong {
+  font-weight: 700;
+  color: var(--text-main, #231E1B);
+}
+.prose ul, .prose ol {
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+.prose li {
+  margin-top: 0.35rem;
+  margin-bottom: 0.35rem;
+}
+.prose a {
+  color: var(--accent-primary, #C67D5B);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-weight: 600;
+  transition: color 0.15s ease;
+}
+.prose a:hover {
+  color: var(--accent-primary-hover, #A8644A);
+}
+.prose blockquote {
+  border-left: 3px solid var(--accent-primary, #C67D5B);
+  padding-left: 1rem;
+  margin-left: 0;
+  margin-right: 0;
+  font-style: italic;
+  color: var(--text-secondary, #6B5E54);
+}
+.prose code {
+  background-color: rgba(198, 125, 91, 0.1);
+  color: #C67D5B;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 0.88em;
+  font-family: var(--font-mono, monospace);
+}
+
+body.dark-mode .prose,
+[data-theme="dark"] .prose,
+.dark .prose {
+  color: #D4C5B5;
+}
+body.dark-mode .prose h1,
+body.dark-mode .prose h2,
+body.dark-mode .prose h3,
+body.dark-mode .prose h4,
+[data-theme="dark"] .prose h1,
+[data-theme="dark"] .prose h2,
+[data-theme="dark"] .prose h3,
+[data-theme="dark"] .prose h4 {
+  color: #FFFFFF;
+}
+body.dark-mode .prose strong,
+[data-theme="dark"] .prose strong {
+  color: #FAF7F2;
+}
+body.dark-mode .prose code,
+[data-theme="dark"] .prose code {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #E8DDD3;
+}
