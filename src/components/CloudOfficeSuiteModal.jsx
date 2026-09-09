@@ -265,18 +265,35 @@ function CloudOfficeSuiteModalContent({
   // Ref setter qui garantit le comportement de compatibilité pour getByPlaceholderText
   const setEditorRef = useCallback((el) => {
     editorRef.current = el;
-    if (el && typeof el.value === 'undefined') {
-      Object.defineProperty(el, 'value', {
-        get() {
-          return el.innerHTML || el.innerText || '';
-        },
-        set(val) {
-          el.innerHTML = val;
-        },
-        configurable: true,
-      });
+    textareaRef.current = el;
+    if (el) {
+      if (!el.innerHTML && docContent) {
+        el.innerHTML = docContent.includes('<') ? docContent : markdownToHtml(docContent);
+      }
+      if (typeof el.value === 'undefined') {
+        Object.defineProperty(el, 'value', {
+          get() {
+            return el.innerHTML || el.innerText || '';
+          },
+          set(val) {
+            el.innerHTML = val;
+          },
+          configurable: true,
+        });
+      }
+      if (el._onNativeChange) {
+        el.removeEventListener('change', el._onNativeChange);
+      }
+      const onNativeChange = (e) => {
+        const val = e.target?.value !== undefined ? e.target.value : (e.currentTarget?.innerHTML || '');
+        const newHtml = typeof val === 'string' ? val : (e.currentTarget?.innerHTML || '');
+        setDocContent(newHtml);
+        setSaveStatus('Sauvegarde... ⏳');
+      };
+      el.addEventListener('change', onNativeChange);
+      el._onNativeChange = onNativeChange;
     }
-  }, []);
+  }, [docContent]);
 
   // Détection dynamique des lignes et colonnes dans les données feuille existantes
   useEffect(() => {
@@ -659,9 +676,9 @@ function CloudOfficeSuiteModalContent({
     }, 20);
   };
 
-  // Formatage Rich Text (A4 Word-like) pour Troco Docs
-  const handleFormat = (command, value = null) => {
-    if (editorRef.current) {
+  // 1. CONNEXION DU MOTEUR D'ÉDITION NATIVE document.execCommand
+  const formatText = (command, value = null) => {
+    if (editorRef.current && typeof document !== 'undefined' && document.activeElement !== editorRef.current) {
       editorRef.current.focus();
     }
     if (typeof document !== 'undefined') {
@@ -670,16 +687,18 @@ function CloudOfficeSuiteModalContent({
       } catch (err) {
         console.warn('execCommand error:', err);
       }
-      if (editorRef.current) {
-        const newHtml = editorRef.current.innerHTML;
-        setDocContent(newHtml);
-        saveDocToFirestore(newHtml);
-      }
+    }
+    if (editorRef.current) {
+      const newHtml = editorRef.current.innerHTML;
+      setDocContent(newHtml);
+      saveDocToFirestore(newHtml);
     }
   };
+  const handleFormat = formatText;
 
   const handleEditorInput = (e) => {
-    const newHtml = e.currentTarget.innerHTML;
+    const val = e.target?.value !== undefined ? e.target.value : (e.currentTarget?.innerHTML || '');
+    const newHtml = typeof val === 'string' ? val : (e.currentTarget?.innerHTML || '');
     setDocContent(newHtml);
   };
 
@@ -1457,9 +1476,9 @@ function CloudOfficeSuiteModalContent({
                 whiteSpace: 'nowrap',
               }}
             >
-              {/* SÉLECTEUR DE STYLE / TITRES */}
+              {/* SÉLECTEUR DE STYLE / TITRES (H1/H2/H3) */}
               <select
-                onChange={(e) => handleFormat('formatBlock', e.target.value)}
+                onChange={(e) => formatText('formatBlock', e.target.value)}
                 defaultValue="<p>"
                 style={{
                   padding: '4px 8px',
@@ -1480,9 +1499,35 @@ function CloudOfficeSuiteModalContent({
                 <option value="<h3>">Titre 3 (H3)</option>
               </select>
 
+              {/* SÉLECTEUR DE POLICE (DROPDOWN) */}
+              <select
+                onChange={(e) => formatText('fontName', e.target.value)}
+                defaultValue="Inter, sans-serif"
+                style={{
+                  padding: '4px 8px',
+                  borderRadius: '6px',
+                  border: '1px solid #CBD5E1',
+                  backgroundColor: 'var(--bg-card)',
+                  color: 'var(--text-main)',
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  outline: 'none',
+                }}
+                title="Police de caractères"
+              >
+                <option value="Inter, sans-serif">Inter</option>
+                <option value="Arial, sans-serif">Arial</option>
+                <option value="Georgia, serif">Georgia</option>
+                <option value="'Courier New', monospace">Courier</option>
+                <option value="'Times New Roman', serif">Times</option>
+                <option value="'Trebuchet MS', sans-serif">Trebuchet</option>
+                <option value="Verdana, sans-serif">Verdana</option>
+              </select>
+
               {/* SÉLECTEUR DE TAILLE DE POLICE */}
               <select
-                onChange={(e) => handleFormat('fontSize', e.target.value)}
+                onChange={(e) => formatText('fontSize', e.target.value)}
                 defaultValue="3"
                 style={{
                   padding: '4px 6px',
@@ -1508,10 +1553,11 @@ function CloudOfficeSuiteModalContent({
 
               <div style={{ width: '1px', height: '18px', backgroundColor: 'var(--border-color)', margin: '0 2px' }} />
 
-              {/* FORMATAGE DU TEXTE : B, I, U, S */}
+              {/* FORMATAGE DU TEXTE : B, I, U, S AVEC PROTECTION DU FOCUS onMouseDown */}
               <button
                 type="button"
-                onClick={() => handleFormat('bold')}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => formatText('bold')}
                 className="hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
                 style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-main)' }}
                 title="Gras (Ctrl+B)"
@@ -1520,7 +1566,8 @@ function CloudOfficeSuiteModalContent({
               </button>
               <button
                 type="button"
-                onClick={() => handleFormat('italic')}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => formatText('italic')}
                 className="hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
                 style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-main)' }}
                 title="Italique (Ctrl+I)"
@@ -1529,7 +1576,8 @@ function CloudOfficeSuiteModalContent({
               </button>
               <button
                 type="button"
-                onClick={() => handleFormat('underline')}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => formatText('underline')}
                 className="hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
                 style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-main)' }}
                 title="Souligné (Ctrl+U)"
@@ -1538,7 +1586,8 @@ function CloudOfficeSuiteModalContent({
               </button>
               <button
                 type="button"
-                onClick={() => handleFormat('strikeThrough')}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => formatText('strikeThrough')}
                 className="hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
                 style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-main)' }}
                 title="Barré"
@@ -1550,6 +1599,7 @@ function CloudOfficeSuiteModalContent({
 
               {/* COULEURS : TEXTE & SURLIGNAGE */}
               <label
+                onMouseDown={(e) => e.preventDefault()}
                 style={{ display: 'flex', alignItems: 'center', gap: '2px', cursor: 'pointer', padding: '2px 4px', borderRadius: '4px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)' }}
                 title="Couleur du texte"
               >
@@ -1557,12 +1607,13 @@ function CloudOfficeSuiteModalContent({
                 <input
                   type="color"
                   defaultValue="#1E293B"
-                  onChange={(e) => handleFormat('foreColor', e.target.value)}
+                  onChange={(e) => formatText('foreColor', e.target.value)}
                   style={{ width: '14px', height: '14px', border: 'none', cursor: 'pointer', background: 'none', padding: 0 }}
                 />
               </label>
 
               <label
+                onMouseDown={(e) => e.preventDefault()}
                 style={{ display: 'flex', alignItems: 'center', gap: '2px', cursor: 'pointer', padding: '2px 4px', borderRadius: '4px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)' }}
                 title="Couleur de surlignage"
               >
@@ -1570,17 +1621,18 @@ function CloudOfficeSuiteModalContent({
                 <input
                   type="color"
                   defaultValue="#FEF08A"
-                  onChange={(e) => handleFormat('hiliteColor', e.target.value)}
+                  onChange={(e) => formatText('hiliteColor', e.target.value)}
                   style={{ width: '14px', height: '14px', border: 'none', cursor: 'pointer', background: 'none', padding: 0 }}
                 />
               </label>
 
               <div style={{ width: '1px', height: '18px', backgroundColor: 'var(--border-color)', margin: '0 2px' }} />
 
-              {/* ALIGNEMENTS */}
+              {/* ALIGNEMENTS AVEC PROTECTION DU FOCUS onMouseDown */}
               <button
                 type="button"
-                onClick={() => handleFormat('justifyLeft')}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => formatText('justifyLeft')}
                 className="hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
                 style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-main)' }}
                 title="Aligner à gauche"
@@ -1589,7 +1641,8 @@ function CloudOfficeSuiteModalContent({
               </button>
               <button
                 type="button"
-                onClick={() => handleFormat('justifyCenter')}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => formatText('justifyCenter')}
                 className="hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
                 style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-main)' }}
                 title="Centrer"
@@ -1598,7 +1651,8 @@ function CloudOfficeSuiteModalContent({
               </button>
               <button
                 type="button"
-                onClick={() => handleFormat('justifyRight')}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => formatText('justifyRight')}
                 className="hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
                 style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-main)' }}
                 title="Aligner à droite"
@@ -1607,7 +1661,8 @@ function CloudOfficeSuiteModalContent({
               </button>
               <button
                 type="button"
-                onClick={() => handleFormat('justifyFull')}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => formatText('justifyFull')}
                 className="hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
                 style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-main)' }}
                 title="Justifier"
@@ -1617,10 +1672,11 @@ function CloudOfficeSuiteModalContent({
 
               <div style={{ width: '1px', height: '18px', backgroundColor: 'var(--border-color)', margin: '0 2px' }} />
 
-              {/* LISTES */}
+              {/* LISTES AVEC PROTECTION DU FOCUS onMouseDown */}
               <button
                 type="button"
-                onClick={() => handleFormat('insertUnorderedList')}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => formatText('insertUnorderedList')}
                 className="hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
                 style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-main)' }}
                 title="Liste à puces"
@@ -1629,7 +1685,8 @@ function CloudOfficeSuiteModalContent({
               </button>
               <button
                 type="button"
-                onClick={() => handleFormat('insertOrderedList')}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => formatText('insertOrderedList')}
                 className="hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
                 style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-main)' }}
                 title="Liste numérotée"
@@ -1639,10 +1696,11 @@ function CloudOfficeSuiteModalContent({
 
               <div style={{ width: '1px', height: '18px', backgroundColor: 'var(--border-color)', margin: '0 2px' }} />
 
-              {/* ANNULER / RÉTABLIR / NETTOYER */}
+              {/* ANNULER / RÉTABLIR / NETTOYER AVEC PROTECTION DU FOCUS onMouseDown */}
               <button
                 type="button"
-                onClick={() => handleFormat('undo')}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => formatText('undo')}
                 className="hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
                 style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-main)' }}
                 title="Annuler (Ctrl+Z)"
@@ -1651,7 +1709,8 @@ function CloudOfficeSuiteModalContent({
               </button>
               <button
                 type="button"
-                onClick={() => handleFormat('redo')}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => formatText('redo')}
                 className="hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
                 style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-main)' }}
                 title="Rétablir (Ctrl+Y)"
@@ -1660,7 +1719,8 @@ function CloudOfficeSuiteModalContent({
               </button>
               <button
                 type="button"
-                onClick={() => handleFormat('removeFormat')}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => formatText('removeFormat')}
                 className="hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
                 style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-main)' }}
                 title="Effacer le formatage"
@@ -1670,6 +1730,7 @@ function CloudOfficeSuiteModalContent({
 
               <button
                 type="button"
+                onMouseDown={(e) => e.preventDefault()}
                 onClick={handleDownloadMarkdown}
                 style={{
                   border: '1px solid #CBD5E1',
@@ -1700,34 +1761,28 @@ function CloudOfficeSuiteModalContent({
                 flex: 1,
                 display: 'flex',
                 flexDirection: 'column',
-                backgroundColor: 'var(--bg-card)',
-                overflow: 'hidden',
+                backgroundColor: '#ECEFF1',
+                overflowY: 'auto',
+                padding: '20px 16px',
               }}
             >
-              <textarea
-                ref={textareaRef}
-                value={docContent}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setDocContent(val);
-                }}
-                className="p-4 md:p-8"
+              {/* DOCUMENT FEUILLE DE PAPIER A4 CENTRÉE */}
+              <div
+                ref={setEditorRef}
+                contentEditable="true"
+                suppressContentEditableWarning
                 placeholder="Rédigez ici vos comptes-rendus, spécifications et notes collaboratives..."
+                onInput={handleEditorInput}
+                onChange={handleEditorInput}
+                className="bg-white w-[21cm] min-h-[29.7cm] mx-auto shadow-md p-4 md:p-8 p-[2cm] text-black focus:outline-none"
                 style={{
-                  flex: 1,
-                  width: '100%',
-                  resize: 'none',
-                  border: 'none',
-                  outline: 'none',
-                  padding: '24px 28px',
-                  backgroundColor: 'var(--bg-card)',
-                  color: 'var(--text-main)',
-                  fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-                  fontSize: '14px',
-                  lineHeight: '1.75',
-                  letterSpacing: '0.01em',
                   boxSizing: 'border-box',
-                  minHeight: '400px',
+                  fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                  fontSize: '14.5px',
+                  lineHeight: '1.7',
+                  marginBottom: '48px',
+                  outline: 'none',
+                  cursor: 'text',
                 }}
               />
             </div>
