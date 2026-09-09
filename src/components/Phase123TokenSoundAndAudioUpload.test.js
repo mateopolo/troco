@@ -60,7 +60,9 @@ describe('Phase 123 : Fix des effets sonores de jetons et ajout de l\'upload de 
 
     test('MessageBubble.jsx affiche le lecteur audio natif pour message.type === "audio"', () => {
       expect(messageBubbleContent).toContain('message.type === \'audio\'');
-      expect(messageBubbleContent).toContain('<audio controls src={message.audioUrl} className="max-w-[200px] md:max-w-xs" />');
+      expect(messageBubbleContent).toContain('<audio');
+      expect(messageBubbleContent).toContain('preload="metadata"');
+      expect(messageBubbleContent).toContain('className="max-w-[200px] md:max-w-xs');
 
       // Test de rendu React
       const { container } = render(

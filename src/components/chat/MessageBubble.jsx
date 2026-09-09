@@ -2,26 +2,35 @@ import React from 'react';
 
 /**
  * MessageBubble.jsx — Rendu unifié des bulles de messages du chat
- * Supporte le rendu direct des fichiers audio natifs (.mp3, .wav, etc.)
+ * Supporte le rendu direct des fichiers audio natifs (.mp3, .wav, .mp4, .webm, etc.)
  * 
- * Règles de rendu audio :
- * - h-10 : hauteur contrainte pour ne pas déformer la mise en page
- * - max-w-[200px] : largeur max pour rester dans la bulle
- * - z-10 relative : correct stacking au-dessus des autres éléments
- * - rounded-full : aspect pill moderne
- * - Fallback si audioUrl absent : message d'erreur explicite
+ * Règles de rendu audio cross-platform :
+ * - <audio controls preload="metadata"> avec sources de secours pour compatibilité PC, iOS Safari et Android
+ * - Classe max-w-[200px] md:max-w-xs pour s'adapter élégamment aux bulles de discussion
+ * - Fallback gracieux si audioUrl absent
  */
 export default function MessageBubble({ message = {}, isMe = false }) {
-  if (message.type === 'audio') {
+  if (message.type === 'audio' || message.kind === 'audio') {
     return (
       <div className="p-2">
+        {message.fileName && (
+          <div className="text-xs font-bold mb-1 opacity-90">
+            🎵 {message.fileName}
+          </div>
+        )}
         {message.audioUrl ? (
           <audio
             controls
-            src={message.audioUrl}
-            className="h-10 max-w-[200px] z-10 relative rounded-full"
             preload="metadata"
-          />
+            src={message.audioUrl}
+            className="max-w-[200px] md:max-w-xs"
+          >
+            <source src={message.audioUrl} type={message.mimeType || 'audio/mp4'} />
+            <source src={message.audioUrl} type="audio/webm" />
+            <source src={message.audioUrl} type="audio/ogg" />
+            <source src={message.audioUrl} type="audio/mpeg" />
+            Votre navigateur ne supporte pas l'élément audio.
+          </audio>
         ) : (
           <span className="text-xs italic opacity-60">
             🎵 {message.fileName || 'Fichier audio'} — URL manquante

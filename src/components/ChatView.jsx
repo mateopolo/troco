@@ -2612,10 +2612,10 @@ function ChatView({
             <VoiceNoteRecorder
               isRecording={isRecordingAudio}
               onCancel={() => setIsRecordingAudio(false)}
-              onSendVoiceNote={async (blob, dur) => {
+              onSendVoiceNote={async (blob, dur, directUrl, mime, transcript) => {
                 userJustSentMessageRef.current = true;
                 if (onSendAudioMessage) {
-                  await onSendAudioMessage(blob, dur);
+                  await onSendAudioMessage(blob, dur, directUrl, mime, transcript);
                 }
                 setIsRecordingAudio(false);
               }}

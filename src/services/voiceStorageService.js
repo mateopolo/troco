@@ -14,28 +14,37 @@ export function blobToDataURL(blob) {
 }
 
 /**
- * Upload d'une note vocale sur Firebase Storage
+ * Upload d'une note vocale sur Firebase Storage avec normalisation MIME cross-platform
  * Si Firebase Storage est indisponible ou bloque les permissions, bascule gracieusement sur un DataURL
  */
 export async function uploadVoiceNote(audioBlob, chatId = 'global') {
   if (!audioBlob) return { success: false, error: 'No audio blob provided' };
 
-  const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}.webm`;
+  // Détection des types MIME supportés par le navigateur avec fallback ordonné
+  const supportedMime = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg'].find(
+    type => typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(type)
+  ) || '';
+
+  const finalContentType = audioBlob.type || supportedMime || 'audio/mp4';
+  const ext = finalContentType.includes('mp4') ? 'mp4' : finalContentType.includes('ogg') ? 'ogg' : 'webm';
+  const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${ext}`;
   const storagePath = `voice_notes/${String(chatId)}/${fileName}`;
 
   try {
     const storageRef = ref(storage, storagePath);
     const metadata = {
-      contentType: audioBlob.type || 'audio/webm',
+      contentType: finalContentType,
     };
 
     const snapshot = await uploadBytes(storageRef, audioBlob, metadata);
+    // Résolution stricte de l'URL Firebase Storage avant injection Firestore
     const downloadURL = await getDownloadURL(snapshot.ref);
 
     return {
       success: true,
       audioUrl: downloadURL,
       storagePath,
+      mimeType: finalContentType,
       isLocal: false,
     };
   } catch (err) {
@@ -45,6 +54,7 @@ export async function uploadVoiceNote(audioBlob, chatId = 'global') {
       return {
         success: true,
         audioUrl: dataUrl,
+        mimeType: finalContentType,
         isLocal: true,
       };
     } catch (fallbackErr) {

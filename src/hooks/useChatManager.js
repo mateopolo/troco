@@ -937,11 +937,17 @@ export const useChatManager = ({
   };
 
   // ---- ENVOI DE MESSAGE VOCAL ----
-  const handleSendAudioMessage = async (audioBlob, duration) => {
+  const handleSendAudioMessage = async (audioBlob, duration, providedAudioUrl = null, mimeType = null, transcription = null) => {
     if (!selectedChat) return;
     const chatId = selectedChat.id;
-    const uploadRes = await uploadVoiceNote(audioBlob, chatId);
-    const audioUrl = uploadRes?.audioUrl;
+    
+    let audioUrl = providedAudioUrl;
+    let finalMime = mimeType;
+    if (!audioUrl && audioBlob) {
+      const uploadRes = await uploadVoiceNote(audioBlob, chatId);
+      audioUrl = uploadRes?.audioUrl;
+      finalMime = uploadRes?.mimeType || finalMime;
+    }
     if (!audioUrl) return;
 
     const formattedDuration = Math.round(duration || 0);
@@ -957,10 +963,12 @@ export const useChatManager = ({
       type: 'audio',
       audioUrl,
       duration: formattedDuration,
+      mimeType: finalMime || 'audio/mp4',
       status: 'pending',
       timestamp: nowTime,
       createdAt: new Date(nowTime),
       text: `🎤 Note vocale (${formattedDuration}s)`,
+      transcription: transcription || null,
     };
 
     setChatThreads(prev => ({ ...prev, [chatId]: [...(prev[chatId] || []), newAudioMessage] }));
@@ -980,7 +988,9 @@ export const useChatManager = ({
           type: 'audio',
           audioUrl,
           duration: formattedDuration,
+          mimeType: finalMime || 'audio/mp4',
           text: newAudioMessage.text,
+          transcription: transcription || null,
           read: false,
           status: 'sent',
           createdAt: serverTimestamp(),
