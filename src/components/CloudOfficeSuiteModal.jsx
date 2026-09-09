@@ -1742,16 +1742,16 @@ function CloudOfficeSuiteModalContent({
 
         {/* CONTENU PRINCIPAL DE L'ONGLET SÉLECTIONNÉ */}
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          {/* 1. TROCO DOCS : BUREAU GRIS CLAIR, TOOLBAR COMPLÈTE & PAGE A4 CENTRÉE */}
+          {/* 1. TROCO DOCS : BUREAU GRIS CLAIR, TOOLBAR COMPLÈTE & PAGE A4 CENTRÉE (EFFET WORD) */}
           {activeTab === 'docs' && (
             <div
+              className="flex-1 overflow-y-auto bg-gray-100 dark:bg-[#12100F] p-4 md:p-10 cursor-text"
+              onClick={() => editorRef.current?.focus()}
               style={{
                 flex: 1,
                 display: 'flex',
                 flexDirection: 'column',
-                backgroundColor: '#ECEFF1',
                 overflowY: 'auto',
-                padding: '20px 16px',
               }}
             >
               {/* DOCUMENT FEUILLE DE PAPIER A4 CENTRÉE */}
@@ -1762,7 +1762,7 @@ function CloudOfficeSuiteModalContent({
                 placeholder="Rédigez ici vos comptes-rendus, spécifications et notes collaboratives..."
                 onInput={handleEditorInput}
                 onChange={handleEditorInput}
-                className="bg-white w-[21cm] min-h-[29.7cm] mx-auto shadow-md p-4 md:p-8 p-[2cm] text-black focus:outline-none"
+                className="w-full max-w-[21cm] md:w-[21cm] min-h-[29.7cm] mx-auto bg-white text-black p-4 md:p-8 p-[2cm] shadow-md shadow-xl outline-none focus:ring-2 focus:ring-[var(--accent-primary)]/50 transition-shadow"
                 style={{
                   boxSizing: 'border-box',
                   fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",

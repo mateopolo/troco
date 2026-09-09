@@ -1,9 +1,9 @@
 /**
- * TrocoDocs.jsx — Composant défensif dédié pour Troco Docs / Suite Office Cloud
- * Phase 103 : Sécurisation absolue de l'ouverture et fallback sur documentData.content
+ * TrocoDocs.jsx — Composant ergonomique Word/Docs (Page A4 centrée et focus global)
+ * Phase 139 : Bureau fond gris avec clic-to-focus et feuille A4 texturée
  */
 
-import React from 'react';
+import React, { useRef } from 'react';
 import CloudOfficeSuiteModal from './CloudOfficeSuiteModal';
 
 const defaultDoc = {
@@ -13,10 +13,42 @@ const defaultDoc = {
   lastUpdated: Date.now(),
 };
 
+/**
+ * Couche 1 (Bureau/fond grisé) + Couche 2 (Feuille A4 éditable)
+ */
+export function TrocoDocsEditor({
+  editorRef: externalEditorRef,
+  content = '',
+  onInput = () => {},
+  onChange = () => {},
+  placeholder = "Rédigez ici vos comptes-rendus, spécifications et notes collaboratives...",
+}) {
+  const localRef = useRef(null);
+  const editorRef = externalEditorRef || localRef;
+
+  return (
+    <div
+      className="flex-1 overflow-y-auto bg-gray-100 dark:bg-[#12100F] p-4 md:p-10 cursor-text"
+      onClick={() => editorRef.current?.focus()}
+    >
+      <div
+        ref={editorRef}
+        contentEditable
+        suppressContentEditableWarning
+        placeholder={placeholder}
+        onInput={onInput}
+        onChange={onChange}
+        className="w-full max-w-[21cm] min-h-[29.7cm] mx-auto bg-white text-black p-[2cm] shadow-xl outline-none focus:ring-2 focus:ring-[var(--accent-primary)]/50 transition-shadow"
+      />
+    </div>
+  );
+}
+
 export default function TrocoDocs(props) {
   // 🚨 PHASE 103 : La première ligne du composant DOIT être if (!isOpen) return null;
   if (!props?.isOpen) return null;
 
+  const editorRef = useRef(null);
   const safeProps = props || {};
   const documentData = safeProps.document || safeProps.documentData || defaultDoc;
   // 🚨 PHASE 103 : Initialisation avec fallback sécurisé
@@ -46,6 +78,7 @@ export default function TrocoDocs(props) {
       currentUser={safeProps.currentUser || { name: 'Moi', uid: 'me' }}
       darkMode={Boolean(safeProps.darkMode)}
       initialTab={safeProps.initialTab || 'docs'}
+      editorRef={editorRef}
     />
   );
 }
