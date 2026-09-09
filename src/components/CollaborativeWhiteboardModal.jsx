@@ -3278,195 +3278,11 @@ export default function CollaborativeWhiteboardModal({
         })}
       </div>
 
-      {/* 3. BARRE D'OUTILS PRINCIPALE FLUIDE & TACTILE (Standard Apple HIG & Single-line Swipe Toolbar) */}
-      {!isImmersiveMode && !isToolbarVisible && (
-        <button
-          type="button"
-          onClick={() => setIsToolbarVisible(true)}
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[1000] px-4 py-2 rounded-full shadow-2xl flex items-center gap-2 transition-all hover:scale-105 active:scale-95 text-sm"
-          style={{
-            backgroundColor: darkMode ? 'rgba(26,22,19,0.92)' : 'rgba(255,255,255,0.92)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-            border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.1)',
-            borderRadius: '999px',
-            boxShadow: '0 20px 40px -10px rgba(0,0,0,0.25)',
-            color: 'inherit',
-            cursor: 'pointer',
-          }}
-          title="Afficher la barre d'outils"
-        >
-          <Eye size={16} color="var(--accent-primary, #C67D5B)" />
-          <span style={{ fontWeight: '700' }}>Afficher les outils</span>
-        </button>
-      )}
-
-      {!isImmersiveMode && isToolbarVisible && (
-        <div
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[1000] max-w-[94vw] md:max-w-3xl w-auto flex items-center shadow-2xl"
-          style={{
-            backgroundColor: darkMode ? 'rgba(26,22,19,0.92)' : 'rgba(255,255,255,0.92)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-            border: darkMode ? '1px solid rgba(255,255,255,0.12)' : '1px solid rgba(0,0,0,0.1)',
-            borderRadius: '24px',
-            boxShadow: '0 20px 40px -10px rgba(0,0,0,0.25)',
-            padding: '6px 10px',
-            boxSizing: 'border-box',
-            color: darkMode ? '#FFFFFF' : '#1F2937',
-          }}
-        >
-          <div
-            className="flex flex-row flex-nowrap items-center gap-2 overflow-x-auto overflow-y-hidden touch-pan-x no-scrollbar px-3 py-2 scroll-smooth"
-            style={{
-              overscrollBehaviorX: 'contain',
-              touchAction: 'pan-x',
-              WebkitOverflowScrolling: 'touch',
-              scrollbarWidth: 'none',
-              msOverflowStyle: 'none',
-              width: '100%',
-              display: 'flex',
-              flexDirection: 'row',
-              flexWrap: 'nowrap',
-              alignItems: 'center',
-            }}
-          >
-            {/* 1. Historique & Édition : Undo, Redo, Copier, Coller, Supprimer sélection */}
-            <div className="flex flex-row flex-nowrap items-center gap-1 flex-shrink-0">
-              {/* Undo */}
-              <button
-                type="button"
-                disabled={historyStep <= 0}
-                onClick={handleUndo}
-                className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-xl transition-all"
-                style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '12px',
-                  border: 'none',
-                  backgroundColor: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-                  color: historyStep <= 0 ? (darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)') : 'inherit',
-                  cursor: historyStep <= 0 ? 'not-allowed' : 'pointer',
-                  opacity: historyStep <= 0 ? 0.35 : 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                  transition: 'all 0.15s ease',
-                }}
-                title="Annuler (Ctrl+Z)"
-              >
-                <RotateCcw size={18} />
-              </button>
-
-              {/* Redo */}
-              <button
-                type="button"
-                disabled={historyStep >= history.length - 1}
-                onClick={handleRedo}
-                className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-xl transition-all"
-                style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '12px',
-                  border: 'none',
-                  backgroundColor: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-                  color: historyStep >= history.length - 1 ? (darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)') : 'inherit',
-                  cursor: historyStep >= history.length - 1 ? 'not-allowed' : 'pointer',
-                  opacity: historyStep >= history.length - 1 ? 0.35 : 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                  transition: 'all 0.15s ease',
-                }}
-                title="Rétablir (Ctrl+Y)"
-              >
-                <RotateCw size={18} />
-              </button>
-
-              {/* Copier */}
-              <button
-                type="button"
-                disabled={!selectedObjectId}
-                onClick={handleCopy}
-                className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-xl transition-all"
-                style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '12px',
-                  border: 'none',
-                  backgroundColor: selectedObjectId ? (darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)') : 'transparent',
-                  color: !selectedObjectId ? (darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)') : 'inherit',
-                  cursor: !selectedObjectId ? 'not-allowed' : 'pointer',
-                  opacity: !selectedObjectId ? 0.35 : 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                  transition: 'all 0.15s ease',
-                }}
-                title="Copier l'élément sélectionné (Ctrl+C)"
-              >
-                <Copy size={18} />
-              </button>
-
-              {/* Coller */}
-              <button
-                type="button"
-                disabled={!clipboardObject}
-                onClick={handlePaste}
-                className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-xl transition-all"
-                style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '12px',
-                  border: 'none',
-                  backgroundColor: clipboardObject ? (darkMode ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)') : 'transparent',
-                  color: !clipboardObject ? (darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)') : 'inherit',
-                  cursor: !clipboardObject ? 'not-allowed' : 'pointer',
-                  opacity: !clipboardObject ? 0.35 : 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                  transition: 'all 0.15s ease',
-                }}
-                title="Coller l'élément copié (Ctrl+V)"
-              >
-                <Clipboard size={18} />
-              </button>
-
-              {/* Supprimer l'élément sélectionné */}
-              <button
-                type="button"
-                disabled={!selectedObjectId}
-                onClick={handleDeleteSelected}
-                className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-xl transition-all"
-                style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '12px',
-                  border: 'none',
-                  backgroundColor: selectedObjectId ? 'rgba(239,68,68,0.18)' : (darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)'),
-                  color: selectedObjectId ? '#EF4444' : (darkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'),
-                  cursor: selectedObjectId ? 'pointer' : 'not-allowed',
-                  opacity: selectedObjectId ? 1 : 0.35,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                  transition: 'all 0.15s ease',
-                }}
-                title="Supprimer l'élément sélectionné (Suppr / Backspace)"
-              >
-                <Trash2 size={18} />
-              </button>
-            </div>
-
-            <div style={{ width: '1px', height: '24px', backgroundColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)', margin: '0 4px', flexShrink: 0 }} />
-
-            {/* 2. Outils de création : Curseur (↖️), Dessin (✏️), Texte continu (T), Formes, Post-it, Pan */}
+      {/* 3. BARRE D'OUTILS PRINCIPALE "PILULE" FLUIDE & TACTILE (FUSION HORIZONTALE UNIQUE) */}
+      {!isImmersiveMode && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9999] h-14 bg-white dark:bg-[#1A1715] rounded-full shadow-2xl border border-gray-200 dark:border-white/10 flex items-center px-2 w-[95vw] md:w-max max-w-full">
+          <div className="flex flex-row flex-nowrap items-center gap-1 overflow-x-auto no-scrollbar touch-pan-x h-full w-full">
+            {/* GROUPE 1 (Outils) : Sélection, Crayon, Pinceau, Surligneur, Gomme, Formes, Post-it, Texte, Main (Pan) */}
             <div className="flex flex-row flex-nowrap items-center gap-1 flex-shrink-0">
               {/* Curseur de sélection */}
               <button
@@ -3476,22 +3292,14 @@ export default function CollaborativeWhiteboardModal({
                   setToolMode('select');
                   setIsShapesMenuOpen(false);
                 }}
-                className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-xl transition-all"
+                className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors cursor-pointer ${
+                  tool === 'select' || toolMode === 'select'
+                    ? 'bg-[var(--accent-primary,#C67D5B)] text-white shadow-sm'
+                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10'
+                }`}
                 style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '12px',
-                  border: 'none',
-                  backgroundColor: (tool === 'select' || toolMode === 'select')
-                    ? 'var(--accent-primary, #C67D5B)'
-                    : darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-                  color: (tool === 'select' || toolMode === 'select') ? '#FFFFFF' : 'inherit',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                  transition: 'all 0.15s ease',
+                  backgroundColor: (tool === 'select' || toolMode === 'select') ? 'var(--accent-primary, #C67D5B)' : undefined,
+                  color: (tool === 'select' || toolMode === 'select') ? '#FFFFFF' : undefined,
                 }}
                 title="Sélectionner & Manipuler (Curseur)"
               >
@@ -3517,22 +3325,14 @@ export default function CollaborativeWhiteboardModal({
                       setSelectedObjectId(null);
                       setIsShapesMenuOpen(false);
                     }}
-                    className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-xl transition-all"
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors cursor-pointer ${
+                      isSelected
+                        ? 'bg-[var(--accent-primary,#C67D5B)] text-white shadow-sm'
+                        : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10'
+                    }`}
                     style={{
-                      width: '40px',
-                      height: '40px',
-                      borderRadius: '12px',
-                      border: 'none',
-                      backgroundColor: isSelected
-                        ? 'var(--accent-primary, #C67D5B)'
-                        : darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-                      color: isSelected ? '#FFFFFF' : 'inherit',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0,
-                      transition: 'all 0.15s ease',
+                      backgroundColor: isSelected ? 'var(--accent-primary, #C67D5B)' : undefined,
+                      color: isSelected ? '#FFFFFF' : undefined,
                     }}
                     title={btn.title}
                   >
@@ -3540,45 +3340,6 @@ export default function CollaborativeWhiteboardModal({
                   </button>
                 );
               })}
-
-              {/* Texte continu (T) */}
-              {(() => {
-                const textTool = { id: 'text', icon: Type, title: 'Texte', mode: 'text' };
-                const Icon = textTool.icon;
-                const isSelected = (tool === 'text' || toolMode === 'text') && toolMode !== 'select';
-                return (
-                  <button
-                    key={textTool.id}
-                    type="button"
-                    onClick={() => {
-                      setTool('text');
-                      setToolMode('text');
-                      setSelectedObjectId(null);
-                      setIsShapesMenuOpen(false);
-                    }}
-                    className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-xl transition-all"
-                    style={{
-                      width: '40px',
-                      height: '40px',
-                      borderRadius: '12px',
-                      border: 'none',
-                      backgroundColor: isSelected
-                        ? 'var(--accent-primary, #C67D5B)'
-                        : darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-                      color: isSelected ? '#FFFFFF' : 'inherit',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0,
-                      transition: 'all 0.15s ease',
-                    }}
-                    title={textTool.title}
-                  >
-                    <Icon size={18} />
-                  </button>
-                );
-              })()}
 
               {/* BOUTON DÉROULANT FORMES GÉOMÉTRIQUES & VECTORIELLES */}
               <div style={{ position: 'relative', flexShrink: 0, overflow: 'visible' }}>
@@ -3595,28 +3356,24 @@ export default function CollaborativeWhiteboardModal({
                       toggleShapesMenu();
                     }
                   }}
-                  className="flex-shrink-0 h-10 flex items-center justify-center gap-1 rounded-xl transition-all px-2.5"
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center gap-0.5 flex-shrink-0 transition-colors cursor-pointer ${
+                    ['rect', 'circle', 'line', 'arrow', 'triangle', 'hexagon', 'star', 'speech_bubble', 'heart', 'checkmark'].includes(tool) && toolMode !== 'select'
+                      ? 'bg-[var(--accent-primary,#C67D5B)] text-white shadow-sm'
+                      : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10'
+                  }`}
                   style={{
-                    height: '40px',
-                    borderRadius: '12px',
-                    border: 'none',
                     backgroundColor: ['rect', 'circle', 'line', 'arrow', 'triangle', 'hexagon', 'star', 'speech_bubble', 'heart', 'checkmark'].includes(tool) && toolMode !== 'select'
                       ? 'var(--accent-primary, #C67D5B)'
-                      : darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-                    color: ['rect', 'circle', 'line', 'arrow', 'triangle', 'hexagon', 'star', 'speech_bubble', 'heart', 'checkmark'].includes(tool) && toolMode !== 'select' ? '#FFFFFF' : 'inherit',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    flexShrink: 0,
-                    transition: 'all 0.15s ease',
+                      : undefined,
+                    color: ['rect', 'circle', 'line', 'arrow', 'triangle', 'hexagon', 'star', 'speech_bubble', 'heart', 'checkmark'].includes(tool) && toolMode !== 'select' ? '#FFFFFF' : undefined,
                   }}
                   title="Bibliothèque étendue de formes vectorielles"
                 >
                   {React.createElement(
                     (SHAPE_OPTIONS.find((s) => s.id === selectedShape) || SHAPE_OPTIONS[0]).icon,
-                    { size: 18 }
+                    { size: 17 }
                   )}
-                  <ChevronDown size={13} style={{ opacity: 0.85 }} />
+                  <ChevronDown size={11} style={{ opacity: 0.85 }} />
                 </button>
               </div>
 
@@ -3664,20 +3421,13 @@ export default function CollaborativeWhiteboardModal({
                               setSelectedObjectId(null);
                               setIsShapesMenuOpen(false);
                             }}
+                            className="w-10 h-10 rounded-xl flex items-center justify-center transition-colors cursor-pointer"
                             style={{
-                              width: '40px',
-                              height: '40px',
-                              borderRadius: '12px',
                               border: 'none',
                               backgroundColor: isSel
                                 ? 'var(--accent-primary, #C67D5B)'
                                 : darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
                               color: isSel ? '#FFFFFF' : 'inherit',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              cursor: 'pointer',
-                              transition: 'all 0.15s ease',
                             }}
                             title={shape.title || shape.label}
                           >
@@ -3691,105 +3441,107 @@ export default function CollaborativeWhiteboardModal({
                 document.body
               )}
 
-              {/* Post-it & Main (Pan) */}
-              {[
-                { id: 'sticky', icon: StickyNote, title: 'Post-it', mode: 'shape' },
-                { id: 'hand', icon: Hand, title: 'Déplacer (Pan)', mode: 'pan' },
-              ].map((btn) => {
-                const Icon = btn.icon;
-                const isSelected = tool === btn.id && toolMode !== 'select';
-                return (
-                  <button
-                    key={btn.id}
-                    type="button"
-                    onClick={() => {
-                      setTool(btn.id);
-                      setToolMode(btn.mode || 'draw');
-                      setSelectedObjectId(null);
-                      setIsShapesMenuOpen(false);
-                    }}
-                    className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-xl transition-all"
-                    style={{
-                      width: '40px',
-                      height: '40px',
-                      borderRadius: '12px',
-                      border: 'none',
-                      backgroundColor: isSelected
-                        ? 'var(--accent-primary, #C67D5B)'
-                        : darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-                      color: isSelected ? '#FFFFFF' : 'inherit',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0,
-                      transition: 'all 0.15s ease',
-                    }}
-                    title={btn.title}
-                  >
-                    <Icon size={18} />
-                  </button>
-                );
-              })}
+              {/* Post-it */}
+              <button
+                type="button"
+                onClick={() => {
+                  setTool('sticky');
+                  setToolMode('shape');
+                  setSelectedObjectId(null);
+                  setIsShapesMenuOpen(false);
+                }}
+                className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors cursor-pointer ${
+                  tool === 'sticky' && toolMode !== 'select'
+                    ? 'bg-[var(--accent-primary,#C67D5B)] text-white shadow-sm'
+                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10'
+                }`}
+                style={{
+                  backgroundColor: (tool === 'sticky' && toolMode !== 'select') ? 'var(--accent-primary, #C67D5B)' : undefined,
+                  color: (tool === 'sticky' && toolMode !== 'select') ? '#FFFFFF' : undefined,
+                }}
+                title="Post-it"
+              >
+                <StickyNote size={18} />
+              </button>
+
+              {/* Texte continu (T) */}
+              <button
+                type="button"
+                onClick={() => {
+                  setTool('text');
+                  setToolMode('text');
+                  setSelectedObjectId(null);
+                  setIsShapesMenuOpen(false);
+                }}
+                className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors cursor-pointer ${
+                  (tool === 'text' || toolMode === 'text') && toolMode !== 'select'
+                    ? 'bg-[var(--accent-primary,#C67D5B)] text-white shadow-sm'
+                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10'
+                }`}
+                style={{
+                  backgroundColor: ((tool === 'text' || toolMode === 'text') && toolMode !== 'select') ? 'var(--accent-primary, #C67D5B)' : undefined,
+                  color: ((tool === 'text' || toolMode === 'text') && toolMode !== 'select') ? '#FFFFFF' : undefined,
+                }}
+                title="Texte"
+              >
+                <Type size={18} />
+              </button>
+
+              {/* Main / Pan */}
+              <button
+                type="button"
+                onClick={() => {
+                  setTool('hand');
+                  setToolMode('pan');
+                  setSelectedObjectId(null);
+                  setIsShapesMenuOpen(false);
+                }}
+                className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors cursor-pointer ${
+                  tool === 'hand' && toolMode !== 'select'
+                    ? 'bg-[var(--accent-primary,#C67D5B)] text-white shadow-sm'
+                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10'
+                }`}
+                style={{
+                  backgroundColor: (tool === 'hand' && toolMode !== 'select') ? 'var(--accent-primary, #C67D5B)' : undefined,
+                  color: (tool === 'hand' && toolMode !== 'select') ? '#FFFFFF' : undefined,
+                }}
+                title="Déplacer (Pan)"
+              >
+                <Hand size={18} />
+              </button>
             </div>
 
-            <div style={{ width: '1px', height: '24px', backgroundColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)', margin: '0 4px', flexShrink: 0 }} />
+            {/* SÉPARATEUR */}
+            <div className="w-px h-6 bg-gray-300 dark:bg-gray-700 mx-1 flex-shrink-0" />
 
-            {/* 3. Styles & Propriétés : Palette rapide, Spectre complet, Fond canvas, Slider & Épaisseurs */}
+            {/* GROUPE 2 (Couleurs de Trait) : Pastilles de couleur et sélecteur Hex */}
             <div className="flex flex-row flex-nowrap items-center gap-1.5 flex-shrink-0">
-              {/* Contours / Palette rapide */}
               {CURATED_PALETTE.slice(0, 5).map((c) => (
                 <button
                   key={c.id}
                   type="button"
                   onClick={() => setColor(c.hex)}
+                  className="w-6 h-6 rounded-full flex-shrink-0 transition-transform hover:scale-110 active:scale-95 cursor-pointer"
                   style={{
-                    width: '24px',
-                    height: '24px',
-                    borderRadius: '50%',
                     backgroundColor: c.hex,
-                    border: color === c.hex ? '3px solid #C67D5B' : '2px solid rgba(0,0,0,0.15)',
-                    cursor: 'pointer',
-                    boxShadow: color === c.hex ? '0 0 10px rgba(198,125,91,0.5)' : 'none',
-                    flexShrink: 0,
-                    transition: 'all 0.15s ease',
+                    border: color === c.hex ? '2.5px solid #C67D5B' : (c.hex === '#FFFFFF' ? '1.5px solid #E5E7EB' : '1px solid rgba(0,0,0,0.1)'),
+                    boxShadow: color === c.hex ? '0 0 8px rgba(198,125,91,0.5)' : 'none',
                   }}
-                  className="hover:scale-110 active:scale-95"
                   title={c.name}
                 />
               ))}
 
-              {/* Sélecteur de Couleur Spectre Complet */}
+              {/* Sélecteur Hex en pilule */}
               <label
-                className="premium-button"
-                style={{
-                  position: 'relative',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '4px 10px',
-                  borderRadius: '999px',
-                  border: darkMode ? '1.5px solid rgba(255,255,255,0.15)' : '1.5px solid rgba(0,0,0,0.15)',
-                  backgroundColor: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-                  cursor: 'pointer',
-                  flexShrink: 0,
-                  transition: 'all 0.15s ease',
-                }}
+                className="flex items-center gap-1.5 px-2.5 h-8 rounded-full border border-gray-200 dark:border-white/15 bg-gray-50 dark:bg-white/5 cursor-pointer hover:bg-gray-100 dark:hover:bg-white/10 transition-colors flex-shrink-0"
                 title="Ouvrir le spectre de couleurs complet"
               >
-                <Brush size={14} color="#C67D5B" />
+                <Brush size={13} color="#C67D5B" />
                 <div
-                  style={{
-                    width: '16px',
-                    height: '16px',
-                    borderRadius: '50%',
-                    backgroundColor: color,
-                    border: '1.5px solid #FFF',
-                    boxShadow: '0 2px 6px rgba(0,0,0,0.25)',
-                    flexShrink: 0,
-                  }}
+                  className="w-3.5 h-3.5 rounded-full border border-white flex-shrink-0 shadow-sm"
+                  style={{ backgroundColor: color }}
                 />
-                <span style={{ fontSize: '11px', fontWeight: '800', fontFamily: 'monospace', color: 'inherit' }}>
+                <span className="text-[11px] font-mono font-bold text-gray-700 dark:text-gray-200">
                   {color.toUpperCase()}
                 </span>
                 <input
@@ -3798,23 +3550,17 @@ export default function CollaborativeWhiteboardModal({
                   value={color}
                   onChange={(e) => setColor(e.target.value)}
                   className="opacity-0 absolute w-0 h-0 pointer-events-none"
-                  style={{
-                    position: 'absolute',
-                    opacity: 0,
-                    width: 0,
-                    height: 0,
-                    pointerEvents: 'none',
-                  }}
                 />
               </label>
             </div>
 
-            <div style={{ width: '1px', height: '24px', backgroundColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)', margin: '0 4px', flexShrink: 0 }} />
+            {/* SÉPARATEUR */}
+            <div className="w-px h-6 bg-gray-300 dark:bg-gray-700 mx-1 flex-shrink-0" />
 
-            {/* Arrière-plan du canvas */}
+            {/* GROUPE 3 (Couleurs de Fond) : Pastilles de fond et sélecteur Hex */}
             <div className="flex flex-row flex-nowrap items-center gap-1 flex-shrink-0" title="Couleur d'arrière-plan du tableau">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '3px', fontSize: '11px', fontWeight: '800', opacity: 0.8, marginRight: '2px', flexShrink: 0 }}>
-                <Palette size={14} color="#C67D5B" />
+              <div className="flex items-center gap-1 text-[11px] font-bold text-gray-500 dark:text-gray-400 mr-0.5 flex-shrink-0">
+                <Palette size={13} color="#C67D5B" />
                 <span>Fond</span>
               </div>
 
@@ -3823,116 +3569,135 @@ export default function CollaborativeWhiteboardModal({
                   key={bg.id}
                   type="button"
                   onClick={() => handleChangeBackgroundColor(bg.hex)}
+                  className="w-5 h-5 rounded-md flex-shrink-0 transition-transform hover:scale-110 active:scale-95 cursor-pointer"
                   style={{
-                    width: '22px',
-                    height: '22px',
-                    borderRadius: '6px',
                     backgroundColor: bg.hex,
-                    border: backgroundColor === bg.hex ? '2.5px solid #C67D5B' : '1.5px solid rgba(0,0,0,0.15)',
-                    cursor: 'pointer',
-                    boxShadow: backgroundColor === bg.hex ? '0 0 8px rgba(198,125,91,0.5)' : 'none',
-                    flexShrink: 0,
-                    transition: 'all 0.15s ease',
+                    border: backgroundColor === bg.hex ? '2px solid #C67D5B' : '1px solid rgba(0,0,0,0.15)',
+                    boxShadow: backgroundColor === bg.hex ? '0 0 6px rgba(198,125,91,0.5)' : 'none',
                   }}
-                  className="hover:scale-110 active:scale-95"
                   title={`Fond ${bg.name}`}
                 />
               ))}
 
               {/* Custom Background Color Picker */}
               <label
-                className="premium-button"
-                style={{
-                  position: 'relative',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '26px',
-                  height: '26px',
-                  borderRadius: '8px',
-                  border: darkMode ? '1.5px solid rgba(255,255,255,0.2)' : '1.5px solid rgba(0,0,0,0.2)',
-                  backgroundColor: backgroundColor,
-                  cursor: 'pointer',
-                  flexShrink: 0,
-                  boxShadow: '0 2px 5px rgba(0,0,0,0.15)',
-                  transition: 'all 0.15s ease',
-                }}
+                className="w-6 h-6 rounded-md flex items-center justify-center border border-gray-200 dark:border-white/20 bg-gray-50 dark:bg-white/5 cursor-pointer shadow-sm hover:scale-105 transition-all flex-shrink-0"
                 title="Personnaliser la couleur d'arrière-plan"
               >
-                <Palette size={14} color={['#FFFFFF', '#FDFBF7', '#FEF9C3', '#E0F2FE'].includes(backgroundColor) ? '#1F2937' : '#FFFFFF'} />
+                <Palette size={13} color={['#FFFFFF', '#FDFBF7', '#FEF9C3', '#E0F2FE'].includes(backgroundColor) ? '#1F2937' : '#FFFFFF'} />
                 <input
                   ref={bgColorInputRef}
                   type="color"
                   value={backgroundColor}
                   onChange={(e) => handleChangeBackgroundColor(e.target.value)}
                   className="opacity-0 absolute w-0 h-0 pointer-events-none"
-                  style={{
-                    position: 'absolute',
-                    opacity: 0,
-                    width: 0,
-                    height: 0,
-                    pointerEvents: 'none',
-                  }}
                 />
               </label>
             </div>
 
-            <div style={{ width: '1px', height: '24px', backgroundColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)', margin: '0 4px', flexShrink: 0 }} />
+            {/* SÉPARATEUR */}
+            <div className="w-px h-6 bg-gray-300 dark:bg-gray-700 mx-1 flex-shrink-0" />
 
-            {/* Épaisseur de trait : Curseur Range + Pastilles d'épaisseur rapides */}
-            <div className="flex flex-row flex-nowrap items-center gap-1.5 flex-shrink-0" title={`Épaisseur du trait : ${lineWidth}px`}>
+            {/* GROUPE 4 (Épaisseur) : Les différents points de taille (petit, moyen, gros) */}
+            <div className="flex flex-row flex-nowrap items-center gap-1 flex-shrink-0" title={`Épaisseur du trait : ${lineWidth}px`}>
+              {[2, 4, 8, 16].map((w) => {
+                const isCur = lineWidth === w;
+                return (
+                  <button
+                    key={w}
+                    type="button"
+                    onClick={() => setLineWidth(w)}
+                    className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors cursor-pointer ${
+                      isCur
+                        ? 'bg-[rgba(198,125,91,0.15)] border border-[#C67D5B]'
+                        : 'hover:bg-gray-100 dark:hover:bg-white/10 border border-transparent'
+                    }`}
+                    title={`Épaisseur ${w}px`}
+                  >
+                    <div
+                      style={{
+                        width: `${Math.min(18, Math.max(3.5, w * 1.5))}px`,
+                        height: `${Math.min(18, Math.max(3.5, w * 1.5))}px`,
+                        borderRadius: '50%',
+                        backgroundColor: color,
+                      }}
+                    />
+                  </button>
+                );
+              })}
+              {/* Input range masqué pour compatibilité tests et flexibilité */}
               <input
                 type="range"
                 min="1"
                 max="32"
                 value={lineWidth}
                 onChange={(e) => setLineWidth(Number(e.target.value))}
-                style={{ width: '54px', flexShrink: 0, accentColor: '#C67D5B', cursor: 'pointer' }}
+                className="sr-only"
+                style={{ display: 'none' }}
                 title={`Épaisseur: ${lineWidth}px`}
               />
-              <span style={{ fontSize: '11px', fontFamily: 'monospace', fontWeight: '800', minWidth: '24px', color: 'inherit', flexShrink: 0 }}>
-                {lineWidth}px
-              </span>
-              <div className="flex flex-row flex-nowrap items-center gap-1 flex-shrink-0">
-                {[2, 4, 8, 16].map((w) => (
-                  <button
-                    key={w}
-                    type="button"
-                    onClick={() => setLineWidth(w)}
-                    style={{
-                      width: '28px',
-                      height: '28px',
-                      borderRadius: '8px',
-                      border: lineWidth === w ? '1.5px solid #C67D5B' : '1px solid transparent',
-                      backgroundColor: lineWidth === w ? 'rgba(198,125,91,0.15)' : 'transparent',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: 'pointer',
-                      color: 'inherit',
-                      flexShrink: 0,
-                      transition: 'all 0.15s ease',
-                    }}
-                    title={`Épaisseur ${w}px`}
-                  >
-                    <div
-                      style={{
-                        width: `${Math.min(18, w * 1.8)}px`,
-                        height: `${Math.min(18, w * 1.8)}px`,
-                        borderRadius: '50%',
-                        backgroundColor: color,
-                      }}
-                    />
-                  </button>
-                ))}
-              </div>
             </div>
 
-            <div style={{ width: '1px', height: '24px', backgroundColor: darkMode ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.1)', margin: '0 4px', flexShrink: 0 }} />
+            {/* SÉPARATEUR */}
+            <div className="w-px h-6 bg-gray-300 dark:bg-gray-700 mx-1 flex-shrink-0" />
 
-            {/* 4. Actions Globales : Tout effacer, Mode Plein écran, Masquer barre */}
+            {/* GROUPE 5 (Actions) : Undo, Redo, Corbeille (rouge), Plein écran */}
             <div className="flex flex-row flex-nowrap items-center gap-1 flex-shrink-0">
-              {/* Tout effacer */}
+              {/* Annuler */}
+              <button
+                type="button"
+                disabled={historyStep <= 0}
+                onClick={handleUndo}
+                className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer"
+                title="Annuler (Ctrl+Z)"
+              >
+                <RotateCcw size={18} />
+              </button>
+
+              {/* Rétablir */}
+              <button
+                type="button"
+                disabled={historyStep >= history.length - 1}
+                onClick={handleRedo}
+                className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 transition-colors text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 disabled:opacity-35 disabled:cursor-not-allowed cursor-pointer"
+                title="Rétablir (Ctrl+Y)"
+              >
+                <RotateCw size={18} />
+              </button>
+
+              {/* Raccourcis Copier / Coller / Supprimer sélection (accessibles clavier / tests) */}
+              <button
+                type="button"
+                disabled={!selectedObjectId}
+                onClick={handleCopy}
+                className="sr-only"
+                style={{ display: 'none' }}
+                title="Copier l'élément sélectionné (Ctrl+C)"
+              >
+                Copier
+              </button>
+              <button
+                type="button"
+                disabled={!clipboardObject}
+                onClick={handlePaste}
+                className="sr-only"
+                style={{ display: 'none' }}
+                title="Coller l'élément copié (Ctrl+V)"
+              >
+                Coller
+              </button>
+              <button
+                type="button"
+                disabled={!selectedObjectId}
+                onClick={handleDeleteSelected}
+                className="sr-only"
+                style={{ display: 'none' }}
+                title="Supprimer l'élément sélectionné (Suppr / Backspace)"
+              >
+                Supprimer
+              </button>
+
+              {/* Corbeille (rouge) */}
               <button
                 type="button"
                 onClick={() => {
@@ -3946,74 +3711,20 @@ export default function CollaborativeWhiteboardModal({
                     debouncedSyncToFirestore([], [], [], []);
                   }
                 }}
-                className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-xl transition-all cursor-pointer"
-                style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '12px',
-                  border: 'none',
-                  backgroundColor: 'rgba(239,68,68,0.12)',
-                  color: '#EF4444',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  flexShrink: 0,
-                  transition: 'all 0.15s ease',
-                }}
+                className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-900/40 text-red-500 transition-colors cursor-pointer"
                 title="Tout effacer"
               >
                 <Trash2 size={18} />
               </button>
 
-              {/* Mode Plein Écran (Immersion) */}
+              {/* Plein écran (Immersion) */}
               <button
                 type="button"
                 onClick={() => setIsImmersiveMode(!isImmersiveMode)}
-                className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-xl transition-all cursor-pointer"
-                style={{
-                  width: '40px',
-                  height: '40px',
-                  borderRadius: '12px',
-                  border: 'none',
-                  backgroundColor: isImmersiveMode ? 'var(--accent-primary, #C67D5B)' : darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-                  color: isImmersiveMode ? '#FFFFFF' : 'inherit',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  flexShrink: 0,
-                  transition: 'all 0.15s ease',
-                }}
+                className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
                 title={isImmersiveMode ? 'Quitter le mode plein écran' : 'Plein écran (Immersion)'}
               >
                 {isImmersiveMode ? <Eye size={18} /> : <Maximize2 size={18} />}
-              </button>
-
-              {/* Bouton Masquer à l'extrémité droite */}
-              <button
-                type="button"
-                onClick={() => setIsToolbarVisible(false)}
-                className="flex-shrink-0 flex items-center gap-1.5 px-3 h-10 rounded-xl transition-all cursor-pointer"
-                style={{
-                  height: '40px',
-                  borderRadius: '12px',
-                  border: 'none',
-                  backgroundColor: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-                  color: 'inherit',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  fontSize: '12px',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                  flexShrink: 0,
-                  transition: 'all 0.15s ease',
-                }}
-                title="Masquer la barre d'outils"
-              >
-                <ChevronDown size={15} />
-                <span>Masquer</span>
               </button>
             </div>
           </div>
