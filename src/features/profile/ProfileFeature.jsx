@@ -36,6 +36,7 @@ import MobileHeader from '../../components/common/MobileHeader';
 import InclusiveAvatarBuilder from '../../components/profile/InclusiveAvatarBuilder';
 import ProfileAppearanceCustomizer from '../../components/profile/ProfileAppearanceCustomizer';
 import DesignStudioModal from '../../components/DesignStudioModal';
+import ReviewsSection from '../../components/ReviewsSection';
 import {
   getBioTranslation as getBioTranslationUtil,
   getReviewTranslation as getReviewTranslationUtil,
@@ -1058,7 +1059,15 @@ export default function ProfileFeature({
         onClose={() => setIsDesignStudioOpen(false)}
         isMobile={isMobile}
       />
-      </div>
+
+      {/* SECTION AVIS ET ÉVALUATIONS EN BAS DU PROFIL */}
+      <ReviewsSection
+        profileUid={profile?.uid || auth?.currentUser?.uid}
+        ownerName={profile?.name || auth?.currentUser?.displayName || 'Propriétaire'}
+        currentUser={auth?.currentUser}
+        darkMode={darkMode}
+        t={t}
+      />
 
       {/* ---- CADRE JURIDIQUE & RGPD ---- */}
       <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '20px', marginTop: '20px' }}>

@@ -7,6 +7,8 @@ import { ProgressiveImage } from './ui/ProgressiveImage';
 import { EmptyState } from './ui/EmptyState';
 import InclusiveAvatarBuilder from './profile/InclusiveAvatarBuilder';
 import DesignStudioModal from './DesignStudioModal';
+import ReviewsSection from './ReviewsSection';
+import { auth } from '../firebase';
 
 export default function ProfileView({
   activeTab,
@@ -635,6 +637,15 @@ export default function ProfileView({
           </div>
         )}
       </div>
+
+      {/* SECTION AVIS ET ÉVALUATIONS EN BAS DU PROFIL */}
+      <ReviewsSection
+        profileUid={profile?.uid || user?.uid || userProp?.uid || auth?.currentUser?.uid}
+        ownerName={profile?.name || user?.name || userProp?.name || 'Propriétaire'}
+        currentUser={userProp || profile || auth?.currentUser}
+        darkMode={darkMode}
+        t={t}
+      />
 
       {/* MODALE DE VÉRIFICATION D'IDENTITÉ (KYC) */}
       <KycModal

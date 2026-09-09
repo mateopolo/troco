@@ -6,6 +6,7 @@ import {
 import MobileHeader from './common/MobileHeader';
 import { SocialLinksDisplay } from './UserProfile';
 import { ProgressiveImage } from './ui/ProgressiveImage';
+import ReviewsSection from './ReviewsSection';
 
 export default function PublicProfileModal({
   isOpen,
@@ -405,7 +406,7 @@ export default function PublicProfileModal({
               { id: 'history', label: `Historique des swaps & deals`, icon: History },
               { id: 'bio', label: 'Présentation & Infos', icon: Briefcase },
               { id: 'portfolio', label: `Portfolio & Photos (${portfolio.length})`, icon: Camera },
-              { id: 'reviews', label: `Avis vérifiés (${reviews.length})`, icon: Star },
+              { id: 'reviews', label: `Avis & Évaluations`, icon: Star },
             ].map((tab) => {
               const isActive = activeTab === tab.id;
               const Icon = tab.icon;
@@ -650,52 +651,16 @@ export default function PublicProfileModal({
             </div>
           )}
 
-          {/* 4. AVIS VÉRIFIÉS */}
+          {/* 4. AVIS ET ÉVALUATIONS FIRESTORE */}
           {activeTab === 'reviews' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {reviews.map((rev) => (
-                <div
-                  key={rev.id}
-                  style={{
-                    backgroundColor: 'var(--bg-subtle)',
-                    padding: '14px 16px',
-                    borderRadius: '18px',
-                    border: '1px solid var(--border-color)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '6px',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <ProgressiveImage
-                        src={rev.avatar}
-                        alt={rev.author}
-                        style={{ width: '32px', height: '32px', borderRadius: '50%', flexShrink: 0, overflow: 'hidden' }}
-                        imgStyle={{ borderRadius: '50%', objectFit: 'cover' }}
-                      />
-                      <div>
-                        <div style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-main)' }}>
-                          {rev.author}
-                        </div>
-                        <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>
-                          {rev.date}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '2px', color: '#F59E0B', fontSize: '11px', fontWeight: '800' }}>
-                      <Star size={12} fill="#F59E0B" />
-                      <span>{rev.rating}</span>
-                    </div>
-                  </div>
-
-                  <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: 'var(--text-main)', lineHeight: 1.45 }}>
-                    "{rev.comment}"
-                  </p>
-                </div>
-              ))}
-            </div>
+            <ReviewsSection
+              profileUid={user.uid || user.id || targetUser?.uid || targetUser?.id || userProp?.uid}
+              ownerName={userName}
+              currentUser={userProp || null}
+              darkMode={darkMode}
+              t={t}
+              initialReviews={reviews}
+            />
           )}
 
           {/* 5. HISTORIQUE DES SWAPS ET DEALS */}
@@ -735,6 +700,16 @@ export default function PublicProfileModal({
               <div style={{ padding: '20px', textAlign: 'center', borderRadius: '18px', backgroundColor: 'var(--bg-subtle)', border: '1px dashed var(--border-color)', color: 'var(--text-secondary)', fontSize: '12.5px' }}>
                 <span>Transactions réelles vérifiées par le tiers de confiance Troco.</span>
               </div>
+
+              {/* SECTION AVIS ET ÉVALUATIONS EN BAS DU PROFIL */}
+              <ReviewsSection
+                profileUid={user.uid || user.id || targetUser?.uid || targetUser?.id || userProp?.uid}
+                ownerName={userName}
+                currentUser={userProp || null}
+                darkMode={darkMode}
+                t={t}
+                initialReviews={reviews}
+              />
             </div>
           )}
         </div>
