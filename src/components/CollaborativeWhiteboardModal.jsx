@@ -21,7 +21,8 @@ import {
   RotateCcw, RotateCw, Trash2, StickyNote,
   Type, Hand, Brush, Check, Eye, Maximize2, ChevronDown,
   Sparkles, Save, Send, History, Palette, Clock, FolderKanban,
-  Triangle, Hexagon, Star, MessageSquare, Heart, Diamond
+  Triangle, Hexagon, Star, MessageSquare, Heart, Diamond, MousePointer2,
+  Copy
 } from 'lucide-react';
 import { doc, getDoc, onSnapshot, setDoc, deleteDoc, collection, serverTimestamp, arrayUnion } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -1185,6 +1186,18 @@ export default function CollaborativeWhiteboardModal({
     }
   }, [isOpen, effectiveId, isVersionsSidebarOpen, fetchVersions]);
 
+  // Helper : Réinitialise intégralement la sélection et la rotation en cours
+  const clearSelectionAndRotation = useCallback(() => {
+    if (isRotatingObjectRef.current) {
+      isRotatingObjectRef.current = null;
+    }
+    if (activeTransformRef.current) {
+      activeTransformRef.current = null;
+    }
+    setSelectedObjectId(null);
+    setRotationTooltip(null);
+  }, []);
+
   // ================= GESTION DES POINTER EVENTS =================
   const handlePointerDown = (e) => {
     // Empêche la création de nouveaux textes ou tracés tant qu'un texte est en cours d'édition
@@ -1230,6 +1243,11 @@ export default function CollaborativeWhiteboardModal({
     if (clickedPath && (tool === 'hand' || tool === 'select')) {
       setSelectedObjectId(clickedPath.id);
       return;
+    }
+
+    // 2b. Clic dans le vide (hors de tout objet) → Désélection immédiate (fix bug rotation verrouillée)
+    if (selectedObjectId || isRotatingObjectRef.current) {
+      clearSelectionAndRotation();
     }
 
     if (tool === 'hand') {
@@ -2815,7 +2833,7 @@ export default function CollaborativeWhiteboardModal({
             </div>
           );
         })}
-        {/* Cadre de sélection et poignée de rotation assistée (Magnétisme 45°) */}
+        {/* Cadre de sélection, actions rapides et poignée de rotation assistée (Magnétisme 45°) */}
         {selectedObjectId && (() => {
           const selObj = localPaths.find((p) => p.id === selectedObjectId);
           if (!selObj) return null;
@@ -2827,68 +2845,160 @@ export default function CollaborativeWhiteboardModal({
           const rot = selObj.rotation || 0;
 
           return (
-            <div
-              style={{
-                position: 'absolute',
-                left: `${screenLeft}px`,
-                top: `${screenTop}px`,
-                width: `${screenWidth}px`,
-                height: `${screenHeight}px`,
-                border: '1.5px dashed var(--accent-primary, #C67D5B)',
-                pointerEvents: 'none',
-                transform: `rotate(${rot}deg)`,
-                transformOrigin: 'center center',
-                zIndex: 45,
-                borderRadius: '6px',
-              }}
-            >
-              {/* Tige verticale reliant le centre haut à la poignée de rotation */}
+            <>
+              {/* Bounding Box dashed + poignée de rotation */}
               <div
                 style={{
                   position: 'absolute',
-                  top: '-26px',
-                  left: '50%',
-                  width: '1.5px',
-                  height: '26px',
-                  backgroundColor: 'var(--accent-primary, #C67D5B)',
+                  left: `${screenLeft}px`,
+                  top: `${screenTop}px`,
+                  width: `${screenWidth}px`,
+                  height: `${screenHeight}px`,
+                  border: '1.5px dashed var(--accent-primary, #C67D5B)',
+                  pointerEvents: 'none',
+                  transform: `rotate(${rot}deg)`,
+                  transformOrigin: 'center center',
+                  zIndex: 45,
+                  borderRadius: '6px',
+                }}
+              >
+                {/* Tige verticale reliant le centre haut à la poignée de rotation */}
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '-26px',
+                    left: '50%',
+                    width: '1.5px',
+                    height: '26px',
+                    backgroundColor: 'var(--accent-primary, #C67D5B)',
+                    transform: 'translateX(-50%)',
+                  }}
+                />
+                {/* Poignée de rotation cliquable avec curseur grab */}
+                <div
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    isRotatingObjectRef.current = {
+                      id: selObj.id,
+                      cx: bbox.cx,
+                      cy: bbox.cy,
+                      startAngle: rot,
+                    };
+                    const degrees = rot;
+                    activeTransformRef.current = { type: 'rotate', id: selObj.id, degrees };
+                  }}
+                  style={{
+                    position: 'absolute',
+                    top: '-36px',
+                    left: '50%',
+                    width: '22px',
+                    height: '22px',
+                    borderRadius: '50%',
+                    backgroundColor: 'var(--accent-primary, #C67D5B)',
+                    color: '#FFFFFF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transform: 'translateX(-50%)',
+                    cursor: 'grab',
+                    pointerEvents: 'auto',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+                  }}
+                  title="Faire pivoter la forme (magnétisme 45°)"
+                >
+                  <RotateCw size={12} />
+                </div>
+              </div>
+
+              {/* Actions rapides : Dupliquer & Supprimer (flottent au-dessus de la sélection) */}
+              <div
+                style={{
+                  position: 'absolute',
+                  left: `${screenLeft + screenWidth / 2}px`,
+                  top: `${screenTop - 52}px`,
                   transform: 'translateX(-50%)',
-                }}
-              />
-              {/* Poignée de rotation cliquable avec curseur grab */}
-              <div
-                onPointerDown={(e) => {
-                  e.stopPropagation();
-                  isRotatingObjectRef.current = {
-                    id: selObj.id,
-                    cx: bbox.cx,
-                    cy: bbox.cy,
-                    startAngle: rot,
-                  };
-                  const degrees = rot;
-                  activeTransformRef.current = { type: 'rotate', id: selObj.id, degrees };
-                }}
-                style={{
-                  position: 'absolute',
-                  top: '-36px',
-                  left: '50%',
-                  width: '22px',
-                  height: '22px',
-                  borderRadius: '50%',
-                  backgroundColor: 'var(--accent-primary, #C67D5B)',
-                  color: '#FFFFFF',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  transform: 'translateX(-50%)',
-                  cursor: 'grab',
+                  gap: '6px',
+                  zIndex: 46,
                   pointerEvents: 'auto',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
                 }}
-                title="Faire pivoter la forme (magnétisme 45°)"
               >
-                <RotateCw size={12} />
+                {/* Dupliquer */}
+                <button
+                  type="button"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const cloned = {
+                      ...selObj,
+                      id: `p-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+                      x: (selObj.x || 0) + 20,
+                      y: (selObj.y || 0) + 20,
+                      fromX: selObj.fromX !== undefined ? selObj.fromX + 20 : undefined,
+                      fromY: selObj.fromY !== undefined ? selObj.fromY + 20 : undefined,
+                      toX: selObj.toX !== undefined ? selObj.toX + 20 : undefined,
+                      toY: selObj.toY !== undefined ? selObj.toY + 20 : undefined,
+                      points: selObj.points ? selObj.points.map((p) => ({ x: p.x + 20, y: p.y + 20 })) : undefined,
+                      createdAt: Date.now(),
+                    };
+                    const nextPaths = [...localPaths, cloned];
+                    setLocalPaths(nextPaths);
+                    pushToHistory(nextPaths);
+                    debouncedSyncToFirestore(nextPaths, remotePaths, stickyNotes, textElements);
+                    setSelectedObjectId(cloned.id);
+                  }}
+                  style={{
+                    width: '30px',
+                    height: '30px',
+                    borderRadius: '50%',
+                    border: darkMode ? '1px solid rgba(255,255,255,0.2)' : '1px solid rgba(0,0,0,0.15)',
+                    backgroundColor: darkMode ? 'rgba(26,22,19,0.92)' : 'rgba(255,255,255,0.96)',
+                    color: 'inherit',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                    backdropFilter: 'blur(8px)',
+                  }}
+                  title="Dupliquer la forme"
+                >
+                  <Copy size={13} />
+                </button>
+
+                {/* Supprimer */}
+                <button
+                  type="button"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const nextPaths = localPaths.filter((p) => p.id !== selectedObjectId);
+                    setLocalPaths(nextPaths);
+                    pushToHistory(nextPaths);
+                    debouncedSyncToFirestore(nextPaths, remotePaths, stickyNotes, textElements);
+                    setSelectedObjectId(null);
+                  }}
+                  style={{
+                    width: '30px',
+                    height: '30px',
+                    borderRadius: '50%',
+                    border: '1px solid rgba(239,68,68,0.3)',
+                    backgroundColor: 'rgba(239,68,68,0.12)',
+                    color: '#EF4444',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+                    backdropFilter: 'blur(8px)',
+                  }}
+                  title="Supprimer la forme"
+                >
+                  <Trash2 size={13} />
+                </button>
               </div>
-            </div>
+            </>
           );
         })()}
 
@@ -2951,6 +3061,7 @@ export default function CollaborativeWhiteboardModal({
           {/* Outils de dessin libres */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
             {[
+              { id: 'select', icon: MousePointer2, title: 'Sélectionner / Déplacer (↖)' },
               { id: 'pencil', icon: Pen, title: 'Crayon à papier' },
               { id: 'brush', icon: Brush, title: 'Pinceau Artistique' },
               { id: 'highlighter', icon: Highlighter, title: 'Stabilo / Surligneur' },
@@ -2963,6 +3074,17 @@ export default function CollaborativeWhiteboardModal({
                   key={btn.id}
                   type="button"
                   onClick={() => {
+                    // Réinitialise la sélection et la rotation en cours au changement d'outil (fix bug rotation)
+                    if (isRotatingObjectRef.current) {
+                      isRotatingObjectRef.current = null;
+                    }
+                    if (activeTransformRef.current) {
+                      activeTransformRef.current = null;
+                    }
+                    if (btn.id !== 'select') {
+                      setSelectedObjectId(null);
+                      setRotationTooltip(null);
+                    }
                     setTool(btn.id);
                     setIsShapesMenuOpen(false);
                   }}
@@ -3111,6 +3233,11 @@ export default function CollaborativeWhiteboardModal({
                   key={btn.id}
                   type="button"
                   onClick={() => {
+                    // Réinitialise rotation/sélection au changement d'outil
+                    if (isRotatingObjectRef.current) isRotatingObjectRef.current = null;
+                    if (activeTransformRef.current) activeTransformRef.current = null;
+                    setSelectedObjectId(null);
+                    setRotationTooltip(null);
                     setTool(btn.id);
                     setIsShapesMenuOpen(false);
                   }}
