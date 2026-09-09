@@ -539,35 +539,49 @@ export const useChatManager = ({
       });
 
       // Fusionner avec les messages optimistes en vol (temp_*) dont l'ID Firestore n'est pas encore connu.
-      // Cela évite le doublon : le temp_ reste visible jusqu'à ce que le vrai doc Firestore arrive.
+      // Cela évite le doublon visuel : le message optimiste est fusionné ou écrasé par le vrai doc Firestore.
       setChatThreads(prev => {
         const currentThread = prev[selectedChat.id] || [];
-        const inFlightOptimistic = currentThread.filter(
-          m => typeof m.id === 'string' && m.id.startsWith('temp_') && !firestoreIds.has(m.id)
-        );
 
-        // Union : vrais messages Firestore + messages optimistes encore non confirmés
-        const combined = [...msgs, ...inFlightOptimistic];
+        // Identifier les messages optimistes locaux non encore confirmés
+        // Si un message optimiste a le même texte et un timestamp proche qu'un message entrant, fusionne-les (on écarte l'optimiste)
+        const inFlightOptimistic = currentThread.filter(m => {
+          const isOptimistic = (typeof m.id === 'string' && m.id.startsWith('temp_')) || Boolean(m.temporaryId);
+          if (!isOptimistic) return false;
+          if (firestoreIds.has(m.id) || (m.temporaryId && firestoreIds.has(m.temporaryId))) return false;
 
-        // Déduplication stricte par ID (les doublons éventuels sont éliminés)
-        const seen = new Set();
-        const unique = combined.filter(m => {
-          const key = String(m.id);
-          if (seen.has(key)) return false;
-          seen.add(key);
-          return true;
+          const mText = (m.text || '').trim();
+          const mTime = typeof m.timestamp === 'number' ? m.timestamp : (m.createdAt ? new Date(m.createdAt).getTime() : 0);
+
+          const matchingDoc = msgs.find(d => {
+            const dText = (d.text || '').trim();
+            const dTime = typeof d.timestamp === 'number' ? d.timestamp : (d.createdAt ? new Date(d.createdAt).getTime() : 0);
+            const textMatches = dText && mText && dText === mText;
+            const timeMatches = Math.abs(dTime - mTime) < 20000;
+            const senderMatches = (d.sender === 'me' || d.senderUid === m.senderUid);
+            return textMatches && timeMatches && senderMatches;
+          });
+
+          return !matchingDoc;
         });
 
-        // Tri chronologique ascendant côté client
-        unique.sort((a, b) => {
-          const tA = typeof a.createdAt === 'number' ? a.createdAt : new Date(a.createdAt || 0).getTime();
-          const tB = typeof b.createdAt === 'number' ? b.createdAt : new Date(b.createdAt || 0).getTime();
+        // Déduplication infaillible utilisant un Map basé sur l'ID du message
+        // En plaçant msgs après inFlightOptimistic, le doc Firestore officiel écrase l'optimiste
+        const combined = [...inFlightOptimistic, ...msgs];
+        const uniqueMessages = Array.from(
+          new Map(combined.map(item => [item.id || item.temporaryId, item])).values()
+        );
+
+        // Tri chronologique ascendant
+        uniqueMessages.sort((a, b) => {
+          const tA = typeof a.timestamp === 'number' ? a.timestamp : (typeof a.createdAt === 'number' ? a.createdAt : new Date(a.createdAt || 0).getTime());
+          const tB = typeof b.timestamp === 'number' ? b.timestamp : (typeof b.createdAt === 'number' ? b.createdAt : new Date(b.createdAt || 0).getTime());
           return tA - tB;
         });
 
         return {
           ...prev,
-          [selectedChat.id]: unique,
+          [selectedChat.id]: uniqueMessages,
         };
       });
 
@@ -663,17 +677,20 @@ export const useChatManager = ({
       // Utiliser un tempId préfixé pour que handleSnapshot puisse l'identifier comme optimiste
       // et ne pas le doubler lorsque Firestore confirme l'écriture.
       const tempId = `temp_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      const nowTime = Date.now();
       const preview = customPayload.text || (customPayload.type === 'audio'
         ? `🎵 ${customPayload.fileName || 'Fichier audio'}`
         : `🎨 ${myName} a partagé le Tableau Blanc : "${customPayload.workspaceTitle || customPayload.title || 'Tableau Blanc'}"`);
 
       const payload = {
         id: tempId,
+        temporaryId: tempId,
         sender: 'me',
         senderUid: myUid,
         senderName: myName,
         status: 'pending',
-        createdAt: new Date(),
+        timestamp: nowTime,
+        createdAt: new Date(nowTime),
         ...customPayload,
         text: preview,
       };
@@ -759,14 +776,17 @@ export const useChatManager = ({
     }
 
     const tempId = `temp_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const nowTime = Date.now();
     const newMessage = {
       id: tempId,
+      temporaryId: tempId,
       sender: 'me',
       senderName: profile?.name || 'Moi',
       senderUid: profile?.uid || null,
       text,
       status: 'pending',
-      createdAt: new Date(),
+      timestamp: nowTime,
+      createdAt: new Date(nowTime),
       translations: { FR: text }
     };
 
@@ -925,16 +945,21 @@ export const useChatManager = ({
     if (!audioUrl) return;
 
     const formattedDuration = Math.round(duration || 0);
+    const tempId = `temp_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const nowTime = Date.now();
     const newAudioMessage = {
-      id: Date.now(),
+      id: tempId,
+      temporaryId: tempId,
       sender: 'me',
+      senderUid: profile?.uid || null,
       senderName: profile?.name || 'Moi',
       kind: 'audio',
       type: 'audio',
       audioUrl,
       duration: formattedDuration,
-      status: 'sent',
-      createdAt: new Date(),
+      status: 'pending',
+      timestamp: nowTime,
+      createdAt: new Date(nowTime),
       text: `🎤 Note vocale (${formattedDuration}s)`,
     };
 
@@ -948,8 +973,9 @@ export const useChatManager = ({
 
     if (db) {
       try {
-        await addDoc(collection(db, 'chats', String(chatId), 'messages'), {
+        const docRef = await addDoc(collection(db, 'chats', String(chatId), 'messages'), {
           senderName: profile?.name || 'Moi',
+          senderUid: profile?.uid || null,
           kind: 'audio',
           type: 'audio',
           audioUrl,
@@ -958,6 +984,15 @@ export const useChatManager = ({
           read: false,
           status: 'sent',
           createdAt: serverTimestamp(),
+        });
+
+        // Promouvoir le temporaryId vers le vrai ID Firestore
+        setChatThreads(prev => {
+          const thread = prev[chatId] || [];
+          return {
+            ...prev,
+            [chatId]: thread.map(m => m.id === tempId ? { ...m, id: docRef.id || tempId, status: 'sent' } : m),
+          };
         });
         await setDoc(doc(db, 'chats', String(chatId)), {
           lastMessage: newAudioMessage.text,

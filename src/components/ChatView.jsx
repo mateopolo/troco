@@ -561,7 +561,19 @@ function ChatView({
 
   const currentChatId = effectiveSelectedChat ? effectiveSelectedChat.id : null;
   const messages = useMemo(() => {
-    return currentChatId ? (chatThreads[currentChatId] || []) : [];
+    const raw = currentChatId ? (chatThreads[currentChatId] || []) : [];
+    if (!raw.length) return [];
+
+    // Déduplication absolue basée sur Map (id ou temporaryId)
+    const uniqueMessages = Array.from(
+      new Map(raw.map(item => [item.id || item.temporaryId, item])).values()
+    );
+
+    return uniqueMessages.sort((a, b) => {
+      const tA = typeof a.timestamp === 'number' ? a.timestamp : (typeof a.createdAt === 'number' ? a.createdAt : new Date(a.createdAt || 0).getTime());
+      const tB = typeof b.timestamp === 'number' ? b.timestamp : (typeof b.createdAt === 'number' ? b.createdAt : new Date(b.createdAt || 0).getTime());
+      return tA - tB;
+    });
   }, [currentChatId, chatThreads]);
 
   const prevChatIdRef = useRef(null);
