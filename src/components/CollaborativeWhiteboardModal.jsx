@@ -22,7 +22,7 @@ import {
   Type, Hand, Brush, Check, Eye, Maximize2, ChevronDown,
   Sparkles, Save, Send, History, Palette, Clock, FolderKanban,
   Triangle, Hexagon, Star, MessageSquare, Heart, Diamond, MousePointer2,
-  Copy
+  Copy, Octagon, Cloud, Zap, Shield, Bookmark
 } from 'lucide-react';
 import { doc, getDoc, onSnapshot, setDoc, deleteDoc, collection, serverTimestamp, arrayUnion } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -49,6 +49,17 @@ const SHAPE_OPTIONS = [
   { id: 'speech_bubble', label: 'Bulle Dialogue', icon: MessageSquare },
   { id: 'heart', label: 'Cœur', icon: Heart },
   { id: 'checkmark', label: 'Validation', icon: Check },
+  { id: 'octagon', label: 'Octogone', icon: Octagon },
+  { id: 'cloud', label: 'Nuage / Idée', icon: Cloud },
+  { id: 'zap', label: 'Éclair / Action', icon: Zap },
+  { id: 'shield', label: 'Bouclier', icon: Shield },
+  { id: 'bookmark', label: 'Bannière / Signet', icon: Bookmark },
+];
+
+const ALL_SHAPE_TYPES = [
+  'rect', 'rectangle', 'circle', 'triangle', 'diamond', 'hexagon',
+  'star', 'speech_bubble', 'heart', 'checkmark',
+  'octagon', 'cloud', 'zap', 'shield', 'bookmark'
 ];
 
 const BG_PRESETS = [
@@ -271,11 +282,14 @@ export default function CollaborativeWhiteboardModal({
   const [selectedStickyId, setSelectedStickyId] = useState(null);
   const [selectedObjectId, setSelectedObjectId] = useState(null);
   const [rotationTooltip, setRotationTooltip] = useState(null);
+  const [marqueeBox, setMarqueeBox] = useState(null);
 
   // Références d'interaction rapide
   const isDrawingRef = useRef(false);
   const isPanningRef = useRef(false);
   const isRotatingObjectRef = useRef(null);
+  const isMarqueeSelectingRef = useRef(false);
+  const marqueeStartRef = useRef({ x: 0, y: 0 });
   const activeTransformRef = useRef(null);
   const currentDrawRef = useRef([]);
   const startPosRef = useRef({ x: 0, y: 0 });
@@ -580,13 +594,15 @@ export default function CollaborativeWhiteboardModal({
     ctx.lineWidth = brushWidth;
     ctx.shadowBlur = 0;
     ctx.shadowColor = 'transparent';
+    ctx.setLineDash([]);
 
-    // CRAYON À PAPIER (EFFET TEXTURÉ / LÉGER)
+    // CRAYON À PAPIER (EFFET POUDRE / GRAPHITE RÉALISTE)
     if (brushTool === 'pencil') {
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
-      ctx.globalAlpha = 0.6;
-      ctx.shadowBlur = 1;
+      ctx.setLineDash([1, 1.8]);
+      ctx.globalAlpha = isRemote ? 0.45 : 0.72;
+      ctx.shadowBlur = Math.max(2, brushWidth * 0.8);
       ctx.shadowColor = brushColor;
       ctx.globalCompositeOperation = 'source-over';
       ctx.strokeStyle = brushColor;
@@ -750,6 +766,64 @@ export default function CollaborativeWhiteboardModal({
       ctx.lineTo(x + width * 0.42, y + height * 0.82);
       ctx.lineTo(x + width * 0.88, y + height * 0.18);
       ctx.stroke();
+    } else if (type === 'octagon') {
+      ctx.beginPath();
+      const cx = x + width / 2;
+      const cy = y + height / 2;
+      const rx = Math.abs(width) / 2;
+      const ry = Math.abs(height) / 2;
+      for (let i = 0; i < 8; i++) {
+        const angle = (i * Math.PI) / 4 - Math.PI / 8;
+        const px = cx + rx * Math.cos(angle);
+        const py = cy + ry * Math.sin(angle);
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+      ctx.stroke();
+    } else if (type === 'cloud') {
+      ctx.beginPath();
+      const w = Math.abs(width);
+      const h = Math.abs(height);
+      const startX = x;
+      const startY = y + h * 0.7;
+      ctx.moveTo(startX, startY);
+      ctx.bezierCurveTo(startX - w * 0.05, startY - h * 0.35, startX + w * 0.25, startY - h * 0.45, startX + w * 0.35, startY - h * 0.3);
+      ctx.bezierCurveTo(startX + w * 0.4, startY - h * 0.7, startX + w * 0.75, startY - h * 0.65, startX + w * 0.8, startY - h * 0.25);
+      ctx.bezierCurveTo(startX + w * 1.05, startY - h * 0.25, startX + w * 1.05, startY + h * 0.25, startX + w * 0.85, startY + h * 0.3);
+      ctx.lineTo(startX + w * 0.15, startY + h * 0.3);
+      ctx.bezierCurveTo(startX - w * 0.05, startY + h * 0.3, startX - w * 0.05, startY, startX, startY);
+      ctx.closePath();
+      ctx.stroke();
+    } else if (type === 'zap') {
+      ctx.beginPath();
+      ctx.moveTo(x + width * 0.55, y);
+      ctx.lineTo(x + width * 0.15, y + height * 0.55);
+      ctx.lineTo(x + width * 0.48, y + height * 0.55);
+      ctx.lineTo(x + width * 0.38, y + height);
+      ctx.lineTo(x + width * 0.85, y + height * 0.42);
+      ctx.lineTo(x + width * 0.52, y + height * 0.42);
+      ctx.closePath();
+      ctx.stroke();
+    } else if (type === 'shield') {
+      ctx.beginPath();
+      const cx = x + width / 2;
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + width, y);
+      ctx.bezierCurveTo(x + width, y + height * 0.6, cx, y + height * 0.85, cx, y + height);
+      ctx.bezierCurveTo(cx, y + height * 0.85, x, y + height * 0.6, x, y);
+      ctx.closePath();
+      ctx.stroke();
+    } else if (type === 'bookmark') {
+      ctx.beginPath();
+      const cx = x + width / 2;
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + width, y);
+      ctx.lineTo(x + width, y + height);
+      ctx.lineTo(cx, y + height * 0.75);
+      ctx.lineTo(x, y + height);
+      ctx.closePath();
+      ctx.stroke();
     } else if (type === 'text_box') {
       ctx.save();
       ctx.strokeStyle = '#C67D5B';
@@ -790,7 +864,7 @@ export default function CollaborativeWhiteboardModal({
       );
     }
 
-    if (['rect', 'circle', 'triangle', 'hexagon', 'star', 'speech_bubble', 'heart', 'checkmark', 'text_box'].includes(path.type)) {
+    if (ALL_SHAPE_TYPES.includes(path.type) || path.type === 'text_box') {
       const pMinX = Math.min(path.x, path.x + (path.width || 0));
       const pMaxX = Math.max(path.x, path.x + (path.width || 0));
       const pMinY = Math.min(path.y, path.y + (path.height || 0));
@@ -1245,7 +1319,16 @@ export default function CollaborativeWhiteboardModal({
       return;
     }
 
-    // 2b. Clic dans le vide (hors de tout objet) → Désélection immédiate (fix bug rotation verrouillée)
+    // 2b. Outil de sélection rectangulaire (Marquee tool) en glisser-déposer dans le vide
+    if (tool === 'select') {
+      clearSelectionAndRotation();
+      isMarqueeSelectingRef.current = true;
+      marqueeStartRef.current = { x: coords.x, y: coords.y };
+      setMarqueeBox({ startX: coords.x, startY: coords.y, currentX: coords.x, currentY: coords.y });
+      return;
+    }
+
+    // Clic dans le vide (hors de tout objet) → Désélection immédiate (fix bug rotation verrouillée)
     if (selectedObjectId || isRotatingObjectRef.current) {
       clearSelectionAndRotation();
     }
@@ -1335,7 +1418,7 @@ export default function CollaborativeWhiteboardModal({
           ctx.restore();
         }
       }
-    } else if (['rect', 'rectangle', 'circle', 'triangle', 'diamond', 'hexagon', 'star', 'speech_bubble', 'heart', 'checkmark'].includes(tool)) {
+    } else if (ALL_SHAPE_TYPES.includes(tool)) {
       const shapePath = {
         id: `s-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
         type: tool,
@@ -1405,6 +1488,12 @@ export default function CollaborativeWhiteboardModal({
         x: panStartRef.current.origPanX + dx,
         y: panStartRef.current.origPanY + dy,
       });
+      return;
+    }
+
+    // GESTION DU TRACÉ DU RECTANGLE DE SÉLECTION (MARQUEE TOOL)
+    if (isMarqueeSelectingRef.current) {
+      setMarqueeBox(prev => prev ? { ...prev, currentX: coords.x, currentY: coords.y } : null);
       return;
     }
 
@@ -1534,7 +1623,7 @@ export default function CollaborativeWhiteboardModal({
           ctx.restore();
         }
       }
-    } else if (['rect', 'rectangle', 'circle', 'triangle', 'diamond', 'hexagon', 'star', 'speech_bubble', 'heart', 'checkmark', 'text_box'].includes(activePath.type)) {
+    } else if (ALL_SHAPE_TYPES.includes(activePath.type) || activePath.type === 'text_box') {
       const w = coords.x - startPosRef.current.x;
       const h = coords.y - startPosRef.current.y;
       activePath.x = w < 0 ? coords.x : startPosRef.current.x;
@@ -1603,7 +1692,36 @@ export default function CollaborativeWhiteboardModal({
       draggingStickyRef.current = null;
     }
 
-    // 4. Réinitialisation des états de navigation et transformation
+    // 4. Clôture immédiate de la sélection par zone (Marquee Tool)
+    if (isMarqueeSelectingRef.current) {
+      isMarqueeSelectingRef.current = false;
+      setMarqueeBox((prevBox) => {
+        if (prevBox) {
+          const minX = Math.min(prevBox.startX, prevBox.currentX);
+          const maxX = Math.max(prevBox.startX, prevBox.currentX);
+          const minY = Math.min(prevBox.startY, prevBox.currentY);
+          const maxY = Math.max(prevBox.startY, prevBox.currentY);
+
+          if (maxX - minX > 6 || maxY - minY > 6) {
+            const hit = localPaths.slice().reverse().find((p) => {
+              const b = getObjectBoundingBox(p);
+              return (
+                b.x < maxX &&
+                b.x + b.width > minX &&
+                b.y < maxY &&
+                b.y + b.height > minY
+              );
+            });
+            if (hit) {
+              setSelectedObjectId(hit.id);
+            }
+          }
+        }
+        return null;
+      });
+    }
+
+    // 5. Réinitialisation des états de navigation et transformation
     if (isPanningRef.current) {
       isPanningRef.current = false;
     }
@@ -1611,7 +1729,7 @@ export default function CollaborativeWhiteboardModal({
       activeTransformRef.current = null;
     }
 
-    // 5. Masquer immédiatement les tooltips d'angle / d'assistance
+    // 6. Masquer immédiatement les tooltips d'angle / d'assistance
     setRotationTooltip(null);
   }, [localPaths, remotePaths, stickyNotes, textElements, pushToHistory, debouncedSyncToFirestore]);
 
@@ -1701,7 +1819,7 @@ export default function CollaborativeWhiteboardModal({
       const nextLocalPaths = [...localPaths, completedPath];
 
       setLocalPaths(nextLocalPaths);
-      if (['rect', 'circle', 'triangle', 'hexagon', 'star', 'speech_bubble', 'heart', 'checkmark', 'line', 'arrow', 'diamond', 'rectangle'].includes(completedPath.type)) {
+      if (ALL_SHAPE_TYPES.includes(completedPath.type) || ['line', 'arrow'].includes(completedPath.type)) {
         setSelectedObjectId(completedPath.id);
       }
 
@@ -2937,16 +3055,16 @@ export default function CollaborativeWhiteboardModal({
                 </div>
               </div>
 
-              {/* Actions rapides : Dupliquer & Supprimer (flottent au-dessus de la sélection) */}
+              {/* Actions rapides : Dupliquer & Supprimer (flottent à 49px au-dessus de la poignée de rotation, >30px garanti) */}
               <div
                 style={{
                   position: 'absolute',
                   left: `${screenLeft + screenWidth / 2}px`,
-                  top: `${screenTop - 52}px`,
+                  top: `${screenTop - 85}px`,
                   transform: 'translateX(-50%)',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '6px',
+                  gap: '8px',
                   zIndex: 46,
                   pointerEvents: 'auto',
                 }}
@@ -3026,6 +3144,32 @@ export default function CollaborativeWhiteboardModal({
                 </button>
               </div>
             </>
+          );
+        })()}
+
+        {/* Boîte de sélection marquee (outil sélection par cliquer-glisser) */}
+        {marqueeBox && (() => {
+          const minX = Math.min(marqueeBox.startX, marqueeBox.currentX);
+          const minY = Math.min(marqueeBox.startY, marqueeBox.currentY);
+          const w = Math.abs(marqueeBox.currentX - marqueeBox.startX);
+          const h = Math.abs(marqueeBox.currentY - marqueeBox.startY);
+          const screenLeft = minX * zoom + pan.x;
+          const screenTop = minY * zoom + pan.y;
+          return (
+            <div
+              style={{
+                position: 'absolute',
+                left: `${screenLeft}px`,
+                top: `${screenTop}px`,
+                width: `${w * zoom}px`,
+                height: `${h * zoom}px`,
+                border: '1.5px dashed var(--accent-primary, #C67D5B)',
+                backgroundColor: 'rgba(198, 125, 91, 0.14)',
+                borderRadius: '4px',
+                pointerEvents: 'none',
+                zIndex: 44,
+              }}
+            />
           );
         })()}
 
@@ -3145,7 +3289,7 @@ export default function CollaborativeWhiteboardModal({
                 ref={shapeButtonRef}
                 type="button"
                 onClick={() => {
-                  if (['rect', 'rectangle', 'circle', 'line', 'arrow', 'triangle', 'diamond', 'hexagon', 'star', 'speech_bubble', 'heart', 'checkmark'].includes(tool)) {
+                  if ([...ALL_SHAPE_TYPES, 'line', 'arrow'].includes(tool)) {
                     toggleShapesMenu();
                   } else {
                     setTool(selectedShape);
@@ -3157,10 +3301,10 @@ export default function CollaborativeWhiteboardModal({
                   padding: '0 10px',
                   borderRadius: '12px',
                   border: 'none',
-                  backgroundColor: ['rect', 'rectangle', 'circle', 'line', 'arrow', 'triangle', 'diamond', 'hexagon', 'star', 'speech_bubble', 'heart', 'checkmark'].includes(tool)
+                  backgroundColor: [...ALL_SHAPE_TYPES, 'line', 'arrow'].includes(tool)
                     ? 'var(--accent-primary, #C67D5B)'
                     : darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-                  color: ['rect', 'rectangle', 'circle', 'line', 'arrow', 'triangle', 'diamond', 'hexagon', 'star', 'speech_bubble', 'heart', 'checkmark'].includes(tool) ? '#FFFFFF' : 'inherit',
+                  color: [...ALL_SHAPE_TYPES, 'line', 'arrow'].includes(tool) ? '#FFFFFF' : 'inherit',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '4px',
