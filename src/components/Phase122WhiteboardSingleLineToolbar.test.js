@@ -7,18 +7,18 @@ describe('Phase 122 : Fix Absolu de la Barre d\'outils Whiteboard sur une seule 
 
   test('1. Conteneur parent : centré en bas avec classes exactes requises', () => {
     expect(whiteboardContent).toContain(
-      'absolute bottom-6 left-1/2 -translate-x-1/2 z-[1000] w-[95vw] max-w-3xl bg-[#2A2624]/95 backdrop-blur-md border border-white/10 rounded-2xl shadow-2xl flex flex-row items-center p-2'
+      'fixed bottom-6 left-1/2 -translate-x-1/2 z-[1000] max-w-[94vw] md:max-w-3xl w-auto flex items-center'
     );
   });
 
   test('2. Conteneur interne : défilement horizontal strict sur une seule ligne avec hauteur h-12', () => {
     expect(whiteboardContent).toContain(
-      'flex flex-row flex-nowrap items-center gap-2 overflow-x-auto overflow-y-hidden touch-pan-x no-scrollbar w-full px-2 h-12 scroll-smooth'
+      'flex flex-row flex-nowrap items-center gap-2 overflow-x-auto overflow-y-hidden touch-pan-x no-scrollbar px-3 py-2 scroll-smooth'
     );
   });
 
   test('3. Absence stricte de flex-wrap, grid ou h-auto sur les conteneurs de la barre', () => {
-    const parentMatch = whiteboardContent.match(/className="absolute bottom-6 left-1\/2[^"]*"/);
+    const parentMatch = whiteboardContent.match(/className="fixed bottom-6 left-1\/2[^"]*"/);
     expect(parentMatch).toBeTruthy();
     expect(parentMatch[0]).not.toContain('flex-wrap');
     expect(parentMatch[0]).not.toContain('grid');
@@ -33,7 +33,7 @@ describe('Phase 122 : Fix Absolu de la Barre d\'outils Whiteboard sur une seule 
 
   test('4. Bouton Masquer / Afficher : positionné absolument si masqué, à droite avec flex-shrink-0 si affiché', () => {
     expect(whiteboardContent).toContain(
-      'absolute bottom-6 left-1/2 -translate-x-1/2 z-[1000] px-4 py-2 bg-[#2A2624]/90 rounded-full shadow-lg text-sm text-white'
+      'fixed bottom-6 left-1/2 -translate-x-1/2 z-[1000] px-4 py-2 rounded-full shadow-2xl flex items-center gap-2'
     );
     expect(whiteboardContent).toContain('title="Masquer la barre d\'outils"');
     expect(whiteboardContent).toContain('setIsToolbarVisible(false)');

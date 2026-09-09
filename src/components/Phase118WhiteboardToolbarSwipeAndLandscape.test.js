@@ -8,14 +8,14 @@ describe('Phase 118 : Reformatage de la barre d\'outils Whiteboard (Swipe & Pays
   test('1. Conteneur externe de positionnement paysage et zone de sécurité', () => {
     // Vérifie le conteneur parent centré en bas
     expect(whiteboardContent).toContain(
-      'absolute bottom-6 left-1/2 -translate-x-1/2 z-[1000] w-[95vw] max-w-3xl bg-[#2A2624]/95 backdrop-blur-md border border-white/10 rounded-2xl shadow-2xl flex flex-row items-center p-2'
+      'fixed bottom-6 left-1/2 -translate-x-1/2 z-[1000] max-w-[94vw] md:max-w-3xl w-auto flex items-center'
     );
   });
 
   test('2. Wrapper principal de la barre d\'outils contraint sur une seule ligne (flex-nowrap, swipe)', () => {
     // Vérifie les classes exactes obligatoires
     expect(whiteboardContent).toContain(
-      'flex flex-row flex-nowrap items-center gap-2 overflow-x-auto overflow-y-hidden touch-pan-x no-scrollbar w-full px-2 h-12 scroll-smooth'
+      'flex flex-row flex-nowrap items-center gap-2 overflow-x-auto overflow-y-hidden touch-pan-x no-scrollbar px-3 py-2 scroll-smooth'
     );
   });
 
@@ -58,7 +58,7 @@ describe('Phase 118 : Reformatage de la barre d\'outils Whiteboard (Swipe & Pays
   });
 
   test('5. Hauteur fine constante et boutons d\'outils en taille fixe (w-10 h-10)', () => {
-    expect(whiteboardContent).toContain('h-12');
+    expect(whiteboardContent).toContain('px-3 py-2');
     expect(whiteboardContent).toContain('flex-shrink-0 w-10 h-10');
   });
 
