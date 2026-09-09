@@ -2312,7 +2312,7 @@ export default function App() {
     handleOpenPayment('boost', listing);
   };
 
-  const closeCheckout = () => {
+  const closeCheckout = async () => {
     const { mode, amount, payload, method } = checkout;
     setCheckout(prev => ({ ...prev, open: false, step: 'method', payload: null }));
 
@@ -2320,59 +2320,244 @@ export default function App() {
     if (checkoutAppliedRef.current) return;
     checkoutAppliedRef.current = true;
 
-    // Si paiement par solde Troco existant : décrémenter le solde de l'utilisateur
+    const clientUid = profile?.uid || auth?.currentUser?.uid;
     const isPaidWithWallet = method === 'troco' || method === 'wallet';
     const chargedFromWallet = isPaidWithWallet && amount > 0;
 
+    // Mode DEAL : Transfert atomique Acheteur <-> Partenaire (Euros et Jetons)
+    if (mode === 'deal' || mode === 'pay-deal') {
+      const chatId = payload?.chatId;
+      const dealId = payload?.dealId;
+      const partnerUid = payload?.partnerUid || payload?.sellerUid;
+      const partnerName = payload?.partnerName || 'Partenaire';
+      const euroDue = Number(payload?.euroAmount ?? payload?.amount ?? (amount || 0));
+      const tokensDue = Number(payload?.tokensAmount ?? payload?.tokens ?? payload?.tokensRequired ?? 0);
+      const shouldDebitWalletEuro = isPaidWithWallet && euroDue > 0;
+
+      // Mise à jour de l'UI locale immédiatement
+      if (chatId && dealId) {
+        setChatThreads(prev => ({
+          ...prev,
+          [chatId]: (prev[chatId] || []).map(m => String(m.id) === String(dealId) ? { ...m, status: 'confirmed' } : m),
+        }));
+        setChatStatusOverrides(prev => ({ ...prev, [chatId]: 'Deal Validé' }));
+      }
+
+      // TRANSACTION ATOMIQUE SUR FIRESTORE
+      if (db && clientUid) {
+        try {
+          await runTransaction(db, async (transaction) => {
+            const clientRef = doc(db, 'users', String(clientUid));
+            const partnerRef = partnerUid ? doc(db, 'users', String(partnerUid)) : null;
+            const msgRef = (chatId && dealId) ? doc(db, 'chats', String(chatId), 'messages', String(dealId)) : null;
+            const chatRef = chatId ? doc(db, 'chats', String(chatId)) : null;
+
+            // 1. TOUTES LES LECTURES AU DÉBUT (READS FIRST)
+            const clientSnap = await transaction.get(clientRef);
+            const partnerSnap = partnerRef ? await transaction.get(partnerRef) : null;
+            const msgSnap = msgRef ? await transaction.get(msgRef) : null;
+
+            if (!clientSnap.exists()) {
+              throw new Error("Compte acheteur introuvable dans Firestore.");
+            }
+
+            const clientData = clientSnap.data();
+            const curClientEuro = Number(clientData.euroBalance ?? clientData.walletBalanceFiat ?? 0);
+            const curClientTokens = Number(clientData.trocoTokens ?? 0);
+            const curClientDeals = Number(clientData.dealsCompleted ?? 0);
+
+            // Vérifications de solvabilité
+            if (shouldDebitWalletEuro && curClientEuro < euroDue) {
+              throw new Error(`Solde Euros insuffisant (${curClientEuro} € disponibles, ${euroDue} € requis).`);
+            }
+            if (tokensDue > 0 && curClientTokens < tokensDue) {
+              throw new Error(`Solde de jetons insuffisant (${curClientTokens} disponible(s), ${tokensDue} requis).`);
+            }
+
+            // Calcul des soldes client
+            const newClientEuro = shouldDebitWalletEuro
+              ? Number(Math.max(0, curClientEuro - euroDue).toFixed(2))
+              : curClientEuro;
+            const newClientTokens = Math.max(0, curClientTokens - tokensDue);
+
+            // Mise à jour acheteur
+            const clientUpdatePayload = {
+              dealsCompleted: curClientDeals + 1,
+              updatedAt: serverTimestamp(),
+            };
+            if (shouldDebitWalletEuro) {
+              clientUpdatePayload.euroBalance = newClientEuro;
+              clientUpdatePayload.walletBalanceFiat = newClientEuro;
+            }
+            if (tokensDue > 0) {
+              clientUpdatePayload.trocoTokens = newClientTokens;
+            }
+            transaction.update(clientRef, clientUpdatePayload);
+
+            // Crédit atomique du partenaire (euros et/ou jetons)
+            if (partnerRef) {
+              const partnerData = (partnerSnap && partnerSnap.exists()) ? partnerSnap.data() : {};
+              const curPartnerEuro = Number(partnerData.euroBalance ?? partnerData.walletBalanceFiat ?? 0);
+              const curPartnerTokens = Number(partnerData.trocoTokens ?? 0);
+              const curPartnerDeals = Number(partnerData.dealsCompleted ?? 0);
+
+              const newPartnerEuro = Number((curPartnerEuro + euroDue).toFixed(2));
+              const newPartnerTokens = curPartnerTokens + tokensDue;
+
+              if (partnerSnap && partnerSnap.exists()) {
+                const partnerUpdatePayload = {
+                  dealsCompleted: curPartnerDeals + 1,
+                  updatedAt: serverTimestamp(),
+                };
+                if (euroDue > 0) {
+                  partnerUpdatePayload.euroBalance = newPartnerEuro;
+                  partnerUpdatePayload.walletBalanceFiat = newPartnerEuro;
+                }
+                if (tokensDue > 0) {
+                  partnerUpdatePayload.trocoTokens = newPartnerTokens;
+                }
+                transaction.update(partnerRef, partnerUpdatePayload);
+              } else {
+                transaction.set(partnerRef, {
+                  uid: String(partnerUid),
+                  name: partnerName || 'Partenaire Troco',
+                  euroBalance: newPartnerEuro,
+                  walletBalanceFiat: newPartnerEuro,
+                  trocoTokens: newPartnerTokens,
+                  dealsCompleted: curPartnerDeals + 1,
+                  updatedAt: serverTimestamp(),
+                }, { merge: true });
+              }
+
+              // Notification temps réel du partenaire
+              const notifRef = doc(collection(db, 'users', String(partnerUid), 'notifications'));
+              transaction.set(notifRef, {
+                type: 'payment_received',
+                amount: tokensDue > 0 ? tokensDue : euroDue,
+                currency: tokensDue > 0 ? 'tokens' : 'EUR',
+                from: clientUid,
+                read: false,
+                timestamp: serverTimestamp(),
+              });
+            }
+
+            // Mise à jour du message de deal dans le chat
+            if (msgRef) {
+              const dealConfirmedPayload = {
+                status: 'confirmed',
+                paidBy: clientUid,
+                paidTo: partnerUid || null,
+                euroAmount: euroDue,
+                tokensAmount: tokensDue,
+                paymentMethod: method,
+                confirmedAt: serverTimestamp(),
+                updatedAt: serverTimestamp(),
+              };
+              if (msgSnap && msgSnap.exists()) {
+                transaction.update(msgRef, dealConfirmedPayload);
+              } else {
+                transaction.set(msgRef, dealConfirmedPayload, { merge: true });
+              }
+            }
+
+            // Mise à jour du document parent chat
+            if (chatRef) {
+              transaction.set(chatRef, {
+                lastDealStatus: 'confirmed',
+                lastMessage: `🤝 Deal validé ! ${tokensDue > 0 ? `${tokensDue}🪙 ` : ''}${euroDue > 0 ? `${euroDue}€` : ''}`,
+                updatedAt: serverTimestamp(),
+              }, { merge: true });
+            }
+
+            // Traçabilité des transactions
+            const txBuyerRef = doc(collection(db, 'transactions'));
+            transaction.set(txBuyerRef, {
+              type: 'deal_payment',
+              mode: 'debit',
+              userId: clientUid,
+              userName: clientData.name || profile?.name || 'Acheteur',
+              partnerUid: partnerUid || null,
+              partnerName,
+              dealId: dealId ? String(dealId) : null,
+              chatId: chatId ? String(chatId) : null,
+              tokens: tokensDue,
+              amountTtc: euroDue,
+              paymentMethod: method,
+              status: 'completed',
+              createdAt: serverTimestamp(),
+            });
+
+            if (partnerUid) {
+              const txSellerRef = doc(collection(db, 'transactions'));
+              transaction.set(txSellerRef, {
+                type: 'deal_receipt',
+                mode: 'credit',
+                userId: partnerUid,
+                userName: partnerName,
+                partnerUid: clientUid,
+                partnerName: clientData.name || profile?.name || 'Acheteur',
+                dealId: dealId ? String(dealId) : null,
+                chatId: chatId ? String(chatId) : null,
+                tokens: tokensDue,
+                amountTtc: euroDue,
+                paymentMethod: method,
+                status: 'completed',
+                createdAt: serverTimestamp(),
+              });
+            }
+          });
+
+          // Mise à jour du state React profile
+          setProfile(prev => ({
+            ...prev,
+            euroBalance: shouldDebitWalletEuro ? Number(Math.max(0, prev.euroBalance - euroDue).toFixed(2)) : prev.euroBalance,
+            trocoTokens: tokensDue > 0 ? Math.max(0, prev.trocoTokens - tokensDue) : prev.trocoTokens,
+            dealsCompleted: (prev.dealsCompleted || 0) + 1,
+          }));
+        } catch (e) {
+          console.error('[Firestore] Atomic Deal Transaction Error in closeCheckout:', e);
+          alert(`Erreur lors de la validation atomique du deal: ${e.message}`);
+          return;
+        }
+      }
+      return;
+    }
+
+    // Gestion du débit portefeuille si d'autres modes (ex: boost, publish-options, edit-listing)
     if (chargedFromWallet) {
       if (profile.euroBalance < amount) {
         alert('Solde Euros insuffisant dans votre portefeuille Troco.');
         return;
       }
-      setProfile(prev => {
-        const newBal = Number(Math.max(0, prev.euroBalance - amount).toFixed(2));
-        if (profile?.uid) {
-          updateDoc(doc(db, 'users', profile.uid), {
-            euroBalance: newBal,
-            updatedAt: serverTimestamp(),
-          }).catch(e => console.warn('[Firestore] update balance error:', e));
+      if (db && clientUid) {
+        try {
+          await runTransaction(db, async (transaction) => {
+            const clientRef = doc(db, 'users', String(clientUid));
+            const clientSnap = await transaction.get(clientRef);
+            if (!clientSnap.exists()) throw new Error("Utilisateur introuvable");
+            const curEuro = Number(clientSnap.data().euroBalance ?? 0);
+            if (curEuro < amount) throw new Error("Solde insuffisant");
+            const newBal = Number(Math.max(0, curEuro - amount).toFixed(2));
+            transaction.update(clientRef, {
+              euroBalance: newBal,
+              walletBalanceFiat: newBal,
+              updatedAt: serverTimestamp(),
+            });
+          });
+        } catch (e) {
+          console.warn('[Firestore] Atomic wallet debit error:', e);
         }
-        return { ...prev, euroBalance: newBal };
-      });
+      }
+      setProfile(prev => ({
+        ...prev,
+        euroBalance: Number(Math.max(0, prev.euroBalance - amount).toFixed(2)),
+      }));
     }
 
     if (mode === 'boost') {
       window.setTimeout(() => {
         setListings(prev => prev.map(item => item.id === payload?.listingId ? { ...item, isBoosted: true } : item));
         setBoostMessage(`Annonce boostée avec succès pendant 7 jours !`);
-      }, 400);
-      return;
-    }
-
-    if (mode === 'deal') {
-      window.setTimeout(async () => {
-        setChatThreads(prev => ({
-          ...prev,
-          [payload?.chatId]: (prev[payload?.chatId] || []).map(m => m.id === payload?.dealId ? { ...m, status: 'confirmed' } : m),
-        }));
-        setChatStatusOverrides(prev => ({ ...prev, [payload?.chatId]: 'Deal Validé' }));
-
-        // Si le deal comprenait des euros et un vendeur identifié, créditer le vendeur
-        if (payload?.partnerUid && payload?.euroAmount && Number(payload.euroAmount) > 0) {
-          try {
-            const partnerRef = doc(db, 'users', String(payload.partnerUid));
-            const partnerSnap = await getDoc(partnerRef);
-            if (partnerSnap.exists()) {
-              const currentPartnerBal = Number(partnerSnap.data().euroBalance) || 0;
-              await updateDoc(partnerRef, {
-                euroBalance: Number((currentPartnerBal + Number(payload.euroAmount)).toFixed(2)),
-                updatedAt: serverTimestamp(),
-              });
-            }
-          } catch (e) {
-            console.warn('[Firestore] Credit partner in deal error:', e);
-          }
-        }
       }, 400);
       return;
     }
