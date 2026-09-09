@@ -28,8 +28,16 @@ export function TrocoDocsEditor({
 
   return (
     <div
-      className="flex-1 overflow-y-auto bg-gray-100 dark:bg-[#12100F] p-4 md:p-10 cursor-text"
+      className="flex-1 overflow-y-auto bg-gray-100 dark:bg-[#12100F] p-4 md:p-10 cursor-text flex flex-col items-center justify-start w-full"
       onClick={() => editorRef.current?.focus()}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'flex-start',
+        width: '100%',
+        boxSizing: 'border-box',
+      }}
     >
       <div
         ref={editorRef}
@@ -38,7 +46,7 @@ export function TrocoDocsEditor({
         placeholder={placeholder}
         onInput={onInput}
         onChange={onChange}
-        className="w-full max-w-[21cm] min-h-[29.7cm] mx-auto bg-white text-black p-[2cm] shadow-xl outline-none focus:ring-2 focus:ring-[var(--accent-primary)]/50 transition-shadow"
+        className="w-full max-w-[21cm] min-h-[29.7cm] mx-auto bg-white text-black p-[2cm] shadow-xl outline-none focus:ring-2 focus:ring-[var(--accent-primary)]/50 transition-shadow shrink-0"
       />
     </div>
   );

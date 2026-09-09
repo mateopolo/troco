@@ -7,7 +7,8 @@ import {
   Presentation, History, Plus, Trash2,
   Play, RotateCcw, Sparkles, Image as ImageIcon,
   RemoveFormatting, Undo, Redo,
-  Download, Printer, Share2, Baseline, Highlighter
+  Download, Printer, Share2, Baseline, Highlighter,
+  StickyNote
 } from 'lucide-react';
 import { doc, setDoc, updateDoc, onSnapshot, serverTimestamp, collection, addDoc } from 'firebase/firestore';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -237,7 +238,7 @@ function CloudOfficeSuiteModalContent({
   // 🚨 PHASE 103 : Initialisation avec fallback sécurisé
   const content = documentData?.content ?? defaultContent ?? (typeof effectiveDoc?.content === 'string' ? effectiveDoc.content : (typeof effectiveDoc?.text === 'string' ? effectiveDoc.text : defaultDoc.content)) ?? '';
 
-  const [activeTab, setActiveTab] = useState(initialTab || 'docs'); // 'docs' | 'sheets' | 'slides' | 'history'
+  const [activeTab, setActiveTab] = useState(initialTab || 'docs'); // 'docs' | 'sheets' | 'slides' | 'notes' | 'history'
   const [docTitle, setDocTitle] = useState(() => effectiveDoc?.title || effectiveDoc?.name || (projectTitle ? `Spécifications & Notes - ${projectTitle}` : defaultDoc.title));
   const [docContent, setDocContent] = useState(() => content);
   const [initialContent, setInitialContent] = useState(() => content);
@@ -246,6 +247,8 @@ function CloudOfficeSuiteModalContent({
   const [sheetData, setSheetData] = useState(() => (effectiveDoc?.gridData || effectiveDoc?.sheetData || effectiveDoc?.cells || DEFAULT_SHEET_DATA || {}));
   const [slidesTitle, setSlidesTitle] = useState(() => effectiveDoc?.slidesTitle || (projectTitle ? `Présentation - ${projectTitle}` : 'Présentation'));
   const [slides, setSlides] = useState(() => (Array.isArray(effectiveDoc?.slides) ? effectiveDoc.slides : DEFAULT_SLIDES));
+  const [notesTitle, setNotesTitle] = useState(() => effectiveDoc?.notesTitle || (projectTitle ? `Notes - ${projectTitle}` : 'Notes Rapides'));
+  const [notesContent, setNotesContent] = useState(() => effectiveDoc?.notesContent || effectiveDoc?.note || '');
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [isPresenting, setIsPresenting] = useState(false);
   const [versionHistory, setVersionHistory] = useState([]);
@@ -352,6 +355,16 @@ function CloudOfficeSuiteModalContent({
   useEffect(() => {
     slidesTitleRef.current = slidesTitle;
   }, [slidesTitle]);
+
+  const notesTitleRef = useRef(notesTitle);
+  useEffect(() => {
+    notesTitleRef.current = notesTitle;
+  }, [notesTitle]);
+
+  const notesContentRef = useRef(notesContent);
+  useEffect(() => {
+    notesContentRef.current = notesContent;
+  }, [notesContent]);
 
   // 2. IMPLÉMENTATION DE LA SAUVEGARDE EN TEMPS RÉEL (DEBOUNCE 1500MS)
   useEffect(() => {
@@ -522,6 +535,44 @@ function CloudOfficeSuiteModalContent({
     } catch (_) {}
   }, [isOpen, effectiveGroupId, currentUser?.id, currentUser?.name]);
 
+  // Synchronisation Firestore en temps réel pour Troco Notes
+  useEffect(() => {
+    if (!isOpen || !effectiveGroupId || !db) return;
+
+    try {
+      const notesRef = doc(db, 'chats', effectiveGroupId, 'workspace', 'notes');
+      const unsubscribe = onSnapshot(notesRef, (snapshot) => {
+        try {
+          if (snapshot?.exists?.()) {
+            const data = snapshot.data() || {};
+            if (data?.title) setNotesTitle(data.title || 'Notes Collaboratives');
+            if (data?.content !== undefined && data?.lastEditor !== (currentUser?.name || currentUser?.displayName || currentUser?.id)) {
+              setNotesContent(data.content || '');
+            }
+            setSaveStatus('Synchronisé en direct 🟢');
+          } else {
+            const myName = currentUser?.name || currentUser?.displayName || 'Moi';
+            setDoc(notesRef, {
+              title: notesTitleRef.current || 'Notes Collaboratives',
+              content: notesContentRef.current || '',
+              lastUpdated: Date.now(),
+              lastEditor: myName,
+              updatedAt: serverTimestamp(),
+            }, { merge: true }).catch(() => {});
+          }
+        } catch (err) {
+          console.warn('[TrocoNotes] snapshot parse error:', err);
+        }
+      }, (err) => {
+        console.warn('[TrocoNotes] snapshot error:', err);
+      });
+
+      return () => {
+        if (typeof unsubscribe === 'function') unsubscribe();
+      };
+    } catch (_) {}
+  }, [isOpen, effectiveGroupId, currentUser?.id, currentUser?.name]);
+
   // Sauvegarde des modifications Troco Docs
   const saveDocToFirestore = useCallback(async (newContent, newTitle = docTitle) => {
     if (!effectiveGroupId || !db) return;
@@ -654,6 +705,50 @@ function CloudOfficeSuiteModalContent({
       setSaveStatus('Mode hors-ligne');
     }
   }, [effectiveGroupId, currentUser, slidesTitle]);
+
+  // Sauvegarde des modifications Troco Notes
+  const saveNotesToFirestore = useCallback(async (newContent, newTitle = notesTitle) => {
+    if (!effectiveGroupId || !db) return;
+    try {
+      setSaveStatus('Sauvegarde en cours...');
+      const myName = currentUser?.name || currentUser?.displayName || 'Moi';
+      const snippet = String(newContent || '')
+        .replace(/<[^>]*>/g, ' ')
+        .replace(/[#*`_~\[\]()]/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 150);
+
+      const notesRef = doc(db, 'chats', effectiveGroupId, 'workspace', 'notes');
+      await setDoc(notesRef, {
+        title: String(newTitle || notesTitleRef.current || 'Notes Collaboratives'),
+        content: String(newContent != null ? newContent : (notesContentRef.current || '')),
+        lastUpdated: Date.now(),
+        snippet,
+        summary: snippet,
+        lastEditor: myName,
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+
+      setVersionHistory(prev => [
+        {
+          id: 'v_' + Date.now(),
+          type: 'notes',
+          title: newTitle || 'Note',
+          content: newContent || '',
+          snippet,
+          timestamp: new Date().toLocaleTimeString(),
+          author: myName,
+        },
+        ...(prev || []).slice(0, 19),
+      ]);
+
+      setSaveStatus('Synchronisé en direct 🟢');
+    } catch (err) {
+      console.warn('[TrocoNotes] Save error:', err);
+      setSaveStatus('Mode hors-ligne');
+    }
+  }, [effectiveGroupId, currentUser, notesTitle]);
 
   // Formatage Markdown pour Troco Docs
   const insertMarkdownFormatting = (prefix, suffix = '') => {
@@ -836,6 +931,10 @@ function CloudOfficeSuiteModalContent({
       }
       const tableHtml = `<table border="1" cellpadding="8" style="border-collapse: collapse; width: 100%; font-size: 13px;">${rowsHtml.join('')}</table>`;
       contentHtml = `<h1>${safeSheetTitle}</h1>${tableHtml}`;
+    } else if (activeTab === 'notes') {
+      const safeNotesTitle = String(notesTitle || 'Notes');
+      const safeNotesContent = String(notesContent || '').replace(/\n/g, '<br/>');
+      contentHtml = `<h1>${safeNotesTitle}</h1><div style="font-family: 'Inter', sans-serif; font-size: 14px; line-height: 1.8; color: #1E293B; white-space: pre-wrap;">${safeNotesContent}</div>`;
     } else {
       contentHtml = `<h1>${safeSlidesTitle}</h1>` + (slides || []).map((s, idx) => `
         <div style="page-break-after: always; padding: 24px; border: 1px solid #ddd; margin-bottom: 20px; border-radius: 12px;">
@@ -994,6 +1093,12 @@ function CloudOfficeSuiteModalContent({
         title = slidesTitle || 'Présentation sans titre';
         snippet = (slides || []).map((s, idx) => `D${idx + 1}: ${s?.title || 'Diapo'}`).slice(0, 4).join(' • ') || 'Présentation';
         icon = '📽️';
+      } else if (activeTab === 'notes') {
+        title = notesTitle || 'Note sans titre';
+        snippet = notesContent
+          ? (notesContent.replace(/<[^>]*>/g, ' ').replace(/[#*`_~\[\]()]/g, '').replace(/\s+/g, ' ').trim().slice(0, 150) + (notesContent.length > 150 ? '...' : ''))
+          : 'Note vide';
+        icon = '📌';
       }
 
       const msgPayload = {
@@ -1167,10 +1272,10 @@ function CloudOfficeSuiteModalContent({
           </div>
         )}
 
-        {/* CONTENEUR MODALE PRINCIPALE */}
+        {/* CONTENEUR MODALE PRINCIPALE PLEIN ÉCRAN */}
         <div
           onClick={(e) => e.stopPropagation()}
-          className="fixed inset-0 md:inset-4 z-[9999] bg-[var(--bg-global)] md:rounded-3xl shadow-2xl border border-white/10 flex flex-col overflow-hidden"
+          className="fixed inset-0 z-[9999] bg-[var(--bg-global)] flex flex-col overflow-hidden w-full h-full"
           style={{
             position: 'fixed',
             top: 0,
@@ -1183,23 +1288,24 @@ function CloudOfficeSuiteModalContent({
             display: 'flex',
             flexDirection: 'column',
             overflow: 'hidden',
-            boxShadow: '0 25px 60px rgba(0,0,0,0.3)',
+            boxShadow: 'none',
             animation: 'fadeSlideUp 0.3s ease both',
           }}
         >
-          {/* EN-TÊTE GLOBAL WORKSPACE (PLEIN ÉCRAN, TABS GLASSMORPHISM, BOUTONS PREMIUM) */}
+          {/* EN-TÊTE GLOBAL WORKSPACE (PLEIN ÉCRAN, TABS GLASSMORPHISM, BOUTONS SANS DÉBORDEMENT) */}
           <div
-            className="flex items-center justify-between p-4 border-b border-white/10 bg-[var(--bg-card)] shrink-0 gap-3"
+            className="flex items-center justify-between px-3 py-2.5 md:px-6 md:py-3 border-b border-white/10 bg-[var(--bg-card)] shrink-0 gap-2 md:gap-4 w-full max-w-full overflow-x-auto no-scrollbar box-border"
             style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              padding: '12px 20px',
+              padding: '10px 16px',
               backgroundColor: darkMode ? '#1E1B18' : 'var(--bg-card, #FFFFFF)',
               borderBottom: darkMode ? '1px solid rgba(255,255,255,0.08)' : '1px solid var(--border-color, rgba(0,0,0,0.08))',
               flexShrink: 0,
               gap: '12px',
               width: '100%',
+              maxWidth: '100%',
               boxSizing: 'border-box',
             }}
           >
@@ -1229,44 +1335,46 @@ function CloudOfficeSuiteModalContent({
               <span>Fermer</span>
             </button>
 
-            {/* SÉLECTEUR D'ONGLETS GLASSMORPHISM AU CENTRE */}
+            {/* SÉLECTEUR D'ONGLETS GLASSMORPHISM AU CENTRE (PILULE : Docs, Sheets, Slides, Notes) */}
             <div
-              className="flex items-center gap-1 p-1 bg-black/5 dark:bg-white/5 backdrop-blur-md border border-black/10 dark:border-white/10 rounded-full max-w-full overflow-x-auto no-scrollbar shadow-sm"
+              className="flex items-center gap-1 p-1.5 bg-white/10 dark:bg-white/10 backdrop-blur-md border border-white/20 dark:border-white/20 rounded-full max-w-full overflow-x-auto no-scrollbar shadow-lg shrink-0"
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '4px',
-                padding: '4px',
-                backgroundColor: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
+                padding: '4px 6px',
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
                 backdropFilter: 'blur(12px)',
                 WebkitBackdropFilter: 'blur(12px)',
                 borderRadius: '9999px',
-                border: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.06)',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
                 overflowX: 'auto',
+                flexShrink: 0,
               }}
             >
+              {/* 1. Troco Docs */}
               <button
                 type="button"
                 onClick={() => setActiveTab('docs')}
-                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+                className={`px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
                   activeTab === 'docs'
-                    ? 'bg-white text-black dark:bg-[#2A2624] dark:text-white shadow-sm font-bold'
-                    : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white bg-transparent'
+                    ? 'bg-[var(--accent-primary)] text-white shadow-md font-bold'
+                    : 'text-stone-600 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white hover:bg-white/10 bg-transparent'
                 }`}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px',
-                  padding: '6px 16px',
+                  gap: '6px',
+                  padding: '6px 14px',
                   borderRadius: '9999px',
                   fontSize: '13px',
                   fontWeight: activeTab === 'docs' ? '700' : '500',
                   border: 'none',
                   cursor: 'pointer',
-                  backgroundColor: activeTab === 'docs' ? (darkMode ? '#2A2624' : '#FFFFFF') : 'transparent',
-                  color: activeTab === 'docs' ? (darkMode ? '#FFFFFF' : '#12100E') : (darkMode ? '#A8998C' : '#6B705C'),
-                  boxShadow: activeTab === 'docs' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none',
+                  backgroundColor: activeTab === 'docs' ? 'var(--accent-primary, #C67D5B)' : 'transparent',
+                  color: activeTab === 'docs' ? '#FFFFFF' : (darkMode ? '#A8998C' : '#6B705C'),
+                  boxShadow: activeTab === 'docs' ? '0 2px 8px rgba(198, 125, 91, 0.3)' : 'none',
                   transition: 'all 0.15s ease',
                   whiteSpace: 'nowrap',
                   outline: 'none',
@@ -1276,27 +1384,28 @@ function CloudOfficeSuiteModalContent({
                 <span>Troco Docs</span>
               </button>
 
+              {/* 2. Troco Sheets */}
               <button
                 type="button"
                 onClick={() => setActiveTab('sheets')}
-                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+                className={`px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
                   activeTab === 'sheets'
-                    ? 'bg-white text-black dark:bg-[#2A2624] dark:text-white shadow-sm font-bold'
-                    : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white bg-transparent'
+                    ? 'bg-[var(--accent-primary)] text-white shadow-md font-bold'
+                    : 'text-stone-600 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white hover:bg-white/10 bg-transparent'
                 }`}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px',
-                  padding: '6px 16px',
+                  gap: '6px',
+                  padding: '6px 14px',
                   borderRadius: '9999px',
                   fontSize: '13px',
                   fontWeight: activeTab === 'sheets' ? '700' : '500',
                   border: 'none',
                   cursor: 'pointer',
-                  backgroundColor: activeTab === 'sheets' ? (darkMode ? '#2A2624' : '#FFFFFF') : 'transparent',
-                  color: activeTab === 'sheets' ? (darkMode ? '#FFFFFF' : '#12100E') : (darkMode ? '#A8998C' : '#6B705C'),
-                  boxShadow: activeTab === 'sheets' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none',
+                  backgroundColor: activeTab === 'sheets' ? 'var(--accent-primary, #C67D5B)' : 'transparent',
+                  color: activeTab === 'sheets' ? '#FFFFFF' : (darkMode ? '#A8998C' : '#6B705C'),
+                  boxShadow: activeTab === 'sheets' ? '0 2px 8px rgba(198, 125, 91, 0.3)' : 'none',
                   transition: 'all 0.15s ease',
                   whiteSpace: 'nowrap',
                   outline: 'none',
@@ -1306,27 +1415,28 @@ function CloudOfficeSuiteModalContent({
                 <span>Troco Sheets</span>
               </button>
 
+              {/* 3. Troco Slides */}
               <button
                 type="button"
                 onClick={() => setActiveTab('slides')}
-                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+                className={`px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
                   activeTab === 'slides'
-                    ? 'bg-white text-black dark:bg-[#2A2624] dark:text-white shadow-sm font-bold'
-                    : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white bg-transparent'
+                    ? 'bg-[var(--accent-primary)] text-white shadow-md font-bold'
+                    : 'text-stone-600 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white hover:bg-white/10 bg-transparent'
                 }`}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px',
-                  padding: '6px 16px',
+                  gap: '6px',
+                  padding: '6px 14px',
                   borderRadius: '9999px',
                   fontSize: '13px',
                   fontWeight: activeTab === 'slides' ? '700' : '500',
                   border: 'none',
                   cursor: 'pointer',
-                  backgroundColor: activeTab === 'slides' ? (darkMode ? '#2A2624' : '#FFFFFF') : 'transparent',
-                  color: activeTab === 'slides' ? (darkMode ? '#FFFFFF' : '#12100E') : (darkMode ? '#A8998C' : '#6B705C'),
-                  boxShadow: activeTab === 'slides' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none',
+                  backgroundColor: activeTab === 'slides' ? 'var(--accent-primary, #C67D5B)' : 'transparent',
+                  color: activeTab === 'slides' ? '#FFFFFF' : (darkMode ? '#A8998C' : '#6B705C'),
+                  boxShadow: activeTab === 'slides' ? '0 2px 8px rgba(198, 125, 91, 0.3)' : 'none',
                   transition: 'all 0.15s ease',
                   whiteSpace: 'nowrap',
                   outline: 'none',
@@ -1336,27 +1446,59 @@ function CloudOfficeSuiteModalContent({
                 <span>Troco Slides</span>
               </button>
 
+              {/* 4. Troco Notes */}
               <button
                 type="button"
-                onClick={() => setActiveTab('history')}
-                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
-                  activeTab === 'history'
-                    ? 'bg-white text-black dark:bg-[#2A2624] dark:text-white shadow-sm font-bold'
-                    : 'text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white bg-transparent'
+                onClick={() => setActiveTab('notes')}
+                className={`px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                  activeTab === 'notes'
+                    ? 'bg-[var(--accent-primary)] text-white shadow-md font-bold'
+                    : 'text-stone-600 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white hover:bg-white/10 bg-transparent'
                 }`}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '8px',
-                  padding: '6px 16px',
+                  gap: '6px',
+                  padding: '6px 14px',
+                  borderRadius: '9999px',
+                  fontSize: '13px',
+                  fontWeight: activeTab === 'notes' ? '700' : '500',
+                  border: 'none',
+                  cursor: 'pointer',
+                  backgroundColor: activeTab === 'notes' ? 'var(--accent-primary, #C67D5B)' : 'transparent',
+                  color: activeTab === 'notes' ? '#FFFFFF' : (darkMode ? '#A8998C' : '#6B705C'),
+                  boxShadow: activeTab === 'notes' ? '0 2px 8px rgba(198, 125, 91, 0.3)' : 'none',
+                  transition: 'all 0.15s ease',
+                  whiteSpace: 'nowrap',
+                  outline: 'none',
+                }}
+              >
+                <StickyNote size={15} />
+                <span>Troco Notes</span>
+              </button>
+
+              {/* 5. Versions / Historique */}
+              <button
+                type="button"
+                onClick={() => setActiveTab('history')}
+                className={`px-3.5 py-1.5 rounded-full text-xs sm:text-sm font-medium transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap ${
+                  activeTab === 'history'
+                    ? 'bg-[var(--accent-primary)] text-white shadow-md font-bold'
+                    : 'text-stone-600 dark:text-stone-300 hover:text-stone-900 dark:hover:text-white hover:bg-white/10 bg-transparent'
+                }`}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '6px 14px',
                   borderRadius: '9999px',
                   fontSize: '13px',
                   fontWeight: activeTab === 'history' ? '700' : '500',
                   border: 'none',
                   cursor: 'pointer',
-                  backgroundColor: activeTab === 'history' ? (darkMode ? '#2A2624' : '#FFFFFF') : 'transparent',
-                  color: activeTab === 'history' ? (darkMode ? '#FFFFFF' : '#12100E') : (darkMode ? '#A8998C' : '#6B705C'),
-                  boxShadow: activeTab === 'history' ? '0 2px 8px rgba(0,0,0,0.08)' : 'none',
+                  backgroundColor: activeTab === 'history' ? 'var(--accent-primary, #C67D5B)' : 'transparent',
+                  color: activeTab === 'history' ? '#FFFFFF' : (darkMode ? '#A8998C' : '#6B705C'),
+                  boxShadow: activeTab === 'history' ? '0 2px 8px rgba(198, 125, 91, 0.3)' : 'none',
                   transition: 'all 0.15s ease',
                   whiteSpace: 'nowrap',
                   outline: 'none',
@@ -1370,17 +1512,17 @@ function CloudOfficeSuiteModalContent({
 
             {/* BOUTON PARTAGER AU CHAT À DROITE & STATUT DE SYNCHRONISATION */}
             <div
-              className="flex items-center gap-3 shrink-0"
+              className="flex items-center gap-2 md:gap-3 shrink-0 ml-auto"
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '12px',
+                gap: '10px',
                 flexShrink: 0,
               }}
             >
               <div
-                className="flex items-center gap-2 text-xs shrink-0 whitespace-nowrap"
-                style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', whiteSpace: 'nowrap' }}
+                className="hidden sm:flex items-center gap-2 text-xs shrink-0 whitespace-nowrap"
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', whiteSpace: 'nowrap' }}
               >
                 <span
                   className={`font-semibold flex items-center gap-1.5 ${
@@ -1430,12 +1572,12 @@ function CloudOfficeSuiteModalContent({
                 type="button"
                 onClick={handleShareToChat}
                 disabled={isSendingToChat}
-                className="px-6 py-2.5 rounded-full bg-[var(--accent-primary)] text-white font-bold shadow-lg hover:opacity-90 transition-opacity whitespace-nowrap flex items-center gap-2 cursor-pointer"
+                className="px-4 py-2 md:px-6 md:py-2.5 rounded-full bg-[var(--accent-primary)] text-white font-bold shadow-lg hover:opacity-90 transition-opacity whitespace-nowrap flex items-center gap-2 cursor-pointer shrink-0"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
                   gap: '8px',
-                  padding: '10px 24px',
+                  padding: '8px 20px',
                   borderRadius: '9999px',
                   backgroundColor: 'var(--accent-primary, #C67D5B)',
                   color: '#FFFFFF',
@@ -1446,6 +1588,7 @@ function CloudOfficeSuiteModalContent({
                   cursor: isSendingToChat ? 'wait' : 'pointer',
                   whiteSpace: 'nowrap',
                   outline: 'none',
+                  flexShrink: 0,
                 }}
                 title="Partager au chat"
               >
@@ -1455,23 +1598,26 @@ function CloudOfficeSuiteModalContent({
             </div>
           </div>
 
-          {/* BARRE SECONDAIRE : TITRE DU DOCUMENT, EXPORTS ET STATUT MOBILE */}
+          {/* BARRE SECONDAIRE : TITRE DU DOCUMENT, EXPORTS SÉCURISÉS SANS DÉBORDEMENT DROIT */}
           <div
-            className="flex flex-wrap items-center justify-between gap-3 px-4 py-2 border-b border-stone-200 dark:border-white/10 bg-[var(--bg-subtle)] shrink-0"
+            className="w-full max-w-full flex items-center justify-between gap-2 px-3 py-2 md:px-6 md:py-2.5 border-b border-stone-200 dark:border-white/10 bg-[var(--bg-subtle)] shrink-0 box-border overflow-x-auto no-scrollbar"
             style={{
               backgroundColor: 'var(--bg-subtle)',
               borderBottom: '1px solid var(--border-color)',
+              boxSizing: 'border-box',
+              width: '100%',
+              maxWidth: '100%',
             }}
           >
             {/* Titre du document avec icône */}
-            <div className="flex items-center gap-2 min-w-0 flex-1 max-w-md">
+            <div className="flex items-center gap-2 min-w-0 flex-1 max-w-xs sm:max-w-md shrink">
               <div
                 style={{
                   width: '28px',
                   height: '28px',
                   borderRadius: '999px',
-                  backgroundColor: activeTab === 'docs' ? 'rgba(198,125,91,0.15)' : activeTab === 'sheets' ? 'rgba(16,185,129,0.15)' : activeTab === 'slides' ? 'rgba(59,130,246,0.15)' : 'rgba(100,116,139,0.15)',
-                  color: activeTab === 'docs' ? '#C67D5B' : activeTab === 'sheets' ? '#10B981' : activeTab === 'slides' ? '#3B82F6' : '#64748B',
+                  backgroundColor: activeTab === 'docs' ? 'rgba(198,125,91,0.15)' : activeTab === 'sheets' ? 'rgba(16,185,129,0.15)' : activeTab === 'slides' ? 'rgba(59,130,246,0.15)' : activeTab === 'notes' ? 'rgba(234,179,8,0.15)' : 'rgba(100,116,139,0.15)',
+                  color: activeTab === 'docs' ? '#C67D5B' : activeTab === 'sheets' ? '#10B981' : activeTab === 'slides' ? '#3B82F6' : activeTab === 'notes' ? '#EAB308' : '#64748B',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -1481,6 +1627,7 @@ function CloudOfficeSuiteModalContent({
                 {activeTab === 'docs' && <FileText size={15} />}
                 {activeTab === 'sheets' && <Table size={15} />}
                 {activeTab === 'slides' && <Presentation size={15} />}
+                {activeTab === 'notes' && <StickyNote size={15} />}
                 {activeTab === 'history' && <History size={15} />}
               </div>
 
@@ -1525,6 +1672,20 @@ function CloudOfficeSuiteModalContent({
                   style={{ color: 'var(--text-main)' }}
                 />
               )}
+              {activeTab === 'notes' && (
+                <input
+                  type="text"
+                  value={notesTitle || ''}
+                  onChange={(e) => {
+                    const val = e.target.value || '';
+                    setNotesTitle(val);
+                    saveNotesToFirestore(notesContent || '', val);
+                  }}
+                  placeholder="Titre de la note..."
+                  className="w-full bg-transparent border-0 outline-none font-bold text-sm sm:text-base min-w-0 text-slate-800 dark:text-slate-100"
+                  style={{ color: 'var(--text-main)' }}
+                />
+              )}
               {activeTab === 'history' && (
                 <span className="font-bold text-sm sm:text-base text-slate-800 dark:text-slate-100 truncate" style={{ color: 'var(--text-main)' }}>
                   Historique des versions
@@ -1532,14 +1693,14 @@ function CloudOfficeSuiteModalContent({
               )}
             </div>
 
-            {/* Exports, Impression & Outils */}
-            <div className="flex items-center gap-2 flex-wrap shrink-0">
+            {/* Exports, Impression & Outils : CONTENEUR STRICTEMENT SÉCURISÉ NE DÉBORDANT PAS À DROITE */}
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 overflow-x-auto no-scrollbar max-w-full justify-end">
               {activeTab === 'docs' && (
                 <>
                   <button
                     type="button"
                     onClick={handleDownloadPDF}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-black/10 dark:border-white/10 transition-colors cursor-pointer whitespace-nowrap"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-black/10 dark:border-white/10 transition-colors cursor-pointer whitespace-nowrap shrink-0"
                     style={{ color: 'var(--text-main)' }}
                     title="Exporter en PDF imprimable"
                   >
@@ -1549,7 +1710,7 @@ function CloudOfficeSuiteModalContent({
                   <button
                     type="button"
                     onClick={handleDownloadDOCX}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-black/10 dark:border-white/10 transition-colors cursor-pointer whitespace-nowrap"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-black/10 dark:border-white/10 transition-colors cursor-pointer whitespace-nowrap shrink-0"
                     style={{ color: 'var(--text-main)' }}
                     title="Exporter au format Word (.docx)"
                   >
@@ -1564,7 +1725,7 @@ function CloudOfficeSuiteModalContent({
                   <button
                     type="button"
                     onClick={handleDownloadXLSX}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-black/10 dark:border-white/10 transition-colors cursor-pointer whitespace-nowrap"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-black/10 dark:border-white/10 transition-colors cursor-pointer whitespace-nowrap shrink-0"
                     style={{ color: 'var(--text-main)' }}
                     title="Exporter au format Excel (.xlsx)"
                   >
@@ -1574,7 +1735,7 @@ function CloudOfficeSuiteModalContent({
                   <button
                     type="button"
                     onClick={handleDownloadCSV}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-black/10 dark:border-white/10 transition-colors cursor-pointer whitespace-nowrap"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-black/10 dark:border-white/10 transition-colors cursor-pointer whitespace-nowrap shrink-0"
                     style={{ color: 'var(--text-main)' }}
                     title="Exporter en CSV"
                   >
@@ -1588,7 +1749,7 @@ function CloudOfficeSuiteModalContent({
                 <button
                   type="button"
                   onClick={handleDownloadPPTX}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-black/10 dark:border-white/10 transition-colors cursor-pointer whitespace-nowrap"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-black/10 dark:border-white/10 transition-colors cursor-pointer whitespace-nowrap shrink-0"
                   style={{ color: 'var(--text-main)' }}
                   title="Exporter au format PowerPoint (.pptx)"
                 >
@@ -1597,10 +1758,31 @@ function CloudOfficeSuiteModalContent({
                 </button>
               )}
 
+              {activeTab === 'notes' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const blob = new Blob([notesContent || ''], { type: 'text/markdown;charset=utf-8' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${(notesTitle || 'Note').replace(/[^a-z0-9]/gi, '_').toLowerCase()}.md`;
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-black/10 dark:border-white/10 transition-colors cursor-pointer whitespace-nowrap shrink-0"
+                  style={{ color: 'var(--text-main)' }}
+                  title="Exporter la note en Markdown (.md)"
+                >
+                  <Download size={13} />
+                  <span>MD</span>
+                </button>
+              )}
+
               <button
                 type="button"
                 onClick={handleDownloadPDF}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-black/10 dark:border-white/10 transition-colors cursor-pointer whitespace-nowrap"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-black/10 dark:border-white/10 transition-colors cursor-pointer whitespace-nowrap shrink-0"
                 style={{ color: 'var(--text-main)' }}
                 title="Imprimer le document"
               >
@@ -1910,17 +2092,20 @@ function CloudOfficeSuiteModalContent({
           {/* 1. TROCO DOCS : BUREAU GRIS CLAIR, TOOLBAR COMPLÈTE & PAGE A4 CENTRÉE (EFFET WORD) */}
           {activeTab === 'docs' && (
             <div
-              className="flex-1 overflow-y-auto bg-gray-100 dark:bg-[#12100F] p-4 md:p-10 cursor-text"
+              className="flex-1 overflow-y-auto bg-gray-100 dark:bg-[#12100F] p-4 md:p-10 cursor-text flex flex-col items-center justify-start w-full"
               onClick={() => editorRef.current?.focus()}
               style={{
                 flex: 1,
                 display: 'flex',
                 flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'flex-start',
                 overflowY: 'auto',
                 backgroundColor: darkMode ? '#12100F' : '#E5E7EB',
                 padding: '32px 16px',
                 cursor: 'text',
                 boxSizing: 'border-box',
+                width: '100%',
               }}
             >
               {/* DOCUMENT FEUILLE DE PAPIER A4 CENTRÉE */}
@@ -1931,7 +2116,7 @@ function CloudOfficeSuiteModalContent({
                 placeholder="Rédigez ici vos comptes-rendus, spécifications et notes collaboratives..."
                 onInput={handleEditorInput}
                 onChange={handleEditorInput}
-                className="w-full max-w-[21cm] md:w-[21cm] min-h-[29.7cm] mx-auto bg-white text-black p-4 md:p-8 p-[2cm] shadow-md shadow-xl outline-none focus:ring-2 focus:ring-[var(--accent-primary)]/50 transition-shadow"
+                className="w-full max-w-[21cm] md:w-[21cm] min-h-[29.7cm] mx-auto bg-white text-black p-4 md:p-8 p-[2cm] shadow-md shadow-xl outline-none focus:ring-2 focus:ring-[var(--accent-primary)]/50 transition-shadow shrink-0"
                 style={{
                   boxSizing: 'border-box',
                   width: '100%',
@@ -2244,259 +2429,332 @@ function CloudOfficeSuiteModalContent({
                 </button>
               </div>
 
-              {/* ÉDITEUR DE LA DIAPOSITIVE EN COURS */}
-              <div style={{ flex: 1, padding: '20px', display: 'flex', flexDirection: 'column', gap: '14px', overflowY: 'auto' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
-                  <input
-                    type="text"
-                    value={slides[currentSlideIndex]?.title || ''}
-                    onChange={(e) => handleUpdateCurrentSlide('title', e.target.value)}
-                    placeholder="Titre de la diapositive..."
-                    style={{
-                      flex: 1,
-                      minWidth: '200px',
-                      fontSize: '22px',
-                      fontWeight: '700',
-                      border: 'none',
-                      outline: 'none',
-                      backgroundColor: 'transparent',
-                      color: 'var(--text-main)',
-                      borderBottom: '1.5px solid var(--border-color)',
-                      paddingBottom: '4px',
-                    }}
-                  />
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    {/* SÉLECTEUR DE THÈME VISUEL */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>Thème de fond :</label>
-                      <select
-                        value={slides[currentSlideIndex]?.theme || 'terracotta'}
-                        onChange={(e) => handleUpdateCurrentSlide('theme', e.target.value)}
-                        aria-label="Thème de fond"
-                        style={{
-                          padding: '5px 8px',
-                          borderRadius: '8px',
-                          border: '1px solid var(--border-color)',
-                          backgroundColor: 'var(--bg-card)',
-                          color: 'var(--text-main)',
-                          fontSize: '12px',
-                          fontWeight: '700',
-                        }}
-                      >
-                        <option value="light">Clair</option>
-                        <option value="dark">Sombre</option>
-                        <option value="gradient">Dégradé</option>
-                        <option value="terracotta">Terracotta</option>
-                      </select>
-                    </div>
-
-                    {/* BOUTON D'INSERTION D'IMAGE */}
+              {/* ÉDITEUR DE LA DIAPOSITIVE EN COURS CENTRÉ PLEIN ÉCRAN */}
+              <div
+                className="flex-1 p-4 md:p-8 flex flex-col items-center justify-start overflow-y-auto w-full"
+                style={{
+                  flex: 1,
+                  padding: '24px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'flex-start',
+                  overflowY: 'auto',
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  backgroundColor: darkMode ? '#12100F' : '#F1F5F9',
+                }}
+              >
+                <div className="w-full max-w-4xl mx-auto flex flex-col gap-4 items-stretch justify-start">
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
                     <input
-                      type="file"
-                      ref={slideImageInputRef}
-                      onChange={handleSlideImageUpload}
-                      accept="image/*"
-                      style={{ display: 'none' }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => slideImageInputRef.current?.click()}
-                      disabled={isUploadingImage}
-                      className="premium-button"
+                      type="text"
+                      value={slides[currentSlideIndex]?.title || ''}
+                      onChange={(e) => handleUpdateCurrentSlide('title', e.target.value)}
+                      placeholder="Titre de la diapositive..."
                       style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                        padding: '6px 10px',
-                        backgroundColor: '#3B82F6',
-                        color: '#FFFFFF',
-                        borderRadius: '8px',
+                        flex: 1,
+                        minWidth: '200px',
+                        fontSize: '22px',
+                        fontWeight: '700',
                         border: 'none',
-                        fontSize: '11px',
-                        fontWeight: '800',
-                        cursor: isUploadingImage ? 'wait' : 'pointer',
-                        whiteSpace: 'nowrap',
+                        outline: 'none',
+                        backgroundColor: 'transparent',
+                        color: 'var(--text-main)',
+                        borderBottom: '1.5px solid var(--border-color)',
+                        paddingBottom: '4px',
                       }}
-                      title="Insérer une image sur la diapositive"
-                    >
-                      <ImageIcon size={13} />
-                      <span>{isUploadingImage ? 'Envoi...' : '➕ Image'}</span>
-                    </button>
-                  </div>
-                </div>
+                    />
 
-                {/* CARTE APERÇU DIAPOSITIVE EN COURS AVEC THÈME DE FOND MODIFIÉ DYNAMIQUEMENT */}
-                <div
-                  style={{
-                    ...getSlideBackgroundStyle(slides[currentSlideIndex]?.theme),
-                    borderRadius: '16px',
-                    padding: '24px 22px',
-                    boxShadow: '0 4px 20px rgba(0,0,0,0.12)',
-                    minHeight: '240px',
-                    position: 'relative',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'center',
-                    transition: 'all 0.25s ease',
-                  }}
-                >
-                  <h2 style={{ fontSize: '24px', fontWeight: '800', margin: '0 0 6px 0', letterSpacing: '-0.01em' }}>
-                    {slides[currentSlideIndex]?.title || 'Titre de la diapositive'}
-                  </h2>
-                  <p style={{ fontSize: '14px', opacity: 0.9, margin: '0 0 14px 0', fontStyle: 'italic' }}>
-                    {slides[currentSlideIndex]?.subtitle || 'Sous-titre et contexte du projet'}
-                  </p>
-
-                  {/* IMAGE REDIMENSIONNABLE EN SURIMPRESSION */}
-                  {slides[currentSlideIndex]?.imageUrl && (
-                    <div style={{ margin: '12px auto', textAlign: 'center', position: 'relative' }}>
-                      <img
-                        src={slides[currentSlideIndex].imageUrl}
-                        alt={`Illustration diapositive ${currentSlideIndex + 1} : ${slides[currentSlideIndex]?.title || 'Présentation'}`}
-                        style={{
-                          width: `${slides[currentSlideIndex].imageWidth || 280}px`,
-                          maxHeight: '240px',
-                          objectFit: 'contain',
-                          borderRadius: '10px',
-                          boxShadow: '0 6px 18px rgba(0,0,0,0.25)',
-                          display: 'inline-block',
-                        }}
-                      />
-                      {/* Contrôles de redimensionnement de l'image */}
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '8px',
-                          marginTop: '8px',
-                          backgroundColor: 'rgba(0,0,0,0.5)',
-                          padding: '3px 8px',
-                          borderRadius: '8px',
-                          width: 'fit-content',
-                          margin: '8px auto 0 auto',
-                        }}
-                      >
-                        <span style={{ fontSize: '11px', color: '#FFF', fontWeight: '600' }}>Taille :</span>
-                        <input
-                          type="range"
-                          min="100"
-                          max="550"
-                          value={slides[currentSlideIndex].imageWidth || 280}
-                          onChange={(e) => handleUpdateCurrentSlide('imageWidth', Number(e.target.value))}
-                          style={{ width: '90px', cursor: 'pointer' }}
-                        />
-                        <span style={{ fontSize: '11px', color: '#FFF' }}>{slides[currentSlideIndex].imageWidth || 280}px</span>
-                        <button
-                          type="button"
-                          onClick={() => handleUpdateCurrentSlide('imageUrl', null)}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {/* SÉLECTEUR DE THÈME VISUEL */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>Thème de fond :</label>
+                        <select
+                          value={slides[currentSlideIndex]?.theme || 'terracotta'}
+                          onChange={(e) => handleUpdateCurrentSlide('theme', e.target.value)}
+                          aria-label="Thème de fond"
                           style={{
-                            border: 'none',
-                            backgroundColor: 'rgba(239, 68, 68, 0.85)',
-                            color: '#FFF',
-                            borderRadius: '4px',
-                            padding: '2px 6px',
-                            fontSize: '10px',
+                            padding: '5px 8px',
+                            borderRadius: '8px',
+                            border: '1px solid var(--border-color)',
+                            backgroundColor: 'var(--bg-card)',
+                            color: 'var(--text-main)',
+                            fontSize: '12px',
                             fontWeight: '700',
-                            cursor: 'pointer',
                           }}
-                          title="Supprimer l'image"
                         >
-                          ✕
-                        </button>
+                          <option value="light">Clair</option>
+                          <option value="dark">Sombre</option>
+                          <option value="gradient">Dégradé</option>
+                          <option value="terracotta">Terracotta</option>
+                        </select>
                       </div>
-                    </div>
-                  )}
 
-                  <ul style={{ margin: '6px 0 0 0', paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                    {(slides[currentSlideIndex]?.bullets || []).map((b, i) => (
-                      <li key={i} style={{ fontSize: '13.5px', fontWeight: '600', opacity: 0.95 }}>
-                        {b}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <input
-                  type="text"
-                  value={slides[currentSlideIndex]?.subtitle || ''}
-                  onChange={(e) => handleUpdateCurrentSlide('subtitle', e.target.value)}
-                  placeholder="Sous-titre / Message clé..."
-                  style={{
-                    fontSize: '14px',
-                    padding: '8px 12px',
-                    borderRadius: '10px',
-                    border: '1px solid var(--border-color)',
-                    backgroundColor: 'var(--bg-subtle)',
-                    color: 'var(--text-secondary)',
-                    outline: 'none',
-                  }}
-                />
-
-                {/* PUCES DE CONTENU */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  <span style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-secondary)' }}>Arguments & Points Clés :</span>
-                  {(slides[currentSlideIndex]?.bullets || []).map((bullet, bIdx) => (
-                    <div key={bIdx} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ color: 'var(--accent-primary)', fontWeight: '800' }}>•</span>
+                      {/* BOUTON D'INSERTION D'IMAGE */}
                       <input
-                        type="text"
-                        value={bullet}
-                        onChange={(e) => {
-                          const nextBullets = [...(slides[currentSlideIndex]?.bullets || [])];
-                          nextBullets[bIdx] = e.target.value;
-                          handleUpdateCurrentSlide('bullets', nextBullets);
-                        }}
-                        style={{
-                          flex: 1,
-                          padding: '8px 12px',
-                          borderRadius: '8px',
-                          border: '1px solid var(--border-color)',
-                          backgroundColor: 'var(--bg-card)',
-                          color: 'var(--text-main)',
-                          fontSize: '13px',
-                          outline: 'none',
-                        }}
+                        type="file"
+                        ref={slideImageInputRef}
+                        onChange={handleSlideImageUpload}
+                        accept="image/*"
+                        style={{ display: 'none' }}
                       />
                       <button
                         type="button"
-                        onClick={() => {
-                          const nextBullets = (slides[currentSlideIndex]?.bullets || []).filter((_, i) => i !== bIdx);
-                          handleUpdateCurrentSlide('bullets', nextBullets);
+                        onClick={() => slideImageInputRef.current?.click()}
+                        disabled={isUploadingImage}
+                        className="premium-button"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '6px 10px',
+                          backgroundColor: '#3B82F6',
+                          color: '#FFFFFF',
+                          borderRadius: '8px',
+                          border: 'none',
+                          fontSize: '11px',
+                          fontWeight: '800',
+                          cursor: isUploadingImage ? 'wait' : 'pointer',
+                          whiteSpace: 'nowrap',
                         }}
-                        style={{ border: 'none', background: 'transparent', color: '#EF4444', cursor: 'pointer' }}
+                        title="Insérer une image sur la diapositive"
                       >
-                        <X size={14} />
+                        <ImageIcon size={13} />
+                        <span>{isUploadingImage ? 'Envoi...' : '➕ Image'}</span>
                       </button>
                     </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const nextBullets = [...(slides[currentSlideIndex]?.bullets || []), 'Nouveau point clé'];
-                      handleUpdateCurrentSlide('bullets', nextBullets);
-                    }}
+                  </div>
+
+                  {/* CARTE APERÇU DIAPOSITIVE EN COURS CENTRÉE AVEC THÈME DE FOND MODIFIÉ DYNAMIQUEMENT */}
+                  <div
                     style={{
-                      alignSelf: 'flex-start',
-                      border: '1px dashed var(--border-color)',
-                      backgroundColor: 'transparent',
-                      color: 'var(--text-secondary)',
-                      borderRadius: '8px',
-                      padding: '6px 12px',
-                      fontSize: '12px',
-                      fontWeight: '700',
-                      cursor: 'pointer',
+                      ...getSlideBackgroundStyle(slides[currentSlideIndex]?.theme),
+                      borderRadius: '16px',
+                      padding: '28px 26px',
+                      boxShadow: '0 8px 30px rgba(0,0,0,0.14)',
+                      aspectRatio: '16/9',
+                      minHeight: '320px',
+                      position: 'relative',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'center',
+                      transition: 'all 0.25s ease',
+                      boxSizing: 'border-box',
                     }}
                   >
-                    + Ajouter un point clé
-                  </button>
+                    <h2 style={{ fontSize: '24px', fontWeight: '800', margin: '0 0 6px 0', letterSpacing: '-0.01em' }}>
+                      {slides[currentSlideIndex]?.title || 'Titre de la diapositive'}
+                    </h2>
+                    <p style={{ fontSize: '14px', opacity: 0.9, margin: '0 0 14px 0', fontStyle: 'italic' }}>
+                      {slides[currentSlideIndex]?.subtitle || 'Sous-titre et contexte du projet'}
+                    </p>
+
+                    {/* IMAGE REDIMENSIONNABLE EN SURIMPRESSION */}
+                    {slides[currentSlideIndex]?.imageUrl && (
+                      <div style={{ margin: '12px auto', textAlign: 'center', position: 'relative' }}>
+                        <img
+                          src={slides[currentSlideIndex].imageUrl}
+                          alt={`Illustration diapositive ${currentSlideIndex + 1} : ${slides[currentSlideIndex]?.title || 'Présentation'}`}
+                          style={{
+                            width: `${slides[currentSlideIndex].imageWidth || 280}px`,
+                            maxHeight: '240px',
+                            objectFit: 'contain',
+                            borderRadius: '10px',
+                            boxShadow: '0 6px 18px rgba(0,0,0,0.25)',
+                            display: 'inline-block',
+                          }}
+                        />
+                        {/* Contrôles de redimensionnement de l'image */}
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '8px',
+                            marginTop: '8px',
+                            backgroundColor: 'rgba(0,0,0,0.5)',
+                            padding: '3px 8px',
+                            borderRadius: '8px',
+                            width: 'fit-content',
+                            margin: '8px auto 0 auto',
+                          }}
+                        >
+                          <span style={{ fontSize: '11px', color: '#FFF', fontWeight: '600' }}>Taille :</span>
+                          <input
+                            type="range"
+                            min="100"
+                            max="550"
+                            value={slides[currentSlideIndex].imageWidth || 280}
+                            onChange={(e) => handleUpdateCurrentSlide('imageWidth', Number(e.target.value))}
+                            style={{ width: '90px', cursor: 'pointer' }}
+                          />
+                          <span style={{ fontSize: '11px', color: '#FFF' }}>{slides[currentSlideIndex].imageWidth || 280}px</span>
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateCurrentSlide('imageUrl', null)}
+                            style={{
+                              border: 'none',
+                              backgroundColor: 'rgba(239, 68, 68, 0.85)',
+                              color: '#FFF',
+                              borderRadius: '4px',
+                              padding: '2px 6px',
+                              fontSize: '10px',
+                              fontWeight: '700',
+                              cursor: 'pointer',
+                            }}
+                            title="Supprimer l'image"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    <ul style={{ margin: '6px 0 0 0', paddingLeft: '18px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      {(slides[currentSlideIndex]?.bullets || []).map((b, i) => (
+                        <li key={i} style={{ fontSize: '13.5px', fontWeight: '600', opacity: 0.95 }}>
+                          {b}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <input
+                    type="text"
+                    value={slides[currentSlideIndex]?.subtitle || ''}
+                    onChange={(e) => handleUpdateCurrentSlide('subtitle', e.target.value)}
+                    placeholder="Sous-titre / Message clé..."
+                    style={{
+                      fontSize: '14px',
+                      padding: '8px 12px',
+                      borderRadius: '10px',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: 'var(--bg-subtle)',
+                      color: 'var(--text-secondary)',
+                      outline: 'none',
+                    }}
+                  />
+
+                  {/* PUCES DE CONTENU */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <span style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-secondary)' }}>Arguments & Points Clés :</span>
+                    {(slides[currentSlideIndex]?.bullets || []).map((bullet, bIdx) => (
+                      <div key={bIdx} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ color: 'var(--accent-primary)', fontWeight: '800' }}>•</span>
+                        <input
+                          type="text"
+                          value={bullet}
+                          onChange={(e) => {
+                            const nextBullets = [...(slides[currentSlideIndex]?.bullets || [])];
+                            nextBullets[bIdx] = e.target.value;
+                            handleUpdateCurrentSlide('bullets', nextBullets);
+                          }}
+                          style={{
+                            flex: 1,
+                            padding: '8px 12px',
+                            borderRadius: '8px',
+                            border: '1px solid var(--border-color)',
+                            backgroundColor: 'var(--bg-card)',
+                            color: 'var(--text-main)',
+                            fontSize: '13px',
+                            outline: 'none',
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const nextBullets = (slides[currentSlideIndex]?.bullets || []).filter((_, i) => i !== bIdx);
+                            handleUpdateCurrentSlide('bullets', nextBullets);
+                          }}
+                          style={{ border: 'none', background: 'transparent', color: '#EF4444', cursor: 'pointer' }}
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nextBullets = [...(slides[currentSlideIndex]?.bullets || []), 'Nouveau point clé'];
+                        handleUpdateCurrentSlide('bullets', nextBullets);
+                      }}
+                      style={{
+                        alignSelf: 'flex-start',
+                        border: '1px dashed var(--border-color)',
+                        backgroundColor: 'transparent',
+                        color: 'var(--text-secondary)',
+                        borderRadius: '8px',
+                        padding: '6px 12px',
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      + Ajouter un point clé
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
           )}
 
-          {/* 4. HISTORIQUE DES VERSIONS */}
+          {/* 4. TROCO NOTES : MINIMALISTE STYLE APPLE NOTES, CENTRÉ PLEIN ÉCRAN */}
+          {activeTab === 'notes' && (
+            <div
+              className="flex-1 overflow-y-auto bg-stone-50 dark:bg-[#12100F] p-4 md:p-10 flex flex-col items-center justify-start w-full cursor-text"
+              style={{
+                flex: 1,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                justifyContent: 'flex-start',
+                overflowY: 'auto',
+                backgroundColor: darkMode ? '#12100F' : '#F8F6F0',
+                padding: '32px 16px',
+                cursor: 'text',
+                boxSizing: 'border-box',
+                width: '100%',
+              }}
+            >
+              <div
+                className="w-full max-w-3xl mx-auto bg-white dark:bg-[#1A1715] text-stone-900 dark:text-stone-100 rounded-3xl shadow-xl border border-stone-200 dark:border-white/10 p-6 md:p-10 flex flex-col gap-4 min-h-[480px] shrink-0 transition-shadow"
+                style={{
+                  boxSizing: 'border-box',
+                  width: '100%',
+                  maxWidth: '48rem',
+                  minHeight: '480px',
+                  borderRadius: '24px',
+                  boxShadow: '0 10px 30px rgba(0, 0, 0, 0.08)',
+                }}
+              >
+                <div className="flex items-center justify-between pb-3 border-b border-stone-200 dark:border-white/10">
+                  <span className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                    <StickyNote size={14} /> Note Rapide
+                  </span>
+                  <span className="text-xs text-stone-400">
+                    {new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  </span>
+                </div>
+                <textarea
+                  value={notesContent}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setNotesContent(val);
+                    saveNotesToFirestore(val, notesTitle);
+                  }}
+                  placeholder="Notez ici vos pensées, listes de tâches, liens utiles ou idées en vrac..."
+                  className="w-full flex-1 min-h-[360px] bg-transparent border-0 outline-none resize-none text-stone-800 dark:text-stone-100 font-sans text-base leading-relaxed"
+                  style={{
+                    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                    lineHeight: '1.7',
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* 5. HISTORIQUE DES VERSIONS */}
           {activeTab === 'history' && (
             <div style={{ flex: 1, padding: '20px', overflowY: 'auto' }}>
               <h3 style={{ margin: '0 0 12px', fontSize: '18px', color: 'var(--text-main)' }}>
@@ -2527,7 +2785,7 @@ function CloudOfficeSuiteModalContent({
                     >
                       <div>
                         <div style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-main)' }}>
-                          {v?.type === 'doc' ? '📄 Document' : v?.type === 'sheet' ? '📊 Tableur' : '📽️ Diaporama'} • {v?.title || 'Sans titre'}
+                          {v?.type === 'doc' ? '📄 Document' : v?.type === 'sheet' ? '📊 Tableur' : v?.type === 'notes' ? '📌 Note' : '📽️ Diaporama'} • {v?.title || 'Sans titre'}
                         </div>
                         <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>
                           Modifié à {v?.timestamp || 'Date inconnue'} par <strong>{v?.author || 'Collaborateur'}</strong>
@@ -2552,6 +2810,11 @@ function CloudOfficeSuiteModalContent({
                             setSlides(s);
                             saveSlidesToFirestore(s);
                             setActiveTab('slides');
+                          } else if (v?.type === 'notes') {
+                            const n = v?.content || '';
+                            setNotesContent(n);
+                            saveNotesToFirestore(n);
+                            setActiveTab('notes');
                           }
                         }}
                         className="premium-button"
