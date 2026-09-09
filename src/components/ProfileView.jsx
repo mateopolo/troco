@@ -6,6 +6,7 @@ import { SocialLinksDisplay, SocialLinksEditor } from './UserProfile';
 import { ProgressiveImage } from './ui/ProgressiveImage';
 import { EmptyState } from './ui/EmptyState';
 import InclusiveAvatarBuilder from './profile/InclusiveAvatarBuilder';
+import DesignStudioModal from './DesignStudioModal';
 
 export default function ProfileView({
   activeTab,
@@ -49,6 +50,7 @@ export default function ProfileView({
   onRemovePortfolioImage,
 }) {
   const [isKycModalOpen, setIsKycModalOpen] = useState(false);
+  const [isDesignStudioOpen, setIsDesignStudioOpen] = useState(false);
   const [portfolioUrlInput, setPortfolioUrlInput] = useState('');
   const portfolioFileInputRef = useRef(null);
 
@@ -249,15 +251,24 @@ export default function ProfileView({
               </div>
             )}
 
-            <div style={{ marginTop: '16px', display: 'flex', gap: '10px' }}>
+            <div style={{ marginTop: '16px', display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
               {!isEditingProfile ? (
-                <button
-                  onClick={handleStartEdit}
-                  className="premium-button"
-                  style={{ border: '1px solid var(--border-color)', borderRadius: '14px', padding: '10px 18px', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-main)', fontWeight: '800', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-                >
-                  <Pencil size={15} /> Modifier le profil
-                </button>
+                <>
+                  <button
+                    onClick={handleStartEdit}
+                    className="premium-button"
+                    style={{ border: '1px solid var(--border-color)', borderRadius: '14px', padding: '10px 18px', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-main)', fontWeight: '800', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                  >
+                    <Pencil size={15} /> Modifier le profil
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsDesignStudioOpen(true)}
+                    className="flex items-center gap-2 px-4 py-2 rounded-full bg-[var(--bg-card)] border border-white/10 hover:bg-white/5 transition-colors text-sm font-medium cursor-pointer"
+                  >
+                    🎨 Personnaliser l'apparence
+                  </button>
+                </>
               ) : (
                 <>
                   <button
@@ -598,6 +609,11 @@ export default function ProfileView({
         }}
         profile={profile}
         darkMode={darkMode}
+      />
+
+      <DesignStudioModal
+        isOpen={isDesignStudioOpen}
+        onClose={() => setIsDesignStudioOpen(false)}
       />
     </div>
   );
