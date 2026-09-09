@@ -579,8 +579,16 @@ export default function CollaborativeWhiteboardModal({
     ctx.shadowBlur = 0;
     ctx.shadowColor = 'transparent';
 
-    // RÈGLE GHOSTING STRICTE : Opacity 0.5 sur les traits distants pendant qu'ils sont dessinés
-    if (brushTool === 'pencil' || brushTool === 'pen') {
+    // CRAYON À PAPIER (EFFET TEXTURÉ / LÉGER)
+    if (brushTool === 'pencil') {
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.globalAlpha = 0.6;
+      ctx.shadowBlur = 1;
+      ctx.shadowColor = brushColor;
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.strokeStyle = brushColor;
+    } else if (brushTool === 'pen') {
       ctx.lineCap = 'butt';
       ctx.lineJoin = 'miter';
       ctx.globalAlpha = isRemote ? 0.5 : 1.0;
@@ -599,10 +607,11 @@ export default function CollaborativeWhiteboardModal({
       ctx.shadowColor = brushColor;
       ctx.strokeStyle = brushColor;
     } else if (brushTool === 'highlighter') {
-      ctx.lineCap = 'square';
+      // LE STABILO (EFFET PRODUIT / MULTIPLY)
+      ctx.globalCompositeOperation = 'multiply';
+      ctx.globalAlpha = 0.4;
+      ctx.lineCap = 'butt';
       ctx.lineJoin = 'bevel';
-      ctx.globalAlpha = isRemote ? 0.2 : 0.32;
-      ctx.globalCompositeOperation = 'source-over';
       ctx.strokeStyle = brushColor;
     } else if (brushTool === 'eraser') {
       ctx.lineCap = 'round';
@@ -854,6 +863,18 @@ export default function CollaborativeWhiteboardModal({
 
       applyBrushStyleToContext(ctx, path.tool, path.color, path.lineWidth, !!path.isRemote);
 
+      // LE STABILO (EFFET PRODUIT / MULTIPLY)
+      if (path.tool === 'highlighter') {
+        ctx.globalCompositeOperation = 'multiply';
+        ctx.globalAlpha = 0.4;
+        ctx.lineCap = 'butt';
+      } else if (path.tool === 'pencil') {
+        // LE CRAYON À PAPIER (EFFET TEXTURÉ / LÉGER)
+        ctx.globalAlpha = 0.6;
+        ctx.shadowBlur = 1;
+        ctx.shadowColor = path.color;
+      }
+
       if (path.type === 'freehand') {
         if (path.points && path.points.length > 0) {
           ctx.moveTo(path.points[0].x, path.points[0].y);
@@ -865,6 +886,12 @@ export default function CollaborativeWhiteboardModal({
       } else {
         drawVectorShape(ctx, path);
       }
+
+      // Réinitialisation systématique du contexte
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = 1.0;
+      ctx.shadowBlur = 0;
+      ctx.shadowColor = 'transparent';
 
       ctx.restore();
     });
@@ -2904,9 +2931,9 @@ export default function CollaborativeWhiteboardModal({
           {/* Outils de dessin libres */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexShrink: 0 }}>
             {[
-              { id: 'pencil', icon: Pen, title: 'Crayon' },
+              { id: 'pencil', icon: Pen, title: 'Crayon à papier' },
               { id: 'brush', icon: Brush, title: 'Pinceau Artistique' },
-              { id: 'highlighter', icon: Highlighter, title: 'Surligneur' },
+              { id: 'highlighter', icon: Highlighter, title: 'Stabilo / Surligneur' },
               { id: 'eraser', icon: Eraser, title: 'Gomme' },
             ].map((btn) => {
               const Icon = btn.icon;
