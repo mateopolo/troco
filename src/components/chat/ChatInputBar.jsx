@@ -79,11 +79,29 @@ function ChatInputBar({
       haptics.impact();
       let downloadUrl = '';
 
+      const isIOS = typeof navigator !== 'undefined' && (
+        /iPad|iPhone|iPod/.test(navigator.userAgent || '') ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+      );
+
+      const ext = (file.name.split('.').pop() || '').toLowerCase();
+      let normalizedMime = file.type;
+      if (!normalizedMime || normalizedMime === 'application/octet-stream') {
+        if (ext === 'mp4' || ext === 'm4a') normalizedMime = 'audio/mp4';
+        else if (ext === 'webm') normalizedMime = 'audio/webm';
+        else if (ext === 'ogg') normalizedMime = 'audio/ogg';
+        else if (ext === 'mp3') normalizedMime = 'audio/mpeg';
+        else if (ext === 'wav') normalizedMime = 'audio/wav';
+        else normalizedMime = isIOS ? 'audio/mp4' : 'audio/webm';
+      } else if (isIOS && (normalizedMime.includes('m4a') || ext === 'm4a' || ext === 'mp4')) {
+        normalizedMime = 'audio/mp4';
+      }
+
       if (storage) {
         const cleanName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
         const storageRef = ref(storage, `chat_audios/${cleanName}`);
         const snapshot = await uploadBytes(storageRef, file, {
-          contentType: file.type || 'audio/mpeg',
+          contentType: normalizedMime || (isIOS ? 'audio/mp4' : 'audio/mpeg'),
         });
         downloadUrl = await getDownloadURL(snapshot.ref);
       } else {
@@ -99,6 +117,7 @@ function ChatInputBar({
         type: 'audio',
         audioUrl: downloadUrl,
         fileName: file.name,
+        mimeType: normalizedMime,
         transcript: '',
         transcriptLang: 'fr',
       };
@@ -124,6 +143,12 @@ function ChatInputBar({
     } catch (err) {
       console.error('[ChatInputBar] handleAudioUpload error:', err);
       try {
+        const isIOS = typeof navigator !== 'undefined' && (
+          /iPad|iPhone|iPod/.test(navigator.userAgent || '') ||
+          (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+        );
+        const ext = (file.name.split('.').pop() || '').toLowerCase();
+        const fallbackMime = (ext === 'mp4' || ext === 'm4a' || isIOS) ? 'audio/mp4' : (ext === 'webm' ? 'audio/webm' : 'audio/mpeg');
         const dataUrl = await new Promise((resolve, reject) => {
           const reader = new FileReader();
           reader.onloadend = () => resolve(reader.result);
@@ -134,6 +159,9 @@ function ChatInputBar({
           type: 'audio',
           audioUrl: dataUrl,
           fileName: file.name,
+          mimeType: fallbackMime,
+          transcript: '',
+          transcriptLang: 'fr',
         };
         if (typeof onAudioUpload === 'function') {
           await onAudioUpload(fallbackMsg);

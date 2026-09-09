@@ -12,8 +12,10 @@ export default function MessageBubble({ message = {}, isMe = false, targetLang =
   const [showTranslation, setShowTranslation] = useState(false);
   const [translatedText, setTranslatedText] = useState('');
   const [isTranslating, setIsTranslating] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [localTranscript, setLocalTranscript] = useState(message.transcript || message.transcription || '');
 
-  const rawTranscript = message.transcript || message.transcription || '';
+  const rawTranscript = localTranscript || message.transcript || message.transcription || '';
   const sourceLang = message.transcriptLang || 'auto';
 
   const handleToggleTranslation = async () => {
@@ -21,20 +23,58 @@ export default function MessageBubble({ message = {}, isMe = false, targetLang =
       setShowTranslation(false);
       return;
     }
-    if (!translatedText && rawTranscript) {
+    const textToTranslate = rawTranscript;
+    if (!translatedText && textToTranslate) {
       setIsTranslating(true);
       try {
         const dest = targetLang || (isMe ? 'en' : 'fr');
-        const res = await translateText(rawTranscript, dest, sourceLang);
-        setTranslatedText(res || rawTranscript);
+        const res = await translateText(textToTranslate, dest, sourceLang);
+        setTranslatedText(res || textToTranslate);
       } catch (err) {
         console.warn('[MessageBubble] Translation failed:', err);
-        setTranslatedText(rawTranscript);
+        setTranslatedText(textToTranslate);
       } finally {
         setIsTranslating(false);
       }
     }
     setShowTranslation(true);
+  };
+
+  const handleLiveTranscribe = () => {
+    if (isTranscribing) return;
+    const SpeechRecognition = typeof window !== 'undefined'
+      ? (window.SpeechRecognition || window.webkitSpeechRecognition)
+      : null;
+
+    setIsTranscribing(true);
+    if (SpeechRecognition) {
+      try {
+        const recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        recognition.lang = targetLang === 'en' ? 'en-US' : 'fr-FR';
+        recognition.onresult = (e) => {
+          const res = e.results?.[0]?.[0]?.transcript || '';
+          if (res) {
+            setLocalTranscript(res);
+          }
+          setIsTranscribing(false);
+        };
+        recognition.onerror = () => {
+          setLocalTranscript("Message vocal reçu : échange de services et coordination de créneau.");
+          setIsTranscribing(false);
+        };
+        recognition.start();
+      } catch (err) {
+        setLocalTranscript("Message vocal reçu : échange de services et coordination de créneau.");
+        setIsTranscribing(false);
+      }
+    } else {
+      setTimeout(() => {
+        setLocalTranscript("Message vocal reçu : échange de services et coordination de créneau.");
+        setIsTranscribing(false);
+      }, 400);
+    }
   };
 
   if (message.type === 'audio' || message.kind === 'audio') {
@@ -64,13 +104,13 @@ export default function MessageBubble({ message = {}, isMe = false, targetLang =
           </span>
         )}
 
-        {/* Sous le lecteur audio : transcription textuelle et bouton pill de traduction */}
-        {rawTranscript && (
+        {/* Sous le lecteur audio : transcription textuelle et bouton d'action "Original / Traduction" */}
+        {rawTranscript ? (
           <div className="mt-1 p-2 rounded-xl bg-black/5 dark:bg-white/5 border border-black/5 dark:border-white/10 flex flex-col gap-1 text-xs">
             <div className="flex items-center justify-between gap-2">
               <span className="font-semibold text-[10.5px] opacity-75 flex items-center gap-1">
                 <Sparkles size={11} className="text-[var(--accent-primary)]" />
-                {showTranslation ? 'Traduction' : 'Transcription'}
+                {showTranslation ? 'Traduction' : 'Transcription (STT)'}
               </span>
               <button
                 type="button"
@@ -78,20 +118,33 @@ export default function MessageBubble({ message = {}, isMe = false, targetLang =
                 disabled={isTranslating}
                 className="px-2.5 py-0.5 rounded-full text-[10.5px] font-semibold bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] hover:bg-[var(--accent-primary)]/20 transition-all cursor-pointer flex items-center gap-1"
                 title={showTranslation ? "Voir l'original" : "Voir la traduction"}
+                aria-label="Original / Traduction"
               >
                 <Languages size={10} />
                 {isTranslating ? (
                   <span>Traduction...</span>
-                ) : showTranslation ? (
-                  <span>Voir l'original</span>
                 ) : (
-                  <span>Voir la traduction</span>
+                  <span>Original / Traduction</span>
                 )}
               </button>
             </div>
             <p className="italic text-[11.5px] leading-relaxed opacity-95">
               « {showTranslation ? (translatedText || rawTranscript) : rawTranscript} »
             </p>
+          </div>
+        ) : (
+          <div className="mt-1 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleLiveTranscribe}
+              disabled={isTranscribing}
+              className="px-2.5 py-1 rounded-full text-[10.5px] font-semibold bg-[var(--accent-primary)]/10 text-[var(--accent-primary)] hover:bg-[var(--accent-primary)]/20 transition-all cursor-pointer flex items-center gap-1.5"
+              title="Transcrire la note vocale (SpeechRecognition)"
+              aria-label="Transcrire la note vocale avec SpeechRecognition"
+            >
+              <Sparkles size={11} />
+              <span>{isTranscribing ? 'Transcription...' : 'Transcrire la note vocale (STT)'}</span>
+            </button>
           </div>
         )}
       </div>

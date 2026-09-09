@@ -385,10 +385,11 @@ export default function VoiceNotePlayer({
                   gap: '3px',
                   boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
                 }}
-                title={showTranslation ? "Voir l'original" : "Voir la traduction"}
+                title={showTranslation ? "Voir l'original" : "Original / Traduction"}
+                aria-label="Original / Traduction"
               >
                 <Languages size={10} />
-                <span>{isTranslating ? 'Traduction...' : showTranslation ? "Voir l'original" : "Voir la traduction"}</span>
+                <span>{isTranslating ? 'Traduction...' : 'Original / Traduction'}</span>
               </button>
 
               <button

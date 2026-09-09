@@ -8,12 +8,31 @@ import { storage } from '../firebase';
  * avec capture Speech-to-Text (SpeechRecognition) en parallèle pour transcription et traduction instantanée.
  */
 
-// Détecte les types MIME supportés par le navigateur avec fallback ordonné
+// Détecte les types MIME supportés par le navigateur avec normalisation prioritaire iOS (audio/mp4)
 export function detectSupportedMimeType() {
-  const mimeType = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg'].find(
-    type => typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(type)
-  ) || '';
-  return mimeType;
+  if (typeof window === 'undefined') return 'audio/mp4';
+  const isIOS = typeof navigator !== 'undefined' && (
+    /iPad|iPhone|iPod/.test(navigator.userAgent || '') ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+  );
+
+  // Sur iOS Safari, audio/mp4 et ses variantes AAC sont strictement prioritaires
+  const mimeCandidates = isIOS
+    ? ['audio/mp4', 'audio/mp4;codecs=aac', 'audio/aac', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg']
+    : ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg', 'audio/aac'];
+
+  if (typeof MediaRecorder !== 'undefined' && typeof MediaRecorder.isTypeSupported === 'function') {
+    const supported = mimeCandidates.find(type => {
+      try {
+        return MediaRecorder.isTypeSupported(type);
+      } catch (_) {
+        return false;
+      }
+    });
+    if (supported) return supported;
+  }
+
+  return isIOS ? 'audio/mp4' : 'audio/webm';
 }
 
 export default function VoiceNoteRecorder({
@@ -53,13 +72,21 @@ export default function VoiceNoteRecorder({
         streamRef.current = stream;
 
         // 1. Normalisation du MediaRecorder à l'enregistrement (mp4 en priorité pour iOS)
-        const mimeType = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg'].find(
-          type => typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(type)
-        ) || '';
+        const mimeType = detectSupportedMimeType();
         setDetectedMimeType(mimeType);
 
-        const options = mimeType ? { mimeType } : {};
-        const mediaRecorder = new MediaRecorder(stream, options);
+        let mediaRecorder;
+        try {
+          mediaRecorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+        } catch (optionsErr) {
+          console.warn('[VoiceNoteRecorder] MediaRecorder avec options a échoué, fallback sans options:', optionsErr);
+          try {
+            mediaRecorder = new MediaRecorder(stream);
+          } catch (basicErr) {
+            console.error('[VoiceNoteRecorder] Échec MediaRecorder complet:', basicErr);
+            throw basicErr;
+          }
+        }
         mediaRecorderRef.current = mediaRecorder;
         audioChunksRef.current = [];
 
@@ -70,7 +97,11 @@ export default function VoiceNoteRecorder({
         };
 
         mediaRecorder.onstop = () => {
-          const actualMime = mediaRecorder.mimeType || mimeType || 'audio/mp4';
+          const isIOS = typeof navigator !== 'undefined' && (
+            /iPad|iPhone|iPod/.test(navigator.userAgent || '') ||
+            (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+          );
+          const actualMime = mediaRecorder.mimeType || mimeType || (isIOS ? 'audio/mp4' : 'audio/webm');
           const blob = new Blob(audioChunksRef.current, { type: actualMime });
           setAudioBlob(blob);
           const url = URL.createObjectURL(blob);
@@ -201,15 +232,14 @@ export default function VoiceNoteRecorder({
         return;
       }
 
-      const finalMimeType = blob.type || detectedMimeType || 'audio/mp4';
-      const extMap = {
-        'audio/mp4': 'mp4',
-        'audio/webm': 'webm',
-        'audio/webm;codecs=opus': 'webm',
-        'audio/ogg': 'ogg',
-        'audio/ogg;codecs=opus': 'ogg',
-      };
-      const ext = extMap[finalMimeType] || 'mp4';
+      const isIOS = typeof navigator !== 'undefined' && (
+        /iPad|iPhone|iPod/.test(navigator.userAgent || '') ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+      );
+      const finalMimeType = blob.type || detectedMimeType || (isIOS ? 'audio/mp4' : 'audio/webm');
+      const isMp4OrAac = finalMimeType.includes('mp4') || finalMimeType.includes('aac');
+      const isOgg = finalMimeType.includes('ogg');
+      const ext = isMp4OrAac ? 'mp4' : (isOgg ? 'ogg' : 'webm');
       const fileName = `voice_${Date.now()}.${ext}`;
 
       let audioUrl = '';
@@ -218,7 +248,7 @@ export default function VoiceNoteRecorder({
         try {
           const storageRef = ref(storage, `voice_notes/${fileName}`);
           const snapshot = await uploadBytes(storageRef, blob, {
-            contentType: finalMimeType || 'audio/mp4',
+            contentType: finalMimeType || (isIOS ? 'audio/mp4' : 'audio/webm'),
           });
           audioUrl = await getDownloadURL(snapshot.ref);
         } catch (storageErr) {
@@ -250,7 +280,11 @@ export default function VoiceNoteRecorder({
     if (!audioBlob && mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
       if (timerRef.current) clearInterval(timerRef.current);
       mediaRecorderRef.current.onstop = async () => {
-        const actualMime = mediaRecorderRef.current?.mimeType || detectedMimeType || 'audio/mp4';
+        const isIOS = typeof navigator !== 'undefined' && (
+          /iPad|iPhone|iPod/.test(navigator.userAgent || '') ||
+          (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+        );
+        const actualMime = mediaRecorderRef.current?.mimeType || detectedMimeType || (isIOS ? 'audio/mp4' : 'audio/webm');
         const blob = new Blob(audioChunksRef.current, { type: actualMime });
         if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
         await doUploadAndSend(blob);
