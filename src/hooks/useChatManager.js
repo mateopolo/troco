@@ -579,10 +579,14 @@ export const useChatManager = ({
           return tA - tB;
         });
 
-        return {
+        const updatedThreads = {
           ...prev,
           [selectedChat.id]: uniqueMessages,
         };
+        try {
+          useChatStore.getState().updateChatThread(selectedChat.id, uniqueMessages);
+        } catch (_) {}
+        return updatedThreads;
       });
 
       // Si le chat est ouvert dans l'onglet 'chat', marquer automatiquement les messages reçus comme "lu"
@@ -817,6 +821,11 @@ export const useChatManager = ({
           };
         });
 
+        // Déduplication & purge de l'ID temporaire dans le cache persistant Zustand
+        try {
+          useChatStore.getState().replaceTempId(chatId, tempId, docRef.id);
+        } catch (_) {}
+
         await setDoc(doc(db, 'chats', String(chatId)), {
           id: chatId,
           user: selectedChat.user,
@@ -873,6 +882,11 @@ export const useChatManager = ({
             [chatId]: thread.map(m => m.id === msg.id ? { ...m, id: docRef.id || msg.id, status: 'sent' } : m)
           };
         });
+
+        // Déduplication & purge de l'ID temporaire dans le cache persistant Zustand
+        try {
+          useChatStore.getState().replaceTempId(chatId, msg.id, docRef.id);
+        } catch (_) {}
       } catch (e) {
         console.warn('[Firestore] retry failed:', e);
         setChatThreads(prev => {
@@ -1011,6 +1025,11 @@ export const useChatManager = ({
             [chatId]: thread.map(m => m.id === tempId ? { ...m, id: docRef.id || tempId, status: 'sent' } : m),
           };
         });
+
+        // Déduplication & purge de l'ID temporaire dans le cache persistant Zustand
+        try {
+          useChatStore.getState().replaceTempId(chatId, tempId, docRef.id);
+        } catch (_) {}
         await setDoc(doc(db, 'chats', String(chatId)), {
           lastMessage: newAudioMessage.text,
           lastSenderName: profile?.name || 'Moi',

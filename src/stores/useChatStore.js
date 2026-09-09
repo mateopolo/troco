@@ -32,6 +32,33 @@ export const useChatStore = create(
         };
       }),
 
+      replaceTempId: (chatId, tempId, realDocId) => set((state) => {
+        const currentThread = state.chatThreads[chatId] || [];
+        const realIdStr = String(realDocId);
+        const tempIdStr = String(tempId);
+
+        // Si le document réel existe déjà (via snapshot Firestore), on purge l'ID temporaire
+        const alreadyHasReal = currentThread.some(m => String(m.id) === realIdStr);
+
+        let updated;
+        if (alreadyHasReal) {
+          updated = currentThread.filter(m => String(m.id) !== tempIdStr);
+        } else {
+          updated = currentThread.map(m =>
+            String(m.id) === tempIdStr
+              ? { ...m, id: realDocId, status: 'sent', isPending: false }
+              : m
+          );
+        }
+
+        return {
+          chatThreads: {
+            ...state.chatThreads,
+            [chatId]: updated,
+          }
+        };
+      }),
+
       setMessageDraft: (messageDraft) => set({ messageDraft }),
       setReadChats: (readChats) => set({ readChats }),
 
