@@ -35,7 +35,7 @@ export default function ProfileView({
   setEquipmentInput,
   handleAddEquipment,
   handleRemoveEquipment,
-  swapHistory,
+  swapHistory = [],
   closedDealsCount,
   inProgressCount,
   averageRating,

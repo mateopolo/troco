@@ -200,10 +200,11 @@ export default function DealMessageCard({
                     whiteSpace: 'nowrap',
                     transition: 'transform 0.15s ease, opacity 0.15s ease'
                   }}
-                  title="Accepter la proposition de deal"
+                  title="Accepter les termes et sceller le deal contractuel"
+                  aria-label="Accepter et sceller le deal"
                 >
                   <Check size={14} strokeWidth={2.5} />
-                  <span>Accepter</span>
+                  <span>Accepter & sceller le deal</span>
                 </button>
 
                 {/* BOUTON 2 : CONTRE-OFFRE */}
@@ -236,10 +237,11 @@ export default function DealMessageCard({
                     whiteSpace: 'nowrap',
                     transition: 'transform 0.15s ease, opacity 0.15s ease'
                   }}
-                  title="Faire une contre-proposition"
+                  title="Proposer des conditions alternatives"
+                  aria-label="Faire une contre-offre"
                 >
                   <RefreshCw size={13} strokeWidth={2.5} />
-                  <span>Négocier</span>
+                  <span>Contre-offre</span>
                 </button>
 
                 {/* BOUTON 3 : REFUSER */}
@@ -272,10 +274,11 @@ export default function DealMessageCard({
                     whiteSpace: 'nowrap',
                     transition: 'transform 0.15s ease, opacity 0.15s ease'
                   }}
-                  title="Décliner cette proposition"
+                  title="Décliner définitivement cette proposition"
+                  aria-label="Décliner l'offre"
                 >
                   <X size={14} strokeWidth={2.5} />
-                  <span>Refuser</span>
+                  <span>Décliner l'offre</span>
                 </button>
               </div>
             )}

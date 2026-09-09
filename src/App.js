@@ -2154,23 +2154,13 @@ export default function App() {
       }
     } else if (Array.isArray(listing.authorReviews) && listing.authorReviews.length > 0) {
       authorReviews = listing.authorReviews;
-    } else if (listing.author === 'Sofia M.' && (listing.isDemo || (typeof listing.id === 'number' && listing.id <= 20))) {
-      authorReviews = [
-        { rating: 5, text: 'Très pédagogique et hyper réactif, j’ai eu un échange de qualité dès le premier message.' },
-        { rating: 4, text: 'Un vrai plaisir de travailler avec elle, le format visio est simple et agréable.' },
-      ];
-    } else if (listing.author === 'Marc L.' && (listing.isDemo || (typeof listing.id === 'number' && listing.id <= 20))) {
-      authorReviews = [
-        { rating: 5, text: 'Très fiable pour les prêts et les dépannages rapides, j’ai apprécié la transparence.' },
-        { rating: 5, text: 'Parfait pour les échanges de proximité, le service est simple et rassurant.' },
-      ];
     } else {
       authorReviews = [];
     }
 
     const hasRealReviews = authorReviews.length > 0;
     const computedRating = hasRealReviews
-      ? (listing.rating || (isCurrentUser && averageRating !== '—' ? Number(averageRating) : 5.0))
+      ? (listing.rating || (isCurrentUser && averageRating !== '—' ? Number(averageRating) : (listing.rating != null ? Number(listing.rating) : null)))
       : null;
     const computedReviewsCount = hasRealReviews
       ? (isCurrentUser ? authorReviews.length : (listing.reviews || authorReviews.length))

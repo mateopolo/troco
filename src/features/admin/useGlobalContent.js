@@ -6,7 +6,7 @@ import { db } from '../../firebase';
  * Valeurs par défaut pour les clés globales de contenu
  */
 export const DEFAULT_GLOBAL_CONTENT = {
-  welcome_message: "Bienvenue sur Troco — La 1ère plateforme de troc de compétences et services en France !",
+  welcome_message: "Bienvenue sur Troco — Plateforme collaborative de troc de compétences et services !",
   hero_subtitle: "Échangez votre savoir-faire sans dépenser 1 euro. Développez votre réseau local.",
   community_rules: "1. Respect mutuel et bienveillance dans tous les échanges.\n2. Aucune transaction financière dissimulée.\n3. Respect des délais et des engagements de troc.",
   platform_announcement: "📢 Nouveauté : Hubs de Projets et Whiteboard Collaboratif 100% P2P disponibles !",

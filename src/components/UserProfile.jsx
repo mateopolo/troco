@@ -750,9 +750,15 @@ export default function UserProfile({
                   <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                     <MapPin size={14} /> {profile.location || 'France'}
                   </span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--accent-warning)', fontWeight: '800' }}>
-                    <Star size={14} fill="var(--accent-warning)" /> {profile.rating || 5.0} ({profile.reviews || 0} avis)
-                  </span>
+                  {(profile.reviews || profile.reviewsCount) ? (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--accent-warning)', fontWeight: '800' }}>
+                      <Star size={14} fill="var(--accent-warning)" /> {Number(profile.rating || 0).toFixed(1)} ({profile.reviews || profile.reviewsCount} avis)
+                    </span>
+                  ) : (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-secondary)', fontWeight: '600' }}>
+                      <Star size={14} /> Pas d'évaluation pour l'instant (0 avis)
+                    </span>
+                  )}
                 </div>
               </>
             ) : (

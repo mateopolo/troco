@@ -13,9 +13,7 @@ const SPONSORED_PARTNERS = [
     image: 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=600&q=80',
     perk: '-15% Code TROCO15',
     ctaText: 'Découvrir le matériel',
-    author: 'Atelier Pro Partenaire',
-    rating: '4.95',
-    reviewsCount: 128
+    author: 'Atelier Pro Partenaire'
   },
   {
     id: 'sponsor-cowork-2',
@@ -27,9 +25,7 @@ const SPONSORED_PARTNERS = [
     image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=600&q=80',
     perk: '1 Journée Offerte',
     ctaText: 'Réserver un pass',
-    author: 'Stillpoint Hub',
-    rating: '4.98',
-    reviewsCount: 84
+    author: 'Stillpoint Hub'
   },
   {
     id: 'sponsor-audio-3',
@@ -41,9 +37,7 @@ const SPONSORED_PARTNERS = [
     image: 'https://images.unsplash.com/photo-1590602847861-f357a9332bbc?auto=format&fit=crop&w=600&q=80',
     perk: 'Troco Plus : -25%',
     ctaText: 'Voir les disponibilités',
-    author: 'Studio TrocoLab',
-    rating: '4.92',
-    reviewsCount: 62
+    author: 'Studio TrocoLab'
   },
   {
     id: 'sponsor-mentor-4',
@@ -55,9 +49,7 @@ const SPONSORED_PARTNERS = [
     image: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=600&q=80',
     perk: 'Audit Express Offert',
     ctaText: 'Demander un audit',
-    author: 'Mentorat Club',
-    rating: '5.0',
-    reviewsCount: 210
+    author: 'Mentorat Club'
   }
 ];
 
@@ -241,10 +233,8 @@ export default function SponsoredFeedCard({ index = 0, darkMode = false, onOpenN
           color: 'var(--text-secondary)'
         }}>
           <span style={{ fontWeight: '600', color: 'var(--text-main)' }}>{partner.author}</span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-            <span style={{ color: '#F59E0B' }}>★</span>
-            <strong>{partner.rating}</strong>
-            <span>({partner.reviewsCount})</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: 'var(--accent-primary)', fontWeight: '600' }}>
+            Partenaire certifié
           </span>
         </div>
 

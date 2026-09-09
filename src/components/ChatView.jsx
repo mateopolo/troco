@@ -3742,7 +3742,7 @@ function ChatView({
                     justifyContent: 'center',
                   }}
                 >
-                  {isTransferringTokens ? 'Transfert...' : `Envoyer ${directTokensCount} 🪙`}
+                  {isTransferringTokens ? 'Transfert en cours...' : `Confirmer le transfert de ${directTokensCount} Jetons Troco`}
                 </button>
               </div>
             </div>

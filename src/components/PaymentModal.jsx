@@ -1361,7 +1361,7 @@ export default function PaymentModal({
                 ) : isUpgradeAction ? (
                   <>
                     <Sparkles size={16} />
-                    ⚡ Mettre à niveau vers Troco Plus Pro ({amountToPay.toFixed(2)} €)
+                    ⚡ Mettre à niveau vers Troco Plus Pro ({amountToPay.toFixed(2)} € avec obligation de paiement)
                   </>
                 ) : isDealMode ? (
                   dealTokensRequired > 0 && !hasEnoughTokens ? (
@@ -1372,18 +1372,18 @@ export default function PaymentModal({
                   ) : amountToPay <= 0 ? (
                     <>
                       <Lock size={16} />
-                      Valider et Sceller le Deal ({dealTokensRequired > 0 ? `${dealTokensRequired} Jeton(s)` : 'Troc Direct'})
+                      Confirmer le transfert et sceller le deal ({dealTokensRequired > 0 ? `${dealTokensRequired} Jeton(s)` : 'Troc Direct'})
                     </>
                   ) : (
                     <>
                       <Lock size={16} />
-                      Régler {amountToPay.toFixed(2)} € & Sceller le Deal
+                      Confirmer le paiement de {amountToPay.toFixed(2)} € et sceller le deal (obligation de paiement)
                     </>
                   )
                 ) : (
                   <>
                     <Lock size={16} />
-                    Payer {amountToPay.toFixed(2)} € avec {paymentMethod === 'applePay' ? 'Apple Pay' : paymentMethod === 'card' ? 'Carte Bancaire' : 'Solde Portefeuille'}
+                    Confirmer et payer {amountToPay.toFixed(2)} € avec {paymentMethod === 'applePay' ? 'Apple Pay' : paymentMethod === 'card' ? 'Carte Bancaire' : 'Solde Portefeuille'} (avec obligation de paiement)
                   </>
                 )}
               </button>
@@ -1496,7 +1496,7 @@ export default function PaymentModal({
                     boxShadow: 'var(--shadow-accent)'
                   }}
                 >
-                  Confirmer
+                  Valider l'authentification et payer
                 </button>
               </div>
             </div>
