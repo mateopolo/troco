@@ -45,14 +45,14 @@ describe('PHASE 126: Workspace Header Unification (Docs, Sheets, Slides, Notes)'
         />
       );
 
-      // Modal container has max-h-[90dvh] and overflow-y-auto
-      const container = baseElement.querySelector('.max-h-\\[90dvh\\]');
+      // Modal container is fullscreen fixed inset-0 md:inset-4 z-[9999] and overflow-hidden
+      const container = baseElement.querySelector('.fixed.inset-0.md\\:inset-4.z-\\[9999\\]');
       expect(container).toBeInTheDocument();
-      expect(container.className).toContain('overflow-y-auto');
+      expect(container.className).toContain('overflow-hidden');
 
-      // Ligne 1
-      const line1 = baseElement.querySelector('.flex.justify-between.items-center.w-full.mb-3');
-      expect(line1).toBeInTheDocument();
+      // Global Header
+      const globalHeader = baseElement.querySelector('.flex.items-center.justify-between.p-4');
+      expect(globalHeader).toBeInTheDocument();
 
       // Close button
       const closeBtn = screen.getAllByRole('button', { name: /Fermer/i })[0];
