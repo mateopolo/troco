@@ -155,7 +155,7 @@ describe('PHASE 126: Workspace Header Unification (Docs, Sheets, Slides, Notes)'
   });
 
   describe('4. NotesModal / Notes Header', () => {
-    test('renders unified header with Close button, Title in center, syncStatus, and Actions', () => {
+    test('renders minimalist Apple-style header with Close button, Title in center, syncStatus, and Actions', () => {
       const handleClose = jest.fn();
       const { baseElement } = render(
         <NotesModal
@@ -170,7 +170,7 @@ describe('PHASE 126: Workspace Header Unification (Docs, Sheets, Slides, Notes)'
       expect(container).toBeInTheDocument();
       expect(container.className).toContain('overflow-y-auto');
 
-      // Ligne 1
+      // Bouton Fermer à gauche
       const closeBtn = screen.getByTitle('Fermer la note');
       expect(closeBtn).toBeInTheDocument();
       fireEvent.click(closeBtn);
@@ -179,15 +179,13 @@ describe('PHASE 126: Workspace Header Unification (Docs, Sheets, Slides, Notes)'
       expect(screen.getByPlaceholderText(/Titre de la note/i)).toBeInTheDocument();
       expect(screen.getByText(/Synchronisé/i)).toBeInTheDocument();
 
-      // Ligne 2 Actions
-      expect(screen.getByText('Aperçu')).toBeInTheDocument();
-      expect(screen.getByTitle(/Exporter au format Markdown/i)).toBeInTheDocument();
-      expect(screen.getByTitle(/Imprimer \/ Exporter PDF/i)).toBeInTheDocument();
+      // Action principale Partager au Chat à droite
       expect(screen.getByText(/Partager au Chat/i)).toBeInTheDocument();
 
-      // Ligne 3 Format tools
-      expect(screen.getByTitle('Gras')).toBeInTheDocument();
-      expect(screen.getByTitle('Italique')).toBeInTheDocument();
+      // Purge des anciennes barres d'outils lourdes (Gras, Italique, etc.)
+      expect(screen.queryByTitle('Gras')).toBeNull();
+      expect(screen.queryByTitle('Italique')).toBeNull();
+      expect(screen.queryByText('Aperçu')).toBeNull();
     });
   });
 });
