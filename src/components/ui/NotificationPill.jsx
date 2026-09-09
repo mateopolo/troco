@@ -173,6 +173,16 @@ export function NotificationPill() {
               }
             }}
             onClick={handleClick}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleClick(e);
+              }
+            }}
+            role="status"
+            aria-live="polite"
+            tabIndex={0}
+            aria-label={`Notification : ${notification.title || 'Alerte'} - ${notification.message || ''}`}
             style={{
               pointerEvents: 'auto',
               cursor: 'pointer',
@@ -276,6 +286,7 @@ export function NotificationPill() {
                   transition: 'color 0.15s ease',
                 }}
                 title="Fermer"
+                aria-label="Fermer la notification"
               >
                 <X size={13} />
               </button>

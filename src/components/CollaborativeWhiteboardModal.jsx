@@ -2317,6 +2317,7 @@ export default function CollaborativeWhiteboardModal({
                 if (nextOpen) fetchVersions();
               }}
               className="premium-button"
+              aria-label="Historique des versions"
               style={{
                 padding: isMobile ? '6px 10px' : '8px 14px',
                 borderRadius: '12px',
@@ -2358,6 +2359,7 @@ export default function CollaborativeWhiteboardModal({
               disabled={isSaving}
               onClick={handleSave}
               className="premium-button"
+              aria-label="Sauvegarder le tableau blanc"
               style={{
                 padding: isMobile ? '6px 10px' : '8px 14px',
                 borderRadius: '12px',
@@ -2385,6 +2387,7 @@ export default function CollaborativeWhiteboardModal({
               disabled={isSending}
               onClick={handleSend}
               className="premium-button"
+              aria-label="Partager et envoyer au chat"
               style={{
                 padding: isMobile ? '6px 12px' : '8px 16px',
                 borderRadius: '12px',
@@ -3105,6 +3108,7 @@ export default function CollaborativeWhiteboardModal({
                     flexShrink: 0,
                   }}
                   title={btn.title}
+                  aria-label={btn.title}
                 >
                   <Icon size={18} />
                 </button>
@@ -3141,6 +3145,7 @@ export default function CollaborativeWhiteboardModal({
                   flexShrink: 0,
                 }}
                 title="Bibliothèque étendue de formes vectorielles"
+                aria-label="Bibliothèque de formes vectorielles"
               >
                 {React.createElement(
                   (SHAPE_OPTIONS.find((s) => s.id === selectedShape) || SHAPE_OPTIONS[0]).icon,
@@ -3206,6 +3211,7 @@ export default function CollaborativeWhiteboardModal({
                             flexShrink: 0,
                           }}
                           title={shape.label}
+                          aria-label={`Forme géométrique : ${shape.label}`}
                         >
                           <ShapeIcon size={18} style={{ flexShrink: 0 }} />
                           <span style={{ fontSize: '12px', fontWeight: '600', whiteSpace: 'nowrap' }}>
@@ -3258,6 +3264,7 @@ export default function CollaborativeWhiteboardModal({
                     flexShrink: 0,
                   }}
                   title={btn.title}
+                  aria-label={btn.title}
                 >
                   <Icon size={18} />
                 </button>
@@ -3285,12 +3292,14 @@ export default function CollaborativeWhiteboardModal({
                   flexShrink: 0,
                 }}
                 title={c.name}
+                aria-label={`Couleur de dessin ${c.name}`}
               />
             ))}
 
             {/* Sélecteur de Couleur Spectre Complet */}
             <label
               className="premium-button"
+              aria-label="Ouvrir le spectre de couleurs complet"
               style={{
                 position: 'relative',
                 display: 'flex',
@@ -3362,12 +3371,14 @@ export default function CollaborativeWhiteboardModal({
                   transition: 'all 0.15s ease',
                 }}
                 title={`Fond ${bg.name}`}
+                aria-label={`Couleur de fond ${bg.name}`}
               />
             ))}
 
             {/* Custom Background Color Picker */}
             <label
               className="premium-button"
+              aria-label="Personnaliser la couleur d'arrière-plan du tableau"
               style={{
                 position: 'relative',
                 display: 'flex',
@@ -3424,6 +3435,7 @@ export default function CollaborativeWhiteboardModal({
                   color: 'inherit',
                 }}
                 title={`Épaisseur ${w}px`}
+                aria-label={`Épaisseur de trait ${w} pixels`}
               >
                 <div
                   style={{
@@ -3445,6 +3457,7 @@ export default function CollaborativeWhiteboardModal({
               type="button"
               disabled={historyStep <= 0}
               onClick={handleUndo}
+              aria-label="Annuler la dernière action (Ctrl+Z)"
               style={{
                 width: '36px',
                 height: '36px',
@@ -3468,6 +3481,7 @@ export default function CollaborativeWhiteboardModal({
               type="button"
               disabled={historyStep >= history.length - 1}
               onClick={handleRedo}
+              aria-label="Rétablir l'action annulée (Ctrl+Y)"
               style={{
                 width: '36px',
                 height: '36px',
@@ -3500,6 +3514,7 @@ export default function CollaborativeWhiteboardModal({
                   debouncedSyncToFirestore([], [], [], []);
                 }
               }}
+              aria-label="Effacer tout le tableau blanc"
               style={{
                 width: '36px',
                 height: '36px',
@@ -3521,6 +3536,7 @@ export default function CollaborativeWhiteboardModal({
             <button
               type="button"
               onClick={() => setIsImmersiveMode(!isImmersiveMode)}
+              aria-label={isImmersiveMode ? 'Quitter le mode plein écran' : 'Plein écran (Immersion)'}
               style={{
                 width: '36px',
                 height: '36px',

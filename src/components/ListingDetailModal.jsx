@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, Star, MapPin, Video, Globe, ShieldCheck, MessageSquare, Flame, Pencil, Trash2, Tag, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getSuggestedMedia } from '../utils/mediaUtils';
 import {
@@ -36,8 +36,11 @@ export default function ListingDetailModal({
   if (!selectedListing) return null;
 
   const isOwner = Boolean(profile?.name && selectedListing.author === profile.name);
-  const media = getSuggestedMedia ? getSuggestedMedia(selectedListing.title, selectedListing.description || '', selectedListing.image, selectedListing.video) : {};
-  const gallery = (selectedListing.gallery && selectedListing.gallery.length > 0) ? selectedListing.gallery : (media.gallery && media.gallery.length > 0 ? media.gallery : (selectedListing.image ? [selectedListing.image] : []));
+  const gallery = (selectedListing.gallery && selectedListing.gallery.length > 0)
+    ? selectedListing.gallery
+    : ((selectedListing.images && selectedListing.images.length > 0)
+        ? selectedListing.images
+        : (media.gallery && media.gallery.length > 0 ? media.gallery : (selectedListing.image ? [selectedListing.image] : [])));
   const currentImage = gallery[selectedImageIndex] || selectedListing.image;
 
   const isDetailShowingOriginal = !!showingOriginalListings[selectedListing.id];
@@ -84,6 +87,21 @@ export default function ListingDetailModal({
     touchDeltaXRef.current = 0;
   };
 
+  // Accessibilité Clavier : Échap pour fermer, Flèches Gauche/Droite pour naviguer dans la galerie
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        onClose?.();
+      } else if (e.key === 'ArrowLeft' && gallery.length > 1) {
+        setSelectedImageIndex(prev => (prev - 1 + gallery.length) % gallery.length);
+      } else if (e.key === 'ArrowRight' && gallery.length > 1) {
+        setSelectedImageIndex(prev => (prev + 1) % gallery.length);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [gallery.length, onClose]);
+
   return (
     <div
       className="fixed inset-0 z-[1000] bg-black/90 md:bg-[var(--overlay-bg)] md:backdrop-blur-md overflow-y-auto flex items-center justify-center p-5"
@@ -104,6 +122,8 @@ export default function ListingDetailModal({
         <button
           onClick={onClose}
           className="premium-button"
+          aria-label="Fermer les détails de l'annonce"
+          title="Fermer les détails de l'annonce (Échap)"
           style={{
             position: 'absolute', top: '18px', right: '18px',
             border: '1px solid var(--border-color)',
@@ -271,7 +291,7 @@ export default function ListingDetailModal({
                     >
                       <img
                         src={imgSrc}
-                        alt=""
+                        alt={`${displayContent.title || selectedListing.title || 'Annonce'} - Photo ${idx + 1}`}
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                       />
                     </div>
@@ -282,6 +302,8 @@ export default function ListingDetailModal({
                   <>
                     <button
                       onClick={(e) => { e.stopPropagation(); setSelectedImageIndex(prev => (prev - 1 + gallery.length) % gallery.length); }}
+                      aria-label="Photo précédente"
+                      title="Photo précédente (Flèche gauche)"
                       style={{
                         position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)',
                         width: '36px', height: '36px', borderRadius: '50%', border: 'none',
@@ -294,6 +316,8 @@ export default function ListingDetailModal({
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); setSelectedImageIndex(prev => (prev + 1) % gallery.length); }}
+                      aria-label="Photo suivante"
+                      title="Photo suivante (Flèche droite)"
                       style={{
                         position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
                         width: '36px', height: '36px', borderRadius: '50%', border: 'none',
@@ -318,7 +342,17 @@ export default function ListingDetailModal({
                   {gallery.map((_, idx) => (
                     <div
                       key={idx}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`Afficher la photo ${idx + 1}`}
                       onClick={(e) => { e.stopPropagation(); setSelectedImageIndex(idx); }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setSelectedImageIndex(idx);
+                        }
+                      }}
                       style={{
                         width: selectedImageIndex === idx ? '18px' : '6px',
                         height: '6px',
@@ -340,12 +374,13 @@ export default function ListingDetailModal({
                 <button
                   key={idx}
                   onClick={() => setSelectedImageIndex(idx)}
+                  aria-label={`Sélectionner la vignette photo ${idx + 1}`}
                   style={{
                     border: selectedImageIndex === idx ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
                     borderRadius: '12px', overflow: 'hidden', width: '64px', height: '64px', padding: 0, cursor: 'pointer', flexShrink: 0
                   }}
                 >
-                  <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <img src={img} alt={`Vignette ${idx + 1} de l'annonce : ${displayContent.title || selectedListing.title || 'Annonce'}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </button>
               ))}
             </div>
@@ -465,6 +500,7 @@ export default function ListingDetailModal({
               <button
                 onClick={() => { if (typeof handleBoostListing === 'function') handleBoostListing(selectedListing); }}
                 className="premium-button"
+                aria-label="Booster la visibilité de cette annonce"
                 style={{ flex: 1, border: 'none', borderRadius: '999px', padding: '12px', backgroundColor: 'var(--accent-warning)', color: '#FFF', fontWeight: '800', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: 'var(--shadow-card)' }}
               >
                 <Flame size={16} /> Booster (2,99€)
@@ -472,6 +508,7 @@ export default function ListingDetailModal({
               <button
                 onClick={() => { if (typeof handleStartEditListing === 'function') handleStartEditListing(selectedListing); }}
                 className="premium-button"
+                aria-label="Modifier cette annonce"
                 style={{ flex: 1, border: '1px solid var(--border-color)', borderRadius: '999px', padding: '12px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', fontWeight: '800', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
               >
                 <Pencil size={16} /> Éditer
@@ -479,6 +516,7 @@ export default function ListingDetailModal({
               <button
                 onClick={() => { if (typeof handleTogglePauseListing === 'function') handleTogglePauseListing(selectedListing.id); }}
                 className="premium-button"
+                aria-label={selectedListing.status === 'paused' ? 'Reprendre la publication de l\'annonce' : 'Mettre en pause la publication de l\'annonce'}
                 style={{ border: '1px solid var(--border-color)', borderRadius: '999px', padding: '12px 16px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', fontWeight: '800', fontSize: '13px', cursor: 'pointer' }}
               >
                 {selectedListing.status === 'paused' ? 'Reprendre' : 'Pauser'}
@@ -486,6 +524,8 @@ export default function ListingDetailModal({
               <button
                 onClick={() => { if (typeof handleDeleteListing === 'function') handleDeleteListing(selectedListing.id); onClose?.(); }}
                 className="premium-button"
+                aria-label="Supprimer définitivement cette annonce"
+                title="Supprimer définitivement cette annonce"
                 style={{ border: '1px solid var(--accent-danger)', borderRadius: '999px', padding: '12px 16px', backgroundColor: 'var(--accent-danger)', color: '#FFF', fontWeight: '800', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
                 <Trash2 size={16} />

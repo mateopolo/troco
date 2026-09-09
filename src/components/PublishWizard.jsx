@@ -285,7 +285,7 @@ export default function PublishWizard({
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={{ padding: '16px', borderRadius: '18px', backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--border-color)' }}>
                 <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '6px' }}>{t('previewLabel')}</div>
-                <img src={postDraft.imageUrl.trim() || getSuggestedImage(postDraft.title, postDraft.description)} alt="aperçu" style={{ width: '100%', height: '160px', objectFit: 'cover', borderRadius: '14px', marginBottom: '10px' }} />
+                <img src={postDraft.imageUrl.trim() || getSuggestedImage(postDraft.title, postDraft.description)} alt={`Aperçu de l'annonce : ${postDraft.title || 'Nouvelle annonce'}`} style={{ width: '100%', height: '160px', objectFit: 'cover', borderRadius: '14px', marginBottom: '10px' }} />
                 <div className="font-editorial-heading" style={{ fontSize: '18px', fontWeight: '600', color: 'var(--text-main)' }}>{postDraft.title || t('titleToBeDefined')}</div>
                 <div style={{ fontSize: '12px', color: 'var(--accent-primary)', margin: '6px 0', fontWeight: '700' }}>{postDraft.category}</div>
                 <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>{postDraft.description || t('addDescriptionConvincing')}</div>

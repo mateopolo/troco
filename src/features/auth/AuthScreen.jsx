@@ -919,18 +919,19 @@ export default function AuthScreen({
                     'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=200&q=80',
                     'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=200&q=80',
                     'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
-                  ].map((av) => (
+                  ].map((av, idx) => (
                     <button
                       key={av}
                       type="button"
                       onClick={() => setSignupAvatar(av)}
+                      aria-label={`Sélectionner l'option d'avatar numéro ${idx + 1}`}
                       style={{
                         border: signupAvatar === av ? '3px solid #C67D5B' : '3px solid transparent',
                         borderRadius: '50%', padding: 0, background: 'none', cursor: 'pointer', transition: 'all 0.2s ease',
                         transform: signupAvatar === av ? 'scale(1.1)' : 'scale(1)',
                       }}
                     >
-                      <img src={av} alt="avatar option" style={{ width: '42px', height: '42px', borderRadius: '50%', objectFit: 'cover' }} />
+                      <img src={av} alt={`Option d'avatar numéro ${idx + 1}`} style={{ width: '42px', height: '42px', borderRadius: '50%', objectFit: 'cover' }} />
                     </button>
                   ))}
                 </div>

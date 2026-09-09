@@ -22,8 +22,8 @@
   --bg-pill: #DDBEA9;
   --bg-glass: rgba(250, 247, 242, 0.72);
   --text-main: #3F4238;
-  --text-secondary: #6B705C;
-  --text-muted: #A5A58D;
+  --text-secondary: #565A4A;
+  --text-muted: #737563;
   --border-color: #D4C7B0;
   --border-dark: #A5A58D;
   --accent-primary: #B98B73;
@@ -2114,4 +2114,80 @@ body.dark-mode .prose code,
 [data-theme="dark"] .prose code {
   background-color: rgba(255, 255, 255, 0.08);
   color: #E8DDD3;
+}
+
+/* ==========================================================================
+   ACCESSIBILITÉ ABSOLUE (A11Y), NAVIGATION CLAVIER & CONTRASTE WCAG AA/AAA
+   ========================================================================== */
+
+/* 1. ANNEAUX DE FOCUS VISIBLES HAUTE DÉFINITION (CLAVIER / TAB) */
+:focus-visible {
+  outline: 2.5px solid var(--accent-primary, #C67D5B) !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 4px rgba(198, 125, 91, 0.3) !important;
+  transition: outline-offset 0.15s ease, box-shadow 0.15s ease !important;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+[role="button"]:focus-visible,
+[role="link"]:focus-visible,
+[role="checkbox"]:focus-visible,
+[role="tab"]:focus-visible,
+[tabindex="0"]:focus-visible {
+  outline: 2.5px solid var(--accent-primary, #C67D5B) !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 4px rgba(198, 125, 91, 0.32) !important;
+}
+
+body.dark-mode :focus-visible,
+[data-theme="dark"] :focus-visible,
+.dark :focus-visible {
+  outline: 2.5px solid #D4A373 !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 4px rgba(212, 163, 115, 0.4) !important;
+}
+
+/* 2. ÉLÉMENTS INTERACTIFS DÉCLENCHABLES AU CLAVIER */
+[role="button"][tabindex="0"] {
+  cursor: pointer;
+}
+
+/* 3. CLASSE UTILITAIRE SCREEN-READER (LECTEURS D'ÉCRAN) */
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border-width: 0 !important;
+}
+
+.not-sr-only {
+  position: static !important;
+  width: auto !important;
+  height: auto !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  overflow: visible !important;
+  clip: auto !important;
+  white-space: normal !important;
+}
+
+/* 4. REDUCTION DES ANIMATIONS POUR UTILISATEURS SENSIBLES (PREFERS-REDUCED-MOTION) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

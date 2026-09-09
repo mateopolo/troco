@@ -243,7 +243,7 @@ export default function AdminCommunityTab({
                   <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <img
                       src={msg.avatar || msg.authorAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'}
-                      alt=""
+                      alt={`Avatar de ${msg.author || 'Auteur anonyme'}`}
                       style={{ width: '34px', height: '34px', borderRadius: '50%', objectFit: 'cover' }}
                     />
                     <div>

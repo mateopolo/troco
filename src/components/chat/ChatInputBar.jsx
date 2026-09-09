@@ -257,6 +257,7 @@ function ChatInputBar({
             onClick={onCancelReply}
             style={{ border: 'none', background: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px' }}
             title="Annuler la réponse"
+            aria-label="Annuler la réponse"
           >
             <X size={15} />
           </button>
@@ -287,6 +288,7 @@ function ChatInputBar({
             onClick={onCancelEdit}
             style={{ border: 'none', background: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px' }}
             title="Annuler la modification"
+            aria-label="Annuler la modification du message"
           >
             <X size={15} />
           </button>
@@ -332,6 +334,8 @@ function ChatInputBar({
                 transition: 'all 0.15s ease',
               }}
               title="Outils Collaboratifs Workspace (Tableau blanc, Documents, Feuilles, Notes)"
+              aria-label="Ouvrir le menu des outils collaboratifs Workspace"
+              aria-expanded={isWorkspaceMenuOpen}
             >
               <LayoutGrid size={isMobile ? 16 : 18} />
             </button>
@@ -699,6 +703,7 @@ function ChatInputBar({
               flexShrink: 0,
             }}
             title="Joindre un fichier audio (.mp3, .wav)"
+            aria-label="Joindre un fichier audio"
           >
             <Paperclip size={isMobile ? 16 : 18} />
           </button>
@@ -735,6 +740,7 @@ function ChatInputBar({
               flexShrink: 0,
             }}
             title="Envoyer une photo / image"
+            aria-label="Envoyer une photo ou une image"
           >
             <ImageIcon size={isMobile ? 16 : 18} />
           </button>
@@ -772,6 +778,7 @@ function ChatInputBar({
               transition: 'transform 0.15s ease',
             }}
             title="Transférer des Jetons Troco instantanément"
+            aria-label="Transférer des Jetons Troco instantanément"
           >
             <Coins size={18} />
           </button>
@@ -808,6 +815,7 @@ function ChatInputBar({
               flexShrink: 0,
             }}
             title="Enregistrer une note vocale"
+            aria-label="Enregistrer une note vocale"
           >
             <Mic size={isMobile ? 16 : 18} />
           </button>
@@ -869,6 +877,7 @@ function ChatInputBar({
             transition: 'transform 0.15s ease',
           }}
           title={editingMsg ? 'Valider la modification' : 'Envoyer'}
+          aria-label={editingMsg ? 'Valider la modification du message' : 'Envoyer le message'}
         >
           {editingMsg ? <Check size={isMobile ? 16 : 18} /> : <Send size={isMobile ? 16 : 18} style={{ transform: 'translateX(-1px)' }} />}
         </button>

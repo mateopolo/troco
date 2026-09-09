@@ -361,6 +361,7 @@ export default function VoiceNoteRecorder({
                 cursor: 'pointer',
               }}
               title={isPreviewPlaying ? 'Pause' : 'Écouter l\'aperçu'}
+              aria-label={isPreviewPlaying ? 'Mettre en pause l\'aperçu audio' : 'Écouter l\'aperçu audio de la note vocale'}
             >
               {isPreviewPlaying ? <Pause size={14} /> : <Play size={14} style={{ marginLeft: '2px' }} />}
             </button>
@@ -390,6 +391,7 @@ export default function VoiceNoteRecorder({
               cursor: 'pointer',
             }}
             title="Arrêter et réécouter"
+            aria-label="Arrêter l'enregistrement et réécouter"
           >
             <Square size={16} fill="currentColor" />
           </button>
@@ -423,6 +425,7 @@ export default function VoiceNoteRecorder({
             cursor: 'pointer',
           }}
           title="Supprimer la note vocale"
+          aria-label="Supprimer la note vocale et annuler"
         >
           <Trash2 size={16} />
         </button>
@@ -449,6 +452,7 @@ export default function VoiceNoteRecorder({
             transition: 'all 0.15s ease',
           }}
           title="Envoyer la note vocale"
+          aria-label="Envoyer la note vocale"
         >
           {isUploading ? (
             <span style={{

@@ -656,6 +656,15 @@ export default function WhiteboardLobby({
                 <div
                   key={board.id}
                   className="whiteboard-card"
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Ouvrir le tableau blanc : ${board.title || 'Tableau sans titre'}`}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleSelect(board.boardId || board.id, board);
+                    }
+                  }}
                   onClick={() => handleSelect(board.boardId || board.id, board)}
                   style={{
                     padding: '14px',
@@ -697,7 +706,7 @@ export default function WhiteboardLobby({
                     >
                       <img
                         src={board.thumbnail}
-                        alt="Aperçu du tableau"
+                        alt={`Aperçu du tableau blanc : ${board.title || 'Sans titre'}`}
                         style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                       />
                     </div>

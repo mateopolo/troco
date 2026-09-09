@@ -841,7 +841,7 @@ function CloudOfficeSuiteModalContent({
         <div style="page-break-after: always; padding: 24px; border: 1px solid #ddd; margin-bottom: 20px; border-radius: 12px;">
           <h2>Diapo ${idx + 1} : ${s?.title || ''}</h2>
           <p style="color: #666; font-style: italic;">${s?.subtitle || ''}</p>
-          ${s?.imageUrl ? `<div style="margin: 14px 0;"><img src="${s.imageUrl}" style="max-width: 360px; border-radius: 8px;" /></div>` : ''}
+          ${s?.imageUrl ? `<div style="margin: 14px 0;"><img src="${s.imageUrl}" alt="Illustration diapositive ${idx + 1}" style="max-width: 360px; border-radius: 8px;" /></div>` : ''}
           <ul>${(s?.bullets || []).map(b => `<li>${b || ''}</li>`).join('')}</ul>
         </div>
       `).join('');
@@ -923,7 +923,7 @@ function CloudOfficeSuiteModalContent({
       <section style="page-break-after: always; padding: 40px; border: 2px solid #C67D5B; border-radius: 16px; margin-bottom: 24px;">
         <h1 style="color: #C67D5B; font-size: 28px;">Diapositive ${idx + 1} : ${s?.title || ''}</h1>
         <h3 style="color: #6B5E54;">${s?.subtitle || ''}</h3>
-        ${s?.imageUrl ? `<div style="margin: 16px 0;"><img src="${s.imageUrl}" style="max-width: 400px; border-radius: 8px;" /></div>` : ''}
+        ${s?.imageUrl ? `<div style="margin: 16px 0;"><img src="${s.imageUrl}" alt="Illustration diapositive ${idx + 1}" style="max-width: 400px; border-radius: 8px;" /></div>` : ''}
         <ul>${(s?.bullets || []).map(b => `<li style="font-size: 16px; margin-bottom: 8px;">${b || ''}</li>`).join('')}</ul>
       </section>
     `).join('');
@@ -1107,7 +1107,7 @@ function CloudOfficeSuiteModalContent({
                 <div style={{ margin: '0 auto 24px auto', textAlign: 'center' }}>
                   <img
                     src={slides[currentSlideIndex].imageUrl}
-                    alt="Illustration diapositive"
+                    alt={`Illustration diapositive ${currentSlideIndex + 1} : ${slides[currentSlideIndex]?.title || 'Présentation'}`}
                     style={{
                       width: `${slides[currentSlideIndex].imageWidth || 360}px`,
                       maxHeight: '360px',
@@ -2353,7 +2353,7 @@ function CloudOfficeSuiteModalContent({
                     <div style={{ margin: '12px auto', textAlign: 'center', position: 'relative' }}>
                       <img
                         src={slides[currentSlideIndex].imageUrl}
-                        alt="Illustration diapositive"
+                        alt={`Illustration diapositive ${currentSlideIndex + 1} : ${slides[currentSlideIndex]?.title || 'Présentation'}`}
                         style={{
                           width: `${slides[currentSlideIndex].imageWidth || 280}px`,
                           maxHeight: '240px',

@@ -3071,7 +3071,13 @@ export default function App() {
               )}
 
               {/* BOUTON FERMER */}
-              <button onClick={() => { setSelectedListing(null); setSelectedDetailImageIndex(0); setDetailMediaTab('image'); }} style={{ position: 'absolute', top: '14px', right: '14px', border: 'none', width: '38px', height: '38px', borderRadius: '50%', backgroundColor: 'rgba(250,247,242,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10, boxShadow: '0 4px 12px rgba(61,53,48,0.15)', color: '#3D3530' }}><X size={18} /></button>
+              <button
+                onClick={() => { setSelectedListing(null); setSelectedDetailImageIndex(0); setDetailMediaTab('image'); }}
+                aria-label="Fermer les détails de l'annonce"
+                style={{ position: 'absolute', top: '14px', right: '14px', border: 'none', width: '38px', height: '38px', borderRadius: '50%', backgroundColor: 'rgba(250,247,242,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10, boxShadow: '0 4px 12px rgba(61,53,48,0.15)', color: '#3D3530' }}
+              >
+                <X size={18} />
+              </button>
 
               {selectedListing.isBoosted && <span className="sponsored-badge" style={{ position: 'absolute', top: '14px', left: '14px', backgroundColor: '#F59E0B', color: '#FFF', fontSize: '11px', fontWeight: '800', padding: '6px 10px', borderRadius: '10px', boxShadow: '0 6px 16px rgba(245,158,11,0.45)', zIndex: 10 }}>🔥 Sponsorisé</span>}
 
@@ -3080,6 +3086,7 @@ export default function App() {
                 <>
                   <button
                     onClick={() => setSelectedDetailImageIndex(prev => (prev > 0 ? prev - 1 : (selectedListing.gallery.length - 1)))}
+                    aria-label="Photo précédente"
                     style={{
                       position: 'absolute', top: '50%', left: '12px',
                       transform: 'translateY(-50%)',
@@ -3100,6 +3107,7 @@ export default function App() {
                   </button>
                   <button
                     onClick={() => setSelectedDetailImageIndex(prev => (prev < (selectedListing.gallery.length - 1) ? prev + 1 : 0))}
+                    aria-label="Photo suivante"
                     style={{
                       position: 'absolute', top: '50%', right: '12px',
                       transform: 'translateY(-50%)',
@@ -3127,7 +3135,16 @@ export default function App() {
                   {selectedListing.gallery.map((_, idx) => (
                     <div
                       key={idx}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`Photo numéro ${idx + 1}`}
                       onClick={() => setSelectedDetailImageIndex(idx)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setSelectedDetailImageIndex(idx);
+                        }
+                      }}
                       style={{
                         width: selectedDetailImageIndex === idx ? '20px' : '8px',
                         height: '8px',
@@ -3329,7 +3346,7 @@ export default function App() {
                   <div style={{ fontWeight: '800', fontSize: '13px', color: darkMode ? '#FAF7F2' : '#3D3530', marginBottom: '8px' }}>{t('portfolio')}</div>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '8px' }}>
                     {(selectedListing.authorProfile?.portfolio || selectedListing.portfolio).map((image, index) => (
-                      <img key={image + index} src={image} alt="portfolio" style={{ width: '100%', height: '80px', objectFit: 'cover', borderRadius: '14px' }} />
+                      <img key={image + index} src={image} alt={`Réalisation du portfolio numéro ${index + 1}`} style={{ width: '100%', height: '80px', objectFit: 'cover', borderRadius: '14px' }} />
                     ))}
                   </div>
                 </div>

@@ -1287,7 +1287,7 @@ export default function AdminDashboard({
                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                               <img
                                 src={user.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'}
-                                alt=""
+                                alt={`Avatar de ${user.name || 'Utilisateur'}`}
                                 style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover' }}
                               />
                               <div>

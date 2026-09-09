@@ -140,7 +140,16 @@ export default function ListingCard({
       whileInView="animate"
       viewport={{ once: false, margin: '10%' }}
       variants={getActiveAnimation('card')}
+      role="button"
+      tabIndex={0}
+      aria-label={`Annonce : ${displayContent.title || item.title || 'Détails de l\'annonce'}`}
       onClick={() => handleOpenListing(item)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleOpenListing(item);
+        }
+      }}
       onMouseEnter={() => setHoveredCardId(item.id)}
       onMouseLeave={() => setHoveredCardId(null)}
       className="premium-card"
@@ -174,7 +183,7 @@ export default function ListingCard({
             <img
               key={idx}
               src={imgSrc}
-              alt={`${displayContent.title} - ${idx + 1}`}
+              alt={`${displayContent.title || item.title || 'Annonce'} - Photo ${idx + 1}`}
               onError={(e) => { e.target.src = safeGetFallbackImage(item.category, item.title); }}
               style={{
                 position: 'absolute',
@@ -199,6 +208,8 @@ export default function ListingCard({
                 e.stopPropagation();
                 setLocalImageIndex(prev => (prev - 1 + galleryLength) % galleryLength);
               }}
+              aria-label="Photo précédente de l'annonce"
+              title="Photo précédente"
               style={{
                 position: 'absolute',
                 left: '8px',
@@ -226,6 +237,8 @@ export default function ListingCard({
                 e.stopPropagation();
                 setLocalImageIndex(prev => (prev + 1) % galleryLength);
               }}
+              aria-label="Photo suivante de l'annonce"
+              title="Photo suivante"
               style={{
                 position: 'absolute',
                 right: '8px',
@@ -271,7 +284,17 @@ export default function ListingCard({
             {effectiveGallery.map((_, idx) => (
               <div
                 key={idx}
+                role="button"
+                tabIndex={0}
+                aria-label={`Photo ${idx + 1}`}
                 onClick={(e) => { e.stopPropagation(); setLocalImageIndex(idx); }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setLocalImageIndex(idx);
+                  }
+                }}
                 style={{
                   width: currentSlideIndex === idx ? '14px' : '5px',
                   height: '5px',

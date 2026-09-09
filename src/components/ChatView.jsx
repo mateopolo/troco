@@ -3305,7 +3305,7 @@ function ChatView({
                           >
                             <img
                               src={board.previewUrl}
-                              alt="Preview"
+                              alt={`Aperçu du tableau : ${board.title || 'Sans titre'}`}
                               style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                             />
                           </div>
