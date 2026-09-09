@@ -4,17 +4,20 @@
  * - Blocage pré-consentement absolu de tout traceur non strictement nécessaire.
  * - Le bouton de refus (« Continuer sans accepter ») est aussi facile d'accès que « Tout accepter ».
  * - Panneau de personnalisation granulaire avec explications claires et switchs désactivés par défaut.
+ * - Navigation au clavier stricte (focus:ring-2) sur tous les formulaires et contrôles.
+ * - Attributs aria-label explicites sur tous les boutons d'actions et d'icônes (A11Y).
  * - Respect du design system Troco (cartes flottantes, rounded-full pills, glassmorphism, thèmes clair/sombre).
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { ShieldCheck, X, Sliders, ChevronDown, ChevronUp, Check, Lock, Info, ExternalLink } from 'lucide-react';
+import { ShieldCheck, X, Sliders, Check, Lock, Info, ExternalLink } from 'lucide-react';
 import {
   getConsentStatus,
   getPrivacySettings,
   saveConsent,
   revokeAllConsent,
+  purgeTrackers,
 } from '../services/consentManager';
 
 export default function CookieBanner({
@@ -37,6 +40,13 @@ export default function CookieBanner({
   useEffect(() => {
     setMounted(true);
     const status = getConsentStatus();
+
+    // RÈGLE CNIL / RGPD : Aucun traceur avant acceptation expresse
+    // Si le consentement est pending ou declined, purge immédiate
+    if (status !== 'accepted') {
+      purgeTrackers();
+    }
+
     if (status === 'pending') {
       // Affichage fluide de la bannière avec un léger délai
       const timer = setTimeout(() => setIsVisible(true), 800);
@@ -48,6 +58,7 @@ export default function CookieBanner({
   useEffect(() => {
     const handleConsentEvent = (e) => {
       if (e.detail?.status === 'pending') {
+        purgeTrackers();
         setIsVisible(true);
       }
     };
@@ -68,17 +79,22 @@ export default function CookieBanner({
 
   const handleDeclineAll = useCallback(() => {
     revokeAllConsent();
+    purgeTrackers();
     setIsVisible(false);
     setIsCustomizing(false);
   }, []);
 
   const handleSaveCustom = useCallback(() => {
+    const finalAnalytics = Boolean(localSettings.analytics);
     saveConsent('accepted', {
       necessary: true,
-      analytics: Boolean(localSettings.analytics),
+      analytics: finalAnalytics,
       proximityAlerts: Boolean(localSettings.proximityAlerts),
       marketingEmails: Boolean(localSettings.marketingEmails),
     });
+    if (!finalAnalytics) {
+      purgeTrackers();
+    }
     setIsVisible(false);
     setIsCustomizing(false);
   }, [localSettings]);
@@ -161,25 +177,25 @@ export default function CookieBanner({
               🍪 Protection de votre vie privée & Cookies
             </h2>
 
-            {/* Bouton de fermeture d'urgence (équivaut à refuser selon CNIL) */}
+            {/* Bouton de fermeture d'urgence (équivaut à refuser selon CNIL) avec focus visible et aria-label */}
             <button
               type="button"
               onClick={handleDeclineAll}
-              aria-label="Fermer la bannière et refuser les traceurs"
-              className="focus:ring-2"
+              aria-label="Fermer la bannière et refuser les traceurs optionnels"
+              className="focus:ring-2 focus:ring-[#C67D5B] focus:ring-offset-2 focus:outline-none transition-all rounded-full"
               style={{
                 border: 'none',
                 background: 'transparent',
                 color: darkMode ? '#A8998C' : '#8A7A6D',
                 cursor: 'pointer',
-                padding: '4px',
+                padding: '6px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 borderRadius: '50%',
               }}
             >
-              <X size={18} />
+              <X size={18} aria-hidden="true" />
             </button>
           </div>
 
@@ -199,6 +215,8 @@ export default function CookieBanner({
             <a
               href="#cookie-policy"
               onClick={(e) => handlePolicyLinkClick(e, 'cookie-policy')}
+              aria-label="Consulter la Politique des Cookies Troco"
+              className="focus:ring-2 focus:ring-[#C67D5B] focus:outline-none rounded px-0.5 transition-all"
               style={{ color: '#C67D5B', textDecoration: 'underline', fontWeight: '600' }}
             >
               Politique des Cookies
@@ -207,15 +225,23 @@ export default function CookieBanner({
             <a
               href="#privacy-policy"
               onClick={(e) => handlePolicyLinkClick(e, 'privacy-policy')}
+              aria-label="Consulter la Politique de Confidentialité Troco"
+              className="focus:ring-2 focus:ring-[#C67D5B] focus:outline-none rounded px-0.5 transition-all"
               style={{ color: '#C67D5B', textDecoration: 'underline', fontWeight: '600' }}
             >
               Politique de Confidentialité
             </a>.
           </div>
 
-          {/* VOLET DE PERSONNALISATION GRANULAIRE */}
+          {/* VOLET DE PERSONNALISATION GRANULAIRE AVEC FORMULAIRE ACCESSIBLE */}
           {isCustomizing && (
-            <div
+            <form
+              role="group"
+              aria-label="Préférences détaillées des traceurs"
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSaveCustom();
+              }}
               style={{
                 padding: '14px 16px',
                 borderRadius: '16px',
@@ -259,22 +285,28 @@ export default function CookieBanner({
               {/* 2. Mesure d'audience */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
                 <div>
-                  <div style={{ fontSize: '12.5px', fontWeight: '700' }}>
+                  <label htmlFor="cookie-switch-analytics" style={{ fontSize: '12.5px', fontWeight: '700', display: 'block', cursor: 'pointer' }}>
                     2. Mesure d'audience & Performances
-                  </div>
+                  </label>
                   <div style={{ fontSize: '11px', color: darkMode ? '#A8998C' : '#7D6E63' }}>
                     Statistiques de navigation anonymisées et détection des bugs techniques.
                   </div>
                 </div>
-                <label style={{ position: 'relative', display: 'inline-block', width: '44px', height: '24px', cursor: 'pointer' }}>
+                <label
+                  htmlFor="cookie-switch-analytics"
+                  className="relative inline-flex items-center cursor-pointer rounded-full focus-within:ring-2 focus-within:ring-[#C67D5B] focus-within:ring-offset-2 focus:outline-none"
+                  style={{ position: 'relative', display: 'inline-block', width: '44px', height: '24px', cursor: 'pointer', borderRadius: '24px' }}
+                >
                   <input
+                    id="cookie-switch-analytics"
                     type="checkbox"
                     checked={localSettings.analytics}
                     onChange={(e) => setLocalSettings(prev => ({ ...prev, analytics: e.target.checked }))}
-                    style={{ opacity: 0, width: 0, height: 0 }}
+                    className="sr-only focus:outline-none focus:ring-2 focus:ring-[#C67D5B]"
                     aria-label="Autoriser la mesure d'audience anonyme"
                   />
                   <span
+                    aria-hidden="true"
                     style={{
                       position: 'absolute',
                       inset: 0,
@@ -284,6 +316,7 @@ export default function CookieBanner({
                     }}
                   />
                   <span
+                    aria-hidden="true"
                     style={{
                       position: 'absolute',
                       height: '18px',
@@ -302,22 +335,28 @@ export default function CookieBanner({
               {/* 3. Alertes géographiques de proximité */}
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px' }}>
                 <div>
-                  <div style={{ fontSize: '12.5px', fontWeight: '700' }}>
+                  <label htmlFor="cookie-switch-proximity" style={{ fontSize: '12.5px', fontWeight: '700', display: 'block', cursor: 'pointer' }}>
                     3. Géolocalisation approximative de proximité
-                  </div>
+                  </label>
                   <div style={{ fontSize: '11px', color: darkMode ? '#A8998C' : '#7D6E63' }}>
                     Affichage des offres de voisins sans pistage continu de votre position exacte.
                   </div>
                 </div>
-                <label style={{ position: 'relative', display: 'inline-block', width: '44px', height: '24px', cursor: 'pointer' }}>
+                <label
+                  htmlFor="cookie-switch-proximity"
+                  className="relative inline-flex items-center cursor-pointer rounded-full focus-within:ring-2 focus-within:ring-[#C67D5B] focus-within:ring-offset-2 focus:outline-none"
+                  style={{ position: 'relative', display: 'inline-block', width: '44px', height: '24px', cursor: 'pointer', borderRadius: '24px' }}
+                >
                   <input
+                    id="cookie-switch-proximity"
                     type="checkbox"
                     checked={localSettings.proximityAlerts}
                     onChange={(e) => setLocalSettings(prev => ({ ...prev, proximityAlerts: e.target.checked }))}
-                    style={{ opacity: 0, width: 0, height: 0 }}
+                    className="sr-only focus:outline-none focus:ring-2 focus:ring-[#C67D5B]"
                     aria-label="Autoriser les alertes de proximité géographique"
                   />
                   <span
+                    aria-hidden="true"
                     style={{
                       position: 'absolute',
                       inset: 0,
@@ -327,6 +366,7 @@ export default function CookieBanner({
                     }}
                   />
                   <span
+                    aria-hidden="true"
                     style={{
                       position: 'absolute',
                       height: '18px',
@@ -341,10 +381,10 @@ export default function CookieBanner({
                   />
                 </label>
               </div>
-            </div>
+            </form>
           )}
 
-          {/* RANGÉE DE BOUTONS D'ACTION */}
+          {/* RANGÉE DE BOUTONS D'ACTION AVEC FOCUS:RING-2 ET ARIA-LABEL */}
           <div
             style={{
               display: 'flex',
@@ -358,7 +398,8 @@ export default function CookieBanner({
               <button
                 type="button"
                 onClick={handleSaveCustom}
-                className="premium-button focus:ring-2"
+                aria-label="Confirmer mes choix sélectionnés"
+                className="premium-button focus:ring-2 focus:ring-[#C67D5B] focus:ring-offset-2 focus:outline-none transition-all rounded-full"
                 style={{
                   border: 'none',
                   borderRadius: '999px',
@@ -379,7 +420,8 @@ export default function CookieBanner({
             <button
               type="button"
               onClick={handleAcceptAll}
-              className="premium-button focus:ring-2"
+              aria-label="Tout accepter : autoriser l'ensemble des traceurs"
+              className="premium-button focus:ring-2 focus:ring-[#C67D5B] focus:ring-offset-2 focus:outline-none transition-all rounded-full"
               style={{
                 border: 'none',
                 borderRadius: '999px',
@@ -400,7 +442,8 @@ export default function CookieBanner({
             <button
               type="button"
               onClick={handleDeclineAll}
-              className="premium-button focus:ring-2"
+              aria-label="Continuer sans accepter : refuser les traceurs optionnels"
+              className="premium-button focus:ring-2 focus:ring-[#C67D5B] focus:ring-offset-2 focus:outline-none transition-all rounded-full"
               style={{
                 border: darkMode ? '1px solid rgba(255,255,255,0.18)' : '1px solid #D4C7B0',
                 borderRadius: '999px',
@@ -419,7 +462,9 @@ export default function CookieBanner({
             <button
               type="button"
               onClick={() => setIsCustomizing(prev => !prev)}
-              className="premium-button focus:ring-2"
+              aria-label={isCustomizing ? 'Masquer les options de personnalisation' : 'Personnaliser les options de traceurs'}
+              aria-expanded={isCustomizing}
+              className="premium-button focus:ring-2 focus:ring-[#C67D5B] focus:ring-offset-2 focus:outline-none transition-all rounded-full"
               style={{
                 border: 'none',
                 borderRadius: '999px',
@@ -433,7 +478,6 @@ export default function CookieBanner({
                 alignItems: 'center',
                 gap: '6px',
               }}
-              aria-expanded={isCustomizing}
             >
               <Sliders size={14} aria-hidden="true" />
               <span>{isCustomizing ? 'Masquer les options' : 'Personnaliser'}</span>

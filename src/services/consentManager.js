@@ -158,15 +158,34 @@ export function purgeTrackers() {
     // 1. Désactivation de Google Analytics / Firebase Analytics si configuré
     const measurementId = process.env.REACT_APP_FIREBASE_MEASUREMENT_ID || 'G-N0XT6XXYSZ';
     window[`ga-disable-${measurementId}`] = true;
+    window['ga-disable-default'] = true;
 
     // 2. Nettoyage des métriques de tracking mémoire
     if (window.__TROCO_PERF_METRICS__) {
       window.__TROCO_PERF_METRICS__ = [];
     }
+
+    // 3. Purge des cookies tiers de mesure d'audience
+    if (typeof document !== 'undefined' && document.cookie) {
+      const trackingPrefixes = ['_ga', '_gid', '_gat', '_gat_gtag', '__utm', 'mp_'];
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        const eqPos = cookie.indexOf('=');
+        const name = eqPos > -1 ? cookie.substr(0, eqPos) : cookie;
+        if (trackingPrefixes.some(p => name.startsWith(p))) {
+          document.cookie = `${name}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;`;
+          if (window.location && window.location.hostname) {
+            document.cookie = `${name}=; Path=/; Domain=${window.location.hostname}; Expires=Thu, 01 Jan 1970 00:00:01 GMT;`;
+            document.cookie = `${name}=; Path=/; Domain=.${window.location.hostname}; Expires=Thu, 01 Jan 1970 00:00:01 GMT;`;
+          }
+        }
+      }
+    }
   } catch (e) {}
 }
 
-// Initialisation au chargement du module
+// Initialisation au chargement du module : purge systématique si non accepté
 if (typeof window !== 'undefined') {
   if (!isTrackerAllowed('analytics')) {
     purgeTrackers();
