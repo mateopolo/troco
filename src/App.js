@@ -4928,6 +4928,10 @@ export default function App() {
       <CookieBanner
         darkMode={darkMode}
         onOpenPrivacyCenter={() => setIsPrivacyCenterOpen(true)}
+        onNavigate={(tab) => {
+          if (typeof window !== 'undefined') window.location.hash = tab;
+          setActiveTab(tab);
+        }}
       />
 
       {/* BANNIÈRE D'INSTALLATION PWA MOBILE 1-CLIC */}

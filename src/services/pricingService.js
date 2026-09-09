@@ -1,3 +1,5 @@
+import { isTrackerAllowed } from './consentManager';
+
 /**
  * pricingService.js
  * Moteur Fintech — Parité de Pouvoir d'Achat (PPP), Verrouillage Géo-IP et Taux de Change Cross-Border
@@ -80,37 +82,41 @@ export const REGIONAL_PPP_MATRIX = {
 
 /**
  * Détection automatique & verrouillage strict de la devise par géolocalisation IP
+ * Respecte le principe de minimisation RGPD : aucun appel externe à ipapi.co sans consentement préalable.
  */
 export async function detectGeoCurrency() {
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 2500);
+  // 1. Appel réseau externe SEULEMENT si l'utilisateur a expressément consenti aux fonctionnalités de géolocalisation/analytics
+  if (isTrackerAllowed('external_geoip')) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2500);
 
-    // Requête géo-IP légère et rapide
-    const response = await fetch('https://ipapi.co/json/', {
-      signal: controller.signal,
-      headers: { 'Accept': 'application/json' },
-    });
-    clearTimeout(timeoutId);
+      // Requête géo-IP légère et rapide
+      const response = await fetch('https://ipapi.co/json/', {
+        signal: controller.signal,
+        headers: { 'Accept': 'application/json' },
+      });
+      clearTimeout(timeoutId);
 
-    if (response.ok) {
-      const data = await response.json();
-      const country = (data.country_code || data.country || 'FR').toUpperCase();
-      const currency = data.currency || (REGIONAL_PPP_MATRIX[country]?.currency || 'EUR');
-      const symbol = CURRENCY_SYMBOLS[currency] || '€';
+      if (response.ok) {
+        const data = await response.json();
+        const country = (data.country_code || data.country || 'FR').toUpperCase();
+        const currency = data.currency || (REGIONAL_PPP_MATRIX[country]?.currency || 'EUR');
+        const symbol = CURRENCY_SYMBOLS[currency] || '€';
 
-      return {
-        countryCode: country,
-        countryName: data.country_name || country,
-        currency,
-        currencySymbol: symbol,
-        city: data.city || '',
-        ip: data.ip || '',
-        isGeoLocked: true,
-      };
+        return {
+          countryCode: country,
+          countryName: data.country_name || country,
+          currency,
+          currencySymbol: symbol,
+          city: data.city || '',
+          ip: data.ip || '',
+          isGeoLocked: true,
+        };
+      }
+    } catch (_) {
+      // Fallback gracieux basé sur le fuseau horaire du terminal
     }
-  } catch (_) {
-    // Fallback gracieux basé sur le fuseau horaire du terminal
   }
 
   // Fallback déterministe hors-ligne ou si bloqueur de pub

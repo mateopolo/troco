@@ -3,6 +3,7 @@ import {
   Lock, Download, Trash2, X,
   AlertTriangle, Sliders
 } from 'lucide-react';
+import { getPrivacySettings, saveConsent, getConsentStatus } from '../services/consentManager';
 
 export default function PrivacyCenterModal({
   isOpen,
@@ -17,20 +18,8 @@ export default function PrivacyCenterModal({
   const [isExporting, setIsExporting] = useState(false);
   const [exportSuccess, setExportSuccess] = useState(false);
 
-  // Consentements
-  const [consents, setConsents] = useState(() => {
-    try {
-      const saved = localStorage.getItem('troco_privacy_settings');
-      return saved ? JSON.parse(saved) : {
-        necessary: true,
-        analytics: true,
-        proximityAlerts: true,
-        marketingEmails: false,
-      };
-    } catch (e) {
-      return { necessary: true, analytics: true, proximityAlerts: true, marketingEmails: false };
-    }
-  });
+  // Consentements synchronisés avec le gestionnaire centralisé (RGPD strict)
+  const [consents, setConsents] = useState(() => getPrivacySettings());
 
   // Suppression de compte
   const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
@@ -43,9 +32,7 @@ export default function PrivacyCenterModal({
     if (key === 'necessary') return; // Toujours actif
     const updated = { ...consents, [key]: !consents[key] };
     setConsents(updated);
-    try {
-      localStorage.setItem('troco_privacy_settings', JSON.stringify(updated));
-    } catch (e) {}
+    saveConsent(getConsentStatus() === 'accepted' ? 'accepted' : 'declined', updated);
   };
 
   // Export JSON des données personnelles (Article 20 RGPD)
