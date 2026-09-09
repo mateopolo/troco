@@ -1,21 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Square, Trash2, Send, Play, Pause } from 'lucide-react';
+import { Square, Trash2, Send, Play, Pause, Sparkles } from 'lucide-react';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../firebase';
 
 /**
  * VoiceNoteRecorder — Enregistrement vocal cross-platform (iOS Safari, Chrome, Firefox, Android)
- *
- * STRATÉGIE MIME TYPE (Cross-Platform Universel) :
- * - audio/mp4 en PREMIER : seul format décodé nativement par Safari / iOS / WebKit
- * - audio/webm;codecs=opus : Chrome / Firefox / Android WebView
- * - audio/webm : fallback Chrome sans opus
- * - audio/ogg : Firefox Linux
- * - '' (vide) : laisse le navigateur choisir (dernier recours)
- *
- * PERSISTANCE :
- * - Upload vers Firebase Storage avec contentType EXPLICITE
- * - await getDownloadURL() résolu AVANT injection dans Firestore
+ * avec capture Speech-to-Text (SpeechRecognition) en parallèle pour transcription et traduction instantanée.
  */
 
 // Détecte les types MIME supportés par le navigateur avec fallback ordonné
@@ -30,6 +20,7 @@ export default function VoiceNoteRecorder({
   isRecording,
   onCancel,
   onSendVoiceNote,
+  userLang = 'fr',
 }) {
   const [duration, setDuration] = useState(0);
   const [audioBlob, setAudioBlob] = useState(null);
@@ -37,14 +28,17 @@ export default function VoiceNoteRecorder({
   const [isPreviewPlaying, setIsPreviewPlaying] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [detectedMimeType, setDetectedMimeType] = useState('');
+  const [liveTranscript, setLiveTranscript] = useState('');
 
   const mediaRecorderRef = useRef(null);
+  const recognitionRef = useRef(null);
+  const transcriptRef = useRef('');
   const audioChunksRef = useRef([]);
   const streamRef = useRef(null);
   const timerRef = useRef(null);
   const previewAudioRef = useRef(null);
 
-  // Démarrer l'enregistrement au montage si isRecording est true
+  // Démarrer l'enregistrement et la reconnaissance vocale au montage
   useEffect(() => {
     let isMounted = true;
 
@@ -58,7 +52,7 @@ export default function VoiceNoteRecorder({
 
         streamRef.current = stream;
 
-        // Normalisation du MediaRecorder à l'enregistrement (mp4 en priorité pour iOS)
+        // 1. Normalisation du MediaRecorder à l'enregistrement (mp4 en priorité pour iOS)
         const mimeType = ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg'].find(
           type => typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported(type)
         ) || '';
@@ -76,7 +70,6 @@ export default function VoiceNoteRecorder({
         };
 
         mediaRecorder.onstop = () => {
-          // Utilise le mimeType réel du recorder (peut différer de l'option demandée)
           const actualMime = mediaRecorder.mimeType || mimeType || 'audio/mp4';
           const blob = new Blob(audioChunksRef.current, { type: actualMime });
           setAudioBlob(blob);
@@ -89,6 +82,50 @@ export default function VoiceNoteRecorder({
         timerRef.current = setInterval(() => {
           setDuration(d => d + 1);
         }, 1000);
+
+        // 2. Capture de la transcription vocale en parallèle (Speech-to-Text STT)
+        const SpeechRecognition = typeof window !== 'undefined'
+          ? (window.SpeechRecognition || window.webkitSpeechRecognition)
+          : null;
+
+        if (SpeechRecognition) {
+          try {
+            const recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.maxAlternatives = 1;
+            const langMap = {
+              fr: 'fr-FR',
+              en: 'en-US',
+              es: 'es-ES',
+              it: 'it-IT',
+              de: 'de-DE',
+              pt: 'pt-PT',
+            };
+            recognition.lang = langMap[userLang?.toLowerCase()] || 'fr-FR';
+
+            recognition.onresult = (event) => {
+              let text = '';
+              for (let i = 0; i < event.results.length; i++) {
+                text += event.results[i][0].transcript;
+              }
+              const trimmed = text.trim();
+              transcriptRef.current = trimmed;
+              setLiveTranscript(trimmed);
+            };
+
+            recognition.onerror = (event) => {
+              if (event.error !== 'no-speech') {
+                console.debug('[VoiceNoteRecorder] SpeechRecognition note:', event.error);
+              }
+            };
+
+            recognition.start();
+            recognitionRef.current = recognition;
+          } catch (recErr) {
+            console.debug('[VoiceNoteRecorder] SpeechRecognition start note:', recErr);
+          }
+        }
       } catch (err) {
         console.error('[VoiceNoteRecorder] Microphone access error:', err);
         alert('Impossible d\'accéder au microphone. Vérifiez les autorisations de votre navigateur.');
@@ -103,6 +140,9 @@ export default function VoiceNoteRecorder({
     return () => {
       isMounted = false;
       if (timerRef.current) clearInterval(timerRef.current);
+      if (recognitionRef.current) {
+        try { recognitionRef.current.stop(); } catch (_) {}
+      }
       if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
         try { mediaRecorderRef.current.stop(); } catch (_) {}
       }
@@ -114,10 +154,13 @@ export default function VoiceNoteRecorder({
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isRecording]);
+  }, [isRecording, userLang]);
 
   const handleStopAndPreview = () => {
     if (timerRef.current) clearInterval(timerRef.current);
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch (_) {}
+    }
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
       mediaRecorderRef.current.stop();
     }
@@ -140,12 +183,16 @@ export default function VoiceNoteRecorder({
   };
 
   /**
-   * handleSend — Upload cross-platform vers Firebase Storage avec contentType EXPLICITE
-   * puis résolution stricte de getDownloadURL() avant d'appeler onSendVoiceNote.
+   * handleSend — Upload cross-platform vers Firebase Storage avec contentType explicite
+   * puis résolution stricte de getDownloadURL() avant d'appeler onSendVoiceNote avec transcript.
    */
   const handleSend = async () => {
     if (isUploading) return;
     setIsUploading(true);
+
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch (_) {}
+    }
 
     const doUploadAndSend = async (blob) => {
       if (!blob) {
@@ -154,10 +201,7 @@ export default function VoiceNoteRecorder({
         return;
       }
 
-      // Détermine le type MIME définitif (préfère celui du blob, sinon detectedMimeType)
       const finalMimeType = blob.type || detectedMimeType || 'audio/mp4';
-
-      // Extension de fichier correspondant au MIME type
       const extMap = {
         'audio/mp4': 'mp4',
         'audio/webm': 'webm',
@@ -170,21 +214,18 @@ export default function VoiceNoteRecorder({
 
       let audioUrl = '';
 
-      // Tentative 1 : Firebase Storage avec contentType explicite
       if (storage) {
         try {
           const storageRef = ref(storage, `voice_notes/${fileName}`);
           const snapshot = await uploadBytes(storageRef, blob, {
             contentType: finalMimeType || 'audio/mp4',
           });
-          // Résolution STRICTE de l'URL (await bloquant) avant injection Firestore
           audioUrl = await getDownloadURL(snapshot.ref);
         } catch (storageErr) {
-          console.warn('[VoiceNoteRecorder] Storage upload failed, falling back to dataURL:', storageErr);
+          console.warn('[VoiceNoteRecorder] Storage upload failed, fallback to dataURL:', storageErr);
         }
       }
 
-      // Fallback : dataURL base64 si Storage indisponible
       if (!audioUrl) {
         audioUrl = await new Promise((resolve, reject) => {
           const reader = new FileReader();
@@ -194,9 +235,11 @@ export default function VoiceNoteRecorder({
         });
       }
 
+      const capturedTranscript = transcriptRef.current || liveTranscript || '';
+
       if (typeof onSendVoiceNote === 'function') {
         try {
-          await onSendVoiceNote(blob, duration, audioUrl, finalMimeType);
+          await onSendVoiceNote(blob, duration, audioUrl, finalMimeType, capturedTranscript, userLang);
         } catch (e) {
           console.warn('[VoiceNoteRecorder] onSendVoiceNote error:', e);
         }
@@ -205,7 +248,6 @@ export default function VoiceNoteRecorder({
     };
 
     if (!audioBlob && mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-      // Envoi immédiat pendant l'enregistrement : stop → onstop → upload
       if (timerRef.current) clearInterval(timerRef.current);
       mediaRecorderRef.current.onstop = async () => {
         const actualMime = mediaRecorderRef.current?.mimeType || detectedMimeType || 'audio/mp4';
@@ -241,7 +283,7 @@ export default function VoiceNoteRecorder({
       animation: 'fadeIn 0.2s ease',
     }}>
       {/* SECTION GAUCHE : État d'enregistrement & Minuterie */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1, overflow: 'hidden' }}>
         {/* Pastille clignotante REC */}
         <span style={{
           width: '10px',
@@ -260,13 +302,38 @@ export default function VoiceNoteRecorder({
           fontSize: '14px',
           color: 'var(--text-main)',
           minWidth: '42px',
+          flexShrink: 0,
         }}>
           {formatTimer(duration)}
         </span>
 
-        {/* Aperçu audio / Lecteur multi-source si arrêté */}
+        {/* Retranscription en direct discrète */}
+        {liveTranscript ? (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            fontSize: '11px',
+            color: 'var(--text-secondary)',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            fontStyle: 'italic',
+          }}>
+            <Sparkles size={11} color="var(--accent-primary)" style={{ flexShrink: 0 }} />
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              « {liveTranscript} »
+            </span>
+          </div>
+        ) : (
+          <span style={{ fontSize: '11px', color: 'var(--text-secondary)', opacity: 0.7 }}>
+            Enregistrement audio...
+          </span>
+        )}
+
+        {/* Aperçu audio si arrêté */}
         {previewUrl && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
             <audio
               ref={previewAudioRef}
               src={previewUrl}
@@ -302,9 +369,9 @@ export default function VoiceNoteRecorder({
         )}
       </div>
 
-      {/* SECTION DROITE : Boutons d'action (Stop/Preview, Annuler, Envoyer) */}
+      {/* SECTION DROITE : Actions */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0 }}>
-        {/* Bouton Arrêter & Aperçu (visible tant qu'on enregistre) */}
+        {/* Bouton Arrêter & Aperçu */}
         {!previewUrl && (
           <button
             type="button"
@@ -328,12 +395,15 @@ export default function VoiceNoteRecorder({
           </button>
         )}
 
-        {/* Bouton Annuler / Poubelle */}
+        {/* Bouton Annuler */}
         <button
           type="button"
           onClick={() => {
             if (timerRef.current) clearInterval(timerRef.current);
             if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
+            if (recognitionRef.current) {
+              try { recognitionRef.current.stop(); } catch (_) {}
+            }
             if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
               try { mediaRecorderRef.current.stop(); } catch (_) {}
             }

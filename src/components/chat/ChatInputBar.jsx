@@ -98,6 +98,8 @@ function ChatInputBar({
         type: 'audio',
         audioUrl: downloadUrl,
         fileName: file.name,
+        transcript: '',
+        transcriptLang: 'fr',
       };
 
       if (typeof onAudioUpload === 'function') {

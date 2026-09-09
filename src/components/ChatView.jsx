@@ -21,6 +21,7 @@ import { EmptyState } from './ui/EmptyState';
 import { playPop, playSwoosh, playSuccessChime } from '../services/audioService';
 import SwipeableChatItem from './SwipeableChatItem';
 import ChatInputBar from './chat/ChatInputBar';
+import MessageBubble from './chat/MessageBubble';
 
 // Lazy loading des outils collaboratifs & suites vectorielles lourdes pour préserver les performances et la rapidité du build
 const CreateProjectGroupModal = lazy(() => import('./CreateProjectGroupModal'));
@@ -2289,14 +2290,7 @@ function ChatView({
                       )}
 
                       {msg.type === 'audio' ? (
-                        <div className="p-2">
-                          {msg.fileName && (
-                            <div style={{ fontSize: '11px', fontWeight: '800', marginBottom: '4px', opacity: 0.9 }}>
-                              🎵 {msg.fileName}
-                            </div>
-                          )}
-                          <audio controls src={msg.audioUrl} className="max-w-[200px] md:max-w-xs" />
-                        </div>
+                        <MessageBubble message={msg} isMe={isMe} targetLang={currentLang} />
                       ) : (msg.kind === 'audio' || msg.audioUrl) ? (
                         <div style={{ width: '100%', maxWidth: '260px', minWidth: 0, boxSizing: 'border-box', overflow: 'hidden' }}>
                           <VoiceNotePlayer
@@ -2304,7 +2298,7 @@ function ChatView({
                             duration={msg.duration}
                             isMe={isMe}
                             currentLang={currentLang}
-                            transcription={msg.transcription || null}
+                            transcription={msg.transcript || msg.transcription || null}
                           />
                         </div>
                       ) : (
@@ -2612,10 +2606,11 @@ function ChatView({
             <VoiceNoteRecorder
               isRecording={isRecordingAudio}
               onCancel={() => setIsRecordingAudio(false)}
-              onSendVoiceNote={async (blob, dur, directUrl, mime, transcript) => {
+              userLang={currentLang || 'fr'}
+              onSendVoiceNote={async (blob, dur, directUrl, mime, transcript, transcriptLang) => {
                 userJustSentMessageRef.current = true;
                 if (onSendAudioMessage) {
-                  await onSendAudioMessage(blob, dur, directUrl, mime, transcript);
+                  await onSendAudioMessage(blob, dur, directUrl, mime, transcript, transcriptLang);
                 }
                 setIsRecordingAudio(false);
               }}

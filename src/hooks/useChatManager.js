@@ -937,7 +937,7 @@ export const useChatManager = ({
   };
 
   // ---- ENVOI DE MESSAGE VOCAL ----
-  const handleSendAudioMessage = async (audioBlob, duration, providedAudioUrl = null, mimeType = null, transcription = null) => {
+  const handleSendAudioMessage = async (audioBlob, duration, providedAudioUrl = null, mimeType = null, transcription = null, transcriptLang = null) => {
     if (!selectedChat) return;
     const chatId = selectedChat.id;
     
@@ -953,6 +953,9 @@ export const useChatManager = ({
     const formattedDuration = Math.round(duration || 0);
     const tempId = `temp_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const nowTime = Date.now();
+    const resolvedLang = transcriptLang || profile?.language || 'fr';
+    const textTranscribed = transcription || '';
+
     const newAudioMessage = {
       id: tempId,
       temporaryId: tempId,
@@ -964,11 +967,13 @@ export const useChatManager = ({
       audioUrl,
       duration: formattedDuration,
       mimeType: finalMime || 'audio/mp4',
+      transcript: textTranscribed,
+      transcription: textTranscribed,
+      transcriptLang: resolvedLang,
       status: 'pending',
       timestamp: nowTime,
       createdAt: new Date(nowTime),
       text: `🎤 Note vocale (${formattedDuration}s)`,
-      transcription: transcription || null,
     };
 
     setChatThreads(prev => ({ ...prev, [chatId]: [...(prev[chatId] || []), newAudioMessage] }));
@@ -989,8 +994,10 @@ export const useChatManager = ({
           audioUrl,
           duration: formattedDuration,
           mimeType: finalMime || 'audio/mp4',
+          transcript: textTranscribed,
+          transcription: textTranscribed,
+          transcriptLang: resolvedLang,
           text: newAudioMessage.text,
-          transcription: transcription || null,
           read: false,
           status: 'sent',
           createdAt: serverTimestamp(),

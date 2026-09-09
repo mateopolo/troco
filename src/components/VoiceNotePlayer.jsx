@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Play, Pause, Mic, FileText, Sparkles, Copy, Check } from 'lucide-react';
+import { Play, Pause, Mic, FileText, Sparkles, Copy, Check, Languages } from 'lucide-react';
+import { translateText } from '../utils/translator';
 
 const CONTEXTUAL_TRANSCRIPTIONS = {
   FR: "Bonjour ! Je te confirme qu'on peut s'organiser pour l'échange de matériel jeudi après-midi. Dis-moi si ça te convient !",
@@ -25,6 +26,9 @@ export default function VoiceNotePlayer({
   const [showTranscription, setShowTranscription] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [transcribedText, setTranscribedText] = useState(transcription || null);
+  const [showTranslation, setShowTranslation] = useState(false);
+  const [translatedText, setTranslatedText] = useState('');
+  const [isTranslating, setIsTranslating] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const audioRef = useRef(null);
 
@@ -112,6 +116,27 @@ export default function VoiceNotePlayer({
     } else {
       setShowTranscription(true);
     }
+  };
+
+  const handleToggleTranslation = async () => {
+    if (showTranslation) {
+      setShowTranslation(false);
+      return;
+    }
+    const baseText = transcribedText || transcription || CONTEXTUAL_TRANSCRIPTIONS[currentLang] || CONTEXTUAL_TRANSCRIPTIONS.FR;
+    if (!translatedText && baseText) {
+      setIsTranslating(true);
+      try {
+        const dest = currentLang || 'FR';
+        const res = await translateText(baseText, dest, 'auto');
+        setTranslatedText(res || baseText);
+      } catch (err) {
+        setTranslatedText(baseText);
+      } finally {
+        setIsTranslating(false);
+      }
+    }
+    setShowTranslation(true);
   };
 
   const handleCopyTranscription = (e) => {
@@ -335,36 +360,62 @@ export default function VoiceNotePlayer({
             position: 'relative',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '3px', fontSize: '9.5px', fontWeight: '800', opacity: 0.85 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px', fontSize: '9.5px', fontWeight: '800', opacity: 0.9, gap: '6px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
               <Sparkles size={10} color={isMe ? '#FFFFFF' : 'var(--accent-primary)'} />
-              <span>TRANSCRIPTION IA • {currentLang}</span>
+              <span>{showTranslation ? 'TRADUCTION' : 'TRANSCRIPTION IA'} • {currentLang}</span>
             </div>
 
-            <button
-              type="button"
-              onClick={handleCopyTranscription}
-              style={{
-                border: 'none',
-                background: 'transparent',
-                color: isMe ? '#FFFFFF' : 'var(--text-secondary)',
-                cursor: 'pointer',
-                padding: '0 2px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '2px',
-                fontSize: '9.5px',
-                fontWeight: '700',
-              }}
-              title="Copier le texte transcrit"
-            >
-              {isCopied ? <Check size={10} /> : <Copy size={10} />}
-              <span>{isCopied ? 'Copié' : 'Copier'}</span>
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <button
+                type="button"
+                onClick={handleToggleTranslation}
+                disabled={isTranslating}
+                style={{
+                  border: 'none',
+                  background: isMe ? 'rgba(255, 255, 255, 0.22)' : 'var(--bg-card)',
+                  color: isMe ? '#FFFFFF' : 'var(--accent-primary)',
+                  fontSize: '9.5px',
+                  fontWeight: '700',
+                  padding: '2px 8px',
+                  borderRadius: '999px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '3px',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                }}
+                title={showTranslation ? "Voir l'original" : "Voir la traduction"}
+              >
+                <Languages size={10} />
+                <span>{isTranslating ? 'Traduction...' : showTranslation ? "Voir l'original" : "Voir la traduction"}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleCopyTranscription}
+                style={{
+                  border: 'none',
+                  background: 'transparent',
+                  color: isMe ? '#FFFFFF' : 'var(--text-secondary)',
+                  cursor: 'pointer',
+                  padding: '0 2px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '2px',
+                  fontSize: '9.5px',
+                  fontWeight: '700',
+                }}
+                title="Copier le texte"
+              >
+                {isCopied ? <Check size={10} /> : <Copy size={10} />}
+                <span>{isCopied ? 'Copié' : 'Copier'}</span>
+              </button>
+            </div>
           </div>
 
           <div style={{ fontStyle: 'italic', wordBreak: 'break-word' }}>
-            « {transcribedText} »
+            « {showTranslation ? (translatedText || transcribedText) : transcribedText} »
           </div>
         </div>
       )}
