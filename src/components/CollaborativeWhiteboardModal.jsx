@@ -1562,12 +1562,9 @@ export default function CollaborativeWhiteboardModal({
     }
   };
 
-  const handlePointerUp = (e) => {
-    if (isPanningRef.current) {
-      isPanningRef.current = false;
-    }
-
-    // Sauvegarde de l'angle final de rotation assistée dans l'objet sélectionné
+  // GESTION DU RELÂCHEMENT GLOBAL (POINTERUP / POINTERCANCEL / BLUR) POUR ÉVITER LES OBJETS BLOQUÉS
+  const handleGlobalPointerUp = useCallback((e) => {
+    // 1. Sauvegarde et clôture de la rotation assistée si active
     if (isRotatingObjectRef.current) {
       const { id } = isRotatingObjectRef.current;
       const finalAngle = isRotatingObjectRef.current.finalAngle;
@@ -1579,22 +1576,9 @@ export default function CollaborativeWhiteboardModal({
         whiteboardP2PService.broadcastEvent('path_update', { id, rotation: finalAngle });
       }
       isRotatingObjectRef.current = null;
-      setRotationTooltip(null);
-    }
-    activeTransformRef.current = null;
-
-    if (draggingStickyRef.current) {
-      lastLocalModificationTimeRef.current = Date.now();
-      const dragged = stickyNotes.find((s) => s.id === draggingStickyRef.current.id);
-      if (dragged) {
-        whiteboardP2PService.broadcastEvent('sticky_update', { sticky: dragged });
-        pushToHistory(localPaths);
-        debouncedSyncToFirestore(localPaths, remotePaths, stickyNotes, textElements);
-      }
-      draggingStickyRef.current = null;
     }
 
-    // Clôture IMMÉDIATE du mode redimensionnement texte
+    // 2. Clôture immédiate du redimensionnement de texte (isResizingText)
     if (resizingTextRef.current) {
       lastLocalModificationTimeRef.current = Date.now();
       const resized = textElements.find((t) => t.id === resizingTextRef.current.id);
@@ -1606,6 +1590,46 @@ export default function CollaborativeWhiteboardModal({
       resizingTextRef.current = null;
       isDrawingRef.current = false;
     }
+
+    // 3. Clôture immédiate du déplacement de post-it / sticky (isMovingPostit)
+    if (draggingStickyRef.current) {
+      lastLocalModificationTimeRef.current = Date.now();
+      const dragged = stickyNotes.find((s) => s.id === draggingStickyRef.current.id);
+      if (dragged) {
+        whiteboardP2PService.broadcastEvent('sticky_update', { sticky: dragged });
+        pushToHistory(localPaths);
+        debouncedSyncToFirestore(localPaths, remotePaths, stickyNotes, textElements);
+      }
+      draggingStickyRef.current = null;
+    }
+
+    // 4. Réinitialisation des états de navigation et transformation
+    if (isPanningRef.current) {
+      isPanningRef.current = false;
+    }
+    if (activeTransformRef.current) {
+      activeTransformRef.current = null;
+    }
+
+    // 5. Masquer immédiatement les tooltips d'angle / d'assistance
+    setRotationTooltip(null);
+  }, [localPaths, remotePaths, stickyNotes, textElements, pushToHistory, debouncedSyncToFirestore]);
+
+  // Écouteur global pointerup/pointercancel/blur pour libérer les interactions si le curseur quitte la zone ou la fenêtre
+  useEffect(() => {
+    if (!isOpen) return;
+    window.addEventListener('pointerup', handleGlobalPointerUp);
+    window.addEventListener('pointercancel', handleGlobalPointerUp);
+    window.addEventListener('blur', handleGlobalPointerUp);
+    return () => {
+      window.removeEventListener('pointerup', handleGlobalPointerUp);
+      window.removeEventListener('pointercancel', handleGlobalPointerUp);
+      window.removeEventListener('blur', handleGlobalPointerUp);
+    };
+  }, [isOpen, handleGlobalPointerUp]);
+
+  const handlePointerUp = (e) => {
+    handleGlobalPointerUp(e);
 
     // GESTION DU TEXTE : Création par tracé, calcul proportionnel diagonale et bascule automatique en édition
     if (isDrawingRef.current && currentPathRef.current?.type === 'text_box') {
