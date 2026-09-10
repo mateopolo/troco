@@ -1,9 +1,9 @@
 /**
- * Troco Service Worker
- * Gestion du cache offline, des requêtes statiques, page offline brandée et installation PWA mobile.
+ * Troco Service Worker (PWA)
+ * Gestion du cache offline, des requêtes statiques, page offline brandée et invalidation immédiate de cache sur nouveau déploiement.
  */
 
-const CACHE_NAME = 'troco-pwa-v2';
+const CACHE_NAME = 'troco-pwa-v3';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -25,7 +25,21 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Activation et purge des anciens caches
+// Écoute des ordres de mise à jour forcée et d'invalidation de cache depuis le client
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+  if (event.data && event.data.type === 'CLEAR_CACHE') {
+    event.waitUntil(
+      caches.keys().then((cacheNames) => {
+        return Promise.all(cacheNames.map((name) => caches.delete(name)));
+      }).then(() => self.skipWaiting())
+    );
+  }
+});
+
+// Activation et purge impérative des anciens caches
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -38,13 +52,13 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Stratégie de mise en cache intelligente : Network First pour navigation, Cache First pour les assets statiques
+// Stratégie de mise en cache intelligente : Network First strict pour navigation, Cache First pour les assets statiques
 self.addEventListener('fetch', (event) => {
   // Ignorer les requêtes non GET ou vers Firebase Firestore / Cloud Functions
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
 
-  // Ignorer les appels API Firestore / WebRTC / WebSockets
+  // Ignorer les appels API Firestore / WebRTC / WebSockets / Cloud Functions
   if (
     url.origin.includes('firestore.googleapis.com') ||
     url.origin.includes('identitytoolkit.googleapis.com') ||
@@ -80,10 +94,10 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 2. Navigation HTML -> Network First avec fallback sur offline.html ou index.html
+  // 2. Navigation HTML -> Network First strict avec cache: 'no-store' pour forcer le chargement de la dernière version déployée
   if (event.request.mode === 'navigate') {
     event.respondWith(
-      fetch(event.request).then((networkResponse) => {
+      fetch(event.request, { cache: 'no-store' }).then((networkResponse) => {
         if (networkResponse && networkResponse.status === 200) {
           const responseToCache = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => {

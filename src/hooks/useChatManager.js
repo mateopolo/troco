@@ -80,7 +80,9 @@ export const useChatManager = ({
       const saved = localStorage.getItem('troco_cached_chats');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map((c) => ({ ...c, activeCall: null }));
+        }
       }
     } catch (_) { }
     return mockChats;
@@ -305,7 +307,8 @@ export const useChatManager = ({
 
       setChatsList(merged);
       try {
-        localStorage.setItem('troco_cached_chats', JSON.stringify(merged));
+        const sanitizedMerged = merged.map((c) => ({ ...c, activeCall: null }));
+        localStorage.setItem('troco_cached_chats', JSON.stringify(sanitizedMerged));
         useChatStore.getState().setChatsList(merged);
       } catch (_) { }
     };
@@ -426,7 +429,10 @@ export const useChatManager = ({
               const map = new Map(prev.map(c => [c.id, c]));
               fetched.forEach(f => map.set(f.id, f));
               const res = Array.from(map.values());
-              try { localStorage.setItem('troco_cached_chats', JSON.stringify(res)); } catch (_) {}
+              try {
+                const sanitizedRes = res.map((c) => ({ ...c, activeCall: null }));
+                localStorage.setItem('troco_cached_chats', JSON.stringify(sanitizedRes));
+              } catch (_) {}
               return res;
             });
           }

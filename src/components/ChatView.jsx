@@ -7,8 +7,10 @@ import {
   Palette, Briefcase, Plus, FileText, Calendar, Table,
   MessageSquareDashed, RefreshCw, MessageSquare, Search, Pin
 } from 'lucide-react';
-import { doc, deleteDoc, addDoc, collection, updateDoc, serverTimestamp, query, where, getDocs, arrayUnion } from 'firebase/firestore';
+import { doc, deleteDoc, addDoc, collection, updateDoc, serverTimestamp, query, where, getDocs, getDoc, arrayUnion } from 'firebase/firestore';
 import { db, auth } from '../firebase';
+import { useChatStore } from '../stores/useChatStore';
+import { useCallStore } from '../stores/useCallStore';
 import { executeDirectTokenTransfer } from '../services/firestoreService';
 import { subscribeTranslations } from '../utils/translator';
 import { analyzeContent } from '../utils/contentModeration';
@@ -173,6 +175,105 @@ function ChatView({
   const effectiveSelectedChat = (selectedChat && !deletedChatIds.has(selectedChat.id)) ? selectedChat : null;
   const activeChatObj = effectiveSelectedChat;
   const [mobileSubView, setMobileSubView] = useState(() => (selectedChat && !deletedChatIds.has(selectedChat.id)) ? 'room' : 'list');
+
+  // 🛡️ SÉCURITÉ ANTI-APPEL FANTÔME (PWA & LOCALSTORAGE)
+  // Purge au montage les états éphémères orphelins si aucun ID de salle valide n'est détecté côté serveur
+  useEffect(() => {
+    let isMounted = true;
+
+    const purgePhantomCallState = async () => {
+      // 1. Purge immédiate des variables éphémères dans les stores Zustand
+      try {
+        if (typeof useChatStore !== 'undefined' && useChatStore.getState) {
+          const chatState = useChatStore.getState();
+          if (
+            chatState.activeCallPip ||
+            chatState.isCallActive ||
+            chatState.callRoomId ||
+            chatState.isInCall ||
+            chatState.activeCall
+          ) {
+            chatState.setActiveCallPip?.(false);
+            chatState.setIsCallActive?.(false);
+            chatState.setCallRoomId?.(null);
+            chatState.setIsInCall?.(false);
+            chatState.setActiveCall?.(null);
+            chatState.setCallDuration?.(0);
+          }
+        }
+        if (typeof useCallStore !== 'undefined' && useCallStore.getState) {
+          useCallStore.getState().resetCallState?.();
+        }
+      } catch (err) {
+        console.warn('[ChatView] Erreur réinitialisation stores appel:', err);
+      }
+
+      // 2. Nettoyage défensif localStorage des clés corrompues
+      if (typeof window !== 'undefined' && window.localStorage) {
+        try {
+          ['troco_active_call', 'troco_call_state', 'troco_call_room_id', 'troco_call_store'].forEach((k) => {
+            localStorage.removeItem(k);
+          });
+        } catch (_) {}
+      }
+
+      // 3. Vérification de la validité de la salle côté serveur Firestore
+      const targetChatId = activeChatObj?.id || selectedChat?.id;
+      const hasCallIndicator = Boolean(
+        activeChatObj?.activeCall?.isLive ||
+        selectedChat?.activeCall?.isLive ||
+        activeChatObj?.activeCall ||
+        selectedChat?.activeCall
+      );
+
+      if (targetChatId && hasCallIndicator) {
+        try {
+          const callDocRef = doc(db, 'calls', String(targetChatId));
+          const callSnap = await getDoc(callDocRef);
+
+          const isValidServerCall =
+            callSnap.exists() &&
+            (callSnap.data()?.status === 'ringing' || callSnap.data()?.status === 'connected');
+
+          if (!isValidServerCall && isMounted) {
+            console.info('[ChatView] 🧹 Salle active fantôme purgée pour le chat:', targetChatId);
+            if (typeof setSelectedChat === 'function') {
+              setSelectedChat((prev) => {
+                if (!prev) return prev;
+                return {
+                  ...prev,
+                  activeCall: null,
+                  isLive: false,
+                };
+              });
+            }
+
+            // Nettoyage en arrière-plan sur le document Firestore 'chats'
+            updateDoc(doc(db, 'chats', String(targetChatId)), {
+              activeCall: null,
+              isLive: false,
+              updatedAt: serverTimestamp(),
+            }).catch(() => {});
+          }
+        } catch (err) {
+          console.warn('[ChatView] Erreur vérification salle serveur:', err);
+          if (isMounted && typeof setSelectedChat === 'function') {
+            setSelectedChat((prev) => (prev ? { ...prev, activeCall: null, isLive: false } : prev));
+          }
+        }
+      } else if (hasCallIndicator && !targetChatId && isMounted) {
+        if (typeof setSelectedChat === 'function') {
+          setSelectedChat((prev) => (prev ? { ...prev, activeCall: null, isLive: false } : prev));
+        }
+      }
+    };
+
+    purgePhantomCallState();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [activeChatObj?.id, selectedChat?.id, setSelectedChat]);
 
   // 🤝 Écoute de l'événement de clôture festive de deal pour déclencher confettis + modale d'évaluation
   useEffect(() => {

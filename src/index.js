@@ -22,8 +22,12 @@ root.render(
   </React.StrictMode>
 );
 
-// Enregistrement PWA du Service Worker pour support offline et installation mobile
-serviceWorkerRegistration.register();
+// Enregistrement PWA du Service Worker pour support offline, détection de nouvelle version et installation mobile
+serviceWorkerRegistration.register({
+  onUpdate: (registration, applyUpdate) => {
+    console.info('[PWA] Nouvelle version détectée après déploiement Vercel.');
+  },
+});
 
 // Tracking actif des Web Vitals (LCP, FID/INP, CLS, TTFB, FCP)
 reportWebVitals(logWebVitalMetric);
