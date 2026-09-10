@@ -1388,16 +1388,19 @@ export default function App() {
   }, [remoteStream]);
 
   // Décrochage universel direct avec bascule immédiate vers la visio plein écran
-  const handleAcceptIncomingCall = async () => {
+  const handleAcceptIncomingCall = async (incomingObj = null) => {
     try {
+      const targetCall = incomingObj || activeIncomingCall;
       setGlobalIncomingCall(null);
-      const res = await acceptIncomingCall();
-      if (res?.chatId) {
-        const foundChat = (chatsList || []).find(c => String(c.id) === String(res.chatId));
+      stopRingtone();
+      const res = await acceptIncomingCall(targetCall);
+      const targetChatId = res?.chatId || targetCall?.chatId || targetCall?.roomId;
+      if (targetChatId) {
+        const foundChat = (chatsList || []).find(c => String(c.id) === String(targetChatId));
         if (foundChat) {
           setSelectedChat(foundChat);
         } else {
-          setSelectedChat({ id: res.chatId, user: res.from || 'Interlocuteur' });
+          setSelectedChat({ id: targetChatId, user: res?.from || targetCall?.from || 'Interlocuteur' });
         }
       }
       setIsCallPip(false);
@@ -1411,6 +1414,7 @@ export default function App() {
 
   useEffect(() => {
     const currentUid = (auth && auth.currentUser && auth.currentUser.uid) || profile?.uid;
+    const normalizedProfile = (profile?.name || '').trim().toLowerCase();
     if (!currentUid || !db) return;
 
     const unsubs = [];
@@ -1427,22 +1431,28 @@ export default function App() {
           if (!data) return;
           if (data.fromUid && String(data.fromUid) === String(currentUid)) return;
           if (data.callerUid && String(data.callerUid) === String(currentUid)) return;
+          if (data.from && normalizedProfile && (data.from || '').trim().toLowerCase() === normalizedProfile) return;
 
           if ((change.type === 'added' || change.type === 'modified') && data.status === 'ringing') {
             setGlobalIncomingCall({
               chatId: change.doc.id,
               callId: change.doc.id,
+              roomId: change.doc.id,
               type: data.type || 'video',
               from: data.from || 'Interlocuteur',
               fromUid: data.fromUid || data.callerUid || null,
               ...data,
             });
+            playRingtone();
+            if (navigator.vibrate) navigator.vibrate([400, 150, 400, 150, 400]);
           }
           if (change.type === 'removed') {
-            setGlobalIncomingCall(prev => (prev?.chatId === change.doc.id ? null : prev));
+            setGlobalIncomingCall(prev => (prev?.chatId === change.doc.id || prev?.callId === change.doc.id ? null : prev));
+            stopRingtone();
           }
           if (change.type === 'modified' && data.status && data.status !== 'ringing') {
-            setGlobalIncomingCall(prev => (prev?.chatId === change.doc.id ? null : prev));
+            setGlobalIncomingCall(prev => (prev?.chatId === change.doc.id || prev?.callId === change.doc.id ? null : prev));
+            stopRingtone();
           }
         });
       }, (err) => {
@@ -1456,7 +1466,7 @@ export default function App() {
     return () => {
       unsubs.forEach(u => { try { if (typeof u === 'function') u(); } catch (_) {} });
     };
-  }, [auth, profile?.uid]);
+  }, [auth, profile?.uid, profile?.name, playRingtone, stopRingtone]);
 
   const activeIncomingCall = incomingCall || globalIncomingCall;
 
@@ -4600,147 +4610,151 @@ export default function App() {
       )}
 
 
-      {/* ---- MODALE PRIORITAIRE D'APPEL ENTRANT GLOBAL (z-[9999]) ---- */}
+      {/* ---- TÂCHE 2 : BANNIÈRE GLOBALE D'ALERTE APPEL ENTRANT (fixed top-10 left-1/2 -translate-x-1/2 z-[999999] shadow-2xl) ---- */}
       {activeIncomingCall && !callState?.active && (
         <div
-          className="z-[9999]"
+          className="fixed top-10 left-1/2 -translate-x-1/2 z-[999999] shadow-2xl"
           style={{
             position: 'fixed',
-            inset: 0,
-            zIndex: 9999,
-            backgroundColor: 'rgba(0, 0, 0, 0.8)',
-            backdropFilter: 'blur(16px)',
-            WebkitBackdropFilter: 'blur(16px)',
+            top: '40px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 999999,
+            width: 'calc(100% - 32px)',
+            maxWidth: '520px',
+            backgroundColor: darkMode ? 'rgba(30, 27, 24, 0.96)' : 'rgba(255, 255, 255, 0.96)',
+            backdropFilter: 'blur(24px) saturate(180%)',
+            WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+            border: '1.5px solid var(--accent-primary, #C67D5B)',
+            borderRadius: '9999px',
+            padding: '10px 18px',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            padding: '20px',
-            animation: 'fadeIn 0.25s ease-out both',
+            justifyContent: 'space-between',
+            gap: '14px',
+            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.45), 0 0 25px rgba(198, 125, 91, 0.25)',
+            animation: 'slideDownIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards',
           }}
         >
-          <div
-            style={{
-              width: '100%',
-              maxWidth: '420px',
-              backgroundColor: darkMode ? '#1F1D1A' : '#FFFFFF',
-              borderRadius: '28px',
-              padding: '32px 24px',
-              border: '2px solid var(--accent-primary, #D97706)',
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 35px rgba(217, 119, 6, 0.3)',
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              textAlign: 'center',
-              gap: '20px',
-            }}
-          >
-            {/* Avatar avec halo */}
-            <div style={{ position: 'relative' }}>
+          {/* Avatar & Infos Appelant */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
+            <div style={{ position: 'relative', flexShrink: 0 }}>
               <div
                 style={{
-                  width: '84px',
-                  height: '84px',
+                  width: '46px',
+                  height: '46px',
                   borderRadius: '50%',
-                  background: 'linear-gradient(135deg, var(--accent-primary, #D97706) 0%, #B45309 100%)',
+                  background: 'linear-gradient(135deg, var(--accent-primary, #C67D5B) 0%, #A85D3B 100%)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   color: '#FFF',
-                  fontSize: '32px',
+                  fontSize: '18px',
                   fontWeight: '800',
-                  boxShadow: '0 8px 24px rgba(217, 119, 6, 0.4)',
+                  boxShadow: '0 4px 14px rgba(198, 125, 91, 0.35)',
                 }}
               >
                 {activeIncomingCall.from ? activeIncomingCall.from.charAt(0).toUpperCase() : 'T'}
               </div>
-            </div>
-
-            {/* Informations de l'appelant */}
-            <div>
-              <h3 style={{ margin: '0 0 6px 0', fontSize: '20px', fontWeight: '800', color: darkMode ? '#F3F4F6' : '#111827' }}>
-                {activeIncomingCall.from || 'Interlocuteur'}
-              </h3>
               <div
                 style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  padding: '4px 12px',
-                  borderRadius: '999px',
-                  backgroundColor: activeIncomingCall.type === 'video' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(16, 185, 129, 0.15)',
-                  color: activeIncomingCall.type === 'video' ? '#3B82F6' : '#10B981',
-                  fontSize: '13px',
-                  fontWeight: '700',
+                  position: 'absolute',
+                  bottom: '0',
+                  right: '0',
+                  width: '12px',
+                  height: '12px',
+                  borderRadius: '50%',
+                  backgroundColor: '#10B981',
+                  border: '2px solid #FFF',
+                }}
+              />
+            </div>
+
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div
+                style={{
+                  color: darkMode ? '#FAF7F2' : '#2D2825',
+                  fontWeight: '800',
+                  fontSize: '15px',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  lineHeight: 1.2,
                 }}
               >
-                {activeIncomingCall.type === 'video' ? <Video size={15} /> : <Phone size={15} />}
-                <span>{activeIncomingCall.type === 'video' ? 'Appel vidéo entrant...' : 'Appel audio entrant...'}</span>
+                {activeIncomingCall.from || 'Interlocuteur'}
+              </div>
+              <div
+                style={{
+                  color: 'var(--accent-primary, #C67D5B)',
+                  fontSize: '12px',
+                  fontWeight: '700',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  marginTop: '2px',
+                }}
+              >
+                {activeIncomingCall.type === 'video' ? <Video size={13} /> : <Phone size={13} />}
+                <span>{activeIncomingCall.type === 'video' ? 'Appel visio FaceTime...' : 'Appel audio HD...'}</span>
               </div>
             </div>
+          </div>
 
-            {/* Boutons d'action : Décliner / Répondre */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '32px', width: '100%', marginTop: '8px' }}>
-              {/* Bouton Décliner */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setGlobalIncomingCall(null);
-                    declineIncomingCall();
-                  }}
-                  style={{
-                    width: '64px',
-                    height: '64px',
-                    borderRadius: '50%',
-                    backgroundColor: '#EF4444',
-                    color: '#FFF',
-                    border: 'none',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: '0 8px 20px rgba(239, 68, 68, 0.4)',
-                    transition: 'transform 0.15s ease',
-                  }}
-                  title="Décliner"
-                >
-                  <PhoneOff size={26} />
-                </button>
-                <span style={{ fontSize: '13px', fontWeight: '700', color: '#EF4444' }}>
-                  Décliner
-                </span>
-              </div>
+          {/* Boutons d'action Décrocher / Raccrocher */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+            {/* Bouton Raccrocher / Décliner */}
+            <button
+              type="button"
+              onClick={() => {
+                setGlobalIncomingCall(null);
+                declineIncomingCall();
+              }}
+              style={{
+                width: '44px',
+                height: '44px',
+                borderRadius: '50%',
+                backgroundColor: '#EF4444',
+                color: '#FFF',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 4px 14px rgba(239, 68, 68, 0.4)',
+                transition: 'transform 0.15s ease',
+              }}
+              title="Refuser l'appel"
+              aria-label="Refuser l'appel"
+            >
+              <PhoneOff size={20} />
+            </button>
 
-              {/* Bouton Répondre */}
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    await handleAcceptIncomingCall();
-                  }}
-                  style={{
-                    width: '64px',
-                    height: '64px',
-                    borderRadius: '50%',
-                    backgroundColor: '#10B981',
-                    color: '#FFF',
-                    border: 'none',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: '0 8px 20px rgba(16, 185, 129, 0.4)',
-                    transition: 'transform 0.15s ease',
-                  }}
-                  title="Répondre"
-                >
-                  <Phone size={26} />
-                </button>
-                <span style={{ fontSize: '13px', fontWeight: '700', color: '#10B981' }}>
-                  Répondre
-                </span>
-              </div>
-            </div>
+            {/* Bouton Décrocher / Répondre */}
+            <button
+              type="button"
+              onClick={async () => {
+                await handleAcceptIncomingCall(activeIncomingCall);
+              }}
+              style={{
+                width: '44px',
+                height: '44px',
+                borderRadius: '50%',
+                backgroundColor: '#10B981',
+                color: '#FFF',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 4px 14px rgba(16, 185, 129, 0.4)',
+                transition: 'transform 0.15s ease',
+              }}
+              title="Décrocher"
+              aria-label="Décrocher"
+            >
+              <Phone size={20} />
+            </button>
           </div>
         </div>
       )}
