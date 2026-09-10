@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { render } from '@testing-library/react';
 import WebRTCCallOverlay from './WebRTCCallOverlay';
 
@@ -57,4 +57,29 @@ describe('WebRTCCallOverlay Foreground & Overlay Tests (Phase 2)', () => {
     const fullscreenDiv = modalRoot?.querySelector('.fixed.inset-0.z-\\[999999\\]');
     expect(fullscreenDiv).toBeFalsy();
   });
+
+  test('Renders incoming call banner inside modal-root with high z-index', () => {
+    const incomingCall = {
+      id: 'call-123',
+      from: 'Alice',
+      type: 'video',
+    };
+
+    render(
+      <WebRTCCallOverlay
+        callState={{ active: false }}
+        isCallPip={false}
+        incomingCall={incomingCall}
+        t={(k) => k}
+      />
+    );
+
+    const modalRoot = document.getElementById('modal-root');
+    expect(modalRoot).not.toBeNull();
+    const banner = modalRoot.firstElementChild;
+    expect(banner).not.toBeNull();
+    expect(banner.style.zIndex).toBe('10000005');
+    expect(banner.textContent).toContain('Alice');
+  });
 });
+

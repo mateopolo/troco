@@ -213,92 +213,94 @@ export default function WebRTCCallOverlay({
     <>
       {/* 1. OVERLAY DE SONNERIE ENTRANTE */}
       {incomingCall && !callState?.active && (
-        <div style={{
-          position: 'fixed',
-          top: '16px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          width: 'calc(100% - 32px)',
-          maxWidth: '520px',
-          zIndex: 10000005,
-          background: darkMode ? 'rgba(35,30,27,0.98)' : 'rgba(250,247,242,0.98)',
-          backdropFilter: 'blur(24px)',
-          WebkitBackdropFilter: 'blur(24px)',
-          border: '1.5px solid var(--accent-primary)',
-          borderRadius: '24px',
-          padding: '14px 18px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '14px',
-          boxShadow: '0 16px 48px rgba(0,0,0,0.5), var(--shadow-accent)',
-          animation: 'slideDownIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-        }}>
+        <Portal containerId="modal-root" lockScroll={false}>
           <div style={{
-            width: '48px',
-            height: '48px',
-            borderRadius: '50%',
-            background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
+            position: 'fixed',
+            top: '16px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            width: 'calc(100% - 32px)',
+            maxWidth: '520px',
+            zIndex: 10000005,
+            background: darkMode ? 'rgba(35,30,27,0.98)' : 'rgba(250,247,242,0.98)',
+            backdropFilter: 'blur(24px)',
+            WebkitBackdropFilter: 'blur(24px)',
+            border: '1.5px solid var(--accent-primary)',
+            borderRadius: '24px',
+            padding: '14px 18px',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '18px',
-            color: '#FFF',
-            fontWeight: '800',
-            flexShrink: 0,
-            boxShadow: 'var(--shadow-accent)',
+            gap: '14px',
+            boxShadow: '0 16px 48px rgba(0,0,0,0.5), var(--shadow-accent)',
+            animation: 'slideDownIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards',
           }}>
-            {incomingCall.from ? incomingCall.from[0].toUpperCase() : 'T'}
-          </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ color: 'var(--text-main)', fontWeight: '800', fontSize: '15px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {incomingCall.from}
+            <div style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: '50%',
+              background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '18px',
+              color: '#FFF',
+              fontWeight: '800',
+              flexShrink: 0,
+              boxShadow: 'var(--shadow-accent)',
+            }}>
+              {incomingCall.from ? incomingCall.from[0].toUpperCase() : 'T'}
             </div>
-            <div style={{ color: 'var(--accent-primary)', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: '700' }}>
-              {incomingCall.type === 'video' ? <Video size={13} color="var(--accent-primary)" /> : <Phone size={13} color="var(--accent-primary)" />}
-              <span>{incomingCall.type === 'video' ? 'Appel vidéo entrant...' : 'Appel audio entrant...'}</span>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ color: 'var(--text-main)', fontWeight: '800', fontSize: '15px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {incomingCall.from}
+              </div>
+              <div style={{ color: 'var(--accent-primary)', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: '700' }}>
+                {incomingCall.type === 'video' ? <Video size={13} color="var(--accent-primary)" /> : <Phone size={13} color="var(--accent-primary)" />}
+                <span>{incomingCall.type === 'video' ? 'Appel vidéo entrant...' : 'Appel audio entrant...'}</span>
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+              <button
+                onClick={declineIncomingCall}
+                style={{
+                  border: 'none',
+                  width: '44px',
+                  height: '44px',
+                  borderRadius: '50%',
+                  backgroundColor: 'var(--accent-danger, #EF4444)',
+                  color: '#FFF',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 4px 14px rgba(239,68,68,0.4)',
+                }}
+                title="Refuser l'appel"
+              >
+                <PhoneOff size={18} />
+              </button>
+              <button
+                onClick={onAccept}
+                style={{
+                  border: 'none',
+                  width: '44px',
+                  height: '44px',
+                  borderRadius: '50%',
+                  backgroundColor: 'var(--accent-success, #10B981)',
+                  color: '#FFF',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 4px 14px rgba(16,185,129,0.4)',
+                }}
+                title="Accepter l'appel"
+              >
+                <Phone size={18} />
+              </button>
             </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
-            <button
-              onClick={declineIncomingCall}
-              style={{
-                border: 'none',
-                width: '44px',
-                height: '44px',
-                borderRadius: '50%',
-                backgroundColor: 'var(--accent-danger, #EF4444)',
-                color: '#FFF',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 4px 14px rgba(239,68,68,0.4)',
-              }}
-              title="Refuser l'appel"
-            >
-              <PhoneOff size={18} />
-            </button>
-            <button
-              onClick={onAccept}
-              style={{
-                border: 'none',
-                width: '44px',
-                height: '44px',
-                borderRadius: '50%',
-                backgroundColor: 'var(--accent-success, #10B981)',
-                color: '#FFF',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 4px 14px rgba(16,185,129,0.4)',
-              }}
-              title="Accepter l'appel"
-            >
-              <Phone size={18} />
-            </button>
-          </div>
-        </div>
+        </Portal>
       )}
 
       {/* 2. MODAL D'APPEL WEBRTC PLEIN ÉCRAN — STYLE FACETIME IMMERSIF */}

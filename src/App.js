@@ -1435,6 +1435,7 @@ export default function App() {
         if (data.from && normalizedProfile && (data.from || '').trim().toLowerCase() === normalizedProfile) return;
 
         if ((change.type === 'added' || change.type === 'modified') && data.status === 'ringing') {
+          // Affichage inconditionnel de l'UI en premier
           setGlobalIncomingCall({
             chatId: change.doc.id,
             callId: change.doc.id,
@@ -1444,8 +1445,21 @@ export default function App() {
             fromUid: data.fromUid || data.callerUid || null,
             ...data,
           });
-          playRingtone();
-          if (navigator.vibrate) navigator.vibrate([400, 150, 400, 150, 400]);
+
+          // Isolation de la lecture audio : L'échec de l'audio (Autoplay Policy) ne doit JAMAIS bloquer l'état de l'UI
+          try {
+            if (typeof playRingtone === 'function') {
+              playRingtone();
+            }
+          } catch (audioErr) {
+            console.warn('Autoplay bloqué', audioErr);
+          }
+
+          if (navigator.vibrate) {
+            try {
+              navigator.vibrate([400, 150, 400, 150, 400]);
+            } catch (_) {}
+          }
         }
         if (change.type === 'removed') {
           setGlobalIncomingCall(prev => (prev?.chatId === change.doc.id || prev?.callId === change.doc.id ? null : prev));
@@ -4690,150 +4704,152 @@ export default function App() {
 
       {/* ---- TÂCHE 2 : BANNIÈRE GLOBALE D'ALERTE APPEL ENTRANT (fixed top-10 left-1/2 -translate-x-1/2 z-[999999] shadow-2xl) ---- */}
       {activeIncomingCall && !callState?.active && (
-        <div
-          className="fixed top-10 left-1/2 -translate-x-1/2 z-[999999] shadow-2xl"
-          style={{
-            position: 'fixed',
-            top: '40px',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 999999,
-            width: 'calc(100% - 32px)',
-            maxWidth: '520px',
-            backgroundColor: darkMode ? 'rgba(30, 27, 24, 0.96)' : 'rgba(255, 255, 255, 0.96)',
-            backdropFilter: 'blur(24px) saturate(180%)',
-            WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-            border: '1.5px solid var(--accent-primary, #C67D5B)',
-            borderRadius: '9999px',
-            padding: '10px 18px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '14px',
-            boxShadow: '0 20px 60px rgba(0, 0, 0, 0.45), 0 0 25px rgba(198, 125, 91, 0.25)',
-            animation: 'slideDownIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-          }}
-        >
-          {/* Avatar & Infos Appelant */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
-            <div style={{ position: 'relative', flexShrink: 0 }}>
-              <div
+        <Portal containerId="modal-root" lockScroll={false}>
+          <div
+            className="fixed top-10 left-1/2 -translate-x-1/2 z-[999999] shadow-2xl"
+            style={{
+              position: 'fixed',
+              top: '40px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: 999999,
+              width: 'calc(100% - 32px)',
+              maxWidth: '520px',
+              backgroundColor: darkMode ? 'rgba(30, 27, 24, 0.96)' : 'rgba(255, 255, 255, 0.96)',
+              backdropFilter: 'blur(24px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+              border: '1.5px solid var(--accent-primary, #C67D5B)',
+              borderRadius: '9999px',
+              padding: '10px 18px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '14px',
+              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.45), 0 0 25px rgba(198, 125, 91, 0.25)',
+              animation: 'slideDownIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+            }}
+          >
+            {/* Avatar & Infos Appelant */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
+              <div style={{ position: 'relative', flexShrink: 0 }}>
+                <div
+                  style={{
+                    width: '46px',
+                    height: '46px',
+                    borderRadius: '50%',
+                    background: 'linear-gradient(135deg, var(--accent-primary, #C67D5B) 0%, #A85D3B 100%)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#FFF',
+                    fontSize: '18px',
+                    fontWeight: '800',
+                    boxShadow: '0 4px 14px rgba(198, 125, 91, 0.35)',
+                  }}
+                >
+                  {activeIncomingCall.from ? activeIncomingCall.from.charAt(0).toUpperCase() : 'T'}
+                </div>
+                <div
+                  style={{
+                    position: 'absolute',
+                    bottom: '0',
+                    right: '0',
+                    width: '12px',
+                    height: '12px',
+                    borderRadius: '50%',
+                    backgroundColor: '#10B981',
+                    border: '2px solid #FFF',
+                  }}
+                />
+              </div>
+
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div
+                  style={{
+                    color: darkMode ? '#FAF7F2' : '#2D2825',
+                    fontWeight: '800',
+                    fontSize: '15px',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    lineHeight: 1.2,
+                  }}
+                >
+                  {activeIncomingCall.from || 'Interlocuteur'}
+                </div>
+                <div
+                  style={{
+                    color: 'var(--accent-primary, #C67D5B)',
+                    fontSize: '12px',
+                    fontWeight: '700',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    marginTop: '2px',
+                  }}
+                >
+                  {activeIncomingCall.type === 'video' ? <Video size={13} /> : <Phone size={13} />}
+                  <span>{activeIncomingCall.type === 'video' ? 'Appel visio FaceTime...' : 'Appel audio HD...'}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Boutons d'action Décrocher / Raccrocher */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+              {/* Bouton Raccrocher / Décliner */}
+              <button
+                type="button"
+                onClick={() => {
+                  handleDeclineIncomingCall(activeIncomingCall);
+                }}
                 style={{
-                  width: '46px',
-                  height: '46px',
+                  width: '44px',
+                  height: '44px',
                   borderRadius: '50%',
-                  background: 'linear-gradient(135deg, var(--accent-primary, #C67D5B) 0%, #A85D3B 100%)',
+                  backgroundColor: '#EF4444',
+                  color: '#FFF',
+                  border: 'none',
+                  cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  color: '#FFF',
-                  fontSize: '18px',
-                  fontWeight: '800',
-                  boxShadow: '0 4px 14px rgba(198, 125, 91, 0.35)',
+                  boxShadow: '0 4px 14px rgba(239, 68, 68, 0.4)',
+                  transition: 'transform 0.15s ease',
                 }}
+                title="Refuser l'appel"
+                aria-label="Refuser l'appel"
               >
-                {activeIncomingCall.from ? activeIncomingCall.from.charAt(0).toUpperCase() : 'T'}
-              </div>
-              <div
+                <PhoneOff size={20} />
+              </button>
+
+              {/* Bouton Décrocher / Répondre */}
+              <button
+                type="button"
+                onClick={async () => {
+                  await handleAcceptIncomingCall(activeIncomingCall);
+                }}
                 style={{
-                  position: 'absolute',
-                  bottom: '0',
-                  right: '0',
-                  width: '12px',
-                  height: '12px',
+                  width: '44px',
+                  height: '44px',
                   borderRadius: '50%',
                   backgroundColor: '#10B981',
-                  border: '2px solid #FFF',
-                }}
-              />
-            </div>
-
-            <div style={{ minWidth: 0, flex: 1 }}>
-              <div
-                style={{
-                  color: darkMode ? '#FAF7F2' : '#2D2825',
-                  fontWeight: '800',
-                  fontSize: '15px',
-                  whiteSpace: 'nowrap',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  lineHeight: 1.2,
-                }}
-              >
-                {activeIncomingCall.from || 'Interlocuteur'}
-              </div>
-              <div
-                style={{
-                  color: 'var(--accent-primary, #C67D5B)',
-                  fontSize: '12px',
-                  fontWeight: '700',
+                  color: '#FFF',
+                  border: 'none',
+                  cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '5px',
-                  marginTop: '2px',
+                  justifyContent: 'center',
+                  boxShadow: '0 4px 14px rgba(16, 185, 129, 0.4)',
+                  transition: 'transform 0.15s ease',
                 }}
+                title="Décrocher"
+                aria-label="Décrocher"
               >
-                {activeIncomingCall.type === 'video' ? <Video size={13} /> : <Phone size={13} />}
-                <span>{activeIncomingCall.type === 'video' ? 'Appel visio FaceTime...' : 'Appel audio HD...'}</span>
-              </div>
+                <Phone size={20} />
+              </button>
             </div>
           </div>
-
-          {/* Boutons d'action Décrocher / Raccrocher */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
-            {/* Bouton Raccrocher / Décliner */}
-            <button
-              type="button"
-              onClick={() => {
-                handleDeclineIncomingCall(activeIncomingCall);
-              }}
-              style={{
-                width: '44px',
-                height: '44px',
-                borderRadius: '50%',
-                backgroundColor: '#EF4444',
-                color: '#FFF',
-                border: 'none',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 4px 14px rgba(239, 68, 68, 0.4)',
-                transition: 'transform 0.15s ease',
-              }}
-              title="Refuser l'appel"
-              aria-label="Refuser l'appel"
-            >
-              <PhoneOff size={20} />
-            </button>
-
-            {/* Bouton Décrocher / Répondre */}
-            <button
-              type="button"
-              onClick={async () => {
-                await handleAcceptIncomingCall(activeIncomingCall);
-              }}
-              style={{
-                width: '44px',
-                height: '44px',
-                borderRadius: '50%',
-                backgroundColor: '#10B981',
-                color: '#FFF',
-                border: 'none',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                boxShadow: '0 4px 14px rgba(16, 185, 129, 0.4)',
-                transition: 'transform 0.15s ease',
-              }}
-              title="Décrocher"
-              aria-label="Décrocher"
-            >
-              <Phone size={20} />
-            </button>
-          </div>
-        </div>
+        </Portal>
       )}
 
       {/* ---- OVERLAY WEBRTC APPELS (SONNERIE ENTRANTE & MODAL PLEIN ÉCRAN) ---- */}

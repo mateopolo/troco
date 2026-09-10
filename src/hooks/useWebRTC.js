@@ -55,6 +55,7 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
   const cameraTrackRef = useRef(null);
   const ringtoneCtxRef = useRef(null);
   const ringtoneIntervalRef = useRef(null);
+  const ringtoneAudioRef = useRef(null);
   const pendingCandidatesRef = useRef([]);
   const callStartTimeRef = useRef(null);
   const activeCallChatIdRef = useRef(null);
@@ -129,6 +130,13 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
     try {
       audioStopRingtone();
     } catch (_) { }
+    if (ringtoneAudioRef.current) {
+      try {
+        ringtoneAudioRef.current.pause();
+        ringtoneAudioRef.current.currentTime = 0;
+      } catch (_) { }
+      ringtoneAudioRef.current = null;
+    }
     if (ringtoneIntervalRef.current) {
       clearInterval(ringtoneIntervalRef.current);
       ringtoneIntervalRef.current = null;
@@ -143,9 +151,26 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
 
   const playRingtone = useCallback(() => {
     stopRingtone();
+    // 1. Synthétiseur Web Audio API sécurisé
     try {
       audioStartRingtone();
-    } catch (_) { }
+    } catch (e) {
+      console.warn('Autoplay bloqué', e);
+    }
+    // 2. Fallback Audio HTML5 isolé avec .catch() explicite pour la politique autoplay
+    try {
+      if (typeof window !== 'undefined' && typeof window.Audio !== 'undefined') {
+        const ringtone = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+        ringtoneAudioRef.current = ringtone;
+        ringtone.loop = true;
+        const playPromise = ringtone.play();
+        if (playPromise && typeof playPromise.catch === 'function') {
+          playPromise.catch(e => console.warn('Autoplay bloqué', e));
+        }
+      }
+    } catch (e) {
+      console.warn('Autoplay bloqué', e);
+    }
   }, [stopRingtone]);
 
   // =======================================================================
@@ -826,6 +851,7 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
           ));
 
         if ((change.type === 'added' || change.type === 'modified') && isMatch && data.status === 'ringing') {
+          // Affichage inconditionnel de l'UI en premier
           setIncomingCall({
             chatId: change.doc.id,
             callId: change.doc.id,
@@ -834,8 +860,17 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
             fromUid: data.fromUid || data.callerUid || null,
             ...data,
           });
-          playRingtone();
-          if (navigator.vibrate) navigator.vibrate([400, 150, 400, 150, 400]);
+
+          // Isolation de la lecture audio : L'échec de l'audio NE DOIT JAMAIS bloquer l'état de l'UI
+          try {
+            playRingtone();
+          } catch (audioErr) {
+            console.warn('Autoplay bloqué', audioErr);
+          }
+
+          if (navigator.vibrate) {
+            try { navigator.vibrate([400, 150, 400, 150, 400]); } catch (_) {}
+          }
         }
         if (change.type === 'removed') {
           setIncomingCall(prev => (prev?.chatId === change.doc.id || prev?.callId === change.doc.id ? null : prev));
