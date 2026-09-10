@@ -19,7 +19,7 @@ export default function MessageBubble({ message = {}, isMe = false }) {
           <audio
             controls
             src={message.audioUrl}
-            className="h-10 max-w-[200px] z-10 relative rounded-full"
+            className="max-w-[200px] md:max-w-xs h-10 z-10 relative rounded-full"
             preload="metadata"
           />
         ) : (

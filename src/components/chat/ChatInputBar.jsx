@@ -47,9 +47,12 @@ function ChatInputBar({
   isGroupChat = false,
   chatId = null,
   onAudioUpload = null,
+  isSending: externalIsSending = false,
 }) {
   const [localText, setLocalText] = useState(editingMsg ? (editingMsg.text || '') : '');
-  const [isSending, setIsSending] = useState(false);
+  const [internalIsSending, setInternalIsSending] = useState(false);
+  const isSending = Boolean(externalIsSending || internalIsSending);
+  const lastSendTimestampRef = useRef(0);
   const [isWorkspaceMenuOpen, setIsWorkspaceMenuOpen] = useState(false);
   const typingTimerRef = useRef(null);
   const imageInputRef = useRef(null);
@@ -175,23 +178,27 @@ function ChatInputBar({
     }
   }, [onTypingChange]);
 
-  // Soumission finale du message avec protection anti-spam et debounce
+  // Soumission finale du message avec protection anti-spam et debounce strict (500ms)
   const handleSubmit = useCallback(async (e) => {
     if (e) {
       if (typeof e.preventDefault === 'function') e.preventDefault();
       if (typeof e.stopPropagation === 'function') e.stopPropagation();
     }
-    if (isSending) return;
+    const now = Date.now();
+    if (isSending || (now - lastSendTimestampRef.current < 500)) {
+      return;
+    }
 
     const trimmed = localText.trim();
-    if (!trimmed) {
+    if (!trimmed && !editingMsg) {
       if (typeof handleSendMessage === 'function') {
         handleSendMessage();
       }
       return;
     }
 
-    setIsSending(true);
+    lastSendTimestampRef.current = now;
+    setInternalIsSending(true);
     try {
       if (editingMsg && typeof onEditMessage === 'function') {
         await onEditMessage(trimmed);
@@ -210,7 +217,9 @@ function ChatInputBar({
     } catch (err) {
       console.error('[ChatInputBar] handleSubmit error:', err);
     } finally {
-      setIsSending(false);
+      setTimeout(() => {
+        setInternalIsSending(false);
+      }, 500);
     }
   }, [localText, isSending, editingMsg, onEditMessage, handleSendMessage, onSendMessage, onTypingChange]);
 
@@ -341,6 +350,7 @@ function ChatInputBar({
                 transition: 'all 0.15s ease',
               }}
               title="Outils Collaboratifs Workspace (Tableau blanc, Documents, Feuilles, Notes)"
+              aria-label="Ouvrir le menu des outils collaboratifs Workspace"
             >
               <LayoutGrid size={isMobile ? 16 : 18} />
             </button>
@@ -673,6 +683,7 @@ function ChatInputBar({
               flexShrink: 0,
             }}
             title="Joindre un fichier audio (.mp3, .wav)"
+            aria-label="Joindre un fichier audio (.mp3, .wav)"
           >
             <Paperclip size={isMobile ? 16 : 18} />
           </button>
@@ -709,6 +720,7 @@ function ChatInputBar({
               flexShrink: 0,
             }}
             title="Envoyer une photo / image"
+            aria-label="Envoyer une photo ou une image"
           >
             <ImageIcon size={isMobile ? 16 : 18} />
           </button>
@@ -746,6 +758,7 @@ function ChatInputBar({
               transition: 'transform 0.15s ease',
             }}
             title="Transférer des Jetons Troco instantanément"
+            aria-label="Transférer des Jetons Troco instantanément"
           >
             <Coins size={18} />
           </button>
@@ -782,6 +795,7 @@ function ChatInputBar({
               flexShrink: 0,
             }}
             title="Enregistrer une note vocale"
+            aria-label="Enregistrer une note vocale"
           >
             <Mic size={isMobile ? 16 : 18} />
           </button>
@@ -839,6 +853,7 @@ function ChatInputBar({
             transition: 'all 0.15s ease',
           }}
           title={editingMsg ? 'Valider la modification' : (isSending ? 'Envoi en cours...' : 'Envoyer')}
+          aria-label={editingMsg ? 'Valider la modification' : 'Envoyer le message'}
         >
           {isSending ? (
             <div

@@ -58,4 +58,29 @@ describe('useChatStore - replaceTempId & deduplication', () => {
     expect(thread[0].id).toBe(realDocId);
     expect(thread.some(m => m.id === tempId)).toBe(false);
   });
+
+  it('reconciles and purges temporary message when real document arrives with temporaryId matching tempId', () => {
+    const chatId = 'chat_789';
+    const tempId = 'temp_optimistic_111';
+    const realDocId = 'firestore_doc_222';
+
+    useChatStore.getState().addMessageToThread(chatId, {
+      id: tempId,
+      temporaryId: tempId,
+      text: 'Message optimiste mobile',
+      status: 'pending',
+    });
+
+    let thread = useChatStore.getState().chatThreads[chatId];
+    expect(thread).toHaveLength(1);
+
+    // Call replaceTempId
+    useChatStore.getState().replaceTempId(chatId, tempId, realDocId);
+
+    thread = useChatStore.getState().chatThreads[chatId];
+    expect(thread).toHaveLength(1);
+    expect(thread[0].id).toBe(realDocId);
+    expect(thread[0].temporaryId).toBe(tempId);
+    expect(thread[0].status).toBe('sent');
+  });
 });

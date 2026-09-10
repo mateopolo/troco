@@ -78,6 +78,8 @@ function ChatView({
   messagesContainerRef: externalMessagesContainerRef = null,
 }) {
   const [isRecordingAudio, setIsRecordingAudio] = useState(false);
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
+  const lastChatSendRef = useRef(0);
   const [isCreateGroupModalOpen, setIsCreateGroupModalOpen] = useState(false);
   const [isProjectRewardsModalOpen, setIsProjectRewardsModalOpen] = useState(false);
   const [isWhiteboardOpen, setIsWhiteboardOpen] = useState(false);
@@ -566,13 +568,33 @@ function ChatView({
   const messages = useMemo(() => {
     if (!currentChatId || !chatThreads) return [];
     const thread = chatThreads[currentChatId] || chatThreads[String(currentChatId)] || [];
+
+    // Réconciliation d'ID optimiste / Firestore :
+    // Récupérer tous les temporaryId déjà confirmés par un document serveur officiel
+    const confirmedTempIds = new Set();
+    thread.forEach(m => {
+      const id = String(m?.id || m?._id || '');
+      if (m?.temporaryId && !id.startsWith('temp_')) {
+        confirmedTempIds.add(String(m.temporaryId));
+      }
+    });
+
     // Déduplication stricte via Map basée sur l'ID de document unique
     const map = new Map();
     thread.forEach(m => {
       const id = String(m?.id || m?._id || '');
-      if (id) {
-        map.set(id, m);
+      if (!id) return;
+
+      // Si le message est temporaire/optimiste et que Firestore a confirmé le document réel,
+      // la version serveur fait foi et écrase impérativement le message temporaire.
+      if (id.startsWith('temp_') || m.status === 'pending') {
+        const tempKey = String(m.temporaryId || id);
+        if (confirmedTempIds.has(tempKey) || confirmedTempIds.has(id)) {
+          return;
+        }
       }
+
+      map.set(id, m);
     });
     return Array.from(map.values());
   }, [currentChatId, chatThreads]);
@@ -2681,16 +2703,37 @@ function ChatView({
             editingMsg={editingMsg}
             replyingTo={null}
             isGroupChat={activeChatObj?.isGroup}
+            isSending={isSendingMessage}
             handleSendMessage={async (msgOrText) => {
+              const now = Date.now();
+              if (isSendingMessage || (now - lastChatSendRef.current < 500)) {
+                return;
+              }
+              lastChatSendRef.current = now;
+              setIsSendingMessage(true);
               userJustSentMessageRef.current = true;
-              if (typeof handleSendMessage === 'function') {
-                return await handleSendMessage(msgOrText);
+              try {
+                if (typeof handleSendMessage === 'function') {
+                  return await handleSendMessage(msgOrText);
+                }
+              } finally {
+                setTimeout(() => setIsSendingMessage(false), 500);
               }
             }}
             onSendMessage={async (text) => {
+              const now = Date.now();
+              if (isSendingMessage || (now - lastChatSendRef.current < 500)) {
+                return;
+              }
+              lastChatSendRef.current = now;
+              setIsSendingMessage(true);
               userJustSentMessageRef.current = true;
-              if (typeof handleSendMessage === 'function') {
-                return await handleSendMessage(text);
+              try {
+                if (typeof handleSendMessage === 'function') {
+                  return await handleSendMessage(text);
+                }
+              } finally {
+                setTimeout(() => setIsSendingMessage(false), 500);
               }
             }}
             onEditMessage={(text) => {
