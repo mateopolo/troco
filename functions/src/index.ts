@@ -168,3 +168,9 @@ export const checkRateLimit = onCall({ cors: true }, async (request) => {
  */
 export const cleanupRateLimits = createCleanupRateLimits(db);
 
+/**
+ * 👥 Cloud Function 18 : migrateChatParticipants (Callable Admin - VERIF-02)
+ * Migration des participants de chats (noms -> Firebase Auth UIDs) et traçabilité orphelins.
+ */
+export { migrateChatParticipants } from './migration/migrateChatParticipants';
+
