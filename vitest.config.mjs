@@ -5,7 +5,10 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     testTimeout: 20000,
-    hookTimeout: 20000,
-    include: ['tests/rules/**/*.{test,spec}.{js,ts}']
+    include: [
+      'tests/rules/**/*.{test,spec}.{js,ts}',
+      'functions/test/**/*.{test,spec}.{js,ts}'
+    ]
   }
 });
+

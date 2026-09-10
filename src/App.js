@@ -61,7 +61,10 @@ import { EmptyState } from './components/ui/EmptyState';
 import OfflineBanner from './components/common/OfflineBanner';
 import NotificationPill from './components/ui/NotificationPill';
 import { isIosOrTouchDevice } from './utils/deviceDetection';
+import { useAdminGuard } from './hooks/useAdminGuard';
+import adminService from './services/adminService';
 export { isIosOrTouchDevice };
+
 
 // Lazy-loaded heavy components & modals (Strict Code-Splitting)
 const AdminDashboard = React.lazy(() => import('./features/admin/AdminDashboard'));
@@ -780,17 +783,15 @@ export default function App() {
     }
   }, []);
 
-  // Handlers actions administrateur
+  // Handlers actions administrateur (via Cloud Functions sécurisées Custom Claims)
   // eslint-disable-next-line no-unused-vars
   const handleAdminUpdateUser = async (uid, updates) => {
     if (!uid) return;
     try {
-      await updateDoc(doc(db, 'users', uid), {
-        ...updates,
-        updatedAt: serverTimestamp(),
-      });
+      await adminService.updateUserAsAdmin(uid, updates);
+      setAllFirestoreUsers(prev => prev.map(u => (u.uid === uid || u.id === uid) ? { ...u, ...updates } : u));
     } catch (err) {
-      console.warn('[Firestore] handleAdminUpdateUser error:', err);
+      console.warn('[Admin] handleAdminUpdateUser error:', err);
       setAllFirestoreUsers(prev => prev.map(u => (u.uid === uid || u.id === uid) ? { ...u, ...updates } : u));
     }
   };
@@ -798,41 +799,44 @@ export default function App() {
   const handleAdminDeleteListing = async (listingOrId) => {
     if (!listingOrId) return;
     const targetId = typeof listingOrId === 'object' ? listingOrId.id : listingOrId;
+    const firestoreId = typeof listingOrId === 'object' && listingOrId.firestoreId
+      ? listingOrId.firestoreId
+      : listings.find(l => String(l.id) === String(targetId))?.firestoreId || String(targetId);
+
+    // Mise à jour optimiste du feed
     setListings(prev => prev.filter(l => String(l.id) !== String(targetId)));
+
     try {
-      const firestoreId = typeof listingOrId === 'object' && listingOrId.firestoreId
-        ? listingOrId.firestoreId
-        : listings.find(l => String(l.id) === String(targetId))?.firestoreId;
       if (firestoreId) {
-        await deleteDoc(doc(db, 'listings', String(firestoreId)));
+        await adminService.deleteListingAsAdmin(String(firestoreId), 'Suppression par modérateur');
       }
     } catch (err) {
-      console.warn('[Firestore] handleAdminDeleteListing error:', err);
+      console.warn('[Admin] handleAdminDeleteListing error:', err);
     }
   };
 
   // eslint-disable-next-line no-unused-vars
-  const handleAdminResolveReport = async (reportId, status = 'resolved') => {
+  const handleAdminResolveReport = async (reportId, status = 'resolved', resolution = '') => {
     if (!reportId) return;
     try {
-      await updateDoc(doc(db, 'reports', reportId), {
-        status,
-        resolvedAt: serverTimestamp(),
-      });
+      await adminService.resolveReport(reportId, status, resolution);
+      setAllReports(prev => prev.map(r => r.id === reportId ? { ...r, status, resolution } : r));
     } catch (err) {
-      console.warn('[Firestore] handleAdminResolveReport error:', err);
+      console.warn('[Admin] handleAdminResolveReport error:', err);
       setAllReports(prev => prev.map(r => r.id === reportId ? { ...r, status } : r));
     }
   };
 
-  // ---- RÉINITIALISATION TOTALE D'UN UTILISATEUR (WIPE & RESET ADMIN) ----
+  // ---- RÉINITIALISATION SÉCURISÉE D'UN UTILISATEUR (CLOUD FUNCTION RESET ADMIN) ----
   // eslint-disable-next-line no-unused-vars
-  const handleAdminResetUser = async (uid, userData = null) => {
+  const handleAdminResetUser = async (uid, userData = null, preserveWallet = true) => {
     if (!uid) return;
     try {
-      const resetData = {
-        euroBalance: 0.00,
-        trocoTokens: 10,
+      const userName = userData?.name || allFirestoreUsers.find(u => u.uid === uid || u.id === uid)?.name;
+
+      // Appel à la Cloud Function sécurisée avec préservation du wallet par défaut
+      const result = await adminService.resetUserSafely(uid, preserveWallet);
+      const newProfileData = result?.newProfile || {
         dealsCompleted: 0,
         dealsInProgress: 0,
         skills: [],
@@ -843,42 +847,22 @@ export default function App() {
         hasClaimedWelcomeGift: false,
         isBanned: false,
         isShadowBanned: false,
-        updatedAt: serverTimestamp(),
       };
 
-      // 1. Mise à jour Firestore users/{uid}
-      await updateDoc(doc(db, 'users', String(uid)), resetData);
-
-      // 2. Suppression de toutes les annonces de cet utilisateur sur Firestore et en local
-      const userName = userData?.name || allFirestoreUsers.find(u => u.uid === uid || u.id === uid)?.name;
-      const userListings = listings.filter(l =>
-        (l.userId && String(l.userId) === String(uid)) ||
-        (userName && l.author === userName)
-      );
-
-      for (const l of userListings) {
-        if (l.firestoreId) {
-          try {
-            await deleteDoc(doc(db, 'listings', String(l.firestoreId)));
-          } catch (e) {
-            console.warn('[Firestore] Delete user listing error:', e);
-          }
-        }
-      }
-
+      // Suppression des annonces de l'utilisateur en local
       setListings(prev => prev.filter(l =>
         !(l.userId && String(l.userId) === String(uid)) &&
         !(userName && l.author === userName)
       ));
 
-      // 3. Mise à jour de l'état allFirestoreUsers
-      setAllFirestoreUsers(prev => prev.map(u => (u.uid === uid || u.id === uid) ? { ...u, ...resetData } : u));
+      // Mise à jour de la liste locale des utilisateurs
+      setAllFirestoreUsers(prev => prev.map(u => (u.uid === uid || u.id === uid) ? { ...u, ...newProfileData } : u));
 
-      // 4. Si c'est l'utilisateur courant, réinitialiser son profil local + déclencher l'onboarding
+      // Si c'est l'utilisateur courant, mise à jour de son profil local
       if (profile?.uid === uid || auth.currentUser?.uid === uid) {
         setProfile(prev => ({
           ...prev,
-          ...resetData,
+          ...newProfileData,
         }));
         setSkills([]);
         setEquipment([]);
@@ -888,9 +872,10 @@ export default function App() {
         } catch (_) { }
       }
 
-      alert(`✅ Le profil ${userName || uid} a été réinitialisé avec succès (solde 0.00€, 10 jetons, onboarding réactivé, annonces supprimées).`);
+      const walletMsg = preserveWallet ? ' (portefeuille et jetons préservés)' : ' (solde remis à zéro)';
+      alert(`✅ Le profil ${userName || uid} a été réinitialisé avec succès${walletMsg}.`);
     } catch (err) {
-      console.warn('[Firestore] handleAdminResetUser error:', err);
+      console.warn('[Admin] handleAdminResetUser error:', err);
       alert(`Erreur lors de la réinitialisation du profil : ${err.message}`);
     }
   };
@@ -1736,23 +1721,22 @@ export default function App() {
     return approx;
   }, []);
 
-  const isAdmin = profile?.email === 'mateopolo91@gmail.com' || auth.currentUser?.email === 'mateopolo91@gmail.com' || profile?.role === 'admin';
+  const { isAdmin } = useAdminGuard();
 
   // ---- MODÉRATION ADMINISTRATEUR ----
 
   const handleAdminToggleHideListing = async (listing) => {
     if (!listing) return;
     const newHidden = !listing.isHidden;
+    const targetId = String(listing.firestoreId || listing.id);
+
+    // Mise à jour locale optimiste
     setListings(prev => prev.map(l => l.id === listing.id ? { ...l, isHidden: newHidden } : l));
-    if (db && listing.firestoreId) {
-      try {
-        await updateDoc(doc(db, 'listings', String(listing.firestoreId)), {
-          isHidden: newHidden,
-          updatedAt: serverTimestamp(),
-        });
-      } catch (err) {
-        console.warn('[Admin] toggle hide error:', err);
-      }
+
+    try {
+      await adminService.toggleHideListingAsAdmin(targetId, newHidden);
+    } catch (err) {
+      console.warn('[Admin] toggle hide error via Cloud Function:', err);
     }
     setSaveMessage(newHidden ? `🚫 Annonce #${listing.id} masquée du feed public` : `👁️ Annonce #${listing.id} visible`);
     setTimeout(() => setSaveMessage(''), 4000);

@@ -1,0 +1,66 @@
+import { getApps, initializeApp } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
+import { onCall } from 'firebase-functions/v2/https';
+
+// Initialisation unique du SDK Firebase Admin
+if (getApps().length === 0) {
+  initializeApp();
+}
+
+const db = getFirestore();
+
+// Handlers d'administration
+import { handleSetAdminClaim } from './admin/setAdminClaim';
+import { handleDeleteListingAsAdmin } from './admin/deleteListingAsAdmin';
+import { handleResetUserSafely } from './admin/resetUserSafely';
+import { handleResolveReport } from './admin/resolveReport';
+import { handleToggleHideListing } from './admin/toggleHideListingAsAdmin';
+import { handleUpdateUserAsAdmin } from './admin/updateUserAsAdmin';
+
+/**
+ * 👑 Cloud Function 1 : setAdminClaim
+ * Définition ou révocation des Custom Claims Admin par un administrateur accrédité.
+ */
+export const setAdminClaim = onCall({ cors: true }, async (request) => {
+  return handleSetAdminClaim(request, db);
+});
+
+/**
+ * 🗑️ Cloud Function 2 : deleteListingAsAdmin
+ * Suppression administrative d'une annonce, notification de l'auteur et traçabilité.
+ */
+export const deleteListingAsAdmin = onCall({ cors: true }, async (request) => {
+  return handleDeleteListingAsAdmin(request, db);
+});
+
+/**
+ * 🛡️ Cloud Function 3 : resetUserSafely
+ * Réinitialisation sécurisée d'un utilisateur avec protection du wallet par défaut.
+ */
+export const resetUserSafely = onCall({ cors: true }, async (request) => {
+  return handleResetUserSafely(request, db);
+});
+
+/**
+ * ⚖️ Cloud Function 4 : resolveReport
+ * Traitement et résolution des signalements avec motif et audit trail.
+ */
+export const resolveReport = onCall({ cors: true }, async (request) => {
+  return handleResolveReport(request, db);
+});
+
+/**
+ * 👁️ Cloud Function 5 : toggleHideListingAsAdmin
+ * Masquage / démasquage modérateur d'une annonce dans le feed public.
+ */
+export const toggleHideListingAsAdmin = onCall({ cors: true }, async (request) => {
+  return handleToggleHideListing(request, db);
+});
+
+/**
+ * 👤 Cloud Function 6 : updateUserAsAdmin
+ * Mise à jour administrative sécurisée d'un profil utilisateur.
+ */
+export const updateUserAsAdmin = onCall({ cors: true }, async (request) => {
+  return handleUpdateUserAsAdmin(request, db);
+});

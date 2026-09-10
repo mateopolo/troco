@@ -28,6 +28,7 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "test:rules": "vitest run tests/rules",
+    "test:functions": "vitest run functions/test",
     "test:e2e": "playwright test",
     "eject": "react-scripts eject"
   },
@@ -53,6 +54,7 @@
     "@firebase/rules-unit-testing": "^5.0.2",
     "@playwright/test": "^1.62.1",
     "firebase-admin": "^14.3.0",
+    "firebase-functions": "^7.3.2",
     "vitest": "^5.0.0"
   }
 }
