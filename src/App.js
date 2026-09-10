@@ -4130,6 +4130,8 @@ export default function App() {
                   openCounterOffer={openCounterOffer}
                   startCall={startCall}
                   joinActiveCall={joinActiveCall}
+                  joinCall={joinActiveCall}
+                  answerCall={handleAcceptIncomingCall || acceptIncomingCall}
                   handleAcceptDeal={handleAcceptDeal}
                   handleConfirmTrocCompletion={handleConfirmTrocCompletion}
                   handleDeclineDeal={handleDeclineDeal}

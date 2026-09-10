@@ -356,11 +356,17 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
   }, []);
 
   // =======================================================================
-  // 4. REJOINDRE UNE SALLE ACTIVE (CALLEE SANS DOUBLE SONNERIE)
+  // 4. REJOINDRE UNE SALLE ACTIVE (CALLEE / JOIN SANS DOUBLE SONNERIE)
   // =======================================================================
-  const joinActiveCall = useCallback(async (targetChatId, type, preloadedCallData = null) => {
-    const chatId = targetChatId || selectedChat?.id;
-    if (!chatId) return null;
+  const joinActiveCall = useCallback(async (targetChatIdOrRoomId, type = 'video', preloadedCallData = null) => {
+    const rawId = (typeof targetChatIdOrRoomId === 'object'
+      ? (targetChatIdOrRoomId?.roomId || targetChatIdOrRoomId?.chatId || targetChatIdOrRoomId?.id || targetChatIdOrRoomId?.callId)
+      : targetChatIdOrRoomId) || selectedChat?.id || activeChatIdRef.current;
+    const chatId = String(rawId || '').trim();
+    if (!chatId) {
+      console.warn('[WebRTC] joinActiveCall: aucun roomId ou chatId valide fourni');
+      return null;
+    }
 
     stopRingtone();
     setIncomingCall(null);
@@ -372,12 +378,13 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
 
     const stream = await _getLocalStream(type || 'video');
     if (!stream) {
-      setCallState({ type: null, active: false, ringing: false, micOn: true, camOn: true, isScreenSharing: false, isHost: false, inviteOpen: false, copied: false, remoteScreenSharing: false });
+      setCallState({ type: null, active: false, ringing: false, micOn: true, camOn: true, isScreenSharing: false, isHost: false, inviteOpen: false, copied: false, remoteScreenSharing: false, roomId: null });
       return null;
     }
     setLocalStream(stream);
     localStreamRef.current = stream;
 
+    // Forcer immédiatement l'ouverture de l'écran d'appel au premier plan
     setCallState({
       type: type || 'video',
       active: true,
@@ -388,21 +395,35 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
       isHost: false,
       inviteOpen: false,
       copied: false,
-      remoteScreenSharing: false
+      remoteScreenSharing: false,
+      roomId: String(chatId),
     });
 
     let callData = preloadedCallData;
-    if (!callData) {
+    if (!callData || !callData.offer) {
       const callSnap = await getDoc(doc(db, 'calls', String(chatId)));
-      if (!callSnap.exists()) {
-        console.warn('[WebRTC] Appel introuvable pour rejoindre');
-        return null;
+      if (callSnap.exists()) {
+        callData = callSnap.data();
       }
-      callData = callSnap.data();
+    }
+
+    // Si l'offre SDP est en cours d'écriture (latence Firestore), effectuer jusqu'à 6 tentatives (3s max)
+    if (!callData?.offer) {
+      for (let attempt = 0; attempt < 6; attempt++) {
+        await new Promise(r => setTimeout(r, 500));
+        const retrySnap = await getDoc(doc(db, 'calls', String(chatId)));
+        if (retrySnap.exists()) {
+          const freshData = retrySnap.data();
+          if (freshData?.offer) {
+            callData = freshData;
+            break;
+          }
+        }
+      }
     }
 
     if (!callData?.offer) {
-      console.warn('[WebRTC] Aucune offre SDP valide dans l\'appel');
+      console.warn('[WebRTC] Aucune offre SDP valide dans l\'appel calls/' + chatId);
       return null;
     }
 
@@ -422,6 +443,7 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
       answer: { type: answer.type, sdp: answer.sdp },
       participants: updatedParticipants,
       status: 'connected',
+      roomId: String(chatId),
       updatedAt: serverTimestamp(),
     });
 
@@ -430,6 +452,7 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
         isLive: true,
         type: type || 'video',
         participants: updatedParticipants,
+        roomId: String(chatId),
       }
     }, { merge: true }).catch(() => { });
 
@@ -525,27 +548,27 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
     activeCallTypeRef.current = type;
     isCallConnectedRef.current = false;
 
+    const myUid = profileUid || (auth.currentUser && auth.currentUser.uid) || null;
+    const partnerUid = selectedChat?.partnerUid || selectedChat?.uid || selectedChat?.authorUid || selectedChat?.userId ||
+      (Array.isArray(selectedChat?.participantUids) ? selectedChat.participantUids.find(u => u && String(u) !== String(myUid)) : null) || null;
+    const partnerName = selectedChat?.user || selectedChat?.name || selectedChat?.partnerName || 'Interlocuteur';
+
     const stream = await _getLocalStream(type);
     if (!stream) {
       stopRingtone();
-      setCallState({ type: null, active: false, ringing: false, micOn: true, camOn: true, isScreenSharing: false, isHost: false, inviteOpen: false, copied: false, remoteScreenSharing: false });
+      setCallState({ type: null, active: false, ringing: false, micOn: true, camOn: true, isScreenSharing: false, isHost: false, inviteOpen: false, copied: false, remoteScreenSharing: false, roomId: null });
       return;
     }
     setLocalStream(stream);
     localStreamRef.current = stream;
 
-    setCallState({ type, active: true, ringing: true, micOn: true, camOn: type === 'video', isScreenSharing: false, isHost: true, inviteOpen: false, copied: false, remoteScreenSharing: false });
+    setCallState({ type, active: true, ringing: true, micOn: true, camOn: type === 'video', isScreenSharing: false, isHost: true, inviteOpen: false, copied: false, remoteScreenSharing: false, roomId: String(chatId) });
 
     const pc = _createPC(chatId, 'caller');
     stream.getTracks().forEach(t => pc.addTrack(t, stream));
 
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
-
-    const partnerUid = selectedChat?.partnerUid || selectedChat?.uid || selectedChat?.authorUid || selectedChat?.userId ||
-      (Array.isArray(selectedChat?.participantUids) ? selectedChat.participantUids.find(u => u && String(u) !== String(myUid)) : null) || null;
-    const partnerName = selectedChat?.user || selectedChat?.name || selectedChat?.partnerName || 'Interlocuteur';
-    const myUid = profileUid || (auth.currentUser && auth.currentUser.uid) || null;
 
     await setDoc(doc(db, 'calls', String(chatId)), {
       type,
@@ -556,10 +579,11 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
       toUid: partnerUid,
       calleeUid: partnerUid,
       participants: [profileName],
-      targetParticipants: [partnerName, partnerUid, profileName, myUid].filter(Boolean),
+      targetParticipants: [partnerName, partnerUid, profileName, myUid, ...(selectedChat?.participantUids || [])].filter(Boolean),
       status: 'ringing',
       offer: { type: offer.type, sdp: offer.sdp },
       isScreenSharing: false,
+      roomId: String(chatId),
       startedAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
@@ -625,14 +649,29 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
   }, [selectedChat, profileName, profileUid, playRingtone, stopRingtone, _getLocalStream, _createPC, _cleanup, addOrQueueCandidate, flushPendingCandidates, joinActiveCall]);
 
   // =======================================================================
-  // 6. ACCEPTER UN APPEL (CALLEE)
+  // 6. ACCEPTER UN APPEL (CALLEE / ANSWER)
   // =======================================================================
-  const acceptIncomingCall = useCallback(async () => {
-    if (!incomingCall) return null;
-    const { chatId, type, from } = incomingCall;
-    await joinActiveCall(chatId, type);
-    return { chatId, type, from };
+  const acceptIncomingCall = useCallback(async (callToAccept = null) => {
+    let target = callToAccept;
+    if (typeof callToAccept === 'string') {
+      target = { chatId: callToAccept, roomId: callToAccept };
+    }
+    const targetCall = target || incomingCall;
+    if (!targetCall) {
+      if (activeChatIdRef.current) {
+        return await joinActiveCall(activeChatIdRef.current, 'video');
+      }
+      return null;
+    }
+    const roomId = targetCall.roomId || targetCall.chatId || targetCall.callId || targetCall.id || activeChatIdRef.current;
+    const type = targetCall.type || 'video';
+    const from = targetCall.from || 'Interlocuteur';
+    await joinActiveCall(roomId, type, targetCall);
+    return { chatId: roomId, roomId, type, from };
   }, [incomingCall, joinActiveCall]);
+
+  const answerCall = acceptIncomingCall;
+  const joinCall = joinActiveCall;
 
   // =======================================================================
   // 7. RACCROCHER & REFUSER
@@ -1053,6 +1092,7 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
     attachLocalStream, attachRemoteStream,
     facingMode, hasMultipleCameras, switchCamera,
     startCall, joinActiveCall, acceptIncomingCall, declineIncomingCall, endCall,
+    joinCall, answerCall,
     toggleMic, toggleCam, toggleScreenShare,
     hostMuteParticipant, hostStopParticipantScreenShare,
     copyInviteLink, playRingtone, stopRingtone,

@@ -22,6 +22,8 @@ export default function ChatSection({
   openCounterOffer,
   startCall,
   joinActiveCall,
+  joinCall,
+  answerCall,
   handleAcceptDeal,
   handleDeclineDeal,
   handleSendToken,
@@ -87,7 +89,9 @@ export default function ChatSection({
                 handleDeleteMessage={handleDeleteMessage}
                 openCounterOffer={openCounterOffer}
                 startCall={startCall}
-                joinActiveCall={joinActiveCall}
+                joinActiveCall={joinActiveCall || joinCall}
+                joinCall={joinCall || joinActiveCall}
+                answerCall={answerCall}
                 handleAcceptDeal={handleAcceptDeal}
                 handleDeclineDeal={handleDeclineDeal}
                 handleSendToken={handleSendToken}

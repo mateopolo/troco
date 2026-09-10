@@ -29,8 +29,8 @@ export default function CallModal({
   const chatAvatar = (selectedChat?.avatar || (getAuthorAvatar ? getAuthorAvatar(chatUser) : '')) || '';
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 10000000,
+    <div className="fixed inset-0 z-[999999]" style={{
+      position: 'fixed', inset: 0, zIndex: 999999,
       backgroundColor: '#000000',
       display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
       overflow: 'hidden', animation: 'fadeSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) both',

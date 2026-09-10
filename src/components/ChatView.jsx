@@ -48,6 +48,8 @@ function ChatView({
   openCounterOffer,
   startCall,
   joinActiveCall,
+  joinCall,
+  answerCall,
   handleAcceptDeal,
   onAcceptDeal,
   handleDeclineDeal,
@@ -603,7 +605,11 @@ function ChatView({
 
   // 🚨 PHASE 102 : LE MUR PORTEUR DU SCROLL (HOOK INDESTRUCTIBLE)
   useEffect(() => {
-    const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' });
+    const scrollToBottom = () => {
+      if (typeof messagesEndRef.current?.scrollIntoView === 'function') {
+        messagesEndRef.current.scrollIntoView({ behavior: 'auto', block: 'end' });
+      }
+    };
     scrollToBottom();
     setTimeout(scrollToBottom, 150); // Fallback post-render
   }, [selectedChat?.id, messages?.length]);
@@ -831,7 +837,11 @@ function ChatView({
 
   const getChatUnreadCount = (chat) => {
     if (!readChats) return 0;
-    const isRead = readChats.has(chat.id) || readChats.has(String(chat.id)) || readChats.has(Number(chat.id));
+    const isRead = typeof readChats.has === 'function'
+      ? (readChats.has(chat.id) || readChats.has(String(chat.id)) || readChats.has(Number(chat.id)))
+      : (Array.isArray(readChats)
+        ? (readChats.includes(chat.id) || readChats.includes(String(chat.id)) || readChats.includes(Number(chat.id)))
+        : Boolean(readChats[chat.id] || readChats[String(chat.id)] || readChats[Number(chat.id)]));
     if (isRead) return 0;
     const thread = chatThreads && chatThreads[chat.id];
     if (thread && thread.length > 0) {
@@ -1486,10 +1496,16 @@ function ChatView({
             </div>
             <button
               onClick={() => {
-                if (typeof joinActiveCall === 'function') {
-                  joinActiveCall(activeChatObj.id, activeChatObj.activeCall.type || 'video');
+                const callType = activeChatObj.activeCall?.type || 'video';
+                const roomId = activeChatObj.id;
+                if (typeof joinCall === 'function') {
+                  joinCall(roomId, callType);
+                } else if (typeof joinActiveCall === 'function') {
+                  joinActiveCall(roomId, callType);
+                } else if (typeof answerCall === 'function') {
+                  answerCall(roomId);
                 } else if (typeof startCall === 'function') {
-                  startCall(activeChatObj.activeCall.type || 'video');
+                  startCall(callType);
                 }
               }}
               className="premium-button"

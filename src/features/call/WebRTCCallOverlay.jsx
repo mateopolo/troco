@@ -306,10 +306,11 @@ export default function WebRTCCallOverlay({
           onPointerMove={resetCallInactivity}
           onTouchStart={resetCallInactivity}
           onClick={resetCallInactivity}
+          className="fixed inset-0 z-[999999]"
           style={{
             position: 'fixed',
             inset: 0,
-            zIndex: 10000000,
+            zIndex: 999999,
             backgroundColor: '#000000',
             display: 'flex',
             flexDirection: 'column',
