@@ -51,6 +51,15 @@ class NotificationService {
     data = null,
     duration = 4500,
   }) {
+    // Déduplication stricte des notifications identiques déclenchées simultanément
+    const dedupeKey = `${data?.chatId || title || ''}_${message || ''}`;
+    const now = Date.now();
+    if (this.lastShownKey === dedupeKey && (now - (this.lastShownTime || 0)) < 1500) {
+      return this.currentNotification?.id || null;
+    }
+    this.lastShownKey = dedupeKey;
+    this.lastShownTime = now;
+
     if (this.timeoutId) {
       clearTimeout(this.timeoutId);
     }

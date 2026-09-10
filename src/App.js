@@ -1505,6 +1505,13 @@ export default function App() {
     };
   }, [auth, profile?.uid, profile?.name, playRingtone, stopRingtone]);
 
+  // Références stables pour éviter de déconnecter/reconnecter les écouteurs Firestore à chaque navigation
+  const activeTabRef = useRef(activeTab);
+  useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
+
+  const selectedChatRef = useRef(selectedChat);
+  useEffect(() => { selectedChatRef.current = selectedChat; }, [selectedChat]);
+
   // ---- TÂCHE 3 : LISTENER GLOBAL DES MESSAGES EN ARRIÈRE-PLAN AVEC TOAST IMMÉDIAT ----
   useEffect(() => {
     const currentUid = (auth && auth.currentUser && auth.currentUser.uid) || profile?.uid;
@@ -1532,10 +1539,12 @@ export default function App() {
 
       // Détecter un nouveau message entrant non lu (sur modification ou ajout après le chargement initial)
       if (change.type === 'modified' || (change.type === 'added' && !isInitial)) {
-        // Condition vitale (Tâche 3) : Affiche le Toast UNIQUEMENT si le chemin de l'URL actuelle est différent de l'URL du chat d'où provient le message
+        // Condition vitale : Affiche le Toast UNIQUEMENT si l'utilisateur n'est pas déjà dans ce chat actif
+        const currentActiveTab = activeTabRef.current;
+        const currentSelectedChat = selectedChatRef.current;
         const currentPath = typeof window !== 'undefined' ? (window.location.pathname + window.location.hash + window.location.search) : '';
-        const isCurrentChatUrl = currentPath.includes(String(chatId)) || (currentPath.includes('chat') && selectedChat && String(selectedChat.id) === String(chatId));
-        const isCurrentlyViewingThisChat = (activeTab === 'chat' && selectedChat && String(selectedChat.id) === String(chatId)) || isCurrentChatUrl;
+        const isCurrentChatUrl = currentPath.includes(String(chatId)) || (currentPath.includes('chat') && currentSelectedChat && String(currentSelectedChat.id) === String(chatId));
+        const isCurrentlyViewingThisChat = (currentActiveTab === 'chat' && currentSelectedChat && String(currentSelectedChat.id) === String(chatId)) || isCurrentChatUrl;
 
         if (!isCurrentlyViewingThisChat) {
           const senderTitle = data.lastSenderName || data.lastSender || data.user || 'Nouveau message';
@@ -1603,7 +1612,7 @@ export default function App() {
     return () => {
       unsubs.forEach(u => { try { if (typeof u === 'function') u(); } catch (_) {} });
     };
-  }, [auth, profile?.uid, profile?.name, profile?.username, activeTab, selectedChat, setSelectedChat, setActiveTab]);
+  }, [auth, profile?.uid, profile?.name, profile?.username, setSelectedChat, setActiveTab]);
 
   // Écoute de l'événement personnalisé troco:open_chat pour basculer vers le chat
   useEffect(() => {
@@ -5229,9 +5238,6 @@ export default function App() {
           </div>
         </div>
       )}
-
-      {/* ---- TOASTS DE NOTIFICATIONS DYNAMIC ISLAND GLOBAUX (z-[999999]) ---- */}
-      <NotificationPill />
 
       </div>
     </LanguageContext.Provider>

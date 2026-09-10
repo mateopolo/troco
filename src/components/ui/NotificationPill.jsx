@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MessageSquare, Coins, Handshake, Bell, X, ChevronRight } from 'lucide-react';
 import notificationService from '../../services/notificationService';
 import { hapticSuccess } from '../../utils/haptics';
+import Portal from './Portal';
 
 /**
  * NotificationPill.jsx
@@ -126,22 +127,23 @@ export function NotificationPill() {
   };
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 'env(safe-area-inset-top, 16px)',
-        left: 0,
-        right: 0,
-        zIndex: 999999,
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        padding: '0 16px',
-        pointerEvents: 'none',
-      }}
-      className="top-safe-area dynamic-island-container fixed top-10 left-1/2 -translate-x-1/2 z-[999999] shadow-2xl"
-    >
-      <AnimatePresence>
+    <Portal containerId="modal-root" lockScroll={false}>
+      <div
+        style={{
+          position: 'fixed',
+          top: 'env(safe-area-inset-top, 16px)',
+          left: 0,
+          right: 0,
+          zIndex: 999999,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: '0 16px',
+          pointerEvents: 'none',
+        }}
+        className="top-safe-area dynamic-island-container fixed top-4 inset-x-0 z-[999999] flex justify-center items-center pointer-events-none"
+      >
+        <AnimatePresence>
         {notification && (
           <motion.div
             key={notification.id}
@@ -294,7 +296,8 @@ export function NotificationPill() {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+      </div>
+    </Portal>
   );
 }
 
