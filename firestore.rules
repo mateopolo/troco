@@ -2,161 +2,211 @@ rules_version = '2';
 
 /**
  * ============================================================================
- * TROCO — RÈGLES DE SÉCURITÉ FIRESTORE ZERO-TRUST
+ * 🛡️ TROCO — RÈGLES DE SÉCURITÉ FIRESTORE ZERO-TRUST (DENY-BY-DEFAULT)
  * ============================================================================
- * 
- * Instructions de déploiement :
- * ----------------------------
- * 1. Assurez-vous d'être authentifié avec la CLI Firebase :
- *    npx firebase-tools login
- * 
- * 2. Vérifiez le projet actif :
- *    npx firebase-tools use --add (ou npx firebase-tools projects:list)
- * 
- * 3. Déployez ces règles de sécurité :
- *    npx firebase-tools deploy --only firestore:rules
- * 
+ * Architecture : Marketplace internationale de troc & entraide de compétences.
+ * Standard de sécurité : Fintech régulée, conformité ISO 27001 & RGPD.
+ *
+ * Principes fondamentaux :
+ * 1. Deny-by-default : Tout accès non expressément autorisé est interdit.
+ * 2. Moindre privilège : Chaque utilisateur n'accède qu'aux données strictement requises.
+ * 3. Intégrité financière absolue : Soldes, transactions et statuts modifiables
+ *    uniquement via l'Admin SDK serveur (Cloud Functions / Firebase Admin).
+ * 4. Autorité cryptographique : Rôles basés sur les Custom Claims signés (admin: true)
+ *    et interdiction d'utiliser request.auth.token.email (falsifiable).
  * ============================================================================
  */
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions d'authentification et d'administration
+    // ========================================================================
+    // 🧰 FONCTIONS HELPER DE SÉCURITÉ RÉUTILISABLES
+    // ========================================================================
+
+    /**
+     * Vérifie si la requête émane d'un utilisateur authentifié auprès de Firebase Auth.
+     */
     function isAuthenticated() {
       return request.auth != null && request.auth.uid != null;
     }
 
-    function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
+    /**
+     * Vérifie si l'utilisateur authentifié est le propriétaire de la ressource ciblée.
+     */
+    function isOwner(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
     }
 
-    // Vérification de l'administrateur (via Custom Claims Firebase Auth ou UID Master vérifié)
+    /**
+     * Vérifie si l'utilisateur possède le custom claim administrateur signé.
+     * Interdiction d'utiliser le token email qui peut être altéré ou non vérifié.
+     */
     function isAdmin() {
-      return isAuthenticated() && (
-        request.auth.token.admin == true ||
-        request.auth.token.role == 'admin' ||
-        request.auth.uid == 'MASTER_ADMIN_TROCO_UID_KEY' ||
-        request.auth.uid == 'ADMIN_RECOVERY_UID_2026'
-      );
+      return isAuthenticated() && request.auth.token.admin == true;
     }
 
-    // --- COLLECTION USERS ---
-    match /users/{userId} {
-      allow read: if isAuthenticated();
-      
-      // Création initiale autorisée pour le profil connecté
-      allow create: if isOwner(userId);
+    /**
+     * Vérifie si l'utilisateur authentifié n'est pas sous le coup d'un bannissement.
+     * Si le document n'existe pas encore (création de compte) ou isBanned != true, l'accès est valide.
+     */
+    function isNotBanned() {
+      return isAuthenticated() &&
+        !(exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isBanned == true);
+    }
 
-      // Mise à jour : l'utilisateur peut modifier ses données personnelles,
-      // MAIS les champs sensibles comme `trocoTokens`, `euroBalance`, `kycVerified`, `isAdmin`
-      // ne peuvent pas être modifiés unilatéralement par le client si l'utilisateur n'est pas Admin.
-      allow update: if isOwner(userId) && (
-        isAdmin() || (
-          // Empêche la manipulation directe du solde de jetons / euros sans passer par une transaction sécurisée
-          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['trocoTokens', 'euroBalance', 'isAdmin', 'role', 'kycVerified'])
-        )
+    // ========================================================================
+    // ⛔ VERROUILLAGE PAR DÉFAUT (ZERO-TRUST DENY ALL)
+    // ========================================================================
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ========================================================================
+    // 👤 COLLECTION USERS (PROFILS PRIVÉS & NOTIFICATIONS)
+    // ========================================================================
+    match /users/{uid} {
+      // Lecture : propriétaire du profil ou administrateur uniquement
+      allow read: if isOwner(uid) || isAdmin();
+
+      // Création : propriétaire uniquement.
+      // Interdiction FORMELLE d'initialiser les champs critiques et financiers côté client.
+      allow create: if isOwner(uid)
+        && !request.resource.data.keys().hasAny([
+          'euroBalance', 'trocoTokens', 'dealsCompleted', 'kycVerified',
+          'isBanned', 'isShadowBanned', 'role', 'subscriptionPlan', 'cguAcceptedAt'
+        ]);
+
+      // Mise à jour : propriétaire non banni uniquement.
+      // Protection stricte contre l'altération des soldes, réputation, bans et abonnements.
+      allow update: if isOwner(uid) && isNotBanned()
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+          'euroBalance', 'trocoTokens', 'dealsCompleted', 'kycVerified',
+          'isBanned', 'isShadowBanned', 'role', 'subscriptionPlan', 'cguAcceptedAt'
+        ]);
+
+      // Suppression directe interdite au client (traitée par Cloud Functions RGPD)
+      allow delete: if false;
+
+      // Sous-collection interne : Notifications
+      match /notifications/{notifId} {
+        allow read: if isOwner(uid);
+        allow write: if false; // Écriture exclusive par Cloud Functions serveur
+      }
+    }
+
+    // ========================================================================
+    // 📢 COLLECTION LISTINGS (ANNONCES DE SERVICES & BIENS)
+    // ========================================================================
+    match /listings/{listingId} {
+      // Lecture : publique si annonce active, ou par l'auteur créateur, ou par l'administrateur
+      allow read: if (resource.data.status == 'active')
+        || (isAuthenticated() && request.auth.uid == resource.data.authorUid)
+        || isAdmin();
+
+      // Création : utilisateur authentifié non banni qui s'assigne comme auteur
+      allow create: if isAuthenticated() && isNotBanned()
+        && request.resource.data.authorUid == request.auth.uid;
+
+      // Modification : auteur non banni sans toucher aux attributs protégés (boosts/modération), ou admin
+      allow update: if (
+        isAuthenticated()
+        && request.auth.uid == resource.data.authorUid
+        && isNotBanned()
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+          'isBoosted', 'isHidden', 'firestoreId'
+        ])
       ) || isAdmin();
 
-      // Suppression de compte strictement réservée à l'administrateur ou au propriétaire
-      allow delete: if isOwner(userId) || isAdmin();
-
-      // Sous-collections de l'utilisateur (historique, préférences, notifications)
-      match /{allSubcollections=**} {
-        allow read, write: if isOwner(userId) || isAdmin();
-      }
+      // Suppression : auteur de l'annonce ou administrateur
+      allow delete: if (isAuthenticated() && request.auth.uid == resource.data.authorUid) || isAdmin();
     }
 
-    // --- COLLECTION LISTINGS (ANNONCES) ---
-    match /listings/{listingId} {
-      allow read: if true; // Feed accessible pour le FCP/découverte
-      allow create: if isAuthenticated() && (
-        request.resource.data.authorUid == request.auth.uid ||
-        request.resource.data.userId == request.auth.uid
-      );
-      allow update: if isAuthenticated() && (
-        resource.data.authorUid == request.auth.uid ||
-        resource.data.userId == request.auth.uid ||
-        isAdmin()
-      );
-      allow delete: if isAuthenticated() && (
-        resource.data.authorUid == request.auth.uid ||
-        resource.data.userId == request.auth.uid ||
-        isAdmin()
-      );
-    }
-
-    // --- COLLECTION CHATS & MESSAGES ---
+    // ========================================================================
+    // 💬 COLLECTION CHATS (CONVERSATIONS ET DISCUSSIONS PRIVÉES)
+    // ========================================================================
     match /chats/{chatId} {
-      allow read, write: if isAuthenticated();
-
-      match /messages/{messageId} {
-        allow read: if isAuthenticated();
-        allow create: if isAuthenticated() && (
-          request.resource.data.senderUid == request.auth.uid ||
-          request.resource.data.senderId == request.auth.uid ||
-          request.resource.data.sender == 'me' ||
-          request.resource.data.sender == request.auth.uid
-        );
-        allow update, delete: if isAuthenticated() && (
-          resource.data.senderUid == request.auth.uid ||
-          isAdmin()
-        );
-      }
-    }
-
-    // --- COLLECTION TRANSACTIONS & SÉQUESTRE ---
-    // Verrouillage Zero-Trust : Aucune création/modification arbitraire sans auth stricte
-    match /transactions/{transactionId} {
+      // Lecture : participants déclarés dans la conversation ou administrateur
       allow read: if isAuthenticated() && (
-        resource.data.buyerUid == request.auth.uid ||
-        resource.data.sellerUid == request.auth.uid ||
-        resource.data.userId == request.auth.uid ||
-        isAdmin()
-      );
-      
-      // Création autorisée si l'initiateur est l'acheteur/émetteur de la transaction
-      allow create: if isAuthenticated() && (
-        request.resource.data.buyerUid == request.auth.uid ||
-        request.resource.data.senderUid == request.auth.uid ||
-        isAdmin()
+        request.auth.uid in resource.data.participants || isAdmin()
       );
 
-      // Modification interdite aux clients normaux une fois scellée sauf admin
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
-    }
+      // Création : utilisateur authentifié non banni inclus dans les participants
+      allow create: if isAuthenticated() && isNotBanned()
+        && request.auth.uid in request.resource.data.participants;
 
-    // --- COLLECTION GLOBAL_CONTENT & CONFIG (GOD MODE) ---
-    match /global_content/{docId} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
+      // Mise à jour : participants non bannis uniquement (statuts, typings, horodatages)
+      allow update: if isAuthenticated() && isNotBanned()
+        && request.auth.uid in resource.data.participants;
 
-    // --- COLLECTION WHITEBOARDS & COLLABORATIVE SUITE ---
-    match /whiteboards/{boardId} {
-      allow read, write: if isAuthenticated();
-    }
+      // Suppression directe interdite (archivage logique ou Cloud Functions)
+      allow delete: if false;
 
-    // --- COLLECTION LIVE_AUDIO_ROOMS ---
-    match /live_audio_rooms/{roomId} {
-      allow read, write: if isAuthenticated();
-      match /{allSubcollections=**} {
-        allow read, write: if isAuthenticated();
+      // Sous-collection : Messages
+      match /messages/{msgId} {
+        // Lecture : participants de la conversation parente ou administrateur
+        allow read: if isAuthenticated() && (
+          request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants
+          || isAdmin()
+        );
+
+        // Création : utilisateur émetteur authentifié et non banni
+        allow create: if isAuthenticated() && isNotBanned()
+          && request.resource.data.senderUid == request.auth.uid;
+
+        // Mise à jour : émetteur du message authentifié et non banni uniquement
+        allow update: if isAuthenticated() && isNotBanned()
+          && request.auth.uid == resource.data.senderUid;
+
+        // Suppression : émetteur du message ou administrateur
+        allow delete: if isAuthenticated() && (
+          request.auth.uid == resource.data.senderUid || isAdmin()
+        );
       }
     }
 
-    // --- COLLECTION AUDIT_LOGS ---
-    match /audit_logs/{logId} {
-      allow read: if isAdmin();
-      allow create: if isAuthenticated();
-      allow update, delete: if false; // Immuable
+    // ========================================================================
+    // 💳 COLLECTION TRANSACTIONS (REGISTRE FINANCIER & SÉQUESTRE ESCROW)
+    // ========================================================================
+    match /transactions/{txId} {
+      // Lecture : parties prenantes de la transaction ou administrateur
+      allow read: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid
+        || resource.data.partnerUid == request.auth.uid
+        || resource.data.buyerUid == request.auth.uid
+        || resource.data.sellerUid == request.auth.uid
+        || isAdmin()
+      );
+
+      // Écriture : FORMELLEMENT INTERDITE côté client (Cloud Functions Admin SDK uniquement)
+      allow create, update, delete: if false;
     }
 
-    // --- COLLECTION PRESENCE ---
-    match /presence/{userId} {
-      allow read: if isAuthenticated();
-      allow write: if isOwner(userId) || isAdmin();
+    // ========================================================================
+    // 🚨 COLLECTION REPORTS (SIGNALEMENTS DE SÉCURITÉ & MODÉRATION)
+    // ========================================================================
+    match /reports/{reportId} {
+      // Lecture : réservée strictement aux administrateurs (protection des lanceurs d'alerte)
+      allow read: if isAdmin();
+
+      // Création : tout membre authentifié et non banni peut signaler un abus
+      allow create: if isAuthenticated() && isNotBanned()
+        && request.resource.data.reporterUid == request.auth.uid;
+
+      // Traitement et suppression : administrateurs uniquement
+      allow update, delete: if isAdmin();
+    }
+
+    // ========================================================================
+    // 🎁 COLLECTION CAMPAIGNS (CAMPAGNES BONUS & PROMOTIONS)
+    // ========================================================================
+    match /campaigns/{campaignId} {
+      // Lecture : utilisateurs authentifiés pour les campagnes actives
+      allow read: if isAuthenticated() && resource.data.active == true;
+
+      // Écriture : administrateurs uniquement
+      allow write: if isAdmin();
     }
   }
 }

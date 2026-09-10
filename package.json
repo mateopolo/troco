@@ -27,6 +27,7 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
+    "test:rules": "vitest run tests/rules",
     "test:e2e": "playwright test",
     "eject": "react-scripts eject"
   },
@@ -49,6 +50,9 @@
     ]
   },
   "devDependencies": {
-    "@playwright/test": "^1.62.1"
+    "@firebase/rules-unit-testing": "^5.0.2",
+    "@playwright/test": "^1.62.1",
+    "firebase-admin": "^14.3.0",
+    "vitest": "^5.0.0"
   }
 }
