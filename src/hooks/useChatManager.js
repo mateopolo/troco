@@ -353,19 +353,29 @@ export const useChatManager = ({
                 const senderTitle = d.lastSenderName || d.lastSender || d.user || 'Nouveau message';
                 const messageText = d.lastMessage || 'Nouveau message reçu';
                 const senderAvatar = d.avatar || d.authorAvatar || null;
+                const rawTime = d.lastMessageTimestamp?.toMillis?.() ||
+                  d.lastMessageTimestamp?.seconds ||
+                  d.lastMessageTime?.seconds ||
+                  d.lastMessageTime ||
+                  d.updatedAt?.seconds ||
+                  d.updatedAt ||
+                  '';
+                const messageId = d.lastMessageId || d.lastMsgId || `${fChatId}_${d.lastSenderUid || lastSender}_${rawTime}_${d.lastMessage || ''}`;
 
                 notificationService.show({
+                  id: messageId,
                   title: senderTitle,
                   message: messageText,
                   avatar: senderAvatar,
                   icon: 'chat',
+                  duration: 3000,
                   onClick: () => {
                     setSelectedChat(d);
                     if (typeof setActiveTab === 'function') {
                       setActiveTab('chat');
                     }
                   },
-                  data: { chatId: fChatId }
+                  data: { chatId: fChatId, messageId }
                 });
               }
             }

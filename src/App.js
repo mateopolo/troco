@@ -1512,7 +1512,10 @@ export default function App() {
   const selectedChatRef = useRef(selectedChat);
   useEffect(() => { selectedChatRef.current = selectedChat; }, [selectedChat]);
 
-  // ---- TÂCHE 3 : LISTENER GLOBAL DES MESSAGES EN ARRIÈRE-PLAN AVEC TOAST IMMÉDIAT ----
+  // Set anti-spam pour éviter les notifications répétées lors des multiples snapshots Firebase
+  const notifiedMessageIds = useRef(new Set());
+
+  // ---- TÂCHE 1 : LISTENER GLOBAL DES MESSAGES EN ARRIÈRE-PLAN AVEC TOAST ANTI-SPAM ----
   useEffect(() => {
     const currentUid = (auth && auth.currentUser && auth.currentUser.uid) || profile?.uid;
     const myName = (profile?.name || '').trim().toLowerCase();
@@ -1539,6 +1542,21 @@ export default function App() {
 
       // Détecter un nouveau message entrant non lu (sur modification ou ajout après le chargement initial)
       if (change.type === 'modified' || (change.type === 'added' && !isInitial)) {
+        // Résolution de l'identifiant unique du message pour le Set anti-spam
+        const rawTime = data.lastMessageTimestamp?.toMillis?.() ||
+          data.lastMessageTimestamp?.seconds ||
+          data.lastMessageTime?.seconds ||
+          data.lastMessageTime ||
+          data.updatedAt?.seconds ||
+          data.updatedAt ||
+          '';
+        const messageId = data.lastMessageId || data.lastMsgId || `${chatId}_${lastSenderUid || lastSenderName}_${rawTime}_${data.lastMessage || ''}`;
+
+        // ANTI-SPAM : Si l'ID du message a déjà été notifié, ignorer les snapshots suivants
+        if (notifiedMessageIds.current && notifiedMessageIds.current.has(messageId)) {
+          return;
+        }
+
         // Condition vitale : Affiche le Toast UNIQUEMENT si l'utilisateur n'est pas déjà dans ce chat actif
         const currentActiveTab = activeTabRef.current;
         const currentSelectedChat = selectedChatRef.current;
@@ -1547,16 +1565,25 @@ export default function App() {
         const isCurrentlyViewingThisChat = (currentActiveTab === 'chat' && currentSelectedChat && String(currentSelectedChat.id) === String(chatId)) || isCurrentChatUrl;
 
         if (!isCurrentlyViewingThisChat) {
+          // Enregistrer dans le Set anti-spam
+          notifiedMessageIds.current.add(messageId);
+          if (notifiedMessageIds.current.size > 500) {
+            const oldest = notifiedMessageIds.current.values().next().value;
+            notifiedMessageIds.current.delete(oldest);
+          }
+
           const senderTitle = data.lastSenderName || data.lastSender || data.user || 'Nouveau message';
           const messageText = data.lastMessage || 'Nouveau message reçu';
           const senderAvatar = data.avatar || data.authorAvatar || null;
 
           // Déclencher l'affichage du Toast de notification Dynamic Island au premier plan (z-[999999])
           notificationService.show({
+            id: messageId,
             title: senderTitle,
             message: messageText,
             avatar: senderAvatar,
             icon: 'chat',
+            duration: 3000,
             onClick: () => {
               setSelectedChat(data);
               if (typeof setActiveTab === 'function') {
@@ -1566,7 +1593,7 @@ export default function App() {
                 window.location.hash = `chat/${chatId}`;
               }
             },
-            data: { chatId }
+            data: { chatId, messageId }
           });
 
           // Vibration haptique

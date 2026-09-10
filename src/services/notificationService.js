@@ -43,16 +43,24 @@ class NotificationService {
    * @param {number} [options.duration=4500] Durée d'affichage en ms
    */
   show({
+    id = null,
     title,
     message,
     avatar = null,
     icon = 'bell',
     onClick = null,
     data = null,
-    duration = 4500,
+    duration = 3000,
   }) {
+    const notifId = id || (data?.messageId) || null;
+
+    // Si la notification actuellement affichée possède déjà cet identifiant, ne pas la dupliquer
+    if (notifId && this.currentNotification && this.currentNotification.id === notifId) {
+      return this.currentNotification.id;
+    }
+
     // Déduplication stricte des notifications identiques déclenchées simultanément
-    const dedupeKey = `${data?.chatId || title || ''}_${message || ''}`;
+    const dedupeKey = notifId || `${data?.chatId || title || ''}_${message || ''}`;
     const now = Date.now();
     if (this.lastShownKey === dedupeKey && (now - (this.lastShownTime || 0)) < 1500) {
       return this.currentNotification?.id || null;
@@ -65,14 +73,14 @@ class NotificationService {
     }
 
     const notification = {
-      id: Date.now() + Math.random(),
+      id: notifId || (Date.now() + Math.random()),
       title: title || 'Notification',
       message: message || '',
       avatar,
       icon,
       onClick,
       data,
-      duration,
+      duration: typeof duration === 'number' ? duration : 3000,
       createdAt: Date.now(),
     };
 

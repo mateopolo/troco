@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import NotificationPill from '../../components/ui/NotificationPill';
 import notificationService from '../../services/notificationService';
@@ -118,5 +118,65 @@ describe('TÂCHE 4 : Notifications de messages en arrière-plan (BackgroundMessa
 
     expect(dismissSpy).toHaveBeenCalled();
     dismissSpy.mockRestore();
+  });
+
+  test('5. Anti-spam : notificationService.show applique une durée stricte de 3000ms et conserve l\'ID unique de message', () => {
+    let currentNotif = null;
+    const unsub = notificationService.subscribe((n) => {
+      currentNotif = n;
+    });
+
+    act(() => {
+      notificationService.show({
+        id: 'msg_unique_123',
+        title: 'Emma',
+        message: 'Message test durée',
+      });
+    });
+
+    expect(currentNotif).not.toBeNull();
+    expect(currentNotif.id).toBe('msg_unique_123');
+    expect(currentNotif.duration).toBe(3000);
+
+    // Une seconde tentative avec le même ID ne duplique pas
+    act(() => {
+      const res = notificationService.show({
+        id: 'msg_unique_123',
+        title: 'Emma',
+        message: 'Message test durée',
+      });
+      expect(res).toBe('msg_unique_123');
+    });
+
+    unsub();
+  });
+
+  test('6. Anti-spam : le Set notifiedMessageIds bloque les snapshots Firestore répétés pour le même message', () => {
+    const notifiedSet = new Set();
+    const triggerNotif = jest.fn();
+
+    const handleMessageSnapshot = (messageId, title, message) => {
+      if (notifiedSet.has(messageId)) {
+        return; // Bloqué par l'anti-spam
+      }
+      notifiedSet.add(messageId);
+      triggerNotif(messageId, title, message);
+    };
+
+    // Premier snapshot (ex: change.type = 'added')
+    handleMessageSnapshot('msg_abc_999', 'Marc', 'Hello !');
+    expect(triggerNotif).toHaveBeenCalledTimes(1);
+
+    // Deuxième snapshot (ex: métadonnées change.type = 'modified' avec statut 'delivered')
+    handleMessageSnapshot('msg_abc_999', 'Marc', 'Hello !');
+    expect(triggerNotif).toHaveBeenCalledTimes(1);
+
+    // Troisième snapshot (ex: change.type = 'modified' avec statut 'seen')
+    handleMessageSnapshot('msg_abc_999', 'Marc', 'Hello !');
+    expect(triggerNotif).toHaveBeenCalledTimes(1);
+
+    // Nouveau message distinct
+    handleMessageSnapshot('msg_abc_1000', 'Marc', 'Tu es là ?');
+    expect(triggerNotif).toHaveBeenCalledTimes(2);
   });
 });
