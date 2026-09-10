@@ -31,25 +31,27 @@ export default function CommunityHubSection({
       {/* 1. EN-TÊTE DU HUB COMMUNAUTÉ */}
       <div
         style={{
-          padding: isMobile ? '10px 14px' : '22px 26px',
-          borderRadius: isMobile ? '18px' : '24px',
-          backgroundColor: darkMode ? '#1F1B18' : '#FAF8F5',
-          border: '1px solid var(--border-color)',
-          boxShadow: '0 10px 30px rgba(0, 0, 0, 0.05)',
+          padding: isMobile ? '12px 16px' : '20px 24px',
+          borderRadius: isMobile ? '20px' : '24px',
+          backgroundColor: darkMode ? 'rgba(31, 27, 24, 0.75)' : 'rgba(250, 248, 245, 0.85)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          border: darkMode ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid rgba(0, 0, 0, 0.07)',
+          boxShadow: darkMode ? '0 12px 32px rgba(0, 0, 0, 0.25)' : '0 12px 32px rgba(0, 0, 0, 0.05)',
           display: 'flex',
           flexDirection: isMobile ? 'column' : 'row',
           alignItems: isMobile ? 'flex-start' : 'center',
           justifyContent: 'space-between',
-          gap: isMobile ? '8px' : '14px',
+          gap: isMobile ? '10px' : '14px',
           flexShrink: 0,
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div
             style={{
-              width: isMobile ? '36px' : '44px',
-              height: isMobile ? '36px' : '44px',
-              borderRadius: '14px',
+              width: isMobile ? '38px' : '44px',
+              height: isMobile ? '38px' : '44px',
+              borderRadius: '9999px',
               background: 'linear-gradient(135deg, var(--accent-primary) 0%, #EF4444 100%)',
               color: '#FFF',
               display: 'flex',
@@ -66,7 +68,8 @@ export default function CommunityHubSection({
               <h2 style={{ margin: 0, fontSize: isMobile ? '15px' : '18px', fontWeight: '800', color: 'var(--text-main)' }}>
                 Communauté & Troco Live
               </h2>
-              <span style={{ fontSize: '9px', fontWeight: '800', backgroundColor: '#10B981', color: '#FFF', padding: '2px 7px', borderRadius: '999px' }}>
+              <span style={{ fontSize: '9px', fontWeight: '800', backgroundColor: '#10B981', color: '#FFF', padding: '2px 8px', borderRadius: '9999px', display: 'inline-flex', alignItems: 'center', gap: '4px', boxShadow: '0 0 10px rgba(16, 185, 129, 0.35)' }}>
+                <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#FFFFFF', display: 'inline-block' }} />
                 1,428 EN LIGNE
               </span>
             </div>
@@ -82,10 +85,12 @@ export default function CommunityHubSection({
         <div
           style={{
             display: 'flex',
-            backgroundColor: 'var(--bg-subtle)',
+            backgroundColor: darkMode ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.05)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
             padding: '3px',
-            borderRadius: '999px',
-            border: '1px solid var(--border-color)',
+            borderRadius: '9999px',
+            border: darkMode ? '1px solid rgba(255, 255, 255, 0.08)' : '1px solid rgba(0, 0, 0, 0.06)',
             alignSelf: isMobile ? 'stretch' : 'auto',
           }}
         >
@@ -98,8 +103,8 @@ export default function CommunityHubSection({
               border: 'none',
               backgroundColor: subView === 'chat' ? 'var(--accent-primary)' : 'transparent',
               color: subView === 'chat' ? '#FFFFFF' : 'var(--text-secondary)',
-              padding: isMobile ? '6px 12px' : '8px 16px',
-              borderRadius: '999px',
+              padding: isMobile ? '7px 14px' : '8px 18px',
+              borderRadius: '9999px',
               fontSize: '11.5px',
               fontWeight: '800',
               cursor: 'pointer',
@@ -107,7 +112,7 @@ export default function CommunityHubSection({
               alignItems: 'center',
               justifyContent: 'center',
               gap: '6px',
-              transition: 'all 0.15s ease',
+              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
               boxShadow: subView === 'chat' ? 'var(--shadow-accent)' : 'none',
             }}
           >
@@ -124,8 +129,8 @@ export default function CommunityHubSection({
               border: 'none',
               backgroundColor: subView === 'activity' ? 'var(--accent-primary)' : 'transparent',
               color: subView === 'activity' ? '#FFFFFF' : 'var(--text-secondary)',
-              padding: isMobile ? '6px 12px' : '8px 16px',
-              borderRadius: '999px',
+              padding: isMobile ? '7px 14px' : '8px 18px',
+              borderRadius: '9999px',
               fontSize: '11.5px',
               fontWeight: '800',
               cursor: 'pointer',
@@ -133,7 +138,7 @@ export default function CommunityHubSection({
               alignItems: 'center',
               justifyContent: 'center',
               gap: '6px',
-              transition: 'all 0.15s ease',
+              transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
               boxShadow: subView === 'activity' ? 'var(--shadow-accent)' : 'none',
             }}
           >

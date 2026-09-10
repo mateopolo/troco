@@ -1045,15 +1045,17 @@ function ChatView({
                 className="premium-button"
                 style={{
                   border: 'none',
-                  borderRadius: '50%',
-                  width: '36px',
-                  height: '36px',
+                  borderRadius: '9999px',
+                  width: '40px',
+                  height: '40px',
                   backgroundColor: 'var(--bg-subtle)',
                   color: 'var(--text-main)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  cursor: 'pointer', flexShrink: 0
+                  cursor: 'pointer', flexShrink: 0,
+                  transition: 'all 0.15s ease',
                 }}
                 title="Retour aux discussions"
+                aria-label="Retour aux discussions"
               >
                 <ChevronLeft size={22} />
               </button>
@@ -1208,7 +1210,7 @@ function ChatView({
           {/* Partie Droite : Actions Appel Audio / Vidéo / Deal ou Rétribution Projet */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
             {activeChatObj?.isGroup ? (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 {/* BOUTON TABLEAU BLANC COLLABORATIF (GROUPE) */}
                 <button
                   type="button"
@@ -1217,17 +1219,20 @@ function ChatView({
                   className="premium-button"
                   style={{
                     border: '1px solid var(--border-color)',
-                    borderRadius: isMobile ? '50%' : '999px',
-                    width: isMobile ? '44px' : 'auto',
-                    height: '44px',
-                    minWidth: '44px',
-                    minHeight: '44px',
-                    padding: isMobile ? '0' : '0 12px',
+                    borderRadius: '9999px',
+                    width: isMobile ? '40px' : 'auto',
+                    height: '40px',
+                    minWidth: '40px',
+                    minHeight: '40px',
+                    padding: isMobile ? '0' : '0 14px',
                     backgroundColor: 'var(--bg-subtle)',
+                    backdropFilter: 'blur(10px)',
+                    WebkitBackdropFilter: 'blur(10px)',
                     color: 'var(--text-main)',
-                    fontWeight: '700', fontSize: '11px', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
-                    position: 'relative', zIndex: 100, pointerEvents: 'auto', touchAction: 'manipulation'
+                    fontWeight: '700', fontSize: '11.5px', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                    position: 'relative', zIndex: 100, pointerEvents: 'auto', touchAction: 'manipulation',
+                    transition: 'all 0.15s ease',
                   }}
                   title="Créer un nouveau tableau blanc"
                   aria-label="Créer un nouveau tableau blanc"
@@ -1244,19 +1249,23 @@ function ChatView({
                   className="premium-button"
                   style={{
                     border: '1px solid var(--border-color)',
-                    borderRadius: isMobile ? '50%' : '999px',
-                    width: isMobile ? '44px' : 'auto',
-                    height: '44px',
-                    minWidth: '44px',
-                    minHeight: '44px',
-                    padding: isMobile ? '0' : '0 12px',
+                    borderRadius: '9999px',
+                    width: isMobile ? '40px' : 'auto',
+                    height: '40px',
+                    minWidth: '40px',
+                    minHeight: '40px',
+                    padding: isMobile ? '0' : '0 14px',
                     backgroundColor: 'var(--bg-subtle)',
+                    backdropFilter: 'blur(10px)',
+                    WebkitBackdropFilter: 'blur(10px)',
                     color: 'var(--text-main)',
-                    fontWeight: '700', fontSize: '11px', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
-                    position: 'relative', zIndex: 100, pointerEvents: 'auto', touchAction: 'manipulation'
+                    fontWeight: '700', fontSize: '11.5px', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                    position: 'relative', zIndex: 100, pointerEvents: 'auto', touchAction: 'manipulation',
+                    transition: 'all 0.15s ease',
                   }}
                   title="Outils Pro (Google Drive, Calendar, Remote)"
+                  aria-label="Outils Pro"
                 >
                   <Briefcase size={15} color="var(--accent-primary)" />
                   {!isMobile && <span>Outils Pro</span>}
@@ -1270,20 +1279,22 @@ function ChatView({
                   className="premium-button"
                   style={{
                     border: 'none',
-                    borderRadius: isMobile ? '50%' : '999px',
-                    width: isMobile ? '44px' : 'auto',
-                    height: '44px',
-                    minWidth: '44px',
-                    minHeight: '44px',
-                    padding: isMobile ? '0' : '0 12px',
+                    borderRadius: '9999px',
+                    width: isMobile ? '40px' : 'auto',
+                    height: '40px',
+                    minWidth: '40px',
+                    minHeight: '40px',
+                    padding: isMobile ? '0' : '0 14px',
                     background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
                     color: '#FFF',
-                    fontWeight: '800', fontSize: '11px', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
+                    fontWeight: '800', fontSize: '11.5px', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
                     boxShadow: 'var(--shadow-accent)',
-                    position: 'relative', zIndex: 100, pointerEvents: 'auto', touchAction: 'manipulation'
+                    position: 'relative', zIndex: 100, pointerEvents: 'auto', touchAction: 'manipulation',
+                    transition: 'all 0.15s ease',
                   }}
                   title="Gérer l'équipe et rétribuer les membres en jetons"
+                  aria-label="Rétributions en jetons"
                 >
                   <Coins size={15} />
                   {!isMobile && <span>💎 Rétributions</span>}
@@ -1296,14 +1307,18 @@ function ChatView({
                   onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); startCall('audio'); }}
                   className="premium-button"
                   style={{
-                    border: 'none', borderRadius: '50%', width: '44px', height: '44px',
-                    minWidth: '44px', minHeight: '44px',
+                    border: '1px solid var(--border-color)', borderRadius: '9999px', width: '40px', height: '40px',
+                    minWidth: '40px', minHeight: '40px',
                     backgroundColor: 'var(--bg-subtle)',
+                    backdropFilter: 'blur(10px)',
+                    WebkitBackdropFilter: 'blur(10px)',
                     color: 'var(--text-main)',
                     cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    position: 'relative', zIndex: 100, pointerEvents: 'auto', touchAction: 'manipulation'
+                    position: 'relative', zIndex: 100, pointerEvents: 'auto', touchAction: 'manipulation',
+                    transition: 'all 0.15s ease',
                   }}
                   title={t('audioCall') || 'Appel audio HD'}
+                  aria-label="Appel audio HD"
                 >
                   <Phone size={15} />
                 </button>
@@ -1313,14 +1328,18 @@ function ChatView({
                   onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); startCall('video'); }}
                   className="premium-button"
                   style={{
-                    border: 'none', borderRadius: '50%', width: '44px', height: '44px',
-                    minWidth: '44px', minHeight: '44px',
+                    border: '1px solid var(--border-color)', borderRadius: '9999px', width: '40px', height: '40px',
+                    minWidth: '40px', minHeight: '40px',
                     backgroundColor: 'var(--bg-subtle)',
+                    backdropFilter: 'blur(10px)',
+                    WebkitBackdropFilter: 'blur(10px)',
                     color: 'var(--text-main)',
                     cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    position: 'relative', zIndex: 100, pointerEvents: 'auto', touchAction: 'manipulation'
+                    position: 'relative', zIndex: 100, pointerEvents: 'auto', touchAction: 'manipulation',
+                    transition: 'all 0.15s ease',
                   }}
                   title={t('videoCall') || 'Appel visio direct'}
+                  aria-label="Appel visio direct"
                 >
                   <Video size={15} />
                 </button>
@@ -1335,17 +1354,20 @@ function ChatView({
                   className="premium-button"
                   style={{
                     border: '1px solid var(--border-color)',
-                    borderRadius: isMobile ? '50%' : '999px',
-                    width: isMobile ? '44px' : 'auto',
-                    height: '44px',
-                    minWidth: '44px',
-                    minHeight: '44px',
-                    padding: isMobile ? '0' : '0 12px',
+                    borderRadius: '9999px',
+                    width: isMobile ? '40px' : 'auto',
+                    height: '40px',
+                    minWidth: '40px',
+                    minHeight: '40px',
+                    padding: isMobile ? '0' : '0 14px',
                     backgroundColor: 'var(--bg-subtle)',
+                    backdropFilter: 'blur(10px)',
+                    WebkitBackdropFilter: 'blur(10px)',
                     color: 'var(--text-main)',
-                    fontWeight: '700', fontSize: '11px', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
-                    position: 'relative', zIndex: 100, pointerEvents: 'auto', touchAction: 'manipulation'
+                    fontWeight: '700', fontSize: '11.5px', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                    position: 'relative', zIndex: 100, pointerEvents: 'auto', touchAction: 'manipulation',
+                    transition: 'all 0.15s ease',
                   }}
                   title="Créer un nouveau tableau blanc"
                   aria-label="Créer un nouveau tableau blanc"
@@ -1360,27 +1382,38 @@ function ChatView({
                   onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); startCall('audio'); }}
                   className="premium-button"
                   style={{
-                    border: 'none', borderRadius: '50%', width: '44px', height: '44px',
-                    minWidth: '44px', minHeight: '44px',
+                    border: '1px solid var(--border-color)', borderRadius: '9999px', width: '40px', height: '40px',
+                    minWidth: '40px', minHeight: '40px',
                     backgroundColor: 'var(--bg-subtle)',
+                    backdropFilter: 'blur(10px)',
+                    WebkitBackdropFilter: 'blur(10px)',
                     color: 'var(--text-main)',
                     cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    position: 'relative', zIndex: 100, pointerEvents: 'auto', touchAction: 'manipulation'
+                    position: 'relative', zIndex: 100, pointerEvents: 'auto', touchAction: 'manipulation',
+                    transition: 'all 0.15s ease',
                   }}
                   title={t('audioCall') || 'Appel audio HD'}
+                  aria-label="Appel audio HD"
                 >
                   <Phone size={15} />
                 </button>
                 <button
                   onClick={() => startCall('video')}
+                  onTouchEnd={(e) => { e.preventDefault(); e.stopPropagation(); startCall('video'); }}
                   className="premium-button"
                   style={{
-                    border: 'none', borderRadius: '50%', width: '34px', height: '34px',
+                    border: '1px solid var(--border-color)', borderRadius: '9999px', width: '40px', height: '40px',
+                    minWidth: '40px', minHeight: '40px',
                     backgroundColor: 'var(--bg-subtle)',
+                    backdropFilter: 'blur(10px)',
+                    WebkitBackdropFilter: 'blur(10px)',
                     color: 'var(--text-main)',
-                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'
+                    cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    position: 'relative', zIndex: 100, pointerEvents: 'auto', touchAction: 'manipulation',
+                    transition: 'all 0.15s ease',
                   }}
                   title={t('videoCall') || 'Appel visio direct'}
+                  aria-label="Appel visio direct"
                 >
                   <Video size={15} />
                 </button>
@@ -1395,17 +1428,21 @@ function ChatView({
                   className="premium-button"
                   style={{
                     border: 'none',
-                    borderRadius: isMobile ? '50%' : '999px',
-                    width: isMobile ? '34px' : 'auto',
-                    height: '34px',
-                    padding: isMobile ? '0' : '0 12px',
+                    borderRadius: '9999px',
+                    width: isMobile ? '40px' : 'auto',
+                    height: '40px',
+                    minWidth: '40px',
+                    minHeight: '40px',
+                    padding: isMobile ? '0' : '0 16px',
                     background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
                     color: '#FFF',
-                    fontWeight: '700', fontSize: '11px', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px',
-                    boxShadow: 'var(--shadow-accent)'
+                    fontWeight: '800', fontSize: '11.5px', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                    boxShadow: 'var(--shadow-accent)',
+                    transition: 'all 0.15s ease',
                   }}
                   title={pendingDealFromMe ? "Modifier ma proposition de deal en attente" : (t('counterOffer') || 'Proposer un deal / Contre-offre')}
+                  aria-label="Proposer un deal ou contre-offre"
                 >
                   <Sparkles size={14} />
                   {!isMobile && <span>{pendingDealFromMe ? 'Modifier Deal' : 'Proposer Deal'}</span>}
@@ -1782,8 +1819,8 @@ function ChatView({
                                 backgroundColor: 'var(--bg-subtle)',
                                 border: '1px dashed var(--border-color)',
                                 color: 'var(--text-secondary)',
-                                borderRadius: '12px',
-                                padding: '10px 14px',
+                                borderRadius: '9999px',
+                                padding: '10px 16px',
                                 fontSize: '12px',
                                 fontWeight: '700',
                                 opacity: 0.85,
@@ -1815,8 +1852,8 @@ function ChatView({
                                   className="premium-button"
                                   style={{
                                     border: 'none',
-                                    borderRadius: '12px',
-                                    padding: '10px 4px',
+                                    borderRadius: '9999px',
+                                    padding: '10px 8px',
                                     background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
                                     color: '#FFFFFF',
                                     fontSize: '11.5px',
@@ -1852,8 +1889,8 @@ function ChatView({
                                   className="premium-button"
                                   style={{
                                     border: 'none',
-                                    borderRadius: '12px',
-                                    padding: '10px 4px',
+                                    borderRadius: '9999px',
+                                    padding: '10px 8px',
                                     background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
                                     color: '#FFFFFF',
                                     fontSize: '11.5px',
@@ -1889,8 +1926,8 @@ function ChatView({
                                   className="premium-button"
                                   style={{
                                     border: '1px solid rgba(239, 68, 68, 0.28)',
-                                    borderRadius: '12px',
-                                    padding: '10px 4px',
+                                    borderRadius: '9999px',
+                                    padding: '10px 8px',
                                     backgroundColor: 'rgba(239, 68, 68, 0.08)',
                                     color: '#EF4444',
                                     fontSize: '11.5px',
@@ -1915,7 +1952,7 @@ function ChatView({
 
                         {/* BADGE OFFRE REMPLACÉE PAR UNE CONTRE-OFFRE */}
                         {isCountered && (
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', backgroundColor: 'var(--bg-subtle)', border: '1px dashed var(--border-color)', color: 'var(--text-secondary)', borderRadius: '12px', padding: '8px 12px', fontSize: '11.5px', fontWeight: '700', marginTop: '8px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', backgroundColor: 'var(--bg-subtle)', border: '1px dashed var(--border-color)', color: 'var(--text-secondary)', borderRadius: '9999px', padding: '8px 16px', fontSize: '11.5px', fontWeight: '700', marginTop: '8px' }}>
                             <RefreshCw size={13} strokeWidth={2} />
                             <span>🔄 Offre remplacée par une contre-proposition</span>
                           </div>
@@ -2276,23 +2313,19 @@ function ChatView({
                         </div>
                       )}
 
-                      {msg?.type === 'audio' ? (
-                        <div className="p-2">
+                      {(msg?.type === 'audio' || msg?.kind === 'audio' || msg?.audioUrl) ? (
+                        <div style={{ width: '100%', maxWidth: '270px', minWidth: 0, boxSizing: 'border-box', overflow: 'hidden' }}>
                           {msg?.fileName && (
                             <div style={{ fontSize: '11px', fontWeight: '800', marginBottom: '4px', opacity: 0.9 }}>
                               🎵 {msg.fileName}
                             </div>
                           )}
-                          <audio controls src={msg?.audioUrl} className="max-w-[200px] md:max-w-xs" />
-                        </div>
-                      ) : (msg?.kind === 'audio' || msg?.audioUrl) ? (
-                        <div style={{ width: '100%', maxWidth: '260px', minWidth: 0, boxSizing: 'border-box', overflow: 'hidden' }}>
                           <VoiceNotePlayer
                             audioUrl={msg?.audioUrl}
                             duration={msg?.duration}
                             isMe={isMe}
                             currentLang={currentLang}
-                            transcription={msg?.transcription || null}
+                            transcription={msg?.transcript || msg?.transcription || null}
                           />
                         </div>
                       ) : (
@@ -2313,6 +2346,7 @@ function ChatView({
                                   fontSize: '11px',
                                   color: 'var(--accent-danger, #EF4444)',
                                   textAlign: 'left',
+                                  boxShadow: 'none'
                                 }}>
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontWeight: '800' }}>
                                     <ShieldAlert size={12} />
@@ -2338,7 +2372,9 @@ function ChatView({
                                 objectFit: 'cover',
                                 display: 'block',
                                 marginBottom: '4px',
+                                cursor: 'pointer'
                               }}
+                              onClick={() => setZoomedImage(msg?.image || msg?.text)}
                             />
                           ) : (
                             <div style={{ fontSize: '13.5px', lineHeight: 1.45, fontWeight: '500' }}>
@@ -2358,13 +2394,14 @@ function ChatView({
                                 color: isMe ? '#FFFFFF' : 'var(--accent-primary)',
                                 fontSize: '9.5px',
                                 fontWeight: '800',
-                                padding: '2px 6px',
-                                borderRadius: '6px',
+                                padding: '3px 8px',
+                                borderRadius: '9999px',
                                 cursor: 'pointer',
                                 display: 'inline-flex',
                                 alignItems: 'center',
-                                gap: '3px',
-                                marginTop: '2px',
+                                gap: '4px',
+                                marginTop: '3px',
+                                transition: 'all 0.15s ease',
                               }}
                               title="Basculer entre la traduction et le texte original"
                             >
@@ -2725,17 +2762,19 @@ function ChatView({
                     border: 'none',
                     background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
                     color: '#FFFFFF',
-                    borderRadius: '12px',
-                    padding: '6px 12px',
+                    borderRadius: '9999px',
+                    padding: '7px 14px',
                     fontSize: '11px',
                     fontWeight: '800',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '4px',
-                    boxShadow: 'var(--shadow-accent)'
+                    gap: '5px',
+                    boxShadow: 'var(--shadow-accent)',
+                    transition: 'all 0.15s ease',
                   }}
                   title="Lancer un projet collaboratif multi-membres"
+                  aria-label="Lancer un projet collaboratif"
                 >
                   <Users size={13} /> + Projet
                 </button>
@@ -3696,9 +3735,9 @@ function ChatView({
                   onClick={() => setIsDirectTransferOpen(false)}
                   style={{
                     flex: 1,
-                    padding: '10px 14px',
+                    padding: '10px 16px',
                     minHeight: '44px',
-                    borderRadius: '12px',
+                    borderRadius: '9999px',
                     border: '1px solid var(--border-color)',
                     backgroundColor: 'var(--bg-subtle)',
                     color: 'var(--text-main)',
@@ -3708,6 +3747,7 @@ function ChatView({
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
+                    transition: 'all 0.15s ease',
                   }}
                 >
                   Annuler
@@ -3720,9 +3760,9 @@ function ChatView({
                   className="premium-button"
                   style={{
                     flex: 1,
-                    padding: '10px 14px',
+                    padding: '10px 16px',
                     minHeight: '44px',
-                    borderRadius: '12px',
+                    borderRadius: '9999px',
                     border: 'none',
                     background: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
                     color: '#FFFFFF',
@@ -3734,9 +3774,10 @@ function ChatView({
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
+                    transition: 'all 0.15s ease',
                   }}
                 >
-                  {isTransferringTokens ? 'Transfert...' : `Envoyer ${directTokensCount} 🪙`}
+                  {isTransferringTokens ? 'Transfert en cours...' : `Confirmer le transfert de ${directTokensCount} Jetons Troco`}
                 </button>
               </div>
             </div>
