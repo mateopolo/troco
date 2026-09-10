@@ -179,11 +179,67 @@ class AudioService {
       console.warn('[AudioService] Success chime playback error:', e);
     }
   }
+
+  /**
+   * Son 4 : RINGTONE (Sonnerie d'appel téléphonique entrante / sortante)
+   * Double tonalité 440Hz + 480Hz avec récurrence toutes les 3.2s et gestion autoplay
+   */
+  startRingtone() {
+    this.stopRingtone();
+    if (!this.isEnabled) return;
+    const ctx = this.initContext();
+    if (!ctx) return;
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+
+    const ring = () => {
+      if (!this.ctx || this.ctx.state === 'closed') return;
+      if (this.ctx.state === 'suspended') {
+        this.ctx.resume().catch(() => {});
+      }
+      try {
+        const now = this.ctx.currentTime;
+        const playTone = (freq, startOffset, duration) => {
+          try {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, now + startOffset);
+            gain.gain.setValueAtTime(0.001, now + startOffset);
+            gain.gain.linearRampToValueAtTime(0.3, now + startOffset + 0.05);
+            gain.gain.setValueAtTime(0.3, now + startOffset + duration - 0.05);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + startOffset + duration);
+            osc.connect(gain);
+            gain.connect(this.masterGain || this.ctx.destination);
+            osc.start(now + startOffset);
+            osc.stop(now + startOffset + duration + 0.05);
+          } catch (_) {}
+        };
+
+        // Double fréquence téléphonique 440Hz + 480Hz pendant 1.2s
+        playTone(440, 0, 1.2);
+        playTone(480, 0, 1.2);
+      } catch (_) {}
+    };
+
+    ring();
+    this.ringtoneInterval = setInterval(ring, 3200);
+  }
+
+  stopRingtone() {
+    if (this.ringtoneInterval) {
+      clearInterval(this.ringtoneInterval);
+      this.ringtoneInterval = null;
+    }
+  }
 }
 
 export const audioService = new AudioService();
 export const playPop = () => audioService.playPop();
 export const playSwoosh = () => audioService.playSwoosh();
 export const playSuccessChime = () => audioService.playSuccessChime();
+export const startRingtone = () => audioService.startRingtone();
+export const stopRingtone = () => audioService.stopRingtone();
 
 export default audioService;

@@ -301,6 +301,8 @@ export default function CallOverlay({
             currentLang={currentLang}
             speakerName={selectedChat?.user || 'Interlocuteur'}
             isCompact={true}
+            chatId={selectedChat?.id}
+            partnerName={selectedChat?.user}
           />
         </div>
       </div>

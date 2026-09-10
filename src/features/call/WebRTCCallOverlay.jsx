@@ -622,8 +622,11 @@ export default function WebRTCCallOverlay({
             <LiveCallSubtitles
               isActive={showCallSubtitles}
               currentLang={currentLang}
-              speakerName={selectedChat?.user || 'Interlocuteur'}
+              speakerName={selectedChat?.user || incomingCall?.from || 'Interlocuteur'}
               isCompact={false}
+              chatId={selectedChat?.id || incomingCall?.chatId}
+              myProfile={profile}
+              partnerName={selectedChat?.user || incomingCall?.from || 'Interlocuteur'}
             />
           </Suspense>
 

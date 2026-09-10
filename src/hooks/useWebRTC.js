@@ -15,6 +15,7 @@ import {
 } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { liveTranscriptionService } from '../services/liveTranscriptionService';
+import { startRingtone as audioStartRingtone, stopRingtone as audioStopRingtone } from '../services/audioService';
 
 // Configuration STUN globale robuste (Google STUN pour traversée NAT, 4G, 5G et Wi-Fi)
 const ICE_CONFIG = {
@@ -125,6 +126,9 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
   // 1. GESTION DE LA SONNERIE (Arrêt immédiat & Nettoyage)
   // =======================================================================
   const stopRingtone = useCallback(() => {
+    try {
+      audioStopRingtone();
+    } catch (_) { }
     if (ringtoneIntervalRef.current) {
       clearInterval(ringtoneIntervalRef.current);
       ringtoneIntervalRef.current = null;
@@ -140,36 +144,7 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
   const playRingtone = useCallback(() => {
     stopRingtone();
     try {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (!AudioCtx) return;
-      const ctx = new AudioCtx();
-      ringtoneCtxRef.current = ctx;
-
-      const triggerPattern = () => {
-        if (!ringtoneCtxRef.current || ringtoneCtxRef.current.state === 'closed') return;
-        const cur = ringtoneCtxRef.current.currentTime;
-        const beep = (freq, start, dur) => {
-          if (!ringtoneCtxRef.current || ringtoneCtxRef.current.state === 'closed') return;
-          try {
-            const osc = ringtoneCtxRef.current.createOscillator();
-            const gain = ringtoneCtxRef.current.createGain();
-            osc.connect(gain);
-            gain.connect(ringtoneCtxRef.current.destination);
-            osc.frequency.value = freq;
-            osc.type = 'sine';
-            gain.gain.setValueAtTime(0, cur + start);
-            gain.gain.linearRampToValueAtTime(0.15, cur + start + 0.05);
-            gain.gain.linearRampToValueAtTime(0, cur + start + dur);
-            osc.start(cur + start);
-            osc.stop(cur + start + dur + 0.05);
-          } catch (_) { }
-        };
-        beep(440, 0, 0.35);
-        beep(880, 0.45, 0.35);
-      };
-
-      triggerPattern();
-      ringtoneIntervalRef.current = setInterval(triggerPattern, 2600);
+      audioStartRingtone();
     } catch (_) { }
   }, [stopRingtone]);
 
@@ -509,6 +484,10 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
     const chatId = selectedChat?.id;
     if (!chatId) return;
 
+    // Déclenchement synchrone immédiat du ringtone dans le geste utilisateur (résout le blocage autoplay)
+    playRingtone();
+    if (navigator.vibrate) navigator.vibrate([300, 100, 300]);
+
     // Protection anti-double sonnerie : vérifier si un appel est déjà actif
     try {
       const existingSnap = await getDoc(doc(db, 'calls', String(chatId)));
@@ -520,6 +499,7 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
           (existingData.fromUid && myUid && String(existingData.fromUid) === String(myUid));
 
         if (!isFromMe && existingData.offer && (existingData.status === 'ringing' || existingData.status === 'connected')) {
+          stopRingtone();
           await joinActiveCall(chatId, existingData.type || type, existingData);
           return;
         }
@@ -535,6 +515,7 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
 
     const stream = await _getLocalStream(type);
     if (!stream) {
+      stopRingtone();
       setCallState({ type: null, active: false, ringing: false, micOn: true, camOn: true, isScreenSharing: false, isHost: false, inviteOpen: false, copied: false, remoteScreenSharing: false });
       return;
     }
@@ -542,8 +523,6 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
     localStreamRef.current = stream;
 
     setCallState({ type, active: true, ringing: true, micOn: true, camOn: type === 'video', isScreenSharing: false, isHost: true, inviteOpen: false, copied: false, remoteScreenSharing: false });
-    playRingtone();
-    if (navigator.vibrate) navigator.vibrate([300, 100, 300]);
 
     const pc = _createPC(chatId, 'caller');
     stream.getTracks().forEach(t => pc.addTrack(t, stream));

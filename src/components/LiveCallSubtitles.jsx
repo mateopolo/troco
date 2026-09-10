@@ -5,6 +5,8 @@ import {
 } from 'lucide-react';
 import { liveTranscriptionService } from '../services/liveTranscriptionService';
 import { translateText } from '../utils/translator';
+import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
+import { db, auth } from '../firebase';
 
 const AVAILABLE_LANGUAGES = [
   { code: 'FR', label: 'Français', flag: '🇫🇷', bcp47: 'fr-FR' },
@@ -42,8 +44,13 @@ export default function LiveCallSubtitles({
   currentLang = 'FR',
   speakerName = 'Interlocuteur',
   isCompact = false,
+  chatId = null,
+  myProfile = null,
+  partnerName = null,
 }) {
   const [currentSubtitle, setCurrentSubtitle] = useState(null);
+  const [localOutgoingSpeech, setLocalOutgoingSpeech] = useState(null);
+  const outgoingTimeoutRef = useRef(null);
   const [recentSentences, setRecentSentences] = useState([]);
   const [showSettings, setShowSettings] = useState(false);
 
@@ -109,11 +116,71 @@ export default function LiveCallSubtitles({
   const dragStartRef = useRef({ x: 0, y: 0, startX: 0, startY: 0 });
   const containerRef = useRef(null);
 
-  // Synchronisation avec le moteur de transcription en direct
+  // 1. Écoute en temps réel des sous-titres émis par le correspondant distant sur calls/{chatId}
+  useEffect(() => {
+    if (!isActive || !chatId || !db) return;
+
+    const myUid = myProfile?.uid || (auth?.currentUser && auth.currentUser.uid) || null;
+    const myName = (myProfile?.name || '').trim().toLowerCase();
+
+    const unsub = onSnapshot(doc(db, 'calls', String(chatId)), async (snap) => {
+      if (!snap.exists()) return;
+      const data = snap.data();
+      const remoteSub = data?.liveSubtitle;
+      if (!remoteSub || !remoteSub.text || !remoteSub.text.trim()) return;
+
+      // Ignore les sous-titres trop anciens (> 15 secondes)
+      if (remoteSub.timestamp && (Date.now() - remoteSub.timestamp > 15000)) return;
+
+      // IMPORTANT : Ignorer si c'est ma propre voix qui a été diffusée
+      const isFromMe = (remoteSub.speakerUid && myUid && String(remoteSub.speakerUid) === String(myUid)) ||
+        (remoteSub.speakerName && myName && remoteSub.speakerName.trim().toLowerCase() === myName);
+      if (isFromMe) return;
+
+      // C'est l'autre personne qui a parlé ! On traduit son message dans ma langue de sous-titres
+      const rawText = remoteSub.text.trim();
+      const detectedSourceLang = (remoteSub.sourceLang || 'FR').toUpperCase();
+      const activeTargetLang = currentSubtitleLang;
+
+      let translated = rawText;
+      if (detectedSourceLang !== activeTargetLang) {
+        try {
+          translated = await translateText(rawText, activeTargetLang, detectedSourceLang.toLowerCase());
+        } catch (err) {
+          console.warn('[LiveCallSubtitles] Erreur traduction incoming peer:', err);
+          translated = rawText;
+        }
+      }
+
+      const peerSubtitleData = {
+        id: remoteSub.timestamp || Date.now(),
+        originalText: rawText,
+        translatedText: translated || rawText,
+        sourceLang: detectedSourceLang,
+        targetLang: activeTargetLang,
+        speaker: remoteSub.speakerName || partnerName || speakerName,
+        isPeer: true,
+        isFinal: remoteSub.isFinal !== undefined ? remoteSub.isFinal : true,
+      };
+
+      setCurrentSubtitle(peerSubtitleData);
+      if (translated) {
+        setRecentSentences(prev => {
+          const next = [...prev, translated];
+          return next.slice(-2);
+        });
+      }
+    });
+
+    return () => unsub();
+  }, [isActive, chatId, currentSubtitleLang, myProfile, partnerName, speakerName]);
+
+  // 2. Synchronisation avec le moteur de transcription en direct (micro local)
   useEffect(() => {
     if (!isActive) {
       liveTranscriptionService.stopListening();
       setCurrentSubtitle(null);
+      setLocalOutgoingSpeech(null);
       setRecentSentences([]);
       return;
     }
@@ -128,12 +195,43 @@ export default function LiveCallSubtitles({
       const rawText = (data.originalText || data.text || data.translatedText || '').trim();
       if (!rawText) return;
 
+      const isLocal = Boolean(data.isLocalMic);
       const activeTargetLang = currentSubtitleLang;
       const detectedSourceLang = (data.sourceLang || currentSourceLang).toUpperCase();
 
-      let translated = data.translatedText;
+      if (isLocal) {
+        // C'est ma propre voix (mon microphone) :
+        // On affiche un bandeau discret de retour vocal sortant ("Vous parlez : ...")
+        if (outgoingTimeoutRef.current) clearTimeout(outgoingTimeoutRef.current);
+        setLocalOutgoingSpeech({
+          text: rawText,
+          isFinal: Boolean(data.isFinal),
+          timestamp: Date.now(),
+        });
+        outgoingTimeoutRef.current = setTimeout(() => {
+          setLocalOutgoingSpeech(null);
+        }, 5000);
 
-      // Traduction dynamique si la langue source diffère de la langue des sous-titres choisie
+        // On diffuse la voix transcrite sur calls/{chatId} pour que l'interlocuteur la reçoive traduite
+        if (chatId && db) {
+          const myUid = myProfile?.uid || (auth?.currentUser && auth.currentUser.uid) || null;
+          const myName = myProfile?.name || 'Moi';
+          updateDoc(doc(db, 'calls', String(chatId)), {
+            liveSubtitle: {
+              text: rawText,
+              speakerName: myName,
+              speakerUid: myUid,
+              sourceLang: currentSourceLang,
+              isFinal: Boolean(data.isFinal),
+              timestamp: Date.now(),
+            }
+          }).catch(() => { });
+        }
+        return;
+      }
+
+      // Cas voix distante ou simulation intelligente : c'est l'autre personne qui parle !
+      let translated = data.translatedText;
       if (detectedSourceLang !== activeTargetLang) {
         if (!translated || translated.trim() === rawText || data.targetLang !== activeTargetLang) {
           try {
@@ -153,22 +251,24 @@ export default function LiveCallSubtitles({
         translatedText: translated || rawText,
         sourceLang: detectedSourceLang,
         targetLang: activeTargetLang,
+        speaker: data.speaker || partnerName || speakerName,
       };
 
       setCurrentSubtitle(enrichedData);
       if (data.isFinal && translated) {
         setRecentSentences(prev => {
           const next = [...prev, translated];
-          return next.slice(-2); // Conserve les 2 phrases les plus récentes pour un défilement cinéma fluide
+          return next.slice(-2);
         });
       }
     });
 
     return () => {
       if (typeof unsubscribe === 'function') unsubscribe();
+      if (outgoingTimeoutRef.current) clearTimeout(outgoingTimeoutRef.current);
       liveTranscriptionService.stopListening();
     };
-  }, [isActive, currentSourceLang, currentSubtitleLang, speakerName]);
+  }, [isActive, chatId, currentSourceLang, currentSubtitleLang, myProfile, partnerName, speakerName]);
 
   // DRAG AND DROP AVEC POINTER EVENTS
   const handlePointerDown = (e) => {
@@ -355,6 +455,42 @@ export default function LiveCallSubtitles({
           </div>
         </div>
 
+        {/* BANDEAU DISCRET DE TRANSMISSION SORTANTE DU LOCUTEUR LOCAL ("VOUS") */}
+        {localOutgoingSpeech?.text && (
+          <div
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              backgroundColor: 'rgba(16, 185, 129, 0.22)',
+              backdropFilter: 'blur(10px)',
+              WebkitBackdropFilter: 'blur(10px)',
+              border: '1px solid rgba(16, 185, 129, 0.45)',
+              borderRadius: '999px',
+              padding: '4px 14px',
+              marginBottom: '6px',
+              fontSize: isCompact ? '11px' : '12px',
+              color: '#ECFDF5',
+              fontWeight: '600',
+              boxShadow: '0 4px 14px rgba(0,0,0,0.35)',
+              maxWidth: '96%',
+              animation: 'fadeIn 0.2s ease',
+            }}
+          >
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#34D399', flexShrink: 0 }}>
+              <Mic size={12} />
+              <span>Vous :</span>
+            </span>
+            <span style={{ fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: isCompact ? '160px' : '320px' }}>
+              "{localOutgoingSpeech.text}"
+            </span>
+            <span style={{ color: 'rgba(255, 255, 255, 0.4)', margin: '0 2px' }}>➔</span>
+            <span style={{ color: '#6EE7B7', fontSize: '11px', flexShrink: 0 }}>
+              Traduit en direct pour {partnerName || speakerName}
+            </span>
+          </div>
+        )}
+
         {/* CADRE SOUS-TITRES STYLE CINÉMA LARGE & FLUIDE */}
         <div
           style={{
@@ -397,7 +533,7 @@ export default function LiveCallSubtitles({
               <span>{activeTranslation}</span>
             ) : (
               <span style={{ opacity: 0.7, fontStyle: 'italic', fontSize: isCompact ? '12px' : '13.5px', color: '#FFFFFF' }}>
-                🎙️ En écoute ({sourceLangObj.label} ➔ Traduction en {targetLangObj.label})...
+                🎙️ En attente de la parole de {partnerName || speakerName}... ({sourceLangObj.label} ➔ Traduction en {targetLangObj.label})
               </span>
             )}
           </div>

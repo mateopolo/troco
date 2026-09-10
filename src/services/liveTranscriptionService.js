@@ -68,7 +68,7 @@ class LiveTranscriptionService {
         if (!textToProcess) return;
 
         const isFinal = Boolean(finalTranscript);
-        await this.handleTranscript(textToProcess, isFinal);
+        await this.handleTranscript(textToProcess, isFinal, true);
       };
 
       this.recognition.onerror = (event) => {
@@ -92,7 +92,7 @@ class LiveTranscriptionService {
     }
   }
 
-  async handleTranscript(rawText, isFinal) {
+  async handleTranscript(rawText, isFinal, isLocalMic = false) {
     if (!rawText || !rawText.trim()) return;
 
     const trimmed = rawText.trim();
@@ -116,9 +116,10 @@ class LiveTranscriptionService {
       originalText: trimmed,
       translatedText: translated || trimmed,
       isFinal,
+      isLocalMic,
       sourceLang: sourceCode,
       targetLang: targetCode,
-      speaker: this.speakerName,
+      speaker: isLocalMic ? 'Moi' : this.speakerName,
       timestamp: new Date(),
     };
 

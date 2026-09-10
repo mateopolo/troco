@@ -2372,9 +2372,7 @@ function ChatView({
                                 objectFit: 'cover',
                                 display: 'block',
                                 marginBottom: '4px',
-                                cursor: 'pointer'
                               }}
-                              onClick={() => setZoomedImage(msg?.image || msg?.text)}
                             />
                           ) : (
                             <div style={{ fontSize: '13.5px', lineHeight: 1.45, fontWeight: '500' }}>

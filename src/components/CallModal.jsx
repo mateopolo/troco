@@ -164,6 +164,8 @@ export default function CallModal({
         currentLang={currentLang}
         speakerName={chatUser}
         isCompact={false}
+        chatId={selectedChat?.id}
+        partnerName={chatUser}
       />
 
       {/* NOTIFICATION D'INVITATION COPIÉE */}

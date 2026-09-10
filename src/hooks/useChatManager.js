@@ -23,6 +23,7 @@ import { playBetclicBalanceSound, playApplePaySound, playSwooshSound } from '../
 import { useChatStore, useWalletStore } from '../stores';
 import { hapticLight, hapticSuccess, hapticError } from '../utils/haptics';
 import { playPop } from '../services/audioService';
+import { notificationService } from '../services/notificationService';
 
 // Singleton audio context pour éviter la saturation des threads WebKit audio sur iOS
 let sharedChatAudioCtx = null;
@@ -347,6 +348,25 @@ export const useChatManager = ({
                 if (typeof navigator !== 'undefined' && navigator.vibrate) {
                   try { navigator.vibrate([120, 60, 120]); } catch (_) { }
                 }
+
+                // Déclencher le bandeau Dynamic Island popup interactif sur les autres pages
+                const senderTitle = d.lastSenderName || d.lastSender || d.user || 'Nouveau message';
+                const messageText = d.lastMessage || 'Nouveau message reçu';
+                const senderAvatar = d.avatar || d.authorAvatar || null;
+
+                notificationService.show({
+                  title: senderTitle,
+                  message: messageText,
+                  avatar: senderAvatar,
+                  icon: 'chat',
+                  onClick: () => {
+                    setSelectedChat(d);
+                    if (typeof setActiveTab === 'function') {
+                      setActiveTab('chat');
+                    }
+                  },
+                  data: { chatId: fChatId }
+                });
               }
             }
           });
