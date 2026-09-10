@@ -1,0 +1,293 @@
+diff --git a/src/hooks/useWebRTC.js b/src/hooks/useWebRTC.js
+index ad00555..ef2a7e1 100644
+--- a/src/hooks/useWebRTC.js
++++ b/src/hooks/useWebRTC.js
+@@ -15,6 +15,7 @@ import {
+ } from 'firebase/firestore';
+ import { db, auth } from '../firebase';
+ import { liveTranscriptionService } from '../services/liveTranscriptionService';
++import { traceWebRTCEvent } from '../utils/webrtcTracer';
+ 
+ // Configuration STUN globale robuste (Google STUN pour traversée NAT, 4G, 5G et Wi-Fi)
+ const ICE_CONFIG = {
+@@ -59,6 +60,7 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
+   const activeCallChatIdRef = useRef(null);
+   const activeCallTypeRef = useRef(null);
+   const isCallConnectedRef = useRef(false);
++  const callDeliveredRef = useRef(false);
+ 
+   // Synchronisation continue du localStreamRef
+   useEffect(() => {
+@@ -555,6 +557,19 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
+     const partnerName = selectedChat?.user || selectedChat?.name || selectedChat?.partnerName || 'Interlocuteur';
+     const myUid = profileUid || (auth.currentUser && auth.currentUser.uid) || null;
+ 
++    callDeliveredRef.current = false;
++    traceWebRTCEvent('call_start', { chatId, type, to: partnerName, partnerUid });
++
++    const targetParticipants = Array.from(new Set([
++      partnerName,
++      (partnerName || '').trim().toLowerCase(),
++      partnerUid,
++      profileName,
++      (profileName || '').trim().toLowerCase(),
++      myUid,
++      ...(selectedChat?.participantUids || [])
++    ].filter(Boolean)));
++
+     await setDoc(doc(db, 'calls', String(chatId)), {
+       type,
+       from: profileName,
+@@ -562,7 +577,7 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
+       to: partnerName,
+       toUid: partnerUid,
+       participants: [profileName],
+-      targetParticipants: [partnerName, partnerUid, profileName, myUid].filter(Boolean),
++      targetParticipants,
+       status: 'ringing',
+       offer: { type: offer.type, sdp: offer.sdp },
+       isScreenSharing: false,
+@@ -595,12 +610,19 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
+         return;
+       }
+       const data = snap.data();
++
++      if (data?.deliveredAt || data?.calleeDelivered) {
++        callDeliveredRef.current = true;
++        traceWebRTCEvent('call_signaling_delivered', { chatId });
++      }
++
+       if (data?.answer && !pc.currentRemoteDescription) {
+         try {
+           await pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+           isCallConnectedRef.current = true;
+           stopRingtone();
+           setCallState(prev => ({ ...prev, ringing: false, active: true }));
++          traceWebRTCEvent('call_connected', { chatId });
+           await flushPendingCandidates();
+         } catch (e) {
+           console.warn('[WebRTC] setRemoteDescription answer error:', e);
+@@ -690,19 +712,30 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
+           }
+         }).catch(() => { });
+       } else {
+-        const logText = `📵 Appel sans réponse • ${timeStr}`;
+-        addDoc(collection(db, 'chats', String(chatId), 'messages'), {
+-          sender: 'system',
+-          senderName: 'Troco Direct',
+-          text: logText,
+-          kind: 'call-log',
+-          status: 'missed',
+-          createdAt: serverTimestamp(),
+-          translations: {
+-            FR: logText,
+-            EN: `📵 Missed call • ${timeStr}`
+-          }
+-        }).catch(() => { });
++        // HOTFIX-05 : Garde stricte anti-notification fantôme "appel manqué"
++        // Le log "Appel sans réponse" n'est créé QUE si l'appel a été effectivement délivré (deliveredAt)
++        // et que l'appel a sonné sans réponse pendant au moins 6 secondes.
++        const wasDelivered = callDeliveredRef.current;
++        const callDurationBeforeEnd = Date.now() - (callStartTimeRef.current || Date.now());
++
++        if (wasDelivered && callDurationBeforeEnd >= 6000) {
++          const logText = `📵 Appel sans réponse • ${timeStr}`;
++          addDoc(collection(db, 'chats', String(chatId), 'messages'), {
++            sender: 'system',
++            senderName: 'Troco Direct',
++            text: logText,
++            kind: 'call-log',
++            status: 'missed',
++            createdAt: serverTimestamp(),
++            translations: {
++              FR: logText,
++              EN: `📵 Missed call • ${timeStr}`
++            }
++          }).catch(() => { });
++          traceWebRTCEvent('call_missed_logged', { chatId, duration: callDurationBeforeEnd });
++        } else {
++          traceWebRTCEvent('call_canceled_before_delivery', { chatId, wasDelivered, duration: callDurationBeforeEnd });
++        }
+       }
+     }
+ 
+@@ -727,6 +760,11 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
+     if (!incomingCall) return;
+     const { chatId } = incomingCall;
+ 
++    setDoc(doc(db, 'calls', String(chatId)), {
++      status: 'declined',
++      declinedAt: serverTimestamp(),
++    }, { merge: true }).catch(() => { });
++
+     setDoc(doc(db, 'chats', String(chatId)), {
+       activeCall: null,
+       isLive: false,
+@@ -735,86 +773,112 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
+     }, { merge: true }).catch(() => { });
+ 
+     const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+-    const logText = `📵 Appel sans réponse • ${timeStr}`;
++    const logText = `📵 Appel refusé • ${timeStr}`;
+     addDoc(collection(db, 'chats', String(chatId), 'messages'), {
+       sender: 'system',
+       senderName: 'Troco Direct',
+       text: logText,
+       kind: 'call-log',
+-      status: 'missed',
++      status: 'declined',
+       createdAt: serverTimestamp(),
+       translations: {
+         FR: logText,
+-        EN: `📵 Missed call • ${timeStr}`
++        EN: `📵 Declined call • ${timeStr}`
+       }
+     }).catch(() => { });
+ 
+     deleteDoc(doc(db, 'calls', String(chatId))).catch(() => { });
+     setIncomingCall(null);
++    traceWebRTCEvent('call_declined', { chatId });
+   }, [incomingCall, stopRingtone, _cleanup]);
+ 
+   // =======================================================================
+-  // 7. ÉCOUTE UNIVERSELLE DES APPELS ENTRANTS
++  // 7. ÉCOUTE UNIVERSELLE DES APPELS ENTRANTS (HOTFIX-04 & HOTFIX-05)
+   // =======================================================================
+   useEffect(() => {
+     if (!profileName && !profileUid && !auth.currentUser?.uid) return;
+     const normalizedProfile = (profileName || '').trim().toLowerCase();
+     const currentUid = profileUid || (auth.currentUser && auth.currentUser.uid);
+-    const myUid = currentUid ? String(currentUid) : (profileName ? String(profileName) : null);
++    const currentUidStr = currentUid ? String(currentUid) : null;
++    const myUid = currentUidStr || (profileName ? String(profileName) : null);
+     if (!myUid) return;
+ 
+-    // 🚨 PHASE 116 : RESTRICTION DE L'ÉCOUTEUR FIRESTORE (ZÉRO FOUILLE GLOBALE / ZÉRO MEMORY LEAK)
+-    const callsQuery = query(
+-      collection(db, 'calls'),
+-      where('targetParticipants', 'array-contains', myUid),
+-      limit(10)
+-    );
+-
+-    const unsub = onSnapshot(callsQuery, (snap) => {
+-      snap.docChanges().forEach(change => {
+-        const data = change.doc.data();
+-        if (!data) return;
+-
+-        const fromName = (data.from || '').trim().toLowerCase();
+-        if (fromName && normalizedProfile && fromName === normalizedProfile) return;
+-        if (data.fromUid && currentUid && String(data.fromUid) === String(currentUid)) return;
+-
+-        const targetTo = (data?.to || '').trim().toLowerCase();
+-        const targetToUid = data?.toUid ? String(data.toUid) : null;
+-        const currentUidStr = currentUid ? String(currentUid) : null;
+-
+-        const isMatch = (normalizedProfile && targetTo === normalizedProfile) ||
+-          (currentUidStr && targetToUid && targetToUid === currentUidStr) ||
+-          (Array.isArray(data?.targetParticipants) && (
+-            data.targetParticipants.map(p => String(p).trim().toLowerCase()).includes(normalizedProfile) ||
+-            (currentUidStr && data.targetParticipants.includes(currentUidStr))
+-          )) ||
+-          (Array.isArray(data?.participants) && (
+-            data.participants.map(p => String(p).trim().toLowerCase()).includes(normalizedProfile) ||
+-            (currentUidStr && data.participants.includes(currentUidStr))
+-          ));
+-
+-        if ((change.type === 'added' || change.type === 'modified') && isMatch && data.status === 'ringing') {
+-          setIncomingCall({
+-            chatId: change.doc.id,
+-            type: data.type || 'video',
+-            from: data.from || 'Interlocuteur',
+-            fromUid: data.fromUid || null
+-          });
+-          playRingtone();
+-          if (navigator.vibrate) navigator.vibrate([400, 150, 400, 150, 400]);
+-        }
+-        if (change.type === 'removed') {
+-          setIncomingCall(prev => prev?.chatId === change.doc.id ? null : prev);
+-          stopRingtone();
+-        }
+-        if (change.type === 'modified' && (data.status === 'connected' || data.status === 'ended' || data.status === 'declined' || data.status === 'canceled')) {
+-          setIncomingCall(prev => prev?.chatId === change.doc.id ? null : prev);
+-          stopRingtone();
+-        }
++    // Multi-cibles d'écoute pour garantir la réception (UID Firebase + nom d'utilisateur)
++    const targetsToListen = Array.from(new Set([
++      myUid,
++      currentUidStr,
++      profileName,
++      normalizedProfile,
++    ].filter(Boolean)));
++
++    const unsubs = [];
++
++    targetsToListen.forEach(target => {
++      const callsQuery = query(
++        collection(db, 'calls'),
++        where('targetParticipants', 'array-contains', target),
++        limit(10)
++      );
++
++      const unsub = onSnapshot(callsQuery, (snap) => {
++        snap.docChanges().forEach(change => {
++          const data = change.doc.data();
++          if (!data) return;
++
++          const fromName = (data.from || '').trim().toLowerCase();
++          if (fromName && normalizedProfile && fromName === normalizedProfile) return;
++          if (data.fromUid && currentUid && String(data.fromUid) === String(currentUid)) return;
++
++          const targetTo = (data?.to || '').trim().toLowerCase();
++          const targetToUid = data?.toUid ? String(data.toUid) : null;
++
++          const isMatch = (normalizedProfile && targetTo === normalizedProfile) ||
++            (currentUidStr && targetToUid && targetToUid === currentUidStr) ||
++            (Array.isArray(data?.targetParticipants) && (
++              data.targetParticipants.map(p => String(p).trim().toLowerCase()).includes(normalizedProfile) ||
++              (currentUidStr && data.targetParticipants.includes(currentUidStr))
++            )) ||
++            (Array.isArray(data?.participants) && (
++              data.participants.map(p => String(p).trim().toLowerCase()).includes(normalizedProfile) ||
++              (currentUidStr && data.participants.includes(currentUidStr))
++            ));
++
++          if ((change.type === 'added' || change.type === 'modified') && isMatch && data.status === 'ringing') {
++            // Acquittement immédiat de réception du signal d'appel
++            updateDoc(doc(db, 'calls', change.doc.id), {
++              deliveredAt: serverTimestamp(),
++              calleeDelivered: true,
++            }).catch(() => { });
++
++            traceWebRTCEvent('call_incoming_ringing', { chatId: change.doc.id, from: data.from });
++            setIncomingCall({
++              chatId: change.doc.id,
++              type: data.type || 'video',
++              from: data.from || 'Interlocuteur',
++              fromUid: data.fromUid || null
++            });
++            playRingtone();
++            if (navigator.vibrate) navigator.vibrate([400, 150, 400, 150, 400]);
++          }
++          if (change.type === 'removed') {
++            setIncomingCall(prev => prev?.chatId === change.doc.id ? null : prev);
++            stopRingtone();
++          }
++          if (change.type === 'modified' && (data.status === 'connected' || data.status === 'ended' || data.status === 'declined' || data.status === 'canceled')) {
++            setIncomingCall(prev => prev?.chatId === change.doc.id ? null : prev);
++            stopRingtone();
++          }
++        });
++      }, (err) => {
++        console.warn('[WebRTC] calls onSnapshot listener error:', err);
+       });
++
++      unsubs.push(unsub);
+     });
+-    return () => unsub();
++
++    return () => {
++      unsubs.forEach(u => { try { u(); } catch (_) { } });
++    };
+   }, [profileName, profileUid, playRingtone, stopRingtone]);
+ 
+   // =======================================================================

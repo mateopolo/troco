@@ -1,0 +1,32 @@
+{
+  "chats_collection_sample": {
+    "_id": "chat_uidA_uidB_listing123",
+    "participants": ["4Z9pL0qW8rT1yU3iO5pA7sD9fG2h", "8kLmNoPqRsTuVwXyZ12aBcDeFgHi"],
+    "participantUids": ["4Z9pL0qW8rT1yU3iO5pA7sD9fG2h", "8kLmNoPqRsTuVwXyZ12aBcDeFgHi"],
+    "previousParticipants": ["Marc Dupont", "Sofia Benali"],
+    "lastMessage": "Parfait pour l'échange de demain !",
+    "lastSenderUid": "4Z9pL0qW8rT1yU3iO5pA7sD9fG2h",
+    "lastSenderName": "Marc",
+    "migrationStatus": "migrated",
+    "updatedAt": "2026-09-10T12:48:00.000Z"
+  },
+  "messages_subcollection_sample": {
+    "_id": "auto_msg_1789043905000",
+    "idempotencyKey": "chat_uidA_uidB:4Z9pL0qW8rT1yU3iO5pA7sD9fG2h:1789043905000",
+    "senderUid": "4Z9pL0qW8rT1yU3iO5pA7sD9fG2h",
+    "text": "Parfait pour l'échange de demain !",
+    "type": "text",
+    "createdAt": "2026-09-10T12:48:00.000Z"
+  },
+  "calls_collection_sample": {
+    "_id": "call_chat_uidA_uidB",
+    "callerUid": "4Z9pL0qW8rT1yU3iO5pA7sD9fG2h",
+    "from": "Marc",
+    "to": "Sofia",
+    "toUid": "8kLmNoPqRsTuVwXyZ12aBcDeFgHi",
+    "targetParticipants": ["8kLmNoPqRsTuVwXyZ12aBcDeFgHi", "4Z9pL0qW8rT1yU3iO5pA7sD9fG2h", "marc", "sofia"],
+    "status": "ended",
+    "deliveredAt": "2026-09-10T12:45:02.120Z",
+    "endedAt": "2026-09-10T12:47:30.000Z"
+  }
+}

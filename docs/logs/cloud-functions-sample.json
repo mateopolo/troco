@@ -1,0 +1,41 @@
+{
+  "audit": "AUDIT-00",
+  "environment": "production-preflight",
+  "timestamp": "2026-09-10T12:52:00.000Z",
+  "recentLogs": [
+    {
+      "severity": "INFO",
+      "timestamp": "2026-09-10T12:48:41.940Z",
+      "action": "transferAtomically",
+      "callerUid": "sender_1",
+      "targetId": "receiver_2",
+      "tokens": 4,
+      "status": "success"
+    },
+    {
+      "severity": "INFO",
+      "timestamp": "2026-09-10T12:48:41.950Z",
+      "action": "resolveReport",
+      "callerUid": "admin_mod",
+      "targetId": "rep_1",
+      "status": "success"
+    },
+    {
+      "severity": "INFO",
+      "timestamp": "2026-09-10T12:48:42.122Z",
+      "action": "syncPublicUser_upsert",
+      "callerUid": "system_trigger",
+      "targetId": "user_new_1",
+      "status": "success"
+    },
+    {
+      "severity": "INFO",
+      "timestamp": "2026-09-10T12:45:04.304Z",
+      "action": "migration_chat_participants_complete",
+      "callerUid": "admin_tester",
+      "status": "success",
+      "totalChats": 1,
+      "migrated": 1
+    }
+  ]
+}
