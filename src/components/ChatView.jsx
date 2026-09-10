@@ -7,10 +7,8 @@ import {
   Palette, Briefcase, Plus, FileText, Calendar, Table,
   MessageSquareDashed, RefreshCw, MessageSquare, Search, Pin
 } from 'lucide-react';
-import { doc, deleteDoc, addDoc, collection, updateDoc, serverTimestamp, query, where, getDocs, getDoc, arrayUnion } from 'firebase/firestore';
+import { doc, deleteDoc, addDoc, collection, updateDoc, serverTimestamp, query, where, getDocs, arrayUnion } from 'firebase/firestore';
 import { db, auth } from '../firebase';
-import { useChatStore } from '../stores/useChatStore';
-import { useCallStore } from '../stores/useCallStore';
 import { executeDirectTokenTransfer } from '../services/firestoreService';
 import { subscribeTranslations } from '../utils/translator';
 import { analyzeContent } from '../utils/contentModeration';
@@ -23,14 +21,11 @@ import { EmptyState } from './ui/EmptyState';
 import { playPop, playSwoosh, playSuccessChime } from '../services/audioService';
 import SwipeableChatItem from './SwipeableChatItem';
 import ChatInputBar from './chat/ChatInputBar';
-import MessageBubble from './chat/MessageBubble';
-import DealRatingModal from './DealRatingModal';
 
 // Lazy loading des outils collaboratifs & suites vectorielles lourdes pour préserver les performances et la rapidité du build
 const CreateProjectGroupModal = lazy(() => import('./CreateProjectGroupModal'));
 const ProjectRewardsModal = lazy(() => import('./ProjectRewardsModal'));
 const CollaborativeWhiteboard = lazy(() => import('../features/workspace/CollaborativeWhiteboard'));
-const NotesModal = lazy(() => import('./NotesModal'));
 const SharedDocumentModal = lazy(() => import('./SharedDocumentModal'));
 const ProjectWorkspaceToolsModal = lazy(() => import('./ProjectWorkspaceToolsModal'));
 const CloudOfficeSuiteModal = lazy(() => import('./CloudOfficeSuiteModal'));
@@ -55,8 +50,6 @@ function ChatView({
   joinActiveCall,
   handleAcceptDeal,
   onAcceptDeal,
-  handleConfirmTrocCompletion,
-  onConfirmTrocCompletion,
   handleDeclineDeal,
   handleSendToken: handleSendTokenProp,
   handleReleaseEscrow,
@@ -167,134 +160,12 @@ function ChatView({
   const [transferComment, setTransferComment] = useState('');
   const [isTransferringTokens, setIsTransferringTokens] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
-  const [ratingDealData, setRatingDealData] = useState(null);
-
   const [isMobileLocal, setIsMobileLocal] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
   const isMobile = isMobileProp !== undefined ? isMobileProp : isMobileLocal;
 
   const effectiveSelectedChat = (selectedChat && !deletedChatIds.has(selectedChat.id)) ? selectedChat : null;
   const activeChatObj = effectiveSelectedChat;
   const [mobileSubView, setMobileSubView] = useState(() => (selectedChat && !deletedChatIds.has(selectedChat.id)) ? 'room' : 'list');
-
-  // 🛡️ SÉCURITÉ ANTI-APPEL FANTÔME (PWA & LOCALSTORAGE)
-  // Purge au montage les états éphémères orphelins si aucun ID de salle valide n'est détecté côté serveur
-  useEffect(() => {
-    let isMounted = true;
-
-    const purgePhantomCallState = async () => {
-      // 1. Purge immédiate des variables éphémères dans les stores Zustand
-      try {
-        if (typeof useChatStore !== 'undefined' && useChatStore.getState) {
-          const chatState = useChatStore.getState();
-          if (
-            chatState.activeCallPip ||
-            chatState.isCallActive ||
-            chatState.callRoomId ||
-            chatState.isInCall ||
-            chatState.activeCall
-          ) {
-            chatState.setActiveCallPip?.(false);
-            chatState.setIsCallActive?.(false);
-            chatState.setCallRoomId?.(null);
-            chatState.setIsInCall?.(false);
-            chatState.setActiveCall?.(null);
-            chatState.setCallDuration?.(0);
-          }
-        }
-        if (typeof useCallStore !== 'undefined' && useCallStore.getState) {
-          useCallStore.getState().resetCallState?.();
-        }
-      } catch (err) {
-        console.warn('[ChatView] Erreur réinitialisation stores appel:', err);
-      }
-
-      // 2. Nettoyage défensif localStorage des clés corrompues
-      if (typeof window !== 'undefined' && window.localStorage) {
-        try {
-          ['troco_active_call', 'troco_call_state', 'troco_call_room_id', 'troco_call_store'].forEach((k) => {
-            localStorage.removeItem(k);
-          });
-        } catch (_) {}
-      }
-
-      // 3. Vérification de la validité de la salle côté serveur Firestore
-      const targetChatId = activeChatObj?.id || selectedChat?.id;
-      const hasCallIndicator = Boolean(
-        activeChatObj?.activeCall?.isLive ||
-        selectedChat?.activeCall?.isLive ||
-        activeChatObj?.activeCall ||
-        selectedChat?.activeCall
-      );
-
-      if (targetChatId && hasCallIndicator) {
-        try {
-          const callDocRef = doc(db, 'calls', String(targetChatId));
-          const callSnap = await getDoc(callDocRef);
-
-          const isValidServerCall =
-            callSnap.exists() &&
-            (callSnap.data()?.status === 'ringing' || callSnap.data()?.status === 'connected');
-
-          if (!isValidServerCall && isMounted) {
-            console.info('[ChatView] 🧹 Salle active fantôme purgée pour le chat:', targetChatId);
-            if (typeof setSelectedChat === 'function') {
-              setSelectedChat((prev) => {
-                if (!prev) return prev;
-                return {
-                  ...prev,
-                  activeCall: null,
-                  isLive: false,
-                };
-              });
-            }
-
-            // Nettoyage en arrière-plan sur le document Firestore 'chats'
-            updateDoc(doc(db, 'chats', String(targetChatId)), {
-              activeCall: null,
-              isLive: false,
-              updatedAt: serverTimestamp(),
-            }).catch(() => {});
-          }
-        } catch (err) {
-          console.warn('[ChatView] Erreur vérification salle serveur:', err);
-          if (isMounted && typeof setSelectedChat === 'function') {
-            setSelectedChat((prev) => (prev ? { ...prev, activeCall: null, isLive: false } : prev));
-          }
-        }
-      } else if (hasCallIndicator && !targetChatId && isMounted) {
-        if (typeof setSelectedChat === 'function') {
-          setSelectedChat((prev) => (prev ? { ...prev, activeCall: null, isLive: false } : prev));
-        }
-      }
-    };
-
-    purgePhantomCallState();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [activeChatObj?.id, selectedChat?.id, setSelectedChat]);
-
-  // 🤝 Écoute de l'événement de clôture festive de deal pour déclencher confettis + modale d'évaluation
-  useEffect(() => {
-    const handleDealCompletedEvent = (event) => {
-      setShowConfetti(true);
-      setTimeout(() => setShowConfetti(false), 4500);
-      if (typeof navigator !== 'undefined' && navigator.vibrate) {
-        try { navigator.vibrate([100, 50, 100]); } catch (_) {}
-      }
-      const detail = event?.detail || {};
-      setRatingDealData({
-        isOpen: true,
-        dealId: detail.dealId || detail.dealMessageId || 'deal',
-        partnerUid: detail.partnerUid || activeChatObj?.uid || activeChatObj?.id,
-        partnerName: detail.partnerName || activeChatObj?.user || 'Partenaire',
-        serviceTitle: detail.serviceTitle || activeChatObj?.listingTitle || 'Troc de compétences',
-      });
-    };
-    window.addEventListener('troco:deal_completed', handleDealCompletedEvent);
-    return () => window.removeEventListener('troco:deal_completed', handleDealCompletedEvent);
-  }, [activeChatObj]);
 
   const openWhiteboard = useCallback((boardId = null, version = null, initialView = null) => {
     setActiveWhiteboardBoardId(boardId);
@@ -689,19 +560,7 @@ function ChatView({
 
   const currentChatId = effectiveSelectedChat ? effectiveSelectedChat.id : null;
   const messages = useMemo(() => {
-    const raw = currentChatId ? (chatThreads[currentChatId] || []) : [];
-    if (!raw.length) return [];
-
-    // Déduplication absolue basée sur Map (id ou temporaryId)
-    const uniqueMessages = Array.from(
-      new Map(raw.map(item => [item.id || item.temporaryId, item])).values()
-    );
-
-    return uniqueMessages.sort((a, b) => {
-      const tA = typeof a.timestamp === 'number' ? a.timestamp : (typeof a.createdAt === 'number' ? a.createdAt : new Date(a.createdAt || 0).getTime());
-      const tB = typeof b.timestamp === 'number' ? b.timestamp : (typeof b.createdAt === 'number' ? b.createdAt : new Date(b.createdAt || 0).getTime());
-      return tA - tB;
-    });
+    return currentChatId ? (chatThreads[currentChatId] || []) : [];
   }, [currentChatId, chatThreads]);
 
   const prevChatIdRef = useRef(null);
@@ -734,11 +593,7 @@ function ChatView({
 
   // 🚨 PHASE 102 : LE MUR PORTEUR DU SCROLL (HOOK INDESTRUCTIBLE)
   useEffect(() => {
-    const scrollToBottom = () => {
-      if (typeof messagesEndRef.current?.scrollIntoView === 'function') {
-        messagesEndRef.current.scrollIntoView({ behavior: 'auto', block: 'end' });
-      }
-    };
+    const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' });
     scrollToBottom();
     setTimeout(scrollToBottom, 150); // Fallback post-render
   }, [selectedChat?.id, messages?.length]);
@@ -965,10 +820,8 @@ function ChatView({
   };
 
   const getChatUnreadCount = (chat) => {
-    if (!readChats || !chat) return 0;
-    const isRead = typeof readChats?.has === 'function'
-      ? (readChats.has(chat.id) || readChats.has(String(chat.id)) || readChats.has(Number(chat.id)))
-      : Boolean(readChats[chat.id] || readChats[String(chat.id)]);
+    if (!readChats) return 0;
+    const isRead = readChats.has(chat.id) || readChats.has(String(chat.id)) || readChats.has(Number(chat.id));
     if (isRead) return 0;
     const thread = chatThreads && chatThreads[chat.id];
     if (thread && thread.length > 0) {
@@ -1759,7 +1612,6 @@ function ChatView({
                   const serviceTitle = terms?.title || terms?.serviceTitle || terms?.itemName || msg?.listing || activeChatObj?.listing || "Prestation de service";
                   const rawDescription = terms?.conditions || terms?.description || terms?.notes || msg?.text || msg?.content || "";
                   const isCounterOffer = Boolean(terms?.isCounterOffer || msg?.type === 'deal_counter_offer');
-                  const currentChatId = activeChatObj?.id ? String(activeChatObj.id) : (selectedChat?.id ? String(selectedChat.id) : null);
 
                   const currentUid = profile?.uid || (auth?.currentUser && auth.currentUser.uid) || '';
                   const senderId = msg?.senderId || msg?.authorUid || msg?.senderUid || (msg?.sender === 'me' ? currentUid : '');
@@ -2152,113 +2004,9 @@ function ChatView({
                         </div>
                       )}
 
-                      {currentDealStatus === 'troc_in_progress' && (() => {
-                        const confirmations = msg?.completionConfirmations || {};
-                        const myConfirmed = Boolean(currentUid && confirmations[currentUid]);
-                        const confirmCount = Object.values(confirmations).filter(Boolean).length;
-
-                        return (
-                          <div style={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '8px',
-                            backgroundColor: 'rgba(59, 130, 246, 0.08)',
-                            border: '1.5px solid rgba(59, 130, 246, 0.35)',
-                            borderRadius: '14px',
-                            padding: '12px 14px',
-                            marginTop: '8px'
-                          }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                              <span style={{ fontSize: '12.5px', fontWeight: '800', color: '#3B82F6', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                🤝 Troc en cours : {confirmCount}/2 validations
-                              </span>
-                              <span style={{ fontSize: '10.5px', fontWeight: '700', color: 'var(--text-secondary)' }}>
-                                Bilatéral
-                              </span>
-                            </div>
-                            <p style={{ fontSize: '11.5px', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.4 }}>
-                              Pour sceller ce troc sans monnaie, chaque participant doit certifier la bonne réalisation de sa prestation.
-                            </p>
-                            {!myConfirmed ? (
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const confirmFn = handleConfirmTrocCompletion || onConfirmTrocCompletion;
-                                  if (typeof confirmFn === 'function') {
-                                    confirmFn(currentChatId, msg?.id);
-                                  }
-                                }}
-                                className="premium-button"
-                                style={{
-                                  border: 'none',
-                                  borderRadius: '999px',
-                                  padding: '10px 16px',
-                                  background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-                                  color: '#FFFFFF',
-                                  fontSize: '12px',
-                                  fontWeight: '800',
-                                  cursor: 'pointer',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  gap: '6px',
-                                  boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)'
-                                }}
-                              >
-                                <CheckCircle size={15} />
-                                <span>Prestation terminée ({confirmCount === 0 ? 'Valider 1/2' : 'Confirmer final 2/2'}) ✓</span>
-                              </button>
-                            ) : (
-                              <div style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                fontSize: '11.5px',
-                                fontWeight: '700',
-                                color: '#10B981'
-                              }}>
-                                <Check size={14} strokeWidth={3} />
-                                <span>Vous avez certifié la prestation. En attente de la confirmation du partenaire ({confirmCount}/2)...</span>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })()}
-
                       {(currentDealStatus === 'confirmed' || currentDealStatus === 'accepted') && (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', borderRadius: '12px', padding: '8px 12px', fontSize: '11.5px', fontWeight: '800' }}>
-                            <CheckCircle size={14} color="var(--accent-primary)" /> <span>Deal validé et scellé avec {partnerName} ✓</span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setRatingDealData({
-                                isOpen: true,
-                                dealId: msg?.id || 'deal',
-                                partnerUid: isMine ? (activeChatObj?.uid || activeChatObj?.id) : (msg?.senderUid || activeChatObj?.uid),
-                                partnerName,
-                                serviceTitle
-                              });
-                            }}
-                            className="premium-button"
-                            style={{
-                              border: '1px solid var(--border-color)',
-                              borderRadius: '999px',
-                              padding: '7px 14px',
-                              backgroundColor: 'var(--bg-subtle)',
-                              color: 'var(--text-main)',
-                              fontSize: '11.5px',
-                              fontWeight: '700',
-                              cursor: 'pointer',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '6px'
-                            }}
-                          >
-                            <span>⭐ Évaluer l'échange</span>
-                          </button>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', borderRadius: '12px', padding: '8px 12px', fontSize: '11.5px', fontWeight: '800' }}>
+                          <CheckCircle size={14} color="var(--accent-primary)" /> <span>Deal validé et scellé avec {partnerName} ✓</span>
                         </div>
                       )}
 
@@ -2528,7 +2276,14 @@ function ChatView({
                       )}
 
                       {msg.type === 'audio' ? (
-                        <MessageBubble message={msg} isMe={isMe} targetLang={currentLang} />
+                        <div className="p-2">
+                          {msg.fileName && (
+                            <div style={{ fontSize: '11px', fontWeight: '800', marginBottom: '4px', opacity: 0.9 }}>
+                              🎵 {msg.fileName}
+                            </div>
+                          )}
+                          <audio controls src={msg.audioUrl} className="max-w-[200px] md:max-w-xs" />
+                        </div>
                       ) : (msg.kind === 'audio' || msg.audioUrl) ? (
                         <div style={{ width: '100%', maxWidth: '260px', minWidth: 0, boxSizing: 'border-box', overflow: 'hidden' }}>
                           <VoiceNotePlayer
@@ -2536,7 +2291,7 @@ function ChatView({
                             duration={msg.duration}
                             isMe={isMe}
                             currentLang={currentLang}
-                            transcription={msg.transcript || msg.transcription || null}
+                            transcription={msg.transcription || null}
                           />
                         </div>
                       ) : (
@@ -2844,11 +2599,10 @@ function ChatView({
             <VoiceNoteRecorder
               isRecording={isRecordingAudio}
               onCancel={() => setIsRecordingAudio(false)}
-              userLang={currentLang || 'fr'}
-              onSendVoiceNote={async (blob, dur, directUrl, mime, transcript, transcriptLang) => {
+              onSendVoiceNote={async (blob, dur) => {
                 userJustSentMessageRef.current = true;
                 if (onSendAudioMessage) {
-                  await onSendAudioMessage(blob, dur, directUrl, mime, transcript, transcriptLang);
+                  await onSendAudioMessage(blob, dur);
                 }
                 setIsRecordingAudio(false);
               }}
@@ -3543,7 +3297,7 @@ function ChatView({
                           >
                             <img
                               src={board.previewUrl}
-                              alt={`Aperçu du tableau : ${board.title || 'Sans titre'}`}
+                              alt="Preview"
                               style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                             />
                           </div>
@@ -3660,7 +3414,7 @@ function ChatView({
       {/* MODALE NOTES PARTAGÉES COLLABORATIVES APPLE-STYLE (LAZY LOADED) */}
       {isSharedDocOpen && (activeChatObj || selectedChat) && (
         <Suspense fallback={null}>
-          <NotesModal
+          <SharedDocumentModal
             isOpen={isSharedDocOpen}
             onClose={() => {
               setIsSharedDocOpen(false);
@@ -3980,7 +3734,7 @@ function ChatView({
                     justifyContent: 'center',
                   }}
                 >
-                  {isTransferringTokens ? 'Transfert en cours...' : `Confirmer le transfert de ${directTokensCount} Jetons Troco`}
+                  {isTransferringTokens ? 'Transfert...' : `Envoyer ${directTokensCount} 🪙`}
                 </button>
               </div>
             </div>
@@ -4037,20 +3791,6 @@ function ChatView({
           currentLang={currentLang}
           darkMode={darkMode}
           t={t}
-        />
-      )}
-
-      {/* MODALE D'ÉVALUATION & AVIS VÉRIFIÉS POST-DEAL */}
-      {ratingDealData?.isOpen && (
-        <DealRatingModal
-          isOpen={ratingDealData.isOpen}
-          onClose={() => setRatingDealData(null)}
-          dealId={ratingDealData.dealId}
-          partnerUid={ratingDealData.partnerUid}
-          partnerName={ratingDealData.partnerName}
-          serviceTitle={ratingDealData.serviceTitle}
-          currentUser={profile}
-          darkMode={darkMode}
         />
       )}
     </>

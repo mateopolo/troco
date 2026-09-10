@@ -23,7 +23,6 @@ export default function ChatSection({
   startCall,
   joinActiveCall,
   handleAcceptDeal,
-  handleConfirmTrocCompletion,
   handleDeclineDeal,
   handleSendToken,
   handleReleaseEscrow,
@@ -90,7 +89,6 @@ export default function ChatSection({
                 startCall={startCall}
                 joinActiveCall={joinActiveCall}
                 handleAcceptDeal={handleAcceptDeal}
-                handleConfirmTrocCompletion={handleConfirmTrocCompletion}
                 handleDeclineDeal={handleDeclineDeal}
                 handleSendToken={handleSendToken}
                 handleReleaseEscrow={handleReleaseEscrow}

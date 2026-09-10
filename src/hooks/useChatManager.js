@@ -22,7 +22,7 @@ import { uploadVoiceNote } from '../services/voiceStorageService';
 import { playBetclicBalanceSound, playApplePaySound, playSwooshSound } from '../utils/audioService';
 import { useChatStore, useWalletStore } from '../stores';
 import { hapticLight, hapticSuccess, hapticError } from '../utils/haptics';
-import { playPop, playSuccessChime } from '../services/audioService';
+import { playPop } from '../services/audioService';
 
 // Singleton audio context pour éviter la saturation des threads WebKit audio sur iOS
 let sharedChatAudioCtx = null;
@@ -80,9 +80,7 @@ export const useChatManager = ({
       const saved = localStorage.getItem('troco_cached_chats');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed.map((c) => ({ ...c, activeCall: null }));
-        }
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
     } catch (_) { }
     return mockChats;
@@ -307,8 +305,7 @@ export const useChatManager = ({
 
       setChatsList(merged);
       try {
-        const sanitizedMerged = merged.map((c) => ({ ...c, activeCall: null }));
-        localStorage.setItem('troco_cached_chats', JSON.stringify(sanitizedMerged));
+        localStorage.setItem('troco_cached_chats', JSON.stringify(merged));
         useChatStore.getState().setChatsList(merged);
       } catch (_) { }
     };
@@ -429,10 +426,7 @@ export const useChatManager = ({
               const map = new Map(prev.map(c => [c.id, c]));
               fetched.forEach(f => map.set(f.id, f));
               const res = Array.from(map.values());
-              try {
-                const sanitizedRes = res.map((c) => ({ ...c, activeCall: null }));
-                localStorage.setItem('troco_cached_chats', JSON.stringify(sanitizedRes));
-              } catch (_) {}
+              try { localStorage.setItem('troco_cached_chats', JSON.stringify(res)); } catch (_) {}
               return res;
             });
           }
@@ -515,76 +509,120 @@ export const useChatManager = ({
     }, 0);
   }, [chatsList, chatThreads, readChats, selectedChat, activeTab, profile?.name, profile?.username, profile?.uid, auth]);
 
-  // ---- SOUSCRIPTION UNIQUE AUX MESSAGES DU CHAT ACTIF ----
+  // ---- SYNC MESSAGES EN TEMPS RÉEL (chat actif avec tri en mémoire résilient) ----
   useEffect(() => {
     if (!selectedChat?.id || !db) return;
     const chatId = String(selectedChat.id);
-    const myUid = profile?.uid || (auth?.currentUser && auth.currentUser.uid);
+    const myUid = profile?.uid || (auth?.currentUser && auth.currentUser.uid) || null;
 
-    const handleSnapshot = (snap) => {
-      const msgs = snap.docs.map(d => {
+    let unsub = () => {};
+
+    const handleSnapshot = (snapshot) => {
+      if (snapshot.empty) return;
+      const firestoreIds = new Set(snapshot.docs.map(d => d.id));
+
+      const msgs = snapshot.docs.map(d => {
         const data = d.data();
-        const text = data.content || data.text || '';
-        const isMe = (myUid && data.senderUid && String(data.senderUid) === String(myUid)) ||
-          (data.senderName && profile?.name && data.senderName.trim().toLowerCase() === profile.name.trim().toLowerCase()) ||
-          data.sender === 'me';
+        const isMe = (data.senderUid && myUid && String(data.senderUid) === String(myUid)) ||
+          (data.senderName?.trim().toLowerCase() === profile?.name?.trim().toLowerCase()) ||
+          (data.sender === 'me');
         return {
           id: d.id,
           ...data,
-          text,
-          content: text,
           sender: isMe ? 'me' : 'them',
-          senderName: data.senderName || (isMe ? (profile?.name || 'Moi') : (selectedChat.user || 'Interlocuteur')),
+          senderName: data.senderName || (isMe ? profile?.name : (selectedChat.user || 'Interlocuteur')),
+          text: data.text || '',
           status: data.status || 'sent',
+          createdAt: data.createdAt?.toMillis ? data.createdAt.toMillis() : (data.createdAt || data.timestamp || Date.now()),
+          translations: data.translations || { FR: data.text || '' },
         };
       });
 
-      setChatThreads(prev => ({
-        ...prev,
-        [selectedChat.id]: msgs,
-        [chatId]: msgs,
-      }));
+      // Fusionner avec les messages optimistes en vol (temp_*) dont l'ID Firestore n'est pas encore connu.
+      // Cela évite le doublon : le temp_ reste visible jusqu'à ce que le vrai doc Firestore arrive.
+      setChatThreads(prev => {
+        const currentThread = prev[selectedChat.id] || [];
+        const inFlightOptimistic = currentThread.filter(
+          m => typeof m.id === 'string' && m.id.startsWith('temp_') && !firestoreIds.has(m.id)
+        );
 
-      try {
-        useChatStore.getState().updateChatThread(selectedChat.id, msgs);
-      } catch (_) {}
+        // Union : vrais messages Firestore + messages optimistes encore non confirmés
+        const combined = [...msgs, ...inFlightOptimistic];
 
+        // Déduplication stricte par ID (les doublons éventuels sont éliminés)
+        const seen = new Set();
+        const unique = combined.filter(m => {
+          const key = String(m.id);
+          if (seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        });
+
+        // Tri chronologique ascendant côté client
+        unique.sort((a, b) => {
+          const tA = typeof a.createdAt === 'number' ? a.createdAt : new Date(a.createdAt || 0).getTime();
+          const tB = typeof b.createdAt === 'number' ? b.createdAt : new Date(b.createdAt || 0).getTime();
+          return tA - tB;
+        });
+
+        return {
+          ...prev,
+          [selectedChat.id]: unique,
+        };
+      });
+
+      // Si le chat est ouvert dans l'onglet 'chat', marquer automatiquement les messages reçus comme "lu"
+      if (activeTab === 'chat' && String(selectedChat.id) === String(chatId)) {
+        snapshot.docs.forEach(d => {
+          const data = d.data();
+          const isFromThem = (data.senderUid && myUid && String(data.senderUid) !== String(myUid)) ||
+            (data.senderName?.trim().toLowerCase() !== profile?.name?.trim().toLowerCase());
+          if (isFromThem && data.status !== 'read' && !data.read) {
+            updateDoc(doc(db, 'chats', chatId, 'messages', d.id), {
+              status: 'read',
+              read: true,
+              readAt: serverTimestamp(),
+            }).catch(() => { });
+          }
+        });
+      }
+
+      // Synchronisation immédiate de l'aperçu du dernier message dans chatsList
       if (msgs.length > 0) {
         const lastMsg = msgs[msgs.length - 1];
-        const previewTxt = lastMsg.content || lastMsg.text || '';
-        setChatsList(prev => prev.map(c => String(c.id) === chatId ? {
+        const previewTxt = lastMsg.kind === 'deal' || lastMsg.type === 'deal'
+          ? (lastMsg.terms?.conditions || 'Proposition de deal')
+          : (lastMsg.text || '');
+        setChatsList(prev => prev.map(c => String(c.id) === String(selectedChat.id) ? {
           ...c,
           lastMessage: previewTxt,
           lastSenderName: lastMsg.senderName,
         } : c));
       }
 
-      setReadChats(prev => new Set([...prev, selectedChat.id, chatId]));
+      // Si la conversation est activement consultée, marquer comme lue
+      setReadChats(prev => new Set([...prev, selectedChat.id, String(selectedChat.id), Number(selectedChat.id)]));
     };
 
-    let unsub = () => {};
     try {
-      const q = query(
-        collection(db, 'chats', chatId, 'messages'),
-        orderBy('timestamp', 'asc')
-      );
+      const q = query(collection(db, 'chats', chatId, 'messages'), orderBy('createdAt', 'asc'));
       unsub = onSnapshot(q, handleSnapshot, (err) => {
-        console.warn('[Firestore] onSnapshot with orderBy timestamp failed, fallback without orderBy:', err);
+        console.warn('[Firestore] chat messages onSnapshot with orderBy failed, fallback without orderBy:', err);
         try {
           const fallbackQ = collection(db, 'chats', chatId, 'messages');
           unsub = onSnapshot(fallbackQ, handleSnapshot, (fallbackErr) => {
-            console.error('[Firestore] onSnapshot fallback failed:', fallbackErr);
+            console.error('[Firestore] chat messages fallback failed:', fallbackErr);
           });
         } catch (_) {}
       });
     } catch (err) {
-      console.warn('[Firestore] query setup error:', err);
+      console.warn('[Firestore] chat messages listener setup failed:', err);
     }
 
     return () => {
       if (typeof unsub === 'function') unsub();
     };
-  }, [selectedChat?.id, profile?.name, profile?.uid, auth, db]);
+  }, [selectedChat?.id, selectedChat?.user, profile?.name, profile?.uid, activeTab, auth, db]);
 
   // ---- GESTION DU TYPING INDICATOR TEMPS RÉEL (DEBOUNCE 2.5S) ----
   const typingTimeoutRef = useRef(null);
@@ -611,77 +649,174 @@ export const useChatManager = ({
     }, 2500);
   };
 
-  // ---- ENVOI DE MESSAGE (PROMPT 1 [FIX-CHAT]) ----
-  const handleSendMessage = async (textOrPayload = null) => {
-    const uid = profile?.uid || (auth?.currentUser && auth.currentUser.uid);
-    if (!selectedChat?.id || !uid) return;
-    const chatId = String(selectedChat.id);
+  // ---- ENVOI DE MESSAGE (TEXTE OU PAYLOAD OBJET PERSONNALISÉ / WHITEBOARD) ----
+  const handleSendMessage = async (customPayload = null) => {
+    if (!selectedChat) return;
+    hapticLight();
+    playPop();
 
-    // Support payload objet personnalisé (ex: note vocale, tableau blanc)
-    if (textOrPayload && typeof textOrPayload === 'object' && !textOrPayload.preventDefault) {
-      if (!db) return;
-      const preview = (textOrPayload.content || textOrPayload.text || (textOrPayload.type === 'audio' ? '🎵 Note vocale' : 'Document partagé')).trim();
-      const messagesRef = collection(db, 'chats', chatId, 'messages');
-      await addDoc(messagesRef, {
-        ...textOrPayload,
-        content: preview,
+    if (customPayload && typeof customPayload === 'object') {
+      const chatId = selectedChat.id;
+      const myUid = profile?.uid || auth?.currentUser?.uid || 'me';
+      const myName = profile?.name || 'Moi';
+
+      // Utiliser un tempId préfixé pour que handleSnapshot puisse l'identifier comme optimiste
+      // et ne pas le doubler lorsque Firestore confirme l'écriture.
+      const tempId = `temp_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      const preview = customPayload.text || (customPayload.type === 'audio'
+        ? `🎵 ${customPayload.fileName || 'Fichier audio'}`
+        : `🎨 ${myName} a partagé le Tableau Blanc : "${customPayload.workspaceTitle || customPayload.title || 'Tableau Blanc'}"`);
+
+      const payload = {
+        id: tempId,
+        sender: 'me',
+        senderUid: myUid,
+        senderName: myName,
+        status: 'pending',
+        createdAt: new Date(),
+        ...customPayload,
         text: preview,
-        senderUid: uid,
-        senderName: profile?.name || 'Utilisateur',
-        timestamp: serverTimestamp(),
-        createdAt: serverTimestamp(),
-        status: 'sent',
-      });
-      try {
-        await updateDoc(doc(db, 'chats', chatId), {
-          lastMessage: preview,
-          lastMessageAt: serverTimestamp(),
-        });
-      } catch (_) {
-        await setDoc(doc(db, 'chats', chatId), {
-          lastMessage: preview,
-          lastMessageAt: serverTimestamp(),
-        }, { merge: true });
+      };
+
+      // 1. Insertion optimiste immédiate
+      setChatThreads(prev => ({
+        ...prev,
+        [chatId]: [...(prev[chatId] || []), payload]
+      }));
+
+      setChatsList(prev => prev.map(c => String(c.id) === String(chatId) ? {
+        ...c,
+        lastMessage: preview,
+        lastSenderName: myName
+      } : c));
+
+      if (db) {
+        try {
+          // 2. Écriture Firestore atomique (audioUrl DOIT être présent avant cet appel)
+          const docRef = await addDoc(collection(db, 'chats', String(chatId), 'messages'), {
+            ...customPayload,
+            sender: myUid,
+            senderUid: myUid,
+            senderName: myName,
+            text: preview,
+            read: false,
+            status: 'sent',
+            createdAt: serverTimestamp(),
+          });
+
+          // 3. Promouvoir le tempId vers l'ID Firestore réel → handleSnapshot ignorera le doublon
+          setChatThreads(prev => {
+            const thread = prev[chatId] || [];
+            return {
+              ...prev,
+              [chatId]: thread.map(m =>
+                m.id === tempId ? { ...m, id: docRef.id, status: 'sent' } : m
+              ),
+            };
+          });
+
+          await setDoc(doc(db, 'chats', String(chatId)), {
+            id: chatId,
+            user: selectedChat.user,
+            listing: selectedChat.listing,
+            lastMessage: preview,
+            lastSenderName: myName,
+            unreadCount: increment(1),
+            participants: selectedChat.participants || [myName, selectedChat.user],
+            updatedAt: serverTimestamp(),
+          }, { merge: true });
+        } catch (e) {
+          console.warn('[Firestore] custom message write failed:', e);
+          // Marquer le message optimiste comme erreur
+          setChatThreads(prev => {
+            const thread = prev[chatId] || [];
+            return {
+              ...prev,
+              [chatId]: thread.map(m => m.id === tempId ? { ...m, status: 'error' } : m),
+            };
+          });
+        }
       }
       return;
     }
 
-    const rawText = typeof textOrPayload === 'string' ? textOrPayload : (typeof messageDraft === 'string' ? messageDraft : '');
-    const text = rawText.trim();
+    const text = messageDraft.trim();
     if (!text) return;
 
-    hapticLight();
-    playPop();
-    setMessageDraft('');
+    const messageCheck = validateChatMessage(text);
+    if (!messageCheck.isValid) {
+      alert(messageCheck.errorMessage);
+      return;
+    }
+
+    const chatId = selectedChat.id;
 
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     if (profile?.name && db) {
-      setDoc(doc(db, 'chats', chatId), {
+      setDoc(doc(db, 'chats', String(chatId)), {
         typing: { [profile.name]: false }
       }, { merge: true }).catch(() => { });
     }
 
+    const tempId = `temp_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const newMessage = {
+      id: tempId,
+      sender: 'me',
+      senderName: profile?.name || 'Moi',
+      senderUid: profile?.uid || null,
+      text,
+      status: 'pending',
+      createdAt: new Date(),
+      translations: { FR: text }
+    };
+
+    // 1. Optimistic insertion : rendu instantané 0ms avec status pending (icône horloge)
+    setChatThreads(prev => ({ ...prev, [chatId]: [...(prev[chatId] || []), newMessage] }));
+    useChatStore.getState().addMessageToThread(chatId, newMessage);
+    setMessageDraft('');
+
+    setChatsList(prev => prev.map(c => String(c.id) === String(chatId) ? { ...c, lastMessage: text, lastSenderName: profile?.name || 'Moi' } : c));
+
     if (db) {
-      const messagesRef = collection(db, 'chats', chatId, 'messages');
-      await addDoc(messagesRef, {
-        content: text,
-        text: text,
-        senderUid: uid,
-        senderName: profile?.name || 'Utilisateur',
-        timestamp: serverTimestamp(),
-        createdAt: serverTimestamp(),
-        status: 'sent',
-      });
       try {
-        await updateDoc(doc(db, 'chats', chatId), {
-          lastMessage: text,
-          lastMessageAt: serverTimestamp(),
+        const docRef = await addDoc(collection(db, 'chats', String(chatId), 'messages'), {
+          senderName: profile?.name || 'Moi',
+          senderUid: profile?.uid || null,
+          text,
+          read: false,
+          status: 'sent',
+          createdAt: serverTimestamp(),
         });
-      } catch (_) {
-        await setDoc(doc(db, 'chats', chatId), {
+
+        // Mise à jour optimiste -> sent
+        setChatThreads(prev => {
+          const thread = prev[chatId] || [];
+          return {
+            ...prev,
+            [chatId]: thread.map(m => m.id === tempId ? { ...m, id: docRef.id || tempId, status: 'sent' } : m)
+          };
+        });
+
+        await setDoc(doc(db, 'chats', String(chatId)), {
+          id: chatId,
+          user: selectedChat.user,
+          listing: selectedChat.listing,
           lastMessage: text,
-          lastMessageAt: serverTimestamp(),
+          lastSenderName: profile?.name || 'Moi',
+          unreadCount: increment(1),
+          participants: selectedChat.participants || [profile?.name || 'Moi', selectedChat.user],
+          updatedAt: serverTimestamp(),
         }, { merge: true });
+      } catch (e) {
+        console.warn('[Firestore] message write failed, marked as error:', e);
+        // Échec -> statut error avec option Réessayer
+        setChatThreads(prev => {
+          const thread = prev[chatId] || [];
+          return {
+            ...prev,
+            [chatId]: thread.map(m => m.id === tempId ? { ...m, status: 'error' } : m)
+          };
+        });
       }
     }
   };
@@ -718,11 +853,6 @@ export const useChatManager = ({
             [chatId]: thread.map(m => m.id === msg.id ? { ...m, id: docRef.id || msg.id, status: 'sent' } : m)
           };
         });
-
-        // Déduplication & purge de l'ID temporaire dans le cache persistant Zustand
-        try {
-          useChatStore.getState().replaceTempId(chatId, msg.id, docRef.id);
-        } catch (_) {}
       } catch (e) {
         console.warn('[Firestore] retry failed:', e);
         setChatThreads(prev => {
@@ -787,42 +917,24 @@ export const useChatManager = ({
   };
 
   // ---- ENVOI DE MESSAGE VOCAL ----
-  const handleSendAudioMessage = async (audioBlob, duration, providedAudioUrl = null, mimeType = null, transcription = null, transcriptLang = null) => {
+  const handleSendAudioMessage = async (audioBlob, duration) => {
     if (!selectedChat) return;
     const chatId = selectedChat.id;
-    
-    let audioUrl = providedAudioUrl;
-    let finalMime = mimeType;
-    if (!audioUrl && audioBlob) {
-      const uploadRes = await uploadVoiceNote(audioBlob, chatId);
-      audioUrl = uploadRes?.audioUrl;
-      finalMime = uploadRes?.mimeType || finalMime;
-    }
+    const uploadRes = await uploadVoiceNote(audioBlob, chatId);
+    const audioUrl = uploadRes?.audioUrl;
     if (!audioUrl) return;
 
     const formattedDuration = Math.round(duration || 0);
-    const tempId = `temp_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-    const nowTime = Date.now();
-    const resolvedLang = transcriptLang || profile?.language || 'fr';
-    const textTranscribed = transcription || '';
-
     const newAudioMessage = {
-      id: tempId,
-      temporaryId: tempId,
+      id: Date.now(),
       sender: 'me',
-      senderUid: profile?.uid || null,
       senderName: profile?.name || 'Moi',
       kind: 'audio',
       type: 'audio',
       audioUrl,
       duration: formattedDuration,
-      mimeType: finalMime || 'audio/mp4',
-      transcript: textTranscribed,
-      transcription: textTranscribed,
-      transcriptLang: resolvedLang,
-      status: 'pending',
-      timestamp: nowTime,
-      createdAt: new Date(nowTime),
+      status: 'sent',
+      createdAt: new Date(),
       text: `🎤 Note vocale (${formattedDuration}s)`,
     };
 
@@ -836,36 +948,17 @@ export const useChatManager = ({
 
     if (db) {
       try {
-        const docRef = await addDoc(collection(db, 'chats', String(chatId), 'messages'), {
+        await addDoc(collection(db, 'chats', String(chatId), 'messages'), {
           senderName: profile?.name || 'Moi',
-          senderUid: profile?.uid || null,
           kind: 'audio',
           type: 'audio',
           audioUrl,
           duration: formattedDuration,
-          mimeType: finalMime || 'audio/mp4',
-          transcript: textTranscribed,
-          transcription: textTranscribed,
-          transcriptLang: resolvedLang,
           text: newAudioMessage.text,
           read: false,
           status: 'sent',
           createdAt: serverTimestamp(),
         });
-
-        // Promouvoir le temporaryId vers le vrai ID Firestore
-        setChatThreads(prev => {
-          const thread = prev[chatId] || [];
-          return {
-            ...prev,
-            [chatId]: thread.map(m => m.id === tempId ? { ...m, id: docRef.id || tempId, status: 'sent' } : m),
-          };
-        });
-
-        // Déduplication & purge de l'ID temporaire dans le cache persistant Zustand
-        try {
-          useChatStore.getState().replaceTempId(chatId, tempId, docRef.id);
-        } catch (_) {}
         await setDoc(doc(db, 'chats', String(chatId)), {
           lastMessage: newAudioMessage.text,
           lastSenderName: profile?.name || 'Moi',
@@ -1695,37 +1788,19 @@ export const useChatManager = ({
     const tokensAmount = Number(terms?.trocoTokens !== undefined ? terms.trocoTokens : terms?.expectedTokens) || 0;
     const euroAmount = Number(terms?.euroAmount !== undefined ? terms.euroAmount : terms?.fiatAmount) || 0;
 
-    // 1. Troc direct (0€ et 0 jeton) : Double validation bilatérale requise (1/2 et 2/2)
+    // 1. Troc direct (0€ et 0 jeton) : validation instantanée
     if (euroAmount === 0 && tokensAmount === 0) {
-      setChatThreads(prev => ({
-        ...prev,
-        [chatId]: (prev[chatId] || []).map(m => String(m.id) === String(dealId) ? {
-          ...m,
-          status: 'troc_in_progress',
-          completionConfirmations: { [currentUid]: true },
-        } : m),
-      }));
-      setChatStatusOverrides(prev => ({ ...prev, [chatId]: 'Prestation en cours (Troc)' }));
-      setSaveMessage(`🤝 Offre acceptée ! Les deux parties doivent cliquer sur « Prestation terminée » pour sceller l'accord.`);
-      setTimeout(() => setSaveMessage(''), 5000);
-
-      if (db) {
-        try {
-          await updateDoc(doc(db, 'chats', String(chatId), 'messages', String(dealId)), {
-            status: 'troc_in_progress',
-            acceptedAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-            [`completionConfirmations.${currentUid}`]: true,
-          });
-          await setDoc(doc(db, 'chats', String(chatId)), {
-            lastDealStatus: 'troc_in_progress',
-            lastMessage: `🤝 Proposition de troc acceptée ! Prestation en cours.`,
-            updatedAt: serverTimestamp(),
-          }, { merge: true });
-        } catch (e) {
-          console.warn('[Firestore] troc in progress write error:', e);
-        }
-      }
+      await executeDealTransaction({
+        chatId,
+        dealId,
+        terms,
+        buyerUid: profile?.uid,
+        partnerUid,
+        partnerName,
+        euroAmount: 0,
+        tokensAmount: 0,
+        paymentMethod: 'Troc Direct',
+      });
       return;
     }
 
@@ -1765,120 +1840,6 @@ export const useChatManager = ({
         }, { merge: true });
       } catch (e) {
         console.warn('[Firestore] deal decline write failed:', e);
-      }
-    }
-  };
-
-  // ---- DOUBLE VALIDATION BILATÉRALE DE TROC (PRESTATION TERMINÉE) ----
-  const handleConfirmTrocCompletion = async (chatId, dealId) => {
-    hapticSuccess();
-    playSuccessChime();
-    const currentUid = String(profile?.uid || auth?.currentUser?.uid || 'me');
-    const chat = (selectedChat && String(selectedChat.id) === String(chatId))
-      ? selectedChat
-      : (chatsList.find(c => String(c.id) === String(chatId)) || mockChats.find(c => String(c.id) === String(chatId)));
-    const partnerName = chat?.user || 'Partenaire';
-    let partnerUid = chat?.partnerUid;
-    if (!partnerUid || partnerUid === currentUid) {
-      partnerUid = chat?.authorUid !== currentUid ? chat?.authorUid : null;
-    }
-
-    let isBothConfirmed = false;
-    let dealTerms = {};
-
-    setChatThreads(prev => {
-      const msgs = prev[chatId] || [];
-      const updated = msgs.map(m => {
-        if (String(m.id) === String(dealId)) {
-          dealTerms = m.dealTerms || m.terms || m.proposal || {};
-          const currentCompletions = { ...(m.completionConfirmations || {}) };
-          currentCompletions[currentUid] = true;
-
-          const totalConfirmed = Object.keys(currentCompletions).filter(k => Boolean(currentCompletions[k])).length;
-          const bothConfirmed = totalConfirmed >= 2 || (m.status === 'troc_in_progress' && Object.keys(currentCompletions).length >= 2);
-
-          if (bothConfirmed) {
-            isBothConfirmed = true;
-            return {
-              ...m,
-              status: 'confirmed',
-              completionConfirmations: currentCompletions,
-              completedAt: new Date().toISOString(),
-            };
-          }
-          return {
-            ...m,
-            status: 'troc_in_progress',
-            completionConfirmations: currentCompletions,
-          };
-        }
-        return m;
-      });
-      return { ...prev, [chatId]: updated };
-    });
-
-    if (isBothConfirmed) {
-      setChatStatusOverrides(prev => ({ ...prev, [chatId]: 'Deal Validé' }));
-      setProfile(prev => ({
-        ...prev,
-        dealsCompleted: (prev?.dealsCompleted || 0) + 1,
-      }));
-      setSaveMessage(`🎉 Troc validé par les deux parties ! Deal scellé avec ${partnerName}.`);
-      setTimeout(() => setSaveMessage(''), 5000);
-
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('troco:deal_completed', {
-          detail: {
-            chatId,
-            dealId,
-            partnerName,
-            partnerUid,
-            serviceTitle: dealTerms?.title || 'Troc de services',
-          }
-        }));
-      }
-    } else {
-      setSaveMessage(`✓ Vous avez confirmé la fin de prestation. En attente de la confirmation de ${partnerName} (1/2).`);
-      setTimeout(() => setSaveMessage(''), 5000);
-    }
-
-    if (db) {
-      try {
-        const msgRef = doc(db, 'chats', String(chatId), 'messages', String(dealId));
-        if (isBothConfirmed) {
-          await updateDoc(msgRef, {
-            status: 'confirmed',
-            [`completionConfirmations.${currentUid}`]: true,
-            completedAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-          });
-          await setDoc(doc(db, 'chats', String(chatId)), {
-            lastDealStatus: 'confirmed',
-            lastMessage: `🤝 Troc accompli et validé par les deux parties !`,
-            updatedAt: serverTimestamp(),
-          }, { merge: true });
-
-          if (profile?.uid) {
-            await updateDoc(doc(db, 'users', String(profile.uid)), {
-              dealsCompleted: increment(1),
-              updatedAt: serverTimestamp(),
-            }).catch(() => {});
-          }
-          if (partnerUid) {
-            await updateDoc(doc(db, 'users', String(partnerUid)), {
-              dealsCompleted: increment(1),
-              updatedAt: serverTimestamp(),
-            }).catch(() => {});
-          }
-        } else {
-          await updateDoc(msgRef, {
-            [`completionConfirmations.${currentUid}`]: true,
-            status: 'troc_in_progress',
-            updatedAt: serverTimestamp(),
-          });
-        }
-      } catch (err) {
-        console.warn('[Firestore] update troc completion error:', err);
       }
     }
   };
@@ -2391,7 +2352,6 @@ export const useChatManager = ({
     handleReleaseEscrow,
     handleAcceptDeal,
     handleDeclineDeal,
-    handleConfirmTrocCompletion,
     handleSendToken,
     handleTransferToken,
     sendPostCallTip,

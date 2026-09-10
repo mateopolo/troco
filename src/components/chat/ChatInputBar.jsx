@@ -16,7 +16,6 @@ import {
   X,
   CornerDownRight,
   Image as ImageIcon,
-  Presentation,
 } from 'lucide-react';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { collection, addDoc, doc, setDoc, serverTimestamp } from 'firebase/firestore';
@@ -79,29 +78,11 @@ function ChatInputBar({
       haptics.impact();
       let downloadUrl = '';
 
-      const isIOS = typeof navigator !== 'undefined' && (
-        /iPad|iPhone|iPod/.test(navigator.userAgent || '') ||
-        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-      );
-
-      const ext = (file.name.split('.').pop() || '').toLowerCase();
-      let normalizedMime = file.type;
-      if (!normalizedMime || normalizedMime === 'application/octet-stream') {
-        if (ext === 'mp4' || ext === 'm4a') normalizedMime = 'audio/mp4';
-        else if (ext === 'webm') normalizedMime = 'audio/webm';
-        else if (ext === 'ogg') normalizedMime = 'audio/ogg';
-        else if (ext === 'mp3') normalizedMime = 'audio/mpeg';
-        else if (ext === 'wav') normalizedMime = 'audio/wav';
-        else normalizedMime = isIOS ? 'audio/mp4' : 'audio/webm';
-      } else if (isIOS && (normalizedMime.includes('m4a') || ext === 'm4a' || ext === 'mp4')) {
-        normalizedMime = 'audio/mp4';
-      }
-
       if (storage) {
         const cleanName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
         const storageRef = ref(storage, `chat_audios/${cleanName}`);
         const snapshot = await uploadBytes(storageRef, file, {
-          contentType: normalizedMime || (isIOS ? 'audio/mp4' : 'audio/mpeg'),
+          contentType: file.type || 'audio/mpeg',
         });
         downloadUrl = await getDownloadURL(snapshot.ref);
       } else {
@@ -117,9 +98,6 @@ function ChatInputBar({
         type: 'audio',
         audioUrl: downloadUrl,
         fileName: file.name,
-        mimeType: normalizedMime,
-        transcript: '',
-        transcriptLang: 'fr',
       };
 
       if (typeof onAudioUpload === 'function') {
@@ -143,12 +121,6 @@ function ChatInputBar({
     } catch (err) {
       console.error('[ChatInputBar] handleAudioUpload error:', err);
       try {
-        const isIOS = typeof navigator !== 'undefined' && (
-          /iPad|iPhone|iPod/.test(navigator.userAgent || '') ||
-          (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-        );
-        const ext = (file.name.split('.').pop() || '').toLowerCase();
-        const fallbackMime = (ext === 'mp4' || ext === 'm4a' || isIOS) ? 'audio/mp4' : (ext === 'webm' ? 'audio/webm' : 'audio/mpeg');
         const dataUrl = await new Promise((resolve, reject) => {
           const reader = new FileReader();
           reader.onloadend = () => resolve(reader.result);
@@ -159,9 +131,6 @@ function ChatInputBar({
           type: 'audio',
           audioUrl: dataUrl,
           fileName: file.name,
-          mimeType: fallbackMime,
-          transcript: '',
-          transcriptLang: 'fr',
         };
         if (typeof onAudioUpload === 'function') {
           await onAudioUpload(fallbackMsg);
@@ -285,7 +254,6 @@ function ChatInputBar({
             onClick={onCancelReply}
             style={{ border: 'none', background: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px' }}
             title="Annuler la réponse"
-            aria-label="Annuler la réponse"
           >
             <X size={15} />
           </button>
@@ -316,7 +284,6 @@ function ChatInputBar({
             onClick={onCancelEdit}
             style={{ border: 'none', background: 'transparent', color: 'var(--text-secondary)', cursor: 'pointer', padding: '4px' }}
             title="Annuler la modification"
-            aria-label="Annuler la modification du message"
           >
             <X size={15} />
           </button>
@@ -362,8 +329,6 @@ function ChatInputBar({
                 transition: 'all 0.15s ease',
               }}
               title="Outils Collaboratifs Workspace (Tableau blanc, Documents, Feuilles, Notes)"
-              aria-label="Ouvrir le menu des outils collaboratifs Workspace"
-              aria-expanded={isWorkspaceMenuOpen}
             >
               <LayoutGrid size={isMobile ? 16 : 18} />
             </button>
@@ -543,41 +508,6 @@ function ChatInputBar({
                   </div>
                 </button>
 
-                {/* 5. TROCO SLIDES */}
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsWorkspaceMenuOpen(false);
-                    if (onOpenWorkspaceTool) onOpenWorkspaceTool('slides');
-                  }}
-                  className="hover-subtle"
-                  style={{
-                    border: 'none',
-                    backgroundColor: 'transparent',
-                    borderRadius: '12px',
-                    padding: '8px 10px',
-                    minHeight: '44px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    cursor: 'pointer',
-                    textAlign: 'left',
-                    width: '100%',
-                  }}
-                >
-                  <div style={{ width: '34px', height: '34px', borderRadius: '10px', backgroundColor: 'rgba(234, 88, 12, 0.15)', color: '#EA580C', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Presentation size={16} />
-                  </div>
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ fontSize: '12.5px', fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <span>Troco Slides</span>
-                      <span style={{ fontSize: '9px', fontWeight: '800', color: '#EA580C', backgroundColor: 'rgba(234, 88, 12, 0.15)', padding: '1px 5px', borderRadius: '4px' }}>SLIDES</span>
-                    </div>
-                    <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>Présentations interactives & pitchs</div>
-                  </div>
-                </button>
-
                 {/* 5. CALENDRIER */}
                 <button
                   type="button"
@@ -731,7 +661,6 @@ function ChatInputBar({
               flexShrink: 0,
             }}
             title="Joindre un fichier audio (.mp3, .wav)"
-            aria-label="Joindre un fichier audio"
           >
             <Paperclip size={isMobile ? 16 : 18} />
           </button>
@@ -768,7 +697,6 @@ function ChatInputBar({
               flexShrink: 0,
             }}
             title="Envoyer une photo / image"
-            aria-label="Envoyer une photo ou une image"
           >
             <ImageIcon size={isMobile ? 16 : 18} />
           </button>
@@ -806,7 +734,6 @@ function ChatInputBar({
               transition: 'transform 0.15s ease',
             }}
             title="Transférer des Jetons Troco instantanément"
-            aria-label="Transférer des Jetons Troco instantanément"
           >
             <Coins size={18} />
           </button>
@@ -843,7 +770,6 @@ function ChatInputBar({
               flexShrink: 0,
             }}
             title="Enregistrer une note vocale"
-            aria-label="Enregistrer une note vocale"
           >
             <Mic size={isMobile ? 16 : 18} />
           </button>
@@ -874,7 +800,18 @@ function ChatInputBar({
         {/* BOUTON ENVOYER / SOUMISSION (ACCOMPAGNE DIRECTEMENT L'INPUT À SA DROITE) */}
         <button
           type="button"
-          onClick={handleSubmit}
+          onClick={(e) => {
+            if (typeof handleSendMessage === 'function') {
+              handleSendMessage(localText);
+            }
+            handleSubmit(e);
+          }}
+          onTouchEnd={(e) => {
+            if (typeof handleSendMessage === 'function') {
+              handleSendMessage(localText);
+            }
+            handleSubmit(e);
+          }}
           className="premium-button"
           style={{
             border: 'none',
@@ -894,7 +831,6 @@ function ChatInputBar({
             transition: 'transform 0.15s ease',
           }}
           title={editingMsg ? 'Valider la modification' : 'Envoyer'}
-          aria-label={editingMsg ? 'Valider la modification du message' : 'Envoyer le message'}
         >
           {editingMsg ? <Check size={isMobile ? 16 : 18} /> : <Send size={isMobile ? 16 : 18} style={{ transform: 'translateX(-1px)' }} />}
         </button>
