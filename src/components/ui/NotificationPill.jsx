@@ -129,17 +129,17 @@ export function NotificationPill() {
     <div
       style={{
         position: 'fixed',
-        top: 'env(safe-area-inset-top, 8px)',
+        top: 'env(safe-area-inset-top, 16px)',
         left: 0,
         right: 0,
         zIndex: 999999,
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        padding: '8px 16px',
+        padding: '0 16px',
         pointerEvents: 'none',
       }}
-      className="top-safe-area dynamic-island-container"
+      className="top-safe-area dynamic-island-container fixed top-10 left-1/2 -translate-x-1/2 z-[999999] shadow-2xl"
     >
       <AnimatePresence>
         {notification && (

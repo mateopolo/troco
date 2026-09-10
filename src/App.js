@@ -1497,15 +1497,17 @@ export default function App() {
 
       // Détecter un nouveau message entrant non lu (sur modification ou ajout après le chargement initial)
       if (change.type === 'modified' || (change.type === 'added' && !isInitial)) {
-        // Vérifier si l'utilisateur est actuellement en train de consulter cette conversation précise
-        const isCurrentlyViewingThisChat = activeTab === 'chat' && selectedChat && String(selectedChat.id) === String(chatId);
+        // Condition vitale (Tâche 3) : Affiche le Toast UNIQUEMENT si le chemin de l'URL actuelle est différent de l'URL du chat d'où provient le message
+        const currentPath = typeof window !== 'undefined' ? (window.location.pathname + window.location.hash + window.location.search) : '';
+        const isCurrentChatUrl = currentPath.includes(String(chatId)) || (currentPath.includes('chat') && selectedChat && String(selectedChat.id) === String(chatId));
+        const isCurrentlyViewingThisChat = (activeTab === 'chat' && selectedChat && String(selectedChat.id) === String(chatId)) || isCurrentChatUrl;
 
         if (!isCurrentlyViewingThisChat) {
           const senderTitle = data.lastSenderName || data.lastSender || data.user || 'Nouveau message';
           const messageText = data.lastMessage || 'Nouveau message reçu';
           const senderAvatar = data.avatar || data.authorAvatar || null;
 
-          // Déclencher l'affichage du Toast de notification Dynamic Island
+          // Déclencher l'affichage du Toast de notification Dynamic Island au premier plan (z-[999999])
           notificationService.show({
             title: senderTitle,
             message: messageText,
@@ -1515,6 +1517,9 @@ export default function App() {
               setSelectedChat(data);
               if (typeof setActiveTab === 'function') {
                 setActiveTab('chat');
+              }
+              if (typeof window !== 'undefined') {
+                window.location.hash = `chat/${chatId}`;
               }
             },
             data: { chatId }
@@ -5188,6 +5193,9 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* ---- TOASTS DE NOTIFICATIONS DYNAMIC ISLAND GLOBAUX (z-[999999]) ---- */}
+      <NotificationPill />
 
       </div>
     </LanguageContext.Provider>
