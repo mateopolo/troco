@@ -29,6 +29,23 @@ class AudioService {
           this.isEnabled = savedEnabled === 'true';
         }
       } catch (_) {}
+
+      // Déverrouillage proactif de l'AudioContext sur premier geste utilisateur (politique Autoplay navigateur)
+      const unlockAudio = () => {
+        try {
+          if (!this.ctx) {
+            this.initContext();
+          } else if (this.ctx.state === 'suspended') {
+            this.ctx.resume().catch(() => {});
+          }
+        } catch (_) {}
+        window.removeEventListener('click', unlockAudio);
+        window.removeEventListener('touchstart', unlockAudio);
+        window.removeEventListener('keydown', unlockAudio);
+      };
+      window.addEventListener('click', unlockAudio, { passive: true });
+      window.addEventListener('touchstart', unlockAudio, { passive: true });
+      window.addEventListener('keydown', unlockAudio, { passive: true });
     }
   }
 

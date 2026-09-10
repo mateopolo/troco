@@ -50,6 +50,8 @@ function ChatView({
   joinActiveCall,
   joinCall,
   answerCall,
+  callState,
+  isCallActive = false,
   handleAcceptDeal,
   onAcceptDeal,
   handleDeclineDeal,
@@ -3101,7 +3103,7 @@ function ChatView({
       </div>
 
       {/* SALLE DE CONVERSATION MOBILE (PORTAL DÉTACHÉ DIRECTEMENT SUR MODAL-ROOT) */}
-      {isMobile && effectiveSelectedChat && mobileSubView === 'room' && (
+      {isMobile && effectiveSelectedChat && mobileSubView === 'room' && !isCallActive && (
         <Portal>
           <div
             className="mobile-chat-fullscreen-room"

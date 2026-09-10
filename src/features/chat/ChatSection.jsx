@@ -24,6 +24,8 @@ export default function ChatSection({
   joinActiveCall,
   joinCall,
   answerCall,
+  callState,
+  isCallActive,
   handleAcceptDeal,
   handleDeclineDeal,
   handleSendToken,
@@ -92,6 +94,8 @@ export default function ChatSection({
                 joinActiveCall={joinActiveCall || joinCall}
                 joinCall={joinCall || joinActiveCall}
                 answerCall={answerCall}
+                callState={callState}
+                isCallActive={isCallActive}
                 handleAcceptDeal={handleAcceptDeal}
                 handleDeclineDeal={handleDeclineDeal}
                 handleSendToken={handleSendToken}

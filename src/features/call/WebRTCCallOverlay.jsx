@@ -18,6 +18,8 @@ import {
   Globe,
 } from 'lucide-react';
 
+import Portal from '../../components/ui/Portal';
+
 const LiveCallSubtitles = React.lazy(() => import('../../components/LiveCallSubtitles'));
 
 /**
@@ -301,27 +303,28 @@ export default function WebRTCCallOverlay({
 
       {/* 2. MODAL D'APPEL WEBRTC PLEIN ÉCRAN — STYLE FACETIME IMMERSIF */}
       {callState?.active && !isCallPip && (
-        <div
-          onPointerDown={resetCallInactivity}
-          onPointerMove={resetCallInactivity}
-          onTouchStart={resetCallInactivity}
-          onClick={resetCallInactivity}
-          className="fixed inset-0 z-[999999]"
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 999999,
-            backgroundColor: '#000000',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            overflow: 'hidden',
-            animation: 'fadeSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) both',
-            userSelect: 'none',
-            WebkitUserSelect: 'none',
-          }}
-        >
+        <Portal containerId="modal-root">
+          <div
+            onPointerDown={resetCallInactivity}
+            onPointerMove={resetCallInactivity}
+            onTouchStart={resetCallInactivity}
+            onClick={resetCallInactivity}
+            className="fixed inset-0 z-[999999] bg-[var(--bg-global)] flex flex-col"
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 999999,
+              backgroundColor: '#000000',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              overflow: 'hidden',
+              animation: 'fadeSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) both',
+              userSelect: 'none',
+              WebkitUserSelect: 'none',
+            }}
+          >
           {/* FLUX VIDÉO PRINCIPAL (100% DE L'ÉCRAN SANS CADRES NI BORDURES) */}
           {callState.type === 'video' ? (
             (callState.ringing || (!remoteStream && !isSwapVideo)) ? (
@@ -780,7 +783,8 @@ export default function WebRTCCallOverlay({
               </div>
             </motion.div>
           )}
-        </div>
+          </div>
+        </Portal>
       )}
     </>
   );

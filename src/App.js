@@ -1370,6 +1370,10 @@ export default function App() {
     stopRingtone,
   } = useWebRTC({ profileName: profile?.name || 'Membre', profileUid: profile?.uid || (auth.currentUser && auth.currentUser.uid), selectedChat });
 
+  // ---- LISTENER GLOBAL DES APPELS (ROOT LEVEL) ----
+  const [globalIncomingCall, setGlobalIncomingCall] = useState(null);
+  const activeIncomingCall = incomingCall || globalIncomingCall;
+
   // Attacheurs de flux universels sans conflit de ref (évite les écrans noirs sur tous navigateurs)
   const attachLocalStream = useCallback((el) => {
     if (el && localStream) {
@@ -1416,9 +1420,6 @@ export default function App() {
     declineIncomingCall(incomingObj || activeIncomingCall);
   }, [activeIncomingCall, declineIncomingCall]);
 
-  // ---- RESTAURATION DU LISTENER GLOBAL DES APPELS DESTINÉS À CURRENTUSER.UID (TÂCHE 2) ----
-  const [globalIncomingCall, setGlobalIncomingCall] = useState(null);
-
   useEffect(() => {
     const currentUid = (auth && auth.currentUser && auth.currentUser.uid) || profile?.uid;
     const normalizedProfile = (profile?.name || '').trim().toLowerCase();
@@ -1426,46 +1427,75 @@ export default function App() {
 
     const unsubs = [];
     try {
-      const q = query(
+      const handleCallDocChange = (change) => {
+        const data = change.doc.data();
+        if (!data) return;
+        if (data.fromUid && String(data.fromUid) === String(currentUid)) return;
+        if (data.callerUid && String(data.callerUid) === String(currentUid)) return;
+        if (data.from && normalizedProfile && (data.from || '').trim().toLowerCase() === normalizedProfile) return;
+
+        if ((change.type === 'added' || change.type === 'modified') && data.status === 'ringing') {
+          setGlobalIncomingCall({
+            chatId: change.doc.id,
+            callId: change.doc.id,
+            roomId: change.doc.id,
+            type: data.type || 'video',
+            from: data.from || 'Interlocuteur',
+            fromUid: data.fromUid || data.callerUid || null,
+            ...data,
+          });
+          playRingtone();
+          if (navigator.vibrate) navigator.vibrate([400, 150, 400, 150, 400]);
+        }
+        if (change.type === 'removed') {
+          setGlobalIncomingCall(prev => (prev?.chatId === change.doc.id || prev?.callId === change.doc.id ? null : prev));
+          stopRingtone();
+        }
+        if (change.type === 'modified' && data.status && data.status !== 'ringing') {
+          setGlobalIncomingCall(prev => (prev?.chatId === change.doc.id || prev?.callId === change.doc.id ? null : prev));
+          stopRingtone();
+        }
+      };
+
+      // 1. Écoute par targetParticipants (UID)
+      const qTarget = query(
         collection(db, 'calls'),
         where('targetParticipants', 'array-contains', String(currentUid)),
         limit(10)
       );
+      unsubs.push(onSnapshot(qTarget, (snap) => snap.docChanges().forEach(handleCallDocChange), (err) => {
+        console.warn('[App.js] Global calls targetParticipants error:', err);
+      }));
 
-      const unsub = onSnapshot(q, (snap) => {
-        snap.docChanges().forEach(change => {
-          const data = change.doc.data();
-          if (!data) return;
-          if (data.fromUid && String(data.fromUid) === String(currentUid)) return;
-          if (data.callerUid && String(data.callerUid) === String(currentUid)) return;
-          if (data.from && normalizedProfile && (data.from || '').trim().toLowerCase() === normalizedProfile) return;
+      // 2. Écoute par calleeUid direct
+      const qCallee = query(
+        collection(db, 'calls'),
+        where('calleeUid', '==', String(currentUid)),
+        limit(5)
+      );
+      unsubs.push(onSnapshot(qCallee, (snap) => snap.docChanges().forEach(handleCallDocChange), (err) => {
+        console.warn('[App.js] Global calls calleeUid error:', err);
+      }));
 
-          if ((change.type === 'added' || change.type === 'modified') && data.status === 'ringing') {
-            setGlobalIncomingCall({
-              chatId: change.doc.id,
-              callId: change.doc.id,
-              roomId: change.doc.id,
-              type: data.type || 'video',
-              from: data.from || 'Interlocuteur',
-              fromUid: data.fromUid || data.callerUid || null,
-              ...data,
-            });
-            playRingtone();
-            if (navigator.vibrate) navigator.vibrate([400, 150, 400, 150, 400]);
-          }
-          if (change.type === 'removed') {
-            setGlobalIncomingCall(prev => (prev?.chatId === change.doc.id || prev?.callId === change.doc.id ? null : prev));
-            stopRingtone();
-          }
-          if (change.type === 'modified' && data.status && data.status !== 'ringing') {
-            setGlobalIncomingCall(prev => (prev?.chatId === change.doc.id || prev?.callId === change.doc.id ? null : prev));
-            stopRingtone();
-          }
-        });
-      }, (err) => {
-        console.warn('[App.js] Global calls onSnapshot error:', err);
-      });
-      unsubs.push(unsub);
+      // 3. Écoute par toUid direct
+      const qToUid = query(
+        collection(db, 'calls'),
+        where('toUid', '==', String(currentUid)),
+        limit(5)
+      );
+      unsubs.push(onSnapshot(qToUid, (snap) => snap.docChanges().forEach(handleCallDocChange), (err) => {
+        console.warn('[App.js] Global calls toUid error:', err);
+      }));
+
+      // 4. Écoute de secours par nom de profil si disponible
+      if (profile?.name) {
+        const qName = query(
+          collection(db, 'calls'),
+          where('targetParticipants', 'array-contains', profile.name),
+          limit(5)
+        );
+        unsubs.push(onSnapshot(qName, (snap) => snap.docChanges().forEach(handleCallDocChange), () => {}));
+      }
     } catch (e) {
       console.warn('[App.js] Error setting up global calls listener:', e);
     }
@@ -1474,8 +1504,6 @@ export default function App() {
       unsubs.forEach(u => { try { if (typeof u === 'function') u(); } catch (_) {} });
     };
   }, [auth, profile?.uid, profile?.name, playRingtone, stopRingtone]);
-
-  const activeIncomingCall = incomingCall || globalIncomingCall;
 
   // ---- TÂCHE 3 : LISTENER GLOBAL DES MESSAGES EN ARRIÈRE-PLAN AVEC TOAST IMMÉDIAT ----
   useEffect(() => {
@@ -4154,6 +4182,8 @@ export default function App() {
                   joinActiveCall={joinActiveCall}
                   joinCall={joinActiveCall}
                   answerCall={handleAcceptIncomingCall || acceptIncomingCall}
+                  callState={callState}
+                  isCallActive={Boolean(callState?.active && !isCallPip)}
                   handleAcceptDeal={handleAcceptDeal}
                   handleConfirmTrocCompletion={handleConfirmTrocCompletion}
                   handleDeclineDeal={handleDeclineDeal}
@@ -4773,7 +4803,7 @@ export default function App() {
       {/* ---- OVERLAY WEBRTC APPELS (SONNERIE ENTRANTE & MODAL PLEIN ÉCRAN) ---- */}
       <Suspense fallback={null}>
         <WebRTCCallOverlay
-          incomingCall={activeIncomingCall}
+          incomingCall={null}
           callState={callState}
           isCallPip={isCallPip}
           setIsCallPip={setIsCallPip}
