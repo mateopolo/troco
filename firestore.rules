@@ -138,37 +138,22 @@ service cloud.firestore {
     // 💬 COLLECTION CHATS (CONVERSATIONS ET DISCUSSIONS PRIVÉES)
     // ========================================================================
     match /chats/{chatId} {
-      // Lecture : participants déclarés dans la conversation ou administrateur
-      allow read: if isAuthenticated() && (
-        request.auth.uid in resource.data.participants || isAdmin()
-      );
+      // Lecture : utilisateur authentifié
+      allow read: if isAuthenticated();
 
-      // Création : utilisateur authentifié non banni inclus dans les participants
-      allow create: if isAuthenticated() && isNotBanned()
-        && request.auth.uid in request.resource.data.participants;
-
-      // Mise à jour : participants non bannis uniquement (statuts, typings, horodatages)
-      allow update: if isAuthenticated() && isNotBanned()
-        && request.auth.uid in resource.data.participants;
+      // Création et mise à jour : utilisateur authentifié non banni
+      allow create, update: if isAuthenticated() && isNotBanned();
 
       // Suppression directe interdite (archivage logique ou Cloud Functions)
       allow delete: if false;
 
       // Sous-collection : Messages
       match /messages/{msgId} {
-        // Lecture : participants de la conversation parente ou administrateur
-        allow read: if isAuthenticated() && (
-          request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants
-          || isAdmin()
-        );
+        // Lecture : utilisateur authentifié
+        allow read: if isAuthenticated();
 
-        // Création : utilisateur émetteur authentifié et non banni
-        allow create: if isAuthenticated() && isNotBanned()
-          && request.resource.data.senderUid == request.auth.uid;
-
-        // Mise à jour : émetteur du message authentifié et non banni uniquement
-        allow update: if isAuthenticated() && isNotBanned()
-          && request.auth.uid == resource.data.senderUid;
+        // Création & modification : utilisateur authentifié non banni
+        allow create, update: if isAuthenticated() && isNotBanned();
 
         // Suppression : émetteur du message ou administrateur
         allow delete: if isAuthenticated() && (
