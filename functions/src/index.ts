@@ -22,6 +22,21 @@ import { handleUpdateUserAsAdmin } from './admin/updateUserAsAdmin';
 import { handleUserWriteSyncPublic } from './users/onUserWriteSyncPublic';
 import { handleMigrateUsersPublic } from './users/migrateUsersPublic';
 
+// Handlers paiements & transferts
+import { handleApplyPayment } from './payments/applyPayment';
+import { handleClaimBonus } from './payments/claimBonus';
+import { handleTransferAtomically } from './payments/transferAtomically';
+import { createCleanupIdempotency } from './payments/cleanupIdempotency';
+
+// Handlers conformité RGPD (Suppression & Rétractation)
+import { handleDeleteUserCompletely } from './gdpr/deleteUserCompletely';
+import { handleRestoreAccount } from './gdpr/restoreAccount';
+import { createScheduledDeletion } from './gdpr/scheduledDeletion';
+
+// Handlers sécurité & limitation de débit
+import { handleCheckRateLimit } from './security/checkRateLimit';
+import { createCleanupRateLimits } from './security/cleanupRateLimits';
+
 
 /**
  * 👑 Cloud Function 1 : setAdminClaim
@@ -86,4 +101,70 @@ export const onUserWriteSyncPublic = onDocumentWritten('users/{uid}', async (eve
 export const migrateUsersPublic = onCall({ cors: true }, async (request) => {
   return handleMigrateUsersPublic(request, db);
 });
+
+/**
+ * 💳 Cloud Function 9 : applyPayment (Callable)
+ * Validation serveur de rechargement/achat de jetons avec idempotence 24h.
+ */
+export const applyPayment = onCall({ cors: true }, async (request) => {
+  return handleApplyPayment(request, db);
+});
+
+/**
+ * 🎁 Cloud Function 10 : claimBonus (Callable)
+ * Réclamation sécurisée anti-double-crédit de bonus partenaire.
+ */
+export const claimBonus = onCall({ cors: true }, async (request) => {
+  return handleClaimBonus(request, db);
+});
+
+/**
+ * ⚡ Cloud Function 11 : transferAtomically (Callable)
+ * Transfert atomique universel de soldes (visio, deal chat, checkout).
+ */
+export const transferAtomically = onCall({ cors: true }, async (request) => {
+  return handleTransferAtomically(request, db);
+});
+
+/**
+ * 🧹 Cloud Function 12 : cleanupIdempotency (Scheduled)
+ * Nettoyage horaire des clés d'idempotence expirées.
+ */
+export const cleanupIdempotency = createCleanupIdempotency(db);
+
+/**
+ * 🔒 Cloud Function 13 : deleteUserCompletely (Callable RGPD)
+ * Suppression de compte conforme RGPD art. 17 (soft delete 30j ou réel).
+ */
+export const deleteUserCompletely = onCall({ cors: true }, async (request) => {
+  return handleDeleteUserCompletely(request, db);
+});
+
+/**
+ * 🔄 Cloud Function 14 : restoreAccount (Callable RGPD)
+ * Rétractation et annulation de suppression dans le délai de 30 jours.
+ */
+export const restoreAccount = onCall({ cors: true }, async (request) => {
+  return handleRestoreAccount(request, db);
+});
+
+/**
+ * 🗑️ Cloud Function 15 : scheduledDeletion (Scheduled RGPD)
+ * Purge quotidienne à 03h00 des comptes dont le délai de rétractation a expiré.
+ */
+export const scheduledDeletion = createScheduledDeletion(db);
+
+/**
+ * ⏱️ Cloud Function 16 : checkRateLimit (Callable)
+ * Contrôle de quota côté serveur pour actions sensibles avec fenêtres glissantes.
+ */
+export const checkRateLimit = onCall({ cors: true }, async (request) => {
+  return handleCheckRateLimit(request, db);
+});
+
+/**
+ * 🧹 Cloud Function 17 : cleanupRateLimits (Scheduled)
+ * Purge horaire des compteurs de rate limit expirés.
+ */
+export const cleanupRateLimits = createCleanupRateLimits(db);
 

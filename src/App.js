@@ -65,6 +65,18 @@ import { useAdminGuard } from './hooks/useAdminGuard';
 import adminService from './services/adminService';
 import { useUsersPublic } from './hooks/useUsersPublic';
 import { setSessionAuthenticated, clearSessionFlags } from './utils/sessionFlags';
+import { isDemoMode, getInitialTransactions } from './data/demoData';
+import { migrateLocalStorage } from './utils/migrateLocalStorage';
+import { clearTrocoLocalStorage } from './utils/clearTrocoLocalStorage';
+import { paymentService } from './services/paymentService';
+import { walletService } from './services/walletService';
+import { gdprService } from './services/gdprService';
+import { useCheckout } from './hooks/useCheckout';
+import { useRateLimit } from './hooks/useRateLimit';
+import CheckoutModal from './components/modals/CheckoutModal';
+import DemoModeBanner from './components/common/DemoModeBanner';
+import Avatar from './components/common/Avatar';
+import { RateLimitToast } from './components/ui/RateLimitToast';
 export { isIosOrTouchDevice };
 
 
@@ -391,42 +403,13 @@ export default function App() {
   }, [profile?.trocoTokens, setTopUpCelebration]);
 
   const [userTransactions, setUserTransactions] = useState(() => {
-    try {
-      const saved = localStorage.getItem('troco_user_transactions');
-      return saved ? JSON.parse(saved) : [
-        {
-          id: 'tx-seed-1',
-          transactionId: 'TRK-202603-4819',
-          label: 'Achat 5 Jetons Troco (Essentiel)',
-          mode: 'pack-tokens',
-          amountTtc: 49.99,
-          amountHt: 41.66,
-          tva: 8.33,
-          currency: 'EUR',
-          paymentMethod: 'Apple Pay',
-          authRef: 'APL-92KDA81',
-          date: '2026-03-10T14:23:00.000Z',
-          tokensPurchased: 5,
-        },
-        {
-          id: 'tx-seed-2',
-          transactionId: 'TRK-202603-3102',
-          label: 'Recharge Portefeuille Troco (20.00 €)',
-          mode: 'topup-cash',
-          amountTtc: 20.00,
-          amountHt: 16.67,
-          tva: 3.33,
-          currency: 'EUR',
-          paymentMethod: 'Carte Bancaire (VISA •••• 4242)',
-          authRef: 'STR-71NXL90',
-          date: '2026-03-05T09:12:00.000Z',
-          cashTopUp: 20.00,
-        },
-      ];
-    } catch (e) {
-      return [];
-    }
+    return getInitialTransactions();
   });
+
+  // Nettoyage données démo au démarrage (RGPD / conformité)
+  useEffect(() => {
+    migrateLocalStorage();
+  }, []);
 
   // Écoute temps réel des transactions de l'utilisateur sur Firestore
   useEffect(() => {
@@ -643,8 +626,49 @@ export default function App() {
       if (txData.paymentMethod?.includes('Solde')) {
         updatedEuro = Math.max(0, Number((updatedEuro - (txData.amountTtc || 0)).toFixed(2)));
       }
-      if (txData.boostDetails?.listingId) {
-        setListings(prev => prev.map(item => item.id === txData.boostDetails.listingId ? { ...item, isBoosted: true } : item));
+      const boostedListingId = txData.boostDetails?.listingId || txData.listingId || txData.payload?.listingId;
+      if (boostedListingId) {
+        setListings(prev => prev.map(item => item.id === boostedListingId ? { ...item, isBoosted: true } : item));
+        setBoostMessage('Annonce boostée avec succès pendant 7 jours !');
+      }
+    } else if (txData.mode === 'edit-listing' || txData.mode === 'publish-options') {
+      const { newListing } = txData.payload || {};
+      if (newListing) {
+        if (isEditingListing) {
+          setListings(prev => prev.map(item => item.id === newListing.id ? newListing : item));
+          if (editingOriginalListing?.firestoreId) {
+            try {
+              const { id: _localId, firestoreId: _fid, ...firestorePayload } = newListing;
+              updateDoc(doc(db, 'listings', editingOriginalListing.firestoreId), {
+                ...firestorePayload,
+                updatedAt: serverTimestamp(),
+              }).catch(e => console.warn('[Firestore] updateDoc failed:', e));
+            } catch (e) {
+              console.warn('[Firestore] updateDoc error:', e);
+            }
+          }
+        } else {
+          setListings(prev => [newListing, ...prev]);
+          try {
+            const { id: _localId, ...firestorePayload } = newListing;
+            addDoc(collection(db, 'listings'), {
+              ...firestorePayload,
+              createdAt: serverTimestamp(),
+              updatedAt: serverTimestamp(),
+            }).catch(e => console.warn('[Firestore] addDoc failed:', e));
+          } catch (e) {
+            console.warn('[Firestore] addDoc error:', e);
+          }
+        }
+        playApplePaySound();
+        const updatedDetail = getListingDetail(newListing);
+        setPublishedListing(updatedDetail);
+        setShowPublishedPopup(true);
+        setSelectedListing(updatedDetail);
+        setIsEditingListing(false);
+        setEditingOriginalListing(null);
+        setPostStep(1);
+        setPostDraft(defaultPostDraft);
       }
     } else if (txData.mode === 'deal' || txData.mode === 'pay-deal') {
       const payload = txData.dealDetails || txData.payload || {};
@@ -673,18 +697,24 @@ export default function App() {
       const tokensAmount = Number(txData.tokensDeducted ?? payload.tokensRequired ?? payload.tokens ?? 0);
 
       if (chatId && dealId) {
-        await executeDealTransaction({
-          chatId,
-          dealId,
-          terms,
-          buyerUid: uid,
-          sellerUid: receiverUid,
-          partnerUid: receiverUid,
-          partnerName,
-          euroAmount,
-          tokensAmount,
-          paymentMethod: txData.paymentMethod || 'Paiement Sécurisé',
-        });
+        try {
+          await walletService.transferAtomically({
+            receiverUid,
+            currency: tokensAmount > 0 ? 'tokens' : 'EUR',
+            amount: tokensAmount > 0 ? tokensAmount : euroAmount,
+            type: 'deal',
+            metadata: {
+              chatId,
+              dealId,
+              terms,
+              partnerName,
+              paymentMethod: txData.paymentMethod || 'Paiement Sécurisé',
+            },
+          });
+        } catch (dealErr) {
+          console.error('🚨 [walletService] Transfert deal échoué:', dealErr);
+          alert(dealErr?.message || 'Erreur lors du transfert deal.');
+        }
         return;
       }
     }
@@ -717,50 +747,61 @@ export default function App() {
       localStorage.setItem('troco_user_transactions', JSON.stringify([newTxRecord, ...userTransactions]));
     } catch (e) { }
 
-    // 3. Persistance sur Firestore users/{uid} et transactions
-    if (uid) {
+    // 3. Application sécurisée côté Cloud Function backend (pas de manipulation solde directe client)
+    if (uid && txData.mode !== 'deal' && txData.mode !== 'pay-deal') {
       try {
-        await updateDoc(doc(db, 'users', uid), {
-          euroBalance: updatedProfile.euroBalance,
-          trocoTokens: updatedProfile.trocoTokens,
-          isTrocoPlus: updatedProfile.isTrocoPlus,
-          subscriptionPlan: updatedProfile.subscriptionPlan,
-          subscriptionStartDate: updatedProfile.subscriptionStartDate,
-          subscriptionRenewalDate: updatedProfile.subscriptionRenewalDate,
-          updatedAt: serverTimestamp(),
-        });
-        await addDoc(collection(db, 'transactions'), {
-          ...txData,
-          userId: uid,
-          userName: profile?.name || 'Utilisateur',
-          userEmail: profile?.email || '',
-          createdAt: serverTimestamp(),
+        await paymentService.applyPayment({
+          paymentIntentId: txData.authRef || txData.transactionId || `pi_${Date.now()}`,
+          mode: txData.mode,
+          amount: txData.amountTtc || txData.amount || txData.cashTopUp || 0,
+          tokens: txData.tokensPurchased || 0,
+          boostDays: txData.boostDays || 0,
+          listingId: txData.boostDetails?.listingId || null,
+          currency: txData.currency || 'EUR',
+          provider: 'mock',
         });
       } catch (err) {
-        console.warn('[Firestore] Error saving transaction:', err);
+        console.warn('[paymentService] Error applying payment on backend:', err);
       }
     }
   };
 
   // ---- GESTION DU CADRE JURIDIQUE & RGPD (BLOC 6) ----
-  const handleDeleteAccount = async () => {
-    const uid = profile?.uid || auth.currentUser?.uid;
+  const handleDeleteAccount = async (options = {}) => {
     try {
-      if (uid) {
-        // Suppression du document utilisateur dans Firestore
-        await deleteDoc(doc(db, 'users', uid));
-      }
-      localStorage.clear();
+      await gdprService.deleteUserCompletely({ immediate: Boolean(options?.immediate) });
+      clearTrocoLocalStorage();
       if (auth.currentUser) {
         await signOut(auth);
       }
       window.location.reload();
     } catch (err) {
       console.error('Account deletion error:', err);
-      localStorage.clear();
+      clearTrocoLocalStorage();
+      if (auth.currentUser) {
+        await signOut(auth);
+      }
       window.location.reload();
     }
   };
+
+  // ---- RATE LIMITING & APP CHECK PROTECTION ----
+  const { isRateLimited, retryAfterSeconds, checkLimit, resetRateLimit } = useRateLimit();
+
+  // ---- SESSION DE PAIEMENT SÉCURISÉE (USECHECKOUT) ----
+  const {
+    checkoutSession,
+    isProcessing: isCheckoutProcessing,
+    paymentStatus: checkoutStatus,
+    openCheckout,
+    cancelCheckout,
+    applyCheckout,
+  } = useCheckout({
+    profile,
+    setProfile,
+    onPaymentSuccess: handlePaymentSuccess,
+    onOpenNotification: setSaveMessage,
+  });
 
   // ---- ÉCOUTE TEMPS RÉEL DES SIGNALEMENTS (MODÉRATION ADMIN - GATED ISADMIN) ----
   useEffect(() => {
@@ -1284,16 +1325,6 @@ export default function App() {
   const [showPublishedPopup, setShowPublishedPopup] = useState(false);
   const [publishedListing, setPublishedListing] = useState(null);
 
-  // ---- CHECKOUT (PAIEMENT SIMULÉ) ----
-  const [checkout, setCheckout] = useState({
-    open: false,
-    mode: null,
-    amount: 0,
-    label: '',
-    payload: null,
-    method: 'applePay',
-    step: 'method',
-  });
 
   const [communityProfileUser, setCommunityProfileUser] = useState(null);
   const [isCommunityProfileOpen, setIsCommunityProfileOpen] = useState(false);
@@ -1458,109 +1489,45 @@ export default function App() {
       freeServiceFee: true,
     };
 
-    // PERSISTANCE TRANSACTIONNELLE ATOMIQUE FIRESTORE (runTransaction)
-    if (db) {
-      try {
-        await runTransaction(db, async (transaction) => {
-          // 1. Lectures atomiques des deux profils (READS FIRST)
-          const payerRef = doc(db, 'users', currentUid);
-          const receiverRef = doc(db, 'users', partnerUid);
+    // PERSISTANCE TRANSACTIONNELLE VIA CLOUD FUNCTION ATOMIQUE (walletService)
+    try {
+      const transferRes = await walletService.transferAtomically({
+        receiverUid: partnerUid,
+        currency: 'tokens',
+        amount: costTokens,
+        type: 'call_tokens',
+        metadata: {
+          partner,
+          duration,
+          insuranceFee,
+        },
+      });
 
-          const [payerSnap, receiverSnap] = await Promise.all([
-            transaction.get(payerRef),
-            transaction.get(receiverRef),
-          ]);
+      // Mise à jour optimiste locale après validation de la transaction backend
+      setProfile(prev => ({
+        ...prev,
+        trocoTokens: transferRes.newSenderTokens !== undefined ? transferRes.newSenderTokens : Math.max(0, (prev?.trocoTokens ?? curSenderTokens) - costTokens),
+        euroBalance: transferRes.newSenderEuro !== undefined ? transferRes.newSenderEuro : (insuranceFee > 0 ? Number(((prev?.euroBalance ?? curSenderEuro) - insuranceFee).toFixed(2)) : (prev?.euroBalance ?? curSenderEuro)),
+        dealsCompleted: (prev?.dealsCompleted || 0) + 1,
+      }));
+      setUserTransactions(prev => [newTx, ...prev]);
 
-          let pTokens = curSenderTokens;
-          let pEuro = curSenderEuro;
-          let pDeals = Number(profile?.dealsCompleted ?? 0);
-
-          if (payerSnap.exists()) {
-            const pData = payerSnap.data();
-            pTokens = pData.trocoTokens !== undefined ? Number(pData.trocoTokens) : pTokens;
-            pEuro = pData.euroBalance !== undefined ? Number(pData.euroBalance) : pEuro;
-            pDeals = pData.dealsCompleted !== undefined ? Number(pData.dealsCompleted) : pDeals;
-          }
-
-          if (pTokens < costTokens) {
-            throw new Error(`Solde de jetons insuffisant (${pTokens} disponible(s), ${costTokens} requis).`);
-          }
-          if (insuranceFee > 0 && pEuro < insuranceFee) {
-            throw new Error(`Solde d'euros insuffisant (${pEuro}€ disponible(s), ${insuranceFee}€ requis).`);
-          }
-
-          const recData = receiverSnap.exists() ? receiverSnap.data() : {};
-          const rDeals = Number(recData.dealsCompleted ?? 0);
-
-          // 2. ÉCRITURE CROISÉE SIMULTANÉE (DOUBLE UPDATE ATOMIQUE)
-          const newPayerEuro = insuranceFee > 0 ? Number(Math.max(0, pEuro - insuranceFee).toFixed(2)) : pEuro;
-
-          transaction.update(payerRef, {
-            trocoTokens: increment(-costTokens),
-            euroBalance: newPayerEuro,
-            walletBalanceFiat: newPayerEuro,
-            dealsCompleted: pDeals + 1,
-            updatedAt: serverTimestamp(),
-          });
-
-          // Crédit simultané du destinataire
-          transaction.update(receiverRef, {
-            trocoTokens: increment(costTokens),
-            dealsCompleted: rDeals + 1,
-            updatedAt: serverTimestamp(),
-          });
-
-          // 3. Notification en temps réel pour le destinataire
-          const notifRef = doc(collection(db, 'users', partnerUid, 'notifications'));
-          transaction.set(notifRef, {
-            type: 'payment_received',
-            amount: costTokens,
-            currency: 'tokens',
-            from: currentUid,
-            senderName: profile?.name || 'Membre Troco',
-            read: false,
-            timestamp: serverTimestamp(),
-          });
-
-          // 4. Enregistrement atomique de la transaction
-          const txDocRef = doc(collection(db, 'transactions'));
-          transaction.set(txDocRef, {
-            ...newTx,
-            userId: currentUid,
-            userName: profile?.name || 'Utilisateur',
-            partnerUid: partnerUid,
-            createdAt: serverTimestamp(),
-          });
-        });
-
-        // 4. Mise à jour optimiste locale après validation de la transaction
-        setProfile(prev => ({
-          ...prev,
-          trocoTokens: Math.max(0, (prev?.trocoTokens ?? curSenderTokens) - costTokens),
-          euroBalance: insuranceFee > 0 ? Number(((prev?.euroBalance ?? curSenderEuro) - insuranceFee).toFixed(2)) : (prev?.euroBalance ?? curSenderEuro),
-          dealsCompleted: (prev?.dealsCompleted || 0) + 1,
-        }));
-        setUserTransactions(prev => [newTx, ...prev]);
-
-        playApplePaySound();
-        playBetclicBalanceSound(true);
-        setTransactionSuccessModalConfig({
-          isOpen: true,
-          type: 'sent',
-          amount: costTokens,
-          currency: 'tokens',
-          partnerName: partner,
-          notificationId: null,
-        });
-        setSaveMessage(`🤝 ${costTokens} Jeton${costTokens > 1 ? 's' : ''} Troco transféré(s) à ${partner} (Frais de service : 0,00 €) !`);
-      } catch (e) {
-        console.error('🚨 [Firestore] Erreur transaction transfert jetons:', e);
-        alert(`Échec du transfert : ${e?.message || 'Erreur réseau ou solde insuffisant.'}`);
-      }
+      playApplePaySound();
+      playBetclicBalanceSound(true);
+      setTransactionSuccessModalConfig({
+        isOpen: true,
+        type: 'sent',
+        amount: costTokens,
+        currency: 'tokens',
+        partnerName: partner,
+        notificationId: null,
+      });
+      setSaveMessage(`🤝 ${costTokens} Jeton${costTokens > 1 ? 's' : ''} Troco transféré(s) à ${partner} (Frais de service : 0,00 €) !`);
+      setTimeout(() => setSaveMessage(''), 5000);
+    } catch (e) {
+      console.error('🚨 [walletService] Erreur transfert jetons visio:', e);
+      alert(`Échec du transfert : ${e?.message || 'Erreur réseau ou solde insuffisant.'}`);
     }
-
-    setSaveMessage(`🤝 ${costTokens} Jeton${costTokens > 1 ? 's' : ''} Troco transféré(s) à ${partner} (Frais de service : 0,00 €) !`);
-    setTimeout(() => setSaveMessage(''), 5000);
   };
 
   // Formateur du chronomètre de deal (HH:MM:SS ou MM:SS)
@@ -1825,13 +1792,17 @@ export default function App() {
 
     import('./data/mockData').then(({ mockListings }) => {
       if (isCancelled) return;
-      const demoBase = (mockListings || []).map(l => ({ ...l, status: 'active', isDemo: true }));
+      const demoBase = isDemoMode()
+        ? (mockListings || []).map(l => ({ ...l, status: 'active', isDemo: true }))
+        : [];
 
-      // Si le cache local n'avait pas encore les démos, on les injecte
-      setListings(prev => {
-        const hasDemos = prev.some(item => item.isDemo);
-        return hasDemos ? prev : [...prev, ...demoBase];
-      });
+      // Si mode démo actif et que le cache local n'avait pas encore les démos, on les injecte
+      if (isDemoMode()) {
+        setListings(prev => {
+          const hasDemos = prev.some(item => item.isDemo);
+          return hasDemos ? prev : [...prev, ...demoBase];
+        });
+      }
 
       // Écoute initiale paginée à 20 pour un FCP et un réseau optimal
       const initialQuery = query(collection(db, 'listings'), orderBy('createdAt', 'desc'), limit(20));
@@ -2206,7 +2177,7 @@ export default function App() {
       },
     };
 
-    if (listing.author === 'Sofia M.' && (listing.isDemo || (typeof listing.id === 'number' && listing.id <= 20))) {
+    if (isDemoMode() && listing.author === 'Sofia M.' && (listing.isDemo || (typeof listing.id === 'number' && listing.id <= 20))) {
       return {
         ...generic,
         description: listing.description || 'Cours de piano et accompagnement musical pensé pour les débutants et les profils en reconversion. Le cadre est très structuré, chaleureux et adapté à un usage flexible.',
@@ -2225,7 +2196,7 @@ export default function App() {
       };
     }
 
-    if (listing.author === 'Marc L.' && (listing.isDemo || (typeof listing.id === 'number' && listing.id <= 20))) {
+    if (isDemoMode() && listing.author === 'Marc L.' && (listing.isDemo || (typeof listing.id === 'number' && listing.id <= 20))) {
       return {
         ...generic,
         description: listing.description || 'Prêt d’outillage et service de dépannage local. Tout est pensé pour qu’un échange soit rapide, concret et sécurisé.',
@@ -2317,349 +2288,6 @@ export default function App() {
     handleOpenPayment('boost', listing);
   };
 
-  const closeCheckout = async () => {
-    const { mode, amount, payload, method } = checkout;
-    setCheckout(prev => ({ ...prev, open: false, step: 'method', payload: null }));
-
-    // ---- GARDE ANTI-DOUBLE-EXÉCUTION ----
-    if (checkoutAppliedRef.current) return;
-    checkoutAppliedRef.current = true;
-
-    const clientUid = profile?.uid || auth?.currentUser?.uid;
-    const isPaidWithWallet = method === 'troco' || method === 'wallet';
-    const chargedFromWallet = isPaidWithWallet && amount > 0;
-
-    // Mode DEAL : Transfert atomique Acheteur <-> Partenaire (Euros et Jetons)
-    if (mode === 'deal' || mode === 'pay-deal') {
-      const chatId = payload?.chatId;
-      const dealId = payload?.dealId;
-      const partnerUid = payload?.partnerUid || payload?.sellerUid;
-      const partnerName = payload?.partnerName || 'Partenaire';
-      const euroDue = Number(payload?.euroAmount ?? payload?.amount ?? (amount || 0));
-      const tokensDue = Number(payload?.tokensAmount ?? payload?.tokens ?? payload?.tokensRequired ?? 0);
-      const shouldDebitWalletEuro = isPaidWithWallet && euroDue > 0;
-
-      // Mise à jour de l'UI locale immédiatement
-      if (chatId && dealId) {
-        setChatThreads(prev => ({
-          ...prev,
-          [chatId]: (prev[chatId] || []).map(m => String(m.id) === String(dealId) ? { ...m, status: 'confirmed' } : m),
-        }));
-        setChatStatusOverrides(prev => ({ ...prev, [chatId]: 'Deal Validé' }));
-      }
-
-      // TRANSACTION ATOMIQUE SUR FIRESTORE
-      if (db && clientUid) {
-        try {
-          await runTransaction(db, async (transaction) => {
-            const clientRef = doc(db, 'users', String(clientUid));
-            const partnerRef = partnerUid ? doc(db, 'users', String(partnerUid)) : null;
-            const msgRef = (chatId && dealId) ? doc(db, 'chats', String(chatId), 'messages', String(dealId)) : null;
-            const chatRef = chatId ? doc(db, 'chats', String(chatId)) : null;
-
-            // 1. TOUTES LES LECTURES AU DÉBUT (READS FIRST)
-            const clientSnap = await transaction.get(clientRef);
-            const partnerSnap = partnerRef ? await transaction.get(partnerRef) : null;
-            const msgSnap = msgRef ? await transaction.get(msgRef) : null;
-
-            if (!clientSnap.exists()) {
-              throw new Error("Compte acheteur introuvable dans Firestore.");
-            }
-
-            const clientData = clientSnap.data();
-            const curClientEuro = Number(clientData.euroBalance ?? clientData.walletBalanceFiat ?? 0);
-            const curClientTokens = Number(clientData.trocoTokens ?? 0);
-            const curClientDeals = Number(clientData.dealsCompleted ?? 0);
-
-            // Vérifications de solvabilité
-            if (shouldDebitWalletEuro && curClientEuro < euroDue) {
-              throw new Error(`Solde Euros insuffisant (${curClientEuro} € disponibles, ${euroDue} € requis).`);
-            }
-            if (tokensDue > 0 && curClientTokens < tokensDue) {
-              throw new Error(`Solde de jetons insuffisant (${curClientTokens} disponible(s), ${tokensDue} requis).`);
-            }
-
-            // Calcul des soldes client
-            const newClientEuro = shouldDebitWalletEuro
-              ? Number(Math.max(0, curClientEuro - euroDue).toFixed(2))
-              : curClientEuro;
-            const newClientTokens = Math.max(0, curClientTokens - tokensDue);
-
-            // Mise à jour acheteur
-            const clientUpdatePayload = {
-              dealsCompleted: curClientDeals + 1,
-              updatedAt: serverTimestamp(),
-            };
-            if (shouldDebitWalletEuro) {
-              clientUpdatePayload.euroBalance = newClientEuro;
-              clientUpdatePayload.walletBalanceFiat = newClientEuro;
-            }
-            if (tokensDue > 0) {
-              clientUpdatePayload.trocoTokens = newClientTokens;
-            }
-            transaction.update(clientRef, clientUpdatePayload);
-
-            // Crédit atomique du partenaire (euros et/ou jetons)
-            if (partnerRef) {
-              const partnerData = (partnerSnap && partnerSnap.exists()) ? partnerSnap.data() : {};
-              const curPartnerEuro = Number(partnerData.euroBalance ?? partnerData.walletBalanceFiat ?? 0);
-              const curPartnerTokens = Number(partnerData.trocoTokens ?? 0);
-              const curPartnerDeals = Number(partnerData.dealsCompleted ?? 0);
-
-              const newPartnerEuro = Number((curPartnerEuro + euroDue).toFixed(2));
-              const newPartnerTokens = curPartnerTokens + tokensDue;
-
-              if (partnerSnap && partnerSnap.exists()) {
-                const partnerUpdatePayload = {
-                  dealsCompleted: curPartnerDeals + 1,
-                  updatedAt: serverTimestamp(),
-                };
-                if (euroDue > 0) {
-                  partnerUpdatePayload.euroBalance = newPartnerEuro;
-                  partnerUpdatePayload.walletBalanceFiat = newPartnerEuro;
-                }
-                if (tokensDue > 0) {
-                  partnerUpdatePayload.trocoTokens = newPartnerTokens;
-                }
-                transaction.update(partnerRef, partnerUpdatePayload);
-              } else {
-                transaction.set(partnerRef, {
-                  uid: String(partnerUid),
-                  name: partnerName || 'Partenaire Troco',
-                  euroBalance: newPartnerEuro,
-                  walletBalanceFiat: newPartnerEuro,
-                  trocoTokens: newPartnerTokens,
-                  dealsCompleted: curPartnerDeals + 1,
-                  updatedAt: serverTimestamp(),
-                }, { merge: true });
-              }
-
-              // Notification temps réel du partenaire
-              const notifRef = doc(collection(db, 'users', String(partnerUid), 'notifications'));
-              transaction.set(notifRef, {
-                type: 'payment_received',
-                amount: tokensDue > 0 ? tokensDue : euroDue,
-                currency: tokensDue > 0 ? 'tokens' : 'EUR',
-                from: clientUid,
-                read: false,
-                timestamp: serverTimestamp(),
-              });
-            }
-
-            // Mise à jour du message de deal dans le chat
-            if (msgRef) {
-              const dealConfirmedPayload = {
-                status: 'confirmed',
-                paidBy: clientUid,
-                paidTo: partnerUid || null,
-                euroAmount: euroDue,
-                tokensAmount: tokensDue,
-                paymentMethod: method,
-                confirmedAt: serverTimestamp(),
-                updatedAt: serverTimestamp(),
-              };
-              if (msgSnap && msgSnap.exists()) {
-                transaction.update(msgRef, dealConfirmedPayload);
-              } else {
-                transaction.set(msgRef, dealConfirmedPayload, { merge: true });
-              }
-            }
-
-            // Mise à jour du document parent chat
-            if (chatRef) {
-              transaction.set(chatRef, {
-                lastDealStatus: 'confirmed',
-                lastMessage: `🤝 Deal validé ! ${tokensDue > 0 ? `${tokensDue}🪙 ` : ''}${euroDue > 0 ? `${euroDue}€` : ''}`,
-                updatedAt: serverTimestamp(),
-              }, { merge: true });
-            }
-
-            // Traçabilité des transactions
-            const txBuyerRef = doc(collection(db, 'transactions'));
-            transaction.set(txBuyerRef, {
-              type: 'deal_payment',
-              mode: 'debit',
-              userId: clientUid,
-              userName: clientData.name || profile?.name || 'Acheteur',
-              partnerUid: partnerUid || null,
-              partnerName,
-              dealId: dealId ? String(dealId) : null,
-              chatId: chatId ? String(chatId) : null,
-              tokens: tokensDue,
-              amountTtc: euroDue,
-              paymentMethod: method,
-              status: 'completed',
-              createdAt: serverTimestamp(),
-            });
-
-            if (partnerUid) {
-              const txSellerRef = doc(collection(db, 'transactions'));
-              transaction.set(txSellerRef, {
-                type: 'deal_receipt',
-                mode: 'credit',
-                userId: partnerUid,
-                userName: partnerName,
-                partnerUid: clientUid,
-                partnerName: clientData.name || profile?.name || 'Acheteur',
-                dealId: dealId ? String(dealId) : null,
-                chatId: chatId ? String(chatId) : null,
-                tokens: tokensDue,
-                amountTtc: euroDue,
-                paymentMethod: method,
-                status: 'completed',
-                createdAt: serverTimestamp(),
-              });
-            }
-          });
-
-          // Mise à jour du state React profile
-          setProfile(prev => ({
-            ...prev,
-            euroBalance: shouldDebitWalletEuro ? Number(Math.max(0, prev.euroBalance - euroDue).toFixed(2)) : prev.euroBalance,
-            trocoTokens: tokensDue > 0 ? Math.max(0, prev.trocoTokens - tokensDue) : prev.trocoTokens,
-            dealsCompleted: (prev.dealsCompleted || 0) + 1,
-          }));
-        } catch (e) {
-          console.error('[Firestore] Atomic Deal Transaction Error in closeCheckout:', e);
-          alert(`Erreur lors de la validation atomique du deal: ${e.message}`);
-          return;
-        }
-      }
-      return;
-    }
-
-    // Gestion du débit portefeuille si d'autres modes (ex: boost, publish-options, edit-listing)
-    if (chargedFromWallet) {
-      if (profile.euroBalance < amount) {
-        alert('Solde Euros insuffisant dans votre portefeuille Troco.');
-        return;
-      }
-      if (db && clientUid) {
-        try {
-          await runTransaction(db, async (transaction) => {
-            const clientRef = doc(db, 'users', String(clientUid));
-            const clientSnap = await transaction.get(clientRef);
-            if (!clientSnap.exists()) throw new Error("Utilisateur introuvable");
-            const curEuro = Number(clientSnap.data().euroBalance ?? 0);
-            if (curEuro < amount) throw new Error("Solde insuffisant");
-            const newBal = Number(Math.max(0, curEuro - amount).toFixed(2));
-            transaction.update(clientRef, {
-              euroBalance: newBal,
-              walletBalanceFiat: newBal,
-              updatedAt: serverTimestamp(),
-            });
-          });
-        } catch (e) {
-          console.warn('[Firestore] Atomic wallet debit error:', e);
-        }
-      }
-      setProfile(prev => ({
-        ...prev,
-        euroBalance: Number(Math.max(0, prev.euroBalance - amount).toFixed(2)),
-      }));
-    }
-
-    if (mode === 'boost') {
-      window.setTimeout(() => {
-        setListings(prev => prev.map(item => item.id === payload?.listingId ? { ...item, isBoosted: true } : item));
-        setBoostMessage(`Annonce boostée avec succès pendant 7 jours !`);
-      }, 400);
-      return;
-    }
-
-    if (mode === 'edit-listing' || mode === 'publish-options') {
-      window.setTimeout(async () => {
-        const { newListing, invoiceCalc } = payload || {};
-        if (!newListing) return;
-
-        // Enregistrement de la transaction avec référence unique TRK-YYYYMM-XXXX
-        const invoiceRef = generateInvoiceRef();
-        const txRecord = {
-          id: `tx-${Date.now()}`,
-          type: isEditingListing ? 'edit-listing' : 'publish-options',
-          title: isEditingListing ? `Modification annonce — ${newListing.title}` : `Options publication — ${newListing.title}`,
-          amount: amount,
-          currency: 'EUR',
-          status: 'completed',
-          invoiceRef: invoiceRef,
-          date: new Date().toISOString(),
-          createdAt: serverTimestamp(),
-          userId: profile.uid || auth.currentUser?.uid || 'anonymous',
-          items: invoiceCalc?.items || [],
-        };
-        try {
-          await addDoc(collection(db, 'transactions'), txRecord);
-        } catch (e) {
-          console.warn('[Firestore] transaction addDoc failed:', e);
-        }
-        setUserTransactions(prev => [txRecord, ...prev]);
-
-        if (isEditingListing) {
-          setListings(prev => prev.map(item => item.id === newListing.id ? newListing : item));
-          if (editingOriginalListing?.firestoreId) {
-            try {
-              const { id: _localId, firestoreId: _fid, ...firestorePayload } = newListing;
-              updateDoc(doc(db, 'listings', editingOriginalListing.firestoreId), {
-                ...firestorePayload,
-                updatedAt: serverTimestamp(),
-              }).catch(e => console.warn('[Firestore] updateDoc failed:', e));
-            } catch (e) {
-              console.warn('[Firestore] updateDoc error:', e);
-            }
-          }
-        } else {
-          setListings(prev => [newListing, ...prev]);
-          try {
-            const { id: _localId, ...firestorePayload } = newListing;
-            addDoc(collection(db, 'listings'), {
-              ...firestorePayload,
-              createdAt: serverTimestamp(),
-              updatedAt: serverTimestamp(),
-            }).catch(e => console.warn('[Firestore] addDoc failed:', e));
-          } catch (e) {
-            console.warn('[Firestore] addDoc error:', e);
-          }
-        }
-
-        playApplePaySound();
-        const updatedDetail = getListingDetail(newListing);
-        setPublishedListing(updatedDetail);
-        setShowPublishedPopup(true);
-        setSelectedListing(updatedDetail);
-
-        setIsEditingListing(false);
-        setEditingOriginalListing(null);
-        setPostStep(1);
-        setPostDraft(defaultPostDraft);
-      }, 400);
-      return;
-    }
-  };
-
-  const openCheckout = ({ mode, amount, label, payload }) => {
-    setCheckout({ open: true, mode, amount, label, payload: payload || null, method: 'applePay', step: 'method' });
-  };
-
-  const checkoutAppliedRef = useRef(false);
-
-  const handleConfirmPayment = () => {
-    // Vérification de sécurité si paiement par solde
-    if ((checkout.method === 'troco' || checkout.method === 'wallet') && (profile.euroBalance || 0) < (checkout.amount || 0)) {
-      alert(`Solde insuffisant (${(profile.euroBalance || 0).toFixed(2)} € disponibles sur ${(checkout.amount || 0).toFixed(2)} € requis). Veuillez recharger votre portefeuille.`);
-      return;
-    }
-    checkoutAppliedRef.current = false; // reset guard for this payment
-    setCheckout(prev => ({ ...prev, step: 'processing' }));
-    window.setTimeout(() => {
-      playApplePaySound();
-      setCheckout(prev => ({ ...prev, step: 'success' }));
-      // Auto-close after 1.6s — will call closeCheckout which applies the balance changes once
-      window.setTimeout(() => {
-        closeCheckout();
-      }, 1600);
-    }, 1400);
-  };
-
   const confirmBoostListing = () => {
     if (!boostingListing) return;
     if (profile.euroBalance < 2.99) {
@@ -2672,14 +2300,6 @@ export default function App() {
     setBoostingListing(null);
   };
 
-  const paymentMethods = [
-    { key: 'applePay', label: 'Apple Pay', sub: 'Paiement instantané et sécurisé', icon: <span style={{ backgroundColor: '#000000', color: '#FFF', borderRadius: '7px', padding: '3px 8px', fontSize: '12px', fontWeight: '800', fontStyle: 'italic' }}> Pay</span> },
-    { key: 'card', label: 'Carte bancaire', sub: 'Visa • Mastercard • Amex', icon: <CreditCard size={18} color="#C67D5B" /> },
-    { key: 'troco', label: 'Solde Troco / Virement', sub: 'Utiliser mes jetons ou virement SEPA', icon: <Coins size={18} color="#C67D5B" /> },
-  ];
-
-
-  // ---- DÉCONNEXION UNIVERSELLE ----
   const handleSignOut = async () => {
     try {
       await signOut(auth);
@@ -2996,6 +2616,9 @@ export default function App() {
         />
       </div>
 
+      {/* BANDEAU MODE DÉMONSTRATION (CONFORMITÉ FINANCIÈRE / AUDIT) */}
+      <DemoModeBanner />
+
       {/* HEADER FIXE GLASSMORPHISM FLUIDE AVEC CONDENSATION AU SCROLL */}
       <AppHeader
         isMobile={isMobile}
@@ -3029,86 +2652,6 @@ export default function App() {
           />
         </Suspense>
       )}
-
-      {/* ---- CHECKOUT / TUNNEL DE PAIEMENT SIMULÉ ---- */}
-      {checkout.open && typeof document !== 'undefined' && createPortal(
-        <div className="fixed inset-0 z-[999999] bg-black/90 md:bg-[rgba(61,53,48,0.7)] md:backdrop-blur-md flex items-center justify-center p-5" style={{ position: 'fixed', inset: 0, zIndex: 999999 }}>
-          <div style={{ width: '100%', maxWidth: '460px', backgroundColor: darkMode ? '#231E1B' : '#FAF7F2', borderRadius: '28px', padding: '24px', boxShadow: '0 30px 80px rgba(61,53,48,0.30)', border: darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #E8DDD3', position: 'relative' }}>
-            {checkout.step === 'success' ? (
-              <div style={{ textAlign: 'center', padding: '18px 8px' }}>
-                <div style={{ width: '76px', height: '76px', borderRadius: '50%', backgroundColor: '#EBF0E6', color: '#3D4A35', margin: '0 auto 18px', display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'popIn 0.5s cubic-bezier(0.22,1,0.36,1) both' }}>
-                  <Check size={36} strokeWidth={3} />
-                </div>
-                <h3 className="font-editorial-heading" style={{ margin: '0 0 10px', fontSize: '22px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530', lineHeight: 1.4 }}>{t('transactionSuccess')}</h3>
-                <p style={{ margin: '0 0 6px', fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>{checkout.label}</p>
-                <p style={{ margin: '0 0 20px', fontSize: '24px', fontWeight: '800', color: '#C67D5B' }}>{(checkout.amount || 0).toFixed(2)} €</p>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '12px', color: '#7A8F6A', fontWeight: '700', marginBottom: '18px' }}>
-                  <ShieldCheck size={14} /> {t('encryptedPayment')}
-                </div>
-                <button onClick={closeCheckout} className="premium-button" style={{ width: '100%', border: 'none', borderRadius: '16px', padding: '14px', background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)', color: '#FFF', fontWeight: '800', cursor: 'pointer', boxShadow: '0 10px 22px rgba(198,125,91,0.25)' }}>{t('doneButton')}</button>
-              </div>
-            ) : checkout.step === 'processing' ? (
-              <div style={{ textAlign: 'center', padding: '34px 8px' }}>
-                <div style={{ width: '46px', height: '46px', margin: '0 auto 20px', border: '3px solid rgba(198,125,91,0.2)', borderTopColor: '#C67D5B', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                <div style={{ fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530', fontSize: '15px' }}>{t('transactionProcessing')}</div>
-                <p style={{ fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', marginTop: '8px' }}>{t('secureBankConnection')}</p>
-              </div>
-            ) : (
-              <>
-                <button onClick={closeCheckout} style={{ position: 'absolute', top: '16px', right: '16px', border: 'none', backgroundColor: darkMode ? 'rgba(232,221,211,0.1)' : '#F5EAE4', width: '34px', height: '34px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-                  <X size={16} color={darkMode ? '#FAF7F2' : '#3D3530'} />
-                </button>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                  <Lock size={16} color="#C67D5B" />
-                  <span style={{ fontSize: '12px', fontWeight: '800', color: '#C67D5B', letterSpacing: '0.04em' }}>{t('securePaymentHeader')}</span>
-                </div>
-                <h3 className="font-editorial-heading" style={{ margin: '0 0 16px', fontSize: '22px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{checkout.label || 'Paiement'}</h3>
-
-                <div style={{ border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', borderRadius: '16px', padding: '14px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', marginBottom: '18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>{t('amountToPay')}</span>
-                  <span style={{ fontSize: '22px', fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{(checkout.amount || 0).toFixed(2)} €</span>
-                </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px' }}>
-                  {paymentMethods.map(method => (
-                    <button key={method.key} onClick={() => setCheckout(prev => ({ ...prev, method: method.key }))} style={{ display: 'flex', alignItems: 'center', gap: '12px', border: checkout.method === method.key ? '1.5px solid #C67D5B' : (darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3'), borderRadius: '14px', padding: '12px 14px', backgroundColor: checkout.method === method.key ? (darkMode ? 'rgba(198,125,91,0.25)' : '#F5EAE4') : (darkMode ? '#1A1715' : '#FFFFFF'), cursor: 'pointer', textAlign: 'left' }}>
-                      {method.icon}
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: '13px', fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{method.label}</div>
-                        <div style={{ fontSize: '11px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>{method.sub}</div>
-                      </div>
-                      <div style={{ width: '18px', height: '18px', borderRadius: '50%', border: checkout.method === method.key ? '5px solid #C67D5B' : '1.5px solid #E8DDD3' }} />
-                    </button>
-                  ))}
-                </div>
-
-                {checkout.method === 'card' && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px', padding: '12px', borderRadius: '14px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3' }}>
-                    <input placeholder="1234 5678 9012 3456" style={{ width: '100%', padding: '10px 12px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', borderRadius: '10px', fontSize: '13px', backgroundColor: darkMode ? '#231E1B' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530' }} />
-                    <div style={{ display: 'flex', gap: '8px' }}>
-                      <input placeholder="MM/AA" style={{ flex: 1, padding: '10px 12px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', borderRadius: '10px', fontSize: '13px', backgroundColor: darkMode ? '#231E1B' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530' }} />
-                      <input placeholder="CVC" style={{ flex: 1, padding: '10px 12px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', borderRadius: '10px', fontSize: '13px', backgroundColor: darkMode ? '#231E1B' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530' }} />
-                    </div>
-                  </div>
-                )}
-
-                {checkout.method === 'troco' && (
-                  <div style={{ marginBottom: '16px', padding: '12px', borderRadius: '14px', backgroundColor: darkMode ? 'rgba(217,119,6,0.15)' : '#FEF3C7', border: '1px solid #E8DDD3', fontSize: '12px', color: darkMode ? '#FDE68A' : '#92400E', lineHeight: 1.6 }}>
-                    💡 Recharge depuis ton solde Troco ou par virement SEPA. Tes jetons seront convertis automatiquement si le solde est insuffisant.
-                  </div>
-                )}
-
-                <button onClick={handleConfirmPayment} className="premium-button" style={{ width: '100%', border: 'none', borderRadius: '16px', padding: '14px', background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)', color: '#FFF', fontWeight: '800', cursor: 'pointer', boxShadow: '0 10px 22px rgba(198,125,91,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                  <Lock size={15} /> Payer {(checkout.amount || 0).toFixed(2)} €
-                </button>
-              </>
-            )}
-          </div>
-        </div>,
-        document.body
-      )}
-
-
 
       <LanguageSelectModal
         isOpen={isLangModalOpen}
@@ -5022,6 +4565,23 @@ export default function App() {
           darkMode={darkMode}
         />
       </Suspense>
+
+      {/* NOUVELLE MODALE DE CHECKOUT DÉCOUPLÉE AVEC PROTECTION STRICTE ANTI-DÉBIT INVOLONTAIRE */}
+      <CheckoutModal
+        isOpen={Boolean(checkoutSession)}
+        session={checkoutSession}
+        onCancel={cancelCheckout}
+        onConfirm={applyCheckout}
+        isProcessing={isCheckoutProcessing}
+        paymentStatus={checkoutStatus}
+      />
+
+      {/* TOAST D'AVERTISSEMENT RATE LIMITING */}
+      <RateLimitToast
+        isRateLimited={isRateLimited}
+        retryAfterSeconds={retryAfterSeconds}
+        onClose={resetRateLimit}
+      />
 
 
       {/* PARCOURS D'ONBOARDING INTERACTIF POUR NOUVEAUX COMPTES (CHANTIER 1) */}

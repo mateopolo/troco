@@ -1,6 +1,7 @@
 import React from 'react';
 import { Sparkles, ExternalLink } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { paymentService } from '../services/paymentService';
 
 const SPONSORED_PARTNERS = [
   {
@@ -53,8 +54,40 @@ const SPONSORED_PARTNERS = [
   }
 ];
 
-export default function SponsoredFeedCard({ index = 0, darkMode = false, onOpenNotification = null }) {
+export default function SponsoredFeedCard({ index = 0, darkMode = false, onOpenNotification = null, onClaimBonus = null }) {
   const partner = SPONSORED_PARTNERS[index % SPONSORED_PARTNERS.length];
+  const [isClaiming, setIsClaiming] = React.useState(false);
+  const [bonusClaimed, setBonusClaimed] = React.useState(false);
+
+  const handleClaim = async (e) => {
+    e.stopPropagation();
+    if (isClaiming || bonusClaimed) return;
+    setIsClaiming(true);
+    try {
+      const res = await paymentService.claimBonus({
+        campaignId: partner.id,
+        amount: 2.0,
+        label: `Bonus Partenaire : ${partner.sponsorName}`,
+      });
+      setBonusClaimed(true);
+      if (onClaimBonus) {
+        onClaimBonus(res);
+      }
+      if (onOpenNotification) {
+        onOpenNotification(`🎉 Félicitations ! Bonus de 2.00 € crédité sur votre compte.`);
+      }
+    } catch (err) {
+      console.error('[SponsoredFeedCard] Bonus claim error:', err);
+      const errMsg = err?.message || 'Impossible de réclamer ce bonus (peut-être déjà réclamé).';
+      if (onOpenNotification) {
+        onOpenNotification(`⚠️ ${errMsg}`);
+      } else {
+        alert(errMsg);
+      }
+    } finally {
+      setIsClaiming(false);
+    }
+  };
 
   const handleAction = (e) => {
     e.stopPropagation();
@@ -239,31 +272,63 @@ export default function SponsoredFeedCard({ index = 0, darkMode = false, onOpenN
         </div>
 
         {/* BOUTON ACTION PARTENAIRE */}
-        <button
-          type="button"
-          onClick={handleAction}
-          className="premium-btn-accent"
-          style={{
-            padding: '8px 14px',
-            borderRadius: '12px',
-            fontSize: '12px',
-            fontWeight: '700',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '6px',
-            boxShadow: 'var(--shadow-accent)',
-            background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
-            color: '#FFFFFF',
-            border: 'none',
-            cursor: 'pointer',
-            width: '100%'
-          }}
-        >
-          <Sparkles size={13} />
-          <span>{partner.ctaText}</span>
-          <ExternalLink size={12} />
-        </button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+          <button
+            type="button"
+            onClick={handleAction}
+            className="premium-btn-accent"
+            style={{
+              padding: '8px 14px',
+              borderRadius: '12px',
+              fontSize: '12px',
+              fontWeight: '700',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              boxShadow: 'var(--shadow-accent)',
+              background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
+              color: '#FFFFFF',
+              border: 'none',
+              cursor: 'pointer',
+              width: '100%'
+            }}
+          >
+            <Sparkles size={13} />
+            <span>{partner.ctaText}</span>
+            <ExternalLink size={12} />
+          </button>
+
+          <button
+            type="button"
+            onClick={handleClaim}
+            disabled={isClaiming || bonusClaimed}
+            style={{
+              padding: '6px 12px',
+              borderRadius: '10px',
+              fontSize: '11px',
+              fontWeight: '600',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              background: bonusClaimed ? 'rgba(16, 185, 129, 0.15)' : 'rgba(59, 130, 246, 0.1)',
+              color: bonusClaimed ? '#10b981' : 'var(--accent-primary)',
+              border: bonusClaimed ? '1px solid #10b981' : '1px dashed var(--accent-primary)',
+              cursor: (isClaiming || bonusClaimed) ? 'default' : 'pointer',
+              width: '100%',
+              transition: 'all 0.2s ease',
+            }}
+          >
+            {bonusClaimed ? (
+              <span>✓ Bonus 2.00 € réclamé !</span>
+            ) : isClaiming ? (
+              <span>Vérification du bonus...</span>
+            ) : (
+              <span>🎁 Réclamer mon bonus de bienvenue (+2.00 €)</span>
+            )}
+          </button>
+        </div>
       </div>
     </motion.div>
   );

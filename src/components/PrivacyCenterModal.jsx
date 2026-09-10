@@ -23,6 +23,7 @@ export default function PrivacyCenterModal({
 
   // Suppression de compte
   const [deleteConfirmationText, setDeleteConfirmationText] = useState('');
+  const [immediateDelete, setImmediateDelete] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
 
@@ -83,15 +84,20 @@ export default function PrivacyCenterModal({
   // Confirmation de suppression de compte
   const handleConfirmDeleteAccount = async () => {
     if (deleteConfirmationText.trim().toUpperCase() !== 'SUPPRIMER') {
-      setDeleteError('Veuillez taper "SUPPRIMER" pour confirmer la suppression définitive.');
+      setDeleteError('Veuillez taper "SUPPRIMER" pour confirmer la suppression.');
       return;
     }
     setDeleteError('');
     setIsDeleting(true);
-    if (onDeleteAccount) {
-      await onDeleteAccount();
+    try {
+      if (onDeleteAccount) {
+        await onDeleteAccount({ immediate: immediateDelete });
+      }
+    } catch (err) {
+      setDeleteError(err?.message || 'Erreur lors de la suppression du compte.');
+    } finally {
+      setIsDeleting(false);
     }
-    setIsDeleting(false);
   };
 
   return (
@@ -433,6 +439,19 @@ export default function PrivacyCenterModal({
                   }}
                 />
                 {deleteError && <div style={{ fontSize: '12px', color: '#EF4444', marginTop: '6px', fontWeight: '700' }}>{deleteError}</div>}
+              </div>
+
+              <div style={{ marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <input
+                  type="checkbox"
+                  id="immediate-delete-check"
+                  checked={immediateDelete}
+                  onChange={(e) => setImmediateDelete(e.target.checked)}
+                  style={{ width: '16px', height: '16px', accentColor: '#EF4444', cursor: 'pointer' }}
+                />
+                <label htmlFor="immediate-delete-check" style={{ fontSize: '12px', color: darkMode ? '#D1D5DB' : '#4B5563', cursor: 'pointer' }}>
+                  Suppression <strong>immédiate sans délai</strong> de rétractation de 30 jours (effacement immédiat irréversible).
+                </label>
               </div>
 
               <button

@@ -37,3 +37,19 @@ export function logAdminAction(payload: AdminLogPayload): void {
     logger.info(structuredEntry.message, structuredEntry);
   }
 }
+
+/**
+ * 📊 Journalisation structurée générique pour les actions financières et RGPD
+ */
+export async function structLog(action: string, payload: Record<string, unknown>): Promise<void> {
+  const structuredEntry = {
+    severity: 'INFO',
+    message: `[STRUCTURED AUDIT] ${action}`,
+    audit: {
+      action,
+      ...payload,
+      timestamp: new Date().toISOString(),
+    }
+  };
+  logger.info(structuredEntry.message, structuredEntry);
+}

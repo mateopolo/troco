@@ -3,6 +3,7 @@ import { getAuth } from "firebase/auth";
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, memoryLocalCache } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 import { getFunctions } from "firebase/functions";
+import { initializeAppCheck, ReCaptchaV3Provider } from "firebase/app-check";
 
 const firebaseConfig = {
   apiKey: process.env.REACT_APP_FIREBASE_API_KEY || "AIzaSyBOnQhKTdDRDtvmE4Fxd_KFxi8StFtQKTk",
@@ -17,7 +18,26 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const storage = getStorage(app);
-export const functions = getFunctions(app);
+export const functions = getFunctions(app, 'europe-west1');
+
+// Initialisation sécurisée d'App Check (Web: reCAPTCHA v3, Dev: Debug token)
+const recaptchaSiteKey = process.env.REACT_APP_RECAPTCHA_SITE_KEY || process.env.VITE_RECAPTCHA_SITE_KEY;
+if (typeof window !== 'undefined') {
+  if (process.env.NODE_ENV !== 'production' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+    // eslint-disable-next-line no-restricted-globals
+    self.FIREBASE_APPCHECK_DEBUG_TOKEN = process.env.REACT_APP_APPCHECK_DEBUG_TOKEN || true;
+  }
+  if (recaptchaSiteKey) {
+    try {
+      initializeAppCheck(app, {
+        provider: new ReCaptchaV3Provider(recaptchaSiteKey),
+        isTokenAutoRefreshEnabled: true,
+      });
+    } catch (err) {
+      console.warn('[AppCheck] Initialization error:', err);
+    }
+  }
+}
 
 let firestoreInstance;
 try {
