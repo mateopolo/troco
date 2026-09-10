@@ -158,4 +158,48 @@ describe('💬 useChatManager Unit Tests Suite [VERIF-03]', () => {
 
     expect(result.current.messageDraft).toBe('   ');
   });
+
+  it('7. [FIX-CHAT] handleSendMessage envoie un message texte direct via addDoc sans dépendre des participants', async () => {
+    const { addDoc, updateDoc } = await import('firebase/firestore');
+    const { result } = renderHook(() => useChatManager(defaultProps));
+
+    act(() => {
+      result.current.handleSelectChat({ id: 'chat_test_123', partnerUid: 'bob_123' });
+    });
+
+    await act(async () => {
+      await result.current.handleSendMessage('Bonjour Alice !');
+    });
+
+    expect(addDoc).toHaveBeenCalledWith(
+      expect.objectContaining({ path: 'chats/chat_test_123/messages' }),
+      expect.objectContaining({
+        content: 'Bonjour Alice !',
+        text: 'Bonjour Alice !',
+        senderUid: 'user_alice_uid',
+        status: 'sent',
+      })
+    );
+    expect(updateDoc).toHaveBeenCalledWith(
+      expect.objectContaining({ path: 'chats/chat_test_123' }),
+      expect.objectContaining({
+        lastMessage: 'Bonjour Alice !',
+      })
+    );
+  });
+
+  it('8. [FIX-CHAT] handleSendMessage vide messageDraft lors de l envoi réussi', async () => {
+    const { result } = renderHook(() => useChatManager(defaultProps));
+
+    act(() => {
+      result.current.handleSelectChat({ id: 'chat_test_456', partnerUid: 'charlie' });
+      result.current.setMessageDraft('Message depuis draft');
+    });
+
+    await act(async () => {
+      await result.current.handleSendMessage();
+    });
+
+    expect(result.current.messageDraft).toBe('');
+  });
 });

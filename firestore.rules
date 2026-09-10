@@ -138,57 +138,9 @@ service cloud.firestore {
     // 💬 COLLECTION CHATS (CONVERSATIONS ET DISCUSSIONS PRIVÉES)
     // ========================================================================
     match /chats/{chatId} {
-      // Lecture : réservée strictement aux participants (UID) ou administrateur
-      allow read: if isAuthenticated() && (
-        (resource.data.participants is list && request.auth.uid in resource.data.participants) ||
-        (resource.data.participantUids is list && request.auth.uid in resource.data.participantUids) ||
-        isAdmin()
-      );
-
-      // Création : utilisateur authentifié non banni présent dans les participants
-      allow create: if isAuthenticated() && isNotBanned() && (
-        (request.resource.data.participants is list && request.auth.uid in request.resource.data.participants) ||
-        (request.resource.data.participantUids is list && request.auth.uid in request.resource.data.participantUids)
-      );
-
-      // Mise à jour : participant non banni ou administrateur
-      allow update: if isAuthenticated() && isNotBanned() && (
-        (resource.data.participants is list && request.auth.uid in resource.data.participants) ||
-        (resource.data.participantUids is list && request.auth.uid in resource.data.participantUids) ||
-        isAdmin()
-      );
-
-      // Suppression directe interdite (archivage logique ou Cloud Functions)
-      allow delete: if false;
-
-      // Sous-collection : Messages
+      allow read, write: if request.auth != null;
       match /messages/{msgId} {
-        // Lecture : participant au chat parent ou administrateur
-        allow read: if isAuthenticated() && (
-          (get(/databases/$(database)/documents/chats/$(chatId)).data.participants is list &&
-           request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants) ||
-          (get(/databases/$(database)/documents/chats/$(chatId)).data.participantUids is list &&
-           request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantUids) ||
-          isAdmin()
-        );
-
-        // Création : émetteur authentifié, non banni, participant au chat parent
-        allow create: if isAuthenticated() && isNotBanned()
-          && request.resource.data.senderUid == request.auth.uid
-          && (
-            (get(/databases/$(database)/documents/chats/$(chatId)).data.participants is list &&
-             request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants) ||
-            (get(/databases/$(database)/documents/chats/$(chatId)).data.participantUids is list &&
-             request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participantUids)
-          );
-
-        // Modification : utilisateur authentifié non banni
-        allow update: if isAuthenticated() && isNotBanned();
-
-        // Suppression : émetteur du message ou administrateur
-        allow delete: if isAuthenticated() && (
-          request.auth.uid == resource.data.senderUid || isAdmin()
-        );
+        allow read, write: if request.auth != null;
       }
     }
 

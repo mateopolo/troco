@@ -18,7 +18,6 @@ import {
 import { Clock, Sparkles, ShieldCheck, CheckCircle, Check, RefreshCw, X } from 'lucide-react';
 import { mockChats, initialChatThreads } from '../data/mockChatsData';
 import { validateChatMessage } from '../utils/moderationBlacklist';
-import { shouldSendMessage, generateDeterministicMessageId } from '../utils/messageIdempotency';
 import { uploadVoiceNote } from '../services/voiceStorageService';
 import { playBetclicBalanceSound, playApplePaySound, playSwooshSound } from '../utils/audioService';
 import { useChatStore, useWalletStore } from '../stores';
@@ -510,138 +509,76 @@ export const useChatManager = ({
     }, 0);
   }, [chatsList, chatThreads, readChats, selectedChat, activeTab, profile?.name, profile?.username, profile?.uid, auth]);
 
-  // ---- SYNC MESSAGES EN TEMPS RÉEL (chat actif avec tri en mémoire résilient) ----
+  // ---- SOUSCRIPTION UNIQUE AUX MESSAGES DU CHAT ACTIF ----
   useEffect(() => {
     if (!selectedChat?.id || !db) return;
     const chatId = String(selectedChat.id);
-    const myUid = profile?.uid || (auth?.currentUser && auth.currentUser.uid) || null;
+    const myUid = profile?.uid || (auth?.currentUser && auth.currentUser.uid);
 
-    let unsub = () => {};
-
-    const handleSnapshot = (snapshot) => {
-      if (snapshot.empty) return;
-      const firestoreIds = new Set(snapshot.docs.map(d => d.id));
-
-      const msgs = snapshot.docs.map(d => {
+    const handleSnapshot = (snap) => {
+      const msgs = snap.docs.map(d => {
         const data = d.data();
-        const isMe = (data.senderUid && myUid && String(data.senderUid) === String(myUid)) ||
-          (data.senderName?.trim().toLowerCase() === profile?.name?.trim().toLowerCase()) ||
-          (data.sender === 'me');
+        const text = data.content || data.text || '';
+        const isMe = (myUid && data.senderUid && String(data.senderUid) === String(myUid)) ||
+          (data.senderName && profile?.name && data.senderName.trim().toLowerCase() === profile.name.trim().toLowerCase()) ||
+          data.sender === 'me';
         return {
           id: d.id,
           ...data,
+          text,
+          content: text,
           sender: isMe ? 'me' : 'them',
-          senderName: data.senderName || (isMe ? profile?.name : (selectedChat.user || 'Interlocuteur')),
-          text: data.text || '',
+          senderName: data.senderName || (isMe ? (profile?.name || 'Moi') : (selectedChat.user || 'Interlocuteur')),
           status: data.status || 'sent',
-          createdAt: data.createdAt?.toMillis ? data.createdAt.toMillis() : (data.createdAt || data.timestamp || Date.now()),
-          translations: data.translations || { FR: data.text || '' },
         };
       });
 
-      // Fusionner avec les messages optimistes en vol (temp_*) dont l'ID Firestore n'est pas encore connu.
-      // Cela évite le doublon visuel : le message optimiste est fusionné ou écrasé par le vrai doc Firestore.
-      setChatThreads(prev => {
-        const currentThread = prev[selectedChat.id] || [];
+      setChatThreads(prev => ({
+        ...prev,
+        [selectedChat.id]: msgs,
+        [chatId]: msgs,
+      }));
 
-        // Identifier les messages optimistes locaux non encore confirmés
-        // Si un message optimiste a le même texte et un timestamp proche qu'un message entrant, fusionne-les (on écarte l'optimiste)
-        const inFlightOptimistic = currentThread.filter(m => {
-          const isOptimistic = (typeof m.id === 'string' && m.id.startsWith('temp_')) || Boolean(m.temporaryId);
-          if (!isOptimistic) return false;
-          if (firestoreIds.has(m.id) || (m.temporaryId && firestoreIds.has(m.temporaryId))) return false;
+      try {
+        useChatStore.getState().updateChatThread(selectedChat.id, msgs);
+      } catch (_) {}
 
-          const mText = (m.text || '').trim();
-          const mTime = typeof m.timestamp === 'number' ? m.timestamp : (m.createdAt ? new Date(m.createdAt).getTime() : 0);
-
-          const matchingDoc = msgs.find(d => {
-            const dText = (d.text || '').trim();
-            const dTime = typeof d.timestamp === 'number' ? d.timestamp : (d.createdAt ? new Date(d.createdAt).getTime() : 0);
-            const textMatches = dText && mText && dText === mText;
-            const timeMatches = Math.abs(dTime - mTime) < 20000;
-            const senderMatches = (d.sender === 'me' || d.senderUid === m.senderUid);
-            return textMatches && timeMatches && senderMatches;
-          });
-
-          return !matchingDoc;
-        });
-
-        // Déduplication infaillible utilisant un Map basé sur l'ID du message
-        // En plaçant msgs après inFlightOptimistic, le doc Firestore officiel écrase l'optimiste
-        const combined = [...inFlightOptimistic, ...msgs];
-        const uniqueMessages = Array.from(
-          new Map(combined.map(item => [item.id || item.temporaryId, item])).values()
-        );
-
-        // Tri chronologique ascendant
-        uniqueMessages.sort((a, b) => {
-          const tA = typeof a.timestamp === 'number' ? a.timestamp : (typeof a.createdAt === 'number' ? a.createdAt : new Date(a.createdAt || 0).getTime());
-          const tB = typeof b.timestamp === 'number' ? b.timestamp : (typeof b.createdAt === 'number' ? b.createdAt : new Date(b.createdAt || 0).getTime());
-          return tA - tB;
-        });
-
-        const updatedThreads = {
-          ...prev,
-          [selectedChat.id]: uniqueMessages,
-        };
-        try {
-          useChatStore.getState().updateChatThread(selectedChat.id, uniqueMessages);
-        } catch (_) {}
-        return updatedThreads;
-      });
-
-      // Si le chat est ouvert dans l'onglet 'chat', marquer automatiquement les messages reçus comme "lu"
-      if (activeTab === 'chat' && String(selectedChat.id) === String(chatId)) {
-        snapshot.docs.forEach(d => {
-          const data = d.data();
-          const isFromThem = (data.senderUid && myUid && String(data.senderUid) !== String(myUid)) ||
-            (data.senderName?.trim().toLowerCase() !== profile?.name?.trim().toLowerCase());
-          if (isFromThem && data.status !== 'read' && !data.read) {
-            updateDoc(doc(db, 'chats', chatId, 'messages', d.id), {
-              status: 'read',
-              read: true,
-              readAt: serverTimestamp(),
-            }).catch(() => { });
-          }
-        });
-      }
-
-      // Synchronisation immédiate de l'aperçu du dernier message dans chatsList
       if (msgs.length > 0) {
         const lastMsg = msgs[msgs.length - 1];
-        const previewTxt = lastMsg.kind === 'deal' || lastMsg.type === 'deal'
-          ? (lastMsg.terms?.conditions || 'Proposition de deal')
-          : (lastMsg.text || '');
-        setChatsList(prev => prev.map(c => String(c.id) === String(selectedChat.id) ? {
+        const previewTxt = lastMsg.content || lastMsg.text || '';
+        setChatsList(prev => prev.map(c => String(c.id) === chatId ? {
           ...c,
           lastMessage: previewTxt,
           lastSenderName: lastMsg.senderName,
         } : c));
       }
 
-      // Si la conversation est activement consultée, marquer comme lue
-      setReadChats(prev => new Set([...prev, selectedChat.id, String(selectedChat.id), Number(selectedChat.id)]));
+      setReadChats(prev => new Set([...prev, selectedChat.id, chatId]));
     };
 
+    let unsub = () => {};
     try {
-      const q = query(collection(db, 'chats', chatId, 'messages'), orderBy('createdAt', 'asc'));
+      const q = query(
+        collection(db, 'chats', chatId, 'messages'),
+        orderBy('timestamp', 'asc')
+      );
       unsub = onSnapshot(q, handleSnapshot, (err) => {
-        console.warn('[Firestore] chat messages onSnapshot with orderBy failed, fallback without orderBy:', err);
+        console.warn('[Firestore] onSnapshot with orderBy timestamp failed, fallback without orderBy:', err);
         try {
           const fallbackQ = collection(db, 'chats', chatId, 'messages');
           unsub = onSnapshot(fallbackQ, handleSnapshot, (fallbackErr) => {
-            console.error('[Firestore] chat messages fallback failed:', fallbackErr);
+            console.error('[Firestore] onSnapshot fallback failed:', fallbackErr);
           });
         } catch (_) {}
       });
     } catch (err) {
-      console.warn('[Firestore] chat messages listener setup failed:', err);
+      console.warn('[Firestore] query setup error:', err);
     }
 
     return () => {
       if (typeof unsub === 'function') unsub();
     };
-  }, [selectedChat?.id, selectedChat?.user, profile?.name, profile?.uid, activeTab, auth, db]);
+  }, [selectedChat?.id, profile?.name, profile?.uid, auth, db]);
 
   // ---- GESTION DU TYPING INDICATOR TEMPS RÉEL (DEBOUNCE 2.5S) ----
   const typingTimeoutRef = useRef(null);
@@ -668,196 +605,77 @@ export const useChatManager = ({
     }, 2500);
   };
 
-  // ---- ENVOI DE MESSAGE (TEXTE OU PAYLOAD OBJET PERSONNALISÉ / WHITEBOARD) ----
-  const handleSendMessage = async (customPayload = null) => {
-    if (!selectedChat) return;
-    hapticLight();
-    playPop();
+  // ---- ENVOI DE MESSAGE (PROMPT 1 [FIX-CHAT]) ----
+  const handleSendMessage = async (textOrPayload = null) => {
+    const uid = profile?.uid || (auth?.currentUser && auth.currentUser.uid);
+    if (!selectedChat?.id || !uid) return;
+    const chatId = String(selectedChat.id);
 
-    if (customPayload && typeof customPayload === 'object') {
-      const chatId = selectedChat.id;
-      const myUid = profile?.uid || auth?.currentUser?.uid || 'me';
-      const myName = profile?.name || 'Moi';
-
-      // Utiliser un tempId préfixé pour que handleSnapshot puisse l'identifier comme optimiste
-      // et ne pas le doubler lorsque Firestore confirme l'écriture.
-      const tempId = `temp_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-      const nowTime = Date.now();
-      const preview = customPayload.text || (customPayload.type === 'audio'
-        ? `🎵 ${customPayload.fileName || 'Fichier audio'}`
-        : `🎨 ${myName} a partagé le Tableau Blanc : "${customPayload.workspaceTitle || customPayload.title || 'Tableau Blanc'}"`);
-
-      const payload = {
-        id: tempId,
-        temporaryId: tempId,
-        sender: 'me',
-        senderUid: myUid,
-        senderName: myName,
-        status: 'pending',
-        timestamp: nowTime,
-        createdAt: new Date(nowTime),
-        ...customPayload,
+    // Support payload objet personnalisé (ex: note vocale, tableau blanc)
+    if (textOrPayload && typeof textOrPayload === 'object' && !textOrPayload.preventDefault) {
+      if (!db) return;
+      const preview = (textOrPayload.content || textOrPayload.text || (textOrPayload.type === 'audio' ? '🎵 Note vocale' : 'Document partagé')).trim();
+      const messagesRef = collection(db, 'chats', chatId, 'messages');
+      await addDoc(messagesRef, {
+        ...textOrPayload,
+        content: preview,
         text: preview,
-      };
-
-      // 1. Insertion optimiste immédiate
-      setChatThreads(prev => ({
-        ...prev,
-        [chatId]: [...(prev[chatId] || []), payload]
-      }));
-
-      setChatsList(prev => prev.map(c => String(c.id) === String(chatId) ? {
-        ...c,
-        lastMessage: preview,
-        lastSenderName: myName
-      } : c));
-
-      if (db) {
-        try {
-          // 2. Écriture Firestore atomique (audioUrl DOIT être présent avant cet appel)
-          const docRef = await addDoc(collection(db, 'chats', String(chatId), 'messages'), {
-            ...customPayload,
-            sender: myUid,
-            senderUid: myUid,
-            senderName: myName,
-            text: preview,
-            read: false,
-            status: 'sent',
-            createdAt: serverTimestamp(),
-          });
-
-          // 3. Promouvoir le tempId vers l'ID Firestore réel → handleSnapshot ignorera le doublon
-          setChatThreads(prev => {
-            const thread = prev[chatId] || [];
-            return {
-              ...prev,
-              [chatId]: thread.map(m =>
-                m.id === tempId ? { ...m, id: docRef.id, status: 'sent' } : m
-              ),
-            };
-          });
-
-          await setDoc(doc(db, 'chats', String(chatId)), {
-            id: chatId,
-            user: selectedChat.user,
-            listing: selectedChat.listing,
-            lastMessage: preview,
-            lastSenderName: myName,
-            unreadCount: increment(1),
-            participants: selectedChat.participants || [myName, selectedChat.user],
-            updatedAt: serverTimestamp(),
-          }, { merge: true });
-        } catch (e) {
-          console.warn('[Firestore] custom message write failed:', e);
-          // Marquer le message optimiste comme erreur
-          setChatThreads(prev => {
-            const thread = prev[chatId] || [];
-            return {
-              ...prev,
-              [chatId]: thread.map(m => m.id === tempId ? { ...m, status: 'error' } : m),
-            };
-          });
-        }
+        senderUid: uid,
+        senderName: profile?.name || 'Utilisateur',
+        timestamp: serverTimestamp(),
+        createdAt: serverTimestamp(),
+        status: 'sent',
+      });
+      try {
+        await updateDoc(doc(db, 'chats', chatId), {
+          lastMessage: preview,
+          lastMessageAt: serverTimestamp(),
+        });
+      } catch (_) {
+        await setDoc(doc(db, 'chats', chatId), {
+          lastMessage: preview,
+          lastMessageAt: serverTimestamp(),
+        }, { merge: true });
       }
       return;
     }
 
-    const chatId = selectedChat?.id;
-    if (!chatId) return;
-
-    const text = messageDraft.trim();
+    const rawText = typeof textOrPayload === 'string' ? textOrPayload : (typeof messageDraft === 'string' ? messageDraft : '');
+    const text = rawText.trim();
     if (!text) return;
 
-    if (!shouldSendMessage(chatId, profile?.uid, text)) {
-      return;
-    }
-
-    const messageCheck = validateChatMessage(text);
-    if (!messageCheck.isValid) {
-      alert(messageCheck.errorMessage);
-      return;
-    }
+    hapticLight();
+    playPop();
+    setMessageDraft('');
 
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     if (profile?.name && db) {
-      setDoc(doc(db, 'chats', String(chatId)), {
+      setDoc(doc(db, 'chats', chatId), {
         typing: { [profile.name]: false }
       }, { merge: true }).catch(() => { });
     }
 
-    const tempId = generateDeterministicMessageId(chatId, profile?.uid, text);
-    const nowTime = Date.now();
-    const newMessage = {
-      id: tempId,
-      temporaryId: tempId,
-      sender: 'me',
-      senderName: profile?.name || 'Moi',
-      senderUid: profile?.uid || null,
-      text,
-      status: 'pending',
-      timestamp: nowTime,
-      createdAt: new Date(nowTime),
-      translations: { FR: text }
-    };
-
-    // 1. Optimistic insertion : rendu instantané 0ms avec status pending (icône horloge)
-    setChatThreads(prev => ({ ...prev, [chatId]: [...(prev[chatId] || []), newMessage] }));
-    useChatStore.getState().addMessageToThread(chatId, newMessage);
-    setMessageDraft('');
-
-    setChatsList(prev => prev.map(c => String(c.id) === String(chatId) ? { ...c, lastMessage: text, lastSenderName: profile?.name || 'Moi' } : c));
-
     if (db) {
+      const messagesRef = collection(db, 'chats', chatId, 'messages');
+      await addDoc(messagesRef, {
+        content: text,
+        text: text,
+        senderUid: uid,
+        senderName: profile?.name || 'Utilisateur',
+        timestamp: serverTimestamp(),
+        createdAt: serverTimestamp(),
+        status: 'sent',
+      });
       try {
-        const docRef = await addDoc(collection(db, 'chats', String(chatId), 'messages'), {
-          senderName: profile?.name || 'Moi',
-          senderUid: profile?.uid || null,
-          text,
-          read: false,
-          status: 'sent',
-          createdAt: serverTimestamp(),
-        });
-
-        // Mise à jour optimiste -> sent
-        setChatThreads(prev => {
-          const thread = prev[chatId] || [];
-          return {
-            ...prev,
-            [chatId]: thread.map(m => m.id === tempId ? { ...m, id: docRef.id || tempId, status: 'sent' } : m)
-          };
-        });
-
-        // Déduplication & purge de l'ID temporaire dans le cache persistant Zustand
-        try {
-          useChatStore.getState().replaceTempId(chatId, tempId, docRef.id);
-        } catch (_) {}
-
-        const existingUids = Array.isArray(selectedChat.participantUids) ? selectedChat.participantUids : [];
-        const otherUid = selectedChat.authorUid || selectedChat.userUid || selectedChat.partnerUid || selectedChat.recipientUid || selectedChat.otherUid;
-        const participantUids = Array.from(new Set([...existingUids, profile?.uid, otherUid].filter(Boolean)));
-
-        await setDoc(doc(db, 'chats', String(chatId)), {
-          id: chatId,
-          user: selectedChat.user,
-          listing: selectedChat.listing,
+        await updateDoc(doc(db, 'chats', chatId), {
           lastMessage: text,
-          lastSenderName: profile?.name || 'Moi',
-          lastSenderUid: profile?.uid || null,
-          unreadCount: increment(1),
-          participants: selectedChat.participants || [profile?.name || 'Moi', selectedChat.user],
-          participantUids: participantUids.length > 0 ? participantUids : undefined,
-          updatedAt: serverTimestamp(),
-        }, { merge: true });
-      } catch (e) {
-        console.warn('[Firestore] message write failed, marked as error:', e);
-        // Échec -> statut error avec option Réessayer
-        setChatThreads(prev => {
-          const thread = prev[chatId] || [];
-          return {
-            ...prev,
-            [chatId]: thread.map(m => m.id === tempId ? { ...m, status: 'error' } : m)
-          };
+          lastMessageAt: serverTimestamp(),
         });
+      } catch (_) {
+        await setDoc(doc(db, 'chats', chatId), {
+          lastMessage: text,
+          lastMessageAt: serverTimestamp(),
+        }, { merge: true });
       }
     }
   };
