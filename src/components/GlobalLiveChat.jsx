@@ -66,6 +66,8 @@ export default function GlobalLiveChat({
   const [onlineCount, setOnlineCount] = useState(1428);
   const [hasNewMessagesBelow, setHasNewMessagesBelow] = useState(false);
   const [isAutoScrollEnabled, setIsAutoScrollEnabled] = useState(true);
+  const [isSending, setIsSending] = useState(false);
+  const lastSendTimestampRef = useRef(0);
 
   // État Modération Administrateur In-App (Discord Style)
   const [editingAdminMsg, setEditingAdminMsg] = useState(null); // { id, text }
@@ -117,12 +119,21 @@ export default function GlobalLiveChat({
 
         return onSnapshot(q, (snapshot) => {
           if (!snapshot.empty) {
+            const firestoreIds = new Set(snapshot.docs.map(d => d.id));
+            const confirmedTempIds = new Set(
+              snapshot.docs
+                .map(d => d.data()?.temporaryId)
+                .filter(Boolean)
+                .map(String)
+            );
+
             const fetched = [];
             snapshot.forEach((docSnap) => {
               const data = docSnap.data();
               if (data) {
                 fetched.push({
                   id: docSnap.id,
+                  temporaryId: data.temporaryId || null,
                   author: data.author || data.authorName || 'Membre Troco',
                   authorUsername: data.authorUsername || '@membre',
                   avatar: data.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
@@ -140,12 +151,27 @@ export default function GlobalLiveChat({
 
             setMessages(prev => {
               const mergedMap = new Map();
-              // Conserver les messages initiaux de démonstration si peu de données
-              INITIAL_GLOBAL_MESSAGES.forEach(m => mergedMap.set(m.id, m));
-              // Ajouter les messages précédemment en mémoire
-              (prev || []).forEach(m => mergedMap.set(m.id, m));
-              // Écraser/ajouter avec les données fraîches de Firestore
-              fetched.forEach(m => mergedMap.set(m.id, m));
+              // 1. Conserver les messages initiaux de démonstration
+              INITIAL_GLOBAL_MESSAGES.forEach(m => mergedMap.set(String(m.id), m));
+
+              // 2. Écraser impérativement avec les documents officiels retournés par Firestore
+              fetched.forEach(m => {
+                const uid = String(m.id);
+                if (uid) mergedMap.set(uid, m);
+              });
+
+              // 3. Ajouter UNIQUEMENT les messages optimistes en vol non encore confirmés par le serveur
+              (prev || []).forEach(m => {
+                const isTemp = typeof m.id === 'string' && (m.id.startsWith('local-') || m.id.startsWith('temp_'));
+                if (isTemp) {
+                  const tempKey = String(m.temporaryId || m.id);
+                  if (firestoreIds.has(String(m.id))) return;
+                  if (confirmedTempIds.has(tempKey) || confirmedTempIds.has(String(m.id))) return;
+                  if (!mergedMap.has(String(m.id))) {
+                    mergedMap.set(String(m.id), m);
+                  }
+                }
+              });
 
               const mergedList = Array.from(mergedMap.values());
               mergedList.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
@@ -188,9 +214,14 @@ export default function GlobalLiveChat({
     }
   };
 
-  // Envoi de message avec mise à jour optimiste instantanée & filtre de modération
+  // Envoi de message avec mise à jour optimiste instantanée, debounce strict (500ms) et Map anti-doublons
   const handleSendMessage = async (e) => {
     e?.preventDefault();
+    const now = Date.now();
+    if (isSending || (now - lastSendTimestampRef.current < 500)) {
+      return;
+    }
+
     const text = inputText.trim();
     if (!text) return;
 
@@ -201,8 +232,13 @@ export default function GlobalLiveChat({
       return;
     }
 
+    lastSendTimestampRef.current = now;
+    setIsSending(true);
+
+    const tempId = `temp_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const optimisticMsg = {
-      id: `local-${Date.now()}`,
+      id: tempId,
+      temporaryId: tempId,
       author: myName,
       authorUsername: myUsername,
       avatar: myAvatar,
@@ -212,7 +248,13 @@ export default function GlobalLiveChat({
       timestamp: Date.now(),
     };
 
-    setMessages(prev => [...prev, optimisticMsg]);
+    setMessages(prev => {
+      const map = new Map();
+      (prev || []).forEach(m => map.set(String(m.id), m));
+      map.set(String(optimisticMsg.id), optimisticMsg);
+      return Array.from(map.values());
+    });
+
     setInputText('');
     setIsUrgentMode(false);
     setIsAutoScrollEnabled(true);
@@ -221,6 +263,7 @@ export default function GlobalLiveChat({
     // Sauvegarde Firestore
     try {
       await addDoc(collection(db, 'global_chat'), {
+        temporaryId: tempId,
         author: myName,
         authorUsername: myUsername,
         avatar: myAvatar,
@@ -232,6 +275,10 @@ export default function GlobalLiveChat({
       });
     } catch (err) {
       console.warn('[GlobalChat] Firestore send error:', err);
+    } finally {
+      setTimeout(() => {
+        setIsSending(false);
+      }, 500);
     }
   };
 
@@ -797,28 +844,45 @@ export default function GlobalLiveChat({
             />
           </div>
 
-          {/* BOUTON ENVOI */}
+          {/* BOUTON ENVOI AVEC PROTECTION ANTI-DOUBLE CLIC & DEBOUNCE */}
           <button
             type="submit"
-            disabled={!inputText.trim()}
+            disabled={isSending || !inputText.trim()}
             className="premium-button"
             style={{
               border: 'none',
               borderRadius: '12px',
               width: '38px',
               height: '38px',
-              backgroundColor: inputText.trim() ? (isUrgentMode ? '#EF4444' : 'var(--accent-primary)') : 'var(--bg-subtle)',
-              color: inputText.trim() ? '#FFFFFF' : 'var(--text-secondary)',
-              cursor: inputText.trim() ? 'pointer' : 'default',
+              backgroundColor: (inputText.trim() && !isSending) ? (isUrgentMode ? '#EF4444' : 'var(--accent-primary)') : 'var(--bg-subtle)',
+              color: (inputText.trim() && !isSending) ? '#FFFFFF' : 'var(--text-secondary)',
+              cursor: (inputText.trim() && !isSending) ? 'pointer' : 'default',
+              pointerEvents: isSending ? 'none' : 'auto',
+              opacity: isSending ? 0.6 : 1,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               flexShrink: 0,
-              boxShadow: inputText.trim() ? (isUrgentMode ? '0 4px 14px rgba(239, 68, 68, 0.4)' : 'var(--shadow-accent)') : 'none',
+              boxShadow: (inputText.trim() && !isSending) ? (isUrgentMode ? '0 4px 14px rgba(239, 68, 68, 0.4)' : 'var(--shadow-accent)') : 'none',
               transition: 'all 0.15s ease',
             }}
+            title={isSending ? "Envoi en cours..." : "Envoyer"}
+            aria-label={isSending ? "Envoi en cours" : "Envoyer le message"}
           >
-            <Send size={15} />
+            {isSending ? (
+              <div
+                style={{
+                  width: 14,
+                  height: 14,
+                  border: '2px solid rgba(255,255,255,0.4)',
+                  borderTopColor: '#FFF',
+                  borderRadius: '50%',
+                  animation: 'spin 0.6s linear infinite',
+                }}
+              />
+            ) : (
+              <Send size={15} />
+            )}
           </button>
         </form>
       </div>
