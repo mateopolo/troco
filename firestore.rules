@@ -97,7 +97,18 @@ service cloud.firestore {
     }
 
     // ========================================================================
+    // 🌐 COLLECTION USERS_PUBLIC (PROFILS MINIMALISTES CONFORMES RGPD)
+    // ========================================================================
+    match /users_public/{uid} {
+      // Lecture : tout utilisateur authentifié (ou feed)
+      allow read: if isAuthenticated();
+      // Écriture : interdite à tous les clients (géré exclusivement par Cloud Functions)
+      allow write: if false;
+    }
+
+    // ========================================================================
     // 📢 COLLECTION LISTINGS (ANNONCES DE SERVICES & BIENS)
+
     // ========================================================================
     match /listings/{listingId} {
       // Lecture : publique si annonce active, ou par l'auteur créateur, ou par l'administrateur

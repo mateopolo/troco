@@ -121,6 +121,20 @@ export async function updateUserAsAdmin(uid, updates) {
   }
 }
 
+/**
+ * 📦 Lancer la migration / backfill des utilisateurs vers users_public
+ */
+export async function migrateUsersPublic() {
+  try {
+    const fn = httpsCallable(functions, 'migrateUsersPublic');
+    const result = await fn();
+    return result.data;
+  } catch (error) {
+    console.error('[adminService] migrateUsersPublic error:', error);
+    throw formatFunctionError(error);
+  }
+}
+
 const adminService = {
   setAdminClaim,
   deleteListingAsAdmin,
@@ -128,7 +142,9 @@ const adminService = {
   resolveReport,
   toggleHideListingAsAdmin,
   updateUserAsAdmin,
+  migrateUsersPublic,
 };
 
 export default adminService;
+
 

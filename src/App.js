@@ -63,6 +63,7 @@ import NotificationPill from './components/ui/NotificationPill';
 import { isIosOrTouchDevice } from './utils/deviceDetection';
 import { useAdminGuard } from './hooks/useAdminGuard';
 import adminService from './services/adminService';
+import { useUsersPublic } from './hooks/useUsersPublic';
 export { isIosOrTouchDevice };
 
 
@@ -257,6 +258,8 @@ export default function App() {
     addPortfolioImage,
     removePortfolioImage,
   } = useAppAuth();
+
+  const { isAdmin } = useAdminGuard();
 
   const {
     activeTab,
@@ -756,8 +759,12 @@ export default function App() {
     }
   };
 
-  // ---- ÉCOUTE TEMPS RÉEL DES SIGNALEMENTS (MODÉRATION ADMIN) ----
+  // ---- ÉCOUTE TEMPS RÉEL DES SIGNALEMENTS (MODÉRATION ADMIN - GATED ISADMIN) ----
   useEffect(() => {
+    if (!isAdmin) {
+      setAllReports([]);
+      return;
+    }
     try {
       const qReports = query(collection(db, 'reports'), orderBy('createdAt', 'desc'));
       const unsub = onSnapshot(qReports, (snap) => {
@@ -768,20 +775,7 @@ export default function App() {
     } catch (e) {
       console.warn('Reports listener setup error:', e);
     }
-  }, []);
-
-  // ---- ÉCOUTE TEMPS RÉEL DES UTILISATEURS (ANNUAIRE ADMIN) ----
-  useEffect(() => {
-    try {
-      const unsub = onSnapshot(collection(db, 'users'), (snap) => {
-        const list = snap.docs.map(d => ({ id: d.id, uid: d.id, ...d.data() }));
-        setAllFirestoreUsers(list);
-      }, (err) => console.warn('[Firestore] Users listener:', err));
-      return () => unsub();
-    } catch (e) {
-      console.warn('Users listener setup error:', e);
-    }
-  }, []);
+  }, [isAdmin]);
 
   // Handlers actions administrateur (via Cloud Functions sécurisées Custom Claims)
   // eslint-disable-next-line no-unused-vars
@@ -1721,8 +1715,6 @@ export default function App() {
     return approx;
   }, []);
 
-  const { isAdmin } = useAdminGuard();
-
   // ---- MODÉRATION ADMINISTRATEUR ----
 
   const handleAdminToggleHideListing = async (listing) => {
@@ -1965,6 +1957,23 @@ export default function App() {
     }
   }, [debouncedSearchQuery]);
 
+  // Extraction des UIDs d'auteurs pour le listener users_public chunké & paginé
+  const visibleAuthorUids = useMemo(() => {
+    const uids = new Set();
+    listings.forEach(item => {
+      const uid = item.authorUid || item.userId || item.sellerId;
+      if (uid && typeof uid === 'string') uids.add(uid);
+    });
+    return Array.from(uids);
+  }, [listings]);
+
+  const { usersMap: usersPublicMap, usersList: usersPublicList } = useUsersPublic({ uids: visibleAuthorUids });
+
+  // Sync usersPublic vers allFirestoreUsers pour compatibilité
+  useEffect(() => {
+    setAllFirestoreUsers(usersPublicList);
+  }, [usersPublicList]);
+
   const filteredListings = useMemo(() => {
     return listings.filter((item) => {
       const rawQuery = (debouncedSearchQuery || '').trim();
@@ -2047,10 +2056,13 @@ export default function App() {
         return distance <= radiusKm;
       })();
 
-      // Filtrage Shadow-Ban & Utilisateurs bannis
-      const authorUser = allFirestoreUsers.find(u => (u.name && u.name.trim().toLowerCase() === (item.author || '').trim().toLowerCase()) || (u.uid && item.authorUid && u.uid === item.authorUid));
-      if (authorUser?.isBanned) return false;
-      if (authorUser?.isShadowBanned && item.author !== profile.name) return false;
+      // Filtrage Shadow-Ban via users_public (Lookup O(1) Map)
+      const authorUid = item.authorUid || item.userId || item.sellerId;
+      const authorUser = authorUid ? usersPublicMap.get(authorUid) : null;
+      const currentUid = profile?.uid || auth.currentUser?.uid;
+      const isSelf = (authorUid && currentUid && authorUid === currentUid) || (item.author && profile?.name && item.author === profile.name);
+
+      if (authorUser?.shadowBannedPublic && !isSelf) return false;
 
       return item.status !== 'paused' && matchesSearch && matchesFormat && matchesCategory && matchesLanguage && matchesPayment && matchesDistance;
     }).sort((a, b) => {
@@ -2091,7 +2103,9 @@ export default function App() {
     radiusKm,
     isInfiniteRadius,
     profile.name,
-    allFirestoreUsers
+    profile?.uid,
+    auth.currentUser?.uid,
+    usersPublicMap
   ]);
 
   const listingsGridRef = useRef(null);

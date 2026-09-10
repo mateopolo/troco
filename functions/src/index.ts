@@ -1,6 +1,7 @@
 import { getApps, initializeApp } from 'firebase-admin/app';
 import { getFirestore } from 'firebase-admin/firestore';
 import { onCall } from 'firebase-functions/v2/https';
+import { onDocumentWritten } from 'firebase-functions/v2/firestore';
 
 // Initialisation unique du SDK Firebase Admin
 if (getApps().length === 0) {
@@ -16,6 +17,11 @@ import { handleResetUserSafely } from './admin/resetUserSafely';
 import { handleResolveReport } from './admin/resolveReport';
 import { handleToggleHideListing } from './admin/toggleHideListingAsAdmin';
 import { handleUpdateUserAsAdmin } from './admin/updateUserAsAdmin';
+
+// Handlers synchronisation & migration users_public (RGPD)
+import { handleUserWriteSyncPublic } from './users/onUserWriteSyncPublic';
+import { handleMigrateUsersPublic } from './users/migrateUsersPublic';
+
 
 /**
  * 👑 Cloud Function 1 : setAdminClaim
@@ -64,3 +70,20 @@ export const toggleHideListingAsAdmin = onCall({ cors: true }, async (request) =
 export const updateUserAsAdmin = onCall({ cors: true }, async (request) => {
   return handleUpdateUserAsAdmin(request, db);
 });
+
+/**
+ * 🔄 Cloud Function 7 : onUserWriteSyncPublic (Trigger Firestore)
+ * Déclenché en temps réel lors de toute modification sur users/{uid} pour mettre à jour users_public/{uid}.
+ */
+export const onUserWriteSyncPublic = onDocumentWritten('users/{uid}', async (event) => {
+  return handleUserWriteSyncPublic(event, db);
+});
+
+/**
+ * 📦 Cloud Function 8 : migrateUsersPublic (Callable Admin)
+ * Backfill / migration idempotent de tous les utilisateurs existants vers users_public.
+ */
+export const migrateUsersPublic = onCall({ cors: true }, async (request) => {
+  return handleMigrateUsersPublic(request, db);
+});
+
