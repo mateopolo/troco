@@ -191,21 +191,12 @@ service cloud.firestore {
     // 📞 COLLECTION CALLS (SIGNALING WEBRTC & CANDIDATS ICE)
     // ========================================================================
     match /calls/{callId} {
-      // Lecture : autorisée pour tout utilisateur authentifié (ou participant ciblé)
-      allow read: if isAuthenticated();
-
-      // Création d'appel : utilisateur authentifié non banni
-      allow create: if isAuthenticated() && isNotBanned();
-
-      // Mise à jour de l'appel (réponse SDP, participants, statut) : utilisateur authentifié non banni
-      allow update: if isAuthenticated() && isNotBanned();
-
-      // Raccrochage / Suppression de la session d'appel
-      allow delete: if isAuthenticated();
-
-      // Sous-collections de signalement ICE (callerCandidates, calleeCandidates, etc.)
+      allow read, write: if request.auth != null;
+      match /signals/{signalId} {
+        allow read, write: if request.auth != null;
+      }
       match /{subcollection}/{candidateId} {
-        allow read, write: if isAuthenticated() && isNotBanned();
+        allow read, write: if request.auth != null;
       }
     }
   }

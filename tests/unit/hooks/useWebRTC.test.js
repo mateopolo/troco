@@ -115,4 +115,45 @@ describe('📞 useWebRTC Hook Unit Tests [VERIF-03]', () => {
 
     expect(result.current.incomingCall).toBeNull();
   });
+
+  it('6. [FIX-CALL] startCall écrit dans calls/{callId} avec callerUid et calleeUid et statut ringing', async () => {
+    const { setDoc } = await import('firebase/firestore');
+    // Mock getUserMedia
+    navigator.mediaDevices = {
+      getUserMedia: vi.fn().mockResolvedValue({
+        getTracks: () => [{ stop: vi.fn(), enabled: true, kind: 'audio' }],
+      }),
+    };
+    global.RTCPeerConnection = class {
+      constructor() {
+        this.addTrack = vi.fn();
+        this.createOffer = vi.fn().mockResolvedValue({ type: 'offer', sdp: 'v=0...' });
+        this.setLocalDescription = vi.fn().mockResolvedValue();
+        this.close = vi.fn();
+        this.getSenders = () => [];
+      }
+    };
+    global.RTCSessionDescription = class {
+      constructor(desc) {
+        Object.assign(this, desc);
+      }
+    };
+
+    const { result } = renderHook(() => useWebRTC(mockProps));
+
+    await act(async () => {
+      await result.current.startCall('video');
+    });
+
+    const expectedCallId = ['user_initiator_uid', 'user_receiver_uid'].sort().join('_');
+    expect(setDoc).toHaveBeenCalledWith(
+      expect.objectContaining({ path: `calls/${expectedCallId}` }),
+      expect.objectContaining({
+        callId: expectedCallId,
+        callerUid: 'user_initiator_uid',
+        calleeUid: 'user_receiver_uid',
+        status: 'ringing',
+      })
+    );
+  });
 });
