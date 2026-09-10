@@ -572,6 +572,7 @@ export default function App() {
     executeDealTransaction,
     handleReleaseEscrow,
     handleAcceptDeal,
+    handleConfirmTrocCompletion,
     handleDeclineDeal,
     handleSendToken,
     sendPostCallTip,
@@ -4396,6 +4397,7 @@ export default function App() {
                   startCall={startCall}
                   joinActiveCall={joinActiveCall}
                   handleAcceptDeal={handleAcceptDeal}
+                  handleConfirmTrocCompletion={handleConfirmTrocCompletion}
                   handleDeclineDeal={handleDeclineDeal}
                   handleSendToken={handleSendToken}
                   handleReleaseEscrow={handleReleaseEscrow}

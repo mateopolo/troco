@@ -22,6 +22,7 @@ import { playPop, playSwoosh, playSuccessChime } from '../services/audioService'
 import SwipeableChatItem from './SwipeableChatItem';
 import ChatInputBar from './chat/ChatInputBar';
 import MessageBubble from './chat/MessageBubble';
+import DealRatingModal from './DealRatingModal';
 
 // Lazy loading des outils collaboratifs & suites vectorielles lourdes pour préserver les performances et la rapidité du build
 const CreateProjectGroupModal = lazy(() => import('./CreateProjectGroupModal'));
@@ -52,6 +53,8 @@ function ChatView({
   joinActiveCall,
   handleAcceptDeal,
   onAcceptDeal,
+  handleConfirmTrocCompletion,
+  onConfirmTrocCompletion,
   handleDeclineDeal,
   handleSendToken: handleSendTokenProp,
   handleReleaseEscrow,
@@ -162,6 +165,29 @@ function ChatView({
   const [transferComment, setTransferComment] = useState('');
   const [isTransferringTokens, setIsTransferringTokens] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
+  const [ratingDealData, setRatingDealData] = useState(null);
+
+  // 🤝 Écoute de l'événement de clôture festive de deal pour déclencher confettis + modale d'évaluation
+  useEffect(() => {
+    const handleDealCompletedEvent = (event) => {
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 4500);
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        try { navigator.vibrate([100, 50, 100]); } catch (_) {}
+      }
+      const detail = event?.detail || {};
+      setRatingDealData({
+        isOpen: true,
+        dealId: detail.dealId || detail.dealMessageId || 'deal',
+        partnerUid: detail.partnerUid || activeChatObj?.uid || activeChatObj?.id,
+        partnerName: detail.partnerName || activeChatObj?.user || 'Partenaire',
+        serviceTitle: detail.serviceTitle || activeChatObj?.listingTitle || 'Troc de compétences',
+      });
+    };
+    window.addEventListener('troco:deal_completed', handleDealCompletedEvent);
+    return () => window.removeEventListener('troco:deal_completed', handleDealCompletedEvent);
+  }, [activeChatObj]);
+
   const [isMobileLocal, setIsMobileLocal] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
   const isMobile = isMobileProp !== undefined ? isMobileProp : isMobileLocal;
 
@@ -1626,6 +1652,7 @@ function ChatView({
                   const serviceTitle = terms?.title || terms?.serviceTitle || terms?.itemName || msg?.listing || activeChatObj?.listing || "Prestation de service";
                   const rawDescription = terms?.conditions || terms?.description || terms?.notes || msg?.text || msg?.content || "";
                   const isCounterOffer = Boolean(terms?.isCounterOffer || msg?.type === 'deal_counter_offer');
+                  const currentChatId = activeChatObj?.id ? String(activeChatObj.id) : (selectedChat?.id ? String(selectedChat.id) : null);
 
                   const currentUid = profile?.uid || (auth?.currentUser && auth.currentUser.uid) || '';
                   const senderId = msg?.senderId || msg?.authorUid || msg?.senderUid || (msg?.sender === 'me' ? currentUid : '');
@@ -2018,9 +2045,113 @@ function ChatView({
                         </div>
                       )}
 
+                      {currentDealStatus === 'troc_in_progress' && (() => {
+                        const confirmations = msg?.completionConfirmations || {};
+                        const myConfirmed = Boolean(currentUid && confirmations[currentUid]);
+                        const confirmCount = Object.values(confirmations).filter(Boolean).length;
+
+                        return (
+                          <div style={{
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '8px',
+                            backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                            border: '1.5px solid rgba(59, 130, 246, 0.35)',
+                            borderRadius: '14px',
+                            padding: '12px 14px',
+                            marginTop: '8px'
+                          }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                              <span style={{ fontSize: '12.5px', fontWeight: '800', color: '#3B82F6', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                🤝 Troc en cours : {confirmCount}/2 validations
+                              </span>
+                              <span style={{ fontSize: '10.5px', fontWeight: '700', color: 'var(--text-secondary)' }}>
+                                Bilatéral
+                              </span>
+                            </div>
+                            <p style={{ fontSize: '11.5px', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.4 }}>
+                              Pour sceller ce troc sans monnaie, chaque participant doit certifier la bonne réalisation de sa prestation.
+                            </p>
+                            {!myConfirmed ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const confirmFn = handleConfirmTrocCompletion || onConfirmTrocCompletion;
+                                  if (typeof confirmFn === 'function') {
+                                    confirmFn(currentChatId, msg?.id);
+                                  }
+                                }}
+                                className="premium-button"
+                                style={{
+                                  border: 'none',
+                                  borderRadius: '999px',
+                                  padding: '10px 16px',
+                                  background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+                                  color: '#FFFFFF',
+                                  fontSize: '12px',
+                                  fontWeight: '800',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  gap: '6px',
+                                  boxShadow: '0 4px 14px rgba(16, 185, 129, 0.35)'
+                                }}
+                              >
+                                <CheckCircle size={15} />
+                                <span>Prestation terminée ({confirmCount === 0 ? 'Valider 1/2' : 'Confirmer final 2/2'}) ✓</span>
+                              </button>
+                            ) : (
+                              <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                fontSize: '11.5px',
+                                fontWeight: '700',
+                                color: '#10B981'
+                              }}>
+                                <Check size={14} strokeWidth={3} />
+                                <span>Vous avez certifié la prestation. En attente de la confirmation du partenaire ({confirmCount}/2)...</span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })()}
+
                       {(currentDealStatus === 'confirmed' || currentDealStatus === 'accepted') && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', borderRadius: '12px', padding: '8px 12px', fontSize: '11.5px', fontWeight: '800' }}>
-                          <CheckCircle size={14} color="var(--accent-primary)" /> <span>Deal validé et scellé avec {partnerName} ✓</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', borderRadius: '12px', padding: '8px 12px', fontSize: '11.5px', fontWeight: '800' }}>
+                            <CheckCircle size={14} color="var(--accent-primary)" /> <span>Deal validé et scellé avec {partnerName} ✓</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setRatingDealData({
+                                isOpen: true,
+                                dealId: msg?.id || 'deal',
+                                partnerUid: isMine ? (activeChatObj?.uid || activeChatObj?.id) : (msg?.senderUid || activeChatObj?.uid),
+                                partnerName,
+                                serviceTitle
+                              });
+                            }}
+                            className="premium-button"
+                            style={{
+                              border: '1px solid var(--border-color)',
+                              borderRadius: '999px',
+                              padding: '7px 14px',
+                              backgroundColor: 'var(--bg-subtle)',
+                              color: 'var(--text-main)',
+                              fontSize: '11.5px',
+                              fontWeight: '700',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px'
+                            }}
+                          >
+                            <span>⭐ Évaluer l'échange</span>
+                          </button>
                         </div>
                       )}
 
@@ -3799,6 +3930,20 @@ function ChatView({
           currentLang={currentLang}
           darkMode={darkMode}
           t={t}
+        />
+      )}
+
+      {/* MODALE D'ÉVALUATION & AVIS VÉRIFIÉS POST-DEAL */}
+      {ratingDealData?.isOpen && (
+        <DealRatingModal
+          isOpen={ratingDealData.isOpen}
+          onClose={() => setRatingDealData(null)}
+          dealId={ratingDealData.dealId}
+          partnerUid={ratingDealData.partnerUid}
+          partnerName={ratingDealData.partnerName}
+          serviceTitle={ratingDealData.serviceTitle}
+          currentUser={profile}
+          darkMode={darkMode}
         />
       )}
     </>

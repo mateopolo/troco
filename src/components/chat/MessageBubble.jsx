@@ -1,19 +1,61 @@
 import React, { useState } from 'react';
 import { Sparkles, Languages } from 'lucide-react';
 import { translateText } from '../../utils/translator';
+import DealMessageCard from '../DealMessageCard';
 
 /**
  * MessageBubble.jsx — Rendu unifié des bulles de messages du chat
- * Supporte le rendu direct des fichiers audio natifs (.mp3, .wav, .mp4, .webm, etc.)
- * avec transcription textuelle Speech-to-Text et bouton de bascule dynamique
- * [ Voir la traduction ] / [ Voir l'original ].
+ * Supporte :
+ * 1. Moteur de Deal « Cinématique » (DealMessageCard greffé aux bulles de messages)
+ * 2. Rendu direct des fichiers audio natifs avec transcription STT et bouton Original / Traduction
+ * 3. Messages textuels enrichis avec bulles stylisées et ergonomiques.
  */
-export default function MessageBubble({ message = {}, isMe = false, targetLang = 'fr' }) {
+export default function MessageBubble({
+  message = {},
+  isMe = false,
+  targetLang = 'fr',
+  partnerName = 'l’interlocuteur',
+  currentUserId = null,
+  onAcceptDeal = null,
+  openCounterOffer = null,
+  onDeclineDeal = null,
+  onConfirmTrocCompletion = null,
+  onOpenRatingModal = null,
+}) {
   const [showTranslation, setShowTranslation] = useState(false);
   const [translatedText, setTranslatedText] = useState('');
   const [isTranslating, setIsTranslating] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [localTranscript, setLocalTranscript] = useState(message.transcript || message.transcription || '');
+
+  const isDealMessage = Boolean(
+    message.type === 'deal_offer' ||
+    message.type === 'deal_proposal' ||
+    message.type === 'deal' ||
+    message.type === 'deal_counter_offer' ||
+    message.kind === 'deal' ||
+    message.dealTerms ||
+    message.deal
+  );
+
+  // 1. Rendu greffé de carte de Deal dans la bulle
+  if (isDealMessage) {
+    return (
+      <DealMessageCard
+        msg={message}
+        isMine={isMe}
+        isSender={isMe}
+        isRecipient={!isMe}
+        partnerName={partnerName}
+        currentUserId={currentUserId}
+        onAcceptDeal={onAcceptDeal}
+        openCounterOffer={openCounterOffer}
+        onDeclineDeal={onDeclineDeal}
+        onConfirmTrocCompletion={onConfirmTrocCompletion}
+        onOpenRatingModal={onOpenRatingModal}
+      />
+    );
+  }
 
   const rawTranscript = localTranscript || message.transcript || message.transcription || '';
   const sourceLang = message.transcriptLang || 'auto';
@@ -77,6 +119,7 @@ export default function MessageBubble({ message = {}, isMe = false, targetLang =
     }
   };
 
+  // 2. Rendu audio
   if (message.type === 'audio' || message.kind === 'audio') {
     return (
       <div className="p-2 flex flex-col gap-1.5">
@@ -151,6 +194,7 @@ export default function MessageBubble({ message = {}, isMe = false, targetLang =
     );
   }
 
+  // 3. Rendu textuel standard
   return (
     <div
       className={`p-3 rounded-2xl ${

@@ -22,7 +22,7 @@ import { uploadVoiceNote } from '../services/voiceStorageService';
 import { playBetclicBalanceSound, playApplePaySound, playSwooshSound } from '../utils/audioService';
 import { useChatStore, useWalletStore } from '../stores';
 import { hapticLight, hapticSuccess, hapticError } from '../utils/haptics';
-import { playPop } from '../services/audioService';
+import { playPop, playSuccessChime } from '../services/audioService';
 
 // Singleton audio context pour éviter la saturation des threads WebKit audio sur iOS
 let sharedChatAudioCtx = null;
@@ -1859,19 +1859,37 @@ export const useChatManager = ({
     const tokensAmount = Number(terms?.trocoTokens !== undefined ? terms.trocoTokens : terms?.expectedTokens) || 0;
     const euroAmount = Number(terms?.euroAmount !== undefined ? terms.euroAmount : terms?.fiatAmount) || 0;
 
-    // 1. Troc direct (0€ et 0 jeton) : validation instantanée
+    // 1. Troc direct (0€ et 0 jeton) : Double validation bilatérale requise (1/2 et 2/2)
     if (euroAmount === 0 && tokensAmount === 0) {
-      await executeDealTransaction({
-        chatId,
-        dealId,
-        terms,
-        buyerUid: profile?.uid,
-        partnerUid,
-        partnerName,
-        euroAmount: 0,
-        tokensAmount: 0,
-        paymentMethod: 'Troc Direct',
-      });
+      setChatThreads(prev => ({
+        ...prev,
+        [chatId]: (prev[chatId] || []).map(m => String(m.id) === String(dealId) ? {
+          ...m,
+          status: 'troc_in_progress',
+          completionConfirmations: { [currentUid]: true },
+        } : m),
+      }));
+      setChatStatusOverrides(prev => ({ ...prev, [chatId]: 'Prestation en cours (Troc)' }));
+      setSaveMessage(`🤝 Offre acceptée ! Les deux parties doivent cliquer sur « Prestation terminée » pour sceller l'accord.`);
+      setTimeout(() => setSaveMessage(''), 5000);
+
+      if (db) {
+        try {
+          await updateDoc(doc(db, 'chats', String(chatId), 'messages', String(dealId)), {
+            status: 'troc_in_progress',
+            acceptedAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+            [`completionConfirmations.${currentUid}`]: true,
+          });
+          await setDoc(doc(db, 'chats', String(chatId)), {
+            lastDealStatus: 'troc_in_progress',
+            lastMessage: `🤝 Proposition de troc acceptée ! Prestation en cours.`,
+            updatedAt: serverTimestamp(),
+          }, { merge: true });
+        } catch (e) {
+          console.warn('[Firestore] troc in progress write error:', e);
+        }
+      }
       return;
     }
 
@@ -1911,6 +1929,120 @@ export const useChatManager = ({
         }, { merge: true });
       } catch (e) {
         console.warn('[Firestore] deal decline write failed:', e);
+      }
+    }
+  };
+
+  // ---- DOUBLE VALIDATION BILATÉRALE DE TROC (PRESTATION TERMINÉE) ----
+  const handleConfirmTrocCompletion = async (chatId, dealId) => {
+    hapticSuccess();
+    playSuccessChime();
+    const currentUid = String(profile?.uid || auth?.currentUser?.uid || 'me');
+    const chat = (selectedChat && String(selectedChat.id) === String(chatId))
+      ? selectedChat
+      : (chatsList.find(c => String(c.id) === String(chatId)) || mockChats.find(c => String(c.id) === String(chatId)));
+    const partnerName = chat?.user || 'Partenaire';
+    let partnerUid = chat?.partnerUid;
+    if (!partnerUid || partnerUid === currentUid) {
+      partnerUid = chat?.authorUid !== currentUid ? chat?.authorUid : null;
+    }
+
+    let isBothConfirmed = false;
+    let dealTerms = {};
+
+    setChatThreads(prev => {
+      const msgs = prev[chatId] || [];
+      const updated = msgs.map(m => {
+        if (String(m.id) === String(dealId)) {
+          dealTerms = m.dealTerms || m.terms || m.proposal || {};
+          const currentCompletions = { ...(m.completionConfirmations || {}) };
+          currentCompletions[currentUid] = true;
+
+          const totalConfirmed = Object.keys(currentCompletions).filter(k => Boolean(currentCompletions[k])).length;
+          const bothConfirmed = totalConfirmed >= 2 || (m.status === 'troc_in_progress' && Object.keys(currentCompletions).length >= 2);
+
+          if (bothConfirmed) {
+            isBothConfirmed = true;
+            return {
+              ...m,
+              status: 'confirmed',
+              completionConfirmations: currentCompletions,
+              completedAt: new Date().toISOString(),
+            };
+          }
+          return {
+            ...m,
+            status: 'troc_in_progress',
+            completionConfirmations: currentCompletions,
+          };
+        }
+        return m;
+      });
+      return { ...prev, [chatId]: updated };
+    });
+
+    if (isBothConfirmed) {
+      setChatStatusOverrides(prev => ({ ...prev, [chatId]: 'Deal Validé' }));
+      setProfile(prev => ({
+        ...prev,
+        dealsCompleted: (prev?.dealsCompleted || 0) + 1,
+      }));
+      setSaveMessage(`🎉 Troc validé par les deux parties ! Deal scellé avec ${partnerName}.`);
+      setTimeout(() => setSaveMessage(''), 5000);
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('troco:deal_completed', {
+          detail: {
+            chatId,
+            dealId,
+            partnerName,
+            partnerUid,
+            serviceTitle: dealTerms?.title || 'Troc de services',
+          }
+        }));
+      }
+    } else {
+      setSaveMessage(`✓ Vous avez confirmé la fin de prestation. En attente de la confirmation de ${partnerName} (1/2).`);
+      setTimeout(() => setSaveMessage(''), 5000);
+    }
+
+    if (db) {
+      try {
+        const msgRef = doc(db, 'chats', String(chatId), 'messages', String(dealId));
+        if (isBothConfirmed) {
+          await updateDoc(msgRef, {
+            status: 'confirmed',
+            [`completionConfirmations.${currentUid}`]: true,
+            completedAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          });
+          await setDoc(doc(db, 'chats', String(chatId)), {
+            lastDealStatus: 'confirmed',
+            lastMessage: `🤝 Troc accompli et validé par les deux parties !`,
+            updatedAt: serverTimestamp(),
+          }, { merge: true });
+
+          if (profile?.uid) {
+            await updateDoc(doc(db, 'users', String(profile.uid)), {
+              dealsCompleted: increment(1),
+              updatedAt: serverTimestamp(),
+            }).catch(() => {});
+          }
+          if (partnerUid) {
+            await updateDoc(doc(db, 'users', String(partnerUid)), {
+              dealsCompleted: increment(1),
+              updatedAt: serverTimestamp(),
+            }).catch(() => {});
+          }
+        } else {
+          await updateDoc(msgRef, {
+            [`completionConfirmations.${currentUid}`]: true,
+            status: 'troc_in_progress',
+            updatedAt: serverTimestamp(),
+          });
+        }
+      } catch (err) {
+        console.warn('[Firestore] update troc completion error:', err);
       }
     }
   };
@@ -2423,6 +2555,7 @@ export const useChatManager = ({
     handleReleaseEscrow,
     handleAcceptDeal,
     handleDeclineDeal,
+    handleConfirmTrocCompletion,
     handleSendToken,
     handleTransferToken,
     sendPostCallTip,
