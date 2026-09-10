@@ -303,6 +303,8 @@ export default function CallOverlay({
             isCompact={true}
             chatId={selectedChat?.id}
             partnerName={selectedChat?.user}
+            isMuted={!callState?.micOn}
+            micOn={callState?.micOn}
           />
         </div>
       </div>

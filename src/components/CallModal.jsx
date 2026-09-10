@@ -166,6 +166,8 @@ export default function CallModal({
         isCompact={false}
         chatId={selectedChat?.id}
         partnerName={chatUser}
+        isMuted={!callState?.micOn}
+        micOn={callState?.micOn}
       />
 
       {/* NOTIFICATION D'INVITATION COPIÉE */}

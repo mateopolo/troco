@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Globe, Volume2, X, Settings, GripHorizontal, Type,
-  Palette, Sliders, Mic
+  Palette, Sliders, Mic, MicOff
 } from 'lucide-react';
 import { liveTranscriptionService } from '../services/liveTranscriptionService';
 import { translateText } from '../utils/translator';
@@ -47,7 +47,10 @@ export default function LiveCallSubtitles({
   chatId = null,
   myProfile = null,
   partnerName = null,
+  isMuted = false,
+  micOn = true,
 }) {
+  const isMicMuted = Boolean(isMuted || micOn === false);
   const [currentSubtitle, setCurrentSubtitle] = useState(null);
   const [localOutgoingSpeech, setLocalOutgoingSpeech] = useState(null);
   const outgoingTimeoutRef = useRef(null);
@@ -178,7 +181,9 @@ export default function LiveCallSubtitles({
   // 2. Synchronisation avec le moteur de transcription en direct (micro local)
   useEffect(() => {
     if (!isActive) {
-      liveTranscriptionService.stopListening();
+      if (typeof liveTranscriptionService.stopListening === 'function') {
+        liveTranscriptionService.stopListening();
+      }
       setCurrentSubtitle(null);
       setLocalOutgoingSpeech(null);
       setRecentSentences([]);
@@ -188,6 +193,10 @@ export default function LiveCallSubtitles({
     const sourceBcp = AVAILABLE_LANGUAGES.find(l => l.code === currentSourceLang)?.bcp47 || 'fr-FR';
     const targetCode = currentSubtitleLang;
 
+    // Transmettre l'état du mute au service de transcription
+    if (typeof liveTranscriptionService.setMuted === 'function') {
+      liveTranscriptionService.setMuted(isMicMuted);
+    }
     liveTranscriptionService.startListening(sourceBcp, targetCode, speakerName);
 
     const unsubscribe = liveTranscriptionService.subscribe(async (data) => {
@@ -196,6 +205,12 @@ export default function LiveCallSubtitles({
       if (!rawText) return;
 
       const isLocal = Boolean(data.isLocalMic);
+
+      // CONFIDENTIALITÉ STRICTE : Si le micro est coupé, aucun son local ne doit être traité ni diffusé
+      if (isLocal && isMicMuted) {
+        return;
+      }
+
       const activeTargetLang = currentSubtitleLang;
       const detectedSourceLang = (data.sourceLang || currentSourceLang).toUpperCase();
 
@@ -266,9 +281,23 @@ export default function LiveCallSubtitles({
     return () => {
       if (typeof unsubscribe === 'function') unsubscribe();
       if (outgoingTimeoutRef.current) clearTimeout(outgoingTimeoutRef.current);
-      liveTranscriptionService.stopListening();
+      if (typeof liveTranscriptionService.stopListening === 'function') {
+        liveTranscriptionService.stopListening();
+      }
     };
-  }, [isActive, chatId, currentSourceLang, currentSubtitleLang, myProfile, partnerName, speakerName]);
+  }, [isActive, chatId, currentSourceLang, currentSubtitleLang, myProfile, partnerName, speakerName, isMicMuted]);
+
+  // Coupure stricte et immédiate de la transcription dès que le microphone local est coupé
+  useEffect(() => {
+    if (!isActive) return;
+    if (typeof liveTranscriptionService.setMuted === 'function') {
+      liveTranscriptionService.setMuted(isMicMuted);
+    }
+    if (isMicMuted) {
+      if (outgoingTimeoutRef.current) clearTimeout(outgoingTimeoutRef.current);
+      setLocalOutgoingSpeech(null);
+    }
+  }, [isActive, isMicMuted]);
 
   // DRAG AND DROP AVEC POINTER EVENTS
   const handlePointerDown = (e) => {
@@ -375,13 +404,21 @@ export default function LiveCallSubtitles({
               boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
             }}
           >
-            <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: '#10B981', boxShadow: '0 0 8px #10B981', animation: 'pulse 1.5s infinite' }} />
+            <span style={{ width: '6px', height: '6px', borderRadius: '50%', backgroundColor: isMicMuted ? '#EF4444' : '#10B981', boxShadow: isMicMuted ? '0 0 8px #EF4444' : '0 0 8px #10B981', animation: isMicMuted ? 'none' : 'pulse 1.5s infinite' }} />
             <Volume2 size={12} color="#FBBF24" />
             <span style={{ textShadow: '0 1px 2px #000' }}>{currentSubtitle?.speaker || speakerName}</span>
             <span style={{ color: 'rgba(255, 255, 255, 0.4)', margin: '0 2px' }}>•</span>
             <span style={{ color: 'var(--accent-primary, #C67D5B)', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
               {sourceLangObj.flag} ➔ {targetLangObj.flag}
             </span>
+            {isMicMuted && (
+              <>
+                <span style={{ color: 'rgba(255, 255, 255, 0.4)', margin: '0 2px' }}>•</span>
+                <span style={{ color: '#F87171', display: 'inline-flex', alignItems: 'center', gap: '3px', fontSize: '10px', fontWeight: '800' }}>
+                  <MicOff size={11} color="#EF4444" /> Mute
+                </span>
+              </>
+            )}
           </div>
 
           {/* POIGNÉE DE DÉPLACEMENT + ENGRENAGE PARAMÈTRES + FERMER */}
@@ -456,7 +493,7 @@ export default function LiveCallSubtitles({
         </div>
 
         {/* BANDEAU DISCRET DE TRANSMISSION SORTANTE DU LOCUTEUR LOCAL ("VOUS") */}
-        {localOutgoingSpeech?.text && (
+        {!isMicMuted && localOutgoingSpeech?.text && (
           <div
             style={{
               display: 'inline-flex',
@@ -533,7 +570,7 @@ export default function LiveCallSubtitles({
               <span>{activeTranslation}</span>
             ) : (
               <span style={{ opacity: 0.7, fontStyle: 'italic', fontSize: isCompact ? '12px' : '13.5px', color: '#FFFFFF' }}>
-                🎙️ En attente de la parole de {partnerName || speakerName}... ({sourceLangObj.label} ➔ Traduction en {targetLangObj.label})
+                {isMicMuted ? '🔇 Micro local coupé (Traduction de votre voix en pause)' : `🎙️ En attente de la parole de ${partnerName || speakerName}... (${sourceLangObj.label} ➔ Traduction en ${targetLangObj.label})`}
               </span>
             )}
           </div>

@@ -627,6 +627,8 @@ export default function WebRTCCallOverlay({
               chatId={selectedChat?.id || incomingCall?.chatId}
               myProfile={profile}
               partnerName={selectedChat?.user || incomingCall?.from || 'Interlocuteur'}
+              isMuted={!callState?.micOn}
+              micOn={callState?.micOn}
             />
           </Suspense>
 

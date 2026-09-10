@@ -184,7 +184,14 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
   // Nettoyage complet et forcé de tous les flux médias (caméra, micro, écran) et écouteurs
   const _cleanup = useCallback((skipDocDelete = false) => {
     stopRingtone();
-    try { liveTranscriptionService.stopListening(); } catch (_) { }
+    try {
+      if (typeof liveTranscriptionService.stopListening === 'function') {
+        liveTranscriptionService.stopListening();
+      }
+      if (typeof liveTranscriptionService.setMuted === 'function') {
+        liveTranscriptionService.setMuted(false);
+      }
+    } catch (_) { }
     pendingCandidatesRef.current = [];
     unsubsRef.current.forEach(u => { try { u(); } catch (_) { } });
     unsubsRef.current = [];
@@ -443,6 +450,11 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
         if (localStreamRef.current) {
           localStreamRef.current.getAudioTracks().forEach(t => { t.enabled = false; });
         }
+        try {
+          if (typeof liveTranscriptionService.setMuted === 'function') {
+            liveTranscriptionService.setMuted(true);
+          }
+        } catch (_) {}
         setCallState(prev => ({ ...prev, micOn: false }));
       }
 
@@ -833,11 +845,29 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
   // 8. CONTRÔLES (MICRO, CAMÉRA, PARTAGE ÉCRAN, MODÉRATION)
   // =======================================================================
   const toggleMic = useCallback(() => {
+    const nextMicOn = !callState.micOn;
     if (localStream) {
-      localStream.getAudioTracks().forEach(t => { t.enabled = !callState.micOn; });
+      localStream.getAudioTracks().forEach(t => { t.enabled = nextMicOn; });
     }
-    setCallState(prev => ({ ...prev, micOn: !prev.micOn }));
+    // Confidentialité WebRTC : Coupure / réactivation stricte de la reconnaissance vocale
+    try {
+      if (typeof liveTranscriptionService.setMuted === 'function') {
+        liveTranscriptionService.setMuted(!nextMicOn);
+      }
+    } catch (_) {}
+    setCallState(prev => ({ ...prev, micOn: nextMicOn }));
   }, [localStream, callState.micOn]);
+
+  // Synchronisation stricte de l'état du microphone avec le service de transcription
+  useEffect(() => {
+    if (!callState.active) return;
+    const isMuted = !callState.micOn;
+    try {
+      if (typeof liveTranscriptionService.setMuted === 'function') {
+        liveTranscriptionService.setMuted(isMuted);
+      }
+    } catch (_) {}
+  }, [callState.active, callState.micOn]);
 
   const toggleCam = useCallback(() => {
     if (localStream) {

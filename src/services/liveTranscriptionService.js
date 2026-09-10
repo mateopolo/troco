@@ -1,6 +1,7 @@
 /**
  * Troco Live Call Transcription & Translation Service
  * Utilise la Web Speech Recognition API avec streaming temps réel et traduction instantanée multi-langues.
+ * Intègre une protection stricte de confidentialité coupant immédiatement la reconnaissance en cas de Mute.
  */
 
 import { translateText } from '../utils/translator';
@@ -22,11 +23,65 @@ class LiveTranscriptionService {
   constructor() {
     this.recognition = null;
     this.isListening = false;
+    this.isMuted = false;
     this.subscribers = new Set();
     this.sourceLanguage = 'fr-FR';
     this.targetLanguage = 'FR';
     this.speakerName = 'Interlocuteur';
     this.simulationTimer = null;
+  }
+
+  // Contrôle strict du microphone pour la confidentialité
+  setMuted(muted) {
+    const shouldMute = Boolean(muted);
+    this.isMuted = shouldMute;
+
+    if (shouldMute) {
+      // COUPURE IMMÉDIATE : arrêt de la reconnaissance et du timer de simulation
+      if (this.simulationTimer) {
+        clearInterval(this.simulationTimer);
+        this.simulationTimer = null;
+      }
+      if (this.recognition) {
+        try {
+          this.recognition.stop();
+        } catch (_) {}
+      }
+    } else {
+      // RÉACTIVATION : reprise de la reconnaissance si l'écoute était active
+      if (this.isListening) {
+        if (!this.recognition) {
+          this.initRecognition();
+        }
+        if (this.recognition) {
+          try {
+            this.recognition.lang = this.sourceLanguage;
+            this.recognition.start();
+          } catch (err) {
+            try {
+              this.initRecognition();
+              this.recognition.start();
+            } catch (_) {}
+          }
+        }
+      }
+    }
+  }
+
+  mute() {
+    this.setMuted(true);
+  }
+
+  unmute() {
+    this.setMuted(false);
+  }
+
+  pauseListening() {
+    this.setMuted(true);
+  }
+
+  resumeListening() {
+    this.setMuted(false);
   }
 
   // Initialisation de la reconnaissance vocale SpeechRecognition
@@ -52,6 +107,11 @@ class LiveTranscriptionService {
       this.recognition.lang = this.sourceLanguage;
 
       this.recognition.onresult = async (event) => {
+        // CONFIDENTIALITÉ STRICTE : Si le micro est coupé (mute), on ignore tout résultat immédiatement
+        if (this.isMuted) {
+          return;
+        }
+
         let interimTranscript = '';
         let finalTranscript = '';
 
@@ -78,7 +138,8 @@ class LiveTranscriptionService {
       };
 
       this.recognition.onend = () => {
-        if (this.isListening) {
+        // Ne redémarre PAS si le micro est coupé (isMuted) ou si l'écoute est inactive
+        if (this.isListening && !this.isMuted) {
           try {
             this.recognition.start();
           } catch (_) {}
@@ -93,6 +154,7 @@ class LiveTranscriptionService {
   }
 
   async handleTranscript(rawText, isFinal, isLocalMic = false) {
+    if (this.isMuted && isLocalMic) return;
     if (!rawText || !rawText.trim()) return;
 
     const trimmed = rawText.trim();
@@ -142,6 +204,11 @@ class LiveTranscriptionService {
       this.simulationTimer = null;
     }
 
+    // Confidentialité : Si le micro est coupé, ne pas démarrer l'écoute physique
+    if (this.isMuted) {
+      return;
+    }
+
     const hasNativeSupport = this.initRecognition();
 
     if (hasNativeSupport && this.recognition) {
@@ -159,6 +226,7 @@ class LiveTranscriptionService {
 
   stopListening() {
     this.isListening = false;
+    this.isMuted = false;
     if (this.simulationTimer) {
       clearInterval(this.simulationTimer);
       this.simulationTimer = null;
@@ -166,6 +234,9 @@ class LiveTranscriptionService {
     if (this.recognition) {
       try {
         this.recognition.stop();
+      } catch (_) {}
+      try {
+        this.recognition.abort();
       } catch (_) {}
     }
   }
@@ -227,7 +298,7 @@ class LiveTranscriptionService {
     let step = 0;
 
     this.simulationTimer = setInterval(async () => {
-      if (!this.isListening) return;
+      if (!this.isListening || this.isMuted) return;
       const currentPhrase = phrases[step % phrases.length];
       step++;
 
