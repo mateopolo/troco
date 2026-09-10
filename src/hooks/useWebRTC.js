@@ -744,7 +744,7 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
     setCallState({ type: null, active: false, ringing: false, micOn: true, camOn: true, isScreenSharing: false, isHost: false, inviteOpen: false, copied: false, remoteScreenSharing: false });
   }, [_cleanup, selectedChat?.id, callState.type, callState.ringing, stopRingtone]);
 
-  const declineIncomingCall = useCallback(() => {
+  const declineIncomingCall = useCallback((callToDecline = null) => {
     stopRingtone();
 
     // Forcer l'arrêt immédiat de tout flux résiduel
@@ -757,8 +757,10 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
     }
     _cleanup(false);
 
-    if (!incomingCall) return;
-    const { chatId } = incomingCall;
+    const targetCall = callToDecline || incomingCall;
+    if (!targetCall) return;
+    const chatId = targetCall.chatId || targetCall.roomId || targetCall.callId || targetCall.id;
+    if (!chatId) return;
 
     setDoc(doc(db, 'chats', String(chatId)), {
       activeCall: null,

@@ -1411,6 +1411,11 @@ export default function App() {
     }
   };
 
+  const handleDeclineIncomingCall = useCallback((incomingObj = null) => {
+    setGlobalIncomingCall(null);
+    declineIncomingCall(incomingObj || activeIncomingCall);
+  }, [activeIncomingCall, declineIncomingCall]);
+
   // ---- RESTAURATION DU LISTENER GLOBAL DES APPELS DESTINÉS À CURRENTUSER.UID (TÂCHE 2) ----
   const [globalIncomingCall, setGlobalIncomingCall] = useState(null);
 
@@ -4714,8 +4719,7 @@ export default function App() {
             <button
               type="button"
               onClick={() => {
-                setGlobalIncomingCall(null);
-                declineIncomingCall();
+                handleDeclineIncomingCall(activeIncomingCall);
               }}
               style={{
                 width: '44px',
@@ -4785,7 +4789,7 @@ export default function App() {
           hasMultipleCameras={hasMultipleCameras}
           switchCamera={switchCamera}
           acceptIncomingCall={acceptIncomingCall}
-          declineIncomingCall={declineIncomingCall}
+          declineIncomingCall={handleDeclineIncomingCall}
           endCall={endCall}
           toggleMic={toggleMic}
           toggleCam={toggleCam}
