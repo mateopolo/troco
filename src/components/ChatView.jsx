@@ -167,6 +167,13 @@ function ChatView({
   const [showConfetti, setShowConfetti] = useState(false);
   const [ratingDealData, setRatingDealData] = useState(null);
 
+  const [isMobileLocal, setIsMobileLocal] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
+  const isMobile = isMobileProp !== undefined ? isMobileProp : isMobileLocal;
+
+  const effectiveSelectedChat = (selectedChat && !deletedChatIds.has(selectedChat.id)) ? selectedChat : null;
+  const activeChatObj = effectiveSelectedChat;
+  const [mobileSubView, setMobileSubView] = useState(() => (selectedChat && !deletedChatIds.has(selectedChat.id)) ? 'room' : 'list');
+
   // 🤝 Écoute de l'événement de clôture festive de deal pour déclencher confettis + modale d'évaluation
   useEffect(() => {
     const handleDealCompletedEvent = (event) => {
@@ -187,13 +194,6 @@ function ChatView({
     window.addEventListener('troco:deal_completed', handleDealCompletedEvent);
     return () => window.removeEventListener('troco:deal_completed', handleDealCompletedEvent);
   }, [activeChatObj]);
-
-  const [isMobileLocal, setIsMobileLocal] = useState(() => typeof window !== 'undefined' ? window.innerWidth < 768 : false);
-  const isMobile = isMobileProp !== undefined ? isMobileProp : isMobileLocal;
-
-  const effectiveSelectedChat = (selectedChat && !deletedChatIds.has(selectedChat.id)) ? selectedChat : null;
-  const activeChatObj = effectiveSelectedChat;
-  const [mobileSubView, setMobileSubView] = useState(() => (selectedChat && !deletedChatIds.has(selectedChat.id)) ? 'room' : 'list');
 
   const openWhiteboard = useCallback((boardId = null, version = null, initialView = null) => {
     setActiveWhiteboardBoardId(boardId);
@@ -633,7 +633,11 @@ function ChatView({
 
   // 🚨 PHASE 102 : LE MUR PORTEUR DU SCROLL (HOOK INDESTRUCTIBLE)
   useEffect(() => {
-    const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' });
+    const scrollToBottom = () => {
+      if (typeof messagesEndRef.current?.scrollIntoView === 'function') {
+        messagesEndRef.current.scrollIntoView({ behavior: 'auto', block: 'end' });
+      }
+    };
     scrollToBottom();
     setTimeout(scrollToBottom, 150); // Fallback post-render
   }, [selectedChat?.id, messages?.length]);
@@ -860,8 +864,10 @@ function ChatView({
   };
 
   const getChatUnreadCount = (chat) => {
-    if (!readChats) return 0;
-    const isRead = readChats.has(chat.id) || readChats.has(String(chat.id)) || readChats.has(Number(chat.id));
+    if (!readChats || !chat) return 0;
+    const isRead = typeof readChats?.has === 'function'
+      ? (readChats.has(chat.id) || readChats.has(String(chat.id)) || readChats.has(Number(chat.id)))
+      : Boolean(readChats[chat.id] || readChats[String(chat.id)]);
     if (isRead) return 0;
     const thread = chatThreads && chatThreads[chat.id];
     if (thread && thread.length > 0) {
