@@ -121,6 +121,21 @@ export const pageTransitionVariants = {
 export const pageTransitionConfig = { duration: 0.2, ease: "easeOut" };
 
 export default function App() {
+  // Purge d'urgence pour réparer les écrans noirs sur mobile
+  useEffect(() => {
+    try {
+      localStorage.removeItem('troco_user_profile');
+      localStorage.removeItem('troco_chat_store');
+      localStorage.removeItem('chat_store');
+      localStorage.removeItem('troco_cached_chats');
+      localStorage.removeItem('troco_active_call');
+      localStorage.removeItem('troco_call_store');
+      localStorage.removeItem('troco_call_state');
+      localStorage.removeItem('troco_call_room_id');
+      sessionStorage.clear();
+    } catch (_) {}
+  }, []);
+
   useFirestoreHealth();
   const {
     theme,

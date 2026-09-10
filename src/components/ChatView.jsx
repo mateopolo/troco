@@ -1965,20 +1965,20 @@ function ChatView({
                           </div>
 
                           <div style={{ fontSize: '11.5px', color: 'var(--text-secondary)', lineHeight: 1.45 }}>
-                            {((msg.paidBy && profile?.uid && msg.paidBy === profile.uid) ||
-                              (msg.escrow?.buyerUid && profile?.uid && msg.escrow.buyerUid === profile.uid) ||
-                              (!msg.paidBy && isIncoming))
-                              ? `Vos fonds (${Number(terms.euroAmount) > 0 ? `${terms.euroAmount}€` : ''} ${Number(terms.trocoTokens) > 0 ? `${terms.trocoTokens} Jetons` : ''}) sont bloqués en toute sécurité sous séquestre. Cliquez ci-dessous une fois la prestation terminée pour débloquer le versement au prestataire.`
-                              : `Le règlement (${Number(terms.euroAmount) > 0 ? `${terms.euroAmount}€` : ''} ${Number(terms.trocoTokens) > 0 ? `${terms.trocoTokens} Jetons` : ''}) est garanti sous séquestre Troco. Les fonds vous seront versés dès confirmation de l'acheteur.`
+                            {((msg?.paidBy && profile?.uid && msg.paidBy === profile.uid) ||
+                              (msg?.escrow?.buyerUid && profile?.uid && msg.escrow.buyerUid === profile.uid) ||
+                              (!msg?.paidBy && isIncoming))
+                              ? `Vos fonds (${Number(terms?.euroAmount) > 0 ? `${terms.euroAmount}€` : ''} ${Number(terms?.trocoTokens) > 0 ? `${terms.trocoTokens} Jetons` : ''}) sont bloqués en toute sécurité sous séquestre. Cliquez ci-dessous une fois la prestation terminée pour débloquer le versement au prestataire.`
+                              : `Le règlement (${Number(terms?.euroAmount) > 0 ? `${terms.euroAmount}€` : ''} ${Number(terms?.trocoTokens) > 0 ? `${terms.trocoTokens} Jetons` : ''}) est garanti sous séquestre Troco. Les fonds vous seront versés dès confirmation de l'acheteur.`
                             }
                           </div>
 
-                          {((msg.paidBy && profile?.uid && msg.paidBy === profile.uid) ||
-                            (msg.escrow?.buyerUid && profile?.uid && msg.escrow.buyerUid === profile.uid) ||
-                            (!msg.paidBy && isIncoming)) && (
+                          {((msg?.paidBy && profile?.uid && msg.paidBy === profile.uid) ||
+                            (msg?.escrow?.buyerUid && profile?.uid && msg.escrow.buyerUid === profile.uid) ||
+                            (!msg?.paidBy && isIncoming)) && (
                             <button
                               type="button"
-                              onClick={() => handleReleaseEscrow && handleReleaseEscrow(currentChatId, msg.id, msg.escrow || { terms })}
+                              onClick={() => handleReleaseEscrow && handleReleaseEscrow(currentChatId, msg?.id, msg?.escrow || { terms })}
                               className="premium-button"
                               style={{
                                 border: 'none',
@@ -2021,17 +2021,17 @@ function ChatView({
               }
 
               // RENDU DES PROPOSITIONS DE RÉTRIBUTION EN JETONS (HUB DE COLLABORATION)
-              if (msg.type === 'reward' || msg.kind === 'reward-proposal') {
-                const reward = msg.reward || {};
-                const isMine = (msg.senderName && profile?.name)
+              if (msg?.type === 'reward' || msg?.kind === 'reward-proposal') {
+                const reward = msg?.reward || {};
+                const isMine = (msg?.senderName && profile?.name)
                   ? (msg.senderName.trim().toLowerCase() === profile.name.trim().toLowerCase())
-                  : (msg.sender === 'me');
-                const isRewardPending = !reward.status || reward.status === 'pending';
-                const isConfirmed = reward.status === 'confirmed' || reward.status === 'validated';
+                  : (msg?.sender === 'me');
+                const isRewardPending = !reward?.status || reward.status === 'pending';
+                const isConfirmed = reward?.status === 'confirmed' || reward.status === 'validated';
 
                 return (
                   <div
-                    key={msg.id}
+                    key={msg?.id || `reward-${msgIdx}`}
                     style={{
                       display: 'flex',
                       flexDirection: 'column',
@@ -2068,7 +2068,7 @@ function ChatView({
                       </div>
 
                       <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-main)', marginBottom: '6px' }}>
-                        {reward.title || 'Mission de projet'}
+                        {reward?.title || 'Mission de projet'}
                       </div>
 
                       <div style={{ display: 'flex', gap: '6px', marginBottom: '12px', flexWrap: 'wrap' }}>
@@ -2078,7 +2078,7 @@ function ChatView({
                           color: 'var(--text-main)',
                           borderRadius: '999px', padding: '3px 9px', fontSize: '11px', fontWeight: '800'
                         }}>
-                          👤 Bénéficiaire : <strong>{reward.beneficiary}</strong>
+                          👤 Bénéficiaire : <strong>{reward?.beneficiary || 'Bénéficiaire'}</strong>
                         </span>
 
                         <span style={{
@@ -2087,7 +2087,7 @@ function ChatView({
                           color: 'var(--accent-primary)',
                           borderRadius: '999px', padding: '3px 9px', fontSize: '11px', fontWeight: '900'
                         }}>
-                          🪙 {reward.amount} Jetons Troco
+                          🪙 {reward?.amount ?? 0} Jetons Troco
                         </span>
 
                         <span style={{
@@ -2096,7 +2096,7 @@ function ChatView({
                           color: 'var(--text-secondary)',
                           borderRadius: '999px', padding: '3px 9px', fontSize: '11px', fontWeight: '700'
                         }}>
-                          {reward.type === 'hourly' ? `⏱️ ${reward.hours || 1}h de prestation` : reward.type === 'fixed' ? '💼 Forfait global' : '📌 Tâche validée'}
+                          {reward?.type === 'hourly' ? `⏱️ ${reward?.hours || 1}h de prestation` : reward?.type === 'fixed' ? '💼 Forfait global' : '📌 Tâche validée'}
                         </span>
                       </div>
 
@@ -2107,7 +2107,7 @@ function ChatView({
                             type="button"
                             onClick={() => {
                               if (onAcceptReward) {
-                                onAcceptReward(currentChatId, msg.id, reward);
+                                onAcceptReward(currentChatId, msg?.id, reward);
                               }
                             }}
                             className="premium-button"
@@ -2128,14 +2128,14 @@ function ChatView({
                               boxShadow: 'var(--shadow-accent)',
                             }}
                           >
-                            <Check size={14} strokeWidth={3} /> Valider & Débloquer les jetons ({reward.amount} 💎)
+                            <Check size={14} strokeWidth={3} /> Valider & Débloquer les jetons ({reward?.amount ?? 0} 💎)
                           </button>
                         </div>
                       )}
 
                       {isConfirmed && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-success)', borderRadius: '12px', padding: '8px 12px', fontSize: '11.5px', fontWeight: '800' }}>
-                          <CheckCircle size={14} /> Les {reward.amount} jetons ont été validés et alloués à {reward.beneficiary}.
+                          <CheckCircle size={14} /> Les {reward?.amount ?? 0} jetons ont été validés et alloués à {reward?.beneficiary || 'partenaire'}.
                         </div>
                       )}
                     </div>
@@ -2143,38 +2143,39 @@ function ChatView({
                 );
               }
 
+
               // RENDU DES CARTES D'INVITATION WORKSPACE (TABLEAU BLANC / NOTES / DOCS / SHEETS)
-              if (msg.type === 'workspace_invite' || msg.kind === 'workspace_invite') {
-                const isMine = (msg.senderName && profile?.name)
+              if (msg?.type === 'workspace_invite' || msg?.kind === 'workspace_invite') {
+                const isMine = (msg?.senderName && profile?.name)
                   ? (msg.senderName.trim().toLowerCase() === profile.name.trim().toLowerCase())
-                  : (msg.sender === 'me');
+                  : (msg?.sender === 'me');
 
                 return (
                   <WorkspaceMessageCard
-                    key={msg.id || `ws_${msg.timestamp || Date.now()}`}
+                    key={msg?.id || `ws_${msg?.timestamp || Date.now()}`}
                     msg={msg}
                     isMine={isMine}
                     isMobile={isMobile}
                     darkMode={darkMode}
                     openWorkspaceTool={(type, docId) => {
-                      const effectiveDocId = docId || msg.documentId || msg.docId || msg.workspaceId || msg.boardId;
+                      const effectiveDocId = docId || msg?.documentId || msg?.docId || msg?.workspaceId || msg?.boardId;
                       openWorkspaceTool(type, effectiveDocId);
                     }}
                     onOpenWorkspace={({ type, workspaceId: targetWsId, boardId: targetBoardId, version: targetVersion }, directDocId) => {
-                      const effectiveDocId = directDocId || targetBoardId || targetWsId || msg.documentId || msg.docId || msg.workspaceId || msg.boardId;
+                      const effectiveDocId = directDocId || targetBoardId || targetWsId || msg?.documentId || msg?.docId || msg?.workspaceId || msg?.boardId;
                       openWorkspaceTool(type, effectiveDocId);
                     }}
                   />
                 );
               }
 
-              const isMe = msg.sender === 'me';
-              const isMenuOpen = activeMenuMsgId === msg.id;
-              const timeString = formatMsgTime(msg.timestamp || msg.createdAt || msg.id);
+              const isMe = msg?.sender === 'me';
+              const isMenuOpen = activeMenuMsgId === msg?.id;
+              const timeString = formatMsgTime(msg?.timestamp || msg?.createdAt || msg?.id);
 
               return (
                 <div
-                  key={msg.id}
+                  key={msg?.id || `msg-${msgIdx}`}
                   style={{
                     display: 'flex',
                     flexDirection: 'column',
@@ -2229,17 +2230,17 @@ function ChatView({
                         gap: '4px'
                       }}
                     >
-                      {activeChatObj?.isGroup && !isMe && msg.senderName && (
+                      {activeChatObj?.isGroup && !isMe && msg?.senderName && (
                         <div style={{ fontSize: '10.5px', fontWeight: '800', color: 'var(--accent-primary)', marginBottom: '2px' }}>
                           {msg.senderName}
                         </div>
                       )}
 
                       {/* IMAGE OU CAPTURE DE TABLEAU BLANC */}
-                      {(msg.imageUrl || msg.type === 'image' || msg.kind === 'image') && (
+                      {(msg?.imageUrl || msg?.type === 'image' || msg?.kind === 'image') && (
                         <div style={{ borderRadius: '12px', overflow: 'hidden', marginBottom: '6px', maxWidth: '320px' }}>
                           <img
-                            src={msg.imageUrl}
+                            src={msg?.imageUrl || ''}
                             alt="Capture tableau blanc"
                             style={{ width: '100%', height: 'auto', display: 'block', borderRadius: '12px', border: '1px solid rgba(0,0,0,0.1)' }}
                           />
@@ -2247,7 +2248,7 @@ function ChatView({
                       )}
 
                       {/* NOTIFICATION DE TRANSFERT DE JETONS */}
-                      {msg.type === 'token_transfer' && (
+                      {msg?.type === 'token_transfer' && (
                         <div
                           style={{
                             borderRadius: '16px',
@@ -2266,39 +2267,39 @@ function ChatView({
                           </div>
                           <div>
                             <div style={{ fontSize: '13px', fontWeight: '800', color: isMe ? '#FFFFFF' : 'var(--text-main)' }}>
-                              Transfert de {msg.tokenAmount || 1} Jeton{msg.tokenAmount > 1 ? 's' : ''} Troco
+                              Transfert de {msg?.tokenAmount || 1} Jeton{Number(msg?.tokenAmount) > 1 ? 's' : ''} Troco
                             </div>
                             <div style={{ fontSize: '11px', color: isMe ? 'rgba(255,255,255,0.9)' : 'var(--text-secondary)' }}>
-                              {msg.text || 'Transfert validé immédiatement'}
+                              {msg?.text || 'Transfert validé immédiatement'}
                             </div>
                           </div>
                         </div>
                       )}
 
-                      {msg.type === 'audio' ? (
+                      {msg?.type === 'audio' ? (
                         <div className="p-2">
-                          {msg.fileName && (
+                          {msg?.fileName && (
                             <div style={{ fontSize: '11px', fontWeight: '800', marginBottom: '4px', opacity: 0.9 }}>
                               🎵 {msg.fileName}
                             </div>
                           )}
-                          <audio controls src={msg.audioUrl} className="max-w-[200px] md:max-w-xs" />
+                          <audio controls src={msg?.audioUrl} className="max-w-[200px] md:max-w-xs" />
                         </div>
-                      ) : (msg.kind === 'audio' || msg.audioUrl) ? (
+                      ) : (msg?.kind === 'audio' || msg?.audioUrl) ? (
                         <div style={{ width: '100%', maxWidth: '260px', minWidth: 0, boxSizing: 'border-box', overflow: 'hidden' }}>
                           <VoiceNotePlayer
-                            audioUrl={msg.audioUrl}
-                            duration={msg.duration}
+                            audioUrl={msg?.audioUrl}
+                            duration={msg?.duration}
                             isMe={isMe}
                             currentLang={currentLang}
-                            transcription={msg.transcription || null}
+                            transcription={msg?.transcription || null}
                           />
                         </div>
                       ) : (
                         <>
-                          {!isMe && msg.text && (() => {
+                          {!isMe && msg?.text && (() => {
                             const analysis = analyzeContent(msg.text);
-                            if (analysis.alertLevel === 'high' || analysis.score >= 35) {
+                            if (analysis?.alertLevel === 'high' || (analysis?.score && analysis.score >= 35)) {
                               return (
                                 <div style={{
                                   backgroundColor: 'rgba(239, 68, 68, 0.12)',
@@ -2318,7 +2319,7 @@ function ChatView({
                                     <span>Alerte Sécurité IA Anti-Arnaque</span>
                                   </div>
                                   <span style={{ fontSize: '10px', opacity: 0.9 }}>
-                                    {analysis.reasons[0] || 'Lien ou méthode de paiement suspecte détectée. Ne communiquez jamais vos coordonnées bancaires hors de Troco.'}
+                                    {analysis?.reasons?.[0] || 'Lien ou méthode de paiement suspecte détectée. Ne communiquez jamais vos coordonnées bancaires hors de Troco.'}
                                   </span>
                                 </div>
                               );
@@ -2326,9 +2327,9 @@ function ChatView({
                             return null;
                           })()}
 
-                          {Boolean(msg.image || (typeof msg.text === 'string' && (msg.text.startsWith('data:image/') || (msg.text.startsWith('http') && (msg.text.includes('.png') || msg.text.includes('.jpg') || msg.text.includes('.jpeg') || msg.text.includes('.webp')))))) ? (
+                          {Boolean(msg?.image || (typeof msg?.text === 'string' && (msg.text.startsWith('data:image/') || (msg.text.startsWith('http') && (msg.text.includes('.png') || msg.text.includes('.jpg') || msg.text.includes('.jpeg') || msg.text.includes('.webp')))))) ? (
                             <img
-                              src={msg.image || msg.text}
+                              src={msg?.image || msg?.text}
                               alt="Image partagée"
                               style={{
                                 maxWidth: '100%',
@@ -2341,7 +2342,7 @@ function ChatView({
                             />
                           ) : (
                             <div style={{ fontSize: '13.5px', lineHeight: 1.45, fontWeight: '500' }}>
-                              {translatedText}
+                              {translatedText || msg?.text || ''}
                             </div>
                           )}
 
@@ -2349,7 +2350,7 @@ function ChatView({
                           {currentLang !== 'FR' && (
                             <button
                               type="button"
-                              onClick={() => toggleOriginalMessage(msg.id)}
+                              onClick={() => toggleOriginalMessage(msg?.id)}
                               style={{
                                 alignSelf: isMe ? 'flex-end' : 'flex-start',
                                 border: 'none',
@@ -2398,7 +2399,7 @@ function ChatView({
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          setActiveMenuMsgId(isMenuOpen ? null : msg.id);
+                          setActiveMenuMsgId(isMenuOpen ? null : msg?.id);
                         }}
                         className="msg-hover-btn"
                         style={{
@@ -2437,15 +2438,15 @@ function ChatView({
                               textAlign: 'left', fontWeight: '600'
                             }}
                           >
-                            {copiedMsgId === msg.id ? <Check size={12} color="var(--accent-primary)" /> : <Copy size={12} />}
-                            <span>{copiedMsgId === msg.id ? 'Copié !' : 'Copier'}</span>
+                            {copiedMsgId === msg?.id ? <Check size={12} color="var(--accent-primary)" /> : <Copy size={12} />}
+                            <span>{copiedMsgId === msg?.id ? 'Copié !' : 'Copier'}</span>
                           </button>
 
                           {isMe && handleEditMessage && (
                             <button
                               onClick={() => {
-                                setEditingMsg({ id: msg.id, text: msg.text });
-                                setChatInputText(msg.text);
+                                setEditingMsg({ id: msg?.id, text: msg?.text });
+                                setChatInputText(msg?.text || '');
                                 setActiveMenuMsgId(null);
                               }}
                               style={{
@@ -2463,7 +2464,7 @@ function ChatView({
                           {isMe && handleDeleteMessage && (
                             <button
                               onClick={() => {
-                                handleDeleteMessage(activeChatObj.id, msg.id);
+                                handleDeleteMessage(activeChatObj?.id, msg?.id);
                                 setActiveMenuMsgId(null);
                               }}
                               style={{
@@ -2479,6 +2480,7 @@ function ChatView({
                           )}
                         </div>
                       )}
+
                     </div>
                   </div>
                 </div>
