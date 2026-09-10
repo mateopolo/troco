@@ -7,7 +7,8 @@ export default defineConfig({
     testTimeout: 20000,
     include: [
       'tests/rules/**/*.{test,spec}.{js,ts}',
-      'functions/test/**/*.{test,spec}.{js,ts}'
+      'functions/test/**/*.{test,spec}.{js,ts}',
+      'tests/unit/**/*.{test,spec}.{js,ts}'
     ]
   }
 });

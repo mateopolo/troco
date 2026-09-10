@@ -874,18 +874,7 @@ function ChatInputBar({
         {/* BOUTON ENVOYER / SOUMISSION (ACCOMPAGNE DIRECTEMENT L'INPUT À SA DROITE) */}
         <button
           type="button"
-          onClick={(e) => {
-            if (typeof handleSendMessage === 'function') {
-              handleSendMessage(localText);
-            }
-            handleSubmit(e);
-          }}
-          onTouchEnd={(e) => {
-            if (typeof handleSendMessage === 'function') {
-              handleSendMessage(localText);
-            }
-            handleSubmit(e);
-          }}
+          onClick={handleSubmit}
           className="premium-button"
           style={{
             border: 'none',

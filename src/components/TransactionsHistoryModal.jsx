@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   FileText, Coins, ArrowUpRight, ArrowDownLeft,
   X, Printer, ShieldCheck, Search,
@@ -16,6 +17,26 @@ export default function TransactionsHistoryModal({
   const [filterType, setFilterType] = useState('all'); // 'all' | 'tokens' | 'cash' | 'boost' | 'deal' | 'caution'
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTransactionForInvoice, setSelectedTransactionForInvoice] = useState(null);
+
+  // Verrouillage du scroll et touche Échap
+  useEffect(() => {
+    if (!isOpen) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        onClose?.();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -40,27 +61,38 @@ export default function TransactionsHistoryModal({
     window.print();
   };
 
-  return (
+  const modalElement = (
     <div
-      className="fixed inset-0 z-[999999] bg-black/90 md:bg-[var(--overlay-bg)] md:backdrop-blur-md"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Historique des transactions"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose?.();
+        }
+      }}
+      className="fixed inset-0 z-[100000] bg-black/80 md:bg-[var(--overlay-bg)] md:backdrop-blur-md pointer-events-auto"
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: 999999,
+        zIndex: 100000,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         padding: '16px',
+        overflow: 'hidden',
         animation: 'fadeIn 0.25s ease-out',
       }}
     >
-      <div style={{
-        backgroundColor: 'var(--bg-card)',
-        borderRadius: '28px',
-        width: '100%',
-        maxWidth: '740px',
-        maxHeight: '92vh',
-        overflowY: 'auto',
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          backgroundColor: 'var(--bg-card)',
+          borderRadius: '28px',
+          width: '100%',
+          maxWidth: '740px',
+          maxHeight: '92vh',
+          overflowY: 'auto',
         boxShadow: 'var(--shadow-modal)',
         border: '1px solid var(--border-color)',
         color: 'var(--text-main)',
@@ -481,5 +513,7 @@ export default function TransactionsHistoryModal({
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalElement, document.body) : modalElement;
 }
 

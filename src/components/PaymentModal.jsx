@@ -133,7 +133,27 @@ export default function PaymentModal({
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, initialMode, currentUser, initialPayload]);
+  }, [isOpen, initialMode, initialPayload]);
+
+  // Verrouillage du scroll du body et écoute de la touche Échap
+  useEffect(() => {
+    if (!isOpen) return;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -407,30 +427,40 @@ export default function PaymentModal({
 
   const modalElement = (
     <div
-      className="fixed inset-0 z-[999999] bg-black/90 md:bg-[var(--overlay-bg)] md:backdrop-blur-md"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Passerelle de paiement Troco"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          handleCloseModal();
+        }
+      }}
+      className="fixed inset-0 z-[100000] bg-black/80 md:bg-[var(--overlay-bg)] md:backdrop-blur-md pointer-events-auto"
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: 999999,
+        zIndex: 100000,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         padding: '12px',
         paddingTop: 'max(16px, env(safe-area-inset-top, 16px))',
         paddingBottom: 'max(16px, env(safe-area-inset-bottom, 16px))',
-        overflowY: 'auto',
+        overflow: 'hidden',
         WebkitOverflowScrolling: 'touch',
         animation: 'fadeIn 0.2s ease',
         boxSizing: 'border-box'
       }}
     >
-      <div style={{
-        backgroundColor: 'var(--bg-card)',
-        borderRadius: '24px',
-        width: '100%',
-        maxWidth: '560px',
-        maxHeight: 'calc(100dvh - 32px)',
-        overflowY: 'auto',
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          backgroundColor: 'var(--bg-card)',
+          borderRadius: '24px',
+          width: '100%',
+          maxWidth: '560px',
+          maxHeight: 'calc(100dvh - 32px)',
+          overflowY: 'auto',
         boxShadow: 'var(--shadow-modal)',
         border: '1px solid var(--border-color)',
         color: 'var(--text-main)',

@@ -18,6 +18,7 @@ import {
 import { Clock, Sparkles, ShieldCheck, CheckCircle, Check, RefreshCw, X } from 'lucide-react';
 import { mockChats, initialChatThreads } from '../data/mockChatsData';
 import { validateChatMessage } from '../utils/moderationBlacklist';
+import { shouldSendMessage, generateDeterministicMessageId } from '../utils/messageIdempotency';
 import { uploadVoiceNote } from '../services/voiceStorageService';
 import { playBetclicBalanceSound, playApplePaySound, playSwooshSound } from '../utils/audioService';
 import { useChatStore, useWalletStore } from '../stores';
@@ -761,16 +762,21 @@ export const useChatManager = ({
       return;
     }
 
+    const chatId = selectedChat?.id;
+    if (!chatId) return;
+
     const text = messageDraft.trim();
     if (!text) return;
+
+    if (!shouldSendMessage(chatId, profile?.uid, text)) {
+      return;
+    }
 
     const messageCheck = validateChatMessage(text);
     if (!messageCheck.isValid) {
       alert(messageCheck.errorMessage);
       return;
     }
-
-    const chatId = selectedChat.id;
 
     if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     if (profile?.name && db) {
@@ -779,7 +785,7 @@ export const useChatManager = ({
       }, { merge: true }).catch(() => { });
     }
 
-    const tempId = `temp_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const tempId = generateDeterministicMessageId(chatId, profile?.uid, text);
     const nowTime = Date.now();
     const newMessage = {
       id: tempId,
@@ -826,14 +832,20 @@ export const useChatManager = ({
           useChatStore.getState().replaceTempId(chatId, tempId, docRef.id);
         } catch (_) {}
 
+        const existingUids = Array.isArray(selectedChat.participantUids) ? selectedChat.participantUids : [];
+        const otherUid = selectedChat.authorUid || selectedChat.userUid || selectedChat.partnerUid || selectedChat.recipientUid || selectedChat.otherUid;
+        const participantUids = Array.from(new Set([...existingUids, profile?.uid, otherUid].filter(Boolean)));
+
         await setDoc(doc(db, 'chats', String(chatId)), {
           id: chatId,
           user: selectedChat.user,
           listing: selectedChat.listing,
           lastMessage: text,
           lastSenderName: profile?.name || 'Moi',
+          lastSenderUid: profile?.uid || null,
           unreadCount: increment(1),
           participants: selectedChat.participants || [profile?.name || 'Moi', selectedChat.user],
+          participantUids: participantUids.length > 0 ? participantUids : undefined,
           updatedAt: serverTimestamp(),
         }, { merge: true });
       } catch (e) {
