@@ -25,6 +25,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 import { useWalletStore } from '../../stores';
+import { setSessionAuthenticated } from '../../utils/sessionFlags';
 
 export default function AuthScreen({
   setProfile,
@@ -133,7 +134,7 @@ export default function AuthScreen({
       }));
       if (setProfileDraft) setProfileDraft(prev => ({ ...prev, ...updatedProfile }));
       setIsAuthenticated(true);
-      window.localStorage.setItem('troco_is_authenticated', 'true');
+      setSessionAuthenticated();
     } catch (err) {
       console.error(err);
       setAuthError('Code de vérification incorrect ou expiré.');
@@ -240,7 +241,7 @@ export default function AuthScreen({
         window.localStorage.setItem('troco_user_profile', JSON.stringify(existingData));
       }
       setIsAuthenticated(true);
-      window.localStorage.setItem('troco_is_authenticated', 'true');
+      setSessionAuthenticated();
     } catch (err) {
       console.warn(`${providerName} Sign-In Error:`, err);
       if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
@@ -292,7 +293,7 @@ export default function AuthScreen({
         if (setProfileDraft) setProfileDraft(prev => ({ ...prev, ...userData }));
       }
       setIsAuthenticated(true);
-      window.localStorage.setItem('troco_is_authenticated', 'true');
+      setSessionAuthenticated();
     } catch (err) {
       console.warn('Email/Password Sign-In Error:', err);
       if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
@@ -390,7 +391,7 @@ export default function AuthScreen({
 
     try {
       window.localStorage.setItem('troco_user_profile', JSON.stringify(finalProfile));
-      window.localStorage.setItem('troco_is_authenticated', 'true');
+      setSessionAuthenticated();
     } catch (e) {
       console.warn('Storage error on demo auth:', e);
     }
@@ -486,7 +487,7 @@ export default function AuthScreen({
       setProfile(newProfile);
       if (setProfileDraft) setProfileDraft(newProfile);
       window.localStorage.setItem('troco_user_profile', JSON.stringify(newProfile));
-      window.localStorage.setItem('troco_is_authenticated', 'true');
+      setSessionAuthenticated();
       setIsAuthenticated(true);
     } catch (err) {
       console.error('Signup submit error:', err);

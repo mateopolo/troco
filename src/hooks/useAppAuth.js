@@ -14,6 +14,7 @@ import {
   serverTimestamp
 } from 'firebase/firestore';
 import { useAuthStore, useWalletStore } from '../stores';
+import { setSessionAuthenticated, clearSessionFlags } from '../utils/sessionFlags';
 
 /**
  * Hook centralisant l'état d'authentification, la synchronisation du profil Firestore,
@@ -42,6 +43,7 @@ export const useAppAuth = () => {
   } = useAuthStore();
 
   const [isLoadingSession, setIsLoadingSession] = useState(true);
+  const [isAuthResolved, setIsAuthResolved] = useState(false);
   const [isUserBanned, setIsUserBanned] = useState(false);
   const [bannedReason, setBannedReason] = useState('');
 
@@ -54,6 +56,7 @@ export const useAppAuth = () => {
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       if (user) {
         useAuthStore.setState({ isAuthenticated: true });
+        setSessionAuthenticated();
 
         // Abonnement temps réel explicite du solde et jetons dans le store Zustand
         try {
@@ -139,8 +142,11 @@ export const useAppAuth = () => {
       } else {
         unsubscribeFirestore();
         unsubscribeBalance();
+        clearSessionFlags();
+        useAuthStore.setState({ isAuthenticated: false });
         setIsLoadingSession(false);
       }
+      setIsAuthResolved(true);
     });
 
     return () => {
@@ -155,7 +161,7 @@ export const useAppAuth = () => {
     try {
       await signOut(auth);
       useAuthStore.getState().resetToDefault();
-      localStorage.removeItem('troco_is_authenticated');
+      clearSessionFlags();
       localStorage.removeItem('troco_user_profile');
     } catch (error) {
       console.error('[Auth] Logout error:', error);
@@ -193,6 +199,8 @@ export const useAppAuth = () => {
     setIsEditingProfile,
     isAuthenticated,
     setIsAuthenticated: (val) => useAuthStore.setState({ isAuthenticated: val }),
+    isAuthResolved,
+    setIsAuthResolved,
     isLoadingSession,
     setIsLoadingSession,
     isUserBanned,

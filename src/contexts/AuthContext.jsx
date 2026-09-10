@@ -25,7 +25,8 @@ import {
   serverTimestamp,
   onSnapshot
 } from 'firebase/firestore';
-import { auth, db } from '../firebase';
+import { db, auth } from '../firebase';
+import { setSessionAuthenticated, clearSessionFlags } from '../utils/sessionFlags';
 
 const AuthContext = createContext(null);
 
@@ -39,9 +40,7 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return window.localStorage.getItem('troco_is_authenticated') === 'true';
-  });
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   const [profile, setProfile] = useState(() => {
     const saved = window.localStorage.getItem('troco_user_profile');
@@ -107,7 +106,7 @@ export const AuthProvider = ({ children }) => {
 
       if (currentUser) {
         setIsAuthenticated(true);
-        window.localStorage.setItem('troco_is_authenticated', 'true');
+        setSessionAuthenticated();
         try {
           const userDocRef = doc(db, 'users', currentUser.uid);
           unsubscribeDoc = onSnapshot(userDocRef, (userSnap) => {
@@ -134,6 +133,10 @@ export const AuthProvider = ({ children }) => {
         } catch (e) {
           console.warn('[AuthContext] Error setting up user doc listener:', e);
         }
+      } else {
+        clearSessionFlags();
+        setIsAuthenticated(false);
+        setProfile(null);
       }
       setIsLoadingSession(false);
     });
@@ -151,7 +154,7 @@ export const AuthProvider = ({ children }) => {
     } catch (e) {
       console.warn('SignOut error:', e);
     }
-    window.localStorage.removeItem('troco_is_authenticated');
+    clearSessionFlags();
     window.localStorage.removeItem('troco_user_profile');
     setIsAuthenticated(false);
     setUser(null);
@@ -275,7 +278,7 @@ export const AuthProvider = ({ children }) => {
         window.localStorage.setItem('troco_user_profile', JSON.stringify(existingData));
       }
       setIsAuthenticated(true);
-      window.localStorage.setItem('troco_is_authenticated', 'true');
+      setSessionAuthenticated();
     } catch (err) {
       console.warn(`${providerName} Sign-In Error:`, err);
       if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
@@ -324,7 +327,7 @@ export const AuthProvider = ({ children }) => {
         setProfile(prev => ({ ...prev, ...userSnap.data(), uid }));
       }
       setIsAuthenticated(true);
-      window.localStorage.setItem('troco_is_authenticated', 'true');
+      setSessionAuthenticated();
     } catch (err) {
       console.warn('Email/Password Sign-In Error:', err);
       if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
@@ -415,7 +418,7 @@ export const AuthProvider = ({ children }) => {
 
       setProfile(newProfile);
       window.localStorage.setItem('troco_user_profile', JSON.stringify(newProfile));
-      window.localStorage.setItem('troco_is_authenticated', 'true');
+      setSessionAuthenticated();
       setIsAuthenticated(true);
     } catch (err) {
       console.error('Signup submit error:', err);
@@ -482,7 +485,7 @@ export const AuthProvider = ({ children }) => {
 
     try {
       window.localStorage.setItem('troco_user_profile', JSON.stringify(finalProfile));
-      window.localStorage.setItem('troco_is_authenticated', 'true');
+      setSessionAuthenticated();
     } catch (e) {
       console.warn('Storage error on demo auth:', e);
     }
@@ -567,7 +570,7 @@ export const AuthProvider = ({ children }) => {
         swapHistory: [],
       }));
       setIsAuthenticated(true);
-      window.localStorage.setItem('troco_is_authenticated', 'true');
+      setSessionAuthenticated();
     } catch (err) {
       console.error(err);
       setAuthError('Code de vérification incorrect ou expiré.');

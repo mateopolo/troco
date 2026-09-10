@@ -64,6 +64,7 @@ import { isIosOrTouchDevice } from './utils/deviceDetection';
 import { useAdminGuard } from './hooks/useAdminGuard';
 import adminService from './services/adminService';
 import { useUsersPublic } from './hooks/useUsersPublic';
+import { setSessionAuthenticated, clearSessionFlags } from './utils/sessionFlags';
 export { isIosOrTouchDevice };
 
 
@@ -241,6 +242,8 @@ export default function App() {
     setIsEditingProfile,
     isAuthenticated,
     setIsAuthenticated,
+    isAuthResolved,
+    setIsAuthResolved,
     isLoadingSession,
     setIsLoadingSession,
     isUserBanned,
@@ -912,7 +915,7 @@ export default function App() {
               setIsUserBanned(true);
               setBannedReason(data.bannedReason || "Votre compte a été suspendu par l'administration Troco suite à un non-respect des règles de la communauté.");
               try { await signOut(auth); } catch (_) {}
-              window.localStorage.removeItem('troco_is_authenticated');
+              clearSessionFlags();
               window.localStorage.removeItem('troco_user_profile');
               setIsAuthenticated(false);
               return;
@@ -1009,17 +1012,20 @@ export default function App() {
         });
 
         setIsAuthenticated(true);
-        window.localStorage.setItem('troco_is_authenticated', 'true');
+        setSessionAuthenticated();
         finishSessionLoading();
       } else {
         prevTokensRef.current = null;
         prevEurosRef.current = null;
-        const hasSession = window.localStorage.getItem('troco_is_authenticated') === 'true';
-        if (!hasSession) {
-          setIsAuthenticated(false);
-        }
+        // Nettoyage immédiat
+        clearSessionFlags();
+        setIsAuthenticated(false);
+        setProfile(null);
+        setSelectedChat(null);
+        setSelectedListing(null);
         finishSessionLoading();
       }
+      setIsAuthResolved(true);
     });
 
     return () => {
@@ -1138,7 +1144,7 @@ export default function App() {
               return updated;
             });
             setIsAuthenticated(true);
-            window.localStorage.setItem('troco_is_authenticated', 'true');
+            setSessionAuthenticated();
           })
           .catch((err) => {
             console.error('Magic link sign-in error:', err);
@@ -2680,7 +2686,7 @@ export default function App() {
     } catch (e) {
       console.warn('SignOut error:', e);
     }
-    window.localStorage.removeItem('troco_is_authenticated');
+    clearSessionFlags();
     window.localStorage.removeItem('troco_user_profile');
     setIsAuthenticated(false);
     setSelectedChat(null);
@@ -2710,7 +2716,7 @@ export default function App() {
     }
   };
 
-  if (isLoadingSession) {
+  if (!isAuthResolved || isLoadingSession) {
     return (
       <div style={{
         minHeight: '100vh',
@@ -2891,10 +2897,10 @@ export default function App() {
       )}
 
       {/* MODALE BLOQUANTE CGU & RGPD OBLIGATOIRE */}
-      {isAuthenticated && !profile.cguAcceptedAt && (
+      {isAuthenticated && !profile?.cguAcceptedAt && (
         <Suspense fallback={null}>
           <CguConsentModal
-            isOpen={isAuthenticated && !profile.cguAcceptedAt}
+            isOpen={isAuthenticated && !profile?.cguAcceptedAt}
             onAccept={handleAcceptCgu}
             profile={profile}
             darkMode={darkMode}

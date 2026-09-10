@@ -35,7 +35,7 @@ export const useAuthStore = create(
   persist(
     (set, get) => ({
       profile: DEFAULT_PROFILE,
-      isAuthenticated: true,
+      isAuthenticated: false,
       authLoading: false,
       authError: '',
       isEditingProfile: false,
