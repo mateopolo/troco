@@ -75,8 +75,8 @@ import { useCheckout } from './hooks/useCheckout';
 import { useRateLimit } from './hooks/useRateLimit';
 import CheckoutModal from './components/modals/CheckoutModal';
 import DemoModeBanner from './components/common/DemoModeBanner';
-import Avatar from './components/common/Avatar';
 import { RateLimitToast } from './components/ui/RateLimitToast';
+import { useFirestoreHealth } from './hooks/useFirestoreHealth';
 export { isIosOrTouchDevice };
 
 
@@ -121,6 +121,7 @@ export const pageTransitionVariants = {
 export const pageTransitionConfig = { duration: 0.2, ease: "easeOut" };
 
 export default function App() {
+  useFirestoreHealth();
   const {
     theme,
     isDark: darkMode,
