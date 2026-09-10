@@ -60,6 +60,7 @@ import { useGlobalContent } from './features/admin/useGlobalContent';
 import { EmptyState } from './components/ui/EmptyState';
 import OfflineBanner from './components/common/OfflineBanner';
 import NotificationPill from './components/ui/NotificationPill';
+import { notificationService } from './services/notificationService';
 import { isIosOrTouchDevice } from './utils/deviceDetection';
 import { useAdminGuard } from './hooks/useAdminGuard';
 import adminService from './services/adminService';
@@ -1458,6 +1459,121 @@ export default function App() {
   }, [auth, profile?.uid]);
 
   const activeIncomingCall = incomingCall || globalIncomingCall;
+
+  // ---- TÂCHE 3 : LISTENER GLOBAL DES MESSAGES EN ARRIÈRE-PLAN AVEC TOAST IMMÉDIAT ----
+  useEffect(() => {
+    const currentUid = (auth && auth.currentUser && auth.currentUser.uid) || profile?.uid;
+    const myName = (profile?.name || '').trim().toLowerCase();
+    const myUsername = (profile?.username || '').trim().toLowerCase();
+    if (!currentUid || !db) return;
+
+    let isInitial = true;
+    const unsubs = [];
+
+    const handleChatDocChange = (change) => {
+      const data = change.doc.data();
+      if (!data) return;
+
+      const chatId = data.id || change.doc.id;
+      const lastSenderUid = data.lastSenderUid ? String(data.lastSenderUid) : null;
+      const lastSenderName = (data.lastSenderName || data.lastSender || '').trim().toLowerCase();
+
+      // Ignorer les messages envoyés par l'utilisateur courant lui-même
+      const isFromMe = (lastSenderUid && lastSenderUid === String(currentUid)) ||
+        (myName && lastSenderName === myName) ||
+        (myUsername && lastSenderName === myUsername);
+
+      if (isFromMe) return;
+
+      // Détecter un nouveau message entrant non lu (sur modification ou ajout après le chargement initial)
+      if (change.type === 'modified' || (change.type === 'added' && !isInitial)) {
+        // Vérifier si l'utilisateur est actuellement en train de consulter cette conversation précise
+        const isCurrentlyViewingThisChat = activeTab === 'chat' && selectedChat && String(selectedChat.id) === String(chatId);
+
+        if (!isCurrentlyViewingThisChat) {
+          const senderTitle = data.lastSenderName || data.lastSender || data.user || 'Nouveau message';
+          const messageText = data.lastMessage || 'Nouveau message reçu';
+          const senderAvatar = data.avatar || data.authorAvatar || null;
+
+          // Déclencher l'affichage du Toast de notification Dynamic Island
+          notificationService.show({
+            title: senderTitle,
+            message: messageText,
+            avatar: senderAvatar,
+            icon: 'chat',
+            onClick: () => {
+              setSelectedChat(data);
+              if (typeof setActiveTab === 'function') {
+                setActiveTab('chat');
+              }
+            },
+            data: { chatId }
+          });
+
+          // Vibration haptique
+          if (typeof navigator !== 'undefined' && navigator.vibrate) {
+            try { navigator.vibrate([80, 40, 80]); } catch (_) {}
+          }
+        }
+      }
+    };
+
+    try {
+      // 1. Écoute par participantUids (UID universel)
+      const qUids = query(
+        collection(db, 'chats'),
+        where('participantUids', 'array-contains', String(currentUid))
+      );
+      const unsubUids = onSnapshot(qUids, (snap) => {
+        snap.docChanges().forEach(handleChatDocChange);
+        isInitial = false;
+      }, (err) => {
+        console.warn('[App.js] Background message listener error (participantUids):', err);
+      });
+      unsubs.push(unsubUids);
+
+      // 2. Écoute par participants (nom d'affichage)
+      if (profile?.name) {
+        const qNames = query(
+          collection(db, 'chats'),
+          where('participants', 'array-contains', profile.name)
+        );
+        const unsubNames = onSnapshot(qNames, (snap) => {
+          snap.docChanges().forEach(handleChatDocChange);
+          isInitial = false;
+        }, (err) => {
+          console.warn('[App.js] Background message listener error (participants):', err);
+        });
+        unsubs.push(unsubNames);
+      }
+    } catch (err) {
+      console.warn('[App.js] Background message listener setup error:', err);
+    }
+
+    return () => {
+      unsubs.forEach(u => { try { if (typeof u === 'function') u(); } catch (_) {} });
+    };
+  }, [auth, profile?.uid, profile?.name, profile?.username, activeTab, selectedChat, setSelectedChat, setActiveTab]);
+
+  // Écoute de l'événement personnalisé troco:open_chat pour basculer vers le chat
+  useEffect(() => {
+    const handleOpenChatEvent = (e) => {
+      const chatId = e.detail?.chatId;
+      if (chatId) {
+        const found = (chatsList || []).find(c => String(c.id) === String(chatId));
+        if (found) {
+          setSelectedChat(found);
+        } else {
+          setSelectedChat({ id: chatId, user: e.detail?.user || 'Interlocuteur' });
+        }
+        if (typeof setActiveTab === 'function') {
+          setActiveTab('chat');
+        }
+      }
+    };
+    window.addEventListener('troco:open_chat', handleOpenChatEvent);
+    return () => window.removeEventListener('troco:open_chat', handleOpenChatEvent);
+  }, [chatsList, setSelectedChat, setActiveTab]);
 
   // État de gestion tactile d'annonce mobile (Chantier 4)
   const [mobileListingActionTarget, setMobileListingActionTarget] = useState(null);
