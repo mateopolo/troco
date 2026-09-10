@@ -530,7 +530,8 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
 
-    const partnerUid = selectedChat?.partnerUid || selectedChat?.uid || selectedChat?.authorUid || selectedChat?.userId || null;
+    const partnerUid = selectedChat?.partnerUid || selectedChat?.uid || selectedChat?.authorUid || selectedChat?.userId ||
+      (Array.isArray(selectedChat?.participantUids) ? selectedChat.participantUids.find(u => u && String(u) !== String(myUid)) : null) || null;
     const partnerName = selectedChat?.user || selectedChat?.name || selectedChat?.partnerName || 'Interlocuteur';
     const myUid = profileUid || (auth.currentUser && auth.currentUser.uid) || null;
 
@@ -538,8 +539,10 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
       type,
       from: profileName,
       fromUid: myUid,
+      callerUid: myUid,
       to: partnerName,
       toUid: partnerUid,
+      calleeUid: partnerUid,
       participants: [profileName],
       targetParticipants: [partnerName, partnerUid, profileName, myUid].filter(Boolean),
       status: 'ringing',
@@ -740,16 +743,11 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
     const normalizedProfile = (profileName || '').trim().toLowerCase();
     const currentUid = profileUid || (auth.currentUser && auth.currentUser.uid);
     const myUid = currentUid ? String(currentUid) : (profileName ? String(profileName) : null);
-    if (!myUid) return;
+    if (!myUid || !db) return;
 
-    // 🚨 PHASE 116 : RESTRICTION DE L'ÉCOUTEUR FIRESTORE (ZÉRO FOUILLE GLOBALE / ZÉRO MEMORY LEAK)
-    const callsQuery = query(
-      collection(db, 'calls'),
-      where('targetParticipants', 'array-contains', myUid),
-      limit(10)
-    );
+    const unsubs = [];
 
-    const unsub = onSnapshot(callsQuery, (snap) => {
+    const handleCallSnap = (snap) => {
       snap.docChanges().forEach(change => {
         const data = change.doc.data();
         if (!data) return;
@@ -757,9 +755,10 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
         const fromName = (data.from || '').trim().toLowerCase();
         if (fromName && normalizedProfile && fromName === normalizedProfile) return;
         if (data.fromUid && currentUid && String(data.fromUid) === String(currentUid)) return;
+        if (data.callerUid && currentUid && String(data.callerUid) === String(currentUid)) return;
 
         const targetTo = (data?.to || '').trim().toLowerCase();
-        const targetToUid = data?.toUid ? String(data.toUid) : null;
+        const targetToUid = data?.toUid ? String(data.toUid) : (data?.calleeUid ? String(data.calleeUid) : null);
         const currentUidStr = currentUid ? String(currentUid) : null;
 
         const isMatch = (normalizedProfile && targetTo === normalizedProfile) ||
@@ -776,24 +775,58 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
         if ((change.type === 'added' || change.type === 'modified') && isMatch && data.status === 'ringing') {
           setIncomingCall({
             chatId: change.doc.id,
+            callId: change.doc.id,
             type: data.type || 'video',
             from: data.from || 'Interlocuteur',
-            fromUid: data.fromUid || null
+            fromUid: data.fromUid || data.callerUid || null,
+            ...data,
           });
           playRingtone();
           if (navigator.vibrate) navigator.vibrate([400, 150, 400, 150, 400]);
         }
         if (change.type === 'removed') {
-          setIncomingCall(prev => prev?.chatId === change.doc.id ? null : prev);
+          setIncomingCall(prev => (prev?.chatId === change.doc.id || prev?.callId === change.doc.id ? null : prev));
           stopRingtone();
         }
         if (change.type === 'modified' && (data.status === 'connected' || data.status === 'ended' || data.status === 'declined' || data.status === 'canceled')) {
-          setIncomingCall(prev => prev?.chatId === change.doc.id ? null : prev);
+          setIncomingCall(prev => (prev?.chatId === change.doc.id || prev?.callId === change.doc.id ? null : prev));
           stopRingtone();
         }
       });
+    };
+
+    // 🚨 PHASE 116 : RESTRICTION DE L'ÉCOUTEUR FIRESTORE (ZÉRO FOUILLE GLOBALE / ZÉRO MEMORY LEAK)
+    const callsQuery = query(
+      collection(db, 'calls'),
+      where('targetParticipants', 'array-contains', myUid),
+      limit(10)
+    );
+
+    const unsub = onSnapshot(callsQuery, handleCallSnap, (err) => {
+      console.warn('[WebRTC] calls targetParticipants onSnapshot error:', err);
     });
-    return () => unsub();
+    unsubs.push(unsub);
+
+    // Écoute directe par toUid si UID présent pour fiabilité maximale
+    if (currentUid) {
+      try {
+        const qToUid = query(
+          collection(db, 'calls'),
+          where('toUid', '==', String(currentUid)),
+          limit(5)
+        );
+        const unsubToUid = onSnapshot(qToUid, handleCallSnap, (err) => {
+          console.warn('[WebRTC] calls toUid onSnapshot error:', err);
+        });
+        unsubs.push(unsubToUid);
+      } catch (_) {}
+    }
+
+    return () => {
+      unsubs.forEach(u => {
+        try { if (typeof u === 'function') u(); } catch (_) {}
+      });
+    };
   }, [profileName, profileUid, playRingtone, stopRingtone]);
 
   // =======================================================================

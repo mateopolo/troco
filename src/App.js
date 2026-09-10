@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback, Suspense, useTransition } from 'react';
 import { createPortal } from 'react-dom';
-import { Search, MapPin, Video, Globe, Filter, ShieldCheck, CheckCircle, X, Sparkles, Coins, Trash2, Camera, Flame, Check, Lock, CreditCard, Tag, ChevronLeft, ChevronRight, ShieldAlert } from 'lucide-react';
+import { Search, MapPin, Video, Globe, Filter, ShieldCheck, CheckCircle, X, Sparkles, Coins, Trash2, Camera, Flame, Check, Lock, CreditCard, Tag, ChevronLeft, ChevronRight, ShieldAlert, Phone, PhoneOff } from 'lucide-react';
 import { auth, db } from './firebase';
 import { collection, addDoc, doc, updateDoc, serverTimestamp, onSnapshot, query, orderBy, limit, setDoc, deleteDoc, getDoc, getDocs, where, runTransaction, increment } from 'firebase/firestore';
 import { fetchListingsPaginated, fetchListingsByGeohash } from './services/firestoreService';
@@ -1389,6 +1389,7 @@ export default function App() {
   // Décrochage universel direct avec bascule immédiate vers la visio plein écran
   const handleAcceptIncomingCall = async () => {
     try {
+      setGlobalIncomingCall(null);
       const res = await acceptIncomingCall();
       if (res?.chatId) {
         const foundChat = (chatsList || []).find(c => String(c.id) === String(res.chatId));
@@ -1403,6 +1404,60 @@ export default function App() {
       console.warn('[WebRTC] Accept incoming call error:', e);
     }
   };
+
+  // ---- RESTAURATION DU LISTENER GLOBAL DES APPELS DESTINÉS À CURRENTUSER.UID (TÂCHE 2) ----
+  const [globalIncomingCall, setGlobalIncomingCall] = useState(null);
+
+  useEffect(() => {
+    const currentUid = (auth && auth.currentUser && auth.currentUser.uid) || profile?.uid;
+    if (!currentUid || !db) return;
+
+    const unsubs = [];
+    try {
+      const q = query(
+        collection(db, 'calls'),
+        where('targetParticipants', 'array-contains', String(currentUid)),
+        limit(10)
+      );
+
+      const unsub = onSnapshot(q, (snap) => {
+        snap.docChanges().forEach(change => {
+          const data = change.doc.data();
+          if (!data) return;
+          if (data.fromUid && String(data.fromUid) === String(currentUid)) return;
+          if (data.callerUid && String(data.callerUid) === String(currentUid)) return;
+
+          if ((change.type === 'added' || change.type === 'modified') && data.status === 'ringing') {
+            setGlobalIncomingCall({
+              chatId: change.doc.id,
+              callId: change.doc.id,
+              type: data.type || 'video',
+              from: data.from || 'Interlocuteur',
+              fromUid: data.fromUid || data.callerUid || null,
+              ...data,
+            });
+          }
+          if (change.type === 'removed') {
+            setGlobalIncomingCall(prev => (prev?.chatId === change.doc.id ? null : prev));
+          }
+          if (change.type === 'modified' && data.status && data.status !== 'ringing') {
+            setGlobalIncomingCall(prev => (prev?.chatId === change.doc.id ? null : prev));
+          }
+        });
+      }, (err) => {
+        console.warn('[App.js] Global calls onSnapshot error:', err);
+      });
+      unsubs.push(unsub);
+    } catch (e) {
+      console.warn('[App.js] Error setting up global calls listener:', e);
+    }
+
+    return () => {
+      unsubs.forEach(u => { try { if (typeof u === 'function') u(); } catch (_) {} });
+    };
+  }, [auth, profile?.uid]);
+
+  const activeIncomingCall = incomingCall || globalIncomingCall;
 
   // État de gestion tactile d'annonce mobile (Chantier 4)
   const [mobileListingActionTarget, setMobileListingActionTarget] = useState(null);
@@ -4427,10 +4482,155 @@ export default function App() {
       )}
 
 
+      {/* ---- MODALE PRIORITAIRE D'APPEL ENTRANT GLOBAL (z-[9999]) ---- */}
+      {activeIncomingCall && !callState?.active && (
+        <div
+          className="z-[9999]"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+            animation: 'fadeIn 0.25s ease-out both',
+          }}
+        >
+          <div
+            style={{
+              width: '100%',
+              maxWidth: '420px',
+              backgroundColor: darkMode ? '#1F1D1A' : '#FFFFFF',
+              borderRadius: '28px',
+              padding: '32px 24px',
+              border: '2px solid var(--accent-primary, #D97706)',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 35px rgba(217, 119, 6, 0.3)',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              textAlign: 'center',
+              gap: '20px',
+            }}
+          >
+            {/* Avatar avec halo */}
+            <div style={{ position: 'relative' }}>
+              <div
+                style={{
+                  width: '84px',
+                  height: '84px',
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, var(--accent-primary, #D97706) 0%, #B45309 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#FFF',
+                  fontSize: '32px',
+                  fontWeight: '800',
+                  boxShadow: '0 8px 24px rgba(217, 119, 6, 0.4)',
+                }}
+              >
+                {activeIncomingCall.from ? activeIncomingCall.from.charAt(0).toUpperCase() : 'T'}
+              </div>
+            </div>
+
+            {/* Informations de l'appelant */}
+            <div>
+              <h3 style={{ margin: '0 0 6px 0', fontSize: '20px', fontWeight: '800', color: darkMode ? '#F3F4F6' : '#111827' }}>
+                {activeIncomingCall.from || 'Interlocuteur'}
+              </h3>
+              <div
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  padding: '4px 12px',
+                  borderRadius: '999px',
+                  backgroundColor: activeIncomingCall.type === 'video' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(16, 185, 129, 0.15)',
+                  color: activeIncomingCall.type === 'video' ? '#3B82F6' : '#10B981',
+                  fontSize: '13px',
+                  fontWeight: '700',
+                }}
+              >
+                {activeIncomingCall.type === 'video' ? <Video size={15} /> : <Phone size={15} />}
+                <span>{activeIncomingCall.type === 'video' ? 'Appel vidéo entrant...' : 'Appel audio entrant...'}</span>
+              </div>
+            </div>
+
+            {/* Boutons d'action : Décliner / Répondre */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '32px', width: '100%', marginTop: '8px' }}>
+              {/* Bouton Décliner */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setGlobalIncomingCall(null);
+                    declineIncomingCall();
+                  }}
+                  style={{
+                    width: '64px',
+                    height: '64px',
+                    borderRadius: '50%',
+                    backgroundColor: '#EF4444',
+                    color: '#FFF',
+                    border: 'none',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 8px 20px rgba(239, 68, 68, 0.4)',
+                    transition: 'transform 0.15s ease',
+                  }}
+                  title="Décliner"
+                >
+                  <PhoneOff size={26} />
+                </button>
+                <span style={{ fontSize: '13px', fontWeight: '700', color: '#EF4444' }}>
+                  Décliner
+                </span>
+              </div>
+
+              {/* Bouton Répondre */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await handleAcceptIncomingCall();
+                  }}
+                  style={{
+                    width: '64px',
+                    height: '64px',
+                    borderRadius: '50%',
+                    backgroundColor: '#10B981',
+                    color: '#FFF',
+                    border: 'none',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 8px 20px rgba(16, 185, 129, 0.4)',
+                    transition: 'transform 0.15s ease',
+                  }}
+                  title="Répondre"
+                >
+                  <Phone size={26} />
+                </button>
+                <span style={{ fontSize: '13px', fontWeight: '700', color: '#10B981' }}>
+                  Répondre
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ---- OVERLAY WEBRTC APPELS (SONNERIE ENTRANTE & MODAL PLEIN ÉCRAN) ---- */}
       <Suspense fallback={null}>
         <WebRTCCallOverlay
-          incomingCall={incomingCall}
+          incomingCall={activeIncomingCall}
           callState={callState}
           isCallPip={isCallPip}
           setIsCallPip={setIsCallPip}
