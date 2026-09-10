@@ -51,6 +51,11 @@ export default function LiveCallSubtitles({
   micOn = true,
 }) {
   const isMicMuted = Boolean(isMuted || micOn === false);
+  const isMicMutedRef = useRef(isMicMuted);
+  useEffect(() => {
+    isMicMutedRef.current = isMicMuted;
+  }, [isMicMuted]);
+
   const [currentSubtitle, setCurrentSubtitle] = useState(null);
   const [localOutgoingSpeech, setLocalOutgoingSpeech] = useState(null);
   const outgoingTimeoutRef = useRef(null);
@@ -207,7 +212,7 @@ export default function LiveCallSubtitles({
       const isLocal = Boolean(data.isLocalMic);
 
       // CONFIDENTIALITÉ STRICTE : Si le micro est coupé, aucun son local ne doit être traité ni diffusé
-      if (isLocal && isMicMuted) {
+      if (isLocal && isMicMutedRef.current) {
         return;
       }
 
@@ -285,7 +290,7 @@ export default function LiveCallSubtitles({
         liveTranscriptionService.stopListening();
       }
     };
-  }, [isActive, chatId, currentSourceLang, currentSubtitleLang, myProfile, partnerName, speakerName, isMicMuted]);
+  }, [isActive, chatId, currentSourceLang, currentSubtitleLang, myProfile, partnerName, speakerName]);
 
   // Coupure stricte et immédiate de la transcription dès que le microphone local est coupé
   useEffect(() => {

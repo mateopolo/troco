@@ -48,23 +48,33 @@ class LiveTranscriptionService {
         } catch (_) {}
       }
     } else {
-      // RÉACTIVATION : reprise de la reconnaissance si l'écoute était active
+      // RÉACTIVATION PROPRE : relance la reconnaissance si l'écoute était active
       if (this.isListening) {
-        if (!this.recognition) {
-          this.initRecognition();
-        }
-        if (this.recognition) {
-          try {
-            this.recognition.lang = this.sourceLanguage;
-            this.recognition.start();
-          } catch (err) {
-            try {
-              this.initRecognition();
-              this.recognition.start();
-            } catch (_) {}
-          }
-        }
+        this.restartRecognition();
       }
+    }
+  }
+
+  restartRecognition() {
+    if (!this.isListening || this.isMuted) return;
+    if (this.simulationTimer) {
+      clearInterval(this.simulationTimer);
+      this.simulationTimer = null;
+    }
+    if (this.recognition) {
+      try { this.recognition.abort(); } catch (_) {}
+      this.recognition = null;
+    }
+    const hasNativeSupport = this.initRecognition();
+    if (hasNativeSupport && this.recognition) {
+      try {
+        this.recognition.lang = this.sourceLanguage;
+        this.recognition.start();
+      } catch (err) {
+        console.warn('[LiveTranscription] Restart recognition start error:', err);
+      }
+    } else if (!hasNativeSupport) {
+      this.startSimulatedDemo(this.sourceLanguage, this.targetLanguage);
     }
   }
 
@@ -142,7 +152,13 @@ class LiveTranscriptionService {
         if (this.isListening && !this.isMuted) {
           try {
             this.recognition.start();
-          } catch (_) {}
+          } catch (_) {
+            setTimeout(() => {
+              if (this.isListening && !this.isMuted) {
+                this.restartRecognition();
+              }
+            }, 300);
+          }
         }
       };
 
@@ -209,19 +225,7 @@ class LiveTranscriptionService {
       return;
     }
 
-    const hasNativeSupport = this.initRecognition();
-
-    if (hasNativeSupport && this.recognition) {
-      try {
-        this.recognition.lang = this.sourceLanguage;
-        this.recognition.start();
-      } catch (err) {
-        console.debug('[LiveTranscription] SpeechRecognition start warning:', err);
-      }
-    } else {
-      // Démarrage de la simulation contextuelle bilingue
-      this.startSimulatedDemo(resolvedSourceBcp, resolvedTargetCode);
-    }
+    this.restartRecognition();
   }
 
   stopListening() {
@@ -238,6 +242,7 @@ class LiveTranscriptionService {
       try {
         this.recognition.abort();
       } catch (_) {}
+      this.recognition = null;
     }
   }
 

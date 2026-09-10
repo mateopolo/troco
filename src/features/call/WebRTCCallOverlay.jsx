@@ -628,7 +628,7 @@ export default function WebRTCCallOverlay({
               currentLang={currentLang}
               speakerName={selectedChat?.user || incomingCall?.from || 'Interlocuteur'}
               isCompact={false}
-              chatId={selectedChat?.id || incomingCall?.chatId}
+              chatId={callState?.roomId || selectedChat?.id || incomingCall?.chatId}
               myProfile={profile}
               partnerName={selectedChat?.user || incomingCall?.from || 'Interlocuteur'}
               isMuted={!callState?.micOn}
