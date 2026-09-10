@@ -1366,6 +1366,8 @@ export default function App() {
     hostMuteParticipant,
     hostStopParticipantScreenShare,
     copyInviteLink,
+    playRingtone,
+    stopRingtone,
   } = useWebRTC({ profileName: profile?.name || 'Membre', profileUid: profile?.uid || (auth.currentUser && auth.currentUser.uid), selectedChat });
 
   // Attacheurs de flux universels sans conflit de ref (évite les écrans noirs sur tous navigateurs)
