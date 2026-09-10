@@ -63,3 +63,42 @@ export async function uploadVoiceNote(audioBlob, chatId = 'global') {
     }
   }
 }
+
+/**
+ * Upload d'un fichier audio (MP3, WAV, etc.) sur Firebase Storage sans limitation arbitraire de taille.
+ * Force impérativement les métadonnées avec contentType: file.type || 'audio/mpeg'.
+ */
+export async function uploadAudioFile(file, chatId = 'global') {
+  if (!file) throw new Error('No audio file provided');
+
+  const resolvedContentType = file.type || 'audio/mpeg';
+  const cleanName = `${Date.now()}_${file.name ? file.name.replace(/[^a-zA-Z0-9._-]/g, '_') : 'audio.mp3'}`;
+  const storagePath = `chat_audios/${cleanName}`;
+
+  try {
+    if (storage) {
+      const storageRef = ref(storage, storagePath);
+      const snapshot = await uploadBytes(storageRef, file, {
+        contentType: file.type || 'audio/mpeg',
+      });
+      const downloadUrl = await getDownloadURL(snapshot.ref);
+      return {
+        success: true,
+        audioUrl: downloadUrl,
+        fileName: file.name || cleanName,
+        contentType: resolvedContentType,
+      };
+    }
+  } catch (err) {
+    console.warn('[VoiceStorageService] Storage upload failed, fallback to DataURL:', err);
+  }
+
+  // Fallback DataURL résilient si Storage est indisponible
+  const dataUrl = await blobToDataURL(file);
+  return {
+    success: true,
+    audioUrl: dataUrl,
+    fileName: file.name || cleanName,
+    contentType: resolvedContentType,
+  };
+}

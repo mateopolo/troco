@@ -102,6 +102,7 @@ function ChatInputBar({
         type: 'audio',
         audioUrl: downloadUrl,
         fileName: file.name,
+        contentType: file.type || 'audio/mpeg',
       };
 
       if (typeof onAudioUpload === 'function') {
