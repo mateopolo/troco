@@ -535,7 +535,8 @@ export const useChatManager = ({
     const chatId = String(selectedChat.id);
     const myUid = profile?.uid || (auth?.currentUser && auth.currentUser.uid) || null;
 
-    let unsub = () => {};
+    let primaryUnsub = null;
+    let fallbackUnsub = null;
 
     const handleSnapshot = (snapshot) => {
       if (snapshot.empty) return;
@@ -559,24 +560,28 @@ export const useChatManager = ({
       });
 
       // Fusionner avec les messages optimistes en vol (temp_*) dont l'ID Firestore n'est pas encore connu.
-      // Cela évite le doublon : le temp_ reste visible jusqu'à ce que le vrai doc Firestore arrive.
       setChatThreads(prev => {
         const currentThread = prev[selectedChat.id] || [];
         const inFlightOptimistic = currentThread.filter(
           m => typeof m.id === 'string' && m.id.startsWith('temp_') && !firestoreIds.has(m.id)
         );
 
-        // Union : vrais messages Firestore + messages optimistes encore non confirmés
-        const combined = [...msgs, ...inFlightOptimistic];
-
-        // Déduplication stricte par ID (les doublons éventuels sont éliminés)
-        const seen = new Set();
-        const unique = combined.filter(m => {
-          const key = String(m.id);
-          if (seen.has(key)) return false;
-          seen.add(key);
-          return true;
+        // Déduplication absolue via Map par ID unique de document
+        const messageMap = new Map();
+        // 1. D'abord les messages Firestore officiels
+        msgs.forEach(m => {
+          const uid = String(m.id || m._id || '');
+          if (uid) messageMap.set(uid, m);
         });
+        // 2. Ensuite les messages optimistes non encore confirmés
+        inFlightOptimistic.forEach(m => {
+          const uid = String(m.id || m._id || '');
+          if (uid && !messageMap.has(uid)) {
+            messageMap.set(uid, m);
+          }
+        });
+
+        const unique = Array.from(messageMap.values());
 
         // Tri chronologique ascendant côté client
         unique.sort((a, b) => {
@@ -626,11 +631,16 @@ export const useChatManager = ({
 
     try {
       const q = query(collection(db, 'chats', chatId, 'messages'), orderBy('createdAt', 'asc'));
-      unsub = onSnapshot(q, handleSnapshot, (err) => {
+      primaryUnsub = onSnapshot(q, handleSnapshot, (err) => {
         console.warn('[Firestore] chat messages onSnapshot with orderBy failed, fallback without orderBy:', err);
+        // Nettoyage strict de l'écouteur primaire avant de basculer sur fallback
+        if (typeof primaryUnsub === 'function') {
+          primaryUnsub();
+          primaryUnsub = null;
+        }
         try {
           const fallbackQ = collection(db, 'chats', chatId, 'messages');
-          unsub = onSnapshot(fallbackQ, handleSnapshot, (fallbackErr) => {
+          fallbackUnsub = onSnapshot(fallbackQ, handleSnapshot, (fallbackErr) => {
             console.error('[Firestore] chat messages fallback failed:', fallbackErr);
           });
         } catch (_) {}
@@ -640,7 +650,12 @@ export const useChatManager = ({
     }
 
     return () => {
-      if (typeof unsub === 'function') unsub();
+      if (typeof primaryUnsub === 'function') {
+        try { primaryUnsub(); } catch (_) {}
+      }
+      if (typeof fallbackUnsub === 'function') {
+        try { fallbackUnsub(); } catch (_) {}
+      }
     };
   }, [selectedChat?.id, selectedChat?.user, profile?.name, profile?.uid, activeTab, auth, db]);
 
@@ -698,11 +713,20 @@ export const useChatManager = ({
         text: preview,
       };
 
-      // 1. Insertion optimiste immédiate
-      setChatThreads(prev => ({
-        ...prev,
-        [chatId]: [...(prev[chatId] || []), payload]
-      }));
+      // 1. Insertion optimiste immédiate avec Map anti-doublon
+      setChatThreads(prev => {
+        const existing = prev[chatId] || [];
+        const map = new Map();
+        existing.forEach(m => {
+          const uid = String(m.id || m._id || '');
+          if (uid) map.set(uid, m);
+        });
+        map.set(String(payload.id), payload);
+        return {
+          ...prev,
+          [chatId]: Array.from(map.values())
+        };
+      });
 
       setChatsList(prev => prev.map(c => String(c.id) === String(chatId) ? {
         ...c,
@@ -724,14 +748,22 @@ export const useChatManager = ({
             createdAt: serverTimestamp(),
           });
 
-          // 3. Promouvoir le tempId vers l'ID Firestore réel → handleSnapshot ignorera le doublon
+          // 3. Promouvoir le tempId vers l'ID Firestore réel via Map (ignore doublon si onSnapshot a déjà reçu le doc)
           setChatThreads(prev => {
             const thread = prev[chatId] || [];
+            const map = new Map();
+            thread.forEach(m => {
+              if (m.id === tempId) {
+                if (!map.has(String(docRef.id))) {
+                  map.set(String(docRef.id), { ...m, id: docRef.id, status: 'sent' });
+                }
+              } else {
+                map.set(String(m.id || m._id), m);
+              }
+            });
             return {
               ...prev,
-              [chatId]: thread.map(m =>
-                m.id === tempId ? { ...m, id: docRef.id, status: 'sent' } : m
-              ),
+              [chatId]: Array.from(map.values())
             };
           });
 
@@ -760,7 +792,10 @@ export const useChatManager = ({
       return;
     }
 
-    const text = messageDraft.trim();
+    const text = (typeof customPayload === 'string' && customPayload.trim())
+      ? customPayload.trim()
+      : messageDraft.trim();
+
     if (!text) return;
 
     const messageCheck = validateChatMessage(text);
@@ -790,8 +825,21 @@ export const useChatManager = ({
       translations: { FR: text }
     };
 
-    // 1. Optimistic insertion : rendu instantané 0ms avec status pending (icône horloge)
-    setChatThreads(prev => ({ ...prev, [chatId]: [...(prev[chatId] || []), newMessage] }));
+    // 1. Optimistic insertion : rendu instantané 0ms avec Map anti-doublon
+    setChatThreads(prev => {
+      const existing = prev[chatId] || [];
+      const map = new Map();
+      existing.forEach(m => {
+        const uid = String(m.id || m._id || '');
+        if (uid) map.set(uid, m);
+      });
+      map.set(String(newMessage.id), newMessage);
+      return {
+        ...prev,
+        [chatId]: Array.from(map.values())
+      };
+    });
+
     useChatStore.getState().addMessageToThread(chatId, newMessage);
     setMessageDraft('');
 
@@ -808,14 +856,29 @@ export const useChatManager = ({
           createdAt: serverTimestamp(),
         });
 
-        // Mise à jour optimiste -> sent
+        // Mise à jour optimiste -> sent avec Map anti-doublon
         setChatThreads(prev => {
           const thread = prev[chatId] || [];
+          const map = new Map();
+          thread.forEach(m => {
+            if (m.id === tempId) {
+              if (!map.has(String(docRef.id))) {
+                map.set(String(docRef.id), { ...m, id: docRef.id || tempId, status: 'sent' });
+              }
+            } else {
+              map.set(String(m.id || m._id), m);
+            }
+          });
           return {
             ...prev,
-            [chatId]: thread.map(m => m.id === tempId ? { ...m, id: docRef.id || tempId, status: 'sent' } : m)
+            [chatId]: Array.from(map.values())
           };
         });
+
+        // Remplacer également dans le Zustand store si disponible
+        if (typeof useChatStore.getState().replaceTempId === 'function') {
+          useChatStore.getState().replaceTempId(chatId, tempId, docRef.id);
+        }
 
         await setDoc(doc(db, 'chats', String(chatId)), {
           id: chatId,

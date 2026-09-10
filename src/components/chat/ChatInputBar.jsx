@@ -49,6 +49,7 @@ function ChatInputBar({
   onAudioUpload = null,
 }) {
   const [localText, setLocalText] = useState(editingMsg ? (editingMsg.text || '') : '');
+  const [isSending, setIsSending] = useState(false);
   const [isWorkspaceMenuOpen, setIsWorkspaceMenuOpen] = useState(false);
   const typingTimerRef = useRef(null);
   const imageInputRef = useRef(null);
@@ -174,12 +175,14 @@ function ChatInputBar({
     }
   }, [onTypingChange]);
 
-  // Soumission finale du message
-  const handleSubmit = useCallback((e) => {
+  // Soumission finale du message avec protection anti-spam et debounce
+  const handleSubmit = useCallback(async (e) => {
     if (e) {
-      e.preventDefault();
-      e.stopPropagation();
+      if (typeof e.preventDefault === 'function') e.preventDefault();
+      if (typeof e.stopPropagation === 'function') e.stopPropagation();
     }
+    if (isSending) return;
+
     const trimmed = localText.trim();
     if (!trimmed) {
       if (typeof handleSendMessage === 'function') {
@@ -188,31 +191,40 @@ function ChatInputBar({
       return;
     }
 
-    if (editingMsg && typeof onEditMessage === 'function') {
-      onEditMessage(trimmed);
-      setLocalText('');
-    } else if (typeof handleSendMessage === 'function') {
-      handleSendMessage(trimmed);
-      setLocalText('');
-    } else if (typeof onSendMessage === 'function') {
-      onSendMessage(trimmed);
-      setLocalText('');
-    }
+    setIsSending(true);
+    try {
+      if (editingMsg && typeof onEditMessage === 'function') {
+        await onEditMessage(trimmed);
+        setLocalText('');
+      } else if (typeof handleSendMessage === 'function') {
+        await handleSendMessage(trimmed);
+        setLocalText('');
+      } else if (typeof onSendMessage === 'function') {
+        await onSendMessage(trimmed);
+        setLocalText('');
+      }
 
-    if (onTypingChange) {
-      onTypingChange('');
+      if (onTypingChange) {
+        onTypingChange('');
+      }
+    } catch (err) {
+      console.error('[ChatInputBar] handleSubmit error:', err);
+    } finally {
+      setIsSending(false);
     }
-  }, [localText, editingMsg, onEditMessage, handleSendMessage, onSendMessage, onTypingChange]);
+  }, [localText, isSending, editingMsg, onEditMessage, handleSendMessage, onSendMessage, onTypingChange]);
 
   const handleKeyDown = useCallback((e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSubmit();
+      if (!isSending) {
+        handleSubmit(e);
+      }
     } else if (e.key === 'Escape' && editingMsg && onCancelEdit) {
       e.preventDefault();
       onCancelEdit();
     }
-  }, [handleSubmit, editingMsg, onCancelEdit]);
+  }, [handleSubmit, isSending, editingMsg, onCancelEdit]);
 
   return (
     <div
@@ -797,19 +809,11 @@ function ChatInputBar({
           }}
         />
 
-        {/* BOUTON ENVOYER / SOUMISSION (ACCOMPAGNE DIRECTEMENT L'INPUT À SA DROITE) */}
+        {/* BOUTON ENVOYER / SOUMISSION (DEBOUNCÉ & DÉSACTIVÉ PENDANT L'ENVOI) */}
         <button
           type="button"
+          disabled={isSending || (!localText.trim() && !editingMsg)}
           onClick={(e) => {
-            if (typeof handleSendMessage === 'function') {
-              handleSendMessage(localText);
-            }
-            handleSubmit(e);
-          }}
-          onTouchEnd={(e) => {
-            if (typeof handleSendMessage === 'function') {
-              handleSendMessage(localText);
-            }
             handleSubmit(e);
           }}
           className="premium-button"
@@ -820,19 +824,38 @@ function ChatInputBar({
             height: isMobile ? '40px' : '44px',
             minWidth: isMobile ? '40px' : '44px',
             minHeight: isMobile ? '40px' : '44px',
-            background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
+            background: isSending
+              ? 'var(--border-color, #E5E7EB)'
+              : 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
             color: '#FFF',
-            cursor: 'pointer',
+            cursor: isSending ? 'not-allowed' : (localText.trim() || editingMsg ? 'pointer' : 'default'),
+            opacity: isSending ? 0.6 : (localText.trim() || editingMsg ? 1 : 0.7),
+            pointerEvents: isSending ? 'none' : 'auto',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: 'var(--shadow-accent)',
+            boxShadow: isSending ? 'none' : 'var(--shadow-accent)',
             flexShrink: 0,
-            transition: 'transform 0.15s ease',
+            transition: 'all 0.15s ease',
           }}
-          title={editingMsg ? 'Valider la modification' : 'Envoyer'}
+          title={editingMsg ? 'Valider la modification' : (isSending ? 'Envoi en cours...' : 'Envoyer')}
         >
-          {editingMsg ? <Check size={isMobile ? 16 : 18} /> : <Send size={isMobile ? 16 : 18} style={{ transform: 'translateX(-1px)' }} />}
+          {isSending ? (
+            <div
+              style={{
+                width: isMobile ? 14 : 16,
+                height: isMobile ? 14 : 16,
+                border: '2px solid rgba(255,255,255,0.4)',
+                borderTopColor: '#FFF',
+                borderRadius: '50%',
+                animation: 'spin 0.6s linear infinite',
+              }}
+            />
+          ) : editingMsg ? (
+            <Check size={isMobile ? 16 : 18} />
+          ) : (
+            <Send size={isMobile ? 16 : 18} style={{ transform: 'translateX(-1px)' }} />
+          )}
         </button>
       </div>
     </div>

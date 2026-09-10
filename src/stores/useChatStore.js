@@ -24,10 +24,35 @@ export const useChatStore = create(
 
       addMessageToThread: (chatId, message) => set((state) => {
         const currentThread = state.chatThreads[chatId] || [];
+        const map = new Map();
+        currentThread.forEach(m => {
+          if (m?.id) map.set(String(m.id), m);
+        });
+        if (message?.id) map.set(String(message.id), message);
         return {
           chatThreads: {
             ...state.chatThreads,
-            [chatId]: [...currentThread, message]
+            [chatId]: Array.from(map.values())
+          }
+        };
+      }),
+
+      replaceTempId: (chatId, tempId, realDocId) => set((state) => {
+        const thread = state.chatThreads[chatId] || [];
+        const map = new Map();
+        thread.forEach(m => {
+          if (m.id === tempId) {
+            if (!map.has(String(realDocId))) {
+              map.set(String(realDocId), { ...m, id: realDocId, status: 'sent' });
+            }
+          } else {
+            map.set(String(m.id), m);
+          }
+        });
+        return {
+          chatThreads: {
+            ...state.chatThreads,
+            [chatId]: Array.from(map.values())
           }
         };
       }),

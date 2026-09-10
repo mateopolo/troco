@@ -560,7 +560,17 @@ function ChatView({
 
   const currentChatId = effectiveSelectedChat ? effectiveSelectedChat.id : null;
   const messages = useMemo(() => {
-    return currentChatId ? (chatThreads[currentChatId] || []) : [];
+    if (!currentChatId || !chatThreads) return [];
+    const thread = chatThreads[currentChatId] || chatThreads[String(currentChatId)] || [];
+    // Déduplication stricte via Map basée sur l'ID de document unique
+    const map = new Map();
+    thread.forEach(m => {
+      const id = String(m?.id || m?._id || '');
+      if (id) {
+        map.set(id, m);
+      }
+    });
+    return Array.from(map.values());
   }, [currentChatId, chatThreads]);
 
   const prevChatIdRef = useRef(null);
@@ -2653,11 +2663,16 @@ function ChatView({
             editingMsg={editingMsg}
             replyingTo={null}
             isGroupChat={activeChatObj?.isGroup}
-            handleSendMessage={handleSendMessage}
-            onSendMessage={(text) => {
+            handleSendMessage={async (msgOrText) => {
               userJustSentMessageRef.current = true;
-              if (handleSendMessage) {
-                handleSendMessage(text);
+              if (typeof handleSendMessage === 'function') {
+                return await handleSendMessage(msgOrText);
+              }
+            }}
+            onSendMessage={async (text) => {
+              userJustSentMessageRef.current = true;
+              if (typeof handleSendMessage === 'function') {
+                return await handleSendMessage(text);
               }
             }}
             onEditMessage={(text) => {
