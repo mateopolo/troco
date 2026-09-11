@@ -716,9 +716,10 @@ export default function App() {
       if (chatId && dealId) {
         try {
           await walletService.transferAtomically({
+            senderUid: profile?.uid || auth?.currentUser?.uid,
             receiverUid,
             currency: tokensAmount > 0 ? 'tokens' : 'EUR',
-            amount: tokensAmount > 0 ? tokensAmount : euroAmount,
+            amount: Number(tokensAmount > 0 ? tokensAmount : euroAmount),
             type: 'deal',
             metadata: {
               chatId,
@@ -1779,9 +1780,10 @@ export default function App() {
     // PERSISTANCE TRANSACTIONNELLE VIA CLOUD FUNCTION ATOMIQUE (walletService)
     try {
       const transferRes = await walletService.transferAtomically({
+        senderUid: currentUid,
         receiverUid: partnerUid,
         currency: 'tokens',
-        amount: costTokens,
+        amount: Number(costTokens),
         type: 'call_tokens',
         metadata: {
           partner,

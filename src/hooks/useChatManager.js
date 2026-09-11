@@ -2006,7 +2006,7 @@ export const useChatManager = ({
     // ORDRE IMPÉRATIF : participantUids (UIDs purs) > explicit targetUid > participants (peut contenir des noms) > partnerUid chat
     // NE PAS utiliser participants[] en premier : ce tableau peut contenir des display names, pas des UIDs.
     const currentUid = String(currentUser.uid);
-    const isValidUid = (v) => typeof v === 'string' && v.length >= 20 && v !== currentUid && v !== 'partner' && v !== 'undefined';
+    const isValidUid = (v) => typeof v === 'string' && v.trim().length >= 3 && v !== currentUid && v !== 'partner' && v !== 'undefined';
 
     let partnerUid = targetUid && isValidUid(targetUid) ? targetUid : null;
 
@@ -2029,7 +2029,7 @@ export const useChatManager = ({
       throw new Error(errorMsg);
     }
 
-    const costTokens = amount;
+    const costTokens = Number(amount) || 1;
 
     try {
       if (db) {
@@ -2047,20 +2047,20 @@ export const useChatManager = ({
           }
 
           // Débit expéditeur
-          transaction.update(senderRef, { trocoTokens: increment(-costTokens) });
+          transaction.update(senderRef, { trocoTokens: increment(-Number(costTokens)) });
 
           // Crédit destinataire — set+merge si le doc n'existe pas encore (évite 'No document to update')
           if (receiverSnap.exists()) {
-            transaction.update(receiverRef, { trocoTokens: increment(costTokens) });
+            transaction.update(receiverRef, { trocoTokens: increment(Number(costTokens)) });
           } else {
-            transaction.set(receiverRef, { trocoTokens: costTokens }, { merge: true });
+            transaction.set(receiverRef, { trocoTokens: Number(costTokens) }, { merge: true });
           }
 
-          // Trace & notification avec type 'tokens_received' pour déclencher l'animation ciblée
+          // Trace & notification avec type 'payment_received' pour conformité transactionnelle
           const notifRef = doc(collection(db, 'users', partnerUid, 'notifications'));
           transaction.set(notifRef, {
-            type: 'tokens_received',
-            amount: costTokens,
+            type: 'payment_received',
+            amount: Number(costTokens),
             currency: 'tokens',
             from: currentUid,
             fromName: profile?.name || '',
@@ -2131,8 +2131,8 @@ export const useChatManager = ({
     const chatObj = chat || selectedChat;
     const currentUid = String(currentUser.uid);
 
-    // Valide qu'une valeur ressemble à un UID Firebase (≥20 chars, pas un nom affiché)
-    const isValidUid = (v) => typeof v === 'string' && v.length >= 20 && v !== currentUid && v !== 'partner' && v !== 'undefined';
+    // Valide qu'une valeur ressemble à un UID Firebase
+    const isValidUid = (v) => typeof v === 'string' && v.trim().length >= 3 && v !== currentUid && v !== 'partner' && v !== 'undefined';
 
     let partnerUid = targetUid && isValidUid(targetUid) ? targetUid : null;
 
@@ -2169,7 +2169,7 @@ export const useChatManager = ({
     }
 
     if (!partnerUid || partnerUid === currentUid) {
-      const errorMsg = "Impossible d'identifier le destinataire dans cette conversation.";
+      const errorMsg = 'Destinataire introuvable';
       console.error('🚨 [handleSendToken] ' + errorMsg, { chatId, currentUid, chatObj });
       alert(errorMsg);
       throw new Error(errorMsg);
@@ -2189,25 +2189,25 @@ export const useChatManager = ({
             transaction.get(receiverRef),
           ]);
 
-          if (!senderSnap.exists() || (Number(senderSnap.data()?.trocoTokens ?? profile?.trocoTokens ?? 0) < amount)) {
+          if (!senderSnap.exists() || (Number(senderSnap.data()?.trocoTokens ?? profile?.trocoTokens ?? 0) < Number(amount))) {
             throw new Error('Solde insuffisant');
           }
 
           // Débit expéditeur
-          transaction.update(senderRef, { trocoTokens: increment(-amount) });
+          transaction.update(senderRef, { trocoTokens: increment(-Number(amount)) });
 
           // Crédit destinataire — set+merge si le doc n'existe pas encore (évite 'No document to update')
           if (receiverSnap.exists()) {
-            transaction.update(receiverRef, { trocoTokens: increment(amount) });
+            transaction.update(receiverRef, { trocoTokens: increment(Number(amount)) });
           } else {
-            transaction.set(receiverRef, { trocoTokens: amount }, { merge: true });
+            transaction.set(receiverRef, { trocoTokens: Number(amount) }, { merge: true });
           }
 
-          // Traçabilité & notification destinataire (type 'tokens_received' pour le listener App.js)
+          // Traçabilité & notification destinataire (type 'payment_received' pour le listener App.js)
           const notifRef = doc(collection(db, 'users', partnerUid, 'notifications'));
           transaction.set(notifRef, {
-            type: 'tokens_received',
-            amount,
+            type: 'payment_received',
+            amount: Number(amount),
             currency: 'tokens',
             from: currentUid,
             fromName: profile?.name || '',
