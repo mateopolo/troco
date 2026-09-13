@@ -98,7 +98,9 @@ function ChatInputBar({
     }
 
     try {
-      haptics.impact();
+      if (typeof haptics?.light === 'function') {
+        haptics.light();
+      }
       setInternalIsSending(true);
       const uploadResult = await uploadAudioFile(file, chatId);
       const downloadUrl = uploadResult?.audioUrl;
@@ -128,7 +130,9 @@ function ChatInputBar({
       } else if (typeof onSendMessage === 'function') {
         onSendMessage(audioMessageData);
       }
-      haptics.success();
+      if (typeof haptics?.success === 'function') {
+        haptics.success();
+      }
     } catch (err) {
       logger.error('[ChatInputBar] Firebase Upload Error:', err);
       logger.error('[ChatInputBar] Error code:', err?.code);
