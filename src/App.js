@@ -2261,6 +2261,22 @@ export default function App() {
     setAllFirestoreUsers(usersPublicList);
   }, [usersPublicList]);
 
+  const usersByUid = useMemo(() => {
+    const map = new Map();
+    allFirestoreUsers.forEach((user) => {
+      if (user.uid) map.set(user.uid, user);
+    });
+    return map;
+  }, [allFirestoreUsers]);
+
+  const usersByName = useMemo(() => {
+    const map = new Map();
+    allFirestoreUsers.forEach((user) => {
+      if (user.name) map.set(user.name.trim().toLowerCase(), user);
+    });
+    return map;
+  }, [allFirestoreUsers]);
+
   const filteredListings = useMemo(() => {
     return listings.filter((item) => {
       if (hideDemos && item.isDemo) return false;
@@ -2347,11 +2363,13 @@ export default function App() {
 
       // Filtrage Shadow-Ban via users_public (Lookup O(1) Map)
       const authorUid = item.authorUid || item.userId || item.sellerId;
-      const authorUser = authorUid ? usersPublicMap.get(authorUid) : null;
+      const authorUser = (authorUid && usersPublicMap.get(authorUid))
+        || (authorUid && usersByUid.get(authorUid))
+        || usersByName.get((item.author || '').trim().toLowerCase());
       const currentUid = profile?.uid || auth.currentUser?.uid;
       const isSelf = (authorUid && currentUid && authorUid === currentUid) || (item.author && profile?.name && item.author === profile.name);
 
-      if (authorUser?.shadowBannedPublic && !isSelf) return false;
+      if ((authorUser?.isBanned || authorUser?.isShadowBanned || authorUser?.shadowBannedPublic) && !isSelf) return false;
 
       return item.status !== 'paused' && matchesSearch && matchesFormat && matchesCategory && matchesLanguage && matchesPayment && matchesDistance;
     }).sort((a, b) => {
@@ -2395,7 +2413,9 @@ export default function App() {
     profile.name,
     profile?.uid,
     auth.currentUser?.uid,
-    usersPublicMap
+    usersPublicMap,
+    usersByUid,
+    usersByName
   ]);
 
   const listingsGridRef = useRef(null);
