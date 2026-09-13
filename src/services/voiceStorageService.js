@@ -37,7 +37,7 @@ export async function uploadVoiceNote(audioBlob, chatId = 'global') {
       contentType: finalContentType,
     };
 
-    const downloadURL = await uploadResumable(storageRef, audioBlob, metadata, 10000);
+    const downloadURL = await uploadResumable(storageRef, audioBlob, metadata, 3000);
 
     return {
       success: true,
