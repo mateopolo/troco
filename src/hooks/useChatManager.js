@@ -1058,20 +1058,27 @@ export const useChatManager = ({
 
   // ---- ENVOI DE MESSAGE VOCAL ----
   const handleSendAudioMessage = async (audioBlob, duration, recordedAudioUrl, mimeType, transcript) => {
-    if (!selectedChat) return;
+    if (!selectedChat) {
+      throw new Error('Aucune discussion active pour envoyer la note vocale.');
+    }
     const chatId = selectedChat.id;
     const uploadRes = recordedAudioUrl
       ? { audioUrl: recordedAudioUrl }
       : await uploadVoiceNote(audioBlob, chatId);
     const audioUrl = uploadRes?.audioUrl;
-    if (!audioUrl) return;
+    if (!audioUrl) {
+      throw new Error('L’URL de la note vocale est indisponible.');
+    }
 
     const formattedDuration = Math.round(duration || 0);
     const normalizedTranscript = typeof transcript === 'string' ? transcript.trim() : '';
+    const temporaryId = `temp_audio_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const newAudioMessage = {
-      id: Date.now(),
+      id: temporaryId,
+      temporaryId,
       sender: 'me',
       senderName: profile?.name || 'Moi',
+      senderUid: profile?.uid || auth?.currentUser?.uid || null,
       kind: 'audio',
       type: 'audio',
       audioUrl,
@@ -1082,7 +1089,13 @@ export const useChatManager = ({
       text: `🎤 Note vocale (${formattedDuration}s)`,
     };
 
-    setChatThreads(prev => ({ ...prev, [chatId]: [...(prev[chatId] || []), newAudioMessage] }));
+    setChatThreads(prev => ({
+      ...prev,
+      [chatId]: [...(prev[chatId] || []), newAudioMessage],
+    }));
+    if (typeof useChatStore.getState().addMessageToThread === 'function') {
+      useChatStore.getState().addMessageToThread(chatId, newAudioMessage);
+    }
 
     setChatsList(prev => prev.map(c => String(c.id) === String(chatId) ? {
       ...c,
@@ -1092,8 +1105,10 @@ export const useChatManager = ({
 
     if (db) {
       try {
-        await addDoc(collection(db, 'chats', String(chatId), 'messages'), {
+        const docRef = await addDoc(collection(db, 'chats', String(chatId), 'messages'), {
+          temporaryId,
           senderName: profile?.name || 'Moi',
+          senderUid: profile?.uid || auth?.currentUser?.uid || null,
           kind: 'audio',
           type: 'audio',
           audioUrl,
@@ -1105,13 +1120,33 @@ export const useChatManager = ({
           status: 'sent',
           createdAt: serverTimestamp(),
         });
+        setChatThreads(prev => ({
+          ...prev,
+          [chatId]: (prev[chatId] || []).map(message => (
+            message.id === temporaryId
+              ? { ...message, id: docRef.id, status: 'sent' }
+              : message
+          )),
+        }));
+        if (typeof useChatStore.getState().replaceTempId === 'function') {
+          useChatStore.getState().replaceTempId(chatId, temporaryId, docRef.id);
+        }
         await setDoc(doc(db, 'chats', String(chatId)), {
+          id: chatId,
           lastMessage: newAudioMessage.text,
           lastSenderName: profile?.name || 'Moi',
+          lastSenderUid: profile?.uid || auth?.currentUser?.uid || null,
           updatedAt: serverTimestamp(),
         }, { merge: true });
       } catch (e) {
-        logger.warn('[Firestore] audio message write failed:', e);
+        setChatThreads(prev => ({
+          ...prev,
+          [chatId]: (prev[chatId] || []).map(message => (
+            message.id === temporaryId ? { ...message, status: 'error' } : message
+          )),
+        }));
+        logger.error('[Firestore] audio message write failed:', e);
+        throw e;
       }
     }
   };
