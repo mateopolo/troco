@@ -30,6 +30,7 @@ export const AppHeader = React.memo(({
   // 🚨 ANIMATION DU SOLDE FAÇON "BETCLIC" (Gain flottant +X sur Jetons et Euros)
   const [floatingGain, setFloatingGain] = useState(null); // { amount, type: 'token' }
   const [floatingEuroGain, setFloatingEuroGain] = useState(null); // { amount, type: 'fiat' }
+  const [gainAmount, setGainAmount] = useState(null);
 
   const prevTokensRef = useRef(profile?.trocoTokens);
   const prevEuroRef = useRef(profile?.euroBalance);
@@ -58,12 +59,14 @@ export const AppHeader = React.memo(({
     if (!isNaN(curEuro) && !isNaN(prevEuro) && curEuro > prevEuro) {
       const diff = Number((curEuro - prevEuro).toFixed(2));
       setFloatingEuroGain({ amount: diff, type: 'fiat' });
+      setGainAmount(diff);
       try {
         playBetclicBalanceSound(true);
       } catch (_) {}
       const timer = setTimeout(() => {
         setFloatingEuroGain(null);
-      }, 2000);
+        setGainAmount(null);
+      }, 1500);
       prevEuroRef.current = curEuro;
       return () => clearTimeout(timer);
     }
@@ -98,6 +101,10 @@ export const AppHeader = React.memo(({
   }, [callState?.active]);
 
   const isHiddenOnMobileChat = isMobile && activeTab === 'chat' && Boolean(selectedChat);
+  const euroGainAmount = floatingEuroGain?.amount ?? gainAmount;
+  const euroGainDisplay = Number.isInteger(Number(euroGainAmount))
+    ? Number(euroGainAmount)
+    : Number(euroGainAmount).toFixed(2);
 
   return (
     <header
@@ -203,46 +210,66 @@ export const AppHeader = React.memo(({
           }}
         >
           {/* Solde Euros */}
-          <button
-            type="button"
-            onClick={() => handleOpenPayment('topup-cash')}
-            title="Recharger mon solde Euros"
-            className="premium-button balance-badge flex-shrink-0"
+          <div
+            className="relative inline-flex items-center"
             style={{
-              border: '1px solid var(--border-color)',
-              borderRadius: '999px',
-              padding: isScrolled ? (isMobile ? '4px 6px' : '5px 10px') : (isMobile ? '5px 8px' : '6px 12px'),
-              backgroundColor: 'var(--bg-subtle)',
-              color: 'var(--accent-primary)',
-              fontWeight: '700',
-              cursor: 'pointer',
+              position: 'relative',
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '4px',
-              fontSize: '11px',
-              position: 'relative',
-              overflow: 'visible',
-              whiteSpace: 'nowrap',
-              flexShrink: 0,
-              transition: 'padding 0.3s var(--ease-quiet)',
+              justifyContent: 'center',
+              height: '40px',
             }}
           >
-            {floatingEuroGain && (
+            {(floatingEuroGain || gainAmount) && (
               <div
-                className="absolute -top-6 left-0 text-green-500 font-bold text-lg animate-float-up-fade pointer-events-none select-none z-50 flex items-center gap-0.5"
-                style={{ textShadow: '0 2px 8px rgba(34, 197, 94, 0.4)' }}
+                className="absolute left-1/2 -translate-x-1/2 text-green-500 font-bold text-sm animate-float-up-fade pointer-events-none select-none z-50"
+                style={{
+                  top: '0',
+                  left: '50%',
+                  textShadow: '0 2px 8px rgba(34, 197, 94, 0.4)',
+                  animation: 'fadeOutUp 1.5s ease-out forwards',
+                  whiteSpace: 'nowrap',
+                }}
               >
-                +{floatingEuroGain.amount}€
+                +{euroGainDisplay}€
               </div>
             )}
-            <Coins size={13} style={{ flexShrink: 0 }} />
-            <AnimatedEuroBalance
-              value={profile?.euroBalance || 0}
-              prefix={isMobile ? '€' : '€ '}
-              suffix=""
-              style={{ fontSize: '11px', fontWeight: '700', whiteSpace: 'nowrap' }}
-            />
-          </button>
+            <button
+              type="button"
+              onClick={() => handleOpenPayment('topup-cash')}
+              title="Recharger mon solde Euros"
+              className="premium-button balance-badge flex-shrink-0"
+              style={{
+                border: '1px solid var(--border-color)',
+                borderRadius: '999px',
+                minWidth: '120px',
+                height: '40px',
+                padding: isScrolled ? (isMobile ? '4px 6px' : '5px 10px') : (isMobile ? '5px 8px' : '6px 12px'),
+                backgroundColor: 'var(--bg-subtle)',
+                color: 'var(--accent-primary)',
+                fontWeight: '700',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '4px',
+                fontSize: '11px',
+                position: 'relative',
+                overflow: 'visible',
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
+                transition: 'padding 0.3s var(--ease-quiet)',
+              }}
+            >
+              <Coins size={13} style={{ flexShrink: 0 }} />
+              <AnimatedEuroBalance
+                value={profile?.euroBalance || 0}
+                prefix={isMobile ? '€' : '€ '}
+                suffix=""
+                style={{ fontSize: '11px', fontWeight: '700', whiteSpace: 'nowrap' }}
+              />
+            </button>
+          </div>
 
           {/* Jetons Troco / Abonnement Troco Plus */}
           <button

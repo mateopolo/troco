@@ -774,6 +774,23 @@ input[type=range]::-moz-range-thumb:hover {
   }
 }
 
+@keyframes fadeOutUp {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 0) scale(0.8);
+  }
+
+  20% {
+    opacity: 1;
+    transform: translate(-50%, -10px) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -40px) scale(1);
+  }
+}
+
 @keyframes pulseGlow {
 
   0%,

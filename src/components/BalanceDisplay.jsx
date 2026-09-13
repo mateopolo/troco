@@ -17,6 +17,7 @@ export default function BalanceDisplay({
 }) {
   const [floatingTokenGain, setFloatingTokenGain] = useState(null);
   const [floatingEuroGain, setFloatingEuroGain] = useState(null);
+  const [gainAmount, setGainAmount] = useState(null);
 
   const prevTokensRef = useRef(trocoTokens);
   const prevEuroRef = useRef(euroBalance);
@@ -48,18 +49,25 @@ export default function BalanceDisplay({
     if (!isNaN(cur) && !isNaN(prev) && cur > prev) {
       const diff = Number((cur - prev).toFixed(2));
       setFloatingEuroGain({ amount: diff, type: 'fiat' });
+      setGainAmount(diff);
       try {
         playBetclicBalanceSound(true);
       } catch (_) {}
 
       const timer = setTimeout(() => {
         setFloatingEuroGain(null);
-      }, 2000);
+        setGainAmount(null);
+      }, 1500);
       prevEuroRef.current = cur;
       return () => clearTimeout(timer);
     }
     prevEuroRef.current = cur;
   }, [euroBalance]);
+
+  const euroGainAmount = floatingEuroGain?.amount ?? gainAmount;
+  const euroGainDisplay = Number.isInteger(Number(euroGainAmount))
+    ? Number(euroGainAmount)
+    : Number(euroGainAmount).toFixed(2);
 
   return (
     <div
@@ -67,14 +75,14 @@ export default function BalanceDisplay({
       style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', ...style }}
     >
       {/* BOUTON SOLDE EUROS */}
-      <div style={{ position: 'relative' }}>
-        {floatingEuroGain && (
+      <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', height: '40px' }}>
+        {(floatingEuroGain || gainAmount) && (
           <div
-            className="absolute -top-6 left-0 text-green-500 font-bold text-lg animate-float-up-fade"
+            className="absolute left-1/2 -translate-x-1/2 text-green-500 font-bold text-sm animate-float-up-fade"
             style={{
               position: 'absolute',
-              top: '-24px',
-              left: 0,
+              top: '0',
+              left: '50%',
               color: '#10B981',
               fontWeight: 'bold',
               fontSize: '18px',
@@ -82,9 +90,10 @@ export default function BalanceDisplay({
               zIndex: 50,
               whiteSpace: 'nowrap',
               textShadow: '0 2px 8px rgba(16, 185, 129, 0.4)',
+              animation: 'fadeOutUp 1.5s ease-out forwards',
             }}
           >
-            +{floatingEuroGain.amount} €
+            +{euroGainDisplay} €
           </div>
         )}
 
@@ -95,6 +104,8 @@ export default function BalanceDisplay({
           style={{
             border: '1px solid var(--accent-primary, #3B82F6)',
             borderRadius: '999px',
+            minWidth: '120px',
+            height: '40px',
             padding: isMobile ? '5px 8px' : '6px 12px',
             backgroundColor: 'var(--bg-subtle, rgba(255, 255, 255, 0.05))',
             color: 'var(--accent-primary, #3B82F6)',
@@ -102,6 +113,7 @@ export default function BalanceDisplay({
             cursor: 'pointer',
             display: 'inline-flex',
             alignItems: 'center',
+            justifyContent: 'center',
             gap: '4px',
             fontSize: '11px',
             position: 'relative',
@@ -114,14 +126,14 @@ export default function BalanceDisplay({
       </div>
 
       {/* BOUTON SOLDE JETONS */}
-      <div style={{ position: 'relative' }}>
+      <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center', height: '40px' }}>
         {floatingTokenGain && (
           <div
-            className="absolute -top-6 left-0 text-green-500 font-bold text-lg animate-float-up-fade"
+            className="absolute left-1/2 -translate-x-1/2 text-green-500 font-bold text-lg animate-float-up-fade"
             style={{
               position: 'absolute',
-              top: '-24px',
-              left: 0,
+              top: '0',
+              left: '50%',
               color: '#10B981',
               fontWeight: 'bold',
               fontSize: '18px',
@@ -129,6 +141,7 @@ export default function BalanceDisplay({
               zIndex: 50,
               whiteSpace: 'nowrap',
               textShadow: '0 2px 8px rgba(16, 185, 129, 0.4)',
+              animation: 'fadeOutUp 1.5s ease-out forwards',
             }}
           >
             +{floatingTokenGain.amount}
@@ -142,6 +155,8 @@ export default function BalanceDisplay({
           style={{
             border: '1px solid var(--accent-primary, #3B82F6)',
             borderRadius: '999px',
+            minWidth: '120px',
+            height: '40px',
             padding: isMobile ? '5px 8px' : '6px 12px',
             backgroundColor: 'var(--bg-subtle, rgba(255, 255, 255, 0.05))',
             color: 'var(--accent-primary, #3B82F6)',
@@ -149,6 +164,7 @@ export default function BalanceDisplay({
             cursor: 'pointer',
             display: 'inline-flex',
             alignItems: 'center',
+            justifyContent: 'center',
             gap: '4px',
             fontSize: '11px',
             position: 'relative',

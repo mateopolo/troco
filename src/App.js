@@ -2018,11 +2018,15 @@ export default function App() {
 
     try {
       await adminService.toggleHideListingAsAdmin(targetId, newHidden);
+      setSaveMessage(newHidden ? `🚫 Annonce #${listing.id} masquée du feed public` : `👁️ Annonce #${listing.id} visible`);
+      safeTimeout(() => setSaveMessage(''), 4000);
     } catch (err) {
       logger.warn('[Admin] toggle hide error via Cloud Function:', err);
+      setSaveMessage(`❌ Erreur : Échec du masquage de l'annonce #${listing.id} (${err?.message || 'Erreur réseau'})`);
+      safeTimeout(() => setSaveMessage(''), 4000);
+      // Rollback de la mise à jour locale
+      setListings(prev => prev.map(l => l.id === listing.id ? { ...l, isHidden: !newHidden } : l));
     }
-    setSaveMessage(newHidden ? `🚫 Annonce #${listing.id} masquée du feed public` : `👁️ Annonce #${listing.id} visible`);
-    safeTimeout(() => setSaveMessage(''), 4000);
   };
 
   const userSwapHistory = Array.isArray(profile?.swapHistory) ? profile.swapHistory : [];
