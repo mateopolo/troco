@@ -1,5 +1,5 @@
 import logger from '../utils/logger';
-import { ref, uploadBytes, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { auth, storage } from '../firebase';
 
 /**
@@ -37,8 +37,7 @@ export async function uploadVoiceNote(audioBlob, chatId = 'global') {
       contentType: finalContentType,
     };
 
-    const snapshot = await uploadBytes(storageRef, audioBlob, metadata);
-    const downloadURL = await getDownloadURL(snapshot.ref);
+    const downloadURL = await uploadResumable(storageRef, audioBlob, metadata, 10000);
 
     return {
       success: true,
@@ -125,13 +124,13 @@ export async function uploadAudioFile(file, chatId = 'global') {
   };
 }
 
-function uploadResumable(storageRef, data, metadata) {
+function uploadResumable(storageRef, data, metadata, timeoutMs = 60000) {
   return new Promise((resolve, reject) => {
     const uploadTask = uploadBytesResumable(storageRef, data, metadata);
     const timeout = setTimeout(() => {
       uploadTask.cancel();
-      reject(new Error('Firebase Storage upload timeout after 60 seconds.'));
-    }, 60000);
+      reject(new Error(`Firebase Storage upload timeout after ${timeoutMs / 1000} seconds.`));
+    }, timeoutMs);
     const finish = (callback) => {
       clearTimeout(timeout);
       callback();
