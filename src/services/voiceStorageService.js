@@ -127,6 +127,15 @@ export async function uploadAudioFile(file, chatId = 'global') {
 function uploadResumable(storageRef, data, metadata) {
   return new Promise((resolve, reject) => {
     const uploadTask = uploadBytesResumable(storageRef, data, metadata);
+    const timeout = setTimeout(() => {
+      uploadTask.cancel();
+      reject(new Error('Firebase Storage upload timeout after 60 seconds.'));
+    }, 60000);
+    const finish = (callback) => {
+      clearTimeout(timeout);
+      callback();
+    };
+
     uploadTask.on(
       'state_changed',
       (snapshot) => {
@@ -134,12 +143,13 @@ function uploadResumable(storageRef, data, metadata) {
           progress: snapshot.totalBytes ? Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100) : 0,
         });
       },
-      reject,
+      (error) => finish(() => reject(error)),
       async () => {
         try {
-          resolve(await getDownloadURL(uploadTask.snapshot.ref));
+          const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+          finish(() => resolve(downloadURL));
         } catch (error) {
-          reject(error);
+          finish(() => reject(error));
         }
       },
     );

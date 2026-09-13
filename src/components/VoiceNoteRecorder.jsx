@@ -209,6 +209,33 @@ export default function VoiceNoteRecorder({
     }
   };
 
+  const stopRecorderAndGetBlob = () => {
+    const recorder = mediaRecorderRef.current;
+    if (!recorder || recorder.state === 'inactive') {
+      return Promise.resolve(audioBlobRef.current || audioBlob);
+    }
+
+    return new Promise((resolve, reject) => {
+      const timeout = window.setTimeout(() => {
+        stopWaitersRef.current = stopWaitersRef.current.filter(waiter => waiter !== resolveBlob);
+        reject(new Error('Le traitement de l’enregistrement a expiré.'));
+      }, 30000);
+      const resolveBlob = (blob) => {
+        window.clearTimeout(timeout);
+        resolve(blob);
+      };
+
+      stopWaitersRef.current.push(resolveBlob);
+      try {
+        recorder.stop();
+      } catch (error) {
+        window.clearTimeout(timeout);
+        stopWaitersRef.current = stopWaitersRef.current.filter(waiter => waiter !== resolveBlob);
+        reject(error);
+      }
+    });
+  };
+
   const handleTogglePreviewPlay = () => {
     const audio = previewAudioRef.current;
     if (!audio) return;
@@ -259,31 +286,14 @@ export default function VoiceNoteRecorder({
     };
 
     try {
-      let blob = audioBlobRef.current || audioBlob;
+      if (timerRef.current) clearInterval(timerRef.current);
+
+      let blob = await stopRecorderAndGetBlob();
       if (!blob && audioChunksRef.current.length > 0) {
         blob = new Blob(audioChunksRef.current, { type: detectedMimeType || 'audio/webm' });
       }
-      if (!blob && mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-        if (timerRef.current) clearInterval(timerRef.current);
-        const recorder = mediaRecorderRef.current;
-        const stoppedBlob = await new Promise((resolve, reject) => {
-          const timeout = window.setTimeout(() => {
-            stopWaitersRef.current = stopWaitersRef.current.filter(waiter => waiter !== resolve);
-            reject(new Error('Le traitement de l’enregistrement a expiré.'));
-          }, 5000);
-          stopWaitersRef.current.push((value) => {
-            window.clearTimeout(timeout);
-            resolve(value);
-          });
-          try {
-            recorder.stop();
-          } catch (error) {
-            window.clearTimeout(timeout);
-            stopWaitersRef.current = stopWaitersRef.current.filter(waiter => waiter !== resolve);
-            reject(error);
-          }
-        });
-        blob = stoppedBlob;
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
       }
       await doUploadAndSend(blob);
     } catch (error) {
