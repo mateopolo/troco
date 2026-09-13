@@ -160,7 +160,7 @@ export function UniversalModal({
             <X size={18} aria-hidden="true" />
           </button>
         )}
-        <div         className="flex flex-1 min-h-0 flex-col items-center overflow-y-auto overscroll-contain px-6 py-4">
+        <div className="flex w-full flex-1 min-h-0 flex-col items-center overflow-y-auto overscroll-contain px-6 py-4 box-border">
           {children}
         </div>
         {footer && (
