@@ -58,8 +58,8 @@ export async function handleApplyPayment(
     }
 
     const userData = userSnap.data() || {};
-    const curEuro = Number(userData.euroBalance || 0);
-    const curTokens = Number(userData.trocoTokens || 0);
+    const curEuro = Number(userData.euroBalance ?? userData.walletBalanceFiat ?? userData.balance ?? 0);
+    const curTokens = Number(userData.trocoTokens ?? userData.tokens ?? 0);
 
     let newEuro = curEuro;
     let newTokens = curTokens;
@@ -73,6 +73,7 @@ export async function handleApplyPayment(
     // Mise à jour sécurisée du solde utilisateur
     tx.update(userRef, {
       euroBalance: newEuro,
+      walletBalanceFiat: newEuro,
       trocoTokens: newTokens,
       updatedAt: FieldValue.serverTimestamp(),
     });

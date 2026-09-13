@@ -981,7 +981,7 @@ export default function App() {
             }
 
             const rawTokens = data.trocoTokens ?? data.tokens;
-            const rawEuros = data.walletBalanceFiat ?? data.euroBalance ?? data.balance;
+            const rawEuros = data.euroBalance ?? data.walletBalanceFiat ?? data.balance;
             const newTokens = rawTokens !== undefined && rawTokens !== null ? Number(rawTokens) : null;
             const newEuros = rawEuros !== undefined && rawEuros !== null ? Number(Number(rawEuros).toFixed(2)) : null;
 
