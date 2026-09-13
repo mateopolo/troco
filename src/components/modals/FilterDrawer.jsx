@@ -83,6 +83,7 @@ export default function FilterDrawer({
           </h3>
           <button
             onClick={onClose}
+            aria-label="Fermer les filtres"
             style={{
               border: 'none',
               background: darkMode ? 'rgba(255,255,255,0.08)' : '#E8DDD3',
@@ -127,6 +128,8 @@ export default function FilterDrawer({
           <button
             onClick={handleRequestGeolocation}
             disabled={isGeolocating}
+            aria-pressed={isGeolocated}
+            aria-label={isGeolocated ? 'Désactiver ma position sécurisée' : 'Utiliser ma position'}
             className="premium-button"
             style={{
               width: '100%',
@@ -156,6 +159,8 @@ export default function FilterDrawer({
           </label>
           <button
             onClick={() => setIsInfiniteRadius(prev => !prev)}
+            aria-pressed={isInfiniteRadius || radiusKm >= 2000}
+            aria-label="Activer ou désactiver le rayon monde entier"
             style={{
               border: isInfiniteRadius || radiusKm >= 2000 ? '1px solid #C67D5B' : (darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #E8DDD3'),
               backgroundColor: isInfiniteRadius || radiusKm >= 2000 ? (darkMode ? 'rgba(198,125,91,0.25)' : '#F5EAE4') : (darkMode ? '#1A1715' : '#FAF7F2'),
@@ -203,6 +208,7 @@ export default function FilterDrawer({
               <button
                 key={preset}
                 onClick={() => { setRadiusKm(preset); setIsInfiniteRadius(preset >= 2000); }}
+                aria-pressed={!isInfiniteRadius && radiusKm === preset}
                 style={{
                   border: !isInfiniteRadius && radiusKm === preset ? '1px solid #C67D5B' : (darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3'),
                   backgroundColor: !isInfiniteRadius && radiusKm === preset ? (darkMode ? 'rgba(198,125,91,0.25)' : '#F5EAE4') : (darkMode ? '#1A1715' : '#FAF7F2'),
@@ -224,7 +230,7 @@ export default function FilterDrawer({
         <label style={{ fontSize: '12px', fontWeight: '700', color: darkMode ? '#D4C5B5' : '#3D3530' }}>
           {t('languages') || 'Langues'}
         </label>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px', marginBottom: '12px' }}>
+        <div role="group" aria-label="Filtres de langue" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px', marginBottom: '12px' }}>
           {[
             { code: 'FR', label: '🇫🇷 FR' },
             { code: 'EN', label: '🇬🇧 EN' },
@@ -237,6 +243,7 @@ export default function FilterDrawer({
             <button
               key={code}
               onClick={() => toggleLanguageFilter(code)}
+              aria-pressed={selectedLanguages.includes(code)}
               style={{
                 border: selectedLanguages.includes(code) ? '1px solid #C67D5B' : (darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3'),
                 backgroundColor: selectedLanguages.includes(code) ? (darkMode ? 'rgba(198,125,91,0.25)' : '#F5EAE4') : (darkMode ? '#1A1715' : '#FAF7F2'),
@@ -273,6 +280,8 @@ export default function FilterDrawer({
           <input
             type="checkbox"
             checked={hideDemos}
+            role="checkbox"
+            aria-checked={hideDemos}
             onChange={(e) => setHideDemos?.(e.target.checked)}
             style={{ accentColor: '#C67D5B', width: '16px', height: '16px' }}
           />
@@ -283,11 +292,12 @@ export default function FilterDrawer({
         <label style={{ fontSize: '12px', fontWeight: '700', color: darkMode ? '#D4C5B5' : '#3D3530' }}>
           Rétribution
         </label>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+        <div role="group" aria-label="Filtres de rétribution" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
           {paymentOptions.map(option => (
             <button
               key={option}
               onClick={() => setSelectedPayment(option)}
+              aria-pressed={selectedPayment === option}
               style={{
                 border: selectedPayment === option ? '1px solid #C67D5B' : (darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3'),
                 backgroundColor: selectedPayment === option ? (darkMode ? 'rgba(198,125,91,0.25)' : '#F5EAE4') : (darkMode ? '#1A1715' : '#FAF7F2'),

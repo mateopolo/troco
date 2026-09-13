@@ -290,6 +290,8 @@ export const AppHeader = React.memo(({
             type="button"
             onClick={toggleDarkMode}
             title={darkMode ? 'Activer le mode clair' : 'Activer le mode sombre'}
+            aria-label={darkMode ? 'Activer le mode clair' : 'Activer le mode sombre'}
+            aria-pressed={darkMode}
             className="premium-button darkmode-btn flex-shrink-0"
             style={{
               border: '1px solid var(--border-color)',

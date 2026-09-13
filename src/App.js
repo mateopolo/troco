@@ -3733,6 +3733,8 @@ export default function App() {
 
                 {/* Conteneur de défilement des catégories */}
                 <div
+                  role="group"
+                  aria-label="Sélection de catégorie"
                   ref={categoryScrollRef}
                   className="category-scroll-container"
                   style={{
@@ -3748,6 +3750,7 @@ export default function App() {
                       <button
                         key={category}
                         onClick={() => setSelectedCategory(category)}
+                        aria-pressed={isSel}
                         className="premium-button category-pill"
                         style={{
                           border: isSel ? '1px solid var(--accent-primary)' : '1px solid var(--border-color)',
@@ -3763,6 +3766,7 @@ export default function App() {
                   })}
                   <button
                     onClick={() => setIsCategoryModalOpen(true)}
+                    aria-label="Ajouter une catégorie"
                     className="premium-button category-pill"
                     style={{
                       border: '1px dashed var(--accent-primary)',
@@ -3804,7 +3808,7 @@ export default function App() {
               </div>
 
               {/* SÉLECTEUR FORMAT (Tous / Sur place / À distance) */}
-              <div style={{
+              <div role="group" aria-label="Filtre de format" style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -3830,6 +3834,7 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => setFormatFilter('all')}
+                    aria-pressed={formatFilter === 'all'}
                     className="premium-button"
                     style={{
                       flex: 1,
@@ -3862,6 +3867,7 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => setFormatFilter('onsite')}
+                    aria-pressed={formatFilter === 'onsite'}
                     className="premium-button"
                     style={{
                       flex: 1,
@@ -3894,6 +3900,7 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => setFormatFilter('remote')}
+                    aria-pressed={formatFilter === 'remote'}
                     className="premium-button"
                     style={{
                       flex: 1,
