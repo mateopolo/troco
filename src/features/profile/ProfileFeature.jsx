@@ -238,23 +238,9 @@ export default function ProfileFeature({
   };
 
   const userSwapHistory = Array.isArray(profile?.swapHistory) ? profile.swapHistory : [];
-  const ratedEntries = userSwapHistory.filter((entry) => entry.rating);
-  const user = {
-    ...profile,
-    dealsCompleted: profile?.dealsCompleted ?? (userSwapHistory.filter((entry) => entry.status === 'Clôturé').length || 0),
-    activeDeals: profile?.activeDeals ?? profile?.dealsInProgress ?? (userSwapHistory.filter((entry) => entry.status === 'En cours' || entry.status === 'Planifié').length || 0),
-    reviewsCount: profile?.reviewsCount ?? ratedEntries.length,
-    averageRating: profile?.averageRating !== undefined
-      ? profile.averageRating
-      : (ratedEntries.length > 0
-        ? (ratedEntries.reduce((sum, entry) => sum + entry.rating, 0) / ratedEntries.length)
-        : (profile?.rating || 0)),
-  };
-  const closedDealsCount = user.dealsCompleted || 0;
-  const inProgressCount = user.activeDeals || 0;
-  const averageRating = user.reviewsCount > 0
-    ? (Math.round(user.averageRating * 10) / 10).toFixed(1)
-    : '—';
+  const closedDealsCount = profile?.dealsCompleted || 0;
+  const inProgressCount = profile?.dealsInProgress || 0;
+  const averageRating = profile?.rating ? Number(profile.rating).toFixed(1) : '—';
 
   return (
     <div style={{ backgroundColor: darkMode ? '#231E1B' : '#FAF7F2', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', padding: '22px', borderRadius: '28px', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', boxShadow: '0 10px 30px rgba(61,53,48,0.06)', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
@@ -922,17 +908,17 @@ export default function ProfileFeature({
         <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' }}>
           <div style={{ flex: 1, minWidth: '130px', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '12px 14px', backgroundColor: 'var(--bg-subtle)' }}>
             <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Deal clôturé</div>
-            <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-main)' }}>{user.dealsCompleted || 0}</div>
+            <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-main)' }}>{closedDealsCount}</div>
           </div>
           <div style={{ flex: 1, minWidth: '130px', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '12px 14px', backgroundColor: 'var(--bg-subtle)' }}>
             <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Note moyenne</div>
-            <div style={{ fontSize: user.reviewsCount > 0 ? '20px' : '12px', fontWeight: user.reviewsCount > 0 ? '800' : '500', color: user.reviewsCount > 0 ? '#F59E0B' : 'var(--text-secondary)', fontStyle: user.reviewsCount > 0 ? 'normal' : 'italic', display: 'flex', alignItems: 'center', gap: '4px', minHeight: '30px' }}>
-              {user.reviewsCount > 0 ? (Math.round(user.averageRating * 10) / 10).toFixed(1) + ' ⭐' : t('profile.no_reviews', 'Pas d\'évaluation pour l\'instant')}
+            <div style={{ fontSize: averageRating !== '—' ? '20px' : '12px', fontWeight: averageRating !== '—' ? '800' : '500', color: averageRating !== '—' ? '#F59E0B' : 'var(--text-secondary)', fontStyle: averageRating !== '—' ? 'normal' : 'italic', display: 'flex', alignItems: 'center', gap: '4px', minHeight: '30px' }}>
+              {averageRating !== '—' ? averageRating + ' ⭐' : '—'}
             </div>
           </div>
           <div style={{ flex: 1, minWidth: '130px', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '12px 14px', backgroundColor: 'var(--bg-subtle)' }}>
             <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>En cours planifié</div>
-            <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--accent-primary)' }}>{user.activeDeals || 0}</div>
+            <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--accent-primary)' }}>{inProgressCount}</div>
           </div>
         </div>
 
