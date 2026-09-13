@@ -84,7 +84,7 @@
 }
 
 .universal-modal-layer {
-  padding: 2rem 1.5rem 4rem;
+  padding: 1rem;
 }
 
 .universal-modal-content {
@@ -108,7 +108,7 @@
 
 @media (min-width: 640px) {
   .universal-modal-layer {
-    padding: 2rem 1.5rem 4rem;
+    padding: 1rem;
   }
 
   .universal-modal-content {
@@ -122,11 +122,11 @@
 
 @media (max-width: 639px) {
   .universal-modal-layer {
-    padding: 1rem 0.75rem var(--modal-safe-bottom);
+    padding: 1rem;
   }
 
   .universal-modal-content {
-    max-height: calc(100dvh - 100px - env(safe-area-inset-bottom, 0px));
+    max-height: calc(100dvh - 2rem);
   }
 }
 
