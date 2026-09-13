@@ -1,5 +1,5 @@
 import logger from './utils/logger';
-import React, { useState, useEffect, useRef, useMemo, useCallback, Suspense, useTransition } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback, useDeferredValue, Suspense, useTransition } from 'react';
 import { createPortal } from 'react-dom';
 import { Search, MapPin, Video, Globe, Filter, ShieldCheck, CheckCircle, X, Sparkles, Coins, Trash2, Camera, Flame, Check, Lock, CreditCard, Tag, ChevronLeft, ChevronRight, ShieldAlert, Phone, PhoneOff } from 'lucide-react';
 import { auth, db } from './firebase';
@@ -1318,6 +1318,7 @@ export default function App() {
   const [selectedPayment, setSelectedPayment] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const deferredSearchQuery = useDeferredValue(debouncedSearchQuery);
 
   // ---- DÉBOUNCE 300MS SUR LA RECHERCHE (Évite tout freeze du thread JS) ----
   useEffect(() => {
@@ -2264,7 +2265,7 @@ export default function App() {
     return listings.filter((item) => {
       if (hideDemos && item.isDemo) return false;
 
-      const rawQuery = (debouncedSearchQuery || '').trim();
+      const rawQuery = (deferredSearchQuery || '').trim();
       const cleanQuery = removeAccents(rawQuery);
       const words = cleanQuery.split(/\s+/).filter(Boolean);
 
@@ -2383,7 +2384,7 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     listings,
-    debouncedSearchQuery,
+    deferredSearchQuery,
     formatFilter,
     selectedCategory,
     selectedLanguages,
@@ -3970,7 +3971,9 @@ export default function App() {
                       gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(290px, 1fr))',
                       gap: isMobile ? '16px' : '24px',
                       width: '100%',
-                      boxSizing: 'border-box'
+                      boxSizing: 'border-box',
+                      opacity: searchQuery !== deferredSearchQuery ? 0.7 : 1,
+                      transition: 'opacity 150ms ease',
                     }}
                   >
                     {(filteredListings || []).map((item, index) => {
