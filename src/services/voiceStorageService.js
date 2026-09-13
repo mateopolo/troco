@@ -1,7 +1,6 @@
 import logger from '../utils/logger';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytes, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { auth, storage } from '../firebase';
-import { optimizeAudioFile } from '../utils/audioUtils';
 
 /**
  * Convertit un Blob audio en Data URL Base64 (fallback résilient offline/storage)
@@ -73,7 +72,9 @@ export async function uploadVoiceNote(audioBlob, chatId = 'global') {
  */
 export async function uploadAudioFile(file, chatId = 'global') {
   if (!file) throw new Error('No audio file provided');
-  const uploadFile = await optimizeAudioFile(file);
+  // Le ré-encodage WAV bloque le thread principal et ne compresse pas le PCM.
+  // L'original est conservé pour rendre la sélection et l'envoi immédiats.
+  const uploadFile = file;
 
   const extension = String(uploadFile.name || file.name || '').split('.').pop().toLowerCase();
   const extensionMime = {
@@ -100,13 +101,23 @@ export async function uploadAudioFile(file, chatId = 'global') {
     }
 
     const storageRef = ref(storage, storagePath);
-    const downloadUrl = await uploadResumable(storageRef, uploadFile, {
+    const uploadPromise = uploadFile.size <= 10 * 1024 * 1024
+      ? uploadBytesWithTimeout(storageRef, uploadFile, {
+        contentType: resolvedContentType,
+        customMetadata: {
+          uploadedBy: auth.currentUser?.uid || 'anonymous',
+          originalName: file.name,
+        },
+      }, 15000)
+      : uploadResumable(storageRef, uploadFile, {
       contentType: resolvedContentType,
       customMetadata: {
         uploadedBy: auth.currentUser?.uid || 'anonymous',
         originalName: file.name,
       },
-    }, 20000);
+      }, 60000);
+    const uploadedSnapshot = await uploadPromise;
+    const downloadUrl = await getDownloadURL(uploadedSnapshot.ref);
     return {
       success: true,
       audioUrl: downloadUrl,
@@ -118,6 +129,32 @@ export async function uploadAudioFile(file, chatId = 'global') {
     logger.error('[VoiceStorageService] Storage error code:', err?.code);
     logger.error('[VoiceStorageService] Storage error message:', err?.message);
     throw err;
+  }
+
+  function uploadBytesWithTimeout(storageRef, data, metadata, timeoutMs) {
+    return new Promise((resolve, reject) => {
+      let settled = false;
+      const timeout = setTimeout(() => {
+        if (!settled) {
+          settled = true;
+          reject(new Error(`Firebase Storage upload timeout after ${timeoutMs / 1000} seconds.`));
+        }
+      }, timeoutMs);
+
+      uploadBytes(storageRef, data, metadata)
+        .then((snapshot) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timeout);
+          resolve(snapshot);
+        })
+        .catch((error) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timeout);
+          reject(error);
+        });
+    });
   }
 }
 
