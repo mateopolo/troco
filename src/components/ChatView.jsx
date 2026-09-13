@@ -2380,7 +2380,7 @@ function ChatView({
                             duration={msg?.duration}
                             isMe={isMe}
                             currentLang={currentLang}
-                            transcription={msg?.transcript || msg?.transcription || null}
+                            transcript={msg?.transcript || null}
                           />
                         </div>
                       ) : (
@@ -2691,10 +2691,10 @@ function ChatView({
             <VoiceNoteRecorder
               isRecording={isRecordingAudio}
               onCancel={() => setIsRecordingAudio(false)}
-              onSendVoiceNote={async (blob, dur) => {
+              onSendVoiceNote={async (blob, dur, audioUrl, mimeType, transcript) => {
                 userJustSentMessageRef.current = true;
                 if (onSendAudioMessage) {
-                  await onSendAudioMessage(blob, dur);
+                  await onSendAudioMessage(blob, dur, audioUrl, mimeType, transcript);
                 }
                 setIsRecordingAudio(false);
               }}
@@ -3920,4 +3920,3 @@ function ChatView({
 }
 
 export default React.memo(ChatView);
-

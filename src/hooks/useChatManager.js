@@ -1057,14 +1057,17 @@ export const useChatManager = ({
   };
 
   // ---- ENVOI DE MESSAGE VOCAL ----
-  const handleSendAudioMessage = async (audioBlob, duration) => {
+  const handleSendAudioMessage = async (audioBlob, duration, recordedAudioUrl, mimeType, transcript) => {
     if (!selectedChat) return;
     const chatId = selectedChat.id;
-    const uploadRes = await uploadVoiceNote(audioBlob, chatId);
+    const uploadRes = recordedAudioUrl
+      ? { audioUrl: recordedAudioUrl }
+      : await uploadVoiceNote(audioBlob, chatId);
     const audioUrl = uploadRes?.audioUrl;
     if (!audioUrl) return;
 
     const formattedDuration = Math.round(duration || 0);
+    const normalizedTranscript = typeof transcript === 'string' ? transcript.trim() : '';
     const newAudioMessage = {
       id: Date.now(),
       sender: 'me',
@@ -1073,6 +1076,7 @@ export const useChatManager = ({
       type: 'audio',
       audioUrl,
       duration: formattedDuration,
+      ...(normalizedTranscript ? { transcript: normalizedTranscript } : {}),
       status: 'sent',
       createdAt: new Date(),
       text: `🎤 Note vocale (${formattedDuration}s)`,
@@ -1094,6 +1098,8 @@ export const useChatManager = ({
           type: 'audio',
           audioUrl,
           duration: formattedDuration,
+          ...(normalizedTranscript ? { transcript: normalizedTranscript } : {}),
+          ...(mimeType ? { mimeType } : {}),
           text: newAudioMessage.text,
           read: false,
           status: 'sent',

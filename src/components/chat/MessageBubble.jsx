@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Table } from 'lucide-react';
 
 /**
@@ -82,8 +82,6 @@ export default function MessageBubble({ message = {}, isMe = false }) {
 }
 
 function AudioMessage({ message }) {
-  const [showTranscript, setShowTranscript] = useState(Boolean(message.transcript));
-  const [requestedTranscript, setRequestedTranscript] = useState(false);
   const transcript = typeof message.transcript === 'string' ? message.transcript.trim() : '';
   return (
     <div className="p-2">
@@ -94,20 +92,19 @@ function AudioMessage({ message }) {
       )}
       {transcript && (
         <>
-          <p className="text-xs mt-2">{showTranscript ? transcript : 'Traduction non disponible'}</p>
-          <button type="button" className="text-xs underline mt-1" onClick={() => setShowTranscript(value => !value)}>
+          <p className="transcript-text text-sm text-[var(--text-secondary)] mt-2">{transcript}</p>
+          <button type="button" className="text-xs underline mt-1" disabled>
             Original / Traduction
           </button>
         </>
       )}
       {!transcript && (
         <>
-          {requestedTranscript && <p className="text-xs mt-2 italic opacity-70">Transcription non disponible pour cette note.</p>}
           <button
             type="button"
             className="text-xs underline mt-1"
             aria-label="Transcrire la note vocale avec SpeechRecognition"
-            onClick={() => setRequestedTranscript(true)}
+            disabled
           >
             Transcrire
           </button>

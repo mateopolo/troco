@@ -8,6 +8,7 @@ export default function VoiceNotePlayer({
   duration = null,
   isMe = false,
   currentLang = 'FR',
+  transcript = null,
   transcription = null,
 }) {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -15,8 +16,9 @@ export default function VoiceNotePlayer({
   const [totalDuration, setTotalDuration] = useState(duration || 0);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [showTranscription, setShowTranscription] = useState(false);
-  const [isTranscribing, setIsTranscribing] = useState(false);
-  const [transcribedText, setTranscribedText] = useState(transcription || null);
+  const sourceTranscript = transcript ?? transcription;
+  const normalizedTranscript = typeof sourceTranscript === 'string' ? sourceTranscript.trim() : '';
+  const [transcribedText] = useState(normalizedTranscript);
   const [showTranslation, setShowTranslation] = useState(false);
   const [translatedText, setTranslatedText] = useState('');
   const [isTranslating, setIsTranslating] = useState(false);
@@ -96,17 +98,8 @@ export default function VoiceNotePlayer({
       return;
     }
 
-    if (!transcribedText) {
-      // Audio transcription must come from the recorder/STT service. Do not
-      // display a plausible-looking placeholder as if it were spoken audio.
-      setIsTranscribing(true);
-      setTimeout(() => {
-        setIsTranscribing(false);
-        setShowTranscription(true);
-      }, 400);
-    } else {
-      setShowTranscription(true);
-    }
+    if (!transcribedText) return;
+    setShowTranscription(true);
   };
 
   const handleToggleTranslation = async () => {
@@ -114,7 +107,7 @@ export default function VoiceNotePlayer({
       setShowTranslation(false);
       return;
     }
-    const baseText = transcribedText || transcription || '';
+    const baseText = transcribedText;
     if (!translatedText && baseText) {
       setIsTranslating(true);
       try {
@@ -210,12 +203,8 @@ export default function VoiceNotePlayer({
             }}
             title="Transcrire la note vocale en texte (IA)"
           >
-            {isTranscribing ? (
-              <Sparkles size={11} className="animate-spin" />
-            ) : (
-              <FileText size={11} />
-            )}
-            <span>{isTranscribing ? 'Transcription...' : 'Transcrire'}</span>
+            <FileText size={11} />
+            <span>Transcrire</span>
           </button>
 
           {/* VITESSE DE LECTURE */}
@@ -406,9 +395,9 @@ export default function VoiceNotePlayer({
             </div>
           </div>
 
-          <div style={{ fontStyle: 'italic', wordBreak: 'break-word' }}>
+          <p className="transcript-text text-sm text-[var(--text-secondary)] mt-2" style={{ fontStyle: 'italic', wordBreak: 'break-word' }}>
             « {showTranslation ? (translatedText || transcribedText) : transcribedText} »
-          </div>
+          </p>
         </div>
       )}
     </div>
