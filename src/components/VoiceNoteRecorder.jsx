@@ -1,8 +1,7 @@
 import logger from '../utils/logger';
 import React, { useState, useEffect, useRef } from 'react';
 import { Square, Trash2, Send, Play, Pause, Sparkles } from 'lucide-react';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
-import { auth, storage } from '../firebase';
+import { uploadVoiceNote } from '../services/voiceStorageService';
 
 /**
  * VoiceNoteRecorder — Enregistrement vocal cross-platform (iOS Safari, Chrome, Firefox, Android)
@@ -40,6 +39,7 @@ export default function VoiceNoteRecorder({
   isRecording,
   onCancel,
   onSendVoiceNote,
+  chatId = 'global',
   userLang = 'fr',
 }) {
   const [duration, setDuration] = useState(0);
@@ -244,41 +244,11 @@ export default function VoiceNoteRecorder({
         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
       );
       const finalMimeType = blob.type || detectedMimeType || (isIOS ? 'audio/mp4' : 'audio/webm');
-      const isMp4OrAac = finalMimeType.includes('mp4') || finalMimeType.includes('aac');
-      const isOgg = finalMimeType.includes('ogg');
-      const ext = isMp4OrAac ? 'mp4' : (isOgg ? 'ogg' : 'webm');
-      const fileName = `voice_${Date.now()}.${ext}`;
-
-      let audioUrl = '';
-
-      if (storage) {
-        const storageRef = ref(storage, `voice_notes/${fileName}`);
-        audioUrl = await new Promise((resolve, reject) => {
-          const uploadTask = uploadBytesResumable(storageRef, blob, {
-            contentType: finalMimeType || (isIOS ? 'audio/mp4' : 'audio/webm'),
-            customMetadata: {
-              uploadedBy: auth.currentUser?.uid || 'anonymous',
-              originalName: fileName,
-            },
-          });
-          uploadTask.on('state_changed', null, reject, async () => {
-            try {
-              resolve(await getDownloadURL(uploadTask.snapshot.ref));
-            } catch (error) {
-              reject(error);
-            }
-          });
-        });
+      const uploadRes = await uploadVoiceNote(blob, chatId);
+      if (!uploadRes?.success || !uploadRes.audioUrl) {
+        throw new Error(uploadRes?.error || 'Le stockage de la note vocale a échoué.');
       }
-
-      if (!audioUrl) {
-        audioUrl = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result);
-          reader.onerror = reject;
-          reader.readAsDataURL(blob);
-        });
-      }
+      const audioUrl = uploadRes.audioUrl;
 
       const capturedTranscript = transcriptRef.current || liveTranscript || '';
 

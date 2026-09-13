@@ -2690,6 +2690,7 @@ function ChatView({
           }}>
             <VoiceNoteRecorder
               isRecording={isRecordingAudio}
+              chatId={activeChatObj?.id}
               onCancel={() => setIsRecordingAudio(false)}
               onSendVoiceNote={async (blob, dur, audioUrl, mimeType, transcript) => {
                 userJustSentMessageRef.current = true;
