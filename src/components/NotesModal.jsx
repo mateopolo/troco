@@ -5,10 +5,10 @@ import logger from '../utils/logger';
  */
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { createPortal } from 'react-dom';
 import { ChevronLeft, Share2, Check } from 'lucide-react';
 import { doc, setDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
+import UniversalModal from './ui/UniversalModal';
 
 const defaultDoc = {
   title: 'Nouvelle Note',
@@ -69,7 +69,7 @@ function NotesModalContent(props) {
   );
   const [content, setContent] = useState(() => initialContent);
   const [saveStatus, setSaveStatus] = useState('Synchronisé en direct 🟢');
-  const [isSendingToChat, setIsSendingToChat] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
   const [sendSuccessToast, setSendSuccessToast] = useState(false);
   const shareInFlightRef = useRef(false);
 
@@ -208,8 +208,8 @@ function NotesModalContent(props) {
 
   // Partage vers la discussion
   const handleSendNoteToChat = async () => {
-    if (!effectiveGroupId || isSendingToChat || shareInFlightRef.current) return;
-    setIsSendingToChat(true);
+    if (!effectiveGroupId || isSharing || shareInFlightRef.current) return;
+    setIsSharing(true);
     shareInFlightRef.current = true;
 
     try {
@@ -260,56 +260,13 @@ function NotesModalContent(props) {
     } catch (err) {
       logger.warn('[NotesModal] Send to chat error:', err);
     } finally {
-      setIsSendingToChat(false);
+      setIsSharing(false);
       shareInFlightRef.current = false;
     }
   };
 
-  if (typeof document === 'undefined') return null;
-
   const modalContent = (
-    <div
-      className="fixed inset-0 z-[999999] flex flex-col bg-black/90 md:bg-black/60 md:backdrop-blur-sm touch-none"
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 999999,
-        width: '100dvw',
-        height: '100dvh',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '0px',
-      }}
-      onClick={(e) => {
-        // Bloque la fermeture accidentelle au clic sur le backdrop
-        e.stopPropagation();
-      }}
-    >
-      <div
-        className="fixed inset-0 md:inset-4 z-[9999] max-h-[90dvh] overflow-y-auto bg-[#F9F9F9] dark:bg-[#1A1A1A] md:rounded-3xl shadow-2xl border border-white/10 flex flex-col overflow-hidden text-gray-900 dark:text-gray-100"
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          position: 'fixed',
-          top: '50%',
-          left: '50%',
-          right: 'auto',
-          bottom: 'auto',
-          width: '100%',
-          height: '100%',
-          maxWidth: '1180px',
-          maxHeight: 'calc(100dvh - 32px)',
-          transform: 'translate(-50%, -50%)',
-          backgroundColor: darkMode ? '#1A1A1A' : '#F9F9F9',
-          color: darkMode ? '#FAF7F2' : '#12100E',
-          display: 'flex',
-          flexDirection: 'column',
-          overflow: 'hidden',
-          boxShadow: '0 25px 60px rgba(0, 0, 0, 0.35)',
-          zIndex: 1000000,
-        }}
-      >
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[#F9F9F9] text-gray-900 dark:bg-[#1A1A1A] dark:text-gray-100">
         {/* 1. HARMONISATION DU HEADER (STRUCTURE & BOUTONS IDENTIQUES À TROCO DOCS) */}
         <header
           className="flex justify-between items-center p-4 border-b border-white/10 shrink-0"
@@ -352,67 +309,7 @@ function NotesModalContent(props) {
           </button>
 
           {/* Indicateur de sauvegarde & Bouton Partager/Sauvegarder */}
-          <div
-            className="flex items-center gap-3"
-            style={{ display: 'flex', alignItems: 'center', gap: '12px' }}
-          >
-            {/* Indicateur de sauvegarde */}
-            <div
-              className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 font-medium"
-              style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px' }}
-            >
-              <span
-                className={`inline-block w-2 h-2 rounded-full ${
-                  saveStatus.includes('Enregistrement') || saveStatus.includes('Sauvegarde')
-                    ? 'bg-amber-500 animate-pulse'
-                    : saveStatus.includes('hors-ligne')
-                    ? 'bg-rose-500'
-                    : 'bg-emerald-500'
-                }`}
-                style={{
-                  display: 'inline-block',
-                  width: '8px',
-                  height: '8px',
-                  borderRadius: '50%',
-                  backgroundColor:
-                    saveStatus.includes('Enregistrement') || saveStatus.includes('Sauvegarde')
-                      ? '#F59E0B'
-                      : saveStatus.includes('hors-ligne')
-                      ? '#EF4444'
-                      : '#10B981',
-                }}
-              />
-              <span className="hidden sm:inline">{saveStatus}</span>
-            </div>
-
-            {/* Bouton Partager/Sauvegarder */}
-            <button
-              type="button"
-              onClick={handleSendNoteToChat}
-              disabled={isSendingToChat}
-              className="px-6 py-2.5 rounded-full bg-[var(--accent-primary)] text-white font-bold shadow-lg hover:opacity-90 transition-opacity whitespace-nowrap flex items-center gap-2 cursor-pointer"
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                padding: '10px 24px',
-                borderRadius: '9999px',
-                backgroundColor: 'var(--accent-primary, #C67D5B)',
-                color: '#FFFFFF',
-                border: 'none',
-                fontWeight: '700',
-                fontSize: '14px',
-                boxShadow: '0 4px 14px rgba(198, 125, 91, 0.35)',
-                cursor: isSendingToChat ? 'wait' : 'pointer',
-                whiteSpace: 'nowrap',
-                outline: 'none',
-              }}
-              title="Partager au Chat"
-            >
-              <Share2 size={15} />
-              <span>{isSendingToChat ? 'Envoi...' : 'Partager au Chat'}</span>
-            </button>
-          </div>
+          <div className="flex min-w-0 items-center gap-3" />
         </header>
 
         {/* 2. ZONE DE TEXTE ÉPURÉE SANS BORDURES DISGRACIEUSES */}
@@ -422,8 +319,8 @@ function NotesModalContent(props) {
         >
           {/* Titre épuré de la note */}
           <div
-            className="px-6 pt-4 md:px-8 md:pt-6"
-            style={{ padding: '16px 32px 8px 32px' }}
+            className="px-4 pt-4 sm:px-6 sm:pt-6"
+            style={{ padding: '16px 24px 8px' }}
           >
             <input
               type="text"
@@ -451,7 +348,7 @@ function NotesModalContent(props) {
             value={content}
             onChange={handleContentChange}
             placeholder="Rédigez vos notes partagées ici..."
-            className="w-full h-full bg-transparent text-[var(--text-primary)] p-6 md:p-8 outline-none border-none resize-none text-lg leading-relaxed font-sans placeholder-gray-400 dark:placeholder-gray-500 box-border flex-1"
+            className="w-full h-full bg-transparent text-[var(--text-primary)] p-6 md:p-8 px-4 sm:px-6 outline-none border-none resize-none text-lg leading-relaxed font-sans placeholder-gray-400 dark:placeholder-gray-500 box-border flex-1"
             style={{
               fontFamily:
                 "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Inter', 'Segoe UI', Roboto, sans-serif",
@@ -460,7 +357,7 @@ function NotesModalContent(props) {
               flex: 1,
               background: 'transparent',
               color: darkMode ? '#FAF7F2' : '#1F2937',
-              padding: '24px 32px',
+              padding: '24px',
               border: 'none',
               outline: 'none',
               resize: 'none',
@@ -495,14 +392,64 @@ function NotesModalContent(props) {
             <span>Note partagée dans la conversation avec succès !</span>
           </div>
         )}
+      <div className="flex flex-wrap justify-end gap-2 border-t border-[var(--border-color)] px-4 py-4 sm:px-6">
+        <div
+          className="mr-auto flex min-w-0 items-center gap-1.5 text-xs font-medium text-gray-500 dark:text-gray-400"
+          title={saveStatus}
+        >
+          <span
+            className={`inline-block h-2 w-2 shrink-0 rounded-full ${
+              saveStatus.includes('Enregistrement') || saveStatus.includes('Sauvegarde')
+                ? 'animate-pulse bg-amber-500'
+                : saveStatus.includes('hors-ligne')
+                ? 'bg-rose-500'
+                : 'bg-emerald-500'
+            }`}
+          />
+          <span>{saveStatus}</span>
+        </div>
+        <button
+          type="button"
+          onClick={() => syncToFirestore(content, title)}
+          className="rounded-full border border-[var(--border-color)] px-4 py-2 text-sm font-semibold text-[var(--text-primary)] transition-opacity hover:opacity-80"
+          title={saveStatus}
+        >
+          Synchroniser en direct
+          <span className="sr-only">{saveStatus}</span>
+        </button>
+        <button
+          type="button"
+          onClick={handleSendNoteToChat}
+          disabled={isSharing}
+          className={`flex items-center gap-2 rounded-full bg-[var(--accent-primary)] px-6 py-2.5 text-sm font-bold text-white shadow-lg transition-opacity whitespace-nowrap ${
+            isSharing ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:opacity-90'
+          }`}
+          title="Partager au Chat"
+        >
+          <Share2 size={15} />
+          <span>{isSharing ? 'Envoi...' : 'Envoyer'}</span>
+          <span className="sr-only">Partager au Chat</span>
+        </button>
       </div>
     </div>
   );
 
-  // Échappement de l'overflow du chat et z-index via Portal
-  return typeof document !== 'undefined' && document.body
-    ? createPortal(modalContent, document.body)
-    : modalContent;
+  return (
+    <UniversalModal
+      isOpen={isOpen}
+      onClose={onClose}
+      maxWidth="max-w-4xl"
+      ariaLabel={projectTitle}
+      contentClassName="rounded-3xl border border-white/10 shadow-2xl"
+      contentStyle={{
+        backgroundColor: darkMode ? '#1A1A1A' : '#F9F9F9',
+        color: darkMode ? '#FAF7F2' : '#12100E',
+      }}
+      overlayClassName="px-4 sm:px-6"
+    >
+      <div className="w-full max-w-full overflow-x-hidden">{modalContent}</div>
+    </UniversalModal>
+  );
 }
 
 export default function NotesModal(props) {

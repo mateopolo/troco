@@ -26,6 +26,7 @@ const MAX_WIDTHS = {
   xl: '896px',
   '2xl': '1152px',
   full: '100%',
+  'max-w-4xl': '896px',
 };
 
 export function UniversalModal({
@@ -150,21 +151,6 @@ export function UniversalModal({
           ...contentStyle,
         }}
       >
-        {title && (
-          <div className="flex-shrink-0 flex items-center justify-between px-6 py-4 border-b border-[var(--border-color)]">
-            <h2 className="text-lg font-semibold text-[var(--text-main)]">{title}</h2>
-            {showCloseButton && onClose && (
-              <button
-                type="button"
-                onClick={onClose}
-                aria-label={closeButtonLabel}
-                className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[var(--bg-subtle)] transition"
-              >
-                <X size={18} aria-hidden="true" />
-              </button>
-            )}
-          </div>
-        )}
         {!title && showCloseButton && onClose && (
           <button
             type="button"
