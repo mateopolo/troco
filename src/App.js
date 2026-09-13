@@ -1164,15 +1164,20 @@ export default function App() {
           rating: profile.rating ?? null,
           updatedAt: serverTimestamp(),
         }, { merge: true });
+        setSaveMessage('🎁 +10 Jetons Troco offerts ! Bienvenue sur Troco.');
+        safeTimeout(() => setSaveMessage(''), 5000);
       } catch (e) {
         logger.warn('[Firestore] Failed to save onboarding to Firestore:', e);
+        setSaveMessage(`❌ Erreur : Échec de la sauvegarde du profil (${e?.message || 'Erreur réseau'})`);
+        safeTimeout(() => setSaveMessage(''), 5000);
       }
+    } else {
+      setSaveMessage('🎁 +10 Jetons Troco offerts ! Bienvenue sur Troco.');
+      safeTimeout(() => setSaveMessage(''), 5000);
     }
     setIsOnboardingOpen(false);
     playWelcomeGiftFanfare();
     setIsWelcomeGiftModalOpen(true);
-    setSaveMessage('🎁 +10 Jetons Troco offerts ! Bienvenue sur Troco.');
-    safeTimeout(() => setSaveMessage(''), 5000);
   };
 
   useEffect(() => {
@@ -1806,7 +1811,10 @@ export default function App() {
       safeTimeout(() => setSaveMessage(''), 5000);
     } catch (e) {
       logger.error('🚨 [walletService] Erreur transfert jetons visio:', e);
-      alert(`Échec du transfert : ${e?.message || 'Erreur réseau ou solde insuffisant.'}`);
+      const errorMsg = e?.message || 'Erreur réseau ou solde insuffisant.';
+      setSaveMessage(`❌ Transfert échoué : ${errorMsg}`);
+      safeTimeout(() => setSaveMessage(''), 5000);
+      alert(`Échec du transfert : ${errorMsg}`);
     }
   };
 
