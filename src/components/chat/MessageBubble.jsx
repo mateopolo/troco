@@ -1,5 +1,6 @@
 import React from 'react';
 import { Table } from 'lucide-react';
+import DownloadButton from './DownloadButton';
 
 /**
  * MessageBubble.jsx — Rendu unifié des bulles de messages du chat
@@ -15,6 +16,26 @@ import { Table } from 'lucide-react';
 export default function MessageBubble({ message = {}, isMe = false }) {
   if (message.type === 'audio') {
     return <AudioMessage message={message} />;
+  }
+
+  if (message.imageUrl) {
+    return (
+      <div className="p-2">
+        <img src={message.imageUrl} alt={message.fileName || 'Image partagée'} className="max-w-xs rounded-lg" />
+        <DownloadButton url={message.imageUrl} filename={message.fileName || 'image'} />
+      </div>
+    );
+  }
+
+  if (message.fileUrl) {
+    return (
+      <div className="flex items-center gap-2 p-3 rounded-2xl bg-gray-100 dark:bg-[#2A2624]">
+        <a href={message.fileUrl} target="_blank" rel="noopener noreferrer" className="text-sm underline truncate">
+          {message.fileName || 'Fichier partagé'}
+        </a>
+        <DownloadButton url={message.fileUrl} filename={message.fileName || 'fichier'} />
+      </div>
+    );
   }
 
   if (message.type === 'sheet_share') {
@@ -86,7 +107,10 @@ function AudioMessage({ message }) {
   return (
     <div className="p-2">
       {message.audioUrl ? (
-        <audio controls src={message.audioUrl} className="max-w-[200px] md:max-w-xs h-10 z-10 relative rounded-full" preload="metadata" />
+        <div className="flex items-center gap-2">
+          <audio controls src={message.audioUrl} className="max-w-[200px] md:max-w-xs h-10 z-10 relative rounded-full" preload="metadata" />
+          <DownloadButton url={message.audioUrl} filename={message.fileName || 'note-vocale'} />
+        </div>
       ) : (
         <span className="text-xs italic opacity-60">🎵 {message.fileName || 'Fichier audio'} — URL manquante</span>
       )}

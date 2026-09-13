@@ -1,6 +1,7 @@
 import logger from '../utils/logger';
 import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { auth, storage } from '../firebase';
+import { optimizeAudioFile } from '../utils/audioUtils';
 
 /**
  * Convertit un Blob audio en Data URL Base64 (fallback résilient offline/storage)
@@ -71,8 +72,9 @@ export async function uploadVoiceNote(audioBlob, chatId = 'global') {
  */
 export async function uploadAudioFile(file, chatId = 'global') {
   if (!file) throw new Error('No audio file provided');
+  const uploadFile = await optimizeAudioFile(file);
 
-  const extension = String(file.name || '').split('.').pop().toLowerCase();
+  const extension = String(uploadFile.name || file.name || '').split('.').pop().toLowerCase();
   const extensionMime = {
     wav: 'audio/wav',
     mp3: 'audio/mpeg',
@@ -82,8 +84,8 @@ export async function uploadAudioFile(file, chatId = 'global') {
     webm: 'audio/webm',
     aac: 'audio/aac',
   }[extension];
-  const resolvedContentType = file.type?.startsWith('audio/')
-    ? file.type
+  const resolvedContentType = uploadFile.type?.startsWith('audio/')
+    ? uploadFile.type
     : extensionMime || 'audio/wav';
   if (!file.type?.startsWith('audio/') && !extensionMime) {
     throw new Error('Unsupported audio file type');
@@ -94,7 +96,7 @@ export async function uploadAudioFile(file, chatId = 'global') {
   try {
     if (storage) {
       const storageRef = ref(storage, storagePath);
-      const downloadUrl = await uploadResumable(storageRef, file, {
+      const downloadUrl = await uploadResumable(storageRef, uploadFile, {
         contentType: resolvedContentType,
         customMetadata: {
           uploadedBy: auth.currentUser?.uid || 'anonymous',
@@ -115,7 +117,7 @@ export async function uploadAudioFile(file, chatId = 'global') {
   }
 
   // Fallback DataURL résilient si Storage est indisponible
-  const dataUrl = await blobToDataURL(file);
+  const dataUrl = await blobToDataURL(uploadFile);
   return {
     success: true,
     audioUrl: dataUrl,

@@ -18,10 +18,10 @@ import {
   CornerDownRight,
   Image as ImageIcon,
 } from 'lucide-react';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { collection, addDoc, doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, storage, db } from '../../firebase';
+import { db } from '../../firebase';
 import { haptics } from '../../utils/haptics';
+import { uploadAudioFile } from '../../services/voiceStorageService';
 
 /**
  * ChatInputBar — Composant de saisie isolé et mémoïsé (Phase 63 & 90)
@@ -99,35 +99,10 @@ function ChatInputBar({
 
     try {
       haptics.impact();
-      let downloadUrl = '';
-
-      if (storage) {
-        const cleanName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
-        const storageRef = ref(storage, `chat_audios/${cleanName}`);
-        downloadUrl = await new Promise((resolve, reject) => {
-          const uploadTask = uploadBytesResumable(storageRef, file, {
-            contentType: audioMime,
-            customMetadata: {
-              uploadedBy: auth.currentUser?.uid || 'anonymous',
-              originalName: file.name,
-            },
-          });
-          uploadTask.on('state_changed', null, reject, async () => {
-            try {
-              resolve(await getDownloadURL(uploadTask.snapshot.ref));
-            } catch (error) {
-              reject(error);
-            }
-          });
-        });
-      } else {
-        downloadUrl = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-      }
+      setInternalIsSending(true);
+      const uploadResult = await uploadAudioFile(file, chatId);
+      const downloadUrl = uploadResult?.audioUrl;
+      if (!downloadUrl) throw new Error('L’upload audio n’a pas retourné d’URL.');
 
       const audioMessageData = {
         type: 'audio',
@@ -185,6 +160,7 @@ function ChatInputBar({
         }
       } catch (_) {}
     } finally {
+      setInternalIsSending(false);
       if (e.target) e.target.value = '';
     }
   };
