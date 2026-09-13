@@ -47,6 +47,9 @@ export const useAppAuth = () => {
   const [isAuthResolved, setIsAuthResolved] = useState(false);
   const [isUserBanned, setIsUserBanned] = useState(false);
   const [bannedReason, setBannedReason] = useState('');
+  const setIsAuthenticated = useCallback((value) => {
+    useAuthStore.setState({ isAuthenticated: value });
+  }, []);
 
   // 1. Écoute temps-réel de l'état Firebase Auth & synchronisation Firestore
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -199,7 +202,7 @@ export const useAppAuth = () => {
     isEditingProfile,
     setIsEditingProfile,
     isAuthenticated,
-    setIsAuthenticated: (val) => useAuthStore.setState({ isAuthenticated: val }),
+    setIsAuthenticated,
     isAuthResolved,
     setIsAuthResolved,
     isLoadingSession,
