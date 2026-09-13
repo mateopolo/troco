@@ -24,6 +24,7 @@ export default function VoiceNotePlayer({
   const [isTranslating, setIsTranslating] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const audioRef = useRef(null);
+  const translationRequestRef = useRef(0);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -54,6 +55,39 @@ export default function VoiceNotePlayer({
       audio.removeEventListener('ended', handleEnded);
     };
   }, [audioUrl]);
+
+  useEffect(() => {
+    if (!transcribedText || !currentLang) {
+      setTranslatedText('');
+      setIsTranslating(false);
+      return undefined;
+    }
+
+    const requestId = translationRequestRef.current + 1;
+    translationRequestRef.current = requestId;
+    setIsTranslating(true);
+
+    translateText(transcribedText, currentLang, 'auto')
+      .then((result) => {
+        if (translationRequestRef.current === requestId) {
+          setTranslatedText(result || transcribedText);
+        }
+      })
+      .catch(() => {
+        if (translationRequestRef.current === requestId) {
+          setTranslatedText(transcribedText);
+        }
+      })
+      .finally(() => {
+        if (translationRequestRef.current === requestId) {
+          setIsTranslating(false);
+        }
+      });
+
+    return () => {
+      translationRequestRef.current += 1;
+    };
+  }, [transcribedText, currentLang]);
 
   const togglePlay = useCallback(() => {
     const audio = audioRef.current;

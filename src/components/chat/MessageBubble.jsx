@@ -123,16 +123,14 @@ function AudioMessage({ message }) {
         </>
       )}
       {!transcript && (
-        <>
-          <button
-            type="button"
-            className="text-xs underline mt-1"
-            aria-label="Transcrire la note vocale avec SpeechRecognition"
-            disabled
-          >
-            Transcrire
-          </button>
-        </>
+        <button
+          type="button"
+          className="text-xs underline mt-1"
+          aria-label="Transcrire la note vocale avec SpeechRecognition"
+          disabled
+        >
+          Transcrire
+        </button>
       )}
     </div>
   );
