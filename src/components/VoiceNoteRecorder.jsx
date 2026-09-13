@@ -1,7 +1,7 @@
 import logger from '../utils/logger';
 import React, { useState, useEffect, useRef } from 'react';
 import { Square, Trash2, Send, Play, Pause, Sparkles } from 'lucide-react';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { auth, storage } from '../firebase';
 
 /**
@@ -57,6 +57,8 @@ export default function VoiceNoteRecorder({
   const streamRef = useRef(null);
   const timerRef = useRef(null);
   const previewAudioRef = useRef(null);
+  const audioBlobRef = useRef(null);
+  const stopWaitersRef = useRef([]);
 
   // Démarrer l'enregistrement et la reconnaissance vocale au montage
   useEffect(() => {
@@ -104,9 +106,15 @@ export default function VoiceNoteRecorder({
           );
           const actualMime = mediaRecorder.mimeType || mimeType || (isIOS ? 'audio/mp4' : 'audio/webm');
           const blob = new Blob(audioChunksRef.current, { type: actualMime });
+          audioBlobRef.current = blob;
           setAudioBlob(blob);
-          const url = URL.createObjectURL(blob);
-          setPreviewUrl(url);
+          if (blob.size > 0) {
+            const url = URL.createObjectURL(blob);
+            setPreviewUrl(url);
+          } else {
+            logger.error('[VoiceNoteRecorder] MediaRecorder produced an empty audio Blob.');
+          }
+          stopWaitersRef.current.splice(0).forEach(resolve => resolve(blob));
         };
 
         // timeslice 100ms = chunks fréquents, protège contre les longs enregistrements
@@ -227,10 +235,8 @@ export default function VoiceNoteRecorder({
     }
 
     const doUploadAndSend = async (blob) => {
-      if (!blob) {
-        onCancel?.();
-        setIsUploading(false);
-        return;
+      if (!blob || blob.size === 0) {
+        throw new Error('La note vocale est vide ou indisponible.');
       }
 
       const isIOS = typeof navigator !== 'undefined' && (
@@ -246,19 +252,23 @@ export default function VoiceNoteRecorder({
       let audioUrl = '';
 
       if (storage) {
-        try {
-          const storageRef = ref(storage, `voice_notes/${fileName}`);
-          const snapshot = await uploadBytes(storageRef, blob, {
+        const storageRef = ref(storage, `voice_notes/${fileName}`);
+        audioUrl = await new Promise((resolve, reject) => {
+          const uploadTask = uploadBytesResumable(storageRef, blob, {
             contentType: finalMimeType || (isIOS ? 'audio/mp4' : 'audio/webm'),
             customMetadata: {
               uploadedBy: auth.currentUser?.uid || 'anonymous',
               originalName: fileName,
             },
           });
-          audioUrl = await getDownloadURL(snapshot.ref);
-        } catch (storageErr) {
-          logger.warn('[VoiceNoteRecorder] Storage upload failed, fallback to dataURL:', storageErr);
-        }
+          uploadTask.on('state_changed', null, reject, async () => {
+            try {
+              resolve(await getDownloadURL(uploadTask.snapshot.ref));
+            } catch (error) {
+              reject(error);
+            }
+          });
+        });
       }
 
       if (!audioUrl) {
@@ -272,31 +282,47 @@ export default function VoiceNoteRecorder({
 
       const capturedTranscript = transcriptRef.current || liveTranscript || '';
 
-      if (typeof onSendVoiceNote === 'function') {
-        try {
-          await onSendVoiceNote(blob, duration, audioUrl, finalMimeType, capturedTranscript, userLang);
-        } catch (e) {
-          logger.warn('[VoiceNoteRecorder] onSendVoiceNote error:', e);
-        }
+      if (typeof onSendVoiceNote !== 'function') {
+        throw new Error('Le gestionnaire d’envoi vocal est indisponible.');
       }
-      setIsUploading(false);
+      await onSendVoiceNote(blob, duration, audioUrl, finalMimeType, capturedTranscript, userLang);
     };
 
-    if (!audioBlob && mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-      if (timerRef.current) clearInterval(timerRef.current);
-      mediaRecorderRef.current.onstop = async () => {
-        const isIOS = typeof navigator !== 'undefined' && (
-          /iPad|iPhone|iPod/.test(navigator.userAgent || '') ||
-          (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
-        );
-        const actualMime = mediaRecorderRef.current?.mimeType || detectedMimeType || (isIOS ? 'audio/mp4' : 'audio/webm');
-        const blob = new Blob(audioChunksRef.current, { type: actualMime });
-        if (streamRef.current) streamRef.current.getTracks().forEach(t => t.stop());
-        await doUploadAndSend(blob);
-      };
-      mediaRecorderRef.current.stop();
-    } else {
-      await doUploadAndSend(audioBlob);
+    try {
+      let blob = audioBlobRef.current || audioBlob;
+      if (!blob && audioChunksRef.current.length > 0) {
+        blob = new Blob(audioChunksRef.current, { type: detectedMimeType || 'audio/webm' });
+      }
+      if (!blob && mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+        if (timerRef.current) clearInterval(timerRef.current);
+        const recorder = mediaRecorderRef.current;
+        const stoppedBlob = await new Promise((resolve, reject) => {
+          const timeout = window.setTimeout(() => {
+            stopWaitersRef.current = stopWaitersRef.current.filter(waiter => waiter !== resolve);
+            reject(new Error('Le traitement de l’enregistrement a expiré.'));
+          }, 5000);
+          stopWaitersRef.current.push((value) => {
+            window.clearTimeout(timeout);
+            resolve(value);
+          });
+          try {
+            recorder.stop();
+          } catch (error) {
+            window.clearTimeout(timeout);
+            stopWaitersRef.current = stopWaitersRef.current.filter(waiter => waiter !== resolve);
+            reject(error);
+          }
+        });
+        blob = stoppedBlob;
+      }
+      await doUploadAndSend(blob);
+    } catch (error) {
+      logger.error('[VoiceNoteRecorder] Firebase Upload Error:', error);
+      logger.error('[VoiceNoteRecorder] Error code:', error?.code);
+      logger.error('[VoiceNoteRecorder] Error message:', error?.message);
+      alert('Échec de l’envoi vocal. Réessayez.');
+    } finally {
+      setIsUploading(false);
     }
   };
 

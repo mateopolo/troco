@@ -18,7 +18,7 @@ import {
   CornerDownRight,
   Image as ImageIcon,
 } from 'lucide-react';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { collection, addDoc, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, storage, db } from '../../firebase';
 import { haptics } from '../../utils/haptics';
@@ -104,14 +104,22 @@ function ChatInputBar({
       if (storage) {
         const cleanName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
         const storageRef = ref(storage, `chat_audios/${cleanName}`);
-        const snapshot = await uploadBytes(storageRef, file, {
-          contentType: audioMime,
-          customMetadata: {
-            uploadedBy: auth.currentUser?.uid || 'anonymous',
-            originalName: file.name,
-          },
+        downloadUrl = await new Promise((resolve, reject) => {
+          const uploadTask = uploadBytesResumable(storageRef, file, {
+            contentType: audioMime,
+            customMetadata: {
+              uploadedBy: auth.currentUser?.uid || 'anonymous',
+              originalName: file.name,
+            },
+          });
+          uploadTask.on('state_changed', null, reject, async () => {
+            try {
+              resolve(await getDownloadURL(uploadTask.snapshot.ref));
+            } catch (error) {
+              reject(error);
+            }
+          });
         });
-        downloadUrl = await getDownloadURL(snapshot.ref);
       } else {
         downloadUrl = await new Promise((resolve, reject) => {
           const reader = new FileReader();
@@ -147,7 +155,9 @@ function ChatInputBar({
       }
       haptics.success();
     } catch (err) {
-      logger.error('[ChatInputBar] handleAudioUpload error:', err);
+      logger.error('[ChatInputBar] Firebase Upload Error:', err);
+      logger.error('[ChatInputBar] Error code:', err?.code);
+      logger.error('[ChatInputBar] Error message:', err?.message);
       try {
         const dataUrl = await new Promise((resolve, reject) => {
           const reader = new FileReader();

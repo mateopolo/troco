@@ -1,5 +1,5 @@
 import logger from '../utils/logger';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { auth, storage } from '../firebase';
 
 /**
@@ -37,9 +37,7 @@ export async function uploadVoiceNote(audioBlob, chatId = 'global') {
       contentType: finalContentType,
     };
 
-    const snapshot = await uploadBytes(storageRef, audioBlob, metadata);
-    // Résolution stricte de l'URL Firebase Storage avant injection Firestore
-    const downloadURL = await getDownloadURL(snapshot.ref);
+    const downloadURL = await uploadResumable(storageRef, audioBlob, metadata);
 
     return {
       success: true,
@@ -49,7 +47,9 @@ export async function uploadVoiceNote(audioBlob, chatId = 'global') {
       isLocal: false,
     };
   } catch (err) {
-    logger.warn('[VoiceStorageService] Firebase Storage upload failed, fallback to DataURL:', err);
+    logger.error('[VoiceStorageService] Firebase Storage upload failed:', err);
+    logger.error('[VoiceStorageService] Firebase Storage error code:', err?.code);
+    logger.error('[VoiceStorageService] Firebase Storage error message:', err?.message);
     try {
       const dataUrl = await blobToDataURL(audioBlob);
       return {
@@ -94,14 +94,13 @@ export async function uploadAudioFile(file, chatId = 'global') {
   try {
     if (storage) {
       const storageRef = ref(storage, storagePath);
-      const snapshot = await uploadBytes(storageRef, file, {
+      const downloadUrl = await uploadResumable(storageRef, file, {
         contentType: resolvedContentType,
         customMetadata: {
           uploadedBy: auth.currentUser?.uid || 'anonymous',
           originalName: file.name,
         },
       });
-      const downloadUrl = await getDownloadURL(snapshot.ref);
       return {
         success: true,
         audioUrl: downloadUrl,
@@ -110,7 +109,9 @@ export async function uploadAudioFile(file, chatId = 'global') {
       };
     }
   } catch (err) {
-    logger.warn('[VoiceStorageService] Storage upload failed, fallback to DataURL:', err);
+    logger.error('[VoiceStorageService] Storage upload failed:', err);
+    logger.error('[VoiceStorageService] Storage error code:', err?.code);
+    logger.error('[VoiceStorageService] Storage error message:', err?.message);
   }
 
   // Fallback DataURL résilient si Storage est indisponible
@@ -121,4 +122,26 @@ export async function uploadAudioFile(file, chatId = 'global') {
     fileName: file.name || cleanName,
     contentType: resolvedContentType,
   };
+}
+
+function uploadResumable(storageRef, data, metadata) {
+  return new Promise((resolve, reject) => {
+    const uploadTask = uploadBytesResumable(storageRef, data, metadata);
+    uploadTask.on(
+      'state_changed',
+      (snapshot) => {
+        logger.debug?.('[VoiceStorageService] Upload progress:', {
+          progress: snapshot.totalBytes ? Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100) : 0,
+        });
+      },
+      reject,
+      async () => {
+        try {
+          resolve(await getDownloadURL(uploadTask.snapshot.ref));
+        } catch (error) {
+          reject(error);
+        }
+      },
+    );
+  });
 }
