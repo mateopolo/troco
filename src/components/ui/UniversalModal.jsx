@@ -19,23 +19,28 @@ const FOCUSABLE_ELEMENTS = [
 let openModalCount = 0;
 let previousBodyOverflow = '';
 
-/**
- * Shared modal shell. Content remains responsible for its own visual design,
- * while this component provides a consistent portal, stacking order and a11y.
- */
-export default function UniversalModal({
+const MAX_WIDTHS = {
+  sm: '384px',
+  md: '448px',
+  lg: '680px',
+  xl: '896px',
+  '2xl': '1152px',
+  full: '100%',
+};
+
+export function UniversalModal({
   isOpen,
   onClose,
-  children,
   title,
+  children,
   footer,
-  maxWidth = 'lg',
+  maxWidth = 'max-w-2xl',
+  closeOnBackdrop = true,
+  closeOnEscape = true,
   ariaLabel = 'Fenêtre modale',
   ariaLabelledBy,
   showCloseButton = true,
   closeButtonLabel = 'Fermer',
-  closeOnBackdrop = true,
-  closeOnEscape = true,
   contentStyle,
   contentClassName = '',
   overlayStyle,
@@ -107,101 +112,81 @@ export default function UniversalModal({
 
   if (!isOpen || typeof document === 'undefined') return null;
 
+  const resolvedMaxWidth = typeof maxWidth === 'number'
+    ? `${maxWidth}px`
+    : MAX_WIDTHS[maxWidth] || maxWidth;
+
   const handleBackdropClick = (event) => {
-    if (closeOnBackdrop && event.target === event.currentTarget) {
+    if (event.target === event.currentTarget && closeOnBackdrop) {
       onClose?.();
     }
   };
 
-  const overlay = (
-    <>
+  return createPortal(
+    <div
+      onClick={handleBackdropClick}
+      className={`fixed inset-0 z-[99999] flex items-center justify-center ${overlayClassName}`.trim()}
+      style={{
+        backgroundColor: 'rgba(0, 0, 0, 0.7)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        padding: 'max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left))',
+        ...overlayStyle,
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+      }}
+    >
       <div
-        className="modal-backdrop"
-        onClick={closeOnBackdrop ? onClose : undefined}
-        aria-hidden="true"
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={ariaLabelledBy ? undefined : ariaLabel}
+        aria-labelledby={ariaLabelledBy}
+        tabIndex={-1}
+        className={`relative w-full max-h-[90dvh] flex flex-col rounded-2xl shadow-2xl overflow-hidden bg-[var(--bg-card)] border border-[var(--border-color)] ${contentClassName}`.trim()}
+        onClick={(event) => event.stopPropagation()}
         style={{
-          position: 'fixed',
-          inset: 0,
-          zIndex: 999998,
-          background: 'rgba(0, 0, 0, 0.7)',
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)',
-        }}
-      />
-      <div
-        className={`universal-modal-layer ${overlayClassName}`.trim()}
-        onClick={handleBackdropClick}
-        style={{
-          position: 'fixed',
-          inset: 0,
-          zIndex: 999999,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          boxSizing: 'border-box',
-          pointerEvents: 'none',
-          ...overlayStyle,
+          maxWidth: resolvedMaxWidth,
+          ...contentStyle,
         }}
       >
-        <div
-          ref={dialogRef}
-          role="dialog"
-          aria-modal="true"
-          aria-label={ariaLabelledBy ? undefined : ariaLabel}
-          aria-labelledby={ariaLabelledBy}
-          tabIndex={-1}
-          className={`universal-modal-content ${contentClassName}`.trim()}
-          onClick={(event) => event.stopPropagation()}
-          style={{
-            position: 'relative',
-            width: '100%',
-            maxWidth: typeof maxWidth === 'number' ? `${maxWidth}px` : ({
-              sm: '384px',
-              md: '448px',
-              lg: '680px',
-              xl: '896px',
-              '2xl': '1152px',
-              full: '100%',
-            }[maxWidth] || maxWidth),
-            maxHeight: 'calc(100dvh - 32px)',
-            display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden',
-            boxSizing: 'border-box',
-            pointerEvents: 'auto',
-            ...contentStyle,
-          }}
-        >
-          {title && (
-            <div className="universal-modal-header">
-              <h2>{title}</h2>
-              {showCloseButton && onClose && (
-                <button type="button" onClick={onClose} aria-label={closeButtonLabel}>
-                  <X size={18} aria-hidden="true" />
-                </button>
-              )}
-            </div>
-          )}
-          {!title && showCloseButton && onClose && (
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label={closeButtonLabel}
-              className="universal-modal-close"
-            >
-              <X size={18} aria-hidden="true" />
-            </button>
-          )}
-          <div className="modal-content">
-            {children}
+        {title && (
+          <div className="flex-shrink-0 flex items-center justify-between px-6 py-4 border-b border-[var(--border-color)]">
+            <h2 className="text-lg font-semibold text-[var(--text-main)]">{title}</h2>
+            {showCloseButton && onClose && (
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label={closeButtonLabel}
+                className="w-9 h-9 flex items-center justify-center rounded-full hover:bg-[var(--bg-subtle)] transition"
+              >
+                <X size={18} aria-hidden="true" />
+              </button>
+            )}
           </div>
-          {footer && <div className="universal-modal-footer">{footer}</div>}
+        )}
+        {!title && showCloseButton && onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={closeButtonLabel}
+            className="absolute top-4 right-4 z-10 w-9 h-9 flex items-center justify-center rounded-full hover:bg-[var(--bg-subtle)] transition"
+          >
+            <X size={18} aria-hidden="true" />
+          </button>
+        )}
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 py-4">
+          {children}
         </div>
+        {footer && (
+          <div className="flex-shrink-0 px-6 py-4 border-t border-[var(--border-color)]">
+            {footer}
+          </div>
+        )}
       </div>
-    </>
+    </div>,
+    document.body,
   );
-
-  return createPortal(overlay, document.body);
 }
 
-export { UniversalModal };
+export default UniversalModal;
