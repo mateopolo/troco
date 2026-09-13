@@ -1102,30 +1102,44 @@ function CloudOfficeSuiteModalContent({
         icon = '📌';
       }
 
-      const msgPayload = {
-        text: `${icon} **${title}** (${activeTab.toUpperCase()})\n\n${snippet}`,
-        sender: authorName,
-        senderId: authorUid,
-        senderName: authorName,
-        createdAt: new Date().toISOString(),
-        timestamp: Date.now(),
-        type: `office_${activeTab}`,
-        docId: effectiveDocId,
-        title,
-        summary: snippet,
-      };
+      const msgPayload = activeTab === 'sheets'
+        ? {
+          type: 'sheet_share',
+          sheetId: effectiveDocId,
+          sheetTitle: title,
+          previewImageUrl: effectiveDoc?.previewUrl || null,
+          cellCount: Object.values(sheetData || {}).filter(value => value !== null && value !== undefined && String(value).trim() !== '').length,
+          sheetUrl: `${window.location.origin}/sheets/${encodeURIComponent(effectiveDocId)}`,
+          senderUid: authorUid,
+          sender: authorName,
+          senderId: authorUid,
+          senderName: authorName,
+          createdAt: new Date().toISOString(),
+          timestamp: Date.now(),
+          content: '',
+        }
+        : {
+          text: `${icon} **${title}** (${activeTab.toUpperCase()})\n\n${snippet}`,
+          sender: authorName,
+          senderId: authorUid,
+          senderName: authorName,
+          createdAt: new Date().toISOString(),
+          timestamp: Date.now(),
+          type: `office_${activeTab}`,
+          docId: effectiveDocId,
+          title,
+          summary: snippet,
+        };
 
-      if (db && effectiveGroupId && effectiveGroupId !== 'demo_group_office' && effectiveGroupId !== 'demo_group_notes') {
+      if (typeof handleSendMessage === 'function') {
+        await handleSendMessage(msgPayload);
+      } else if (db && effectiveGroupId && effectiveGroupId !== 'demo_group_office' && effectiveGroupId !== 'demo_group_notes') {
         await addDoc(collection(db, 'chats', String(effectiveGroupId), 'messages'), msgPayload);
         await setDoc(doc(db, 'chats', String(effectiveGroupId)), {
-          lastMessage: `${icon} Workspace : "${title}"`,
+          lastMessage: activeTab === 'sheets' ? `📊 Workspace : "${title}"` : `${icon} Workspace : "${title}"`,
           lastSenderName: authorName,
           updatedAt: serverTimestamp(),
         }, { merge: true });
-      }
-
-      if (typeof handleSendMessage === 'function') {
-        handleSendMessage(msgPayload);
       }
 
       if (typeof onSendToChat === 'function') {
@@ -2868,4 +2882,3 @@ export default function CloudOfficeSuiteModal(props) {
     />
   );
 }
-

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Table } from 'lucide-react';
 
 /**
  * MessageBubble.jsx — Rendu unifié des bulles de messages du chat
@@ -14,6 +15,41 @@ import React, { useState } from 'react';
 export default function MessageBubble({ message = {}, isMe = false }) {
   if (message.type === 'audio') {
     return <AudioMessage message={message} />;
+  }
+
+  if (message.type === 'sheet_share') {
+    return (
+      <div className="flex flex-col gap-3 p-4 rounded-2xl max-w-sm bg-[var(--bg-card)] border border-[var(--border-color)]">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-green-100 dark:bg-green-900/40">
+            <Table size={20} className="text-green-600 dark:text-green-400" aria-hidden="true" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-sm truncate">
+              {message.sheetTitle || 'Tableau partagé'}
+            </p>
+            <p className="text-xs text-[var(--text-secondary)]">
+              {message.cellCount || 0} cellules
+            </p>
+          </div>
+        </div>
+        {message.previewImageUrl && (
+          <img
+            src={message.previewImageUrl}
+            alt={`Aperçu de ${message.sheetTitle || 'Tableau partagé'}`}
+            className="w-full h-32 object-cover rounded-lg"
+          />
+        )}
+        <a
+          href={message.sheetUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-center py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm font-medium transition"
+        >
+          Ouvrir le tableur
+        </a>
+      </div>
+    );
   }
 
   if (typeof message.type === 'string' && message.type.startsWith('office_')) {
