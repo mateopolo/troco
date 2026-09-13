@@ -126,12 +126,11 @@ export function UniversalModal({
   return createPortal(
     <div
       onClick={handleBackdropClick}
-      className={`fixed inset-0 z-[99999] flex items-center justify-center ${overlayClassName}`.trim()}
+      className={`fixed inset-0 z-[99999] flex items-center justify-center p-4 box-border ${overlayClassName}`.trim()}
       style={{
         backgroundColor: 'rgba(0, 0, 0, 0.7)',
         backdropFilter: 'blur(12px)',
         WebkitBackdropFilter: 'blur(12px)',
-        padding: 'max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left))',
         ...overlayStyle,
         backdropFilter: 'blur(12px)',
         WebkitBackdropFilter: 'blur(12px)',
@@ -161,7 +160,7 @@ export function UniversalModal({
             <X size={18} aria-hidden="true" />
           </button>
         )}
-        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 py-4">
+        <div         className="flex flex-1 min-h-0 flex-col items-center overflow-y-auto overscroll-contain px-6 py-4">
           {children}
         </div>
         {footer && (

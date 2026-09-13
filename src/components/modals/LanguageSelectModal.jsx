@@ -29,6 +29,7 @@ export default function LanguageSelectModal({
           isOpen={isOpen}
           onClose={onClose}
           ariaLabel={t('selectLanguage')}
+          maxWidth={380}
           showCloseButton={false}
           overlayStyle={{
             backgroundColor: 'rgba(61,53,48,0.7)',
