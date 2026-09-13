@@ -6,6 +6,26 @@ import { playBetclicBalanceSound, playApplePaySound } from '../utils/audioServic
 import { detectGeoCurrency } from '../services/pricingService';
 import { hapticSuccess } from '../utils/haptics';
 
+// Tracker global des timeouts pour cleanup
+const walletStoreTimeouts = new Set();
+
+// Nettoyer les timeouts du store
+const cleanupWalletStoreTimeouts = () => {
+  walletStoreTimeouts.forEach((timerId) => clearTimeout(timerId));
+  walletStoreTimeouts.clear();
+};
+
+// Fonction safeTimeout pour le store
+const safeStoreTimeout = (fn, delay) => {
+  const timerId = setTimeout(() => {
+    if (walletStoreTimeouts.has(timerId)) {
+      fn();
+    }
+  }, delay);
+  walletStoreTimeouts.add(timerId);
+  return timerId;
+};
+
 export const useWalletStore = create(
   persist(
     (set, get) => ({
@@ -126,7 +146,7 @@ export const useWalletStore = create(
                 subtitle: `Nouveau solde : ${newTokens} Jetons Troco`,
               },
             });
-            setTimeout(() => {
+            safeStoreTimeout(() => {
               if (get().topUpCelebration?.title?.includes('Jeton')) {
                 set({ topUpCelebration: null });
               }
@@ -141,7 +161,7 @@ export const useWalletStore = create(
                 subtitle: `Nouveau solde : ${newEuros.toFixed(2)} €`,
               },
             });
-            setTimeout(() => {
+            safeStoreTimeout(() => {
               if (get().topUpCelebration?.title?.includes('€')) {
                 set({ topUpCelebration: null });
               }

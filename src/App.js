@@ -74,6 +74,7 @@ import { walletService } from './services/walletService';
 import { gdprService } from './services/gdprService';
 import { useCheckout } from './hooks/useCheckout';
 import { useRateLimit } from './hooks/useRateLimit';
+import { useSafeTimeout } from './hooks/useSafeTimeout';
 import CheckoutModal from './components/modals/CheckoutModal';
 import DemoModeBanner from './components/common/DemoModeBanner';
 import { RateLimitToast } from './components/ui/RateLimitToast';
@@ -293,6 +294,9 @@ export default function App() {
 
   const { isAdmin } = useAdminGuard();
 
+  // Hook pour gérer les timeouts en toute sécurité
+  const { safeTimeout } = useSafeTimeout();
+
   const {
     activeTab,
     setActiveTab,
@@ -413,7 +417,7 @@ export default function App() {
           title: `+${gained} Jeton${gained > 1 ? 's' : ''} Troco reçus ! 🪙`,
           subtitle: `Nouveau solde : ${currentVal} Jetons Troco`,
         });
-        setTimeout(() => setTopUpCelebration(null), 4500);
+        safeTimeout(() => setTopUpCelebration(null), 4500);
       }
     }
     prevTokensRef.current = profile?.trocoTokens;
@@ -623,9 +627,9 @@ export default function App() {
         subtitle: `Abonnement ${txData.subscriptionPlan?.title || 'Troco Plus'} activé`,
         isTokens: true
       });
-      setTimeout(() => setTopUpCelebration(null), 4500);
+      safeTimeout(() => setTopUpCelebration(null), 4500);
       setSaveMessage(`⭐ Abonnement ${txData.subscriptionPlan?.title || 'Troco Plus'} activé avec succès ! +${txData.tokensPurchased} jetons crédités.`);
-      setTimeout(() => setSaveMessage(''), 6000);
+      safeTimeout(() => setSaveMessage(''), 6000);
     } else if (txData.mode === 'topup-cash') {
       const topUpAmount = Number(txData.cashTopUp) || 0;
       if (topUpAmount > 0) {
@@ -635,9 +639,9 @@ export default function App() {
           subtitle: `Nouveau solde : ${updatedEuro.toFixed(2)} €`,
           isEuro: true
         });
-        setTimeout(() => setTopUpCelebration(null), 4500);
+        safeTimeout(() => setTopUpCelebration(null), 4500);
         setSaveMessage(`💳 Solde rechargé avec succès (+${topUpAmount.toFixed(2)} € via ${txData.paymentMethod}).`);
-        setTimeout(() => setSaveMessage(''), 5000);
+        safeTimeout(() => setSaveMessage(''), 5000);
       }
     } else if (txData.mode === 'boost') {
       if (txData.paymentMethod?.includes('Solde')) {
@@ -947,7 +951,7 @@ export default function App() {
     const finishSessionLoading = () => {
       const elapsed = Date.now() - sessionStartTime;
       const remaining = Math.max(0, 2500 - elapsed);
-      setTimeout(() => {
+      safeTimeout(() => {
         setIsLoadingSession(false);
       }, remaining);
     };
@@ -994,7 +998,7 @@ export default function App() {
                 title: `+${gained} Jeton${gained > 1 ? 's' : ''} Troco reçus ! 🪙`,
                 subtitle: `Nouveau solde : ${newTokens} Jetons Troco`,
               });
-              setTimeout(() => setTopUpCelebration(null), 4500);
+              safeTimeout(() => setTopUpCelebration(null), 4500);
             }
 
             // Détection de réception temps réel d'euros & Alerte sonore
@@ -1006,7 +1010,7 @@ export default function App() {
                 title: `+${gained} € reçus sur votre solde ! 💳`,
                 subtitle: `Nouveau solde : ${Number(newEuros).toFixed(2)} €`,
               });
-              setTimeout(() => setTopUpCelebration(null), 4500);
+              safeTimeout(() => setTopUpCelebration(null), 4500);
             }
 
             if (newTokens !== null) prevTokensRef.current = newTokens;
@@ -1181,7 +1185,7 @@ export default function App() {
     playWelcomeGiftFanfare();
     setIsWelcomeGiftModalOpen(true);
     setSaveMessage('🎁 +10 Jetons Troco offerts ! Bienvenue sur Troco.');
-    setTimeout(() => setSaveMessage(''), 5000);
+    safeTimeout(() => setSaveMessage(''), 5000);
   };
 
   useEffect(() => {
@@ -1812,7 +1816,7 @@ export default function App() {
         notificationId: null,
       });
       setSaveMessage(`🤝 ${costTokens} Jeton${costTokens > 1 ? 's' : ''} Troco transféré(s) à ${partner} (Frais de service : 0,00 €) !`);
-      setTimeout(() => setSaveMessage(''), 5000);
+      safeTimeout(() => setSaveMessage(''), 5000);
     } catch (e) {
       console.error('🚨 [walletService] Erreur transfert jetons visio:', e);
       alert(`Échec du transfert : ${e?.message || 'Erreur réseau ou solde insuffisant.'}`);
@@ -1993,7 +1997,7 @@ export default function App() {
       console.warn('[Admin] toggle hide error via Cloud Function:', err);
     }
     setSaveMessage(newHidden ? `🚫 Annonce #${listing.id} masquée du feed public` : `👁️ Annonce #${listing.id} visible`);
-    setTimeout(() => setSaveMessage(''), 4000);
+    safeTimeout(() => setSaveMessage(''), 4000);
   };
 
   const userSwapHistory = Array.isArray(profile?.swapHistory) ? profile.swapHistory : [];
@@ -4006,7 +4010,7 @@ export default function App() {
                                 }));
                                 playApplePaySound();
                                 setSaveMessage(`🎁 Bonus partenaire crédité : +${amount}€ sur votre solde !`);
-                                setTimeout(() => setSaveMessage(''), 6000);
+                                safeTimeout(() => setSaveMessage(''), 6000);
                               }}
                             />
                           )}

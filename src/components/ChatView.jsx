@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback, lazy, Suspense } from 'react';
 import Portal from './ui/Portal';
+import { useSafeTimeout } from '../hooks/useSafeTimeout';
 import {
   Send, Phone, Video, Sparkles, Clock, CheckCircle,
   ChevronLeft, Globe, Edit2, Edit3, Trash2, Copy, Check, X,
@@ -77,6 +78,9 @@ function ChatView({
   onOpenListing = () => {},
   messagesContainerRef: externalMessagesContainerRef = null,
 }) {
+  // Hook pour gérer les timeouts en toute sécurité
+  const { safeTimeout } = useSafeTimeout();
+  
   const [isRecordingAudio, setIsRecordingAudio] = useState(false);
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const lastChatSendRef = useRef(0);
@@ -199,7 +203,7 @@ function ChatView({
         const res = await handleSendTokenProp(cid, tokens, transferComment || '');
         if (res?.success) {
           setShowConfetti(true);
-          setTimeout(() => setShowConfetti(false), 3800);
+          safeTimeout(() => setShowConfetti(false), 3800);
           setIsDirectTransferOpen(false);
           setTransferComment('');
           setDirectTokensCount(1);
@@ -286,7 +290,7 @@ function ChatView({
 
       // Déclenchement de l'animation festive
       setShowConfetti(true);
-      setTimeout(() => setShowConfetti(false), 3800);
+      safeTimeout(() => setShowConfetti(false), 3800);
       setIsDirectTransferOpen(false);
       setTransferComment('');
       setDirectTokensCount(1);
@@ -782,7 +786,7 @@ function ChatView({
       }
     } catch (_) {}
     setCopiedMsgId(msg.id);
-    setTimeout(() => setCopiedMsgId(null), 1500);
+    safeTimeout(() => setCopiedMsgId(null), 1500);
     setActiveMenuMsgId(null);
   };
 
@@ -2717,7 +2721,7 @@ function ChatView({
                   return await handleSendMessage(msgOrText);
                 }
               } finally {
-                setTimeout(() => setIsSendingMessage(false), 500);
+                safeTimeout(() => setIsSendingMessage(false), 500);
               }
             }}
             onSendMessage={async (text) => {
@@ -2733,7 +2737,7 @@ function ChatView({
                   return await handleSendMessage(text);
                 }
               } finally {
-                setTimeout(() => setIsSendingMessage(false), 500);
+                safeTimeout(() => setIsSendingMessage(false), 500);
               }
             }}
             onEditMessage={(text) => {

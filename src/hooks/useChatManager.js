@@ -15,6 +15,7 @@ import {
   increment,
   runTransaction
 } from 'firebase/firestore';
+import { useSafeTimeout } from './useSafeTimeout';
 import { Clock, Sparkles, ShieldCheck, CheckCircle, Check, RefreshCw, X } from 'lucide-react';
 import { mockChats, initialChatThreads } from '../data/mockChatsData';
 import { validateChatMessage } from '../utils/moderationBlacklist';
@@ -55,6 +56,9 @@ export const useChatManager = ({
   setSaveMessage = () => { },
   onTransactionSuccess = () => { },
 }) => {
+  // Hook pour gérer les timeouts en toute sécurité
+  const { safeTimeout } = useSafeTimeout();
+  
   // ---- ÉTATS DE MESSAGERIE & DEALS ----
   const [selectedChat, setSelectedChat] = useState(null);
   const [readChats, setReadChats] = useState(() => {
@@ -1779,7 +1783,7 @@ export const useChatManager = ({
     }
 
     setSaveMessage(`🤝 Deal validé avec succès ! ${finalTokens > 0 ? `${finalTokens}🪙 ` : ''}${finalEuro > 0 ? `${finalEuro}€ ` : ''}transféré(s).`);
-    setTimeout(() => setSaveMessage(''), 5000);
+    safeTimeout(() => setSaveMessage(''), 5000);
   };
 
   // ---- LIBÉRATION DU SÉQUESTRE FINANCIER ----
@@ -1892,7 +1896,7 @@ export const useChatManager = ({
     }
 
     setSaveMessage(`🎉 Prestation confirmée ! ${finalEuro > 0 ? `${finalEuro}€ ` : ''}${finalTokens > 0 ? `${finalTokens} Jeton(s) ` : ''}versé(s) à ${partnerName}.`);
-    setTimeout(() => setSaveMessage(''), 5000);
+    safeTimeout(() => setSaveMessage(''), 5000);
   };
 
   // ---- DÉCLENCHEMENT DE L'ACCEPTATION D'UN DEAL ----
@@ -2099,7 +2103,7 @@ export const useChatManager = ({
         });
       }
       setSaveMessage(`🪙 ${costTokens} Jeton(s) Troco envoyé(s) avec succès !`);
-      setTimeout(() => setSaveMessage(''), 4000);
+      safeTimeout(() => setSaveMessage(''), 4000);
 
       return { success: true, receiverUid: partnerUid, partnerUid, amount: costTokens };
     } catch (err) {
@@ -2276,7 +2280,7 @@ export const useChatManager = ({
         });
       }
       setSaveMessage(`🪙 ${amount} Jeton(s) Troco envoyé(s) avec succès !`);
-      setTimeout(() => setSaveMessage(''), 4000);
+      safeTimeout(() => setSaveMessage(''), 4000);
 
       return { success: true, receiverUid: partnerUid, partnerUid, amount };
     } catch (err) {

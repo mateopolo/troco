@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, Profiler } from 'react';
 import { Search, ChevronLeft, ChevronRight, MapPin, Video, Flame } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useSafeTimeout } from '../../hooks/useSafeTimeout';
 import FeedCardItem from '../../components/FeedCardItem';
 import SponsoredFeedCard from '../../components/SponsoredFeedCard';
 import { EmptyState } from '../../components/ui/EmptyState';
@@ -61,6 +62,9 @@ export function FeedSection({
   onLoadMore = null,
   mapContainerRef = null,
 }) {
+  // Hook pour gérer les timeouts en toute sécurité
+  const { safeTimeout } = useSafeTimeout();
+  
   const sentinelRef = useRef(null);
 
   useEffect(() => {
@@ -470,7 +474,7 @@ export function FeedSection({
                       darkMode={darkMode}
                       onOpenNotification={(msg) => {
                         setSaveMessage(msg);
-                        setTimeout(() => setSaveMessage(''), 6000);
+                        safeTimeout(() => setSaveMessage(''), 6000);
                       }}
                     />
                   )}

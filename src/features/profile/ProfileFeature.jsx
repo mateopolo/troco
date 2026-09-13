@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { ProgressiveImage } from '../../components/ui/ProgressiveImage';
+import { useSafeTimeout } from '../../hooks/useSafeTimeout';
 import { EmptyState } from '../../components/ui/EmptyState';
 import {
   ShieldCheck,
@@ -73,6 +74,9 @@ export default function ProfileFeature({
   formatTokenCount,
   formatCompensation,
 }) {
+  // Hook pour gérer les timeouts en toute sécurité
+  const { safeTimeout } = useSafeTimeout();
+  
   const [isDesignStudioOpen, setIsDesignStudioOpen] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
   const [portfolioUrlInput, setPortfolioUrlInput] = useState('');
@@ -176,7 +180,7 @@ export default function ProfileFeature({
     window.localStorage.setItem('troco_user_profile', JSON.stringify(updated));
     if (setIsEditingProfile) setIsEditingProfile(false);
     setSaveMessage('Profil mis à jour avec succès !');
-    setTimeout(() => setSaveMessage(''), 3000);
+    safeTimeout(() => setSaveMessage(''), 3000);
 
     const uid = profile.uid || auth.currentUser?.uid;
     if (uid) {
