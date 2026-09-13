@@ -1782,14 +1782,14 @@ export default function App() {
       freeServiceFee: true,
     };
 
-    // PERSISTANCE TRANSACTIONNELLE VIA CLOUD FUNCTION ATOMIQUE (walletService)
+    // PERSISTANCE TRANSACTIONNELLE VIA dealService (atomique unifié)
     try {
-      const transferRes = await walletService.transferAtomically({
-        senderUid: currentUid,
-        receiverUid: partnerUid,
-        currency: 'tokens',
-        amount: Number(costTokens),
-        type: 'call_tokens',
+      const transferRes = await dealService.transferTokensAtomically({
+        fromUid: currentUid,
+        toUid: partnerUid,
+        tokens: Number(costTokens),
+        euros: 0,
+        method: 'call_tokens',
         metadata: {
           partner,
           duration,

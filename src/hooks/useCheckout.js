@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { paymentService } from '../services/paymentService';
 import { walletService } from '../services/walletService';
+import { dealService } from '../services/dealService';
 
 export function useCheckout({ profile, setProfile, onPaymentSuccess, onOpenNotification }) {
   const [checkoutSession, setCheckoutSession] = useState(null);
@@ -46,15 +47,18 @@ export function useCheckout({ profile, setProfile, onPaymentSuccess, onOpenNotif
       let result;
 
       if (mode === 'deal' || mode === 'pay-deal') {
-        // Direct peer-to-peer transfer via Cloud Function
-        result = await walletService.transferAtomically({
-          receiverUid: checkoutSession.sellerUid || checkoutSession.partnerUid,
-          currency: checkoutSession.tokensRequired > 0 ? 'tokens' : 'EUR',
-          amount: checkoutSession.tokensRequired > 0 ? checkoutSession.tokensRequired : checkoutSession.euroRequired,
-          type: 'deal',
+        // Transaction atomique unifiée via dealService
+        const toUid = checkoutSession.sellerUid || checkoutSession.partnerUid;
+        const isTokens = (checkoutSession.tokensRequired || 0) > 0;
+        result = await dealService.transferTokensAtomically({
+          fromUid: profile?.uid,
+          toUid: toUid,
+          tokens: isTokens ? Number(checkoutSession.tokensRequired) : 0,
+          euros: !isTokens ? Number(checkoutSession.euroRequired || 0) : 0,
+          method: 'deal',
+          dealId: checkoutSession.dealId,
+          chatId: checkoutSession.chatId,
           metadata: {
-            chatId: checkoutSession.chatId,
-            dealId: checkoutSession.dealId,
             terms: checkoutSession.terms,
             partnerName: checkoutSession.partnerName,
           },
