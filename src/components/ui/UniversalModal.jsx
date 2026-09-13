@@ -28,6 +28,7 @@ export default function UniversalModal({
   onClose,
   children,
   title,
+  footer,
   maxWidth = 'lg',
   ariaLabel = 'Fenêtre modale',
   ariaLabelledBy,
@@ -113,81 +114,83 @@ export default function UniversalModal({
   };
 
   const overlay = (
-    <div
-      className={`universal-modal-overlay ${overlayClassName}`.trim()}
-      onClick={handleBackdropClick}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 999999,
-        backgroundColor: 'rgba(15, 23, 42, 0.68)',
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '16px 16px var(--modal-safe-bottom)',
-        overflow: 'auto',
-        boxSizing: 'border-box',
-        ...overlayStyle,
-      }}
-    >
+    <>
       <div
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-label={ariaLabelledBy ? undefined : ariaLabel}
-        aria-labelledby={ariaLabelledBy}
-        tabIndex={-1}
-        className={`universal-modal-content ${contentClassName}`.trim()}
-        onClick={(event) => event.stopPropagation()}
+        className="modal-backdrop"
+        onClick={closeOnBackdrop ? onClose : undefined}
+        aria-hidden="true"
+      />
+      <div
+        className={`universal-modal-layer ${overlayClassName}`.trim()}
+        onClick={handleBackdropClick}
         style={{
-          position: 'relative',
-          width: '100%',
-          maxWidth: typeof maxWidth === 'number' ? `${maxWidth}px` : ({
-            sm: '384px',
-            md: '448px',
-            lg: '680px',
-            xl: '896px',
-            '2xl': '1152px',
-            full: '100%',
-          }[maxWidth] || maxWidth),
-          maxHeight: 'calc(100dvh - 32px)',
-          overflowY: 'auto',
+          position: 'fixed',
+          inset: 0,
+          zIndex: 999999,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
           boxSizing: 'border-box',
-          ...contentStyle,
+          pointerEvents: 'none',
+          ...overlayStyle,
         }}
       >
-        {title && <h2 className="sr-only">{title}</h2>}
-        {showCloseButton && onClose && (
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label={closeButtonLabel}
-            className="universal-modal-close"
-            style={{
-              position: 'absolute',
-              top: '12px',
-              right: '12px',
-              zIndex: 2,
-              width: '36px',
-              height: '36px',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              border: 'none',
-              borderRadius: '50%',
-              background: 'rgba(255,255,255,0.82)',
-              color: '#3D3530',
-              cursor: 'pointer',
-            }}
-          >
-            <X size={18} aria-hidden="true" />
-          </button>
-        )}
-        {children}
+        <div
+          ref={dialogRef}
+          role="dialog"
+          aria-modal="true"
+          aria-label={ariaLabelledBy ? undefined : ariaLabel}
+          aria-labelledby={ariaLabelledBy}
+          tabIndex={-1}
+          className={`universal-modal-content ${contentClassName}`.trim()}
+          onClick={(event) => event.stopPropagation()}
+          style={{
+            position: 'relative',
+            width: '100%',
+            maxWidth: typeof maxWidth === 'number' ? `${maxWidth}px` : ({
+              sm: '384px',
+              md: '448px',
+              lg: '680px',
+              xl: '896px',
+              '2xl': '1152px',
+              full: '100%',
+            }[maxWidth] || maxWidth),
+            maxHeight: 'calc(100dvh - 32px)',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden',
+            boxSizing: 'border-box',
+            pointerEvents: 'auto',
+            ...contentStyle,
+          }}
+        >
+          {title && (
+            <div className="universal-modal-header">
+              <h2>{title}</h2>
+              {showCloseButton && onClose && (
+                <button type="button" onClick={onClose} aria-label={closeButtonLabel}>
+                  <X size={18} aria-hidden="true" />
+                </button>
+              )}
+            </div>
+          )}
+          {!title && showCloseButton && onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label={closeButtonLabel}
+              className="universal-modal-close"
+            >
+              <X size={18} aria-hidden="true" />
+            </button>
+          )}
+          <div className="modal-content">
+            {children}
+          </div>
+          {footer && <div className="universal-modal-footer">{footer}</div>}
+        </div>
       </div>
-    </div>
+    </>
   );
 
   return createPortal(overlay, document.body);

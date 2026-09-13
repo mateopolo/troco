@@ -68,13 +68,110 @@
   --border-warm: var(--border-color);
 }
 
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 999998;
+  background-color: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+@supports not (backdrop-filter: blur(12px)) {
+  .modal-backdrop {
+    background-color: rgba(0, 0, 0, 0.88);
+  }
+}
+
+.universal-modal-layer {
+  padding: 2rem 1.5rem 4rem;
+}
+
 .universal-modal-content {
+  min-height: 0;
+}
+
+.modal-content {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
   padding-bottom: var(--modal-safe-bottom);
 }
 
+.universal-modal-header,
+.universal-modal-footer {
+  flex: 0 0 auto;
+}
+
 @media (min-width: 640px) {
+  .universal-modal-layer {
+    padding: 2rem 1.5rem 4rem;
+  }
+
   .universal-modal-content {
+    max-height: calc(100dvh - 2rem);
+  }
+
+  .modal-content {
     padding-bottom: 20px;
+  }
+}
+
+@media (max-width: 639px) {
+  .universal-modal-layer {
+    padding: 1rem 0.75rem var(--modal-safe-bottom);
+  }
+
+  .universal-modal-content {
+    max-height: calc(100dvh - 100px - env(safe-area-inset-bottom, 0px));
+  }
+}
+
+.universal-modal-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 3.5rem 1rem 1.25rem;
+  background: var(--bg-card);
+}
+
+.universal-modal-header h2 {
+  margin: 0;
+  font-size: 1.125rem;
+}
+
+.universal-modal-header button,
+.universal-modal-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  z-index: 2;
+  width: 2.25rem;
+  height: 2.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.82);
+  color: #3D3530;
+  cursor: pointer;
+}
+
+.universal-modal-footer {
+  padding: 1rem 1.25rem;
+  background: var(--bg-card);
+}
+
+@media (max-width: 639px) {
+  .universal-modal-footer {
+    padding-bottom: var(--modal-safe-bottom);
   }
 }
 
