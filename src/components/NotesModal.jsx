@@ -7,7 +7,7 @@ import logger from '../utils/logger';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronLeft, Share2, Check } from 'lucide-react';
-import { doc, setDoc, onSnapshot, serverTimestamp, addDoc, collection } from 'firebase/firestore';
+import { doc, setDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 
 const defaultDoc = {
@@ -71,6 +71,7 @@ function NotesModalContent(props) {
   const [saveStatus, setSaveStatus] = useState('Synchronisé en direct 🟢');
   const [isSendingToChat, setIsSendingToChat] = useState(false);
   const [sendSuccessToast, setSendSuccessToast] = useState(false);
+  const shareInFlightRef = useRef(false);
 
   const textareaRef = useRef(null);
   const isTypingRef = useRef(false);
@@ -207,8 +208,9 @@ function NotesModalContent(props) {
 
   // Partage vers la discussion
   const handleSendNoteToChat = async () => {
-    if (!effectiveGroupId || isSendingToChat) return;
+    if (!effectiveGroupId || isSendingToChat || shareInFlightRef.current) return;
     setIsSendingToChat(true);
+    shareInFlightRef.current = true;
 
     try {
       const authorName = currentUser?.name || currentUser?.displayName || 'Moi';
@@ -230,7 +232,12 @@ function NotesModalContent(props) {
       };
 
       if (db && effectiveGroupId && effectiveGroupId !== 'demo_group_notes') {
-        await addDoc(collection(db, 'chats', String(effectiveGroupId), 'messages'), msgPayload);
+        // A deterministic message id makes repeated clicks/re-renders idempotent.
+        await setDoc(
+          doc(db, 'chats', String(effectiveGroupId), 'messages', `note_${effectiveDocId}`),
+          msgPayload,
+          { merge: true }
+        );
         await setDoc(
           doc(db, 'chats', String(effectiveGroupId)),
           {
@@ -242,12 +249,10 @@ function NotesModalContent(props) {
         );
       }
 
-      if (typeof handleSendMessage === 'function') {
-        handleSendMessage(msgPayload);
-      }
-
       if (typeof onSendToChat === 'function') {
         onSendToChat(effectiveDocId, msgPayload);
+      } else if (typeof handleSendMessage === 'function') {
+        handleSendMessage(msgPayload);
       }
 
       setSendSuccessToast(true);
@@ -256,6 +261,7 @@ function NotesModalContent(props) {
       logger.warn('[NotesModal] Send to chat error:', err);
     } finally {
       setIsSendingToChat(false);
+      shareInFlightRef.current = false;
     }
   };
 
@@ -286,12 +292,15 @@ function NotesModalContent(props) {
         onClick={(e) => e.stopPropagation()}
         style={{
           position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
+          top: '50%',
+          left: '50%',
+          right: 'auto',
+          bottom: 'auto',
           width: '100%',
           height: '100%',
+          maxWidth: '1180px',
+          maxHeight: 'calc(100dvh - 32px)',
+          transform: 'translate(-50%, -50%)',
           backgroundColor: darkMode ? '#1A1A1A' : '#F9F9F9',
           color: darkMode ? '#FAF7F2' : '#12100E',
           display: 'flex',

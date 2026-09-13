@@ -77,6 +77,16 @@
   -webkit-backdrop-filter: blur(12px);
 }
 
+.troco-footer {
+  padding-bottom: calc(24px + var(--safe-area-bottom, 0px)) !important;
+}
+
+@media (max-width: 767px) {
+  .troco-footer {
+    padding-bottom: calc(92px + var(--safe-area-bottom, 0px)) !important;
+  }
+}
+
 @supports not (backdrop-filter: blur(12px)) {
   .modal-backdrop {
     background-color: rgba(0, 0, 0, 0.88);

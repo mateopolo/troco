@@ -3,16 +3,6 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Play, Pause, Mic, FileText, Sparkles, Copy, Check, Languages } from 'lucide-react';
 import { translateText } from '../utils/translator';
 
-const CONTEXTUAL_TRANSCRIPTIONS = {
-  FR: "Bonjour ! Je te confirme qu'on peut s'organiser pour l'échange de matériel jeudi après-midi. Dis-moi si ça te convient !",
-  EN: "Hi! Just confirming we can meet up for the equipment swap on Thursday afternoon. Let me know if that works for you!",
-  ES: "¡Hola! Te confirmo que podemos organizar el intercambio de material este jueves por la tarde. ¡Dime si te viene bien!",
-  IT: "Ciao! Ti confermo che possiamo organizzarci per lo scambio giovedì pomeriggio. Fammi sapere se ti va bene!",
-  DE: "Hallo! Ich bestätige dir, dass wir den Tausch am Donnerstagnachmittag machen können. Sag Bescheid, ob das passt!",
-  JA: "こんにちは！木曜日の午後に交換の件で調整可能です。ご都合はいかがでしょうか？",
-  ZH: "你好！我确认周四下午我们可以进行设备交换。你看这个时间合适吗？",
-};
-
 export default function VoiceNotePlayer({
   audioUrl,
   duration = null,
@@ -107,10 +97,10 @@ export default function VoiceNotePlayer({
     }
 
     if (!transcribedText) {
+      // Audio transcription must come from the recorder/STT service. Do not
+      // display a plausible-looking placeholder as if it were spoken audio.
       setIsTranscribing(true);
       setTimeout(() => {
-        const generated = transcription || CONTEXTUAL_TRANSCRIPTIONS[currentLang] || CONTEXTUAL_TRANSCRIPTIONS.FR;
-        setTranscribedText(generated);
         setIsTranscribing(false);
         setShowTranscription(true);
       }, 400);
@@ -124,7 +114,7 @@ export default function VoiceNotePlayer({
       setShowTranslation(false);
       return;
     }
-    const baseText = transcribedText || transcription || CONTEXTUAL_TRANSCRIPTIONS[currentLang] || CONTEXTUAL_TRANSCRIPTIONS.FR;
+    const baseText = transcribedText || transcription || '';
     if (!translatedText && baseText) {
       setIsTranslating(true);
       try {

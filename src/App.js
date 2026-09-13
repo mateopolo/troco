@@ -4559,7 +4559,7 @@ export default function App() {
       </AnimatePresence>
 
       {/* PIED DE PAGE GLOBAL & LIENS DE CONFORMITÉ LÉGALE */}
-      {activeTab !== 'chat' && activeTab !== 'community' && (
+      {!isMobile && ['feed', 'legal-notice', 'privacy-policy', 'cookie-policy', 'refund-policy'].includes(activeTab) && (
         <Suspense fallback={null}>
           <Footer
             onNavigate={(tab) => {

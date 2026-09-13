@@ -15,7 +15,6 @@ export default function Footer({
   currentLang = 'FR',
 }) {
   const currentYear = new Date().getFullYear();
-
   const linkStyle = {
     color: darkMode ? '#D4C5B5' : '#6B5E54',
     fontSize: '13.5px',
@@ -41,6 +40,7 @@ export default function Footer({
 
   return (
     <footer
+      className="troco-footer"
       role="contentinfo"
       aria-label="Informations légales et navigation secondaire"
       style={{

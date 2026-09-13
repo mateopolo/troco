@@ -78,6 +78,21 @@ function ChatInputBar({
   const handleAudioUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const extension = String(file.name || '').split('.').pop().toLowerCase();
+    const audioMime = file.type || ({
+      wav: 'audio/wav',
+      mp3: 'audio/mpeg',
+      m4a: 'audio/mp4',
+      mp4: 'audio/mp4',
+      ogg: 'audio/ogg',
+      webm: 'audio/webm',
+      aac: 'audio/aac',
+    }[extension] || '');
+    if (!audioMime.startsWith('audio/')) {
+      logger.warn('[ChatInputBar] Unsupported audio file rejected:', file.name);
+      if (e.target) e.target.value = '';
+      return;
+    }
 
     try {
       haptics.impact();
@@ -87,7 +102,7 @@ function ChatInputBar({
         const cleanName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
         const storageRef = ref(storage, `chat_audios/${cleanName}`);
         const snapshot = await uploadBytes(storageRef, file, {
-          contentType: file.type || 'audio/mpeg',
+          contentType: audioMime,
         });
         downloadUrl = await getDownloadURL(snapshot.ref);
       } else {
@@ -103,7 +118,7 @@ function ChatInputBar({
         type: 'audio',
         audioUrl: downloadUrl,
         fileName: file.name,
-        contentType: file.type || 'audio/mpeg',
+        contentType: audioMime,
       };
 
       if (typeof onAudioUpload === 'function') {

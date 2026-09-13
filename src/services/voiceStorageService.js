@@ -72,7 +72,20 @@ export async function uploadVoiceNote(audioBlob, chatId = 'global') {
 export async function uploadAudioFile(file, chatId = 'global') {
   if (!file) throw new Error('No audio file provided');
 
-  const resolvedContentType = file.type || 'audio/mpeg';
+  const extension = String(file.name || '').split('.').pop().toLowerCase();
+  const extensionMime = {
+    wav: 'audio/wav',
+    mp3: 'audio/mpeg',
+    m4a: 'audio/mp4',
+    mp4: 'audio/mp4',
+    ogg: 'audio/ogg',
+    webm: 'audio/webm',
+    aac: 'audio/aac',
+  }[extension];
+  const resolvedContentType = file.type || extensionMime || 'audio/mpeg';
+  if (!resolvedContentType.startsWith('audio/')) {
+    throw new Error('Unsupported audio file type');
+  }
   const cleanName = `${Date.now()}_${file.name ? file.name.replace(/[^a-zA-Z0-9._-]/g, '_') : 'audio.mp3'}`;
   const storagePath = `chat_audios/${cleanName}`;
 
@@ -80,7 +93,7 @@ export async function uploadAudioFile(file, chatId = 'global') {
     if (storage) {
       const storageRef = ref(storage, storagePath);
       const snapshot = await uploadBytes(storageRef, file, {
-        contentType: file.type || 'audio/mpeg',
+        contentType: resolvedContentType,
       });
       const downloadUrl = await getDownloadURL(snapshot.ref);
       return {

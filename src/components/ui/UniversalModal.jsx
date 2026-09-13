@@ -119,6 +119,14 @@ export default function UniversalModal({
         className="modal-backdrop"
         onClick={closeOnBackdrop ? onClose : undefined}
         aria-hidden="true"
+        style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 999998,
+          background: 'rgba(0, 0, 0, 0.7)',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+        }}
       />
       <div
         className={`universal-modal-layer ${overlayClassName}`.trim()}

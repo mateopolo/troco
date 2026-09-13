@@ -203,7 +203,7 @@ export default function ProfileView({
                   </h1>
                   <span style={{ fontSize: '13px', color: 'var(--accent-primary)', fontWeight: '700' }}>{profile?.username || '@membre'}</span>
                   {profile?.kycVerified ? (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-success)', fontSize: '11px', fontWeight: '800', padding: '3px 8px', borderRadius: '999px', border: '1px solid var(--border-color)' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: '#DCFCE7', color: '#166534', fontSize: '11px', fontWeight: '800', padding: '3px 8px', borderRadius: '999px', border: '1px solid #86EFAC' }}>
                       <ShieldCheck size={13} /> Identité Vérifiée ✅
                     </span>
                   ) : (
@@ -754,4 +754,3 @@ export default function ProfileView({
     </div>
   );
 }
-
