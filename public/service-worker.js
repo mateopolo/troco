@@ -58,6 +58,10 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
 
+  // Browser extensions are outside the application's origin and cannot be
+  // stored in the Cache API from this service worker.
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
+
   // Ignorer les appels API Firestore / WebRTC / WebSockets / Cloud Functions
   if (
     url.origin.includes('firestore.googleapis.com') ||
@@ -81,9 +85,9 @@ self.addEventListener('fetch', (event) => {
         const fetchPromise = fetch(event.request).then((networkResponse) => {
           if (networkResponse && networkResponse.status === 200) {
             const responseToCache = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => {
-              cache.put(event.request, responseToCache);
-            });
+            caches.open(CACHE_NAME)
+              .then((cache) => cache.put(event.request, responseToCache))
+              .catch(() => {});
           }
           return networkResponse;
         }).catch(() => cachedResponse);
@@ -100,9 +104,9 @@ self.addEventListener('fetch', (event) => {
       fetch(event.request, { cache: 'no-store' }).then((networkResponse) => {
         if (networkResponse && networkResponse.status === 200) {
           const responseToCache = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
+          caches.open(CACHE_NAME)
+            .then((cache) => cache.put(event.request, responseToCache))
+            .catch(() => {});
         }
         return networkResponse;
       }).catch(async () => {
