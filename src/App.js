@@ -5223,6 +5223,9 @@ export default function App() {
       {/* OVERLAY CÉLÉBRATION TOP-UP SOLDE & JETONS AU PREMIER PLAN */}
       {topUpCelebration && (
         <div
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
           style={{
             position: 'fixed',
             top: 'calc(env(safe-area-inset-top, 0px) + 70px)',

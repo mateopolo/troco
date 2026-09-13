@@ -129,6 +129,9 @@ export function NotificationPill() {
   return (
     <Portal containerId="modal-root" lockScroll={false}>
       <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
         style={{
           position: 'fixed',
           top: 'env(safe-area-inset-top, 16px)',
@@ -181,8 +184,6 @@ export function NotificationPill() {
                 handleClick(e);
               }
             }}
-            role="status"
-            aria-live="polite"
             tabIndex={0}
             aria-label={`Notification : ${notification.title || 'Alerte'} - ${notification.message || ''}`}
             style={{

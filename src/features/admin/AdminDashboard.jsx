@@ -1082,6 +1082,9 @@ export default function AdminDashboard({
       {/* TOAST ALERTE FLOTTANTE */}
       {toastMsg && (
         <div
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
           style={{
             position: 'fixed',
             bottom: '24px',
