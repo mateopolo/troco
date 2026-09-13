@@ -1,5 +1,5 @@
 import logger from '../utils/logger';
-import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytes, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { auth, storage } from '../firebase';
 
 /**
@@ -37,7 +37,8 @@ export async function uploadVoiceNote(audioBlob, chatId = 'global') {
       contentType: finalContentType,
     };
 
-    const downloadURL = await uploadResumable(storageRef, audioBlob, metadata);
+    const snapshot = await uploadBytes(storageRef, audioBlob, metadata);
+    const downloadURL = await getDownloadURL(snapshot.ref);
 
     return {
       success: true,
