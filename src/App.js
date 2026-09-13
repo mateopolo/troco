@@ -406,24 +406,9 @@ export default function App() {
   const globalWelcomeMsg = useGlobalContent('welcome_message');
 
   // ---- NOTIFICATION & ANIMATION DE RÉCEPTION DE JETONS (DESTINATAIRE) ----
+  // Ref: P1-BUG-08 - Centralisation dans le listener Firestore onSnapshot pour éviter le double déclenchement
   const prevTokensRef = useRef(profile?.trocoTokens);
   const prevEurosRef = useRef(profile?.euroBalance);
-  useEffect(() => {
-    if (prevTokensRef.current !== undefined && profile?.trocoTokens !== undefined) {
-      const currentVal = Number(profile.trocoTokens);
-      const prevVal = Number(prevTokensRef.current);
-      if (currentVal > prevVal) {
-        const gained = currentVal - prevVal;
-        playBetclicBalanceSound(true);
-        setTopUpCelebration({
-          title: `+${gained} Jeton${gained > 1 ? 's' : ''} Troco reçus ! 🪙`,
-          subtitle: `Nouveau solde : ${currentVal} Jetons Troco`,
-        });
-        safeTimeout(() => setTopUpCelebration(null), 4500);
-      }
-    }
-    prevTokensRef.current = profile?.trocoTokens;
-  }, [profile?.trocoTokens, setTopUpCelebration]);
 
   const [userTransactions, setUserTransactions] = useState(() => {
     return getInitialTransactions();
