@@ -303,7 +303,18 @@ export default function ProfileFeature({
         <div style={{ minWidth: 0, flex: 1 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '4px' }}>
             {profile.kycVerified ? (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '10.5px', fontWeight: '800', padding: '4px 10px', borderRadius: '999px', backgroundColor: darkMode ? 'rgba(156,175,136,0.25)' : '#EBF0E6', color: '#3D4A35', border: '1px solid #D4DFCE' }}>
+              <span style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                fontSize: '10.5px',
+                fontWeight: '800',
+                padding: '4px 10px',
+                borderRadius: '999px',
+                color: darkMode ? '#6EE7B7' : '#15803D',
+                backgroundColor: darkMode ? 'rgba(16, 185, 129, 0.2)' : '#DCFCE7',
+                border: `1px solid ${darkMode ? 'rgba(16, 185, 129, 0.5)' : '#BBF7D0'}`
+              }}>
                 <ShieldCheck size={12} /> {t('verifiedProfile') || 'Identité Vérifiée'} ✅
               </span>
             ) : null}
