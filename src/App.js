@@ -71,6 +71,7 @@ import { migrateLocalStorage } from './utils/migrateLocalStorage';
 import { clearTrocoLocalStorage } from './utils/clearTrocoLocalStorage';
 import { paymentService } from './services/paymentService';
 import { walletService } from './services/walletService';
+import { dealService } from './services/dealService';
 import { gdprService } from './services/gdprService';
 import { useCheckout } from './hooks/useCheckout';
 import { useRateLimit } from './hooks/useRateLimit';
@@ -719,22 +720,22 @@ export default function App() {
 
       if (chatId && dealId) {
         try {
-          await walletService.transferAtomically({
-            senderUid: profile?.uid || auth?.currentUser?.uid,
-            receiverUid,
-            currency: tokensAmount > 0 ? 'tokens' : 'EUR',
-            amount: Number(tokensAmount > 0 ? tokensAmount : euroAmount),
-            type: 'deal',
+          await dealService.transferTokensAtomically({
+            fromUid: profile?.uid || auth?.currentUser?.uid,
+            toUid: receiverUid,
+            tokens: tokensAmount > 0 ? Number(tokensAmount) : 0,
+            euros: tokensAmount > 0 ? 0 : Number(euroAmount),
+            method: 'deal',
+            dealId: dealId,
+            chatId: chatId,
             metadata: {
-              chatId,
-              dealId,
               terms,
               partnerName,
               paymentMethod: txData.paymentMethod || 'Paiement Sécurisé',
             },
           });
         } catch (dealErr) {
-          console.error('🚨 [walletService] Transfert deal échoué:', dealErr);
+          console.error('🚨 [dealService] Transfert deal échoué:', dealErr);
           alert(dealErr?.message || 'Erreur lors du transfert deal.');
         }
         return;
