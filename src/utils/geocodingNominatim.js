@@ -3,8 +3,104 @@ import logger from '../utils/logger';
 // UTILITAIRE DE GÉOLOCALISATION MONDIALE OPEN-SOURCE (OPENSTREETMAP NOMINATIM)
 // =====================================================================
 
-// Cache mémoire des requêtes de géocodage pour éviter les appels réseau redondants
+const NOMINATIM_CACHE_TTL_MS = 5 * 60 * 1000;
+const NOMINATIM_CACHE_MAX_ENTRIES = 100;
+const NOMINATIM_MIN_INTERVAL_MS = 1100;
 const nominatimCache = new Map();
+const nominatimQueue = [];
+let isProcessingNominatimQueue = false;
+let lastNominatimRequestAt = 0;
+
+function createAbortError() {
+  const error = new Error('Nominatim request aborted');
+  error.name = 'AbortError';
+  return error;
+}
+
+function getCachedResults(cacheKey) {
+  const cached = nominatimCache.get(cacheKey);
+  if (!cached) return null;
+  if (Date.now() - cached.timestamp >= NOMINATIM_CACHE_TTL_MS) {
+    nominatimCache.delete(cacheKey);
+    return null;
+  }
+
+  nominatimCache.delete(cacheKey);
+  nominatimCache.set(cacheKey, cached);
+  return cached.results;
+}
+
+function setCachedResults(cacheKey, results) {
+  nominatimCache.delete(cacheKey);
+  nominatimCache.set(cacheKey, { results, timestamp: Date.now() });
+  while (nominatimCache.size > NOMINATIM_CACHE_MAX_ENTRIES) {
+    nominatimCache.delete(nominatimCache.keys().next().value);
+  }
+}
+
+function processNominatimQueue() {
+  if (isProcessingNominatimQueue || nominatimQueue.length === 0) return;
+
+  const nextEntry = nominatimQueue.shift();
+  if (nextEntry.signal?.aborted) {
+    nextEntry.reject(createAbortError());
+    processNominatimQueue();
+    return;
+  }
+
+  isProcessingNominatimQueue = true;
+  const waitTime = Math.max(0, NOMINATIM_MIN_INTERVAL_MS - (Date.now() - lastNominatimRequestAt));
+
+  setTimeout(async () => {
+    try {
+      if (nextEntry.signal?.aborted) {
+        nextEntry.reject(createAbortError());
+        return;
+      }
+
+      const response = await fetch(nextEntry.endpoint, {
+        headers: { Accept: 'application/json' },
+        signal: nextEntry.signal,
+      });
+
+      if (!response.ok) {
+        nextEntry.resolve([]);
+        return;
+      }
+
+      const data = await response.json();
+      const results = data.map((item) => {
+        const addr = item.address || {};
+        const cityName = addr.city || addr.town || addr.village || addr.municipality || addr.county || item.name || '';
+        const countryName = addr.country || '';
+        const postcode = addr.postcode || '';
+        const shortDisplay = [cityName, postcode, countryName].filter(Boolean).join(', ') || item.display_name;
+
+        return {
+          id: item.place_id,
+          displayName: item.display_name,
+          shortDisplay,
+          cityName,
+          postcode,
+          country: countryName,
+          countryCode: (addr.country_code || '').toUpperCase(),
+          lat: parseFloat(item.lat),
+          lon: parseFloat(item.lon),
+          type: item.type,
+        };
+      });
+
+      setCachedResults(nextEntry.cacheKey, results);
+      nextEntry.resolve(results);
+    } catch (error) {
+      nextEntry.reject(error);
+    } finally {
+      lastNominatimRequestAt = Date.now();
+      isProcessingNominatimQueue = false;
+      processNominatimQueue();
+    }
+  }, waitTime);
+}
 
 /**
  * Recherche d'adresses et villes mondiales via l'API publique OpenStreetMap Nominatim.
@@ -12,53 +108,36 @@ const nominatimCache = new Map();
  * @param {Object} options Options de recherche
  * @returns {Promise<Array>} Liste d'adresses géocodées
  */
-export async function searchNominatim(query, { limit = 5, lang = 'fr' } = {}) {
+export function searchNominatim(query, { limit = 5, lang = 'fr', signal } = {}) {
   const cleanQuery = String(query || '').trim().toLowerCase();
   if (!cleanQuery || cleanQuery.length < 2) return [];
 
   const cacheKey = `${cleanQuery}_${limit}_${lang}`;
-  if (nominatimCache.has(cacheKey)) {
-    return nominatimCache.get(cacheKey);
-  }
+  const cachedResults = getCachedResults(cacheKey);
+  if (cachedResults) return Promise.resolve(cachedResults);
+  if (signal?.aborted) return Promise.reject(createAbortError());
 
-  try {
-    const endpoint = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(cleanQuery)}&addressdetails=1&limit=${limit}&accept-language=${lang}`;
-    const response = await fetch(endpoint, {
-      headers: {
-        'Accept': 'application/json',
-      },
-    });
+  const endpoint = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(cleanQuery)}&addressdetails=1&limit=${limit}&accept-language=${lang}`;
+  return new Promise((resolve, reject) => {
+    const entry = { cacheKey, endpoint, resolve, reject, signal };
+    const handleAbort = () => {
+      const queueIndex = nominatimQueue.indexOf(entry);
+      if (queueIndex !== -1) {
+        nominatimQueue.splice(queueIndex, 1);
+        reject(createAbortError());
+      }
+    };
 
-    if (!response.ok) return [];
-    const data = await response.json();
-
-    const results = data.map((item) => {
-      const addr = item.address || {};
-      const cityName = addr.city || addr.town || addr.village || addr.municipality || addr.county || item.name || '';
-      const countryName = addr.country || '';
-      const postcode = addr.postcode || '';
-      const shortDisplay = [cityName, postcode, countryName].filter(Boolean).join(', ') || item.display_name;
-
-      return {
-        id: item.place_id,
-        displayName: item.display_name,
-        shortDisplay: shortDisplay,
-        cityName: cityName,
-        postcode: postcode,
-        country: countryName,
-        countryCode: (addr.country_code || '').toUpperCase(),
-        lat: parseFloat(item.lat),
-        lon: parseFloat(item.lon),
-        type: item.type,
-      };
-    });
-
-    nominatimCache.set(cacheKey, results);
-    return results;
-  } catch (error) {
+    if (signal) {
+      signal.addEventListener('abort', handleAbort, { once: true });
+    }
+    nominatimQueue.push(entry);
+    processNominatimQueue();
+  }).catch((error) => {
+    if (error?.name === 'AbortError') throw error;
     logger.warn('[Nominatim Geocoding] Fetch error:', error);
     return [];
-  }
+  });
 }
 
 /**

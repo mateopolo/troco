@@ -1320,11 +1320,11 @@ export default function App() {
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const deferredSearchQuery = useDeferredValue(debouncedSearchQuery);
 
-  // ---- DÉBOUNCE 300MS SUR LA RECHERCHE (Évite tout freeze du thread JS) ----
+  // ---- DÉBOUNCE 600MS SUR LA RECHERCHE (Évite tout freeze du thread JS) ----
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearchQuery(searchQuery);
-    }, 300);
+    }, 600);
     return () => clearTimeout(handler);
   }, [searchQuery]);
 
@@ -2225,9 +2225,12 @@ export default function App() {
   const [dynamicSearchAliases, setDynamicSearchAliases] = useState([]);
 
   useEffect(() => {
+    const abortController = new AbortController();
+    let isCurrentSearch = true;
     const raw = (debouncedSearchQuery || '').trim();
     if (raw.length >= 3) {
-      searchNominatim(raw, { limit: 3 }).then(results => {
+      searchNominatim(raw, { limit: 3, signal: abortController.signal }).then(results => {
+        if (!isCurrentSearch) return;
         if (results && results.length > 0) {
           const names = results
             .map(r => [r.cityName, r.displayName, r.country])
@@ -2238,10 +2241,19 @@ export default function App() {
         } else {
           setDynamicSearchAliases([]);
         }
-      }).catch(() => setDynamicSearchAliases([]));
+      }).catch((error) => {
+        if (error?.name !== 'AbortError' && isCurrentSearch) {
+          setDynamicSearchAliases([]);
+        }
+      });
     } else {
       setDynamicSearchAliases([]);
     }
+
+    return () => {
+      isCurrentSearch = false;
+      abortController.abort();
+    };
   }, [debouncedSearchQuery]);
 
   // Extraction des UIDs d'auteurs pour le listener users_public chunké & paginé
