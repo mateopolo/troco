@@ -596,16 +596,14 @@ export default function App() {
   const handlePaymentSuccess = async (txData) => {
     const uid = profile?.uid || auth.currentUser?.uid;
 
-    // 1. Mise à jour des soldes et du statut d'abonnement de l'utilisateur
-    let updatedEuro = profile.euroBalance;
-    let updatedTokens = profile.trocoTokens;
+    // 1. Mise à jour du statut d'abonnement uniquement.
+    // Les soldes sont persistés par applyPayment puis reçus via onSnapshot.
     let updatedTrocoPlus = profile.isTrocoPlus || false;
     let updatedSubscriptionPlan = profile.subscriptionPlan || profile.trocoPlusPlan || null;
     let updatedSubscriptionStartDate = profile.subscriptionStartDate || null;
     let updatedSubscriptionRenewalDate = profile.subscriptionRenewalDate || null;
 
     if (txData.mode === 'troco-plus' || txData.mode === 'pack-tokens') {
-      updatedTokens += (txData.tokensPurchased || 0);
       updatedTrocoPlus = true;
       updatedSubscriptionPlan = txData.subscriptionPlan?.planKey || 'essential';
       updatedSubscriptionStartDate = txData.subscriptionStartDate || new Date().toISOString();
@@ -621,10 +619,13 @@ export default function App() {
     } else if (txData.mode === 'topup-cash') {
       const topUpAmount = Number(txData.cashTopUp) || 0;
       if (topUpAmount > 0) {
-        updatedEuro = Number((updatedEuro + topUpAmount).toFixed(2));
+        const persistedEuroBalance = Number(txData.newEuroBalance);
+        const displayedEuroBalance = Number.isFinite(persistedEuroBalance)
+          ? persistedEuroBalance
+          : Number(profile?.euroBalance || 0) + topUpAmount;
         setTopUpCelebration({
           title: `+${topUpAmount.toFixed(2)} € Rechargés !`,
-          subtitle: `Nouveau solde : ${updatedEuro.toFixed(2)} €`,
+          subtitle: `Nouveau solde : ${displayedEuroBalance.toFixed(2)} €`,
           isEuro: true
         });
         safeTimeout(() => setTopUpCelebration(null), 4500);
@@ -632,9 +633,6 @@ export default function App() {
         safeTimeout(() => setSaveMessage(''), 5000);
       }
     } else if (txData.mode === 'boost') {
-      if (txData.paymentMethod?.includes('Solde')) {
-        updatedEuro = Math.max(0, Number((updatedEuro - (txData.amountTtc || 0)).toFixed(2)));
-      }
       const boostedListingId = txData.boostDetails?.listingId || txData.listingId || txData.payload?.listingId;
       if (boostedListingId) {
         setListings(prev => prev.map(item => item.id === boostedListingId ? { ...item, isBoosted: true } : item));
@@ -731,18 +729,28 @@ export default function App() {
 
     const updatedProfile = {
       ...profile,
-      euroBalance: Number(updatedEuro.toFixed(2)),
-      trocoTokens: updatedTokens,
       isTrocoPlus: updatedTrocoPlus,
       subscriptionPlan: updatedSubscriptionPlan,
       trocoPlusPlan: updatedSubscriptionPlan,
       subscriptionStartDate: updatedSubscriptionStartDate,
       subscriptionRenewalDate: updatedSubscriptionRenewalDate,
     };
-    setProfile(updatedProfile);
-    try {
-      storage.setDebounced('troco_user_profile', updatedProfile);
-    } catch (_) { }
+    if (
+      updatedProfile.isTrocoPlus !== profile.isTrocoPlus
+      || updatedProfile.subscriptionPlan !== profile.subscriptionPlan
+      || updatedProfile.trocoPlusPlan !== profile.trocoPlusPlan
+      || updatedProfile.subscriptionStartDate !== profile.subscriptionStartDate
+      || updatedProfile.subscriptionRenewalDate !== profile.subscriptionRenewalDate
+    ) {
+      setProfile(prev => ({
+        ...prev,
+        isTrocoPlus: updatedProfile.isTrocoPlus,
+        subscriptionPlan: updatedProfile.subscriptionPlan,
+        trocoPlusPlan: updatedProfile.trocoPlusPlan,
+        subscriptionStartDate: updatedProfile.subscriptionStartDate,
+        subscriptionRenewalDate: updatedProfile.subscriptionRenewalDate,
+      }));
+    }
 
     // 2. Sauvegarde de la transaction dans le state local
     const newTxRecord = {
