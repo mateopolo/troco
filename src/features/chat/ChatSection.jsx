@@ -5,7 +5,7 @@ import { PullToRefresh } from '../../components/ui/PullToRefresh';
 import { onRenderProfilerCallback } from '../../utils/performanceProfiler';
 import { pageTransitionVariants, pageTransitionConfig } from '../../utils/motionTransitions';
 
-export default function ChatSection({
+function ChatSection({
   activeTab,
   selectedChat,
   setSelectedChat,
@@ -126,3 +126,19 @@ export default function ChatSection({
     </div>
   );
 }
+
+const areChatSectionPropsEqual = (previous, next) => {
+  const previousChatId = previous.selectedChat?.id;
+  const nextChatId = next.selectedChat?.id;
+  const previousThread = previous.chatThreads?.[previousChatId];
+  const nextThread = next.chatThreads?.[nextChatId];
+
+  return previousChatId === nextChatId &&
+    previousThread === nextThread &&
+    previousThread?.length === nextThread?.length &&
+    previous.isThemTyping === next.isThemTyping &&
+    previous.darkMode === next.darkMode &&
+    previous.isMobile === next.isMobile;
+};
+
+export default React.memo(ChatSection, areChatSectionPropsEqual);

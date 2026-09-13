@@ -559,5 +559,29 @@ function FeedCardItem({
   );
 }
 
-export default React.memo(FeedCardItem);
+const areFeedCardPropsEqual = (previous, next) => {
+  const previousItem = previous.item;
+  const nextItem = next.item;
+  const previousUpdatedAt = previousItem?.updatedAt?.toMillis?.() || previousItem?.updatedAt;
+  const nextUpdatedAt = nextItem?.updatedAt?.toMillis?.() || nextItem?.updatedAt;
 
+  return previousItem?.id === nextItem?.id &&
+    previousItem?.isBoosted === nextItem?.isBoosted &&
+    previousUpdatedAt === nextUpdatedAt &&
+    previous.darkMode === next.darkMode &&
+    previous.hoveredCardId === next.hoveredCardId &&
+    previous.handleOpenListing === next.handleOpenListing &&
+    previous.setHoveredCardId === next.setHoveredCardId &&
+    previous.toggleOriginalListing === next.toggleOriginalListing &&
+    previous.handleStartDiscussion === next.handleStartDiscussion &&
+    previous.onAdminDeleteListing === next.onAdminDeleteListing &&
+    previous.onAdminDelete === next.onAdminDelete &&
+    previous.onAdminToggleHideListing === next.onAdminToggleHideListing &&
+    previous.onAdminToggleHide === next.onAdminToggleHide &&
+    previous.onAdminEditListing === next.onAdminEditListing &&
+    previous.onOpenMobileActions === next.onOpenMobileActions &&
+    previous.onMobileActionClick === next.onMobileActionClick &&
+    previous.onAuthorProfileClick === next.onAuthorProfileClick;
+};
+
+export default React.memo(FeedCardItem, areFeedCardPropsEqual);
