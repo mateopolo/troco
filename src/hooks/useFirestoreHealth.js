@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import { useEffect } from 'react';
 import { captureFirestoreAlert } from '../utils/sentryFilters';
 
@@ -10,10 +11,10 @@ const errorCounters = new Map();
  */
 export function useFirestoreHealth() {
   useEffect(() => {
-    // Sauvegarde du console.error original
+    // Sauvegarde du logger.error original
     const originalConsoleError = console.error;
 
-    console.error = (...args) => {
+    logger.error = (...args) => {
       try {
         const msg = args.map((arg) => (typeof arg === 'object' ? JSON.stringify(arg) : String(arg))).join(' ');
 
@@ -51,7 +52,7 @@ export function useFirestoreHealth() {
     }, 60000);
 
     return () => {
-      console.error = originalConsoleError;
+      logger.error = originalConsoleError;
       clearInterval(intervalId);
     };
   }, []);

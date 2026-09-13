@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 /**
  * DealMessageCard.jsx — Composant sécurisé de carte de négociation de Deal
  * Workflow conversationnel : Boutons réactifs « Accepter », « Contre-offre », « Refuser »
@@ -222,7 +223,7 @@ export default function DealMessageCard({
                         onAcceptDeal(effectiveMessageId, terms);
                       }
                     } catch (err) {
-                      console.warn('[DealMessageCard] Accept deal error:', err);
+                      logger.warn('[DealMessageCard] Accept deal error:', err);
                     }
                   }}
                   className="premium-button focus:ring-2 focus:ring-[#10B981] focus:outline-none transition-all rounded-full"
@@ -259,7 +260,7 @@ export default function DealMessageCard({
                         handleCounter(terms, effectiveMessageId);
                       }
                     } catch (err) {
-                      console.warn('[DealMessageCard] Counter offer error:', err);
+                      logger.warn('[DealMessageCard] Counter offer error:', err);
                     }
                   }}
                   className="premium-button focus:ring-2 focus:ring-[#C67D5B] focus:outline-none transition-all rounded-full"
@@ -295,7 +296,7 @@ export default function DealMessageCard({
                         onDeclineDeal(effectiveMessageId);
                       }
                     } catch (err) {
-                      console.warn('[DealMessageCard] Decline deal error:', err);
+                      logger.warn('[DealMessageCard] Decline deal error:', err);
                     }
                   }}
                   className="premium-button focus:ring-2 focus:ring-[#EF4444] focus:outline-none transition-all rounded-full"
@@ -381,7 +382,7 @@ export default function DealMessageCard({
                       onConfirmTrocCompletion(effectiveMessageId);
                     }
                   } catch (e) {
-                    console.warn('[DealMessageCard] confirm troc error:', e);
+                    logger.warn('[DealMessageCard] confirm troc error:', e);
                   }
                 }}
                 aria-label="Prestation terminée"

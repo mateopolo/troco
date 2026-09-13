@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import React, { useState } from 'react';
 import {
   ShieldCheck, Lock, X,
@@ -30,7 +31,7 @@ export default function CguModal({
           acceptedAt: new Date().toISOString(),
         });
       } catch (err) {
-        console.warn('[CGU] onAccept error:', err);
+        logger.warn('[CGU] onAccept error:', err);
       }
     }
     setIsSubmitting(false);

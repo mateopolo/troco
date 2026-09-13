@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import { useState, useEffect, useCallback } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../firebase';
@@ -25,7 +26,7 @@ export function useAdminGuard() {
       setIsAdmin(hasAdminClaim);
       return hasAdminClaim;
     } catch (err) {
-      console.warn('[useAdminGuard] Erreur lors du refresh du token admin:', err);
+      logger.warn('[useAdminGuard] Erreur lors du refresh du token admin:', err);
       setIsAdmin(false);
       return false;
     } finally {
@@ -53,7 +54,7 @@ export function useAdminGuard() {
           setIsAdminLoading(false);
         }
       } catch (err) {
-        console.warn('[useAdminGuard] Erreur lecture tokenResult:', err);
+        logger.warn('[useAdminGuard] Erreur lecture tokenResult:', err);
         if (!cancelled) {
           setIsAdmin(false);
           setIsAdminLoading(false);
@@ -70,7 +71,7 @@ export function useAdminGuard() {
             setIsAdmin(tr.claims?.admin === true);
           }
         } catch (err) {
-          console.warn('[useAdminGuard] Erreur rotation token:', err);
+          logger.warn('[useAdminGuard] Erreur rotation token:', err);
         }
       }
     }, 55 * 60 * 1000);

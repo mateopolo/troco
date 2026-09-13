@@ -1,3 +1,4 @@
+import logger from './utils/logger';
 import React, { useState, useEffect, useRef, useMemo, useCallback, Suspense, useTransition } from 'react';
 import { createPortal } from 'react-dom';
 import { Search, MapPin, Video, Globe, Filter, ShieldCheck, CheckCircle, X, Sparkles, Coins, Trash2, Camera, Flame, Check, Lock, CreditCard, Tag, ChevronLeft, ChevronRight, ShieldAlert, Phone, PhoneOff } from 'lucide-react';
@@ -451,10 +452,10 @@ export default function App() {
             localStorage.setItem('troco_user_transactions', JSON.stringify(list));
           } catch (e) { }
         }
-      }, (err) => console.warn('[Firestore] Transactions listener:', err));
+      }, (err) => logger.warn('[Firestore] Transactions listener:', err));
       return () => unsub();
     } catch (e) {
-      console.warn('Transactions listener error:', e);
+      logger.warn('Transactions listener error:', e);
     }
   }, [profile?.uid]);
 
@@ -479,7 +480,7 @@ export default function App() {
           readAt: serverTimestamp(),
         });
       } catch (err) {
-        console.warn('Erreur marquage notification lue:', err);
+        logger.warn('Erreur marquage notification lue:', err);
       }
     }
     setTransactionSuccessModalConfig(prev => ({ ...prev, isOpen: false, notificationId: null }));
@@ -515,12 +516,12 @@ export default function App() {
           });
         }
       }, (err) => {
-        console.warn('[Notifications] Erreur écoute notifications temps réel:', err);
+        logger.warn('[Notifications] Erreur écoute notifications temps réel:', err);
       });
 
       return () => unsubNotifs();
     } catch (e) {
-      console.warn('[Notifications] Listener setup error:', e);
+      logger.warn('[Notifications] Listener setup error:', e);
     }
   }, [profile?.uid, profile?.id]);
 
@@ -664,9 +665,9 @@ export default function App() {
               updateDoc(doc(db, 'listings', editingOriginalListing.firestoreId), {
                 ...firestorePayload,
                 updatedAt: serverTimestamp(),
-              }).catch(e => console.warn('[Firestore] updateDoc failed:', e));
+              }).catch(e => logger.warn('[Firestore] updateDoc failed:', e));
             } catch (e) {
-              console.warn('[Firestore] updateDoc error:', e);
+              logger.warn('[Firestore] updateDoc error:', e);
             }
           }
         } else {
@@ -677,9 +678,9 @@ export default function App() {
               ...firestorePayload,
               createdAt: serverTimestamp(),
               updatedAt: serverTimestamp(),
-            }).catch(e => console.warn('[Firestore] addDoc failed:', e));
+            }).catch(e => logger.warn('[Firestore] addDoc failed:', e));
           } catch (e) {
-            console.warn('[Firestore] addDoc error:', e);
+            logger.warn('[Firestore] addDoc error:', e);
           }
         }
         playApplePaySound();
@@ -710,7 +711,7 @@ export default function App() {
       }
 
       if (!receiverUid) {
-        console.error('🚨 [Finance] Transaction annulée : Destinataire (receiverUid) introuvable.', { payload, selectedChat });
+        logger.error('🚨 [Finance] Transaction annulée : Destinataire (receiverUid) introuvable.', { payload, selectedChat });
         alert('Erreur de transaction : Impossible d\'identifier le destinataire du paiement. Aucun montant n\'a été débité.');
         return;
       }
@@ -735,7 +736,7 @@ export default function App() {
             },
           });
         } catch (dealErr) {
-          console.error('🚨 [dealService] Transfert deal échoué:', dealErr);
+          logger.error('🚨 [dealService] Transfert deal échoué:', dealErr);
           alert(dealErr?.message || 'Erreur lors du transfert deal.');
         }
         return;
@@ -784,7 +785,7 @@ export default function App() {
           provider: 'mock',
         });
       } catch (err) {
-        console.warn('[paymentService] Error applying payment on backend:', err);
+        logger.warn('[paymentService] Error applying payment on backend:', err);
       }
     }
   };
@@ -799,7 +800,7 @@ export default function App() {
       }
       window.location.reload();
     } catch (err) {
-      console.error('Account deletion error:', err);
+      logger.error('Account deletion error:', err);
       clearTrocoLocalStorage();
       if (auth.currentUser) {
         await signOut(auth);
@@ -837,10 +838,10 @@ export default function App() {
       const unsub = onSnapshot(qReports, (snap) => {
         const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         setAllReports(list);
-      }, (err) => console.warn('[Firestore] Reports listener:', err));
+      }, (err) => logger.warn('[Firestore] Reports listener:', err));
       return () => unsub();
     } catch (e) {
-      console.warn('Reports listener setup error:', e);
+      logger.warn('Reports listener setup error:', e);
     }
   }, [isAdmin]);
 
@@ -852,7 +853,7 @@ export default function App() {
       await adminService.updateUserAsAdmin(uid, updates);
       setAllFirestoreUsers(prev => prev.map(u => (u.uid === uid || u.id === uid) ? { ...u, ...updates } : u));
     } catch (err) {
-      console.warn('[Admin] handleAdminUpdateUser error:', err);
+      logger.warn('[Admin] handleAdminUpdateUser error:', err);
       setAllFirestoreUsers(prev => prev.map(u => (u.uid === uid || u.id === uid) ? { ...u, ...updates } : u));
     }
   };
@@ -872,7 +873,7 @@ export default function App() {
         await adminService.deleteListingAsAdmin(String(firestoreId), 'Suppression par modérateur');
       }
     } catch (err) {
-      console.warn('[Admin] handleAdminDeleteListing error:', err);
+      logger.warn('[Admin] handleAdminDeleteListing error:', err);
     }
   };
 
@@ -883,7 +884,7 @@ export default function App() {
       await adminService.resolveReport(reportId, status, resolution);
       setAllReports(prev => prev.map(r => r.id === reportId ? { ...r, status, resolution } : r));
     } catch (err) {
-      console.warn('[Admin] handleAdminResolveReport error:', err);
+      logger.warn('[Admin] handleAdminResolveReport error:', err);
       setAllReports(prev => prev.map(r => r.id === reportId ? { ...r, status } : r));
     }
   };
@@ -936,7 +937,7 @@ export default function App() {
       const walletMsg = preserveWallet ? ' (portefeuille et jetons préservés)' : ' (solde remis à zéro)';
       alert(`✅ Le profil ${userName || uid} a été réinitialisé avec succès${walletMsg}.`);
     } catch (err) {
-      console.warn('[Admin] handleAdminResetUser error:', err);
+      logger.warn('[Admin] handleAdminResetUser error:', err);
       alert(`Erreur lors de la réinitialisation du profil : ${err.message}`);
     }
   };
@@ -1070,7 +1071,7 @@ export default function App() {
               prevTokensRef.current = 10;
               prevEurosRef.current = 0;
             } catch (e) {
-              console.warn('[Firestore] Failed to init user doc:', e);
+              logger.warn('[Firestore] Failed to init user doc:', e);
             }
           }
         });
@@ -1179,7 +1180,7 @@ export default function App() {
           updatedAt: serverTimestamp(),
         }, { merge: true });
       } catch (e) {
-        console.warn('[Firestore] Failed to save onboarding to Firestore:', e);
+        logger.warn('[Firestore] Failed to save onboarding to Firestore:', e);
       }
     }
     setIsOnboardingOpen(false);
@@ -1211,7 +1212,7 @@ export default function App() {
             setSessionAuthenticated();
           })
           .catch((err) => {
-            console.error('Magic link sign-in error:', err);
+            logger.error('Magic link sign-in error:', err);
           })
           .finally(() => setIsLoadingSession(false));
       }
@@ -1417,7 +1418,7 @@ export default function App() {
       }
       setIsCallPip(false);
     } catch (e) {
-      console.warn('[WebRTC] Accept incoming call error:', e);
+      logger.warn('[WebRTC] Accept incoming call error:', e);
     }
   };
 
@@ -1458,7 +1459,7 @@ export default function App() {
               playRingtone();
             }
           } catch (audioErr) {
-            console.warn('Autoplay bloqué', audioErr);
+            logger.warn('Autoplay bloqué', audioErr);
           }
 
           if (navigator.vibrate) {
@@ -1484,7 +1485,7 @@ export default function App() {
         limit(10)
       );
       unsubs.push(onSnapshot(qTarget, (snap) => snap.docChanges().forEach(handleCallDocChange), (err) => {
-        console.warn('[App.js] Global calls targetParticipants error:', err);
+        logger.warn('[App.js] Global calls targetParticipants error:', err);
       }));
 
       // 2. Écoute par calleeUid direct
@@ -1494,7 +1495,7 @@ export default function App() {
         limit(5)
       );
       unsubs.push(onSnapshot(qCallee, (snap) => snap.docChanges().forEach(handleCallDocChange), (err) => {
-        console.warn('[App.js] Global calls calleeUid error:', err);
+        logger.warn('[App.js] Global calls calleeUid error:', err);
       }));
 
       // 3. Écoute par toUid direct
@@ -1504,7 +1505,7 @@ export default function App() {
         limit(5)
       );
       unsubs.push(onSnapshot(qToUid, (snap) => snap.docChanges().forEach(handleCallDocChange), (err) => {
-        console.warn('[App.js] Global calls toUid error:', err);
+        logger.warn('[App.js] Global calls toUid error:', err);
       }));
 
       // 4. Écoute de secours par nom de profil si disponible
@@ -1517,7 +1518,7 @@ export default function App() {
         unsubs.push(onSnapshot(qName, (snap) => snap.docChanges().forEach(handleCallDocChange), () => {}));
       }
     } catch (e) {
-      console.warn('[App.js] Error setting up global calls listener:', e);
+      logger.warn('[App.js] Error setting up global calls listener:', e);
     }
 
     return () => {
@@ -1634,7 +1635,7 @@ export default function App() {
         snap.docChanges().forEach(handleChatDocChange);
         isInitial = false;
       }, (err) => {
-        console.warn('[App.js] Background message listener error (participantUids):', err);
+        logger.warn('[App.js] Background message listener error (participantUids):', err);
       });
       unsubs.push(unsubUids);
 
@@ -1648,12 +1649,12 @@ export default function App() {
           snap.docChanges().forEach(handleChatDocChange);
           isInitial = false;
         }, (err) => {
-          console.warn('[App.js] Background message listener error (participants):', err);
+          logger.warn('[App.js] Background message listener error (participants):', err);
         });
         unsubs.push(unsubNames);
       }
     } catch (err) {
-      console.warn('[App.js] Background message listener setup error:', err);
+      logger.warn('[App.js] Background message listener setup error:', err);
     }
 
     return () => {
@@ -1746,7 +1747,7 @@ export default function App() {
 
     // RÈGLE STRICTE : Si partnerUid est indéfini, la transaction DOIT échouer avec une erreur explicite. Ne jamais débiter si la cible est introuvable.
     if (!partnerUid || partnerUid === currentUid) {
-      console.error('🚨 [Finance] Transfert annulé : Destinataire (partnerUid) introuvable ou invalide.', {
+      logger.error('🚨 [Finance] Transfert annulé : Destinataire (partnerUid) introuvable ou invalide.', {
         selectedChat,
         currentUid,
         partnerUid
@@ -1819,7 +1820,7 @@ export default function App() {
       setSaveMessage(`🤝 ${costTokens} Jeton${costTokens > 1 ? 's' : ''} Troco transféré(s) à ${partner} (Frais de service : 0,00 €) !`);
       safeTimeout(() => setSaveMessage(''), 5000);
     } catch (e) {
-      console.error('🚨 [walletService] Erreur transfert jetons visio:', e);
+      logger.error('🚨 [walletService] Erreur transfert jetons visio:', e);
       alert(`Échec du transfert : ${e?.message || 'Erreur réseau ou solde insuffisant.'}`);
     }
   };
@@ -1995,7 +1996,7 @@ export default function App() {
     try {
       await adminService.toggleHideListingAsAdmin(targetId, newHidden);
     } catch (err) {
-      console.warn('[Admin] toggle hide error via Cloud Function:', err);
+      logger.warn('[Admin] toggle hide error via Cloud Function:', err);
     }
     setSaveMessage(newHidden ? `🚫 Annonce #${listing.id} masquée du feed public` : `👁️ Annonce #${listing.id} visible`);
     safeTimeout(() => setSaveMessage(''), 4000);
@@ -2034,7 +2035,7 @@ export default function App() {
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
     } catch (e) {
-      console.warn('Erreur chargement localStorage des annonces', e);
+      logger.warn('Erreur chargement localStorage des annonces', e);
     }
     const defaultUserListing = {
       id: 9999,
@@ -2069,7 +2070,7 @@ export default function App() {
     try {
       localStorage.setItem('troco_user_listings', JSON.stringify(listings));
     } catch (e) {
-      console.warn('Erreur sauvegarde localStorage des annonces', e);
+      logger.warn('Erreur sauvegarde localStorage des annonces', e);
     }
   }, [listings]);
 
@@ -2123,7 +2124,7 @@ export default function App() {
           });
         },
         (error) => {
-          console.warn('[Firestore] onSnapshot with orderBy error, trying fallback query:', error);
+          logger.warn('[Firestore] onSnapshot with orderBy error, trying fallback query:', error);
           if (!isCancelled) {
             try {
               const fallbackQuery = query(collection(db, 'listings'), limit(20));
@@ -2153,7 +2154,7 @@ export default function App() {
         }
       );
     }).catch(err => {
-      console.warn('[MockData] Erreur de chargement différé des annonces démo:', err);
+      logger.warn('[MockData] Erreur de chargement différé des annonces démo:', err);
     });
 
     return () => {
@@ -2185,7 +2186,7 @@ export default function App() {
         setHasMoreListings(false);
       }
     } catch (err) {
-      console.error('[App] handleLoadMoreListings error:', err);
+      logger.error('[App] handleLoadMoreListings error:', err);
     } finally {
       setIsLoadingMoreListings(false);
     }
@@ -2538,7 +2539,7 @@ export default function App() {
         try {
           await deleteDoc(doc(db, 'listings', String(targetListing.firestoreId)));
         } catch (e) {
-          console.warn('[Firestore] deleteDoc failed:', e);
+          logger.warn('[Firestore] deleteDoc failed:', e);
         }
       }
       setMobileListingActionTarget(null);
@@ -2598,7 +2599,7 @@ export default function App() {
     try {
       await signOut(auth);
     } catch (e) {
-      console.warn('SignOut error:', e);
+      logger.warn('SignOut error:', e);
     }
     clearSessionFlags();
     window.localStorage.removeItem('troco_user_profile');
@@ -2625,7 +2626,7 @@ export default function App() {
           updatedAt: serverTimestamp(),
         });
       } catch (e) {
-        console.warn('[Firestore] CGU acceptance update failed:', e);
+        logger.warn('[Firestore] CGU acceptance update failed:', e);
       }
     }
   };

@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import {
@@ -112,10 +113,10 @@ function SharedDocumentModalContent({
             }, { merge: true }).catch(() => {});
           }
         } catch (snapshotErr) {
-          console.warn('[SharedDocumentModal] onSnapshot processing error:', snapshotErr);
+          logger.warn('[SharedDocumentModal] onSnapshot processing error:', snapshotErr);
         }
       }, (err) => {
-        console.warn('[Firestore Shared Note] Snapshot notice:', err);
+        logger.warn('[Firestore Shared Note] Snapshot notice:', err);
       });
 
       return () => {
@@ -170,7 +171,7 @@ function SharedDocumentModalContent({
         setSaveStatus('Synchronisé en direct 🟢');
         isTypingRef.current = false;
       } catch (err) {
-        console.warn('[Shared Document] Save error:', err);
+        logger.warn('[Shared Document] Save error:', err);
         setSaveStatus('Mode hors-ligne');
       }
     }, 400);
@@ -308,7 +309,7 @@ function SharedDocumentModalContent({
       setSendSuccessToast(true);
       setTimeout(() => setSendSuccessToast(false), 3500);
     } catch (err) {
-      console.warn('[Shared Note] Send to chat error:', err);
+      logger.warn('[Shared Note] Send to chat error:', err);
     } finally {
       setIsSendingToChat(false);
     }

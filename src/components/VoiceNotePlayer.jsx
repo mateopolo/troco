@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Play, Pause, Mic, FileText, Sparkles, Copy, Check, Languages } from 'lucide-react';
 import { translateText } from '../utils/translator';
@@ -74,7 +75,7 @@ export default function VoiceNotePlayer({
       audio.play().then(() => {
         setIsPlaying(true);
       }).catch(err => {
-        console.warn('[VoiceNotePlayer] play error:', err);
+        logger.warn('[VoiceNotePlayer] play error:', err);
       });
     }
   }, [isPlaying, playbackRate]);

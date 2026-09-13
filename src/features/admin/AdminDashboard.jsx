@@ -1,3 +1,4 @@
+import logger from '../../utils/logger';
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Shield, Users, FileText, MessageSquare, Globe, Search,
@@ -120,12 +121,12 @@ export default function AdminDashboard({
           setIsLoadingUsers(false);
         },
         (err) => {
-          console.warn('[AdminDashboard] Erreur écoute users:', err);
+          logger.warn('[AdminDashboard] Erreur écoute users:', err);
           setIsLoadingUsers(false);
         }
       );
     } catch (e) {
-      console.warn('[AdminDashboard] Exception users:', e);
+      logger.warn('[AdminDashboard] Exception users:', e);
       setIsLoadingUsers(false);
     }
 
@@ -156,12 +157,12 @@ export default function AdminDashboard({
           setIsLoadingListings(false);
         },
         (err) => {
-          console.warn('[AdminDashboard] Erreur écoute listings:', err);
+          logger.warn('[AdminDashboard] Erreur écoute listings:', err);
           setIsLoadingListings(false);
         }
       );
     } catch (e) {
-      console.warn('[AdminDashboard] Exception listings:', e);
+      logger.warn('[AdminDashboard] Exception listings:', e);
       setIsLoadingListings(false);
     }
 
@@ -272,7 +273,7 @@ export default function AdminDashboard({
         q,
         handleSnapshot,
         (err) => {
-          console.warn('[AdminDashboard] Erreur écoute transactions avec orderBy, fallback sans orderBy:', err);
+          logger.warn('[AdminDashboard] Erreur écoute transactions avec orderBy, fallback sans orderBy:', err);
           try {
             const fallbackQ = query(collection(db, 'transactions'), limit(100));
             unsubscribe = onSnapshot(fallbackQ, handleSnapshot, () => setIsLoadingTransactions(false));
@@ -282,7 +283,7 @@ export default function AdminDashboard({
         }
       );
     } catch (e) {
-      console.warn('[AdminDashboard] Exception transactions:', e);
+      logger.warn('[AdminDashboard] Exception transactions:', e);
       setIsLoadingTransactions(false);
     }
 
@@ -353,7 +354,7 @@ export default function AdminDashboard({
 
       showToast(newBannedState ? `⛔ Compte de ${user.name || 'utilisateur'} banni en direct !` : `✅ Compte de ${user.name || 'utilisateur'} réactivé.`);
     } catch (err) {
-      console.error('[Admin] Erreur ban user:', err);
+      logger.error('[Admin] Erreur ban user:', err);
       alert("Erreur lors de la mise à jour de l'utilisateur : " + err.message);
     }
   };
@@ -498,7 +499,7 @@ export default function AdminDashboard({
           await batch.commit();
         }
       } catch (errListings) {
-        console.warn('[AdminDashboard] Erreur suppression cascade annonces:', errListings);
+        logger.warn('[AdminDashboard] Erreur suppression cascade annonces:', errListings);
       }
 
       // 3. Suppression en cascade des messages et inscription du log système
@@ -580,7 +581,7 @@ export default function AdminDashboard({
           // ignore si chatThreads absent
         }
       } catch (errMessages) {
-        console.warn('[AdminDashboard] Erreur suppression cascade messages:', errMessages);
+        logger.warn('[AdminDashboard] Erreur suppression cascade messages:', errMessages);
       }
 
       showToast(`🧨 Réinitialisation usine terminée pour ${userToReset.name || targetUid}`);
@@ -589,7 +590,7 @@ export default function AdminDashboard({
         setEditingUser(null);
       }
     } catch (err) {
-      console.error('[AdminDashboard] Erreur factory reset:', err);
+      logger.error('[AdminDashboard] Erreur factory reset:', err);
       alert('Erreur lors de la réinitialisation usine : ' + err.message);
     } finally {
       setIsResetting(false);

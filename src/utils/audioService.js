@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 // Singleton AudioContext pour le Web Audio API (réutilisable sans saturer les contextes du navigateur)
 let sharedAudioCtx = null;
 
@@ -43,7 +44,7 @@ export const playApplePaySound = () => {
     osc2.start(ctx.currentTime + 0.07);
     osc2.stop(ctx.currentTime + 0.5);
   } catch (e) {
-    console.warn('[AudioService] Apple Pay sound error:', e);
+    logger.warn('[AudioService] Apple Pay sound error:', e);
   }
 };
 
@@ -71,7 +72,7 @@ export const playBetclicBalanceSound = (isIncrease = false) => {
       osc.stop(startTime + 0.12);
     });
   } catch (e) {
-    console.warn('[AudioService] Betclic balance sound error:', e);
+    logger.warn('[AudioService] Betclic balance sound error:', e);
   }
 };
 
@@ -102,7 +103,7 @@ export const playWelcomeGiftFanfare = () => {
       osc.stop(ctx.currentTime + t + d);
     });
   } catch (e) {
-    console.warn('[AudioService] Welcome fanfare error:', e);
+    logger.warn('[AudioService] Welcome fanfare error:', e);
   }
 };
 
@@ -126,7 +127,7 @@ export const playSwooshSound = () => {
     osc.start(now);
     osc.stop(now + 0.2);
   } catch (e) {
-    console.warn('[AudioService] Swoosh sound error:', e);
+    logger.warn('[AudioService] Swoosh sound error:', e);
   }
 };
 

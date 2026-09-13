@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import { playPop } from './audioService';
 import { hapticLight } from '../utils/haptics';
 
@@ -26,7 +27,7 @@ class NotificationService {
       try {
         listener(this.currentNotification);
       } catch (err) {
-        console.warn('[NotificationService] Listener error:', err);
+        logger.warn('[NotificationService] Listener error:', err);
       }
     });
   }

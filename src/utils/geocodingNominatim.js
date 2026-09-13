@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 // =====================================================================
 // UTILITAIRE DE GÉOLOCALISATION MONDIALE OPEN-SOURCE (OPENSTREETMAP NOMINATIM)
 // =====================================================================
@@ -55,7 +56,7 @@ export async function searchNominatim(query, { limit = 5, lang = 'fr' } = {}) {
     nominatimCache.set(cacheKey, results);
     return results;
   } catch (error) {
-    console.warn('[Nominatim Geocoding] Fetch error:', error);
+    logger.warn('[Nominatim Geocoding] Fetch error:', error);
     return [];
   }
 }
@@ -102,7 +103,7 @@ export async function reverseGeocodeNominatim(lat, lon, { lang = 'fr' } = {}) {
       lon: parseFloat(item.lon),
     };
   } catch (error) {
-    console.warn('[Nominatim Reverse Geocoding] Error:', error);
+    logger.warn('[Nominatim Reverse Geocoding] Error:', error);
     return null;
   }
 }

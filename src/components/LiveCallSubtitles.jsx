@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Globe, Volume2, X, Settings, GripHorizontal, Type,
@@ -155,7 +156,7 @@ export default function LiveCallSubtitles({
         try {
           translated = await translateText(rawText, activeTargetLang, detectedSourceLang.toLowerCase());
         } catch (err) {
-          console.warn('[LiveCallSubtitles] Erreur traduction incoming peer:', err);
+          logger.warn('[LiveCallSubtitles] Erreur traduction incoming peer:', err);
           translated = rawText;
         }
       }
@@ -257,7 +258,7 @@ export default function LiveCallSubtitles({
           try {
             translated = await translateText(rawText, activeTargetLang, detectedSourceLang.toLowerCase());
           } catch (err) {
-            console.warn('[LiveCallSubtitles] Erreur traduction en direct:', err);
+            logger.warn('[LiveCallSubtitles] Erreur traduction en direct:', err);
             translated = rawText;
           }
         }

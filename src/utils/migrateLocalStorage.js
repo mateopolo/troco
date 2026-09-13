@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import { isDemoMode } from '../data/demoData';
 
 /**
@@ -42,6 +43,6 @@ export function migrateLocalStorage() {
       }
     }
   } catch (err) {
-    console.warn('[migrateLocalStorage] Error during migration:', err);
+    logger.warn('[migrateLocalStorage] Error during migration:', err);
   }
 }

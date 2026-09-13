@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import React from 'react';
 import { PlusCircle, CheckCircle, ChevronRight } from 'lucide-react';
 import { collection, addDoc } from 'firebase/firestore';
@@ -310,7 +311,7 @@ export default function PublishWizard({
                     });
                     handlePublishAnnouncement();
                   } catch (e) {
-                    console.error("Error adding document: ", e);
+                    logger.error("Error adding document: ", e);
                     handlePublishAnnouncement();
                   }
                 }} 

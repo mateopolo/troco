@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../firebase';
 
@@ -48,7 +49,7 @@ export async function uploadVoiceNote(audioBlob, chatId = 'global') {
       isLocal: false,
     };
   } catch (err) {
-    console.warn('[VoiceStorageService] Firebase Storage upload failed, fallback to DataURL:', err);
+    logger.warn('[VoiceStorageService] Firebase Storage upload failed, fallback to DataURL:', err);
     try {
       const dataUrl = await blobToDataURL(audioBlob);
       return {
@@ -58,7 +59,7 @@ export async function uploadVoiceNote(audioBlob, chatId = 'global') {
         isLocal: true,
       };
     } catch (fallbackErr) {
-      console.error('[VoiceStorageService] DataURL conversion failed:', fallbackErr);
+      logger.error('[VoiceStorageService] DataURL conversion failed:', fallbackErr);
       return { success: false, error: fallbackErr };
     }
   }
@@ -90,7 +91,7 @@ export async function uploadAudioFile(file, chatId = 'global') {
       };
     }
   } catch (err) {
-    console.warn('[VoiceStorageService] Storage upload failed, fallback to DataURL:', err);
+    logger.warn('[VoiceStorageService] Storage upload failed, fallback to DataURL:', err);
   }
 
   // Fallback DataURL résilient si Storage est indisponible

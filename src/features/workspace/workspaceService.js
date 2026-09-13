@@ -1,3 +1,4 @@
+import logger from '../../utils/logger';
 /**
  * workspaceService.js — Moteur de persistance & versioning pour Troco Workspace
  * Collection Firestore : `workspaces`
@@ -39,7 +40,7 @@ export async function saveWorkspaceVersion({
   changeSummary = 'Mise à jour collaborative',
 }) {
   if (!db) {
-    console.warn('[WorkspaceService] Firestore non disponible — mode local');
+    logger.warn('[WorkspaceService] Firestore non disponible — mode local');
     return {
       success: true,
       workspaceId: workspaceId || `local_${Date.now()}`,
@@ -118,7 +119,7 @@ export async function saveWorkspaceVersion({
       title: workspacePayload.title,
     };
   } catch (error) {
-    console.error('🚨 [WorkspaceService] Erreur sauvegarde Firestore:', error);
+    logger.error('🚨 [WorkspaceService] Erreur sauvegarde Firestore:', error);
     return {
       success: false,
       error: error.message || 'Échec de sauvegarde',
@@ -143,7 +144,7 @@ export async function loadWorkspaceData(workspaceId) {
     }
     return null;
   } catch (err) {
-    console.warn('[WorkspaceService] Erreur chargement Firestore:', err);
+    logger.warn('[WorkspaceService] Erreur chargement Firestore:', err);
     return null;
   }
 }
@@ -205,7 +206,7 @@ export async function postWorkspaceInviteToChat({
 
     return true;
   } catch (err) {
-    console.warn('[WorkspaceService] Échec envoi message invite au chat:', err);
+    logger.warn('[WorkspaceService] Échec envoi message invite au chat:', err);
     return false;
   }
 }
@@ -227,7 +228,7 @@ export async function fetchWorkspaceVersions(workspaceId) {
     }
     return [];
   } catch (err) {
-    console.warn('[WorkspaceService] Erreur récupération versions:', err);
+    logger.warn('[WorkspaceService] Erreur récupération versions:', err);
     return [];
   }
 }

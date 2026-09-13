@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 /**
  * audioService.js
  * Moteur de Sound Design & Micro-Audio UI à 0ms de latence basé sur l'API Web Audio
@@ -122,7 +123,7 @@ class AudioService {
       osc.start(now);
       osc.stop(now + 0.05);
     } catch (e) {
-      console.warn('[AudioService] Pop playback error:', e);
+      logger.warn('[AudioService] Pop playback error:', e);
     }
   }
 
@@ -156,7 +157,7 @@ class AudioService {
       osc.start(now);
       osc.stop(now + 0.14);
     } catch (e) {
-      console.warn('[AudioService] Swoosh playback error:', e);
+      logger.warn('[AudioService] Swoosh playback error:', e);
     }
   }
 
@@ -193,7 +194,7 @@ class AudioService {
         osc.stop(startTime + 0.35);
       });
     } catch (e) {
-      console.warn('[AudioService] Success chime playback error:', e);
+      logger.warn('[AudioService] Success chime playback error:', e);
     }
   }
 

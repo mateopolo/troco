@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import {
   signInWithPopup,
@@ -128,10 +129,10 @@ export const AuthProvider = ({ children }) => {
               } catch (_) {}
             }
           }, (err) => {
-            console.warn('[AuthContext] onSnapshot user doc error:', err);
+            logger.warn('[AuthContext] onSnapshot user doc error:', err);
           });
         } catch (e) {
-          console.warn('[AuthContext] Error setting up user doc listener:', e);
+          logger.warn('[AuthContext] Error setting up user doc listener:', e);
         }
       } else {
         clearSessionFlags();
@@ -152,7 +153,7 @@ export const AuthProvider = ({ children }) => {
     try {
       await signOut(auth);
     } catch (e) {
-      console.warn('SignOut error:', e);
+      logger.warn('SignOut error:', e);
     }
     clearSessionFlags();
     window.localStorage.removeItem('troco_user_profile');
@@ -177,7 +178,7 @@ export const AuthProvider = ({ children }) => {
           updatedAt: serverTimestamp(),
         });
       } catch (e) {
-        console.warn('[AuthContext] CGU acceptance update failed:', e);
+        logger.warn('[AuthContext] CGU acceptance update failed:', e);
       }
     }
   };
@@ -222,7 +223,7 @@ export const AuthProvider = ({ children }) => {
               existingUserByEmail = emailSnap.docs[0].data();
             }
           } catch (e) {
-            console.warn('[AuthContext] Email lookup for multi-auth linking failed:', e);
+            logger.warn('[AuthContext] Email lookup for multi-auth linking failed:', e);
           }
         }
 
@@ -280,7 +281,7 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(true);
       setSessionAuthenticated();
     } catch (err) {
-      console.warn(`${providerName} Sign-In Error:`, err);
+      logger.warn(`${providerName} Sign-In Error:`, err);
       if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
         setAuthError('Connexion annulée.');
       } else if (err.code === 'auth/popup-blocked') {
@@ -329,7 +330,7 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(true);
       setSessionAuthenticated();
     } catch (err) {
-      console.warn('Email/Password Sign-In Error:', err);
+      logger.warn('Email/Password Sign-In Error:', err);
       if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
         setAuthError('Identifiants incorrects. Vérifiez votre email et mot de passe ou créez un compte.');
       } else {
@@ -372,7 +373,7 @@ export const AuthProvider = ({ children }) => {
         const res = await createUserWithEmailAndPassword(auth, email, signupPassword);
         uid = res.user.uid;
       } catch (authErr) {
-        console.warn('Firebase Auth user creation fallback:', authErr);
+        logger.warn('Firebase Auth user creation fallback:', authErr);
         if (authErr.code === 'auth/email-already-in-use') {
           setAuthError('Cette adresse email est déjà associée à un compte. Veuillez vous connecter.');
           setAuthLoading(false);
@@ -409,7 +410,7 @@ export const AuthProvider = ({ children }) => {
       try {
         await setDoc(doc(db, 'users', uid), newProfile, { merge: true });
       } catch (dbErr) {
-        console.warn('[AuthContext] Failed to save user:', dbErr);
+        logger.warn('[AuthContext] Failed to save user:', dbErr);
       }
 
       if (onSkillsUpdated && signupSkills.length > 0) {
@@ -421,7 +422,7 @@ export const AuthProvider = ({ children }) => {
       setSessionAuthenticated();
       setIsAuthenticated(true);
     } catch (err) {
-      console.error('Signup submit error:', err);
+      logger.error('Signup submit error:', err);
       setAuthError(err.message || 'Erreur lors de l’inscription.');
     } finally {
       setAuthLoading(false);
@@ -480,14 +481,14 @@ export const AuthProvider = ({ children }) => {
         }
       }
     } catch (e) {
-      console.warn('[DemoAuth Context] Firestore sync error:', e);
+      logger.warn('[DemoAuth Context] Firestore sync error:', e);
     }
 
     try {
       window.localStorage.setItem('troco_user_profile', JSON.stringify(finalProfile));
       setSessionAuthenticated();
     } catch (e) {
-      console.warn('Storage error on demo auth:', e);
+      logger.warn('Storage error on demo auth:', e);
     }
     setProfile(finalProfile);
     setIsAuthenticated(true);
@@ -516,7 +517,7 @@ export const AuthProvider = ({ children }) => {
       setAuthStep('sms-verify');
       setAuthError('');
     } catch (err) {
-      console.error('Firebase SMS Error:', err);
+      logger.error('Firebase SMS Error:', err);
       const code = err?.code || '';
       const message = err?.message || '';
 
@@ -572,7 +573,7 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(true);
       setSessionAuthenticated();
     } catch (err) {
-      console.error(err);
+      logger.error(err);
       setAuthError('Code de vérification incorrect ou expiré.');
     } finally {
       setAuthLoading(false);
@@ -596,7 +597,7 @@ export const AuthProvider = ({ children }) => {
       window.localStorage.setItem('emailForSignIn', authEmail);
       setAuthStep('email-sent');
     } catch (err) {
-      console.warn('Firebase SDK Exception, Basculement en mode Email Simulé:', err);
+      logger.warn('Firebase SDK Exception, Basculement en mode Email Simulé:', err);
       window.localStorage.setItem('emailForSignIn', authEmail);
       setAuthStep('email-sent');
       setAuthError('ℹ️ Clé Firebase non renseignée : Mode Email Simulé activé !');

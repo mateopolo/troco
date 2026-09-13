@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 // src/utils/messageIdempotency.js
 // ═══════════════════════════════════════════════════════════════════
 // TROCO — MESSAGE IDEMPOTENCY & DEDUPLICATION HELPER
@@ -53,7 +54,7 @@ export function shouldSendMessage(chatId, senderUid, text) {
   if (recentMessageHashes.has(key)) {
     const lastSent = recentMessageHashes.get(key);
     if (now - lastSent < HASH_TTL_MS) {
-      console.warn(`[MessageIdempotency] Duplicate message blocked for chat ${chatId}: "${cleanText.substring(0, 20)}..."`);
+      logger.warn(`[MessageIdempotency] Duplicate message blocked for chat ${chatId}: "${cleanText.substring(0, 20)}..."`);
       return false;
     }
   }

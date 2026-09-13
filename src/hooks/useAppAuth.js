@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import { useState, useEffect, useCallback } from 'react';
 import { auth, db } from '../firebase';
 import {
@@ -74,7 +75,7 @@ export const useAppAuth = () => {
               await signInWithEmailLink(auth, email, window.location.href);
               window.localStorage.removeItem('emailForSignIn');
             } catch (err) {
-              console.warn('[Auth] Email link sign in error:', err);
+              logger.warn('[Auth] Email link sign in error:', err);
             }
           }
         }
@@ -131,12 +132,12 @@ export const useAppAuth = () => {
               createdAt: serverTimestamp(),
             };
             setDoc(userDocRef, initialData, { merge: true }).catch((e) =>
-              console.warn('[Auth] Initial profile sync:', e)
+              logger.warn('[Auth] Initial profile sync:', e)
             );
           }
           setIsLoadingSession(false);
         }, (error) => {
-          console.warn('[Firestore] Profile listener error:', error);
+          logger.warn('[Firestore] Profile listener error:', error);
           setIsLoadingSession(false);
         });
       } else {
@@ -164,7 +165,7 @@ export const useAppAuth = () => {
       clearSessionFlags();
       localStorage.removeItem('troco_user_profile');
     } catch (error) {
-      console.error('[Auth] Logout error:', error);
+      logger.error('[Auth] Logout error:', error);
     }
   }, []);
 
@@ -185,7 +186,7 @@ export const useAppAuth = () => {
           kycVerifiedAt: serverTimestamp(),
         });
       } catch (err) {
-        console.warn('[Firestore] Update KYC error:', err);
+        logger.warn('[Firestore] Update KYC error:', err);
       }
     }
   }, [profile, setProfile, setProfileDraft]);

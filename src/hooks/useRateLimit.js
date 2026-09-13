@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import { useState, useCallback, useRef } from 'react';
 import { httpsCallable } from 'firebase/functions';
 import { functions, auth } from '../firebase';
@@ -49,7 +50,7 @@ export function useRateLimit() {
       setRetryAfterSeconds(0);
       return { allowed: true };
     } catch (err) {
-      console.warn('[useRateLimit] checkRateLimit error, allowing action as fallback:', err);
+      logger.warn('[useRateLimit] checkRateLimit error, allowing action as fallback:', err);
       return { allowed: true };
     }
   }, []);

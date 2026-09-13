@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import React, { useState } from 'react';
 import {
   HeartHandshake, Coins, Clock,
@@ -54,7 +55,7 @@ export default function VisioSettlementModal({
           duration: callDuration,
         });
       } catch (err) {
-        console.warn('[VisioSettlement] Error:', err);
+        logger.warn('[VisioSettlement] Error:', err);
       }
     }
     setIsTransferred(true);

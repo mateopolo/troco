@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import React, { useState, useEffect, useLayoutEffect, useRef, useMemo, useCallback, lazy, Suspense } from 'react';
 import Portal from './ui/Portal';
 import { useSafeTimeout } from '../hooks/useSafeTimeout';
@@ -159,7 +160,7 @@ function ChatView({
         });
       }
     } catch (err) {
-      console.warn('[Firestore] Chat soft delete error:', err);
+      logger.warn('[Firestore] Chat soft delete error:', err);
     }
   }, [selectedChat, setSelectedChat, profile?.uid]);
 
@@ -210,7 +211,7 @@ function ChatView({
           return;
         }
       } catch (err) {
-        console.warn('[DirectTransfer] via handleSendTokenProp error:', err);
+        logger.warn('[DirectTransfer] via handleSendTokenProp error:', err);
       } finally {
         setIsTransferringTokens(false);
       }
@@ -272,7 +273,7 @@ function ChatView({
       });
 
       if (!res.success) {
-        console.error('🚨 [DirectTransfer] Échec transfert Firestore:', res.error);
+        logger.error('🚨 [DirectTransfer] Échec transfert Firestore:', res.error);
         alert(res.error || 'Erreur lors du transfert de jetons.');
         return;
       }
@@ -295,7 +296,7 @@ function ChatView({
       setTransferComment('');
       setDirectTokensCount(1);
     } catch (err) {
-      console.warn('[DirectTransfer] error:', err);
+      logger.warn('[DirectTransfer] error:', err);
     } finally {
       setIsTransferringTokens(false);
     }
@@ -349,11 +350,11 @@ function ChatView({
         openWhiteboard(null, null, 'lobby');
       }
     } catch (err) {
-      console.error('[ChatView] Erreur lors de l\'ouverture du Whiteboard depuis l\'en-tête:', err);
+      logger.error('[ChatView] Erreur lors de l\'ouverture du Whiteboard depuis l\'en-tête:', err);
       try {
         openWhiteboard(null, null, 'lobby');
       } catch (fallbackErr) {
-        console.error('[ChatView] Erreur de secours ouverture Whiteboard:', fallbackErr);
+        logger.error('[ChatView] Erreur de secours ouverture Whiteboard:', fallbackErr);
       }
     }
   }, [openWorkspaceTool, openWhiteboard]);
@@ -430,7 +431,7 @@ function ChatView({
           updatedAt: serverTimestamp(),
         }).catch(() => {});
       } catch (err) {
-        console.warn('[ChatView] Send workspace invite notice:', err);
+        logger.warn('[ChatView] Send workspace invite notice:', err);
       }
     }
   };
@@ -717,7 +718,7 @@ function ChatView({
         });
         setFirestoreRecentBoards(list);
       } catch (err) {
-        console.warn('[ChatView] Firestore recent boards note:', err);
+        logger.warn('[ChatView] Firestore recent boards note:', err);
       }
     };
 
@@ -1900,7 +1901,7 @@ function ChatView({
                                         handleAcceptDeal(currentChatId, msg?.id, terms);
                                       }
                                     } catch (err) {
-                                      console.warn('[ChatView] Accept deal error:', err);
+                                      logger.warn('[ChatView] Accept deal error:', err);
                                     }
                                   }}
                                   className="premium-button"
@@ -1937,7 +1938,7 @@ function ChatView({
                                         openCounterOffer(terms, msg?.id);
                                       }
                                     } catch (err) {
-                                      console.warn('[ChatView] Counter offer error:', err);
+                                      logger.warn('[ChatView] Counter offer error:', err);
                                     }
                                   }}
                                   className="premium-button"
@@ -1974,7 +1975,7 @@ function ChatView({
                                         handleDeclineDeal(currentChatId, msg?.id);
                                       }
                                     } catch (err) {
-                                      console.warn('[ChatView] Decline deal error:', err);
+                                      logger.warn('[ChatView] Decline deal error:', err);
                                     }
                                   }}
                                   className="premium-button"
@@ -2575,7 +2576,7 @@ function ChatView({
                 </div>
               );
               } catch (renderError) {
-                console.warn('[ChatView] Safe render message fallback:', renderError, msg);
+                logger.warn('[ChatView] Safe render message fallback:', renderError, msg);
                 return (
                   <div
                     key={msg?.id || `msg-error-${msgIdx}`}

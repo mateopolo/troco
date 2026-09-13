@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 /**
  * outboxService.js — Moteur de résilience financière & Outbox Pattern IndexedDB
  * Garantit qu'aucune transaction, paiement ou opération critique n'est perdue en cas de coupure réseau.
@@ -43,7 +44,7 @@ class OutboxService {
 
       request.onsuccess = () => resolve(request.result);
       request.onerror = (e) => {
-        console.warn('[OutboxService] IndexedDB init error:', e);
+        logger.warn('[OutboxService] IndexedDB init error:', e);
         resolve(null);
       };
     });
@@ -86,7 +87,7 @@ class OutboxService {
         await new Promise((res) => (tx.oncomplete = res));
       }
     } catch (e) {
-      console.warn('[OutboxService] Échec écriture locale IndexedDB:', e);
+      logger.warn('[OutboxService] Échec écriture locale IndexedDB:', e);
     }
 
     // Si nous sommes en ligne, tenter la synchronisation immédiate
@@ -112,7 +113,7 @@ class OutboxService {
       await this.removeRecord(STORE_TRANSACTIONS, record.idempotencyKey);
       return true;
     } catch (err) {
-      console.warn('[OutboxService] Erreur de sync transaction (restera en file locale) :', err);
+      logger.warn('[OutboxService] Erreur de sync transaction (restera en file locale) :', err);
       return false;
     }
   }
@@ -148,7 +149,7 @@ class OutboxService {
         }
       }
     } catch (e) {
-      console.warn('[OutboxService] Erreur globale lors du flushOutbox:', e);
+      logger.warn('[OutboxService] Erreur globale lors du flushOutbox:', e);
     } finally {
       this.isSyncing = false;
     }

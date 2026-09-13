@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 /**
  * themeColor.js
  * Gestionnaire dynamique de la balise <meta name="theme-color"> et de la barre de statut mobile
@@ -49,7 +50,7 @@ export function setMetaThemeColor(color) {
     const isDarkColor = isHexDark(color);
     metaAppleStatus.setAttribute('content', isDarkColor ? 'black-translucent' : 'default');
   } catch (e) {
-    console.warn('[ThemeColor] Failed to update meta tags:', e);
+    logger.warn('[ThemeColor] Failed to update meta tags:', e);
   }
 }
 

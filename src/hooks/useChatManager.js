@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   collection,
@@ -396,13 +397,13 @@ export const useChatManager = ({
           updateMergedChats();
           isInitialLoad = false;
         }, (err) => {
-          console.error('🚨 [Firestore] chats onSnapshot error for target:', targetVal, err);
+          logger.error('🚨 [Firestore] chats onSnapshot error for target:', targetVal, err);
           updateMergedChats();
         });
 
         unsubs.push(unsub);
       } catch (err) {
-        console.error('[Firestore] query setup error:', err);
+        logger.error('[Firestore] query setup error:', err);
       }
     });
 
@@ -420,7 +421,7 @@ export const useChatManager = ({
           });
           updateMergedChats();
         }, (err) => {
-          console.error('🚨 [Firestore] chats onSnapshot error for participantUids:', err);
+          logger.error('🚨 [Firestore] chats onSnapshot error for participantUids:', err);
         });
 
         unsubs.push(unsubUids);
@@ -469,7 +470,7 @@ export const useChatManager = ({
           }
         }
       } catch (err) {
-        console.warn('[useChatManager] Force refetch error:', err);
+        logger.warn('[useChatManager] Force refetch error:', err);
       }
     };
 
@@ -664,7 +665,7 @@ export const useChatManager = ({
     try {
       const q = query(collection(db, 'chats', chatId, 'messages'), orderBy('createdAt', 'asc'));
       primaryUnsub = onSnapshot(q, handleSnapshot, (err) => {
-        console.warn('[Firestore] chat messages onSnapshot with orderBy failed, fallback without orderBy:', err);
+        logger.warn('[Firestore] chat messages onSnapshot with orderBy failed, fallback without orderBy:', err);
         // Nettoyage strict de l'écouteur primaire avant de basculer sur fallback
         if (typeof primaryUnsub === 'function') {
           primaryUnsub();
@@ -673,12 +674,12 @@ export const useChatManager = ({
         try {
           const fallbackQ = collection(db, 'chats', chatId, 'messages');
           fallbackUnsub = onSnapshot(fallbackQ, handleSnapshot, (fallbackErr) => {
-            console.error('[Firestore] chat messages fallback failed:', fallbackErr);
+            logger.error('[Firestore] chat messages fallback failed:', fallbackErr);
           });
         } catch (_) {}
       });
     } catch (err) {
-      console.warn('[Firestore] chat messages listener setup failed:', err);
+      logger.warn('[Firestore] chat messages listener setup failed:', err);
     }
 
     return () => {
@@ -723,7 +724,7 @@ export const useChatManager = ({
     // Débounce strict de 500ms et verrou isSending anti-double-clic/tactile
     const now = Date.now();
     if (isSending || (now - lastSendMessageTimestampRef.current < 500)) {
-      console.warn('[useChatManager] Double envoi évité par le debounce de 500ms');
+      logger.warn('[useChatManager] Double envoi évité par le debounce de 500ms');
       return;
     }
     lastSendMessageTimestampRef.current = now;
@@ -827,7 +828,7 @@ export const useChatManager = ({
               updatedAt: serverTimestamp(),
             }, { merge: true });
           } catch (e) {
-            console.warn('[Firestore] custom message write failed:', e);
+            logger.warn('[Firestore] custom message write failed:', e);
             // Marquer le message optimiste comme erreur
             setChatThreads(prev => {
               const thread = prev[chatId] || [];
@@ -942,7 +943,7 @@ export const useChatManager = ({
             updatedAt: serverTimestamp(),
           }, { merge: true });
         } catch (e) {
-          console.warn('[Firestore] message write failed, marked as error:', e);
+          logger.warn('[Firestore] message write failed, marked as error:', e);
           // Échec -> statut error avec option Réessayer
           setChatThreads(prev => {
             const thread = prev[chatId] || [];
@@ -993,7 +994,7 @@ export const useChatManager = ({
           };
         });
       } catch (e) {
-        console.warn('[Firestore] retry failed:', e);
+        logger.warn('[Firestore] retry failed:', e);
         setChatThreads(prev => {
           const thread = prev[chatId] || [];
           return {
@@ -1034,7 +1035,7 @@ export const useChatManager = ({
           updatedAt: serverTimestamp(),
         });
       } catch (e) {
-        console.warn('[Firestore] edit message failed:', e);
+        logger.warn('[Firestore] edit message failed:', e);
       }
     }
   };
@@ -1050,7 +1051,7 @@ export const useChatManager = ({
       try {
         await deleteDoc(doc(db, 'chats', cid, 'messages', String(messageId)));
       } catch (e) {
-        console.warn('[Firestore] delete message failed:', e);
+        logger.warn('[Firestore] delete message failed:', e);
       }
     }
   };
@@ -1104,7 +1105,7 @@ export const useChatManager = ({
           updatedAt: serverTimestamp(),
         }, { merge: true });
       } catch (e) {
-        console.warn('[Firestore] audio message write failed:', e);
+        logger.warn('[Firestore] audio message write failed:', e);
       }
     }
   };
@@ -1175,7 +1176,7 @@ export const useChatManager = ({
           updatedAt: serverTimestamp(),
         }, { merge: true });
       } catch (e) {
-        console.error('[Firestore] start discussion failed:', e);
+        logger.error('[Firestore] start discussion failed:', e);
       }
     }
 
@@ -1237,7 +1238,7 @@ export const useChatManager = ({
           createdAt: serverTimestamp(),
         });
       } catch (e) {
-        console.warn('[Firestore] group chat create error:', e);
+        logger.warn('[Firestore] group chat create error:', e);
       }
     }
   };
@@ -1285,7 +1286,7 @@ export const useChatManager = ({
           updatedAt: serverTimestamp(),
         }, { merge: true });
       } catch (e) {
-        console.warn('[Firestore] reward proposal write error:', e);
+        logger.warn('[Firestore] reward proposal write error:', e);
       }
     }
   };
@@ -1359,7 +1360,7 @@ export const useChatManager = ({
           createdAt: serverTimestamp(),
         });
       } catch (e) {
-        console.warn('[Firestore] reward confirmation sync error:', e);
+        logger.warn('[Firestore] reward confirmation sync error:', e);
       }
     }
   };
@@ -1448,7 +1449,7 @@ export const useChatManager = ({
             updatedAt: serverTimestamp(),
           });
         } catch (e) {
-          console.warn('[Firestore] previous deal countered status update failed:', e);
+          logger.warn('[Firestore] previous deal countered status update failed:', e);
         }
       }
     }
@@ -1500,7 +1501,7 @@ export const useChatManager = ({
           updatedAt: serverTimestamp(),
         }, { merge: true });
       } catch (e) {
-        console.warn('[Firestore] new deal_offer message write failed:', e);
+        logger.warn('[Firestore] new deal_offer message write failed:', e);
       }
     }
   };
@@ -1538,7 +1539,7 @@ export const useChatManager = ({
     // Si partnerUid est indéfini, STOPPE la fonction et affiche une erreur.
     if (!partnerUid || partnerUid === 'partner' || partnerUid === 'undefined' || partnerUid === currentUid) {
       const errorMsg = 'Transaction annulée : Destinataire (partnerUid/sellerUid) introuvable ou invalide. Aucun débit n\'a été effectué.';
-      console.error('🚨 [Finance] ' + errorMsg, { chatId, dealId, currentUid, partnerUid, chat });
+      logger.error('🚨 [Finance] ' + errorMsg, { chatId, dealId, currentUid, partnerUid, chat });
       alert(errorMsg);
       return { success: false, error: errorMsg };
     }
@@ -1769,7 +1770,7 @@ export const useChatManager = ({
           });
         });
       } catch (err) {
-        console.error('🚨 [Firestore] Erreur transaction atomique deal:', err);
+        logger.error('🚨 [Firestore] Erreur transaction atomique deal:', err);
       }
     }
 
@@ -1891,7 +1892,7 @@ export const useChatManager = ({
           });
         });
       } catch (err) {
-        console.warn('[Firestore] Escrow release transaction error:', err);
+        logger.warn('[Firestore] Escrow release transaction error:', err);
       }
     }
 
@@ -1978,7 +1979,7 @@ export const useChatManager = ({
           updatedAt: serverTimestamp(),
         }, { merge: true });
       } catch (e) {
-        console.warn('[Firestore] deal decline write failed:', e);
+        logger.warn('[Firestore] deal decline write failed:', e);
       }
     }
   };
@@ -2028,7 +2029,7 @@ export const useChatManager = ({
 
     if (!partnerUid || partnerUid === currentUid) {
       const errorMsg = 'Destinataire introuvable pour le pourboire post-appel.';
-      console.error('🚨 [sendPostCallTip] ' + errorMsg, { targetUid, partnerUid, selectedChat });
+      logger.error('🚨 [sendPostCallTip] ' + errorMsg, { targetUid, partnerUid, selectedChat });
       alert(errorMsg);
       throw new Error(errorMsg);
     }
@@ -2174,7 +2175,7 @@ export const useChatManager = ({
 
     if (!partnerUid || partnerUid === currentUid) {
       const errorMsg = 'Destinataire introuvable';
-      console.error('🚨 [handleSendToken] ' + errorMsg, { chatId, currentUid, chatObj });
+      logger.error('🚨 [handleSendToken] ' + errorMsg, { chatId, currentUid, chatObj });
       alert(errorMsg);
       throw new Error(errorMsg);
     }

@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import { httpsCallable } from 'firebase/functions';
 import { functions } from '../firebase';
 
@@ -35,7 +36,7 @@ export async function setAdminClaim(uid, admin = true) {
     const result = await fn({ uid, admin });
     return result.data;
   } catch (error) {
-    console.error('[adminService] setAdminClaim error:', error);
+    logger.error('[adminService] setAdminClaim error:', error);
     throw formatFunctionError(error);
   }
 }
@@ -51,7 +52,7 @@ export async function deleteListingAsAdmin(listingId, reason = 'Violation des co
     const result = await fn({ listingId, reason });
     return result.data;
   } catch (error) {
-    console.error('[adminService] deleteListingAsAdmin error:', error);
+    logger.error('[adminService] deleteListingAsAdmin error:', error);
     throw formatFunctionError(error);
   }
 }
@@ -67,7 +68,7 @@ export async function resetUserSafely(uid, preserveWallet = true) {
     const result = await fn({ uid, preserveWallet });
     return result.data;
   } catch (error) {
-    console.error('[adminService] resetUserSafely error:', error);
+    logger.error('[adminService] resetUserSafely error:', error);
     throw formatFunctionError(error);
   }
 }
@@ -84,7 +85,7 @@ export async function resolveReport(reportId, status = 'resolved', resolution = 
     const result = await fn({ reportId, status, resolution });
     return result.data;
   } catch (error) {
-    console.error('[adminService] resolveReport error:', error);
+    logger.error('[adminService] resolveReport error:', error);
     throw formatFunctionError(error);
   }
 }
@@ -100,7 +101,7 @@ export async function toggleHideListingAsAdmin(listingId, isHidden) {
     const result = await fn({ listingId, isHidden });
     return result.data;
   } catch (error) {
-    console.error('[adminService] toggleHideListingAsAdmin error:', error);
+    logger.error('[adminService] toggleHideListingAsAdmin error:', error);
     throw formatFunctionError(error);
   }
 }
@@ -116,7 +117,7 @@ export async function updateUserAsAdmin(uid, updates) {
     const result = await fn({ uid, updates });
     return result.data;
   } catch (error) {
-    console.error('[adminService] updateUserAsAdmin error:', error);
+    logger.error('[adminService] updateUserAsAdmin error:', error);
     throw formatFunctionError(error);
   }
 }
@@ -130,7 +131,7 @@ export async function migrateUsersPublic() {
     const result = await fn();
     return result.data;
   } catch (error) {
-    console.error('[adminService] migrateUsersPublic error:', error);
+    logger.error('[adminService] migrateUsersPublic error:', error);
     throw formatFunctionError(error);
   }
 }

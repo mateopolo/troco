@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 /**
  * Troco Live Call Transcription & Translation Service
  * Utilise la Web Speech Recognition API avec streaming temps réel et traduction instantanée multi-langues.
@@ -71,7 +72,7 @@ class LiveTranscriptionService {
         this.recognition.lang = this.sourceLanguage;
         this.recognition.start();
       } catch (err) {
-        console.warn('[LiveTranscription] Restart recognition start error:', err);
+        logger.warn('[LiveTranscription] Restart recognition start error:', err);
       }
     } else if (!hasNativeSupport) {
       this.startSimulatedDemo(this.sourceLanguage, this.targetLanguage);
@@ -143,7 +144,7 @@ class LiveTranscriptionService {
 
       this.recognition.onerror = (event) => {
         if (event.error !== 'no-speech') {
-          console.warn('[LiveTranscription] Erreur recognition:', event.error);
+          logger.warn('[LiveTranscription] Erreur recognition:', event.error);
         }
       };
 
@@ -164,7 +165,7 @@ class LiveTranscriptionService {
 
       return true;
     } catch (e) {
-      console.warn('[LiveTranscription] Échec initialisation SpeechRecognition:', e);
+      logger.warn('[LiveTranscription] Échec initialisation SpeechRecognition:', e);
       return false;
     }
   }
@@ -184,7 +185,7 @@ class LiveTranscriptionService {
       try {
         translated = await translateText(trimmed, targetCode, sourceCode.toLowerCase());
       } catch (err) {
-        console.warn('[LiveTranscription] Erreur traduction:', err);
+        logger.warn('[LiveTranscription] Erreur traduction:', err);
         translated = trimmed;
       }
     }
@@ -256,7 +257,7 @@ class LiveTranscriptionService {
       try {
         cb(data);
       } catch (err) {
-        console.warn('[LiveTranscription] Erreur subscriber:', err);
+        logger.warn('[LiveTranscription] Erreur subscriber:', err);
       }
     });
   }

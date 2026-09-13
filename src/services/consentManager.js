@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 /**
  * consentManager.js — Gestionnaire Centralisé du Consentement & Gardien Anti-Trackers
  * Strictement conforme aux standards RGPD (Art. 4-11, 7) et aux recommandations CNIL de septembre 2020.
@@ -137,7 +138,7 @@ export function saveConsent(status, customSettings = null) {
       detail: { status, settings: finalSettings }
     }));
   } catch (e) {
-    console.warn('[ConsentManager] Erreur lors de l\'enregistrement du consentement:', e);
+    logger.warn('[ConsentManager] Erreur lors de l\'enregistrement du consentement:', e);
   }
 }
 

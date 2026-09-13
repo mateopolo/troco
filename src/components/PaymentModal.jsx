@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import React, { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import {
@@ -419,7 +420,7 @@ export default function PaymentModal({
       try {
         onSuccess(successDetails);
       } catch (err) {
-        console.warn('[PaymentModal] onSuccess error:', err);
+        logger.warn('[PaymentModal] onSuccess error:', err);
       }
     }
     onClose?.();

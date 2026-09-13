@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Send, Flame, Zap,
@@ -185,14 +186,14 @@ export default function GlobalLiveChat({
             }
           }
         }, (err) => {
-          console.error('🚨 [GlobalChat] Firestore listener error:', err);
+          logger.error('🚨 [GlobalChat] Firestore listener error:', err);
           if (useOrderBy) {
-            console.warn('[GlobalChat] Essai de la requête de repli sans orderBy...');
+            logger.warn('[GlobalChat] Essai de la requête de repli sans orderBy...');
             unsubscribe = setupListener(false);
           }
         });
       } catch (err) {
-        console.error('[GlobalChat] Erreur configuration écouteur:', err);
+        logger.error('[GlobalChat] Erreur configuration écouteur:', err);
         return () => {};
       }
     };
@@ -274,7 +275,7 @@ export default function GlobalLiveChat({
         createdAt: Date.now(),
       });
     } catch (err) {
-      console.warn('[GlobalChat] Firestore send error:', err);
+      logger.warn('[GlobalChat] Firestore send error:', err);
     } finally {
       setTimeout(() => {
         setIsSending(false);
@@ -294,7 +295,7 @@ export default function GlobalLiveChat({
         await deleteDoc(doc(db, 'global_chat', targetId));
       }
     } catch (err) {
-      console.warn('[GlobalChat] Erreur suppression message admin:', err);
+      logger.warn('[GlobalChat] Erreur suppression message admin:', err);
     }
   };
 
@@ -316,7 +317,7 @@ export default function GlobalLiveChat({
         });
       }
     } catch (err) {
-      console.warn('[GlobalChat] Erreur update message admin:', err);
+      logger.warn('[GlobalChat] Erreur update message admin:', err);
     }
   };
 

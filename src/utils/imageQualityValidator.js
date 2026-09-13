@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 /**
  * Image Quality Validator & Processor (Canvas API)
  * Intercepte et valide la résolution minimale et la luminosité moyenne des photos.
@@ -71,7 +72,7 @@ export function validateAndProcessImage(file, options = {}) {
             }
           }
         } catch (canvasErr) {
-          console.warn('[ImageQualityValidator] Canvas brightness analysis skipped:', canvasErr);
+          logger.warn('[ImageQualityValidator] Canvas brightness analysis skipped:', canvasErr);
         }
 
         // 3. Compression & Redimensionnement respectant le ratio

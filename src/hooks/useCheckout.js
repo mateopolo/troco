@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { paymentService } from '../services/paymentService';
 import { walletService } from '../services/walletService';
@@ -34,7 +35,7 @@ export function useCheckout({ profile, setProfile, onPaymentSuccess, onOpenNotif
   const applyCheckout = useCallback(async (paymentDetails = {}) => {
     if (!checkoutSession) return;
     if (appliedRef.current || checkoutSession.applied) {
-      console.warn('[useCheckout] applyCheckout called multiple times. Prevented double execution.');
+      logger.warn('[useCheckout] applyCheckout called multiple times. Prevented double execution.');
       return;
     }
 
@@ -95,7 +96,7 @@ export function useCheckout({ profile, setProfile, onPaymentSuccess, onOpenNotif
 
       return result;
     } catch (err) {
-      console.error('[useCheckout] applyCheckout error:', err);
+      logger.error('[useCheckout] applyCheckout error:', err);
       setPaymentStatus('failed');
       appliedRef.current = false;
       const errMsg = err?.message || 'Erreur lors de la finalisation du paiement.';

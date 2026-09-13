@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 /**
  * whiteboardP2PService.js — Moteur Multijoueur P2P à Coût Zéro (WebRTC DataChannels)
  * Diffuse les coordonnées de dessin et modifications en temps réel à 0ms de latence.
@@ -33,7 +34,7 @@ class WhiteboardP2PService {
     if (onRemoteEvent) this.listeners.add(onRemoteEvent);
 
     if (!db) {
-      console.warn('[WhiteboardP2P] Mode local (Firestore non disponible)');
+      logger.warn('[WhiteboardP2P] Mode local (Firestore non disponible)');
       return;
     }
 
@@ -85,7 +86,7 @@ class WhiteboardP2PService {
 
       this.signalingUnsubs.push(unsubPeers, unsubSignals);
     } catch (e) {
-      console.warn('[WhiteboardP2P] Signaling init error:', e);
+      logger.warn('[WhiteboardP2P] Signaling init error:', e);
     }
   }
 

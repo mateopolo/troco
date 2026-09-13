@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { auth, db } from '../firebase';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
@@ -57,14 +58,14 @@ export function WalletProvider({ children }) {
       );
 
       unsubscribe = onSnapshot(q, handleSnapshot, (err) => {
-        console.warn('[WalletContext] transactions with orderBy failed, fallback without orderBy:', err);
+        logger.warn('[WalletContext] transactions with orderBy failed, fallback without orderBy:', err);
         try {
           const fallbackQ = query(
             collection(db, 'transactions'),
             where('userId', '==', user.uid)
           );
           unsubscribe = onSnapshot(fallbackQ, handleSnapshot, (fallbackErr) => {
-            console.error('[WalletContext] fallback query failed:', fallbackErr);
+            logger.error('[WalletContext] fallback query failed:', fallbackErr);
             setLoading(false);
           });
         } catch (_) {
@@ -72,7 +73,7 @@ export function WalletProvider({ children }) {
         }
       });
     } catch (e) {
-      console.warn('[WalletContext] query initialization error:', e);
+      logger.warn('[WalletContext] query initialization error:', e);
       setLoading(false);
     }
 

@@ -1,3 +1,4 @@
+import logger from '../../utils/logger';
 import React, { useState, useEffect, useRef, useCallback, memo } from 'react';
 import {
   Send,
@@ -124,7 +125,7 @@ function ChatInputBar({
       }
       haptics.success();
     } catch (err) {
-      console.error('[ChatInputBar] handleAudioUpload error:', err);
+      logger.error('[ChatInputBar] handleAudioUpload error:', err);
       try {
         const dataUrl = await new Promise((resolve, reject) => {
           const reader = new FileReader();
@@ -216,7 +217,7 @@ function ChatInputBar({
         onTypingChange('');
       }
     } catch (err) {
-      console.error('[ChatInputBar] handleSubmit error:', err);
+      logger.error('[ChatInputBar] handleSubmit error:', err);
     } finally {
       setTimeout(() => {
         setInternalIsSending(false);

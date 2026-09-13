@@ -1,3 +1,4 @@
+import logger from './utils/logger';
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 
 /**
@@ -193,7 +194,7 @@ const executeFormula = (formula, sheetData) => {
         try {
           return func.execute(sheetData, ...args);
         } catch (e) {
-          console.error(`Erreur dans la formule ${func.name}:`, e);
+          logger.error(`Erreur dans la formule ${func.name}:`, e);
           return '#ERROR';
         }
       }

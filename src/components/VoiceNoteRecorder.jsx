@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import React, { useState, useEffect, useRef } from 'react';
 import { Square, Trash2, Send, Play, Pause, Sparkles } from 'lucide-react';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -79,11 +80,11 @@ export default function VoiceNoteRecorder({
         try {
           mediaRecorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
         } catch (optionsErr) {
-          console.warn('[VoiceNoteRecorder] MediaRecorder avec options a échoué, fallback sans options:', optionsErr);
+          logger.warn('[VoiceNoteRecorder] MediaRecorder avec options a échoué, fallback sans options:', optionsErr);
           try {
             mediaRecorder = new MediaRecorder(stream);
           } catch (basicErr) {
-            console.error('[VoiceNoteRecorder] Échec MediaRecorder complet:', basicErr);
+            logger.error('[VoiceNoteRecorder] Échec MediaRecorder complet:', basicErr);
             throw basicErr;
           }
         }
@@ -158,7 +159,7 @@ export default function VoiceNoteRecorder({
           }
         }
       } catch (err) {
-        console.error('[VoiceNoteRecorder] Microphone access error:', err);
+        logger.error('[VoiceNoteRecorder] Microphone access error:', err);
         alert('Impossible d\'accéder au microphone. Vérifiez les autorisations de votre navigateur.');
         onCancel?.();
       }
@@ -252,7 +253,7 @@ export default function VoiceNoteRecorder({
           });
           audioUrl = await getDownloadURL(snapshot.ref);
         } catch (storageErr) {
-          console.warn('[VoiceNoteRecorder] Storage upload failed, fallback to dataURL:', storageErr);
+          logger.warn('[VoiceNoteRecorder] Storage upload failed, fallback to dataURL:', storageErr);
         }
       }
 
@@ -271,7 +272,7 @@ export default function VoiceNoteRecorder({
         try {
           await onSendVoiceNote(blob, duration, audioUrl, finalMimeType, capturedTranscript, userLang);
         } catch (e) {
-          console.warn('[VoiceNoteRecorder] onSendVoiceNote error:', e);
+          logger.warn('[VoiceNoteRecorder] onSendVoiceNote error:', e);
         }
       }
       setIsUploading(false);

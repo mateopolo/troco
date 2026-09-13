@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import React from 'react';
 import { Palette, Phone, Video, ArrowLeft } from 'lucide-react';
 
@@ -28,7 +29,7 @@ export default function ChatHeader({
         onOpenWhiteboard();
       }
     } catch (err) {
-      console.error('[ChatHeader] Erreur lors de l\'ouverture du Whiteboard:', err);
+      logger.error('[ChatHeader] Erreur lors de l\'ouverture du Whiteboard:', err);
     }
   };
 
@@ -40,7 +41,7 @@ export default function ChatHeader({
         startCall(type);
       }
     } catch (err) {
-      console.error(`[ChatHeader] Erreur lors de l'appel ${type}:`, err);
+      logger.error(`[ChatHeader] Erreur lors de l'appel ${type}:`, err);
     }
   };
 

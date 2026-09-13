@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import { doc, collection, runTransaction, serverTimestamp, increment } from 'firebase/firestore';
 import { db } from '../firebase';
 
@@ -218,7 +219,7 @@ export const dealService = {
         newSenderEuro: resultNewSenderEuro,
       };
     } catch (error) {
-      console.error('[dealService] transferTokensAtomically error:', error);
+      logger.error('[dealService] transferTokensAtomically error:', error);
       return {
         success: false,
         error: error instanceof Error ? error : new Error(String(error)),

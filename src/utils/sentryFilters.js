@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 /**
  * 🛡️ TROCO — Filtres et Gestionnaire d'Alertes Sentry [VERIF-03]
  * Centralise le filtrage du bruit, l'enrichissement de contexte et les alertes Firestore.
@@ -76,6 +77,6 @@ export function captureFirestoreAlert(title, extra = {}, level = 'error') {
       extra,
     });
   } else {
-    console.warn(`[SENTRY-ALERT] [${level.toUpperCase()}] ${title}`, extra);
+    logger.warn(`[SENTRY-ALERT] [${level.toUpperCase()}] ${title}`, extra);
   }
 }

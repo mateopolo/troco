@@ -8,6 +8,11 @@ import { ErrorBoundary } from './ErrorBoundary';
 import * as serviceWorkerRegistration from './serviceWorkerRegistration';
 import reportWebVitals from './reportWebVitals';
 import { logWebVitalMetric } from './utils/performanceProfiler';
+import { initSentry } from './utils/sentry';
+import logger from './utils/logger';
+
+// P2-OBS-02: Initialisation Sentry AVANT le render React
+initSentry();
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
@@ -25,7 +30,7 @@ root.render(
 // Enregistrement PWA du Service Worker pour support offline, détection de nouvelle version et installation mobile
 serviceWorkerRegistration.register({
   onUpdate: (registration, applyUpdate) => {
-    console.info('[PWA] Nouvelle version détectée après déploiement Vercel.');
+    logger.info('[PWA] Nouvelle version détectée après déploiement Vercel.');
   },
 });
 

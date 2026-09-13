@@ -1,3 +1,4 @@
+import logger from '../../utils/logger';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, useAnimation } from 'framer-motion';
 import { RefreshCw, ArrowDown } from 'lucide-react';
@@ -124,7 +125,7 @@ export function PullToRefresh({
           new Promise((resolve) => setTimeout(resolve, 500)),
         ]);
       } catch (err) {
-        console.warn('[PullToRefresh] Refresh failed:', err);
+        logger.warn('[PullToRefresh] Refresh failed:', err);
       } finally {
         setIsRefreshing(false);
         setPullDistance(0);

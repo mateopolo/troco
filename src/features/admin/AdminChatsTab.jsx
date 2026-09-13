@@ -1,3 +1,4 @@
+import logger from '../../utils/logger';
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   MessageSquare, Search, Trash2,
@@ -53,12 +54,12 @@ export default function AdminChatsTab({
           setIsLoadingChats(false);
         },
         (err) => {
-          console.warn('[AdminChatsTab] Erreur écoute chats:', err);
+          logger.warn('[AdminChatsTab] Erreur écoute chats:', err);
           setIsLoadingChats(false);
         }
       );
     } catch (e) {
-      console.warn('[AdminChatsTab] Exception chats:', e);
+      logger.warn('[AdminChatsTab] Exception chats:', e);
       setIsLoadingChats(false);
     }
 

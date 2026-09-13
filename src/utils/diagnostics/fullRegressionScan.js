@@ -1,3 +1,4 @@
+import logger from '../../utils/logger';
 /**
  * fullRegressionScan.js — TROCO Diagnostic Complet des Régressions
  * Exécutable depuis la console DevTools (F12) sur mobile & desktop.
@@ -27,14 +28,14 @@ export async function fullDiagnostic() {
       const paths = listeners.map(l => l.path);
       const dupes = paths.filter((p, i) => paths.indexOf(p) !== i);
       if (dupes.length > 0) {
-        console.warn('⚠️ DOUBLONS DÉTECTÉS :', [...new Set(dupes)]);
+        logger.warn('⚠️ DOUBLONS DÉTECTÉS :', [...new Set(dupes)]);
         report.results.duplicateListeners = [...new Set(dupes)];
       }
     } else {
       console.info('ℹ️ Aucun listener tracké via window.__firestoreListeners');
     }
   } catch (e) {
-    console.error('Erreur scan listeners :', e);
+    logger.error('Erreur scan listeners :', e);
   }
   console.groupEnd();
 
@@ -52,14 +53,14 @@ export async function fullDiagnostic() {
         const ids = msgs.map(m => m.id);
         const dupes = ids.filter((id, i) => ids.indexOf(id) !== i);
         if (dupes.length > 0) {
-          console.warn(`  ⚠️ ${dupes.length} message(s) dupliqué(s)`);
+          logger.warn(`  ⚠️ ${dupes.length} message(s) dupliqué(s)`);
           report.results.duplicateMessages = report.results.duplicateMessages || {};
           report.results.duplicateMessages[chatId] = dupes;
         }
       });
     }
   } catch (e) {
-    console.error('Erreur scan chat :', e);
+    logger.error('Erreur scan chat :', e);
   }
   console.groupEnd();
 
@@ -89,7 +90,7 @@ export async function fullDiagnostic() {
     const notifKeys = Object.keys(localStorage).filter(k => k.includes('notif') || k.includes('call'));
     console.log('Clés notifications :', notifKeys);
   } catch (e) {
-    console.error('Erreur scan WebRTC :', e);
+    logger.error('Erreur scan WebRTC :', e);
   }
   console.groupEnd();
 
@@ -103,7 +104,7 @@ export async function fullDiagnostic() {
       console.info('ℹ️ App Check initialisé (mode standard sans debug hook)');
     }
   } catch (e) {
-    console.error('Erreur scan App Check :', e);
+    logger.error('Erreur scan App Check :', e);
   }
   console.groupEnd();
 
@@ -124,7 +125,7 @@ export async function fullDiagnostic() {
       position: x.pos,
     })));
   } catch (e) {
-    console.error('Erreur scan stacking :', e);
+    logger.error('Erreur scan stacking :', e);
   }
   console.groupEnd();
 

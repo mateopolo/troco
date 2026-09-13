@@ -1,3 +1,4 @@
+import logger from '../../utils/logger';
 import React, { useState, useRef } from 'react';
 import { ProgressiveImage } from '../../components/ui/ProgressiveImage';
 import { useSafeTimeout } from '../../hooks/useSafeTimeout';
@@ -187,7 +188,7 @@ export default function ProfileFeature({
       try {
         await setDoc(doc(db, 'users', String(uid)), updated, { merge: true });
       } catch (e) {
-        console.warn('[Firestore] Profile save failed:', e);
+        logger.warn('[Firestore] Profile save failed:', e);
       }
     }
   };
@@ -201,7 +202,7 @@ export default function ProfileFeature({
       try {
         await setDoc(doc(db, 'users', String(uid)), { portfolioImages: newImages }, { merge: true });
       } catch (e) {
-        console.warn('[Firestore] Portfolio add failed:', e);
+        logger.warn('[Firestore] Portfolio add failed:', e);
       }
     }
   };
@@ -214,7 +215,7 @@ export default function ProfileFeature({
       try {
         await setDoc(doc(db, 'users', String(uid)), { portfolioImages: newImages }, { merge: true });
       } catch (e) {
-        console.warn('[Firestore] Portfolio remove failed:', e);
+        logger.warn('[Firestore] Portfolio remove failed:', e);
       }
     }
   };

@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import React, { useState, useEffect } from 'react';
 import { Star, MessageSquare, Send, CornerDownRight, Clock } from 'lucide-react';
 import {
@@ -68,7 +69,7 @@ export default function ReviewsSection({
           setLoading(false);
         },
         (err) => {
-          console.warn('[ReviewsSection] query with orderBy failed, fallback to unordered collection:', err);
+          logger.warn('[ReviewsSection] query with orderBy failed, fallback to unordered collection:', err);
           // Fallback en cas d'index manquant sur timestamp
           const fallbackUnsub = onSnapshot(
             reviewsColl,
@@ -92,7 +93,7 @@ export default function ReviewsSection({
         }
       );
     } catch (e) {
-      console.warn('[ReviewsSection] init error:', e);
+      logger.warn('[ReviewsSection] init error:', e);
       setLoading(false);
     }
 
@@ -135,7 +136,7 @@ export default function ReviewsSection({
       setReplyingToId(null);
       setReplyText('');
     } catch (err) {
-      console.error('[ReviewsSection] updateDoc reply failed:', err);
+      logger.error('[ReviewsSection] updateDoc reply failed:', err);
       setErrorMessage("Erreur lors de l'envoi de la réponse. Veuillez réessayer.");
     } finally {
       setIsSubmitting(false);

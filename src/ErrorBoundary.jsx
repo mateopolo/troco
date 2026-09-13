@@ -1,3 +1,4 @@
+import logger from './utils/logger';
 import React from 'react';
 
 export class ErrorBoundary extends React.Component {
@@ -11,7 +12,7 @@ export class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error("Troco Runtime Error Caught:", error, errorInfo);
+    logger.error("Troco Runtime Error Caught:", error, errorInfo);
     this.setState({ errorInfo });
   }
 

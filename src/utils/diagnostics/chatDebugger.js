@@ -1,3 +1,4 @@
+import logger from '../../utils/logger';
 /**
  * chatDebugger.js
  * Script de diagnostic pour inspecter les discussions, les listeners Firestore,
@@ -37,7 +38,7 @@ export async function diagnoseChat() {
     const duplicates = ids.filter((id, i) => ids.indexOf(id) !== i);
     if (duplicates.length > 0) {
       totalDups += duplicates.length;
-      console.warn(`⚠️ Chat ${chatId} : ${duplicates.length} message(s) avec le même ID`, duplicates);
+      logger.warn(`⚠️ Chat ${chatId} : ${duplicates.length} message(s) avec le même ID`, duplicates);
     }
 
     // Détecter messages avec contenu identique et timestamps très proches (< 10s)
@@ -52,7 +53,7 @@ export async function diagnoseChat() {
 
     const contentDups = [...contentMap.entries()].filter(([_, count]) => count > 1);
     if (contentDups.length > 0) {
-      console.warn(`⚠️ Chat ${chatId} : ${contentDups.length} contenu(s) dupliqué(s) en < 1s :`, contentDups);
+      logger.warn(`⚠️ Chat ${chatId} : ${contentDups.length} contenu(s) dupliqué(s) en < 1s :`, contentDups);
     }
   }
 

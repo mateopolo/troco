@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { applyGlobalThemeColor } from '../utils/themeColor';
 
@@ -802,7 +803,7 @@ export function ThemeProvider({ children }) {
       const saved = localStorage.getItem('troco_theme_base') || localStorage.getItem('troco_theme');
       if (saved && (THEMES_CONFIG[saved] || saved === 'custom')) return saved;
     } catch (e) {
-      console.warn('Could not read theme from localStorage', e);
+      logger.warn('Could not read theme from localStorage', e);
     }
     return 'earthy';
   });
@@ -825,7 +826,7 @@ export function ThemeProvider({ children }) {
         return { ...DEFAULT_CUSTOM_COLORS, ...JSON.parse(saved) };
       }
     } catch (e) {
-      console.warn('Could not read custom colors from localStorage', e);
+      logger.warn('Could not read custom colors from localStorage', e);
     }
     return DEFAULT_CUSTOM_COLORS;
   });
@@ -879,7 +880,7 @@ export function ThemeProvider({ children }) {
       try {
         localStorage.setItem('troco_custom_colors', JSON.stringify(updated));
       } catch (e) {
-        console.warn('Could not persist custom colors', e);
+        logger.warn('Could not persist custom colors', e);
       }
       return updated;
     });
@@ -922,7 +923,7 @@ export function ThemeProvider({ children }) {
       localStorage.removeItem('troco_studio_brand_color');
       localStorage.removeItem('troco_custom_colors');
     } catch (e) {
-      console.warn('Could not remove custom color from localStorage', e);
+      logger.warn('Could not remove custom color from localStorage', e);
     }
 
     // B. Mettre à jour l'état du thème
@@ -931,7 +932,7 @@ export function ThemeProvider({ children }) {
       localStorage.setItem('troco_theme_base', targetId);
       localStorage.setItem('troco_theme', targetId);
     } catch (e) {
-      console.warn('Could not persist theme to localStorage', e);
+      logger.warn('Could not persist theme to localStorage', e);
     }
 
     // C. Force la redéfinition immédiate de la variable CSS --accent-primary pour qu'elle utilise

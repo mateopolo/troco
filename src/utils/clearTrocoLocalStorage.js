@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 /**
  * Safely removes only Troco-specific keys from localStorage,
  * preventing accidental wipeout of other domain/app data (GDPR compliant).
@@ -17,7 +18,7 @@ export function clearTrocoLocalStorage() {
     try {
       localStorage.removeItem(k);
     } catch (e) {
-      console.warn(`Failed to remove localStorage key: ${k}`, e);
+      logger.warn(`Failed to remove localStorage key: ${k}`, e);
     }
   });
 }

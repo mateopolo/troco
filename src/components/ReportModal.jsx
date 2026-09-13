@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import React, { useState } from 'react';
 import { ShieldAlert, X, CheckCircle, AlertTriangle } from 'lucide-react';
 import { db } from '../firebase';
@@ -56,7 +57,7 @@ export default function ReportModal({
 
       setSubmitted(true);
       if (typeof onReportSubmitted === 'function') {
-        try { onReportSubmitted(reportPayload); } catch (e) { console.warn(e); }
+        try { onReportSubmitted(reportPayload); } catch (e) { logger.warn(e); }
       }
 
       setTimeout(() => {
@@ -66,7 +67,7 @@ export default function ReportModal({
         onClose?.();
       }, 1800);
     } catch (err) {
-      console.warn('[Firestore] Failed to save report:', err);
+      logger.warn('[Firestore] Failed to save report:', err);
       // Fallback local
       setSubmitted(true);
       if (typeof onReportSubmitted === 'function') {
@@ -79,7 +80,7 @@ export default function ReportModal({
             status: 'pending',
             createdAt: new Date(),
           });
-        } catch (e) { console.warn(e); }
+        } catch (e) { logger.warn(e); }
       }
       setTimeout(() => {
         setSubmitted(false);

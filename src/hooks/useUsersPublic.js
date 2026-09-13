@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { collection, query, where, documentId, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -84,14 +85,14 @@ export function useUsersPublic({ uids = [], pageSize = 100 } = {}) {
             setIsLoading(false);
           },
           (err) => {
-            console.warn('[useUsersPublic] Erreur snapshot chunk:', err);
+            logger.warn('[useUsersPublic] Erreur snapshot chunk:', err);
             setIsLoading(false);
           }
         );
 
         unsubscribers.push(unsub);
       } catch (e) {
-        console.warn('[useUsersPublic] Erreur création query chunk:', e);
+        logger.warn('[useUsersPublic] Erreur création query chunk:', e);
       }
     });
 

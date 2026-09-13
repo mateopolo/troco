@@ -1,3 +1,4 @@
+import logger from '../../utils/logger';
 /**
  * modalDebugger.js
  * Script de diagnostic pour inspecter les modales, stacking contexts, z-index et overflow.
@@ -7,7 +8,7 @@ export function diagnoseModal() {
   console.group('🔍 [DIAGNOSTIC MODALE - HOTFIX-01]');
   
   if (typeof document === 'undefined') {
-    console.warn('document non défini (environnement non-navigateur)');
+    logger.warn('document non défini (environnement non-navigateur)');
     console.groupEnd();
     return;
   }

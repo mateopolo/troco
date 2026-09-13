@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import { doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 
@@ -18,7 +19,7 @@ export const usersPublicService = {
       }
       return null;
     } catch (err) {
-      console.warn(`[usersPublicService] Error fetching public profile ${uid}:`, err);
+      logger.warn(`[usersPublicService] Error fetching public profile ${uid}:`, err);
       return null;
     }
   },
@@ -35,7 +36,7 @@ export const usersPublicService = {
         callback(null);
       }
     }, (err) => {
-      console.warn(`[usersPublicService] Subscription error for ${uid}:`, err);
+      logger.warn(`[usersPublicService] Subscription error for ${uid}:`, err);
     });
   }
 };

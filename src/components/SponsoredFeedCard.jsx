@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import React from 'react';
 import { Sparkles, ExternalLink } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -77,7 +78,7 @@ export default function SponsoredFeedCard({ index = 0, darkMode = false, onOpenN
         onOpenNotification(`🎉 Félicitations ! Bonus de 2.00 € crédité sur votre compte.`);
       }
     } catch (err) {
-      console.error('[SponsoredFeedCard] Bonus claim error:', err);
+      logger.error('[SponsoredFeedCard] Bonus claim error:', err);
       const errMsg = err?.message || 'Impossible de réclamer ce bonus (peut-être déjà réclamé).';
       if (onOpenNotification) {
         onOpenNotification(`⚠️ ${errMsg}`);

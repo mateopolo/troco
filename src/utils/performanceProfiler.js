@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 /**
  * performanceProfiler.js
  * Sonde de mesure des performances React Profiler & Google Web Vitals
@@ -26,7 +27,7 @@ export function onRenderProfilerCallback(
   const isSlow = actualDuration > 16.6;
 
   if (isSlow) {
-    console.warn(
+    logger.warn(
       `⚡ [Performance Drop] <${id}> a pris ${actualDuration.toFixed(2)}ms (${phase}) pour être calculé. Budget 16ms dépassé !`
     );
   } else if (PERF_LOG_ENABLED) {

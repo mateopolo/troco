@@ -1,3 +1,4 @@
+import logger from '../../utils/logger';
 import React, { useState, useRef, Suspense } from 'react';
 import {
   Sparkles,
@@ -299,7 +300,7 @@ export default function PostListingFeature({
   // ---- PUBLICATION FINALE DE L'ANNONCE (ANTI DOUBLE-CLIC + ASSAINISSEMENT FIRESTORE + SÉPARATION EUROS/TOKENS) ----
   const handlePublishAnnouncement = async () => {
     if (isSubmitting) {
-      console.warn('[PostListingFeature] Publication déjà en cours (Anti-Double Clic actif)');
+      logger.warn('[PostListingFeature] Publication déjà en cours (Anti-Double Clic actif)');
       return;
     }
     setIsSubmitting(true);
@@ -397,7 +398,7 @@ export default function PostListingFeature({
           }
         }
       } catch (geoErr) {
-        console.warn('[PostListingFeature] Erreur geocoding tolérée, coordonnées par défaut utilisées:', geoErr);
+        logger.warn('[PostListingFeature] Erreur geocoding tolérée, coordonnées par défaut utilisées:', geoErr);
         baseCoords = [48.8566, 2.3522];
       }
 
@@ -506,7 +507,7 @@ export default function PostListingFeature({
             await addDoc(collection(db, 'transactions'), sanitizeForFirestore(txRecord));
           }
         } catch (e) {
-          console.error('[PostListingFeature] Firestore transaction addDoc failed:', e);
+          logger.error('[PostListingFeature] Firestore transaction addDoc failed:', e);
         }
         setUserTransactions(prev => [txRecord, ...prev]);
       }
@@ -524,7 +525,7 @@ export default function PostListingFeature({
             await updateDoc(doc(db, 'listings', editingOriginalListing.firestoreId), sanitized);
             console.log('[PostListingFeature] Listing mis à jour avec succès dans Firestore:', editingOriginalListing.firestoreId);
           } catch (e) {
-            console.error('[PostListingFeature] Firestore updateDoc failed:', e);
+            logger.error('[PostListingFeature] Firestore updateDoc failed:', e);
           }
         }
       } else {
@@ -542,7 +543,7 @@ export default function PostListingFeature({
             newListing.firestoreId = createdFirestoreId;
             console.log('[PostListingFeature] Annonce créée avec succès dans Firestore (ID):', createdFirestoreId);
           } catch (e) {
-            console.error('[PostListingFeature] Firestore addDoc failed:', e);
+            logger.error('[PostListingFeature] Firestore addDoc failed:', e);
           }
         }
         setListings(prev => [newListing, ...prev]);
@@ -592,7 +593,7 @@ export default function PostListingFeature({
         videoUrl: '',
       });
     } catch (err) {
-      console.error('[PostListingFeature] Erreur critique de publication:', err);
+      logger.error('[PostListingFeature] Erreur critique de publication:', err);
       setPublishMessage(`Erreur lors de la publication : ${err.message || 'Veuillez réessayer'}`);
     } finally {
       setIsSubmitting(false);
@@ -1043,7 +1044,7 @@ export default function PostListingFeature({
                           }));
                         },
                         err => {
-                          console.warn('Geolocation error:', err);
+                          logger.warn('Geolocation error:', err);
                           alert('Impossible de récupérer automatiquement votre position GPS. Veuillez saisir votre ville manuellement.');
                         }
                       );

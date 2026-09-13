@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 /**
  * CollaborativeWhiteboardModal.jsx — Moteur de Tableau Blanc Collaboratif Multi-versions (Standard International)
  *
@@ -360,7 +361,7 @@ export default function CollaborativeWhiteboardModal({
       list.sort((a, b) => (Number(b.version) || 0) - (Number(a.version) || 0));
       setVersionsList(list);
     } catch (e) {
-      console.warn('[CollaborativeWhiteboard] Erreur récupération versions:', e);
+      logger.warn('[CollaborativeWhiteboard] Erreur récupération versions:', e);
     } finally {
       setIsLoadingVersions(false);
     }
@@ -470,7 +471,7 @@ export default function CollaborativeWhiteboardModal({
         await setDoc(docRef, payload, { merge: true });
         setSaveStatus('Synchronisé en direct 🟢');
       } catch (err) {
-        console.warn('[Firestore Whiteboard Sync] error:', err);
+        logger.warn('[Firestore Whiteboard Sync] error:', err);
         setSaveStatus('Mode P2P Direct ⚡');
       }
     }, 380);
@@ -1097,10 +1098,10 @@ export default function CollaborativeWhiteboardModal({
             setSaveStatus('P2P Direct ⚡ 0ms');
           }
         }, (err) => {
-          console.warn('[Firestore Whiteboard] Note:', err);
+          logger.warn('[Firestore Whiteboard] Note:', err);
         });
       } catch (e) {
-        console.warn('[Firestore Whiteboard] Error:', e);
+        logger.warn('[Firestore Whiteboard] Error:', e);
       }
     }
 
@@ -1150,7 +1151,7 @@ export default function CollaborativeWhiteboardModal({
       const p2pPeerCount = Object.keys(remoteCursorsRef.current || {}).length + 1;
       setActiveUsersCount(Math.max(1, activeCount, p2pPeerCount));
     }, (err) => {
-      console.warn('[Presence Whiteboard] Note:', err);
+      logger.warn('[Presence Whiteboard] Note:', err);
     });
 
     return () => {
@@ -1239,7 +1240,7 @@ export default function CollaborativeWhiteboardModal({
           setCurrentPath(null);
         }
       } catch (err) {
-        console.warn('[CollaborativeWhiteboard] Initial load failed:', err);
+        logger.warn('[CollaborativeWhiteboard] Initial load failed:', err);
       }
     };
 
@@ -2103,7 +2104,7 @@ export default function CollaborativeWhiteboardModal({
       setSaveSuccessToast(true);
       setTimeout(() => setSaveSuccessToast(false), 3500);
     } catch (err) {
-      console.warn('[CollaborativeWhiteboard] Save error:', err);
+      logger.warn('[CollaborativeWhiteboard] Save error:', err);
       setSaveStatus('Erreur de sauvegarde ⚠️');
     } finally {
       setIsSaving(false);
@@ -2140,7 +2141,7 @@ export default function CollaborativeWhiteboardModal({
       if (typeof sendFn === 'function') {
         await sendFn(invitePayload);
       } else {
-        console.warn('⚠️ [CollaborativeWhiteboard] Aucune fonction onSendMessage trouvée !', {
+        logger.warn('⚠️ [CollaborativeWhiteboard] Aucune fonction onSendMessage trouvée !', {
           onSendMessage,
           handleSendMessage,
           onSendToChat,
@@ -2160,7 +2161,7 @@ export default function CollaborativeWhiteboardModal({
       setSaveStatus('Envoyé dans le chat 💬');
       setTimeout(() => setShareSuccessToast(false), 3500);
     } catch (err) {
-      console.warn('[CollaborativeWhiteboard] Send to chat error:', err);
+      logger.warn('[CollaborativeWhiteboard] Send to chat error:', err);
     } finally {
       setIsSending(false);
     }

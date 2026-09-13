@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import {
@@ -444,10 +445,10 @@ function CloudOfficeSuiteModalContent({
             }, { merge: true }).catch(() => {});
           }
         } catch (err) {
-          console.warn('[TrocoDocs] snapshot parse error:', err);
+          logger.warn('[TrocoDocs] snapshot parse error:', err);
         }
       }, (err) => {
-        console.warn('[TrocoDocs] snapshot error:', err);
+        logger.warn('[TrocoDocs] snapshot error:', err);
       });
 
       return () => {
@@ -484,10 +485,10 @@ function CloudOfficeSuiteModalContent({
             }, { merge: true }).catch(() => {});
           }
         } catch (err) {
-          console.warn('[TrocoSheets] snapshot parse error:', err);
+          logger.warn('[TrocoSheets] snapshot parse error:', err);
         }
       }, (err) => {
-        console.warn('[TrocoSheets] snapshot error:', err);
+        logger.warn('[TrocoSheets] snapshot error:', err);
       });
 
       return () => {
@@ -523,10 +524,10 @@ function CloudOfficeSuiteModalContent({
             }, { merge: true }).catch(() => {});
           }
         } catch (err) {
-          console.warn('[TrocoSlides] snapshot parse error:', err);
+          logger.warn('[TrocoSlides] snapshot parse error:', err);
         }
       }, (err) => {
-        console.warn('[TrocoSlides] snapshot error:', err);
+        logger.warn('[TrocoSlides] snapshot error:', err);
       });
 
       return () => {
@@ -561,10 +562,10 @@ function CloudOfficeSuiteModalContent({
             }, { merge: true }).catch(() => {});
           }
         } catch (err) {
-          console.warn('[TrocoNotes] snapshot parse error:', err);
+          logger.warn('[TrocoNotes] snapshot parse error:', err);
         }
       }, (err) => {
-        console.warn('[TrocoNotes] snapshot error:', err);
+        logger.warn('[TrocoNotes] snapshot error:', err);
       });
 
       return () => {
@@ -614,7 +615,7 @@ function CloudOfficeSuiteModalContent({
 
       setSaveStatus('Synchronisé en direct 🟢');
     } catch (err) {
-      console.warn('[TrocoDocs] Save error:', err);
+      logger.warn('[TrocoDocs] Save error:', err);
       setSaveStatus('Mode hors-ligne');
     }
   }, [effectiveGroupId, effectiveDocId, currentUser?.id, currentUser?.name]);
@@ -659,7 +660,7 @@ function CloudOfficeSuiteModalContent({
 
       setSaveStatus('Synchronisé en direct 🟢');
     } catch (err) {
-      console.warn('[TrocoSheets] Save error:', err);
+      logger.warn('[TrocoSheets] Save error:', err);
       setSaveStatus('Mode hors-ligne');
     }
   }, [effectiveGroupId, currentUser, sheetTitle]);
@@ -701,7 +702,7 @@ function CloudOfficeSuiteModalContent({
 
       setSaveStatus('Synchronisé en direct 🟢');
     } catch (err) {
-      console.warn('[TrocoSlides] Save error:', err);
+      logger.warn('[TrocoSlides] Save error:', err);
       setSaveStatus('Mode hors-ligne');
     }
   }, [effectiveGroupId, currentUser, slidesTitle]);
@@ -745,7 +746,7 @@ function CloudOfficeSuiteModalContent({
 
       setSaveStatus('Synchronisé en direct 🟢');
     } catch (err) {
-      console.warn('[TrocoNotes] Save error:', err);
+      logger.warn('[TrocoNotes] Save error:', err);
       setSaveStatus('Mode hors-ligne');
     }
   }, [effectiveGroupId, currentUser, notesTitle]);
@@ -780,7 +781,7 @@ function CloudOfficeSuiteModalContent({
       try {
         document.execCommand(command, false, value);
       } catch (err) {
-        console.warn('execCommand error:', err);
+        logger.warn('execCommand error:', err);
       }
     }
     if (editorRef.current) {
@@ -830,7 +831,7 @@ function CloudOfficeSuiteModalContent({
           const uploadRes = await uploadBytes(fileRef, file);
           imageUrl = await getDownloadURL(uploadRes.ref);
         } catch (uploadErr) {
-          console.warn('[TrocoSlides] Storage upload fallback to base64:', uploadErr);
+          logger.warn('[TrocoSlides] Storage upload fallback to base64:', uploadErr);
         }
       }
 
@@ -854,7 +855,7 @@ function CloudOfficeSuiteModalContent({
         saveSlidesToFirestore(nextSlides);
       }
     } catch (err) {
-      console.error('[TrocoSlides] Image upload error:', err);
+      logger.error('[TrocoSlides] Image upload error:', err);
     } finally {
       setIsUploadingImage(false);
       if (slideImageInputRef.current) {
@@ -1134,7 +1135,7 @@ function CloudOfficeSuiteModalContent({
       setSendSuccessToast(true);
       setTimeout(() => setSendSuccessToast(false), 3500);
     } catch (err) {
-      console.warn('[Cloud Suite] Share to chat error:', err);
+      logger.warn('[Cloud Suite] Share to chat error:', err);
     } finally {
       setIsSendingToChat(false);
     }

@@ -1,3 +1,4 @@
+import logger from '../../utils/logger';
 import React, { Suspense, useCallback, useState, useEffect, useRef } from 'react';
 import Portal from '../../components/ui/Portal';
 import { MapContainer, TileLayer, useMap } from 'react-leaflet';
@@ -90,7 +91,7 @@ function MapLocateControl({ onLocated, currentLang = 'FR' }) {
       },
       (err) => {
         setIsLocating(false);
-        console.warn('[Geolocation] Error or permission denied:', err);
+        logger.warn('[Geolocation] Error or permission denied:', err);
         map.flyTo([49.0022, 2.5153], 13, {
           animate: true,
           duration: 1.2,

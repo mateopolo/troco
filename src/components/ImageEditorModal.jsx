@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   X, RotateCw, FlipHorizontal, Crop, Sun, Sliders,
@@ -90,7 +91,7 @@ export default function ImageEditorModal({
       }
       ctx.putImageData(imgData, 0, 0);
     } catch (err) {
-      console.warn('[ImageEditor] Pixel adjustments fallback note:', err);
+      logger.warn('[ImageEditor] Pixel adjustments fallback note:', err);
     }
   }, []);
 
@@ -226,7 +227,7 @@ export default function ImageEditorModal({
       onSave(dataUrl);
       onClose();
     } catch (e) {
-      console.warn('Image export error:', e);
+      logger.warn('Image export error:', e);
       // Fallback sur le canvas de prévisualisation en cas de sécurité CORS
       if (canvasRef.current) {
         try {

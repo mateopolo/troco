@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Maximize2, SwitchCamera, Mic, MicOff, PhoneOff,
@@ -60,7 +61,7 @@ export default function CallOverlay({
         vid.webkitSetPresentationMode('picture-in-picture');
       }
     } catch (err) {
-      console.warn('[WebRTC] Native PiP non supporté ou refusé:', err);
+      logger.warn('[WebRTC] Native PiP non supporté ou refusé:', err);
     }
   };
 

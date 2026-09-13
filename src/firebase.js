@@ -1,3 +1,4 @@
+import logger from './utils/logger';
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, memoryLocalCache } from "firebase/firestore";
@@ -34,7 +35,7 @@ if (typeof window !== 'undefined') {
         isTokenAutoRefreshEnabled: true,
       });
     } catch (err) {
-      console.warn('[AppCheck] Initialization error:', err);
+      logger.warn('[AppCheck] Initialization error:', err);
     }
   }
 }
@@ -47,7 +48,7 @@ try {
     })
   });
 } catch (e) {
-  console.warn("Firestore persistentLocalCache unavailable, falling back to memory cache:", e);
+  logger.warn("Firestore persistentLocalCache unavailable, falling back to memory cache:", e);
   try {
     firestoreInstance = initializeFirestore(app, {
       localCache: memoryLocalCache()

@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 /**
  * NotesModal.jsx — Application Notes Minimaliste Style Apple Notes Native
  * Épurée, rapide, sans barres d'outils lourdes, avec typographie système lisible et auto-save Firestore.
@@ -114,11 +115,11 @@ function NotesModalContent(props) {
               ).catch(() => {});
             }
           } catch (snapshotErr) {
-            console.warn('[NotesModal] snapshot error:', snapshotErr);
+            logger.warn('[NotesModal] snapshot error:', snapshotErr);
           }
         },
         (err) => {
-          console.warn('[NotesModal] snapshot notice:', err);
+          logger.warn('[NotesModal] snapshot notice:', err);
         }
       );
 
@@ -183,7 +184,7 @@ function NotesModalContent(props) {
           setSaveStatus('Synchronisé en direct 🟢');
           isTypingRef.current = false;
         } catch (err) {
-          console.warn('[NotesModal] Save error:', err);
+          logger.warn('[NotesModal] Save error:', err);
           setSaveStatus('Mode hors-ligne');
         }
       }, 400);
@@ -252,7 +253,7 @@ function NotesModalContent(props) {
       setSendSuccessToast(true);
       setTimeout(() => setSendSuccessToast(false), 3500);
     } catch (err) {
-      console.warn('[NotesModal] Send to chat error:', err);
+      logger.warn('[NotesModal] Send to chat error:', err);
     } finally {
       setIsSendingToChat(false);
     }

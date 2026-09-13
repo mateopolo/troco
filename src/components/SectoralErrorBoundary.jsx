@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import React from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 
@@ -12,7 +13,7 @@ export class SectoralErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error(`[SectoralErrorBoundary] Error caught in sector "${this.props.moduleName || 'Isolated Module'}":`, error, errorInfo);
+    logger.error(`[SectoralErrorBoundary] Error caught in sector "${this.props.moduleName || 'Isolated Module'}":`, error, errorInfo);
     if (this.props.onError) {
       this.props.onError(error, errorInfo);
     }

@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import {
   collection,
   doc,
@@ -79,7 +80,7 @@ export const fetchListingsPaginated = async ({ pageSize = 20, lastDoc = null } =
       hasMore,
     };
   } catch (error) {
-    console.warn('[FirestoreService] fetchListingsPaginated with orderBy failed, falling back without orderBy:', error);
+    logger.warn('[FirestoreService] fetchListingsPaginated with orderBy failed, falling back without orderBy:', error);
     try {
       let fallbackQuery;
       if (lastDoc) {
@@ -102,7 +103,7 @@ export const fetchListingsPaginated = async ({ pageSize = 20, lastDoc = null } =
         hasMore: snapshot.docs.length === pageSize,
       };
     } catch (fallbackErr) {
-      console.error('[FirestoreService] fetchListingsPaginated fallback error:', fallbackErr);
+      logger.error('[FirestoreService] fetchListingsPaginated fallback error:', fallbackErr);
       return { items: [], lastVisible: null, hasMore: false, error: fallbackErr };
     }
   }
@@ -199,7 +200,7 @@ export const fetchListingsByGeohash = async ({ center, radiusKm = 20, pageSize =
       totalFound: items.length,
     };
   } catch (error) {
-    console.error('[FirestoreService] fetchListingsByGeohash error:', error);
+    logger.error('[FirestoreService] fetchListingsByGeohash error:', error);
     return fetchListingsPaginated({ pageSize });
   }
 };
@@ -268,12 +269,12 @@ export const subscribeToListingsByGeohash = ({ center, radiusKm = 20, pageSize =
         resultsByRange.set(index, items);
         emitMerged();
       }, (err) => {
-        console.warn(`[FirestoreService] subscribeToListingsByGeohash range ${index} error:`, err);
+        logger.warn(`[FirestoreService] subscribeToListingsByGeohash range ${index} error:`, err);
         if (onError) onError(err);
       });
       unsubscribes.push(unsub);
     } catch (e) {
-      console.warn(`[FirestoreService] subscribeToListingsByGeohash setup range ${index} failed:`, e);
+      logger.warn(`[FirestoreService] subscribeToListingsByGeohash setup range ${index} failed:`, e);
     }
   });
 
@@ -303,7 +304,7 @@ export const subscribeToListings = (onUpdate, onError, pageSize = 20) => {
       }));
       onUpdate(items, snapshot.docs[snapshot.docs.length - 1] || null);
     }, (error) => {
-      console.warn('[FirestoreService] subscribeToListings error, falling back without orderBy:', error);
+      logger.warn('[FirestoreService] subscribeToListings error, falling back without orderBy:', error);
       try {
         const fallbackQ = query(collection(db, 'listings'), limit(pageSize));
         return onSnapshot(fallbackQ, (snapshot) => {
@@ -322,7 +323,7 @@ export const subscribeToListings = (onUpdate, onError, pageSize = 20) => {
       }
     });
   } catch (err) {
-    console.warn('[FirestoreService] subscribeToListings setup failed:', err);
+    logger.warn('[FirestoreService] subscribeToListings setup failed:', err);
     return () => {};
   }
 };
@@ -362,7 +363,7 @@ export const createListing = async (listingData) => {
     const docRef = await addDoc(collection(db, 'listings'), payload);
     return { success: true, id: docRef.id, geohash };
   } catch (error) {
-    console.error('[FirestoreService] createListing error:', error);
+    logger.error('[FirestoreService] createListing error:', error);
     return { success: false, error };
   }
 };
@@ -375,7 +376,7 @@ export const deleteListing = async (listingId) => {
     await deleteDoc(doc(db, 'listings', String(listingId)));
     return { success: true };
   } catch (error) {
-    console.error('[FirestoreService] deleteListing error:', error);
+    logger.error('[FirestoreService] deleteListing error:', error);
     return { success: false, error };
   }
 };
@@ -418,11 +419,11 @@ export const subscribeToUserChats = (userNameOrUid, onUpdate, onError) => {
       });
       onUpdate(chats);
     }, (error) => {
-      console.error('🚨 [FirestoreService] subscribeToUserChats error:', error);
+      logger.error('🚨 [FirestoreService] subscribeToUserChats error:', error);
       if (onError) onError(error);
     });
   } catch (err) {
-    console.error('🚨 [FirestoreService] subscribeToUserChats setup failed:', err);
+    logger.error('🚨 [FirestoreService] subscribeToUserChats setup failed:', err);
     if (onError) onError(err);
     return () => {};
   }
@@ -450,7 +451,7 @@ export const subscribeToChatMessages = (chatId, onUpdate, onError) => {
       });
       onUpdate(messages);
     }, (error) => {
-      console.warn('[FirestoreService] subscribeToChatMessages with orderBy failed, fallback without orderBy:', error);
+      logger.warn('[FirestoreService] subscribeToChatMessages with orderBy failed, fallback without orderBy:', error);
       try {
         const fallbackQ = collection(db, 'chats', String(chatId), 'messages');
         return onSnapshot(fallbackQ, (snapshot) => {
@@ -470,7 +471,7 @@ export const subscribeToChatMessages = (chatId, onUpdate, onError) => {
       }
     });
   } catch (err) {
-    console.warn('[FirestoreService] subscribeToChatMessages setup failed:', err);
+    logger.warn('[FirestoreService] subscribeToChatMessages setup failed:', err);
     return () => {};
   }
 };
@@ -497,7 +498,7 @@ export const sendChatMessage = async (chatId, messageData) => {
 
     return { success: true, id: docRef.id };
   } catch (error) {
-    console.error('[FirestoreService] sendChatMessage error:', error);
+    logger.error('[FirestoreService] sendChatMessage error:', error);
     return { success: false, error };
   }
 };
@@ -524,7 +525,7 @@ export const executeDealTransaction = async ({
     const receiverUid = sellerUid || partnerUid;
     if (!buyerUid || !receiverUid || receiverUid === 'partner' || receiverUid === 'undefined' || receiverUid === buyerUid) {
       const errorMsg = '[FirestoreService] executeDealTransaction: buyerUid ou destinataire (sellerUid/partnerUid) introuvable ou invalide.';
-      console.error(errorMsg, { buyerUid, sellerUid, partnerUid });
+      logger.error(errorMsg, { buyerUid, sellerUid, partnerUid });
       return { success: false, error: new Error(errorMsg) };
     }
 
@@ -612,7 +613,7 @@ export const executeDealTransaction = async ({
 
     return { success: true };
   } catch (error) {
-    console.error('[FirestoreService] executeDealTransaction error:', error);
+    logger.error('[FirestoreService] executeDealTransaction error:', error);
     return { success: false, error };
   }
 };
@@ -675,7 +676,7 @@ export const releaseEscrowTransaction = async ({
 
     return { success: true };
   } catch (error) {
-    console.error('[FirestoreService] releaseEscrowTransaction error:', error);
+    logger.error('[FirestoreService] releaseEscrowTransaction error:', error);
     return { success: false, error };
   }
 };
@@ -795,7 +796,7 @@ export const executeDirectTokenTransfer = async (
 
   // Si !recipientUid, lance une erreur explicite et annule le débit
   if (!recipientUid) {
-    console.error('🚨 [FirestoreService] executeDirectTokenTransfer ERROR: Destinataire introuvable pour ce transfert.', {
+    logger.error('🚨 [FirestoreService] executeDirectTokenTransfer ERROR: Destinataire introuvable pour ce transfert.', {
       chatId,
       senderUid,
       amount,
@@ -808,7 +809,7 @@ export const executeDirectTokenTransfer = async (
   }
 
   if (!senderUid || amount <= 0) {
-    console.error('[FirestoreService] executeDirectTokenTransfer: senderUid manquant ou tokenAmount invalide', { senderUid, amount });
+    logger.error('[FirestoreService] executeDirectTokenTransfer: senderUid manquant ou tokenAmount invalide', { senderUid, amount });
     return { success: false, error: 'Paramètres invalides pour le transfert.' };
   }
 
@@ -908,7 +909,7 @@ export const executeDirectTokenTransfer = async (
 
     return { success: true, targetRecipientUid: recipientUid };
   } catch (error) {
-    console.error('🚨 [FirestoreService] executeDirectTokenTransfer transaction failed:', error);
+    logger.error('🚨 [FirestoreService] executeDirectTokenTransfer transaction failed:', error);
     return { success: false, error: error?.message || error };
   }
 };
@@ -927,7 +928,7 @@ export const sendPostCallTip = async ({
   const partnerUid = targetUid || explicitPartnerUid || selectedChat?.participants?.find(uid => uid && uid !== senderUid) || selectedChat?.partnerUid;
   if (!partnerUid || partnerUid === senderUid) {
     const errorMsg = '[FirestoreService] sendPostCallTip: partnerUid introuvable ou identique à senderUid.';
-    console.error(errorMsg, { targetUid, partnerUid, senderUid, selectedChat });
+    logger.error(errorMsg, { targetUid, partnerUid, senderUid, selectedChat });
     throw new Error(errorMsg);
   }
 

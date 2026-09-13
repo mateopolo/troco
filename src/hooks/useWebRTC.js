@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 /**
  * useWebRTC.js — Signalisation WebRTC temps réel via Firestore avec STUN mondial (Wi-Fi ⇄ 4G/5G),
  * Partage d'écran (Screen Share avec bascule instantanée) et Outils de modération Professeur / Admin d'appel
@@ -155,7 +156,7 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
     try {
       audioStartRingtone();
     } catch (e) {
-      console.warn('Autoplay bloqué', e);
+      logger.warn('Autoplay bloqué', e);
     }
     // 2. Fallback Audio HTML5 isolé avec .catch() explicite pour la politique autoplay
     try {
@@ -165,11 +166,11 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
         ringtone.loop = true;
         const playPromise = ringtone.play();
         if (playPromise && typeof playPromise.catch === 'function') {
-          playPromise.catch(e => console.warn('Autoplay bloqué', e));
+          playPromise.catch(e => logger.warn('Autoplay bloqué', e));
         }
       }
     } catch (e) {
-      console.warn('Autoplay bloqué', e);
+      logger.warn('Autoplay bloqué', e);
     }
   }, [stopRingtone]);
 
@@ -187,11 +188,11 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
     try {
       return await navigator.mediaDevices.getUserMedia(constraints);
     } catch (err) {
-      console.warn('getUserMedia primary failed:', err);
+      logger.warn('getUserMedia primary failed:', err);
       try {
         return await navigator.mediaDevices.getUserMedia({ video: type === 'video', audio: true });
       } catch (fallbackErr) {
-        console.error('getUserMedia fallback failed:', fallbackErr);
+        logger.error('getUserMedia fallback failed:', fallbackErr);
         if (fallbackErr.name === 'NotAllowedError' || fallbackErr.name === 'PermissionDeniedError') {
           alert("Accès caméra / microphone refusé :\n\nPour passer des appels audio ou visio sur Troco, veuillez autoriser l'accès aux périphériques dans les paramètres de votre navigateur.");
         } else if (fallbackErr.name === 'NotFoundError' || fallbackErr.name === 'DevicesNotFoundError') {
@@ -324,7 +325,7 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
         pendingCandidatesRef.current.push(candidate);
       }
     } catch (err) {
-      console.warn('[WebRTC] addOrQueueCandidate error:', err);
+      logger.warn('[WebRTC] addOrQueueCandidate error:', err);
     }
   }, []);
 
@@ -336,7 +337,7 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
       try {
         await pc.addIceCandidate(cand);
       } catch (err) {
-        console.warn('[WebRTC] flush pending candidate error:', err);
+        logger.warn('[WebRTC] flush pending candidate error:', err);
       }
     }
   }, []);
@@ -389,7 +390,7 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
       : targetChatIdOrRoomId) || selectedChat?.id || activeChatIdRef.current;
     const chatId = String(rawId || '').trim();
     if (!chatId) {
-      console.warn('[WebRTC] joinActiveCall: aucun roomId ou chatId valide fourni');
+      logger.warn('[WebRTC] joinActiveCall: aucun roomId ou chatId valide fourni');
       return null;
     }
 
@@ -448,7 +449,7 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
     }
 
     if (!callData?.offer) {
-      console.warn('[WebRTC] Aucune offre SDP valide dans l\'appel calls/' + chatId);
+      logger.warn('[WebRTC] Aucune offre SDP valide dans l\'appel calls/' + chatId);
       return null;
     }
 
@@ -565,7 +566,7 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
         }
       }
     } catch (checkErr) {
-      console.warn('[WebRTC] check existing call error:', checkErr);
+      logger.warn('[WebRTC] check existing call error:', checkErr);
     }
 
     callStartTimeRef.current = Date.now();
@@ -646,7 +647,7 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
           setCallState(prev => ({ ...prev, ringing: false, active: true }));
           await flushPendingCandidates();
         } catch (e) {
-          console.warn('[WebRTC] setRemoteDescription answer error:', e);
+          logger.warn('[WebRTC] setRemoteDescription answer error:', e);
         }
       }
 
@@ -865,7 +866,7 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
           try {
             playRingtone();
           } catch (audioErr) {
-            console.warn('Autoplay bloqué', audioErr);
+            logger.warn('Autoplay bloqué', audioErr);
           }
 
           if (navigator.vibrate) {
@@ -891,7 +892,7 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
     );
 
     const unsub = onSnapshot(callsQuery, handleCallSnap, (err) => {
-      console.warn('[WebRTC] calls targetParticipants onSnapshot error:', err);
+      logger.warn('[WebRTC] calls targetParticipants onSnapshot error:', err);
     });
     unsubs.push(unsub);
 
@@ -904,7 +905,7 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
           limit(5)
         );
         const unsubToUid = onSnapshot(qToUid, handleCallSnap, (err) => {
-          console.warn('[WebRTC] calls toUid onSnapshot error:', err);
+          logger.warn('[WebRTC] calls toUid onSnapshot error:', err);
         });
         unsubs.push(unsubToUid);
       } catch (_) {}
@@ -994,7 +995,7 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
           }).catch(() => { });
         }
       } catch (err) {
-        console.warn('[WebRTC] Erreur retour caméra :', err);
+        logger.warn('[WebRTC] Erreur retour caméra :', err);
       }
       return;
     }
@@ -1042,7 +1043,7 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
         }).catch(() => { });
       }
     } catch (err) {
-      console.warn('[WebRTC] getDisplayMedia refusé ou annulé :', err);
+      logger.warn('[WebRTC] getDisplayMedia refusé ou annulé :', err);
     }
   }, [callState.isScreenSharing, localStream, profileName, selectedChat]);
 
@@ -1056,7 +1057,7 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
       });
       alert("Micro du participant coupé avec succès.");
     } catch (err) {
-      console.warn('[WebRTC] hostMuteParticipant error:', err);
+      logger.warn('[WebRTC] hostMuteParticipant error:', err);
     }
   }, [selectedChat]);
 
@@ -1070,7 +1071,7 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
       });
       alert("Partage d'écran du participant arrêté.");
     } catch (err) {
-      console.warn('[WebRTC] hostStopParticipantScreenShare error:', err);
+      logger.warn('[WebRTC] hostStopParticipantScreenShare error:', err);
     }
   }, [selectedChat]);
 
@@ -1119,7 +1120,7 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
       }
       setFacingMode(nextFacing);
     } catch (err) {
-      console.warn('[WebRTC] Erreur switchCamera vers :', nextFacing, err);
+      logger.warn('[WebRTC] Erreur switchCamera vers :', nextFacing, err);
     }
   }, [callState.type, callState.isScreenSharing, localStream, facingMode]);
 

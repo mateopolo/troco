@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 /**
  * WhiteboardLobby.jsx — Écran d'accueil & Historique multi-tableaux blancs (Phase 102)
  *
@@ -73,7 +74,7 @@ export default function WhiteboardLobby({
         onCreateNewBoard(newBoardId);
       }
     } catch (err) {
-      console.error('[WhiteboardLobby] Erreur dans onCreateNew:', err);
+      logger.error('[WhiteboardLobby] Erreur dans onCreateNew:', err);
     }
   };
 
@@ -88,7 +89,7 @@ export default function WhiteboardLobby({
         onSelectBoard(boardId, data);
       }
     } catch (err) {
-      console.error('[WhiteboardLobby] Erreur dans onSelect:', err);
+      logger.error('[WhiteboardLobby] Erreur dans onSelect:', err);
     }
   };
 
@@ -116,7 +117,7 @@ export default function WhiteboardLobby({
         }
       }
     } catch (err) {
-      console.error('[WhiteboardLobby] Erreur lors de la création d\'un nouveau tableau blanc:', err);
+      logger.error('[WhiteboardLobby] Erreur lors de la création d\'un nouveau tableau blanc:', err);
     }
   };
 
@@ -138,7 +139,7 @@ export default function WhiteboardLobby({
         handleCreate(e);
       }
     } catch (err) {
-      console.error('[WhiteboardLobby] Erreur lors de la reprise du dernier tableau:', err);
+      logger.error('[WhiteboardLobby] Erreur lors de la reprise du dernier tableau:', err);
     }
   };
 
@@ -152,7 +153,7 @@ export default function WhiteboardLobby({
         onSelectBoard(boardId, boardData || boards.find(b => b.id === boardId || b.boardId === boardId) || null);
       }
     } catch (err) {
-      console.error('[WhiteboardLobby] Erreur lors de la sélection du tableau:', err);
+      logger.error('[WhiteboardLobby] Erreur lors de la sélection du tableau:', err);
     }
   };
 
@@ -213,7 +214,7 @@ export default function WhiteboardLobby({
         updateCombinedBoards();
       },
       (err) => {
-        console.warn('[WhiteboardLobby] workspaces onSnapshot notice:', err);
+        logger.warn('[WhiteboardLobby] workspaces onSnapshot notice:', err);
         setIsLoading(false);
       }
     );
@@ -248,7 +249,7 @@ export default function WhiteboardLobby({
         updateCombinedBoards();
       },
       (err) => {
-        console.warn('[WhiteboardLobby] legacy onSnapshot notice:', err);
+        logger.warn('[WhiteboardLobby] legacy onSnapshot notice:', err);
       }
     );
 

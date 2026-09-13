@@ -1,3 +1,4 @@
+import logger from '../../utils/logger';
 import { useState, useEffect, useCallback } from 'react';
 import { doc, onSnapshot, setDoc, serverTimestamp, collection } from 'firebase/firestore';
 import { db } from '../../firebase';
@@ -41,11 +42,11 @@ export function useGlobalContent(key, fallbackValue = '') {
           }
         },
         (err) => {
-          console.warn(`[useGlobalContent] Erreur écoute '${key}':`, err);
+          logger.warn(`[useGlobalContent] Erreur écoute '${key}':`, err);
         }
       );
     } catch (e) {
-      console.warn(`[useGlobalContent] Exception init '${key}':`, e);
+      logger.warn(`[useGlobalContent] Exception init '${key}':`, e);
     }
 
     return () => {
@@ -85,13 +86,13 @@ export function useAllGlobalContent() {
           setIsLoading(false);
         },
         (err) => {
-          console.warn('[useAllGlobalContent] Erreur Firestore:', err);
+          logger.warn('[useAllGlobalContent] Erreur Firestore:', err);
           setItems(DEFAULT_GLOBAL_CONTENT);
           setIsLoading(false);
         }
       );
     } catch (e) {
-      console.warn('[useAllGlobalContent] Exception:', e);
+      logger.warn('[useAllGlobalContent] Exception:', e);
       setIsLoading(false);
     }
 

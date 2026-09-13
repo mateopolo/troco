@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { doc, onSnapshot } from 'firebase/firestore';
@@ -179,7 +180,7 @@ export const useWalletStore = create(
             subscriptionPlan: data.trocoPlusPlan || null,
           });
         }, (err) => {
-          console.warn('[useWalletStore] onSnapshot balance error:', err);
+          logger.warn('[useWalletStore] onSnapshot balance error:', err);
         });
 
         return unsubscribe;

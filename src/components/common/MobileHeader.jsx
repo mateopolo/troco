@@ -1,3 +1,4 @@
+import logger from '../../utils/logger';
 import React from 'react';
 import { ArrowLeft, Palette } from 'lucide-react';
 
@@ -152,7 +153,7 @@ export default function MobileHeader({
                   onOpenWhiteboard();
                 }
               } catch (err) {
-                console.error('[MobileHeader] Erreur lors de l\'ouverture du Whiteboard:', err);
+                logger.error('[MobileHeader] Erreur lors de l\'ouverture du Whiteboard:', err);
               }
             }}
             className="premium-button"

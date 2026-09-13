@@ -1,3 +1,4 @@
+import logger from './utils/logger';
 /**
  * Service Worker Registration for Troco PWA
  * Gère la détection de nouvelle version, l'invalidation forcée du cache,
@@ -39,7 +40,7 @@ export function applyServiceWorkerUpdate(registration) {
       waitingWorker.postMessage({ type: 'SKIP_WAITING' });
     }
   } catch (err) {
-    console.warn('[PWA] PostMessage to SW failed:', err);
+    logger.warn('[PWA] PostMessage to SW failed:', err);
   }
 
   // Purge de tous les caches connus
@@ -163,7 +164,7 @@ function handleUpdateFound(registration, config) {
     try {
       config.onUpdate(registration, () => applyServiceWorkerUpdate(registration));
     } catch (e) {
-      console.warn('[PWA] Erreur dans config.onUpdate:', e);
+      logger.warn('[PWA] Erreur dans config.onUpdate:', e);
     }
   }
 
@@ -263,7 +264,7 @@ function registerValidSW(swUrl, config) {
       };
     })
     .catch((error) => {
-      console.warn('[PWA] Erreur enregistrement Service Worker:', error);
+      logger.warn('[PWA] Erreur enregistrement Service Worker:', error);
     });
 }
 
@@ -298,7 +299,7 @@ export function unregister() {
         registration.unregister();
       })
       .catch((error) => {
-        console.warn(error.message);
+        logger.warn(error.message);
       });
   }
 }

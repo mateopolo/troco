@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 import { httpsCallable } from 'firebase/functions';
 import { doc, getDoc, runTransaction, serverTimestamp, increment, collection } from 'firebase/firestore';
 import { db, auth, functions } from '../firebase';
@@ -66,7 +67,7 @@ export const walletService = {
         if (response?.data) return response.data;
       }
     } catch (cfErr) {
-      console.warn('[walletService] Cloud Function unavailable/failed, executing Firestore runTransaction fallback:', cfErr);
+      logger.warn('[walletService] Cloud Function unavailable/failed, executing Firestore runTransaction fallback:', cfErr);
     }
 
     // 4. Transaction Firestore atomique native (runTransaction)

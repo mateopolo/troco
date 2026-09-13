@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 /**
  * Utilitaires de gestion des drapeaux de session localStorage pour Troco.
  * 
@@ -21,7 +22,7 @@ export function setSessionAuthenticated() {
       window.localStorage.setItem(AUTH_FLAG_KEY, 'true');
     }
   } catch (err) {
-    console.warn('[SessionFlags] Failed to set auth flag:', err);
+    logger.warn('[SessionFlags] Failed to set auth flag:', err);
   }
 }
 
@@ -35,7 +36,7 @@ export function clearSessionFlags() {
       window.localStorage.removeItem(AUTH_FLAG_KEY);
     }
   } catch (err) {
-    console.warn('[SessionFlags] Failed to remove auth flag:', err);
+    logger.warn('[SessionFlags] Failed to remove auth flag:', err);
   }
 }
 

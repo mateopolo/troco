@@ -1,3 +1,4 @@
+import logger from '../utils/logger';
 /**
  * DealRatingModal.jsx — Modale de Notation & Récolte d'Avis Vérifiés post-deal
  * S'affiche automatiquement à la résolution d'un deal ou d'un troc validé pour gamifier la clôture.
@@ -96,7 +97,7 @@ export default function DealRatingModal({
         onClose();
       }, 1600);
     } catch (err) {
-      console.warn('[DealRatingModal] Submit error:', err);
+      logger.warn('[DealRatingModal] Submit error:', err);
       setIsSuccess(true);
       setTimeout(() => {
         setIsSuccess(false);
