@@ -514,7 +514,7 @@ export default function App() {
   const handleOpenPayment = useCallback((mode = 'pack-tokens', payload = null) => {
     setPaymentModalConfig({ mode, payload });
     setIsPaymentModalOpen(true);
-  }, []);
+  }, [setIsPaymentModalOpen, setPaymentModalConfig]);
 
   // ---- MOTEUR CHAT, NÉGOCIATIONS & DEALS (HOOK EXTRAIT PHASE 4) ----
   const chatManager = useChatManager({
@@ -1082,7 +1082,7 @@ export default function App() {
       if (unsubDoc) unsubDoc();
       unsubscribeAuth();
     };
-  }, []);
+  }, [safeTimeout, setBannedReason, setIsAuthResolved, setIsAuthenticated, setIsLoadingSession, setIsUserBanned, setProfile, setSelectedChat, setSelectedListing, setTopUpCelebration]);
 
   // ---- ÉCOUTE ET RÉACTUALISATION EN TEMPS RÉEL DES TRADUCTIONS DYNAMIQUES ----
   const [, setTranslationRevision] = useState(0);
@@ -1091,7 +1091,7 @@ export default function App() {
       setTranslationRevision(r => r + 1);
     });
     return () => unsub();
-  }, []);
+  }, [setIsAuthenticated, setIsLoadingSession, setProfile]);
 
   // ---- DÉTECTION ET OUVERTURE DU WIZARD D'ONBOARDING POUR NOUVEAUX COMPTES (CHANTIER 1) ----
   useEffect(() => {
@@ -1207,7 +1207,7 @@ export default function App() {
           .finally(() => setIsLoadingSession(false));
       }
     }
-  }, []);
+  }, [setIsAuthenticated, setIsLoadingSession, setProfile]);
 
 
   // État d'édition profil initialisé plus haut
@@ -1514,7 +1514,7 @@ export default function App() {
     return () => {
       unsubs.forEach(u => { try { if (typeof u === 'function') u(); } catch (_) {} });
     };
-  }, [auth, profile?.uid, profile?.name, playRingtone, stopRingtone]);
+  }, [profile?.uid, profile?.name, playRingtone, stopRingtone]);
 
   // Références stables pour éviter de déconnecter/reconnecter les écouteurs Firestore à chaque navigation
   const activeTabRef = useRef(activeTab);
@@ -1650,7 +1650,7 @@ export default function App() {
     return () => {
       unsubs.forEach(u => { try { if (typeof u === 'function') u(); } catch (_) {} });
     };
-  }, [auth, profile?.uid, profile?.name, profile?.username, setSelectedChat, setActiveTab]);
+  }, [profile?.uid, profile?.name, profile?.username, setSelectedChat, setActiveTab]);
 
   // Écoute de l'événement personnalisé troco:open_chat pour basculer vers le chat
   useEffect(() => {
@@ -1897,17 +1897,17 @@ export default function App() {
   ];
 
   // ---- COHÉRENCE DES AVATARS & NOMS ----
-  const femaleAvatars = [
+  const femaleAvatars = useMemo(() => [
     'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80',
     'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=200&q=80',
     'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=200&q=80',
-  ];
-  const maleAvatars = [
+  ], []);
+  const maleAvatars = useMemo(() => [
     'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80',
     'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=200&q=80',
     'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
-  ];
-  const authorAvatars = {
+  ], []);
+  const authorAvatars = useMemo(() => ({
     'Sofia M.': femaleAvatars[0],
     'Marc L.': maleAvatars[0],
     'Matteo R.': maleAvatars[1],
@@ -1938,15 +1938,15 @@ export default function App() {
     'Hana T.': femaleAvatars[2],
     'Noa K.': maleAvatars[0],
     'Samir M.': maleAvatars[1],
-  };
-  const feminineFirstNames = ['sofia', 'elisa', 'amélie', 'amelie', 'laura', 'clara', 'giulia', 'mina', 'inès', 'ines', 'pauline', 'claire', 'julie', 'noémie', 'noemie', 'sabrina', 'léa', 'lea', 'hana', 'emma', 'chloé', 'chloe', 'lina', 'anna', 'maria', 'eva', 'nina', 'lucie', 'camille', 'sara', 'julia'];
+  }), [femaleAvatars, maleAvatars]);
+  const feminineFirstNames = useMemo(() => ['sofia', 'elisa', 'amélie', 'amelie', 'laura', 'clara', 'giulia', 'mina', 'inès', 'ines', 'pauline', 'claire', 'julie', 'noémie', 'noemie', 'sabrina', 'léa', 'lea', 'hana', 'emma', 'chloé', 'chloe', 'lina', 'anna', 'maria', 'eva', 'nina', 'lucie', 'camille', 'sara', 'julia'], []);
 
-  const getAuthorAvatar = (name) => {
+  const getAuthorAvatar = useCallback((name) => {
     const firstName = String(name || '').split(' ')[0].toLowerCase();
     if (authorAvatars[name]) return authorAvatars[name];
     if (feminineFirstNames.includes(firstName)) return femaleAvatars[firstName.length % femaleAvatars.length];
     return maleAvatars[firstName.length % maleAvatars.length];
-  };
+  }, [authorAvatars, feminineFirstNames, femaleAvatars, maleAvatars]);
 
   // ---- COORDONNÉES GPS RÉELLES ET RÉSOLUTION MONDIALE (GÉOLOCALISATION DYNAMIQUE OPENSTREETMAP) ----
   const locationCoordsCacheRef = useRef(new Map());
@@ -2398,7 +2398,7 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasMoreListings, isLoadingMoreListings, activeTab, lastVisibleListingDoc]);
 
-  const getListingDetail = (listing) => {
+  const getListingDetail = useCallback((listing) => {
     const media = getSuggestedMedia(listing.title, listing.description || '', listing.image, listing.video);
     const isCurrentUser = Boolean(
       listing.author === profile?.name ||
@@ -2504,11 +2504,11 @@ export default function App() {
     }
 
     return generic;
-  };
+  }, [profile, portfolioImages, averageRating, getAuthorAvatar, femaleAvatars, maleAvatars]);
 
   const handleOpenListing = useCallback((listing) => {
     setSelectedListing(getListingDetail(listing));
-  }, [getListingDetail]);
+  }, [getListingDetail, setSelectedListing]);
 
   const handleViewOnMap = (listing) => {
     if (!listing) return;
