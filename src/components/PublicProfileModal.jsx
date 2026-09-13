@@ -6,6 +6,7 @@ import {
 import MobileHeader from './common/MobileHeader';
 import { SocialLinksDisplay } from './UserProfile';
 import { ProgressiveImage } from './ui/ProgressiveImage';
+import UniversalModal from './ui/UniversalModal';
 import ReviewsSection from './ReviewsSection';
 
 export default function PublicProfileModal({
@@ -158,20 +159,16 @@ export default function PublicProfileModal({
     : `${customFont}, sans-serif`;
 
   return (
-    <div
-      className="fixed inset-0 z-[10050] bg-black/90 md:bg-black/65 md:backdrop-blur-md"
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 10050,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '12px 12px max(80px, env(safe-area-inset-bottom, 24px)) 12px',
-        animation: 'fadeIn 0.2s ease both',
-        boxSizing: 'border-box'
+    <UniversalModal
+      isOpen={isOpen}
+      onClose={onClose}
+      ariaLabel={`Profil public de ${userName}`}
+      showCloseButton={false}
+      overlayStyle={{
+        backgroundColor: 'rgba(0,0,0,0.65)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
       }}
-      onClick={onClose}
     >
       <div
         style={{
@@ -193,7 +190,6 @@ export default function PublicProfileModal({
           '--accent-primary-hover': customThemeColor,
           '--shadow-accent': `0 4px 14px ${customThemeColor}33`,
         }}
-        onClick={(e) => e.stopPropagation()}
       >
         {/* EN-TÊTE FIXE AVEC RETOUR 44x44px (APPLE HIG) */}
         <MobileHeader
@@ -755,6 +751,6 @@ export default function PublicProfileModal({
           </button>
         </div>
       </div>
-    </div>
+    </UniversalModal>
   );
 }

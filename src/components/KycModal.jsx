@@ -3,6 +3,7 @@ import {
   ShieldCheck, Camera, Upload, CheckCircle2,
   Sparkles, X, ChevronRight, RefreshCw, Lock
 } from 'lucide-react';
+import UniversalModal from './ui/UniversalModal';
 
 export default function KycModal({ isOpen, onClose, onComplete, profile, darkMode }) {
   const [step, setStep] = useState(1); // 1: Document, 2: Selfie, 3: Processing & Success
@@ -85,18 +86,18 @@ export default function KycModal({ isOpen, onClose, onComplete, profile, darkMod
   if (!isOpen) return null;
 
   return (
-    <div
-      onClick={onClose}
-      className="fixed inset-0 z-[99999] bg-black/90 md:bg-[rgba(61,53,48,0.72)] md:backdrop-blur-sm flex items-center justify-center p-5"
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 99999,
-        animation: 'fadeIn 0.2s ease-out'
+    <UniversalModal
+      isOpen={isOpen}
+      onClose={onClose}
+      ariaLabel="Vérification d'identité"
+      showCloseButton={false}
+      overlayStyle={{
+        backgroundColor: 'rgba(61,53,48,0.72)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
       }}
     >
       <div
-        onClick={(e) => e.stopPropagation()}
         style={{
           backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
           color: darkMode ? '#FAF7F2' : '#3D3530',
@@ -719,6 +720,6 @@ export default function KycModal({ isOpen, onClose, onComplete, profile, darkMod
           )}
         </div>
       </div>
-    </div>
+    </UniversalModal>
   );
 }

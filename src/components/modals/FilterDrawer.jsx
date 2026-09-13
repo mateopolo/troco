@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, Sparkles, MapPin } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import UniversalModal from '../ui/UniversalModal';
 
 export default function FilterDrawer({
   isOpen,
@@ -33,21 +34,27 @@ export default function FilterDrawer({
   return (
     <AnimatePresence>
       {isOpen && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.22 }}
-          onClick={onClose}
-          style={{
-            position: 'fixed',
-            inset: 0,
+        <UniversalModal
+          isOpen={isOpen}
+          onClose={onClose}
+          ariaLabel={t('filtersTitle')}
+          showCloseButton={false}
+          contentStyle={{
+            width: '100%',
+            maxWidth: '360px',
+            height: '100%',
+            maxHeight: 'none',
+            overflow: 'visible',
+            marginLeft: 'auto',
+            borderRadius: 0,
+          }}
+          overlayStyle={{
             backgroundColor: 'rgba(61,53,48,0.6)',
             backdropFilter: 'blur(8px)',
             WebkitBackdropFilter: 'blur(8px)',
-            zIndex: 55,
-            display: 'flex',
+            alignItems: 'stretch',
             justifyContent: 'flex-end',
+            padding: 0,
           }}
         >
           <motion.div
@@ -296,8 +303,8 @@ export default function FilterDrawer({
             </button>
           ))}
         </div>
-        </motion.div>
-      </motion.div>
+          </motion.div>
+        </UniversalModal>
     )}
   </AnimatePresence>
   );

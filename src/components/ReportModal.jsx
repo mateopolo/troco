@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { ShieldAlert, X, CheckCircle, AlertTriangle } from 'lucide-react';
 import { db } from '../firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import UniversalModal from './ui/UniversalModal';
 
 const REPORT_REASONS = [
   { key: 'fraud', label: 'Arnaque ou suspicion de fraude', desc: 'Demande de virement externe, coupon prépayé ou arnaque avérée.' },
@@ -93,15 +94,16 @@ export default function ReportModal({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-[99999] bg-black/90 md:bg-[rgba(61,53,48,0.72)] md:backdrop-blur-md flex items-center justify-center p-4"
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 99999,
-        animation: 'fadeSlideUp 0.25s ease both',
+    <UniversalModal
+      isOpen={isOpen}
+      onClose={onClose}
+      ariaLabel="Signaler un contenu"
+      showCloseButton={false}
+      overlayStyle={{
+        backgroundColor: 'rgba(61,53,48,0.72)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
       }}
-      onClick={onClose}
     >
       <div
         style={{
@@ -115,7 +117,6 @@ export default function ReportModal({
           color: darkMode ? '#FAF7F2' : '#3D3530',
           position: 'relative',
         }}
-        onClick={(e) => e.stopPropagation()}
       >
         {/* BOUTON FERMER */}
         <button
@@ -317,6 +318,6 @@ export default function ReportModal({
           </form>
         )}
       </div>
-    </div>
+    </UniversalModal>
   );
 }

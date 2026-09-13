@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, CheckCircle2, AlertCircle, ShieldCheck, CreditCard } from 'lucide-react';
+import UniversalModal from '../ui/UniversalModal';
 
 export default function CheckoutModal({
   isOpen,
@@ -13,12 +14,6 @@ export default function CheckoutModal({
   const [selectedMethod, setSelectedMethod] = useState('card');
 
   if (!isOpen || !session) return null;
-
-  const handleBackdropClick = (e) => {
-    if (e.target === e.currentTarget && !isProcessing) {
-      onCancel();
-    }
-  };
 
   const title = session.title || session.label || 'Finaliser la transaction';
   const amountDisplay = session.amountTtc !== undefined
@@ -33,22 +28,18 @@ export default function CheckoutModal({
 
   return (
     <AnimatePresence>
-      <div
-        className="checkout-modal-overlay"
-        onClick={handleBackdropClick}
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
+      <UniversalModal
+        isOpen={isOpen && Boolean(session)}
+        onClose={() => {
+          if (!isProcessing) onCancel();
+        }}
+        closeOnBackdrop={!isProcessing}
+        ariaLabel="Paiement sécurisé"
+        showCloseButton={false}
+        contentStyle={{ maxWidth: 'none', maxHeight: 'none', overflow: 'visible' }}
+        overlayStyle={{
           backgroundColor: 'rgba(0, 0, 0, 0.65)',
           backdropFilter: 'blur(8px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 9999,
-          padding: '16px',
         }}
       >
         <motion.div
@@ -251,7 +242,7 @@ export default function CheckoutModal({
             )}
           </div>
         </motion.div>
-      </div>
+      </UniversalModal>
     </AnimatePresence>
   );
 }

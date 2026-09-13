@@ -1,5 +1,6 @@
 import React from 'react';
 import { X } from 'lucide-react';
+import UniversalModal from '../ui/UniversalModal';
 
 export default function CategoryPickerModal({
   isOpen,
@@ -13,17 +14,15 @@ export default function CategoryPickerModal({
   if (!isOpen) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-[100005] bg-black/95 md:bg-[rgba(61,53,48,0.65)] md:backdrop-blur-md flex items-center justify-center p-5"
-      style={{
-        position: 'fixed',
-        inset: 0,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '20px',
-        zIndex: 100005,
-        animation: 'fadeIn 0.2s ease-out'
+    <UniversalModal
+      isOpen={isOpen}
+      onClose={onClose}
+      ariaLabel={t('addCategory')}
+      showCloseButton={false}
+      overlayStyle={{
+        backgroundColor: 'rgba(61,53,48,0.72)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
       }}
     >
       <div style={{
@@ -92,6 +91,6 @@ export default function CategoryPickerModal({
           {t('addButton')}
         </button>
       </div>
-    </div>
+    </UniversalModal>
   );
 }

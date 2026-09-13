@@ -4,6 +4,7 @@ import {
   AlertTriangle, Sliders
 } from 'lucide-react';
 import { getPrivacySettings, saveConsent, getConsentStatus } from '../services/consentManager';
+import UniversalModal from './ui/UniversalModal';
 
 export default function PrivacyCenterModal({
   isOpen,
@@ -101,13 +102,15 @@ export default function PrivacyCenterModal({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-[4000] bg-black/90 md:bg-[rgba(61,53,48,0.72)] md:backdrop-blur-sm flex items-center justify-center p-4"
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 4000,
-        animation: 'fadeIn 0.25s ease-out',
+    <UniversalModal
+      isOpen={isOpen}
+      onClose={onClose}
+      ariaLabel="Centre de confidentialité et RGPD"
+      showCloseButton={false}
+      overlayStyle={{
+        backgroundColor: 'rgba(61,53,48,0.72)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
       }}
     >
       <div style={{
@@ -485,6 +488,6 @@ export default function PrivacyCenterModal({
         </div>
 
       </div>
-    </div>
+    </UniversalModal>
   );
 }

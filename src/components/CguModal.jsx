@@ -5,6 +5,7 @@ import {
   Scale, Clock, ShieldAlert, Sparkles,
   Check
 } from 'lucide-react';
+import UniversalModal from './ui/UniversalModal';
 
 export default function CguModal({
   isOpen,
@@ -78,19 +79,17 @@ export default function CguModal({
   ];
 
   return (
-    <div style={{
-      position: 'fixed',
-      inset: 0,
-      zIndex: 4500,
-      backgroundColor: 'rgba(61, 53, 48, 0.72)',
-      backdropFilter: 'blur(12px)',
-      WebkitBackdropFilter: 'blur(12px)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '16px',
-      animation: 'fadeIn 0.25s ease-out',
-    }}>
+    <UniversalModal
+      isOpen={isOpen}
+      onClose={isMandatory ? undefined : onClose}
+      ariaLabel="Conditions générales et charte Troco"
+      showCloseButton={false}
+      overlayStyle={{
+        backgroundColor: 'rgba(61, 53, 48, 0.72)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+      }}
+    >
       <div style={{
         backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
         borderRadius: '24px',
@@ -358,6 +357,6 @@ export default function CguModal({
         </div>
 
       </div>
-    </div>
+    </UniversalModal>
   );
 }

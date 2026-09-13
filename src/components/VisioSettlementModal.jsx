@@ -4,6 +4,7 @@ import {
   HeartHandshake, Coins, Clock,
   Sparkles, Check, X
 } from 'lucide-react';
+import UniversalModal from './ui/UniversalModal';
 
 export default function VisioSettlementModal({
   isOpen,
@@ -65,19 +66,15 @@ export default function VisioSettlementModal({
   };
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 10000010,
+    <UniversalModal
+      isOpen={isOpen}
+      onClose={onClose}
+      ariaLabel={`Règlement de la visio avec ${partnerName}`}
+      showCloseButton={false}
+      overlayStyle={{
         backgroundColor: 'var(--overlay-bg)',
         backdropFilter: 'blur(10px)',
         WebkitBackdropFilter: 'blur(10px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '16px',
-        animation: 'fadeIn 0.25s ease-out',
       }}
     >
       <div
@@ -375,7 +372,6 @@ export default function VisioSettlementModal({
           </button>
         )}
       </div>
-    </div>
+    </UniversalModal>
   );
 }
-

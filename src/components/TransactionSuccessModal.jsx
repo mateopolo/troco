@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import { CheckCircle2, X, Sparkles, Coins, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 import { playApplePaySound, playBetclicBalanceSound } from '../utils/audioService';
+import UniversalModal from './ui/UniversalModal';
 
 /**
  * Modale de confirmation de transaction plein écran (Paiement envoyé ou reçu).
@@ -47,23 +47,15 @@ export default function TransactionSuccessModal({
         : `Vous avez envoyé ${formattedAmount}.`);
 
   const modalContent = (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label={title}
-      className="fixed inset-0 z-[999999] flex items-center justify-center p-4"
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 999999,
+    <UniversalModal
+      isOpen={isOpen}
+      onClose={onClose}
+      ariaLabel={title}
+      showCloseButton={false}
+      overlayStyle={{
         backgroundColor: 'rgba(0, 0, 0, 0.65)',
         backdropFilter: 'blur(16px)',
         WebkitBackdropFilter: 'blur(16px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '16px',
-        animation: 'fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
       }}
     >
       <div
@@ -294,12 +286,8 @@ export default function TransactionSuccessModal({
           Fermer
         </button>
       </div>
-    </div>
+    </UniversalModal>
   );
-
-  if (typeof document !== 'undefined') {
-    return createPortal(modalContent, document.body);
-  }
 
   return modalContent;
 }

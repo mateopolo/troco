@@ -1,5 +1,6 @@
 import React from 'react';
 import { X } from 'lucide-react';
+import UniversalModal from '../ui/UniversalModal';
 
 export default function BoostListingModal({
   isOpen,
@@ -13,17 +14,15 @@ export default function BoostListingModal({
   if (!isOpen || !boostingListing) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-[80] bg-black/95 md:bg-[rgba(61,53,48,0.72)] md:backdrop-blur-md flex items-center justify-center p-5"
-      style={{
-        position: 'fixed',
-        inset: 0,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '20px',
-        zIndex: 80,
-        animation: 'fadeIn 0.2s ease-out'
+    <UniversalModal
+      isOpen={isOpen}
+      onClose={onClose}
+      ariaLabel="Booster une annonce"
+      showCloseButton={false}
+      overlayStyle={{
+        backgroundColor: 'rgba(61,53,48,0.72)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
       }}
     >
       <div style={{
@@ -86,6 +85,6 @@ export default function BoostListingModal({
           </div>
         )}
       </div>
-    </div>
+    </UniversalModal>
   );
 }

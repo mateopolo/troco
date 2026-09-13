@@ -3,6 +3,7 @@ import {
   Coins, Sparkles, Check, ArrowRight,
   ShieldCheck, Clock, X
 } from 'lucide-react';
+import UniversalModal from './ui/UniversalModal';
 
 export default function WelcomeGiftCelebrationModal({
   isOpen,
@@ -24,19 +25,15 @@ export default function WelcomeGiftCelebrationModal({
   if (!isOpen) return null;
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 9999,
+    <UniversalModal
+      isOpen={isOpen}
+      onClose={onClose}
+      ariaLabel="Cadeau de bienvenue Troco"
+      showCloseButton={false}
+      overlayStyle={{
         backgroundColor: 'var(--overlay-bg)',
         backdropFilter: 'blur(12px)',
         WebkitBackdropFilter: 'blur(12px)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '16px',
-        animation: 'fadeIn 0.3s ease-out',
       }}
     >
       {/* EFFET VISUEL DE PARTICULES SOLAIRES / FESTIVES */}
@@ -257,7 +254,6 @@ export default function WelcomeGiftCelebrationModal({
           <ArrowRight size={18} />
         </button>
       </div>
-    </div>
+    </UniversalModal>
   );
 }
-

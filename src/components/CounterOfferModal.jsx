@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import { Sparkles, X, Clock, Coins, CircleDollarSign, ArrowRight } from 'lucide-react';
 import { useWalletStore } from '../stores';
+import UniversalModal from './ui/UniversalModal';
 
 export default function CounterOfferModal({
   isOpen,
@@ -69,27 +69,17 @@ export default function CounterOfferModal({
     }
   };
 
-  if (!isOpen) return null;
-  if (typeof document === 'undefined') return null;
-
   const modalElement = (
-    <div
-      className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/90 md:bg-black/75 md:backdrop-blur-md touch-none"
-      style={{
-        position: 'fixed',
-        inset: 0,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '16px 16px max(80px, env(safe-area-inset-bottom, 24px)) 16px',
-        zIndex: 999999,
-        animation: 'fadeIn 0.2s ease-out both',
-        boxSizing: 'border-box'
-      }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget && typeof onClose === 'function') {
-          onClose();
-        }
+    <UniversalModal
+      isOpen={isOpen}
+      onClose={onClose}
+      ariaLabel={isEditing ? 'Modifier la contre-offre' : 'Envoyer une contre-offre'}
+      showCloseButton={false}
+      contentStyle={{ maxWidth: 'none', maxHeight: 'none', overflow: 'visible' }}
+      overlayStyle={{
+        backgroundColor: 'rgba(0,0,0,0.78)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
       }}
     >
       <div
@@ -353,10 +343,9 @@ export default function CounterOfferModal({
           </div>
         </form>
       </div>
-    </div>
+    </UniversalModal>
   );
 
-  return createPortal(modalElement, document.body);
+  return modalElement;
 }
-
 

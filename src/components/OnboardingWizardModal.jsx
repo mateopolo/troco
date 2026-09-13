@@ -21,6 +21,7 @@ import {
   ACCOUNT_TYPES,
   DIVERSE_AVATARS
 } from '../data/categoriesData';
+import UniversalModal from './ui/UniversalModal';
 
 export default function OnboardingWizardModal({
   isOpen,
@@ -152,12 +153,15 @@ export default function OnboardingWizardModal({
   const canProceedStep2 = name.trim().length >= 2 && username.trim().length >= 2;
 
   return (
-    <div
-      className="fixed inset-0 z-[100] bg-black/90 md:bg-[var(--overlay-bg)] md:backdrop-blur-md flex items-center justify-center p-4"
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 100,
+    <UniversalModal
+      isOpen={isOpen}
+      ariaLabel="Bienvenue sur Troco"
+      showCloseButton={false}
+      closeOnBackdrop={false}
+      overlayStyle={{
+        backgroundColor: 'var(--overlay-bg)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
       }}
     >
       <div style={{
@@ -1103,6 +1107,6 @@ export default function OnboardingWizardModal({
           )}
         </div>
       </div>
-    </div>
+    </UniversalModal>
   );
 }

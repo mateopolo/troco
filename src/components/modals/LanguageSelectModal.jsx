@@ -2,6 +2,7 @@ import React from 'react';
 import { Globe, X, CheckCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getActiveAnimation } from '../../config/animations';
+import UniversalModal from '../ui/UniversalModal';
 
 const AVAILABLE_LANGUAGES = [
   { code: 'FR', label: 'Français', flag: '🇫🇷' },
@@ -24,21 +25,15 @@ export default function LanguageSelectModal({
   return (
     <AnimatePresence>
       {isOpen && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          onClick={onClose}
-          className="fixed inset-0 z-[65] bg-black/95 md:bg-[rgba(61,53,48,0.7)] md:backdrop-blur-md flex items-center justify-center p-5"
-          style={{
-            position: 'fixed',
-            inset: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '20px',
-            zIndex: 65,
+        <UniversalModal
+          isOpen={isOpen}
+          onClose={onClose}
+          ariaLabel={t('selectLanguage')}
+          showCloseButton={false}
+          overlayStyle={{
+            backgroundColor: 'rgba(61,53,48,0.7)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
           }}
         >
           <motion.div
@@ -123,8 +118,8 @@ export default function LanguageSelectModal({
             </button>
           ))}
         </div>
-        </motion.div>
-      </motion.div>
+          </motion.div>
+        </UniversalModal>
     )}
   </AnimatePresence>
   );
