@@ -36,6 +36,7 @@ import { createScheduledDeletion } from './gdpr/scheduledDeletion';
 // Handlers sécurité & limitation de débit
 import { handleCheckRateLimit } from './security/checkRateLimit';
 import { createCleanupRateLimits } from './security/cleanupRateLimits';
+import { health } from './health/healthCheck';
 
 
 /**
@@ -169,8 +170,13 @@ export const checkRateLimit = onCall({ cors: true }, async (request) => {
 export const cleanupRateLimits = createCleanupRateLimits(db);
 
 /**
+ * ❤️ Cloud Function 19 : health (HTTP)
+ * Vérification de disponibilité Firestore et Firebase Auth pour le monitoring uptime.
+ */
+export { health };
+
+/**
  * 👥 Cloud Function 18 : migrateChatParticipants (Callable Admin - VERIF-02)
  * Migration des participants de chats (noms -> Firebase Auth UIDs) et traçabilité orphelins.
  */
 export { migrateChatParticipants } from './migration/migrateChatParticipants';
-

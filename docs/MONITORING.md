@@ -66,3 +66,28 @@ bash scripts/analyze-cloud-logs.sh
    Mesure du delta entre `createdAt` (client émetteur) et `onSnapshot` (client récepteur) : cible `< 1000ms`.
 3. **Distribution des statuts d'appels WebRTC :**
    Ratio `ended` vs `missed` vs `rejected`. Un pic de `missed` sans `deliveredAt` indique un problème de notification push.
+
+---
+
+## 6. Health Check Uptime
+
+La Cloud Function HTTP `health` expose un endpoint public de disponibilité :
+
+```text
+https://<region>-<project>.cloudfunctions.net/health
+```
+
+Le endpoint renvoie `200 OK` avec un JSON `status: "ok"` lorsque Firestore et
+Firebase Auth sont disponibles. Une erreur de lecture Firestore renvoie
+`503 Service Unavailable` avec `status: "degraded"`.
+
+### Configuration recommandée
+
+Configurer un contrôle toutes les **5 minutes** avec l'un des outils suivants :
+
+- [UptimeRobot](https://uptimerobot.com/) (offre gratuite)
+- **GCP Uptime Checks** dans Cloud Monitoring
+
+Configurer une alerte email après **2 échecs consécutifs**. Le corps JSON
+contient notamment `timestamp`, `version` et l'état de chaque dépendance pour
+faciliter le diagnostic.

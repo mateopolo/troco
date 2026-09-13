@@ -1,6 +1,6 @@
 {
   "name": "troco-functions",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Cloud Functions sécurisées pour Troco — Custom Claims, Modération & Intégrité Financière",
   "main": "lib/index.js",
   "scripts": {
