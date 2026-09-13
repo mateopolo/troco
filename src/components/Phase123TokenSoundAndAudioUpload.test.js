@@ -41,8 +41,8 @@ describe('Phase 123 : Fix des effets sonores de jetons et ajout de l\'upload de 
   });
 
   describe('2. Ajout de l\'upload audio dans le chat (ChatInputBar.jsx & MessageBubble.jsx)', () => {
-    test('ChatInputBar contient un input file caché accept="audio/*" avec onChange={handleAudioUpload}', () => {
-      expect(chatInputBarContent).toMatch(/<input[^>]*type="file"[^>]*accept="audio\/\*"[^>]*onChange=\{handleAudioUpload\}/);
+    test('ChatInputBar accepte les formats audio courants avec onChange={handleAudioUpload}', () => {
+      expect(chatInputBarContent).toMatch(/<input[^>]*type="file"[^>]*accept="audio\/\*,\.wav,\.mp3,\.m4a,\.ogg,\.webm"[^>]*onChange=\{handleAudioUpload\}/);
       expect(chatInputBarContent).toContain('audioInputRef');
     });
 

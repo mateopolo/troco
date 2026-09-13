@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { collection, addDoc, doc, setDoc, serverTimestamp } from 'firebase/firestore';
-import { storage, db } from '../../firebase';
+import { auth, storage, db } from '../../firebase';
 import { haptics } from '../../utils/haptics';
 
 /**
@@ -79,7 +79,7 @@ function ChatInputBar({
     const file = e.target.files?.[0];
     if (!file) return;
     const extension = String(file.name || '').split('.').pop().toLowerCase();
-    const audioMime = file.type || ({
+    const extensionMime = ({
       wav: 'audio/wav',
       mp3: 'audio/mpeg',
       m4a: 'audio/mp4',
@@ -88,7 +88,10 @@ function ChatInputBar({
       webm: 'audio/webm',
       aac: 'audio/aac',
     }[extension] || '');
-    if (!audioMime.startsWith('audio/')) {
+    const audioMime = file.type.startsWith('audio/')
+      ? file.type
+      : extensionMime || 'audio/wav';
+    if (!file.type.startsWith('audio/') && !extensionMime) {
       logger.warn('[ChatInputBar] Unsupported audio file rejected:', file.name);
       if (e.target) e.target.value = '';
       return;
@@ -103,6 +106,10 @@ function ChatInputBar({
         const storageRef = ref(storage, `chat_audios/${cleanName}`);
         const snapshot = await uploadBytes(storageRef, file, {
           contentType: audioMime,
+          customMetadata: {
+            uploadedBy: auth.currentUser?.uid || 'anonymous',
+            originalName: file.name,
+          },
         });
         downloadUrl = await getDownloadURL(snapshot.ref);
       } else {
@@ -663,7 +670,7 @@ function ChatInputBar({
         {/* INPUT FICHIER AUDIO CACHÉ */}
         <input
           type="file"
-          accept="audio/*"
+          accept="audio/*,.wav,.mp3,.m4a,.ogg,.webm"
           ref={audioInputRef}
           onChange={handleAudioUpload}
           style={{ display: 'none' }}

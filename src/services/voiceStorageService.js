@@ -1,6 +1,6 @@
 import logger from '../utils/logger';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage } from '../firebase';
+import { auth, storage } from '../firebase';
 
 /**
  * Convertit un Blob audio en Data URL Base64 (fallback résilient offline/storage)
@@ -82,8 +82,10 @@ export async function uploadAudioFile(file, chatId = 'global') {
     webm: 'audio/webm',
     aac: 'audio/aac',
   }[extension];
-  const resolvedContentType = file.type || extensionMime || 'audio/mpeg';
-  if (!resolvedContentType.startsWith('audio/')) {
+  const resolvedContentType = file.type?.startsWith('audio/')
+    ? file.type
+    : extensionMime || 'audio/wav';
+  if (!file.type?.startsWith('audio/') && !extensionMime) {
     throw new Error('Unsupported audio file type');
   }
   const cleanName = `${Date.now()}_${file.name ? file.name.replace(/[^a-zA-Z0-9._-]/g, '_') : 'audio.mp3'}`;
@@ -94,6 +96,10 @@ export async function uploadAudioFile(file, chatId = 'global') {
       const storageRef = ref(storage, storagePath);
       const snapshot = await uploadBytes(storageRef, file, {
         contentType: resolvedContentType,
+        customMetadata: {
+          uploadedBy: auth.currentUser?.uid || 'anonymous',
+          originalName: file.name,
+        },
       });
       const downloadUrl = await getDownloadURL(snapshot.ref);
       return {

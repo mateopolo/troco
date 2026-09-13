@@ -2,7 +2,7 @@ import logger from '../utils/logger';
 import React, { useState, useEffect, useRef } from 'react';
 import { Square, Trash2, Send, Play, Pause, Sparkles } from 'lucide-react';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { storage } from '../firebase';
+import { auth, storage } from '../firebase';
 
 /**
  * VoiceNoteRecorder — Enregistrement vocal cross-platform (iOS Safari, Chrome, Firefox, Android)
@@ -250,6 +250,10 @@ export default function VoiceNoteRecorder({
           const storageRef = ref(storage, `voice_notes/${fileName}`);
           const snapshot = await uploadBytes(storageRef, blob, {
             contentType: finalMimeType || (isIOS ? 'audio/mp4' : 'audio/webm'),
+            customMetadata: {
+              uploadedBy: auth.currentUser?.uid || 'anonymous',
+              originalName: fileName,
+            },
           });
           audioUrl = await getDownloadURL(snapshot.ref);
         } catch (storageErr) {
