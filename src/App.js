@@ -2549,8 +2549,30 @@ export default function App() {
     }
   };
 
-  const handleTogglePauseListing = (id) => {
-    setListings(prev => prev.map(item => item.id === id ? { ...item, status: item.status === 'paused' ? 'active' : 'paused' } : item));
+  const handleTogglePauseListing = async (id) => {
+    const listingToUpdate = listings.find(item => item.id === id);
+    if (!listingToUpdate) return;
+
+    const newStatus = listingToUpdate.status === 'paused' ? 'active' : 'paused';
+    const firestoreId = listingToUpdate.firestoreId || String(id);
+
+    const previousListings = [...listings];
+    setListings(prev => prev.map(item => item.id === id ? { ...item, status: newStatus } : item));
+
+    try {
+      await updateDoc(doc(db, 'listings', firestoreId), {
+        status: newStatus,
+        updatedAt: serverTimestamp(),
+      });
+    } catch (err) {
+      setListings(previousListings);
+      notificationService.show({
+        title: 'Erreur',
+        message: 'Impossible de mettre à jour le statut de l\'annonce',
+        icon: 'error',
+        duration: 3000,
+      });
+    }
   };
 
   const handleStartEditListing = (listing) => {
@@ -4671,9 +4693,9 @@ export default function App() {
               </button>
 
               <button
-                onClick={() => {
+                onClick={async () => {
                   const targetId = mobileListingActionTarget.id;
-                  handleTogglePauseListing(targetId);
+                  await handleTogglePauseListing(targetId);
                   setMobileListingActionTarget(null);
                 }}
                 className="premium-button"
