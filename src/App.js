@@ -81,6 +81,7 @@ import CheckoutModal from './components/modals/CheckoutModal';
 import DemoModeBanner from './components/common/DemoModeBanner';
 import { RateLimitToast } from './components/ui/RateLimitToast';
 import { useFirestoreHealth } from './hooks/useFirestoreHealth';
+import * as storage from './utils/storage';
 export { isIosOrTouchDevice };
 
 
@@ -128,7 +129,7 @@ export default function App() {
   // Purge d'urgence pour réparer les écrans noirs sur mobile
   useEffect(() => {
     try {
-      localStorage.removeItem('troco_user_profile');
+      storage.remove('troco_user_profile');
       localStorage.removeItem('troco_chat_store');
       localStorage.removeItem('chat_store');
       localStorage.removeItem('troco_cached_chats');
@@ -434,7 +435,7 @@ export default function App() {
           const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
           setUserTransactions(list);
           try {
-            localStorage.setItem('troco_user_transactions', JSON.stringify(list));
+            storage.setDebounced('troco_user_transactions', list);
           } catch (e) { }
         }
       }, (err) => logger.warn('[Firestore] Transactions listener:', err));
@@ -740,7 +741,7 @@ export default function App() {
     };
     setProfile(updatedProfile);
     try {
-      localStorage.setItem('troco_user_profile', JSON.stringify(updatedProfile));
+      storage.setDebounced('troco_user_profile', updatedProfile);
     } catch (_) { }
 
     // 2. Sauvegarde de la transaction dans le state local
@@ -753,7 +754,7 @@ export default function App() {
     };
     setUserTransactions(prev => [newTxRecord, ...prev]);
     try {
-      localStorage.setItem('troco_user_transactions', JSON.stringify([newTxRecord, ...userTransactions]));
+      storage.setDebounced('troco_user_transactions', [newTxRecord, ...userTransactions]);
     } catch (e) { }
 
     // 3. Application sécurisée côté Cloud Function backend (pas de manipulation solde directe client)
@@ -966,7 +967,7 @@ export default function App() {
               setBannedReason(data.bannedReason || "Votre compte a été suspendu par l'administration Troco suite à un non-respect des règles de la communauté.");
               try { await signOut(auth); } catch (_) {}
               clearSessionFlags();
-              window.localStorage.removeItem('troco_user_profile');
+              storage.remove('troco_user_profile');
               setIsAuthenticated(false);
               return;
             }
@@ -1011,7 +1012,7 @@ export default function App() {
                 uid: uid,
               };
               try {
-                window.localStorage.setItem('troco_user_profile', JSON.stringify(updated));
+                storage.setDebounced('troco_user_profile', updated);
               } catch (_) {}
               return updated;
             });
@@ -1148,8 +1149,8 @@ export default function App() {
     setProfileDraft(updatedProfile);
     if (Array.isArray(completedData.skills)) setSkills(completedData.skills);
     if (Array.isArray(completedData.equipment)) setEquipment(completedData.equipment);
-    window.localStorage.setItem('troco_user_profile', JSON.stringify(updatedProfile));
-    window.localStorage.setItem('troco_welcome_gift_celebrated', 'true');
+    storage.setDebounced('troco_user_profile', updatedProfile);
+    storage.setSync('troco_welcome_gift_celebrated', 'true');
 
     const uid = profile?.uid || auth.currentUser?.uid;
     if (uid) {
@@ -1195,7 +1196,7 @@ export default function App() {
             const userHandle = '@' + (result.user.email?.split('@')[0] || 'user').toLowerCase().replace(/\s+/g, '');
             setProfile(prev => {
               const updated = { ...prev, loginMethod: 'Email Link', name: userName, username: userHandle, uid: result.user.uid };
-              window.localStorage.setItem('troco_user_profile', JSON.stringify(updated));
+              storage.setDebounced('troco_user_profile', updated);
               return updated;
             });
             setIsAuthenticated(true);
@@ -2640,7 +2641,7 @@ export default function App() {
       logger.warn('SignOut error:', e);
     }
     clearSessionFlags();
-    window.localStorage.removeItem('troco_user_profile');
+    storage.remove('troco_user_profile');
     setIsAuthenticated(false);
     setSelectedChat(null);
     setSelectedListing(null);
@@ -2653,7 +2654,7 @@ export default function App() {
     const uid = profile.uid || auth.currentUser?.uid;
     setProfile(prev => {
       const updated = { ...prev, cguAcceptedAt: now, cguVersion: cguVersion || '2026.1' };
-      window.localStorage.setItem('troco_user_profile', JSON.stringify(updated));
+      storage.setDebounced('troco_user_profile', updated);
       return updated;
     });
     if (uid) {
