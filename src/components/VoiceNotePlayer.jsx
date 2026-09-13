@@ -8,6 +8,7 @@ export default function VoiceNotePlayer({
   duration = null,
   isMe = false,
   currentLang = 'FR',
+  sourceLang = 'FR',
   transcript = null,
   transcription = null,
 }) {
@@ -22,6 +23,7 @@ export default function VoiceNotePlayer({
   const [showTranslation, setShowTranslation] = useState(false);
   const [translatedText, setTranslatedText] = useState('');
   const [isTranslating, setIsTranslating] = useState(false);
+  const [translationError, setTranslationError] = useState('');
   const [isCopied, setIsCopied] = useState(false);
   const audioRef = useRef(null);
   const translationRequestRef = useRef(0);
@@ -60,22 +62,38 @@ export default function VoiceNotePlayer({
     if (!transcribedText || !currentLang) {
       setTranslatedText('');
       setIsTranslating(false);
+      setTranslationError('');
+      return undefined;
+    }
+
+    const normalizedSourceLang = String(sourceLang || 'FR').split('-')[0].toUpperCase();
+    const normalizedTargetLang = String(currentLang).split('-')[0].toUpperCase();
+    if (normalizedSourceLang === normalizedTargetLang) {
+      setTranslatedText(transcribedText);
+      setIsTranslating(false);
+      setTranslationError('');
       return undefined;
     }
 
     const requestId = translationRequestRef.current + 1;
     translationRequestRef.current = requestId;
     setIsTranslating(true);
+    setTranslationError('');
 
-    translateText(transcribedText, currentLang, 'auto')
+    translateText(transcribedText, normalizedTargetLang, normalizedSourceLang)
       .then((result) => {
         if (translationRequestRef.current === requestId) {
-          setTranslatedText(result || transcribedText);
+          if (!result || result.trim() === transcribedText) {
+            throw new Error('Translation service returned the source text');
+          }
+          setTranslatedText(result);
         }
       })
-      .catch(() => {
+      .catch((error) => {
         if (translationRequestRef.current === requestId) {
-          setTranslatedText(transcribedText);
+          setTranslatedText('');
+          setTranslationError('Traduction indisponible pour le moment');
+          logger.warn('[VoiceNotePlayer] translation error:', error);
         }
       })
       .finally(() => {
@@ -87,7 +105,7 @@ export default function VoiceNotePlayer({
     return () => {
       translationRequestRef.current += 1;
     };
-  }, [transcribedText, currentLang]);
+  }, [transcribedText, currentLang, sourceLang]);
 
   const togglePlay = useCallback(() => {
     const audio = audioRef.current;
@@ -144,12 +162,19 @@ export default function VoiceNotePlayer({
     const baseText = transcribedText;
     if (!translatedText && baseText) {
       setIsTranslating(true);
+      setTranslationError('');
       try {
-        const dest = currentLang || 'FR';
-        const res = await translateText(baseText, dest, 'auto');
-        setTranslatedText(res || baseText);
+        const dest = String(currentLang || 'FR').split('-')[0].toUpperCase();
+        const source = String(sourceLang || 'FR').split('-')[0].toUpperCase();
+        const res = await translateText(baseText, dest, source);
+        if (!res || res.trim() === baseText) {
+          throw new Error('Translation service returned the source text');
+        }
+        setTranslatedText(res);
       } catch (err) {
-        setTranslatedText(baseText);
+        setTranslatedText('');
+        setTranslationError('Traduction indisponible pour le moment');
+        logger.warn('[VoiceNotePlayer] manual translation error:', err);
       } finally {
         setIsTranslating(false);
       }
@@ -430,7 +455,7 @@ export default function VoiceNotePlayer({
           </div>
 
           <p className="transcript-text text-sm text-[var(--text-secondary)] mt-2" style={{ fontStyle: 'italic', wordBreak: 'break-word' }}>
-            « {showTranslation ? (translatedText || transcribedText) : transcribedText} »
+            « {showTranslation ? (translatedText || translationError) : transcribedText} »
           </p>
         </div>
       )}

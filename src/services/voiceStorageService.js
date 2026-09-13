@@ -68,7 +68,8 @@ export async function uploadVoiceNote(audioBlob, chatId = 'global') {
 
 /**
  * Upload d'un fichier audio (MP3, WAV, etc.) sur Firebase Storage sans limitation arbitraire de taille.
- * Force impérativement les métadonnées avec contentType: file.type || 'audio/mpeg'.
+ * Les fichiers importés ne sont jamais convertis en Data URL : Firestore refuserait
+ * les fichiers dépassant sa limite de 1 MiB lorsqu'ils sont stockés dans un message.
  */
 export async function uploadAudioFile(file, chatId = 'global') {
   if (!file) throw new Error('No audio file provided');
@@ -94,36 +95,30 @@ export async function uploadAudioFile(file, chatId = 'global') {
   const storagePath = `chat_audios/${cleanName}`;
 
   try {
-    if (storage) {
-      const storageRef = ref(storage, storagePath);
-      const downloadUrl = await uploadResumable(storageRef, uploadFile, {
-        contentType: resolvedContentType,
-        customMetadata: {
-          uploadedBy: auth.currentUser?.uid || 'anonymous',
-          originalName: file.name,
-        },
-      });
-      return {
-        success: true,
-        audioUrl: downloadUrl,
-        fileName: file.name || cleanName,
-        contentType: resolvedContentType,
-      };
+    if (!storage) {
+      throw new Error('Firebase Storage is not initialized.');
     }
+
+    const storageRef = ref(storage, storagePath);
+    const downloadUrl = await uploadResumable(storageRef, uploadFile, {
+      contentType: resolvedContentType,
+      customMetadata: {
+        uploadedBy: auth.currentUser?.uid || 'anonymous',
+        originalName: file.name,
+      },
+    }, 20000);
+    return {
+      success: true,
+      audioUrl: downloadUrl,
+      fileName: file.name || cleanName,
+      contentType: resolvedContentType,
+    };
   } catch (err) {
     logger.error('[VoiceStorageService] Storage upload failed:', err);
     logger.error('[VoiceStorageService] Storage error code:', err?.code);
     logger.error('[VoiceStorageService] Storage error message:', err?.message);
+    throw err;
   }
-
-  // Fallback DataURL résilient si Storage est indisponible
-  const dataUrl = await blobToDataURL(uploadFile);
-  return {
-    success: true,
-    audioUrl: dataUrl,
-    fileName: file.name || cleanName,
-    contentType: resolvedContentType,
-  };
 }
 
 function uploadResumable(storageRef, data, metadata, timeoutMs = 60000) {

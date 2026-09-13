@@ -2380,6 +2380,7 @@ function ChatView({
                             duration={msg?.duration}
                             isMe={isMe}
                             currentLang={currentLang}
+                            sourceLang={msg?.sourceLang || msg?.language || 'FR'}
                             transcript={msg?.transcript || null}
                           />
                         </div>
@@ -2761,10 +2762,10 @@ function ChatView({
             }}
             onOpenProjectRewards={() => setIsProjectRewardsModalOpen(true)}
             chatId={currentChatId}
-            onAudioUpload={(audioPayload) => {
+            onAudioUpload={async (audioPayload) => {
               userJustSentMessageRef.current = true;
               if (typeof handleSendMessage === 'function') {
-                handleSendMessage(audioPayload);
+                await handleSendMessage(audioPayload);
               }
             }}
           />

@@ -137,32 +137,6 @@ function ChatInputBar({
       logger.error('[ChatInputBar] Firebase Upload Error:', err);
       logger.error('[ChatInputBar] Error code:', err?.code);
       logger.error('[ChatInputBar] Error message:', err?.message);
-      try {
-        const dataUrl = await new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onloadend = () => resolve(reader.result);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-        const fallbackMsg = {
-          type: 'audio',
-          audioUrl: dataUrl,
-          fileName: file.name,
-        };
-        if (typeof onAudioUpload === 'function') {
-          await onAudioUpload(fallbackMsg);
-        } else if (chatId && db) {
-          await addDoc(collection(db, 'chats', String(chatId), 'messages'), {
-            ...fallbackMsg,
-            senderName: 'Moi',
-            read: false,
-            status: 'sent',
-            createdAt: serverTimestamp(),
-          });
-        } else if (typeof onSendMessage === 'function') {
-          onSendMessage(fallbackMsg);
-        }
-      } catch (_) {}
     } finally {
       setInternalIsSending(false);
       if (e.target) e.target.value = '';

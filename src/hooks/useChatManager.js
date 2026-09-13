@@ -837,6 +837,7 @@ export const useChatManager = ({
                 [chatId]: thread.map(m => (m.id === tempId || m.temporaryId === tempId) ? { ...m, status: 'error' } : m),
               };
             });
+            throw e;
           }
         }
         return;
@@ -978,9 +979,18 @@ export const useChatManager = ({
     if (db) {
       try {
         const docRef = await addDoc(collection(db, 'chats', String(chatId), 'messages'), {
+          ...(msg.type === 'audio' || msg.kind === 'audio'
+            ? {
+              type: 'audio',
+              kind: 'audio',
+              audioUrl: msg.audioUrl,
+              fileName: msg.fileName || null,
+              contentType: msg.contentType || msg.mimeType || null,
+            }
+            : {}),
           senderName: profile?.name || 'Moi',
           senderUid: profile?.uid || null,
-          text: msg.text,
+          text: msg.text || (msg.type === 'audio' ? `🎵 ${msg.fileName || 'Fichier audio'}` : ''),
           read: false,
           status: 'sent',
           createdAt: serverTimestamp(),
@@ -1083,6 +1093,7 @@ export const useChatManager = ({
       type: 'audio',
       audioUrl,
       duration: formattedDuration,
+      sourceLang: 'FR',
       ...(normalizedTranscript ? { transcript: normalizedTranscript } : {}),
       status: 'sent',
       createdAt: new Date(),
@@ -1113,6 +1124,7 @@ export const useChatManager = ({
           type: 'audio',
           audioUrl,
           duration: formattedDuration,
+          sourceLang: 'FR',
           ...(normalizedTranscript ? { transcript: normalizedTranscript } : {}),
           ...(mimeType ? { mimeType } : {}),
           text: newAudioMessage.text,
