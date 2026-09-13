@@ -421,7 +421,7 @@ export default function App() {
       }
     }
     prevTokensRef.current = profile?.trocoTokens;
-  }, [profile?.trocoTokens, setTopUpCelebration]);
+  }, [profile?.trocoTokens, setTopUpCelebration, safeTimeout]);
 
   const [userTransactions, setUserTransactions] = useState(() => {
     return getInitialTransactions();
@@ -1095,7 +1095,7 @@ export default function App() {
       if (unsubDoc) unsubDoc();
       unsubscribeAuth();
     };
-  }, []);
+  }, [safeTimeout, setBannedReason, setIsAuthResolved, setIsAuthenticated, setIsLoadingSession, setIsUserBanned, setProfile, setSelectedChat, setSelectedListing, setTopUpCelebration]);
 
   // ---- ÉCOUTE ET RÉACTUALISATION EN TEMPS RÉEL DES TRADUCTIONS DYNAMIQUES ----
   const [, setTranslationRevision] = useState(0);
