@@ -17,6 +17,8 @@ export default function FilterDrawer({
   toggleLanguageFilter,
   selectedPayment = 'all',
   setSelectedPayment,
+  hideDemos = false,
+  setHideDemos,
   paymentOptions = ['all', 'credits', 'cash', 'troc', 'hybrid'],
   paymentLabels = {
     all: 'Tous',
@@ -246,6 +248,29 @@ export default function FilterDrawer({
             </button>
           ))}
         </div>
+
+        {/* FILTRE DES ANNONCES DÉMO */}
+        <label
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            marginTop: '16px',
+            marginBottom: '14px',
+            color: darkMode ? '#FAF7F2' : '#3D3530',
+            fontSize: '12px',
+            fontWeight: '700',
+            cursor: 'pointer',
+          }}
+        >
+          <input
+            type="checkbox"
+            checked={hideDemos}
+            onChange={(e) => setHideDemos?.(e.target.checked)}
+            style={{ accentColor: '#C67D5B', width: '16px', height: '16px' }}
+          />
+          Masquer les démos
+        </label>
 
         {/* FILTRE MODE DE RÉTRIBUTION */}
         <label style={{ fontSize: '12px', fontWeight: '700', color: darkMode ? '#D4C5B5' : '#3D3530' }}>

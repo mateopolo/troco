@@ -1216,8 +1216,21 @@ export default function App() {
   const [customCategories, setCustomCategories] = useState([]);
   const [radiusKm, setRadiusKm] = useState(20);
   const [isInfiniteRadius, setIsInfiniteRadius] = useState(true);
+  const [hideDemos, setHideDemos] = useState(() => {
+    try {
+      return localStorage.getItem('troco_hide_demos') === 'true';
+    } catch (_) {
+      return false;
+    }
+  });
   const [hoveredCardId, setHoveredCardId] = useState(null);
   const [hoverSlideIndex, setHoverSlideIndex] = useState(0);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('troco_hide_demos', String(hideDemos));
+    } catch (_) {}
+  }, [hideDemos]);
 
   // Verrouillage absolu du scroll global dans l'onglet Chat (comportement application native iOS)
   useEffect(() => {
@@ -1279,6 +1292,13 @@ export default function App() {
       const deltaX = touch.clientX - modalTouchStartRef.current.x;
       const deltaY = touch.clientY - modalTouchStartRef.current.y;
       const gallery = selectedListing.gallery && selectedListing.gallery.length > 0 ? selectedListing.gallery : [selectedListing.image];
+
+      if (deltaY > 80 && Math.abs(deltaY) > Math.abs(deltaX)) {
+        setSelectedListing(null);
+        setSelectedDetailImageIndex(0);
+        modalTouchStartRef.current = null;
+        return;
+      }
 
       if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 20 && gallery.length > 1) {
         if (deltaX < 0) {
@@ -2241,6 +2261,8 @@ export default function App() {
 
   const filteredListings = useMemo(() => {
     return listings.filter((item) => {
+      if (hideDemos && item.isDemo) return false;
+
       const rawQuery = (debouncedSearchQuery || '').trim();
       const cleanQuery = removeAccents(rawQuery);
       const words = cleanQuery.split(/\s+/).filter(Boolean);
@@ -2367,6 +2389,7 @@ export default function App() {
     selectedPayment,
     radiusKm,
     isInfiniteRadius,
+    hideDemos,
     profile.name,
     profile?.uid,
     auth.currentUser?.uid,
@@ -2990,6 +3013,8 @@ export default function App() {
         toggleLanguageFilter={toggleLanguageFilter}
         selectedPayment={selectedPayment}
         setSelectedPayment={setSelectedPayment}
+        hideDemos={hideDemos}
+        setHideDemos={setHideDemos}
         paymentOptions={paymentOptions}
         paymentLabels={paymentLabels}
         darkMode={darkMode}
@@ -4732,7 +4757,7 @@ export default function App() {
             className="fixed top-10 left-1/2 -translate-x-1/2 z-[999999] shadow-2xl"
             style={{
               position: 'fixed',
-              top: '40px',
+                top: 'max(16px, calc(env(safe-area-inset-top, 0px) + 16px))',
               left: '50%',
               transform: 'translateX(-50%)',
               zIndex: 999999,
@@ -5164,7 +5189,7 @@ export default function App() {
         <div
           style={{
             position: 'fixed',
-            top: '85px',
+            top: 'calc(env(safe-area-inset-top, 0px) + 70px)',
             left: '50%',
             transform: 'translateX(-50%)',
             zIndex: 999999,

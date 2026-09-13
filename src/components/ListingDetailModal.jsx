@@ -30,6 +30,7 @@ export default function ListingDetailModal({
 
   const touchStartRef = useRef(null);
   const touchDeltaXRef = useRef(0);
+  const touchDeltaYRef = useRef(0);
   const isSwipingRef = useRef(false);
   const detailVideoRef = useRef(null);
 
@@ -56,6 +57,7 @@ export default function ListingDetailModal({
       y: e.touches[0].clientY,
     };
     touchDeltaXRef.current = 0;
+    touchDeltaYRef.current = 0;
     isSwipingRef.current = false;
   };
 
@@ -67,6 +69,7 @@ export default function ListingDetailModal({
     const deltaY = touchStartRef.current.y - currentY;
 
     touchDeltaXRef.current = deltaX;
+    touchDeltaYRef.current = currentY - touchStartRef.current.y;
     if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 12) {
       isSwipingRef.current = true;
     }
@@ -74,6 +77,16 @@ export default function ListingDetailModal({
 
   const handleTouchEnd = () => {
     const deltaX = touchDeltaXRef.current;
+    const deltaY = touchDeltaYRef.current;
+    if (deltaY > 80 && Math.abs(deltaY) > Math.abs(deltaX)) {
+      onClose?.();
+      setSelectedImageIndex(0);
+      touchStartRef.current = null;
+      touchDeltaXRef.current = 0;
+      touchDeltaYRef.current = 0;
+      return;
+    }
+
     if (isSwipingRef.current && Math.abs(deltaX) > 20 && gallery.length > 1) {
       if (deltaX > 0) {
         // Swiped left -> next photo
@@ -85,6 +98,7 @@ export default function ListingDetailModal({
     }
     touchStartRef.current = null;
     touchDeltaXRef.current = 0;
+    touchDeltaYRef.current = 0;
   };
 
   // Accessibilité Clavier : Échap pour fermer, Flèches Gauche/Droite pour naviguer dans la galerie
@@ -537,4 +551,3 @@ export default function ListingDetailModal({
     </div>
   );
 }
-
