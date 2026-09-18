@@ -29,6 +29,7 @@ import TransactionSuccessModal from './components/TransactionSuccessModal';
 import { useWalletStore } from './stores';
 import haptics from './utils/haptics';
 import { useAppAuth } from './hooks/useAppAuth';
+import { deriveDisplayName, buildUsernameHandle, humanizeEmailPrefix, isTechnicalId, safeName } from './utils/displayName';
 import { useAppNavigation } from './hooks/useAppNavigation';
 import { useAppModals } from './hooks/useAppModals';
 import Portal from './components/ui/Portal';
@@ -229,6 +230,7 @@ export default function App() {
   const [showingOriginalListings, setShowingOriginalListings] = useState({});
   const [showingOriginalMessages, setShowingOriginalMessages] = useState({});
   const mainContainerRef = useRef(null);
+  const hasResolvedAuthRef = useRef(false);
   const toggleOriginalMessage = (id) => setShowingOriginalMessages(prev => ({ ...prev, [id]: !prev[id] }));
 
   const toggleOriginalListing = useCallback((id, event) => {
@@ -948,6 +950,7 @@ export default function App() {
       const elapsed = Date.now() - sessionStartTime;
       const remaining = Math.max(0, 2500 - elapsed);
       safeTimeout(() => {
+        hasResolvedAuthRef.current = true;
         setIsLoadingSession(false);
       }, remaining);
     };
@@ -1036,18 +1039,25 @@ export default function App() {
             if (Array.isArray(data.equipment)) setEquipment(data.equipment);
           } else {
             // Initialisation automatique du profil sur Firestore si nouveau provider
+            // NOM RÉEL OBLIGATOIRE : displayName Google → préfixe email humanisé ("john.doe" → "John Doe").
+            // JAMAIS l'UID technique ni l'email brut comme nom visible.
+            const realDisplayName = deriveDisplayName(firebaseUser);
+            const emailPrefix = (firebaseUser.email || '').split('@')[0] || '';
             const defaultUserDoc = {
               uid: uid,
-              name: firebaseUser.displayName || firebaseUser.email?.split('@')[0].toUpperCase() || 'Utilisateur Troco',
-              username: '@' + (firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'user').toLowerCase().replace(/\s+/g, ''),
+              name: realDisplayName,
+              username: buildUsernameHandle(realDisplayName, emailPrefix || uid),
               email: firebaseUser.email || '',
               phoneNumber: firebaseUser.phoneNumber || '',
-              avatar: firebaseUser.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
-              bio: 'Nouvel utilisateur sur Troco ! Prêt à partager mes compétences et échanger des services.',
-              location: 'Paris, France',
+              avatar: firebaseUser.photoURL || '',
+              bio: '',
+              location: '',
               languages: ['FR'],
               skills: [],
               equipment: [],
+              socialLinks: [],
+              portfolio: [],
+              reviews: [],
               euroBalance: 0.00,
               trocoTokens: 10,
               dealsCompleted: 0,
@@ -1196,12 +1206,14 @@ export default function App() {
         email = window.prompt('Veuillez entrer votre email pour valider la connexion :');
       }
       if (email) {
-        setIsLoadingSession(true);
+        if (!hasResolvedAuthRef.current) {
+          setIsLoadingSession(true);
+        }
         signInWithEmailLink(auth, email, window.location.href)
           .then((result) => {
             window.localStorage.removeItem('emailForSignIn');
-            const userName = result.user.email?.split('@')[0].toUpperCase() || 'UTILISATEUR';
-            const userHandle = '@' + (result.user.email?.split('@')[0] || 'user').toLowerCase().replace(/\s+/g, '');
+            const userName = deriveDisplayName(result.user);
+            const userHandle = buildUsernameHandle(userName, result.user.email || '');
             setProfile(prev => {
               const updated = { ...prev, loginMethod: 'Email Link', name: userName, username: userHandle, uid: result.user.uid };
               storage.setDebounced('troco_user_profile', updated);
@@ -1213,7 +1225,11 @@ export default function App() {
           .catch((err) => {
             logger.error('Magic link sign-in error:', err);
           })
-          .finally(() => setIsLoadingSession(false));
+          .finally(() => {
+            if (!hasResolvedAuthRef.current) {
+              setIsLoadingSession(false);
+            }
+          });
       }
     }
   }, [setIsAuthenticated, setIsLoadingSession, setProfile]);
@@ -1613,7 +1629,7 @@ export default function App() {
             notifiedMessageIds.current.delete(oldest);
           }
 
-          const senderTitle = data.lastSenderName || data.lastSender || data.user || 'Nouveau message';
+          const senderTitle = safeName(data.lastSenderName || data.lastSender || data.user, 'Nouveau message');
           const messageText = data.lastMessage || 'Nouveau message reçu';
           const senderAvatar = data.avatar || data.authorAvatar || null;
 
@@ -2064,33 +2080,8 @@ export default function App() {
     } catch (e) {
       logger.warn('Erreur chargement localStorage des annonces', e);
     }
-    const defaultUserListing = {
-      id: 9999,
-      title: "Coaching React, Node.js & Firebase (1h)",
-      description: "Session individuelle de mentorat web moderne : React, Firebase, API Rest & architecture. Support vidéo et exercices pratiques inclus.",
-      author: "Matéo Polo",
-      category: "Cours & Compétences",
-      verified: true,
-      rating: 5.0,
-      reviews: 6,
-      status: "active",
-      location: "Paris 11e (à 0.5 km)",
-      coordinates: [48.8584, 2.3785],
-      type: "remote",
-      nativeLang: "FR",
-      languages: ["FR", "EN"],
-      compensation: "1h = 1 Crédit",
-      image: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=600&q=80",
-      video: "https://assets.mixkit.co/videos/preview/mixkit-software-developer-working-on-his-laptop-34440-large.mp4",
-      urgent: true,
-      caution: null,
-      tags: ["React", "Firebase", "WebDev", "Mentorat"],
-      translations: {
-        EN: { title: "React, Node.js & Firebase Coaching (1h)", description: "1-on-1 modern web development coaching: React, Firebase, REST APIs. Includes video recording and hands-on exercises." },
-        ES: { title: "Clase de React, Node.js y Firebase (1h)", description: "Sesión individual de desarrollo web moderno: React, Firebase y APIs REST." }
-      }
-    };
-    return [defaultUserListing];
+    // P1-BUG-MOCKDATA : aucun contenu simulé — un nouveau compte démarre avec zéro annonce.
+    return [];
   });
 
   useEffect(() => {
@@ -4301,7 +4292,7 @@ export default function App() {
       {/* ONGLET 2 : MESSAGERIE & NÉGOCIATIONS */}
       {activeTab === 'chat' && (() => {
         const activeChatData = chatsList.find(c => String(c.id) === String(selectedChat?.id));
-        const otherUserName = activeChatData?.user || selectedChat?.user;
+        const otherUserName = safeName(activeChatData?.user || selectedChat?.user, 'Interlocuteur');
         const isThemTyping = !!(activeChatData?.typing && otherUserName && activeChatData.typing[otherUserName]);
 
         return (

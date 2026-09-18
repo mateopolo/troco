@@ -26,6 +26,93 @@ export default function CheckoutModal({
           ? `${session.euroRequired.toFixed(2)} €`
           : '0.00 €';
 
+  const modalHeader = (
+    <div
+      style={{
+        padding: '20px 24px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <ShieldCheck size={22} color="#10b981" />
+        <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 600 }}>Paiement Sécurisé</h3>
+      </div>
+      <button
+        type="button"
+        id="checkout-modal-close-btn"
+        onClick={onCancel}
+        disabled={isProcessing}
+        style={{
+          background: 'rgba(255, 255, 255, 0.05)',
+          border: 'none',
+          color: '#9ca3af',
+          cursor: isProcessing ? 'not-allowed' : 'pointer',
+          borderRadius: '50%',
+          width: '32px',
+          height: '32px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          transition: 'background 0.2s ease',
+        }}
+        aria-label="Annuler le paiement"
+      >
+        <X size={18} />
+      </button>
+    </div>
+  );
+
+  const modalFooter = paymentStatus === 'success' || paymentStatus === 'failed' ? null : (
+    <div style={{ display: 'flex', gap: '12px', padding: '0 24px 24px 24px' }}>
+      <button
+        type="button"
+        onClick={onCancel}
+        disabled={isProcessing}
+        style={{
+          flex: 1,
+          padding: '12px',
+          borderRadius: '14px',
+          background: 'rgba(255, 255, 255, 0.05)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          color: '#f9fafb',
+          fontWeight: 600,
+          cursor: isProcessing ? 'not-allowed' : 'pointer',
+          fontSize: '14px',
+        }}
+      >
+        Annuler
+      </button>
+
+      <button
+        type="button"
+        id="checkout-modal-confirm-btn"
+        onClick={() => onConfirm({ paymentMethod: selectedMethod === 'mock' ? 'Mock Provider' : 'Carte Bancaire' })}
+        disabled={isProcessing}
+        style={{
+          flex: 1.5,
+          padding: '12px',
+          borderRadius: '14px',
+          background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+          border: 'none',
+          color: '#ffffff',
+          fontWeight: 700,
+          cursor: isProcessing ? 'not-allowed' : 'pointer',
+          boxShadow: '0 10px 15px -3px rgba(16, 185, 129, 0.3)',
+          fontSize: '14px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '8px',
+        }}
+      >
+        {isProcessing ? 'Traitement sécurisé...' : `Confirmer & Payer (${amountDisplay})`}
+      </button>
+    </div>
+  );
+
   return (
     <AnimatePresence>
       <UniversalModal
@@ -36,10 +123,19 @@ export default function CheckoutModal({
         closeOnBackdrop={!isProcessing}
         ariaLabel="Paiement sécurisé"
         showCloseButton={false}
-        contentStyle={{ maxWidth: 'none', maxHeight: 'none', overflow: 'visible' }}
+        maxWidth={460}
+        header={modalHeader}
+        footer={modalFooter}
+        contentStyle={{
+          backgroundColor: 'var(--bg-card, #1f2937)',
+          color: 'var(--text-main, #f9fafb)',
+          borderRadius: '24px',
+          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          padding: 0,
+        }}
         overlayStyle={{
           backgroundColor: 'rgba(0, 0, 0, 0.65)',
-          backdropFilter: 'blur(8px)',
         }}
       >
         <motion.div
@@ -48,58 +144,7 @@ export default function CheckoutModal({
           exit={{ opacity: 0, scale: 0.95, y: 15 }}
           transition={{ duration: 0.25, ease: 'easeOut' }}
           className="checkout-modal-content"
-          style={{
-            backgroundColor: 'var(--bg-card, #1f2937)',
-            color: 'var(--text-main, #f9fafb)',
-            borderRadius: '24px',
-            width: '100%',
-            maxWidth: '460px',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            overflow: 'hidden',
-            position: 'relative',
-          }}
         >
-          {/* Header */}
-          <div
-            style={{
-              padding: '20px 24px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <ShieldCheck size={22} color="#10b981" />
-              <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 600 }}>Paiement Sécurisé</h3>
-            </div>
-            {/* "X" CANCEL BUTTON — PURE UI DISMISSAL, ZERO FINANCIAL SIDE-EFFECT */}
-            <button
-              type="button"
-              id="checkout-modal-close-btn"
-              onClick={onCancel}
-              disabled={isProcessing}
-              style={{
-                background: 'rgba(255, 255, 255, 0.05)',
-                border: 'none',
-                color: '#9ca3af',
-                cursor: isProcessing ? 'not-allowed' : 'pointer',
-                borderRadius: '50%',
-                width: '32px',
-                height: '32px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'background 0.2s ease',
-              }}
-              aria-label="Annuler le paiement"
-            >
-              <X size={18} />
-            </button>
-          </div>
-
-          {/* Body */}
           <div style={{ padding: '24px' }}>
             {paymentStatus === 'success' ? (
               <div style={{ textAlign: 'center', padding: '20px 0' }}>
@@ -143,8 +188,7 @@ export default function CheckoutModal({
                   </div>
                 </div>
 
-                {/* Mode Selector */}
-                <div style={{ marginBottom: '20px' }}>
+                <div style={{ marginBottom: '0px' }}>
                   <label style={{ fontSize: '13px', color: '#9ca3af', display: 'block', marginBottom: '8px' }}>
                     Moyen de paiement
                   </label>
@@ -190,53 +234,6 @@ export default function CheckoutModal({
                       ⚡ Mock Provider
                     </button>
                   </div>
-                </div>
-
-                {/* Actions */}
-                <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
-                  <button
-                    type="button"
-                    onClick={onCancel}
-                    disabled={isProcessing}
-                    style={{
-                      flex: 1,
-                      padding: '12px',
-                      borderRadius: '14px',
-                      background: 'rgba(255, 255, 255, 0.05)',
-                      border: '1px solid rgba(255, 255, 255, 0.1)',
-                      color: '#f9fafb',
-                      fontWeight: 600,
-                      cursor: isProcessing ? 'not-allowed' : 'pointer',
-                      fontSize: '14px',
-                    }}
-                  >
-                    Annuler
-                  </button>
-
-                  <button
-                    type="button"
-                    id="checkout-modal-confirm-btn"
-                    onClick={() => onConfirm({ paymentMethod: selectedMethod === 'mock' ? 'Mock Provider' : 'Carte Bancaire' })}
-                    disabled={isProcessing}
-                    style={{
-                      flex: 1.5,
-                      padding: '12px',
-                      borderRadius: '14px',
-                      background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                      border: 'none',
-                      color: '#ffffff',
-                      fontWeight: 700,
-                      cursor: isProcessing ? 'not-allowed' : 'pointer',
-                      boxShadow: '0 10px 15px -3px rgba(16, 185, 129, 0.3)',
-                      fontSize: '14px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '8px',
-                    }}
-                  >
-                    {isProcessing ? 'Traitement sécurisé...' : `Confirmer & Payer (${amountDisplay})`}
-                  </button>
                 </div>
               </>
             )}

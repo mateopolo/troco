@@ -22,6 +22,92 @@ export default function CguModal({
 
   if (!isOpen) return null;
 
+  const cguHeader = (
+    <div style={{
+      padding: '22px 24px',
+      borderBottom: darkMode ? '1px solid rgba(232,221,211,0.08)' : '1px solid #E8DDD3',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
+      color: darkMode ? '#FAF7F2' : '#3D3530',
+      borderRadius: '24px 24px 0 0',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{
+          width: '42px',
+          height: '42px',
+          borderRadius: '12px',
+          background: 'linear-gradient(135deg, #C67D5B, #A8644A)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#FFF',
+          boxShadow: '0 4px 14px rgba(198,125,91,0.35)',
+        }}>
+          <Scale size={22} />
+        </div>
+        <div>
+          <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '20px', fontWeight: '600', letterSpacing: '-0.01em' }}>
+            Conditions Générales & Charte Troco
+          </h3>
+          <p style={{ margin: '2px 0 0', fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>
+            Version 2026.1 • Engagement communautaire & conformité légale
+          </p>
+        </div>
+      </div>
+
+      {!isMandatory && onClose && (
+        <button
+          onClick={onClose}
+          style={{
+            border: 'none',
+            background: darkMode ? 'rgba(232,221,211,0.1)' : '#F5EAE4',
+            color: darkMode ? '#FAF7F2' : '#3D3530',
+            width: '32px',
+            height: '32px',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+          }}
+        >
+          <X size={18} />
+        </button>
+      )}
+    </div>
+  );
+
+  const cguFooter = (
+    <button
+      type="button"
+      onClick={handleConfirmAcceptance}
+      disabled={!hasAgreedTerms || !hasAgreedPrivacy || isSubmitting}
+      className="premium-button"
+      style={{
+        width: '100%',
+        padding: '16px',
+        borderRadius: '16px',
+        border: 'none',
+        background: (!hasAgreedTerms || !hasAgreedPrivacy) ? (darkMode ? '#3D3530' : '#E8DDD3') : 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)',
+        color: '#FFF',
+        fontWeight: '800',
+        fontSize: '15px',
+        cursor: (!hasAgreedTerms || !hasAgreedPrivacy || isSubmitting) ? 'not-allowed' : 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '8px',
+        boxShadow: (hasAgreedTerms && hasAgreedPrivacy) ? '0 10px 25px -5px rgba(198,125,91,0.35)' : 'none',
+        transition: 'all 0.2s ease',
+      }}
+    >
+      <Check size={18} strokeWidth={3} />
+      Accepter les CGU & Rejoindre Troco
+    </button>
+  );
+
   const handleConfirmAcceptance = async () => {
     if (!hasAgreedTerms || !hasAgreedPrivacy) return;
     setIsSubmitting(true);
@@ -84,80 +170,20 @@ export default function CguModal({
       onClose={isMandatory ? undefined : onClose}
       ariaLabel="Conditions générales et charte Troco"
       showCloseButton={false}
-      overlayStyle={{
-        backgroundColor: 'rgba(61, 53, 48, 0.72)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-      }}
-    >
-      <div style={{
+      header={cguHeader}
+      footer={cguFooter}
+      contentStyle={{
         backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
         borderRadius: '24px',
-        width: '100%',
-        maxWidth: '680px',
-        maxHeight: '92vh',
-        overflowY: 'auto',
         boxShadow: darkMode ? '0 25px 50px -12px rgba(0, 0, 0, 0.85), 0 0 35px rgba(198,125,91,0.2)' : '0 25px 50px -12px rgba(61, 53, 48, 0.25)',
         border: darkMode ? '1px solid rgba(232, 221, 211, 0.15)' : '1px solid #E8DDD3',
         color: darkMode ? '#FAF7F2' : '#3D3530',
-        position: 'relative',
-        display: 'flex',
-        flexDirection: 'column',
-      }}>
-
-        {/* HEADER MODALE */}
-        <div style={{
-          padding: '22px 24px',
-          borderBottom: darkMode ? '1px solid rgba(232,221,211,0.08)' : '1px solid #E8DDD3',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{
-              width: '42px',
-              height: '42px',
-              borderRadius: '12px',
-              background: 'linear-gradient(135deg, #C67D5B, #A8644A)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#FFF',
-              boxShadow: '0 4px 14px rgba(198,125,91,0.35)',
-            }}>
-              <Scale size={22} />
-            </div>
-            <div>
-              <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '20px', fontWeight: '600', letterSpacing: '-0.01em' }}>
-                Conditions Générales & Charte Troco
-              </h3>
-              <p style={{ margin: '2px 0 0', fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>
-                Version 2026.1 • Engagement communautaire & conformité légale
-              </p>
-            </div>
-          </div>
-
-          {!isMandatory && onClose && (
-            <button
-              onClick={onClose}
-              style={{
-                border: 'none',
-                background: darkMode ? 'rgba(232,221,211,0.1)' : '#F5EAE4',
-                color: darkMode ? '#FAF7F2' : '#3D3530',
-                width: '32px',
-                height: '32px',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-              }}
-            >
-              <X size={18} />
-            </button>
-          )}
-        </div>
-
+      }}
+      overlayStyle={{
+        backgroundColor: 'rgba(61, 53, 48, 0.72)',
+      }}
+    >
+      <div style={{ backgroundColor: darkMode ? '#231E1B' : '#FAF7F2' }}>
         {/* ONGLETS SYNTHÈSE / TEXTE INTÉGRAL */}
         <div style={{
           display: 'flex',
@@ -197,7 +223,7 @@ export default function CguModal({
         </div>
 
         {/* CONTENU */}
-        <div style={{ padding: '24px', overflowY: 'auto' }}>
+        <div style={{ padding: '24px' }}>
 
           {activeTab === 'summary' ? (
             <div>
@@ -325,34 +351,6 @@ export default function CguModal({
               </span>
             </label>
           </div>
-
-          {/* BOUTON D'ACCEPTATION */}
-          <button
-            type="button"
-            onClick={handleConfirmAcceptance}
-            disabled={!hasAgreedTerms || !hasAgreedPrivacy || isSubmitting}
-            className="premium-button"
-            style={{
-              width: '100%',
-              padding: '16px',
-              borderRadius: '16px',
-              border: 'none',
-              background: (!hasAgreedTerms || !hasAgreedPrivacy) ? (darkMode ? '#3D3530' : '#E8DDD3') : 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)',
-              color: '#FFF',
-              fontWeight: '800',
-              fontSize: '15px',
-              cursor: (!hasAgreedTerms || !hasAgreedPrivacy || isSubmitting) ? 'not-allowed' : 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              boxShadow: (hasAgreedTerms && hasAgreedPrivacy) ? '0 10px 25px -5px rgba(198,125,91,0.35)' : 'none',
-              transition: 'all 0.2s ease',
-            }}
-          >
-            <Check size={18} strokeWidth={3} />
-            Accepter les CGU & Rejoindre Troco
-          </button>
 
         </div>
 

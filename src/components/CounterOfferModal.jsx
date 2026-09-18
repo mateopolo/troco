@@ -69,189 +69,203 @@ export default function CounterOfferModal({
     }
   };
 
-  const modalElement = (
+  const modalHeader = (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: '24px',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{
+          width: '42px', height: '42px', borderRadius: '50%',
+          background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
+          color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: 'var(--shadow-accent)'
+        }}>
+          <Sparkles size={20} />
+        </div>
+        <div>
+          <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: 'var(--text-main)' }}>
+            {isEditing ? 'Modifier ma proposition' : 'Proposer un Deal'}
+          </h3>
+          <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600' }}>
+            Échange avec <span style={{ color: 'var(--accent-primary)', fontWeight: '800' }}>{partnerName}</span>
+          </p>
+        </div>
+      </div>
+      <button
+        type="button"
+        onClick={onClose}
+        style={{
+          border: 'none', background: 'var(--bg-subtle)',
+          width: '34px', height: '34px', borderRadius: '50%',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: 'var(--text-main)', cursor: 'pointer',
+          flexShrink: 0,
+        }}
+      >
+        <X size={16} />
+      </button>
+    </div>
+  );
+
+  const modalFooter = (
+    <div style={{ display: 'flex', gap: '10px', padding: '0 24px 24px' }}>
+      <button
+        type="button"
+        onClick={onClose}
+        className="premium-button"
+        style={{
+          flex: 1,
+          border: '1px solid var(--border-color)',
+          borderRadius: '14px',
+          padding: '12px',
+          backgroundColor: 'transparent',
+          color: 'var(--text-secondary)',
+          fontSize: '13px',
+          fontWeight: '700',
+          cursor: 'pointer'
+        }}
+      >
+        Annuler
+      </button>
+      <button
+        type="button"
+        onClick={handleSubmit}
+        className="premium-button"
+        style={{
+          flex: 2,
+          border: 'none',
+          borderRadius: '14px',
+          padding: '12px',
+          background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
+          color: '#FFF',
+          fontSize: '13.5px',
+          fontWeight: '800',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: '6px',
+          boxShadow: 'var(--shadow-accent)'
+        }}
+      >
+        <span>{isEditing ? 'Mettre à jour' : 'Envoyer la proposition'}</span>
+        <ArrowRight size={16} />
+      </button>
+    </div>
+  );
+
+  return (
     <UniversalModal
       isOpen={isOpen}
       onClose={onClose}
       ariaLabel={isEditing ? 'Modifier la contre-offre' : 'Envoyer une contre-offre'}
       showCloseButton={false}
-      contentStyle={{ maxWidth: 'none', maxHeight: 'none', overflow: 'visible' }}
+      maxWidth={480}
+      header={modalHeader}
+      footer={modalFooter}
+      contentStyle={{
+        backgroundColor: 'var(--bg-card)',
+        borderRadius: '24px',
+        boxShadow: 'var(--shadow-modal)',
+        border: '1px solid var(--border-color)',
+      }}
       overlayStyle={{
         backgroundColor: 'rgba(0,0,0,0.78)',
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
       }}
     >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          width: '100%',
-          maxWidth: '480px',
-          maxHeight: 'calc(100dvh - 32px)',
-          overflowY: 'auto',
-          backgroundColor: 'var(--bg-card)',
-          borderRadius: '24px',
-          padding: '24px',
-          boxShadow: 'var(--shadow-modal)',
-          border: '1px solid var(--border-color)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '16px',
-          animation: 'fadeSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) both',
-          boxSizing: 'border-box',
-        }}
-      >
-        {/* EN-TÊTE MODALE */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{
-              width: '42px', height: '42px', borderRadius: '50%',
-              background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
-              color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: 'var(--shadow-accent)'
-            }}>
-              <Sparkles size={20} />
-            </div>
-            <div>
-              <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: 'var(--text-main)' }}>
-                {isEditing ? 'Modifier ma proposition' : 'Proposer un Deal'}
-              </h3>
-              <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600' }}>
-                Échange avec <span style={{ color: 'var(--accent-primary)', fontWeight: '800' }}>{partnerName}</span>
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              border: 'none', background: 'var(--bg-subtle)',
-              width: '34px', height: '34px', borderRadius: '50%',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: 'var(--text-main)', cursor: 'pointer'
-            }}
-          >
-            <X size={16} />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          {/* DURÉE DE L'ÉCHANGE */}
-          <div>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '8px' }}>
-              <Clock size={14} color="var(--accent-primary)" />
-              <span>Durée estimée de la prestation</span>
-            </label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
-              {[
-                { type: 'hourly', label: '1h', val: '1' },
-                { type: 'hourly', label: '2h', val: '2' },
-                { type: 'daily', label: '1 Jour', val: '1' },
-                { type: 'fixed', label: 'Forfait', val: '1' }
-              ].map((item, idx) => {
-                const isSel = durationType === item.type && (item.type === 'fixed' || durationValue === item.val);
-                return (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => {
-                      setDurationType(item.type);
-                      setDurationValue(item.val);
-                    }}
-                    style={{
-                      border: isSel ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
-                      backgroundColor: isSel ? 'var(--bg-subtle)' : 'var(--bg-card)',
-                      color: isSel ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                      borderRadius: '12px',
-                      padding: '8px 4px',
-                      fontSize: '12px',
-                      fontWeight: '800',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    {item.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* RÉTRIBUTION : JETONS TROCO */}
-          <div>
-            <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '8px' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <Coins size={14} color="var(--accent-warning)" /> Jetons Troco proposés
-              </span>
-              <span style={{ fontSize: '11px', color: 'var(--accent-warning)', fontWeight: '700' }}>{trocoTokens || 0} Jeton(s)</span>
-            </label>
-            <div style={{ display: 'flex', gap: '6px' }}>
-              {['0', '1', '2', '3', '5'].map((num) => (
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '0 24px' }}>
+        {/* DURÉE DE L'ÉCHANGE */}
+        <div>
+          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '8px' }}>
+            <Clock size={14} color="var(--accent-primary)" />
+            <span>Durée estimée de la prestation</span>
+          </label>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
+            {[
+              { type: 'hourly', label: '1h', val: '1' },
+              { type: 'hourly', label: '2h', val: '2' },
+              { type: 'daily', label: '1 Jour', val: '1' },
+              { type: 'fixed', label: 'Forfait', val: '1' }
+            ].map((item, idx) => {
+              const isSel = durationType === item.type && (item.type === 'fixed' || durationValue === item.val);
+              return (
                 <button
-                  key={num}
+                  key={idx}
                   type="button"
-                  onClick={() => setTrocoTokens(num)}
+                  onClick={() => {
+                    setDurationType(item.type);
+                    setDurationValue(item.val);
+                  }}
                   style={{
-                    flex: 1,
-                    border: trocoTokens === num ? '2px solid var(--accent-warning)' : '1px solid var(--border-color)',
-                    backgroundColor: trocoTokens === num ? 'var(--bg-subtle)' : 'var(--bg-card)',
-                    color: trocoTokens === num ? 'var(--accent-warning)' : 'var(--text-secondary)',
+                    border: isSel ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                    backgroundColor: isSel ? 'var(--bg-subtle)' : 'var(--bg-card)',
+                    color: isSel ? 'var(--accent-primary)' : 'var(--text-secondary)',
                     borderRadius: '12px',
-                    padding: '8px 0',
+                    padding: '8px 4px',
                     fontSize: '12px',
                     fontWeight: '800',
-                    cursor: 'pointer'
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease'
                   }}
                 >
-                  {num === '0' ? '0' : `🪙 ${num}`}
+                  {item.label}
                 </button>
-              ))}
-            </div>
+              );
+            })}
           </div>
+        </div>
 
-          {/* COMPLÉMENT FINANCIER EN DEVISE LOCALE (OPTIONNEL) */}
-          <div>
-            <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '8px' }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <CircleDollarSign size={14} color="var(--accent-primary)" /> Complément Financier ({currencySymbol})
-              </span>
-              <span style={{ fontSize: '11px', color: 'var(--accent-primary)', fontWeight: '700' }}>Optionnel</span>
-            </label>
-            <div style={{ position: 'relative' }}>
-              <input
-                type="number"
-                min="0"
-                step="5"
-                placeholder="Ex : 25"
-                value={euroAmount}
-                onChange={(e) => setEuroAmount(e.target.value)}
+        {/* RÉTRIBUTION : JETONS TROCO */}
+        <div>
+          <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '8px' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <Coins size={14} color="var(--accent-warning)" /> Jetons Troco proposés
+            </span>
+            <span style={{ fontSize: '11px', color: 'var(--accent-warning)', fontWeight: '700' }}>{trocoTokens || 0} Jeton(s)</span>
+          </label>
+          <div style={{ display: 'flex', gap: '6px' }}>
+            {['0', '1', '2', '3', '5'].map((num) => (
+              <button
+                key={num}
+                type="button"
+                onClick={() => setTrocoTokens(num)}
                 style={{
-                  width: '100%',
-                  boxSizing: 'border-box',
-                  border: '1px solid var(--border-color)',
-                  backgroundColor: 'var(--bg-subtle)',
-                  color: 'var(--text-main)',
-                  borderRadius: '14px',
-                  padding: '10px 38px 10px 14px',
-                  fontSize: '14px',
-                  fontWeight: '700',
-                  outline: 'none'
+                  flex: 1,
+                  border: trocoTokens === num ? '2px solid var(--accent-warning)' : '1px solid var(--border-color)',
+                  backgroundColor: trocoTokens === num ? 'var(--bg-subtle)' : 'var(--bg-card)',
+                  color: trocoTokens === num ? 'var(--accent-warning)' : 'var(--text-secondary)',
+                  borderRadius: '12px',
+                  padding: '8px 0',
+                  fontSize: '12px',
+                  fontWeight: '800',
+                  cursor: 'pointer'
                 }}
-              />
-              <span style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', fontWeight: '800', color: 'var(--accent-primary)' }}>{currencySymbol}</span>
-            </div>
+              >
+                {num === '0' ? '0' : `🪙 ${num}`}
+              </button>
+            ))}
           </div>
+        </div>
 
-          {/* CONDITIONS & TERMES DU DEAL */}
-          <div>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '8px' }}>
-              Conditions et détails de l'accord
-            </label>
-            <textarea
-              rows={3}
-              value={conditions}
-              onChange={(e) => setConditions(e.target.value)}
-              placeholder="Ex: Cours de violon de 1h en visio ce samedi à 14h. Partitions incluses."
+        {/* COMPLÉMENT FINANCIER EN DEVISE LOCALE (OPTIONNEL) */}
+        <div>
+          <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '12px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '8px' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <CircleDollarSign size={14} color="var(--accent-primary)" /> Complément Financier ({currencySymbol})
+            </span>
+            <span style={{ fontSize: '11px', color: 'var(--accent-primary)', fontWeight: '700' }}>Optionnel</span>
+          </label>
+          <div style={{ position: 'relative' }}>
+            <input
+              type="number"
+              min="0"
+              step="5"
+              placeholder="Ex : 25"
+              value={euroAmount}
+              onChange={(e) => setEuroAmount(e.target.value)}
               style={{
                 width: '100%',
                 boxSizing: 'border-box',
@@ -259,93 +273,71 @@ export default function CounterOfferModal({
                 backgroundColor: 'var(--bg-subtle)',
                 color: 'var(--text-main)',
                 borderRadius: '14px',
-                padding: '12px 14px',
-                fontSize: '13px',
-                lineHeight: 1.5,
-                fontWeight: '600',
-                outline: 'none',
-                resize: 'none'
+                padding: '10px 38px 10px 14px',
+                fontSize: '14px',
+                fontWeight: '700',
+                outline: 'none'
               }}
             />
+            <span style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', fontWeight: '800', color: 'var(--accent-primary)' }}>{currencySymbol}</span>
           </div>
+        </div>
 
-          {/* RÉSUMÉ VISUEL DU DEAL */}
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap',
-            padding: '10px 14px', borderRadius: '14px',
-            backgroundColor: 'var(--bg-subtle)',
-            border: '1px solid var(--border-color)'
-          }}>
-            <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-main)' }}>Récapitulatif :</span>
-            <span style={{ fontSize: '11px', fontWeight: '800', backgroundColor: 'var(--bg-card)', padding: '3px 8px', borderRadius: '999px', color: 'var(--text-main)', border: '1px solid var(--border-color)' }}>
-              ⏱️ {durationType === 'hourly' ? `${durationValue}h` : durationType === 'daily' ? `${durationValue}j` : 'Forfait'}
+        {/* CONDITIONS & TERMES DU DEAL */}
+        <div>
+          <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '8px' }}>
+            Conditions et détails de l'accord
+          </label>
+          <textarea
+            rows={3}
+            value={conditions}
+            onChange={(e) => setConditions(e.target.value)}
+            placeholder="Ex: Cours de violon de 1h en visio ce samedi à 14h. Partitions incluses."
+            style={{
+              width: '100%',
+              boxSizing: 'border-box',
+              border: '1px solid var(--border-color)',
+              backgroundColor: 'var(--bg-subtle)',
+              color: 'var(--text-main)',
+              borderRadius: '14px',
+              padding: '12px 14px',
+              fontSize: '13px',
+              lineHeight: 1.5,
+              fontWeight: '600',
+              outline: 'none',
+              resize: 'none'
+            }}
+          />
+        </div>
+
+        {/* RÉSUMÉ VISUEL DU DEAL */}
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap',
+          padding: '10px 14px', borderRadius: '14px',
+          backgroundColor: 'var(--bg-subtle)',
+          border: '1px solid var(--border-color)'
+        }}>
+          <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-main)' }}>Récapitulatif :</span>
+          <span style={{ fontSize: '11px', fontWeight: '800', backgroundColor: 'var(--bg-card)', padding: '3px 8px', borderRadius: '999px', color: 'var(--text-main)', border: '1px solid var(--border-color)' }}>
+            ⏱️ {durationType === 'hourly' ? `${durationValue}h` : durationType === 'daily' ? `${durationValue}j` : 'Forfait'}
+          </span>
+          {Number(trocoTokens) > 0 && (
+            <span style={{ fontSize: '11px', fontWeight: '800', backgroundColor: 'var(--bg-card)', padding: '3px 8px', borderRadius: '999px', color: 'var(--accent-warning)', border: '1px solid var(--border-color)' }}>
+              🪙 {trocoTokens} Jeton(s)
             </span>
-            {Number(trocoTokens) > 0 && (
-              <span style={{ fontSize: '11px', fontWeight: '800', backgroundColor: 'var(--bg-card)', padding: '3px 8px', borderRadius: '999px', color: 'var(--accent-warning)', border: '1px solid var(--border-color)' }}>
-                🪙 {trocoTokens} Jeton(s)
-              </span>
-            )}
-            {Number(euroAmount) > 0 && (
-              <span style={{ fontSize: '11px', fontWeight: '800', backgroundColor: 'var(--bg-card)', padding: '3px 8px', borderRadius: '999px', color: 'var(--accent-primary)', border: '1px solid var(--border-color)' }}>
-                💶 {euroAmount}€
-              </span>
-            )}
-            {Number(trocoTokens) === 0 && Number(euroAmount) === 0 && (
-              <span style={{ fontSize: '11px', fontWeight: '800', backgroundColor: 'var(--bg-card)', padding: '3px 8px', borderRadius: '999px', color: 'var(--accent-success)', border: '1px solid var(--border-color)' }}>
-                🤝 Troc direct
-              </span>
-            )}
-          </div>
-
-          {/* BOUTONS D'ACTION */}
-          <div style={{ display: 'flex', gap: '10px', marginTop: '4px' }}>
-            <button
-              type="button"
-              onClick={onClose}
-              className="premium-button"
-              style={{
-                flex: 1,
-                border: '1px solid var(--border-color)',
-                borderRadius: '14px',
-                padding: '12px',
-                backgroundColor: 'transparent',
-                color: 'var(--text-secondary)',
-                fontSize: '13px',
-                fontWeight: '700',
-                cursor: 'pointer'
-              }}
-            >
-              Annuler
-            </button>
-            <button
-              type="submit"
-              className="premium-button"
-              style={{
-                flex: 2,
-                border: 'none',
-                borderRadius: '14px',
-                padding: '12px',
-                background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
-                color: '#FFF',
-                fontSize: '13.5px',
-                fontWeight: '800',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '6px',
-                boxShadow: 'var(--shadow-accent)'
-              }}
-            >
-              <span>{isEditing ? 'Mettre à jour' : 'Envoyer la proposition'}</span>
-              <ArrowRight size={16} />
-            </button>
-          </div>
-        </form>
-      </div>
+          )}
+          {Number(euroAmount) > 0 && (
+            <span style={{ fontSize: '11px', fontWeight: '800', backgroundColor: 'var(--bg-card)', padding: '3px 8px', borderRadius: '999px', color: 'var(--accent-primary)', border: '1px solid var(--border-color)' }}>
+              💶 {euroAmount}€
+            </span>
+          )}
+          {Number(trocoTokens) === 0 && Number(euroAmount) === 0 && (
+            <span style={{ fontSize: '11px', fontWeight: '800', backgroundColor: 'var(--bg-card)', padding: '3px 8px', borderRadius: '999px', color: 'var(--accent-success)', border: '1px solid var(--border-color)' }}>
+              🤝 Troc direct
+            </span>
+          )}
+        </div>
+      </form>
     </UniversalModal>
   );
-
-  return modalElement;
 }
-

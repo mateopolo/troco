@@ -170,8 +170,28 @@ export default function AuthScreen({
       const userDocRef = doc(db, 'users', uid);
       const userSnap = await getDoc(userDocRef);
 
-      const realName = user.displayName || user.email?.split('@')[0] || `Utilisateur ${providerName}`;
-      const realUsername = '@' + (user.reloadUserInfo?.screenName || realName).toLowerCase().replace(/[^a-z0-9_]/g, '');
+            // --- Name / username derivation (NEVER use a raw Firebase UID as display name) ---
+      const rawDisplayName = user.displayName || '';
+      const emailPrefix = (user.email || '').split('@')[0] || '';
+      const cleanEmailPrefix = emailPrefix
+        .replace(/[._-]+/g, ' ')
+        .trim()
+        .toLowerCase()
+        .split(' ')
+        .filter(Boolean)
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(' ') || '';
+
+      const realName = rawDisplayName
+        ? rawDisplayName.trim()
+        : (cleanEmailPrefix || `Utilisateur ${providerName}`);
+
+      const cleanUsernameBase = (rawDisplayName || emailPrefix)
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '')
+        .replace(/^_+|_+$/g, '')
+        .replace(/_+/g, '_') || `user_${uid.slice(0, 6)}`;
+      const realUsername = '@' + cleanUsernameBase.replace(/^_+|_+$/g, '');
       const realAvatar = user.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80';
 
       if (!userSnap.exists()) {
@@ -210,11 +230,13 @@ export default function AuthScreen({
             email: user.email || '',
             phoneNumber: user.phoneNumber || '',
             avatar: realAvatar,
-            bio: 'Bienvenue sur mon profil Troco ! Prêt à échanger des services et partager des compétences.',
-            location: 'Paris, France',
-            languages: ['FR'],
+            bio: '',
+            location: '',
+                        languages: ['FR'],
             skills: [],
             equipment: [],
+            socialLinks: [],
+            portfolioImages: [],
             dealsCompleted: 0,
             dealsInProgress: 0,
             rating: null,
@@ -349,7 +371,7 @@ export default function AuthScreen({
       username: '@mateopolo',
       avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80',
       bio: 'Créateur de contenus, développeur Python et passionné de musique. Je propose des services flexibles et des échanges de qualité.',
-      location: 'Paris, France',
+      location: '',
       languages: ['FR', 'EN', 'ES', 'IT'],
       loginMethod: loginMethodName,
       euroBalance: 128,

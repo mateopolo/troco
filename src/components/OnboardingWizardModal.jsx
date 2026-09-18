@@ -61,6 +61,152 @@ export default function OnboardingWizardModal({
 
   if (!isOpen) return null;
 
+  const onboardingHeader = (
+    <div style={{
+      padding: '24px 28px 18px',
+      borderBottom: '1px solid var(--border-color)',
+      backgroundColor: 'var(--bg-card)',
+      color: 'var(--text-main)',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{
+            width: '32px',
+            height: '32px',
+            borderRadius: '10px',
+            background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            color: '#FFF',
+          }}>
+            <Sparkles size={16} />
+          </div>
+          <div>
+            <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '18px', fontWeight: '600', letterSpacing: '-0.01em', color: 'var(--text-main)' }}>
+              Bienvenue sur Troco
+            </h3>
+            <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+              Étape {step} sur 4
+            </span>
+          </div>
+        </div>
+        <span style={{
+          fontSize: '11px',
+          fontWeight: '800',
+          padding: '4px 10px',
+          borderRadius: '999px',
+          backgroundColor: 'var(--bg-subtle)',
+          color: 'var(--accent-primary)',
+        }}>
+          {step === 1 && '📜 Conditions & Règles'}
+          {step === 2 && '👤 Identité & Profil'}
+          {step === 3 && '🎯 Compétences & Matériel'}
+          {step === 4 && '✍️ Ma Biographie'}
+        </span>
+      </div>
+
+      <div style={{ display: 'flex', gap: '6px', width: '100%' }}>
+        {[1, 2, 3, 4].map(s => (
+          <div
+            key={s}
+            style={{
+              flex: 1,
+              height: '6px',
+              borderRadius: '999px',
+              backgroundColor: s <= step
+                ? 'var(--accent-primary)'
+                : 'var(--border-color)',
+              transition: 'background-color 0.3s ease',
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+
+  const onboardingFooter = (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      backgroundColor: 'var(--bg-card)',
+    }}>
+      {step > 1 ? (
+        <button
+          onClick={() => setStep(prev => prev - 1)}
+          style={{
+            border: '1px solid var(--border-color)',
+            borderRadius: '999px',
+            padding: '11px 20px',
+            backgroundColor: 'transparent',
+            color: 'var(--text-secondary)',
+            fontWeight: '700',
+            fontSize: '13px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+          }}
+        >
+          <ArrowLeft size={15} /> Précédent
+        </button>
+      ) : <span />}
+
+      {step < 4 ? (
+        <button
+          onClick={() => setStep(prev => prev + 1)}
+          disabled={step === 1 ? !canProceedStep1 : !canProceedStep2}
+          className="premium-button"
+          style={{
+            border: 'none',
+            borderRadius: '999px',
+            padding: '12px 24px',
+            background: (step === 1 && !canProceedStep1) || (step === 2 && !canProceedStep2)
+              ? 'var(--border-color)'
+              : 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
+            color: '#FFF',
+            fontWeight: '800',
+            fontSize: '13px',
+            cursor: (step === 1 && !canProceedStep1) || (step === 2 && !canProceedStep2)
+              ? 'not-allowed'
+              : 'pointer',
+            boxShadow: (step === 1 && !canProceedStep1) || (step === 2 && !canProceedStep2)
+              ? 'none'
+              : 'var(--shadow-accent)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+          }}
+        >
+          Continuer <ArrowRight size={15} />
+        </button>
+      ) : (
+        <button
+          onClick={handleFinalize}
+          disabled={isSubmitting}
+          className="premium-button"
+          style={{
+            border: 'none',
+            borderRadius: '999px',
+            padding: '12px 28px',
+            background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
+            color: '#FFF',
+            fontWeight: '800',
+            fontSize: '14px',
+            cursor: isSubmitting ? 'not-allowed' : 'pointer',
+            boxShadow: 'var(--shadow-accent)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+          }}
+        >
+          <CheckCircle size={16} /> Finaliser & Explorer Troco
+        </button>
+      )}
+    </div>
+  );
+
   // Gestion de l'upload photo local
   const handleAvatarUpload = (e) => {
     const file = e.target.files?.[0];
@@ -158,90 +304,17 @@ export default function OnboardingWizardModal({
       ariaLabel="Bienvenue sur Troco"
       showCloseButton={false}
       closeOnBackdrop={false}
-      overlayStyle={{
-        backgroundColor: 'var(--overlay-bg)',
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
-      }}
-    >
-      <div style={{
+      header={onboardingHeader}
+      footer={onboardingFooter}
+      contentStyle={{
         backgroundColor: 'var(--bg-card)',
         color: 'var(--text-main)',
         borderRadius: '28px',
-        width: '100%',
-        maxWidth: '680px',
-        maxHeight: '90vh',
-        overflowY: 'auto',
         border: '1px solid var(--border-color)',
         boxShadow: 'var(--shadow-modal)',
-        position: 'relative',
-        display: 'flex',
-        flexDirection: 'column',
-      }}>
-        {/* BARRE DE PROGRESSION EN HAUT */}
-        <div style={{
-          padding: '24px 28px 18px',
-          borderBottom: '1px solid var(--border-color)',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '10px',
-                background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#FFF',
-              }}>
-                <Sparkles size={16} />
-              </div>
-              <div>
-                <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '18px', fontWeight: '600', letterSpacing: '-0.01em', color: 'var(--text-main)' }}>
-                  Bienvenue sur Troco
-                </h3>
-                <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                  Étape {step} sur 4
-                </span>
-              </div>
-            </div>
-            <span style={{
-              fontSize: '11px',
-              fontWeight: '800',
-              padding: '4px 10px',
-              borderRadius: '999px',
-              backgroundColor: 'var(--bg-subtle)',
-              color: 'var(--accent-primary)',
-            }}>
-              {step === 1 && '📜 Conditions & Règles'}
-              {step === 2 && '👤 Identité & Profil'}
-              {step === 3 && '🎯 Compétences & Matériel'}
-              {step === 4 && '✍️ Ma Biographie'}
-            </span>
-          </div>
-
-          {/* Stepper Dots & Line */}
-          <div style={{ display: 'flex', gap: '6px', width: '100%' }}>
-            {[1, 2, 3, 4].map(s => (
-              <div
-                key={s}
-                style={{
-                  flex: 1,
-                  height: '6px',
-                  borderRadius: '999px',
-                  backgroundColor: s <= step
-                    ? 'var(--accent-primary)'
-                    : 'var(--border-color)',
-                  transition: 'background-color 0.3s ease',
-                }}
-              />
-            ))}
-          </div>
-        </div>
-
-        {/* CORPS DE LA MODALE SELON L'ÉTAPE */}
-        <div style={{ padding: '24px 28px', flex: 1, overflowY: 'auto' }}>
+      }}
+    >
+      <div style={{ padding: '24px 28px', backgroundColor: 'var(--bg-card)' }}>
 
           {/* ================================================================ */}
           {/* ÉTAPE 1 : CONDITIONS D'UTILISATION & CADRE JURIDIQUE             */}
@@ -1023,88 +1096,6 @@ export default function OnboardingWizardModal({
             </div>
           )}
 
-        </div>
-
-        {/* PIED DE PAGE AVEC BOUTONS PRÉCÉDENT / SUIVANT / TERMINER */}
-        <div style={{
-          padding: '18px 28px 24px',
-          borderTop: '1px solid var(--border-color)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}>
-          {step > 1 ? (
-            <button
-              onClick={() => setStep(prev => prev - 1)}
-              style={{
-                border: '1px solid var(--border-color)',
-                borderRadius: '999px',
-                padding: '11px 20px',
-                backgroundColor: 'transparent',
-                color: 'var(--text-secondary)',
-                fontWeight: '700',
-                fontSize: '13px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-              }}
-            >
-              <ArrowLeft size={15} /> Précédent
-            </button>
-          ) : <span />}
-
-          {step < 4 ? (
-            <button
-              onClick={() => setStep(prev => prev + 1)}
-              disabled={step === 1 ? !canProceedStep1 : !canProceedStep2}
-              className="premium-button"
-              style={{
-                border: 'none',
-                borderRadius: '999px',
-                padding: '12px 24px',
-                background: (step === 1 && !canProceedStep1) || (step === 2 && !canProceedStep2)
-                  ? 'var(--border-color)'
-                  : 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
-                color: '#FFF',
-                fontWeight: '800',
-                fontSize: '13px',
-                cursor: (step === 1 && !canProceedStep1) || (step === 2 && !canProceedStep2)
-                  ? 'not-allowed'
-                  : 'pointer',
-                boxShadow: (step === 1 && !canProceedStep1) || (step === 2 && !canProceedStep2)
-                  ? 'none'
-                  : 'var(--shadow-accent)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-              }}
-            >
-              Continuer <ArrowRight size={15} />
-            </button>
-          ) : (
-            <button
-              onClick={handleFinalize}
-              disabled={isSubmitting}
-              className="premium-button"
-              style={{
-                border: 'none',
-                borderRadius: '999px',
-                padding: '12px 28px',
-                background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
-                color: '#FFF',
-                fontWeight: '800',
-                fontSize: '14px',
-                cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                boxShadow: 'var(--shadow-accent)',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-              }}
-            >
-              <CheckCircle size={16} /> Finaliser & Explorer Troco
-            </button>
-          )}
         </div>
       </div>
     </UniversalModal>

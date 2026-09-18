@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Star, MapPin, Video, Globe, ShieldCheck, MessageSquare, Flame, Pencil, Trash2, Tag, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getSuggestedMedia } from '../utils/mediaUtils';
+import UniversalModal from './ui/UniversalModal';
 import {
   parseAndTranslateDynamicText,
   parseAndTranslateListing,
@@ -116,114 +117,212 @@ export default function ListingDetailModal({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [gallery.length, onClose]);
 
-  return (
-    <div
-      className="fixed inset-0 z-[1000] bg-black/90 md:bg-[var(--overlay-bg)] md:backdrop-blur-md overflow-y-auto flex items-center justify-center p-5"
-      style={{
-        position: 'fixed', inset: 0,
-        zIndex: 1000,
-      }}
-    >
-      <div style={{
-        backgroundColor: 'var(--bg-card)',
-        borderRadius: '28px', width: '100%', maxWidth: '780px',
-        maxHeight: '90vh', overflowY: 'auto',
-        boxShadow: 'var(--shadow-modal)',
-        border: '1px solid var(--border-color)',
-        position: 'relative', padding: '28px'
-      }}>
-        {/* BOUTON FERMER */}
-        <button
-          onClick={onClose}
-          className="premium-button"
-          aria-label="Fermer les détails de l'annonce"
-          title="Fermer les détails de l'annonce (Échap)"
-          style={{
-            position: 'absolute', top: '18px', right: '18px',
-            border: '1px solid var(--border-color)',
+  const modalHeader = (
+    <div style={{ position: 'relative', padding: '28px 28px 0' }}>
+      {/* BOUTON FERMER */}
+      <button
+        onClick={onClose}
+        className="premium-button"
+        aria-label="Fermer les détails de l'annonce"
+        title="Fermer les détails de l'annonce (Échap)"
+        style={{
+          position: 'absolute', top: '18px', right: '18px',
+          border: '1px solid var(--border-color)',
+          backgroundColor: 'var(--bg-subtle)',
+          color: 'var(--text-main)', width: '36px', height: '36px',
+          borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          cursor: 'pointer', zIndex: 10
+        }}
+      >
+        <X size={18} />
+      </button>
+
+      {/* HEADER ANNONCE */}
+      <div style={{ marginBottom: '20px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
+          <span style={{
             backgroundColor: 'var(--bg-subtle)',
-            color: 'var(--text-main)', width: '36px', height: '36px',
-            borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer', zIndex: 10
-          }}
-        >
-          <X size={18} />
-        </button>
-
-        {/* HEADER ANNONCE */}
-        <div style={{ marginBottom: '20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
-            <span style={{
-              backgroundColor: 'var(--bg-subtle)',
-              color: 'var(--accent-primary)', fontSize: '12px', fontWeight: '800',
-              padding: '4px 12px', borderRadius: '999px', border: '1px solid var(--border-color)'
-            }}>
-              {selectedListing.category}
+            color: 'var(--accent-primary)', fontSize: '12px', fontWeight: '800',
+            padding: '4px 12px', borderRadius: '999px', border: '1px solid var(--border-color)'
+          }}>
+            {selectedListing.category}
+          </span>
+          {selectedListing.type === 'remote' ? (
+            <span style={{ backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)', fontSize: '12px', fontWeight: '800', padding: '4px 12px', borderRadius: '999px', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <Globe size={13} color="var(--accent-primary)" /> {t('remoteFormat') || 'À distance'}
             </span>
-            {selectedListing.type === 'remote' ? (
-              <span style={{ backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)', fontSize: '12px', fontWeight: '800', padding: '4px 12px', borderRadius: '999px', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Globe size={13} color="var(--accent-primary)" /> {t('remoteFormat') || 'À distance'}
-              </span>
-            ) : (
-              <span style={{ backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)', fontSize: '12px', fontWeight: '800', padding: '4px 12px', borderRadius: '999px', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <MapPin size={13} color="var(--accent-primary)" /> {selectedListing.location}
-              </span>
-            )}
-            {selectedListing.urgent && (
-              <span style={{ backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', fontSize: '12px', fontWeight: '900', padding: '4px 12px', borderRadius: '999px', border: '1.5px solid var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                🚨 {t('urgentOption') || 'URGENT'}
-              </span>
-            )}
-            {selectedListing.isBoosted && (
-              <span className="sponsored-badge" style={{ backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-warning)', fontSize: '12px', fontWeight: '800', padding: '4px 12px', borderRadius: '999px', border: '1px solid var(--accent-warning)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Flame size={13} /> Sponsoring Premium
-              </span>
-            )}
-          </div>
-
-          <h2 className="font-editorial-heading" style={{ margin: '0 0 6px', fontSize: '28px', fontWeight: '600', color: 'var(--text-main)', lineHeight: 1.25 }}>
-            {parseAndTranslateDynamicText(displayContent.title, currentLang, { forceOriginal: isDetailShowingOriginal })}
-          </h2>
-          {currentLang !== nativeLang && (
-            <button
-              onClick={(e) => toggleOriginalListing(selectedListing.id, e)}
-              style={{
-                border: 'none',
-                background: 'none',
-                backgroundColor: 'transparent',
-                boxShadow: 'none',
-                outline: 'none',
-                color: 'var(--accent-primary)',
-                fontSize: '12px',
-                fontWeight: '800',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                padding: '2px 0 10px 0'
-              }}
-            >
-              <Globe size={13} color="var(--accent-primary)" style={{ flexShrink: 0 }} />
-              <span>{isDetailShowingOriginal ? t('showTranslation') : t('showOriginal')}</span>
-            </button>
+          ) : (
+            <span style={{ backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)', fontSize: '12px', fontWeight: '800', padding: '4px 12px', borderRadius: '999px', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <MapPin size={13} color="var(--accent-primary)" /> {selectedListing.location}
+            </span>
           )}
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '14px', color: 'var(--text-secondary)' }}>
-            <span style={{ fontWeight: '800', color: 'var(--accent-primary)', fontSize: '18px' }}>
-              {formatCompensation ? formatCompensation(selectedListing.compensation) : selectedListing.compensation}
+          {selectedListing.urgent && (
+            <span style={{ backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', fontSize: '12px', fontWeight: '900', padding: '4px 12px', borderRadius: '999px', border: '1.5px solid var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              🚨 {t('urgentOption') || 'URGENT'}
             </span>
-            {selectedListing.rating && selectedListing.reviews > 0 ? (
-              <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--accent-warning)', fontWeight: '800' }}>
-                <Star size={16} fill="var(--accent-warning)" color="var(--accent-warning)" /> {selectedListing.rating} ({selectedListing.reviews} avis)
-              </span>
-            ) : (
-              <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-secondary)', fontSize: '13px', fontWeight: '600' }}>
-                Nouveau membre (0 avis)
-              </span>
-            )}
-          </div>
+          )}
+          {selectedListing.isBoosted && (
+            <span className="sponsored-badge" style={{ backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-warning)', fontSize: '12px', fontWeight: '800', padding: '4px 12px', borderRadius: '999px', border: '1px solid var(--accent-warning)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <Flame size={13} /> Sponsoring Premium
+            </span>
+          )}
         </div>
 
+        <h2 className="font-editorial-heading" style={{ margin: '0 0 6px', fontSize: '28px', fontWeight: '600', color: 'var(--text-main)', lineHeight: 1.25 }}>
+          {parseAndTranslateDynamicText(displayContent.title, currentLang, { forceOriginal: isDetailShowingOriginal })}
+        </h2>
+        {currentLang !== nativeLang && (
+          <button
+            onClick={(e) => toggleOriginalListing(selectedListing.id, e)}
+            style={{
+              border: 'none',
+              background: 'none',
+              backgroundColor: 'transparent',
+              boxShadow: 'none',
+              outline: 'none',
+              color: 'var(--accent-primary)',
+              fontSize: '12px',
+              fontWeight: '800',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '5px',
+              padding: '2px 0 10px 0'
+            }}
+          >
+            <Globe size={13} color="var(--accent-primary)" style={{ flexShrink: 0 }} />
+            <span>{isDetailShowingOriginal ? t('showTranslation') : t('showOriginal')}</span>
+          </button>
+        )}
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '14px', color: 'var(--text-secondary)' }}>
+          <span style={{ fontWeight: '800', color: 'var(--accent-primary)', fontSize: '18px' }}>
+            {formatCompensation ? formatCompensation(selectedListing.compensation) : selectedListing.compensation}
+          </span>
+          {selectedListing.rating && selectedListing.reviews > 0 ? (
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--accent-warning)', fontWeight: '800' }}>
+              <Star size={16} fill="var(--accent-warning)" color="var(--accent-warning)" /> {selectedListing.rating} ({selectedListing.reviews} avis)
+            </span>
+          ) : (
+            <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-secondary)', fontSize: '13px', fontWeight: '600' }}>
+              Nouveau membre (0 avis)
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  const modalFooter = (
+    <div style={{ padding: '0 28px 28px' }}>
+      {/* ACTIONS */}
+      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
+        {handleViewOnMap && (
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof handleViewOnMap === 'function') handleViewOnMap(selectedListing);
+              onClose?.();
+            }}
+            className="premium-button"
+            style={{
+              border: '1.5px solid var(--border-color)',
+              borderRadius: '999px',
+              padding: '13px 18px',
+              backgroundColor: 'var(--bg-card)',
+              color: 'var(--text-main)',
+              fontWeight: '800',
+              fontSize: '13px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '7px',
+              boxShadow: 'var(--shadow-card)',
+            }}
+            title="Centrer la carte interactive sur cette annonce"
+          >
+            <MapPin size={16} color="var(--accent-primary)" />
+            <span>{typeof t === 'function' ? (t('viewOnMap') || 'Voir sur la carte') : 'Voir sur la carte'}</span>
+          </button>
+        )}
+
+        {!isOwner ? (
+          <button
+            onClick={() => { if (typeof handleStartDiscussion === 'function') handleStartDiscussion(selectedListing); }}
+            className="premium-button"
+            style={{
+              flex: 1, minWidth: '180px', border: 'none', borderRadius: '999px', padding: '14px 24px',
+              background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)', color: '#FFF',
+              fontWeight: '800', fontSize: '14px', cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
+              boxShadow: 'var(--shadow-accent)'
+            }}
+          >
+            <MessageSquare size={18} /> {typeof t === 'function' ? (t('startDiscussion') || 'Contacter le membre') : 'Contacter le membre'}
+          </button>
+        ) : (
+          <div style={{ display: 'flex', gap: '8px', flex: 1, minWidth: '220px', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => { if (typeof handleBoostListing === 'function') handleBoostListing(selectedListing); }}
+              className="premium-button"
+              aria-label="Booster la visibilité de cette annonce"
+              style={{ flex: 1, border: 'none', borderRadius: '999px', padding: '12px', backgroundColor: 'var(--accent-warning)', color: '#FFF', fontWeight: '800', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: 'var(--shadow-card)' }}
+            >
+              <Flame size={16} /> Booster (2,99€)
+            </button>
+            <button
+              onClick={() => { if (typeof handleStartEditListing === 'function') handleStartEditListing(selectedListing); }}
+              className="premium-button"
+              aria-label="Modifier cette annonce"
+              style={{ flex: 1, border: '1px solid var(--border-color)', borderRadius: '999px', padding: '12px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', fontWeight: '800', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+            >
+              <Pencil size={16} /> Éditer
+            </button>
+            <button
+              onClick={() => { if (typeof handleTogglePauseListing === 'function') handleTogglePauseListing(selectedListing.id); }}
+              className="premium-button"
+              aria-label={selectedListing.status === 'paused' ? 'Reprendre la publication de l\'annonce' : 'Mettre en pause la publication de l\'annonce'}
+              style={{ border: '1px solid var(--border-color)', borderRadius: '999px', padding: '12px 16px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', fontWeight: '800', fontSize: '13px', cursor: 'pointer' }}
+            >
+              {selectedListing.status === 'paused' ? 'Reprendre' : 'Pauser'}
+            </button>
+            <button
+              onClick={() => { if (typeof handleDeleteListing === 'function') handleDeleteListing(selectedListing.id); onClose?.(); }}
+              className="premium-button"
+              aria-label="Supprimer définitivement cette annonce"
+              title="Supprimer définitivement cette annonce"
+              style={{ border: '1px solid var(--accent-danger)', borderRadius: '999px', padding: '12px 16px', backgroundColor: 'var(--accent-danger)', color: '#FFF', fontWeight: '800', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+            >
+              <Trash2 size={16} />
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  return (
+    <UniversalModal
+      isOpen={!!selectedListing}
+      onClose={onClose}
+      ariaLabel="Détails de l'annonce"
+      showCloseButton={false}
+      maxWidth={780}
+      header={modalHeader}
+      footer={modalFooter}
+      contentStyle={{
+        backgroundColor: 'var(--bg-card)',
+        borderRadius: '28px',
+        boxShadow: 'var(--shadow-modal)',
+        border: '1px solid var(--border-color)',
+        color: 'var(--text-main)',
+      }}
+      overlayStyle={{
+        backgroundColor: 'var(--overlay-bg)',
+      }}
+    >
+      <div style={{ padding: '0 28px 24px', display: 'flex', flexDirection: 'column', gap: '0' }}>
         {/* MÉDIAS (IMAGE / GALERIE / VIDÉO) */}
         <div style={{ marginBottom: '24px' }}>
           <div style={{ display: 'flex', gap: '10px', marginBottom: '12px' }}>
@@ -462,92 +561,7 @@ export default function ListingDetailModal({
             )}
           </div>
         )}
-
-        {/* ACTIONS */}
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
-          {handleViewOnMap && (
-            <button
-              type="button"
-              onClick={() => {
-                if (typeof handleViewOnMap === 'function') handleViewOnMap(selectedListing);
-                onClose?.();
-              }}
-              className="premium-button"
-              style={{
-                border: '1.5px solid var(--border-color)',
-                borderRadius: '999px',
-                padding: '13px 18px',
-                backgroundColor: 'var(--bg-card)',
-                color: 'var(--text-main)',
-                fontWeight: '800',
-                fontSize: '13px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '7px',
-                boxShadow: 'var(--shadow-card)',
-              }}
-              title="Centrer la carte interactive sur cette annonce"
-            >
-              <MapPin size={16} color="var(--accent-primary)" />
-              <span>{typeof t === 'function' ? (t('viewOnMap') || 'Voir sur la carte') : 'Voir sur la carte'}</span>
-            </button>
-          )}
-
-          {!isOwner ? (
-            <button
-              onClick={() => { if (typeof handleStartDiscussion === 'function') handleStartDiscussion(selectedListing); }}
-              className="premium-button"
-              style={{
-                flex: 1, minWidth: '180px', border: 'none', borderRadius: '999px', padding: '14px 24px',
-                background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)', color: '#FFF',
-                fontWeight: '800', fontSize: '14px', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                boxShadow: 'var(--shadow-accent)'
-              }}
-            >
-              <MessageSquare size={18} /> {typeof t === 'function' ? (t('startDiscussion') || 'Contacter le membre') : 'Contacter le membre'}
-            </button>
-          ) : (
-            <div style={{ display: 'flex', gap: '8px', flex: 1, minWidth: '220px', flexWrap: 'wrap' }}>
-              <button
-                onClick={() => { if (typeof handleBoostListing === 'function') handleBoostListing(selectedListing); }}
-                className="premium-button"
-                aria-label="Booster la visibilité de cette annonce"
-                style={{ flex: 1, border: 'none', borderRadius: '999px', padding: '12px', backgroundColor: 'var(--accent-warning)', color: '#FFF', fontWeight: '800', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: 'var(--shadow-card)' }}
-              >
-                <Flame size={16} /> Booster (2,99€)
-              </button>
-              <button
-                onClick={() => { if (typeof handleStartEditListing === 'function') handleStartEditListing(selectedListing); }}
-                className="premium-button"
-                aria-label="Modifier cette annonce"
-                style={{ flex: 1, border: '1px solid var(--border-color)', borderRadius: '999px', padding: '12px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', fontWeight: '800', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-              >
-                <Pencil size={16} /> Éditer
-              </button>
-              <button
-                onClick={() => { if (typeof handleTogglePauseListing === 'function') handleTogglePauseListing(selectedListing.id); }}
-                className="premium-button"
-                aria-label={selectedListing.status === 'paused' ? 'Reprendre la publication de l\'annonce' : 'Mettre en pause la publication de l\'annonce'}
-                style={{ border: '1px solid var(--border-color)', borderRadius: '999px', padding: '12px 16px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', fontWeight: '800', fontSize: '13px', cursor: 'pointer' }}
-              >
-                {selectedListing.status === 'paused' ? 'Reprendre' : 'Pauser'}
-              </button>
-              <button
-                onClick={() => { if (typeof handleDeleteListing === 'function') handleDeleteListing(selectedListing.id); onClose?.(); }}
-                className="premium-button"
-                aria-label="Supprimer définitivement cette annonce"
-                title="Supprimer définitivement cette annonce"
-                style={{ border: '1px solid var(--accent-danger)', borderRadius: '999px', padding: '12px 16px', backgroundColor: 'var(--accent-danger)', color: '#FFF', fontWeight: '800', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              >
-                <Trash2 size={16} />
-              </button>
-            </div>
-          )}
-        </div>
       </div>
-    </div>
+    </UniversalModal>
   );
 }

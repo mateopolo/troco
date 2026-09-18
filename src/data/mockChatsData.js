@@ -1,5 +1,9 @@
+import { isDemoMode } from './demoData';
+
 // Conversations de démo enrichies (intelligentes & réalistes)
-export const mockChats = [
+// PURGE P1-BUG-MOCKDATA : les conversations de démo ne sont exposées QUE si le mode démo est activé.
+// En production, un nouveau compte doit voir ZÉRO conversation fictive.
+const _demoChats = [
   {
     id: 201,
     isDemo: true,
@@ -120,7 +124,9 @@ export const mockChats = [
   }
 ];
 
-export const initialChatThreads = {
+export const mockChats = isDemoMode() ? _demoChats : [];
+
+const _demoChatThreads = {
   301: [
     { id: 1, sender: 'system', text: '🚀 Hub de collaboration initialisé pour "Collectif Rénovation Tiers-Lieu". Réserve allouée : 25 Jetons Troco. Membres : Mateo, Marie D., Lucas M., Alex K.' },
     { id: 2, sender: 'them', senderName: 'Marie D.', text: 'Bonjour l’équipe ! J’ai terminé les plans d’implantation 3D pour l’espace atelier et la terrasse.' },
@@ -161,5 +167,7 @@ export const initialChatThreads = {
     { id: 3, sender: 'them', kind: 'deal', dealId: 'deal-104-1', status: 'confirmed', terms: { euroAmount: 0, trocoTokens: 0, conditions: 'Échange réciproque 3 nuitées (Studio Marseille Vieux-Port vs Studio Paris Marais). Sans aucun frais.' } },
   ],
 };
+
+export const initialChatThreads = isDemoMode() ? _demoChatThreads : {};
 
 export default mockChats;

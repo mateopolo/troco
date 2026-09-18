@@ -1,6 +1,5 @@
 import logger from '../utils/logger';
 import React, { useState, useEffect, useMemo } from 'react';
-import { createPortal } from 'react-dom';
 import {
   CreditCard, ShieldCheck, Lock, X,
   Sparkles, Coins, Zap, Smartphone,
@@ -11,8 +10,8 @@ import { outboxService } from '../services/outboxService';
 import { hapticSuccess, hapticError } from '../utils/haptics';
 import { convertCurrency, formatCurrencyAmount } from '../services/pricingService';
 import { useWalletStore } from '../stores';
+import UniversalModal from './ui/UniversalModal';
 
-// Algorithme de Luhn pour la validation des numéros de carte bancaire
 function isValidLuhn(numStr) {
   const sanitized = numStr.replace(/\D/g, '');
   if (sanitized.length < 13 || sanitized.length > 19) return false;
@@ -30,7 +29,6 @@ function isValidLuhn(numStr) {
   return sum % 10 === 0;
 }
 
-// Détection de la marque de la carte
 function detectCardBrand(numStr) {
   const sanitized = numStr.replace(/\D/g, '');
   if (/^4/.test(sanitized)) return 'visa';
@@ -44,14 +42,14 @@ export default function PaymentModal({
   onClose,
   darkMode = false,
   currentUser = null,
-  initialMode = 'troco-plus', // 'troco-plus' | 'topup-cash' | 'boost' | 'caution' | 'deal'
+  initialMode = 'troco-plus',
   initialPayload = null,
   onSuccess = null,
   playBetclicSound = null,
   playApplePaySound = null,
 }) {
   const [mode, setMode] = useState(initialMode === 'pack-tokens' ? 'troco-plus' : initialMode);
-  const [paymentMethod, setPaymentMethod] = useState('applePay'); // 'applePay' | 'card' | 'wallet'
+  const [paymentMethod, setPaymentMethod] = useState('applePay');
   const [isProcessing, setIsProcessing] = useState(false);
   const [show3DSecure, setShow3DSecure] = useState(false);
   const [otpCode, setOtpCode] = useState('');
@@ -59,14 +57,12 @@ export default function PaymentModal({
   const [isSuccess, setIsSuccess] = useState(false);
   const [successDetails, setSuccessDetails] = useState(null);
 
-  // Formulaire Carte Bancaire
   const [cardNumber, setCardNumber] = useState('');
   const [cardHolder, setCardHolder] = useState(currentUser?.name || '');
   const [cardExpiry, setCardExpiry] = useState('');
   const [cardCvc, setCardCvc] = useState('');
   const [formErrors, setFormErrors] = useState({});
 
-  // 🚨 PHASE 107 : VERROUILLAGE DE LA DEVISE SUR LA GÉOLOCALISATION STORE (IMMUTABLE)
   const currency = useWalletStore(state => state.currency);
   const storeCountryCode = useWalletStore(state => state.countryCode);
   const selectedCountry = useMemo(() => {
@@ -81,18 +77,15 @@ export default function PaymentModal({
   const trocoPlusPlans = useMemo(() => getLocalizedTrocoPlusPlans(selectedCountry), [selectedCountry]);
   const [selectedTrocoPlusPlan, setSelectedTrocoPlusPlan] = useState(() => getLocalizedTrocoPlusPlans(selectedCountry)[0]);
 
-  // Synchronisation si le plan sélectionné change lors de la mise à jour de la devise
   useEffect(() => {
     const updated = trocoPlusPlans.find(p => p.id === selectedTrocoPlusPlan?.id) || trocoPlusPlans[0];
     setSelectedTrocoPlusPlan(updated);
   }, [trocoPlusPlans, selectedTrocoPlusPlan?.id]);
 
-  // Sélection Recharge Cash
   const cashAmounts = [10, 20, 50, 100];
   const [selectedCashAmount, setSelectedCashAmount] = useState(20);
   const [customCashAmount, setCustomCashAmount] = useState('');
 
-  // Options de Boosts
   const boostOptions = [
     { id: 'boost-7d', title: 'Boost 7 jours', price: 1.99, duration: '7 jours', icon: Zap, desc: 'Remonte en tête de liste dans les résultats de recherche' },
     { id: 'boost-urgent', title: 'Boost Urgent 48h', price: 2.99, duration: '48 heures', icon: Sparkles, desc: 'Badge Flamme exclusif + notification de proximité' },
@@ -100,7 +93,6 @@ export default function PaymentModal({
   ];
   const [selectedBoost, setSelectedBoost] = useState(boostOptions[0]);
 
-  // Réinitialisation lors de l'ouverture
   useEffect(() => {
     if (isOpen) {
       const normalizedMode = (initialMode === 'pack-tokens' || initialMode === 'troco-plus')
@@ -119,7 +111,6 @@ export default function PaymentModal({
       const euroRequired = Number(initialPayload?.euroRequired ?? initialPayload?.amount ?? initialPayload?.terms?.euroAmount ?? 0);
       const userEuro = Number(currentUser?.euroBalance || 0);
 
-      // Si rechargement ou abonnement, le mode doit être bancaire
       if (normalizedMode === 'troco-plus' || normalizedMode === 'topup-cash') {
         setPaymentMethod('applePay');
       } else if (normalizedMode === 'deal') {
@@ -133,32 +124,10 @@ export default function PaymentModal({
         setCardHolder(currentUser.name);
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, initialMode, initialPayload]);
-
-  // Verrouillage du scroll du body et écoute de la touche Échap
-  useEffect(() => {
-    if (!isOpen) return;
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') {
-        e.stopPropagation();
-        onClose();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.body.style.overflow = originalOverflow;
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isOpen]);
 
   if (!isOpen) return null;
 
-  // Données du deal
   const isDealMode = mode === 'deal' || mode === 'pay-deal';
   const dealTokensRequired = isDealMode ? Number(initialPayload?.tokensRequired ?? initialPayload?.tokens ?? initialPayload?.terms?.trocoTokens ?? 0) : 0;
   const dealEuroRequired = isDealMode ? Number(initialPayload?.euroRequired ?? initialPayload?.amount ?? initialPayload?.terms?.euroAmount ?? 0) : 0;
@@ -167,23 +136,19 @@ export default function PaymentModal({
   const hasEnoughTokens = userTokens >= dealTokensRequired;
   const hasEnoughEuro = userEuro >= dealEuroRequired;
 
-  // Détection du statut d'abonnement existant de l'utilisateur
   const userHasSubscription = Boolean(currentUser?.isTrocoPlus);
   const userPlanKey = currentUser?.subscriptionPlan || (userHasSubscription ? 'essential' : null);
   const isUserPro = userHasSubscription && (userPlanKey === 'pro' || userPlanKey === 'premium');
   const isUserEssential = userHasSubscription && (userPlanKey === 'essential' || userPlanKey === 'basic');
 
-  // Statut pour le plan sélectionné
   const isSelectedPlanCurrent = (isUserPro && selectedTrocoPlusPlan.planKey === 'pro') || (isUserEssential && selectedTrocoPlusPlan.planKey === 'essential');
   const isSelectedPlanDowngrade = isUserPro && selectedTrocoPlusPlan.planKey === 'essential';
   const isUpgradeAction = isUserEssential && selectedTrocoPlusPlan.planKey === 'pro';
   const isSubscriptionDisabled = (mode === 'troco-plus' || mode === 'pack-tokens') && (isSelectedPlanCurrent || isSelectedPlanDowngrade);
 
-  // Calcul du montant d'upgrade (différence de prix entre pro et essential)
   const essentialPlanPrice = trocoPlusPlans.find(p => p.planKey === 'essential')?.price || 9.99;
   const upgradePrice = Math.max(0, Number((selectedTrocoPlusPlan.price - essentialPlanPrice).toFixed(2)));
 
-  // Calcul du montant total
   const getAmountToPay = () => {
     if (mode === 'troco-plus' || mode === 'pack-tokens') {
       if (isSubscriptionDisabled) return 0;
@@ -210,7 +175,6 @@ export default function PaymentModal({
   const amountToPay = getAmountToPay();
   const cardBrand = detectCardBrand(cardNumber);
 
-  // Formatage du numéro de carte
   const handleCardNumberChange = (e) => {
     let raw = e.target.value.replace(/\D/g, '').slice(0, 16);
     let formatted = raw.replace(/(\d{4})(?=\d)/g, '$1 ');
@@ -218,7 +182,6 @@ export default function PaymentModal({
     if (formErrors.cardNumber) setFormErrors(prev => ({ ...prev, cardNumber: null }));
   };
 
-  // Formatage de la date d'expiration
   const handleExpiryChange = (e) => {
     let raw = e.target.value.replace(/\D/g, '').slice(0, 4);
     let formatted = raw;
@@ -231,7 +194,6 @@ export default function PaymentModal({
     if (formErrors.cardExpiry) setFormErrors(prev => ({ ...prev, cardExpiry: null }));
   };
 
-  // Validation du formulaire CB
   const validateCardForm = () => {
     const errors = {};
     const cleanNum = cardNumber.replace(/\s+/g, '');
@@ -264,7 +226,6 @@ export default function PaymentModal({
     return Object.keys(errors).length === 0;
   };
 
-  // Traitement du paiement
   const handleInitiatePayment = () => {
     if (isDealMode) {
       if (dealTokensRequired > 0 && !hasEnoughTokens) {
@@ -292,7 +253,6 @@ export default function PaymentModal({
         return;
       }
       setIsProcessing(true);
-      // Simulation appel passerelle Stripe / 3D Secure
       setTimeout(() => {
         setIsProcessing(false);
         setShow3DSecure(true);
@@ -327,7 +287,6 @@ export default function PaymentModal({
     }
   };
 
-  // Validation 3D Secure
   const handleVerify3DS = () => {
     if (otpCode.trim() !== '1234' && otpCode.trim().length !== 4) {
       hapticError();
@@ -345,7 +304,6 @@ export default function PaymentModal({
     }, 1000);
   };
 
-  // Finalisation du paiement et retour au parent
   const finalizePayment = (paymentMeta) => {
     setIsProcessing(false);
     hapticSuccess();
@@ -356,7 +314,7 @@ export default function PaymentModal({
     }
 
     const transactionId = `TRK-${new Date().getFullYear()}${String(new Date().getMonth() + 1).padStart(2, '0')}-${Math.floor(1000 + Math.random() * 9000)}`;
-    const taxRate = 0.20; // TVA 20%
+    const taxRate = 0.20;
     const totalTtc = amountToPay;
     const totalHt = Number((totalTtc / (1 + taxRate)).toFixed(2));
     const tva = Number((totalTtc - totalHt).toFixed(2));
@@ -401,7 +359,6 @@ export default function PaymentModal({
               : `Paiement Deal (${amountToPay.toFixed(2)} €)`,
     };
 
-    // Moteur Outbox IndexedDB : persistance immédiate et réconciliation garantie
     try {
       outboxService.queueTransaction({
         ...resultPayload,
@@ -426,1117 +383,797 @@ export default function PaymentModal({
     onClose?.();
   };
 
-  const modalElement = (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label="Passerelle de paiement Troco"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          handleCloseModal();
-        }
-      }}
-      className="fixed inset-0 z-[100000] bg-black/80 md:bg-[var(--overlay-bg)] md:backdrop-blur-md pointer-events-auto"
+  const modalHeader = (
+    <div style={{
+      padding: '20px 24px',
+      borderBottom: '1px solid var(--border-color)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{
+          width: '38px',
+          height: '38px',
+          borderRadius: '12px',
+          background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-primary-hover))',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: '#FFF',
+          boxShadow: 'var(--shadow-accent)',
+        }}>
+          {(mode === 'troco-plus' || mode === 'pack-tokens') ? <Sparkles size={20} /> : <CreditCard size={20} />}
+        </div>
+        <div>
+          <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '20px', fontWeight: '600', letterSpacing: '-0.01em', color: 'var(--text-main)' }}>
+            {(mode === 'troco-plus' || mode === 'pack-tokens') && 'Abonnement Troco Plus'}
+            {mode === 'topup-cash' && 'Recharger mon Portefeuille'}
+            {mode === 'boost' && 'Booster une Annonce'}
+            {mode === 'caution' && 'Empreinte de Caution'}
+            {mode === 'deal' && 'Paiement Sécurisé du Deal'}
+          </h3>
+          <p style={{ margin: '2px 0 0', fontSize: '12px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <ShieldCheck size={13} color="var(--accent-success)" /> Paiement 100% chiffré & sécurisé SSL 256 bits
+          </p>
+        </div>
+      </div>
+      <button
+        onClick={handleCloseModal}
+        style={{
+          border: 'none',
+          background: 'var(--bg-subtle)',
+          color: 'var(--text-main)',
+          width: '32px',
+          height: '32px',
+          borderRadius: '50%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer',
+        }}
+      >
+        <X size={18} />
+      </button>
+    </div>
+  );
+
+  const modalFooter = isSuccess ? (
+    <button
+      onClick={handleCloseModal}
+      className="premium-button"
       style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 100000,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '12px',
-        paddingTop: 'max(16px, env(safe-area-inset-top, 16px))',
-        paddingBottom: 'max(16px, env(safe-area-inset-bottom, 16px))',
-        overflow: 'hidden',
-        WebkitOverflowScrolling: 'touch',
-        animation: 'fadeIn 0.2s ease',
-        boxSizing: 'border-box'
+        width: '100%',
+        padding: '14px',
+        borderRadius: '14px',
+        border: 'none',
+        background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
+        color: '#FFF',
+        fontWeight: '800',
+        fontSize: '14px',
+        cursor: 'pointer',
+        boxShadow: 'var(--shadow-accent)'
       }}
     >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          backgroundColor: 'var(--bg-card)',
-          borderRadius: '24px',
-          width: '100%',
-          maxWidth: '560px',
-          maxHeight: 'calc(100dvh - 32px)',
-          overflowY: 'auto',
+      Terminer & Retourner à Troco
+    </button>
+  ) : (
+    <>
+      <div style={{
+        padding: '16px',
+        borderRadius: '16px',
+        backgroundColor: 'var(--bg-subtle)',
+        border: '1px solid var(--border-color)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        margin: '0 24px 16px 24px',
+      }}>
+        <div>
+          <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+            {isDealMode ? 'Total du deal' : 'Montant total TTC'}
+          </div>
+          <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span>{amountToPay.toFixed(2)} €</span>
+            {isDealMode && dealTokensRequired > 0 && (
+              <span style={{ fontSize: '14px', color: 'var(--accent-warning)', fontWeight: '800' }}>
+                + {dealTokensRequired} Jeton(s)
+              </span>
+            )}
+          </div>
+        </div>
+        <div style={{ fontSize: '11px', color: 'var(--text-secondary)', textAlign: 'right' }}>
+          {isDealMode
+            ? (dealTokensRequired > 0 ? `${dealTokensRequired} Jeton(s) débité(s)` : 'Troc direct')
+            : `Dont TVA 20% : ${(amountToPay * 0.20 / 1.20).toFixed(2)} €`}
+        </div>
+      </div>
+
+      <div style={{ padding: '0 24px 16px 24px' }}>
+        <button
+          type="button"
+          onClick={handleInitiatePayment}
+          disabled={isProcessing || isSubscriptionDisabled || (isDealMode ? (dealTokensRequired > 0 && !hasEnoughTokens) : amountToPay <= 0)}
+          className="premium-button"
+          style={{
+            width: '100%',
+            padding: '16px',
+            borderRadius: '16px',
+            border: 'none',
+            background: (isSubscriptionDisabled || (isDealMode && dealTokensRequired > 0 && !hasEnoughTokens))
+              ? 'var(--bg-subtle)'
+              : (paymentMethod === 'applePay' && amountToPay > 0)
+                ? 'var(--text-main)'
+                : 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
+            color: (isSubscriptionDisabled || (isDealMode && dealTokensRequired > 0 && !hasEnoughTokens))
+              ? 'var(--text-secondary)'
+              : (paymentMethod === 'applePay' && amountToPay > 0)
+                ? 'var(--bg-card)'
+                : '#FFF',
+            fontWeight: '800',
+            fontSize: '15px',
+            cursor: (isProcessing || isSubscriptionDisabled || (isDealMode ? (dealTokensRequired > 0 && !hasEnoughTokens) : amountToPay <= 0)) ? 'not-allowed' : 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+            boxShadow: (isSubscriptionDisabled || (isDealMode && dealTokensRequired > 0 && !hasEnoughTokens)) ? 'none' : 'var(--shadow-accent)',
+            transition: 'all 0.2s ease',
+            opacity: (isProcessing || isSubscriptionDisabled || (isDealMode ? (dealTokensRequired > 0 && !hasEnoughTokens) : amountToPay <= 0)) ? 0.7 : 1,
+          }}
+        >
+          {isProcessing ? (
+            <>
+              <Loader2 size={18} className="spin-animation" />
+              Traitement sécurisé en cours...
+            </>
+          ) : isSubscriptionDisabled ? (
+            <>
+              <CheckCircle size={16} color="#10B981" />
+              Abonnement Déjà Actif ({isSelectedPlanCurrent ? 'Votre Formule' : 'Inclus dans votre offre Pro'})
+            </>
+          ) : isUpgradeAction ? (
+            <>
+              <Sparkles size={16} />
+              ⚡ Mettre à niveau vers Troco Plus Pro ({amountToPay.toFixed(2)} € avec obligation de paiement)
+            </>
+          ) : isDealMode ? (
+            dealTokensRequired > 0 && !hasEnoughTokens ? (
+              <>
+                <Coins size={16} />
+                Solde Jetons Insuffisant ({userTokens}/{dealTokensRequired})
+              </>
+            ) : amountToPay <= 0 ? (
+              <>
+                <Lock size={16} />
+                Confirmer le transfert et sceller le deal ({dealTokensRequired > 0 ? `${dealTokensRequired} Jeton(s)` : 'Troc Direct'})
+              </>
+            ) : (
+              <>
+                <Lock size={16} />
+                Confirmer le paiement de {amountToPay.toFixed(2)} € et sceller le deal (obligation de paiement)
+              </>
+            )
+          ) : (
+            <>
+              <Lock size={16} />
+              Confirmer et payer {amountToPay.toFixed(2)} € avec {paymentMethod === 'applePay' ? 'Apple Pay' : paymentMethod === 'card' ? 'Carte Bancaire' : 'Solde Portefeuille'} (avec obligation de paiement)
+            </>
+          )}
+        </button>
+      </div>
+    </>
+  );
+
+  return (
+    <UniversalModal
+      isOpen={isOpen}
+      onClose={handleCloseModal}
+      ariaLabel="Passerelle de paiement Troco"
+      showCloseButton={false}
+      maxWidth={560}
+      header={modalHeader}
+      footer={modalFooter}
+      contentStyle={{
+        backgroundColor: 'var(--bg-card)',
+        borderRadius: '24px',
         boxShadow: 'var(--shadow-modal)',
         border: '1px solid var(--border-color)',
         color: 'var(--text-main)',
         position: 'relative',
-        display: 'flex',
-        flexDirection: 'column',
-        boxSizing: 'border-box'
-      }}>
+        padding: 0,
+      }}
+      overlayStyle={{
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+      }}
+    >
+      <div style={{ padding: '24px', position: 'relative' }}>
 
-        {/* HEADER MODAL */}
-        <div style={{
-          padding: '20px 24px',
-          borderBottom: '1px solid var(--border-color)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{
-              width: '38px',
-              height: '38px',
-              borderRadius: '12px',
-              background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-primary-hover))',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#FFF',
-              boxShadow: 'var(--shadow-accent)',
-            }}>
-              {(mode === 'troco-plus' || mode === 'pack-tokens') ? <Sparkles size={20} /> : <CreditCard size={20} />}
-            </div>
-            <div>
-              <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '20px', fontWeight: '600', letterSpacing: '-0.01em', color: 'var(--text-main)' }}>
-                {(mode === 'troco-plus' || mode === 'pack-tokens') && 'Abonnement Troco Plus'}
-                {mode === 'topup-cash' && 'Recharger mon Portefeuille'}
-                {mode === 'boost' && 'Booster une Annonce'}
-                {mode === 'caution' && 'Empreinte de Caution'}
-                {mode === 'deal' && 'Paiement Sécurisé du Deal'}
-              </h3>
-              <p style={{ margin: '2px 0 0', fontSize: '12px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <ShieldCheck size={13} color="var(--accent-success)" /> Paiement 100% chiffré & sécurisé SSL 256 bits
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={handleCloseModal}
-            style={{
-              border: 'none',
-              background: 'var(--bg-subtle)',
-              color: 'var(--text-main)',
-              width: '32px',
-              height: '32px',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-            }}
-          >
-            <X size={18} />
-          </button>
-        </div>
-
-        {/* CORPS DE LA MODAL */}
-        <div style={{ padding: '24px', overflowY: 'auto' }}>
-
-          {/* SÉLECTEUR D'ONGLET DU PORTEFEUILLE (GÉRER MON SOLDE EURO / ABONNEMENT TROCO PLUS) */}
-          {(mode === 'troco-plus' || mode === 'pack-tokens' || mode === 'topup-cash') && (
-            <div style={{
-              display: 'flex',
-              backgroundColor: 'var(--bg-subtle)',
-              borderRadius: '16px',
-              padding: '5px',
-              marginBottom: '22px',
-              border: '1px solid var(--border-color)',
-              boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.04)'
-            }}>
-              <button
-                type="button"
-                onClick={() => {
-                  setMode('topup-cash');
-                  setPaymentMethod('applePay');
-                  setFormErrors({});
-                }}
-                style={{
-                  flex: 1,
-                  padding: '10px 14px',
-                  borderRadius: '12px',
-                  border: 'none',
-                  backgroundColor: mode === 'topup-cash' ? 'var(--accent-primary)' : 'transparent',
-                  color: mode === 'topup-cash' ? '#FFFFFF' : 'var(--text-secondary)',
-                  fontWeight: mode === 'topup-cash' ? '800' : '600',
-                  fontSize: '13px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px',
-                  boxShadow: mode === 'topup-cash' ? 'var(--shadow-accent)' : 'none',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <CreditCard size={15} /> Recharger mon solde (€)
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setMode('troco-plus');
-                  setPaymentMethod('applePay');
-                  setFormErrors({});
-                }}
-                style={{
-                  flex: 1,
-                  padding: '10px 14px',
-                  borderRadius: '12px',
-                  border: 'none',
-                  backgroundColor: (mode === 'troco-plus' || mode === 'pack-tokens') ? 'var(--accent-primary)' : 'transparent',
-                  color: (mode === 'troco-plus' || mode === 'pack-tokens') ? '#FFFFFF' : 'var(--text-secondary)',
-                  fontWeight: (mode === 'troco-plus' || mode === 'pack-tokens') ? '800' : '600',
-                  fontSize: '13px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px',
-                  boxShadow: (mode === 'troco-plus' || mode === 'pack-tokens') ? 'var(--shadow-accent)' : 'none',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <Sparkles size={15} /> Abonnement Troco Plus
-              </button>
-            </div>
-          )}
-
-          {/* ÉCRAN DE SUCCÈS */}
-          {isSuccess ? (
-            <div style={{ textAlign: 'center', padding: '20px 10px' }}>
-              <div style={{
-                width: '72px',
-                height: '72px',
-                borderRadius: '50%',
-                backgroundColor: 'var(--bg-subtle)',
-                color: 'var(--accent-success)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto 16px',
-                border: '4px solid var(--accent-success)',
-              }}>
-                <Check size={38} strokeWidth={3} />
-              </div>
-              <h4 className="font-editorial-heading" style={{ margin: '0 0 6px', fontSize: '22px', fontWeight: '600', color: 'var(--text-main)' }}>
-                Paiement Validé avec Succès !
-              </h4>
-              <p style={{ margin: '0 0 20px', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                Votre transaction a été enregistrée et votre compte mis à jour instantanément.
-              </p>
-
-              <div style={{
-                backgroundColor: 'var(--bg-subtle)',
-                borderRadius: '16px',
-                padding: '16px',
-                border: '1px solid var(--border-color)',
-                textAlign: 'left',
-                marginBottom: '24px',
-                fontSize: '13px',
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>Référence :</span>
-                  <strong style={{ fontFamily: 'monospace', color: 'var(--accent-primary)' }}>{successDetails?.transactionId}</strong>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>Objet :</span>
-                  <strong>{successDetails?.label}</strong>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ color: 'var(--text-secondary)' }}>Moyen utilisé :</span>
-                  <span>{successDetails?.paymentMethod}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px solid var(--border-color)', fontSize: '15px' }}>
-                  <span style={{ fontWeight: '800' }}>Total TTC débité :</span>
-                  <strong style={{ color: 'var(--accent-success)', fontWeight: '800' }}>{successDetails?.amountTtc.toFixed(2)} €</strong>
-                </div>
-              </div>
-
-              <button
-                onClick={handleCloseModal}
-                className="premium-button"
-                style={{
-                  width: '100%',
-                  padding: '14px',
-                  borderRadius: '14px',
-                  border: 'none',
-                  background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
-                  color: '#FFF',
-                  fontWeight: '800',
-                  fontSize: '14px',
-                  cursor: 'pointer',
-                  boxShadow: 'var(--shadow-accent)'
-                }}
-              >
-                Terminer & Retourner à Troco
-              </button>
-            </div>
-          ) : (
-            <>
-              {/* ÉTAPE 1 : SÉLECTION DE L'OFFRE / DU MONTANT */}
-              {(mode === 'troco-plus' || mode === 'pack-tokens') && (
-                <div style={{ marginBottom: '22px' }}>
-                  <div style={{ marginBottom: '14px' }}>
-                    <label style={{ display: 'block', fontSize: '13.5px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>
-                      1. Choisissez votre abonnement mensuel Troco Plus
-                    </label>
-                  </div>
-
-                  {/* BANNIÈRE DE STATUT D'ABONNEMENT SI DÉJÀ ACTIF */}
-                  {userHasSubscription && (
-                    <div style={{
-                      padding: '10px 14px',
-                      borderRadius: '14px',
-                      backgroundColor: isUserPro ? 'rgba(16, 185, 129, 0.12)' : 'rgba(198, 125, 91, 0.12)',
-                      border: isUserPro ? '1.5px solid #10B981' : '1.5px solid var(--accent-primary)',
-                      marginBottom: '14px',
-                      fontSize: '12px',
-                      color: 'var(--text-main)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px'
-                    }}>
-                      <CheckCircle size={16} color={isUserPro ? '#10B981' : 'var(--accent-primary)'} />
-                      <div>
-                        <strong>{isUserPro ? '👑 Offre Troco Plus Pro Active' : '⭐ Offre Troco Plus Essentielle Active'}</strong>
-                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                          {isUserPro
-                            ? 'Vous bénéficiez déjà du palier maximal (15 jetons/mois, 3 boosts). Le réachat en boucle est verrouillé.'
-                            : 'Passez à l\'offre Pro pour débloquer +10 jetons supplémentaires et des boosts exclusifs.'}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {trocoPlusPlans.map(plan => {
-                      const isSelected = selectedTrocoPlusPlan.id === plan.id;
-                      const isThisPlanCurrent = (isUserPro && plan.planKey === 'pro') || (isUserEssential && plan.planKey === 'essential');
-                      const isThisPlanIncluded = isUserPro && plan.planKey === 'essential';
-                      const isThisPlanUpgrade = isUserEssential && plan.planKey === 'pro';
-
-                      return (
-                        <div
-                          key={plan.id}
-                          onClick={() => setSelectedTrocoPlusPlan(plan)}
-                          style={{
-                            padding: '16px',
-                            borderRadius: '18px',
-                            border: isSelected ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
-                            backgroundColor: isThisPlanCurrent ? 'rgba(16, 185, 129, 0.06)' : isSelected ? 'var(--bg-subtle)' : 'var(--bg-card)',
-                            cursor: 'pointer',
-                            position: 'relative',
-                            transition: 'all 0.2s ease',
-                            boxShadow: isSelected ? 'var(--shadow-accent)' : 'none'
-                          }}
-                        >
-                          {/* BADGES EN HAUT À DROITE */}
-                          {isThisPlanCurrent && (
-                            <span style={{
-                              position: 'absolute',
-                              top: '-9px',
-                              right: '16px',
-                              backgroundColor: '#10B981',
-                              color: '#FFF',
-                              fontSize: '11px',
-                              fontWeight: '800',
-                              padding: '2px 8px',
-                              borderRadius: '999px',
-                              boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)'
-                            }}>
-                              ✓ Abonnement Actif
-                            </span>
-                          )}
-
-                          {!isThisPlanCurrent && isThisPlanUpgrade && (
-                            <span style={{
-                              position: 'absolute',
-                              top: '-9px',
-                              right: '16px',
-                              backgroundColor: 'var(--accent-primary)',
-                              color: '#FFF',
-                              fontSize: '11px',
-                              fontWeight: '800',
-                              padding: '2px 8px',
-                              borderRadius: '999px',
-                              boxShadow: 'var(--shadow-accent)'
-                            }}>
-                              ⚡ Mise à niveau (Upgrade)
-                            </span>
-                          )}
-
-                          {!isThisPlanCurrent && !isThisPlanUpgrade && isThisPlanIncluded && (
-                            <span style={{
-                              position: 'absolute',
-                              top: '-9px',
-                              right: '16px',
-                              backgroundColor: 'var(--text-secondary)',
-                              color: '#FFF',
-                              fontSize: '10.5px',
-                              fontWeight: '800',
-                              padding: '2px 8px',
-                              borderRadius: '999px',
-                            }}>
-                              Inclus dans votre offre
-                            </span>
-                          )}
-
-                          {!userHasSubscription && plan.popular && (
-                            <span style={{
-                              position: 'absolute',
-                              top: '-9px',
-                              right: '16px',
-                              backgroundColor: 'var(--accent-primary)',
-                              color: '#FFF',
-                              fontSize: '11px',
-                              fontWeight: '800',
-                              padding: '2px 8px',
-                              borderRadius: '999px',
-                              boxShadow: 'var(--shadow-accent)'
-                            }}>
-                              ⭐ Le plus populaire
-                            </span>
-                          )}
-
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
-                            <div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <strong className="font-editorial-heading" style={{ fontSize: '17px', color: 'var(--text-main)' }}>{plan.title}</strong>
-                                <span style={{
-                                  fontSize: '11px', fontWeight: '800', padding: '3px 8px', borderRadius: '999px',
-                                  backgroundColor: isThisPlanCurrent ? '#EBF0E6' : 'var(--bg-subtle)',
-                                  color: isThisPlanCurrent ? '#3D4A35' : 'var(--accent-primary)'
-                                }}>
-                                  {isThisPlanCurrent ? 'Actuel' : plan.badge}
-                                </span>
-                              </div>
-                              <p style={{ margin: '4px 0 10px', fontSize: '12px', color: 'var(--text-secondary)' }}>
-                                {plan.desc}
-                              </p>
-                            </div>
-                            <div style={{ textAlign: 'right' }}>
-                              <div style={{ fontSize: '20px', fontWeight: '900', color: isSelected ? 'var(--accent-primary)' : 'var(--text-main)' }}>
-                                {isThisPlanUpgrade && upgradePrice > 0
-                                  ? `${upgradePrice.toFixed(2)} €`
-                                  : (plan.formattedPrice || `${plan.price.toFixed(2)} €`)}
-                              </div>
-                              <div style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '600' }}>
-                                {isThisPlanUpgrade ? 'différence/mois' : plan.period}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', borderTop: '1px solid var(--border-color)', paddingTop: '10px' }}>
-                            {plan.features.map((feat, idx) => (
-                              <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600' }}>
-                                <Check size={14} color="var(--accent-success)" />
-                                <span>{feat}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <div style={{ marginTop: '10px', padding: '8px 12px', borderRadius: '10px', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', fontSize: '11px', fontWeight: '700', textAlign: 'center' }}>
-                    💡 Les abonnements Troco Plus sont renouvelés automatiquement chaque mois et résiliables à tout instant en un clic.
-                  </div>
-                </div>
-              )}
-
-              {mode === 'topup-cash' && (
-                <div style={{ marginBottom: '22px' }}>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '800', marginBottom: '10px', color: 'var(--text-main)' }}>
-                    1. Choisissez le montant de votre recharge réelle (€)
-                  </label>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginBottom: '12px' }}>
-                    {cashAmounts.map(amt => {
-                      const isSelected = selectedCashAmount === amt && !customCashAmount;
-                      return (
-                        <button
-                          key={amt}
-                          type="button"
-                          onClick={() => { setSelectedCashAmount(amt); setCustomCashAmount(''); }}
-                          style={{
-                            padding: '14px 10px',
-                            borderRadius: '14px',
-                            border: isSelected ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
-                            backgroundColor: isSelected ? 'var(--bg-subtle)' : 'var(--bg-card)',
-                            color: isSelected ? 'var(--accent-primary)' : 'var(--text-main)',
-                            fontWeight: '800',
-                            fontSize: '16px',
-                            cursor: 'pointer',
-                            boxShadow: isSelected ? 'var(--shadow-card)' : 'none'
-                          }}
-                        >
-                          +{amt} €
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <div>
-                    <input
-                      type="number"
-                      min="5"
-                      max="1000"
-                      placeholder="Ou montant libre en € (ex: 75)"
-                      value={customCashAmount}
-                      onChange={(e) => setCustomCashAmount(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '12px 14px',
-                        borderRadius: '12px',
-                        border: customCashAmount ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
-                        backgroundColor: 'var(--bg-subtle)',
-                        color: 'var(--text-main)',
-                        fontSize: '14px',
-                        outline: 'none',
-                      }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {mode === 'boost' && (
-                <div style={{ marginBottom: '22px' }}>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '800', marginBottom: '10px', color: 'var(--text-main)' }}>
-                    1. Choisissez votre formule de visibilité
-                  </label>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {boostOptions.map(b => {
-                      const isSelected = selectedBoost.id === b.id;
-                      const IconComponent = b.icon;
-                      return (
-                        <div
-                          key={b.id}
-                          onClick={() => setSelectedBoost(b)}
-                          style={{
-                            padding: '14px',
-                            borderRadius: '16px',
-                            border: isSelected ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
-                            backgroundColor: isSelected ? 'var(--bg-subtle)' : 'var(--bg-card)',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            boxShadow: isSelected ? 'var(--shadow-accent)' : 'none'
-                          }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <div style={{
-                              width: '36px',
-                              height: '36px',
-                              borderRadius: '10px',
-                              backgroundColor: isSelected ? 'var(--accent-primary)' : 'var(--bg-subtle)',
-                              color: isSelected ? '#FFF' : 'var(--text-secondary)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                            }}>
-                              <IconComponent size={18} />
-                            </div>
-                            <div>
-                              <strong className="font-editorial-heading" style={{ fontSize: '15px' }}>{b.title}</strong>
-                              <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{b.desc}</div>
-                            </div>
-                          </div>
-                          <div style={{ fontSize: '16px', fontWeight: '800', color: isSelected ? 'var(--accent-primary)' : 'var(--text-main)' }}>
-                            {b.price.toFixed(2)} €
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* ÉTAPE 1 SPÉCIFIQUE AU DEAL */}
-              {isDealMode && (
-                <div style={{ marginBottom: '22px' }}>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '800', marginBottom: '10px', color: 'var(--text-main)' }}>
-                    1. Récapitulatif et conditions du Deal
-                  </label>
-
-                  <div style={{
-                    padding: '16px',
-                    borderRadius: '18px',
-                    backgroundColor: 'var(--bg-subtle)',
-                    border: '1px solid var(--border-color)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '12px',
-                    marginBottom: '12px'
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{
-                          width: '32px', height: '32px', borderRadius: '50%',
-                          background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-primary-hover))',
-                          color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontWeight: '800', fontSize: '12px'
-                        }}>
-                          {(initialPayload?.partnerName || 'P').charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                          <strong style={{ fontSize: '14px', color: 'var(--text-main)' }}>
-                            {initialPayload?.partnerName || 'Partenaire de troc'}
-                          </strong>
-                          <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                            {initialPayload?.terms?.conditions || initialPayload?.label || 'Accord convenu'}
-                          </div>
-                        </div>
-                      </div>
-                      <span style={{
-                        backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)',
-                        padding: '4px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '800', color: 'var(--accent-primary)'
-                      }}>
-                        🤝 Deal en cours
-                      </span>
-                    </div>
-
-                    {/* VÉRIFICATION DU SOLDE DE JETONS */}
-                    {dealTokensRequired > 0 && (
-                      <div style={{
-                        padding: '12px',
-                        borderRadius: '14px',
-                        border: hasEnoughTokens ? '1px solid var(--border-color)' : '1.5px solid var(--accent-warning)',
-                        backgroundColor: hasEnoughTokens ? 'var(--bg-card)' : 'rgba(245, 158, 11, 0.08)',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '8px'
-                      }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', fontWeight: '800', color: 'var(--text-main)' }}>
-                            <Coins size={16} color="var(--accent-warning)" />
-                            <span>Jetons requis : <strong>{dealTokensRequired} Jeton(s)</strong></span>
-                          </div>
-                          <span style={{ fontSize: '11.5px', fontWeight: '700', color: hasEnoughTokens ? 'var(--accent-primary)' : 'var(--accent-warning)' }}>
-                            Solde actuel : {userTokens} Jeton(s)
-                          </span>
-                        </div>
-
-                        {!hasEnoughTokens && (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
-                            <div style={{ fontSize: '11.5px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                              ⚠️ Votre solde de jetons est insuffisant pour finaliser cet accord. Vous pouvez vous abonner à <strong>Troco Plus</strong> pour obtenir instantanément des jetons mensuels.
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setMode('troco-plus');
-                                setPaymentMethod('applePay');
-                              }}
-                              className="premium-button"
-                              style={{
-                                padding: '8px 12px',
-                                borderRadius: '10px',
-                                border: 'none',
-                                background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
-                                color: '#FFF',
-                                fontSize: '11.5px',
-                                fontWeight: '800',
-                                cursor: 'pointer',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: '6px'
-                              }}
-                            >
-                              <Sparkles size={13} /> S'abonner à Troco Plus (+5 Jetons)
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* VÉRIFICATION DU MONTANT FINANCIER & CONVERSION CROSS-BORDER STRIPE FX */}
-                    {dealEuroRequired > 0 && (
-                      <div style={{
-                        padding: '12px',
-                        borderRadius: '14px',
-                        border: '1px solid var(--border-color)',
-                        backgroundColor: 'var(--bg-card)',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: '6px'
-                      }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', fontWeight: '800', color: 'var(--text-main)' }}>
-                            <CreditCard size={16} color="var(--accent-primary)" />
-                            <span>Montant : <strong>{formatCurrencyAmount(dealEuroRequired, 'EUR')}</strong></span>
-                          </div>
-                          <span style={{ fontSize: '11.5px', fontWeight: '700', color: hasEnoughEuro ? 'var(--accent-primary)' : 'var(--text-secondary)' }}>
-                            Solde dispo : {userEuro.toFixed(2)} € {hasEnoughEuro ? '✓' : '(complément requis)'}
-                          </span>
-                        </div>
-
-                        {/* 🚨 PHASE 58 : NOTICE DE CONVERSION TEMPS RÉEL SI TRANSACTION CROSS-BORDER */}
-                        {initialPayload?.deal?.terms?.sellerCurrency && initialPayload?.deal?.terms?.sellerCurrency !== 'EUR' && (
-                          <div style={{
-                            padding: '6px 10px',
-                            borderRadius: '8px',
-                            backgroundColor: 'rgba(59, 130, 246, 0.08)',
-                            border: '1px solid rgba(59, 130, 246, 0.2)',
-                            fontSize: '11px',
-                            fontWeight: '600',
-                            color: '#3B82F6',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                          }}>
-                            <span>🌐 Vous allez payer ~{formatCurrencyAmount(convertCurrency(dealEuroRequired, initialPayload.deal.terms.sellerCurrency, 'EUR'), 'EUR')} (Équivalent demandé : {formatCurrencyAmount(dealEuroRequired, initialPayload.deal.terms.sellerCurrency)})</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* ÉTAPE 2 : SÉLECTION DU MOYEN DE PAIEMENT */}
-              {amountToPay > 0 && (
-                <div style={{ marginBottom: '22px' }}>
-                  <label style={{ display: 'block', fontSize: '13px', fontWeight: '800', marginBottom: '10px', color: 'var(--text-main)' }}>
-                    2. Moyen de Paiement Sécurisé
-                  </label>
-                  <div style={{ display: 'grid', gridTemplateColumns: (mode === 'troco-plus' || mode === 'pack-tokens' || mode === 'topup-cash') ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: '10px' }}>
-                    {/* Option Apple Pay */}
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod('applePay')}
-                      style={{
-                        padding: '12px 8px',
-                        borderRadius: '14px',
-                        border: paymentMethod === 'applePay' ? '2px solid var(--text-main)' : '1px solid var(--border-color)',
-                        backgroundColor: paymentMethod === 'applePay' ? 'var(--text-main)' : 'var(--bg-subtle)',
-                        color: paymentMethod === 'applePay' ? 'var(--bg-card)' : 'var(--text-secondary)',
-                        fontWeight: '800',
-                        fontSize: '13px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '6px',
-                      }}
-                    >
-                      <Smartphone size={16} /> Apple Pay
-                    </button>
-
-                    {/* Option Carte Bancaire */}
-                    <button
-                      type="button"
-                      onClick={() => setPaymentMethod('card')}
-                      style={{
-                        padding: '12px 8px',
-                        borderRadius: '14px',
-                        border: paymentMethod === 'card' ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
-                        backgroundColor: paymentMethod === 'card' ? 'var(--bg-subtle)' : 'var(--bg-card)',
-                        color: paymentMethod === 'card' ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                        fontWeight: '800',
-                        fontSize: '13px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '6px',
-                        boxShadow: paymentMethod === 'card' ? 'var(--shadow-card)' : 'none'
-                      }}
-                    >
-                      <CreditCard size={16} /> Carte CB
-                    </button>
-
-                    {/* Option Solde Portefeuille (uniquement pour deal, caution, boost) */}
-                    {mode !== 'troco-plus' && mode !== 'pack-tokens' && mode !== 'topup-cash' && (
-                      <button
-                        type="button"
-                        disabled={(currentUser?.euroBalance || 0) < amountToPay}
-                        onClick={() => setPaymentMethod('wallet')}
-                        style={{
-                          padding: '12px 8px',
-                          borderRadius: '14px',
-                          border: paymentMethod === 'wallet' ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
-                          backgroundColor: paymentMethod === 'wallet' ? 'var(--bg-subtle)' : 'var(--bg-card)',
-                          color: paymentMethod === 'wallet' ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                          fontWeight: '800',
-                          fontSize: '13px',
-                          cursor: (currentUser?.euroBalance || 0) < amountToPay ? 'not-allowed' : 'pointer',
-                          opacity: (currentUser?.euroBalance || 0) < amountToPay ? 0.5 : 1,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '6px',
-                        }}
-                      >
-                        <Coins size={16} /> Solde ({currentUser?.euroBalance || 0}€)
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* FORMULAIRE CARTE BANCAIRE INTERACTIF */}
-              {paymentMethod === 'card' && (
-                <div style={{
-                  backgroundColor: 'var(--bg-subtle)',
-                  borderRadius: '18px',
-                  padding: '18px',
-                  border: '1px solid var(--border-color)',
-                  marginBottom: '22px',
-                }}>
-                  {/* APERÇU VISUEL DE LA CARTE */}
-                  <div style={{
-                    borderRadius: '16px',
-                    padding: '16px 20px',
-                    background: cardBrand === 'mastercard'
-                      ? 'linear-gradient(135deg, #EB001B, #F79E1B)'
-                      : cardBrand === 'amex'
-                        ? 'linear-gradient(135deg, #0077A6, #00A3E0)'
-                        : 'linear-gradient(135deg, var(--accent-primary), var(--accent-primary-hover))',
-                    color: '#FFF',
-                    boxShadow: 'var(--shadow-card)',
-                    marginBottom: '16px',
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                      <span style={{ fontSize: '11px', fontWeight: '800', letterSpacing: '0.1em', opacity: 0.85 }}>TROCO PAY</span>
-                      <span style={{ fontSize: '12px', fontWeight: '800', textTransform: 'uppercase' }}>
-                        {cardBrand === 'visa' && 'VISA'}
-                        {cardBrand === 'mastercard' && 'MASTERCARD'}
-                        {cardBrand === 'amex' && 'AMEX'}
-                        {cardBrand === 'generic' && 'CARTE BANCAIRE'}
-                      </span>
-                    </div>
-                    <div style={{ fontFamily: 'monospace', fontSize: '17px', letterSpacing: '2px', fontWeight: '700', marginBottom: '14px' }}>
-                      {cardNumber || '•••• •••• •••• ••••'}
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', fontSize: '11px' }}>
-                      <div>
-                        <div style={{ opacity: 0.7, fontSize: '9px' }}>TITULAIRE</div>
-                        <div style={{ fontWeight: '700', textTransform: 'uppercase' }}>{cardHolder || 'PRENOM NOM'}</div>
-                      </div>
-                      <div>
-                        <div style={{ opacity: 0.7, fontSize: '9px' }}>EXPIRE</div>
-                        <div style={{ fontWeight: '700' }}>{cardExpiry || 'MM/AA'}</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* CHAMPS DE SAISIE */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                        Numéro de carte
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="1234 5678 9012 3456"
-                        value={cardNumber}
-                        onChange={handleCardNumberChange}
-                        maxLength={19}
-                        style={{
-                          width: '100%',
-                          padding: '10px 12px',
-                          borderRadius: '10px',
-                          border: formErrors.cardNumber ? '1px solid #EF4444' : '1px solid var(--border-color)',
-                          backgroundColor: 'var(--bg-card)',
-                          color: 'var(--text-main)',
-                          fontSize: '14px',
-                          outline: 'none',
-                        }}
-                      />
-                      {formErrors.cardNumber && <span style={{ fontSize: '11px', color: '#EF4444' }}>{formErrors.cardNumber}</span>}
-                    </div>
-
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                        Nom sur la carte
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="Ex: Mateo Polo"
-                        value={cardHolder}
-                        onChange={(e) => { setCardHolder(e.target.value); setFormErrors(prev => ({ ...prev, cardHolder: null })); }}
-                        style={{
-                          width: '100%',
-                          padding: '10px 12px',
-                          borderRadius: '10px',
-                          border: formErrors.cardHolder ? '1px solid #EF4444' : '1px solid var(--border-color)',
-                          backgroundColor: 'var(--bg-card)',
-                          color: 'var(--text-main)',
-                          fontSize: '14px',
-                          outline: 'none',
-                        }}
-                      />
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                      <div>
-                        <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                          Expiration (MM/AA)
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="12/28"
-                          value={cardExpiry}
-                          onChange={handleExpiryChange}
-                          maxLength={5}
-                          style={{
-                            width: '100%',
-                            padding: '10px 12px',
-                            borderRadius: '10px',
-                            border: formErrors.cardExpiry ? '1px solid #EF4444' : '1px solid var(--border-color)',
-                            backgroundColor: 'var(--bg-card)',
-                            color: 'var(--text-main)',
-                            fontSize: '14px',
-                            outline: 'none',
-                          }}
-                        />
-                        {formErrors.cardExpiry && <span style={{ fontSize: '11px', color: '#EF4444' }}>{formErrors.cardExpiry}</span>}
-                      </div>
-                      <div>
-                        <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '4px' }}>
-                          CVC / CVV
-                        </label>
-                        <input
-                          type="password"
-                          placeholder="123"
-                          value={cardCvc}
-                          onChange={(e) => { setCardCvc(e.target.value.replace(/\D/g, '').slice(0, 4)); setFormErrors(prev => ({ ...prev, cardCvc: null })); }}
-                          maxLength={4}
-                          style={{
-                            width: '100%',
-                            padding: '10px 12px',
-                            borderRadius: '10px',
-                            border: formErrors.cardCvc ? '1px solid #EF4444' : '1px solid var(--border-color)',
-                            backgroundColor: 'var(--bg-card)',
-                            color: 'var(--text-main)',
-                            fontSize: '14px',
-                            outline: 'none',
-                          }}
-                        />
-                        {formErrors.cardCvc && <span style={{ fontSize: '11px', color: '#EF4444' }}>{formErrors.cardCvc}</span>}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* RÉCAPITULATIF & BOUTON D'ACTION */}
-              <div style={{
-                padding: '16px',
-                borderRadius: '16px',
-                backgroundColor: 'var(--bg-subtle)',
-                border: '1px solid var(--border-color)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                marginBottom: '16px',
-              }}>
-                <div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                    {isDealMode ? 'Total du deal' : 'Montant total TTC'}
-                  </div>
-                  <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span>{amountToPay.toFixed(2)} €</span>
-                    {isDealMode && dealTokensRequired > 0 && (
-                      <span style={{ fontSize: '14px', color: 'var(--accent-warning)', fontWeight: '800' }}>
-                        + {dealTokensRequired} Jeton(s)
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', textAlign: 'right' }}>
-                  {isDealMode
-                    ? (dealTokensRequired > 0 ? `${dealTokensRequired} Jeton(s) débité(s)` : 'Troc direct')
-                    : `Dont TVA 20% : ${(amountToPay * 0.20 / 1.20).toFixed(2)} €`}
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleInitiatePayment}
-                disabled={isProcessing || isSubscriptionDisabled || (isDealMode ? (dealTokensRequired > 0 && !hasEnoughTokens) : amountToPay <= 0)}
-                className="premium-button"
-                style={{
-                  width: '100%',
-                  padding: '16px',
-                  borderRadius: '16px',
-                  border: 'none',
-                  background: (isSubscriptionDisabled || (isDealMode && dealTokensRequired > 0 && !hasEnoughTokens))
-                    ? 'var(--bg-subtle)'
-                    : (paymentMethod === 'applePay' && amountToPay > 0)
-                      ? 'var(--text-main)'
-                      : 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
-                  color: (isSubscriptionDisabled || (isDealMode && dealTokensRequired > 0 && !hasEnoughTokens))
-                    ? 'var(--text-secondary)'
-                    : (paymentMethod === 'applePay' && amountToPay > 0)
-                      ? 'var(--bg-card)'
-                      : '#FFF',
-                  fontWeight: '800',
-                  fontSize: '15px',
-                  cursor: (isProcessing || isSubscriptionDisabled || (isDealMode ? (dealTokensRequired > 0 && !hasEnoughTokens) : amountToPay <= 0)) ? 'not-allowed' : 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  boxShadow: (isSubscriptionDisabled || (isDealMode && dealTokensRequired > 0 && !hasEnoughTokens)) ? 'none' : 'var(--shadow-accent)',
-                  transition: 'all 0.2s ease',
-                  opacity: (isProcessing || isSubscriptionDisabled || (isDealMode ? (dealTokensRequired > 0 && !hasEnoughTokens) : amountToPay <= 0)) ? 0.7 : 1,
-                }}
-              >
-                {isProcessing ? (
-                  <>
-                    <Loader2 size={18} className="spin-animation" />
-                    Traitement sécurisé en cours...
-                  </>
-                ) : isSubscriptionDisabled ? (
-                  <>
-                    <CheckCircle size={16} color="#10B981" />
-                    Abonnement Déjà Actif ({isSelectedPlanCurrent ? 'Votre Formule' : 'Inclus dans votre offre Pro'})
-                  </>
-                ) : isUpgradeAction ? (
-                  <>
-                    <Sparkles size={16} />
-                    ⚡ Mettre à niveau vers Troco Plus Pro ({amountToPay.toFixed(2)} € avec obligation de paiement)
-                  </>
-                ) : isDealMode ? (
-                  dealTokensRequired > 0 && !hasEnoughTokens ? (
-                    <>
-                      <Coins size={16} />
-                      Solde Jetons Insuffisant ({userTokens}/{dealTokensRequired})
-                    </>
-                  ) : amountToPay <= 0 ? (
-                    <>
-                      <Lock size={16} />
-                      Confirmer le transfert et sceller le deal ({dealTokensRequired > 0 ? `${dealTokensRequired} Jeton(s)` : 'Troc Direct'})
-                    </>
-                  ) : (
-                    <>
-                      <Lock size={16} />
-                      Confirmer le paiement de {amountToPay.toFixed(2)} € et sceller le deal (obligation de paiement)
-                    </>
-                  )
-                ) : (
-                  <>
-                    <Lock size={16} />
-                    Confirmer et payer {amountToPay.toFixed(2)} € avec {paymentMethod === 'applePay' ? 'Apple Pay' : paymentMethod === 'card' ? 'Carte Bancaire' : 'Solde Portefeuille'} (avec obligation de paiement)
-                  </>
-                )}
-              </button>
-            </>
-          )}
-
-        </div>
-
-        {/* OVERLAY 3D SECURE / AUTHENTIFICATION BANCAIRE */}
-        {show3DSecure && (
+        {(mode === 'troco-plus' || mode === 'pack-tokens' || mode === 'topup-cash') && (
           <div style={{
-            position: 'absolute',
-            inset: 0,
-            zIndex: 4100,
-            backgroundColor: 'var(--overlay-bg)',
-            backdropFilter: 'blur(8px)',
-            borderRadius: '24px',
             display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '24px',
-            animation: 'fadeIn 0.2s ease-out',
+            backgroundColor: 'var(--bg-subtle)',
+            borderRadius: '16px',
+            padding: '5px',
+            marginBottom: '22px',
+            border: '1px solid var(--border-color)',
+            boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.04)'
           }}>
-            <div style={{
-              backgroundColor: 'var(--bg-card)',
-              borderRadius: '20px',
-              padding: '24px',
-              width: '100%',
-              maxWidth: '380px',
-              textAlign: 'center',
-              border: '1px solid var(--border-color)',
-              boxShadow: 'var(--shadow-modal)',
-            }}>
-              <div style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '50%',
-                backgroundColor: 'var(--bg-subtle)',
-                color: 'var(--accent-primary)',
+            <button
+              type="button"
+              onClick={() => {
+                setMode('topup-cash');
+                setPaymentMethod('applePay');
+                setFormErrors({});
+              }}
+              style={{
+                flex: 1,
+                padding: '10px 14px',
+                borderRadius: '12px',
+                border: 'none',
+                backgroundColor: mode === 'topup-cash' ? 'var(--accent-primary)' : 'transparent',
+                color: mode === 'topup-cash' ? '#FFFFFF' : 'var(--text-secondary)',
+                fontWeight: mode === 'topup-cash' ? '800' : '600',
+                fontSize: '13px',
+                cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                margin: '0 auto 12px',
-              }}>
-                <ShieldCheck size={26} />
-              </div>
-              <h4 className="font-editorial-heading" style={{ margin: '0 0 6px', fontSize: '19px', fontWeight: '600', color: 'var(--text-main)' }}>
-                Authentification 3D Secure
-              </h4>
-              <p style={{ margin: '0 0 16px', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                Votre banque demande une confirmation pour le paiement de <strong>{amountToPay.toFixed(2)} €</strong>.
-              </p>
+                gap: '6px',
+                boxShadow: mode === 'topup-cash' ? 'var(--shadow-accent)' : 'none',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <CreditCard size={15} /> Recharger mon solde (€)
+            </button>
 
-              <div style={{ marginBottom: '14px' }}>
-                <input
-                  type="text"
-                  placeholder="Code OTP (ex: 1234)"
-                  value={otpCode}
-                  onChange={(e) => setOtpCode(e.target.value)}
-                  maxLength={4}
-                  style={{
-                    width: '100%',
-                    padding: '12px',
-                    textAlign: 'center',
-                    fontFamily: 'monospace',
-                    fontSize: '20px',
-                    letterSpacing: '8px',
-                    borderRadius: '12px',
-                    border: otpError ? '2px solid #EF4444' : '1px solid var(--border-color)',
-                    backgroundColor: 'var(--bg-subtle)',
-                    color: 'var(--text-main)',
-                    outline: 'none',
-                  }}
-                />
-                {otpError && <div style={{ fontSize: '11px', color: '#EF4444', marginTop: '4px' }}>{otpError}</div>}
-              </div>
-
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <button
-                  type="button"
-                  onClick={() => setShow3DSecure(false)}
-                  style={{
-                    flex: 1,
-                    padding: '12px',
-                    borderRadius: '12px',
-                    border: '1px solid var(--border-color)',
-                    backgroundColor: 'transparent',
-                    color: 'var(--text-secondary)',
-                    fontWeight: '700',
-                    fontSize: '13px',
-                    cursor: 'pointer',
-                  }}
-                >
-                  Annuler
-                </button>
-                <button
-                  type="button"
-                  onClick={handleVerify3DS}
-                  className="premium-button"
-                  style={{
-                    flex: 2,
-                    padding: '12px',
-                    borderRadius: '12px',
-                    border: 'none',
-                    background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
-                    color: '#FFF',
-                    fontWeight: '800',
-                    fontSize: '13px',
-                    cursor: 'pointer',
-                    boxShadow: 'var(--shadow-accent)'
-                  }}
-                >
-                  Valider l'authentification et payer
-                </button>
-              </div>
-            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setMode('troco-plus');
+                setPaymentMethod('applePay');
+                setFormErrors({});
+              }}
+              style={{
+                flex: 1,
+                padding: '10px 14px',
+                borderRadius: '12px',
+                border: 'none',
+                backgroundColor: (mode === 'troco-plus' || mode === 'pack-tokens') ? 'var(--accent-primary)' : 'transparent',
+                color: (mode === 'troco-plus' || mode === 'pack-tokens') ? '#FFFFFF' : 'var(--text-secondary)',
+                fontWeight: (mode === 'troco-plus' || mode === 'pack-tokens') ? '800' : '600',
+                fontSize: '13px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                boxShadow: (mode === 'troco-plus' || mode === 'pack-tokens') ? 'var(--shadow-accent)' : 'none',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <Sparkles size={15} /> Abonnement Troco Plus
+            </button>
           </div>
         )}
 
-      </div>
-    </div>
-  );
+        {isSuccess ? (
+          <div style={{ textAlign: 'center', padding: '20px 10px' }}>
+            <div style={{
+              width: '72px',
+              height: '72px',
+              borderRadius: '50%',
+              backgroundColor: 'var(--bg-subtle)',
+              color: 'var(--accent-success)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 16px',
+              border: '4px solid var(--accent-success)',
+            }}>
+              <Check size={38} strokeWidth={3} />
+            </div>
+            <h4 className="font-editorial-heading" style={{ margin: '0 0 6px', fontSize: '22px', fontWeight: '600', color: 'var(--text-main)' }}>
+              Paiement Validé avec Succès !
+            </h4>
+            <p style={{ margin: '0 0 20px', fontSize: '13px', color: 'var(--text-secondary)' }}>
+              Votre transaction a été enregistrée et votre compte mis à jour instantanément.
+            </p>
 
-  return typeof document !== 'undefined' ? createPortal(modalElement, document.body) : modalElement;
+            <div style={{
+              backgroundColor: 'var(--bg-subtle)',
+              borderRadius: '16px',
+              padding: '16px',
+              border: '1px solid var(--border-color)',
+              textAlign: 'left',
+              fontSize: '13px',
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Référence :</span>
+                <strong style={{ fontFamily: 'monospace', color: 'var(--accent-primary)' }}>{successDetails?.transactionId}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Objet :</span>
+                <strong>{successDetails?.label}</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span style={{ color: 'var(--text-secondary)' }}>Moyen utilisé :</span>
+                <span>{successDetails?.paymentMethod}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px solid var(--border-color)', fontSize: '15px' }}>
+                <span style={{ fontWeight: '800' }}>Total TTC débité :</span>
+                <strong style={{ color: 'var(--accent-success)', fontWeight: '800' }}>{successDetails?.amountTtc.toFixed(2)} €</strong>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <>
+            {(mode === 'troco-plus' || mode === 'pack-tokens') && (
+              <div style={{ marginBottom: '22px' }}>
+                <div style={{ marginBottom: '14px' }}>
+                  <label style={{ display: 'block', fontSize: '13.5px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>
+                    1. Choisissez votre abonnement mensuel Troco Plus
+                  </label>
+                </div>
+
+                {userHasSubscription && (
+                  <div style={{
+                    padding: '10px 14px',
+                    borderRadius: '14px',
+                    backgroundColor: isUserPro ? 'rgba(16, 185, 129, 0.12)' : 'rgba(198, 125, 91, 0.12)',
+                    border: isUserPro ? '1.5px solid #10B981' : '1.5px solid var(--accent-primary)',
+                    marginBottom: '14px',
+                    fontSize: '12px',
+                    color: 'var(--text-main)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    <CheckCircle size={16} color={isUserPro ? '#10B981' : 'var(--accent-primary)'} />
+                    <div>
+                      <strong>{isUserPro ? '👑 Offre Troco Plus Pro Active' : '⭐ Offre Troco Plus Essentielle Active'}</strong>
+                      <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                        {isUserPro
+                          ? 'Vous bénéficiez déjà du palier maximal (15 jetons/mois, 3 boosts). Le réachat en boucle est verrouillé.'
+                          : 'Passez à l\'offre Pro pour débloquer +10 jetons supplémentaires et des boosts exclusifs.'}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {trocoPlusPlans.map(plan => {
+                    const isSelected = selectedTrocoPlusPlan.id === plan.id;
+                    const isThisPlanCurrent = (isUserPro && plan.planKey === 'pro') || (isUserEssential && plan.planKey === 'essential');
+                    const isThisPlanIncluded = isUserPro && plan.planKey === 'essential';
+                    const isThisPlanUpgrade = isUserEssential && plan.planKey === 'pro';
+
+                    return (
+                      <div
+                        key={plan.id}
+                        onClick={() => setSelectedTrocoPlusPlan(plan)}
+                        style={{
+                          padding: '16px',
+                          borderRadius: '18px',
+                          border: isSelected ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                          backgroundColor: isThisPlanCurrent ? 'rgba(16, 185, 129, 0.06)' : isSelected ? 'var(--bg-subtle)' : 'var(--bg-card)',
+                          cursor: 'pointer',
+                          position: 'relative',
+                          transition: 'all 0.2s ease',
+                          boxShadow: isSelected ? 'var(--shadow-accent)' : 'none'
+                        }}
+                      >
+                        {isThisPlanCurrent && (
+                          <span style={{
+                            position: 'absolute',
+                            top: '-9px',
+                            right: '16px',
+                            backgroundColor: '#10B981',
+                            color: '#FFF',
+                            fontSize: '11px',
+                            fontWeight: '800',
+                            padding: '2px 8px',
+                            borderRadius: '999px',
+                            boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)'
+                          }}>
+                            ✓ Abonnement Actif
+                          </span>
+                        )}
+
+                        {!isThisPlanCurrent && isThisPlanUpgrade && (
+                          <span style={{
+                            position: 'absolute',
+                            top: '-9px',
+                            right: '16px',
+                            backgroundColor: 'var(--accent-primary)',
+                            color: '#FFF',
+                            fontSize: '11px',
+                            fontWeight: '800',
+                            padding: '2px 8px',
+                            borderRadius: '999px',
+                            boxShadow: 'var(--shadow-accent)'
+                          }}>
+                            ⚡ Mise à niveau (Upgrade)
+                          </span>
+                        )}
+
+                        {!isThisPlanCurrent && !isThisPlanUpgrade && isThisPlanIncluded && (
+                          <span style={{
+                            position: 'absolute',
+                            top: '-9px',
+                            right: '16px',
+                            backgroundColor: 'var(--text-secondary)',
+                            color: '#FFF',
+                            fontSize: '10.5px',
+                            fontWeight: '800',
+                            padding: '2px 8px',
+                            borderRadius: '999px',
+                          }}>
+                            Inclus dans votre offre
+                          </span>
+                        )}
+
+                        {!userHasSubscription && plan.popular && (
+                          <span style={{
+                            position: 'absolute',
+                            top: '-9px',
+                            right: '16px',
+                            backgroundColor: 'var(--accent-primary)',
+                            color: '#FFF',
+                            fontSize: '11px',
+                            fontWeight: '800',
+                            padding: '2px 8px',
+                            borderRadius: '999px',
+                            boxShadow: 'var(--shadow-accent)'
+                          }}>
+                            ⭐ Le plus populaire
+                          </span>
+                        )}
+
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
+                          <div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <strong className="font-editorial-heading" style={{ fontSize: '17px', color: 'var(--text-main)' }}>{plan.title}</strong>
+                              <span style={{
+                                fontSize: '11px', fontWeight: '800', padding: '3px 8px', borderRadius: '999px',
+                                backgroundColor: isThisPlanCurrent ? '#EBF0E6' : 'var(--bg-subtle)',
+                                color: isThisPlanCurrent ? '#3D4A35' : 'var(--accent-primary)'
+                              }}>
+                                {isThisPlanCurrent ? 'Actuel' : plan.badge}
+                              </span>
+                            </div>
+                            <p style={{ margin: '4px 0 10px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                              {plan.desc}
+                            </p>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontSize: '20px', fontWeight: '900', color: isSelected ? 'var(--accent-primary)' : 'var(--text-main)' }}>
+                              {isThisPlanUpgrade && upgradePrice > 0
+                                ? `${upgradePrice.toFixed(2)} €`
+                                : (plan.formattedPrice || `${plan.price.toFixed(2)} €`)}
+                            </div>
+                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '600' }}>
+                              {isThisPlanUpgrade ? 'différence/mois' : plan.period}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', borderTop: '1px solid var(--border-color)', paddingTop: '10px' }}>
+                          {plan.features.map((feat, idx) => (
+                            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600' }}>
+                              <Check size={14} color="var(--accent-success)" />
+                              <span>{feat}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div style={{ marginTop: '10px', padding: '8px 12px', borderRadius: '10px', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', fontSize: '11px', fontWeight: '700', textAlign: 'center' }}>
+                  💡 Les abonnements Troco Plus sont renouvelés automatiquement chaque mois et résiliables à tout instant en un clic.
+                </div>
+              </div>
+            )}
+
+            {mode === 'topup-cash' && (
+              <div style={{ marginBottom: '22px' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '800', marginBottom: '10px', color: 'var(--text-main)' }}>
+                  1. Choisissez le montant de votre recharge réelle (€)
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginBottom: '12px' }}>
+                  {cashAmounts.map(amt => {
+                    const isSelected = selectedCashAmount === amt && !customCashAmount;
+                    return (
+                      <button
+                        key={amt}
+                        type="button"
+                        onClick={() => { setSelectedCashAmount(amt); setCustomCashAmount(''); }}
+                        style={{
+                          padding: '14px 10px',
+                          borderRadius: '14px',
+                          border: isSelected ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                          backgroundColor: isSelected ? 'var(--bg-subtle)' : 'var(--bg-card)',
+                          color: isSelected ? 'var(--accent-primary)' : 'var(--text-main)',
+                          fontWeight: '800',
+                          fontSize: '16px',
+                          cursor: 'pointer',
+                          boxShadow: isSelected ? 'var(--shadow-card)' : 'none'
+                        }}
+                      >
+                        +{amt} €
+                      </button>
+                    );
+                  })}
+                </div>
+                <div>
+                  <input
+                    type="number"
+                    min="5"
+                    max="1000"
+                    placeholder="Ou montant libre en € (ex: 75)"
+                    value={customCashAmount}
+                    onChange={(e) => setCustomCashAmount(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '12px 14px',
+                      borderRadius: '12px',
+                      border: customCashAmount ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                      backgroundColor: 'var(--bg-subtle)',
+                      color: 'var(--text-main)',
+                      fontSize: '14px',
+                      outline: 'none',
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {mode === 'boost' && (
+              <div style={{ marginBottom: '22px' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '800', marginBottom: '10px', color: 'var(--text-main)' }}>
+                  1. Choisissez votre formule de visibilité
+                </label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {boostOptions.map(b => {
+                    const isSelected = selectedBoost.id === b.id;
+                    const IconComponent = b.icon;
+                    return (
+                      <div
+                        key={b.id}
+                        onClick={() => setSelectedBoost(b)}
+                        style={{
+                          padding: '14px',
+                          borderRadius: '16px',
+                          border: isSelected ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                          backgroundColor: isSelected ? 'var(--bg-subtle)' : 'var(--bg-card)',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          boxShadow: isSelected ? 'var(--shadow-accent)' : 'none'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <div style={{
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '10px',
+                            backgroundColor: isSelected ? 'var(--accent-primary)' : 'var(--bg-subtle)',
+                            color: isSelected ? '#FFF' : 'var(--text-secondary)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}>
+                            <IconComponent size={18} />
+                          </div>
+                          <div>
+                            <strong className="font-editorial-heading" style={{ fontSize: '15px' }}>{b.title}</strong>
+                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{b.desc}</div>
+                          </div>
+                        </div>
+                        <div style={{ fontSize: '16px', fontWeight: '800', color: isSelected ? 'var(--accent-primary)' : 'var(--text-main)' }}>
+                          {b.price.toFixed(2)} €
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {isDealMode && (
+              <div style={{ marginBottom: '22px' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '800', marginBottom: '10px', color: 'var(--text-main)' }}>
+                  1. Récapitulatif et conditions du Deal
+                </label>
+
+                <div style={{
+                  padding: '16px',
+                  borderRadius: '18px',
+                  backgroundColor: 'var(--bg-subtle)',
+                  border: '1px solid var(--border-color)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '12px',
+                  marginBottom: '12px'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{
+                        width: '32px', height: '32px', borderRadius: '50%',
+                        background: 'linear-gradient(135deg, var(--accent-primary), var(--accent-primary-hover))',
+                        color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontWeight: '800', fontSize: '12px'
+                      }}>
+                        {(initialPayload?.partnerName || 'P').charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <strong style={{ fontSize: '14px', color: 'var(--text-main)' }}>
+                          {initialPayload?.partnerName || 'Partenaire de troc'}
+                        </strong>
+                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                          {initialPayload?.terms?.conditions || initialPayload?.label || 'Accord convenu'}
+                        </div>
+                      </div>
+                    </div>
+                    <span style={{
+                      backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)',
+                      padding: '4px 10px', borderRadius: '999px', fontSize: '11px', fontWeight: '800', color: 'var(--accent-primary)'
+                    }}>
+                      🤝 Deal en cours
+                    </span>
+                  </div>
+
+                  {dealTokensRequired > 0 && (
+                    <div style={{
+                      padding: '12px',
+                      borderRadius: '14px',
+                      border: hasEnoughTokens ? '1px solid var(--border-color)' : '1.5px solid var(--accent-warning)',
+                      backgroundColor: hasEnoughTokens ? 'var(--bg-card)' : 'rgba(245, 158, 11, 0.08)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '8px'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', fontWeight: '800', color: 'var(--text-main)' }}>
+                          <Coins size={16} color="var(--accent-warning)" />
+                          <span>Jetons requis : <strong>{dealTokensRequired} Jeton(s)</strong></span>
+                        </div>
+                        <span style={{ fontSize: '11.5px', fontWeight: '700', color: hasEnoughTokens ? 'var(--accent-primary)' : 'var(--accent-warning)' }}>
+                          Solde actuel : {userTokens} Jeton(s)
+                        </span>
+                      </div>
+
+                      {!hasEnoughTokens && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
+                          <div style={{ fontSize: '11.5px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                            ⚠️ Votre solde de jetons est insuffisant pour finaliser cet accord. Vous pouvez vous abonner à <strong>Troco Plus</strong> pour obtenir instantanément des jetons mensuels.
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setMode('troco-plus');
+                              setPaymentMethod('applePay');
+                            }}
+                            className="premium-button"
+                            style={{
+                              padding: '8px 12px',
+                              borderRadius: '10px',
+                              border: 'none',
+                              background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
+                              color: '#FFF',
+                              fontSize: '11.5px',
+                              fontWeight: '800',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px'
+                            }}
+                          >
+                            <Sparkles size={13} /> S'abonner à Troco Plus (+5 Jetons)
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {dealEuroRequired > 0 && (
+                    <div style={{
+                      padding: '12px',
+                      borderRadius: '14px',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: 'var(--bg-card)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '6px'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', fontWeight: '800', color: 'var(--text-main)' }}>
+                          <CreditCard size={16} color="var(--accent-primary)" />
+                          <span>Montant : <strong>{formatCurrencyAmount(dealEuroRequired, 'EUR')}</strong></span>
+                        </div>
+                        <span style={{ fontSize: '11.5px', fontWeight: '700', color: hasEnoughEuro ? 'var(--accent-primary)' : 'var(--text-secondary)' }}>
+                          Solde dispo : {userEuro.toFixed(2)} € {hasEnoughEuro ? '✓' : '(complément requis)'}
+                        </span>
+                      </div>
+
+                      {initialPayload?.deal?.terms?.sellerCurrency && initialPayload?.deal?.terms?.sellerCurrency !== 'EUR' && (
+                        <div style={{
+                          padding: '6px 10px',
+                          borderRadius: '8px',
+                          backgroundColor: 'rgba(59, 130, 246, 0.08)',
+                          border: '1px solid rgba(59, 130, 246, 0.2)',
+                          fontSize: '11px',
+                          fontWeight: '600',
+                          color: '#3B82F6',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                        }}>
+                          <span>🌐 Vous allez payer ~{formatCurrencyAmount(convertCurrency(dealEuroRequired, initialPayload.deal.terms.sellerCurrency, 'EUR'), 'EUR')} (Équivalent demandé : {formatCurrencyAmount(dealEuroRequired, initialPayload.deal.terms.sellerCurrency)})</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {amountToPay > 0 && (
+              <div style={{ marginBottom: '22px' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '800', marginBottom: '10px', color: 'var(--text-main)' }}>
+                  2. Moyen de Paiement Sécurisé
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: (mode === 'troco-plus' || mode === 'pack-tokens' || mode === 'topup-cash') ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: '10px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('applePay')}
+                    style={{
+                      padding: '12px 8px',
+                      borderRadius: '14px',
+                      border: paymentMethod === 'applePay' ? '2px solid var(--text-main)' : '1px solid var(--border-color)',
+                      backgroundColor: paymentMethod === 'applePay' ? 'var(--text-main)' : 'var(--bg-subtle)',
+                      color: paymentMethod === 'applePay' ? 'var(--bg-card)' : 'var(--text-secondary)',
+                      fontWeight: '800',
+                      fontSize: '13px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    <Smartphone size={16} /> Apple Pay
+                  </button>
+
+                                    <button
+                    type="button"
+                    onClick={() => setPaymentMethod('card')}
+                    style={{
+                      padding: '12px 8px',
+                      borderRadius: '14px',
+                      border: paymentMethod === 'card' ? '2px solid var(--accent)' : '1px solid var(--border-color)',
+                      backgroundColor: paymentMethod === 'card' ? 'var(--accent)' : 'var(--bg-subtle)',
+                      color: paymentMethod === 'card' ? '#FFF' : 'var(--text-secondary)',
+                      fontWeight: '800',
+                      fontSize: '13px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                                        }}
+                  >
+                    <CreditCard size={16} /> Carte Bancaire
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </UniversalModal>
+  );
 }

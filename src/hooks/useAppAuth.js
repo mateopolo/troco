@@ -16,6 +16,7 @@ import {
 } from 'firebase/firestore';
 import { useAuthStore, useWalletStore } from '../stores';
 import { setSessionAuthenticated, clearSessionFlags } from '../utils/sessionFlags';
+import { deriveDisplayName, buildUsernameHandle } from '../utils/displayName';
 
 /**
  * Hook centralisant l'état d'authentification, la synchronisation du profil Firestore,
@@ -121,15 +122,16 @@ export const useAppAuth = () => {
               if (setKycVerified) setKycVerified(Boolean(data.kycVerified));
             } catch (_) { }
           } else {
-            // Création du profil initial Firestore
+            // Création du profil initial Firestore — nom réel obligatoire, jamais d'UID brut
             const initialData = {
               uid: user.uid,
-              name: user.displayName || profile.name || 'Membre Troco',
+              name: deriveDisplayName(user),
+              username: buildUsernameHandle(deriveDisplayName(user), user.email || ''),
               email: user.email || profile.email || '',
               avatar: user.photoURL || profile.avatar || '',
-              trocoTokens: profile.trocoTokens || 12,
-              euroBalance: profile.euroBalance || 100,
-              socialLinks: profile.socialLinks || ['https://github.com/mateopolo', 'https://linkedin.com/in/mateopolo'],
+              trocoTokens: profile.trocoTokens || 10,
+              euroBalance: profile.euroBalance || 0,
+              socialLinks: profile.socialLinks || [],
               kycVerified: false,
               isBanned: false,
               createdAt: serverTimestamp(),

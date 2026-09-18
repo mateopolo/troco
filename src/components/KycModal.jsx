@@ -85,140 +85,232 @@ export default function KycModal({ isOpen, onClose, onComplete, profile, darkMod
 
   if (!isOpen) return null;
 
+  const kycHeader = (
+    <div>
+      <div style={{
+        padding: '24px 24px 16px',
+        borderBottom: darkMode ? '1px solid rgba(232,221,211,0.08)' : '1px solid #E8DDD3',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
+        color: darkMode ? '#FAF7F2' : '#3D3530',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{
+            width: '42px',
+            height: '42px',
+            borderRadius: '14px',
+            background: 'linear-gradient(135deg, #9CAF88 0%, #7A8F6A 100%)',
+            color: '#FFF',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 4px 14px rgba(156,175,136,0.35)'
+          }}>
+            <ShieldCheck size={24} />
+          </div>
+          <div>
+            <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
+              Vérification d'Identité (KYC)
+            </h3>
+            <span style={{ fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', fontWeight: '500' }}>
+              Échanges 100% sécurisés & Badge Vérifié ✅
+            </span>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          style={{
+            width: '32px',
+            height: '32px',
+            borderRadius: '50%',
+            border: 'none',
+            backgroundColor: darkMode ? 'rgba(232,221,211,0.1)' : '#F5EAE4',
+            color: darkMode ? '#FAF7F2' : '#3D3530',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
+          <X size={16} />
+        </button>
+      </div>
+
+      <div style={{
+        display: 'flex',
+        padding: '12px 24px',
+        backgroundColor: darkMode ? '#1A1715' : '#F5F0E8',
+        gap: '8px',
+        borderBottom: darkMode ? '1px solid rgba(232,221,211,0.08)' : '1px solid #E8DDD3'
+      }}>
+        {[
+          { num: 1, label: 'Pièce d’identité' },
+          { num: 2, label: 'Selfie contrôle' },
+          { num: 3, label: 'Validation' }
+        ].map(s => {
+          const isActive = step === s.num;
+          const isDone = step > s.num || (s.num === 3 && isSuccess);
+          return (
+            <div
+              key={s.num}
+              style={{
+                flex: 1,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                opacity: isActive || isDone ? 1 : 0.4
+              }}
+            >
+              <div style={{
+                width: '24px',
+                height: '24px',
+                borderRadius: '50%',
+                backgroundColor: isDone ? '#9CAF88' : (isActive ? '#C67D5B' : (darkMode ? '#3D3530' : '#E8DDD3')),
+                color: '#FFF',
+                fontSize: '11px',
+                fontWeight: '800',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                {isDone ? '✓' : s.num}
+              </div>
+              <span style={{
+                fontSize: '11px',
+                fontWeight: isActive ? '800' : '600',
+                color: isActive ? '#C67D5B' : (darkMode ? '#D4C5B5' : '#6B5E54'),
+                whiteSpace: 'nowrap'
+              }}>
+                {s.label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+
+  const kycFooter = (
+    <div style={{ backgroundColor: darkMode ? '#231E1B' : '#FAF7F2' }}>
+      {step === 1 && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+          <button
+            type="button"
+            disabled={!docPreview}
+            onClick={() => setStep(2)}
+            className="premium-button"
+            style={{
+              padding: '12px 24px',
+              borderRadius: '14px',
+              border: 'none',
+              background: docPreview ? 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)' : (darkMode ? '#3D3530' : '#E8DDD3'),
+              color: '#FFF',
+              fontWeight: '800',
+              fontSize: '13px',
+              cursor: docPreview ? 'pointer' : 'not-allowed',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              boxShadow: docPreview ? '0 4px 14px rgba(198,125,91,0.25)' : 'none'
+            }}
+          >
+            Continuer vers le Selfie <ChevronRight size={16} />
+          </button>
+        </div>
+      )}
+
+      {step === 2 && (
+        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+          <button
+            type="button"
+            onClick={() => setStep(1)}
+            style={{
+              padding: '10px 18px',
+              borderRadius: '12px',
+              border: 'none',
+              backgroundColor: 'transparent',
+              color: darkMode ? '#D4C5B5' : '#6B5E54',
+              fontWeight: '700',
+              fontSize: '13px',
+              cursor: 'pointer'
+            }}
+          >
+            Retour
+          </button>
+          <button
+            type="button"
+            disabled={!selfiePreview}
+            onClick={startVerificationProcess}
+            className="premium-button"
+            style={{
+              padding: '12px 24px',
+              borderRadius: '14px',
+              border: 'none',
+              background: selfiePreview ? 'linear-gradient(135deg, #9CAF88 0%, #7A8F6A 100%)' : (darkMode ? '#3D3530' : '#E8DDD3'),
+              color: '#FFF',
+              fontWeight: '800',
+              fontSize: '13px',
+              cursor: selfiePreview ? 'pointer' : 'not-allowed',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              boxShadow: selfiePreview ? '0 4px 14px rgba(156,175,136,0.3)' : 'none'
+            }}
+          >
+            Lancer l'analyse biométrique <Sparkles size={16} />
+          </button>
+        </div>
+      )}
+
+      {step === 3 && isSuccess && (
+        <button
+          type="button"
+          onClick={handleFinalize}
+          className="premium-button"
+          style={{
+            width: '100%',
+            padding: '14px',
+            borderRadius: '16px',
+            border: 'none',
+            background: 'linear-gradient(135deg, #9CAF88 0%, #7A8F6A 100%)',
+            color: '#FFF',
+            fontWeight: '800',
+            fontSize: '14px',
+            cursor: 'pointer',
+            boxShadow: '0 8px 20px rgba(156,175,136,0.35)',
+          }}
+        >
+          Activer mon badge sur mon profil
+        </button>
+      )}
+    </div>
+  );
+
   return (
     <UniversalModal
       isOpen={isOpen}
       onClose={onClose}
       ariaLabel="Vérification d'identité"
       showCloseButton={false}
+      maxWidth="md"
+      header={kycHeader}
+      footer={kycFooter}
+      contentStyle={{
+        backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
+        color: darkMode ? '#FAF7F2' : '#3D3530',
+        borderRadius: '28px',
+        boxShadow: '0 25px 60px -15px rgba(61, 53, 48, 0.4)',
+        border: darkMode ? '1px solid rgba(232, 221, 211, 0.15)' : '1px solid #E8DDD3',
+      }}
       overlayStyle={{
         backgroundColor: 'rgba(61,53,48,0.72)',
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
       }}
     >
-      <div
-        style={{
-          backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
-          color: darkMode ? '#FAF7F2' : '#3D3530',
-          borderRadius: '28px',
-          maxWidth: '520px',
-          width: '100%',
-          maxHeight: '90vh',
-          overflowY: 'auto',
-          boxShadow: '0 25px 60px -15px rgba(61, 53, 48, 0.4)',
-          border: darkMode ? '1px solid rgba(232, 221, 211, 0.15)' : '1px solid #E8DDD3',
-          position: 'relative',
-          display: 'flex',
-          flexDirection: 'column'
-        }}
-      >
-        {/* EN-TÊTE MODALE */}
-        <div style={{
-          padding: '24px 24px 16px',
-          borderBottom: darkMode ? '1px solid rgba(232,221,211,0.08)' : '1px solid #E8DDD3',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{
-              width: '42px',
-              height: '42px',
-              borderRadius: '14px',
-              background: 'linear-gradient(135deg, #9CAF88 0%, #7A8F6A 100%)',
-              color: '#FFF',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 4px 14px rgba(156,175,136,0.35)'
-            }}>
-              <ShieldCheck size={24} />
-            </div>
-            <div>
-              <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
-                Vérification d'Identité (KYC)
-              </h3>
-              <span style={{ fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', fontWeight: '500' }}>
-                Échanges 100% sécurisés & Badge Vérifié ✅
-              </span>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              width: '32px',
-              height: '32px',
-              borderRadius: '50%',
-              border: 'none',
-              backgroundColor: darkMode ? 'rgba(232,221,211,0.1)' : '#F5EAE4',
-              color: darkMode ? '#FAF7F2' : '#3D3530',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-          >
-            <X size={16} />
-          </button>
-        </div>
-
-        {/* ÉTAPES (STEPPERS) */}
-        <div style={{
-          display: 'flex',
-          padding: '12px 24px',
-          backgroundColor: darkMode ? '#1A1715' : '#F5F0E8',
-          gap: '8px',
-          borderBottom: darkMode ? '1px solid rgba(232,221,211,0.08)' : '1px solid #E8DDD3'
-        }}>
-          {[
-            { num: 1, label: 'Pièce d’identité' },
-            { num: 2, label: 'Selfie contrôle' },
-            { num: 3, label: 'Validation' }
-          ].map(s => {
-            const isActive = step === s.num;
-            const isDone = step > s.num || (s.num === 3 && isSuccess);
-            return (
-              <div
-                key={s.num}
-                style={{
-                  flex: 1,
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  opacity: isActive || isDone ? 1 : 0.4
-                }}
-              >
-                <div style={{
-                  width: '24px',
-                  height: '24px',
-                  borderRadius: '50%',
-                  backgroundColor: isDone ? '#9CAF88' : (isActive ? '#C67D5B' : (darkMode ? '#3D3530' : '#E8DDD3')),
-                  color: '#FFF',
-                  fontSize: '11px',
-                  fontWeight: '800',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>
-                  {isDone ? '✓' : s.num}
-                </div>
-                <span style={{
-                  fontSize: '11px',
-                  fontWeight: isActive ? '800' : '600',
-                  color: isActive ? '#C67D5B' : (darkMode ? '#D4C5B5' : '#6B5E54'),
-                  whiteSpace: 'nowrap'
-                }}>
-                  {s.label}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* CORPS DE LA MODALE */}
-        <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      {/* CORPS DE LA MODALE */}
+      <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px', backgroundColor: darkMode ? '#231E1B' : '#FAF7F2' }}>
 
           {/* ÉTAPE 1 : CHOIX & UPLOAD DU DOCUMENT */}
           {step === 1 && (
@@ -368,31 +460,6 @@ export default function KycModal({ isOpen, onClose, onComplete, profile, darkMod
                 <Lock size={14} flexShrink={0} />
                 <span>Tes documents sont chiffrés de bout en bout et protégés conformément au RGPD.</span>
               </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '8px' }}>
-                <button
-                  type="button"
-                  disabled={!docPreview}
-                  onClick={() => setStep(2)}
-                  className="premium-button"
-                  style={{
-                    padding: '12px 24px',
-                    borderRadius: '14px',
-                    border: 'none',
-                    background: docPreview ? 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)' : (darkMode ? '#3D3530' : '#E8DDD3'),
-                    color: '#FFF',
-                    fontWeight: '800',
-                    fontSize: '13px',
-                    cursor: docPreview ? 'pointer' : 'not-allowed',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    boxShadow: docPreview ? '0 4px 14px rgba(198,125,91,0.25)' : 'none'
-                  }}
-                >
-                  Continuer vers le Selfie <ChevronRight size={16} />
-                </button>
-              </div>
             </div>
           )}
 
@@ -531,46 +598,6 @@ export default function KycModal({ isOpen, onClose, onComplete, profile, darkMod
                 </button>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px' }}>
-                <button
-                  type="button"
-                  onClick={() => setStep(1)}
-                  style={{
-                    padding: '10px 18px',
-                    borderRadius: '12px',
-                    border: 'none',
-                    backgroundColor: 'transparent',
-                    color: darkMode ? '#D4C5B5' : '#6B5E54',
-                    fontWeight: '700',
-                    fontSize: '13px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Retour
-                </button>
-                <button
-                  type="button"
-                  disabled={!selfiePreview}
-                  onClick={startVerificationProcess}
-                  className="premium-button"
-                  style={{
-                    padding: '12px 24px',
-                    borderRadius: '14px',
-                    border: 'none',
-                    background: selfiePreview ? 'linear-gradient(135deg, #9CAF88 0%, #7A8F6A 100%)' : (darkMode ? '#3D3530' : '#E8DDD3'),
-                    color: '#FFF',
-                    fontWeight: '800',
-                    fontSize: '13px',
-                    cursor: selfiePreview ? 'pointer' : 'not-allowed',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    boxShadow: selfiePreview ? '0 4px 14px rgba(156,175,136,0.3)' : 'none'
-                  }}
-                >
-                  Lancer l'analyse biométrique <Sparkles size={16} />
-                </button>
-              </div>
             </div>
           )}
 
@@ -693,27 +720,6 @@ export default function KycModal({ isOpen, onClose, onComplete, profile, darkMod
                       </div>
                     </div>
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={handleFinalize}
-                    className="premium-button"
-                    style={{
-                      width: '100%',
-                      padding: '14px',
-                      borderRadius: '16px',
-                      border: 'none',
-                      background: 'linear-gradient(135deg, #9CAF88 0%, #7A8F6A 100%)',
-                      color: '#FFF',
-                      fontWeight: '800',
-                      fontSize: '14px',
-                      cursor: 'pointer',
-                      boxShadow: '0 8px 20px rgba(156,175,136,0.35)',
-                      marginTop: '8px'
-                    }}
-                  >
-                    Activer mon badge sur mon profil
-                  </button>
                 </>
               ) : null}
             </div>
