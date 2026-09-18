@@ -725,7 +725,6 @@ export default function KycModal({ isOpen, onClose, onComplete, profile, darkMod
             </div>
           )}
         </div>
-      </div>
     </UniversalModal>
   );
 }

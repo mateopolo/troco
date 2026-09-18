@@ -1097,7 +1097,6 @@ export default function OnboardingWizardModal({
           )}
 
         </div>
-      </div>
     </UniversalModal>
   );
 }
