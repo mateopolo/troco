@@ -1,6 +1,6 @@
 # 🦄 TROCO — MASTER AUDIT & ROADMAP VIVANTE
 
-> **Dernière mise à jour :** 2026-09-21T16:05:00+02:00  
+> **Dernière mise à jour :** 2026-09-21T16:22:00+02:00 (UTF-8 strict)  
 > **Vision :** Marketplace P2P internationale de troc (biens & services), PWA installable, objectif licorne fintech régulée.  
 > **Sources fusionnées :**
 > - `CONTEXT.md` (Vision produit, architecture, design system, sécurité Zero-Trust)
