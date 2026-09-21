@@ -652,6 +652,10 @@ export default function App() {
     } else if (txData.mode === 'topup-cash') {
       const topUpAmount = Number(txData.cashTopUp) || 0;
       if (topUpAmount > 0) {
+        setProfile(prev => ({
+          ...prev,
+          euroBalance: Number(((prev?.euroBalance || 0) + topUpAmount).toFixed(2)),
+        }));
         const persistedEuroBalance = Number(txData.newEuroBalance);
         const displayedEuroBalance = Number.isFinite(persistedEuroBalance)
           ? persistedEuroBalance
@@ -1110,6 +1114,9 @@ export default function App() {
               const updated = {
                 ...prev,
                 ...data,
+                euroBalance: newEuros !== null ? newEuros : (data.euroBalance ?? prev?.euroBalance ?? 0),
+                trocoTokens: newTokens !== null ? newTokens : (data.trocoTokens ?? prev?.trocoTokens ?? 10),
+                cguAcceptedAt: data.cguAcceptedAt || prev?.cguAcceptedAt || null,
                 name: resolvedName,
                 avatar: resolvedAvatar,
                 onboardingCompleted: true,

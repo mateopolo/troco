@@ -837,11 +837,28 @@ export const useChatManager = ({
 
         if (db) {
           try {
+            const safeParticipants = Array.isArray(selectedChat.participants) && selectedChat.participants.length > 0
+              ? (selectedChat.participants.includes(myUid) ? selectedChat.participants : [...selectedChat.participants, myUid])
+              : [myUid, selectedChat.partnerUid || selectedChat.authorUid].filter(Boolean);
+
+            await setDoc(doc(db, 'chats', String(chatId)), {
+              id: chatId,
+              user: selectedChat.user || 'Interlocuteur',
+              listing: selectedChat.listing || null,
+              lastMessage: preview,
+              lastSenderName: myName,
+              unreadCount: increment(1),
+              participants: safeParticipants,
+              participantUids: [myUid, selectedChat.partnerUid || selectedChat.authorUid].filter(Boolean),
+              updatedAt: serverTimestamp(),
+            }, { merge: true });
+
             const docRef = await addDoc(collection(db, 'chats', String(chatId), 'messages'), {
               ...customPayload,
               temporaryId: tempId,
-              sender: myUid,
+              senderId: myUid,
               senderUid: myUid,
+              sender: myUid,
               senderName: myName,
               text: preview,
               read: false,
@@ -870,22 +887,6 @@ export const useChatManager = ({
             if (typeof useChatStore.getState().replaceTempId === 'function') {
               useChatStore.getState().replaceTempId(chatId, tempId, docRef.id);
             }
-
-            const safeParticipants = Array.isArray(selectedChat.participants) && selectedChat.participants.length > 0
-              ? (selectedChat.participants.includes(myUid) ? selectedChat.participants : [...selectedChat.participants, myUid])
-              : [myUid, selectedChat.partnerUid || selectedChat.authorUid].filter(Boolean);
-
-            await setDoc(doc(db, 'chats', String(chatId)), {
-              id: chatId,
-              user: selectedChat.user,
-              listing: selectedChat.listing,
-              lastMessage: preview,
-              lastSenderName: myName,
-              unreadCount: increment(1),
-              participants: safeParticipants,
-              participantUids: [myUid, selectedChat.partnerUid || selectedChat.authorUid].filter(Boolean),
-              updatedAt: serverTimestamp(),
-            }, { merge: true });
           } catch (e) {
             logger.warn('[Firestore] custom message write failed:', e);
             setChatThreads(prev => {
@@ -956,10 +957,30 @@ export const useChatManager = ({
 
       if (db) {
         try {
+          const myUid = auth?.currentUser?.uid || (profile?.uid && !profile.uid.includes('@') ? profile.uid : null);
+          const myName = profile?.name || auth?.currentUser?.displayName || 'Moi';
+          const safeParticipants = Array.isArray(selectedChat.participants) && selectedChat.participants.length > 0
+            ? (selectedChat.participants.includes(myUid) ? selectedChat.participants : [...selectedChat.participants, myUid])
+            : [myUid, selectedChat.partnerUid || selectedChat.authorUid].filter(Boolean);
+
+          await setDoc(doc(db, 'chats', String(chatId)), {
+            id: chatId,
+            user: selectedChat.user || 'Interlocuteur',
+            listing: selectedChat.listing || null,
+            lastMessage: text,
+            lastSenderName: myName,
+            unreadCount: increment(1),
+            participants: safeParticipants,
+            participantUids: [myUid, selectedChat.partnerUid || selectedChat.authorUid].filter(Boolean),
+            updatedAt: serverTimestamp(),
+          }, { merge: true });
+
           const docRef = await addDoc(collection(db, 'chats', String(chatId), 'messages'), {
             temporaryId: tempId,
-            senderName: profile?.name || 'Moi',
-            senderUid: profile?.uid || null,
+            senderId: myUid,
+            senderUid: myUid,
+            sender: myUid,
+            senderName: myName,
             text,
             read: false,
             status: 'sent',
@@ -987,23 +1008,6 @@ export const useChatManager = ({
           if (typeof useChatStore.getState().replaceTempId === 'function') {
             useChatStore.getState().replaceTempId(chatId, tempId, docRef.id);
           }
-
-          const myUid = auth?.currentUser?.uid || (profile?.uid && !profile.uid.includes('@') ? profile.uid : null);
-          const safeParticipants = Array.isArray(selectedChat.participants) && selectedChat.participants.length > 0
-            ? (selectedChat.participants.includes(myUid) ? selectedChat.participants : [...selectedChat.participants, myUid])
-            : [myUid, selectedChat.partnerUid || selectedChat.authorUid].filter(Boolean);
-
-          await setDoc(doc(db, 'chats', String(chatId)), {
-            id: chatId,
-            user: selectedChat.user,
-            listing: selectedChat.listing,
-            lastMessage: text,
-            lastSenderName: profile?.name || 'Moi',
-            unreadCount: increment(1),
-            participants: safeParticipants,
-            participantUids: [myUid, selectedChat.partnerUid || selectedChat.authorUid].filter(Boolean),
-            updatedAt: serverTimestamp(),
-          }, { merge: true });
         } catch (e) {
           logger.warn('[Firestore] message write failed, marked as error:', e);
           setChatThreads(prev => {
@@ -1037,23 +1041,27 @@ export const useChatManager = ({
 
     if (db) {
       try {
-        const docRef = await addDoc(collection(db, 'chats', String(chatId), 'messages'), {
-          ...(msg.type === 'audio' || msg.kind === 'audio'
-            ? {
-              type: 'audio',
-              kind: 'audio',
-              audioUrl: msg.audioUrl,
-              fileName: msg.fileName || null,
-              contentType: msg.contentType || msg.mimeType || null,
-            }
-            : {}),
-          senderName: profile?.name || 'Moi',
-          senderUid: profile?.uid || null,
-          text: msg.text || (msg.type === 'audio' ? `🎵 ${msg.fileName || 'Fichier audio'}` : ''),
-          read: false,
-          status: 'sent',
-          createdAt: serverTimestamp(),
-        });
+          const myUid = auth?.currentUser?.uid || (profile?.uid && !profile.uid.includes('@') ? profile.uid : null);
+          const myName = profile?.name || auth?.currentUser?.displayName || 'Moi';
+          const docRef = await addDoc(collection(db, 'chats', String(chatId), 'messages'), {
+            ...(msg.type === 'audio' || msg.kind === 'audio'
+              ? {
+                type: 'audio',
+                kind: 'audio',
+                audioUrl: msg.audioUrl,
+                fileName: msg.fileName || null,
+                contentType: msg.contentType || msg.mimeType || null,
+              }
+              : {}),
+            senderId: myUid,
+            senderUid: myUid,
+            sender: myUid,
+            senderName: myName,
+            text: msg.text || (msg.type === 'audio' ? `🎵 ${msg.fileName || 'Fichier audio'}` : ''),
+            read: false,
+            status: 'sent',
+            createdAt: serverTimestamp(),
+          });
 
         setChatThreads(prev => {
           const thread = prev[chatId] || [];
@@ -1175,10 +1183,14 @@ export const useChatManager = ({
 
     if (db) {
       try {
+        const myUid = auth?.currentUser?.uid || (profile?.uid && !profile.uid.includes('@') ? profile.uid : null);
+        const myName = profile?.name || auth?.currentUser?.displayName || 'Moi';
         const docRef = await addDoc(collection(db, 'chats', String(chatId), 'messages'), {
           temporaryId,
-          senderName: profile?.name || 'Moi',
-          senderUid: profile?.uid || auth?.currentUser?.uid || null,
+          senderId: myUid,
+          senderUid: myUid,
+          sender: myUid,
+          senderName: myName,
           kind: 'audio',
           type: 'audio',
           audioUrl,

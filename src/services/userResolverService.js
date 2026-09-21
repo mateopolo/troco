@@ -9,7 +9,7 @@ import logger from '../utils/logger';
 
 const CACHE_STORAGE_KEY = 'troco_resolved_users_cache';
 
-// Charger le cache initial depuis le localStorage si disponible
+// Charger le cache initial depuis le localStorage si disponible (en purgeant les fallbacks robotiques et génériques)
 const profileCache = new Map();
 try {
   if (typeof window !== 'undefined' && window.localStorage) {
@@ -18,7 +18,19 @@ try {
       const parsed = JSON.parse(raw);
       if (typeof parsed === 'object' && parsed !== null) {
         Object.entries(parsed).forEach(([k, v]) => {
-          if (k && v && typeof v === 'object') profileCache.set(k, v);
+          if (k && v && typeof v === 'object') {
+            // Nettoyage immédiat : ne jamais conserver un profil avec avatar robot ou nom générique
+            if (typeof v.avatar === 'string' && v.avatar.includes('bottts')) {
+              v.avatar = '';
+            }
+            if (typeof v.photoURL === 'string' && v.photoURL.includes('bottts')) {
+              v.photoURL = '';
+            }
+            if (!v.name || isGenericName(v.name) || isRawUid(v.name)) {
+              return;
+            }
+            profileCache.set(k, v);
+          }
         });
       }
     }
@@ -109,22 +121,23 @@ export const sanitizeProfileData = (uid, data = {}) => {
   }
 
   if (!cleanName) {
-    cleanName = 'Membre Troco';
+    cleanName = data.displayName || data.name || data.author || '';
   }
 
-  // Photo de profil
+  // Photo de profil réelle (aucun avatar robot de remplacement)
   const rawAvatar = data.photoURL || data.avatar || '';
   const isUnsplash = typeof rawAvatar === 'string' && rawAvatar.includes('unsplash.com');
-  const avatar = (data.photoURL && (!rawAvatar || isUnsplash)) ? data.photoURL : rawAvatar;
+  const isRobot = typeof rawAvatar === 'string' && rawAvatar.includes('bottts');
+  const avatar = (data.photoURL && (!rawAvatar || isUnsplash)) ? data.photoURL : (!isRobot ? rawAvatar : '');
 
   return {
     uid,
     id: uid,
     name: cleanName,
     displayName: cleanName,
-    username: data.username || (cleanName !== 'Membre Troco' ? `@${cleanName.toLowerCase().replace(/[^a-z0-9]/g, '')}` : '@membre'),
-    avatar: avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(uid)}`,
-    photoURL: avatar,
+    username: data.username || (cleanName ? `@${cleanName.toLowerCase().replace(/[^a-z0-9]/g, '')}` : ''),
+    avatar: avatar || '',
+    photoURL: avatar || '',
     bio: data.bio || '',
     location: data.location || 'France',
     skills: Array.isArray(data.skills) ? data.skills : [],
@@ -190,24 +203,21 @@ export const resolveUserProfile = async (uid, db) => {
   }
 
   if (!db) {
-    const fallback = sanitizeProfileData(cleanUid, {});
-    profileCache.set(cleanUid, fallback);
-    return fallback;
+    return null;
   }
 
   const fetchPromise = (async () => {
     try {
-      // Tenter d'abord la collection users
+      // 1. Tenter d'abord la collection users
       let userSnap = await getDoc(doc(db, 'users', cleanUid)).catch(() => null);
       let userData = userSnap?.exists() ? userSnap.data() : null;
 
-      // Si non trouvé ou si le nom est générique ou incomplet, tenter users_public
+      // 2. Si non trouvé ou si le nom est générique ou incomplet, tenter users_public
       if (!userData || !userData.name || isGenericName(userData.name)) {
         const publicSnap = await getDoc(doc(db, 'users_public', cleanUid)).catch(() => null);
         if (publicSnap?.exists()) {
           const publicData = publicSnap.data() || {};
           userData = { ...publicData, ...(userData || {}) };
-          // Si le publicData a un nom valide alors que userData a 'Utilisateur Troco'
           if (publicData.name && !isGenericName(publicData.name)) {
             userData.name = publicData.name;
           }
@@ -217,16 +227,20 @@ export const resolveUserProfile = async (uid, db) => {
         }
       }
 
-      const resolved = sanitizeProfileData(cleanUid, userData || {});
-      profileCache.set(cleanUid, resolved);
-      persistCache();
-      notifySubscribers(cleanUid, resolved);
+      if (!userData) {
+        return null;
+      }
+
+      const resolved = sanitizeProfileData(cleanUid, userData);
+      if (resolved && resolved.name && !isGenericName(resolved.name)) {
+        profileCache.set(cleanUid, resolved);
+        persistCache();
+        notifySubscribers(cleanUid, resolved);
+      }
       return resolved;
     } catch (err) {
       logger.warn(`[userResolverService] Erreur résolution profil UID ${cleanUid}:`, err);
-      const fallback = sanitizeProfileData(cleanUid, {});
-      profileCache.set(cleanUid, fallback);
-      return fallback;
+      return null;
     } finally {
       pendingPromises.delete(cleanUid);
     }

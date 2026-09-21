@@ -417,3 +417,22 @@ L'application dispose d'un composant unifié pour toutes les boîtes de dialogue
 3. **Accès au profil public depuis le chat sans profil vierge**
    - `PublicProfileModal.jsx` : filtrage strict pour interdire l'utilisation d'identifiants de salons (`chat_...`, `group-...`) comme UID utilisateur, et recherche Firestore par nom/username en cas de fallback.
    - `ChatView.jsx` : le clic sur le contact de l'en-tête de conversation construit un objet utilisateur propre (`partnerUserObj`) et synchronise le store global `useUIStore.setSelectedPublicUser` ainsi que la modale locale.
+
+### Patch Persistance Wallet, Profils Publics & Purge des Mocks (commit `fix(core)`)
+
+1. **Middleware CORS sur la Cloud Function `applyPayment`**
+   - `functions/src/index.ts` & `functions/lib/index.js` : Injection du middleware CORS `const corsMiddleware = corsLib({ origin: true })` enveloppant l'exécution de la Cloud Function `applyPayment` pour autoriser les requêtes preflight (`OPTIONS`) et supprimer tout blocage d'origine depuis Vercel.
+   - Transpilation TypeScript (`tsc`) réussie dans `functions/lib/`.
+
+2. **Persistance atomique du solde Wallet (React & Firestore)**
+   - `PaymentModal.jsx` : Garantie d'incrément atomique Firestore `updateDoc(doc(db, 'users', uid), { euroBalance: increment(amountToPay) })` et synchronisation optimiste immédiate avec le store Zustand (`useWalletStore`).
+   - Le listener `onSnapshot` dans `App.js` garantit la persistance du solde à l'actualisation.
+
+3. **Réparation définitive de la jointure des Profils Publics**
+   - `PublicProfileModal.jsx` : Récupération directe via `getDoc` et synchronisation temps réel `onSnapshot` ciblant directement l'UID cible (`users/{targetUid}` et `users_public/{targetUid}`).
+   - Élimination définitive de tout avatar de robot et des libellés génériques "Membre Troco". Affichage garanti d'un spinner fluide pendant le chargement des données réelles.
+
+4. **Purge intégrale des Mocks (Fil d'Activité & Chat Global)**
+   - `CommunityActivityFeed.jsx` : Purge totale des tableaux mockés en dur (`INITIAL_ACTIVITIES = []`, suppression des faux "Lucas M", "Emma R", "Éco-troc", etc.). Ajout d'un état vide propre ("Aucune activité récente pour le moment") et publication en temps réel basée sur le profil réel `currentUser`.
+   - `GlobalLiveChat.jsx` : État initial strictement fixé à `[]` (`useState([])`), élimination des faux avatars et pseudos Mateo Polo en dur.
+

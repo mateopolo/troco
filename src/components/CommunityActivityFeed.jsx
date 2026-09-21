@@ -5,96 +5,7 @@ import {
   Share2, Sparkles
 } from 'lucide-react';
 
-const INITIAL_ACTIVITIES = [
-  {
-    id: 'act-1',
-    type: 'deal',
-    actor: {
-      name: 'Sophie D.',
-      username: '@sophied',
-      avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=150&q=80',
-      verified: true,
-    },
-    targetUser: {
-      name: 'Karim B.',
-      username: '@karimb',
-      avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=150&q=80',
-      verified: true,
-    },
-    actionText: 'a validé un deal d’échange avec',
-    detail: '🎸 2h de Cours de Guitare Acoustique ⇄ 🛠️ Dépannage Informatique Mac',
-    time: 'Il y a 12 min',
-    reactions: { love: 14, fire: 8, clap: 19 },
-    userReacted: null,
-  },
-  {
-    id: 'act-2',
-    type: 'review',
-    actor: {
-      name: 'Lucas M.',
-      username: '@lucasm',
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=150&q=80',
-      verified: true,
-    },
-    actionText: 'a reçu une évaluation 5 étoiles ★★★★★',
-    detail: '« Ponctuel, outillage de pro et travail soigné sur la plomberie. Je recommande les yeux fermés ! »',
-    rating: 5,
-    time: 'Il y a 34 min',
-    reactions: { love: 22, fire: 15, clap: 31 },
-    userReacted: null,
-  },
-  {
-    id: 'act-3',
-    type: 'tip',
-    actor: {
-      name: 'Emma R.',
-      username: '@emmar',
-      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80',
-      verified: true,
-    },
-    targetUser: {
-      name: 'Thomas V.',
-      username: '@thomasv',
-      avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=150&q=80',
-      verified: true,
-    },
-    actionText: 'a envoyé un pourboire de remerciement de 5 Jetons Troco à',
-    detail: '💎 Pourboire accordé pour son aide d’urgence sur l’audit de sécurité.',
-    time: 'Il y a 1h',
-    reactions: { love: 18, fire: 12, clap: 27 },
-    userReacted: null,
-  },
-  {
-    id: 'act-4',
-    type: 'project',
-    actor: {
-      name: 'Mateo P.',
-      username: '@mateopolo',
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
-      verified: true,
-    },
-    actionText: 'a lancé un nouveau Projet Collaboratif 🚀',
-    detail: '« Application Mobile Green & Éco-troc » — 15 Jetons Troco alloués au pot commun pour l’équipe.',
-    time: 'Il y a 2h',
-    reactions: { love: 45, fire: 38, clap: 52 },
-    userReacted: null,
-  },
-  {
-    id: 'act-5',
-    type: 'kyc',
-    actor: {
-      name: 'Clara T.',
-      username: '@clarat',
-      avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
-      verified: true,
-    },
-    actionText: 'a obtenu son badge Identité Vérifiée KYC ✅',
-    detail: 'Membre de confiance certifié par la communauté Troco.',
-    time: 'Il y a 3h',
-    reactions: { love: 11, fire: 5, clap: 24 },
-    userReacted: null,
-  },
-];
+const INITIAL_ACTIVITIES = [];
 
 export default function CommunityActivityFeed({
   currentUser = null,
@@ -130,14 +41,18 @@ export default function CommunityActivityFeed({
     e.preventDefault();
     if (!statusText.trim()) return;
 
+    const authorName = currentUser?.displayName || currentUser?.name || 'Membre';
+    const authorUsername = currentUser?.username || (authorName ? `@${authorName.toLowerCase().replace(/[^a-z0-9]/g, '')}` : '@membre');
+    const authorAvatar = currentUser?.photoURL || currentUser?.avatar || '';
+
     const newPost = {
       id: `act-${Date.now()}`,
       type: 'post',
       actor: {
-        name: currentUser?.name || 'Mateo P.',
-        username: currentUser?.username || '@mateopolo',
-        avatar: currentUser?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
-        verified: currentUser?.kycVerified || true,
+        name: authorName,
+        username: authorUsername,
+        avatar: authorAvatar,
+        verified: Boolean(currentUser?.kycVerified),
       },
       actionText: 'a partagé une mise à jour avec la communauté :',
       detail: `« ${statusText.trim()} »`,
@@ -172,11 +87,30 @@ export default function CommunityActivityFeed({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <img
-            src={currentUser?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'}
-            alt="Moi"
-            style={{ width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid var(--accent-primary)' }}
-          />
+          {currentUser?.photoURL || currentUser?.avatar ? (
+            <img
+              src={currentUser.photoURL || currentUser.avatar}
+              alt="Moi"
+              style={{ width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid var(--accent-primary)' }}
+            />
+          ) : (
+            <div
+              style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: '50%',
+                backgroundColor: 'var(--accent-primary)',
+                color: '#FFF',
+                fontWeight: '700',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '14px',
+              }}
+            >
+              {(currentUser?.displayName || currentUser?.name || 'M')[0].toUpperCase()}
+            </div>
+          )}
           <div style={{ flex: 1 }}>
             <form onSubmit={handlePostStatus} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <input
@@ -264,7 +198,30 @@ export default function CommunityActivityFeed({
 
       {/* 3. LISTE DES ACTIVITÉS EN TEMPS RÉEL */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        {filteredActivities.map((act) => {
+        {filteredActivities.length === 0 ? (
+          <div
+            style={{
+              padding: '48px 24px',
+              borderRadius: '20px',
+              backgroundColor: darkMode ? '#1F1B18' : '#FAF8F5',
+              border: '1px dashed var(--border-color)',
+              textAlign: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '10px',
+            }}
+          >
+            <Sparkles size={32} style={{ color: 'var(--accent-primary)', opacity: 0.8 }} />
+            <div style={{ fontWeight: '700', fontSize: '15px', color: 'var(--text-main)' }}>
+              Aucune activité récente pour le moment
+            </div>
+            <div style={{ fontSize: '12.5px', color: 'var(--text-secondary)', maxWidth: '380px' }}>
+              Soyez le premier à partager une actualité, valider un échange ou encourager la communauté Troco !
+            </div>
+          </div>
+        ) : filteredActivities.map((act) => {
           const isDeal = act.type === 'deal';
           const isReview = act.type === 'review';
           const isTip = act.type === 'tip';

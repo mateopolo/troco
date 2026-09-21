@@ -103,11 +103,23 @@ export const migrateUsersPublic = onCall({ cors: true }, async (request) => {
   return handleMigrateUsersPublic(request, db);
 });
 
+import corsLib from 'cors';
+const corsMiddleware = corsLib({ origin: true });
+
 /**
  * 💳 Cloud Function 9 : applyPayment (Callable)
  * Validation serveur de rechargement/achat de jetons avec idempotence 24h.
+ * Enveloppé avec le middleware CORS pour autoriser les requêtes preflight et éviter le blocage Vercel.
  */
 export const applyPayment = onCall({ cors: true }, async (request) => {
+  if (request.rawRequest && (request as any).rawResponse) {
+    await new Promise<void>((resolve, reject) => {
+      corsMiddleware(request.rawRequest, (request as any).rawResponse, (err: any) => {
+        if (err) return reject(err);
+        resolve();
+      });
+    });
+  }
   return handleApplyPayment(request, db);
 });
 

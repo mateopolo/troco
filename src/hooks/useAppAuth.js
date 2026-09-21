@@ -139,9 +139,11 @@ export const useAppAuth = () => {
               }).catch((err) => logger.warn('[Auth] Auto-sync photo/onboarding to Firestore failed:', err));
             }
 
-            // Mise à jour du profil local avec l'UID garanti (pas de fallback artificiel à 100€)
-            const newTokens = data.trocoTokens !== undefined ? Number(data.trocoTokens) : 10;
-            const newEuros = data.euroBalance !== undefined ? Number(data.euroBalance) : 0;
+            // Mise à jour du profil local avec les données réelles Firestore
+            const rawEuros = data.euroBalance ?? data.walletBalanceFiat ?? data.balance;
+            const newEuros = rawEuros !== undefined && rawEuros !== null ? Number(Number(rawEuros).toFixed(2)) : 0;
+            const rawTokens = data.trocoTokens ?? data.tokens;
+            const newTokens = rawTokens !== undefined && rawTokens !== null ? Number(rawTokens) : 10;
             const isWelcomeClaimed = Boolean(data.welcomeBonusClaimed || data.onboardingCompleted);
 
             setProfile((prev) => ({
@@ -149,6 +151,7 @@ export const useAppAuth = () => {
               ...data,
               trocoTokens: newTokens,
               euroBalance: newEuros,
+              cguAcceptedAt: data.cguAcceptedAt || prev?.cguAcceptedAt || null,
               onboardingCompleted: true, // Garanti pour les utilisateurs existants
               welcomeBonusClaimed: isWelcomeClaimed || Boolean(prev?.welcomeBonusClaimed),
               uid: user.uid,

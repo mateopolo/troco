@@ -33,9 +33,9 @@ export default function GlobalLiveChat({
   const scrollContainerRef = useRef(null);
   const inputRef = useRef(null);
 
-  const myName = currentUser?.name || 'Moi';
-  const myUsername = currentUser?.username || '@moi';
-  const myAvatar = currentUser?.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80';
+  const myName = currentUser?.displayName || currentUser?.name || 'Moi';
+  const myUsername = currentUser?.username || (myName !== 'Moi' ? `@${myName.toLowerCase().replace(/[^a-z0-9]/g, '')}` : '@moi');
+  const myAvatar = currentUser?.photoURL || currentUser?.avatar || '';
   const myBadge = currentUser?.kycVerified ? 'VÉRIFIÉ' : 'MEMBRE';
   const isAdmin = currentUser?.email === 'mateopolo91@gmail.com' || currentUser?.role === 'admin';
 

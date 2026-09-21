@@ -9,9 +9,10 @@ import { SocialLinksDisplay } from './UserProfile';
 import { ProgressiveImage } from './ui/ProgressiveImage';
 import UniversalModal from './ui/UniversalModal';
 import ReviewsSection from './ReviewsSection';
+import Avatar from './common/Avatar';
 import { db } from '../firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { resolveUserProfile, getCachedUserProfile, isRawUid, isGenericName, sanitizeProfileData } from '../services/userResolverService';
+import { collection, query, where, getDocs, doc, getDoc, onSnapshot } from 'firebase/firestore';
+import { resolveUserProfile, getCachedUserProfile, isRawUid, isGenericName, sanitizeProfileData, setCachedUserProfile } from '../services/userResolverService';
 import logger from '../utils/logger';
 
 export default function PublicProfileModal({
@@ -64,26 +65,70 @@ export default function PublicProfileModal({
     if (!isOpen) return;
 
     let isMounted = true;
+    let unsubUser = null;
 
     if (targetUid && db) {
-      // 1. Résolution du profil utilisateur réel
+      // 1. Initialisation par le cache s'il est valide
       const cached = getCachedUserProfile(targetUid);
       if (cached && cached.name && !isGenericName(cached.name)) {
         setProfileData(cached);
+        setLoadingProfile(false);
       } else {
         setLoadingProfile(true);
-        resolveUserProfile(targetUid, db)
-          .then((resolved) => {
-            if (isMounted && resolved) {
-              setProfileData(resolved);
-            }
-          })
-          .catch((err) => {
-            logger.warn('[PublicProfileModal] Erreur lors de la résolution du profil:', err);
-          })
-          .finally(() => {
-            if (isMounted) setLoadingProfile(false);
-          });
+      }
+
+      // Écoute en temps réel et getDoc du document utilisateur Firestore users/{targetUid}
+      try {
+        getDoc(doc(db, 'users', String(targetUid))).then((snap) => {
+          if (!isMounted) return;
+          if (snap.exists()) {
+            const resolved = sanitizeProfileData(targetUid, snap.data());
+            setProfileData(resolved);
+            setCachedUserProfile(targetUid, resolved);
+          } else {
+            // Tenter users_public
+            getDoc(doc(db, 'users_public', String(targetUid))).then((pSnap) => {
+              if (!isMounted) return;
+              if (pSnap.exists()) {
+                const resolved = sanitizeProfileData(targetUid, pSnap.data());
+                setProfileData(resolved);
+                setCachedUserProfile(targetUid, resolved);
+              } else {
+                resolveUserProfile(targetUid, db).then((res) => {
+                  if (isMounted && res) setProfileData(res);
+                });
+              }
+            });
+          }
+        }).catch((err) => {
+          logger.warn('[PublicProfileModal] getDoc error:', err);
+        });
+
+        unsubUser = onSnapshot(doc(db, 'users', String(targetUid)), (snap) => {
+          if (!isMounted) return;
+          if (snap.exists()) {
+            const raw = snap.data();
+            const resolved = sanitizeProfileData(targetUid, raw);
+            setProfileData(resolved);
+            setCachedUserProfile(targetUid, resolved);
+          } else {
+            resolveUserProfile(targetUid, db).then((res) => {
+              if (isMounted && res) setProfileData(res);
+            });
+          }
+          setLoadingProfile(false);
+        }, (err) => {
+          logger.warn('[PublicProfileModal] onSnapshot user error:', err);
+          if (isMounted) {
+            resolveUserProfile(targetUid, db).then((res) => {
+              if (isMounted && res) setProfileData(res);
+            }).finally(() => {
+              if (isMounted) setLoadingProfile(false);
+            });
+          }
+        });
+      } catch (e) {
+        logger.warn('[PublicProfileModal] Subscription setup error:', e);
       }
 
       // 2. Récupération des annonces réelles de l'utilisateur (Firestore query)
@@ -138,6 +183,7 @@ export default function PublicProfileModal({
               const foundDoc = uSnap.docs[0];
               const resolved = sanitizeProfileData(foundDoc.id, foundDoc.data());
               setProfileData(resolved);
+              setCachedUserProfile(foundDoc.id, resolved);
 
               // Charger ses annonces avec l'UID découvert
               const lSnap = await getDocs(query(collection(db, 'listings'), where('authorUid', '==', foundDoc.id)));
@@ -169,6 +215,7 @@ export default function PublicProfileModal({
 
     return () => {
       isMounted = false;
+      if (typeof unsubUser === 'function') unsubUser();
     };
   }, [isOpen, targetUid, allListings]);
 
@@ -178,11 +225,11 @@ export default function PublicProfileModal({
   const resolved = profileData || targetUser?.peerProfile || {};
   const rawDisplayName = resolved.displayName || resolved.name || targetUser?.displayName || targetUser?.name || targetUser?.user || userProp?.displayName || userProp?.name || '';
   const userName = (!rawDisplayName || isRawUid(rawDisplayName) || isGenericName(rawDisplayName))
-    ? (targetUser?.name && !isGenericName(targetUser.name) && !isRawUid(targetUser.name) ? targetUser.name : 'Membre Troco')
+    ? (targetUser?.name && !isGenericName(targetUser.name) && !isRawUid(targetUser.name) ? targetUser.name : (targetUser?.displayName || ''))
     : rawDisplayName;
-  const avatar = resolved.photoURL || resolved.avatar || targetUser?.avatar || (userName !== 'Membre Troco' ? `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(userName)}` : 'https://api.dicebear.com/7.x/bottts/svg?seed=Troco');
+  const avatar = resolved.photoURL || resolved.avatar || targetUser?.photoURL || targetUser?.avatar || '';
   const isKycVerified = Boolean(resolved.kycVerified ?? targetUser?.kycVerified ?? false);
-  const username = resolved.username || targetUser?.username || (userName !== 'Membre Troco' ? `@${userName.toLowerCase().replace(/[^a-z0-9]/g, '')}` : '@membre');
+  const username = resolved.username || targetUser?.username || (userName ? `@${userName.toLowerCase().replace(/[^a-z0-9]/g, '')}` : '');
   const location = resolved.location || targetUser?.location || '';
   const reviewsCount = resolved.reviewsCount || targetUser?.reviewsCount || 0;
   const averageRating = resolved.rating !== undefined ? resolved.rating : (resolved.averageRating !== undefined ? resolved.averageRating : (targetUser?.averageRating || targetUser?.rating || 0));
@@ -292,63 +339,76 @@ export default function PublicProfileModal({
           }
         />
 
-        {/* CORPS DÉROULANT DU PROFIL PUBLIC */}
-        <div
-          style={{
-            flex: 1,
-            minHeight: 0,
-            overflowY: 'auto',
-            padding: '20px 22px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '20px',
-            boxSizing: 'border-box',
-          }}
-        >
-          {/* BANDEAU HÉROS : AVATAR, IDENTITÉ & BADGES DE CONFIANCE */}
+        {/* CORPS DU PROFIL PUBLIC : CHARGEMENT SPINNER TANT QUE LE VRAI PROFIL N'EST PAS RÉSOLU */}
+        {loadingProfile && (!profileData || !userName || isGenericName(userName)) ? (
           <div
             style={{
+              flex: 1,
+              minHeight: '360px',
               display: 'flex',
+              flexDirection: 'column',
               alignItems: 'center',
-              gap: '18px',
-              flexWrap: 'wrap',
-              paddingBottom: '16px',
-              borderBottom: '1px solid var(--border-color)',
+              justifyContent: 'center',
+              gap: '16px',
+              padding: '60px 20px',
             }}
           >
-            {/* AVATAR AVEC BADGE EN LIGNE */}
-            <div style={{ position: 'relative', flexShrink: 0 }}>
-              <ProgressiveImage
-                src={avatar}
-                alt={userName}
-                style={{
-                  width: '84px',
-                  height: '84px',
-                  borderRadius: '50%',
-                  border: '3px solid var(--accent-primary)',
-                  boxShadow: 'var(--shadow-accent)',
-                  overflow: 'hidden',
-                }}
-                imgStyle={{
-                  borderRadius: '50%',
-                  objectFit: 'cover',
-                }}
-              />
-              <div
-                title="Membre Troco"
-                style={{
-                  position: 'absolute',
-                  bottom: '2px',
-                  right: '2px',
-                  width: '14px',
-                  height: '14px',
-                  borderRadius: '50%',
-                  backgroundColor: 'var(--accent-success)',
-                  border: '2.5px solid var(--bg-card)',
-                  boxShadow: '0 0 8px var(--accent-success)',
-                }}
-              />
-            </div>
+            <Loader2 size={44} className="animate-spin" style={{ color: 'var(--accent-primary, #C67D5B)' }} />
+            <span style={{ fontSize: '15px', color: 'var(--text-secondary)', fontWeight: 500 }}>
+              {t('profile.loading', 'Chargement du profil...')}
+            </span>
+          </div>
+        ) : (
+          <div
+            style={{
+              flex: 1,
+              minHeight: 0,
+              overflowY: 'auto',
+              padding: '20px 22px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '20px',
+              boxSizing: 'border-box',
+            }}
+          >
+            {/* BANDEAU HÉROS : AVATAR, IDENTITÉ & BADGES DE CONFIANCE */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '18px',
+                flexWrap: 'wrap',
+                paddingBottom: '16px',
+                borderBottom: '1px solid var(--border-color)',
+              }}
+            >
+              {/* AVATAR AVEC BADGE EN LIGNE (AUCUN ROBOT DE REMPLACEMENT) */}
+              <div style={{ position: 'relative', flexShrink: 0 }}>
+                <Avatar
+                  size={84}
+                  src={avatar}
+                  name={userName || 'Membre'}
+                  alt={userName || 'Avatar'}
+                  style={{
+                    border: '3px solid var(--accent-primary)',
+                    boxShadow: 'var(--shadow-accent)',
+                  }}
+                />
+                <div
+                  title="En ligne"
+                  style={{
+                    position: 'absolute',
+                    bottom: '2px',
+                    right: '2px',
+                    width: '14px',
+                    height: '14px',
+                    borderRadius: '50%',
+                    backgroundColor: 'var(--accent-success)',
+                    border: '2.5px solid var(--bg-card)',
+                    boxShadow: '0 0 8px var(--accent-success)',
+                  }}
+                />
+              </div>
 
             {/* INFOS NOM, USERNAME, STATUT & ÉVALUATION */}
             <div style={{ flex: 1, minWidth: '220px' }}>
@@ -840,6 +900,7 @@ export default function PublicProfileModal({
             </div>
           )}
         </div>
+        )}
 
         {/* PIED DE MODALE AVEC ACTION RETOUR AU CHAT */}
         <div
