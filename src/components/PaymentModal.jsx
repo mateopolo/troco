@@ -414,19 +414,34 @@ export default function PaymentModal({
       });
     } catch (_) {}
 
-    // SYNC FIRESTORE : incrément atomique garanti du solde euros pour les rechargements (Apple Pay / Carte)
+    // SYNC FIRESTORE : incrément atomique garanti du solde euros et jetons pour les rechargements (Apple Pay / Carte)
     // L'onSnapshot de useWalletStore / App.js propage ensuite le nouveau solde en temps réel
-    if (mode === 'topup-cash' && amountToPay > 0) {
-      const uid = auth.currentUser?.uid || currentUser?.uid;
-      if (uid && db) {
+    const uid = auth.currentUser?.uid || currentUser?.uid;
+    if (uid && db) {
+      if (mode === 'topup-cash' && amountToPay > 0) {
         updateDoc(doc(db, 'users', String(uid)), {
           euroBalance: increment(amountToPay),
+          walletBalanceFiat: increment(amountToPay),
           updatedAt: new Date().toISOString(),
         }).catch((err) => logger.warn('[PaymentModal] Firestore topup-cash increment failed:', err));
 
         // Mise à jour immédiate et optimiste du store Portefeuille pour fluidité totale
         try {
           useWalletStore.getState().creditBalance(amountToPay, 0);
+        } catch (_) {}
+      } else if (isSubscriptionMode && tokensCredited > 0) {
+        updateDoc(doc(db, 'users', String(uid)), {
+          trocoTokens: increment(tokensCredited),
+          tokens: increment(tokensCredited),
+          isTrocoPlus: true,
+          subscriptionPlan: selectedTrocoPlusPlan?.planKey || 'essential',
+          subscriptionStartDate: subscriptionStartDate,
+          subscriptionRenewalDate: subscriptionRenewalDate,
+          updatedAt: new Date().toISOString(),
+        }).catch((err) => logger.warn('[PaymentModal] Firestore token/subscription increment failed:', err));
+
+        try {
+          useWalletStore.getState().creditBalance(0, tokensCredited);
         } catch (_) {}
       }
     }
