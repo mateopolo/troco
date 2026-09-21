@@ -29,6 +29,9 @@ import {
   getCachedUserProfile,
   setCachedUserProfile,
   isRawUid,
+  isGenericName,
+  getChatPartnerUid,
+  getChatPartnerName,
   subscribeToUserProfileResolutions,
 } from '../services/userResolverService';
 
@@ -283,19 +286,17 @@ export const useChatManager = ({
           return true;
         })
         .map(([docId, data]) => {
-          // Extraction du véritable UID du correspondant
-          const peerUid = (Array.isArray(data.participants)
-            ? data.participants.find(p => p && String(p) !== String(currentUid) && !String(p).includes('@'))
-            : null) || data.partnerUid || data.authorUid || null;
+          // Extraction du véritable UID du correspondant (exclut rigoureusement currentUid)
+          const peerUid = getChatPartnerUid(data, currentUid);
 
           // Résolution de l'identité du correspondant (nom & photo)
-          let resolvedName = data.user;
+          let resolvedName = getChatPartnerName(data, currentUid, myName);
           let resolvedAvatar = data.avatar || '';
           let peerProfile = null;
 
           if (peerUid) {
             const cached = getCachedUserProfile(peerUid);
-            if (cached) {
+            if (cached && cached.name && !isGenericName(cached.name)) {
               resolvedName = cached.name;
               if (cached.avatar) resolvedAvatar = cached.avatar;
               peerProfile = cached;
@@ -304,12 +305,7 @@ export const useChatManager = ({
               if (db) {
                 resolveUserProfile(peerUid, db);
               }
-              if (isRawUid(data.user) || !data.user) {
-                resolvedName = (data.author && !isRawUid(data.author)) ? data.author : 'Membre Troco';
-              }
             }
-          } else if (isRawUid(data.user)) {
-            resolvedName = (data.author && !isRawUid(data.author)) ? data.author : 'Membre Troco';
           }
 
           const fChatId = data.id || docId;
@@ -489,10 +485,16 @@ export const useChatManager = ({
 
   // Écoute des résolutions asynchrones des profils pour mettre à jour chatsList et selectedChat instantanément
   useEffect(() => {
+    const currentMyUid = profile?.uid || (auth?.currentUser && auth.currentUser.uid);
     const unsub = subscribeToUserProfileResolutions((resolvedUid, resolvedProfile) => {
+      const matchChat = (c) => {
+        if (!c) return false;
+        const cPeerUid = getChatPartnerUid(c, currentMyUid);
+        return String(cPeerUid) === String(resolvedUid);
+      };
+
       setChatsList(prev => prev.map(c => {
-        const cPeerUid = c.partnerUid || c.authorUid || c.peerUid || (Array.isArray(c.participants) ? c.participants.find(p => String(p) !== String(profile?.uid)) : null);
-        if (String(cPeerUid) === String(resolvedUid)) {
+        if (matchChat(c)) {
           return {
             ...c,
             user: resolvedProfile.name,
@@ -505,8 +507,7 @@ export const useChatManager = ({
 
       setSelectedChat(prev => {
         if (!prev) return prev;
-        const prevPeerUid = prev.partnerUid || prev.authorUid || prev.peerUid || (Array.isArray(prev.participants) ? prev.participants.find(p => String(p) !== String(profile?.uid)) : null);
-        if (String(prevPeerUid) === String(resolvedUid)) {
+        if (matchChat(prev)) {
           return {
             ...prev,
             user: resolvedProfile.name,
@@ -518,7 +519,7 @@ export const useChatManager = ({
       });
     });
     return () => unsub();
-  }, [profile?.uid]);
+  }, [profile?.uid, auth?.currentUser?.uid]);
 
   // ---- SÉLECTION D'UN CHAT ET MARQUAGE COMME LU ----
   const handleSelectChat = async (chat) => {
@@ -527,14 +528,22 @@ export const useChatManager = ({
       return;
     }
     const currentMyUid = profile?.uid || (auth?.currentUser && auth.currentUser.uid);
-    const peerUid = chat.partnerUid || chat.authorUid || chat.peerUid || (Array.isArray(chat.participants) ? chat.participants.find(p => String(p) !== String(currentMyUid)) : null);
+    const peerUid = getChatPartnerUid(chat, currentMyUid);
     const cachedPeer = peerUid ? getCachedUserProfile(peerUid) : null;
+    if (peerUid && (!cachedPeer || isGenericName(cachedPeer.name)) && db) {
+      resolveUserProfile(peerUid, db);
+    }
+    const resolvedPartnerName = cachedPeer?.name && !isGenericName(cachedPeer.name)
+      ? cachedPeer.name
+      : getChatPartnerName(chat, currentMyUid, profile?.name);
+    const resolvedPartnerAvatar = cachedPeer?.avatar || chat.avatar || chat.peerProfile?.avatar || '';
+
     const enrichedChat = {
       ...chat,
       partnerUid: peerUid,
       peerUid: peerUid,
-      user: cachedPeer?.name || (isRawUid(chat.user) ? 'Membre Troco' : (chat.user || 'Interlocuteur')),
-      avatar: cachedPeer?.avatar || chat.avatar || '',
+      user: resolvedPartnerName,
+      avatar: resolvedPartnerAvatar,
       peerProfile: cachedPeer || chat.peerProfile || null,
     };
     setSelectedChat(enrichedChat);

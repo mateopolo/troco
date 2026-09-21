@@ -403,3 +403,17 @@ L'application dispose d'un composant unifié pour toutes les boîtes de dialogue
    - `AppHeader.jsx` : déjà `🇫🇷 FR`, `🇬🇧 EN`, etc. (format drapeau + code).
    - `ProfileFeature.jsx` : harmonisé en `🇫🇷 FR` (drapeau avant code).
    - `ProfileView.jsx` : ajout de `LANG_FLAG_EMOJI` map — affiche `🇫🇷 FR` dans les pills de langues parlées.
+
+### Patch Résolution Profil & Discussion (commit `fix(chat/profile)`)
+
+1. **Résolution infaillible du correspondant de discussion (Partenaire vs Utilisateur courant)**
+   - `userResolverService.js` : création de `getChatPartnerUid` et `getChatPartnerName` qui inspectent rigoureusement tous les champs (`participantUids`, `participants`, `partnerUid`, `peerUid`, etc.) en excluant catégoriquement le `currentUid` de l'utilisateur connecté.
+   - `sanitizeProfileData` : ne s'arrête plus aux noms génériques ('Utilisateur Troco' / 'Membre Troco') et extrait le nom réel via `displayName`, `username` ou le préfixe email.
+
+2. **Affichage du vrai nom et avatar dans les discussions et la conversation**
+   - `ChatView.jsx` : la liste des discussions (`SwipeableChatItem`) et l'en-tête de la conversation affichent désormais le vrai nom résolu (`Matmot`) et son avatar réel au lieu du fallback 'Membre Troco' / 'Utilisateur Troco'.
+   - `useChatManager.js` : `updateMergedChats`, `subscribeToUserProfileResolutions` et `handleSelectChat` utilisent les helpers de résolution pour ne plus jamais confondre l'auteur d'une annonce avec l'interlocuteur.
+
+3. **Accès au profil public depuis le chat sans profil vierge**
+   - `PublicProfileModal.jsx` : filtrage strict pour interdire l'utilisation d'identifiants de salons (`chat_...`, `group-...`) comme UID utilisateur, et recherche Firestore par nom/username en cas de fallback.
+   - `ChatView.jsx` : le clic sur le contact de l'en-tête de conversation construit un objet utilisateur propre (`partnerUserObj`) et synchronise le store global `useUIStore.setSelectedPublicUser` ainsi que la modale locale.

@@ -23,7 +23,8 @@ import { EmptyState } from './ui/EmptyState';
 import { playPop, playSwoosh, playSuccessChime } from '../services/audioService';
 import SwipeableChatItem from './SwipeableChatItem';
 import ChatInputBar from './chat/ChatInputBar';
-import { isRawUid } from '../services/userResolverService';
+import { isRawUid, isGenericName, getChatPartnerUid, getChatPartnerName, getCachedUserProfile, resolveUserProfile } from '../services/userResolverService';
+import { useUIStore } from '../stores/useUIStore';
 
 // Lazy loading des outils collaboratifs & suites vectorielles lourdes pour préserver les performances et la rapidité du build
 const CreateProjectGroupModal = lazy(() => import('./CreateProjectGroupModal'));
@@ -78,6 +79,7 @@ function ChatView({
   presenceMap = {},
   allListings = [],
   onOpenListing = () => {},
+  onOpenProfile = null,
   messagesContainerRef: externalMessagesContainerRef = null,
 }) {
   // Hook pour gérer les timeouts en toute sécurité
@@ -102,6 +104,7 @@ function ChatView({
   const [officeInitialTab, setOfficeInitialTab] = useState('docs');
   const [isWorkspaceMenuOpen, setIsWorkspaceMenuOpen] = useState(false);
   const [isPublicProfileOpen, setIsPublicProfileOpen] = useState(false);
+  const [localTargetUser, setLocalTargetUser] = useState(null);
   const [deletedChatIds, setDeletedChatIds] = useState(() => {
     try {
       const saved = localStorage.getItem('troco_deleted_chats');
@@ -178,6 +181,46 @@ function ChatView({
   const effectiveSelectedChat = (selectedChat && !deletedChatIds.has(selectedChat.id)) ? selectedChat : null;
   const activeChatObj = effectiveSelectedChat;
   const [mobileSubView, setMobileSubView] = useState(() => (selectedChat && !deletedChatIds.has(selectedChat.id)) ? 'room' : 'list');
+
+  const currentMyUid = profile?.uid || (auth?.currentUser && auth.currentUser.uid);
+  const currentMyName = profile?.name || '';
+  const activePartnerUid = getChatPartnerUid(activeChatObj, currentMyUid);
+  const activePartnerName = getChatPartnerName(activeChatObj, currentMyUid, currentMyName);
+  const cachedActivePartner = activePartnerUid ? getCachedUserProfile(activePartnerUid) : null;
+  const activePartnerAvatar = cachedActivePartner?.avatar || activeChatObj?.peerProfile?.avatar || activeChatObj?.avatar || '';
+
+  const handleOpenPartnerProfile = useCallback(() => {
+    if (!activeChatObj || activeChatObj.isGroup) return;
+    const partnerUid = getChatPartnerUid(activeChatObj, currentMyUid);
+    const partnerName = getChatPartnerName(activeChatObj, currentMyUid, currentMyName);
+    const cached = partnerUid ? getCachedUserProfile(partnerUid) : null;
+    const partnerAvatar = cached?.avatar || activeChatObj?.peerProfile?.avatar || activeChatObj?.avatar || '';
+
+    const partnerUserObj = {
+      ...(activeChatObj.peerProfile || {}),
+      ...(cached || {}),
+      id: partnerUid || activeChatObj.partnerUid || activeChatObj.authorUid || `user_${partnerName}`,
+      uid: partnerUid || activeChatObj.partnerUid || activeChatObj.authorUid || null,
+      name: partnerName,
+      displayName: partnerName,
+      avatar: partnerAvatar,
+      photoURL: partnerAvatar,
+      username: cached?.username || activeChatObj.peerProfile?.username || (partnerName && !isGenericName(partnerName) ? `@${partnerName.toLowerCase().replace(/[^a-z0-9]/g, '')}` : '@membre'),
+      bio: cached?.bio || activeChatObj.peerProfile?.bio || '',
+      authorProfile: cached || activeChatObj.peerProfile || null,
+    };
+
+    try {
+      useUIStore.getState().setSelectedPublicUser(partnerUserObj);
+    } catch (_) {}
+
+    if (typeof onOpenProfile === 'function') {
+      onOpenProfile(partnerUserObj);
+    }
+
+    setLocalTargetUser(partnerUserObj);
+    setIsPublicProfileOpen(true);
+  }, [activeChatObj, currentMyUid, currentMyName, onOpenProfile]);
 
   const openWhiteboard = useCallback((boardId = null, version = null, initialView = null) => {
     setActiveWhiteboardBoardId(boardId);
@@ -1113,11 +1156,7 @@ function ChatView({
 
             {/* CONTENEUR CONTACT CLIQUABLE */}
             <div
-              onClick={() => {
-                if (!activeChatObj?.isGroup) {
-                  setIsPublicProfileOpen(true);
-                }
-              }}
+              onClick={handleOpenPartnerProfile}
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -1130,13 +1169,13 @@ function ChatView({
                 transition: 'background-color 0.15s ease',
               }}
               className={!activeChatObj?.isGroup ? 'hover-subtle' : ''}
-              title={!activeChatObj?.isGroup ? `Voir le profil public de ${activeChatObj?.user}` : undefined}
+              title={!activeChatObj?.isGroup ? `Voir le profil public de ${activePartnerName}` : undefined}
             >
               <div style={{ position: 'relative', width: '36px', height: '36px', flexShrink: 0 }}>
-                {activeChatObj?.avatar ? (
+                {activePartnerAvatar ? (
                   <img
-                    src={activeChatObj.avatar}
-                    alt={activeChatObj?.user || 'Avatar'}
+                    src={activePartnerAvatar}
+                    alt={activePartnerName || 'Avatar'}
                     style={{
                       width: '36px',
                       height: '36px',
@@ -1148,7 +1187,7 @@ function ChatView({
                   />
                 ) : (
                   <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: activeChatObj?.isGroup ? 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%)' : 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: activeChatObj?.isGroup ? '17px' : '14px', boxShadow: 'var(--shadow-accent)' }}>
-                    {activeChatObj?.isGroup ? '👥' : (activeChatObj?.user && !isRawUid(activeChatObj.user) ? activeChatObj.user[0].toUpperCase() : 'T')}
+                    {activeChatObj?.isGroup ? '👥' : (activePartnerName && !isGenericName(activePartnerName) && !isRawUid(activePartnerName) ? activePartnerName[0].toUpperCase() : 'T')}
                   </div>
                 )}
                 {activeChatIsOnline ? (
@@ -1178,7 +1217,7 @@ function ChatView({
               <div style={{ minWidth: 0, flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, flexWrap: 'wrap' }}>
                   <span style={{ fontWeight: '800', fontSize: isMobile ? '14px' : '14.5px', color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {activeChatObj?.isGroup ? (activeChatObj.projectTitle || activeChatObj.user) : (isRawUid(activeChatObj?.user) ? 'Membre Troco' : (activeChatObj?.user || 'Interlocuteur'))}
+                    {activeChatObj?.isGroup ? (activeChatObj.projectTitle || activeChatObj.user) : activePartnerName}
                   </span>
                   {activeChatObj?.isGroup ? (
                     <span style={{ fontSize: '9px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', padding: '1px 6px', borderRadius: '6px', border: '1px solid var(--border-color)', flexShrink: 0 }}>
@@ -2962,6 +3001,11 @@ function ChatView({
                     const showReplyBadge = isUnread && lastSenderIsThem;
                     const showWaitingBadge = !isUnread && lastSenderIsMe;
 
+                    const itemPartnerUid = getChatPartnerUid(chat, currentMyUid);
+                    const itemPartnerName = getChatPartnerName(chat, currentMyUid, currentMyName);
+                    const itemCachedPartner = itemPartnerUid ? getCachedUserProfile(itemPartnerUid) : null;
+                    const itemPartnerAvatar = itemCachedPartner?.avatar || chat.peerProfile?.avatar || chat.avatar || '';
+
                     return (
                       <SwipeableChatItem
                         key={chat.id}
@@ -3001,16 +3045,16 @@ function ChatView({
                             <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: chat.isGroup ? 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%)' : 'linear-gradient(135deg, var(--text-main) 0%, var(--text-secondary) 100%)', color: 'var(--bg-card)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: chat.isGroup ? '18px' : '15px', flexShrink: 0, boxShadow: 'var(--shadow-card)', position: 'relative', overflow: 'hidden' }}>
                               {chat.isGroup ? (
                                 '👥'
-                              ) : chat.avatar ? (
+                              ) : itemPartnerAvatar ? (
                                 <img
-                                  src={chat.avatar}
-                                  alt={chat.user || 'Avatar'}
+                                  src={itemPartnerAvatar}
+                                  alt={itemPartnerName || 'Avatar'}
                                   style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
                                 />
                               ) : (
-                                (chat.user && !isRawUid(chat.user)) ? chat.user[0].toUpperCase() : 'T'
+                                (itemPartnerName && !isGenericName(itemPartnerName) && !isRawUid(itemPartnerName)) ? itemPartnerName[0].toUpperCase() : 'T'
                               )}
-                              {isUserOnline(chat.user, chat.authorUid || chat.userId) ? (
+                              {isUserOnline(itemPartnerName, itemPartnerUid) ? (
                                 <span
                                   title="En ligne"
                                   style={{
@@ -3051,7 +3095,7 @@ function ChatView({
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
                                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: isUnread ? '800' : '600', fontSize: isUnread ? '14.5px' : '14px', color: 'var(--text-main)' }}>
-                                  {chat.isGroup ? (chat.projectTitle || chat.user) : (isRawUid(chat.user) ? 'Membre Troco' : (chat.user || 'Interlocuteur'))}
+                                  {chat.isGroup ? (chat.projectTitle || chat.user) : itemPartnerName}
                                   {pinnedChatIds.has(chat.id) && (
                                     <span title="Épinglé" style={{ display: 'inline-flex', alignItems: 'center', color: '#3B82F6' }}>
                                       <Pin size={12} style={{ fill: '#3B82F6' }} />
@@ -3916,15 +3960,20 @@ function ChatView({
       )}
 
       {/* MODALE PROFIL PUBLIC ACCESSIBLE DEPUIS LE CHAT */}
-      {isPublicProfileOpen && activeChatObj && (
+      {isPublicProfileOpen && (localTargetUser || activeChatObj) && (
         <PublicProfileModal
           isOpen={isPublicProfileOpen}
-          onClose={() => setIsPublicProfileOpen(false)}
-          targetUser={{
-            ...activeChatObj,
-            uid: activeChatObj.partnerUid || activeChatObj.peerUid || activeChatObj.authorUid || activeChatObj.userId || null,
-            name: isRawUid(activeChatObj.user) ? (activeChatObj.peerProfile?.displayName || 'Membre Troco') : (activeChatObj.user || 'Membre Troco'),
-            avatar: activeChatObj.avatar || activeChatObj.peerProfile?.photoURL || ''
+          onClose={() => {
+            setIsPublicProfileOpen(false);
+            setLocalTargetUser(null);
+          }}
+          targetUser={localTargetUser || {
+            ...(activeChatObj?.peerProfile || {}),
+            id: activePartnerUid,
+            uid: activePartnerUid,
+            name: activePartnerName,
+            displayName: activePartnerName,
+            avatar: activePartnerAvatar,
           }}
           allListings={allListings}
           onOpenListing={onOpenListing}

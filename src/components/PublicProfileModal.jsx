@@ -11,7 +11,7 @@ import UniversalModal from './ui/UniversalModal';
 import ReviewsSection from './ReviewsSection';
 import { db } from '../firebase';
 import { collection, query, where, getDocs } from 'firebase/firestore';
-import { resolveUserProfile, getCachedUserProfile, isRawUid } from '../services/userResolverService';
+import { resolveUserProfile, getCachedUserProfile, isRawUid, isGenericName, sanitizeProfileData } from '../services/userResolverService';
 import logger from '../utils/logger';
 
 export default function PublicProfileModal({
@@ -28,8 +28,26 @@ export default function PublicProfileModal({
 }) {
   const [activeTab, setActiveTab] = useState('listings'); // 'listings' | 'history' | 'bio' | 'portfolio' | 'reviews'
 
-  // Extraction propre de l'UID cible (jamais un email ou un nom brut)
-  const targetUid = targetUser?.uid || targetUser?.id || targetUser?.partnerUid || targetUser?.authorUid || targetUser?.peerUid || targetUser?.userId || userProp?.uid || userProp?.id || null;
+  const isValidUserUid = (v) =>
+    v &&
+    typeof v === 'string' &&
+    !v.startsWith('chat_') &&
+    !v.startsWith('group-') &&
+    !v.includes(' ') &&
+    !v.includes('@') &&
+    v.length >= 3;
+
+  // Extraction propre de l'UID cible (jamais un email, un nom brut, ou un ID de salon de chat)
+  const targetUid =
+    (isValidUserUid(targetUser?.uid) && targetUser.uid) ||
+    (isValidUserUid(targetUser?.partnerUid) && targetUser.partnerUid) ||
+    (isValidUserUid(targetUser?.peerUid) && targetUser.peerUid) ||
+    (isValidUserUid(targetUser?.userId) && targetUser.userId) ||
+    (isValidUserUid(userProp?.uid) && userProp.uid) ||
+    (isValidUserUid(targetUser?.authorUid) && targetUser.authorUid) ||
+    (isValidUserUid(targetUser?.id) && targetUser.id) ||
+    (isValidUserUid(userProp?.id) && userProp.id) ||
+    null;
 
   const [profileData, setProfileData] = useState(() => {
     if (targetUid) {
@@ -50,7 +68,7 @@ export default function PublicProfileModal({
     if (targetUid && db) {
       // 1. Résolution du profil utilisateur réel
       const cached = getCachedUserProfile(targetUid);
-      if (cached) {
+      if (cached && cached.name && !isGenericName(cached.name)) {
         setProfileData(cached);
       } else {
         setLoadingProfile(true);
@@ -101,13 +119,49 @@ export default function PublicProfileModal({
         });
     } else {
       // Fallback par nom textuel si pas d'UID direct
-      const rawName = targetUser?.name || targetUser?.user || userProp?.displayName || '';
-      if (rawName && !isRawUid(rawName)) {
-        const fromAll = allListings.filter((l) =>
-          (l.author && l.author.trim().toLowerCase() === rawName.trim().toLowerCase()) ||
-          (l.user && l.user.trim().toLowerCase() === rawName.trim().toLowerCase())
-        );
-        setUserListings(fromAll);
+      const rawName = targetUser?.name || targetUser?.displayName || targetUser?.user || userProp?.displayName || '';
+      if (rawName && !isRawUid(rawName) && !isGenericName(rawName) && db) {
+        setLoadingProfile(true);
+        // Recherche dans users par nom
+        const searchUserByName = async () => {
+          try {
+            const clean = rawName.trim();
+            let uSnap = await getDocs(query(collection(db, 'users'), where('name', '==', clean)));
+            if (uSnap.empty) {
+              uSnap = await getDocs(query(collection(db, 'users'), where('displayName', '==', clean)));
+            }
+            if (uSnap.empty) {
+              const handle = clean.replace(/^@/, '');
+              uSnap = await getDocs(query(collection(db, 'users'), where('username', '==', `@${handle}`)));
+            }
+            if (!uSnap.empty && isMounted) {
+              const foundDoc = uSnap.docs[0];
+              const resolved = sanitizeProfileData(foundDoc.id, foundDoc.data());
+              setProfileData(resolved);
+
+              // Charger ses annonces avec l'UID découvert
+              const lSnap = await getDocs(query(collection(db, 'listings'), where('authorUid', '==', foundDoc.id)));
+              if (!lSnap.empty && isMounted) {
+                setUserListings(lSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
+                return;
+              }
+            }
+          } catch (e) {
+            logger.warn('[PublicProfileModal] Recherche utilisateur par nom échouée:', e);
+          } finally {
+            if (isMounted) setLoadingProfile(false);
+          }
+
+          // Filtrer allListings par nom en mémoire
+          if (isMounted) {
+            const fromAll = allListings.filter((l) =>
+              (l.author && l.author.trim().toLowerCase() === rawName.trim().toLowerCase()) ||
+              (l.user && l.user.trim().toLowerCase() === rawName.trim().toLowerCase())
+            );
+            setUserListings(fromAll);
+          }
+        };
+        searchUserByName();
       } else {
         setUserListings([]);
       }
@@ -122,8 +176,10 @@ export default function PublicProfileModal({
 
   // Données résolues et consolidées
   const resolved = profileData || targetUser?.peerProfile || {};
-  const rawDisplayName = resolved.displayName || targetUser?.displayName || targetUser?.name || targetUser?.user || userProp?.displayName || userProp?.name || '';
-  const userName = (!rawDisplayName || isRawUid(rawDisplayName)) ? 'Membre Troco' : rawDisplayName;
+  const rawDisplayName = resolved.displayName || resolved.name || targetUser?.displayName || targetUser?.name || targetUser?.user || userProp?.displayName || userProp?.name || '';
+  const userName = (!rawDisplayName || isRawUid(rawDisplayName) || isGenericName(rawDisplayName))
+    ? (targetUser?.name && !isGenericName(targetUser.name) && !isRawUid(targetUser.name) ? targetUser.name : 'Membre Troco')
+    : rawDisplayName;
   const avatar = resolved.photoURL || resolved.avatar || targetUser?.avatar || (userName !== 'Membre Troco' ? `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(userName)}` : 'https://api.dicebear.com/7.x/bottts/svg?seed=Troco');
   const isKycVerified = Boolean(resolved.kycVerified ?? targetUser?.kycVerified ?? false);
   const username = resolved.username || targetUser?.username || (userName !== 'Membre Troco' ? `@${userName.toLowerCase().replace(/[^a-z0-9]/g, '')}` : '@membre');

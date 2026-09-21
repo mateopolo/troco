@@ -48,6 +48,7 @@ function ChatSection({
   presenceMap,
   allListings,
   onOpenListing,
+  onOpenProfile,
 }) {
   const safeMockChats = Array.isArray(mockChats) ? mockChats : [];
   const messagesContainerRef = useRef(null);
@@ -118,6 +119,7 @@ function ChatSection({
                 presenceMap={presenceMap}
                 allListings={allListings}
                 onOpenListing={onOpenListing}
+                onOpenProfile={onOpenProfile}
               />
             </Profiler>
           </motion.div>
@@ -134,6 +136,9 @@ const areChatSectionPropsEqual = (previous, next) => {
   const nextThread = next.chatThreads?.[nextChatId];
 
   return previousChatId === nextChatId &&
+    previous.selectedChat?.user === next.selectedChat?.user &&
+    previous.selectedChat?.avatar === next.selectedChat?.avatar &&
+    previous.mockChats === next.mockChats &&
     previousThread === nextThread &&
     previousThread?.length === nextThread?.length &&
     previous.isThemTyping === next.isThemTyping &&

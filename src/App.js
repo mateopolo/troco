@@ -4470,6 +4470,7 @@ export default function App() {
                         presenceMap={presenceMap}
                         allListings={listings}
                         onOpenListing={handleOpenListing}
+                        onOpenProfile={(u) => setSelectedPublicUser(u)}
                       />
                     </Suspense>
                   </SectoralErrorBoundary>
