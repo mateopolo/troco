@@ -2140,7 +2140,7 @@ export default function App() {
           logger.warn('[Firestore] onSnapshot listings query error:', error);
           if (!isCancelled) {
             try {
-              const fallbackQuery = query(collection(db, 'listings'), where('status', '==', 'active'));
+              const fallbackQuery = query(collection(db, 'listings'), limit(50));
               unsubFirestore = onSnapshot(fallbackQuery, (snapshot) => {
                 if (isCancelled) return;
                 const firestoreListings = snapshot.docs.map((docSnap) => ({

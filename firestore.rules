@@ -91,8 +91,8 @@ service cloud.firestore {
 
       // Sous-collection interne : Notifications
       match /notifications/{notifId} {
-        allow read: if isOwner(uid);
-        allow write: if false; // Écriture exclusive par Cloud Functions serveur
+        allow read, update, delete: if isOwner(uid) || isAdmin();
+        allow create: if isAuthenticated();
       }
     }
 
@@ -108,11 +108,11 @@ service cloud.firestore {
 
     // ========================================================================
     // 📢 COLLECTION LISTINGS (ANNONCES DE SERVICES & BIENS)
-
     // ========================================================================
     match /listings/{listingId} {
-      // Lecture : publique si annonce active, ou par l'auteur créateur, ou par l'administrateur
+      // Lecture : publique si annonce active, sans statut défini (annonces publiques), créateur ou admin
       allow read: if (resource.data.status == 'active')
+        || !('status' in resource.data)
         || (isAuthenticated() && request.auth.uid == resource.data.authorUid)
         || isAdmin();
 
@@ -135,12 +135,43 @@ service cloud.firestore {
     }
 
     // ========================================================================
+    // 💬 COLLECTION GLOBAL_CHAT (MESSAGERIE INSTANTANÉE COMMUNAUTAIRE)
+    // ========================================================================
+    match /global_chat/{msgId} {
+      // Lecture publique du chat en direct
+      allow read: if true;
+
+      // Création : membre authentifié non banni
+      allow create: if isAuthenticated() && isNotBanned();
+
+      // Modification / Suppression : auteur du message ou administrateur
+      allow update, delete: if isAdmin() || (isAuthenticated() && resource.data.authorUid == request.auth.uid);
+    }
+
+    // ========================================================================
+    // 📢 COLLECTION COMMUNITY_MESSAGES (COMMUNAUTÉ)
+    // ========================================================================
+    match /community_messages/{msgId} {
+      allow read: if true;
+      allow create: if isAuthenticated() && isNotBanned();
+      allow update, delete: if isAdmin() || (isAuthenticated() && resource.data.authorUid == request.auth.uid);
+    }
+
+    // ========================================================================
+    // 🟢 COLLECTION PRESENCE (STATUT EN LIGNE / HORS LIGNE)
+    // ========================================================================
+    match /presence/{userId} {
+      allow read: if true;
+      allow write: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+    }
+
+    // ========================================================================
     // 💬 COLLECTION CHATS (CONVERSATIONS ET DISCUSSIONS PRIVÉES)
     // ========================================================================
     match /chats/{chatId} {
-      allow read, write: if request.auth != null;
-      match /messages/{msgId} {
-        allow read, write: if request.auth != null;
+      allow read, write: if isAuthenticated();
+      match /{allSubcollections=**} {
+        allow read, write: if isAuthenticated();
       }
     }
 
@@ -157,8 +188,10 @@ service cloud.firestore {
         || isAdmin()
       );
 
-      // Écriture : FORMELLEMENT INTERDITE côté client (Cloud Functions Admin SDK uniquement)
-      allow create, update, delete: if false;
+      // Écriture : réservée au serveur (ou transaction client initialisée)
+      allow create: if isAuthenticated() && isNotBanned()
+        && (request.resource.data.userId == request.auth.uid || request.resource.data.buyerUid == request.auth.uid);
+      allow update, delete: if false;
     }
 
     // ========================================================================
@@ -191,13 +224,40 @@ service cloud.firestore {
     // 📞 COLLECTION CALLS (SIGNALING WEBRTC & CANDIDATS ICE)
     // ========================================================================
     match /calls/{callId} {
-      allow read, write: if request.auth != null;
-      match /signals/{signalId} {
-        allow read, write: if request.auth != null;
-      }
+      allow read, write: if isAuthenticated();
       match /{subcollection}/{candidateId} {
-        allow read, write: if request.auth != null;
+        allow read, write: if isAuthenticated();
       }
+    }
+
+    // ========================================================================
+    // 📰 COLLECTION GLOBAL_CONTENT (CMS & BANNIÈRES)
+    // ========================================================================
+    match /global_content/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ========================================================================
+    // 🎨 ESPACES COLLABORATIFS & WHITEBOARDS
+    // ========================================================================
+    match /whiteboard_rooms/{roomId}/{document=**} {
+      allow read, write: if isAuthenticated();
+    }
+    match /project_whiteboards/{boardId}/{document=**} {
+      allow read, write: if isAuthenticated();
+    }
+    match /project_shared_notes/{noteId}/{document=**} {
+      allow read, write: if isAuthenticated();
+    }
+    match /workspaces/{workspaceId}/{document=**} {
+      allow read, write: if isAuthenticated();
+    }
+    match /chatThreads/{threadId}/{document=**} {
+      allow read, write: if isAuthenticated();
+    }
+    match /admin_audit_logs/{logId} {
+      allow read, write: if isAdmin();
     }
   }
 }
