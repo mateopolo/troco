@@ -175,16 +175,24 @@ export const AuthProvider = ({ children }) => {
 
   // Validation CGU
   const handleAcceptCgu = async ({ cguVersion, acceptedAt } = {}) => {
+    // 1. Verrou synchrone d'urgence immédiat AVANT tout appel réseau
+    try {
+      window.sessionStorage?.setItem('troco_cgu_dismissed', 'true');
+      window.localStorage?.setItem('troco_cgu_dismissed', 'true');
+    } catch (_) { }
+
     const now = acceptedAt || new Date().toISOString();
-    const uid = profile?.uid || auth.currentUser?.uid;
+    const nativeUid = auth.currentUser?.uid || profile?.uid;
     setProfile(prev => {
       const updated = { ...prev, cguAcceptedAt: now, cguVersion: cguVersion || '2026.1' };
       window.localStorage.setItem('troco_user_profile', JSON.stringify(updated));
       return updated;
     });
-    if (uid) {
+
+    const targetUid = auth.currentUser?.uid || nativeUid;
+    if (targetUid && db) {
       try {
-        await updateDoc(doc(db, 'users', String(uid)), {
+        await updateDoc(doc(db, 'users', String(targetUid)), {
           cguAcceptedAt: serverTimestamp(),
           cguVersion: cguVersion || '2026.1',
           updatedAt: serverTimestamp(),
@@ -458,70 +466,9 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Connexion Démo (Persistance intelligente Phase 109)
-  const handleConfirmDemoAuth = async (method) => {
-    const pin = window.prompt('Entrez le code administrateur :');
-    if (pin !== '2609') {
-      alert('Accès refusé.');
-      return;
-    }
-
-    const demoUid = 'demo_mateopolo';
-    const loginMethodName = (typeof method === 'string' && method.trim()) ? method : 'Démo Rapide';
-    let baseDemoProfile = {
-      uid: demoUid,
-      name: 'MATEO POLO',
-      username: '@mateopolo',
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80',
-      bio: 'Créateur de contenus, développeur Python et passionné de musique. Je propose des services flexibles et des échanges de qualité.',
-      location: 'Paris, France',
-      languages: ['FR', 'EN', 'ES', 'IT'],
-      loginMethod: loginMethodName,
-      euroBalance: 128,
-      trocoTokens: 12,
-      isDemo: true,
-      dealsCompleted: 3,
-      dealsInProgress: 1,
-      rating: 4.9,
-      reviewsCount: 3,
-      skills: ['Développement Web', 'Design UI/UX', 'Python', 'Montage Vidéo'],
-      equipment: ['MacBook Pro M3', 'Micro Shure SM7B', 'Caméra Sony A7IV'],
-      onboardingCompleted: true,
-      cguAcceptedAt: new Date().toISOString(),
-    };
-
-    let finalProfile = baseDemoProfile;
-
-    try {
-      if (db) {
-        const userDoc = await getDoc(doc(db, 'users', demoUid));
-        const docExists = userDoc && (typeof userDoc.exists === 'function' ? userDoc.exists() : Boolean(userDoc.exists));
-        if (docExists) {
-          const remoteData = (typeof userDoc.data === 'function' ? userDoc.data() : userDoc.data) || {};
-          finalProfile = {
-            ...baseDemoProfile,
-            ...remoteData,
-            uid: demoUid,
-            isDemo: true,
-            loginMethod: loginMethodName,
-          };
-        } else {
-          await setDoc(doc(db, 'users', demoUid), baseDemoProfile, { merge: true });
-        }
-      }
-    } catch (e) {
-      logger.warn('[DemoAuth Context] Firestore sync error:', e);
-    }
-
-    try {
-      window.localStorage.setItem('troco_user_profile', JSON.stringify(finalProfile));
-      setSessionAuthenticated();
-    } catch (e) {
-      logger.warn('Storage error on demo auth:', e);
-    }
-    setProfile(finalProfile);
-    setIsAuthenticated(true);
-    setAuthError('');
+  // Connexion Démo désactivée (prévention de corruption d'identité & split-brain)
+  const handleConfirmDemoAuth = async () => {
+    alert("L'Accès Rapide démo avec faux identifiant a été désactivé pour garantir l'intégrité de vos permissions Firestore et de votre profil. Veuillez vous connecter avec votre adresse Gmail ou votre Email officiel.");
   };
 
   // SMS Auth Handlers

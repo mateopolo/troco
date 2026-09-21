@@ -45,8 +45,7 @@ export const useAppAuth = () => {
 
   const isE2ESession = typeof window !== 'undefined' && (
     window.__E2E__ === true ||
-    window.localStorage?.getItem('troco_e2e_authenticated') === 'true' ||
-    window.localStorage?.getItem('troco_auth_session') === 'true'
+    window.localStorage?.getItem('troco_e2e_authenticated') === 'true'
   );
 
   const [isLoadingSession, setIsLoadingSession] = useState(() => !isE2ESession);
@@ -70,6 +69,9 @@ export const useAppAuth = () => {
         setSessionAuthenticated();
         setIsProfileLoading(true);
 
+        // Attribution dynamique et ultra-sécurisée du God Mode / Admin strictement basée sur l'email
+        const isGodAdmin = user.email === 'mateopolo91@gmail.com';
+
         // Abonnement temps réel explicite du solde et jetons dans le store Zustand
         try {
           unsubscribeBalance = useWalletStore.getState().subscribeToUserBalance(user.uid);
@@ -91,11 +93,12 @@ export const useAppAuth = () => {
           }
         }
 
-        // Mise à jour immédiate du store avec l'UID Firebase Auth valide
+        // Mise à jour immédiate du store avec l'UID Firebase Auth valide et droits admin
         setProfile((prev) => ({
           ...prev,
           uid: user.uid,
           email: user.email || prev.email,
+          ...(isGodAdmin ? { isAdmin: true, role: 'admin' } : {}),
         }));
 
         // Écoute continue du document utilisateur Firestore
@@ -152,6 +155,7 @@ export const useAppAuth = () => {
               email: user.email || data.email || prev.email,
               name: resolvedName,
               avatar: resolvedAvatar,
+              ...(isGodAdmin ? { isAdmin: true, role: 'admin' } : {}),
             }));
 
             // Mise à jour atomique du store Zustand Portefeuille
@@ -178,6 +182,7 @@ export const useAppAuth = () => {
               socialLinks: profile?.socialLinks || ['https://github.com/mateopolo', 'https://linkedin.com/in/mateopolo'],
               kycVerified: false,
               isBanned: false,
+              ...(isGodAdmin ? { isAdmin: true, role: 'admin' } : {}),
               createdAt: serverTimestamp(),
               updatedAt: serverTimestamp(),
             };
@@ -200,8 +205,7 @@ export const useAppAuth = () => {
       } else {
         const isE2E = typeof window !== 'undefined' && (
           window.__E2E__ === true ||
-          window.localStorage?.getItem('troco_e2e_authenticated') === 'true' ||
-          window.localStorage?.getItem('troco_auth_session') === 'true'
+          window.localStorage?.getItem('troco_e2e_authenticated') === 'true'
         );
         if (isE2E) {
           useAuthStore.setState({ isAuthenticated: true });

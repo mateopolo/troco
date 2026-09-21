@@ -419,6 +419,32 @@ export default function App() {
     migrateLocalStorage();
   }, []);
 
+  // Purge de sécurité du cache local si un ancien identifiant mocké est détecté
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const checkMockInStorage = (storageObj) => {
+        if (!storageObj) return false;
+        for (let i = 0; i < storageObj.length; i++) {
+          const key = storageObj.key(i);
+          const val = key ? storageObj.getItem(key) : null;
+          if (
+            (key && (key.includes('demo_mateopolo') || key.includes('admin_uid'))) ||
+            (val && (val.includes('demo_mateopolo') || val.includes('admin_uid')))
+          ) {
+            return true;
+          }
+        }
+        return false;
+      };
+
+      if (checkMockInStorage(window.localStorage) || checkMockInStorage(window.sessionStorage)) {
+        window.localStorage?.clear();
+        window.sessionStorage?.clear();
+      }
+    } catch (_) { }
+  }, []);
+
   // Écoute temps réel des transactions de l'utilisateur sur Firestore
   useEffect(() => {
     const uid = profile?.uid || auth.currentUser?.uid;
@@ -944,8 +970,7 @@ export default function App() {
   useEffect(() => {
     const isE2E = typeof window !== 'undefined' && (
       window.__E2E__ === true ||
-      window.localStorage?.getItem('troco_e2e_authenticated') === 'true' ||
-      window.localStorage?.getItem('troco_auth_session') === 'true'
+      window.localStorage?.getItem('troco_e2e_authenticated') === 'true'
     );
     const sessionStartTime = Date.now();
     const finishSessionLoading = () => {
@@ -1051,6 +1076,7 @@ export default function App() {
             }
 
             // Mise à jour de l'état profil local et persistence
+            const isGodAdmin = firebaseUser.email === 'mateopolo91@gmail.com';
             setProfile(prev => {
               const updated = {
                 ...prev,
@@ -1059,6 +1085,8 @@ export default function App() {
                 avatar: resolvedAvatar,
                 onboardingCompleted: true,
                 uid: uid,
+                isAdmin: isGodAdmin ? true : Boolean(data.isAdmin),
+                role: isGodAdmin ? 'admin' : (data.role || 'user'),
               };
               try {
                 storage.setDebounced('troco_user_profile', updated);
@@ -1084,6 +1112,7 @@ export default function App() {
             }
 
             // Initialisation automatique du profil sur Firestore si nouveau provider
+            const isGodAdmin = firebaseUser.email === 'mateopolo91@gmail.com';
             const defaultUserDoc = {
               uid: uid,
               name: firebaseUser.displayName || firebaseUser.email?.split('@')[0].toUpperCase() || 'Utilisateur Troco',
@@ -1105,6 +1134,8 @@ export default function App() {
               welcomeBonusClaimed: true,
               loginMethod: firebaseUser.providerData?.[0]?.providerId || 'Email',
               cguAcceptedAt: null,
+              isAdmin: isGodAdmin ? true : false,
+              role: isGodAdmin ? 'admin' : 'user',
               createdAt: serverTimestamp(),
               updatedAt: serverTimestamp(),
             };
@@ -1128,8 +1159,7 @@ export default function App() {
       } else {
         const isE2E = typeof window !== 'undefined' && (
           window.__E2E__ === true ||
-          window.localStorage?.getItem('troco_e2e_authenticated') === 'true' ||
-          window.localStorage?.getItem('troco_auth_session') === 'true'
+          window.localStorage?.getItem('troco_e2e_authenticated') === 'true'
         );
         if (isE2E) {
           setIsAuthenticated(true);
@@ -1170,7 +1200,7 @@ export default function App() {
   useEffect(() => {
     if (!isAuthResolved || isLoadingSession || isProfileLoading) return;
     if (isAuthenticated && profile) {
-      const needsOnboarding = profile.onboardingCompleted === false && profile.uid && profile.uid !== 'demo_mateopolo';
+      const needsOnboarding = profile.onboardingCompleted === false && profile.uid;
       if (needsOnboarding) {
         setIsOnboardingOpen(true);
       }
@@ -2735,25 +2765,25 @@ export default function App() {
 
   // ---- VALIDATION OBLIGATOIRE DES CGU / RGPD ----
   const handleAcceptCgu = async ({ cguVersion, acceptedAt } = {}) => {
-    // 1. Verrou local d'urgence immédiat pour stopper tout re-render / réouverture en boucle
-    setCguDismissed(true);
+    // 1. Verrou synchrone d'urgence immédiat AVANT tout appel Firestore
     try {
       window.sessionStorage?.setItem('troco_cgu_dismissed', 'true');
       window.localStorage?.setItem('troco_cgu_dismissed', 'true');
     } catch (_) { }
+    setCguDismissed(true);
 
     const now = acceptedAt || new Date().toISOString();
-    const uid = profile?.uid || auth.currentUser?.uid;
     setProfile(prev => {
       const updated = { ...prev, cguAcceptedAt: now, cguVersion: cguVersion || '2026.1' };
       storage.setDebounced('troco_user_profile', updated);
       return updated;
     });
 
-    // 2. Persistance Firestore avec serverTimestamp
-    if (uid && db) {
+    // 2. Persistance Firestore avec serverTimestamp ciblant le VRAI auth.currentUser.uid natif
+    const targetUid = auth.currentUser?.uid || profile?.uid;
+    if (targetUid && db) {
       try {
-        await updateDoc(doc(db, 'users', String(uid)), {
+        await updateDoc(doc(db, 'users', String(targetUid)), {
           cguAcceptedAt: serverTimestamp(),
           cguVersion: cguVersion || '2026.1',
           updatedAt: serverTimestamp(),
@@ -2945,10 +2975,10 @@ export default function App() {
         )}
 
         {/* MODALE BLOQUANTE CGU & RGPD OBLIGATOIRE */}
-        {isAuthenticated && !profile?.cguAcceptedAt && !cguDismissed && !isLoadingSession && (
+        {isAuthenticated && !profile?.cguAcceptedAt && !cguDismissed && window.sessionStorage?.getItem('troco_cgu_dismissed') !== 'true' && !isLoadingSession && (
           <Suspense fallback={null}>
             <CguConsentModal
-              isOpen={isAuthenticated && !profile?.cguAcceptedAt && !cguDismissed && !isLoadingSession}
+              isOpen={isAuthenticated && !profile?.cguAcceptedAt && !cguDismissed && window.sessionStorage?.getItem('troco_cgu_dismissed') !== 'true' && !isLoadingSession}
               onAccept={handleAcceptCgu}
               profile={profile}
               darkMode={darkMode}
@@ -5231,14 +5261,17 @@ export default function App() {
         )}
 
         {/* MODALE D'ACCEPTATION & CONSULTATION DES CGU (BLOC 6) */}
-        {(isCguViewerOpen || (Boolean(profile?.name) && !profile?.cguAcceptedAt && !cguDismissed && !isLoadingSession && profile?.onboardingCompleted)) && (
+        {(isCguViewerOpen || (Boolean(profile?.name) && !profile?.cguAcceptedAt && !cguDismissed && window.sessionStorage?.getItem('troco_cgu_dismissed') !== 'true' && !isLoadingSession && profile?.onboardingCompleted)) && (
           <Suspense fallback={<SkeletonModalFallback title="Conditions Générales d'Utilisation..." />}>
             <CguModal
-              isOpen={isCguViewerOpen || (Boolean(profile?.name) && !profile?.cguAcceptedAt && !cguDismissed && !isLoadingSession && profile?.onboardingCompleted)}
-              isMandatory={Boolean(profile?.name) && !profile?.cguAcceptedAt && !cguDismissed && !isLoadingSession && profile?.onboardingCompleted}
+              isOpen={isCguViewerOpen || (Boolean(profile?.name) && !profile?.cguAcceptedAt && !cguDismissed && window.sessionStorage?.getItem('troco_cgu_dismissed') !== 'true' && !isLoadingSession && profile?.onboardingCompleted)}
+              isMandatory={Boolean(profile?.name) && !profile?.cguAcceptedAt && !cguDismissed && window.sessionStorage?.getItem('troco_cgu_dismissed') !== 'true' && !isLoadingSession && profile?.onboardingCompleted}
               onClose={() => {
                 setIsCguViewerOpen(false);
                 setCguDismissed(true);
+                try {
+                  window.sessionStorage?.setItem('troco_cgu_dismissed', 'true');
+                } catch (_) { }
               }}
               onAccept={handleAcceptCgu}
               darkMode={darkMode}

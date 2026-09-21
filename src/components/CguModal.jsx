@@ -20,10 +20,19 @@ export default function CguModal({
   const [activeTab, setActiveTab] = useState('summary'); // 'summary' | 'full'
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  if (!isOpen) return null;
+  const isSessionDismissed = typeof window !== 'undefined' && (
+    window.sessionStorage?.getItem('troco_cgu_dismissed') === 'true' ||
+    window.localStorage?.getItem('troco_cgu_dismissed') === 'true'
+  );
+
+  if (!isOpen || isSessionDismissed) return null;
 
   const handleConfirmAcceptance = async () => {
     if (!hasAgreedTerms || !hasAgreedPrivacy) return;
+    try {
+      window.sessionStorage?.setItem('troco_cgu_dismissed', 'true');
+      window.localStorage?.setItem('troco_cgu_dismissed', 'true');
+    } catch (_) {}
     setIsSubmitting(true);
     if (typeof onAccept === 'function') {
       try {

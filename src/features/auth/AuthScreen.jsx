@@ -350,81 +350,9 @@ export default function AuthScreen({
     }
   };
 
-  // ---- ACCÈS DÉMO RAPIDE (PERSISTANCE INTELLIGENTE PHASE 109) ----
-  const handleConfirmDemoAuth = async (method) => {
-    const pin = window.prompt('Entrez le code administrateur :');
-    if (pin !== '2609') {
-      alert('Accès refusé.');
-      return;
-    }
-
-    const demoUid = 'demo_mateopolo';
-    const loginMethodName = (typeof method === 'string' && method.trim()) ? method : 'Démo Rapide';
-    let baseDemoProfile = {
-      uid: demoUid,
-      name: 'MATEO POLO',
-      username: '@mateopolo',
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80',
-      bio: 'Créateur de contenus, développeur Python et passionné de musique. Je propose des services flexibles et des échanges de qualité.',
-      location: 'Paris, France',
-      languages: ['FR', 'EN', 'ES', 'IT'],
-      loginMethod: loginMethodName,
-      euroBalance: 128,
-      trocoTokens: 12,
-      isDemo: true,
-      dealsCompleted: 0,
-      dealsInProgress: 0,
-      rating: null,
-      reviewsCount: 0,
-      skills: ['Développement Web', 'Design UI/UX', 'Python', 'Montage Vidéo'],
-      equipment: ['MacBook Pro M3', 'Micro Shure SM7B', 'Caméra Sony A7IV'],
-      onboardingCompleted: true,
-      cguAcceptedAt: new Date().toISOString(),
-    };
-
-    let finalProfile = baseDemoProfile;
-
-    try {
-      if (db) {
-        // 🚨 PHASE 109 : INTERROGATION FIRESTORE AVANT HYDRATATION LOCALE
-        const userDoc = await getDoc(doc(db, 'users', demoUid));
-        const docExists = userDoc && (typeof userDoc.exists === 'function' ? userDoc.exists() : Boolean(userDoc.exists));
-        if (docExists) {
-          const remoteData = (typeof userDoc.data === 'function' ? userDoc.data() : userDoc.data) || {};
-          finalProfile = {
-            ...baseDemoProfile,
-            ...remoteData,
-            uid: demoUid,
-            isDemo: true,
-            loginMethod: loginMethodName,
-          };
-        } else {
-          // Initialisation initiale dans Firestore
-          await setDoc(doc(db, 'users', demoUid), baseDemoProfile, { merge: true });
-        }
-      }
-    } catch (err) {
-      logger.warn('Erreur de synchronisation Firestore profil démo:', err);
-    }
-
-    try {
-      window.localStorage.setItem('troco_user_profile', JSON.stringify(finalProfile));
-      setSessionAuthenticated();
-    } catch (e) {
-      logger.warn('Storage error on demo auth:', e);
-    }
-
-    setProfile(finalProfile);
-    if (setProfileDraft) setProfileDraft(finalProfile);
-
-    try {
-      const { setTrocoTokens, setEuroBalance } = useWalletStore.getState();
-      if (setTrocoTokens && finalProfile.trocoTokens !== undefined) setTrocoTokens(Number(finalProfile.trocoTokens));
-      if (setEuroBalance && finalProfile.euroBalance !== undefined) setEuroBalance(Number(finalProfile.euroBalance));
-    } catch (_) {}
-
-    setIsAuthenticated(true);
-    setAuthError('');
+  // ---- ACCÈS DÉMO RAPIDE (DÉSACTIVÉ POUR PRÉSERVER L'INTÉGRITÉ FIRESTORE & ÉVITER LE SPLIT-BRAIN) ----
+  const handleConfirmDemoAuth = () => {
+    alert("L'Accès Rapide démo avec faux identifiant a été désactivé pour garantir l'intégrité de vos permissions Firestore et de votre profil. Veuillez vous connecter avec votre adresse Gmail ou votre Email officiel.");
   };
 
   // ---- FORMULAIRE DE CRÉATION DE COMPTE ----

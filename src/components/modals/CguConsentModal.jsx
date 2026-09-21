@@ -8,7 +8,20 @@ export default function CguConsentModal({
   darkMode = false,
   t = (k) => k,
 }) {
-  if (!isOpen) return null;
+  const isSessionDismissed = typeof window !== 'undefined' && (
+    window.sessionStorage?.getItem('troco_cgu_dismissed') === 'true' ||
+    window.localStorage?.getItem('troco_cgu_dismissed') === 'true'
+  );
+
+  if (!isOpen || isSessionDismissed) return null;
+
+  const handleAcceptClick = (e) => {
+    try {
+      window.sessionStorage?.setItem('troco_cgu_dismissed', 'true');
+      window.localStorage?.setItem('troco_cgu_dismissed', 'true');
+    } catch (_) {}
+    onAccept?.(e);
+  };
 
   return (
     <div
@@ -86,7 +99,7 @@ export default function CguConsentModal({
         </div>
 
         <button
-          onClick={onAccept}
+          onClick={handleAcceptClick}
           className="premium-button"
           style={{
             width: '100%',
