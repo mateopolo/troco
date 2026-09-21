@@ -129,11 +129,7 @@ export const useAppAuth = () => {
               username: buildUsernameHandle(deriveDisplayName(user), user.email || ''),
               email: user.email || profile.email || '',
               avatar: user.photoURL || profile.avatar || '',
-              trocoTokens: profile.trocoTokens || 10,
-              euroBalance: profile.euroBalance || 0,
               socialLinks: profile.socialLinks || [],
-              kycVerified: false,
-              isBanned: false,
               createdAt: serverTimestamp(),
             };
             setDoc(userDocRef, initialData, { merge: true }).catch((e) =>

@@ -1493,3 +1493,471 @@ Troco est en **non-conformité depuis l'entrée en application de la directive**
 - [ ] **P1** Souscrire une **assurance cyber** dès l'activation du wallet réel
 - [ ] **P2** Évaluer un partenariat **Mangopay / Lemonway** pour le séquestre réel
 - [ ] **P2** Évaluer une **assurance P2P** intégrée (levier de différenciation)
+- [ ] **P2** Ouvrir un second compte bancaire de secours (procédure de continuité)
+- [ ] **P2** Établir un budget média de croissance (0 € en M0-M6, plafonné à 500 €/mois en M6-M12)
+- [ ] **P2** Créer une page « À propos » présentant l'équipe et l'histoire du projet
+- [ ] **P2** Créer une page « Nous rejoindre » avec les postes ouverts
+- [ ] **P2** Préparer un cap table initial (même mono-associé) avec un tableau de suivi des émissions
+- [ ] **P2** Rédiger les statuts de société avec un avocat (clauses de préemption, gouvernance, sortie)
+
+### Produit : roadmap 90 jours et corrections critiques
+
+- [ ] **P0** Corriger le bug P1-BUG-06 (destruction de solde à l'onboarding) — critique, touche l'argent
+- [ ] **P0** Corriger le badge KYC inversé de `PublicProfileModal.jsx:39` (`kycVerified ?? true` → `kycVerified === true`)
+- [ ] **P0** Retirer `user-scalable=no` et `maximum-scale=1.0` de `public/index.html:5`
+- [ ] **P0** Retirer toute UI de paiement fictive (Apple Pay / Visa simulés)
+- [ ] **P0** Harmoniser le prix du boost (1,99 € ou 2,99 € — pas les deux)
+- [ ] **P0** Retirer la valeur factice `compte@troco.fr` de `TransactionsHistoryModal.jsx:223`
+- [ ] **P1** Remplacer les `window.prompt` / `alert` / `confirm` natifs par les modales maison
+- [ ] **P1** Corriger le stale geolocation dans `filteredListings` (deps `userCoords` manquantes)
+- [ ] **P1** Persister la pause d'annonce (`handleTogglePauseListing` sans `updateDoc`)
+- [ ] **P1** Corriger la célébration double (deux sources dans `App.js`)
+- [ ] **P1** Unifier les 2 flux de boost parallèles
+- [ ] **P1** Retirer la persistance du feed dans `localStorage` (`troco_user_listings`)
+- [ ] **P1** Remplacer `window.prompt` magic link par un `PromptDialog`
+- [ ] **P1** Implémenter l'export de portabilité RGPD en self-service
+- [ ] **P1** Brancher les notifications push web (Firebase Cloud Messaging)
+- [ ] **P1** Publier un centre d'aide de 30 articles (10 questions × 7 langues)
+- [ ] **P2** Découper `App.js` en routes + hooks (avec précaution — voir Section 5)
+- [ ] **P2** Migrer le feed vers `useDeferredValue` + `React.memo` sur les composants lourds
+- [ ] **P2** Publier 5-10 pages SEO pilier (mots-clés transactionnels)
+- [ ] **P2** Réaliser un audit de contraste sur les deux thèmes (clair / sombre)
+- [ ] **P2** Intégrer `axe-core` dans les tests Vitest pour bloquer les régressions a11y
+
+### Légal : validation, médiation, mentions
+
+- [ ] **P0** Faire valider CGU + CGV + politique de confidentialité + politique de remboursement + mentions légales par un avocat (forfait)
+- [ ] **P0** Désigner un médiateur de la consommation (CMAP, CM2C, AFNOR Médiation)
+- [ ] **P0** Publier les coordonnées du médiateur dans les CGU, la politique de remboursement et les mentions légales
+- [ ] **P1** Ajouter la clause « hors plateforme » aux CGU (aucune protection en cas de paiement extérieur)
+- [ ] **P1** Ajouter la clause de disponibilité (SLA) et la clause de limitation de responsabilité
+- [ ] **P1** Versionner les CGU (numéro + date + historique) et stocker la version acceptée par utilisateur
+- [ ] **P1** Ajouter les mentions obligatoires dans les factures (numérotation séquentielle, TVA, SIREN)
+- [ ] **P1** Rédiger la politique de gestion des données de candidats (2 ans max)
+- [ ] **P1** Publier le plan de réponse aux incidents RGPD (72 h CNIL)
+- [ ] **P1** Rédiger les 3 modèles de communication de crise (fuite d'identifiants, fuite financière, compromission de compte)
+- [ ] **P2** Traduire les documents juridiques en 7 langues par un juriste-linguiste
+- [ ] **P2** Publier une déclaration d'accessibilité (European Accessibility Act)
+- [ ] **P2** Anticiper la facturation électronique France 2026 (Factur-X)
+
+### Finance : comptabilité, TVA, facturation
+
+- [ ] **P0** Choisir un expert-comptable inscrit à l'Ordre (en ligne : 300-800 €/mois en TNS, 1 500-3 000 €/mois en SAS)
+- [ ] **P0** Ouvrir la comptabilité de la société (exercice, plan comptable, logiciel)
+- [ ] **P0** Déterminer le régime de TVA avec l'expert-comptable
+- [ ] **P1** Implémenter la génération automatique de factures PDF depuis `transactions/{txId}`
+- [ ] **P1** Implémenter la numérotation séquentielle des factures
+- [ ] **P1** Calculer et afficher la TVA correctement (B2C, B2B autoliquidée, exonération micro)
+- [ ] **P1** Mettre en place la réconciliation Stripe ↔ comptabilité
+- [ ] **P1** Déployer le module DAC7 (collecte NIF + date de naissance + adresse vendeur)
+- [ ] **P1** Vérifier les NIF via VIES pour les professionnels
+- [ ] **P2** Établir un budget prévisionnel 12 mois (3 scénarios)
+- [ ] **P2** Calculer le coût d'infrastructure par utilisateur (Firestore, Storage, Functions, Sentry)
+- [ ] **P2** Mettre en place un contrôle de gestion mensuel (revue P&L avec l'expert-comptable)
+
+### Communication : kit média, réseaux sociaux, page presse
+
+- [ ] **P1** Créer une page « Presse » publique (kit média téléchargeable)
+- [ ] **P1** Préparer le kit média : logos SVG/PNG, palette, bios fondateur (2 longueurs), captures, chiffres clés
+- [ ] **P1** Créer des comptes sociaux professionnels (LinkedIn entreprise, X/Twitter, Instagram, Discord communautaire)
+- [ ] **P1** Rédiger un communiqué de lancement (interne, à publier au bon moment)
+- [ ] **P2** Créer un blog ou une section « Actualités » sur le site
+- [ ] **P2** Préparer une FAQ presse (5-10 questions/réponses)
+- [ ] **P2** Établir une liste de 20 journalistes/bloggers spécialisés (consommation collaborative, fintech, écologie)
+- [ ] **P2** Préparer un calendrier éditorial mensuel (1 article + 4 posts sociaux)
+
+═══════════════════════════════════════════════════════════════
+SECTION 5 — PLAN D'EXÉCUTION SUR 90 JOURS
+═══════════════════════════════════════════════════════════════
+
+> Cette section comble trois angles morts volontairement laissés ouverts dans les Sections 1-4 : (1) dans quel ORDRE technique corriger le code sans casser ce qui fonctionne, (2) comment tester et mesurer la qualité, (3) quel brief donner au CTO freelance pour ses 90 premiers jours.
+
+### 5.1 — Plan de migration technique (ordre strict, anti-régression)
+
+Les Batchs 1 et 2 ont montré qu'un refactor massif en une seule vague **casse tout**. La règle est désormais : **1 correction = 1 fichier = 1 commit = 1 test manuel**.
+
+**Semaine 1 — Corrections P0 isolées (aucun impact croisé)**
+| Jour | Action | Fichier | Test |
+|---|---|---|---|
+| J1 | Corriger le badge KYC inversé | `PublicProfileModal.jsx:39` | Créer un compte → badge PAS affiché sans KYC |
+| J1 | Retirer `user-scalable=no` | `public/index.html:5` | Test mobile : zoom fonctionne |
+| J2 | Corriger le PIN en dur `2609` | `AdminPanel.jsx:46` | Tester : PIN retiré → Custom Claims utilisés |
+| J2 | Retirer `compte@troco.fr` | `TransactionsHistoryModal.jsx:223` | Historique → pas d'adresse factice |
+| J3 | Harmoniser prix boost | `src/App.js:2680` | Booster → montant unique |
+| J3 | Retirer UI Apple Pay/Visa fictifs | `CheckoutModal.jsx` | Checkout → pas de fausse UI |
+| J4 | Corriger P1-BUG-06 (solde onboarding) | `useAppAuth.js` | Créer compte avec solde → solde préservé |
+| J4 | Corriger stale geolocation | `src/App.js` (deps `filteredListings`) | Géolocaliser → distances recalculées |
+| J5 | Persister pause annonce | `src/App.js` | Pause → reload → reste pausé |
+
+**Semaine 2 — Suppression de l'admin Gmail + CORS**
+| Jour | Action | Test |
+|---|---|---|
+| J1-J3 | Remplacer les 8 occurrences de `mateopolo91@gmail.com` par Custom Claims | Admin voit le panneau ; autre user ne le voit pas |
+| J4 | Restreindre le `cors: true` des 17 Cloud Functions | Appel depuis domaine légitime OK ; depuis domaine externe refusé |
+| J5 | Activer App Check en mode enforcing | Bot refusé ; app fonctionne |
+
+**Semaine 3 — Corrections UI/UX isolées**
+| Jour | Action | Test |
+|---|---|---|
+| J1 | Remplacer `window.prompt` magic link | Dialog premium affiché |
+| J2 | Corriger la célébration double | Recevoir 5 jetons → 1 son + 1 toast |
+| J3 | Unifier les 2 flux boost | Booster → flux unique |
+| J4 | Retirer persistance feed localStorage | Feed fonctionne, quota localStorage OK |
+| J5 | Corriger le stale geolocation restant | Filtres distance corrects |
+
+**Semaine 4-6 — Chantiers modérés (isolation stricte)**
+| Semaine | Chantier | Garde-fou |
+|---|---|---|
+| S4 | Brancher Stripe Connect (paiement réel) | Feature flag `STRIPE_ENABLED` — rollback 1 clic |
+| S4 | Brancher KYC réel (Stripe Identity) | Feature flag `KYC_REAL_ENABLED` — les 2 flux coexistent |
+| S5 | Implémenter DAC7 (collecte NIF) | Nouveaux champs Firestore, aucune migration destructive |
+| S5 | Publier le plan de réponse incidents | Documentation pure, aucun code |
+| S6 | Notification push web (FCM) | Opt-in utilisateur, aucun push automatique |
+
+**Semaine 7-10 — Refactors progressifs (UN fichier à la fois)**
+| Semaine | Chantier | Garde-fou |
+|---|---|---|
+| S7 | Extraire `useListingsFeed` de `App.js` | Tests E2E passent, comportement identique |
+| S8 | Extraire `useCheckout` de `App.js` | Tests E2E passent, comportement identique |
+| S9 | Extraire `useTransactionNotifications` | Tests E2E passent |
+| S10 | Extraire `useUserBanGuard` + `useAdminGuard` | Tests E2E passent |
+
+**Semaine 11-13 — Découpage final + polissage**
+| Semaine | Chantier |
+|---|---|
+| S11 | Découper `App.js` en routes (`FeedRoute`, `ChatRoute`, `ProfileRoute`...) |
+| S12 | Migrer le feed vers `useDeferredValue` + `React.memo` |
+| S13 | Audit a11y + corrections contraste + axe-core en CI |
+
+**Règle d'or : jamais deux chantiers en parallèle. Jamais un refactor sur un module dont le test E2E n'existe pas encore.**
+
+### 5.2 — Stratégie de tests (état actuel → standard fintech)
+
+**État actuel :**
+- Tests unitaires : ~15 fichiers `*.test.js` (Vitest) — **couverture non mesurée**
+- Tests E2E : 3-4 specs Playwright (parcours critiques, chat, WebRTC)
+- Tests Firestore Rules : `tests/rules/firestore.rules.test.js` — **excellent**
+- Tests Cloud Functions : `functions/test/` (admin, gdpr, payments, onUserWriteSyncPublic)
+- CI : `.github/workflows/ci.yml`
+
+**Objectifs de couverture par zone (fintech-grade) :**
+
+| Zone | Couverture actuelle | Cible M3 | Cible M12 |
+|---|---|---|---|
+| `functions/src/payments/` (argent) | ~50 % estimé | **100 %** | 100 % |
+| `functions/src/gdpr/` (données perso) | ~60 % | **100 %** | 100 % |
+| `functions/src/admin/` (privilèges) | ~40 % | 90 % | 100 % |
+| `src/hooks/` (logique métier) | ~20 % | 60 % | 80 % |
+| `src/services/` (API) | ~30 % | 70 % | 90 % |
+| `src/components/` (UI) | ~5 % | 30 % | 60 % |
+| Firestore Rules | 100 % (déjà bon) | 100 % | 100 % |
+
+**Actions par semaine :**
+
+- **S1** : Activer la mesure de couverture dans `vitest.config.mjs` + publication dans le CI
+- **S2** : Écrire les tests manquants sur `transferAtomically` et `applyPayment` (100 % obligatoire)
+- **S3** : Écrire les tests manquants sur `deleteUserCompletely` et `anonymizeTransactions` (100 %)
+- **S4** : Ajouter 5 tests E2E : achat jetons, ouverture litige, suppression compte, appel 3 participants, collaboration simultanée
+- **S6** : Configurer **Codecov** ou équivalent (rapport de couverture commenté sur chaque PR)
+- **S8** : Ajouter des budgets de performance (LCP < 2,5 s, INP < 200 ms, CLS < 0,1) bloquants en CI
+- **M3** : Premier test de charge (1 000 utilisateurs simultanés, 100 transferts/minute)
+
+**Règle absolue :** aucune nouvelle fonctionnalité financière tant que la couverture de `functions/src/payments/` n'est pas à 100 %.
+
+### 5.3 — Brief pour le CTO / Lead Developer freelance (90 premiers jours)
+
+**Profil recherché :**
+- 7+ ans d'expérience, spécialiste React + Firebase + TypeScript
+- A déjà opéré une plateforme à utilisateurs réels (pas uniquement du prototype)
+- Sensibilité fintech (comprend l'importance des transactions atomiques, de l'idempotence, des tests)
+- Français courant (le reste du code est en français)
+
+**Modalité :** freelance 3 jours/semaine, 3 500 à 6 000 €/mois chargé, renouvelable, avec conversion en CDI envisageable à M9-M12.
+
+**Mission 90 jours — 5 livrables mesurables :**
+
+**Livrable 1 — Sécurisation (Mois 1)**
+- Suppression des 8 occurrences de `mateopolo91@gmail.com`
+- Restriction du CORS des Cloud Functions aux origines légitimes
+- Correction du PIN en dur `2609`
+- Activation App Check enforcing
+- Audit de sécurité complet du code (rapport écrit de 10 pages maximum)
+- **Critère de succès :** aucun vecteur d'élévation de privilèges côté client.
+
+**Livrable 2 — Intégration PSP (Mois 2)**
+- Branchement de Stripe Connect en production (comptes connectés, escrow, payouts)
+- Webhook Stripe → Cloud Functions (événements paiement, chargeback, payout)
+- Retrait complet des UI de paiement fictives
+- Tests E2E sur les parcours de paiement réels
+- **Critère de succès :** un utilisateur peut réellement payer un boost et le vendeur reçoit le payout.
+
+**Livrable 3 — Qualité et tests (Mois 2-3)**
+- Couverture 100 % sur `functions/src/payments/` et `functions/src/gdpr/`
+- Ajout de 5 tests E2E sur les parcours manquants
+- Configuration de Codecov dans la CI
+- Budgets de performance bloquants
+- **Critère de succès :** un dev peut refactorer sans crainte, le CI bloque toute régression.
+
+**Livrable 4 — Refactor progressif (Mois 3)**
+- Extraction de 2 hooks depuis `App.js` (`useListingsFeed`, `useCheckout`)
+- Chaque extraction livrée séparément avec test E2E de non-régression
+- **Critère de succès :** `App.js` perd au moins 500 lignes sans casser aucune fonctionnalité.
+
+**Livrable 5 — Documentation technique (Mois 3)**
+- Mise à jour de `CODEBASE-BIBLE.md` avec les nouvelles décisions
+- ADR (Architecture Decision Records) pour les 5 décisions majeures du trimestre
+- Runbook d'incident technique (à fusionner avec le plan RGPD)
+- **Critère de succès :** un nouveau dev peut comprendre l'architecture en 1 jour.
+
+**Ce que le CTO NE DOIT PAS faire dans les 90 jours :**
+- Ne PAS toucher à `useChatManager.js`, `useWebRTC.js`, `ChatView.jsx` (zones rouges)
+- Ne PAS introduire de nouveaux frameworks ou de réécriture massive
+- Ne PAS refactorer plus de 2 modules en parallèle
+- Ne PAS modifier les Firestore Rules sans test unitaire préalable
+
+**Critères de fin de mission (à 90 jours) :**
+- Le fondateur peut partir en vacances 1 semaine sans que la plateforme casse
+- Les paiements réels fonctionnent
+- La couverture des zones critiques est à 100 %
+- Le rapport de sécurité ne contient plus de P0 ouvert
+
+═══════════════════════════════════════════════════════════════
+SECTION 6 — ANNEXES (modèles réutilisables)
+═══════════════════════════════════════════════════════════════
+
+### Annexe A — Modèle de registre des traitements RGPD
+
+À conserver dans un fichier `docs/REGISTRE-TRAITEMENTS.md`. Format recommandé par la CNIL (art. 30 RGPD).
+
+```markdown
+# Registre des traitements — Troco
+
+| # | Traitement | Finalité | Base légale | Personnes concernées | Catégories de données | Destinataires | Durée de conservation | Mesures de sécurité |
+|---|---|---|---|---|---|---|---|---|
+| 1 | Gestion des comptes utilisateurs | Fournir le service, authentifier | Contrat (art. 6-1-b) | Tous les utilisateurs | Identité, email, mot de passe hashé, avatar, bio, préférences | Firebase Auth, Firebase Firestore (UE) | Vie du compte + 3 mois | Hash bcrypt, MFA, Firestore Rules |
+| 2 | Annonces et marketplace | Mettre en relation vendeurs et acheteurs | Contrat | Utilisateurs actifs | Annonces, photos, catégories, prix, coordonnées | Firestore (UE) | Vie de l'annonce + 1 an | Firestore Rules |
+| 3 | Messagerie | Permettre la communication entre membres | Contrat | Utilisateurs en conversation | Contenu des messages, pièces jointes, timestamps | Firestore (UE) | 3 ans après le dernier message | Chiffrement en transit (TLS) |
+| 4 | Wallet et transactions | Permettre les échanges monétaires | Contrat + obligation légale (comptable) | Utilisateurs avec solde | Identité, IBAN, historique transactions, KYC | Stripe, Firestore (UE) | 10 ans (obligation comptable) | Stripe hosted, anonymisation à la suppression |
+| 5 | KYC / AML | Obligation légale (LCB-FT) | Obligation légale (art. 6-1-c) | Vendeurs, utilisateurs à seuil | Pièce d'identité, selfie, justificatif domicile | Stripe Identity (UE) | 5 ans après la fin de la relation | Chiffrement, accès restreint, logs d'audit |
+| 6 | Géolocalisation | Afficher les annonces proches | Consentement (art. 6-1-a) | Utilisateurs ayant accepté | Position GPS floutée à 2 décimales | Firestore (UE) | Session uniquement | Fuzzing, aucune position exacte stockée |
+| 7 | Cookies et traceurs | Mesurer l'audience, améliorer le produit | Consentement | Visiteurs du site | Identifiants cookies, pages vues, device | Google Analytics (UE/US avec DPA) | 13 mois max | Opt-in, purge au refus |
+| 8 | Support client | Traiter les demandes | Contrat | Utilisateurs ayant contacté | Email, contenu du ticket, historique | Ticketing (UE) | 3 ans | Accès restreint, journalisation |
+| 9 | Modération / Trust & Safety | Assurer la sécurité, DSA | Intérêt légitime + obligation légale | Utilisateurs signalés | Signalements, contenu incriminé, décisions | Firestore (UE) | 5 ans | Accès restreint, journalisation |
+| 10 | Newsletter / marketing | Communiquer sur le produit | Consentement | Inscrits | Email, préférences | Fournisseur email (UE) | Jusqu'au désabonnement | Opt-in, lien de désabonnement dans chaque envoi |
+| 11 | Recrutement | Traiter les candidatures | Intérêt légitime | Candidats | CV, lettre, entretien | ATS (UE) | 2 ans max | Accès RH uniquement |
+| 12 | Logs techniques et sécurité | Détecter les incidents, sécurité | Intérêt légitime | Tous les utilisateurs | IP, user-agent, actions sensibles | Cloud Logging (UE) | 12 mois (usage) / 5 ans (finance) | Accès restreint, chiffrement |
+
+## Sous-traitants (art. 28 RGPD)
+
+| Sous-traitant | Service | Localisation | DPA signé ? |
+|---|---|---|---|
+| Google (Firebase / GCP) | Auth, Firestore, Storage, Functions, Logging | UE (europe-west1) | À vérifier |
+| Sentry | Monitoring erreurs | UE (option) ou US | À signer |
+| Stripe | Paiement + KYC | UE | À signer |
+| Nominatim / OpenStreetMap | Géocodage | UE | Conditions d'usage à respecter |
+| [Fournisseur ticketing] | Support client | UE | À signer |
+| [Fournisseur email] | Transactionnel + marketing | UE | À signer |
+Annexe B — Modèle de plan de réponse aux incidents RGPD
+À conserver dans docs/INCIDENT-RESPONSE.md.
+
+markdown
+# Plan de réponse aux incidents — Troco
+
+## 1. Canal de déclenchement
+- Alerte Sentry (severity: error)
+- Alerte uptime (health check KO > 2 min)
+- Alerte budget GCP (dépassement 150 %)
+- Signalement externe (security@, client, partenaire)
+
+## 2. Matrice de gravité
+
+| Niveau | Critère | Exemple | Délai réponse | Notification CNIL |
+|---|---|---|---|---|
+| P1 Critique | Données personnelles compromises OU service totalement indisponible OU fonds perdus | Fuite de la base users | < 1 h | OBLIGATOIRE < 72 h |
+| P2 Majeur | Service dégradé > 4 h OU perte de données limitée | Paiements KO 6 h | < 4 h | Selon analyse |
+| P3 Mineur | Service dégradé < 4 h OU bug isolé | Feed lent 1 h | < 24 h | Non |
+| P4 Cosmétique | Bug visuel, UX | Bouton mal aligné | < 1 semaine | Non |
+
+## 3. Procédure P1 (6 phases)
+
+### Phase 1 — Détection (immédiat)
+- Sentry / Cloud Monitoring déclenche l'alerte
+- Push immédiat vers `devops@troco.fr` + fondateur
+- Création d'un canal dédié (Slack #incident-YYYYMMDD-HHMM)
+
+### Phase 2 — Qualification (< 1 h)
+- Type de violation : confidentialité / intégrité / disponibilité ?
+- Nombre de personnes concernées ?
+- Données sensibles touchées ? (identité, finance, santé, données enfants)
+- **Décision : l'incident est-il notifiable à la CNIL ?**
+
+### Phase 3 — Contention (< 4 h)
+- Révoquer les accès compromis (tokens Firebase, sessions admin)
+- Invalider les secrets (`firebase functions:secrets:set`)
+- Couper la fonctionnalité concernée si nécessaire
+- **Sauvegarder les preuves** (logs, snapshots, captures) AVANT remédiation
+
+### Phase 4 — Notification CNIL (< 72 h, obligation légale art. 33)
+- Notification en ligne sur le site de la CNIL
+- Contenu : nature, catégories et nombre de personnes, conséquences probables, mesures prises
+- **Si l'analyse n'est pas terminée à 72 h, notifier quand même et compléter ensuite**
+- Conserver une copie de la notification
+
+### Phase 5 — Information des personnes (sans délai injustifié, art. 34)
+Si risque élevé :
+- Email clair, sans jargon
+- Description de l'incident
+- Ce que Troco fait
+- Ce que l'utilisateur doit faire (changer de mot de passe, surveiller ses comptes, contacter sa banque)
+- Contacts utiles
+
+### Phase 6 — Post-mortem (< 15 jours)
+- Chronologie détaillée
+- Cause racine
+- Mesures correctives immédiates
+- Mesures de prévention à moyen terme
+- Responsables et échéances
+- Format : `docs/INCIDENT-POST-MORTEM-YYYYMMDD.md`
+
+## 4. Registre des violations (obligation art. 33-5)
+Même les incidents non notifiables doivent être consignés : date, nature, gravité, personnes concernées, mesures prises, décision de notification (oui/non + justification).
+
+## 5. Contacts d'urgence
+| Rôle | Contact |
+|---|---|
+| CNIL (notification en ligne) | https://notifications.cnil.fr |
+| CNIL (standard) | 01 53 73 22 22 |
+| Avocat | [à compléter] |
+| Assureur cyber | [à compléter] |
+| DPO | dpo@troco.fr |
+| Google Cloud Support | console.cloud.google.com |
+| Stripe Support | dashboard.stripe.com |
+
+## 6. Modèles de communication pré-validés
+À préparer à l'avance et faire valider par l'avocat :
+- **Modèle 1** : fuite d'identifiants (email + mot de passe)
+- **Modèle 2** : fuite de données financières
+- **Modèle 3** : compromission de compte utilisateur
+Annexe C — Matrice de routage email (résumé opérationnel)
+Mots-clés dans l'objet	Routage	SLA	Action automatique
+rgpd, données personnelles, droit d'accès, effacement, portabilité	privacy@ → dpo@	72 h / 30 j	Créer fiche dsr_requests + accusé légal
+contenu illicite, insulte, harcèlement, signaler	abuse@	24 h / 72 h	Créer dossier modération + catégorie obligatoire
+escroquerie, arnaque, fraude, hors plateforme	fraud@ (copie abuse@)	12 h / 24 h	Geler les retraits du compte en attente
+litige, deal bloqué, séquestre, non conforme	litiges@	24 h / 5 j	Ouvrir disputes/{id}
+rétractation, remboursement, facture, TVA	billing@	24 h / 5 j	Démarrer le compteur de 14 jours
+kyc, identité, vérification refusée	kyc@	24 h / 72 h	Relancer prestataire KYC
+faille, vulnérabilité, sécurité, piratage	security@	24 h / 7 j	Alerte push immédiate + dossier confidentiel
+mise en demeure, réquisition, huissier, autorité, CNIL	legal@	24 h / 48 h	Alerte multi-canal + archivage immuable
+investisseur, levée, board	ceo@	5 j	Notification directe fondateur
+partenariat, API, intégration	partners@	48 h / 7 j	Envoi formulaire de qualification
+presse, interview, article, média	press@	24 h / 3 j	Envoi automatique du kit média
+candidature, CV, stage, freelance	careers@	immédiat / 7 j	Accusé instantané + dépôt ATS
+alerte, incident, downtime, billing GCP	devops@	temps réel	Push vers canal d'astreinte
+Aucune correspondance	contact@	48 h	Aiguillage manuel assisté
+Annexe D — Modèles de réponse support (10 questions les plus fréquentes)
+Modèle 1 — Problème de connexion
+
+Bonjour [Prénom],
+Merci de nous avoir contactés. Pour vous reconnecter à Troco :
+
+Sur la page de connexion, cliquez sur « Mot de passe oublié ».
+
+Saisissez votre adresse email. Un lien de réinitialisation vous sera envoyé sous 2 minutes.
+
+Vérifiez vos spams si vous ne le recevez pas.
+Si le problème persiste après cette manipulation, répondez à cet email en précisant votre adresse et le message d'erreur affiché.
+Bien à vous,
+L'équipe Troco
+
+Modèle 2 — Jetons non reçus après paiement
+
+Bonjour [Prénom],
+Nous avons bien reçu votre demande. Nos serveurs confirment que votre paiement est en cours de traitement. Les jetons seront crédités sur votre compte sous 5 minutes.
+Si vous ne les voyez pas apparaître après ce délai, répondez à cet email avec votre référence de transaction (visible dans votre historique) et nous régulariserons immédiatement.
+Bien à vous,
+L'équipe Troco
+
+Modèle 3 — Suppression de compte (RGPD)
+
+Bonjour [Prénom],
+Nous confirmons la réception de votre demande de suppression de compte.
+Conformément au RGPD, votre compte sera marqué pour suppression et effectivement supprimé après un délai de rétractation de 30 jours. Vous pouvez annuler cette demande à tout moment pendant cette période en cliquant sur le lien présent dans l'email de confirmation.
+Vos transactions seront anonymisées pour respecter nos obligations comptables (conservation 10 ans), mais vos données personnelles (email, téléphone, photo, bio) seront définitivement effacées.
+Délai légal de traitement : 30 jours maximum.
+Bien à vous,
+L'équipe Troco
+
+Modèle 4 — Signalement de contenu illicite (DSA)
+
+Bonjour [Prénom],
+Nous avons bien reçu votre signalement du [date] concernant : [objet]. Il a été enregistré sous la référence #[ticket].
+Conformément au DSA, nous traiterons votre signalement sous 72 heures. Vous recevrez une décision motivée à l'issue de l'examen.
+Si vous constatez un contenu à caractère urgent (menace pour une personne, contenu pédocriminel), contactez immédiatement les autorités (Pharos : 0 800 00 56 96).
+Bien à vous,
+L'équipe Troco
+
+Modèle 5 — Litige avec un autre membre
+
+Bonjour [Prénom],
+Nous avons bien reçu votre signalement de litige concernant la transaction #[référence]. Un médiateur Troco va examiner votre dossier.
+Nous avons contacté l'autre partie et vous tiendrons informé de l'avancement sous 5 jours ouvrés.
+Si vous ne trouvez pas d'accord amiable, vous pouvez saisir notre médiateur de la consommation : [coordonnées à compléter].
+Bien à vous,
+L'équipe Troco
+
+Modèle 6 — Problème d'appel vidéo
+
+Bonjour [Prénom],
+Merci de nous avoir signalé ce problème. Voici quelques vérifications rapides :
+
+Autorisez-vous bien l'accès au micro et à la caméra dans votre navigateur ? (icône cadenas dans la barre d'adresse)
+
+Votre navigateur est-il à jour ? (Chrome, Safari, Firefox récents)
+
+Testez-vous sur Wi-Fi ou en 4G ? (Wi-Fi recommandé)
+Si le problème persiste, répondez à cet email avec le navigateur utilisé et le message d'erreur exact.
+Bien à vous,
+L'équipe Troco
+
+Modèle 7 — Demande de facture
+
+Bonjour [Prénom],
+Votre facture est disponible dans votre espace personnel, rubrique « Historique des transactions ». Vous pouvez la télécharger au format PDF.
+Si vous avez besoin d'une facture libellée au nom de votre entreprise avec mention de TVA, répondez à cet email avec votre numéro de SIREN et votre numéro de TVA intracommunautaire.
+Bien à vous,
+L'équipe Troco
+
+Modèle 8 — Refus de KYC
+
+Bonjour [Prénom],
+Votre vérification d'identité n'a pas pu être validée automatiquement. Cela peut être dû à :
+
+Une photo de document peu lisible ou coupée
+
+Un document expiré
+
+Une différence entre la photo et le selfie
+Vous pouvez recommencer la vérification depuis votre profil. Si vous avez des difficultés, répondez à cet email et nous vous accompagnerons.
+Bien à vous,
+L'équipe Troco
+
+Modèle 9 — Annonce refusée / masquée
+
+Bonjour [Prénom],
+Votre annonce « [titre] » a été masquée suite à notre charte communautaire. Raison : [motif précis].
+Vous pouvez la modifier pour la rendre conforme et la republier. Si vous pensez qu'il s'agit d'une erreur, répondez à cet email et nous réexaminerons votre annonce.
+Bien à vous,
+L'équipe Troco
+
+Modèle 10 — Rétractation achat de jetons
+
+Bonjour [Prénom],
+Nous confirmons la réception de votre demande de rétractation pour l'achat de jetons du [date], référence #[référence].
+Conformément à notre politique de remboursement (14 jours), vous serez remboursé sous 14 jours sur le moyen de paiement utilisé pour l'achat.
+Le remboursement porte sur les jetons non consommés. Les jetons déjà utilisés ne sont pas remboursables.
+Bien à vous,
+L'équipe Troco
+
+═══════════════════════════════════════════════════════════════
+FIN DE L'AUDIT OPÉRATIONNEL — TROCO
+═══════════════════════════════════════════════════════════════

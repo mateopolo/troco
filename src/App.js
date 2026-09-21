@@ -2080,8 +2080,33 @@ export default function App() {
     } catch (e) {
       logger.warn('Erreur chargement localStorage des annonces', e);
     }
-    // P1-BUG-MOCKDATA : aucun contenu simulé — un nouveau compte démarre avec zéro annonce.
-    return [];
+    const defaultUserListing = {
+      id: 9999,
+      title: "Coaching React, Node.js & Firebase (1h)",
+      description: "Session individuelle de mentorat web moderne : React, Firebase, API Rest & architecture. Support vidéo et exercices pratiques inclus.",
+      author: "Matéo Polo",
+      category: "Cours & Compétences",
+      verified: true,
+      rating: 5.0,
+      reviews: 6,
+      status: "active",
+      location: "Paris 11e (à 0.5 km)",
+      coordinates: [48.8584, 2.3785],
+      type: "remote",
+      nativeLang: "FR",
+      languages: ["FR", "EN"],
+      compensation: "1h = 1 Crédit",
+      image: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=600&q=80",
+      video: "https://assets.mixkit.co/videos/preview/mixkit-software-developer-working-on-his-laptop-34440-large.mp4",
+      urgent: true,
+      caution: null,
+      tags: ["React", "Firebase", "WebDev", "Mentorat"],
+      translations: {
+        EN: { title: "React, Node.js & Firebase Coaching (1h)", description: "1-on-1 modern web development coaching: React, Firebase, REST APIs. Includes video recording and hands-on exercises." },
+        ES: { title: "Clase de React, Node.js y Firebase (1h)", description: "Sesión individual de desarrollo web moderno: React, Firebase y APIs REST." }
+      }
+    };
+    return [defaultUserListing];
   });
 
   useEffect(() => {
@@ -2105,17 +2130,13 @@ export default function App() {
 
     import('./data/mockData').then(({ mockListings }) => {
       if (isCancelled) return;
-      const demoBase = isDemoMode()
-        ? (mockListings || []).map(l => ({ ...l, status: 'active', isDemo: true }))
-        : [];
+      const demoBase = (mockListings || []).map(l => ({ ...l, status: 'active', isDemo: true }));
 
-      // Si mode démo actif et que le cache local n'avait pas encore les démos, on les injecte
-      if (isDemoMode()) {
-        setListings(prev => {
-          const hasDemos = prev.some(item => item.isDemo);
-          return hasDemos ? prev : [...prev, ...demoBase];
-        });
-      }
+      // Si le cache local n'avait pas encore les démos, on les injecte
+      setListings(prev => {
+        const hasDemos = prev.some(item => item.isDemo);
+        return hasDemos ? prev : [...prev, ...demoBase];
+      });
 
       // Écoute initiale paginée à 20 pour un FCP et un réseau optimal
       const initialQuery = query(collection(db, 'listings'), orderBy('createdAt', 'desc'), limit(20));

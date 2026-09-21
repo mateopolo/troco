@@ -175,10 +175,10 @@ L'envoi et la lecture des messages audio et vocaux reposent sur une architecture
 - **Création du handle `@username` :** Nettoyage automatique des accents et caractères spéciaux (`slugifyUsername`), toujours basé sur le nom humain et jamais sur l'UID.
 - **Connexion Google :** Récupération automatique du vrai nom du compte Google et pré-remplissage propre du profil.
 
-### 3.5 Purge des Données Fictives (Clean State)
-- Toutes les annonces factices et faux profils de test créés par d'anciens scripts ont été purgés du code.
-- L'application consomme exclusivement les données réelles issues de la collection Firestore `listings`.
-- Un utilisateur nouvellement inscrit dispose d'un espace propre et vide, avec un état "EmptyState" soigné et accueillant.
+### 3.5 Sécurisation des Hooks Firestore (Feed & Chats) & Persistance Session
+- **Persistance Firebase Auth :** La méthode `setPersistence(auth, browserLocalPersistence)` dans `src/firebase.js` garantit qu'un rechargement de page (F5/Refresh) ne déconnecte pas l'utilisateur de sa session active.
+- **Sécurisation des Abonnements Feed & Chats :** Les flux d'annonces et de conversations (`mockChats`, `initialChatThreads`, `listings`) sont préservés de manière résiliente sans dépendre d'un flag démo défaillant, assurant que les annonces et discussions s'affichent fidèlement.
+- **Sauvegarde du Profil et Respect des Règles Firestore Zero-Trust :** Les écritures client sur `users/{uid}` (`handleSaveProfile`, `handleAvatarFileUpload`) assainissent le payload pour ne pas modifier les champs financiers ou d'administration protégés (`euroBalance`, `trocoTokens`, `kycVerified`, `isBanned`, etc.), assurant une synchronisation et une persistance sans rejet de permission.
 
 ---
 
@@ -237,6 +237,11 @@ Pour permettre l'upload audio et photo sans blocage de requêtes Cross-Origin de
 
 ### 5.1 Architecture des Modales avec `UniversalModal.jsx`
 L'application dispose d'un composant unifié pour toutes les boîtes de dialogue et fenêtres pop-up : `UniversalModal.jsx` situé dans `src/components/ui/UniversalModal.jsx`.
+
+> [!IMPORTANT]
+> **Résolution du crash 'Z' (ReferenceError / Temporal Dead Zone) & Z-Index :**
+> - Les gestionnaires d'actions (ex: `handleConfirmAcceptance`) doivent impérativement être déclarés AVANT les fragments JSX qui les référencent (ex: `cguFooter`) afin d'éviter tout crash minifié en production (`Cannot access 'Z' before initialization`).
+> - Pour garantir que les modales critiques (telles que `CguModal`) s'affichent par-dessus la barre de navigation mobile (`AppBottomNav`), le conteneur portalé utilise `overlayClassName="fixed inset-0 z-[99999] overflow-y-auto"`, `overlayStyle={{ zIndex: 99999 }}`, et `disableSafeArea={true}`.
 
 **Points capitaux d'intégration :**
 - **Portal sur `document.body` :** La modale s'extrait systématiquement du contexte d'empilement (stacking context) du chat ou de la navigation pour éviter tout débordement tronqué (`overflow: hidden`).

@@ -79,6 +79,23 @@ export default function CguModal({
     </div>
   );
 
+  const handleConfirmAcceptance = async () => {
+    if (!hasAgreedTerms || !hasAgreedPrivacy) return;
+    setIsSubmitting(true);
+    if (typeof onAccept === 'function') {
+      try {
+        await onAccept({
+          cguVersion: '2026.1',
+          acceptedAt: new Date().toISOString(),
+        });
+      } catch (err) {
+        logger.warn('[CGU] onAccept error:', err);
+      }
+    }
+    setIsSubmitting(false);
+    onClose?.();
+  };
+
   const cguFooter = (
     <button
       type="button"
@@ -107,23 +124,6 @@ export default function CguModal({
       Accepter les CGU & Rejoindre Troco
     </button>
   );
-
-  const handleConfirmAcceptance = async () => {
-    if (!hasAgreedTerms || !hasAgreedPrivacy) return;
-    setIsSubmitting(true);
-    if (typeof onAccept === 'function') {
-      try {
-        await onAccept({
-          cguVersion: '2026.1',
-          acceptedAt: new Date().toISOString(),
-        });
-      } catch (err) {
-        logger.warn('[CGU] onAccept error:', err);
-      }
-    }
-    setIsSubmitting(false);
-    onClose?.();
-  };
 
   const pillars = [
     {
@@ -172,15 +172,20 @@ export default function CguModal({
       showCloseButton={false}
       header={cguHeader}
       footer={cguFooter}
+      disableSafeArea={true}
+      overlayClassName="fixed inset-0 z-[99999] overflow-y-auto"
       contentStyle={{
         backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
         borderRadius: '24px',
+        maxHeight: '90vh',
+        overflowY: 'auto',
         boxShadow: darkMode ? '0 25px 50px -12px rgba(0, 0, 0, 0.85), 0 0 35px rgba(198,125,91,0.2)' : '0 25px 50px -12px rgba(61, 53, 48, 0.25)',
         border: darkMode ? '1px solid rgba(232, 221, 211, 0.15)' : '1px solid #E8DDD3',
         color: darkMode ? '#FAF7F2' : '#3D3530',
       }}
       overlayStyle={{
         backgroundColor: 'rgba(61, 53, 48, 0.72)',
+        zIndex: 99999,
       }}
     >
       <div style={{ backgroundColor: darkMode ? '#231E1B' : '#FAF7F2' }}>
