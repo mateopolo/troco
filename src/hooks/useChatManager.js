@@ -258,240 +258,158 @@ export const useChatManager = ({
     playNotificationSoundRef.current = playNotificationSound;
   }, [playNotificationSound]);
 
-  // Synchronisation temps réel des discussions depuis Firestore (CONFIDENTIALITÉ STRICTE : filtrage multi-clés + tri client)
+  // Synchronisation temps réel des discussions depuis Firestore (EXCLUSIVEMENT via UID Firebase)
   useEffect(() => {
-    if (!db) return;
-    const myName = (profile?.name || '').trim();
     const myUid = profile?.uid || (auth?.currentUser && auth.currentUser.uid) || null;
-    const myUsername = (profile?.username || '').trim();
-    const myEmail = (profile?.email || auth?.currentUser?.email || '').trim();
+    if (!myUid || !db) return;
 
-    // Tous les identifiants possibles de l'utilisateur pour une récupération exhaustive
-    const targetSet = new Set([
-      myUid,
-      myName,
-      myName.toLowerCase(),
-      myUsername,
-      myUsername.toLowerCase(),
-      myEmail,
-      myEmail.toLowerCase(),
-    ].filter(Boolean));
-
-    const targets = Array.from(targetSet);
-
-    // Initialisation immédiate des discussions (avec cache local résilient)
-    if (targets.length === 0) {
-      // Si on n'a pas encore les identifiants utilisateur mais qu'on a des discussions en mémoire, ne JAMAIS les écraser
-      return;
-    }
-
-    const unsubs = [];
-    const allDocsMap = new Map();
     let isInitialLoad = true;
 
-    // Helper pour fusionner et mettre à jour la liste des chats avec tri client résilient
-    const updateMergedChats = () => {
-      const firestoreChats = Array.from(allDocsMap.entries())
-        .filter(([docId, data]) => {
-          if (!data) return false;
-          if (Array.isArray(data.deletedBy)) {
-            if (myUid && data.deletedBy.includes(myUid)) return false;
-            if (myName && data.deletedBy.includes(myName)) return false;
-          }
-          return true;
-        })
-        .map(([docId, data]) => {
-          const otherUser = Array.isArray(data.participants)
-            ? data.participants.find(p => p && String(p).trim().toLowerCase() !== myName.toLowerCase() && String(p) !== String(myUid) && String(p).trim().toLowerCase() !== myEmail.toLowerCase()) || data.user || 'Interlocuteur'
-            : data.user || 'Interlocuteur';
+    const chatsQuery = query(
+      collection(db, 'chats'),
+      where('participants', 'array-contains', myUid)
+    );
 
-          const fChatId = data.id || docId;
+    const unsubscribe = onSnapshot(
+      chatsQuery,
+      (snapshot) => {
+        snapshot.docChanges().forEach(change => {
+          const d = change.doc.data();
+          if (!d) return;
+          const fChatId = d.id || change.doc.id;
+          const lastSenderUid = d.lastSenderUid;
+          const isMe = lastSenderUid ? String(lastSenderUid) === String(myUid) : false;
+          const isFromThem = !isMe && (d.unreadCount > 0 || (d.lastSender && d.lastSender !== profile?.name));
 
-          return {
-            id: fChatId,
-            firestoreId: docId,
-            ...data,
-            user: otherUser,
-          };
-        });
-
-      const merged = [...firestoreChats];
-      firestoreChats.forEach(fChat => {
-        const idx = merged.findIndex(m => String(m.id) === String(fChat.id));
-        if (idx >= 0) {
-          merged[idx] = { ...merged[idx], ...fChat };
-        } else {
-          merged.unshift(fChat);
-        }
-      });
-
-      // Tri direct en mémoire par date de dernière activité (évite tout bug d'index manquant Firestore)
-      merged.sort((a, b) => {
-        const timeA = a.updatedAt?.toMillis ? a.updatedAt.toMillis() : (a.updatedAt ? new Date(a.updatedAt).getTime() : (a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt ? new Date(a.createdAt).getTime() : (a.timestamp || 0))));
-        const timeB = b.updatedAt?.toMillis ? b.updatedAt.toMillis() : (b.updatedAt ? new Date(b.updatedAt).getTime() : (b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt ? new Date(b.createdAt).getTime() : (b.timestamp || 0))));
-        return timeB - timeA;
-      });
-
-      setChatsList(merged);
-      try {
-        localStorage.setItem('troco_cached_chats', JSON.stringify(merged));
-        useChatStore.getState().setChatsList(merged);
-      } catch (_) { }
-    };
-
-    // Écoute des discussions par participants sans orderBy (évite index manquant)
-    targets.forEach(targetVal => {
-      try {
-        const q = query(
-          collection(db, 'chats'),
-          where('participants', 'array-contains', targetVal)
-        );
-
-        const unsub = onSnapshot(q, (snapshot) => {
-          snapshot.docChanges().forEach(change => {
-            const d = change.doc.data();
-            if (!d) return;
-            const fChatId = d.id || change.doc.id;
-            const lastSender = (d.lastSenderName || d.lastSender || '').trim().toLowerCase();
-            const isMe = (myName && lastSender === myName.toLowerCase()) ||
-              (myUsername && lastSender === myUsername.toLowerCase()) ||
-              (myEmail && lastSender === myEmail.toLowerCase()) ||
-              (d.lastSenderUid && myUid && String(d.lastSenderUid) === String(myUid));
-            const isFromThem = !isMe && (lastSender.length > 0 || (d.unreadCount && d.unreadCount > 0));
-
-            // Détection en temps réel d'un nouveau message entrant non lu (PC ⇄ Mobile)
-            if (isFromThem && (change.type === 'modified' || (change.type === 'added' && !isInitialLoad))) {
-              const currentSelected = selectedChatRef.current;
-              const currentTab = activeTabRef.current;
-              const isCurrentlyActive = currentSelected && String(currentSelected.id) === String(fChatId) && currentTab === 'chat';
-              if (!isCurrentlyActive) {
-                // Forcer la suppression du cache de lecture pour réactiver le badge rouge immédiatement
-                setReadChats(prev => {
-                  const next = new Set(prev);
-                  next.delete(fChatId);
-                  next.delete(String(fChatId));
-                  next.delete(Number(fChatId));
-                  return next;
-                });
-                // Déclencher le son de notification et vibration
-                if (typeof playNotificationSoundRef.current === 'function') {
-                  playNotificationSoundRef.current();
-                }
-                if (typeof navigator !== 'undefined' && navigator.vibrate) {
-                  try { navigator.vibrate([120, 60, 120]); } catch (_) { }
-                }
-
-                // Déclencher le bandeau Dynamic Island popup interactif sur les autres pages
-                const senderTitle = d.lastSenderName || d.lastSender || d.user || 'Nouveau message';
-                const messageText = d.lastMessage || 'Nouveau message reçu';
-                const senderAvatar = d.avatar || d.authorAvatar || null;
-                const rawTime = d.lastMessageTimestamp?.toMillis?.() ||
-                  d.lastMessageTimestamp?.seconds ||
-                  d.lastMessageTime?.seconds ||
-                  d.lastMessageTime ||
-                  d.updatedAt?.seconds ||
-                  d.updatedAt ||
-                  '';
-                const messageId = d.lastMessageId || d.lastMsgId || `${fChatId}_${d.lastSenderUid || lastSender}_${rawTime}_${d.lastMessage || ''}`;
-
-                notificationService.show({
-                  id: messageId,
-                  title: senderTitle,
-                  message: messageText,
-                  avatar: senderAvatar,
-                  icon: 'chat',
-                  duration: 3000,
-                  onClick: () => {
-                    setSelectedChat(d);
-                    if (typeof setActiveTab === 'function') {
-                      setActiveTab('chat');
-                    }
-                  },
-                  data: { chatId: fChatId, messageId }
-                });
+          // Détection en temps réel d'un nouveau message entrant non lu (PC ⇄ Mobile)
+          if (isFromThem && (change.type === 'modified' || (change.type === 'added' && !isInitialLoad))) {
+            const currentSelected = selectedChatRef.current;
+            const currentTab = activeTabRef.current;
+            const isCurrentlyActive = currentSelected && String(currentSelected.id) === String(fChatId) && currentTab === 'chat';
+            if (!isCurrentlyActive) {
+              // Forcer la suppression du cache de lecture pour réactiver le badge rouge immédiatement
+              setReadChats(prev => {
+                const next = new Set(prev);
+                next.delete(fChatId);
+                next.delete(String(fChatId));
+                next.delete(Number(fChatId));
+                return next;
+              });
+              // Déclencher le son de notification et vibration
+              if (typeof playNotificationSoundRef.current === 'function') {
+                playNotificationSoundRef.current();
               }
+              if (typeof navigator !== 'undefined' && navigator.vibrate) {
+                try { navigator.vibrate([120, 60, 120]); } catch (_) { }
+              }
+
+              // Déclencher le bandeau Dynamic Island popup interactif sur les autres pages
+              const senderTitle = d.lastSenderName || d.lastSender || d.user || 'Nouveau message';
+              const messageText = d.lastMessage || 'Nouveau message reçu';
+              const senderAvatar = d.avatar || d.authorAvatar || null;
+              const rawTime = d.lastMessageTimestamp?.toMillis?.() ||
+                d.lastMessageTimestamp?.seconds ||
+                d.lastMessageTime?.seconds ||
+                d.lastMessageTime ||
+                d.updatedAt?.seconds ||
+                d.updatedAt ||
+                '';
+              const messageId = d.lastMessageId || d.lastMsgId || `${fChatId}_${d.lastSenderUid || ''}_${rawTime}_${d.lastMessage || ''}`;
+
+              notificationService.show({
+                id: messageId,
+                title: senderTitle,
+                message: messageText,
+                avatar: senderAvatar,
+                icon: 'chat',
+                duration: 3000,
+                onClick: () => {
+                  setSelectedChat(d);
+                  if (typeof setActiveTab === 'function') {
+                    setActiveTab('chat');
+                  }
+                },
+                data: { chatId: fChatId, messageId }
+              });
             }
-          });
-
-          // Enregistrer ou mettre à jour les docs dans notre Map
-          snapshot.docs.forEach(docSnap => {
-            allDocsMap.set(docSnap.id, docSnap.data());
-          });
-
-          updateMergedChats();
-          isInitialLoad = false;
-        }, (err) => {
-          logger.error('🚨 [Firestore] chats onSnapshot error for target:', targetVal, err);
-          updateMergedChats();
+          }
         });
 
-        unsubs.push(unsub);
-      } catch (err) {
-        logger.error('[Firestore] query setup error:', err);
+        const chats = snapshot.docs
+          .filter((docSnap) => {
+            const data = docSnap.data();
+            if (!data) return false;
+            if (Array.isArray(data.deletedBy) && data.deletedBy.includes(myUid)) {
+              return false;
+            }
+            return true;
+          })
+          .map((docSnap) => {
+            const data = docSnap.data();
+            const otherUser = Array.isArray(data.participants)
+              ? data.participants.find(p => p && String(p) !== String(myUid) && (!profile?.name || String(p).trim().toLowerCase() !== profile.name.toLowerCase())) || data.user || 'Interlocuteur'
+              : data.user || 'Interlocuteur';
+
+            return {
+              id: data.id || docSnap.id,
+              firestoreId: docSnap.id,
+              ...data,
+              user: otherUser,
+            };
+          });
+
+        // Tri direct en mémoire par date de dernière activité (évite tout bug d'index manquant Firestore)
+        chats.sort((a, b) => {
+          const timeA = a.updatedAt?.toMillis ? a.updatedAt.toMillis() : (a.updatedAt ? new Date(a.updatedAt).getTime() : (a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt ? new Date(a.createdAt).getTime() : (a.timestamp || 0))));
+          const timeB = b.updatedAt?.toMillis ? b.updatedAt.toMillis() : (b.updatedAt ? new Date(b.updatedAt).getTime() : (b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt ? new Date(b.createdAt).getTime() : (b.timestamp || 0))));
+          return timeB - timeA;
+        });
+
+        setChatsList(chats);
+        try {
+          localStorage.setItem('troco_cached_chats', JSON.stringify(chats));
+          useChatStore.getState().setChatsList(chats);
+        } catch (_) { }
+
+        isInitialLoad = false;
+      },
+      (error) => {
+        logger.error('[useChatManager] chats onSnapshot error:', error);
       }
-    });
-
-    // Écoute additionnelle par participantUids si myUid est présent
-    if (myUid) {
-      try {
-        const qUids = query(
-          collection(db, 'chats'),
-          where('participantUids', 'array-contains', myUid)
-        );
-
-        const unsubUids = onSnapshot(qUids, (snapshot) => {
-          snapshot.docs.forEach(docSnap => {
-            allDocsMap.set(docSnap.id, docSnap.data());
-          });
-          updateMergedChats();
-        }, (err) => {
-          logger.error('🚨 [Firestore] chats onSnapshot error for participantUids:', err);
-        });
-
-        unsubs.push(unsubUids);
-      } catch (_) {}
-    }
+    );
 
     return () => {
-      unsubs.forEach(u => { try { if (typeof u === 'function') u(); } catch (_) { } });
+      try {
+        if (typeof unsubscribe === 'function') unsubscribe();
+      } catch (_) { }
     };
-  }, [profile?.name, profile?.uid, profile?.username, profile?.email, auth, db]);
+  }, [profile?.uid, auth?.currentUser?.uid, db]);
 
   // Écoute de l'événement personnalisé pour forcer le rafraîchissement des conversations Firestore
   useEffect(() => {
     const handleForceRefetch = async () => {
       if (!db) return;
       try {
-        const myUid = profile?.uid || (auth?.currentUser && auth.currentUser.uid);
-        const myName = profile?.name;
-        const qList = [];
-        if (myUid) {
-          qList.push(query(collection(db, 'chats'), where('participantUids', 'array-contains', myUid)));
-        }
-        if (myName) {
-          qList.push(query(collection(db, 'chats'), where('user', '==', myName)));
-          qList.push(query(collection(db, 'chats'), where('author', '==', myName)));
-        }
-        for (const qItem of qList) {
-          const snap = await getDocs(qItem);
-          if (snap && snap.docs.length > 0) {
-            const fetched = snap.docs
-              .map(d => ({ id: d.id, ...d.data() }))
-              .filter(d => {
-                if (Array.isArray(d.deletedBy)) {
-                  if (myUid && d.deletedBy.includes(myUid)) return false;
-                  if (myName && d.deletedBy.includes(myName)) return false;
-                }
-                return true;
-              });
-            setChatsList(prev => {
-              const map = new Map(prev.map(c => [c.id, c]));
-              fetched.forEach(f => map.set(f.id, f));
-              const res = Array.from(map.values());
-              try { localStorage.setItem('troco_cached_chats', JSON.stringify(res)); } catch (_) {}
-              return res;
+        const myUid = profile?.uid || (auth?.currentUser && auth.currentUser.uid) || null;
+        if (!myUid) return;
+        const qItem = query(collection(db, 'chats'), where('participants', 'array-contains', myUid));
+        const snap = await getDocs(qItem);
+        if (snap && snap.docs.length > 0) {
+          const fetched = snap.docs
+            .map(d => ({ id: d.id, ...d.data() }))
+            .filter(d => {
+              if (Array.isArray(d.deletedBy) && d.deletedBy.includes(myUid)) {
+                return false;
+              }
+              return true;
             });
-          }
+          setChatsList(prev => {
+            const map = new Map(prev.map(c => [c.id, c]));
+            fetched.forEach(f => map.set(f.id, f));
+            const res = Array.from(map.values());
+            try { localStorage.setItem('troco_cached_chats', JSON.stringify(res)); } catch (_) {}
+            return res;
+          });
         }
       } catch (err) {
         logger.warn('[useChatManager] Force refetch error:', err);
@@ -500,7 +418,7 @@ export const useChatManager = ({
 
     window.addEventListener('troco:refetch_chats', handleForceRefetch);
     return () => window.removeEventListener('troco:refetch_chats', handleForceRefetch);
-  }, [db, profile, auth]);
+  }, [db, profile?.uid, auth?.currentUser?.uid]);
 
   // ---- SÉLECTION D'UN CHAT ET MARQUAGE COMME LU ----
   const handleSelectChat = async (chat) => {

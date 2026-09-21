@@ -201,6 +201,7 @@ L'envoi et la lecture des messages audio et vocaux reposent sur une architecture
 1. **Deny-by-default :** `match /{document=**} { allow read, write: if false; }` est la règle racine. Aucun document n'est exposé sans autorisation explicite.
 2. **Moindre Privilège Financier :** Aucune opération de crédit, de débit ou de validation de deal ne peut être injectée par un client HTTP/WebSocket non privilégié. Seules les Cloud Functions avec le Service Account Admin SDK peuvent modifier les soldes.
 3. **Contrôle des Bannissements (`isNotBanned`) :** Tout utilisateur banni (`isBanned: true`) est immédiatement bloqué en écriture sur les annonces, les signalements et les profils.
+4. **Filtrage Strict par UID Firebase :** Les requêtes Firestore utilisent EXCLUSIVEMENT `profile.uid` (jamais email, jamais nom, jamais username) pour filtrer les chats et les données utilisateur. Les règles de sécurité exigent `request.auth.uid in resource.data.participants` ; toute tentative de filtrage avec email, nom ou username déclenche une erreur `Missing or insufficient permissions`.
 
 ### 4.3 Configuration CORS Firebase Storage (`cors.json`)
 Pour permettre l'upload audio et photo sans blocage de requêtes Cross-Origin depuis Vercel ou les environnements de test locaux, la règle CORS suivante est appliquée sur le bucket Firebase Storage :
@@ -306,3 +307,6 @@ L'application dispose d'un composant unifié pour toutes les boîtes de dialogue
 
 6. **COMMITS PROPRES & RESPECT DE LA PRODUCTION :**
    Des messages de commit clairs, préfixés par convention (`fix:`, `feat:`, `refactor:`, `docs:`), et une synchronisation propre avec la branche `main`.
+
+7. **REQUÊTES FIRESTORE & IDENTIFIANTS UTILISATEUR :**
+   Les requêtes Firestore utilisent EXCLUSIVEMENT profile.uid (jamais email, jamais nom, jamais username) pour filtrer les chats et les données utilisateur.

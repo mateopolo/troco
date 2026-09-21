@@ -1544,15 +1544,7 @@ export default function App() {
         logger.warn('[App.js] Global calls toUid error:', err);
       }));
 
-      // 4. Écoute de secours par nom de profil si disponible
-      if (profile?.name) {
-        const qName = query(
-          collection(db, 'calls'),
-          where('targetParticipants', 'array-contains', profile.name),
-          limit(5)
-        );
-        unsubs.push(onSnapshot(qName, (snap) => snap.docChanges().forEach(handleCallDocChange), () => {}));
-      }
+
     } catch (e) {
       logger.warn('[App.js] Error setting up global calls listener:', e);
     }
@@ -1675,20 +1667,18 @@ export default function App() {
       });
       unsubs.push(unsubUids);
 
-      // 2. Écoute par participants (nom d'affichage)
-      if (profile?.name) {
-        const qNames = query(
-          collection(db, 'chats'),
-          where('participants', 'array-contains', profile.name)
-        );
-        const unsubNames = onSnapshot(qNames, (snap) => {
-          snap.docChanges().forEach(handleChatDocChange);
-          isInitial = false;
-        }, (err) => {
-          logger.warn('[App.js] Background message listener error (participants):', err);
-        });
-        unsubs.push(unsubNames);
-      }
+      // 2. Écoute par participants (UID universel)
+      const qParticipants = query(
+        collection(db, 'chats'),
+        where('participants', 'array-contains', String(currentUid))
+      );
+      const unsubParticipants = onSnapshot(qParticipants, (snap) => {
+        snap.docChanges().forEach(handleChatDocChange);
+        isInitial = false;
+      }, (err) => {
+        logger.warn('[App.js] Background message listener error (participants):', err);
+      });
+      unsubs.push(unsubParticipants);
     } catch (err) {
       logger.warn('[App.js] Background message listener setup error:', err);
     }

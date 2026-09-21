@@ -45,21 +45,9 @@ import { calculateHaversineDistance } from '../utils/geocodingNominatim';
 export const fetchListingsPaginated = async ({ pageSize = 20, lastDoc = null } = {}) => {
   if (!db) return { items: [], lastVisible: null, hasMore: false };
   try {
-    let q;
-    if (lastDoc) {
-      q = query(
-        collection(db, 'listings'),
-        orderBy('createdAt', 'desc'),
-        startAfter(lastDoc),
-        limit(pageSize)
-      );
-    } else {
-      q = query(
-        collection(db, 'listings'),
-        orderBy('createdAt', 'desc'),
-        limit(pageSize)
-      );
-    }
+    const q = lastDoc
+      ? query(collection(db, 'listings'), startAfter(lastDoc), limit(pageSize))
+      : query(collection(db, 'listings'), limit(pageSize));
 
     const snapshot = await getDocs(q);
     const items = snapshot.docs.map((docSnap) => ({
@@ -71,6 +59,13 @@ export const fetchListingsPaginated = async ({ pageSize = 20, lastDoc = null } =
       _doc: docSnap,
     }));
 
+    // Tri en mémoire par date décroissante (évite tout besoin d'index composite Firestore)
+    items.sort((a, b) => {
+      const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+      const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt ? new Date(b.createdAt).getTime() : 0);
+      return timeB - timeA;
+    });
+
     const lastVisible = snapshot.docs[snapshot.docs.length - 1] || null;
     const hasMore = snapshot.docs.length === pageSize;
 
@@ -80,32 +75,8 @@ export const fetchListingsPaginated = async ({ pageSize = 20, lastDoc = null } =
       hasMore,
     };
   } catch (error) {
-    logger.warn('[FirestoreService] fetchListingsPaginated with orderBy failed, falling back without orderBy:', error);
-    try {
-      let fallbackQuery;
-      if (lastDoc) {
-        fallbackQuery = query(collection(db, 'listings'), startAfter(lastDoc), limit(pageSize));
-      } else {
-        fallbackQuery = query(collection(db, 'listings'), limit(pageSize));
-      }
-      const snapshot = await getDocs(fallbackQuery);
-      const items = snapshot.docs.map((docSnap) => ({
-        id: docSnap.data().id || docSnap.id,
-        firestoreId: docSnap.id,
-        ...docSnap.data(),
-        status: docSnap.data().status || 'active',
-        isDemo: false,
-        _doc: docSnap,
-      }));
-      return {
-        items,
-        lastVisible: snapshot.docs[snapshot.docs.length - 1] || null,
-        hasMore: snapshot.docs.length === pageSize,
-      };
-    } catch (fallbackErr) {
-      logger.error('[FirestoreService] fetchListingsPaginated fallback error:', fallbackErr);
-      return { items: [], lastVisible: null, hasMore: false, error: fallbackErr };
-    }
+    logger.error('[FirestoreService] fetchListingsPaginated error:', error);
+    return { items: [], lastVisible: null, hasMore: false, error };
   }
 };
 
@@ -396,12 +367,12 @@ export const buildDeterministicConversationId = (listingId, userAId, userBId) =>
 };
 
 /**
- * Écoute les discussions de l'utilisateur connecté avec tri en mémoire sécurisé (Zéro dépendance d'index)
+ * Écoute les discussions de l'utilisateur connecté (EXCLUSIVEMENT par UID Firebase) avec tri en mémoire sécurisé
  */
-export const subscribeToUserChats = (userNameOrUid, onUpdate, onError) => {
-  if (!userNameOrUid || typeof userNameOrUid !== 'string') return () => {};
+export const subscribeToUserChats = (userUid, onUpdate, onError) => {
+  if (!userUid || typeof userUid !== 'string') return () => {};
   try {
-    const target = userNameOrUid.trim();
+    const target = userUid.trim();
     const q = query(
       collection(db, 'chats'),
       where('participants', 'array-contains', target)
