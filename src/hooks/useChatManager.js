@@ -237,23 +237,25 @@ export const useChatManager = ({
   // Synchronisation temps réel des discussions depuis Firestore (EXCLUSIVEMENT par UID Firebase Auth)
   useEffect(() => {
     if (!db) return;
-    const currentUid = auth?.currentUser?.uid || profile?.uid || null;
-    const myName = (profile?.name || '').trim();
-    const myUsername = (profile?.username || '').trim();
-    const myEmail = (profile?.email || auth?.currentUser?.email || '').trim();
 
-    // Attendre que l'utilisateur soit authentifié
+    // Source de vérité unique et inviolable : UID Firebase Auth authentifié (chaîne alphanumérique stricte)
+    const firebaseUser = auth?.currentUser;
+    const rawUid = firebaseUser?.uid || profile?.uid || null;
+    const isGenuineUid = rawUid && typeof rawUid === 'string' && !rawUid.includes('@') && !rawUid.includes(' ');
+    const currentUid = firebaseUser?.uid || (isGenuineUid ? rawUid : null);
+    const myName = (profile?.name || '').trim();
+
+    // Si profile.uid dans le store/cache est corrompu (ex: email ou nom), on le purge immédiatement
+    if (firebaseUser?.uid && profile?.uid !== firebaseUser.uid) {
+      if (typeof setProfile === 'function') {
+        setProfile(prev => ({ ...prev, uid: firebaseUser.uid }));
+      }
+    }
+
+    // Attendre que l'utilisateur soit authentifié avec un UID Firebase valide
     if (!currentUid) {
       return;
     }
-
-    // Tous les identifiants possibles (UID en priorité absolue, puis nom d'affichage pour rétrocompatibilité)
-    const targetSet = new Set([
-      currentUid,
-      ...(myName ? [myName] : []),
-    ].filter(Boolean));
-
-    const targets = Array.from(targetSet);
 
     const unsubs = [];
     const allDocsMap = new Map();
@@ -266,13 +268,12 @@ export const useChatManager = ({
           if (!data) return false;
           if (Array.isArray(data.deletedBy)) {
             if (currentUid && data.deletedBy.includes(currentUid)) return false;
-            if (myName && data.deletedBy.includes(myName)) return false;
           }
           return true;
         })
         .map(([docId, data]) => {
           const otherUser = Array.isArray(data.participants)
-            ? data.participants.find(p => p && String(p).trim().toLowerCase() !== myName.toLowerCase() && String(p) !== String(currentUid) && String(p).trim().toLowerCase() !== myEmail.toLowerCase()) || data.user || 'Interlocuteur'
+            ? data.participants.find(p => p && String(p) !== String(currentUid) && !String(p).includes('@')) || data.user || 'Interlocuteur'
             : data.user || 'Interlocuteur';
 
           const fChatId = data.id || docId;
@@ -300,154 +301,159 @@ export const useChatManager = ({
       } catch (_) { }
     };
 
-    // Écoute des discussions par participants
-    targets.forEach(targetVal => {
-      try {
-        const q = query(
-          collection(db, 'chats'),
-          where('participants', 'array-contains', targetVal)
-        );
+    const handleSnapshot = (snapshot) => {
+      snapshot.docChanges().forEach(change => {
+        const d = change.doc.data();
+        if (!d) return;
+        const fChatId = d.id || change.doc.id;
+        const lastSender = (d.lastSenderName || d.lastSender || '').trim().toLowerCase();
+        const isMe = (myName && lastSender === myName.toLowerCase()) ||
+          (d.lastSenderUid && currentUid && String(d.lastSenderUid) === String(currentUid));
+        const isFromThem = !isMe && (lastSender.length > 0 || (d.unreadCount && d.unreadCount > 0));
 
-        const unsub = onSnapshot(q, (snapshot) => {
-          snapshot.docChanges().forEach(change => {
-            const d = change.doc.data();
-            if (!d) return;
-            const fChatId = d.id || change.doc.id;
-            const lastSender = (d.lastSenderName || d.lastSender || '').trim().toLowerCase();
-            const isMe = (myName && lastSender === myName.toLowerCase()) ||
-              (myUsername && lastSender === myUsername.toLowerCase()) ||
-              (myEmail && lastSender === myEmail.toLowerCase()) ||
-              (d.lastSenderUid && currentUid && String(d.lastSenderUid) === String(currentUid));
-            const isFromThem = !isMe && (lastSender.length > 0 || (d.unreadCount && d.unreadCount > 0));
-
-            // Détection en temps réel d'un nouveau message entrant non lu
-            if (isFromThem && (change.type === 'modified' || (change.type === 'added' && !isInitialLoad))) {
-              const currentSelectedChat = selectedChatRef.current;
-              const currentActiveTab = activeTabRef.current;
-              const isCurrentlyActive = currentSelectedChat && String(currentSelectedChat.id) === String(fChatId) && currentActiveTab === 'chat';
-              if (!isCurrentlyActive) {
-                setReadChats(prev => {
-                  const next = new Set(prev);
-                  next.delete(fChatId);
-                  next.delete(String(fChatId));
-                  next.delete(Number(fChatId));
-                  return next;
-                });
-                playNotificationSound();
-                if (typeof navigator !== 'undefined' && navigator.vibrate) {
-                  try { navigator.vibrate([120, 60, 120]); } catch (_) { }
-                }
-
-                const senderTitle = d.lastSenderName || d.lastSender || d.user || 'Nouveau message';
-                const messageText = d.lastMessage || 'Nouveau message reçu';
-                const senderAvatar = d.avatar || d.authorAvatar || null;
-                const rawTime = d.lastMessageTimestamp?.toMillis?.() ||
-                  d.lastMessageTimestamp?.seconds ||
-                  d.lastMessageTime?.seconds ||
-                  d.lastMessageTime ||
-                  d.updatedAt?.seconds ||
-                  d.updatedAt ||
-                  '';
-                const messageId = d.lastMessageId || d.lastMsgId || `${fChatId}_${d.lastSenderUid || lastSender}_${rawTime}_${d.lastMessage || ''}`;
-
-                notificationService.show({
-                  id: messageId,
-                  title: senderTitle,
-                  message: messageText,
-                  avatar: senderAvatar,
-                  icon: 'chat',
-                  duration: 3000,
-                  onClick: () => {
-                    setSelectedChat(d);
-                    if (typeof setActiveTab === 'function') {
-                      setActiveTab('chat');
-                    }
-                  },
-                  data: { chatId: fChatId, messageId }
-                });
-              }
+        // Détection en temps réel d'un nouveau message entrant non lu
+        if (isFromThem && (change.type === 'modified' || (change.type === 'added' && !isInitialLoad))) {
+          const currentSelectedChat = selectedChatRef.current;
+          const currentActiveTab = activeTabRef.current;
+          const isCurrentlyActive = currentSelectedChat && String(currentSelectedChat.id) === String(fChatId) && currentActiveTab === 'chat';
+          if (!isCurrentlyActive) {
+            setReadChats(prev => {
+              const next = new Set(prev);
+              next.delete(fChatId);
+              next.delete(String(fChatId));
+              next.delete(Number(fChatId));
+              return next;
+            });
+            playNotificationSound();
+            if (typeof navigator !== 'undefined' && navigator.vibrate) {
+              try { navigator.vibrate([120, 60, 120]); } catch (_) { }
             }
+
+            const senderTitle = d.lastSenderName || d.lastSender || d.user || 'Nouveau message';
+            const messageText = d.lastMessage || 'Nouveau message reçu';
+            const senderAvatar = d.avatar || d.authorAvatar || null;
+            const rawTime = d.lastMessageTimestamp?.toMillis?.() ||
+              d.lastMessageTimestamp?.seconds ||
+              d.lastMessageTime?.seconds ||
+              d.lastMessageTime ||
+              d.updatedAt?.seconds ||
+              d.updatedAt ||
+              '';
+            const messageId = d.lastMessageId || d.lastMsgId || `${fChatId}_${d.lastSenderUid || lastSender}_${rawTime}_${d.lastMessage || ''}`;
+
+            notificationService.show({
+              id: messageId,
+              title: senderTitle,
+              message: messageText,
+              avatar: senderAvatar,
+              icon: 'chat',
+              duration: 3000,
+              onClick: () => {
+                setSelectedChat(d);
+                if (typeof setActiveTab === 'function') {
+                  setActiveTab('chat');
+                }
+              },
+              data: { chatId: fChatId, messageId }
+            });
+          }
+        }
+      });
+
+      snapshot.docs.forEach(docSnap => {
+        allDocsMap.set(docSnap.id, docSnap.data());
+      });
+
+      updateMergedChats();
+      isInitialLoad = false;
+    };
+
+    // 1. Écoute principale sécurisée : array-contains strict sur l'UID Firebase Auth avec orderBy updatedAt
+    try {
+      const qWithOrder = query(
+        collection(db, 'chats'),
+        where('participants', 'array-contains', currentUid),
+        orderBy('updatedAt', 'desc')
+      );
+
+      const unsubWithOrder = onSnapshot(qWithOrder, handleSnapshot, (err) => {
+        logger.warn('[Firestore] chats query with orderBy failed (index building or missing), falling back without orderBy:', err?.message || err);
+        try {
+          const qFallback = query(
+            collection(db, 'chats'),
+            where('participants', 'array-contains', currentUid)
+          );
+          const unsubFallback = onSnapshot(qFallback, handleSnapshot, (fallbackErr) => {
+            logger.error('[Firestore] chats fallback onSnapshot error:', fallbackErr);
+            updateMergedChats();
           });
-
-          snapshot.docs.forEach(docSnap => {
-            allDocsMap.set(docSnap.id, docSnap.data());
-          });
-
-          updateMergedChats();
-          isInitialLoad = false;
-        }, (err) => {
-          logger.warn('[Firestore] chats onSnapshot warning for target:', targetVal, err?.message || err);
-          updateMergedChats();
-        });
-
-        unsubs.push(unsub);
-      } catch (err) {
-        logger.error('[Firestore] query setup error:', err);
-      }
-    });
-
-    // Écoute additionnelle par participantUids (UIDs stricts)
-    if (currentUid) {
+          unsubs.push(unsubFallback);
+        } catch (_) { }
+      });
+      unsubs.push(unsubWithOrder);
+    } catch (_) {
       try {
-        const qUids = query(
+        const qFallback = query(
           collection(db, 'chats'),
-          where('participantUids', 'array-contains', currentUid)
+          where('participants', 'array-contains', currentUid)
         );
-
-        const unsubUids = onSnapshot(qUids, (snapshot) => {
-          snapshot.docs.forEach(docSnap => {
-            allDocsMap.set(docSnap.id, docSnap.data());
-          });
-          updateMergedChats();
-        }, (err) => {
-          logger.warn('[Firestore] chats onSnapshot warning for participantUids:', err?.message || err);
-        });
-
-        unsubs.push(unsubUids);
+        unsubs.push(onSnapshot(qFallback, handleSnapshot));
       } catch (_) { }
     }
+
+    // 2. Écoute complémentaire pour rétrocompatibilité avec les documents stockant l'UID dans participantUids
+    try {
+      const qUids = query(
+        collection(db, 'chats'),
+        where('participantUids', 'array-contains', currentUid)
+      );
+      const unsubUids = onSnapshot(qUids, (snapshot) => {
+        snapshot.docs.forEach(docSnap => {
+          allDocsMap.set(docSnap.id, docSnap.data());
+        });
+        updateMergedChats();
+      }, (err) => {
+        logger.warn('[Firestore] chats onSnapshot warning for participantUids:', err?.message || err);
+      });
+      unsubs.push(unsubUids);
+    } catch (_) { }
 
     return () => {
       unsubs.forEach(u => { try { if (typeof u === 'function') u(); } catch (_) { } });
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [auth?.currentUser?.uid, profile?.uid, profile?.name, profile?.email, profile?.username]);
+  }, [auth?.currentUser?.uid, profile?.uid]);
 
   // Écoute de l'événement personnalisé pour forcer le rafraîchissement des conversations Firestore
   useEffect(() => {
     const handleForceRefetch = async () => {
       if (!db) return;
       try {
-        const myUid = profile?.uid || (auth?.currentUser && auth.currentUser.uid);
-        const myName = profile?.name;
-        const qList = [];
-        if (myUid) {
-          qList.push(query(collection(db, 'chats'), where('participantUids', 'array-contains', myUid)));
-        }
-        if (myName) {
-          qList.push(query(collection(db, 'chats'), where('user', '==', myName)));
-          qList.push(query(collection(db, 'chats'), where('author', '==', myName)));
-        }
+        const firebaseUser = auth?.currentUser;
+        const myUid = firebaseUser?.uid || (profile?.uid && !profile.uid.includes('@') && !profile.uid.includes(' ') ? profile.uid : null);
+        if (!myUid) return;
+
+        const qList = [
+          query(collection(db, 'chats'), where('participants', 'array-contains', myUid)),
+          query(collection(db, 'chats'), where('participantUids', 'array-contains', myUid)),
+        ];
+
         for (const qItem of qList) {
-          const snap = await getDocs(qItem);
-          if (snap && snap.docs.length > 0) {
-            const fetched = snap.docs
-              .map(d => ({ id: d.id, ...d.data() }))
-              .filter(d => {
-                if (Array.isArray(d.deletedBy)) {
-                  if (myUid && d.deletedBy.includes(myUid)) return false;
-                  if (myName && d.deletedBy.includes(myName)) return false;
-                }
-                return true;
+          try {
+            const snap = await getDocs(qItem);
+            if (snap && snap.docs.length > 0) {
+              const fetched = snap.docs
+                .map(d => ({ id: d.id, ...d.data() }))
+                .filter(d => !Array.isArray(d.deletedBy) || !d.deletedBy.includes(myUid));
+              setChatsList(prev => {
+                const map = new Map(prev.map(c => [c.id, c]));
+                fetched.forEach(f => map.set(f.id, f));
+                const res = Array.from(map.values());
+                try { localStorage.setItem('troco_cached_chats', JSON.stringify(res)); } catch (_) { }
+                return res;
               });
-            setChatsList(prev => {
-              const map = new Map(prev.map(c => [c.id, c]));
-              fetched.forEach(f => map.set(f.id, f));
-              const res = Array.from(map.values());
-              try { localStorage.setItem('troco_cached_chats', JSON.stringify(res)); } catch (_) { }
-              return res;
-            });
-          }
+            }
+          } catch (_) { }
         }
       } catch (err) {
         logger.warn('[useChatManager] Force refetch error:', err);
@@ -456,7 +462,7 @@ export const useChatManager = ({
 
     window.addEventListener('troco:refetch_chats', handleForceRefetch);
     return () => window.removeEventListener('troco:refetch_chats', handleForceRefetch);
-  }, [db, profile, auth]);
+  }, [profile?.uid, auth?.currentUser?.uid]);
 
   // ---- SÉLECTION D'UN CHAT ET MARQUAGE COMME LU ----
   const handleSelectChat = async (chat) => {
@@ -783,6 +789,10 @@ export const useChatManager = ({
               useChatStore.getState().replaceTempId(chatId, tempId, docRef.id);
             }
 
+            const safeParticipants = Array.isArray(selectedChat.participants) && selectedChat.participants.length > 0
+              ? (selectedChat.participants.includes(myUid) ? selectedChat.participants : [...selectedChat.participants, myUid])
+              : [myUid, selectedChat.partnerUid || selectedChat.authorUid].filter(Boolean);
+
             await setDoc(doc(db, 'chats', String(chatId)), {
               id: chatId,
               user: selectedChat.user,
@@ -790,7 +800,8 @@ export const useChatManager = ({
               lastMessage: preview,
               lastSenderName: myName,
               unreadCount: increment(1),
-              participants: selectedChat.participants || [myName, selectedChat.user],
+              participants: safeParticipants,
+              participantUids: [myUid, selectedChat.partnerUid || selectedChat.authorUid].filter(Boolean),
               updatedAt: serverTimestamp(),
             }, { merge: true });
           } catch (e) {
@@ -895,6 +906,11 @@ export const useChatManager = ({
             useChatStore.getState().replaceTempId(chatId, tempId, docRef.id);
           }
 
+          const myUid = auth?.currentUser?.uid || (profile?.uid && !profile.uid.includes('@') ? profile.uid : null);
+          const safeParticipants = Array.isArray(selectedChat.participants) && selectedChat.participants.length > 0
+            ? (selectedChat.participants.includes(myUid) ? selectedChat.participants : [...selectedChat.participants, myUid])
+            : [myUid, selectedChat.partnerUid || selectedChat.authorUid].filter(Boolean);
+
           await setDoc(doc(db, 'chats', String(chatId)), {
             id: chatId,
             user: selectedChat.user,
@@ -902,7 +918,8 @@ export const useChatManager = ({
             lastMessage: text,
             lastSenderName: profile?.name || 'Moi',
             unreadCount: increment(1),
-            participants: selectedChat.participants || [profile?.name || 'Moi', selectedChat.user],
+            participants: safeParticipants,
+            participantUids: [myUid, selectedChat.partnerUid || selectedChat.authorUid].filter(Boolean),
             updatedAt: serverTimestamp(),
           }, { merge: true });
         } catch (e) {
@@ -1161,8 +1178,8 @@ export const useChatManager = ({
       lastMessage: `Début de discussion pour ${listing.title}`,
       status: 'Nouvelle discussion',
       terms: listing.compensation || '',
-      participants: [myUid, authorUid, profile?.name, listing.author].filter(Boolean),
-      participantUids: [myUid, authorUid].filter(Boolean),
+      participants: Array.from(new Set([myUid, authorUid])).filter(Boolean),
+      participantUids: Array.from(new Set([myUid, authorUid])).filter(Boolean),
     };
 
     setSelectedChat(conversation);
@@ -1183,8 +1200,8 @@ export const useChatManager = ({
           lastMessage: `Début de discussion pour ${listing.title}`,
           status: 'Nouvelle discussion',
           terms: listing.compensation || '',
-          participants: [myUid, authorUid, profile?.name, listing.author].filter(Boolean),
-          participantUids: [myUid, authorUid].filter(Boolean),
+          participants: Array.from(new Set([myUid, authorUid])).filter(Boolean),
+          participantUids: Array.from(new Set([myUid, authorUid])).filter(Boolean),
           updatedAt: serverTimestamp(),
         }, { merge: true });
       } catch (e) {
