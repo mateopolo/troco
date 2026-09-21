@@ -604,18 +604,18 @@ export default function ProfileFeature({
         <div style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '8px' }}>{t('spokenLanguages')}</div>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           {[
-            { code: 'FR', label: 'FR 🇫🇷' },
-            { code: 'EN', label: 'EN 🇬🇧' },
-            { code: 'ES', label: 'ES 🇪🇸' },
-            { code: 'IT', label: 'IT 🇮🇹' },
-            { code: 'DE', label: 'DE 🇩🇪' },
-            { code: 'PT', label: 'PT 🇵🇹' },
-            { code: 'AR', label: 'AR 🇸🇦' },
-            { code: 'ZH', label: 'ZH 🇨🇳' },
-            { code: 'JA', label: 'JA 🇯🇵' },
-            { code: 'RU', label: 'RU 🇷🇺' },
-            { code: 'NL', label: 'NL 🇳🇱' },
-            { code: 'KO', label: 'KO 🇰🇷' },
+            { code: 'FR', label: '🇫🇷 FR' },
+            { code: 'EN', label: '🇬🇧 EN' },
+            { code: 'ES', label: '🇪🇸 ES' },
+            { code: 'IT', label: '🇮🇹 IT' },
+            { code: 'DE', label: '🇩🇪 DE' },
+            { code: 'PT', label: '🇵🇹 PT' },
+            { code: 'AR', label: '🇸🇦 AR' },
+            { code: 'ZH', label: '🇨🇳 ZH' },
+            { code: 'JA', label: '🇯🇵 JA' },
+            { code: 'RU', label: '🇷🇺 RU' },
+            { code: 'NL', label: '🇳🇱 NL' },
+            { code: 'KO', label: '🇰🇷 KO' },
           ].map(({ code, label }) => {
             const active = (isEditingProfile ? (profileDraft.languages || []) : (profile.languages || [])).includes(code);
             return (

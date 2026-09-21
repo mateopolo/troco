@@ -6,6 +6,9 @@ import {
   Sparkles, Coins, Zap, Smartphone,
   Check, CheckCircle, Loader2, Award
 } from 'lucide-react';
+import { doc, updateDoc, increment } from 'firebase/firestore';
+import { db } from '../firebase';
+import { auth } from '../firebase';
 import { getLocalizedTrocoPlusPlans, detectUserCountry, PPP_COUNTRY_MATRIX } from '../utils/pricingEngine';
 import { outboxService } from '../services/outboxService';
 import { hapticSuccess, hapticError } from '../utils/haptics';
@@ -410,6 +413,17 @@ export default function PaymentModal({
         type: isSubscriptionMode ? 'subscription' : mode === 'topup-cash' ? 'topup' : mode === 'boost' ? 'boost' : 'deal_payout',
       });
     } catch (_) {}
+
+    // SYNC FIRESTORE : incrément atomique du solde euros pour les rechargements cash
+    // L’onSnapshot de useWalletStore / App.js propage ensuite le nouveau solde en temps réel
+    if (mode === 'topup-cash' && amountToPay > 0) {
+      const uid = auth.currentUser?.uid || currentUser?.uid;
+      if (uid && db) {
+        updateDoc(doc(db, 'users', String(uid)), {
+          euroBalance: increment(amountToPay),
+        }).catch((err) => logger.warn('[PaymentModal] Firestore topup-cash increment failed:', err));
+      }
+    }
 
     setSuccessDetails(resultPayload);
     setIsSuccess(true);

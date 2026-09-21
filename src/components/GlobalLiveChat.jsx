@@ -11,57 +11,13 @@ import {
 import { db } from '../firebase';
 import { validateChatMessage } from '../utils/moderationBlacklist';
 
-// Messages initiaux riches
-const INITIAL_GLOBAL_MESSAGES = [
-  {
-    id: 'm-init-1',
-    author: 'Mateo P.',
-    authorUsername: '@mateopolo',
-    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
-    text: 'Bienvenue sur le Chat Global Troco Live ! Posez vos questions ou lancez vos demandes urgentes en direct 🚀',
-    badge: 'FONDATEUR',
-    isUrgent: false,
-    timestamp: Date.now() - 360000,
-  },
-  {
-    id: 'm-init-2',
-    author: 'Emma R.',
-    authorUsername: '@emmar',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=150&q=80',
-    text: '@mateopolo Je recherche un photographe pour un shooting produit ce jeudi à Paris 11e, troc contre cours de design !',
-    badge: 'PRO',
-    isUrgent: false,
-    timestamp: Date.now() - 240000,
-  },
-  {
-    id: 'm-init-3',
-    author: 'Thomas V.',
-    authorUsername: '@thomasv',
-    avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=150&q=80',
-    text: '⚡ URGENT : Quelqu’un de dispo pour un coup de main sur un script Python / FastApi ce soir ? 15 Jetons Troco offerts !',
-    badge: 'VIP',
-    isUrgent: true,
-    timestamp: Date.now() - 90000,
-  },
-  {
-    id: 'm-init-4',
-    author: 'Sofia L.',
-    authorUsername: '@sofial',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
-    text: '@thomasv Je suis dispo dans 30 min ! Je t’envoie un MP dans l’onglet Chat 💬',
-    badge: 'VÉRIFIÉ',
-    isUrgent: false,
-    timestamp: Date.now() - 30000,
-  }
-];
-
 export default function GlobalLiveChat({
   currentUser = null,
   onOpenProfile = null,
   darkMode = false,
   isCompact = false,
 }) {
-  const [messages, setMessages] = useState(INITIAL_GLOBAL_MESSAGES);
+  const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const [isUrgentMode, setIsUrgentMode] = useState(false);
   const [onlineCount, setOnlineCount] = useState(1428);
@@ -151,17 +107,16 @@ export default function GlobalLiveChat({
             fetched.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
 
             setMessages(prev => {
+              // Construire la map uniquement à partir des données Firestore (zéro mock)
               const mergedMap = new Map();
-              // 1. Conserver les messages initiaux de démonstration
-              INITIAL_GLOBAL_MESSAGES.forEach(m => mergedMap.set(String(m.id), m));
 
-              // 2. Écraser impérativement avec les documents officiels retournés par Firestore
+              // 1. Documents officiels Firestore
               fetched.forEach(m => {
                 const uid = String(m.id);
                 if (uid) mergedMap.set(uid, m);
               });
 
-              // 3. Ajouter UNIQUEMENT les messages optimistes en vol non encore confirmés par le serveur
+              // 2. Ajouter UNIQUEMENT les messages optimistes en vol non encore confirmés par le serveur
               (prev || []).forEach(m => {
                 const isTemp = typeof m.id === 'string' && (m.id.startsWith('local-') || m.id.startsWith('temp_'));
                 if (isTemp) {

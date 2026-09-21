@@ -11,6 +11,25 @@ import DesignStudioModal from './DesignStudioModal';
 import ReviewsSection from './ReviewsSection';
 import { auth } from '../firebase';
 
+// Map des codes langue vers emojis drapeaux
+const LANG_FLAG_EMOJI = {
+  FR: '🇫🇷',
+  EN: '🇬🇧',
+  ES: '🇪🇸',
+  IT: '🇮🇹',
+  DE: '🇩🇪',
+  PT: '🇵🇹',
+  AR: '🇸🇦',
+  ZH: '🇨🇳',
+  JA: '🇯🇵',
+  RU: '🇷🇺',
+  NL: '🇳🇱',
+  KO: '🇰🇷',
+  PL: '🇵🇱',
+  SV: '🇸🇪',
+  TR: '🇹🇷',
+};
+
 export default function ProfileView({
   activeTab,
   profile,
@@ -247,10 +266,11 @@ export default function ProfileView({
                   <div style={{ fontSize: '12px', color: (user.dealsCompleted || 0) > 0 ? 'var(--accent-success)' : 'var(--text-secondary)', fontWeight: '700' }}>
                     🤝 Deal clôturé: {user.dealsCompleted || 0}
                   </div>
-                  <div style={{ display: 'flex', gap: '4px' }}>
+                  <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                     {profile?.languages?.map(lang => (
-                      <span key={lang} style={{ fontSize: '11px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-main)', padding: '2px 6px', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
-                        {lang}
+                      <span key={lang} style={{ fontSize: '11px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-main)', padding: '2px 8px', borderRadius: '6px', border: '1px solid var(--border-color)', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                        <span>{LANG_FLAG_EMOJI[lang.toUpperCase()] || '🌐'}</span>
+                        <span>{lang}</span>
                       </span>
                     ))}
                   </div>

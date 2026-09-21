@@ -378,3 +378,28 @@ L'application dispose d'un composant unifié pour toutes les boîtes de dialogue
 
 - **docs/audits-archived/** : Anciens audits fusionnés dans MASTER_AUDIT.md.
   NE PAS UTILISER comme référence. Conservés uniquement pour historique.
+
+---
+
+## 🔄 CHANGELOG TECHNIQUE — Septembre 2026
+
+### Patch UI/Data (commit `fix(ui/data)`)
+
+1. **Purge définitive des faux messages IA (Communauté / Troco Live)**
+   - `GlobalLiveChat.jsx` : `INITIAL_GLOBAL_MESSAGES` supprimé, `messages` initialisé à `[]`.
+   - Le snapshot Firestore ne merge plus jamais avec des données mockées.
+   - `FeedView.jsx` : le fallback `filteredListings` (mocks Sardaigne, Perceuse, etc.) est supprimé. Si Firestore est vide → liste vide.
+
+2. **Wallet Firestore Synchronisé (Rechargement Apple Pay / Carte)**
+   - `PaymentModal.jsx` : après confirmation d'un paiement `topup-cash`, appel atomique `updateDoc(doc(db, 'users', uid), { euroBalance: increment(amountToPay) })`.
+   - L'`onSnapshot` de `useWalletStore` propage le nouveau solde en temps réel → l'affichage passe immédiatement de 0 à 50 €.
+   - Le solde est persisté en Firestore → survit aux rafraîchissements de page.
+
+3. **Avatars du Feed cliquables et réels**
+   - `FeedCardItem.jsx` : utilise `item.authorAvatar` (champ Firestore) en priorité 1.
+   - Le clic sur l'auteur navigue vers le profil via `onAuthorProfileClick({ uid: item.authorUid, ... })`.
+
+4. **Emojis Drapeaux unifiés**
+   - `AppHeader.jsx` : déjà `🇫🇷 FR`, `🇬🇧 EN`, etc. (format drapeau + code).
+   - `ProfileFeature.jsx` : harmonisé en `🇫🇷 FR` (drapeau avant code).
+   - `ProfileView.jsx` : ajout de `LANG_FLAG_EMOJI` map — affiche `🇫🇷 FR` dans les pills de langues parlées.

@@ -61,13 +61,14 @@ export default function FeedView({
     return () => unsub();
   }, []);
 
-  const displayListings = realtimeListings.length > 0 ? realtimeListings.filter(item => {
-    const matchesSearch = item.title?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+  // Seules les annonces Firestore sont affich\u00e9es — z\u00e9ro fallback mock
+  const displayListings = realtimeListings.filter(item => {
+    const matchesSearch = item.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           item.description?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesFormat = formatFilter === 'all' || item.type === 'both' || item.type === formatFilter;
     const matchesCategory = selectedCategory === 'all' || selectedCategory === 'Tous' || item.category === selectedCategory;
     return matchesSearch && matchesFormat && matchesCategory;
-  }) : filteredListings;
+  });
 
   if (activeTab !== 'feed') return null;
 

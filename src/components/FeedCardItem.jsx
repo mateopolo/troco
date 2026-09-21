@@ -505,17 +505,30 @@ function FeedCardItem({
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: '1px solid var(--border-color)', gap: '8px', flexWrap: 'wrap' }}>
+          {/* AUTEUR : AVATAR RÉEL + LIEN VERS LE PROFIL */}
           <span
             onClick={(e) => {
               e.stopPropagation();
-              if (typeof onAuthorProfileClick === 'function') {
-                onAuthorProfileClick(item.authorProfile || { name: item.author, avatar: item.avatar, bio: item.bio });
+              if (item.authorUid && typeof onAuthorProfileClick === 'function') {
+                onAuthorProfileClick(item.authorProfile || { uid: item.authorUid, name: item.author, avatar: item.authorAvatar || item.avatar, bio: item.bio });
+              } else if (typeof onAuthorProfileClick === 'function') {
+                onAuthorProfileClick(item.authorProfile || { name: item.author, avatar: item.authorAvatar || item.avatar, bio: item.bio });
               }
             }}
-            style={{ display: 'flex', alignItems: 'center', gap: '7px', fontWeight: '700', fontSize: '13px', color: 'var(--text-main)', cursor: onAuthorProfileClick ? 'pointer' : 'default' }}
+            title={item.authorUid ? `Voir le profil de ${item.author}` : item.author}
+            style={{ display: 'flex', alignItems: 'center', gap: '7px', fontWeight: '700', fontSize: '13px', color: 'var(--text-main)', cursor: (item.authorUid || onAuthorProfileClick) ? 'pointer' : 'default', textDecoration: 'none' }}
           >
             <ProgressiveImage
-              src={(profile?.name && item.author === profile.name) ? (profile?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80') : (typeof getAuthorAvatar === 'function' ? getAuthorAvatar(item.author) : 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80')}
+              src={
+                // Priorité 1 : avatar stocké dans l'annonce Firestore (authorAvatar)
+                // Priorité 2 : avatar du profil si c'est notre propre annonce
+                // Priorité 3 : getAuthorAvatar helper
+                // Priorité 4 : avatar générique
+                item.authorAvatar ||
+                ((profile?.name && item.author === profile.name) ? (profile?.avatar || '') : '') ||
+                (typeof getAuthorAvatar === 'function' ? getAuthorAvatar(item.author) : '') ||
+                'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80'
+              }
               alt={item.author || 'Auteur'}
               style={{ width: '24px', height: '24px', borderRadius: '50%', flexShrink: 0, border: '1px solid var(--border-color)', overflow: 'hidden' }}
               imgStyle={{ borderRadius: '50%', objectFit: 'cover' }}
