@@ -1,0 +1,521 @@
+🦄 TROCO — ROADMAP ULTIME (Master Audit Fusionné + Plan d'Exécution)
+Document de référence unique fusionnant les 3 audits, regroupé par thème, ordonné par logique d'exécution, avec phases détaillées. Chaque tâche a un ID unique réutilisable dans les prompts Antigravity IDE.
+
+Positionnement : application internationale de troc de biens & services visant le statut de licorne. Le standard qualité est celui d'une fintech régulée, pas d'un side-project.
+
+📊 PARTIE 0 — SYNTHÈSE EXÉCUTIVE
+0.1 — Score actuel vs cible licorne
+Axe	Poids	Troco actuel	Cible Série A	Delta critique
+Sécurité financière	25%	6/10	10/10	🔴 -4
+Conformité légale (PSD2, RGPD, DSA, DAC7, KYC/AML)	20%	4/10	10/10	🔴 -6
+Architecture & scalabilité	15%	6/10	9/10	🟠 -3
+Performance mobile-first	10%	7/10	9/10	🟠 -2
+UX Premium	10%	8/10	10/10	🟡 -2
+Observabilité & DevOps	10%	2/10	9/10	🔴 -7
+Différenciation produit	10%	6/10	10/10	🟠 -4
+SCORE GLOBAL	100%	5.6/10	9.5/10	-3.9
+0.2 — Diagnostic en une phrase
+Troco est une démo technique impressionnante (top 10% des codebases marketplace que j'ai vues à ce stade) avec des choix d'architecture avancés (transactions atomiques Firestore, code-splitting, geo-privacy, PWA), MAIS :
+
+Le portefeuille est client-authoritative → n'importe qui peut se créditer des euros
+
+L'admin est déterminé côté client → n'importe qui peut devenir admin
+
+Toute la base users est téléchargée par tous → violation RGPD + coût Firestore explosif
+
+Les paiements sont simulés (Apple Pay, Visa, factures) → illégal en production
+
+Aucune observabilité → tu navigues à l'aveugle en prod
+
+Zéro test → chaque refactor est un pari
+
+0.3 — Les 3 moves qui font basculer de "bonne app" à "licorne"
+Escrow visuel + Score de confiance portefeuille → la confiance devient ton moat défensif.
+
+IA Matching + Assistant IA → la friction tombe à zéro, l'effet réseau s'emballe.
+
+Troco Pass + Troco Business → MRR récurrent + B2B, valorisation ×10.
+
+🔴 PARTIE 1 — SÉCURITÉ, ARGENT & LÉGAL (P0 — Bloquant)
+Ces tâches doivent être terminées AVANT toute nouvelle fonctionnalité. Chaque item ici est un risque existentiel (fraude, sanction légale, breach RGPD).
+
+1.1 — Sécurité & Contrôle d'accès
+ID	Problème	Impact	Fix cible
+P0-SEC-01	Admin déterminé côté client (profile?.email === '...')	N'importe qui devient admin via DevTools	Firebase Custom Claims vérifiés par getIdTokenResult().claims.admin + toutes les actions admin déplacées en Cloud Functions
+P0-SEC-02	onSnapshot(collection(db, 'users')) télécharge TOUS les users	Violation RGPD majeure + coût Firestore à 100k users	Collection users_public (nom, avatar, ville, kyc, rating) + listeners admin gated par claims
+P0-SEC-03	onSnapshot(collection(db, 'reports')) idem	Exposition modération + coût	Gate derrière isAdmin (claims)
+P0-SEC-04	Firestore Rules inconnues / absentes	Sans deny-by-default, tout est ouvert	Audit + rédaction firestore.rules complètes avec tests unitaires
+P0-SEC-05	localStorage.troco_is_authenticated utilisé comme source de vérité	Session fantôme, bypass possible	Session = uniquement onAuthStateChanged + ID token vérifié
+P0-SEC-06	Pas d'App Check	Bots + abuse Firestore	Activer Firebase App Check (reCAPTCHA v3 + DeviceCheck iOS + Play Integrity Android)
+P0-SEC-07	Rate limiting absent sur Firestore writes	Spam, DDoS économique	Cloud Functions + rate limiting (Firebase Extensions ou Cloud Armor)
+P0-SEC-08	Pas de secrets management	Fuite de clés possible	Firebase Secrets / Google Secret Manager, jamais de clé en dur
+1.2 — Intégrité financière
+ID	Problème	Impact	Fix cible
+P0-FIN-01	onClaimBonus crédite des euros côté client	Imprimante à billets	Cloud Function signée (Stripe webhook ou campaign server-validated)
+P0-FIN-02	handlePaymentSuccess écrit euroBalance via updateDoc client	Self-credit possible	Cloud Function applyPayment server-authoritative
+P0-FIN-03	Bouton "X" du checkout appelle closeCheckout qui exécute le paiement	Annuler = payer	Séparer cancelCheckout() (UI pure) vs applyCheckout() (déclenché uniquement sur succès)
+P0-FIN-04	3 blocs de transaction quasi-identiques (handleTransferCallTokens, closeCheckout deal, handlePaymentSuccess deal)	Bug fixé 1× = pas fixé partout	Un seul walletService.transferAtomically() + tests
+P0-FIN-05	Pas de garde anti-double-exécution	Double crédit via webhook + confirmation client	Idempotency keys côté Firestore + Stripe
+P0-FIN-06	Escrow (fonds utilisateurs détenus) sans structure légale	Activité d'EMI illégale en UE (agrément ACPR)	Stripe Connect Express / Mangopay / Adyen for Platforms
+P0-FIN-07	Pas de flux de retrait (payout)	Les vendeurs accumulent un solde interne, impossible de cash-out	Stripe Connect payouts + KYC vendeur obligatoire
+P0-FIN-08	Solde euros détenu côté client dans Firestore	Réglementaire + technique	Solde = source de vérité Stripe/Mangopay, Firestore = cache lecture seule
+1.3 — KYC / AML / Sanctions
+ID	Problème	Impact	Fix cible
+P0-KYC-01	KYC simulé (aucun provider réel)	Non-conformité LCEN + 4e directive AML	Stripe Identity / Onfido / Jumio
+P0-KYC-02	Seuils KYC non définis	Non-conformité	KYC obligatoire > 250€ cumulés, renforcé > 1000€
+P0-KYC-03	Pas de screening sanctions (OFAC/UE/ONU)	Interdiction légale de transaction	Intégrer Comply Advantage / Chainalysis (si crypto)
+P0-KYC-04	Pas de monitoring transactionnel	Non-conformité AML	Rules engine + alertes > 10 000€
+P0-KYC-05	Pas de FATF Travel Rule (>1000€)	Non-conformité internationale	Implémenter transmission sender/receiver
+1.4 — Paiements & Facturation
+ID	Problème	Impact	Fix cible
+P0-PAY-01	UI Apple Pay / Visa simulée (inputs factices, aucun PSP)	Pratique commerciale trompeuse (Code conso L.121-1)	Intégrer Stripe Elements / Adyen Drop-in
+P0-PAY-02	Factures fictives (TRK-YYYYMM-XXXX) sans valeur légale	Fraude fiscale potentielle	Factures générées par PSP + TVA correcte
+P0-PAY-03	Transactions seed hardcodées dans localStorage (tx-seed-1, tx-seed-2 avec refs Apple Pay)	Faux enregistrements financiers	Retirer, migrer vers vraies transactions Firestore
+P0-PAY-04	PSD2/SCA non implémentés	Non-conformité UE	Stripe SCA natif
+P0-PAY-05	Facturation électronique France 2026 non anticipée	Non-conformité	Factur-X / Chorus Pro / plateforme agréée
+P0-PAY-06	Pas de DAC7 (reporting fiscal plateforme UE)	Non-conformité depuis 2023	Module reporting vendeurs → autorités fiscales
+P0-PAY-07	Pas de multi-devises réel (FX, pricing par marché)	Blocage expansion internationale	Stripe multi-currency + FX rates live
+P0-PAY-08	Pas de méthodes de paiement locales (iDEAL, Bancontact, PIX, UPI, Alipay)	Conversion faible hors France	Stripe local methods
+1.5 — RGPD & Vie privée
+ID	Problème	Impact	Fix cible
+P0-GDPR-01	handleDeleteAccount supprime le doc Firestore mais pas le compte Auth	Non-conformité RGPD art. 17	Cloud Function Admin SDK : Auth + Firestore + sous-collections
+P0-GDPR-02	Sous-collections (notifications, chats) non supprimées	Données fantômes	Suppression en cascade
+P0-GDPR-03	localStorage.clear() nuke tout le domaine	Effets de bord autres apps	Supprimer uniquement les clés Troco
+P0-GDPR-04	Transactions non anonymisées à la suppression	Conflit RGPD vs obligation comptable	Anonymisation (montants conservés, identité purgée)
+P0-GDPR-05	Pas de portabilité des données (art. 20)	Non-conformité	Export JSON/CSV depuis Privacy Center
+P0-GDPR-06	Pas de registre de consentements	Non-conformité	Table consents avec horodatage + version
+P0-GDPR-07	Data residency non gérée	Blocage clients UE stricts	Firestore multi-région + choix utilisateur
+1.6 — Contenu & modération
+ID	Problème	Impact	Fix cible
+P0-MOD-01	Modération 100% manuelle	Ne scale pas	Modération auto (Hive / AWS Rekognition / OpenAI Moderation)
+P0-MOD-02	Pas de détection de contenu illégal (DSA)	Non-conformité DSA (obligatoire UE)	Signalement + réponse < 24h + transparence
+P0-MOD-03	Demo data mélangée au feed de prod (mockListings mergés)	Perte de crédibilité	Séparer mode démo (flag) vs prod
+P0-MOD-04	Bios/portfolios hardcodés pour "Sofia M." / "Marc L." en vue détail	Fuite de démo en prod	Retirer, utiliser vraies données
+P0-MOD-05	Avatars hardcodés par nom (authorAvatars)	Fragile, faux profils	Utiliser vraies données user
+🟠 PARTIE 2 — BUGS FONCTIONNELS (P1)
+Erreurs qui dégradent l'UX, corrompent les données ou créent de l'incohérence d'état.
+
+ID	Bug	Impact	Fix
+P1-BUG-01	Toast succès affiché hors try (handleTransferCallTokens)	Message mensonger	Déplacer dans le bloc success
+P1-BUG-02	Pas de rollback sur deal échoué (UI optimiste avant runTransaction)	UI menteuse	Pessimistic UI sur la finance
+P1-BUG-03	filteredListings ne dépend pas de userCoords	Filtrage par distance stale	Ajouter userCoords aux deps
+P1-BUG-04	handleTogglePauseListing ne persiste pas	Pause annulée au reload	updateDoc Firestore
+P1-BUG-05	Ghost session (troco_is_authenticated sans user Firebase)	App bloquée "connecté"	Source de vérité = onAuthStateChanged uniquement
+P1-BUG-06	handleCompleteOnboarding force 10 tokens / 0€	Destruction de solde si re-trigger	Garde : ne s'exécute que si onboardingCompleted === false ET solde initial
+P1-BUG-07	State updater impur (localStorage.setItem dans setProfile)	Bugs StrictMode	Déplacer les side effects hors des updaters
+P1-BUG-08	prevTokensRef déclenche célébration 2× (effect + listener Firestore)	Double son + double toast	Source unique (listener Firestore)
+P1-BUG-09	Deux flux boost parallèles (confirmBoostListing vs handleBoostListing)	Bugs futurs	Unifier
+P1-BUG-10	key={item.id || index}	Bugs d'état React	Garantir IDs stables
+P1-BUG-11	Persistance de TOUT le feed dans localStorage (troco_user_listings)	Quota explosé + perf	Ne pas persister de données serveur
+P1-BUG-12	window.prompt pour email magic link	UX cheap + faille	Modale custom
+P1-BUG-13	handleOpenListing useCallback inutile (deps recréées)	Rerender inutile	useCallback correct ou retirer
+🟡 PARTIE 3 — ARCHITECTURE & DETTE TECHNIQUE (P2)
+3.1 — Découpage & structure
+ID	Problème	Fix cible
+P2-ARCH-01	Fichier monstre App.js (~2500 lignes)	Découper en routes/ + hooks/ + services/ + stores/
+P2-ARCH-02	Logique feed dans App	Extraire useListingsFeed.js
+P2-ARCH-03	Logique checkout dans App	Extraire useCheckout.js
+P2-ARCH-04	Notifications transaction dans App	Extraire useTransactionNotifications.js
+P2-ARCH-05	Ban guard dans App	Extraire useUserBanGuard.js
+P2-ARCH-06	Timer call + settlement dans App	Extraire useCallTimer.js
+P2-ARCH-07	Pas de store Zustand centralisé (déjà useWalletStore partiel)	Migrer feed + chat + UI vers Zustand, éliminer prop drilling
+P2-ARCH-08	Injection de <style> global dans JSX	Déplacer dans CSS module
+Structure cible :
+
+text
+src/
+├── App.jsx                      (~300 lignes : providers + routing)
+├── routes/
+│   ├── FeedRoute.jsx
+│   ├── ChatRoute.jsx
+│   ├── ProfileRoute.jsx
+│   ├── PostRoute.jsx
+│   └── LegalRoute.jsx
+├── hooks/
+│   ├── useListingsFeed.js
+│   ├── useCheckout.js
+│   ├── useTransactionNotifications.js
+│   ├── useUserBanGuard.js
+│   ├── useGeolocation.js
+│   ├── useSearchAliases.js
+│   ├── useCallTimer.js
+│   ├── useAdminGuard.js
+│   ├── useSafeTimeout.js
+│   └── useConfirm.js
+├── services/
+│   ├── walletService.js
+│   ├── dealService.js
+│   ├── notificationService.js
+│   ├── kycService.js
+│   ├── geocodingService.js
+│   └── logger.js
+├── stores/
+│   ├── walletStore.js
+│   ├── feedStore.js
+│   ├── chatStore.js
+│   └── uiStore.js
+└── functions/                   (Cloud Functions)
+    ├── admin/
+    ├── payments/
+    ├── kyc/
+    └── indexing/
+3.2 — Performance
+ID	Problème	Fix cible
+P2-PERF-01	setTimeout non nettoyés → fuites	useSafeTimeout() hook
+P2-PERF-02	localStorage synchrone dans listener Firestore	Debounce + IndexedDB (idb-keyval)
+P2-PERF-03	filteredListings dépend de allFirestoreUsers → re-render cascade	Index Map précalculée
+P2-PERF-04	Shadow-ban matching O(n×m)	Pre-index Map<uid, user> + Map<name, user>
+P2-PERF-05	searchNominatim à chaque frappe (violation 1 req/s)	Cache LRU + debounce 600ms + geocoder commercial
+P2-PERF-06	Normalisation accents recalculée par item	Précalculer index normalisé par listing
+P2-PERF-07	Pas de React.memo sur composants lourds	React.memo sur FeedCardItem, ChatSection, MapSection
+P2-PERF-08	Pas de useDeferredValue sur recherche	Ajouter sur searchQuery
+P2-PERF-09	Persistance feed entier localStorage	Retirer (données serveur)
+P2-PERF-10	Tri + sort à chaque render	useMemo correct avec deps complètes
+3.3 — Observabilité
+ID	Problème	Fix cible
+P2-OBS-01	console.warn/error en prod	logger.js conditionnel (dev uniquement)
+P2-OBS-02	Aucun monitoring erreurs	Sentry (web + mobile)
+P2-OBS-03	Aucun monitoring perf	Firebase Performance Monitoring + RUM
+P2-OBS-04	Aucun tracking business	Analytics events (deal créé, deal complété, etc.)
+P2-OBS-05	Pas d'alerting budget Firebase	Alertes budget GCP
+P2-OBS-06	Pas de health check	Endpoint /health + Uptime monitoring
+3.4 — Tests & CI/CD
+ID	Problème	Fix cible
+P2-TEST-01	Zéro test unitaire	Vitest + React Testing Library sur services/ et hooks/
+P2-TEST-02	Zéro test E2E	Playwright sur flows critiques (paiement, deal, login)
+P2-TEST-03	Zéro test Firestore Rules	@firebase/rules-unit-testing
+P2-TEST-04	Pas de CI/CD	GitHub Actions : lint, test, build, deploy preview
+P2-TEST-05	Pas d'environnement staging	Firebase projects séparés (dev/staging/prod)
+P2-TEST-06	Pas de preview deploys	Firebase Hosting preview channels
+3.5 — Code quality
+ID	Problème	Fix cible
+P2-QUAL-01	eslint-disable partout (deps useEffect)	Pattern useEvent / useLatestRef
+P2-QUAL-02	Pas de TypeScript	Migration progressive (au moins services/)
+P2-QUAL-03	Pas de Prettier config	Ajouter
+P2-QUAL-04	Pas de husky + lint-staged	Ajouter
+P2-QUAL-05	Pas de conventions de nommage	Doc + ESLint rules
+🟢 PARTIE 4 — UX, UI & ACCESSIBILITÉ (P3)
+4.1 — UX Premium
+ID	Problème	Fix
+P3-UX-01	alert() / window.confirm() / window.prompt natifs (~15 occurrences)	useConfirm() + <ConfirmDialog /> + <PromptDialog />
+P3-UX-02	topUpCelebration fixe à top: 85px (chevauche header)	env(safe-area-inset-top)
+P3-UX-03	Swipe vertical ne ferme pas les modales	Détection deltaY > 80
+P3-UX-04	Démos visibles dans le feed	Filtre "Masquer les démos" dans FilterDrawer
+P3-UX-05	document.body.style.touchAction = 'none' global (casse scroll iframes)	Scope au conteneur chat uniquement
+P3-UX-06	Bouton "Retour" Android quitte le checkout	history.pushState + listener popstate
+P3-UX-07	isLoadingSession force 2.5s minimum artificiel	Skeleton + résolution réelle
+P3-UX-08	Strings français hardcodées dans JSX	Extraction i18n complète
+P3-UX-09	Pas de skeleton loaders cohérents	Design system skeletons
+P3-UX-10	Modal touch swipe horizontal uniquement	Ajouter vertical (fermeture)
+P3-UX-11	Pas de gestion prefers-reduced-motion	Respecter
+P3-UX-12	Pas de fallback offline pour actions critiques	Queue de sync
+4.2 — Accessibilité (a11y)
+ID	Problème	Fix
+P3-A11Y-01	aria-live="polite" manquant sur topUpCelebration et NotificationPill	Ajouter
+P3-A11Y-02	aria-pressed manquant sur les toggles	Ajouter
+P3-A11Y-03	Contrastes insuffisants mode clair (#C67D5B sur #FAF7F2 ~3.5:1)	Ajuster pour WCAG AA
+P3-A11Y-04	Pas de focus-visible styles	Ajouter
+P3-A11Y-05	Pas de focus trap dans les modales	Implémenter
+P3-A11Y-06	eslint-plugin-jsx-a11y non installé	Ajouter en dev
+P3-A11Y-07	axe-core non intégré en CI	Ajouter
+P3-A11Y-08	Navigation clavier incomplète	Audit + fixes
+P3-A11Y-09	Landmarks ARIA manquants	Ajouter
+4.3 — Cohérence visuelle
+ID	Problème	Fix
+P3-VIS-01	Composants inline styles répétés	Design system + tokens
+P3-VIS-02	Plusieurs systèmes d'animation (Framer Motion + CSS + Rive potentiel)	Unifier
+P3-VIS-03	Emojis partout (🔥, 🎉, 🤝)	Icônes vectorielles cohérentes
+🌍 PARTIE 5 — INTERNATIONAL & CONFORMITÉ MULTI-JURIDICTIONNELLE (P4)
+5.1 — Localisation
+ID	Problème	Fix
+P4-I18N-01	Strings FR hardcodées (boutons, toasts, empty states)	Extraction t() complète
+P4-I18N-02	Pas de RTL (MENA expansion)	Support dir="rtl" + CSS logical properties
+P4-I18N-03	Dates/nombres non localisés	Intl.DateTimeFormat + Intl.NumberFormat
+P4-I18N-04	Timezones non gérées (stockage UTC, affichage local)	Standardiser UTC Firestore, convertir à l'affichage
+P4-I18N-05	Pas de pipeline traduction automatique	DeepL / Google Translate API + review humaine
+5.2 — Paiements internationaux
+ID	Problème	Fix
+P4-PAY-01	Pas de SEPA, iDEAL, Bancontact, PIX, UPI, Alipay, WeChat Pay	Stripe local methods par région
+P4-PAY-02	Pas de multi-devises wallet	Stripe multi-currency + FX
+P4-PAY-03	Pas de crypto (USDC/USDT)	Provider crypto payment (Coinbase Commerce, Bitpay)
+P4-PAY-04	Pas de pricing par marché (pouvoir d'achat)	Config prix par pays
+5.3 — Conformité régionale
+ID	Région	Obligation	Fix
+P4-REG-EU-01	UE	PSD2, RGPD, DSA, DAC7	Stripe Connect + reporting
+P4-REG-FR-01	France	TVA autoliquidation marketplace, facturation électronique 2026	Factur-X / Chorus Pro
+P4-REG-US-01	USA	FinCEN MSB, 1099-K	Stripe Atlas / PSP local
+P4-REG-UK-01	UK	FCA Small Payment Institution	PSP UK
+P4-REG-ASIA-01	Asie	MAS (SG), FSA (JP)	Partenariats PSP locaux
+P4-REG-GLOBAL-01	Global	FATF Travel Rule	Transmission sender/receiver
+P4-REG-SANC-01	Global	OFAC, UE, ONU	Screening KYC
+P4-REG-PCI-01	Global	PCI-DSS SAQ-A	Hosted fields (Stripe Elements)
+5.4 — App Store / Play Store
+ID	Problème	Fix
+P4-STORE-01	Tokens utilisés pour services digitaux = IAP Apple 30%	Audit juridique + stratégie
+P4-STORE-02	Pas de compte démo pour reviewers	Créer
+P4-STORE-03	Pas de politique de confidentialité accessible	Ajouter
+P4-STORE-04	Pas de gestion des notifications push natives	FCM + APNs
+5.5 — Trust & Safety à l'échelle
+ID	Problème	Fix
+P4-TS-01	Modération manuelle	Auto-modération (Hive, AWS Rekognition, OpenAI)
+P4-TS-02	Pas de résolution de litige	Flow dispute + médiation
+P4-TS-03	Pas de gestion chargeback	Stripe Chargeback API
+P4-TS-04	Pas de scoring de confiance	Score multi-facteurs (ancienneté, deals, KYC, avis, réactivité)
+5.6 — Data model & scalabilité
+ID	Problème	Fix
+P4-DATA-01	Author info non dénormalisée (jointures coûteuses)	Snapshot auteur sur listing
+P4-DATA-02	Statut listing server-side absent	Firestore rules + Cloud Function
+P4-DATA-03	IDs non stables	UUID Firestore natifs
+P4-DATA-04	Pas de pagination cursor sur toutes les collections	Standardiser
+P4-DATA-05	Pas de backup/DR	Firestore exports quotidiens
+P4-DATA-06	Pas de sharding prévu	Firestore sharding patterns
+🚀 PARTIE 6 — DIFFÉRENCIATION PRODUIT (P5)
+6.1 — Quick Wins (1-2 semaines)
+ID	Feature	Impact
+P5-QW-01	Pull-to-refresh natif sur le Feed	UX mobile perçue ×3
+P5-QW-02	Badge "en ligne" temps réel (presenceMap déjà présent)	+20% taux de contact
+P5-QW-03	Filtres sauvegardés ("Ma recherche Piano Paris")	Rétention J+7
+P5-QW-04	Recherche vocale (Web Speech API)	Accessibilité + wow
+P5-QW-05	Mode sombre auto (heure locale + prefers-color-scheme)	Confort
+P5-QW-06	Widget "Mes deals en cours" en haut du Feed	Réengagement
+P5-QW-07	Filtre "Masquer les démos"	Crédibilité
+6.2 — Différenciateurs (1-2 mois)
+ID	Feature	Impact Licorne
+P5-DIFF-01	Troco Escrow visuel (timeline animée)	Confiance = conversion
+P5-DIFF-02	IA Matching (Firestore Vector Search + embeddings)	Cœur de la valeur
+P5-DIFF-03	Assistant IA (rédaction annonce photo, suggestion prix, traduction chat)	Rétention + barrière à l'entrée
+P5-DIFF-04	Score de confiance portefeuille	Monétisable
+P5-DIFF-05	Badges gamifiés (Lottie)	Virality
+P5-DIFF-06	Signature électronique deals > 500€	Marché B2B
+P5-DIFF-07	Multi-devises crypto/fiat	International
+P5-DIFF-08	Mode hors-ligne complet (IndexedDB + queue de sync)	Marchés émergents
+P5-DIFF-09	Troco Live (LiveKit / Daily.co)	Effet réseau
+P5-DIFF-10	Troco Business (factures PDF, TVA, multi-users, API)	B2B revenue
+6.3 — Vision long terme (Mois 3+)
+ID	Feature	Impact
+P5-VIS-01	Troco Places (carte lieux partenaires)	Monétisation locale
+P5-VIS-02	Troco Academy (cours certifiants)	Upsell jetons
+P5-VIS-03	Troco Impact (1% reversé à assos)	Marque employeur + presse
+P5-VIS-04	Marketplace templates d'annonces	Économie créateur
+P5-VIS-05	Troco Pass (abonnement perks)	MRR récurrent
+📅 PARTIE 7 — ROADMAP ULTIME PAR PHASES
+🏁 PHASE 0 — URGENCE SÉCURITÉ (Semaine 1, 5 jours)
+Objectif : éliminer les failles existentielles avant toute nouvelle feature.
+Critère de sortie : aucune action admin/money possible côté client, RGPD respecté sur la lecture users.
+
+Jour	Tâches	IDs	Livrable
+J1	Audit Firestore Rules + correction deny-by-default	P0-SEC-04, P0-SEC-07	firestore.rules versionné + tests
+J1	Migrer admin vers Custom Claims	P0-SEC-01	Cloud Function setAdminClaim + useAdminGuard.js
+J2	Gater listeners users/reports	P0-SEC-02, P0-SEC-03	Collection users_public + listeners conditionnels
+J2	Fix session fantôme	P0-SEC-05, P1-BUG-05	Source de vérité = Auth uniquement
+J3	Retirer onClaimBonus client + handlePaymentSuccess direct	P0-FIN-01, P0-FIN-02	Cloud Function applyPayment
+J3	Séparer cancelCheckout / applyCheckout	P0-FIN-03	Checkout refactoré
+J4	Créer walletService.transferAtomically() unifié	P0-FIN-04, P0-FIN-05	3 blocs → 1 service + tests
+J4	Idempotency keys	P0-FIN-05	Firestore idempotency/{key}
+J5	Retirer seed transactions fake + demo data du feed	P0-PAY-03, P0-MOD-03, P0-MOD-04, P0-MOD-05	Feed propre
+J5	Fix handleDeleteAccount RGPD complet	P0-GDPR-01, P0-GDPR-02, P0-GDPR-03	Cloud Function deleteUser
+Livrable Phase 0 : app safe pour bêta privée (10-50 users trusted).
+
+🛡️ PHASE 1 — STABILISATION & CONFORMITÉ (Semaines 2-4, 3 semaines)
+Objectif : rendre l'app fiable et conforme pour une bêta publique (1000 users).
+
+Semaine	Tâches	IDs
+S2	Brancher Stripe Connect (PSP réel)	P0-PAY-01, P0-PAY-02, P0-FIN-06, P0-FIN-07, P0-FIN-08, P0-PAY-04
+S2	Brancher KYC réel (Stripe Identity)	P0-KYC-01, P0-KYC-02
+S2	Retirer UI Apple Pay/Visa fictive	P0-PAY-01
+S3	Facturation électronique France	P0-PAY-05, P4-REG-FR-01
+S3	DAC7 reporting	P0-PAY-06, P4-REG-EU-01
+S3	KYC screening sanctions	P0-KYC-03, P0-KYC-04, P0-KYC-05
+S3	Rate limiting + App Check	P0-SEC-06, P0-SEC-07
+S4	RGPD : portabilité + consentements	P0-GDPR-04, P0-GDPR-05, P0-GDPR-06
+S4	Fix bugs P1 restants	Tous P1-BUG-*
+S4	Observabilité : logger + Sentry + RUM	P2-OBS-01 → P2-OBS-06
+Livrable Phase 1 : app conforme UE, PSP réel, KYC réel, monitoring actif.
+
+🏗️ PHASE 2 — ARCHITECTURE & OBSERVABILITÉ (Semaines 5-7, 3 semaines)
+Objectif : rendre le code maintenable et testable pour scaler l'équipe.
+
+Semaine	Tâches	IDs
+S5	Découper App.jsx en routes	P2-ARCH-01 → P2-ARCH-06
+S5	Extraire hooks dédiés	P2-ARCH-02 → P2-ARCH-06
+S5	Migration Zustand complète	P2-ARCH-07
+S6	useSafeTimeout + useConfirm + remplacer alert/confirm	P2-PERF-01, P3-UX-01
+S6	localStorage → IndexedDB + debounce	P2-PERF-02
+S6	React.memo + useDeferredValue	P2-PERF-07, P2-PERF-08
+S6	Fix deps useEffect (useEvent pattern)	P2-QUAL-01
+S7	Tests unitaires services/ + hooks/	P2-TEST-01
+S7	Tests E2E flows critiques	P2-TEST-02
+S7	Tests Firestore Rules	P2-TEST-03
+S7	CI/CD + staging + preview	P2-TEST-04, P2-TEST-05, P2-TEST-06
+Livrable Phase 2 : code testé, CI/CD, monitoring, prêt pour équipe de 5 devs.
+
+🎨 PHASE 3 — UX POLISH & ACCESSIBILITÉ (Semaines 8-10, 3 semaines)
+Objectif : UX premium digne d'une app grand public, accessible à tous.
+
+Semaine	Tâches	IDs
+S8	Audit a11y + corrections (aria, contrastes, focus)	P3-A11Y-01 → P3-A11Y-09
+S8	Safe-area + swipe modal + scope touchAction	P3-UX-02, P3-UX-03, P3-UX-05, P3-UX-10
+S8	Bouton Retour Android checkout	P3-UX-06
+S9	Skeleton loaders + prefers-reduced-motion	P3-UX-07, P3-UX-09, P3-UX-11
+S9	Extraction i18n complète (strings FR hardcodées)	P3-UX-08, P4-I18N-01
+S9	Design system + tokens	P3-VIS-01, P3-VIS-02, P3-VIS-03
+S10	Filtre "Masquer les démos"	P3-UX-04
+S10	Polissage final UX	Tous P3 restants
+Livrable Phase 3 : app accessible WCAG AA, UX premium, i18n complet.
+
+🚀 PHASE 4 — DIFFÉRENCIATION & SCALE (Mois 3-4, 8 semaines)
+Objectif : features qui te démarquent (killer features).
+
+Semaine	Tâches	IDs
+M3-S1	Troco Escrow visuel (timeline animée)	P5-DIFF-01
+M3-S1	Score de confiance portefeuille	P5-DIFF-04
+M3-S2	IA Matching (Vector Search)	P5-DIFF-02
+M3-S3	Assistant IA rédaction annonce + suggestion prix	P5-DIFF-03
+M3-S4	Badges gamifiés Lottie	P5-DIFF-05
+M4-S1	Multi-devises + méthodes locales	P4-PAY-01, P4-PAY-02, P4-PAY-04, P5-DIFF-07
+M4-S2	Mode hors-ligne complet	P5-DIFF-08
+M4-S3	Signature électronique deals >500€	P5-DIFF-06
+M4-S4	Quick wins mobile (pull-to-refresh, voice, filtres sauvegardés)	P5-QW-01 → P5-QW-07
+Livrable Phase 4 : produit différencié, prêt Série A.
+
+🌍 PHASE 5 — INTERNATIONAL & LICORNE (Mois 5-12)
+Objectif : expansion mondiale + conformité multi-juridictionnelle.
+
+Mois	Tâches	IDs
+M5	RTL + timezones + Intl	P4-I18N-02, P4-I18N-03, P4-I18N-04
+M5	Pipeline traduction auto (DeepL)	P4-I18N-05
+M6	Conformité US + UK	P4-REG-US-01, P4-REG-UK-01
+M6	Conformité Asie (MAS, FSA)	P4-REG-ASIA-01
+M7	FATF Travel Rule	P4-REG-GLOBAL-01
+M7	PCI-DSS certification	P4-REG-PCI-01
+M8	App Store / Play Store compliance	P4-STORE-01 → P4-STORE-04
+M8	Troco Live (LiveKit)	P5-DIFF-09
+M9	Troco Business (factures PDF, TVA, API)	P5-DIFF-10
+M9	Trust & Safety auto-modération	P4-TS-01 → P4-TS-04
+M10	Data model scalabilité (dénormalisation, sharding, backup)	P4-DATA-01 → P4-DATA-06
+M10	Troco Places	P5-VIS-01
+M11	Troco Academy	P5-VIS-02
+M11	Troco Impact	P5-VIS-03
+M12	Troco Pass + Marketplace templates	P5-VIS-04, P5-VIS-05
+Livrable Phase 5 : app internationale, conforme multi-juridiction, licorne-ready.
+
+📋 PARTIE 8 — BACKLOG CONSOLIDÉ PAR PRIORITÉ (référence pour prompts)
+P0 — Existential (11 items) — Phase 0 + 1
+P0-SEC-01 → P0-SEC-08 | P0-FIN-01 → P0-FIN-08 | P0-KYC-01 → P0-KYC-05 | P0-PAY-01 → P0-PAY-08 | P0-GDPR-01 → P0-GDPR-07 | P0-MOD-01 → P0-MOD-05
+
+P1 — Critical bugs (13 items) — Phase 1
+P1-BUG-01 → P1-BUG-13
+
+P2 — Architecture & observabilité (30 items) — Phase 2
+P2-ARCH-01 → P2-ARCH-08 | P2-PERF-01 → P2-PERF-10 | P2-OBS-01 → P2-OBS-06 | P2-TEST-01 → P2-TEST-06 | P2-QUAL-01 → P2-QUAL-05
+
+P3 — UX & a11y (24 items) — Phase 3
+P3-UX-01 → P3-UX-12 | P3-A11Y-01 → P3-A11Y-09 | P3-VIS-01 → P3-VIS-03
+
+P4 — International & conformité (30 items) — Phase 4 + 5
+P4-I18N-01 → P4-I18N-05 | P4-PAY-01 → P4-PAY-04 | P4-REG-* | P4-STORE-01 → P4-STORE-04 | P4-TS-01 → P4-TS-04 | P4-DATA-01 → P4-DATA-06
+
+P5 — Différenciation produit (22 items) — Phase 4 + 5
+P5-QW-01 → P5-QW-07 | P5-DIFF-01 → P5-DIFF-10 | P5-VIS-01 → P5-VIS-05
+
+TOTAL : ~130 tâches identifiées et priorisées.
+
+🎯 PARTIE 9 — PROCHAINES ÉTAPES POUR ANTIGRAVITY IDE
+9.1 — Format de prompt recommandé
+text
+PROMPT #[N] — [ID] [Titre court]
+
+📁 CONTEXTE
+- Fichier(s) concerné(s) : [chemins]
+- État actuel : [description du problème]
+- Dépendances : [autres tâches/IDs]
+
+🎯 OBJECTIF
+- Résultat attendu : [description]
+- Critère de succès mesurable : [métrique]
+
+⚠️ CONTRAINTES
+- Ne pas casser : [X, Y]
+- Respecter : [pattern, style, TS strict]
+- Interdit : [alert, updateDoc sur balance, etc.]
+
+📦 LIVRABLE
+- Fichiers à créer/modifier : [liste]
+- Tests à ajouter : [description]
+
+✅ CRITÈRES D'ACCEPTATION
+- [ ] Test manuel 1
+- [ ] Test manuel 2
+- [ ] Lint passe
+- [ ] Tests passent
+9.2 — Ordre de génération recommandé
+Batch 1 — Phase 0 (URGENCE, 10 prompts)
+
+Prompt 1 : P0-SEC-04 Firestore Rules deny-by-default
+
+Prompt 2 : P0-SEC-01 Custom Claims admin
+
+Prompt 3 : P0-SEC-02 + P0-SEC-03 Collection users_public
+
+Prompt 4 : P0-SEC-05 + P1-BUG-05 Fix ghost session
+
+Prompt 5 : P0-FIN-01 + P0-FIN-02 Cloud Function applyPayment
+
+Prompt 6 : P0-FIN-03 Séparer cancel/apply checkout
+
+Prompt 7 : P0-FIN-04 + P0-FIN-05 walletService unifié + idempotency
+
+Prompt 8 : P0-PAY-03 + P0-MOD-03/04/05 Retirer demo data
+
+Prompt 9 : P0-GDPR-01/02/03 RGPD delete complet
+
+Prompt 10 : P0-SEC-06/07 App Check + rate limiting
+
+Batch 2 — Phase 1 (Conformité, 8 prompts)
+
+PSP Stripe Connect, KYC, facturation, DAC7, RGPD portabilité, fixes P1, observabilité.
+
+Batch 3 — Phase 2 (Architecture, 10 prompts)
+
+Découpage App.js, hooks, Zustand, tests, CI/CD.
+
+Batch 4 — Phase 3 (UX/a11y, 8 prompts)
+
+a11y, safe-area, i18n, design system.
+
+Batch 5+ — Phases 4-5 (Différenciation)
+
+Features killer, international, conformité multi-juridiction.
+
+🏆 PARTIE 10 — VERDICT FINAL
+Horizon	Score	Statut
+Aujourd'hui	5.6/10	Démo technique impressionnante, 4 failles existentielles
+3 mois (Phase 0-2)	8.5/10	Fintech-grade, bêta privée 1000 users
+6 mois (Phase 3-4)	9.5/10	Produit différencié, prêt Série A
+12 mois (Phase 5)	9.5/10	Licorne internationale (si conformité exécutée)
+24 mois	10/10	Licorne déca-unicorn si Troco Pass + Business + Live scale
+Les 3 moves qui font basculer de "bonne app" à "licorne"
+Escrow visuel + Score de confiance = moat défensif
+
+IA Matching + Assistant IA = effet réseau auto-entretenu
+
+Troco Pass + Troco Business = MRR récurrent + B2B, valorisation ×10
+
+Règle d'or
+Aucune nouvelle feature tant qu'une tâche P0 n'est pas fermée.
+Une licorne ne se construit pas sur des fondations qui s'effondrent.
+
+✅ VALIDATION
+Cet audit fusionne les 3 audits (le tien, le mien v1, le mien v2) en un seul document de référence :
+
+~130 tâches identifiées et priorisées
+
+6 phases sur 12 mois
+
+IDs uniques pour chaque tâche → prêts à être transformés en prompts Antigravity
+
+Conformité internationale intégrée (PSD2, RGPD, DSA, DAC7, FATF, OFAC, PCI-DSS)
+
+Dimension licorne ajoutée (trust & safety, data residency, multi-devises, App Store)
+
+Prochaine étape : génération du Batch 1 de prompts Antigravity IDE (Phase 0 — Urgence Sécurité).

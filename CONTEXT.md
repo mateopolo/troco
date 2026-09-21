@@ -310,3 +310,16 @@ L'application dispose d'un composant unifié pour toutes les boîtes de dialogue
 
 7. **REQUÊTES FIRESTORE & IDENTIFIANTS UTILISATEUR :**
    Les requêtes Firestore utilisent EXCLUSIVEMENT profile.uid (jamais email, jamais nom, jamais username) pour filtrer les chats et les données utilisateur.
+
+---
+
+## 📚 DOCUMENT DE RÉFÉRENCE UNIQUE
+
+- **MASTER_AUDIT.md** : Audit ultime fusionné + roadmap vivante du projet.
+  Contient l'état réel de chaque tâche (fait / à faire), les failles de
+  sécurité, les problèmes de performance, les features à ajouter, triées
+  du quick win au plus difficile.
+  **À consulter AVANT toute tâche. À mettre à jour APRÈS chaque tâche.**
+
+- **docs/audits-archived/** : Anciens audits fusionnés dans MASTER_AUDIT.md.
+  NE PAS UTILISER comme référence. Conservés uniquement pour historique.

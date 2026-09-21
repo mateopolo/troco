@@ -1,0 +1,298 @@
+🔍 Audit complet de ton application Troco
+J'ai analysé ton fichier App.js (probablement ~2500+ lignes). Voici un audit structuré, honnête et actionnable avec des axes d'amélioration précis et des fonctionnalités à ajouter pour rendre ton app vraiment "extra".
+
+📊 1. Diagnostic global
+Ce qui est excellent :
+
+✅ Architecture modulaire (hooks custom : useAppAuth, useAppNavigation, useAppModals, useChatManager, useWebRTC, useGlobalContent)
+
+✅ Code-splitting agressif (React.lazy partout)
+
+✅ Isolation iOS/touch (isIosOrTouchDevice, désactivation WebGL)
+
+✅ Transactions atomiques Firestore (runTransaction) — très pro
+
+✅ Notifications temps réel + sons différenciés (Apple Pay, Betclic, Welcome fanfare)
+
+✅ Sécurité financière : vérification partnerUid avant débit, jamais de débit orphelin
+
+✅ PWA + OfflineBanner + OfflineScreen + CookieBanner + RGPD
+
+✅ GeoPrivacy (fuzzing GPS à 2 décimales)
+
+✅ Multilingue avec LanguageContext + subscribeTranslations
+
+Ce qui pose problème :
+
+⚠️ Fichier monstre de ~2500 lignes → maintenance difficile
+
+⚠️ Beaucoup de console.warn/console.error en prod
+
+⚠️ localStorage.setItem synchrone dans le rendu et les listeners Firestore
+
+⚠️ Plusieurs setTimeout non nettoyés (fuites potentielles)
+
+⚠️ alert() et window.confirm() natifs → rupture UX premium
+
+⚠️ Duplication de logique de transaction (deal vs boost vs call)
+
+⚠️ useEffect avec dépendances manquantes (eslint-disable un peu partout)
+
+⚠️ Le prevTokensRef + listener Firestore peut déclencher plusieurs fois la célébration
+
+🛠️ 2. Axes d'amélioration techniques
+2.1 — Découper ce fichier (priorité #1)
+App.js fait tout. Découpe-le en :
+
+text
+src/
+  App.jsx                         (~300 lignes max : providers + routing)
+  routes/
+    FeedRoute.jsx
+    ChatRoute.jsx
+    ProfileRoute.jsx
+    PostRoute.jsx
+    LegalRoute.jsx
+  hooks/
+    useListingsFeed.js            (listings + filtres + pagination)
+    useCheckout.js                (checkout + handleConfirmPayment)
+    useTransactionNotifications.js (prevTokensRef, notifs, célébration)
+    useUserBanGuard.js            (surveillance isBanned)
+    useGeolocation.js             (fuzzing + Nominatim)
+    useSearchAliases.js           (dynamicSearchAliases)
+    useCallTimer.js               (chrono + settlement)
+  services/
+    dealService.js                (runTransaction deal)
+    walletService.js              (crédit/débit atomique)
+    notificationService.js        (push Firestore + toast)
+Bénéfice : lisibilité, testabilité, hot-reload plus rapide, moins de re-renders.
+
+2.2 — Remplacer alert() et window.confirm() par tes propres modales
+Tu as déjà TransactionSuccessModal, NotificationPill, EmptyState… mais tu utilises encore alert() et window.confirm() à une quinzaine d'endroits.
+
+js
+// ❌ Actuel
+if (window.confirm(t('confirmDeleteText'))) { ... }
+
+// ✅ Cible
+const confirmed = await confirmDialog({
+  title: t('deleteListingTitle'),
+  message: t('confirmDeleteText'),
+  confirmLabel: t('delete'),
+  destructive: true,
+});
+Crée un useConfirm() hook + un <ConfirmDialog /> global. Impact UX énorme : ton app est premium, ces boîtes natives cassent tout.
+
+2.3 — Corriger les fuites mémoire (setTimeout + listeners)
+Partout où tu as :
+
+js
+setTimeout(() => setSaveMessage(''), 6000);
+Si le composant démonte avant, tu écris sur un composant mort. Solution :
+
+js
+// hooks/useTimeout.js
+function useSafeTimeout() {
+  const timersRef = useRef(new Set());
+  useEffect(() => () => {
+    timersRef.current.forEach(clearTimeout);
+    timersRef.current.clear();
+  }, []);
+  return useCallback((fn, delay) => {
+    const id = setTimeout(() => {
+      timersRef.current.delete(id);
+      fn();
+    }, delay);
+    timersRef.current.add(id);
+    return id;
+  }, []);
+}
+Remplace tous les setTimeout liés au state par safeTimeout.
+
+2.4 — localStorage synchrone dans le listener Firestore
+js
+unsubDoc = onSnapshot(userDocRef, async (docSnap) => {
+  // ...
+  window.localStorage.setItem('troco_user_profile', JSON.stringify(updated)); // ⚠️ bloquant
+});
+À chaque update Firestore, tu sérialises un gros objet en synchrone sur le thread UI. Sur mobile, ça micro-freeze.
+
+Fix : debounce + IndexedDB (idb-keyval) ou écrire uniquement les champs modifiés (tokens, euros, kyc, plus — pas tout le profil).
+
+2.5 — Dépendances useEffect bricolées
+js
+useEffect(() => {
+  // ...
+}, []); // ⚠️ devrait dépendre de profile?.uid, etc.
+Plusieurs hooks écoutent des choses qui changent (uid) mais ne se re-souscrivent pas. Risque : si l'utilisateur change de compte sans reload, tu gardes les listeners du compte précédent.
+
+Fix : ajoute les vraies deps, ou utilise des refs pour les valeurs "latest" (pattern useEvent de React 18.3+).
+
+2.6 — Duplication des transactions
+Tu as 3 blocs très similaires :
+
+handleTransferCallTokens (visio)
+
+closeCheckout mode deal
+
+handlePaymentSuccess mode deal
+
+→ Extrais dans services/dealService.js :
+
+js
+export async function transferTokensAtomically({
+  fromUid, toUid, tokens, euros, method, dealId, chatId,
+  notifPayload, txMetadata
+}) { /* runTransaction unique */ }
+Bénéfice : un seul point à auditer pour la sécurité financière.
+
+2.7 — console.warn / console.error en prod
+Crée un logger :
+
+js
+// utils/logger.js
+const isDev = import.meta.env.DEV;
+export const logger = {
+  warn: (...a) => isDev && console.warn(...a),
+  error: (...a) => { console.error(...a); Sentry?.captureException?.(a[0]); },
+};
+Et branche Sentry (ou LogRocket/Bugsnag). Sans ça, tu es aveugle en prod sur mobile.
+
+2.8 — Accessibilité (a11y)
+Tes div avec role="button" sont OK, mais il manque aria-pressed sur les toggles
+
+aria-live="polite" manquant sur topUpCelebration et NotificationPill
+
+Contrastes à vérifier en mode clair (accent #C67D5B sur fond #FAF7F2 = ~3.5:1, sous AA pour du texte)
+
+focus-visible styles absents
+
+Fix : installe eslint-plugin-jsx-a11y + axe-core en dev.
+
+2.9 — Performance React
+filteredListings recalcule tout à chaque frappe (débounce 300ms aide mais) → passe à useDeferredValue (React 18) pour la recherche
+
+Beaucoup de props dérivées passées en cascade → risque de re-renders en chaîne. Utilise React.memo sur FeedCardItem, ChatSection, MapSection
+
+useWalletStore.getState() dans un listener Firestore → OK, mais appelle-le dans un requestAnimationFrame si tu ajoutes d'autres state updates
+
+2.10 — Sécurité
+Risque	Détail	Fix
+Admin codé en dur	email === 'mateopolo91@gmail.com'	Firestore rules + custom claims Firebase Auth
+KYC simulé ?	onKycComplete ne semble pas brancher de vrai provider	Intègre Stripe Identity / Onfido
+Injection dans alert	partnerName concaténé	Sanitize ou utilise tes propres modales
+Geohash	fetchListingsByGeohash : vérifie que tu n'exposes pas de positions exactes	Fuzzing déjà OK 👍
+✨ 3. Fonctionnalités à ajouter pour rendre Troco "extra"
+🎯 Niveau 1 — Quick wins (1-2 semaines)
+Skia / Reanimated pour les transitions mobile — remplace Framer Motion par Rive ou Lottie pour les micro-animations (confettis, badge boost, pulse notif).
+
+Pull-to-refresh natif sur le Feed (composant custom, détection touchstart + threshold).
+
+Recherche vocale (Web Speech API) — un petit micro à côté de la barre de recherche.
+
+Filtres sauvegardés — "Ma recherche : Piano Paris <10km" → rejouable en 1 tap.
+
+Badge "en ligne" temps réel via presenceMap (tu l'as déjà !) → expose-le sur les cartes du feed.
+
+Mode sombre automatique au coucher du soleil (via prefers-color-scheme + heure locale).
+
+Widget "Mes deals en cours" en haut du Feed (mini-dashboard).
+
+🚀 Niveau 2 — Différenciateurs (1-2 mois)
+Troco Live (tu as CommunityHubSection) → ajoute du live streaming audio (LiveKit, Daily.co) : les users peuvent animer des sessions de troc en direct.
+
+IA de matching : "Ce service t'intéresse, voici 3 personnes qui peuvent te l'échanger cette semaine." → embeddings + Firestore vector search.
+
+Assistant IA conversationnel (Gemini / Mistral) pour :
+
+Rédiger une annonce à partir d'une photo
+
+Traduire automatiquement les messages chat (tu as déjà les helpers)
+
+Suggérer un prix juste selon le marché
+
+Réputation portefeuille : score de confiance basé sur ancienneté + deals + KYC + avis + réactivité.
+
+Troco Escrow visuel : timeline animée d'un deal (proposition → acceptation → paiement → exécution → libération). Tu as déjà handleReleaseEscrow, il faut le rendre visible.
+
+Multi-devises crypto/fiat : accepte USDC/USDT en plus des euros, conversion instantanée.
+
+Badges gamifiés : "Premier deal", "10 deals", "Mentor du mois", "KYC Gold". Avec animations Lottie.
+
+Troco Business : espace pro avec factures PDF auto, TVA, multi-utilisateurs, API.
+
+Signature électronique des deals (DocuSign-like) pour les gros échanges (>500€).
+
+Mode hors-ligne complet : PWA + IndexedDB + queue de sync. Tu as déjà OfflineScreen, pousse jusqu'au bout.
+
+🌍 Niveau 3 — Vision long terme
+Troco Places : carte des lieux partenaires (coworking, ateliers, cafés) où les deals peuvent se faire en présentiel. Monétisation : les lieux paient pour apparaître.
+
+Troco Academy : cours certifiants pour apprendre à monétiser ses compétences (upsell des packs de jetons).
+
+Troco Impact : 1% des transactions reversé à des associations locales choisies par l'utilisateur. Argument marketing fort.
+
+Marketplace de templates d'annonces (créés par la communauté, vendus en jetons).
+
+Troco Pass : abonnement mensuel type "Troco Plus" (tu l'as déjà !) → ajoute des perks : 0% frais, boost 1x/mois, badge exclusif.
+
+🎨 4. Détails UX à corriger
+Endroit	Problème	Fix
+topUpCelebration	Fixe à top: 85px, peut chevaucher le header sur petit écran	Utilise env(safe-area-inset-top)
+handleModalTouchEnd	Ne gère pas le swipe vertical (fermeture modale)	Ajoute deltaY > 80 && abs(deltaY) > abs(deltaX) → close
+Feed	Tri boost → démo → urgent → date. Les démos restent visibles longtemps	Filtre "Masquer les démos" dans le FilterDrawer
+Chat	document.body.style.touchAction = 'none' global → casse le scroll dans certains iframes	Scope au conteneur du chat
+checkout	Pas de gestion du "back button" navigateur (Android)	history.pushState + popstate listener
+isLoadingSession	Force 2.5s minimum → artificiel	Réduis à 800ms ou affiche un skeleton
+📋 5. Plan d'action priorisé
+Semaine 1-2 (fondations)
+
+□ Logger + Sentry
+□ useConfirm + remplacer tous les alert/confirm
+□ useSafeTimeout + corriger les fuites
+□ dealService.js (factoriser les 3 blocs de transaction)
+□ Déplacer la logique du feed dans useListingsFeed.js
+Semaine 3-4 (polish)
+
+□ Découper App.js en routes
+□ React.memo sur FeedCardItem / ChatSection / MapSection
+□ useDeferredValue sur la recherche
+□ Audit a11y + axe-core en CI
+□ Firestore rules + custom claims admin
+Mois 2 (différenciation)
+
+□ Assistant IA de rédaction d'annonce
+□ Timeline Escrow visuelle
+□ Gamification badges
+□ Pull-to-refresh natif
+□ Filtres sauvegardés
+Mois 3+ (vision)
+
+□ Troco Live (streaming)
+□ IA matching vectoriel
+□ Troco Business
+□ Troco Places
+🏁 Verdict
+Ton app est déjà très avancée — la sécurité financière (transactions atomiques, vérification partnerUid) et l'architecture modulaire (hooks dédiés) sont dignes d'un produit pro.
+
+Les points qui te font perdre le plus de valeur aujourd'hui :
+
+Le fichier monstre App.js (dette technique)
+
+alert/confirm natifs (casse l'UX premium)
+
+Absence de monitoring prod (tu navigues à l'aveugle)
+
+Duplication logique transactionnelle (risque de bug critique)
+
+Règle ces 4 points → tu passes d'une "super app" à une app de niveau startup financée.
+
+Si tu veux, je peux te générer :
+
+le code de useConfirm + <ConfirmDialog />
+
+la version factorisée de dealService.js
+
+le squelette de découpage App.js en routes
+
+un firestore.rules complet avec claims admin
