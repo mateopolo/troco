@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { createPortal } from 'react-dom';
 import { X, Coins, Sparkles, Plus, Award } from 'lucide-react';
+import UniversalModal from './ui/UniversalModal';
 
 export default function ProjectRewardsModal({
   isOpen,
@@ -63,89 +63,82 @@ export default function ProjectRewardsModal({
   };
 
   if (!isOpen || !activeChat) return null;
-  if (typeof document === 'undefined') return null;
 
-  const modalElement = (
-    <div
-      className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/90 md:bg-black/75 md:backdrop-blur-md touch-none"
-      style={{
-        position: 'fixed',
-        inset: 0,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '16px 16px max(80px, env(safe-area-inset-bottom, 24px)) 16px',
-        zIndex: 999999,
-        animation: 'fadeIn 0.25s ease',
-        boxSizing: 'border-box'
-      }}
-      onClick={(e) => {
-        if (e.target === e.currentTarget && typeof onClose === 'function') {
-          onClose();
-        }
-      }}
-    >
-      <div style={{
+  const modalHeader = (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: '18px 22px',
+      borderBottom: '1px solid var(--border-color)',
+      backgroundColor: 'var(--bg-glass)',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <Coins size={20} color="var(--accent-primary)" />
+        <div>
+          <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: 'var(--text-main)' }}>
+            {activeChat.projectTitle || activeChat.user || 'Hub de Collaboration'}
+          </h3>
+          <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-secondary)' }}>
+            Gestion de l'équipe et rétribution en jetons Troco
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+
+  const modalFooter = (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'flex-end',
+      padding: '14px 22px',
+      borderTop: '1px solid var(--border-color)',
+      backgroundColor: 'var(--bg-glass)',
+    }}>
+      <button
+        type="button"
+        onClick={onClose}
+        className="premium-button"
+        style={{
+          border: '1px solid var(--border-color)',
+          borderRadius: '999px',
+          padding: '10px 20px',
+          backgroundColor: 'var(--bg-subtle)',
+          color: 'var(--text-secondary)',
+          fontWeight: '700',
+          fontSize: '13px',
+          cursor: 'pointer',
+        }}
+      >
+        Fermer
+      </button>
+    </div>
+  );
+
+  return (
+    <UniversalModal
+      isOpen={isOpen}
+      onClose={onClose}
+      maxWidth="560px"
+      ariaLabel="Gestion des récompenses"
+      closeOnBackdrop={true}
+      closeOnEscape={true}
+      header={modalHeader}
+      footer={modalFooter}
+      contentStyle={{
         backgroundColor: 'var(--bg-card)',
         borderRadius: '24px',
         border: '1px solid var(--border-color)',
         boxShadow: 'var(--shadow-modal)',
-        width: '100%',
-        maxWidth: '560px',
-        maxHeight: 'min(calc(100dvh - 100px), 740px)',
+      }}
+    >
+      <div style={{
+        padding: '20px 22px',
         display: 'flex',
         flexDirection: 'column',
-        overflow: 'hidden',
-        boxSizing: 'border-box'
+        gap: '16px',
       }}>
-        {/* HEADER */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: '18px 22px',
-          borderBottom: '1px solid var(--border-color)',
-          backgroundColor: 'var(--bg-glass)',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <Coins size={20} color="var(--accent-primary)" />
-            <div>
-              <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: 'var(--text-main)' }}>
-                {activeChat.projectTitle || activeChat.user || 'Hub de Collaboration'}
-              </h3>
-              <p style={{ margin: 0, fontSize: '11px', color: 'var(--text-secondary)' }}>
-                Gestion de l'équipe et rétribution en jetons Troco
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              border: 'none',
-              background: 'var(--bg-subtle)',
-              width: '32px',
-              height: '32px',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-              color: 'var(--text-main)',
-            }}
-          >
-            <X size={16} />
-          </button>
-        </div>
-
-        {/* CONTENT */}
-        <div style={{
-          padding: '20px 22px',
-          overflowY: 'auto',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '16px',
-        }}>
           {/* STATS DE LA CAGNOTTE */}
           <div style={{
             display: 'grid',
@@ -472,38 +465,7 @@ export default function ProjectRewardsModal({
             </form>
           )}
         </div>
-
-        {/* FOOTER */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'flex-end',
-          padding: '14px 22px',
-          borderTop: '1px solid var(--border-color)',
-          backgroundColor: 'var(--bg-glass)',
-        }}>
-          <button
-            type="button"
-            onClick={onClose}
-            className="premium-button"
-            style={{
-              border: '1px solid var(--border-color)',
-              backgroundColor: 'transparent',
-              color: 'var(--text-main)',
-              borderRadius: '12px',
-              padding: '8px 16px',
-              fontSize: '12px',
-              fontWeight: '700',
-              cursor: 'pointer',
-            }}
-          >
-            Fermer
-          </button>
-        </div>
-      </div>
-    </div>
+    </UniversalModal>
   );
-
-  return createPortal(modalElement, document.body);
 }
 

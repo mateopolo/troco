@@ -1,5 +1,4 @@
 import React, { useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import {
   Sparkles,
   Repeat,
@@ -12,6 +11,7 @@ import {
   X,
 } from 'lucide-react';
 import { useTheme, TYPOGRAPHY_OPTIONS } from '../contexts/ThemeContext';
+import UniversalModal from './ui/UniversalModal';
 
 export default function DesignStudioModal({
   isOpen = false,
@@ -52,59 +52,17 @@ export default function DesignStudioModal({
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
-  if (typeof document === 'undefined') return null;
 
-  const modalContent = (
+  const modalHeader = (
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center p-3 md:p-6 bg-black/60 backdrop-blur-md animate-in fade-in duration-200"
-      onClick={onClose}
       style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 9999,
-        backgroundColor: 'rgba(0, 0, 0, 0.65)',
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
+        padding: '16px 22px',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'center',
-        padding: '16px',
+        justifyContent: 'space-between',
+        gap: '12px',
       }}
     >
-      <div
-        className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto bg-[var(--bg-card)] text-[var(--text-main)] rounded-3xl shadow-2xl border border-white/10 flex flex-col no-scrollbar animate-in zoom-in-95 duration-200"
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          backgroundColor: 'var(--bg-card)',
-          color: 'var(--text-main)',
-          borderRadius: '24px',
-          maxHeight: '90vh',
-          maxWidth: '780px',
-          width: '100%',
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
-          border: '1px solid var(--border-color)',
-          overflowY: 'auto',
-          display: 'flex',
-          flexDirection: 'column',
-        }}
-      >
-        {/* EN-TÊTE STICKY DE LA MODALE */}
-        <div
-          style={{
-            position: 'sticky',
-            top: 0,
-            zIndex: 20,
-            backgroundColor: 'var(--bg-card)',
-            backdropFilter: 'blur(16px)',
-            WebkitBackdropFilter: 'blur(16px)',
-            padding: '16px 22px',
-            borderBottom: '1px solid var(--border-color)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '12px',
-          }}
-        >
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div
               style={{
@@ -184,10 +142,29 @@ export default function DesignStudioModal({
             </button>
           </div>
         </div>
+  );
 
-        {/* CORPS DU STUDIO DE DESIGN */}
-        <div style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          {/* 1. CARTE DE PRÉVISUALISATION EN DIRECT */}
+  return (
+    <UniversalModal
+      isOpen={isOpen}
+      onClose={onClose}
+      maxWidth="780px"
+      ariaLabel="Studio de Design & Accessibilité"
+      closeOnBackdrop={true}
+      closeOnEscape={true}
+      header={modalHeader}
+      contentStyle={{
+        backgroundColor: 'var(--bg-card)',
+        borderRadius: '24px',
+        border: '1px solid var(--border-color)',
+        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+      }}
+      overlayStyle={{
+        backgroundColor: 'rgba(0, 0, 0, 0.65)',
+      }}
+    >
+      <div style={{ padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        {/* 1. CARTE DE PRÉVISUALISATION EN DIRECT */}
           <div
             style={{
               backgroundColor: 'var(--bg-card)',
@@ -821,11 +798,8 @@ export default function DesignStudioModal({
                 </div>
               </div>
             </div>
-          </div>
         </div>
       </div>
-    </div>
+    </UniversalModal>
   );
-
-  return createPortal(modalContent, document.body);
 }
