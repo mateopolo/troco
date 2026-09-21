@@ -1,13 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X, Star, ShieldCheck, MapPin, Sparkles, MessageSquare,
-  CheckCircle, Briefcase, Award, Camera, Wrench, ExternalLink, FileText, Link as LinkIcon, History
+  CheckCircle, Briefcase, Award, Camera, Wrench, ExternalLink, FileText, Link as LinkIcon, History,
+  PackageOpen, Loader2
 } from 'lucide-react';
 import MobileHeader from './common/MobileHeader';
 import { SocialLinksDisplay } from './UserProfile';
 import { ProgressiveImage } from './ui/ProgressiveImage';
 import UniversalModal from './ui/UniversalModal';
 import ReviewsSection from './ReviewsSection';
+import { db } from '../firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { resolveUserProfile, getCachedUserProfile, isRawUid } from '../services/userResolverService';
+import logger from '../utils/logger';
 
 export default function PublicProfileModal({
   isOpen,
@@ -23,129 +28,138 @@ export default function PublicProfileModal({
 }) {
   const [activeTab, setActiveTab] = useState('listings'); // 'listings' | 'history' | 'bio' | 'portfolio' | 'reviews'
 
+  // Extraction propre de l'UID cible (jamais un email ou un nom brut)
+  const targetUid = targetUser?.uid || targetUser?.id || targetUser?.partnerUid || targetUser?.authorUid || targetUser?.peerUid || targetUser?.userId || userProp?.uid || userProp?.id || null;
+
+  const [profileData, setProfileData] = useState(() => {
+    if (targetUid) {
+      return getCachedUserProfile(targetUid) || null;
+    }
+    return null;
+  });
+  const [userListings, setUserListings] = useState([]);
+  const [loadingProfile, setLoadingProfile] = useState(false);
+  const [loadingListings, setLoadingListings] = useState(false);
+
+  // Synchronisation avec le cache et Firestore à l'ouverture de la modale
+  useEffect(() => {
+    if (!isOpen) return;
+
+    let isMounted = true;
+
+    if (targetUid && db) {
+      // 1. Résolution du profil utilisateur réel
+      const cached = getCachedUserProfile(targetUid);
+      if (cached) {
+        setProfileData(cached);
+      } else {
+        setLoadingProfile(true);
+        resolveUserProfile(targetUid, db)
+          .then((resolved) => {
+            if (isMounted && resolved) {
+              setProfileData(resolved);
+            }
+          })
+          .catch((err) => {
+            logger.warn('[PublicProfileModal] Erreur lors de la résolution du profil:', err);
+          })
+          .finally(() => {
+            if (isMounted) setLoadingProfile(false);
+          });
+      }
+
+      // 2. Récupération des annonces réelles de l'utilisateur (Firestore query)
+      setLoadingListings(true);
+      const listingsRef = collection(db, 'listings');
+      const q = query(listingsRef, where('authorUid', '==', targetUid));
+      getDocs(q)
+        .then((snapshot) => {
+          if (!isMounted) return;
+          if (!snapshot.empty) {
+            const fetched = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+            setUserListings(fetched);
+          } else {
+            // Correspondance secondaire dans allListings si déjà chargé
+            const fromAll = allListings.filter((l) =>
+              (l.authorUid && l.authorUid === targetUid) ||
+              (l.userId && l.userId === targetUid)
+            );
+            setUserListings(fromAll);
+          }
+        })
+        .catch((err) => {
+          if (!isMounted) return;
+          logger.warn('[PublicProfileModal] Erreur Firestore listings:', err);
+          const fromAll = allListings.filter((l) =>
+            (l.authorUid && l.authorUid === targetUid) ||
+            (l.userId && l.userId === targetUid)
+          );
+          setUserListings(fromAll);
+        })
+        .finally(() => {
+          if (isMounted) setLoadingListings(false);
+        });
+    } else {
+      // Fallback par nom textuel si pas d'UID direct
+      const rawName = targetUser?.name || targetUser?.user || userProp?.displayName || '';
+      if (rawName && !isRawUid(rawName)) {
+        const fromAll = allListings.filter((l) =>
+          (l.author && l.author.trim().toLowerCase() === rawName.trim().toLowerCase()) ||
+          (l.user && l.user.trim().toLowerCase() === rawName.trim().toLowerCase())
+        );
+        setUserListings(fromAll);
+      } else {
+        setUserListings([]);
+      }
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen, targetUid, allListings]);
+
   if (!isOpen || (!targetUser && !userProp)) return null;
 
-  const rawUser = targetUser || userProp || {};
-  const user = {
-    ...rawUser,
-    dealsCompleted: rawUser.dealsCompleted || 0,
-    activeDeals: rawUser.activeDeals ?? rawUser.dealsInProgress ?? 0,
-    reviewsCount: rawUser.reviewsCount || 0,
-    averageRating: rawUser.averageRating !== undefined ? rawUser.averageRating : (rawUser.rating || 0),
-  };
+  // Données résolues et consolidées
+  const resolved = profileData || targetUser?.peerProfile || {};
+  const rawDisplayName = resolved.displayName || targetUser?.displayName || targetUser?.name || targetUser?.user || userProp?.displayName || userProp?.name || '';
+  const userName = (!rawDisplayName || isRawUid(rawDisplayName)) ? 'Membre Troco' : rawDisplayName;
+  const avatar = resolved.photoURL || resolved.avatar || targetUser?.avatar || (userName !== 'Membre Troco' ? `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(userName)}` : 'https://api.dicebear.com/7.x/bottts/svg?seed=Troco');
+  const isKycVerified = Boolean(resolved.kycVerified ?? targetUser?.kycVerified ?? false);
+  const username = resolved.username || targetUser?.username || (userName !== 'Membre Troco' ? `@${userName.toLowerCase().replace(/[^a-z0-9]/g, '')}` : '@membre');
+  const location = resolved.location || targetUser?.location || '';
+  const reviewsCount = resolved.reviewsCount || targetUser?.reviewsCount || 0;
+  const averageRating = resolved.rating !== undefined ? resolved.rating : (resolved.averageRating !== undefined ? resolved.averageRating : (targetUser?.averageRating || targetUser?.rating || 0));
+  const dealsCompleted = resolved.dealsCompleted || targetUser?.dealsCompleted || 0;
+  const activeDeals = resolved.activeDeals ?? targetUser?.activeDeals ?? targetUser?.dealsInProgress ?? 0;
 
-  const userName = user.name || user.user || 'Membre Troco';
-  const avatar = user.avatar || `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(userName)}`;
-  const isKycVerified = user.kycVerified ?? true;
-  const username = user.username || `@${userName.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
-  const location = user.location || 'Paris, France';
-  const rating = user.averageRating || user.rating || null;
-  const reviewsCount = user.reviewsCount || 0;
-  const completedSwaps = user.dealsCompleted || 0;
+  // Bio réelle sans fallback fantaisiste
+  const bio = resolved.bio || targetUser?.bio || `Membre de la communauté Troco.`;
 
-  // Bio par défaut intelligente selon le persona / contact
-  const defaultBio = targetUser.bio || `Passionné d'échange et d'entraide sur Troco ! N'hésitez pas à me contacter via le chat pour discuter d'un troc, d'un prêt de matériel ou d'un coup de main mutuel.`;
+  // Liens sociaux réels
+  const socialLinks = Array.isArray(resolved.socialLinks) && resolved.socialLinks.length > 0
+    ? resolved.socialLinks
+    : (Array.isArray(targetUser?.socialLinks) && targetUser.socialLinks.length > 0 ? targetUser.socialLinks : []);
 
-  // Liens sociaux vérifiés
-  const socialLinks = Array.isArray(targetUser.socialLinks) && targetUser.socialLinks.length > 0
-    ? targetUser.socialLinks
-    : (targetUser.socialUrl ? [targetUser.socialUrl] : [
-        `https://linkedin.com/in/${userName.toLowerCase().replace(/[^a-z0-9]/g, '')}`,
-        `https://github.com/${userName.toLowerCase().replace(/[^a-z0-9]/g, '')}`
-      ]);
+  // Compétences & Matériel réels
+  const skills = Array.isArray(resolved.skills) && resolved.skills.length > 0
+    ? resolved.skills
+    : (Array.isArray(targetUser?.skills) && targetUser.skills.length > 0 ? targetUser.skills : []);
 
-  // Compétences & Matériel
-  const skills = targetUser.skills || [
-    'Échange de logement & Stay Swap',
-    'Bilingue Français / Italien',
-    'Photographie & Prêt studio',
-    'Conseils voyage & bonnes adresses'
-  ];
+  const equipment = Array.isArray(resolved.equipment) && resolved.equipment.length > 0
+    ? resolved.equipment
+    : (Array.isArray(targetUser?.equipment) && targetUser.equipment.length > 0 ? targetUser.equipment : []);
 
-  const equipment = targetUser.equipment || [
-    'Maison de vacances (Sardaigne)',
-    'Appareil Photo Sony Alpha 7',
-    'Kit éclairage softbox',
-    'VTT Électrique'
-  ];
+  // Portfolio réel
+  const portfolio = Array.isArray(resolved.portfolio) && resolved.portfolio.length > 0
+    ? resolved.portfolio
+    : (Array.isArray(targetUser?.portfolio) && targetUser.portfolio.length > 0 ? targetUser.portfolio : []);
 
-  // Portfolio images
-  const portfolio = targetUser.portfolio || [
-    'https://images.unsplash.com/photo-1533105079780-92b9be482077?auto=format&fit=crop&w=600&q=80', // Sardaigne / mer
-    'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=600&q=80', // Plage
-    'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=600&q=80', // Villa
-    'https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=600&q=80', // Photo session
-  ];
+  // Annonces affichées (Firestore pure, aucun mock)
+  const displayListings = userListings;
 
-  // Avis clients
-  const reviews = targetUser.reviews || [
-    {
-      id: 1,
-      author: 'Lucas M.',
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80',
-      rating: 5,
-      date: 'Il y a 3 jours',
-      comment: 'Super échange ! La villa en Sardaigne était absolument magnifique, conforme à la description et très propre. Communication au top.',
-    },
-    {
-      id: 2,
-      author: 'Clara D.',
-      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=80',
-      rating: 5,
-      date: 'Il y a 2 semaines',
-      comment: 'Personne très sérieuse et bienveillante. Matériel prêté en parfait état, je recommande à 100% sur Troco !',
-    },
-    {
-      id: 3,
-      author: 'Antoine B.',
-      avatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&w=120&q=80',
-      rating: 4.8,
-      date: 'Il y a 1 mois',
-      comment: 'Transaction fluide et rapide via le tiers de confiance. Merci pour les conseils précieux.',
-    }
-  ];
-
-  // Filtrer les annonces de cet utilisateur ou générer des annonces pertinentes
-  const userListings = allListings.filter(l =>
-    (l.author && l.author.trim().toLowerCase() === userName.trim().toLowerCase()) ||
-    (l.user && l.user.trim().toLowerCase() === userName.trim().toLowerCase())
-  );
-
-  // Annonces fallback si l'utilisateur n'en a pas encore publié dans le feed global
-  const displayListings = userListings.length > 0 ? userListings : [
-    {
-      id: `fallback-${userName}-1`,
-      title: `Villa & Maison de vacances vue mer (Sardaigne / Cagliari)`,
-      description: `Magnifique villa à 5 minutes des plages de Sardaigne. Idéal pour un Stay Swap ou échange contre compétences / crédits Troco.`,
-      image: 'https://images.unsplash.com/photo-1533105079780-92b9be482077?auto=format&fit=crop&w=800&q=80',
-      author: userName,
-      location: 'Cagliari, Sardaigne (Italie)',
-      category: 'housing',
-      format: 'onsite',
-      compensationType: 'hybrid',
-      tokensAmount: 3,
-      euroAmount: 45,
-      viewsCount: 142,
-      createdAt: '2026-08-20',
-    },
-    {
-      id: `fallback-${userName}-2`,
-      title: `Prêt Studio Photo Pro & Équipement Sony Alpha`,
-      description: `Studio tout équipé avec softbox, trépieds et flashs professionnels. Prêt à la demi-journée contre jetons Troco.`,
-      image: 'https://images.unsplash.com/photo-1527011046414-4781f1f94f8c?auto=format&fit=crop&w=800&q=80',
-      author: userName,
-      location: location,
-      category: 'media',
-      format: 'onsite',
-      compensationType: 'tokens',
-      tokensAmount: 2,
-      viewsCount: 88,
-      createdAt: '2026-08-22',
-    }
-  ];
-
-  const customFont = targetUser.customFont || 'Inter';
-  const customThemeColor = targetUser.customThemeColor || '#C67D5B';
+  const customFont = targetUser?.customFont || 'Inter';
+  const customThemeColor = targetUser?.customThemeColor || '#C67D5B';
   const customFontFamily = customFont === 'Inter' ? "'Inter', sans-serif"
     : customFont === 'Playfair Display' ? "'Playfair Display', serif"
     : customFont === 'Roboto' ? "'Roboto', sans-serif"
@@ -265,7 +279,7 @@ export default function PublicProfileModal({
                 }}
               />
               <div
-                title="Membre actif"
+                title="Membre Troco"
                 style={{
                   position: 'absolute',
                   bottom: '2px',
@@ -319,7 +333,7 @@ export default function PublicProfileModal({
               </div>
 
               {/* BOUTON PROÉMINENT CV / RESUME SI PRÉSENT */}
-              {targetUser.cvUrl && (
+              {targetUser?.cvUrl && (
                 <div style={{ marginBottom: '10px' }}>
                   <a
                     href={targetUser.cvUrl}
@@ -359,28 +373,30 @@ export default function PublicProfileModal({
               {/* STATS DE CONFIANCE & LOCALISATION */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap', fontSize: '12px', color: 'var(--text-secondary)' }}>
                 {/* Note moyenne : affichée uniquement si l'utilisateur a des avis réels */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontWeight: user.reviewsCount > 0 ? '700' : '400', color: user.reviewsCount > 0 ? '#F59E0B' : 'var(--text-secondary)', fontStyle: user.reviewsCount > 0 ? 'normal' : 'italic' }}>
-                  {user.reviewsCount > 0 && <Star size={14} fill="#F59E0B" />}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontWeight: reviewsCount > 0 ? '700' : '400', color: reviewsCount > 0 ? '#F59E0B' : 'var(--text-secondary)', fontStyle: reviewsCount > 0 ? 'normal' : 'italic' }}>
+                  {reviewsCount > 0 && <Star size={14} fill="#F59E0B" />}
                   <span>
-                    {user.reviewsCount > 0 ? (Math.round(user.averageRating * 10) / 10).toFixed(1) + ' ⭐' : t('profile.no_reviews', 'Pas d\'évaluation pour l\'instant')}
+                    {reviewsCount > 0 ? (Math.round(averageRating * 10) / 10).toFixed(1) + ' ⭐' : t('profile.no_reviews', 'Pas d\'évaluation pour l\'instant')}
                   </span>
-                  {user.reviewsCount > 0 && (
-                    <span style={{ color: 'var(--text-secondary)', fontWeight: '500' }}>({user.reviewsCount} avis)</span>
+                  {reviewsCount > 0 && (
+                    <span style={{ color: 'var(--text-secondary)', fontWeight: '500' }}>({reviewsCount} avis)</span>
                   )}
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                  <MapPin size={13} color="var(--accent-primary)" />
-                  <span>{location}</span>
+                {location && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <MapPin size={13} color="var(--accent-primary)" />
+                    <span>{location}</span>
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: dealsCompleted > 0 ? 'var(--accent-success)' : 'var(--text-secondary)', fontWeight: dealsCompleted > 0 ? '700' : '400' }}>
+                  <CheckCircle size={13} style={{ opacity: dealsCompleted > 0 ? 1 : 0.35 }} />
+                  <span>Deal clôturé: {dealsCompleted}</span>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: (user.dealsCompleted || 0) > 0 ? 'var(--accent-success)' : 'var(--text-secondary)', fontWeight: (user.dealsCompleted || 0) > 0 ? '700' : '400' }}>
-                  <CheckCircle size={13} style={{ opacity: (user.dealsCompleted || 0) > 0 ? 1 : 0.35 }} />
-                  <span>Deal clôturé: {user.dealsCompleted || 0}</span>
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: (user.activeDeals || 0) > 0 ? 'var(--accent-primary)' : 'var(--text-secondary)', fontWeight: (user.activeDeals || 0) > 0 ? '700' : '400' }}>
-                  <span>En cours planifié: {user.activeDeals || 0}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: activeDeals > 0 ? 'var(--accent-primary)' : 'var(--text-secondary)', fontWeight: activeDeals > 0 ? '700' : '400' }}>
+                  <span>En cours: {activeDeals}</span>
                 </div>
               </div>
             </div>
@@ -401,7 +417,7 @@ export default function PublicProfileModal({
               { id: 'listings', label: `Annonces (${displayListings.length})`, icon: Sparkles },
               { id: 'history', label: `Historique des swaps & deals`, icon: History },
               { id: 'bio', label: 'Présentation & Infos', icon: Briefcase },
-              { id: 'portfolio', label: `Portfolio & Photos (${portfolio.length})`, icon: Camera },
+              { id: 'portfolio', label: `Portfolio (${portfolio.length})`, icon: Camera },
               { id: 'reviews', label: `Avis & Évaluations`, icon: Star },
             ].map((tab) => {
               const isActive = activeTab === tab.id;
@@ -438,91 +454,117 @@ export default function PublicProfileModal({
 
           {/* CONTENU SELON L'ONGLET ACTIF */}
 
-          {/* 1. ANNONCES ACTIVES */}
+          {/* 1. ANNONCES ACTIVES (FIRESTORE SEULEMENT) */}
           {activeTab === 'listings' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-main)' }}>
                 Toutes les offres et annonces publiées par {userName} :
               </div>
 
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-                  gap: '14px',
-                }}
-              >
-                {displayListings.map((item) => (
-                  <div
-                    key={item.id}
-                    onClick={() => {
-                      if (onOpenListing) onOpenListing(item);
-                    }}
-                    className="premium-panel"
-                    style={{
-                      backgroundColor: 'var(--bg-card)',
-                      border: '1px solid var(--border-color)',
-                      borderRadius: '18px',
-                      overflow: 'hidden',
-                      cursor: 'pointer',
-                      boxShadow: 'var(--shadow-card)',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-                    }}
-                  >
-                    <div style={{ position: 'relative', width: '100%', height: '140px' }}>
-                      <ProgressiveImage
-                        src={item.image || 'https://images.unsplash.com/photo-1533105079780-92b9be482077?auto=format&fit=crop&w=600&q=80'}
-                        alt={item.title}
-                        style={{ width: '100%', height: '100%' }}
-                        imgStyle={{ objectFit: 'cover' }}
-                      />
-                      {item.location && (
-                        <div
-                          style={{
-                            position: 'absolute',
-                            bottom: '8px',
-                            left: '8px',
-                            backgroundColor: 'rgba(0,0,0,0.65)',
-                            backdropFilter: 'blur(8px)',
-                            color: '#FFF',
-                            fontSize: '10px',
-                            fontWeight: '700',
-                            padding: '3px 8px',
-                            borderRadius: '999px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                          }}
-                        >
-                          <MapPin size={11} />
-                          <span>{item.location}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
-                      <div style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-main)', lineHeight: 1.3 }}>
-                        {item.title}
-                      </div>
-
-                      <div style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                        {item.description}
-                      </div>
-
-                      <div style={{ marginTop: 'auto', paddingTop: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--border-color)', fontSize: '11px', fontWeight: '800', color: 'var(--accent-primary)' }}>
-                        <span>
-                          {item.euroAmount ? `${item.euroAmount}€` : ''} {item.tokensAmount ? `+ ${item.tokensAmount} Jeton(s)` : ''}
-                        </span>
-                        <span style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                          <ExternalLink size={12} /> Voir
-                        </span>
-                      </div>
-                    </div>
+              {loadingListings ? (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 0', gap: '8px', color: 'var(--text-secondary)' }}>
+                  <Loader2 size={20} className="animate-spin" />
+                  <span style={{ fontSize: '13px' }}>Chargement des annonces...</span>
+                </div>
+              ) : displayListings.length === 0 ? (
+                <div
+                  style={{
+                    textAlign: 'center',
+                    padding: '44px 20px',
+                    borderRadius: '20px',
+                    backgroundColor: 'var(--bg-subtle)',
+                    border: '1px dashed var(--border-color)',
+                    color: 'var(--text-secondary)',
+                  }}
+                >
+                  <PackageOpen size={40} style={{ opacity: 0.35, margin: '0 auto 12px', display: 'block' }} />
+                  <div style={{ fontWeight: '800', fontSize: '14.5px', color: 'var(--text-main)', marginBottom: '4px' }}>
+                    Aucune annonce active
                   </div>
-                ))}
-              </div>
+                  <div style={{ fontSize: '12.5px', maxWidth: '340px', margin: '0 auto', lineHeight: 1.5 }}>
+                    {userName} n'a pas encore publié d'offres ou toutes ses annonces ont été conclues.
+                  </div>
+                </div>
+              ) : (
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
+                    gap: '14px',
+                  }}
+                >
+                  {displayListings.map((item) => (
+                    <div
+                      key={item.id}
+                      onClick={() => {
+                        if (onOpenListing) onOpenListing(item);
+                      }}
+                      className="premium-panel"
+                      style={{
+                        backgroundColor: 'var(--bg-card)',
+                        border: '1px solid var(--border-color)',
+                        borderRadius: '18px',
+                        overflow: 'hidden',
+                        cursor: 'pointer',
+                        boxShadow: 'var(--shadow-card)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                      }}
+                    >
+                      <div style={{ position: 'relative', width: '100%', height: '140px' }}>
+                        <ProgressiveImage
+                          src={item.image || item.photos?.[0] || 'https://images.unsplash.com/photo-1513542789411-b6a5d4f31634?auto=format&fit=crop&w=600&q=80'}
+                          alt={item.title}
+                          style={{ width: '100%', height: '100%' }}
+                          imgStyle={{ objectFit: 'cover' }}
+                        />
+                        {item.location && (
+                          <div
+                            style={{
+                              position: 'absolute',
+                              bottom: '8px',
+                              left: '8px',
+                              backgroundColor: 'rgba(0,0,0,0.65)',
+                              backdropFilter: 'blur(8px)',
+                              color: '#FFF',
+                              fontSize: '10px',
+                              fontWeight: '700',
+                              padding: '3px 8px',
+                              borderRadius: '999px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                            }}
+                          >
+                            <MapPin size={11} />
+                            <span>{item.location}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
+                        <div style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-main)', lineHeight: 1.3 }}>
+                          {item.title}
+                        </div>
+
+                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                          {item.description}
+                        </div>
+
+                        <div style={{ marginTop: 'auto', paddingTop: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--border-color)', fontSize: '11px', fontWeight: '800', color: 'var(--accent-primary)' }}>
+                          <span>
+                            {item.euroAmount ? `${item.euroAmount}€` : ''} {item.tokensAmount ? `+ ${item.tokensAmount} Jeton(s)` : ''}
+                          </span>
+                          <span style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                            <ExternalLink size={12} /> Voir
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -544,7 +586,7 @@ export default function PublicProfileModal({
                   À propos de {userName}
                 </div>
                 <p style={{ margin: 0, color: 'var(--text-secondary)' }}>
-                  {defaultBio}
+                  {bio}
                 </p>
               </div>
 
@@ -565,47 +607,59 @@ export default function PublicProfileModal({
                   <Award size={15} color="var(--accent-primary)" />
                   <span>Compétences proposées à l'échange :</span>
                 </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                  {skills.map((skill, idx) => (
-                    <span
-                      key={idx}
-                      style={{
-                        padding: '6px 12px',
-                        borderRadius: '999px',
-                        backgroundColor: 'var(--bg-subtle)',
-                        color: 'var(--text-main)',
-                        fontSize: '11px',
-                        fontWeight: '700',
-                        border: '1px solid var(--border-color)',
-                      }}
-                    >
-                      ✨ {skill}
-                    </span>
-                  ))}
-                </div>
+                {skills.length === 0 ? (
+                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontStyle: 'italic', padding: '4px 0' }}>
+                    Aucune compétence renseignée pour le moment.
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {skills.map((skill, idx) => (
+                      <span
+                        key={idx}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: '999px',
+                          backgroundColor: 'var(--bg-subtle)',
+                          color: 'var(--text-main)',
+                          fontSize: '11px',
+                          fontWeight: '700',
+                          border: '1px solid var(--border-color)',
+                        }}
+                      >
+                        ✨ {skill}
+                      </span>
+                    ))}
+                  </div>
+                )}
 
                 <div style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px' }}>
                   <Wrench size={15} color="var(--accent-primary)" />
                   <span>Matériel & Espaces disponibles :</span>
                 </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                  {equipment.map((item, idx) => (
-                    <span
-                      key={idx}
-                      style={{
-                        padding: '6px 12px',
-                        borderRadius: '999px',
-                        backgroundColor: 'var(--bg-subtle)',
-                        color: 'var(--accent-primary)',
-                        fontSize: '11px',
-                        fontWeight: '700',
-                        border: '1px solid var(--border-color)',
-                      }}
-                    >
-                      🏠 {item}
-                    </span>
-                  ))}
-                </div>
+                {equipment.length === 0 ? (
+                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontStyle: 'italic', padding: '4px 0' }}>
+                    Aucun matériel répertorié pour le moment.
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                    {equipment.map((item, idx) => (
+                      <span
+                        key={idx}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: '999px',
+                          backgroundColor: 'var(--bg-subtle)',
+                          color: 'var(--accent-primary)',
+                          fontSize: '11px',
+                          fontWeight: '700',
+                          border: '1px solid var(--border-color)',
+                        }}
+                      >
+                        🏠 {item}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -614,48 +668,69 @@ export default function PublicProfileModal({
           {activeTab === 'portfolio' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-main)' }}>
-                Galerie de réalisations, logements et matériel :
+                Galerie de réalisations et photos :
               </div>
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-                  gap: '10px',
-                }}
-              >
-                {portfolio.map((imgUrl, idx) => (
-                  <div
-                    key={idx}
-                    style={{
-                      position: 'relative',
-                      height: '160px',
-                      borderRadius: '16px',
-                      overflow: 'hidden',
-                      boxShadow: 'var(--shadow-card)',
-                      border: '1px solid var(--border-color)',
-                    }}
-                  >
-                    <ProgressiveImage
-                      src={imgUrl}
-                      alt={`Portfolio ${idx + 1}`}
-                      style={{ width: '100%', height: '100%' }}
-                      imgStyle={{ objectFit: 'cover' }}
-                    />
+              {portfolio.length === 0 ? (
+                <div
+                  style={{
+                    textAlign: 'center',
+                    padding: '44px 20px',
+                    borderRadius: '20px',
+                    backgroundColor: 'var(--bg-subtle)',
+                    border: '1px dashed var(--border-color)',
+                    color: 'var(--text-secondary)',
+                  }}
+                >
+                  <Camera size={38} style={{ opacity: 0.35, margin: '0 auto 10px', display: 'block' }} />
+                  <div style={{ fontWeight: '800', fontSize: '14px', color: 'var(--text-main)', marginBottom: '4px' }}>
+                    Portfolio vide
                   </div>
-                ))}
-              </div>
+                  <div style={{ fontSize: '12.5px' }}>
+                    Aucune photo dans le portfolio pour le moment.
+                  </div>
+                </div>
+              ) : (
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+                    gap: '10px',
+                  }}
+                >
+                  {portfolio.map((imgUrl, idx) => (
+                    <div
+                      key={idx}
+                      style={{
+                        position: 'relative',
+                        height: '160px',
+                        borderRadius: '16px',
+                        overflow: 'hidden',
+                        boxShadow: 'var(--shadow-card)',
+                        border: '1px solid var(--border-color)',
+                      }}
+                    >
+                      <ProgressiveImage
+                        src={imgUrl}
+                        alt={`Portfolio ${idx + 1}`}
+                        style={{ width: '100%', height: '100%' }}
+                        imgStyle={{ objectFit: 'cover' }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
           {/* 4. AVIS ET ÉVALUATIONS FIRESTORE */}
           {activeTab === 'reviews' && (
             <ReviewsSection
-              profileUid={user.uid || user.id || targetUser?.uid || targetUser?.id || userProp?.uid}
+              profileUid={targetUid}
               ownerName={userName}
               currentUser={userProp || null}
               darkMode={darkMode}
               t={t}
-              initialReviews={reviews}
+              initialReviews={[]}
             />
           )}
 
@@ -672,15 +747,15 @@ export default function PublicProfileModal({
                 <div style={{ flex: 1, minWidth: '130px', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '12px 14px', backgroundColor: 'var(--bg-subtle)' }}>
                   <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Deal clôturé</div>
                   <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-main)' }}>
-                    {user.dealsCompleted || 0}
+                    {dealsCompleted}
                   </div>
                 </div>
 
                 {/* NOTE MOYENNE */}
                 <div style={{ flex: 1, minWidth: '140px', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '12px 14px', backgroundColor: 'var(--bg-subtle)' }}>
                   <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Note moyenne</div>
-                  <div style={{ fontSize: user.reviewsCount > 0 ? '20px' : '12.5px', fontWeight: user.reviewsCount > 0 ? '800' : '500', color: user.reviewsCount > 0 ? '#F59E0B' : 'var(--text-secondary)', fontStyle: user.reviewsCount > 0 ? 'normal' : 'italic', display: 'flex', alignItems: 'center', gap: '4px', minHeight: '28px' }}>
-                    {user.reviewsCount > 0 ? (Math.round(user.averageRating * 10) / 10).toFixed(1) + ' ⭐' : t('profile.no_reviews', 'Pas d\'évaluation pour l\'instant')}
+                  <div style={{ fontSize: reviewsCount > 0 ? '20px' : '12.5px', fontWeight: reviewsCount > 0 ? '800' : '500', color: reviewsCount > 0 ? '#F59E0B' : 'var(--text-secondary)', fontStyle: reviewsCount > 0 ? 'normal' : 'italic', display: 'flex', alignItems: 'center', gap: '4px', minHeight: '28px' }}>
+                    {reviewsCount > 0 ? (Math.round(averageRating * 10) / 10).toFixed(1) + ' ⭐' : t('profile.no_reviews', 'Pas d\'évaluation pour l\'instant')}
                   </div>
                 </div>
 
@@ -688,7 +763,7 @@ export default function PublicProfileModal({
                 <div style={{ flex: 1, minWidth: '130px', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '12px 14px', backgroundColor: 'var(--bg-subtle)' }}>
                   <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>En cours planifié</div>
                   <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--accent-primary)' }}>
-                    {user.activeDeals || 0}
+                    {activeDeals}
                   </div>
                 </div>
               </div>
@@ -699,12 +774,12 @@ export default function PublicProfileModal({
 
               {/* SECTION AVIS ET ÉVALUATIONS EN BAS DU PROFIL */}
               <ReviewsSection
-                profileUid={user.uid || user.id || targetUser?.uid || targetUser?.id || userProp?.uid}
+                profileUid={targetUid}
                 ownerName={userName}
                 currentUser={userProp || null}
                 darkMode={darkMode}
                 t={t}
-                initialReviews={reviews}
+                initialReviews={[]}
               />
             </div>
           )}

@@ -210,6 +210,26 @@ L'envoi et la lecture des messages audio et vocaux reposent sur une architecture
   - **Garantie `onboardingCompleted: true` :** Tout document utilisateur existant ou nouvellement créé via provider social enregistre `onboardingCompleted: true`.
   - **Préservation des soldes :** `handleCompleteOnboarding` conserve désormais strictement `profile.euroBalance` et `profile.trocoTokens` au lieu d'écraser le solde à zéro.
 
+### 3.8 Mapping UIDs vers Profils Réels, Fiabilisation Messages & Purge Totale des Mocks
+- **Mapping UIDs vers Profils Réels (`userResolverService.js` & `useChatManager.js`) :**
+  - **Problématique :** La collection Firestore `chats` stocke dans son tableau `participants` les UIDs bruts de 28 caractères (ex: `V5RkW...`). L'onglet Messages et l'en-tête de conversation affichaient ces chaînes alphanumériques illisibles et leurs initiales au lieu des noms et photos des utilisateurs.
+  - **Service de résolution singleton (`userResolverService.js`) :**
+    - Interroge Firestore de façon asynchrone sur `users/{uid}` puis `users_public/{uid}` pour extraire `displayName`, `photoURL`, `username`, `bio`, `location`, `rating`, `reviewsCount` et `dealsCompleted`.
+    - Système de cache à double niveau (mémoire `Map` + persistance `localStorage: troco_resolved_users_cache`) garantissant un rendu instantané à 60 FPS sans surconsommation de lectures Firestore.
+    - Pattern observateur (`subscribeToUserProfileResolutions`) permettant à `useChatManager` de rafraîchir en temps réel la liste des chats (`chatsList`) et la conversation active dès la résolution en arrière-plan.
+  - **Affichage assaini dans `ChatView.jsx` :**
+    - L'avatar de chaque interlocuteur dans la liste des chats et l'en-tête actif affiche l'image `<img src={chat.avatar} />` si disponible.
+    - En l'absence d'image, l'initiale est calculée sur le vrai `displayName` (jamais sur le premier caractère de l'UID).
+    - Garde `isRawUid(str)` : si le nom n'est pas encore résolu, l'UI affiche élégamment "Membre Troco" ou "Interlocuteur" au lieu de l'UID brut.
+- **Fiabilisation de l'Écoute des Messages (`chats/{chatId}/messages`) :**
+  - **Origine du bug des premiers messages :** L'utilisation de `orderBy('createdAt', 'asc')` dans Firestore provoquait l'exclusion silencieuse des messages initiaux en cours de synchronisation locale (pending writes où `serverTimestamp()` n'est pas encore matérialisé par le serveur). De plus, une garde hâtive `if (snapshot.empty) return;` bloquait la mise à jour des états vides lors du changement de salon.
+  - **Solution robuste :** Écoute `onSnapshot` directe de la collection `messages` avec tri chronologique JavaScript haute précision en mémoire (`createdAt || timestamp`), et suppression de tout message local d'accueil simulé dans `handleStartDiscussion`.
+- **Purge Définitive des Profils et Annonces Factices (`PublicProfileModal.jsx`) :**
+  - **Éradication complète :** Suppression de tous les mocks résiduels ("Sardaigne", "Cagliari", "Sony Alpha", "Studio photo pro", "Villa").
+  - **Source de vérité 100% Firestore :** Le profil public consulte exclusivement `doc(db, 'users', targetUid)` et `collection(db, 'listings')` avec `where('authorUid', '==', targetUid)`.
+  - **EmptyStates authentiques :** Si un membre ne possède aucune annonce, compétence, matériel ou photo de portfolio, l'interface affiche désormais un conteneur vide dédié (`PackageOpen`, `Camera`, "Aucune annonce active"), sans JAMAIS injecter de fausses données de test.
+  - **Avis réels :** `ReviewsSection` est alimenté avec `initialReviews={[]}` et écoute uniquement la sous-collection Firestore `users/{targetUid}/reviews`.
+
 ---
 
 ## 🛡️ 4. RÈGLES DE SÉCURITÉ, BASE DE DONNÉES & CORS

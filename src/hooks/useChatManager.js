@@ -8,7 +8,6 @@ import {
   serverTimestamp,
   onSnapshot,
   query,
-  orderBy,
   setDoc,
   deleteDoc,
   getDocs,
@@ -25,6 +24,13 @@ import { useChatStore, useWalletStore } from '../stores';
 import { hapticLight, hapticSuccess, hapticError } from '../utils/haptics';
 import { playPop } from '../services/audioService';
 import { notificationService } from '../services/notificationService';
+import {
+  resolveUserProfile,
+  getCachedUserProfile,
+  setCachedUserProfile,
+  isRawUid,
+  subscribeToUserProfileResolutions,
+} from '../services/userResolverService';
 
 // Singleton audio context pour éviter la saturation des threads WebKit audio sur iOS
 let sharedChatAudioCtx = null;
@@ -257,6 +263,11 @@ export const useChatManager = ({
       return;
     }
 
+    // Mettre en cache immédiatement le profil de l'utilisateur authentifié
+    if (currentUid && profile) {
+      setCachedUserProfile(currentUid, profile);
+    }
+
     const unsubs = [];
     const allDocsMap = new Map();
     let isInitialLoad = true;
@@ -272,9 +283,34 @@ export const useChatManager = ({
           return true;
         })
         .map(([docId, data]) => {
-          const otherUser = Array.isArray(data.participants)
-            ? data.participants.find(p => p && String(p) !== String(currentUid) && !String(p).includes('@')) || data.user || 'Interlocuteur'
-            : data.user || 'Interlocuteur';
+          // Extraction du véritable UID du correspondant
+          const peerUid = (Array.isArray(data.participants)
+            ? data.participants.find(p => p && String(p) !== String(currentUid) && !String(p).includes('@'))
+            : null) || data.partnerUid || data.authorUid || null;
+
+          // Résolution de l'identité du correspondant (nom & photo)
+          let resolvedName = data.user;
+          let resolvedAvatar = data.avatar || '';
+          let peerProfile = null;
+
+          if (peerUid) {
+            const cached = getCachedUserProfile(peerUid);
+            if (cached) {
+              resolvedName = cached.name;
+              if (cached.avatar) resolvedAvatar = cached.avatar;
+              peerProfile = cached;
+            } else {
+              // Lancement asynchrone non-bloquant de la résolution Firestore
+              if (db) {
+                resolveUserProfile(peerUid, db);
+              }
+              if (isRawUid(data.user) || !data.user) {
+                resolvedName = (data.author && !isRawUid(data.author)) ? data.author : 'Membre Troco';
+              }
+            }
+          } else if (isRawUid(data.user)) {
+            resolvedName = (data.author && !isRawUid(data.author)) ? data.author : 'Membre Troco';
+          }
 
           const fChatId = data.id || docId;
 
@@ -282,7 +318,11 @@ export const useChatManager = ({
             id: fChatId,
             firestoreId: docId,
             ...data,
-            user: otherUser,
+            partnerUid: peerUid,
+            peerUid: peerUid,
+            user: resolvedName || 'Interlocuteur',
+            avatar: resolvedAvatar,
+            peerProfile: peerProfile,
           };
         });
 
@@ -447,10 +487,58 @@ export const useChatManager = ({
     return () => window.removeEventListener('troco:refetch_chats', handleForceRefetch);
   }, [profile?.uid, auth?.currentUser?.uid]);
 
+  // Écoute des résolutions asynchrones des profils pour mettre à jour chatsList et selectedChat instantanément
+  useEffect(() => {
+    const unsub = subscribeToUserProfileResolutions((resolvedUid, resolvedProfile) => {
+      setChatsList(prev => prev.map(c => {
+        const cPeerUid = c.partnerUid || c.authorUid || c.peerUid || (Array.isArray(c.participants) ? c.participants.find(p => String(p) !== String(profile?.uid)) : null);
+        if (String(cPeerUid) === String(resolvedUid)) {
+          return {
+            ...c,
+            user: resolvedProfile.name,
+            avatar: resolvedProfile.avatar || c.avatar,
+            peerProfile: resolvedProfile,
+          };
+        }
+        return c;
+      }));
+
+      setSelectedChat(prev => {
+        if (!prev) return prev;
+        const prevPeerUid = prev.partnerUid || prev.authorUid || prev.peerUid || (Array.isArray(prev.participants) ? prev.participants.find(p => String(p) !== String(profile?.uid)) : null);
+        if (String(prevPeerUid) === String(resolvedUid)) {
+          return {
+            ...prev,
+            user: resolvedProfile.name,
+            avatar: resolvedProfile.avatar || prev.avatar,
+            peerProfile: resolvedProfile,
+          };
+        }
+        return prev;
+      });
+    });
+    return () => unsub();
+  }, [profile?.uid]);
+
   // ---- SÉLECTION D'UN CHAT ET MARQUAGE COMME LU ----
   const handleSelectChat = async (chat) => {
-    setSelectedChat(chat);
-    try { useChatStore.getState().setSelectedChat(chat); } catch (_) { }
+    if (!chat) {
+      setSelectedChat(null);
+      return;
+    }
+    const currentMyUid = profile?.uid || (auth?.currentUser && auth.currentUser.uid);
+    const peerUid = chat.partnerUid || chat.authorUid || chat.peerUid || (Array.isArray(chat.participants) ? chat.participants.find(p => String(p) !== String(currentMyUid)) : null);
+    const cachedPeer = peerUid ? getCachedUserProfile(peerUid) : null;
+    const enrichedChat = {
+      ...chat,
+      partnerUid: peerUid,
+      peerUid: peerUid,
+      user: cachedPeer?.name || (isRawUid(chat.user) ? 'Membre Troco' : (chat.user || 'Interlocuteur')),
+      avatar: cachedPeer?.avatar || chat.avatar || '',
+      peerProfile: cachedPeer || chat.peerProfile || null,
+    };
+    setSelectedChat(enrichedChat);
+    try { useChatStore.getState().setSelectedChat(enrichedChat); } catch (_) { }
     if (chat?.id && db) {
       const cidStr = String(chat.id);
       setReadChats(prev => new Set([...prev, chat.id, cidStr, Number(chat.id)]));
@@ -526,7 +614,13 @@ export const useChatManager = ({
     let fallbackUnsub = null;
 
     const handleSnapshot = (snapshot) => {
-      if (snapshot.empty) return;
+      if (snapshot.empty) {
+        setChatThreads(prev => ({
+          ...prev,
+          [selectedChat.id]: []
+        }));
+        return;
+      }
       const firestoreIds = new Set(snapshot.docs.map(d => d.id));
       const confirmedTemporaryIds = new Set(
         snapshot.docs
@@ -540,6 +634,10 @@ export const useChatManager = ({
         const isMe = (data.senderUid && myUid && String(data.senderUid) === String(myUid)) ||
           (data.senderName?.trim().toLowerCase() === profile?.name?.trim().toLowerCase()) ||
           (data.sender === 'me');
+        const resolvedCreatedAt = data.createdAt?.toMillis
+          ? data.createdAt.toMillis()
+          : (data.createdAt ? new Date(data.createdAt).getTime() : (data.timestamp || Date.now()));
+
         return {
           id: d.id,
           temporaryId: data.temporaryId || null,
@@ -548,7 +646,7 @@ export const useChatManager = ({
           senderName: data.senderName || (isMe ? profile?.name : (selectedChat.user || 'Interlocuteur')),
           text: data.text || '',
           status: data.status || 'sent',
-          createdAt: data.createdAt?.toMillis ? data.createdAt.toMillis() : (data.createdAt || data.timestamp || Date.now()),
+          createdAt: resolvedCreatedAt,
           translations: data.translations || { FR: data.text || '' },
         };
       });
@@ -580,6 +678,7 @@ export const useChatManager = ({
 
         const unique = Array.from(messageMap.values());
 
+        // Tri chronologique ascendant fiable en mémoire (supporte Timestamps Firestore, ISO et Date.now)
         unique.sort((a, b) => {
           const tA = typeof a.createdAt === 'number' ? a.createdAt : new Date(a.createdAt || 0).getTime();
           const tB = typeof b.createdAt === 'number' ? b.createdAt : new Date(b.createdAt || 0).getTime();
@@ -625,19 +724,10 @@ export const useChatManager = ({
     };
 
     try {
-      const q = query(collection(db, 'chats', chatId, 'messages'), orderBy('createdAt', 'asc'));
+      // Écoute directe de la sous-collection messages (tri en mémoire sécurisé pour éviter l'exclusion Firestore sur createdAt pending)
+      const q = collection(db, 'chats', chatId, 'messages');
       primaryUnsub = onSnapshot(q, handleSnapshot, (err) => {
-        logger.warn('[Firestore] chat messages onSnapshot with orderBy failed, fallback without orderBy:', err);
-        if (typeof primaryUnsub === 'function') {
-          primaryUnsub();
-          primaryUnsub = null;
-        }
-        try {
-          const fallbackQ = collection(db, 'chats', chatId, 'messages');
-          fallbackUnsub = onSnapshot(fallbackQ, handleSnapshot, (fallbackErr) => {
-            logger.error('[Firestore] chat messages fallback failed:', fallbackErr);
-          });
-        } catch (_) { }
+        logger.warn('[Firestore] chat messages onSnapshot error:', err);
       });
     } catch (err) {
       logger.warn('[Firestore] chat messages listener setup failed:', err);
@@ -1152,11 +1242,18 @@ export const useChatManager = ({
 
     const conversationId = buildConversationId(listing.id, profile?.name, listing.author, myUid, authorUid);
 
+    const cachedPartner = authorUid ? getCachedUserProfile(authorUid) : null;
+    const partnerName = cachedPartner?.name || (isRawUid(listing.author) ? 'Membre Troco' : (listing.author || 'Membre Troco'));
+    const partnerAvatar = cachedPartner?.avatar || listing.authorAvatar || '';
+
     const conversation = {
       id: conversationId,
-      user: listing.author,
+      user: partnerName,
+      avatar: partnerAvatar,
       authorUid: authorUid,
       partnerUid: authorUid,
+      peerUid: authorUid,
+      peerProfile: cachedPartner || null,
       listing: listing.title,
       lastMessage: `Début de discussion pour ${listing.title}`,
       status: 'Nouvelle discussion',
@@ -1176,7 +1273,8 @@ export const useChatManager = ({
       try {
         await setDoc(doc(db, 'chats', String(conversationId)), {
           id: conversationId,
-          user: listing.author,
+          user: partnerName,
+          avatar: partnerAvatar,
           authorUid: authorUid,
           partnerUid: authorUid,
           listing: listing.title,
@@ -1191,14 +1289,6 @@ export const useChatManager = ({
         logger.error('[Firestore] start discussion failed:', e);
       }
     }
-
-    setChatThreads(prev => {
-      if (prev[conversationId]) return prev;
-      return {
-        ...prev,
-        [conversationId]: [{ id: 1, sender: 'them', text: `Bonjour ! Je peux te proposer un échange fluide sur « ${listing.title} ».` }],
-      };
-    });
   };
 
   // ---- CRÉATION D'UN HUB DE PROJET MULTI-MEMBRES ----

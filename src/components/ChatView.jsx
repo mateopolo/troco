@@ -23,6 +23,7 @@ import { EmptyState } from './ui/EmptyState';
 import { playPop, playSwoosh, playSuccessChime } from '../services/audioService';
 import SwipeableChatItem from './SwipeableChatItem';
 import ChatInputBar from './chat/ChatInputBar';
+import { isRawUid } from '../services/userResolverService';
 
 // Lazy loading des outils collaboratifs & suites vectorielles lourdes pour préserver les performances et la rapidité du build
 const CreateProjectGroupModal = lazy(() => import('./CreateProjectGroupModal'));
@@ -1147,7 +1148,7 @@ function ChatView({
                   />
                 ) : (
                   <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: activeChatObj?.isGroup ? 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%)' : 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)', color: '#FFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: activeChatObj?.isGroup ? '17px' : '14px', boxShadow: 'var(--shadow-accent)' }}>
-                    {activeChatObj?.isGroup ? '👥' : (activeChatObj?.user ? activeChatObj.user[0].toUpperCase() : 'T')}
+                    {activeChatObj?.isGroup ? '👥' : (activeChatObj?.user && !isRawUid(activeChatObj.user) ? activeChatObj.user[0].toUpperCase() : 'T')}
                   </div>
                 )}
                 {activeChatIsOnline ? (
@@ -1177,7 +1178,7 @@ function ChatView({
               <div style={{ minWidth: 0, flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, flexWrap: 'wrap' }}>
                   <span style={{ fontWeight: '800', fontSize: isMobile ? '14px' : '14.5px', color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {activeChatObj?.isGroup ? (activeChatObj.projectTitle || activeChatObj.user) : activeChatObj?.user}
+                    {activeChatObj?.isGroup ? (activeChatObj.projectTitle || activeChatObj.user) : (isRawUid(activeChatObj?.user) ? 'Membre Troco' : (activeChatObj?.user || 'Interlocuteur'))}
                   </span>
                   {activeChatObj?.isGroup ? (
                     <span style={{ fontSize: '9px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', padding: '1px 6px', borderRadius: '6px', border: '1px solid var(--border-color)', flexShrink: 0 }}>
@@ -2997,8 +2998,18 @@ function ChatView({
                               transition: 'all 0.2s ease'
                             }}
                           >
-                            <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: chat.isGroup ? 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%)' : 'linear-gradient(135deg, var(--text-main) 0%, var(--text-secondary) 100%)', color: 'var(--bg-card)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: chat.isGroup ? '18px' : '15px', flexShrink: 0, boxShadow: 'var(--shadow-card)', position: 'relative' }}>
-                              {chat.isGroup ? '👥' : (chat.user ? chat.user[0].toUpperCase() : 'T')}
+                            <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: chat.isGroup ? 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-secondary) 100%)' : 'linear-gradient(135deg, var(--text-main) 0%, var(--text-secondary) 100%)', color: 'var(--bg-card)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: chat.isGroup ? '18px' : '15px', flexShrink: 0, boxShadow: 'var(--shadow-card)', position: 'relative', overflow: 'hidden' }}>
+                              {chat.isGroup ? (
+                                '👥'
+                              ) : chat.avatar ? (
+                                <img
+                                  src={chat.avatar}
+                                  alt={chat.user || 'Avatar'}
+                                  style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
+                                />
+                              ) : (
+                                (chat.user && !isRawUid(chat.user)) ? chat.user[0].toUpperCase() : 'T'
+                              )}
                               {isUserOnline(chat.user, chat.authorUid || chat.userId) ? (
                                 <span
                                   title="En ligne"
@@ -3040,7 +3051,7 @@ function ChatView({
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2px' }}>
                                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: isUnread ? '800' : '600', fontSize: isUnread ? '14.5px' : '14px', color: 'var(--text-main)' }}>
-                                  {chat.isGroup ? (chat.projectTitle || chat.user) : chat.user}
+                                  {chat.isGroup ? (chat.projectTitle || chat.user) : (isRawUid(chat.user) ? 'Membre Troco' : (chat.user || 'Interlocuteur'))}
                                   {pinnedChatIds.has(chat.id) && (
                                     <span title="Épinglé" style={{ display: 'inline-flex', alignItems: 'center', color: '#3B82F6' }}>
                                       <Pin size={12} style={{ fill: '#3B82F6' }} />
@@ -3909,7 +3920,12 @@ function ChatView({
         <PublicProfileModal
           isOpen={isPublicProfileOpen}
           onClose={() => setIsPublicProfileOpen(false)}
-          targetUser={activeChatObj}
+          targetUser={{
+            ...activeChatObj,
+            uid: activeChatObj.partnerUid || activeChatObj.peerUid || activeChatObj.authorUid || activeChatObj.userId || null,
+            name: isRawUid(activeChatObj.user) ? (activeChatObj.peerProfile?.displayName || 'Membre Troco') : (activeChatObj.user || 'Membre Troco'),
+            avatar: activeChatObj.avatar || activeChatObj.peerProfile?.photoURL || ''
+          }}
           allListings={allListings}
           onOpenListing={onOpenListing}
           currentLang={currentLang}
