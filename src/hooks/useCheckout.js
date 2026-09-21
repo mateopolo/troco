@@ -65,7 +65,7 @@ export function useCheckout({ profile, setProfile, onPaymentSuccess, onOpenNotif
           },
         });
       } else {
-        // Platform payment via Cloud Function applyPayment
+        // Platform payment via direct Firestore persistence (Option A)
         result = await paymentService.applyPayment({
           paymentIntentId: paymentDetails.paymentIntentId || `pi_mock_${Date.now()}`,
           mode: mode,
@@ -75,6 +75,7 @@ export function useCheckout({ profile, setProfile, onPaymentSuccess, onOpenNotif
           listingId: checkoutSession.listingId || null,
           currency: checkoutSession.currency || 'EUR',
           provider: paymentDetails.provider || 'mock',
+          userId: profile?.uid,
         });
       }
 

@@ -6,7 +6,7 @@ import {
   Sparkles, Coins, Zap, Smartphone,
   Check, CheckCircle, Loader2, Award
 } from 'lucide-react';
-import { doc, updateDoc, increment } from 'firebase/firestore';
+import { doc, setDoc, increment, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { auth } from '../firebase';
 import { getLocalizedTrocoPlusPlans, detectUserCountry, PPP_COUNTRY_MATRIX } from '../utils/pricingEngine';
@@ -416,29 +416,30 @@ export default function PaymentModal({
 
     // SYNC FIRESTORE : incrément atomique garanti du solde euros et jetons pour les rechargements (Apple Pay / Carte)
     // L'onSnapshot de useWalletStore / App.js propage ensuite le nouveau solde en temps réel
-    const uid = auth.currentUser?.uid || currentUser?.uid;
+    const uid = auth.currentUser?.uid || currentUser?.uid || currentUser?.id;
     if (uid && db) {
       if (mode === 'topup-cash' && amountToPay > 0) {
-        updateDoc(doc(db, 'users', String(uid)), {
+        setDoc(doc(db, 'users', String(uid)), {
           euroBalance: increment(amountToPay),
           walletBalanceFiat: increment(amountToPay),
-          updatedAt: new Date().toISOString(),
-        }).catch((err) => logger.warn('[PaymentModal] Firestore topup-cash increment failed:', err));
+          balance: increment(amountToPay),
+          updatedAt: serverTimestamp(),
+        }, { merge: true }).catch((err) => logger.warn('[PaymentModal] Firestore topup-cash increment failed:', err));
 
         // Mise à jour immédiate et optimiste du store Portefeuille pour fluidité totale
         try {
           useWalletStore.getState().creditBalance(amountToPay, 0);
         } catch (_) {}
       } else if (isSubscriptionMode && tokensCredited > 0) {
-        updateDoc(doc(db, 'users', String(uid)), {
+        setDoc(doc(db, 'users', String(uid)), {
           trocoTokens: increment(tokensCredited),
           tokens: increment(tokensCredited),
           isTrocoPlus: true,
           subscriptionPlan: selectedTrocoPlusPlan?.planKey || 'essential',
           subscriptionStartDate: subscriptionStartDate,
           subscriptionRenewalDate: subscriptionRenewalDate,
-          updatedAt: new Date().toISOString(),
-        }).catch((err) => logger.warn('[PaymentModal] Firestore token/subscription increment failed:', err));
+          updatedAt: serverTimestamp(),
+        }, { merge: true }).catch((err) => logger.warn('[PaymentModal] Firestore token/subscription increment failed:', err));
 
         try {
           useWalletStore.getState().creditBalance(0, tokensCredited);

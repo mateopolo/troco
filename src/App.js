@@ -652,10 +652,19 @@ export default function App() {
     } else if (txData.mode === 'topup-cash') {
       const topUpAmount = Number(txData.cashTopUp) || 0;
       if (topUpAmount > 0) {
-        setProfile(prev => ({
-          ...prev,
-          euroBalance: Number(((prev?.euroBalance || 0) + topUpAmount).toFixed(2)),
-        }));
+        setProfile(prev => {
+          const newBal = Number(((prev?.euroBalance || 0) + topUpAmount).toFixed(2));
+          const updated = {
+            ...prev,
+            euroBalance: newBal,
+            walletBalanceFiat: newBal,
+            balance: newBal,
+          };
+          try {
+            storage.setDebounced('troco_user_profile', updated);
+          } catch (_) {}
+          return updated;
+        });
         const persistedEuroBalance = Number(txData.newEuroBalance);
         const displayedEuroBalance = Number.isFinite(persistedEuroBalance)
           ? persistedEuroBalance
@@ -802,7 +811,7 @@ export default function App() {
       storage.setDebounced('troco_user_transactions', [newTxRecord, ...userTransactions]);
     } catch (e) { }
 
-    // 3. Application sécurisée côté Cloud Function backend (pas de manipulation solde directe client)
+    // 3. Application directe et atomique côté Firestore (Option A sans Cloud Functions)
     if (uid && txData.mode !== 'deal' && txData.mode !== 'pay-deal') {
       try {
         await paymentService.applyPayment({
@@ -814,9 +823,10 @@ export default function App() {
           listingId: txData.boostDetails?.listingId || null,
           currency: txData.currency || 'EUR',
           provider: 'mock',
+          userId: uid,
         });
       } catch (err) {
-        logger.warn('[paymentService] Error applying payment on backend:', err);
+        logger.warn('[paymentService] Error applying payment:', err);
       }
     }
   };
