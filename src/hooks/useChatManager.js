@@ -242,6 +242,22 @@ export const useChatManager = ({
     } catch (_) { }
   }, []);
 
+  // Références stables pour éviter de détruire et reconstruire les listeners onSnapshot lors des changements d'onglet ou de chat sélectionné
+  const selectedChatRef = useRef(selectedChat);
+  useEffect(() => {
+    selectedChatRef.current = selectedChat;
+  }, [selectedChat]);
+
+  const activeTabRef = useRef(activeTab);
+  useEffect(() => {
+    activeTabRef.current = activeTab;
+  }, [activeTab]);
+
+  const playNotificationSoundRef = useRef(playNotificationSound);
+  useEffect(() => {
+    playNotificationSoundRef.current = playNotificationSound;
+  }, [playNotificationSound]);
+
   // Synchronisation temps réel des discussions depuis Firestore (CONFIDENTIALITÉ STRICTE : filtrage multi-clés + tri client)
   useEffect(() => {
     if (!db) return;
@@ -345,7 +361,9 @@ export const useChatManager = ({
 
             // Détection en temps réel d'un nouveau message entrant non lu (PC ⇄ Mobile)
             if (isFromThem && (change.type === 'modified' || (change.type === 'added' && !isInitialLoad))) {
-              const isCurrentlyActive = selectedChat && String(selectedChat.id) === String(fChatId) && activeTab === 'chat';
+              const currentSelected = selectedChatRef.current;
+              const currentTab = activeTabRef.current;
+              const isCurrentlyActive = currentSelected && String(currentSelected.id) === String(fChatId) && currentTab === 'chat';
               if (!isCurrentlyActive) {
                 // Forcer la suppression du cache de lecture pour réactiver le badge rouge immédiatement
                 setReadChats(prev => {
@@ -356,7 +374,9 @@ export const useChatManager = ({
                   return next;
                 });
                 // Déclencher le son de notification et vibration
-                playNotificationSound();
+                if (typeof playNotificationSoundRef.current === 'function') {
+                  playNotificationSoundRef.current();
+                }
                 if (typeof navigator !== 'undefined' && navigator.vibrate) {
                   try { navigator.vibrate([120, 60, 120]); } catch (_) { }
                 }
@@ -435,7 +455,7 @@ export const useChatManager = ({
     return () => {
       unsubs.forEach(u => { try { if (typeof u === 'function') u(); } catch (_) { } });
     };
-  }, [profile?.name, profile?.uid, profile?.username, profile?.email, selectedChat, activeTab, playNotificationSound, auth, db]);
+  }, [profile?.name, profile?.uid, profile?.username, profile?.email, auth, db]);
 
   // Écoute de l'événement personnalisé pour forcer le rafraîchissement des conversations Firestore
   useEffect(() => {

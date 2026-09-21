@@ -177,7 +177,7 @@ L'envoi et la lecture des messages audio et vocaux reposent sur une architecture
 
 ### 3.5 Sécurisation des Hooks Firestore (Feed & Chats) & Persistance Session
 - **Persistance Firebase Auth :** La méthode `setPersistence(auth, browserLocalPersistence)` dans `src/firebase.js` garantit qu'un rechargement de page (F5/Refresh) ne déconnecte pas l'utilisateur de sa session active.
-- **Données 100% Firestore (Zéro Mock Data) :** Les flux d'annonces (`listings`) et de conversations (`chats`) proviennent **exclusivement de Cloud Firestore**. Les fichiers `mockData.js` et `mockChatsData.js` existent toujours dans `src/data/` mais ne sont **jamais injectés** dans les états applicatifs en production. Si Firestore retourne une collection vide, l'interface affiche son EmptyState natif.
+- **Données 100% Firestore (Zéro Mock Data) :** Les flux d'annonces (`listings`) et de conversations (`chats`) proviennent **exclusivement de Cloud Firestore**. Les `onSnapshot` sur `chats` (`where('participants', 'array-contains', ...)` et `where('participantUids', 'array-contains', uid)`) et sur `listings` (`collection(db, 'listings')` trié par date avec fallback résilient) sont actifs et alimentent directement l'UI. Aucun fallback mock data n'existe plus dans le code ni dans l'initialisation des états. Si Firestore retourne une collection vide, l'interface affiche son EmptyState natif.
 - **Sauvegarde du Profil et Respect des Règles Firestore Zero-Trust :** Les écritures client sur `users/{uid}` (`handleSaveProfile`, `handleAvatarFileUpload`) assainissent le payload pour ne pas modifier les champs financiers ou d'administration protégés (`euroBalance`, `trocoTokens`, `kycVerified`, `isBanned`, etc.), assurant une synchronisation et une persistance sans rejet de permission.
 
 ---
@@ -239,10 +239,15 @@ Pour permettre l'upload audio et photo sans blocage de requêtes Cross-Origin de
 L'application dispose d'un composant unifié pour toutes les boîtes de dialogue et fenêtres pop-up : `UniversalModal.jsx` situé dans `src/components/ui/UniversalModal.jsx`.
 
 > [!IMPORTANT]
-> **Résolution du crash 'Z' (ReferenceError / Temporal Dead Zone) & Z-Index :**
-> - Les gestionnaires d'actions (ex: `handleConfirmAcceptance`) doivent impérativement être déclarés AVANT les fragments JSX qui les référencent (ex: `cguFooter`) afin d'éviter tout crash minifié en production (`Cannot access 'Z' before initialization`).
-> - **Z-Index Standard Absolu : `999999`**. Le composant `UniversalModal` utilise `zIndex: 999999` pour tous les overlays. La prop `overlayStyle` peut surcharger cette valeur mais ne doit jamais descendre en dessous de `99999`. Ce z-index garantit que les modales critiques s'affichent par-dessus la barre de navigation mobile (`AppBottomNav`).
-> - **Padding Symétrique avec `disableSafeArea={true}` :** Quand cette prop est `true`, l'overlay utilise `paddingBottom: '16px'` (identique au paddingTop), éliminant l'offset de 80px de la bottom nav. Réservé aux modales critiques type `CguModal`.
+> **Standard universel d'architecture des Modales :**
+> - **Wrapper :** `fixed inset-0 z-[999999] flex items-center justify-center p-4 md:p-6`
+> - **Conteneur intérieur :** `max-h-[calc(100dvh-120px)]` (60px pour le header + 60px pour la BottomNav en bas sur mobile).
+> - **En-tête (Header) & Pied de page (Footer) fixes :** `flex-shrink: 0` (toujours visibles et accessibles).
+> - **Contenu central (Corps) :** `flex-1 min-h-0 overflow-y-auto` (défilement vertical fluide sans masquer les actions).
+> - **Résolution du crash 'Z' (ReferenceError / Temporal Dead Zone) & Z-Index :**
+>   - Les gestionnaires d'actions (ex: `handleConfirmAcceptance`) doivent impérativement être déclarés AVANT les fragments JSX qui les référencent (ex: `cguFooter`) afin d'éviter tout crash minifié en production (`Cannot access 'Z' before initialization`).
+>   - **Z-Index Standard Absolu : `999999`**. Le composant `UniversalModal` utilise `zIndex: 999999` pour tous les overlays. La prop `overlayStyle` peut surcharger cette valeur mais ne doit jamais descendre en dessous de `99999`. Ce z-index garantit que les modales critiques s'affichent par-dessus la barre de navigation mobile (`AppBottomNav`).
+>   - **Padding Symétrique avec `disableSafeArea={true}` :** Quand cette prop est `true`, l'overlay utilise `paddingBottom: '16px'` (identique au paddingTop), éliminant l'offset de 80px de la bottom nav. Utilisé pour les modales plein écran ou centrées type `CguModal`, `PrivacyCenterModal`.
 
 **Points capitaux d'intégration :**
 - **Portal sur `document.body` :** La modale s'extrait systématiquement du contexte d'empilement (stacking context) du chat ou de la navigation pour éviter tout débordement tronqué (`overflow: hidden`).
@@ -255,10 +260,11 @@ L'application dispose d'un composant unifié pour toutes les boîtes de dialogue
     onClose={onClose}
     maxWidth="640px"
     ariaLabel="Titre descriptif"
+    disableSafeArea={true}
     header={monHeader}
     footer={monFooter}
   >
-    <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+    <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '16px', flex: 1, minHeight: 0, overflowY: 'auto' }}>
       {/* Contenu complet */}
     </div>
   </UniversalModal>

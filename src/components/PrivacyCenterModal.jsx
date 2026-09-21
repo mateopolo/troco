@@ -107,25 +107,37 @@ export default function PrivacyCenterModal({
       onClose={onClose}
       ariaLabel="Centre de confidentialité et RGPD"
       showCloseButton={false}
+      disableSafeArea={true}
+      maxWidth="680px"
+      contentStyle={{
+        backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
+        borderRadius: '24px',
+        maxHeight: 'calc(100dvh - 120px)',
+        overflow: 'hidden',
+        boxShadow: darkMode ? '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 30px rgba(198,125,91,0.15)' : '0 25px 50px -12px rgba(61, 53, 48, 0.25)',
+        border: darkMode ? '1px solid rgba(232, 221, 211, 0.15)' : '1px solid #E8DDD3',
+        color: darkMode ? '#FAF7F2' : '#3D3530',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
       overlayStyle={{
         backgroundColor: 'rgba(61,53,48,0.72)',
         backdropFilter: 'blur(8px)',
         WebkitBackdropFilter: 'blur(8px)',
+        zIndex: 999999,
+        padding: '16px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
       }}
     >
       <div style={{
-        backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
-        borderRadius: '24px',
         width: '100%',
-        maxWidth: '680px',
-        maxHeight: '92vh',
-        overflowY: 'auto',
-        boxShadow: darkMode ? '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 30px rgba(198,125,91,0.15)' : '0 25px 50px -12px rgba(61, 53, 48, 0.25)',
-        border: darkMode ? '1px solid rgba(232, 221, 211, 0.15)' : '1px solid #E8DDD3',
-        color: darkMode ? '#FAF7F2' : '#3D3530',
-        position: 'relative',
+        height: '100%',
+        maxHeight: 'calc(100dvh - 120px)',
         display: 'flex',
         flexDirection: 'column',
+        overflow: 'hidden',
       }}>
 
         {/* HEADER */}
@@ -135,6 +147,7 @@ export default function PrivacyCenterModal({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          flexShrink: 0,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{
@@ -185,6 +198,7 @@ export default function PrivacyCenterModal({
           borderBottom: darkMode ? '1px solid rgba(232,221,211,0.08)' : '1px solid #E8DDD3',
           padding: '0 24px',
           gap: '8px',
+          flexShrink: 0,
         }}>
           {[
             { id: 'data', label: '📥 Mes Données & Portabilité', icon: Download },
@@ -215,7 +229,7 @@ export default function PrivacyCenterModal({
         </div>
 
         {/* CORPS */}
-        <div style={{ padding: '24px', overflowY: 'auto' }}>
+        <div style={{ padding: '24px', overflowY: 'auto', flex: 1, minHeight: 0 }}>
 
           {/* ONGLET 1 : PORTABILITÉ DES DONNÉES */}
           {activeTab === 'data' && (

@@ -2075,43 +2075,22 @@ export default function App() {
       const saved = localStorage.getItem('troco_user_listings');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Filtrer tout résidu de faux mock ou annonce de test hardcodée
+          const validSaved = parsed.filter(item => item && !item.isDemo && item.id !== 9999 && item.title !== "Coaching React, Node.js & Firebase (1h)");
+          if (validSaved.length > 0) return validSaved;
+        }
       }
     } catch (e) {
       logger.warn('Erreur chargement localStorage des annonces', e);
     }
-    const defaultUserListing = {
-      id: 9999,
-      title: "Coaching React, Node.js & Firebase (1h)",
-      description: "Session individuelle de mentorat web moderne : React, Firebase, API Rest & architecture. Support vidéo et exercices pratiques inclus.",
-      author: "Matéo Polo",
-      category: "Cours & Compétences",
-      verified: true,
-      rating: 5.0,
-      reviews: 6,
-      status: "active",
-      location: "Paris 11e (à 0.5 km)",
-      coordinates: [48.8584, 2.3785],
-      type: "remote",
-      nativeLang: "FR",
-      languages: ["FR", "EN"],
-      compensation: "1h = 1 Crédit",
-      image: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=600&q=80",
-      video: "https://assets.mixkit.co/videos/preview/mixkit-software-developer-working-on-his-laptop-34440-large.mp4",
-      urgent: true,
-      caution: null,
-      tags: ["React", "Firebase", "WebDev", "Mentorat"],
-      translations: {
-        EN: { title: "React, Node.js & Firebase Coaching (1h)", description: "1-on-1 modern web development coaching: React, Firebase, REST APIs. Includes video recording and hands-on exercises." },
-        ES: { title: "Clase de React, Node.js y Firebase (1h)", description: "Sesión individual de desarrollo web moderno: React, Firebase y APIs REST." }
-      }
-    };
-    return [defaultUserListing];
+    return [];
   });
 
   useEffect(() => {
     try {
-      localStorage.setItem('troco_user_listings', JSON.stringify(listings));
+      const cleanListings = listings.filter(item => item && !item.isDemo && item.id !== 9999);
+      localStorage.setItem('troco_user_listings', JSON.stringify(cleanListings));
     } catch (e) {
       logger.warn('Erreur sauvegarde localStorage des annonces', e);
     }
@@ -2123,8 +2102,7 @@ export default function App() {
   const [isLoadingMoreListings, setIsLoadingMoreListings] = useState(false);
 
   // ---- SYNC TEMPS RÉEL FIRESTORE — Firestore est l'unique source de vérité des annonces ----
-  // Les mockListings ne sont JAMAIS injectés en production.
-  // Si Firestore est vide, le FeedView affiche son EmptyState natif.
+  // Zéro mock data : si Firestore est vide, l'application affiche son EmptyState natif.
   useEffect(() => {
     let unsubFirestore = () => {};
     let isCancelled = false;
@@ -2150,7 +2128,7 @@ export default function App() {
 
         // Conserve uniquement les annonces créées localement dans la session (non présentes dans Firestore)
         setListings(prev => {
-          const sessionLocalListings = prev.filter(p => !p.isDemo && !p.firestoreId && !firestoreListings.some(f => f.id === p.id));
+          const sessionLocalListings = prev.filter(p => !p.isDemo && p.id !== 9999 && !p.firestoreId && !firestoreListings.some(f => f.id === p.id));
           return [...firestoreListings, ...sessionLocalListings];
         });
       },
@@ -2172,7 +2150,7 @@ export default function App() {
               setLastVisibleListingDoc(lastDoc);
               setHasMoreListings(snapshot.docs.length === 20);
               setListings(prev => {
-                const sessionLocalListings = prev.filter(p => !p.isDemo && !p.firestoreId && !firestoreListings.some(f => f.id === p.id));
+                const sessionLocalListings = prev.filter(p => !p.isDemo && p.id !== 9999 && !p.firestoreId && !firestoreListings.some(f => f.id === p.id));
                 return [...firestoreListings, ...sessionLocalListings];
               });
             }, () => {
