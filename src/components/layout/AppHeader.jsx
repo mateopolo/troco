@@ -108,6 +108,7 @@ export const AppHeader = React.memo(({
 
   return (
     <header
+      className="app-header-container"
       style={{
         display: isHiddenOnMobileChat ? 'none' : 'block',
         backgroundColor: darkMode ? 'rgba(26, 22, 19, 0.52)' : 'rgba(250, 247, 242, 0.52)',

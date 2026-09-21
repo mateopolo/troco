@@ -214,7 +214,7 @@ export const AppBottomNav = React.memo(({
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerCancel}
       onPointerLeave={handlePointerCancel}
-      className="bg-[var(--bg-card)] md:bg-[var(--glass-bg)] md:backdrop-blur-xl border-t border-[var(--border-color)]"
+      className="app-bottom-nav bg-[var(--bg-card)] md:bg-[var(--glass-bg)] md:backdrop-blur-xl border-t border-[var(--border-color)]"
       style={{
         display: isHidden ? 'none' : 'block',
         position: 'fixed',
@@ -291,9 +291,15 @@ export const AppBottomNav = React.memo(({
           const IconComponent = tab.Icon;
 
           return (
-            <div
+            <button
+              type="button"
               key={tab.id}
               data-tab={tab.id}
+              aria-label={tab.label}
+              onClick={(e) => {
+                e.stopPropagation();
+                executeTabAction(tab.id);
+              }}
               style={{
                 flex: 1,
                 display: 'flex',
@@ -304,7 +310,10 @@ export const AppBottomNav = React.memo(({
                 height: '100%',
                 position: 'relative',
                 zIndex: 1,
-                pointerEvents: 'none', // Évite d'intercepter les coordonnées pointer du conteneur nav
+                background: 'none',
+                border: 'none',
+                padding: 0,
+                cursor: 'pointer',
                 transition: 'transform 0.2s var(--ease-monopo)',
                 transform: isHighlighted ? 'scale(1.08)' : 'scale(1)',
               }}
@@ -374,7 +383,7 @@ export const AppBottomNav = React.memo(({
               >
                 {tab.label}
               </span>
-            </div>
+            </button>
           );
         })}
       </div>

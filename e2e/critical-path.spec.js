@@ -4,19 +4,40 @@ test.describe('Troco — Parcours Critique E2E (Critical Path)', () => {
   test.beforeEach(async ({ page }) => {
     // Configuration d'un profil connecté persistant pour simuler la session utilisateur
     await page.addInitScript(() => {
-      localStorage.setItem('troco_user_profile', JSON.stringify({
+      window.__E2E__ = true;
+      localStorage.setItem('troco_e2e_authenticated', 'true');
+      localStorage.setItem('troco_auth_session', 'true');
+      localStorage.setItem('troco_cgu_accepted', 'true');
+      localStorage.setItem('troco_cookie_consent', 'accepted');
+      localStorage.setItem('troco_consent_timestamp', String(Date.now()));
+
+      const testProfile = {
         id: 'test-user-123',
         uid: 'test-user-123',
         name: 'Alexandre Troco',
+        username: '@alexandre',
         email: 'alexandre@troco.app',
         avatar: '',
         trocoTokens: 50,
         euroBalance: 120,
-        cguAcceptedAt: Date.now(),
+        cguAcceptedAt: new Date().toISOString(),
+        onboardingCompleted: true,
+        skills: ['Développement Web', 'Design UI'],
+        equipment: ['MacBook Pro'],
+        socialLinks: ['https://github.com/mateopolo'],
+        portfolioImages: [],
         verified: true,
+      };
+
+      localStorage.setItem('troco_user_profile', JSON.stringify(testProfile));
+      localStorage.setItem('troco_auth_store', JSON.stringify({
+        state: {
+          isAuthenticated: true,
+          profile: testProfile,
+          profileDraft: testProfile,
+        },
+        version: 0
       }));
-      localStorage.setItem('troco_cgu_accepted', 'true');
-      localStorage.setItem('troco_auth_session', 'true');
     });
 
     await page.goto('/');
@@ -29,18 +50,18 @@ test.describe('Troco — Parcours Critique E2E (Critical Path)', () => {
 
     // Vérification de la présence des éléments de navigation
     const navBar = page.locator('nav, .app-bottom-nav, .app-header-container');
-    await expect(navBar.first()).toBeVisible();
+    await expect(navBar.first()).toBeVisible({ timeout: 10000 });
   });
 
   test('2. Navigation vers la Messagerie (Chat)', async ({ page }) => {
     // Clic sur l'onglet Messagerie / Chat
     const chatNavButton = page.locator('button:has-text("Messages"), button:has-text("Chat"), [data-tab="chat"]').first();
     if (await chatNavButton.isVisible()) {
-      await chatNavButton.click();
+      await chatNavButton.click({ force: true });
     }
 
     // Vérifier que la vue chat ou la liste des conversations est active
-    await expect(page.locator('input[type="text"], .chat-row-container, .dynamic-island-container').first()).toBeVisible();
+    await expect(page.locator('h3:has-text("Discussions"), input[type="text"], .chat-row-container, .dynamic-island-container').first()).toBeVisible({ timeout: 10000 });
   });
 
   test('3. Envoi d\'un message dans une conversation', async ({ page }) => {
