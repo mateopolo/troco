@@ -266,6 +266,8 @@ export default function App() {
     setIsAuthResolved,
     isLoadingSession,
     setIsLoadingSession,
+    isProfileLoading,
+    setIsProfileLoading,
     isUserBanned,
     setIsUserBanned,
     bannedReason,
@@ -1025,11 +1027,37 @@ export default function App() {
             if (newTokens !== null) prevTokensRef.current = newTokens;
             if (newEuros !== null) prevEurosRef.current = newEuros;
 
+            // Détection et synchronisation de la photo de profil native Gmail / Auth
+            const isUnsplashPlaceholder = typeof data.avatar === 'string' && data.avatar.includes('unsplash.com');
+            const resolvedAvatar = (firebaseUser.photoURL && (!data.avatar || isUnsplashPlaceholder)) ? firebaseUser.photoURL : (data.avatar || firebaseUser.photoURL || '');
+            const resolvedName = (firebaseUser.displayName && (!data.name || data.name === 'Membre Troco' || data.name === 'Utilisateur Troco')) ? firebaseUser.displayName : (data.name || firebaseUser.displayName || 'Membre Troco');
+
+            // Synchronisation vers Firestore si la photo ou l'onboarding manquent
+            const updatesToSync = {};
+            if (firebaseUser.photoURL && (!data.avatar || isUnsplashPlaceholder)) {
+              updatesToSync.avatar = firebaseUser.photoURL;
+            }
+            if (firebaseUser.displayName && (!data.name || data.name === 'Membre Troco' || data.name === 'Utilisateur Troco')) {
+              updatesToSync.name = firebaseUser.displayName;
+            }
+            if (data.onboardingCompleted === undefined || data.onboardingCompleted === false) {
+              updatesToSync.onboardingCompleted = true;
+            }
+            if (Object.keys(updatesToSync).length > 0) {
+              updateDoc(userDocRef, {
+                ...updatesToSync,
+                updatedAt: serverTimestamp(),
+              }).catch((err) => logger.warn('[Auth] Auto-sync photo/onboarding in App.js failed:', err));
+            }
+
             // Mise à jour de l'état profil local et persistence
             setProfile(prev => {
               const updated = {
                 ...prev,
                 ...data,
+                name: resolvedName,
+                avatar: resolvedAvatar,
+                onboardingCompleted: true,
                 uid: uid,
               };
               try {
@@ -1047,9 +1075,11 @@ export default function App() {
 
             if (Array.isArray(data.skills)) setSkills(data.skills);
             if (Array.isArray(data.equipment)) setEquipment(data.equipment);
+            finishSessionLoading();
           } else {
             // VERROU STRICT : Si le bonus ou l'onboarding a déjà été validé, pas de ré-initialisation
             if (profile?.welcomeBonusClaimed === true || profile?.onboardingCompleted === true) {
+              finishSessionLoading();
               return;
             }
 
@@ -1071,7 +1101,7 @@ export default function App() {
               dealsCompleted: 0,
               dealsInProgress: 0,
               rating: null,
-              onboardingCompleted: false,
+              onboardingCompleted: true,
               welcomeBonusClaimed: true,
               loginMethod: firebaseUser.providerData?.[0]?.providerId || 'Email',
               cguAcceptedAt: null,
@@ -1086,12 +1116,15 @@ export default function App() {
             } catch (e) {
               logger.warn('[Firestore] Failed to init user doc:', e);
             }
+            finishSessionLoading();
           }
+        }, (err) => {
+          logger.warn('[Firestore] App.js user snapshot error:', err);
+          finishSessionLoading();
         });
 
         setIsAuthenticated(true);
         setSessionAuthenticated();
-        finishSessionLoading();
       } else {
         const isE2E = typeof window !== 'undefined' && (
           window.__E2E__ === true ||
@@ -1135,14 +1168,15 @@ export default function App() {
 
   // ---- DÉTECTION ET OUVERTURE DU WIZARD D'ONBOARDING POUR NOUVEAUX COMPTES (CHANTIER 1) ----
   useEffect(() => {
+    if (!isAuthResolved || isLoadingSession || isProfileLoading) return;
     if (isAuthenticated && profile) {
-      const needsOnboarding = profile.onboardingCompleted === false || (profile.onboardingCompleted === undefined && profile.uid && profile.uid !== 'demo_mateopolo');
+      const needsOnboarding = profile.onboardingCompleted === false && profile.uid && profile.uid !== 'demo_mateopolo';
       if (needsOnboarding) {
         setIsOnboardingOpen(true);
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, profile?.onboardingCompleted, profile?.uid]);
+  }, [isAuthenticated, isAuthResolved, isLoadingSession, isProfileLoading, profile?.onboardingCompleted, profile?.uid]);
 
   // Synchronisation réactive globale avec le store Zustand useWalletStore (élimine le prop drilling)
   useEffect(() => {
@@ -1172,8 +1206,8 @@ export default function App() {
 
   // ---- FINALISATION DU PARCOURS D'ONBOARDING (CHANTIER 1 & CADEAU DE BIENVENUE) ----
   const handleCompleteOnboarding = async (completedData) => {
-    const finalEuroBalance = 0.00; // Toujours 0€ à la création de compte
-    const finalTokens = 10; // Toujours 10 Jetons offerts à la bienvenue
+    const finalEuroBalance = Number(profile?.euroBalance ?? 0.00); // Préserve le solde existant
+    const finalTokens = Number(profile?.trocoTokens ?? 10); // Préserve les jetons existants
     const updatedProfile = {
       ...profile,
       ...completedData,
@@ -2730,7 +2764,7 @@ export default function App() {
     }
   };
 
-  if (!isAuthResolved || isLoadingSession) {
+  if (!isAuthResolved || isLoadingSession || (isAuthenticated && isProfileLoading)) {
     return (
       <div style={{
         minHeight: '100vh',

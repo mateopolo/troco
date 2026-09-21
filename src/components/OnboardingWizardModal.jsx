@@ -38,7 +38,8 @@ export default function OnboardingWizardModal({
 
   // Étape 2 : Type de compte & Identité
   const [accountType, setAccountType] = useState('particular');
-  const [avatar, setAvatar] = useState(currentUser?.avatar || DIVERSE_AVATARS[0]);
+  const initialAvatar = currentUser?.photoURL || (currentUser?.avatar && !currentUser.avatar.includes('unsplash.com') ? currentUser.avatar : (currentUser?.photoURL || currentUser?.avatar || DIVERSE_AVATARS[0]));
+  const [avatar, setAvatar] = useState(initialAvatar);
   const [name, setName] = useState(currentUser?.name || '');
   const [username, setUsername] = useState(currentUser?.username || '');
   const [location, setLocation] = useState(currentUser?.location || 'Paris, France');

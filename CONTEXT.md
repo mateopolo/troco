@@ -194,6 +194,22 @@ L'envoi et la lecture des messages audio et vocaux reposent sur une architecture
   - **Suppression d'orderBy bloquant :** La requête temps réel principale est exécutée directement avec `query(collection(db, 'chats'), where('participants', 'array-contains', currentUid))` sans clause `orderBy` composite.
   - **Tri JavaScript haute performance :** Les conversations sont ordonnées côté client en mémoire dans `updateMergedChats` (`(a, b) => timeB - timeA`) en gérant de façon transparente les Timestamps Firestore, dates ISO et millisecondes, garantissant l'accès immédiat aux messages même en l'absence d'index composite.
 
+### 3.7 Résolution de la Boucle d'Onboarding & Synchronisation Photo/Nom Gmail vers Firestore
+- **Origine de la boucle d'onboarding (Race Condition) :**
+  - À chaque reconnexion Firebase Auth, `isAuthenticated` passait immédiatement à `true` et `setProfile({ uid })` s'exécutait avant que Firestore n'ait renvoyé le document utilisateur.
+  - Le guard d'onboarding (`needsOnboarding`) évaluait `profile.onboardingCompleted === undefined` comme devant afficher le wizard de bienvenue.
+  - De plus, `finishSessionLoading()` était appelé de façon prématurée en dehors du callback `onSnapshot`, retirant l'écran de chargement avant la résolution du document distant.
+  - Enfin, la finalisation du wizard écrasait artificiellement `euroBalance` à `0.00€` et `trocoTokens` à `10`.
+- **Mécanisme de résolution implémenté :**
+  - **État `isProfileLoading` :** Introduit dans `useAppAuth.js` et propagé à `App.js`. Le loader plein écran persiste tant que `(!isAuthResolved || isLoadingSession || (isAuthenticated && isProfileLoading))` est vérifié.
+  - **Garde strict d'onboarding :** Le `useEffect` de déclenchement du wizard attend impérativement `!isLoadingSession && !isProfileLoading && isAuthResolved` et ne se déclenche QUE si `profile.onboardingCompleted === false` de façon explicite (jamais sur `undefined`).
+  - **Synchronisation automatique de la photo et du nom natifs Google (Auth -> Firestore) :**
+    - Dans `useAppAuth.js`, `App.js`, `AuthContext.jsx` et `AuthScreen.jsx`, si l'utilisateur possède un `user.photoURL` et que son `avatar` Firestore est manquant ou contient un placeholder Unsplash, la photo native Gmail est automatiquement persistée sur le document `users/{uid}` via `updateDoc({ avatar: user.photoURL })`.
+    - De même, le `displayName` natif Google est automatiquement synchronisé vers `users/{uid}`.
+    - La Cloud Function `onUserWriteSyncPublic` propage ensuite cette photo et ce nom vers `users_public/{uid}`, garantissant une visibilité publique instantanée.
+  - **Garantie `onboardingCompleted: true` :** Tout document utilisateur existant ou nouvellement créé via provider social enregistre `onboardingCompleted: true`.
+  - **Préservation des soldes :** `handleCompleteOnboarding` conserve désormais strictement `profile.euroBalance` et `profile.trocoTokens` au lieu d'écraser le solde à zéro.
+
 ---
 
 ## 🛡️ 4. RÈGLES DE SÉCURITÉ, BASE DE DONNÉES & CORS

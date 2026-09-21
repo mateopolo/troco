@@ -189,15 +189,17 @@ export default function AuthScreen({
         }
 
         if (existingUserByEmail) {
+          const isEmailUserUnsplash = typeof existingUserByEmail.avatar === 'string' && existingUserByEmail.avatar.includes('unsplash.com');
           const mergedUserData = {
             ...existingUserByEmail,
             uid,
             email: user.email,
+            onboardingCompleted: true,
             loginMethod: providerName,
             updatedAt: serverTimestamp(),
           };
-          if (user.photoURL && !mergedUserData.avatar) mergedUserData.avatar = user.photoURL;
-          if (user.displayName && !mergedUserData.name) mergedUserData.name = user.displayName;
+          if (user.photoURL && (!mergedUserData.avatar || isEmailUserUnsplash)) mergedUserData.avatar = user.photoURL;
+          if (user.displayName && (!mergedUserData.name || mergedUserData.name === 'Membre Troco' || mergedUserData.name === 'Utilisateur Troco')) mergedUserData.name = user.displayName;
           await setDoc(userDocRef, mergedUserData, { merge: true });
           setProfile(mergedUserData);
           if (setProfileDraft) setProfileDraft(mergedUserData);
@@ -220,7 +222,7 @@ export default function AuthScreen({
             rating: null,
             reviewsCount: 0,
             swapHistory: [],
-            onboardingCompleted: false,
+            onboardingCompleted: true,
             euroBalance: 0.00,
             trocoTokens: 10,
             loginMethod: providerName,
@@ -235,8 +237,23 @@ export default function AuthScreen({
         }
       } else {
         const existingData = { ...userSnap.data(), uid };
-        if (user.photoURL && !existingData.avatar) existingData.avatar = user.photoURL;
-        if (user.displayName && !existingData.name) existingData.name = user.displayName;
+        const isUnsplash = typeof existingData.avatar === 'string' && existingData.avatar.includes('unsplash.com');
+        const updates = {};
+        if (user.photoURL && (!existingData.avatar || isUnsplash)) {
+          existingData.avatar = user.photoURL;
+          updates.avatar = user.photoURL;
+        }
+        if (user.displayName && (!existingData.name || existingData.name === 'Membre Troco' || existingData.name === 'Utilisateur Troco')) {
+          existingData.name = user.displayName;
+          updates.name = user.displayName;
+        }
+        if (existingData.onboardingCompleted === undefined || existingData.onboardingCompleted === false) {
+          existingData.onboardingCompleted = true;
+          updates.onboardingCompleted = true;
+        }
+        if (Object.keys(updates).length > 0) {
+          await setDoc(userDocRef, updates, { merge: true }).catch(() => {});
+        }
         setProfile(existingData);
         if (setProfileDraft) setProfileDraft(existingData);
         window.localStorage.setItem('troco_user_profile', JSON.stringify(existingData));

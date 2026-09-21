@@ -113,17 +113,29 @@ export const AuthProvider = ({ children }) => {
           unsubscribeDoc = onSnapshot(userDocRef, (userSnap) => {
             if (userSnap.exists()) {
               const data = userSnap.data();
+              const isUnsplash = typeof data.avatar === 'string' && data.avatar.includes('unsplash.com');
+              const resolvedAvatar = (currentUser.photoURL && (!data.avatar || isUnsplash)) ? currentUser.photoURL : (data.avatar || currentUser.photoURL || '');
+              const resolvedName = (currentUser.displayName && (!data.name || data.name === 'Membre Troco' || data.name === 'Utilisateur Troco')) ? currentUser.displayName : (data.name || currentUser.displayName || 'Membre Troco');
+
+              if (currentUser.photoURL && (!data.avatar || isUnsplash)) {
+                updateDoc(userDocRef, { avatar: currentUser.photoURL, updatedAt: serverTimestamp() }).catch(() => {});
+              }
+
               setProfile(prev => ({
                 ...prev,
                 ...data,
                 uid: currentUser.uid,
-                name: data.name || currentUser.displayName || prev?.name,
+                name: resolvedName,
                 email: currentUser.email || data.email || prev?.email,
-                avatar: data.avatar || currentUser.photoURL || prev?.avatar,
+                avatar: resolvedAvatar,
+                onboardingCompleted: true,
               }));
               try {
                 window.localStorage.setItem('troco_user_profile', JSON.stringify({
                   ...data,
+                  name: resolvedName,
+                  avatar: resolvedAvatar,
+                  onboardingCompleted: true,
                   uid: currentUser.uid
                 }));
               } catch (_) {}
@@ -228,15 +240,17 @@ export const AuthProvider = ({ children }) => {
         }
 
         if (existingUserByEmail) {
+          const isEmailUserUnsplash = typeof existingUserByEmail.avatar === 'string' && existingUserByEmail.avatar.includes('unsplash.com');
           const mergedUserData = {
             ...existingUserByEmail,
             uid,
             email: u.email,
+            onboardingCompleted: true,
             loginMethod: providerName,
             updatedAt: serverTimestamp(),
           };
-          if (u.photoURL && !mergedUserData.avatar) mergedUserData.avatar = u.photoURL;
-          if (u.displayName && !mergedUserData.name) mergedUserData.name = u.displayName;
+          if (u.photoURL && (!mergedUserData.avatar || isEmailUserUnsplash)) mergedUserData.avatar = u.photoURL;
+          if (u.displayName && (!mergedUserData.name || mergedUserData.name === 'Membre Troco' || mergedUserData.name === 'Utilisateur Troco')) mergedUserData.name = u.displayName;
           await setDoc(userDocRef, mergedUserData, { merge: true });
           setProfile(mergedUserData);
           window.localStorage.setItem('troco_user_profile', JSON.stringify(mergedUserData));
@@ -259,7 +273,7 @@ export const AuthProvider = ({ children }) => {
             rating: null,
             reviewsCount: 0,
             swapHistory: [],
-            onboardingCompleted: false,
+            onboardingCompleted: true,
             euroBalance: 0.00,
             trocoTokens: 10,
             loginMethod: providerName,
@@ -273,8 +287,23 @@ export const AuthProvider = ({ children }) => {
         }
       } else {
         const existingData = { ...userSnap.data(), uid };
-        if (u.photoURL && !existingData.avatar) existingData.avatar = u.photoURL;
-        if (u.displayName && !existingData.name) existingData.name = u.displayName;
+        const isUnsplash = typeof existingData.avatar === 'string' && existingData.avatar.includes('unsplash.com');
+        const updates = {};
+        if (u.photoURL && (!existingData.avatar || isUnsplash)) {
+          existingData.avatar = u.photoURL;
+          updates.avatar = u.photoURL;
+        }
+        if (u.displayName && (!existingData.name || existingData.name === 'Membre Troco' || existingData.name === 'Utilisateur Troco')) {
+          existingData.name = u.displayName;
+          updates.name = u.displayName;
+        }
+        if (existingData.onboardingCompleted === undefined || existingData.onboardingCompleted === false) {
+          existingData.onboardingCompleted = true;
+          updates.onboardingCompleted = true;
+        }
+        if (Object.keys(updates).length > 0) {
+          await setDoc(userDocRef, updates, { merge: true }).catch(() => {});
+        }
         setProfile(existingData);
         window.localStorage.setItem('troco_user_profile', JSON.stringify(existingData));
       }
