@@ -395,8 +395,18 @@ export default function App() {
 
   // ---- NOTIFICATION & ANIMATION DE RÉCEPTION DE JETONS (DESTINATAIRE) ----
   // Ref: P1-BUG-08 - Centralisation dans le listener Firestore onSnapshot pour éviter le double déclenchement
-  const prevTokensRef = useRef(profile?.trocoTokens);
-  const prevEurosRef = useRef(profile?.euroBalance);
+  const prevTokensRef = useRef(null);
+  const prevEurosRef = useRef(null);
+  const isInitialAuthSnapRef = useRef(true);
+
+  // Verrou d'urgence anti-boucle CGU / RGPD : persistance session immédiate
+  const [cguDismissed, setCguDismissed] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.sessionStorage?.getItem('troco_cgu_dismissed') === 'true' ||
+             window.localStorage?.getItem('troco_cgu_dismissed') === 'true';
+    }
+    return false;
+  });
 
   const [userTransactions, setUserTransactions] = useState(() => {
     return getInitialTransactions();
@@ -981,30 +991,37 @@ export default function App() {
             const newTokens = rawTokens !== undefined && rawTokens !== null ? Number(rawTokens) : null;
             const newEuros = rawEuros !== undefined && rawEuros !== null ? Number(Number(rawEuros).toFixed(2)) : null;
 
-            // Détection de réception temps réel de jetons Troco (+X jetons) & Alerte sonore
-            if (prevTokensRef.current !== undefined && prevTokensRef.current !== null && newTokens !== null && newTokens > prevTokensRef.current) {
-              const gained = newTokens - prevTokensRef.current;
-              haptics.success();
-              playBetclicBalanceSound(true);
-              setTopUpCelebration({
-                title: `+${gained} Jeton${gained > 1 ? 's' : ''} Troco reçus ! 🪙`,
-                subtitle: `Nouveau solde : ${newTokens} Jetons Troco`,
-              });
-              safeTimeout(() => setTopUpCelebration(null), 4500);
+            // VERROU STRICT SUR LES CÉLÉBRATIONS FINANCIÈRES :
+            // Ne JAMAIS déclencher au snapshot initial, ni si le bonus/onboarding a déjà été validé
+            const isClaimed = Boolean(data.welcomeBonusClaimed || data.onboardingCompleted || profile?.welcomeBonusClaimed || profile?.onboardingCompleted);
+
+            if (!isInitialAuthSnapRef.current && !isClaimed) {
+              // Détection de réception temps réel de jetons Troco (+X jetons) & Alerte sonore
+              if (prevTokensRef.current !== null && newTokens !== null && newTokens > prevTokensRef.current) {
+                const gained = newTokens - prevTokensRef.current;
+                haptics.success();
+                playBetclicBalanceSound(true);
+                setTopUpCelebration({
+                  title: `+${gained} Jeton${gained > 1 ? 's' : ''} Troco reçus ! 🪙`,
+                  subtitle: `Nouveau solde : ${newTokens} Jetons Troco`,
+                });
+                safeTimeout(() => setTopUpCelebration(null), 4500);
+              }
+
+              // Détection de réception temps réel d'euros & Alerte sonore
+              if (prevEurosRef.current !== null && newEuros !== null && newEuros > prevEurosRef.current) {
+                const gained = (newEuros - prevEurosRef.current).toFixed(2);
+                haptics.success();
+                playApplePaySound();
+                setTopUpCelebration({
+                  title: `+${gained} € reçus sur votre solde ! 💳`,
+                  subtitle: `Nouveau solde : ${Number(newEuros).toFixed(2)} €`,
+                });
+                safeTimeout(() => setTopUpCelebration(null), 4500);
+              }
             }
 
-            // Détection de réception temps réel d'euros & Alerte sonore
-            if (prevEurosRef.current !== undefined && prevEurosRef.current !== null && newEuros !== null && newEuros > prevEurosRef.current) {
-              const gained = (newEuros - prevEurosRef.current).toFixed(2);
-              haptics.success();
-              playApplePaySound();
-              setTopUpCelebration({
-                title: `+${gained} € reçus sur votre solde ! 💳`,
-                subtitle: `Nouveau solde : ${Number(newEuros).toFixed(2)} €`,
-              });
-              safeTimeout(() => setTopUpCelebration(null), 4500);
-            }
-
+            isInitialAuthSnapRef.current = false;
             if (newTokens !== null) prevTokensRef.current = newTokens;
             if (newEuros !== null) prevEurosRef.current = newEuros;
 
@@ -1031,6 +1048,11 @@ export default function App() {
             if (Array.isArray(data.skills)) setSkills(data.skills);
             if (Array.isArray(data.equipment)) setEquipment(data.equipment);
           } else {
+            // VERROU STRICT : Si le bonus ou l'onboarding a déjà été validé, pas de ré-initialisation
+            if (profile?.welcomeBonusClaimed === true || profile?.onboardingCompleted === true) {
+              return;
+            }
+
             // Initialisation automatique du profil sur Firestore si nouveau provider
             const defaultUserDoc = {
               uid: uid,
@@ -1050,6 +1072,7 @@ export default function App() {
               dealsInProgress: 0,
               rating: null,
               onboardingCompleted: false,
+              welcomeBonusClaimed: true,
               loginMethod: firebaseUser.providerData?.[0]?.providerId || 'Email',
               cguAcceptedAt: null,
               createdAt: serverTimestamp(),
@@ -1058,8 +1081,8 @@ export default function App() {
             try {
               await setDoc(userDocRef, defaultUserDoc, { merge: true });
               setProfile(prev => ({ ...prev, ...defaultUserDoc }));
-              prevTokensRef.current = 10;
-              prevEurosRef.current = 0;
+              prevTokensRef.current = defaultUserDoc.trocoTokens;
+              prevEurosRef.current = defaultUserDoc.euroBalance;
             } catch (e) {
               logger.warn('[Firestore] Failed to init user doc:', e);
             }
@@ -1667,20 +1690,18 @@ export default function App() {
       });
       unsubs.push(unsubUids);
 
-      // 2. Écoute par participants (nom d'affichage)
-      if (profile?.name) {
-        const qNames = query(
-          collection(db, 'chats'),
-          where('participants', 'array-contains', profile.name)
-        );
-        const unsubNames = onSnapshot(qNames, (snap) => {
-          snap.docChanges().forEach(handleChatDocChange);
-          isInitial = false;
-        }, (err) => {
-          logger.warn('[App.js] Background message listener error (participants):', err);
-        });
-        unsubs.push(unsubNames);
-      }
+      // 2. Écoute par participants (UID Firebase strict pour respecter les règles de sécurité Firestore)
+      const qParticipants = query(
+        collection(db, 'chats'),
+        where('participants', 'array-contains', String(currentUid))
+      );
+      const unsubParticipants = onSnapshot(qParticipants, (snap) => {
+        snap.docChanges().forEach(handleChatDocChange);
+        isInitial = false;
+      }, (err) => {
+        logger.warn('[App.js] Background message listener warning (participants):', err);
+      });
+      unsubs.push(unsubParticipants);
     } catch (err) {
       logger.warn('[App.js] Background message listener setup error:', err);
     }
@@ -2680,14 +2701,23 @@ export default function App() {
 
   // ---- VALIDATION OBLIGATOIRE DES CGU / RGPD ----
   const handleAcceptCgu = async ({ cguVersion, acceptedAt } = {}) => {
+    // 1. Verrou local d'urgence immédiat pour stopper tout re-render / réouverture en boucle
+    setCguDismissed(true);
+    try {
+      window.sessionStorage?.setItem('troco_cgu_dismissed', 'true');
+      window.localStorage?.setItem('troco_cgu_dismissed', 'true');
+    } catch (_) { }
+
     const now = acceptedAt || new Date().toISOString();
-    const uid = profile.uid || auth.currentUser?.uid;
+    const uid = profile?.uid || auth.currentUser?.uid;
     setProfile(prev => {
       const updated = { ...prev, cguAcceptedAt: now, cguVersion: cguVersion || '2026.1' };
       storage.setDebounced('troco_user_profile', updated);
       return updated;
     });
-    if (uid) {
+
+    // 2. Persistance Firestore avec serverTimestamp
+    if (uid && db) {
       try {
         await updateDoc(doc(db, 'users', String(uid)), {
           cguAcceptedAt: serverTimestamp(),
@@ -2881,10 +2911,10 @@ export default function App() {
         )}
 
         {/* MODALE BLOQUANTE CGU & RGPD OBLIGATOIRE */}
-        {isAuthenticated && !profile?.cguAcceptedAt && (
+        {isAuthenticated && !profile?.cguAcceptedAt && !cguDismissed && !isLoadingSession && (
           <Suspense fallback={null}>
             <CguConsentModal
-              isOpen={isAuthenticated && !profile?.cguAcceptedAt}
+              isOpen={isAuthenticated && !profile?.cguAcceptedAt && !cguDismissed && !isLoadingSession}
               onAccept={handleAcceptCgu}
               profile={profile}
               darkMode={darkMode}
@@ -5167,12 +5197,15 @@ export default function App() {
         )}
 
         {/* MODALE D'ACCEPTATION & CONSULTATION DES CGU (BLOC 6) */}
-        {(isCguViewerOpen || (Boolean(profile?.name) && !profile?.cguAcceptedAt && profile?.onboardingCompleted)) && (
+        {(isCguViewerOpen || (Boolean(profile?.name) && !profile?.cguAcceptedAt && !cguDismissed && !isLoadingSession && profile?.onboardingCompleted)) && (
           <Suspense fallback={<SkeletonModalFallback title="Conditions Générales d'Utilisation..." />}>
             <CguModal
-              isOpen={isCguViewerOpen || (Boolean(profile?.name) && !profile?.cguAcceptedAt && profile?.onboardingCompleted)}
-              isMandatory={Boolean(profile?.name) && !profile?.cguAcceptedAt && profile?.onboardingCompleted}
-              onClose={() => setIsCguViewerOpen(false)}
+              isOpen={isCguViewerOpen || (Boolean(profile?.name) && !profile?.cguAcceptedAt && !cguDismissed && !isLoadingSession && profile?.onboardingCompleted)}
+              isMandatory={Boolean(profile?.name) && !profile?.cguAcceptedAt && !cguDismissed && !isLoadingSession && profile?.onboardingCompleted}
+              onClose={() => {
+                setIsCguViewerOpen(false);
+                setCguDismissed(true);
+              }}
               onAccept={handleAcceptCgu}
               darkMode={darkMode}
               currentUser={profile}

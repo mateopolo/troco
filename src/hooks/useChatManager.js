@@ -368,37 +368,20 @@ export const useChatManager = ({
       isInitialLoad = false;
     };
 
-    // 1. Écoute principale sécurisée : array-contains strict sur l'UID Firebase Auth avec orderBy updatedAt
+    // 1. Écoute principale sécurisée : array-contains strict sur l'UID Firebase Auth (SANS orderBy pour contourner tout blocage d'index)
     try {
-      const qWithOrder = query(
+      const qChats = query(
         collection(db, 'chats'),
-        where('participants', 'array-contains', currentUid),
-        orderBy('updatedAt', 'desc')
+        where('participants', 'array-contains', currentUid)
       );
 
-      const unsubWithOrder = onSnapshot(qWithOrder, handleSnapshot, (err) => {
-        logger.warn('[Firestore] chats query with orderBy failed (index building or missing), falling back without orderBy:', err?.message || err);
-        try {
-          const qFallback = query(
-            collection(db, 'chats'),
-            where('participants', 'array-contains', currentUid)
-          );
-          const unsubFallback = onSnapshot(qFallback, handleSnapshot, (fallbackErr) => {
-            logger.error('[Firestore] chats fallback onSnapshot error:', fallbackErr);
-            updateMergedChats();
-          });
-          unsubs.push(unsubFallback);
-        } catch (_) { }
+      const unsubChats = onSnapshot(qChats, handleSnapshot, (err) => {
+        logger.warn('[Firestore] chats query error:', err?.message || err);
+        updateMergedChats();
       });
-      unsubs.push(unsubWithOrder);
-    } catch (_) {
-      try {
-        const qFallback = query(
-          collection(db, 'chats'),
-          where('participants', 'array-contains', currentUid)
-        );
-        unsubs.push(onSnapshot(qFallback, handleSnapshot));
-      } catch (_) { }
+      unsubs.push(unsubChats);
+    } catch (err) {
+      logger.error('[Firestore] chats query setup error:', err);
     }
 
     // 2. Écoute complémentaire pour rétrocompatibilité avec les documents stockant l'UID dans participantUids

@@ -111,15 +111,17 @@ export const useAppAuth = () => {
               setBannedReason('');
             }
 
-            // Mise à jour du profil local avec l'UID garanti
-            const newTokens = data.trocoTokens !== undefined ? Number(data.trocoTokens) : 12;
-            const newEuros = data.euroBalance !== undefined ? Number(data.euroBalance) : 100;
+            // Mise à jour du profil local avec l'UID garanti (pas de fallback artificiel à 100€)
+            const newTokens = data.trocoTokens !== undefined ? Number(data.trocoTokens) : 10;
+            const newEuros = data.euroBalance !== undefined ? Number(data.euroBalance) : 0;
+            const isWelcomeClaimed = Boolean(data.welcomeBonusClaimed || data.onboardingCompleted);
 
             setProfile((prev) => ({
               ...prev,
               ...data,
               trocoTokens: newTokens,
               euroBalance: newEuros,
+              welcomeBonusClaimed: isWelcomeClaimed || Boolean(prev?.welcomeBonusClaimed),
               uid: user.uid,
               email: user.email || data.email || prev.email,
               name: data.name || user.displayName || prev.name,
@@ -134,14 +136,21 @@ export const useAppAuth = () => {
               if (setKycVerified) setKycVerified(Boolean(data.kycVerified));
             } catch (_) { }
           } else {
-            // Création du profil initial Firestore
+            // VERROU STRICT : Si le bonus ou l'onboarding a déjà été validé en local, sortie immédiate
+            if (profile?.welcomeBonusClaimed === true || profile?.onboardingCompleted === true) {
+              setIsLoadingSession(false);
+              return;
+            }
+
+            // Création du profil initial Firestore avec verrou welcomeBonusClaimed posé
             const initialData = {
               uid: user.uid,
               name: user.displayName || profile.name || 'Membre Troco',
               email: user.email || profile.email || '',
               avatar: user.photoURL || profile.avatar || '',
-              trocoTokens: profile.trocoTokens || 12,
-              euroBalance: profile.euroBalance || 100,
+              trocoTokens: Number(profile.trocoTokens ?? 10),
+              euroBalance: Number(profile.euroBalance ?? 0),
+              welcomeBonusClaimed: true,
               socialLinks: profile.socialLinks || ['https://github.com/mateopolo', 'https://linkedin.com/in/mateopolo'],
               kycVerified: false,
               isBanned: false,

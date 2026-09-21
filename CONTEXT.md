@@ -180,6 +180,20 @@ L'envoi et la lecture des messages audio et vocaux reposent sur une architecture
 - **Données 100% Firestore (Zéro Mock Data) :** Les flux d'annonces (`listings`) et de conversations (`chats`) proviennent **exclusivement de Cloud Firestore**. Les `onSnapshot` sur `chats` (`where('participants', 'array-contains', ...)` et `where('participantUids', 'array-contains', uid)`) et sur `listings` (`collection(db, 'listings')` trié par date avec fallback résilient) sont actifs et alimentent directement l'UI. Aucun fallback mock data n'existe plus dans le code ni dans l'initialisation des états. Si Firestore retourne une collection vide, l'interface affiche son EmptyState natif.
 - **Sauvegarde du Profil et Respect des Règles Firestore Zero-Trust :** Les écritures client sur `users/{uid}` (`handleSaveProfile`, `handleAvatarFileUpload`) assainissent le payload pour ne pas modifier les champs financiers ou d'administration protégés (`euroBalance`, `trocoTokens`, `kycVerified`, `isBanned`, etc.), assurant une synchronisation et une persistance sans rejet de permission.
 
+### 3.6 Neutralisation de la Boucle Infinie (Bonus Financier & Modale CGU) & Restauration Messagerie
+- **Neutralisation de la boucle du bonus financier (+100 € / son caisse) :**
+  - **Origine :** Détection réactive de solde dans `App.js` (`prevEurosRef.current !== null && newEuros > prevEurosRef.current`) et `useWalletStore.js` se déclenchant au montage lorsque `prevEurosRef` était initialisé à `0` ou `null` alors que le profil chargeait un solde ou un fallback `euroBalance: 100`.
+  - **Verrou absolu d'onboarding :** `useAppAuth.js`, `App.js` et `useWalletStore.js` intègrent désormais une vérification stricte : si `data.welcomeBonusClaimed === true` ou `data.onboardingCompleted === true`, aucune célébration financière ni son de caisse (`playApplePaySound`) ne peut être déclenché.
+  - **Snapshot initial protégé :** Utilisation de `isInitialAuthSnapRef` dans `App.js` et `isInitialSnapshot` dans `useWalletStore.js` pour calibrer les soldes initiaux sans générer de faux événements de réception de fonds.
+  - **Suppression du fallback artificiel à 100 € :** `euroBalance` est systématiquement résolu à sa valeur réelle Firestore (ou `0`), interdisant tout ping-pong d'écriture Firestore `0.00` ↔ `100.00`.
+- **Persistance et arrêt de la réouverture en boucle des CGU (`CguModal` & `CguConsentModal`) :**
+  - **Verrou de session immédiat :** Dès que l'utilisateur valide les CGU, un flag local d'urgence `cguDismissed` est activé dans le state React et persisté dans `sessionStorage` (`troco_cgu_dismissed = 'true'`).
+  - **Écriture Firestore robuste :** `handleAcceptCgu` enregistre `cguAcceptedAt: serverTimestamp()` et `cguVersion: '2026.1'` sur `users/{uid}`.
+  - **Condition d'affichage stricte :** La modale s'affiche uniquement si `!profile?.cguAcceptedAt && !cguDismissed && !isLoadingSession`, empêchant toute réapparition intempestive durant la session.
+- **Restauration des Discussions Privées (`useChatManager.js`) :**
+  - **Suppression d'orderBy bloquant :** La requête temps réel principale est exécutée directement avec `query(collection(db, 'chats'), where('participants', 'array-contains', currentUid))` sans clause `orderBy` composite.
+  - **Tri JavaScript haute performance :** Les conversations sont ordonnées côté client en mémoire dans `updateMergedChats` (`(a, b) => timeB - timeA`) en gérant de façon transparente les Timestamps Firestore, dates ISO et millisecondes, garantissant l'accès immédiat aux messages même en l'absence d'index composite.
+
 ---
 
 ## 🛡️ 4. RÈGLES DE SÉCURITÉ, BASE DE DONNÉES & CORS
