@@ -410,6 +410,14 @@ export default function App() {
     return false;
   });
 
+  // Verrou synchrone anti-flickering CGU : évite toute ouverture intempestive pour le compte admin
+  // pendant le cycle de rendu React avant que Firestore ne confirme cguAcceptedAt
+  const cguBypassRef = useRef(
+    typeof window !== 'undefined' &&
+    (window.sessionStorage?.getItem('troco_cgu_dismissed') === 'true' ||
+     window.localStorage?.getItem('troco_cgu_dismissed') === 'true')
+  );
+
   const [userTransactions, setUserTransactions] = useState(() => {
     return getInitialTransactions();
   });
@@ -1068,6 +1076,27 @@ export default function App() {
             if (data.onboardingCompleted === undefined || data.onboardingCompleted === false) {
               updatesToSync.onboardingCompleted = true;
             }
+
+            // AUTO-GUÉRISON : Si l'admin (mateopolo91@gmail.com) n'a pas de cguAcceptedAt,
+            // on le patch immédiatement côté Firestore ET on pose le verrou synchrone
+            // pour bloquer toute ouverture de modale CGU dans ce cycle de rendu.
+            const isGodAdminSnap = firebaseUser.email === 'mateopolo91@gmail.com';
+            if (isGodAdminSnap && !data.cguAcceptedAt) {
+              const healedAt = new Date().toISOString();
+              updatesToSync.cguAcceptedAt = serverTimestamp();
+              updatesToSync.cguVersion = '2026.1';
+              // Verrou synchrone immédiat : bypasse React state pour ce cycle de rendu
+              cguBypassRef.current = true;
+              try {
+                window.sessionStorage?.setItem('troco_cgu_dismissed', 'true');
+                window.localStorage?.setItem('troco_cgu_dismissed', 'true');
+              } catch (_) { }
+              setCguDismissed(true);
+              // Mise à jour optimiste locale pour éviter le flash de modale
+              setProfile(prev => ({ ...prev, cguAcceptedAt: healedAt, cguVersion: '2026.1' }));
+              logger.info('[Auth] Self-heal: cguAcceptedAt patché pour le compte admin.');
+            }
+
             if (Object.keys(updatesToSync).length > 0) {
               updateDoc(userDocRef, {
                 ...updatesToSync,
@@ -1133,7 +1162,9 @@ export default function App() {
               onboardingCompleted: true,
               welcomeBonusClaimed: true,
               loginMethod: firebaseUser.providerData?.[0]?.providerId || 'Email',
-              cguAcceptedAt: null,
+              // Ne jamais créer un doc admin avec cguAcceptedAt: null — sinon boucle CGU garantie
+              cguAcceptedAt: isGodAdmin ? serverTimestamp() : null,
+              cguVersion: isGodAdmin ? '2026.1' : undefined,
               isAdmin: isGodAdmin ? true : false,
               role: isGodAdmin ? 'admin' : 'user',
               createdAt: serverTimestamp(),
@@ -2975,10 +3006,10 @@ export default function App() {
         )}
 
         {/* MODALE BLOQUANTE CGU & RGPD OBLIGATOIRE */}
-        {isAuthenticated && !profile?.cguAcceptedAt && !cguDismissed && window.sessionStorage?.getItem('troco_cgu_dismissed') !== 'true' && !isLoadingSession && (
+        {isAuthenticated && !profile?.cguAcceptedAt && !cguDismissed && !cguBypassRef.current && window.sessionStorage?.getItem('troco_cgu_dismissed') !== 'true' && !isLoadingSession && (
           <Suspense fallback={null}>
             <CguConsentModal
-              isOpen={isAuthenticated && !profile?.cguAcceptedAt && !cguDismissed && window.sessionStorage?.getItem('troco_cgu_dismissed') !== 'true' && !isLoadingSession}
+              isOpen={isAuthenticated && !profile?.cguAcceptedAt && !cguDismissed && !cguBypassRef.current && window.sessionStorage?.getItem('troco_cgu_dismissed') !== 'true' && !isLoadingSession}
               onAccept={handleAcceptCgu}
               profile={profile}
               darkMode={darkMode}
