@@ -177,7 +177,7 @@ L'envoi et la lecture des messages audio et vocaux reposent sur une architecture
 
 ### 3.5 Sécurisation des Hooks Firestore (Feed & Chats) & Persistance Session
 - **Persistance Firebase Auth :** La méthode `setPersistence(auth, browserLocalPersistence)` dans `src/firebase.js` garantit qu'un rechargement de page (F5/Refresh) ne déconnecte pas l'utilisateur de sa session active.
-- **Sécurisation des Abonnements Feed & Chats :** Les flux d'annonces et de conversations (`mockChats`, `initialChatThreads`, `listings`) sont préservés de manière résiliente sans dépendre d'un flag démo défaillant, assurant que les annonces et discussions s'affichent fidèlement.
+- **Données 100% Firestore (Zéro Mock Data) :** Les flux d'annonces (`listings`) et de conversations (`chats`) proviennent **exclusivement de Cloud Firestore**. Les fichiers `mockData.js` et `mockChatsData.js` existent toujours dans `src/data/` mais ne sont **jamais injectés** dans les états applicatifs en production. Si Firestore retourne une collection vide, l'interface affiche son EmptyState natif.
 - **Sauvegarde du Profil et Respect des Règles Firestore Zero-Trust :** Les écritures client sur `users/{uid}` (`handleSaveProfile`, `handleAvatarFileUpload`) assainissent le payload pour ne pas modifier les champs financiers ou d'administration protégés (`euroBalance`, `trocoTokens`, `kycVerified`, `isBanned`, etc.), assurant une synchronisation et une persistance sans rejet de permission.
 
 ---
@@ -241,7 +241,8 @@ L'application dispose d'un composant unifié pour toutes les boîtes de dialogue
 > [!IMPORTANT]
 > **Résolution du crash 'Z' (ReferenceError / Temporal Dead Zone) & Z-Index :**
 > - Les gestionnaires d'actions (ex: `handleConfirmAcceptance`) doivent impérativement être déclarés AVANT les fragments JSX qui les référencent (ex: `cguFooter`) afin d'éviter tout crash minifié en production (`Cannot access 'Z' before initialization`).
-> - Pour garantir que les modales critiques (telles que `CguModal`) s'affichent par-dessus la barre de navigation mobile (`AppBottomNav`), le conteneur portalé utilise `overlayClassName="fixed inset-0 z-[99999] overflow-y-auto"`, `overlayStyle={{ zIndex: 99999 }}`, et `disableSafeArea={true}`.
+> - **Z-Index Standard Absolu : `999999`**. Le composant `UniversalModal` utilise `zIndex: 999999` pour tous les overlays. La prop `overlayStyle` peut surcharger cette valeur mais ne doit jamais descendre en dessous de `99999`. Ce z-index garantit que les modales critiques s'affichent par-dessus la barre de navigation mobile (`AppBottomNav`).
+> - **Padding Symétrique avec `disableSafeArea={true}` :** Quand cette prop est `true`, l'overlay utilise `paddingBottom: '16px'` (identique au paddingTop), éliminant l'offset de 80px de la bottom nav. Réservé aux modales critiques type `CguModal`.
 
 **Points capitaux d'intégration :**
 - **Portal sur `document.body` :** La modale s'extrait systématiquement du contexte d'empilement (stacking context) du chat ou de la navigation pour éviter tout débordement tronqué (`overflow: hidden`).

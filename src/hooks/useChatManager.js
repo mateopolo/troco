@@ -18,7 +18,7 @@ import {
 } from 'firebase/firestore';
 import { useSafeTimeout } from './useSafeTimeout';
 import { Clock, Sparkles, ShieldCheck, CheckCircle, Check, RefreshCw, X } from 'lucide-react';
-import { mockChats, initialChatThreads } from '../data/mockChatsData';
+// mockChats/initialChatThreads supprimés — Firestore est la seule source de vérité
 import { validateChatMessage } from '../utils/moderationBlacklist';
 import { uploadVoiceNote } from '../services/voiceStorageService';
 import { playBetclicBalanceSound, playApplePaySound, playSwooshSound } from '../utils/audioService';
@@ -80,16 +80,20 @@ export const useChatManager = ({
   }, [readChats]);
 
   const [messageDraft, setMessageDraft] = useState('');
-  const [chatThreads, setChatThreads] = useState(initialChatThreads);
+  const [chatThreads, setChatThreads] = useState({});
   const [chatsList, setChatsList] = useState(() => {
     try {
       const saved = localStorage.getItem('troco_cached_chats');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        // Filtre les anciennes conversations de démonstration sauvegardées en cache
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const realChats = parsed.filter(c => !c.isDemo);
+          if (realChats.length > 0) return realChats;
+        }
       }
     } catch (_) { }
-    return mockChats;
+    return [];
   });
   const [chatStatusOverrides, setChatStatusOverrides] = useState({});
   const [editingDealId, setEditingDealId] = useState(null);
@@ -295,7 +299,7 @@ export const useChatManager = ({
           };
         });
 
-      const merged = [...mockChats];
+      const merged = [...firestoreChats];
       firestoreChats.forEach(fChat => {
         const idx = merged.findIndex(m => String(m.id) === String(fChat.id));
         if (idx >= 0) {
@@ -509,7 +513,7 @@ export const useChatManager = ({
 
   // ---- COMPTEUR NON-LUS GLOBAL ----
   const unreadCount = useMemo(() => {
-    const allChats = chatsList && chatsList.length > 0 ? chatsList : mockChats;
+    const allChats = chatsList || [];
     const myNameNorm = (profile?.name || '').trim().toLowerCase();
     const myUsernameNorm = (profile?.username || '').trim().toLowerCase();
     const myUidStr = profile?.uid || (auth?.currentUser && auth.currentUser.uid);
@@ -1584,7 +1588,7 @@ export const useChatManager = ({
     // Récupération de l'objet chat en mémoire
     const chat = (selectedChat && String(selectedChat.id) === String(chatId))
       ? selectedChat
-      : (chatsList.find(c => String(c.id) === String(chatId)) || mockChats.find(c => String(c.id) === String(chatId)));
+      : chatsList.find(c => String(c.id) === String(chatId));
 
     // 🚨 Isole le UID cible DE FAÇON IMPÉRATIVE
     const partnerUid = targetUid || inputPartnerUid || explicitSellerUid || selectedChat?.participants?.find(uid => uid && uid !== currentUser?.uid) || selectedChat?.partnerUid || chat?.participants?.find(uid => uid && uid !== currentUser?.uid) || chat?.partnerUid;
@@ -1958,7 +1962,7 @@ export const useChatManager = ({
     hapticSuccess();
     const chat = (selectedChat && String(selectedChat.id) === String(chatId))
       ? selectedChat
-      : (chatsList.find(c => String(c.id) === String(chatId)) || mockChats.find(c => String(c.id) === String(chatId)));
+      : chatsList.find(c => String(c.id) === String(chatId));
     const partnerName = chat?.user || 'Interlocuteur';
     // 🚨 PHASE 95 : CIBLAGE STRICT DU DESTINATAIRE (RECEIVER UID)
     const currentUid = profile?.uid || auth?.currentUser?.uid;
@@ -2181,7 +2185,7 @@ export const useChatManager = ({
 
     const chat = (selectedChat && String(selectedChat.id) === String(chatId))
       ? selectedChat
-      : (chatsList.find(c => String(c.id) === String(chatId)) || mockChats.find(c => String(c.id) === String(chatId)));
+      : chatsList.find(c => String(c.id) === String(chatId));
 
     // 🚨 Résolution BLINDÉE du UID destinataire.
     // ORDRE IMPÉRATIF : participantUids (UIDs purs) > explicit targetUid > participants (peut contenir des noms) > fallback Firestore.

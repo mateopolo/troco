@@ -140,12 +140,12 @@ export default function UniversalModal({
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: 99999,
+        zIndex: 999999,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         padding: '16px',
-        paddingBottom: `calc(16px + ${BOTTOM_NAV_HEIGHT}px + ${safeAreaBottom})`,
+        paddingBottom: disableSafeArea ? '16px' : `calc(16px + ${BOTTOM_NAV_HEIGHT}px + ${safeAreaBottom})`,
         ...overlayStyle,
       }}
     >

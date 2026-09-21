@@ -68,7 +68,7 @@ import { useAdminGuard } from './hooks/useAdminGuard';
 import adminService from './services/adminService';
 import { useUsersPublic } from './hooks/useUsersPublic';
 import { setSessionAuthenticated, clearSessionFlags } from './utils/sessionFlags';
-import { isDemoMode, getInitialTransactions } from './data/demoData';
+import { getInitialTransactions } from './data/demoData';
 import { migrateLocalStorage } from './utils/migrateLocalStorage';
 import { clearTrocoLocalStorage } from './utils/clearTrocoLocalStorage';
 import { paymentService } from './services/paymentService';
@@ -2122,79 +2122,69 @@ export default function App() {
   const [hasMoreListings, setHasMoreListings] = useState(true);
   const [isLoadingMoreListings, setIsLoadingMoreListings] = useState(false);
 
-  // ---- SYNC TEMPS RÉEL FIRESTORE & DÉMOS DIFFÉRÉES (LIMIT 20) ----
-  // Chargement asynchrone non-bloquant de mockData avec pagination pour éliminer le goulot d'étranglement
+  // ---- SYNC TEMPS RÉEL FIRESTORE — Firestore est l'unique source de vérité des annonces ----
+  // Les mockListings ne sont JAMAIS injectés en production.
+  // Si Firestore est vide, le FeedView affiche son EmptyState natif.
   useEffect(() => {
     let unsubFirestore = () => {};
     let isCancelled = false;
 
-    import('./data/mockData').then(({ mockListings }) => {
-      if (isCancelled) return;
-      const demoBase = (mockListings || []).map(l => ({ ...l, status: 'active', isDemo: true }));
+    // Écoute initiale paginée à 20 pour un FCP et un réseau optimal
+    const initialQuery = query(collection(db, 'listings'), orderBy('createdAt', 'desc'), limit(20));
+    unsubFirestore = onSnapshot(
+      initialQuery,
+      (snapshot) => {
+        if (isCancelled) return;
+        const firestoreListings = snapshot.docs.map((docSnap) => ({
+          id: docSnap.data().id || docSnap.id,
+          firestoreId: docSnap.id,
+          ...docSnap.data(),
+          status: docSnap.data().status || 'active',
+          isDemo: false,
+          _doc: docSnap,
+        }));
 
-      // Si le cache local n'avait pas encore les démos, on les injecte
-      setListings(prev => {
-        const hasDemos = prev.some(item => item.isDemo);
-        return hasDemos ? prev : [...prev, ...demoBase];
-      });
+        const lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
+        setLastVisibleListingDoc(lastDoc);
+        setHasMoreListings(snapshot.docs.length === 20);
 
-      // Écoute initiale paginée à 20 pour un FCP et un réseau optimal
-      const initialQuery = query(collection(db, 'listings'), orderBy('createdAt', 'desc'), limit(20));
-      unsubFirestore = onSnapshot(
-        initialQuery,
-        (snapshot) => {
-          if (isCancelled) return;
-          const firestoreListings = snapshot.docs.map((docSnap) => ({
-            id: docSnap.data().id || docSnap.id,
-            firestoreId: docSnap.id,
-            ...docSnap.data(),
-            status: docSnap.data().status || 'active',
-            isDemo: false,
-            _doc: docSnap,
-          }));
-
-          const lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
-          setLastVisibleListingDoc(lastDoc);
-          setHasMoreListings(snapshot.docs.length === 20);
-
-          setListings(prev => {
-            const customLocalListings = prev.filter(p => !p.isDemo && !firestoreListings.some(f => f.id === p.id));
-            return [...demoBase, ...firestoreListings, ...customLocalListings];
-          });
-        },
-        (error) => {
-          logger.warn('[Firestore] onSnapshot with orderBy error, trying fallback query:', error);
-          if (!isCancelled) {
-            try {
-              const fallbackQuery = query(collection(db, 'listings'), limit(20));
-              unsubFirestore = onSnapshot(fallbackQuery, (snapshot) => {
-                const firestoreListings = snapshot.docs.map((docSnap) => ({
-                  id: docSnap.data().id || docSnap.id,
-                  firestoreId: docSnap.id,
-                  ...docSnap.data(),
-                  status: docSnap.data().status || 'active',
-                  isDemo: false,
-                  _doc: docSnap,
-                }));
-                const lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
-                setLastVisibleListingDoc(lastDoc);
-                setHasMoreListings(snapshot.docs.length === 20);
-                setListings(prev => {
-                  const customLocalListings = prev.filter(p => !p.isDemo && !firestoreListings.some(f => f.id === p.id));
-                  return [...demoBase, ...firestoreListings, ...customLocalListings];
-                });
-              }, () => {
-                setListings(prev => prev.length > 0 ? prev : demoBase);
+        // Conserve uniquement les annonces créées localement dans la session (non présentes dans Firestore)
+        setListings(prev => {
+          const sessionLocalListings = prev.filter(p => !p.isDemo && !p.firestoreId && !firestoreListings.some(f => f.id === p.id));
+          return [...firestoreListings, ...sessionLocalListings];
+        });
+      },
+      (error) => {
+        logger.warn('[Firestore] onSnapshot listings with orderBy error, fallback sans tri:', error);
+        if (!isCancelled) {
+          try {
+            const fallbackQuery = query(collection(db, 'listings'), limit(20));
+            unsubFirestore = onSnapshot(fallbackQuery, (snapshot) => {
+              const firestoreListings = snapshot.docs.map((docSnap) => ({
+                id: docSnap.data().id || docSnap.id,
+                firestoreId: docSnap.id,
+                ...docSnap.data(),
+                status: docSnap.data().status || 'active',
+                isDemo: false,
+                _doc: docSnap,
+              }));
+              const lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
+              setLastVisibleListingDoc(lastDoc);
+              setHasMoreListings(snapshot.docs.length === 20);
+              setListings(prev => {
+                const sessionLocalListings = prev.filter(p => !p.isDemo && !p.firestoreId && !firestoreListings.some(f => f.id === p.id));
+                return [...firestoreListings, ...sessionLocalListings];
               });
-            } catch (_) {
-              setListings(prev => prev.length > 0 ? prev : demoBase);
-            }
+            }, () => {
+              // Si Firestore est inaccessible, on conserve l'état courant (pas de mock)
+              logger.warn('[Firestore] onSnapshot listings fallback also failed — keeping current state');
+            });
+          } catch (_) {
+            logger.warn('[Firestore] Failed to subscribe to listings fallback query');
           }
         }
-      );
-    }).catch(err => {
-      logger.warn('[MockData] Erreur de chargement différé des annonces démo:', err);
-    });
+      }
+    );
 
     return () => {
       isCancelled = true;
@@ -2315,8 +2305,6 @@ export default function App() {
 
   const filteredListings = useMemo(() => {
     return listings.filter((item) => {
-      if (hideDemos && item.isDemo) return false;
-
       const rawQuery = (deferredSearchQuery || '').trim();
       const cleanQuery = removeAccents(rawQuery);
       const words = cleanQuery.split(/\s+/).filter(Boolean);
@@ -2414,12 +2402,7 @@ export default function App() {
       const bBoost = (b.isBoosted || b.sponsored) ? 1 : 0;
       if (bBoost !== aBoost) return bBoost - aBoost;
 
-      // 2. Annonces créées par de vrais utilisateurs (humains) avant les annonces Démo / IA
-      const aDemo = (a.isDemo || a.persona || (typeof a.id === 'number' && a.id < 300)) ? 1 : 0;
-      const bDemo = (b.isDemo || b.persona || (typeof b.id === 'number' && b.id < 300)) ? 1 : 0;
-      if (aDemo !== bDemo) return aDemo - bDemo;
-
-      // 3. Annonces urgentes en priorité
+      // 2. Annonces urgentes en priorité
       const aUrgent = (a.urgent || a.isUrgent) ? 1 : 0;
       const bUrgent = (b.urgent || b.isUrgent) ? 1 : 0;
       if (bUrgent !== aUrgent) return bUrgent - aUrgent;
@@ -2513,13 +2496,7 @@ export default function App() {
 
     const authorPortfolio = isCurrentUser
       ? (portfolioImages && portfolioImages.length > 0 ? portfolioImages : (profile?.portfolioImages || profile?.portfolio || []))
-      : (listing.portfolio || listing.authorProfile?.portfolio || (listing.isDemo && listing.author === 'Sofia M.' ? [
-        'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=600&q=80',
-        'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=600&q=80',
-      ] : listing.isDemo && listing.author === 'Marc L.' ? [
-        'https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=600&q=80',
-        'https://images.unsplash.com/photo-1487958449943-2429e8be8625?auto=format&fit=crop&w=600&q=80',
-      ] : []));
+      : (listing.portfolio || listing.authorProfile?.portfolio || []);
 
     const generic = {
       id: listing.id,
@@ -2545,44 +2522,6 @@ export default function App() {
         reviews: authorReviews,
       },
     };
-
-    if (isDemoMode() && listing.author === 'Sofia M.' && (listing.isDemo || (typeof listing.id === 'number' && listing.id <= 20))) {
-      return {
-        ...generic,
-        description: listing.description || 'Cours de piano et accompagnement musical pensé pour les débutants et les profils en reconversion. Le cadre est très structuré, chaleureux et adapté à un usage flexible.',
-        wallet: { euros: 15, tokens: 1 },
-        authorProfile: {
-          ...generic.authorProfile,
-          avatar: femaleAvatars[0],
-          bio: 'Professeure de piano, coach de créativité et experte en échanges à distance.',
-          socials: ['LinkedIn', 'Instagram', 'TikTok'],
-          portfolio: [
-            'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=600&q=80',
-            'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=600&q=80',
-          ],
-          reviews: authorReviews,
-        },
-      };
-    }
-
-    if (isDemoMode() && listing.author === 'Marc L.' && (listing.isDemo || (typeof listing.id === 'number' && listing.id <= 20))) {
-      return {
-        ...generic,
-        description: listing.description || 'Prêt d’outillage et service de dépannage local. Tout est pensé pour qu’un échange soit rapide, concret et sécurisé.',
-        wallet: { euros: 12, tokens: 2 },
-        authorProfile: {
-          ...generic.authorProfile,
-          avatar: maleAvatars[0],
-          bio: 'Bricoleur local, passionné de matériel et de partage de services de proximité.',
-          socials: ['LinkedIn', 'Instagram'],
-          portfolio: [
-            'https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=600&q=80',
-            'https://images.unsplash.com/photo-1487958449943-2429e8be8625?auto=format&fit=crop&w=600&q=80',
-          ],
-          reviews: authorReviews,
-        },
-      };
-    }
 
     return generic;
   }, [profile, portfolioImages, averageRating, getAuthorAvatar, femaleAvatars, maleAvatars]);
@@ -3299,25 +3238,7 @@ export default function App() {
                           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 10px', borderRadius: '999px', backgroundColor: darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4', color: darkMode ? '#FAF7F2' : '#A8644A', fontSize: '11px', fontWeight: '800' }}>
                             <Sparkles size={12} /> {t('verifiedOffer')}
                           </div>
-                          {(selectedListing.isDemo || (typeof selectedListing.id === 'number' && selectedListing.id <= 20)) && (
-                            <span style={{
-                              fontSize: '10.5px',
-                              fontWeight: '750',
-                              letterSpacing: '0.04em',
-                              padding: '5px 11px',
-                              borderRadius: '999px',
-                              backgroundColor: 'var(--bg-subtle)',
-                              color: 'var(--accent-primary)',
-                              border: '1px solid var(--border-color)',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '5px',
-                              textTransform: 'uppercase'
-                            }}>
-                              <Sparkles size={12} color="var(--accent-primary)" />
-                              Exemple Démo
-                            </span>
-                          )}
+
                         </div>
                         <h3 className="font-editorial-heading" style={{ margin: '0 0 4px 0', fontSize: '24px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{detailDisplayContent.title}</h3>
                         {currentLang !== (selectedListing.nativeLang || 'FR') && (
