@@ -2060,31 +2060,15 @@ export default function App() {
   const paymentOptions = ['all', 'credits', 'cash', 'troc', 'hybrid'];
   const paymentLabels = { all: 'Tous', credits: 'Crédits', cash: 'Cash', troc: 'Troc', hybrid: 'Hybride' };
 
-  const [listings, setListings] = useState(() => {
-    try {
-      const saved = localStorage.getItem('troco_user_listings');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          // Filtrer tout résidu de faux mock ou annonce de test hardcodée
-          const validSaved = parsed.filter(item => item && !item.isDemo && item.id !== 9999 && item.title !== "Coaching React, Node.js & Firebase (1h)");
-          if (validSaved.length > 0) return validSaved;
-        }
-      }
-    } catch (e) {
-      logger.warn('Erreur chargement localStorage des annonces', e);
-    }
-    return [];
-  });
+  // ZÉRO MOCK DATA : Initialisation à liste vide. Firestore est l'unique source de vérité.
+  const [listings, setListings] = useState([]);
 
+  // Purge de tout résidu de mock ou cache obsolète dans localStorage
   useEffect(() => {
     try {
-      const cleanListings = listings.filter(item => item && !item.isDemo && item.id !== 9999);
-      localStorage.setItem('troco_user_listings', JSON.stringify(cleanListings));
-    } catch (e) {
-      logger.warn('Erreur sauvegarde localStorage des annonces', e);
-    }
-  }, [listings]);
+      localStorage.removeItem('troco_user_listings');
+    } catch (_) {}
+  }, []);
 
   // ---- ÉTATS PAGINATION FEED (PAGINATED INFINITE SCROLL) ----
   const [lastVisibleListingDoc, setLastVisibleListingDoc] = useState(null);
@@ -2097,58 +2081,86 @@ export default function App() {
     let unsubFirestore = () => {};
     let isCancelled = false;
 
-    // Écoute initiale paginée à 20 pour un FCP et un réseau optimal
-    const initialQuery = query(collection(db, 'listings'), orderBy('createdAt', 'desc'), limit(20));
+    // Normalisation d'un document annonce Firestore
+    const mapListingDoc = (docSnap) => {
+      const data = docSnap.data() || {};
+      const authorUid = data.authorUid || data.userId || data.sellerId || null;
+      const rawAuthor = data.author || data.authorName || data.userName || '';
+      const cleanAuthor = safeName(rawAuthor, 'Membre Troco');
+
+      return {
+        id: data.id || docSnap.id,
+        firestoreId: docSnap.id,
+        ...data,
+        author: cleanAuthor,
+        authorUid,
+        status: data.status || 'active',
+        isDemo: false,
+        _doc: docSnap,
+      };
+    };
+
+    // Tri chronologique robuste en mémoire (gère Timestamp Firestore, string ISO, millisecondes)
+    const sortListingsByDate = (items) => {
+      return [...items].sort((a, b) => {
+        const getTime = (item) => {
+          if (item.createdAt?.toMillis) return item.createdAt.toMillis();
+          if (item.createdAt?.seconds) return item.createdAt.seconds * 1000;
+          if (typeof item.createdAt === 'string') return new Date(item.createdAt).getTime() || 0;
+          if (typeof item.createdAt === 'number') return item.createdAt;
+          const numId = Number(String(item.id).replace(/\D/g, ''));
+          return isNaN(numId) ? 0 : numId;
+        };
+        return getTime(b) - getTime(a);
+      });
+    };
+
+    // Requête principale conforme aux règles Firestore (where status == 'active')
+    // Évite tout besoin d'index composite complexe et garantit l'accès en lecture
+    const activeListingsQuery = query(
+      collection(db, 'listings'),
+      where('status', '==', 'active')
+    );
+
     unsubFirestore = onSnapshot(
-      initialQuery,
+      activeListingsQuery,
       (snapshot) => {
         if (isCancelled) return;
-        const firestoreListings = snapshot.docs.map((docSnap) => ({
-          id: docSnap.data().id || docSnap.id,
-          firestoreId: docSnap.id,
-          ...docSnap.data(),
-          status: docSnap.data().status || 'active',
-          isDemo: false,
-          _doc: docSnap,
-        }));
+        const firestoreListings = snapshot.docs.map(mapListingDoc);
+        const sortedListings = sortListingsByDate(firestoreListings);
 
         const lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
         setLastVisibleListingDoc(lastDoc);
-        setHasMoreListings(snapshot.docs.length === 20);
+        setHasMoreListings(snapshot.docs.length >= 20);
 
-        // Conserve uniquement les annonces créées localement dans la session (non présentes dans Firestore)
-        setListings(prev => {
-          const sessionLocalListings = prev.filter(p => !p.isDemo && p.id !== 9999 && !p.firestoreId && !firestoreListings.some(f => f.id === p.id));
-          return [...firestoreListings, ...sessionLocalListings];
-        });
+        setListings(sortedListings);
       },
       (error) => {
-        logger.warn('[Firestore] onSnapshot listings with orderBy error, fallback sans tri:', error);
+        logger.warn('[Firestore] onSnapshot listings active query error, tentative fallback:', error);
         if (!isCancelled) {
           try {
-            const fallbackQuery = query(collection(db, 'listings'), limit(20));
-            unsubFirestore = onSnapshot(fallbackQuery, (snapshot) => {
-              const firestoreListings = snapshot.docs.map((docSnap) => ({
-                id: docSnap.data().id || docSnap.id,
-                firestoreId: docSnap.id,
-                ...docSnap.data(),
-                status: docSnap.data().status || 'active',
-                isDemo: false,
-                _doc: docSnap,
-              }));
-              const lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
-              setLastVisibleListingDoc(lastDoc);
-              setHasMoreListings(snapshot.docs.length === 20);
-              setListings(prev => {
-                const sessionLocalListings = prev.filter(p => !p.isDemo && p.id !== 9999 && !p.firestoreId && !firestoreListings.some(f => f.id === p.id));
-                return [...firestoreListings, ...sessionLocalListings];
-              });
-            }, () => {
-              // Si Firestore est inaccessible, on conserve l'état courant (pas de mock)
-              logger.warn('[Firestore] onSnapshot listings fallback also failed — keeping current state');
-            });
-          } catch (_) {
-            logger.warn('[Firestore] Failed to subscribe to listings fallback query');
+            const fallbackQuery = query(collection(db, 'listings'), limit(50));
+            unsubFirestore = onSnapshot(
+              fallbackQuery,
+              (fallbackSnap) => {
+                if (isCancelled) return;
+                const firestoreListings = fallbackSnap.docs.map(mapListingDoc);
+                const sortedListings = sortListingsByDate(firestoreListings);
+
+                const lastDoc = fallbackSnap.docs[fallbackSnap.docs.length - 1] || null;
+                setLastVisibleListingDoc(lastDoc);
+                setHasMoreListings(fallbackSnap.docs.length >= 20);
+
+                setListings(sortedListings);
+              },
+              (fallbackErr) => {
+                logger.error('[Firestore] onSnapshot listings fallback failed too:', fallbackErr);
+                if (!isCancelled) setListings([]);
+              }
+            );
+          } catch (e) {
+            logger.error('[Firestore] Failed to attach fallback listings listener:', e);
+            if (!isCancelled) setListings([]);
           }
         }
       }
@@ -2437,6 +2449,10 @@ export default function App() {
       (listing.authorUid && (listing.authorUid === profile?.uid || listing.authorUid === auth.currentUser?.uid))
     );
 
+    const authorUid = listing.authorUid || listing.userId || listing.sellerId;
+    const authorUser = authorUid ? (usersPublicMap?.get(authorUid) || usersByUid?.get(authorUid)) : null;
+    const resolvedAuthorName = isCurrentUser ? (profile?.name || 'Moi') : safeName(authorUser?.name || authorUser?.displayName || listing.author, 'Membre Troco');
+
     // Détermination stricte des avis légitimes (zéro avis artificiel si 0 transaction complétée)
     let authorReviews = [];
     if (isCurrentUser) {
@@ -2481,10 +2497,12 @@ export default function App() {
       translations: listing.translations || {},
       rating: computedRating,
       reviews: computedReviewsCount,
+      author: resolvedAuthorName,
+      authorUid: authorUid || null,
       authorProfile: {
-        name: listing.author,
-        avatar: isCurrentUser ? profile.avatar : getAuthorAvatar(listing.author),
-        bio: isCurrentUser ? profile.bio : 'Créateur de contenus, expert en échange de services et passionné de communautés locales.',
+        name: resolvedAuthorName,
+        avatar: isCurrentUser ? profile.avatar : (authorUser?.avatar || getAuthorAvatar(resolvedAuthorName)),
+        bio: isCurrentUser ? profile.bio : (authorUser?.bio || 'Créateur de contenus, expert en échange de services et passionné de communautés locales.'),
         socials: isCurrentUser ? (profile.socials || []) : ['LinkedIn', 'Instagram'],
         portfolio: authorPortfolio,
         reviews: authorReviews,
@@ -2492,7 +2510,7 @@ export default function App() {
     };
 
     return generic;
-  }, [profile, portfolioImages, averageRating, getAuthorAvatar, femaleAvatars, maleAvatars]);
+  }, [profile, portfolioImages, averageRating, getAuthorAvatar, femaleAvatars, maleAvatars, usersPublicMap, usersByUid]);
 
   const handleOpenListing = useCallback((listing) => {
     setSelectedListing(getListingDetail(listing));
@@ -3929,18 +3947,34 @@ export default function App() {
                     }}
                   >
                     {(filteredListings || []).map((item, index) => {
+                      const authorUid = item?.authorUid || item?.userId || item?.sellerId;
+                      const authorUser = authorUid ? (usersPublicMap?.get(authorUid) || usersByUid?.get(authorUid)) : null;
+                      const isCurrentUser = Boolean(
+                        (authorUid && (authorUid === profile?.uid || authorUid === auth.currentUser?.uid)) ||
+                        (profile?.name && item?.author === profile?.name)
+                      );
+                      const rawAuthorName = isCurrentUser ? (profile?.name || 'Moi') : (authorUser?.name || authorUser?.displayName || item?.author || '');
+                      const resolvedAuthorName = safeName(rawAuthorName, 'Membre Troco');
+
                       const authorProfile = item?.authorProfile || {
-                        name: item?.author || 'Membre Troco',
-                        avatar: item?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
-                        bio: item?.bio || '',
-                        location: item?.location || 'Paris',
-                        uid: item?.authorUid || null,
+                        name: resolvedAuthorName,
+                        avatar: isCurrentUser ? profile?.avatar : (authorUser?.avatar || item?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'),
+                        bio: isCurrentUser ? profile?.bio : (authorUser?.bio || item?.bio || ''),
+                        location: authorUser?.location || item?.location || 'Paris',
+                        uid: authorUid || null,
+                      };
+
+                      // Annonce enrichie avec le vrai nom humain résolu (anti-fuite UID technique)
+                      const enrichedItem = {
+                        ...item,
+                        author: resolvedAuthorName,
+                        authorProfile,
                       };
 
                       return (
                         <React.Fragment key={item.id || index}>
                           <FeedCardItem
-                            item={item}
+                            item={enrichedItem}
                             darkMode={darkMode}
                             hoveredCardId={hoveredCardId}
                             setHoveredCardId={setHoveredCardId}
@@ -3968,10 +4002,10 @@ export default function App() {
                             t={t}
                             onViewUserProfile={() => {
                               const userObj = {
-                                id: item.authorUid || item.userId || `user_${item.author}`,
-                                uid: item.authorUid || item.userId || null,
-                                name: item.author || 'Membre Troco',
-                                username: item.author ? `@${item.author.toLowerCase().replace(/\s+/g, '')}` : '@membre',
+                                id: authorUid || `user_${resolvedAuthorName}`,
+                                uid: authorUid || null,
+                                name: resolvedAuthorName,
+                                username: resolvedAuthorName ? `@${resolvedAuthorName.toLowerCase().replace(/\s+/g, '')}` : '@membre',
                                 avatar: authorProfile.avatar,
                                 bio: authorProfile.bio,
                                 location: item.location || 'France',
