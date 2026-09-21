@@ -18,7 +18,6 @@ import {
 } from 'firebase/firestore';
 import { useSafeTimeout } from './useSafeTimeout';
 import { Clock, Sparkles, ShieldCheck, CheckCircle, Check, RefreshCw, X } from 'lucide-react';
-// mockChats/initialChatThreads supprimés — Firestore est la seule source de vérité
 import { validateChatMessage } from '../utils/moderationBlacklist';
 import { uploadVoiceNote } from '../services/voiceStorageService';
 import { playBetclicBalanceSound, playApplePaySound, playSwooshSound } from '../utils/audioService';
@@ -41,6 +40,7 @@ export const getChatAudioContext = () => {
 
 /**
  * Hook centralisant le moteur logique de messagerie, négociations et transactions de deals.
+ * Fix critique : abonnements Firestore stables + purge des données mock.
  */
 export const useChatManager = ({
   profile,
@@ -57,9 +57,8 @@ export const useChatManager = ({
   setSaveMessage = () => { },
   onTransactionSuccess = () => { },
 }) => {
-  // Hook pour gérer les timeouts en toute sécurité
   const { safeTimeout } = useSafeTimeout();
-  
+
   // ---- ÉTATS DE MESSAGERIE & DEALS ----
   const [selectedChat, setSelectedChat] = useState(null);
   const [readChats, setReadChats] = useState(() => {
@@ -81,20 +80,7 @@ export const useChatManager = ({
 
   const [messageDraft, setMessageDraft] = useState('');
   const [chatThreads, setChatThreads] = useState({});
-  const [chatsList, setChatsList] = useState(() => {
-    try {
-      const saved = localStorage.getItem('troco_cached_chats');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        // Filtre les anciennes conversations de démonstration sauvegardées en cache
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const realChats = parsed.filter(c => !c.isDemo);
-          if (realChats.length > 0) return realChats;
-        }
-      }
-    } catch (_) { }
-    return [];
-  });
+  const [chatsList, setChatsList] = useState([]);
   const [chatStatusOverrides, setChatStatusOverrides] = useState({});
   const [editingDealId, setEditingDealId] = useState(null);
   const [isCounterOfferOpen, setIsCounterOfferOpen] = useState(false);
@@ -108,6 +94,12 @@ export const useChatManager = ({
 
   const [isSending, setIsSending] = useState(false);
   const lastSendMessageTimestampRef = useRef(0);
+
+  // ---- REFS STABLES POUR ÉVITER LES RE-SOUSCRIPTIONS INUTILES ----
+  const selectedChatRef = useRef(selectedChat);
+  useEffect(() => { selectedChatRef.current = selectedChat; }, [selectedChat]);
+  const activeTabRef = useRef(activeTab);
+  useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
 
   // ---- GESTION DU STATUT EN LIGNE RÉEL (HEARTBEAT OPTIMISÉ & DÉTECTION HORS LIGNE INSTANTANÉE) ----
   const [presenceMap, setPresenceMap] = useState({});
@@ -242,174 +234,220 @@ export const useChatManager = ({
     } catch (_) { }
   }, []);
 
-  // Références stables pour éviter de détruire et reconstruire les listeners onSnapshot lors des changements d'onglet ou de chat sélectionné
-  const selectedChatRef = useRef(selectedChat);
+  // Synchronisation temps réel des discussions depuis Firestore (EXCLUSIVEMENT par UID Firebase Auth)
   useEffect(() => {
-    selectedChatRef.current = selectedChat;
-  }, [selectedChat]);
+    if (!db) return;
+    const currentUid = auth?.currentUser?.uid || profile?.uid || null;
+    const myName = (profile?.name || '').trim();
+    const myUsername = (profile?.username || '').trim();
+    const myEmail = (profile?.email || auth?.currentUser?.email || '').trim();
 
-  const activeTabRef = useRef(activeTab);
-  useEffect(() => {
-    activeTabRef.current = activeTab;
-  }, [activeTab]);
+    // Attendre que l'utilisateur soit authentifié
+    if (!currentUid) {
+      return;
+    }
 
-  const playNotificationSoundRef = useRef(playNotificationSound);
-  useEffect(() => {
-    playNotificationSoundRef.current = playNotificationSound;
-  }, [playNotificationSound]);
+    // Tous les identifiants possibles (UID en priorité absolue, puis nom d'affichage pour rétrocompatibilité)
+    const targetSet = new Set([
+      currentUid,
+      ...(myName ? [myName] : []),
+    ].filter(Boolean));
 
-  // Synchronisation temps réel des discussions depuis Firestore (EXCLUSIVEMENT via UID Firebase)
-  useEffect(() => {
-    const myUid = profile?.uid || (auth?.currentUser && auth.currentUser.uid) || null;
-    if (!myUid || !db) return;
+    const targets = Array.from(targetSet);
 
+    const unsubs = [];
+    const allDocsMap = new Map();
     let isInitialLoad = true;
 
-    const chatsQuery = query(
-      collection(db, 'chats'),
-      where('participants', 'array-contains', myUid)
-    );
-
-    const unsubscribe = onSnapshot(
-      chatsQuery,
-      (snapshot) => {
-        snapshot.docChanges().forEach(change => {
-          const d = change.doc.data();
-          if (!d) return;
-          const fChatId = d.id || change.doc.id;
-          const lastSenderUid = d.lastSenderUid;
-          const isMe = lastSenderUid ? String(lastSenderUid) === String(myUid) : false;
-          const isFromThem = !isMe && (d.unreadCount > 0 || (d.lastSender && d.lastSender !== profile?.name));
-
-          // Détection en temps réel d'un nouveau message entrant non lu (PC ⇄ Mobile)
-          if (isFromThem && (change.type === 'modified' || (change.type === 'added' && !isInitialLoad))) {
-            const currentSelected = selectedChatRef.current;
-            const currentTab = activeTabRef.current;
-            const isCurrentlyActive = currentSelected && String(currentSelected.id) === String(fChatId) && currentTab === 'chat';
-            if (!isCurrentlyActive) {
-              // Forcer la suppression du cache de lecture pour réactiver le badge rouge immédiatement
-              setReadChats(prev => {
-                const next = new Set(prev);
-                next.delete(fChatId);
-                next.delete(String(fChatId));
-                next.delete(Number(fChatId));
-                return next;
-              });
-              // Déclencher le son de notification et vibration
-              if (typeof playNotificationSoundRef.current === 'function') {
-                playNotificationSoundRef.current();
-              }
-              if (typeof navigator !== 'undefined' && navigator.vibrate) {
-                try { navigator.vibrate([120, 60, 120]); } catch (_) { }
-              }
-
-              // Déclencher le bandeau Dynamic Island popup interactif sur les autres pages
-              const senderTitle = d.lastSenderName || d.lastSender || d.user || 'Nouveau message';
-              const messageText = d.lastMessage || 'Nouveau message reçu';
-              const senderAvatar = d.avatar || d.authorAvatar || null;
-              const rawTime = d.lastMessageTimestamp?.toMillis?.() ||
-                d.lastMessageTimestamp?.seconds ||
-                d.lastMessageTime?.seconds ||
-                d.lastMessageTime ||
-                d.updatedAt?.seconds ||
-                d.updatedAt ||
-                '';
-              const messageId = d.lastMessageId || d.lastMsgId || `${fChatId}_${d.lastSenderUid || ''}_${rawTime}_${d.lastMessage || ''}`;
-
-              notificationService.show({
-                id: messageId,
-                title: senderTitle,
-                message: messageText,
-                avatar: senderAvatar,
-                icon: 'chat',
-                duration: 3000,
-                onClick: () => {
-                  setSelectedChat(d);
-                  if (typeof setActiveTab === 'function') {
-                    setActiveTab('chat');
-                  }
-                },
-                data: { chatId: fChatId, messageId }
-              });
-            }
+    // Helper pour fusionner et mettre à jour la liste des chats avec tri client résilient
+    const updateMergedChats = () => {
+      const firestoreChats = Array.from(allDocsMap.entries())
+        .filter(([docId, data]) => {
+          if (!data) return false;
+          if (Array.isArray(data.deletedBy)) {
+            if (currentUid && data.deletedBy.includes(currentUid)) return false;
+            if (myName && data.deletedBy.includes(myName)) return false;
           }
+          return true;
+        })
+        .map(([docId, data]) => {
+          const otherUser = Array.isArray(data.participants)
+            ? data.participants.find(p => p && String(p).trim().toLowerCase() !== myName.toLowerCase() && String(p) !== String(currentUid) && String(p).trim().toLowerCase() !== myEmail.toLowerCase()) || data.user || 'Interlocuteur'
+            : data.user || 'Interlocuteur';
+
+          const fChatId = data.id || docId;
+
+          return {
+            id: fChatId,
+            firestoreId: docId,
+            ...data,
+            user: otherUser,
+          };
         });
 
-        const chats = snapshot.docs
-          .filter((docSnap) => {
-            const data = docSnap.data();
-            if (!data) return false;
-            if (Array.isArray(data.deletedBy) && data.deletedBy.includes(myUid)) {
-              return false;
-            }
-            return true;
-          })
-          .map((docSnap) => {
-            const data = docSnap.data();
-            const otherUser = Array.isArray(data.participants)
-              ? data.participants.find(p => p && String(p) !== String(myUid) && (!profile?.name || String(p).trim().toLowerCase() !== profile.name.toLowerCase())) || data.user || 'Interlocuteur'
-              : data.user || 'Interlocuteur';
+      // Tri direct en mémoire par date de dernière activité (évite tout bug d'index manquant Firestore)
+      const merged = [...firestoreChats];
+      merged.sort((a, b) => {
+        const timeA = a.updatedAt?.toMillis ? a.updatedAt.toMillis() : (a.updatedAt ? new Date(a.updatedAt).getTime() : (a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt ? new Date(a.createdAt).getTime() : (a.timestamp || 0))));
+        const timeB = b.updatedAt?.toMillis ? b.updatedAt.toMillis() : (b.updatedAt ? new Date(b.updatedAt).getTime() : (b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt ? new Date(b.createdAt).getTime() : (b.timestamp || 0))));
+        return timeB - timeA;
+      });
 
-            return {
-              id: data.id || docSnap.id,
-              firestoreId: docSnap.id,
-              ...data,
-              user: otherUser,
-            };
-          });
-
-        // Tri direct en mémoire par date de dernière activité (évite tout bug d'index manquant Firestore)
-        chats.sort((a, b) => {
-          const timeA = a.updatedAt?.toMillis ? a.updatedAt.toMillis() : (a.updatedAt ? new Date(a.updatedAt).getTime() : (a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt ? new Date(a.createdAt).getTime() : (a.timestamp || 0))));
-          const timeB = b.updatedAt?.toMillis ? b.updatedAt.toMillis() : (b.updatedAt ? new Date(b.updatedAt).getTime() : (b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt ? new Date(b.createdAt).getTime() : (b.timestamp || 0))));
-          return timeB - timeA;
-        });
-
-        setChatsList(chats);
-        try {
-          localStorage.setItem('troco_cached_chats', JSON.stringify(chats));
-          useChatStore.getState().setChatsList(chats);
-        } catch (_) { }
-
-        isInitialLoad = false;
-      },
-      (error) => {
-        logger.error('[useChatManager] chats onSnapshot error:', error);
-      }
-    );
-
-    return () => {
+      setChatsList(merged);
       try {
-        if (typeof unsubscribe === 'function') unsubscribe();
+        localStorage.setItem('troco_cached_chats', JSON.stringify(merged));
+        useChatStore.getState().setChatsList(merged);
       } catch (_) { }
     };
-  }, [profile?.uid, auth?.currentUser?.uid, db]);
+
+    // Écoute des discussions par participants
+    targets.forEach(targetVal => {
+      try {
+        const q = query(
+          collection(db, 'chats'),
+          where('participants', 'array-contains', targetVal)
+        );
+
+        const unsub = onSnapshot(q, (snapshot) => {
+          snapshot.docChanges().forEach(change => {
+            const d = change.doc.data();
+            if (!d) return;
+            const fChatId = d.id || change.doc.id;
+            const lastSender = (d.lastSenderName || d.lastSender || '').trim().toLowerCase();
+            const isMe = (myName && lastSender === myName.toLowerCase()) ||
+              (myUsername && lastSender === myUsername.toLowerCase()) ||
+              (myEmail && lastSender === myEmail.toLowerCase()) ||
+              (d.lastSenderUid && currentUid && String(d.lastSenderUid) === String(currentUid));
+            const isFromThem = !isMe && (lastSender.length > 0 || (d.unreadCount && d.unreadCount > 0));
+
+            // Détection en temps réel d'un nouveau message entrant non lu
+            if (isFromThem && (change.type === 'modified' || (change.type === 'added' && !isInitialLoad))) {
+              const currentSelectedChat = selectedChatRef.current;
+              const currentActiveTab = activeTabRef.current;
+              const isCurrentlyActive = currentSelectedChat && String(currentSelectedChat.id) === String(fChatId) && currentActiveTab === 'chat';
+              if (!isCurrentlyActive) {
+                setReadChats(prev => {
+                  const next = new Set(prev);
+                  next.delete(fChatId);
+                  next.delete(String(fChatId));
+                  next.delete(Number(fChatId));
+                  return next;
+                });
+                playNotificationSound();
+                if (typeof navigator !== 'undefined' && navigator.vibrate) {
+                  try { navigator.vibrate([120, 60, 120]); } catch (_) { }
+                }
+
+                const senderTitle = d.lastSenderName || d.lastSender || d.user || 'Nouveau message';
+                const messageText = d.lastMessage || 'Nouveau message reçu';
+                const senderAvatar = d.avatar || d.authorAvatar || null;
+                const rawTime = d.lastMessageTimestamp?.toMillis?.() ||
+                  d.lastMessageTimestamp?.seconds ||
+                  d.lastMessageTime?.seconds ||
+                  d.lastMessageTime ||
+                  d.updatedAt?.seconds ||
+                  d.updatedAt ||
+                  '';
+                const messageId = d.lastMessageId || d.lastMsgId || `${fChatId}_${d.lastSenderUid || lastSender}_${rawTime}_${d.lastMessage || ''}`;
+
+                notificationService.show({
+                  id: messageId,
+                  title: senderTitle,
+                  message: messageText,
+                  avatar: senderAvatar,
+                  icon: 'chat',
+                  duration: 3000,
+                  onClick: () => {
+                    setSelectedChat(d);
+                    if (typeof setActiveTab === 'function') {
+                      setActiveTab('chat');
+                    }
+                  },
+                  data: { chatId: fChatId, messageId }
+                });
+              }
+            }
+          });
+
+          snapshot.docs.forEach(docSnap => {
+            allDocsMap.set(docSnap.id, docSnap.data());
+          });
+
+          updateMergedChats();
+          isInitialLoad = false;
+        }, (err) => {
+          logger.warn('[Firestore] chats onSnapshot warning for target:', targetVal, err?.message || err);
+          updateMergedChats();
+        });
+
+        unsubs.push(unsub);
+      } catch (err) {
+        logger.error('[Firestore] query setup error:', err);
+      }
+    });
+
+    // Écoute additionnelle par participantUids (UIDs stricts)
+    if (currentUid) {
+      try {
+        const qUids = query(
+          collection(db, 'chats'),
+          where('participantUids', 'array-contains', currentUid)
+        );
+
+        const unsubUids = onSnapshot(qUids, (snapshot) => {
+          snapshot.docs.forEach(docSnap => {
+            allDocsMap.set(docSnap.id, docSnap.data());
+          });
+          updateMergedChats();
+        }, (err) => {
+          logger.warn('[Firestore] chats onSnapshot warning for participantUids:', err?.message || err);
+        });
+
+        unsubs.push(unsubUids);
+      } catch (_) { }
+    }
+
+    return () => {
+      unsubs.forEach(u => { try { if (typeof u === 'function') u(); } catch (_) { } });
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [auth?.currentUser?.uid, profile?.uid, profile?.name, profile?.email, profile?.username]);
 
   // Écoute de l'événement personnalisé pour forcer le rafraîchissement des conversations Firestore
   useEffect(() => {
     const handleForceRefetch = async () => {
       if (!db) return;
       try {
-        const myUid = profile?.uid || (auth?.currentUser && auth.currentUser.uid) || null;
-        if (!myUid) return;
-        const qItem = query(collection(db, 'chats'), where('participants', 'array-contains', myUid));
-        const snap = await getDocs(qItem);
-        if (snap && snap.docs.length > 0) {
-          const fetched = snap.docs
-            .map(d => ({ id: d.id, ...d.data() }))
-            .filter(d => {
-              if (Array.isArray(d.deletedBy) && d.deletedBy.includes(myUid)) {
-                return false;
-              }
-              return true;
+        const myUid = profile?.uid || (auth?.currentUser && auth.currentUser.uid);
+        const myName = profile?.name;
+        const qList = [];
+        if (myUid) {
+          qList.push(query(collection(db, 'chats'), where('participantUids', 'array-contains', myUid)));
+        }
+        if (myName) {
+          qList.push(query(collection(db, 'chats'), where('user', '==', myName)));
+          qList.push(query(collection(db, 'chats'), where('author', '==', myName)));
+        }
+        for (const qItem of qList) {
+          const snap = await getDocs(qItem);
+          if (snap && snap.docs.length > 0) {
+            const fetched = snap.docs
+              .map(d => ({ id: d.id, ...d.data() }))
+              .filter(d => {
+                if (Array.isArray(d.deletedBy)) {
+                  if (myUid && d.deletedBy.includes(myUid)) return false;
+                  if (myName && d.deletedBy.includes(myName)) return false;
+                }
+                return true;
+              });
+            setChatsList(prev => {
+              const map = new Map(prev.map(c => [c.id, c]));
+              fetched.forEach(f => map.set(f.id, f));
+              const res = Array.from(map.values());
+              try { localStorage.setItem('troco_cached_chats', JSON.stringify(res)); } catch (_) { }
+              return res;
             });
-          setChatsList(prev => {
-            const map = new Map(prev.map(c => [c.id, c]));
-            fetched.forEach(f => map.set(f.id, f));
-            const res = Array.from(map.values());
-            try { localStorage.setItem('troco_cached_chats', JSON.stringify(res)); } catch (_) {}
-            return res;
-          });
+          }
         }
       } catch (err) {
         logger.warn('[useChatManager] Force refetch error:', err);
@@ -418,7 +456,7 @@ export const useChatManager = ({
 
     window.addEventListener('troco:refetch_chats', handleForceRefetch);
     return () => window.removeEventListener('troco:refetch_chats', handleForceRefetch);
-  }, [db, profile?.uid, auth?.currentUser?.uid]);
+  }, [db, profile, auth]);
 
   // ---- SÉLECTION D'UN CHAT ET MARQUAGE COMME LU ----
   const handleSelectChat = async (chat) => {
@@ -451,7 +489,7 @@ export const useChatManager = ({
 
   // ---- COMPTEUR NON-LUS GLOBAL ----
   const unreadCount = useMemo(() => {
-    const allChats = chatsList || [];
+    const allChats = chatsList && chatsList.length > 0 ? chatsList : [];
     const myNameNorm = (profile?.name || '').trim().toLowerCase();
     const myUsernameNorm = (profile?.username || '').trim().toLowerCase();
     const myUidStr = profile?.uid || (auth?.currentUser && auth.currentUser.uid);
@@ -533,22 +571,17 @@ export const useChatManager = ({
           const isTemp = (typeof m.id === 'string' && m.id.startsWith('temp_')) || Boolean(m.temporaryId);
           if (!isTemp) return false;
           const tempKey = String(m.temporaryId || m.id);
-          // Si le message temporaire a été confirmé par Firestore (via doc.id ou doc.temporaryId),
-          // la version serveur fait foi et écrase impérativement le message optimiste.
           if (firestoreIds.has(String(m.id))) return false;
           if (confirmedTemporaryIds.has(tempKey)) return false;
           if (confirmedTemporaryIds.has(String(m.id))) return false;
           return true;
         });
 
-        // Déduplication absolue via Map par ID unique de document
         const messageMap = new Map();
-        // 1. D'abord les messages Firestore officiels (écrasent toute version temporaire)
         msgs.forEach(m => {
           const uid = String(m.id || m._id || '');
           if (uid) messageMap.set(uid, m);
         });
-        // 2. Ensuite UNIQUEMENT les messages optimistes non encore confirmés par le serveur
         inFlightOptimistic.forEach(m => {
           const uid = String(m.id || m._id || '');
           if (uid && !messageMap.has(uid)) {
@@ -558,7 +591,6 @@ export const useChatManager = ({
 
         const unique = Array.from(messageMap.values());
 
-        // Tri chronologique ascendant côté client
         unique.sort((a, b) => {
           const tA = typeof a.createdAt === 'number' ? a.createdAt : new Date(a.createdAt || 0).getTime();
           const tB = typeof b.createdAt === 'number' ? b.createdAt : new Date(b.createdAt || 0).getTime();
@@ -600,7 +632,6 @@ export const useChatManager = ({
         } : c));
       }
 
-      // Si la conversation est activement consultée, marquer comme lue
       setReadChats(prev => new Set([...prev, selectedChat.id, String(selectedChat.id), Number(selectedChat.id)]));
     };
 
@@ -608,7 +639,6 @@ export const useChatManager = ({
       const q = query(collection(db, 'chats', chatId, 'messages'), orderBy('createdAt', 'asc'));
       primaryUnsub = onSnapshot(q, handleSnapshot, (err) => {
         logger.warn('[Firestore] chat messages onSnapshot with orderBy failed, fallback without orderBy:', err);
-        // Nettoyage strict de l'écouteur primaire avant de basculer sur fallback
         if (typeof primaryUnsub === 'function') {
           primaryUnsub();
           primaryUnsub = null;
@@ -618,7 +648,7 @@ export const useChatManager = ({
           fallbackUnsub = onSnapshot(fallbackQ, handleSnapshot, (fallbackErr) => {
             logger.error('[Firestore] chat messages fallback failed:', fallbackErr);
           });
-        } catch (_) {}
+        } catch (_) { }
       });
     } catch (err) {
       logger.warn('[Firestore] chat messages listener setup failed:', err);
@@ -626,10 +656,10 @@ export const useChatManager = ({
 
     return () => {
       if (typeof primaryUnsub === 'function') {
-        try { primaryUnsub(); } catch (_) {}
+        try { primaryUnsub(); } catch (_) { }
       }
       if (typeof fallbackUnsub === 'function') {
-        try { fallbackUnsub(); } catch (_) {}
+        try { fallbackUnsub(); } catch (_) { }
       }
     };
   }, [selectedChat?.id, selectedChat?.user, profile?.name, profile?.uid, activeTab, auth, db]);
@@ -663,7 +693,6 @@ export const useChatManager = ({
   const handleSendMessage = async (customPayload = null) => {
     if (!selectedChat) return;
 
-    // Débounce strict de 500ms et verrou isSending anti-double-clic/tactile
     const now = Date.now();
     if (isSending || (now - lastSendMessageTimestampRef.current < 500)) {
       logger.warn('[useChatManager] Double envoi évité par le debounce de 500ms');
@@ -681,8 +710,6 @@ export const useChatManager = ({
         const myUid = profile?.uid || auth?.currentUser?.uid || 'me';
         const myName = profile?.name || 'Moi';
 
-        // Utiliser un tempId préfixé pour que handleSnapshot puisse l'identifier comme optimiste
-        // et ne pas le doubler lorsque Firestore confirme l'écriture.
         const tempId = `temp_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
         const preview = customPayload.text || (customPayload.type === 'audio'
           ? `🎵 ${customPayload.fileName || 'Fichier audio'}`
@@ -700,7 +727,6 @@ export const useChatManager = ({
           text: preview,
         };
 
-        // 1. Insertion optimiste immédiate avec Map anti-doublon
         setChatThreads(prev => {
           const existing = prev[chatId] || [];
           const map = new Map();
@@ -723,7 +749,6 @@ export const useChatManager = ({
 
         if (db) {
           try {
-            // 2. Écriture Firestore atomique (audioUrl DOIT être présent avant cet appel)
             const docRef = await addDoc(collection(db, 'chats', String(chatId), 'messages'), {
               ...customPayload,
               temporaryId: tempId,
@@ -736,7 +761,6 @@ export const useChatManager = ({
               createdAt: serverTimestamp(),
             });
 
-            // 3. Promouvoir le tempId vers l'ID Firestore réel via Map (ignore doublon si onSnapshot a déjà reçu le doc)
             setChatThreads(prev => {
               const thread = prev[chatId] || [];
               const map = new Map();
@@ -771,7 +795,6 @@ export const useChatManager = ({
             }, { merge: true });
           } catch (e) {
             logger.warn('[Firestore] custom message write failed:', e);
-            // Marquer le message optimiste comme erreur
             setChatThreads(prev => {
               const thread = prev[chatId] || [];
               return {
@@ -819,7 +842,6 @@ export const useChatManager = ({
         translations: { FR: text }
       };
 
-      // 1. Optimistic insertion : rendu instantané 0ms avec Map anti-doublon
       setChatThreads(prev => {
         const existing = prev[chatId] || [];
         const map = new Map();
@@ -851,7 +873,6 @@ export const useChatManager = ({
             createdAt: serverTimestamp(),
           });
 
-          // Mise à jour optimiste -> sent avec Map anti-doublon
           setChatThreads(prev => {
             const thread = prev[chatId] || [];
             const map = new Map();
@@ -870,7 +891,6 @@ export const useChatManager = ({
             };
           });
 
-          // Remplacer également dans le Zustand store si disponible
           if (typeof useChatStore.getState().replaceTempId === 'function') {
             useChatStore.getState().replaceTempId(chatId, tempId, docRef.id);
           }
@@ -887,7 +907,6 @@ export const useChatManager = ({
           }, { merge: true });
         } catch (e) {
           logger.warn('[Firestore] message write failed, marked as error:', e);
-          // Échec -> statut error avec option Réessayer
           setChatThreads(prev => {
             const thread = prev[chatId] || [];
             return {
@@ -908,8 +927,7 @@ export const useChatManager = ({
   const handleRetryMessage = async (msg) => {
     if (!msg || !selectedChat) return;
     const chatId = selectedChat.id;
-    
-    // Remise en statut pending
+
     setChatThreads(prev => {
       const thread = prev[chatId] || [];
       return {
@@ -1107,7 +1125,6 @@ export const useChatManager = ({
 
   // ---- ISOLATION DES DISCUSSIONS PAR PAIRE D'UTILISATEURS ET ANNONCE (STRICT UIDS FIRST) ----
   const buildConversationId = (listingId, userA, userB, uidA = null, uidB = null) => {
-    // Concaténation stricte des UIDs pour préserver l'historique de discussion même en cas de changement de nom
     if (uidA && uidB) {
       const sortedUids = [String(uidA).trim(), String(uidB).trim()].sort().join('_');
       const cleanListingId = listingId ? `_${String(listingId).trim()}` : '';
@@ -1294,7 +1311,6 @@ export const useChatManager = ({
     const amount = Number(rewardData.amount) || 0;
     const beneficiary = rewardData.beneficiary;
 
-    // 1. Mettre à jour l'état du message localement
     setChatThreads(prev => ({
       ...prev,
       [chatId]: (prev[chatId] || []).map(m => {
@@ -1313,7 +1329,6 @@ export const useChatManager = ({
       })
     }));
 
-    // 2. Si le profil connecté est le bénéficiaire, créditer son solde de jetons
     if (beneficiary && profile?.name && beneficiary.trim().toLowerCase() === profile.name.trim().toLowerCase()) {
       setProfile(prev => ({
         ...prev,
@@ -1321,7 +1336,6 @@ export const useChatManager = ({
       }));
     }
 
-    // 3. Mettre à jour les membres et allocations dans le chat du groupe
     setChatsList(prev => prev.map(c => {
       if (String(c.id) === cid) {
         const updatedMembers = (c.members || []).map(mem => {
@@ -1340,7 +1354,6 @@ export const useChatManager = ({
       return c;
     }));
 
-    // 4. Synchroniser avec Firestore
     if (db) {
       try {
         await updateDoc(doc(db, 'chats', cid, 'messages', mid), {
@@ -1402,8 +1415,7 @@ export const useChatManager = ({
     const itemId = (terms.itemId !== undefined && terms.itemId !== null) ? String(terms.itemId) : (selectedChat.listingId ? String(selectedChat.listingId) : null);
     const itemName = terms.title || terms.itemName || selectedChat.listing || selectedChat.title || selectedChat.projectTitle || 'Prestation Troco';
     const conditions = (terms.conditions && terms.conditions.trim()) || `${durationValue}h d'échange pour ${trocoTokens > 0 ? `${trocoTokens} Jeton(s)` : ''} ${euroAmount > 0 ? `${euroAmount}€` : ''}`.trim() || 'Échange convenu.';
-    
-    // Contrat strict standardisé
+
     const dealTerms = {
       title: itemName,
       hours: Number(expectedHours) || 0,
@@ -1430,7 +1442,6 @@ export const useChatManager = ({
       conditions: conditions || 'Nouvelle proposition de troc',
     };
 
-    // Si c'est une contre-offre, passer l'ancienne offre en statut 'countered'
     if (editingDealId) {
       setChatThreads(prev => ({
         ...prev,
@@ -1504,7 +1515,7 @@ export const useChatManager = ({
   const handleSendDeal = handleCounterOfferSubmit;
 
   // ---- FONCTION PRINCIPALE : EXÉCUTION DE TRANSACTION FIRESTORE ATOMIQUE (FINTECH ENGINE) ----
-  /** @locked @critical DO NOT MODIFY THIS TRANSACTION LOGIC. Atomic runTransaction with buyerUid and sellerUid is required for financial integrity. */
+  /** @locked @critical DO NOT MODIFY THIS TRANSACTION LOGIC. */
   const executeDealTransaction = async ({
     chatId,
     dealId,
@@ -1523,15 +1534,12 @@ export const useChatManager = ({
     const currentUser = auth?.currentUser || profile;
     const currentUid = currentUser?.uid || 'me';
 
-    // Récupération de l'objet chat en mémoire
     const chat = (selectedChat && String(selectedChat.id) === String(chatId))
       ? selectedChat
       : chatsList.find(c => String(c.id) === String(chatId));
 
-    // 🚨 Isole le UID cible DE FAÇON IMPÉRATIVE
     const partnerUid = targetUid || inputPartnerUid || explicitSellerUid || selectedChat?.participants?.find(uid => uid && uid !== currentUser?.uid) || selectedChat?.partnerUid || chat?.participants?.find(uid => uid && uid !== currentUser?.uid) || chat?.partnerUid;
 
-    // Si partnerUid est indéfini, STOPPE la fonction et affiche une erreur.
     if (!partnerUid || partnerUid === 'partner' || partnerUid === 'undefined' || partnerUid === currentUid) {
       const errorMsg = 'Transaction annulée : Destinataire (partnerUid/sellerUid) introuvable ou invalide. Aucun débit n\'a été effectué.';
       logger.error('🚨 [Finance] ' + errorMsg, { chatId, dealId, currentUid, partnerUid, chat });
@@ -1546,7 +1554,6 @@ export const useChatManager = ({
     const isCurrentUserBuyer = currentUid === buyerUid;
     const isCurrentUserSeller = currentUid === sellerUid;
 
-    // 1. Mise à jour optimiste du profil local
     if (isCurrentUserBuyer) {
       const updatedTokens = finalTokens > 0 ? Math.max(0, (profile?.trocoTokens || 0) - finalTokens) : (profile?.trocoTokens || 0);
       const updatedEuro = (finalEuro > 0 && shouldDebitWallet) ? Number(Math.max(0, (profile?.euroBalance || 0) - finalEuro).toFixed(2)) : (profile?.euroBalance || 0);
@@ -1597,7 +1604,7 @@ export const useChatManager = ({
       playBetclicBalanceSound(true);
       playApplePaySound();
       hapticSuccess();
-    } catch (_) {}
+    } catch (_) { }
 
     const transactionId = `TRK-DEAL-${Date.now().toString().slice(-6)}`;
     const newTx = {
@@ -1615,7 +1622,6 @@ export const useChatManager = ({
     };
     setUserTransactions(prev => [newTx, ...prev]);
 
-    // 2. TRANSACTION ATOMIQUE SUR FIRESTORE (runTransaction)
     if (db && buyerUid && sellerUid) {
       try {
         await runTransaction(db, async (transaction) => {
@@ -1624,7 +1630,6 @@ export const useChatManager = ({
           const msgRef = doc(db, 'chats', String(chatId), 'messages', String(dealId));
           const chatDocRef = doc(db, 'chats', String(chatId));
 
-          // 1. TOUTES LES LECTURES (READS FIRST)
           const [buyerSnap, sellerSnap, msgSnap] = await Promise.all([
             transaction.get(buyerRef),
             transaction.get(sellerRef),
@@ -1642,7 +1647,6 @@ export const useChatManager = ({
           const curSellerTokens = Number(sellerData.trocoTokens ?? 0);
           const curSellerDeals = Number(sellerData.dealsCompleted ?? 0);
 
-          // Vérification de solvabilité
           if (finalTokens > 0 && curBuyerTokens < finalTokens) {
             throw new Error(`Solde de jetons insuffisant (${curBuyerTokens} disponible(s), ${finalTokens} requis).`);
           }
@@ -1650,14 +1654,12 @@ export const useChatManager = ({
             throw new Error(`Solde d'euros insuffisant (${curBuyerEuro}€ disponible(s), ${finalEuro}€ requis).`);
           }
 
-          // 2. CALCUL DES SOLDES : DÉDUCTION BUYER & AJOUT SELLER
           const newBuyerTokens = Math.max(0, curBuyerTokens - finalTokens);
           const newBuyerEuro = shouldDebitWallet ? Number(Math.max(0, curBuyerEuro - finalEuro).toFixed(2)) : curBuyerEuro;
 
           const newSellerTokens = curSellerTokens + finalTokens;
           const newSellerEuro = Number((curSellerEuro + finalEuro).toFixed(2));
 
-          // 3. ÉCRITURES ATOMIQUES (WRITES)
           if (finalTokens > 0) {
             transaction.update(buyerRef, {
               trocoTokens: increment(-finalTokens),
@@ -1691,7 +1693,6 @@ export const useChatManager = ({
             }, { merge: true });
           }
 
-          // 🚨 NOTIFICATION DE TRANSACTION EN TEMPS RÉEL POUR LE DESTINATAIRE
           const notifRef = doc(collection(db, 'users', partnerUid, 'notifications'));
           transaction.set(notifRef, {
             type: 'payment_received',
@@ -1729,7 +1730,6 @@ export const useChatManager = ({
             updatedAt: serverTimestamp(),
           }, { merge: true });
 
-          // Traçabilité des transactions
           const txBuyerRef = doc(collection(db, 'transactions'));
           transaction.set(txBuyerRef, {
             type: 'deal_payment',
@@ -1902,7 +1902,6 @@ export const useChatManager = ({
       ? selectedChat
       : chatsList.find(c => String(c.id) === String(chatId));
     const partnerName = chat?.user || 'Interlocuteur';
-    // 🚨 PHASE 95 : CIBLAGE STRICT DU DESTINATAIRE (RECEIVER UID)
     const currentUid = profile?.uid || auth?.currentUser?.uid;
     let partnerUid = chat?.partnerUid;
     if (!partnerUid || partnerUid === currentUid) {
@@ -1923,7 +1922,6 @@ export const useChatManager = ({
     const tokensAmount = Number(terms?.trocoTokens !== undefined ? terms.trocoTokens : terms?.expectedTokens) || 0;
     const euroAmount = Number(terms?.euroAmount !== undefined ? terms.euroAmount : terms?.fiatAmount) || 0;
 
-    // 1. Troc direct (0€ et 0 jeton) : validation instantanée
     if (euroAmount === 0 && tokensAmount === 0) {
       await executeDealTransaction({
         chatId,
@@ -1939,7 +1937,6 @@ export const useChatManager = ({
       return;
     }
 
-    // 2. Si euros > 0 ou jetons > 0 : ouverture du tunnel de paiement
     handleOpenPayment('pay-deal', {
       chatId,
       dealId,
@@ -1979,7 +1976,7 @@ export const useChatManager = ({
     }
   };
 
-  // ---- 🚨 TRANSACTION DE FIN D'APPEL / POURBOIRE POST-APPEL ----
+  // ---- TRANSACTION DE FIN D'APPEL / POURBOIRE POST-APPEL ----
   const sendPostCallTip = async (arg1, arg2, arg3) => {
     let targetUid, amount, comment = '', duration = 0, insurance = false, partnerName = '';
     if (typeof arg1 === 'object' && arg1 !== null) {
@@ -2002,22 +1999,17 @@ export const useChatManager = ({
       return { success: false, error: errorMsg };
     }
 
-    // 🚨 Résolution BLINDÉE du UID destinataire.
-    // ORDRE IMPÉRATIF : participantUids (UIDs purs) > explicit targetUid > participants (peut contenir des noms) > partnerUid chat
-    // NE PAS utiliser participants[] en premier : ce tableau peut contenir des display names, pas des UIDs.
     const currentUid = String(currentUser.uid);
     const isValidUid = (v) => typeof v === 'string' && v.trim().length >= 3 && v !== currentUid && v !== 'partner' && v !== 'undefined';
 
     let partnerUid = targetUid && isValidUid(targetUid) ? targetUid : null;
 
     if (!partnerUid) {
-      // 1. Priorité absolue : participantUids (seuls vrais UIDs Firebase)
       const pUids = selectedChat?.participantUids;
       if (Array.isArray(pUids)) partnerUid = pUids.find(u => isValidUid(u)) || null;
     }
     if (!partnerUid && isValidUid(selectedChat?.partnerUid)) partnerUid = selectedChat.partnerUid;
     if (!partnerUid) {
-      // 2. participants[] — accepté uniquement si la valeur passe la validation UID
       const parts = selectedChat?.participants;
       if (Array.isArray(parts)) partnerUid = parts.find(u => isValidUid(u)) || null;
     }
@@ -2037,7 +2029,6 @@ export const useChatManager = ({
           const senderRef = doc(db, 'users', currentUid);
           const receiverRef = doc(db, 'users', partnerUid);
 
-          // Lecture atomique des deux docs (obligatoire avant tout write dans runTransaction)
           const [senderSnap, receiverSnap] = await Promise.all([
             transaction.get(senderRef),
             transaction.get(receiverRef),
@@ -2046,17 +2037,14 @@ export const useChatManager = ({
             throw new Error('Solde insuffisant');
           }
 
-          // Débit expéditeur
           transaction.update(senderRef, { trocoTokens: increment(-Number(costTokens)) });
 
-          // Crédit destinataire — set+merge si le doc n'existe pas encore (évite 'No document to update')
           if (receiverSnap.exists()) {
             transaction.update(receiverRef, { trocoTokens: increment(Number(costTokens)) });
           } else {
             transaction.set(receiverRef, { trocoTokens: Number(costTokens) }, { merge: true });
           }
 
-          // Trace & notification avec type 'payment_received' pour conformité transactionnelle
           const notifRef = doc(collection(db, 'users', partnerUid, 'notifications'));
           transaction.set(notifRef, {
             type: 'payment_received',
@@ -2080,13 +2068,13 @@ export const useChatManager = ({
       try {
         const { setTrocoTokens } = useWalletStore.getState();
         if (setTrocoTokens) setTrocoTokens(updatedTokens);
-      } catch (_) {}
+      } catch (_) { }
 
       try {
         const saved = JSON.parse(localStorage.getItem('troco_user_profile') || '{}');
         saved.trocoTokens = updatedTokens;
         localStorage.setItem('troco_user_profile', JSON.stringify(saved));
-      } catch (_) {}
+      } catch (_) { }
 
       hapticSuccess();
       playSwooshSound();
@@ -2110,13 +2098,13 @@ export const useChatManager = ({
     }
   };
 
-  // ---- 🚨 PHASE 89 : TRANSFERT DE JETONS DIRECT (FINTECH ENGINE ATOMIQUE) ----
-  /** @locked @critical DO NOT MODIFY THIS TRANSACTION LOGIC. Atomic runTransaction with buyerUid and sellerUid is required for financial integrity. */
+  // ---- TRANSFERT DE JETONS DIRECT ----
+  /** @locked @critical DO NOT MODIFY THIS TRANSACTION LOGIC. */
   const handleTransferToken = async (chatId, tokenAmount = 1, comment = '', customPartnerUid = null) => {
     return handleSendToken(chatId, tokenAmount, comment, customPartnerUid);
   };
 
-  /** 🚨 PHASE 109 : MOTEUR TRANSACTIONNEL ABSOLU (runTransaction double écriture atomique & traçabilité) */
+  /** MOTEUR TRANSACTIONNEL ABSOLU (runTransaction double écriture atomique & traçabilité) */
   const handleSendToken = async (chatId, tokenAmount = 1, comment = '', targetUid = null) => {
     const currentUser = auth?.currentUser || profile;
     if (!currentUser?.uid) return { success: false, error: 'Non authentifié' };
@@ -2125,47 +2113,38 @@ export const useChatManager = ({
       ? selectedChat
       : chatsList.find(c => String(c.id) === String(chatId));
 
-    // 🚨 Résolution BLINDÉE du UID destinataire.
-    // ORDRE IMPÉRATIF : participantUids (UIDs purs) > explicit targetUid > participants (peut contenir des noms) > fallback Firestore.
-    // Ne jamais utiliser participants[] en premier : ce tableau peut contenir des display names.
     const chatObj = chat || selectedChat;
     const currentUid = String(currentUser.uid);
 
-    // Valide qu'une valeur ressemble à un UID Firebase
     const isValidUid = (v) => typeof v === 'string' && v.trim().length >= 3 && v !== currentUid && v !== 'partner' && v !== 'undefined';
 
     let partnerUid = targetUid && isValidUid(targetUid) ? targetUid : null;
 
     if (!partnerUid) {
-      // 1. Priorité absolue : participantUids (seuls vrais UIDs Firebase)
       const pUids = chatObj?.participantUids || selectedChat?.participantUids;
       if (Array.isArray(pUids)) partnerUid = pUids.find(u => isValidUid(u)) || null;
     }
 
     if (!partnerUid) {
-      // 2. partnerUid explicite dans le document chat
       const explicit = chatObj?.partnerUid || selectedChat?.partnerUid;
       if (isValidUid(explicit)) partnerUid = explicit;
     }
 
     if (!partnerUid) {
-      // 3. participants[] — accepté uniquement si la valeur passe la validation UID
       const parts = chatObj?.participants || selectedChat?.participants;
       if (Array.isArray(parts)) partnerUid = parts.find(u => isValidUid(u)) || null;
     }
 
     if (!partnerUid) {
-      // 4. authorUid (créateur de l'annonce)
       if (isValidUid(chatObj?.authorUid)) partnerUid = chatObj.authorUid;
     }
 
     if (!partnerUid && chatObj?.user && db) {
-      // 5. Fallback Firestore : lookup par display name
       try {
         const qUser = query(collection(db, 'users'), where('name', '==', chatObj.user));
         const snap = await getDocs(qUser);
         if (!snap.empty) partnerUid = snap.docs[0].id;
-      } catch (_) {}
+      } catch (_) { }
     }
 
     if (!partnerUid || partnerUid === currentUid) {
@@ -2183,7 +2162,6 @@ export const useChatManager = ({
           const senderRef = doc(db, 'users', currentUid);
           const receiverRef = doc(db, 'users', partnerUid);
 
-          // Lecture atomique des deux docs (obligatoire avant tout write dans runTransaction)
           const [senderSnap, receiverSnap] = await Promise.all([
             transaction.get(senderRef),
             transaction.get(receiverRef),
@@ -2193,17 +2171,14 @@ export const useChatManager = ({
             throw new Error('Solde insuffisant');
           }
 
-          // Débit expéditeur
           transaction.update(senderRef, { trocoTokens: increment(-Number(amount)) });
 
-          // Crédit destinataire — set+merge si le doc n'existe pas encore (évite 'No document to update')
           if (receiverSnap.exists()) {
             transaction.update(receiverRef, { trocoTokens: increment(Number(amount)) });
           } else {
             transaction.set(receiverRef, { trocoTokens: Number(amount) }, { merge: true });
           }
 
-          // Traçabilité & notification destinataire (type 'payment_received' pour le listener App.js)
           const notifRef = doc(collection(db, 'users', partnerUid, 'notifications'));
           transaction.set(notifRef, {
             type: 'payment_received',
@@ -2217,7 +2192,6 @@ export const useChatManager = ({
         });
       }
 
-      // Double écriture atomique dans l'état local
       const currentBalance = Number(profile?.trocoTokens || 0);
       const updatedTokens = Math.max(0, currentBalance - amount);
       setProfile(prev => ({ ...prev, trocoTokens: updatedTokens }));
@@ -2225,15 +2199,14 @@ export const useChatManager = ({
       try {
         const { setTrocoTokens } = useWalletStore.getState();
         if (setTrocoTokens) setTrocoTokens(updatedTokens);
-      } catch (_) {}
+      } catch (_) { }
 
       try {
         const saved = JSON.parse(localStorage.getItem('troco_user_profile') || '{}');
         saved.trocoTokens = updatedTokens;
         localStorage.setItem('troco_user_profile', JSON.stringify(saved));
-      } catch (_) {}
+      } catch (_) { }
 
-      // Message de confirmation dans le chat si applicable
       if (chatId) {
         try {
           const transferMessage = {
@@ -2259,13 +2232,10 @@ export const useChatManager = ({
               createdAt: serverTimestamp()
             });
           }
-        } catch (_) {}
+        } catch (_) { }
       }
 
       hapticSuccess();
-      // FIX DU SON DES JETONS :
-      // L'expéditeur ne doit PAS entendre le son de gain / réception.
-      // Seul le listener onSnapshot du receveur déclenche le son "plus vert".
       playSwooshSound();
       if (typeof onTransactionSuccess === 'function') {
         onTransactionSuccess({
@@ -2351,11 +2321,9 @@ export const useChatManager = ({
           )}
         </div>
 
-        {/* TITRE ET DESCRIPTION */}
         <div style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '4px' }}>{serviceTitle}</div>
         {conditions && <div style={{ fontSize: '12.5px', color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: '10px' }}>{conditions}</div>}
 
-        {/* BADGES */}
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '10px' }}>
           {(expectedHours > 0 || terms.durationType) && (
             <span style={{ backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--border-color)', color: 'var(--text-main)', borderRadius: '999px', padding: '3px 9px', fontSize: '11px', fontWeight: '800' }}>
@@ -2367,7 +2335,6 @@ export const useChatManager = ({
           {expectedHours === 0 && expectedTokens === 0 && fiatAmount === 0 && <span style={{ backgroundColor: 'var(--bg-subtle)', border: '1px solid var(--accent-primary)', color: 'var(--accent-primary)', borderRadius: '999px', padding: '3px 9px', fontSize: '11px', fontWeight: '800' }}>🤝 Troc direct / Service</span>}
         </div>
 
-        {/* 3 BOUTONS DE NÉGOCIATION POUR LE DESTINATAIRE */}
         {isDealPending && isRecipient && (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '6px' }}>
             <button onClick={() => handleAcceptDeal(chatId, message.id, terms)} className="premium-button" style={{ border: 'none', borderRadius: '12px', padding: '9px 4px', background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)', color: '#FFFFFF', fontSize: '11.5px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 12px rgba(16, 185, 129, 0.35)', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
@@ -2385,7 +2352,6 @@ export const useChatManager = ({
           </div>
         )}
 
-        {/* INDICATEUR D'ATTENTE POUR L'EXPÉDITEUR AVEC ACTIONS */}
         {isDealPending && !isRecipient && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
@@ -2404,14 +2370,12 @@ export const useChatManager = ({
           </div>
         )}
 
-        {/* BADGE CONTRE-OFFRE */}
         {isCountered && (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', backgroundColor: 'var(--bg-subtle)', border: '1px dashed var(--border-color)', color: 'var(--text-secondary)', borderRadius: '10px', padding: '6px 10px', fontSize: '11px', fontWeight: '700' }}>
             <RefreshCw size={12} /> Offre remplacée par une contre-proposition
           </div>
         )}
 
-        {/* SÉQUESTRE FINANCIER */}
         {currentDealStatus === 'escrow_locked' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', backgroundColor: 'var(--bg-subtle)', border: '1.5px solid var(--accent-primary)', borderRadius: '14px', padding: '12px 14px', marginTop: '6px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: '800', color: 'var(--accent-primary)' }}>

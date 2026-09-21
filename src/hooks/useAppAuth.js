@@ -16,7 +16,6 @@ import {
 } from 'firebase/firestore';
 import { useAuthStore, useWalletStore } from '../stores';
 import { setSessionAuthenticated, clearSessionFlags } from '../utils/sessionFlags';
-import { deriveDisplayName, buildUsernameHandle } from '../utils/displayName';
 
 /**
  * Hook centralisant l'état d'authentification, la synchronisation du profil Firestore,
@@ -84,6 +83,13 @@ export const useAppAuth = () => {
           }
         }
 
+        // Mise à jour immédiate du store avec l'UID Firebase Auth valide
+        setProfile((prev) => ({
+          ...prev,
+          uid: user.uid,
+          email: user.email || prev.email,
+        }));
+
         // Écoute continue du document utilisateur Firestore
         const userDocRef = doc(db, 'users', user.uid);
         unsubscribeFirestore = onSnapshot(userDocRef, (snap) => {
@@ -99,7 +105,7 @@ export const useAppAuth = () => {
               setBannedReason('');
             }
 
-            // Mise à jour du profil local
+            // Mise à jour du profil local avec l'UID garanti
             const newTokens = data.trocoTokens !== undefined ? Number(data.trocoTokens) : 12;
             const newEuros = data.euroBalance !== undefined ? Number(data.euroBalance) : 100;
 
@@ -122,14 +128,17 @@ export const useAppAuth = () => {
               if (setKycVerified) setKycVerified(Boolean(data.kycVerified));
             } catch (_) { }
           } else {
-            // Création du profil initial Firestore — nom réel obligatoire, jamais d'UID brut
+            // Création du profil initial Firestore
             const initialData = {
               uid: user.uid,
-              name: deriveDisplayName(user),
-              username: buildUsernameHandle(deriveDisplayName(user), user.email || ''),
+              name: user.displayName || profile.name || 'Membre Troco',
               email: user.email || profile.email || '',
               avatar: user.photoURL || profile.avatar || '',
-              socialLinks: profile.socialLinks || [],
+              trocoTokens: profile.trocoTokens || 12,
+              euroBalance: profile.euroBalance || 100,
+              socialLinks: profile.socialLinks || ['https://github.com/mateopolo', 'https://linkedin.com/in/mateopolo'],
+              kycVerified: false,
+              isBanned: false,
               createdAt: serverTimestamp(),
             };
             setDoc(userDocRef, initialData, { merge: true }).catch((e) =>

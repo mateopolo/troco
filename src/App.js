@@ -29,7 +29,6 @@ import TransactionSuccessModal from './components/TransactionSuccessModal';
 import { useWalletStore } from './stores';
 import haptics from './utils/haptics';
 import { useAppAuth } from './hooks/useAppAuth';
-import { deriveDisplayName, buildUsernameHandle, humanizeEmailPrefix, isTechnicalId, safeName } from './utils/displayName';
 import { useAppNavigation } from './hooks/useAppNavigation';
 import { useAppModals } from './hooks/useAppModals';
 import Portal from './components/ui/Portal';
@@ -68,7 +67,7 @@ import { useAdminGuard } from './hooks/useAdminGuard';
 import adminService from './services/adminService';
 import { useUsersPublic } from './hooks/useUsersPublic';
 import { setSessionAuthenticated, clearSessionFlags } from './utils/sessionFlags';
-import { getInitialTransactions } from './data/demoData';
+import { isDemoMode, getInitialTransactions } from './data/demoData';
 import { migrateLocalStorage } from './utils/migrateLocalStorage';
 import { clearTrocoLocalStorage } from './utils/clearTrocoLocalStorage';
 import { paymentService } from './services/paymentService';
@@ -128,20 +127,7 @@ export const pageTransitionConfig = { duration: 0.2, ease: "easeOut" };
 
 export default function App() {
   // Purge d'urgence pour réparer les écrans noirs sur mobile
-  useEffect(() => {
-    try {
-      storage.remove('troco_user_profile');
-      localStorage.removeItem('troco_chat_store');
-      localStorage.removeItem('chat_store');
-      localStorage.removeItem('troco_cached_chats');
-      localStorage.removeItem('troco_active_call');
-      localStorage.removeItem('troco_call_store');
-      localStorage.removeItem('troco_call_state');
-      localStorage.removeItem('troco_call_room_id');
-      sessionStorage.clear();
-    } catch (_) {}
-  }, []);
-
+  // (Bloc de purge supprimé — cassait la persistance localStorage)
   useFirestoreHealth();
   const {
     theme,
@@ -183,7 +169,7 @@ export default function App() {
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('languagechange', { detail: { lang: normalized } }));
       }
-    } catch (_) {}
+    } catch (_) { }
   }, []);
 
   const setCurrentLang = setLang;
@@ -230,7 +216,6 @@ export default function App() {
   const [showingOriginalListings, setShowingOriginalListings] = useState({});
   const [showingOriginalMessages, setShowingOriginalMessages] = useState({});
   const mainContainerRef = useRef(null);
-  const hasResolvedAuthRef = useRef(false);
   const toggleOriginalMessage = (id) => setShowingOriginalMessages(prev => ({ ...prev, [id]: !prev[id] }));
 
   const toggleOriginalListing = useCallback((id, event) => {
@@ -381,7 +366,7 @@ export default function App() {
   useEffect(() => {
     try {
       useWalletStore.getState().initializeGeoCurrency?.();
-    } catch (_) {}
+    } catch (_) { }
   }, []);
 
   const mapContainerRef = useRef(null);
@@ -950,7 +935,6 @@ export default function App() {
       const elapsed = Date.now() - sessionStartTime;
       const remaining = Math.max(0, 2500 - elapsed);
       safeTimeout(() => {
-        hasResolvedAuthRef.current = true;
         setIsLoadingSession(false);
       }, remaining);
     };
@@ -976,7 +960,7 @@ export default function App() {
             if (data.isBanned) {
               setIsUserBanned(true);
               setBannedReason(data.bannedReason || "Votre compte a été suspendu par l'administration Troco suite à un non-respect des règles de la communauté.");
-              try { await signOut(auth); } catch (_) {}
+              try { await signOut(auth); } catch (_) { }
               clearSessionFlags();
               storage.remove('troco_user_profile');
               setIsAuthenticated(false);
@@ -1024,7 +1008,7 @@ export default function App() {
               };
               try {
                 storage.setDebounced('troco_user_profile', updated);
-              } catch (_) {}
+              } catch (_) { }
               return updated;
             });
 
@@ -1039,25 +1023,18 @@ export default function App() {
             if (Array.isArray(data.equipment)) setEquipment(data.equipment);
           } else {
             // Initialisation automatique du profil sur Firestore si nouveau provider
-            // NOM RÉEL OBLIGATOIRE : displayName Google → préfixe email humanisé ("john.doe" → "John Doe").
-            // JAMAIS l'UID technique ni l'email brut comme nom visible.
-            const realDisplayName = deriveDisplayName(firebaseUser);
-            const emailPrefix = (firebaseUser.email || '').split('@')[0] || '';
             const defaultUserDoc = {
               uid: uid,
-              name: realDisplayName,
-              username: buildUsernameHandle(realDisplayName, emailPrefix || uid),
+              name: firebaseUser.displayName || firebaseUser.email?.split('@')[0].toUpperCase() || 'Utilisateur Troco',
+              username: '@' + (firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'user').toLowerCase().replace(/\s+/g, ''),
               email: firebaseUser.email || '',
               phoneNumber: firebaseUser.phoneNumber || '',
-              avatar: firebaseUser.photoURL || '',
-              bio: '',
-              location: '',
+              avatar: firebaseUser.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
+              bio: 'Nouvel utilisateur sur Troco ! Prêt à partager mes compétences et échanger des services.',
+              location: 'Paris, France',
               languages: ['FR'],
               skills: [],
               equipment: [],
-              socialLinks: [],
-              portfolio: [],
-              reviews: [],
               euroBalance: 0.00,
               trocoTokens: 10,
               dealsCompleted: 0,
@@ -1206,14 +1183,12 @@ export default function App() {
         email = window.prompt('Veuillez entrer votre email pour valider la connexion :');
       }
       if (email) {
-        if (!hasResolvedAuthRef.current) {
-          setIsLoadingSession(true);
-        }
+        setIsLoadingSession(true);
         signInWithEmailLink(auth, email, window.location.href)
           .then((result) => {
             window.localStorage.removeItem('emailForSignIn');
-            const userName = deriveDisplayName(result.user);
-            const userHandle = buildUsernameHandle(userName, result.user.email || '');
+            const userName = result.user.email?.split('@')[0].toUpperCase() || 'UTILISATEUR';
+            const userHandle = '@' + (result.user.email?.split('@')[0] || 'user').toLowerCase().replace(/\s+/g, '');
             setProfile(prev => {
               const updated = { ...prev, loginMethod: 'Email Link', name: userName, username: userHandle, uid: result.user.uid };
               storage.setDebounced('troco_user_profile', updated);
@@ -1225,11 +1200,7 @@ export default function App() {
           .catch((err) => {
             logger.error('Magic link sign-in error:', err);
           })
-          .finally(() => {
-            if (!hasResolvedAuthRef.current) {
-              setIsLoadingSession(false);
-            }
-          });
+          .finally(() => setIsLoadingSession(false));
       }
     }
   }, [setIsAuthenticated, setIsLoadingSession, setProfile]);
@@ -1254,7 +1225,7 @@ export default function App() {
   useEffect(() => {
     try {
       localStorage.setItem('troco_hide_demos', String(hideDemos));
-    } catch (_) {}
+    } catch (_) { }
   }, [hideDemos]);
 
   // Verrouillage absolu du scroll global dans l'onglet Chat (comportement application native iOS)
@@ -1501,7 +1472,7 @@ export default function App() {
           if (navigator.vibrate) {
             try {
               navigator.vibrate([400, 150, 400, 150, 400]);
-            } catch (_) {}
+            } catch (_) { }
           }
         }
         if (change.type === 'removed') {
@@ -1544,13 +1515,21 @@ export default function App() {
         logger.warn('[App.js] Global calls toUid error:', err);
       }));
 
-
+      // 4. Écoute de secours par nom de profil si disponible
+      if (profile?.name) {
+        const qName = query(
+          collection(db, 'calls'),
+          where('targetParticipants', 'array-contains', profile.name),
+          limit(5)
+        );
+        unsubs.push(onSnapshot(qName, (snap) => snap.docChanges().forEach(handleCallDocChange), () => { }));
+      }
     } catch (e) {
       logger.warn('[App.js] Error setting up global calls listener:', e);
     }
 
     return () => {
-      unsubs.forEach(u => { try { if (typeof u === 'function') u(); } catch (_) {} });
+      unsubs.forEach(u => { try { if (typeof u === 'function') u(); } catch (_) { } });
     };
   }, [profile?.uid, profile?.name, playRingtone, stopRingtone]);
 
@@ -1621,7 +1600,7 @@ export default function App() {
             notifiedMessageIds.current.delete(oldest);
           }
 
-          const senderTitle = safeName(data.lastSenderName || data.lastSender || data.user, 'Nouveau message');
+          const senderTitle = data.lastSenderName || data.lastSender || data.user || 'Nouveau message';
           const messageText = data.lastMessage || 'Nouveau message reçu';
           const senderAvatar = data.avatar || data.authorAvatar || null;
 
@@ -1647,7 +1626,7 @@ export default function App() {
 
           // Vibration haptique
           if (typeof navigator !== 'undefined' && navigator.vibrate) {
-            try { navigator.vibrate([80, 40, 80]); } catch (_) {}
+            try { navigator.vibrate([80, 40, 80]); } catch (_) { }
           }
         }
       }
@@ -1667,24 +1646,26 @@ export default function App() {
       });
       unsubs.push(unsubUids);
 
-      // 2. Écoute par participants (UID universel)
-      const qParticipants = query(
-        collection(db, 'chats'),
-        where('participants', 'array-contains', String(currentUid))
-      );
-      const unsubParticipants = onSnapshot(qParticipants, (snap) => {
-        snap.docChanges().forEach(handleChatDocChange);
-        isInitial = false;
-      }, (err) => {
-        logger.warn('[App.js] Background message listener error (participants):', err);
-      });
-      unsubs.push(unsubParticipants);
+      // 2. Écoute par participants (nom d'affichage)
+      if (profile?.name) {
+        const qNames = query(
+          collection(db, 'chats'),
+          where('participants', 'array-contains', profile.name)
+        );
+        const unsubNames = onSnapshot(qNames, (snap) => {
+          snap.docChanges().forEach(handleChatDocChange);
+          isInitial = false;
+        }, (err) => {
+          logger.warn('[App.js] Background message listener error (participants):', err);
+        });
+        unsubs.push(unsubNames);
+      }
     } catch (err) {
       logger.warn('[App.js] Background message listener setup error:', err);
     }
 
     return () => {
-      unsubs.forEach(u => { try { if (typeof u === 'function') u(); } catch (_) {} });
+      unsubs.forEach(u => { try { if (typeof u === 'function') u(); } catch (_) { } });
     };
   }, [profile?.uid, profile?.name, profile?.username, setSelectedChat, setActiveTab]);
 
@@ -1999,7 +1980,7 @@ export default function App() {
       if (coords && Array.isArray(coords) && coords.length >= 2) {
         locationCoordsCacheRef.current.set(locKey, coords);
       }
-    }).catch(() => {});
+    }).catch(() => { });
 
     // Décalage déterministe pour rendu immédiat fluide sans blocage
     const match = String(location).match(/(\d+(?:\.\d+)?)\s*km/i);
@@ -2060,115 +2041,116 @@ export default function App() {
   const paymentOptions = ['all', 'credits', 'cash', 'troc', 'hybrid'];
   const paymentLabels = { all: 'Tous', credits: 'Crédits', cash: 'Cash', troc: 'Troc', hybrid: 'Hybride' };
 
-  // ZÉRO MOCK DATA : Initialisation à liste vide. Firestore est l'unique source de vérité.
-  const [listings, setListings] = useState([]);
+  const [listings, setListings] = useState(() => {
+    try {
+      const saved = localStorage.getItem('troco_user_listings');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      logger.warn('Erreur chargement localStorage des annonces', e);
+    }
+    return [];
+  });
 
-  // Purge de tout résidu de mock ou cache obsolète dans localStorage
   useEffect(() => {
     try {
-      localStorage.removeItem('troco_user_listings');
-    } catch (_) {}
-  }, []);
+      localStorage.setItem('troco_user_listings', JSON.stringify(listings));
+    } catch (e) {
+      logger.warn('Erreur sauvegarde localStorage des annonces', e);
+    }
+  }, [listings]);
 
   // ---- ÉTATS PAGINATION FEED (PAGINATED INFINITE SCROLL) ----
   const [lastVisibleListingDoc, setLastVisibleListingDoc] = useState(null);
   const [hasMoreListings, setHasMoreListings] = useState(true);
   const [isLoadingMoreListings, setIsLoadingMoreListings] = useState(false);
 
-  // ---- SYNC TEMPS RÉEL FIRESTORE — Firestore est l'unique source de vérité des annonces ----
-  // Zéro mock data : si Firestore est vide, l'application affiche son EmptyState natif.
+  // ---- SYNC TEMPS RÉEL FIRESTORE & DÉMOS DIFFÉRÉES (LIMIT 50) ----
+  // Chargement des annonces réelles Firestore filtrées par status == 'active' pour se conformer aux règles de sécurité
   useEffect(() => {
-    let unsubFirestore = () => {};
+    let unsubFirestore = () => { };
     let isCancelled = false;
 
-    // Normalisation d'un document annonce Firestore
-    const mapListingDoc = (docSnap) => {
-      const data = docSnap.data() || {};
-      const authorUid = data.authorUid || data.userId || data.sellerId || null;
-      const rawAuthor = data.author || data.authorName || data.userName || '';
-      const cleanAuthor = safeName(rawAuthor, 'Membre Troco');
+    import('./data/mockData').then(({ mockListings }) => {
+      if (isCancelled) return;
+      const demoBase = isDemoMode()
+        ? (mockListings || []).map(l => ({ ...l, status: 'active', isDemo: true }))
+        : [];
 
-      return {
-        id: data.id || docSnap.id,
-        firestoreId: docSnap.id,
-        ...data,
-        author: cleanAuthor,
-        authorUid,
-        status: data.status || 'active',
-        isDemo: false,
-        _doc: docSnap,
-      };
-    };
+      if (isDemoMode()) {
+        setListings(prev => {
+          const hasDemos = prev.some(item => item.isDemo);
+          return hasDemos ? prev : [...prev, ...demoBase];
+        });
+      }
 
-    // Tri chronologique robuste en mémoire (gère Timestamp Firestore, string ISO, millisecondes)
-    const sortListingsByDate = (items) => {
-      return [...items].sort((a, b) => {
-        const getTime = (item) => {
-          if (item.createdAt?.toMillis) return item.createdAt.toMillis();
-          if (item.createdAt?.seconds) return item.createdAt.seconds * 1000;
-          if (typeof item.createdAt === 'string') return new Date(item.createdAt).getTime() || 0;
-          if (typeof item.createdAt === 'number') return item.createdAt;
-          const numId = Number(String(item.id).replace(/\D/g, ''));
-          return isNaN(numId) ? 0 : numId;
-        };
-        return getTime(b) - getTime(a);
-      });
-    };
+      // Requête principale conforme aux règles Firestore (where status == 'active')
+      const initialQuery = query(
+        collection(db, 'listings'),
+        where('status', '==', 'active'),
+        limit(50)
+      );
 
-    // Requête principale conforme aux règles Firestore (where status == 'active')
-    // Évite tout besoin d'index composite complexe et garantit l'accès en lecture
-    const activeListingsQuery = query(
-      collection(db, 'listings'),
-      where('status', '==', 'active')
-    );
+      unsubFirestore = onSnapshot(
+        initialQuery,
+        (snapshot) => {
+          if (isCancelled) return;
+          const firestoreListings = snapshot.docs.map((docSnap) => ({
+            id: docSnap.data().id || docSnap.id,
+            firestoreId: docSnap.id,
+            ...docSnap.data(),
+            status: docSnap.data().status || 'active',
+            isDemo: false,
+            _doc: docSnap,
+          }));
 
-    unsubFirestore = onSnapshot(
-      activeListingsQuery,
-      (snapshot) => {
-        if (isCancelled) return;
-        const firestoreListings = snapshot.docs.map(mapListingDoc);
-        const sortedListings = sortListingsByDate(firestoreListings);
+          const lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
+          setLastVisibleListingDoc(lastDoc);
+          setHasMoreListings(snapshot.docs.length >= 50);
 
-        const lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
-        setLastVisibleListingDoc(lastDoc);
-        setHasMoreListings(snapshot.docs.length >= 20);
-
-        setListings(sortedListings);
-      },
-      (error) => {
-        logger.warn('[Firestore] onSnapshot listings active query error, tentative fallback:', error);
-        if (!isCancelled) {
-          try {
-            const fallbackQuery = query(collection(db, 'listings'), limit(50));
-            unsubFirestore = onSnapshot(
-              fallbackQuery,
-              (fallbackSnap) => {
+          setListings(prev => {
+            const customLocalListings = prev.filter(p => !p.isDemo && !firestoreListings.some(f => f.id === p.id));
+            return [...firestoreListings, ...customLocalListings];
+          });
+        },
+        (error) => {
+          logger.warn('[Firestore] onSnapshot listings query error:', error);
+          if (!isCancelled) {
+            try {
+              const fallbackQuery = query(collection(db, 'listings'), where('status', '==', 'active'));
+              unsubFirestore = onSnapshot(fallbackQuery, (snapshot) => {
                 if (isCancelled) return;
-                const firestoreListings = fallbackSnap.docs.map(mapListingDoc);
-                const sortedListings = sortListingsByDate(firestoreListings);
-
-                const lastDoc = fallbackSnap.docs[fallbackSnap.docs.length - 1] || null;
+                const firestoreListings = snapshot.docs.map((docSnap) => ({
+                  id: docSnap.data().id || docSnap.id,
+                  firestoreId: docSnap.id,
+                  ...docSnap.data(),
+                  status: docSnap.data().status || 'active',
+                  isDemo: false,
+                  _doc: docSnap,
+                }));
+                const lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
                 setLastVisibleListingDoc(lastDoc);
-                setHasMoreListings(fallbackSnap.docs.length >= 20);
-
-                setListings(sortedListings);
-              },
-              (fallbackErr) => {
-                logger.error('[Firestore] onSnapshot listings fallback failed too:', fallbackErr);
-                if (!isCancelled) setListings([]);
-              }
-            );
-          } catch (e) {
-            logger.error('[Firestore] Failed to attach fallback listings listener:', e);
-            if (!isCancelled) setListings([]);
+                setHasMoreListings(snapshot.docs.length >= 50);
+                setListings(prev => {
+                  const customLocalListings = prev.filter(p => !p.isDemo && !firestoreListings.some(f => f.id === p.id));
+                  return [...firestoreListings, ...customLocalListings];
+                });
+              }, (fallbackErr) => {
+                logger.error('[Firestore] Fallback listings query failed:', fallbackErr);
+              });
+            } catch (_) { }
           }
         }
-      }
-    );
+      );
+    }).catch(err => {
+      logger.warn('[MockData] Erreur de chargement différé des annonces démo:', err);
+    });
 
     return () => {
       isCancelled = true;
-      unsubFirestore();
+      try { unsubFirestore(); } catch (_) {}
     };
   }, []);
 
@@ -2285,6 +2267,8 @@ export default function App() {
 
   const filteredListings = useMemo(() => {
     return listings.filter((item) => {
+      if (hideDemos && item.isDemo) return false;
+
       const rawQuery = (deferredSearchQuery || '').trim();
       const cleanQuery = removeAccents(rawQuery);
       const words = cleanQuery.split(/\s+/).filter(Boolean);
@@ -2382,7 +2366,12 @@ export default function App() {
       const bBoost = (b.isBoosted || b.sponsored) ? 1 : 0;
       if (bBoost !== aBoost) return bBoost - aBoost;
 
-      // 2. Annonces urgentes en priorité
+      // 2. Annonces créées par de vrais utilisateurs (humains) avant les annonces Démo / IA
+      const aDemo = (a.isDemo || a.persona || (typeof a.id === 'number' && a.id < 300)) ? 1 : 0;
+      const bDemo = (b.isDemo || b.persona || (typeof b.id === 'number' && b.id < 300)) ? 1 : 0;
+      if (aDemo !== bDemo) return aDemo - bDemo;
+
+      // 3. Annonces urgentes en priorité
       const aUrgent = (a.urgent || a.isUrgent) ? 1 : 0;
       const bUrgent = (b.urgent || b.isUrgent) ? 1 : 0;
       if (bUrgent !== aUrgent) return bUrgent - aUrgent;
@@ -2449,10 +2438,6 @@ export default function App() {
       (listing.authorUid && (listing.authorUid === profile?.uid || listing.authorUid === auth.currentUser?.uid))
     );
 
-    const authorUid = listing.authorUid || listing.userId || listing.sellerId;
-    const authorUser = authorUid ? (usersPublicMap?.get(authorUid) || usersByUid?.get(authorUid)) : null;
-    const resolvedAuthorName = isCurrentUser ? (profile?.name || 'Moi') : safeName(authorUser?.name || authorUser?.displayName || listing.author, 'Membre Troco');
-
     // Détermination stricte des avis légitimes (zéro avis artificiel si 0 transaction complétée)
     let authorReviews = [];
     if (isCurrentUser) {
@@ -2480,7 +2465,13 @@ export default function App() {
 
     const authorPortfolio = isCurrentUser
       ? (portfolioImages && portfolioImages.length > 0 ? portfolioImages : (profile?.portfolioImages || profile?.portfolio || []))
-      : (listing.portfolio || listing.authorProfile?.portfolio || []);
+      : (listing.portfolio || listing.authorProfile?.portfolio || (listing.isDemo && listing.author === 'Sofia M.' ? [
+        'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=600&q=80',
+        'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=600&q=80',
+      ] : listing.isDemo && listing.author === 'Marc L.' ? [
+        'https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=600&q=80',
+        'https://images.unsplash.com/photo-1487958449943-2429e8be8625?auto=format&fit=crop&w=600&q=80',
+      ] : []));
 
     const generic = {
       id: listing.id,
@@ -2497,20 +2488,56 @@ export default function App() {
       translations: listing.translations || {},
       rating: computedRating,
       reviews: computedReviewsCount,
-      author: resolvedAuthorName,
-      authorUid: authorUid || null,
       authorProfile: {
-        name: resolvedAuthorName,
-        avatar: isCurrentUser ? profile.avatar : (authorUser?.avatar || getAuthorAvatar(resolvedAuthorName)),
-        bio: isCurrentUser ? profile.bio : (authorUser?.bio || 'Créateur de contenus, expert en échange de services et passionné de communautés locales.'),
+        name: listing.author,
+        avatar: isCurrentUser ? profile.avatar : getAuthorAvatar(listing.author),
+        bio: isCurrentUser ? profile.bio : 'Créateur de contenus, expert en échange de services et passionné de communautés locales.',
         socials: isCurrentUser ? (profile.socials || []) : ['LinkedIn', 'Instagram'],
         portfolio: authorPortfolio,
         reviews: authorReviews,
       },
     };
 
+    if (isDemoMode() && listing.author === 'Sofia M.' && (listing.isDemo || (typeof listing.id === 'number' && listing.id <= 20))) {
+      return {
+        ...generic,
+        description: listing.description || 'Cours de piano et accompagnement musical pensé pour les débutants et les profils en reconversion. Le cadre est très structuré, chaleureux et adapté à un usage flexible.',
+        wallet: { euros: 15, tokens: 1 },
+        authorProfile: {
+          ...generic.authorProfile,
+          avatar: femaleAvatars[0],
+          bio: 'Professeure de piano, coach de créativité et experte en échanges à distance.',
+          socials: ['LinkedIn', 'Instagram', 'TikTok'],
+          portfolio: [
+            'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=600&q=80',
+            'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=600&q=80',
+          ],
+          reviews: authorReviews,
+        },
+      };
+    }
+
+    if (isDemoMode() && listing.author === 'Marc L.' && (listing.isDemo || (typeof listing.id === 'number' && listing.id <= 20))) {
+      return {
+        ...generic,
+        description: listing.description || 'Prêt d’outillage et service de dépannage local. Tout est pensé pour qu’un échange soit rapide, concret et sécurisé.',
+        wallet: { euros: 12, tokens: 2 },
+        authorProfile: {
+          ...generic.authorProfile,
+          avatar: maleAvatars[0],
+          bio: 'Bricoleur local, passionné de matériel et de partage de services de proximité.',
+          socials: ['LinkedIn', 'Instagram'],
+          portfolio: [
+            'https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=600&q=80',
+            'https://images.unsplash.com/photo-1487958449943-2429e8be8625?auto=format&fit=crop&w=600&q=80',
+          ],
+          reviews: authorReviews,
+        },
+      };
+    }
+
     return generic;
-  }, [profile, portfolioImages, averageRating, getAuthorAvatar, femaleAvatars, maleAvatars, usersPublicMap, usersByUid]);
+  }, [profile, portfolioImages, averageRating, getAuthorAvatar, femaleAvatars, maleAvatars]);
 
   const handleOpenListing = useCallback((listing) => {
     setSelectedListing(getListingDetail(listing));
@@ -2776,75 +2803,75 @@ export default function App() {
   return (
     <LanguageContext.Provider value={langContextValue}>
       <div style={{
-      backgroundColor: 'var(--bg-global)',
-      color: 'var(--text-main)',
-      minHeight: '100vh',
-      height: 'auto',
-      display: 'block',
-      overflowX: 'hidden',
-      transition: 'background-color 0.3s ease, color 0.3s ease',
-      paddingBottom: activeTab === 'chat' ? '0' : '90px',
-      position: 'relative',
-      fontFamily: 'var(--font-family-main)'
-    }}>
-      {/* 🚨 PHASE 49 & 82 : ÉCRAN & BANNIÈRE HORS-LIGNE INTERACTIFS */}
-      <OfflineBanner />
-      <OfflineScreen />
+        backgroundColor: 'var(--bg-global)',
+        color: 'var(--text-main)',
+        minHeight: '100vh',
+        height: 'auto',
+        display: 'block',
+        overflowX: 'hidden',
+        transition: 'background-color 0.3s ease, color 0.3s ease',
+        paddingBottom: activeTab === 'chat' ? '0' : '90px',
+        position: 'relative',
+        fontFamily: 'var(--font-family-main)'
+      }}>
+        {/* 🚨 PHASE 49 & 82 : ÉCRAN & BANNIÈRE HORS-LIGNE INTERACTIFS */}
+        <OfflineBanner />
+        <OfflineScreen />
 
-      {/* 🚨 PHASE 55 : NOTIFICATIONS DYNAMIC ISLAND / TOASTS PREMIUM */}
-      <NotificationPill />
+        {/* 🚨 PHASE 55 : NOTIFICATIONS DYNAMIC ISLAND / TOASTS PREMIUM */}
+        <NotificationPill />
 
-      {/* 🚨 PHASE 114 : EXTINCTION DU CANVAS WEBRGL SUR IOS (VRAM FIX) */}
-      {!isIosOrTouchDevice() ? (
-        <Suspense fallback={null}>
-          <GeometricBackground darkMode={darkMode} />
-        </Suspense>
-      ) : (
-        /* FALLBACK CSS PREMIUM POUR LE BACKGROUND : DÉGRADÉ RADIAL RICHE SANS AUCUN CANVAS */
-        <div
-          data-testid="ios-touch-background-fallback"
-          style={{
+        {/* 🚨 PHASE 114 : EXTINCTION DU CANVAS WEBRGL SUR IOS (VRAM FIX) */}
+        {!isIosOrTouchDevice() ? (
+          <Suspense fallback={null}>
+            <GeometricBackground darkMode={darkMode} />
+          </Suspense>
+        ) : (
+          /* FALLBACK CSS PREMIUM POUR LE BACKGROUND : DÉGRADÉ RADIAL RICHE SANS AUCUN CANVAS */
+          <div
+            data-testid="ios-touch-background-fallback"
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: darkMode
+                ? 'radial-gradient(circle at 50% 10%, rgba(198, 125, 91, 0.18) 0%, rgba(26, 22, 19, 0.95) 60%, #12100E 100%)'
+                : 'radial-gradient(circle at 50% 10%, rgba(198, 125, 91, 0.14) 0%, rgba(250, 247, 242, 0.95) 65%, #FAF7F2 100%)',
+              pointerEvents: 'none',
+              zIndex: -100,
+            }}
+          />
+        )}
+
+        {/* FOND LIQUIDE IRIDESCENT : DÉGRADÉ STATIQUE SUR MOBILE / TACTILE POUR ÉVITER LE DÉPASSEMENT VRAM iOS */}
+        {(isTouchDevice || isMobileDevice) ? (
+          <div style={{
             position: 'fixed',
             inset: 0,
-            background: darkMode
-              ? 'radial-gradient(circle at 50% 10%, rgba(198, 125, 91, 0.18) 0%, rgba(26, 22, 19, 0.95) 60%, #12100E 100%)'
-              : 'radial-gradient(circle at 50% 10%, rgba(198, 125, 91, 0.14) 0%, rgba(250, 247, 242, 0.95) 65%, #FAF7F2 100%)',
+            background: 'radial-gradient(circle at top right, var(--bg-subtle), var(--bg-global))',
             pointerEvents: 'none',
-            zIndex: -100,
-          }}
-        />
-      )}
+            zIndex: 0
+          }} />
+        ) : (
+          <div className="liquid-iridescence-container">
+            <div className="liquid-blob liquid-blob-1" />
+            <div className="liquid-blob liquid-blob-2" />
+            <div className="liquid-blob liquid-blob-3" />
+          </div>
+        )}
 
-      {/* FOND LIQUIDE IRIDESCENT : DÉGRADÉ STATIQUE SUR MOBILE / TACTILE POUR ÉVITER LE DÉPASSEMENT VRAM iOS */}
-      {(isTouchDevice || isMobileDevice) ? (
-        <div style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'radial-gradient(circle at top right, var(--bg-subtle), var(--bg-global))',
-          pointerEvents: 'none',
-          zIndex: 0
-        }} />
-      ) : (
-        <div className="liquid-iridescence-container">
-          <div className="liquid-blob liquid-blob-1" />
-          <div className="liquid-blob liquid-blob-2" />
-          <div className="liquid-blob liquid-blob-3" />
-        </div>
-      )}
-
-      {/* MODALE BLOQUANTE CGU & RGPD OBLIGATOIRE */}
-      {isAuthenticated && !profile?.cguAcceptedAt && (
-        <Suspense fallback={null}>
-          <CguConsentModal
-            isOpen={isAuthenticated && !profile?.cguAcceptedAt}
-            onAccept={handleAcceptCgu}
-            profile={profile}
-            darkMode={darkMode}
-            t={t}
-          />
-        </Suspense>
-      )}
-      <style>{`
+        {/* MODALE BLOQUANTE CGU & RGPD OBLIGATOIRE */}
+        {isAuthenticated && !profile?.cguAcceptedAt && (
+          <Suspense fallback={null}>
+            <CguConsentModal
+              isOpen={isAuthenticated && !profile?.cguAcceptedAt}
+              onAccept={handleAcceptCgu}
+              profile={profile}
+              darkMode={darkMode}
+              t={t}
+            />
+          </Suspense>
+        )}
+        <style>{`
         * { box-sizing: border-box; }
         .premium-main { animation: fadeSlideUp 0.5s cubic-bezier(0.19, 1, 0.22, 1) both; }
         .premium-card, .premium-nav-btn, .premium-pill, .premium-panel, .premium-button {
@@ -2903,2425 +2930,2427 @@ export default function App() {
 
 
 
-      {/* MICRO-INDICATEUR DE PROGRESSION (React 18 useTransition — barre YouTube-style) */}
-      <div
-        aria-hidden="true"
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          height: '3px',
-          zIndex: 99999,
-          pointerEvents: 'none',
-          overflow: 'hidden',
-        }}
-      >
+        {/* MICRO-INDICATEUR DE PROGRESSION (React 18 useTransition — barre YouTube-style) */}
         <div
-          style={{
-            height: '100%',
-            background: 'linear-gradient(90deg, var(--accent-primary, #C67D5B) 0%, #F59E0B 60%, #EC4899 100%)',
-            transformOrigin: 'left center',
-            transform: isPending ? 'scaleX(0.85)' : 'scaleX(0)',
-            opacity: isPending ? 1 : 0,
-            transition: isPending
-              ? 'transform 1.4s cubic-bezier(0.1, 0.4, 0.2, 1), opacity 0.1s ease'
-              : 'transform 0.15s ease, opacity 0.3s ease 0.1s',
-            boxShadow: isPending ? '0 0 10px rgba(198,125,91,0.6)' : 'none',
-          }}
-        />
-      </div>
-
-      {/* BANDEAU MODE DÉMONSTRATION (CONFORMITÉ FINANCIÈRE / AUDIT) */}
-      <DemoModeBanner />
-
-      {/* HEADER FIXE GLASSMORPHISM FLUIDE AVEC CONDENSATION AU SCROLL */}
-      <AppHeader
-        isMobile={isMobile}
-        activeTab={activeTab}
-        selectedChat={selectedChat}
-        callState={callState}
-        endCall={endCall}
-        setActiveTab={switchTab}
-        setSelectedListing={setSelectedListing}
-        setSelectedChat={setSelectedChat}
-        handleOpenPayment={handleOpenPayment}
-        profile={profile}
-        toggleDarkMode={toggleDarkMode}
-        darkMode={darkMode}
-        setIsLangModalOpen={setIsLangModalOpen}
-        currentLang={currentLang}
-        t={t}
-        formatTokenCount={formatTokenCount}
-      />
-
-      {isBoostModalOpen && boostingListing && (
-        <Suspense fallback={null}>
-          <BoostListingModal
-            isOpen={isBoostModalOpen}
-            onClose={() => setIsBoostModalOpen(false)}
-            boostingListing={boostingListing}
-            confirmBoostListing={confirmBoostListing}
-            boostMessage={boostMessage}
-            darkMode={darkMode}
-            profile={profile}
-          />
-        </Suspense>
-      )}
-
-      <LanguageSelectModal
-        isOpen={isLangModalOpen}
-        onClose={() => setIsLangModalOpen(false)}
-        currentLang={currentLang}
-        onSelectLanguage={(code) => {
-          setLang(code);
-          setIsLangModalOpen(false);
-        }}
-        darkMode={darkMode}
-        t={t}
-      />
-
-      <FilterDrawer
-        isOpen={isFilterDrawerOpen}
-        onClose={() => setIsFilterDrawerOpen(false)}
-        filteredListingsCount={filteredListings.length}
-        isInfiniteRadius={isInfiniteRadius}
-        setIsInfiniteRadius={setIsInfiniteRadius}
-        radiusKm={radiusKm}
-        setRadiusKm={setRadiusKm}
-        handleRequestGeolocation={handleRequestGeolocation}
-        isGeolocating={isGeolocating}
-        isGeolocated={isGeolocated}
-        selectedLanguages={selectedLanguages}
-        toggleLanguageFilter={toggleLanguageFilter}
-        selectedPayment={selectedPayment}
-        setSelectedPayment={setSelectedPayment}
-        hideDemos={hideDemos}
-        setHideDemos={setHideDemos}
-        paymentOptions={paymentOptions}
-        paymentLabels={paymentLabels}
-        darkMode={darkMode}
-        t={t}
-      />
-
-      {isCategoryModalOpen && (
-        <Suspense fallback={null}>
-          <CategoryPickerModal
-            isOpen={isCategoryModalOpen}
-            onClose={() => setIsCategoryModalOpen(false)}
-            categoryInput={categoryInput}
-            setCategoryInput={setCategoryInput}
-            handleAddCategory={handleAddCategory}
-            darkMode={darkMode}
-            t={t}
-          />
-        </Suspense>
-      )}
-
-      {selectedListing && (
-        <div
-          className="fixed inset-0 z-[100005] bg-black/90 md:bg-[rgba(28,24,22,0.72)] md:backdrop-blur-md overflow-y-auto"
+          aria-hidden="true"
           style={{
             position: 'fixed',
-            inset: 0,
-            zIndex: 100005,
-            overflowY: 'auto',
-            WebkitOverflowScrolling: 'touch',
-            padding: isMobile ? '12px 8px 90px' : '24px 16px 60px'
+            top: 0,
+            left: 0,
+            right: 0,
+            height: '3px',
+            zIndex: 99999,
+            pointerEvents: 'none',
+            overflow: 'hidden',
           }}
         >
-          <div style={{
-            maxWidth: '760px',
-            margin: '0 auto',
-            backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
-            borderRadius: '28px',
-            overflow: 'hidden',
-            boxShadow: darkMode ? '0 30px 90px rgba(0,0,0,0.75)' : '0 30px 90px rgba(61,53,48,0.25)',
-            border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
-            color: darkMode ? '#FAF7F2' : '#3D3530',
-            animation: 'modalSlideIn 0.55s var(--ease-monopo) both'
-          }}>
+          <div
+            style={{
+              height: '100%',
+              background: 'linear-gradient(90deg, var(--accent-primary, #C67D5B) 0%, #F59E0B 60%, #EC4899 100%)',
+              transformOrigin: 'left center',
+              transform: isPending ? 'scaleX(0.85)' : 'scaleX(0)',
+              opacity: isPending ? 1 : 0,
+              transition: isPending
+                ? 'transform 1.4s cubic-bezier(0.1, 0.4, 0.2, 1), opacity 0.1s ease'
+                : 'transform 0.15s ease, opacity 0.3s ease 0.1s',
+              boxShadow: isPending ? '0 0 10px rgba(198,125,91,0.6)' : 'none',
+            }}
+          />
+        </div>
 
-            {/* EN-TÊTE MOBILE RETOUR TACTILE 44x44px (APPLE HIG) */}
-            {isMobile && (
-              <MobileHeader
-                title={selectedListing.title || "Détail de l'annonce"}
-                subtitle={selectedListing.category || "Troco"}
-                onBack={() => {
-                  setSelectedListing(null);
-                  setSelectedDetailImageIndex(0);
-                  setDetailMediaTab('image');
-                }}
-                darkMode={darkMode}
-              />
-            )}
+        {/* BANDEAU MODE DÉMONSTRATION (CONFORMITÉ FINANCIÈRE / AUDIT) */}
+        <DemoModeBanner />
 
-            {/* CARROUSEL HÉRO INTERACTIF */}
-            <div
-              onTouchStart={handleModalTouchStart}
-              onTouchMove={handleModalTouchMove}
-              onTouchEnd={handleModalTouchEnd}
-              style={{ position: 'relative', width: '100%', height: '340px', backgroundColor: '#1A1715', touchAction: 'pan-y', userSelect: 'none', WebkitUserSelect: 'none', overflow: 'hidden' }}
-            >
-              {detailMediaTab === 'video' && selectedListing.video ? (
-                <video
-                  src={selectedListing.video}
-                  poster={selectedListing.image}
-                  autoPlay
-                  loop
-                  muted
-                  playsInline
-                  onError={() => setDetailMediaTab('image')}
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+        {/* HEADER FIXE GLASSMORPHISM FLUIDE AVEC CONDENSATION AU SCROLL */}
+        <AppHeader
+          isMobile={isMobile}
+          activeTab={activeTab}
+          selectedChat={selectedChat}
+          callState={callState}
+          endCall={endCall}
+          setActiveTab={switchTab}
+          setSelectedListing={setSelectedListing}
+          setSelectedChat={setSelectedChat}
+          handleOpenPayment={handleOpenPayment}
+          profile={profile}
+          toggleDarkMode={toggleDarkMode}
+          darkMode={darkMode}
+          setIsLangModalOpen={setIsLangModalOpen}
+          currentLang={currentLang}
+          t={t}
+          formatTokenCount={formatTokenCount}
+        />
+
+        {isBoostModalOpen && boostingListing && (
+          <Suspense fallback={null}>
+            <BoostListingModal
+              isOpen={isBoostModalOpen}
+              onClose={() => setIsBoostModalOpen(false)}
+              boostingListing={boostingListing}
+              confirmBoostListing={confirmBoostListing}
+              boostMessage={boostMessage}
+              darkMode={darkMode}
+              profile={profile}
+            />
+          </Suspense>
+        )}
+
+        <LanguageSelectModal
+          isOpen={isLangModalOpen}
+          onClose={() => setIsLangModalOpen(false)}
+          currentLang={currentLang}
+          onSelectLanguage={(code) => {
+            setLang(code);
+            setIsLangModalOpen(false);
+          }}
+          darkMode={darkMode}
+          t={t}
+        />
+
+        <FilterDrawer
+          isOpen={isFilterDrawerOpen}
+          onClose={() => setIsFilterDrawerOpen(false)}
+          filteredListingsCount={filteredListings.length}
+          isInfiniteRadius={isInfiniteRadius}
+          setIsInfiniteRadius={setIsInfiniteRadius}
+          radiusKm={radiusKm}
+          setRadiusKm={setRadiusKm}
+          handleRequestGeolocation={handleRequestGeolocation}
+          isGeolocating={isGeolocating}
+          isGeolocated={isGeolocated}
+          selectedLanguages={selectedLanguages}
+          toggleLanguageFilter={toggleLanguageFilter}
+          selectedPayment={selectedPayment}
+          setSelectedPayment={setSelectedPayment}
+          hideDemos={hideDemos}
+          setHideDemos={setHideDemos}
+          paymentOptions={paymentOptions}
+          paymentLabels={paymentLabels}
+          darkMode={darkMode}
+          t={t}
+        />
+
+        {isCategoryModalOpen && (
+          <Suspense fallback={null}>
+            <CategoryPickerModal
+              isOpen={isCategoryModalOpen}
+              onClose={() => setIsCategoryModalOpen(false)}
+              categoryInput={categoryInput}
+              setCategoryInput={setCategoryInput}
+              handleAddCategory={handleAddCategory}
+              darkMode={darkMode}
+              t={t}
+            />
+          </Suspense>
+        )}
+
+        {selectedListing && (
+          <div
+            className="fixed inset-0 z-[100005] bg-black/90 md:bg-[rgba(28,24,22,0.72)] md:backdrop-blur-md overflow-y-auto"
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 100005,
+              overflowY: 'auto',
+              WebkitOverflowScrolling: 'touch',
+              padding: isMobile ? '12px 8px 90px' : '24px 16px 60px'
+            }}
+          >
+            <div style={{
+              maxWidth: '760px',
+              margin: '0 auto',
+              backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
+              borderRadius: '28px',
+              overflow: 'hidden',
+              boxShadow: darkMode ? '0 30px 90px rgba(0,0,0,0.75)' : '0 30px 90px rgba(61,53,48,0.25)',
+              border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
+              color: darkMode ? '#FAF7F2' : '#3D3530',
+              animation: 'modalSlideIn 0.55s var(--ease-monopo) both'
+            }}>
+
+              {/* EN-TÊTE MOBILE RETOUR TACTILE 44x44px (APPLE HIG) */}
+              {isMobile && (
+                <MobileHeader
+                  title={selectedListing.title || "Détail de l'annonce"}
+                  subtitle={selectedListing.category || "Troco"}
+                  onBack={() => {
+                    setSelectedListing(null);
+                    setSelectedDetailImageIndex(0);
+                    setDetailMediaTab('image');
+                  }}
+                  darkMode={darkMode}
                 />
-              ) : (
-                (() => {
-                  const gallery = selectedListing.gallery && selectedListing.gallery.length > 0 ? selectedListing.gallery : [selectedListing.image];
-                  return (
-                    <div style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
-                      {gallery.map((imgSrc, idx) => {
-                        const isActive = idx === selectedDetailImageIndex;
-                        return (
-                          <img
-                            key={idx}
-                            src={imgSrc}
-                            alt={selectedListing.title}
-                            draggable={false}
-                            onError={(e) => { e.target.src = getFallbackImage(selectedListing.category, selectedListing.title); }}
-                            style={{
-                              position: 'absolute',
-                              inset: 0,
-                              width: '100%',
-                              height: '100%',
-                              objectFit: 'cover',
-                              opacity: isActive ? 1 : 0,
-                              transition: 'opacity 0.4s ease-in-out, transform 0.4s ease-in-out',
-                              transform: isActive ? 'scale(1)' : 'scale(1.03)',
-                              pointerEvents: 'none',
-                              WebkitUserDrag: 'none',
-                              userSelect: 'none',
-                              WebkitUserSelect: 'none',
-                              zIndex: isActive ? 2 : 1
-                            }}
-                          />
-                        );
-                      })}
-                    </div>
-                  );
-                })()
               )}
 
-              {/* BOUTON FERMER */}
-              <button
-                onClick={() => { setSelectedListing(null); setSelectedDetailImageIndex(0); setDetailMediaTab('image'); }}
-                aria-label="Fermer les détails de l'annonce"
-                style={{ position: 'absolute', top: '14px', right: '14px', border: 'none', width: '38px', height: '38px', borderRadius: '50%', backgroundColor: 'rgba(250,247,242,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10, boxShadow: '0 4px 12px rgba(61,53,48,0.15)', color: '#3D3530' }}
+              {/* CARROUSEL HÉRO INTERACTIF */}
+              <div
+                onTouchStart={handleModalTouchStart}
+                onTouchMove={handleModalTouchMove}
+                onTouchEnd={handleModalTouchEnd}
+                style={{ position: 'relative', width: '100%', height: '340px', backgroundColor: '#1A1715', touchAction: 'pan-y', userSelect: 'none', WebkitUserSelect: 'none', overflow: 'hidden' }}
               >
-                <X size={18} />
-              </button>
+                {detailMediaTab === 'video' && selectedListing.video ? (
+                  <video
+                    src={selectedListing.video}
+                    poster={selectedListing.image}
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    onError={() => setDetailMediaTab('image')}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                ) : (
+                  (() => {
+                    const gallery = selectedListing.gallery && selectedListing.gallery.length > 0 ? selectedListing.gallery : [selectedListing.image];
+                    return (
+                      <div style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
+                        {gallery.map((imgSrc, idx) => {
+                          const isActive = idx === selectedDetailImageIndex;
+                          return (
+                            <img
+                              key={idx}
+                              src={imgSrc}
+                              alt={selectedListing.title}
+                              draggable={false}
+                              onError={(e) => { e.target.src = getFallbackImage(selectedListing.category, selectedListing.title); }}
+                              style={{
+                                position: 'absolute',
+                                inset: 0,
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover',
+                                opacity: isActive ? 1 : 0,
+                                transition: 'opacity 0.4s ease-in-out, transform 0.4s ease-in-out',
+                                transform: isActive ? 'scale(1)' : 'scale(1.03)',
+                                pointerEvents: 'none',
+                                WebkitUserDrag: 'none',
+                                userSelect: 'none',
+                                WebkitUserSelect: 'none',
+                                zIndex: isActive ? 2 : 1
+                              }}
+                            />
+                          );
+                        })}
+                      </div>
+                    );
+                  })()
+                )}
 
-              {selectedListing.isBoosted && <span className="sponsored-badge" style={{ position: 'absolute', top: '14px', left: '14px', backgroundColor: '#F59E0B', color: '#FFF', fontSize: '11px', fontWeight: '800', padding: '6px 10px', borderRadius: '10px', boxShadow: '0 6px 16px rgba(245,158,11,0.45)', zIndex: 10 }}>🔥 Sponsorisé</span>}
+                {/* BOUTON FERMER */}
+                <button
+                  onClick={() => { setSelectedListing(null); setSelectedDetailImageIndex(0); setDetailMediaTab('image'); }}
+                  aria-label="Fermer les détails de l'annonce"
+                  style={{ position: 'absolute', top: '14px', right: '14px', border: 'none', width: '38px', height: '38px', borderRadius: '50%', backgroundColor: 'rgba(250,247,242,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10, boxShadow: '0 4px 12px rgba(61,53,48,0.15)', color: '#3D3530' }}
+                >
+                  <X size={18} />
+                </button>
 
-              {/* FLÈCHES DE NAVIGATION LATÉRALE */}
-              {detailMediaTab === 'image' && (selectedListing.gallery?.length || 0) > 1 && (
-                <>
-                  <button
-                    onClick={() => setSelectedDetailImageIndex(prev => (prev > 0 ? prev - 1 : (selectedListing.gallery.length - 1)))}
-                    aria-label="Photo précédente"
-                    style={{
-                      position: 'absolute', top: '50%', left: '12px',
-                      transform: 'translateY(-50%)',
-                      border: 'none',
-                      width: '38px', height: '38px',
-                      borderRadius: '50%',
-                      backgroundColor: 'rgba(61,53,48,0.4)',
-                      backdropFilter: 'blur(8px)',
-                      WebkitBackdropFilter: 'blur(8px)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      cursor: 'pointer', zIndex: 10,
-                      transition: 'all 0.2s ease',
-                      outline: 'none',
-                      boxShadow: 'none'
-                    }}
-                  >
-                    <ChevronLeft size={20} color="#FFFFFF" strokeWidth={2.5} />
+                {selectedListing.isBoosted && <span className="sponsored-badge" style={{ position: 'absolute', top: '14px', left: '14px', backgroundColor: '#F59E0B', color: '#FFF', fontSize: '11px', fontWeight: '800', padding: '6px 10px', borderRadius: '10px', boxShadow: '0 6px 16px rgba(245,158,11,0.45)', zIndex: 10 }}>🔥 Sponsorisé</span>}
+
+                {/* FLÈCHES DE NAVIGATION LATÉRALE */}
+                {detailMediaTab === 'image' && (selectedListing.gallery?.length || 0) > 1 && (
+                  <>
+                    <button
+                      onClick={() => setSelectedDetailImageIndex(prev => (prev > 0 ? prev - 1 : (selectedListing.gallery.length - 1)))}
+                      aria-label="Photo précédente"
+                      style={{
+                        position: 'absolute', top: '50%', left: '12px',
+                        transform: 'translateY(-50%)',
+                        border: 'none',
+                        width: '38px', height: '38px',
+                        borderRadius: '50%',
+                        backgroundColor: 'rgba(61,53,48,0.4)',
+                        backdropFilter: 'blur(8px)',
+                        WebkitBackdropFilter: 'blur(8px)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        cursor: 'pointer', zIndex: 10,
+                        transition: 'all 0.2s ease',
+                        outline: 'none',
+                        boxShadow: 'none'
+                      }}
+                    >
+                      <ChevronLeft size={20} color="#FFFFFF" strokeWidth={2.5} />
+                    </button>
+                    <button
+                      onClick={() => setSelectedDetailImageIndex(prev => (prev < (selectedListing.gallery.length - 1) ? prev + 1 : 0))}
+                      aria-label="Photo suivante"
+                      style={{
+                        position: 'absolute', top: '50%', right: '12px',
+                        transform: 'translateY(-50%)',
+                        border: 'none',
+                        width: '38px', height: '38px',
+                        borderRadius: '50%',
+                        backgroundColor: 'rgba(61,53,48,0.4)',
+                        backdropFilter: 'blur(8px)',
+                        WebkitBackdropFilter: 'blur(8px)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        cursor: 'pointer', zIndex: 10,
+                        transition: 'all 0.2s ease',
+                        outline: 'none',
+                        boxShadow: 'none'
+                      }}
+                    >
+                      <ChevronRight size={20} color="#FFFFFF" strokeWidth={2.5} />
+                    </button>
+                  </>
+                )}
+
+                {/* PUCES INDICATRICES */}
+                {detailMediaTab === 'image' && (selectedListing.gallery?.length || 0) > 1 && (
+                  <div style={{ position: 'absolute', bottom: '14px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '6px', zIndex: 10, backgroundColor: 'rgba(61,53,48,0.6)', padding: '6px 12px', borderRadius: '999px', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
+                    {selectedListing.gallery.map((_, idx) => (
+                      <div
+                        key={idx}
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`Photo numéro ${idx + 1}`}
+                        onClick={() => setSelectedDetailImageIndex(idx)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            setSelectedDetailImageIndex(idx);
+                          }
+                        }}
+                        style={{
+                          width: selectedDetailImageIndex === idx ? '20px' : '8px',
+                          height: '8px',
+                          borderRadius: '999px',
+                          backgroundColor: selectedDetailImageIndex === idx ? '#C67D5B' : 'rgba(255,255,255,0.5)',
+                          cursor: 'pointer',
+                          transition: 'all 0.3s ease'
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {/* COMMUTATEUR MÉDIA BASCULE VIDÉO / GALERIE */}
+                <div style={{ position: 'absolute', bottom: '14px', left: '14px', display: 'flex', gap: '8px', zIndex: 10 }}>
+                  {selectedListing.video && (
+                    <button onClick={() => setDetailMediaTab('video')} style={{ border: 'none', borderRadius: '999px', padding: '7px 14px', backgroundColor: detailMediaTab === 'video' ? '#C67D5B' : 'rgba(61,53,48,0.75)', color: '#FFF', fontSize: '12px', fontWeight: '800', cursor: 'pointer', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <Video size={13} /> {t('demoVideo')}
+                    </button>
+                  )}
+                  <button onClick={() => setDetailMediaTab('image')} style={{ border: 'none', borderRadius: '999px', padding: '7px 14px', backgroundColor: detailMediaTab === 'image' ? '#C67D5B' : 'rgba(61,53,48,0.75)', color: '#FFF', fontSize: '12px', fontWeight: '800', cursor: 'pointer', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <Camera size={13} /> Photos ({selectedListing.gallery?.length || 1})
                   </button>
-                  <button
-                    onClick={() => setSelectedDetailImageIndex(prev => (prev < (selectedListing.gallery.length - 1) ? prev + 1 : 0))}
-                    aria-label="Photo suivante"
-                    style={{
-                      position: 'absolute', top: '50%', right: '12px',
-                      transform: 'translateY(-50%)',
-                      border: 'none',
-                      width: '38px', height: '38px',
-                      borderRadius: '50%',
-                      backgroundColor: 'rgba(61,53,48,0.4)',
-                      backdropFilter: 'blur(8px)',
-                      WebkitBackdropFilter: 'blur(8px)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      cursor: 'pointer', zIndex: 10,
-                      transition: 'all 0.2s ease',
-                      outline: 'none',
-                      boxShadow: 'none'
-                    }}
-                  >
-                    <ChevronRight size={20} color="#FFFFFF" strokeWidth={2.5} />
-                  </button>
-                </>
-              )}
+                </div>
+              </div>
 
-              {/* PUCES INDICATRICES */}
-              {detailMediaTab === 'image' && (selectedListing.gallery?.length || 0) > 1 && (
-                <div style={{ position: 'absolute', bottom: '14px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '6px', zIndex: 10, backgroundColor: 'rgba(61,53,48,0.6)', padding: '6px 12px', borderRadius: '999px', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
-                  {selectedListing.gallery.map((_, idx) => (
-                    <div
-                      key={idx}
-                      role="button"
-                      tabIndex={0}
-                      aria-label={`Photo numéro ${idx + 1}`}
-                      onClick={() => setSelectedDetailImageIndex(idx)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          setSelectedDetailImageIndex(idx);
+              <div style={{ padding: '20px' }}>
+                {(() => {
+                  const isDetailShowingOriginal = !!showingOriginalListings[selectedListing.id];
+                  const detailDisplayContent = getListingDisplayContent(selectedListing, currentLang, isDetailShowingOriginal);
+                  return (
+                    <>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', gap: '10px', flexWrap: 'wrap' }}>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 10px', borderRadius: '999px', backgroundColor: darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4', color: darkMode ? '#FAF7F2' : '#A8644A', fontSize: '11px', fontWeight: '800' }}>
+                              <Sparkles size={12} /> {t('verifiedOffer')}
+                            </div>
+                            {(selectedListing.isDemo || (typeof selectedListing.id === 'number' && selectedListing.id <= 20)) && (
+                              <span style={{
+                                fontSize: '10.5px',
+                                fontWeight: '750',
+                                letterSpacing: '0.04em',
+                                padding: '5px 11px',
+                                borderRadius: '999px',
+                                backgroundColor: 'var(--bg-subtle)',
+                                color: 'var(--accent-primary)',
+                                border: '1px solid var(--border-color)',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '5px',
+                                textTransform: 'uppercase'
+                              }}>
+                                <Sparkles size={12} color="var(--accent-primary)" />
+                                Exemple Démo
+                              </span>
+                            )}
+                          </div>
+                          <h3 className="font-editorial-heading" style={{ margin: '0 0 4px 0', fontSize: '24px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{detailDisplayContent.title}</h3>
+                          {currentLang !== (selectedListing.nativeLang || 'FR') && (
+                            <button
+                              onClick={(e) => toggleOriginalListing(selectedListing.id, e)}
+                              className="premium-button"
+                              style={{
+                                border: 'none',
+                                backgroundColor: 'transparent',
+                                color: '#C67D5B',
+                                fontSize: '12px',
+                                fontWeight: '800',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '5px',
+                                padding: '2px 0 6px 0'
+                              }}
+                            >
+                              <Globe size={13} color="#C67D5B" />
+                              {isDetailShowingOriginal ? t('showTranslation') : t('showOriginal')}
+                            </button>
+                          )}
+                        </div>
+                        {(() => {
+                          const authorName = selectedListing.authorProfile?.name || selectedListing.author || 'Membre Troco';
+                          const authorUid = selectedListing.authorProfile?.uid || selectedListing.authorUid || null;
+                          const isOwnListing = Boolean(
+                            (profile?.name && authorName === profile.name) ||
+                            (authorUid && (authorUid === profile?.uid || authorUid === auth.currentUser?.uid))
+                          );
+
+                          return !isOwnListing ? (
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                              <button
+                                type="button"
+                                onClick={() => handleViewOnMap(selectedListing)}
+                                className="premium-button"
+                                title="Centrer la carte interactive sur cette annonce"
+                                style={{
+                                  border: darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #E8DDD3',
+                                  borderRadius: '999px',
+                                  padding: '11px 14px',
+                                  backgroundColor: darkMode ? '#1A1715' : '#FFF',
+                                  color: darkMode ? '#FAF7F2' : '#3D3530',
+                                  fontWeight: '700',
+                                  fontSize: '12px',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                }}
+                              >
+                                <MapPin size={14} color="#C67D5B" /> {t('viewOnMap') || 'Voir sur la carte'}
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setReportTarget({
+                                    listing: selectedListing,
+                                    user: { name: authorName, uid: authorUid }
+                                  });
+                                  setIsReportModalOpen(true);
+                                }}
+                                className="premium-button"
+                                title="Signaler un contenu abusif ou suspect"
+                                style={{
+                                  border: 'none',
+                                  borderRadius: '999px',
+                                  padding: '11px 14px',
+                                  backgroundColor: darkMode ? 'rgba(239,68,68,0.2)' : '#FEF2F2',
+                                  color: '#EF4444',
+                                  fontWeight: '700',
+                                  fontSize: '12px',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '5px',
+                                }}
+                              >
+                                <ShieldAlert size={14} /> Signaler
+                              </button>
+                              <button onClick={() => handleStartDiscussion({ id: selectedListing.id, title: selectedListing.title, author: authorName, compensation: selectedListing.compensation })} className="premium-button" style={{ border: 'none', borderRadius: '999px', padding: '11px 16px', background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)', color: '#FFF', fontWeight: '800', cursor: 'pointer', boxShadow: '0 8px 20px rgba(198,125,91,0.35)' }}>{t('startDiscussion')}</button>
+                            </div>
+                          ) : (
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                              <button
+                                type="button"
+                                onClick={() => handleViewOnMap(selectedListing)}
+                                className="premium-button"
+                                title="Centrer la carte interactive sur cette annonce"
+                                style={{
+                                  border: darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #E8DDD3',
+                                  borderRadius: '999px',
+                                  padding: '10px 14px',
+                                  backgroundColor: darkMode ? '#1A1715' : '#FFF',
+                                  color: darkMode ? '#FAF7F2' : '#3D3530',
+                                  fontWeight: '700',
+                                  fontSize: '12px',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                }}
+                              >
+                                <MapPin size={14} color="#C67D5B" /> {t('viewOnMap') || 'Voir sur la carte'}
+                              </button>
+                              <div style={{ backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', color: darkMode ? '#D4C5B5' : '#6B5E54', padding: '10px 16px', borderRadius: '999px', fontSize: '13px', fontWeight: '700', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3' }}>{t('authorAnnc')}</div>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                      <p style={{ margin: '0 0 14px', lineHeight: 1.7, color: darkMode ? '#D4C5B5' : '#6B5E54', fontSize: '14px' }}>{detailDisplayContent.description}</p>
+                    </>
+                  );
+                })()}
+
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '14px' }}>
+                  {localizeTags(selectedListing.tags, currentLang).map(tag => (
+                    <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4', color: darkMode ? '#FAF7F2' : '#A8644A', borderRadius: '999px', padding: '5px 10px', fontSize: '11px', fontWeight: '800' }}><Tag size={11} /> {tag}</span>
+                  ))}
+                </div>
+
+                <div style={{ border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3', borderRadius: '16px', padding: '14px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', marginBottom: '14px' }}>
+                  <div style={{ fontWeight: '800', fontSize: '13px', color: darkMode ? '#FAF7F2' : '#3D3530', marginBottom: '6px' }}>{t('compensation')}</div>
+                  <div style={{ fontSize: '13px', color: '#C67D5B', fontWeight: '700' }}>{formatCompensation(selectedListing.compensation)}</div>
+                </div>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '14px', padding: '14px', borderRadius: '16px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3' }}>
+                  <img src={selectedListing.authorProfile?.avatar || selectedListing.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'} alt={selectedListing.authorProfile?.name || selectedListing.author || 'Auteur'} style={{ width: '56px', height: '56px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #E8DDD3' }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{selectedListing.authorProfile?.name || selectedListing.author || 'Membre Troco'}</div>
+                    <div style={{ fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54', marginTop: '4px' }}>{getBioTranslation(selectedListing.authorProfile?.bio || selectedListing.bio || '', currentLang, !!showingOriginalListings[selectedListing.id])}</div>
+                  </div>
+                </div>
+                <div style={{ marginBottom: '14px' }}>
+                  <div style={{ fontWeight: '800', fontSize: '13px', color: darkMode ? '#FAF7F2' : '#3D3530', marginBottom: '8px' }}>{t('socialNetworks')}</div>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    {(selectedListing.authorProfile?.socials || selectedListing.socials || []).map(link => <span key={link} style={{ border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', borderRadius: '999px', padding: '6px 10px', fontSize: '12px', color: '#C67D5B', fontWeight: '700', backgroundColor: darkMode ? '#1A1715' : '#FAF7F2' }}>{link}</span>)}
+                  </div>
+                </div>
+                {(selectedListing.authorProfile?.portfolio || selectedListing.portfolio) && (selectedListing.authorProfile?.portfolio || selectedListing.portfolio).length > 0 && (
+                  <div style={{ marginBottom: '14px' }}>
+                    <div style={{ fontWeight: '800', fontSize: '13px', color: darkMode ? '#FAF7F2' : '#3D3530', marginBottom: '8px' }}>{t('portfolio')}</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '8px' }}>
+                      {(selectedListing.authorProfile?.portfolio || selectedListing.portfolio).map((image, index) => (
+                        <img key={image + index} src={image} alt={`Réalisation du portfolio numéro ${index + 1}`} style={{ width: '100%', height: '80px', objectFit: 'cover', borderRadius: '14px' }} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div>
+                  <div style={{ fontWeight: '800', fontSize: '13px', color: darkMode ? '#FAF7F2' : '#3D3530', marginBottom: '8px' }}>{t('reviews')}</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {(selectedListing.authorProfile?.reviews || selectedListing.authorReviews) && (selectedListing.authorProfile?.reviews || selectedListing.authorReviews).length > 0 ? (
+                      (selectedListing.authorProfile?.reviews || selectedListing.authorReviews).map((review, index) => (
+                        <div key={review.text + index} style={{ border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3', borderRadius: '14px', padding: '12px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8' }}>
+                          <div style={{ color: '#F59E0B', marginBottom: '4px' }}>{'⭐'.repeat(review.rating)}{'☆'.repeat(Math.max(0, 5 - review.rating))}</div>
+                          <div style={{ fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>{localizeReview(review.text, currentLang)}</div>
+                        </div>
+                      ))
+                    ) : (
+                      <div style={{ fontSize: '12.5px', color: darkMode ? '#D4C5B5' : '#6B5E54', fontStyle: 'italic', padding: '12px 14px', borderRadius: '14px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3' }}>
+                        🤝 Nouveau membre • Aucun avis pour le moment (0 transaction clôturée)
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {isAdmin && (
+                  <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: darkMode ? '1px solid rgba(239,68,68,0.3)' : '1px solid #FEE2E2' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (window.confirm(`[ADMINISTRATEUR]\nConfirmez-vous la suppression définitive de l'annonce "${selectedListing.title}" ?`)) {
+                          handleAdminDeleteListing(selectedListing);
+                          setSelectedListing(null);
                         }
                       }}
                       style={{
-                        width: selectedDetailImageIndex === idx ? '20px' : '8px',
-                        height: '8px',
-                        borderRadius: '999px',
-                        backgroundColor: selectedDetailImageIndex === idx ? '#C67D5B' : 'rgba(255,255,255,0.5)',
+                        width: '100%',
+                        padding: '12px',
+                        borderRadius: '14px',
+                        backgroundColor: '#EF4444',
+                        color: '#FFFFFF',
+                        fontWeight: '800',
+                        fontSize: '13px',
+                        border: 'none',
                         cursor: 'pointer',
-                        transition: 'all 0.3s ease'
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        boxShadow: '0 6px 16px rgba(239,68,68,0.25)'
                       }}
-                    />
-                  ))}
-                </div>
-              )}
-
-              {/* COMMUTATEUR MÉDIA BASCULE VIDÉO / GALERIE */}
-              <div style={{ position: 'absolute', bottom: '14px', left: '14px', display: 'flex', gap: '8px', zIndex: 10 }}>
-                {selectedListing.video && (
-                  <button onClick={() => setDetailMediaTab('video')} style={{ border: 'none', borderRadius: '999px', padding: '7px 14px', backgroundColor: detailMediaTab === 'video' ? '#C67D5B' : 'rgba(61,53,48,0.75)', color: '#FFF', fontSize: '12px', fontWeight: '800', cursor: 'pointer', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                    <Video size={13} /> {t('demoVideo')}
-                  </button>
-                )}
-                <button onClick={() => setDetailMediaTab('image')} style={{ border: 'none', borderRadius: '999px', padding: '7px 14px', backgroundColor: detailMediaTab === 'image' ? '#C67D5B' : 'rgba(61,53,48,0.75)', color: '#FFF', fontSize: '12px', fontWeight: '800', cursor: 'pointer', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                  <Camera size={13} /> Photos ({selectedListing.gallery?.length || 1})
-                </button>
-              </div>
-            </div>
-
-            <div style={{ padding: '20px' }}>
-              {(() => {
-                const isDetailShowingOriginal = !!showingOriginalListings[selectedListing.id];
-                const detailDisplayContent = getListingDisplayContent(selectedListing, currentLang, isDetailShowingOriginal);
-                return (
-                  <>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', gap: '10px', flexWrap: 'wrap' }}>
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '8px' }}>
-                          <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 10px', borderRadius: '999px', backgroundColor: darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4', color: darkMode ? '#FAF7F2' : '#A8644A', fontSize: '11px', fontWeight: '800' }}>
-                            <Sparkles size={12} /> {t('verifiedOffer')}
-                          </div>
-
-                        </div>
-                        <h3 className="font-editorial-heading" style={{ margin: '0 0 4px 0', fontSize: '24px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{detailDisplayContent.title}</h3>
-                        {currentLang !== (selectedListing.nativeLang || 'FR') && (
-                          <button
-                            onClick={(e) => toggleOriginalListing(selectedListing.id, e)}
-                            className="premium-button"
-                            style={{
-                              border: 'none',
-                              backgroundColor: 'transparent',
-                              color: '#C67D5B',
-                              fontSize: '12px',
-                              fontWeight: '800',
-                              cursor: 'pointer',
-                              display: 'inline-flex',
-                              alignItems: 'center',
-                              gap: '5px',
-                              padding: '2px 0 6px 0'
-                            }}
-                          >
-                            <Globe size={13} color="#C67D5B" />
-                            {isDetailShowingOriginal ? t('showTranslation') : t('showOriginal')}
-                          </button>
-                        )}
-                      </div>
-                      {(() => {
-                        const authorName = selectedListing.authorProfile?.name || selectedListing.author || 'Membre Troco';
-                        const authorUid = selectedListing.authorProfile?.uid || selectedListing.authorUid || null;
-                        const isOwnListing = Boolean(
-                          (profile?.name && authorName === profile.name) ||
-                          (authorUid && (authorUid === profile?.uid || authorUid === auth.currentUser?.uid))
-                        );
-
-                        return !isOwnListing ? (
-                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-                            <button
-                              type="button"
-                              onClick={() => handleViewOnMap(selectedListing)}
-                              className="premium-button"
-                              title="Centrer la carte interactive sur cette annonce"
-                              style={{
-                                border: darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #E8DDD3',
-                                borderRadius: '999px',
-                                padding: '11px 14px',
-                                backgroundColor: darkMode ? '#1A1715' : '#FFF',
-                                color: darkMode ? '#FAF7F2' : '#3D3530',
-                                fontWeight: '700',
-                                fontSize: '12px',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                              }}
-                            >
-                              <MapPin size={14} color="#C67D5B" /> {t('viewOnMap') || 'Voir sur la carte'}
-                            </button>
-                            <button
-                              onClick={() => {
-                                setReportTarget({
-                                  listing: selectedListing,
-                                  user: { name: authorName, uid: authorUid }
-                                });
-                                setIsReportModalOpen(true);
-                              }}
-                              className="premium-button"
-                              title="Signaler un contenu abusif ou suspect"
-                              style={{
-                                border: 'none',
-                                borderRadius: '999px',
-                                padding: '11px 14px',
-                                backgroundColor: darkMode ? 'rgba(239,68,68,0.2)' : '#FEF2F2',
-                                color: '#EF4444',
-                                fontWeight: '700',
-                                fontSize: '12px',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '5px',
-                              }}
-                            >
-                              <ShieldAlert size={14} /> Signaler
-                            </button>
-                            <button onClick={() => handleStartDiscussion({ id: selectedListing.id, title: selectedListing.title, author: authorName, compensation: selectedListing.compensation })} className="premium-button" style={{ border: 'none', borderRadius: '999px', padding: '11px 16px', background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)', color: '#FFF', fontWeight: '800', cursor: 'pointer', boxShadow: '0 8px 20px rgba(198,125,91,0.35)' }}>{t('startDiscussion')}</button>
-                          </div>
-                        ) : (
-                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                            <button
-                              type="button"
-                              onClick={() => handleViewOnMap(selectedListing)}
-                              className="premium-button"
-                              title="Centrer la carte interactive sur cette annonce"
-                              style={{
-                                border: darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #E8DDD3',
-                                borderRadius: '999px',
-                                padding: '10px 14px',
-                                backgroundColor: darkMode ? '#1A1715' : '#FFF',
-                                color: darkMode ? '#FAF7F2' : '#3D3530',
-                                fontWeight: '700',
-                                fontSize: '12px',
-                                cursor: 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                              }}
-                            >
-                              <MapPin size={14} color="#C67D5B" /> {t('viewOnMap') || 'Voir sur la carte'}
-                            </button>
-                            <div style={{ backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', color: darkMode ? '#D4C5B5' : '#6B5E54', padding: '10px 16px', borderRadius: '999px', fontSize: '13px', fontWeight: '700', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3' }}>{t('authorAnnc')}</div>
-                          </div>
-                        );
-                      })()}
-                    </div>
-                    <p style={{ margin: '0 0 14px', lineHeight: 1.7, color: darkMode ? '#D4C5B5' : '#6B5E54', fontSize: '14px' }}>{detailDisplayContent.description}</p>
-                  </>
-                );
-              })()}
-
-              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '14px' }}>
-                {localizeTags(selectedListing.tags, currentLang).map(tag => (
-                  <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4', color: darkMode ? '#FAF7F2' : '#A8644A', borderRadius: '999px', padding: '5px 10px', fontSize: '11px', fontWeight: '800' }}><Tag size={11} /> {tag}</span>
-                ))}
-              </div>
-
-              <div style={{ border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3', borderRadius: '16px', padding: '14px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', marginBottom: '14px' }}>
-                <div style={{ fontWeight: '800', fontSize: '13px', color: darkMode ? '#FAF7F2' : '#3D3530', marginBottom: '6px' }}>{t('compensation')}</div>
-                <div style={{ fontSize: '13px', color: '#C67D5B', fontWeight: '700' }}>{formatCompensation(selectedListing.compensation)}</div>
-              </div>
-              <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '14px', padding: '14px', borderRadius: '16px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3' }}>
-                <img src={selectedListing.authorProfile?.avatar || selectedListing.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'} alt={selectedListing.authorProfile?.name || selectedListing.author || 'Auteur'} style={{ width: '56px', height: '56px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #E8DDD3' }} />
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{selectedListing.authorProfile?.name || selectedListing.author || 'Membre Troco'}</div>
-                  <div style={{ fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54', marginTop: '4px' }}>{getBioTranslation(selectedListing.authorProfile?.bio || selectedListing.bio || '', currentLang, !!showingOriginalListings[selectedListing.id])}</div>
-                </div>
-              </div>
-              <div style={{ marginBottom: '14px' }}>
-                <div style={{ fontWeight: '800', fontSize: '13px', color: darkMode ? '#FAF7F2' : '#3D3530', marginBottom: '8px' }}>{t('socialNetworks')}</div>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  {(selectedListing.authorProfile?.socials || selectedListing.socials || []).map(link => <span key={link} style={{ border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', borderRadius: '999px', padding: '6px 10px', fontSize: '12px', color: '#C67D5B', fontWeight: '700', backgroundColor: darkMode ? '#1A1715' : '#FAF7F2' }}>{link}</span>)}
-                </div>
-              </div>
-              {(selectedListing.authorProfile?.portfolio || selectedListing.portfolio) && (selectedListing.authorProfile?.portfolio || selectedListing.portfolio).length > 0 && (
-                <div style={{ marginBottom: '14px' }}>
-                  <div style={{ fontWeight: '800', fontSize: '13px', color: darkMode ? '#FAF7F2' : '#3D3530', marginBottom: '8px' }}>{t('portfolio')}</div>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '8px' }}>
-                    {(selectedListing.authorProfile?.portfolio || selectedListing.portfolio).map((image, index) => (
-                      <img key={image + index} src={image} alt={`Réalisation du portfolio numéro ${index + 1}`} style={{ width: '100%', height: '80px', objectFit: 'cover', borderRadius: '14px' }} />
-                    ))}
+                    >
+                      <Trash2 size={16} /> Supprimer cette annonce (Action Administrateur)
+                    </button>
                   </div>
-                </div>
-              )}
-              <div>
-                <div style={{ fontWeight: '800', fontSize: '13px', color: darkMode ? '#FAF7F2' : '#3D3530', marginBottom: '8px' }}>{t('reviews')}</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                  {(selectedListing.authorProfile?.reviews || selectedListing.authorReviews) && (selectedListing.authorProfile?.reviews || selectedListing.authorReviews).length > 0 ? (
-                    (selectedListing.authorProfile?.reviews || selectedListing.authorReviews).map((review, index) => (
-                      <div key={review.text + index} style={{ border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3', borderRadius: '14px', padding: '12px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8' }}>
-                        <div style={{ color: '#F59E0B', marginBottom: '4px' }}>{'⭐'.repeat(review.rating)}{'☆'.repeat(Math.max(0, 5 - review.rating))}</div>
-                        <div style={{ fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>{localizeReview(review.text, currentLang)}</div>
-                      </div>
-                    ))
-                  ) : (
-                    <div style={{ fontSize: '12.5px', color: darkMode ? '#D4C5B5' : '#6B5E54', fontStyle: 'italic', padding: '12px 14px', borderRadius: '14px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3' }}>
-                      🤝 Nouveau membre • Aucun avis pour le moment (0 transaction clôturée)
-                    </div>
-                  )}
-                </div>
+                )}
               </div>
-
-              {isAdmin && (
-                <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: darkMode ? '1px solid rgba(239,68,68,0.3)' : '1px solid #FEE2E2' }}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (window.confirm(`[ADMINISTRATEUR]\nConfirmez-vous la suppression définitive de l'annonce "${selectedListing.title}" ?`)) {
-                        handleAdminDeleteListing(selectedListing);
-                        setSelectedListing(null);
-                      }
-                    }}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      borderRadius: '14px',
-                      backgroundColor: '#EF4444',
-                      color: '#FFFFFF',
-                      fontWeight: '800',
-                      fontSize: '13px',
-                      border: 'none',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '8px',
-                      boxShadow: '0 6px 16px rgba(239,68,68,0.25)'
-                    }}
-                  >
-                    <Trash2 size={16} /> Supprimer cette annonce (Action Administrateur)
-                  </button>
-                </div>
-              )}
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* CONTENU DYNAMIQUE SELON L'ONGLET SÉLECTIONNÉ */}
-      <main
-        ref={mainContainerRef}
-        className={`premium-main ${activeTab === 'chat' ? 'chat-mode' : ''}`}
-        style={{
-          maxWidth: activeTab === 'feed' ? '1460px' : '1240px',
-          margin: '0 auto',
-          width: '100%',
-          boxSizing: 'border-box',
-          display: (activeTab === 'chat' || activeTab === 'community') ? 'flex' : 'block',
-          flexDirection: (activeTab === 'chat' || activeTab === 'community') ? 'column' : 'initial',
-          overflow: (activeTab === 'chat' || activeTab === 'community') ? 'hidden' : 'visible',
-          height: activeTab === 'chat'
-            ? (isMobile ? (selectedChat ? '100dvh' : 'calc(100dvh - 125px)') : 'calc(100vh - 138px)')
-            : (activeTab === 'community'
-              ? (isMobile ? 'calc(100dvh - 56px - 65px - env(safe-area-inset-bottom, 0px))' : 'calc(100vh - 138px)')
-              : 'auto'),
-          maxHeight: activeTab === 'chat'
-            ? (isMobile ? (selectedChat ? '100dvh' : 'calc(100dvh - 125px)') : 'calc(100vh - 138px)')
-            : (activeTab === 'community'
-              ? (isMobile ? 'calc(100dvh - 56px - 65px - env(safe-area-inset-bottom, 0px))' : 'calc(100vh - 138px)')
-              : 'none'),
-          padding: activeTab === 'chat'
-            ? (isMobile ? (selectedChat ? '0' : '0 6px') : '14px 16px 0 16px')
-            : (activeTab === 'community'
-              ? (isMobile ? '8px 10px 0 10px' : '14px 16px 0 16px')
-              : (isMobile ? '12px 12px 90px' : '20px 20px 90px')),
-          transition: 'max-width 0.3s ease'
-        }}
-      >
+        {/* CONTENU DYNAMIQUE SELON L'ONGLET SÉLECTIONNÉ */}
+        <main
+          ref={mainContainerRef}
+          className={`premium-main ${activeTab === 'chat' ? 'chat-mode' : ''}`}
+          style={{
+            maxWidth: activeTab === 'feed' ? '1460px' : '1240px',
+            margin: '0 auto',
+            width: '100%',
+            boxSizing: 'border-box',
+            display: (activeTab === 'chat' || activeTab === 'community') ? 'flex' : 'block',
+            flexDirection: (activeTab === 'chat' || activeTab === 'community') ? 'column' : 'initial',
+            overflow: (activeTab === 'chat' || activeTab === 'community') ? 'hidden' : 'visible',
+            height: activeTab === 'chat'
+              ? (isMobile ? (selectedChat ? '100dvh' : 'calc(100dvh - 125px)') : 'calc(100vh - 138px)')
+              : (activeTab === 'community'
+                ? (isMobile ? 'calc(100dvh - 56px - 65px - env(safe-area-inset-bottom, 0px))' : 'calc(100vh - 138px)')
+                : 'auto'),
+            maxHeight: activeTab === 'chat'
+              ? (isMobile ? (selectedChat ? '100dvh' : 'calc(100dvh - 125px)') : 'calc(100vh - 138px)')
+              : (activeTab === 'community'
+                ? (isMobile ? 'calc(100dvh - 56px - 65px - env(safe-area-inset-bottom, 0px))' : 'calc(100vh - 138px)')
+                : 'none'),
+            padding: activeTab === 'chat'
+              ? (isMobile ? (selectedChat ? '0' : '0 6px') : '14px 16px 0 16px')
+              : (activeTab === 'community'
+                ? (isMobile ? '8px 10px 0 10px' : '14px 16px 0 16px')
+                : (isMobile ? '12px 12px 90px' : '20px 20px 90px')),
+            transition: 'max-width 0.3s ease'
+          }}
+        >
 
-      <AnimatePresence mode="wait">
-        {/* ONGLET 1 : EXPLORER / FEED */}
-        {activeTab === 'feed' && (
-          <motion.div
-            key="page-feed"
-            variants={pageTransitionVariants}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-            transition={pageTransitionConfig}
-            style={{ width: '100%' }}
-          >
-          <div className="feed-layout-container">
-            {/* BANNIÈRE LATÉRALE GAUCHE (DESKTOP) */}
-            <aside className="desktop-ad-banner" aria-label="Espace Partenaires Troco">
-              <div className="ad-card">
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '9px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', color: darkMode ? '#FAF7F2' : '#A8644A', backgroundColor: darkMode ? 'rgba(198,125,91,0.25)' : '#F5EAE4', padding: '3px 7px', borderRadius: '6px' }}>
-                    🌟 Partenaire Pro
-                  </span>
-                  <span style={{ fontSize: '9px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>Sponsorisé</span>
-                </div>
-                <img
-                  src="https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=400&q=80"
-                  alt="Partenaire Outillage"
-                  style={{ width: '100%', height: '85px', objectFit: 'cover', borderRadius: '12px', marginBottom: '8px' }}
-                />
-                <div style={{ fontSize: '13px', fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530', marginBottom: '4px', lineHeight: 1.3 }}>
-                  Brico & Outillage Pro
-                </div>
-                <div style={{ fontSize: '11px', color: darkMode ? '#D4C5B5' : '#6B5E54', lineHeight: 1.4, marginBottom: '8px' }}>
-                  Matériel certifié disponible en prêt immédiat avec caution Troco.
-                </div>
-                <div style={{ display: 'inline-block', fontSize: '10px', fontWeight: '800', color: '#3D4A35', backgroundColor: '#EBF0E6', padding: '2px 8px', borderRadius: '999px', marginBottom: '8px', border: '1px solid #D4DFCE' }}>
-                  -15% membres Troco
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedCategory('Outillage');
-                    alert("🏷️ Code promo partenaire 'TROCO15' appliqué sur la catégorie Outillage !");
-                  }}
-                  className="premium-button"
-                  style={{
-                    width: '100%',
-                    padding: '8px 10px',
-                    borderRadius: '10px',
-                    background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)',
-                    color: '#FFF',
-                    fontSize: '11px',
-                    fontWeight: '700',
-                    border: 'none',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Voir les offres
-                </button>
-              </div>
-
-              <div className="ad-card">
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '9px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#D97706', backgroundColor: '#FEF3C7', padding: '3px 7px', borderRadius: '6px' }}>
-                    🎓 Mentorat
-                  </span>
-                  <span style={{ fontSize: '9px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>Publicité</span>
-                </div>
-                <img
-                  src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=400&q=80"
-                  alt="Academia Code"
-                  style={{ width: '100%', height: '85px', objectFit: 'cover', borderRadius: '12px', marginBottom: '8px' }}
-                />
-                <div style={{ fontSize: '13px', fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530', marginBottom: '4px', lineHeight: 1.3 }}>
-                  Academia Code & Langues
-                </div>
-                <div style={{ fontSize: '11px', color: darkMode ? '#D4C5B5' : '#6B5E54', lineHeight: 1.4, marginBottom: '8px' }}>
-                  Mentorat accéléré et cours en visioconférence HD.
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedCategory('Cours/Compétences');
-                    setFormatFilter('remote');
-                  }}
-                  className="premium-button"
-                  style={{
-                    width: '100%',
-                    padding: '8px 10px',
-                    borderRadius: '10px',
-                    backgroundColor: darkMode ? '#1A1715' : '#FAF7F2',
-                    color: darkMode ? '#FAF7F2' : '#3D3530',
-                    fontSize: '11px',
-                    fontWeight: '700',
-                    border: '1px solid #E8DDD3',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Trouver un mentor
-                </button>
-              </div>
-            </aside>
-
-            {/* CONTENU CENTRAL DU FEED */}
-            <div className="feed-main-content">
-              {/* BANNIÈRE D'ANNONCE GLOBALE DYNAMIQUE DU CMS (useGlobalContent) */}
-              {globalAnnouncement && (
-                <div
-                  style={{
-                    backgroundColor: darkMode ? 'rgba(198,125,91,0.15)' : '#FBF3EE',
-                    border: '1px solid rgba(198,125,91,0.3)',
-                    borderRadius: '16px',
-                    padding: '10px 16px',
-                    marginBottom: '12px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    gap: '10px',
-                    fontSize: '13px',
-                    fontWeight: '700',
-                    color: darkMode ? '#FAF7F2' : '#8C482F',
-                    boxShadow: '0 4px 12px rgba(198,125,91,0.08)',
-                    animation: 'fadeIn 0.3s ease',
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Sparkles size={16} color="var(--accent-primary)" style={{ flexShrink: 0 }} />
-                    <span>{globalAnnouncement}</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Ligne Recherche + Filtre Rayon + Bascule Vue Liste / Carte */}
-              <div style={{ display: 'flex', gap: '8px', marginBottom: '14px', flexWrap: 'wrap', alignItems: 'center' }}>
-                <div style={{ flex: 1, minWidth: '220px', display: 'flex', alignItems: 'center', backgroundColor: 'var(--bg-card)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '10px 14px', boxShadow: 'var(--shadow-card)' }}>
-                  <Search size={18} color="var(--accent-primary)" style={{ marginRight: '10px' }} />
-                  <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} type="text" placeholder={t('searchPlaceholder')} style={{ border: 'none', outline: 'none', width: '100%', fontSize: '14px', backgroundColor: 'transparent', color: 'var(--text-main)' }} />
-                </div>
-                <button
-                  onClick={() => setIsFilterDrawerOpen(true)}
-                  className="premium-button"
-                  style={{
-                    backgroundColor: isInfiniteRadius || radiusKm >= 100 ? 'var(--bg-subtle)' : 'var(--bg-card)',
-                    backdropFilter: 'blur(16px)',
-                    WebkitBackdropFilter: 'blur(16px)',
-                    border: isInfiniteRadius || radiusKm >= 100 ? '1px solid var(--accent-primary)' : '1px solid var(--border-color)',
-                    borderRadius: '16px',
-                    padding: '10px 14px',
-                    cursor: 'pointer',
-                    boxShadow: 'var(--shadow-card)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    color: isInfiniteRadius || radiusKm >= 100 ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                    fontWeight: '700',
-                    fontSize: '13px'
-                  }}
-                >
-                  <Filter size={18} color={isInfiniteRadius || radiusKm >= 100 ? 'var(--accent-primary)' : 'var(--text-secondary)'} />
-                  <span>{isInfiniteRadius || radiusKm >= 100 ? `♾️ ${t('infinite')}` : `${radiusKm} km`}</span>
-                </button>
-
-                {/* Sélecteur de vue (Liste / Carte) dédié et étanche */}
-                <div className="premium-panel" style={{ display: 'inline-flex', flexShrink: 0, border: '1px solid var(--border-color)', borderRadius: '999px', padding: '3px', backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-card)' }}>
-                  <button onClick={() => setViewMode('list')} className="premium-nav-btn" style={{ border: 'none', borderRadius: '999px', padding: '8px 14px', backgroundColor: viewMode === 'list' ? 'var(--accent-primary)' : 'transparent', color: viewMode === 'list' ? '#FFF' : 'var(--text-secondary)', fontWeight: '700', cursor: 'pointer', fontSize: '12px' }}>{t('viewList')}</button>
-                  <button onClick={handleSwitchToMap} className="premium-nav-btn" style={{ border: 'none', borderRadius: '999px', padding: '8px 14px', backgroundColor: viewMode === 'map' ? 'var(--accent-primary)' : 'transparent', color: viewMode === 'map' ? '#FFF' : 'var(--text-secondary)', fontWeight: '700', cursor: 'pointer', fontSize: '12px' }}>{t('viewMap')}</button>
-                </div>
-              </div>
-
-              {/* Barre des catégories avec Carrousel fluide et flèches de navigation latérales */}
-              <div style={{
-                position: 'relative',
-                display: 'flex',
-                alignItems: 'center',
-                marginBottom: '16px',
-                width: '100%',
-                minWidth: 0,
-                gap: '8px'
-              }}>
-                {/* Flèche de défilement gauche */}
-                <button
-                  type="button"
-                  onClick={() => scrollCategories('left')}
-                  title="Faire défiler vers la gauche"
-                  className="premium-button"
-                  style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '50%',
-                    border: '1px solid var(--border-color)',
-                    backgroundColor: 'var(--bg-card)',
-                    color: 'var(--accent-primary)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    flexShrink: 0,
-                    boxShadow: 'var(--shadow-card)',
-                    zIndex: 2,
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  <ChevronLeft size={16} />
-                </button>
-
-                {/* Conteneur de défilement des catégories */}
-                <div
-                  role="group"
-                  aria-label="Sélection de catégorie"
-                  ref={categoryScrollRef}
-                  className="category-scroll-container"
-                  style={{
-                    flex: 1,
-                    minWidth: 0,
-                    paddingBottom: '4px',
-                    scrollBehavior: 'smooth'
-                  }}
-                >
-                  {allCategories.map(category => {
-                    const isSel = selectedCategory === category;
-                    return (
-                      <button
-                        key={category}
-                        onClick={() => setSelectedCategory(category)}
-                        aria-pressed={isSel}
-                        className="premium-button category-pill"
-                        style={{
-                          border: isSel ? '1px solid var(--accent-primary)' : '1px solid var(--border-color)',
-                          backgroundColor: isSel ? 'var(--bg-subtle)' : 'var(--bg-card)',
-                          color: isSel ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                          boxShadow: isSel ? 'var(--shadow-accent)' : 'var(--shadow-card)',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        {getCategoryLabel(category)}
-                      </button>
-                    );
-                  })}
-                  <button
-                    onClick={() => setIsCategoryModalOpen(true)}
-                    aria-label="Ajouter une catégorie"
-                    className="premium-button category-pill"
-                    style={{
-                      border: '1px dashed var(--accent-primary)',
-                      backgroundColor: 'var(--bg-subtle)',
-                      color: 'var(--accent-primary)',
-                      cursor: 'pointer',
-                      flexShrink: 0
-                    }}
-                  >
-                    + {t('newCategory')}
-                  </button>
-                </div>
-
-                {/* Flèche de défilement droite */}
-                <button
-                  type="button"
-                  onClick={() => scrollCategories('right')}
-                  title="Faire défiler vers la droite"
-                  className="premium-button"
-                  style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '50%',
-                    border: '1px solid var(--border-color)',
-                    backgroundColor: 'var(--bg-card)',
-                    color: 'var(--accent-primary)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    flexShrink: 0,
-                    boxShadow: 'var(--shadow-card)',
-                    zIndex: 2,
-                    transition: 'all 0.2s ease'
-                  }}
-                >
-                  <ChevronRight size={16} />
-                </button>
-              </div>
-
-              {/* SÉLECTEUR FORMAT (Tous / Sur place / À distance) */}
-              <div role="group" aria-label="Filtre de format" style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                maxWidth: isMobile ? '100%' : '480px',
-                width: '100%',
-                margin: '0 auto 20px auto',
-              }}>
-                {/* SÉLECTEUR SEGMENTÉ FORMAT */}
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  width: '100%',
-                  padding: '4px',
-                  borderRadius: '16px',
-                  backgroundColor: 'var(--bg-card)',
-                  backdropFilter: 'blur(16px)',
-                  WebkitBackdropFilter: 'blur(16px)',
-                  border: '1px solid var(--border-color)',
-                  boxShadow: 'var(--shadow-card)',
-                  boxSizing: 'border-box',
-                  gap: '4px'
-                }}>
-                  <button
-                    type="button"
-                    onClick={() => setFormatFilter('all')}
-                    aria-pressed={formatFilter === 'all'}
-                    className="premium-button"
-                    style={{
-                      flex: 1,
-                      padding: '8px 12px',
-                      borderRadius: '12px',
-                      border: 'none',
-                      backgroundColor: formatFilter === 'all'
-                        ? 'var(--accent-primary)'
-                        : 'transparent',
-                      color: formatFilter === 'all'
-                        ? '#FFFFFF'
-                        : 'var(--text-secondary)',
-                      fontSize: '12px',
-                      fontWeight: '700',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px',
-                      boxShadow: formatFilter === 'all'
-                        ? 'var(--shadow-accent)'
-                        : 'none',
-                      transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)'
-                    }}
-                  >
-                    <Globe size={13} />
-                    <span>{t('all')}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setFormatFilter('onsite')}
-                    aria-pressed={formatFilter === 'onsite'}
-                    className="premium-button"
-                    style={{
-                      flex: 1,
-                      padding: '8px 12px',
-                      borderRadius: '12px',
-                      border: 'none',
-                      backgroundColor: formatFilter === 'onsite'
-                        ? 'var(--accent-primary)'
-                        : 'transparent',
-                      color: formatFilter === 'onsite'
-                        ? '#FFFFFF'
-                        : 'var(--text-secondary)',
-                      fontSize: '12px',
-                      fontWeight: '700',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px',
-                      boxShadow: formatFilter === 'onsite'
-                        ? 'var(--shadow-accent)'
-                        : 'none',
-                      transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)'
-                    }}
-                  >
-                    <MapPin size={13} />
-                    <span>{t('onsite')}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setFormatFilter('remote')}
-                    aria-pressed={formatFilter === 'remote'}
-                    className="premium-button"
-                    style={{
-                      flex: 1,
-                      padding: '8px 12px',
-                      borderRadius: '12px',
-                      border: 'none',
-                      backgroundColor: formatFilter === 'remote'
-                        ? 'var(--accent-primary)'
-                        : 'transparent',
-                      color: formatFilter === 'remote'
-                        ? '#FFFFFF'
-                        : 'var(--text-secondary)',
-                      fontSize: '12px',
-                      fontWeight: '700',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '6px',
-                      boxShadow: formatFilter === 'remote'
-                        ? 'var(--shadow-accent)'
-                        : 'none',
-                      transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)'
-                    }}
-                  >
-                    <Video size={13} />
-                    <span>{t('remote')}</span>
-                  </button>
-                </div>
-              </div>
-
-              {filteredListings.length === 0 ? (
-                <div style={{ width: '100%', padding: '40px 0', display: 'flex', justifyContent: 'center' }}>
-                  <EmptyState
-                    icon={<Search size={30} strokeWidth={2.2} />}
-                    title="Aucune annonce ne correspond à ta recherche"
-                    description="Essaie d'élargir ton rayon de recherche, de changer de catégorie ou de réinitialiser tes filtres pour découvrir les annonces des membres Troco."
-                    action={(
+          <AnimatePresence mode="wait">
+            {/* ONGLET 1 : EXPLORER / FEED */}
+            {activeTab === 'feed' && (
+              <motion.div
+                key="page-feed"
+                variants={pageTransitionVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                transition={pageTransitionConfig}
+                style={{ width: '100%' }}
+              >
+                <div className="feed-layout-container">
+                  {/* BANNIÈRE LATÉRALE GAUCHE (DESKTOP) */}
+                  <aside className="desktop-ad-banner" aria-label="Espace Partenaires Troco">
+                    <div className="ad-card">
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                        <span style={{ fontSize: '9px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', color: darkMode ? '#FAF7F2' : '#A8644A', backgroundColor: darkMode ? 'rgba(198,125,91,0.25)' : '#F5EAE4', padding: '3px 7px', borderRadius: '6px' }}>
+                          🌟 Partenaire Pro
+                        </span>
+                        <span style={{ fontSize: '9px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>Sponsorisé</span>
+                      </div>
+                      <img
+                        src="https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=400&q=80"
+                        alt="Partenaire Outillage"
+                        style={{ width: '100%', height: '85px', objectFit: 'cover', borderRadius: '12px', marginBottom: '8px' }}
+                      />
+                      <div style={{ fontSize: '13px', fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530', marginBottom: '4px', lineHeight: 1.3 }}>
+                        Brico & Outillage Pro
+                      </div>
+                      <div style={{ fontSize: '11px', color: darkMode ? '#D4C5B5' : '#6B5E54', lineHeight: 1.4, marginBottom: '8px' }}>
+                        Matériel certifié disponible en prêt immédiat avec caution Troco.
+                      </div>
+                      <div style={{ display: 'inline-block', fontSize: '10px', fontWeight: '800', color: '#3D4A35', backgroundColor: '#EBF0E6', padding: '2px 8px', borderRadius: '999px', marginBottom: '8px', border: '1px solid #D4DFCE' }}>
+                        -15% membres Troco
+                      </div>
                       <button
                         type="button"
                         onClick={() => {
-                          setSearchQuery('');
-                          setSelectedCategory('all');
-                          setRadiusKm(100);
-                          setIsInfiniteRadius(true);
-                          setSelectedLanguages([]);
-                          setSelectedPayment('all');
-                          setFormatFilter('all');
+                          setSelectedCategory('Outillage');
+                          alert("🏷️ Code promo partenaire 'TROCO15' appliqué sur la catégorie Outillage !");
                         }}
                         className="premium-button"
                         style={{
-                          border: 'none',
-                          borderRadius: '999px',
-                          padding: '12px 24px',
-                          background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
+                          width: '100%',
+                          padding: '8px 10px',
+                          borderRadius: '10px',
+                          background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)',
                           color: '#FFF',
-                          fontWeight: '800',
-                          fontSize: '13px',
-                          cursor: 'pointer',
-                          boxShadow: 'var(--shadow-accent)',
+                          fontSize: '11px',
+                          fontWeight: '700',
+                          border: 'none',
+                          cursor: 'pointer'
                         }}
                       >
-                        Réinitialiser tous les filtres
-                      </button>
-                    )}
-                  />
-                </div>
-              ) : viewMode === 'map' ? (
-                <div ref={mapContainerRef} style={{ width: '100%', position: 'relative' }}>
-                  <Suspense fallback={null}>
-                    <MapSection
-                      filteredListings={filteredListings}
-                      mapCenter={mapCenter}
-                      mapZoom={mapZoom}
-                      darkMode={darkMode}
-                      currentLang={currentLang}
-                      t={t}
-                      theme={theme}
-                      getCoordinatesForLocation={getCoordinatesForLocation}
-                      getSuggestedMedia={getSuggestedMedia}
-                      getListingDisplayContent={getListingDisplayContent}
-                      localizeLocation={localizeLocation}
-                      handleOpenListing={handleOpenListing}
-                      onClose={() => setViewMode('list')}
-                      onCloseMap={() => setViewMode('list')}
-                      mapContainerRef={mapContainerRef}
-                    />
-                  </Suspense>
-                </div>
-              ) : (
-                <>
-                  <motion.div
-                    ref={listingsGridRef}
-                    variants={{
-                      hidden: { opacity: 0 },
-                      show: {
-                        opacity: 1,
-                        transition: {
-                          staggerChildren: 0.05,
-                        },
-                      },
-                    }}
-                    initial="hidden"
-                    animate="show"
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(290px, 1fr))',
-                      gap: isMobile ? '16px' : '24px',
-                      width: '100%',
-                      boxSizing: 'border-box',
-                      opacity: searchQuery !== deferredSearchQuery ? 0.7 : 1,
-                      transition: 'opacity 150ms ease',
-                    }}
-                  >
-                    {(filteredListings || []).map((item, index) => {
-                      const authorUid = item?.authorUid || item?.userId || item?.sellerId;
-                      const authorUser = authorUid ? (usersPublicMap?.get(authorUid) || usersByUid?.get(authorUid)) : null;
-                      const isCurrentUser = Boolean(
-                        (authorUid && (authorUid === profile?.uid || authorUid === auth.currentUser?.uid)) ||
-                        (profile?.name && item?.author === profile?.name)
-                      );
-                      const rawAuthorName = isCurrentUser ? (profile?.name || 'Moi') : (authorUser?.name || authorUser?.displayName || item?.author || '');
-                      const resolvedAuthorName = safeName(rawAuthorName, 'Membre Troco');
-
-                      const authorProfile = item?.authorProfile || {
-                        name: resolvedAuthorName,
-                        avatar: isCurrentUser ? profile?.avatar : (authorUser?.avatar || item?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'),
-                        bio: isCurrentUser ? profile?.bio : (authorUser?.bio || item?.bio || ''),
-                        location: authorUser?.location || item?.location || 'Paris',
-                        uid: authorUid || null,
-                      };
-
-                      // Annonce enrichie avec le vrai nom humain résolu (anti-fuite UID technique)
-                      const enrichedItem = {
-                        ...item,
-                        author: resolvedAuthorName,
-                        authorProfile,
-                      };
-
-                      return (
-                        <React.Fragment key={item.id || index}>
-                          <FeedCardItem
-                            item={enrichedItem}
-                            darkMode={darkMode}
-                            hoveredCardId={hoveredCardId}
-                            setHoveredCardId={setHoveredCardId}
-                            hoverSlideIndex={hoverSlideIndex}
-                            handleOpenListing={handleOpenListing}
-                            getSuggestedMedia={getSuggestedMedia}
-                            getFallbackImage={getFallbackImage}
-                            formatCompensation={formatCompensation}
-                            getListingDisplayContent={getListingDisplayContent}
-                            currentLang={currentLang}
-                            showingOriginalListings={showingOriginalListings}
-                            toggleOriginalListing={toggleOriginalListing}
-                            localizeLocation={localizeLocation}
-                            localizeTags={localizeTags}
-                            generateTags={generateTags}
-                            getAuthorAvatar={getAuthorAvatar}
-                            profile={profile}
-                            handleStartDiscussion={handleStartDiscussion}
-                            isAdmin={isAdmin}
-                            isGodModeActive={isGodModeActive}
-                            onAdminDeleteListing={handleAdminDeleteListing}
-                            onAdminToggleHideListing={handleAdminToggleHideListing}
-                            onAdminEditListing={handleAdminEditListing}
-                            onOpenMobileActions={setMobileListingActionTarget}
-                            t={t}
-                            onViewUserProfile={() => {
-                              const userObj = {
-                                id: authorUid || `user_${resolvedAuthorName}`,
-                                uid: authorUid || null,
-                                name: resolvedAuthorName,
-                                username: resolvedAuthorName ? `@${resolvedAuthorName.toLowerCase().replace(/\s+/g, '')}` : '@membre',
-                                avatar: authorProfile.avatar,
-                                bio: authorProfile.bio,
-                                location: item.location || 'France',
-                                trocoTokens: item.trocoTokens || 12,
-                                euroBalance: item.euroBalance || 100,
-                                isTrocoPlus: item.isTrocoPlus || false,
-                                kycVerified: item.kycVerified || false,
-                                dealsCompleted: item.dealsCompleted || 0,
-                                authorProfile: authorProfile,
-                              };
-                              setSelectedPublicUser(userObj);
-                            }}
-                          />
-
-                          {/* INJECTION FLUIDE D'UNE CARTE SPONSORISÉE TOUTES LES 6 ANNONCES */}
-                          {(index + 1) % 6 === 0 && (
-                            <SponsoredFeedCard
-                              key={`sponsored-card-${index}`}
-                              darkMode={darkMode}
-                              currentLang={currentLang}
-                              t={t}
-                              onOpenBoostModal={() => {
-                                const myListing = listings.find(l => l.author === profile?.name) || listings[0];
-                                setBoostingListing(myListing);
-                                setIsBoostModalOpen(true);
-                              }}
-                              onOpenBusinessOffer={() => {
-                                setIsCguViewerOpen(true);
-                              }}
-                              onClaimBonus={(amount) => {
-                                setProfile(prev => ({
-                                  ...prev,
-                                  euroBalance: Number((prev.euroBalance + amount).toFixed(2))
-                                }));
-                                playApplePaySound();
-                                setSaveMessage(`🎁 Bonus partenaire crédité : +${amount}€ sur votre solde !`);
-                                safeTimeout(() => setSaveMessage(''), 6000);
-                              }}
-                            />
-                          )}
-                        </React.Fragment>
-                      );
-                    })}
-                  </motion.div>
-
-                  {/* SENTINELLE OBSERVER POUR AUTO INFINITE SCROLL */}
-                  {hasMoreListings && (
-                    <div ref={loadMoreSentinelRef} style={{ width: '100%', height: '24px', margin: '8px 0', pointerEvents: 'none' }} />
-                  )}
-
-                  {/* BOUTON CHARGER PLUS D'ANNONCES (PAGINATED INFINITE SCROLL) */}
-                  {hasMoreListings && (
-                    <div style={{ display: 'flex', justifyContent: 'center', marginTop: '28px', marginBottom: '20px' }}>
-                      <button
-                        type="button"
-                        onClick={handleLoadMoreListings}
-                        disabled={isLoadingMoreListings}
-                        className="premium-button"
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '10px',
-                          padding: '12px 30px',
-                          borderRadius: '999px',
-                          border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(0,0,0,0.12)',
-                          backgroundColor: darkMode ? 'rgba(35,30,27,0.95)' : '#FFFFFF',
-                          color: darkMode ? '#FAF7F2' : '#3D3530',
-                          fontSize: '13px',
-                          fontWeight: '800',
-                          cursor: isLoadingMoreListings ? 'not-allowed' : 'pointer',
-                          boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-                          transition: 'all 0.2s ease',
-                          opacity: isLoadingMoreListings ? 0.7 : 1,
-                        }}
-                      >
-                        {isLoadingMoreListings ? (
-                          <>
-                            <div style={{ width: '16px', height: '16px', border: '2px solid #C67D5B', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-                            <span>Chargement des annonces...</span>
-                          </>
-                        ) : (
-                          <>
-                            <span>Charger plus d'annonces</span>
-                            <ChevronRight size={16} />
-                          </>
-                        )}
+                        Voir les offres
                       </button>
                     </div>
-                  )}
-                </>
-              )}
-            </div>
 
-            {/* BANNIÈRE LATÉRALE DROITE (DESKTOP) */}
-            <aside className="desktop-ad-banner" aria-label="Monétisation & Boost Troco">
-              <div className="ad-card" style={{ border: darkMode ? '1px solid rgba(245,158,11,0.3)' : '1px solid #FDE68A' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '9px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#B45309', backgroundColor: '#FEF3C7', padding: '3px 7px', borderRadius: '6px' }}>
-                    🔥 Troco Boost
-                  </span>
-                  <span style={{ fontSize: '9px', color: darkMode ? '#94A3B8' : '#94A3B8' }}>Visibilité</span>
+                    <div className="ad-card">
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                        <span style={{ fontSize: '9px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#D97706', backgroundColor: '#FEF3C7', padding: '3px 7px', borderRadius: '6px' }}>
+                          🎓 Mentorat
+                        </span>
+                        <span style={{ fontSize: '9px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>Publicité</span>
+                      </div>
+                      <img
+                        src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=400&q=80"
+                        alt="Academia Code"
+                        style={{ width: '100%', height: '85px', objectFit: 'cover', borderRadius: '12px', marginBottom: '8px' }}
+                      />
+                      <div style={{ fontSize: '13px', fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530', marginBottom: '4px', lineHeight: 1.3 }}>
+                        Academia Code & Langues
+                      </div>
+                      <div style={{ fontSize: '11px', color: darkMode ? '#D4C5B5' : '#6B5E54', lineHeight: 1.4, marginBottom: '8px' }}>
+                        Mentorat accéléré et cours en visioconférence HD.
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedCategory('Cours/Compétences');
+                          setFormatFilter('remote');
+                        }}
+                        className="premium-button"
+                        style={{
+                          width: '100%',
+                          padding: '8px 10px',
+                          borderRadius: '10px',
+                          backgroundColor: darkMode ? '#1A1715' : '#FAF7F2',
+                          color: darkMode ? '#FAF7F2' : '#3D3530',
+                          fontSize: '11px',
+                          fontWeight: '700',
+                          border: '1px solid #E8DDD3',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Trouver un mentor
+                      </button>
+                    </div>
+                  </aside>
+
+                  {/* CONTENU CENTRAL DU FEED */}
+                  <div className="feed-main-content">
+                    {/* BANNIÈRE D'ANNONCE GLOBALE DYNAMIQUE DU CMS (useGlobalContent) */}
+                    {globalAnnouncement && (
+                      <div
+                        style={{
+                          backgroundColor: darkMode ? 'rgba(198,125,91,0.15)' : '#FBF3EE',
+                          border: '1px solid rgba(198,125,91,0.3)',
+                          borderRadius: '16px',
+                          padding: '10px 16px',
+                          marginBottom: '12px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '10px',
+                          fontSize: '13px',
+                          fontWeight: '700',
+                          color: darkMode ? '#FAF7F2' : '#8C482F',
+                          boxShadow: '0 4px 12px rgba(198,125,91,0.08)',
+                          animation: 'fadeIn 0.3s ease',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <Sparkles size={16} color="var(--accent-primary)" style={{ flexShrink: 0 }} />
+                          <span>{globalAnnouncement}</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Ligne Recherche + Filtre Rayon + Bascule Vue Liste / Carte */}
+                    <div style={{ display: 'flex', gap: '8px', marginBottom: '14px', flexWrap: 'wrap', alignItems: 'center' }}>
+                      <div style={{ flex: 1, minWidth: '220px', display: 'flex', alignItems: 'center', backgroundColor: 'var(--bg-card)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '10px 14px', boxShadow: 'var(--shadow-card)' }}>
+                        <Search size={18} color="var(--accent-primary)" style={{ marginRight: '10px' }} />
+                        <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} type="text" placeholder={t('searchPlaceholder')} style={{ border: 'none', outline: 'none', width: '100%', fontSize: '14px', backgroundColor: 'transparent', color: 'var(--text-main)' }} />
+                      </div>
+                      <button
+                        onClick={() => setIsFilterDrawerOpen(true)}
+                        className="premium-button"
+                        style={{
+                          backgroundColor: isInfiniteRadius || radiusKm >= 100 ? 'var(--bg-subtle)' : 'var(--bg-card)',
+                          backdropFilter: 'blur(16px)',
+                          WebkitBackdropFilter: 'blur(16px)',
+                          border: isInfiniteRadius || radiusKm >= 100 ? '1px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                          borderRadius: '16px',
+                          padding: '10px 14px',
+                          cursor: 'pointer',
+                          boxShadow: 'var(--shadow-card)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          color: isInfiniteRadius || radiusKm >= 100 ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                          fontWeight: '700',
+                          fontSize: '13px'
+                        }}
+                      >
+                        <Filter size={18} color={isInfiniteRadius || radiusKm >= 100 ? 'var(--accent-primary)' : 'var(--text-secondary)'} />
+                        <span>{isInfiniteRadius || radiusKm >= 100 ? `♾️ ${t('infinite')}` : `${radiusKm} km`}</span>
+                      </button>
+
+                      {/* Sélecteur de vue (Liste / Carte) dédié et étanche */}
+                      <div className="premium-panel" style={{ display: 'inline-flex', flexShrink: 0, border: '1px solid var(--border-color)', borderRadius: '999px', padding: '3px', backgroundColor: 'var(--bg-card)', boxShadow: 'var(--shadow-card)' }}>
+                        <button onClick={() => setViewMode('list')} className="premium-nav-btn" style={{ border: 'none', borderRadius: '999px', padding: '8px 14px', backgroundColor: viewMode === 'list' ? 'var(--accent-primary)' : 'transparent', color: viewMode === 'list' ? '#FFF' : 'var(--text-secondary)', fontWeight: '700', cursor: 'pointer', fontSize: '12px' }}>{t('viewList')}</button>
+                        <button onClick={handleSwitchToMap} className="premium-nav-btn" style={{ border: 'none', borderRadius: '999px', padding: '8px 14px', backgroundColor: viewMode === 'map' ? 'var(--accent-primary)' : 'transparent', color: viewMode === 'map' ? '#FFF' : 'var(--text-secondary)', fontWeight: '700', cursor: 'pointer', fontSize: '12px' }}>{t('viewMap')}</button>
+                      </div>
+                    </div>
+
+                    {/* Barre des catégories avec Carrousel fluide et flèches de navigation latérales */}
+                    <div style={{
+                      position: 'relative',
+                      display: 'flex',
+                      alignItems: 'center',
+                      marginBottom: '16px',
+                      width: '100%',
+                      minWidth: 0,
+                      gap: '8px'
+                    }}>
+                      {/* Flèche de défilement gauche */}
+                      <button
+                        type="button"
+                        onClick={() => scrollCategories('left')}
+                        title="Faire défiler vers la gauche"
+                        className="premium-button"
+                        style={{
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '50%',
+                          border: '1px solid var(--border-color)',
+                          backgroundColor: 'var(--bg-card)',
+                          color: 'var(--accent-primary)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                          flexShrink: 0,
+                          boxShadow: 'var(--shadow-card)',
+                          zIndex: 2,
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        <ChevronLeft size={16} />
+                      </button>
+
+                      {/* Conteneur de défilement des catégories */}
+                      <div
+                        role="group"
+                        aria-label="Sélection de catégorie"
+                        ref={categoryScrollRef}
+                        className="category-scroll-container"
+                        style={{
+                          flex: 1,
+                          minWidth: 0,
+                          paddingBottom: '4px',
+                          scrollBehavior: 'smooth'
+                        }}
+                      >
+                        {allCategories.map(category => {
+                          const isSel = selectedCategory === category;
+                          return (
+                            <button
+                              key={category}
+                              onClick={() => setSelectedCategory(category)}
+                              aria-pressed={isSel}
+                              className="premium-button category-pill"
+                              style={{
+                                border: isSel ? '1px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                                backgroundColor: isSel ? 'var(--bg-subtle)' : 'var(--bg-card)',
+                                color: isSel ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                                boxShadow: isSel ? 'var(--shadow-accent)' : 'var(--shadow-card)',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              {getCategoryLabel(category)}
+                            </button>
+                          );
+                        })}
+                        <button
+                          onClick={() => setIsCategoryModalOpen(true)}
+                          aria-label="Ajouter une catégorie"
+                          className="premium-button category-pill"
+                          style={{
+                            border: '1px dashed var(--accent-primary)',
+                            backgroundColor: 'var(--bg-subtle)',
+                            color: 'var(--accent-primary)',
+                            cursor: 'pointer',
+                            flexShrink: 0
+                          }}
+                        >
+                          + {t('newCategory')}
+                        </button>
+                      </div>
+
+                      {/* Flèche de défilement droite */}
+                      <button
+                        type="button"
+                        onClick={() => scrollCategories('right')}
+                        title="Faire défiler vers la droite"
+                        className="premium-button"
+                        style={{
+                          width: '32px',
+                          height: '32px',
+                          borderRadius: '50%',
+                          border: '1px solid var(--border-color)',
+                          backgroundColor: 'var(--bg-card)',
+                          color: 'var(--accent-primary)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          cursor: 'pointer',
+                          flexShrink: 0,
+                          boxShadow: 'var(--shadow-card)',
+                          zIndex: 2,
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        <ChevronRight size={16} />
+                      </button>
+                    </div>
+
+                    {/* SÉLECTEUR FORMAT (Tous / Sur place / À distance) */}
+                    <div role="group" aria-label="Filtre de format" style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      maxWidth: isMobile ? '100%' : '480px',
+                      width: '100%',
+                      margin: '0 auto 20px auto',
+                    }}>
+                      {/* SÉLECTEUR SEGMENTÉ FORMAT */}
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        width: '100%',
+                        padding: '4px',
+                        borderRadius: '16px',
+                        backgroundColor: 'var(--bg-card)',
+                        backdropFilter: 'blur(16px)',
+                        WebkitBackdropFilter: 'blur(16px)',
+                        border: '1px solid var(--border-color)',
+                        boxShadow: 'var(--shadow-card)',
+                        boxSizing: 'border-box',
+                        gap: '4px'
+                      }}>
+                        <button
+                          type="button"
+                          onClick={() => setFormatFilter('all')}
+                          aria-pressed={formatFilter === 'all'}
+                          className="premium-button"
+                          style={{
+                            flex: 1,
+                            padding: '8px 12px',
+                            borderRadius: '12px',
+                            border: 'none',
+                            backgroundColor: formatFilter === 'all'
+                              ? 'var(--accent-primary)'
+                              : 'transparent',
+                            color: formatFilter === 'all'
+                              ? '#FFFFFF'
+                              : 'var(--text-secondary)',
+                            fontSize: '12px',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '6px',
+                            boxShadow: formatFilter === 'all'
+                              ? 'var(--shadow-accent)'
+                              : 'none',
+                            transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)'
+                          }}
+                        >
+                          <Globe size={13} />
+                          <span>{t('all')}</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setFormatFilter('onsite')}
+                          aria-pressed={formatFilter === 'onsite'}
+                          className="premium-button"
+                          style={{
+                            flex: 1,
+                            padding: '8px 12px',
+                            borderRadius: '12px',
+                            border: 'none',
+                            backgroundColor: formatFilter === 'onsite'
+                              ? 'var(--accent-primary)'
+                              : 'transparent',
+                            color: formatFilter === 'onsite'
+                              ? '#FFFFFF'
+                              : 'var(--text-secondary)',
+                            fontSize: '12px',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '6px',
+                            boxShadow: formatFilter === 'onsite'
+                              ? 'var(--shadow-accent)'
+                              : 'none',
+                            transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)'
+                          }}
+                        >
+                          <MapPin size={13} />
+                          <span>{t('onsite')}</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setFormatFilter('remote')}
+                          aria-pressed={formatFilter === 'remote'}
+                          className="premium-button"
+                          style={{
+                            flex: 1,
+                            padding: '8px 12px',
+                            borderRadius: '12px',
+                            border: 'none',
+                            backgroundColor: formatFilter === 'remote'
+                              ? 'var(--accent-primary)'
+                              : 'transparent',
+                            color: formatFilter === 'remote'
+                              ? '#FFFFFF'
+                              : 'var(--text-secondary)',
+                            fontSize: '12px',
+                            fontWeight: '700',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '6px',
+                            boxShadow: formatFilter === 'remote'
+                              ? 'var(--shadow-accent)'
+                              : 'none',
+                            transition: 'all 0.2s cubic-bezier(0.22, 1, 0.36, 1)'
+                          }}
+                        >
+                          <Video size={13} />
+                          <span>{t('remote')}</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {filteredListings.length === 0 ? (
+                      <div style={{ width: '100%', padding: '40px 0', display: 'flex', justifyContent: 'center' }}>
+                        <EmptyState
+                          icon={<Search size={30} strokeWidth={2.2} />}
+                          title="Aucune annonce ne correspond à ta recherche"
+                          description="Essaie d'élargir ton rayon de recherche, de changer de catégorie ou de réinitialiser tes filtres pour découvrir les annonces des membres Troco."
+                          action={(
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSearchQuery('');
+                                setSelectedCategory('all');
+                                setRadiusKm(100);
+                                setIsInfiniteRadius(true);
+                                setSelectedLanguages([]);
+                                setSelectedPayment('all');
+                                setFormatFilter('all');
+                              }}
+                              className="premium-button"
+                              style={{
+                                border: 'none',
+                                borderRadius: '999px',
+                                padding: '12px 24px',
+                                background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
+                                color: '#FFF',
+                                fontWeight: '800',
+                                fontSize: '13px',
+                                cursor: 'pointer',
+                                boxShadow: 'var(--shadow-accent)',
+                              }}
+                            >
+                              Réinitialiser tous les filtres
+                            </button>
+                          )}
+                        />
+                      </div>
+                    ) : viewMode === 'map' ? (
+                      <div ref={mapContainerRef} style={{ width: '100%', position: 'relative' }}>
+                        <Suspense fallback={null}>
+                          <MapSection
+                            filteredListings={filteredListings}
+                            mapCenter={mapCenter}
+                            mapZoom={mapZoom}
+                            darkMode={darkMode}
+                            currentLang={currentLang}
+                            t={t}
+                            theme={theme}
+                            getCoordinatesForLocation={getCoordinatesForLocation}
+                            getSuggestedMedia={getSuggestedMedia}
+                            getListingDisplayContent={getListingDisplayContent}
+                            localizeLocation={localizeLocation}
+                            handleOpenListing={handleOpenListing}
+                            onClose={() => setViewMode('list')}
+                            onCloseMap={() => setViewMode('list')}
+                            mapContainerRef={mapContainerRef}
+                          />
+                        </Suspense>
+                      </div>
+                    ) : (
+                      <>
+                        <motion.div
+                          ref={listingsGridRef}
+                          variants={{
+                            hidden: { opacity: 0 },
+                            show: {
+                              opacity: 1,
+                              transition: {
+                                staggerChildren: 0.05,
+                              },
+                            },
+                          }}
+                          initial="hidden"
+                          animate="show"
+                          style={{
+                            display: 'grid',
+                            gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(290px, 1fr))',
+                            gap: isMobile ? '16px' : '24px',
+                            width: '100%',
+                            boxSizing: 'border-box',
+                            opacity: searchQuery !== deferredSearchQuery ? 0.7 : 1,
+                            transition: 'opacity 150ms ease',
+                          }}
+                        >
+                          {(filteredListings || []).map((item, index) => {
+                            const authorProfile = item?.authorProfile || {
+                              name: item?.author || 'Membre Troco',
+                              avatar: item?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+                              bio: item?.bio || '',
+                              location: item?.location || 'Paris',
+                              uid: item?.authorUid || null,
+                            };
+
+                            return (
+                              <React.Fragment key={item.id || index}>
+                                <FeedCardItem
+                                  item={item}
+                                  darkMode={darkMode}
+                                  hoveredCardId={hoveredCardId}
+                                  setHoveredCardId={setHoveredCardId}
+                                  hoverSlideIndex={hoverSlideIndex}
+                                  handleOpenListing={handleOpenListing}
+                                  getSuggestedMedia={getSuggestedMedia}
+                                  getFallbackImage={getFallbackImage}
+                                  formatCompensation={formatCompensation}
+                                  getListingDisplayContent={getListingDisplayContent}
+                                  currentLang={currentLang}
+                                  showingOriginalListings={showingOriginalListings}
+                                  toggleOriginalListing={toggleOriginalListing}
+                                  localizeLocation={localizeLocation}
+                                  localizeTags={localizeTags}
+                                  generateTags={generateTags}
+                                  getAuthorAvatar={getAuthorAvatar}
+                                  profile={profile}
+                                  handleStartDiscussion={handleStartDiscussion}
+                                  isAdmin={isAdmin}
+                                  isGodModeActive={isGodModeActive}
+                                  onAdminDeleteListing={handleAdminDeleteListing}
+                                  onAdminToggleHideListing={handleAdminToggleHideListing}
+                                  onAdminEditListing={handleAdminEditListing}
+                                  onOpenMobileActions={setMobileListingActionTarget}
+                                  t={t}
+                                  onViewUserProfile={() => {
+                                    const userObj = {
+                                      id: item.authorUid || item.userId || `user_${item.author}`,
+                                      uid: item.authorUid || item.userId || null,
+                                      name: item.author || 'Membre Troco',
+                                      username: item.author ? `@${item.author.toLowerCase().replace(/\s+/g, '')}` : '@membre',
+                                      avatar: authorProfile.avatar,
+                                      bio: authorProfile.bio,
+                                      location: item.location || 'France',
+                                      trocoTokens: item.trocoTokens || 12,
+                                      euroBalance: item.euroBalance || 100,
+                                      isTrocoPlus: item.isTrocoPlus || false,
+                                      kycVerified: item.kycVerified || false,
+                                      dealsCompleted: item.dealsCompleted || 0,
+                                      authorProfile: authorProfile,
+                                    };
+                                    setSelectedPublicUser(userObj);
+                                  }}
+                                />
+
+                                {/* INJECTION FLUIDE D'UNE CARTE SPONSORISÉE TOUTES LES 6 ANNONCES */}
+                                {(index + 1) % 6 === 0 && (
+                                  <SponsoredFeedCard
+                                    key={`sponsored-card-${index}`}
+                                    darkMode={darkMode}
+                                    currentLang={currentLang}
+                                    t={t}
+                                    onOpenBoostModal={() => {
+                                      const myListing = listings.find(l => l.author === profile?.name) || listings[0];
+                                      setBoostingListing(myListing);
+                                      setIsBoostModalOpen(true);
+                                    }}
+                                    onOpenBusinessOffer={() => {
+                                      setIsCguViewerOpen(true);
+                                    }}
+                                    onClaimBonus={(amount) => {
+                                      setProfile(prev => ({
+                                        ...prev,
+                                        euroBalance: Number((prev.euroBalance + amount).toFixed(2))
+                                      }));
+                                      playApplePaySound();
+                                      setSaveMessage(`🎁 Bonus partenaire crédité : +${amount}€ sur votre solde !`);
+                                      safeTimeout(() => setSaveMessage(''), 6000);
+                                    }}
+                                  />
+                                )}
+                              </React.Fragment>
+                            );
+                          })}
+                        </motion.div>
+
+                        {/* SENTINELLE OBSERVER POUR AUTO INFINITE SCROLL */}
+                        {hasMoreListings && (
+                          <div ref={loadMoreSentinelRef} style={{ width: '100%', height: '24px', margin: '8px 0', pointerEvents: 'none' }} />
+                        )}
+
+                        {/* BOUTON CHARGER PLUS D'ANNONCES (PAGINATED INFINITE SCROLL) */}
+                        {hasMoreListings && (
+                          <div style={{ display: 'flex', justifyContent: 'center', marginTop: '28px', marginBottom: '20px' }}>
+                            <button
+                              type="button"
+                              onClick={handleLoadMoreListings}
+                              disabled={isLoadingMoreListings}
+                              className="premium-button"
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '10px',
+                                padding: '12px 30px',
+                                borderRadius: '999px',
+                                border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid rgba(0,0,0,0.12)',
+                                backgroundColor: darkMode ? 'rgba(35,30,27,0.95)' : '#FFFFFF',
+                                color: darkMode ? '#FAF7F2' : '#3D3530',
+                                fontSize: '13px',
+                                fontWeight: '800',
+                                cursor: isLoadingMoreListings ? 'not-allowed' : 'pointer',
+                                boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
+                                transition: 'all 0.2s ease',
+                                opacity: isLoadingMoreListings ? 0.7 : 1,
+                              }}
+                            >
+                              {isLoadingMoreListings ? (
+                                <>
+                                  <div style={{ width: '16px', height: '16px', border: '2px solid #C67D5B', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                                  <span>Chargement des annonces...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <span>Charger plus d'annonces</span>
+                                  <ChevronRight size={16} />
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
+
+                  {/* BANNIÈRE LATÉRALE DROITE (DESKTOP) */}
+                  <aside className="desktop-ad-banner" aria-label="Monétisation & Boost Troco">
+                    <div className="ad-card" style={{ border: darkMode ? '1px solid rgba(245,158,11,0.3)' : '1px solid #FDE68A' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                        <span style={{ fontSize: '9px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#B45309', backgroundColor: '#FEF3C7', padding: '3px 7px', borderRadius: '6px' }}>
+                          🔥 Troco Boost
+                        </span>
+                        <span style={{ fontSize: '9px', color: darkMode ? '#94A3B8' : '#94A3B8' }}>Visibilité</span>
+                      </div>
+                      <img
+                        src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=400&q=80"
+                        alt="Booster annonce"
+                        style={{ width: '100%', height: '85px', objectFit: 'cover', borderRadius: '12px', marginBottom: '8px' }}
+                      />
+                      <div style={{ fontSize: '13px', fontWeight: '800', color: darkMode ? '#FFFFFF' : '#0F172A', marginBottom: '4px', lineHeight: 1.3 }}>
+                        Passez en tête du Feed !
+                      </div>
+                      <div style={{ fontSize: '11px', color: darkMode ? '#94A3B8' : '#64748B', lineHeight: 1.4, marginBottom: '6px' }}>
+                        Multipliez par 5 vos contacts en plaçant vos annonces en tête d'affiche.
+                      </div>
+                      <div style={{ fontSize: '11px', fontWeight: '800', color: darkMode ? '#FBBF24' : '#D97706', marginBottom: '8px' }}>
+                        À partir de 2,99€ / 7 jours
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const myListing = listings.find(l => l.author === profile?.name) || listings[0];
+                          if (myListing) {
+                            setBoostingListing(myListing);
+                            setIsBoostModalOpen(true);
+                          } else {
+                            setActiveTab('profile');
+                            alert("💡 Créez ou sélectionnez l'une de vos annonces depuis votre profil pour activer le Boost !");
+                          }
+                        }}
+                        className="premium-button"
+                        style={{
+                          width: '100%',
+                          padding: '8px 10px',
+                          borderRadius: '10px',
+                          backgroundColor: '#D97706',
+                          color: '#FFF',
+                          fontSize: '11px',
+                          fontWeight: '800',
+                          border: 'none',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '4px',
+                          boxShadow: '0 4px 12px rgba(217,119,6,0.25)'
+                        }}
+                      >
+                        <Flame size={13} /> Booster mon annonce
+                      </button>
+                    </div>
+                    <div className="ad-card">
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                        <span style={{ fontSize: '9px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#7E22CE', backgroundColor: '#F3E8FF', padding: '3px 7px', borderRadius: '6px' }}>
+                          🏢 Espace Pro
+                        </span>
+                        <span style={{ fontSize: '9px', color: darkMode ? '#94A3B8' : '#94A3B8' }}>Offre Pro</span>
+                      </div>
+                      <img
+                        src="https://images.unsplash.com/photo-1556761175-5973dc0f32e7?auto=format&fit=crop&w=400&q=80"
+                        alt="Troco Entreprise"
+                        style={{ width: '100%', height: '85px', objectFit: 'cover', borderRadius: '12px', marginBottom: '8px' }}
+                      />
+                      <div style={{ fontSize: '13px', fontWeight: '800', color: darkMode ? '#FFFFFF' : '#0F172A', marginBottom: '4px', lineHeight: 1.3 }}>
+                        Vous êtes une Entreprise ?
+                      </div>
+                      <div style={{ fontSize: '11px', color: darkMode ? '#94A3B8' : '#64748B', lineHeight: 1.4, marginBottom: '8px' }}>
+                        Abonnement Pro avec facturation TVA et échanges illimités.
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setIsCguViewerOpen(true)}
+                        className="premium-button"
+                        style={{
+                          width: '100%',
+                          padding: '8px 10px',
+                          borderRadius: '10px',
+                          backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : '#F1F5F9',
+                          color: darkMode ? '#FFF' : '#0F172A',
+                          fontSize: '11px',
+                          fontWeight: '700',
+                          border: 'none',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        En savoir plus
+                      </button>
+                    </div>
+                  </aside>
                 </div>
-                <img
-                  src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=400&q=80"
-                  alt="Booster annonce"
-                  style={{ width: '100%', height: '85px', objectFit: 'cover', borderRadius: '12px', marginBottom: '8px' }}
-                />
-                <div style={{ fontSize: '13px', fontWeight: '800', color: darkMode ? '#FFFFFF' : '#0F172A', marginBottom: '4px', lineHeight: 1.3 }}>
-                  Passez en tête du Feed !
-                </div>
-                <div style={{ fontSize: '11px', color: darkMode ? '#94A3B8' : '#64748B', lineHeight: 1.4, marginBottom: '6px' }}>
-                  Multipliez par 5 vos contacts en plaçant vos annonces en tête d'affiche.
-                </div>
-                <div style={{ fontSize: '11px', fontWeight: '800', color: darkMode ? '#FBBF24' : '#D97706', marginBottom: '8px' }}>
-                  À partir de 2,99€ / 7 jours
+              </motion.div>
+            )}
+
+            {/* ONGLET COMMUNAUTÉ : TROCO LIVE & FIL D'ACTIVITÉ */}
+            {activeTab === 'community' && (
+              <motion.div
+                key="page-community"
+                variants={pageTransitionVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                transition={pageTransitionConfig}
+                style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', flex: 1 }}
+              >
+                <SectoralErrorBoundary moduleName="Communauté & Troco Live">
+                  <Suspense fallback={null}>
+                    <CommunityHubSection
+                      currentUser={profile}
+                      onOpenProfile={(targetUser) => {
+                        const targetObj = {
+                          id: targetUser.id || targetUser.uid || `user-${Date.now()}`,
+                          user: targetUser.name || targetUser.author || 'Membre Troco',
+                          avatar: targetUser.avatar,
+                          verified: targetUser.verified || false,
+                          author: targetUser.name || targetUser.author || 'Membre Troco',
+                          authorUsername: targetUser.username || targetUser.authorUsername || '@membre',
+                          authorProfile: targetUser,
+                        };
+                        setCommunityProfileUser(targetObj);
+                        setIsCommunityProfileOpen(true);
+                      }}
+                      darkMode={darkMode}
+                      isMobile={isMobile}
+                    />
+                  </Suspense>
+                </SectoralErrorBoundary>
+              </motion.div>
+            )}
+
+            {/* ONGLET 2 : MESSAGERIE & NÉGOCIATIONS */}
+            {activeTab === 'chat' && (() => {
+              const activeChatData = chatsList.find(c => String(c.id) === String(selectedChat?.id));
+              const otherUserName = activeChatData?.user || selectedChat?.user;
+              const isThemTyping = !!(activeChatData?.typing && otherUserName && activeChatData.typing[otherUserName]);
+
+              return (
+                <motion.div
+                  key="page-chat"
+                  variants={pageTransitionVariants}
+                  initial="initial"
+                  animate="animate"
+                  exit="exit"
+                  transition={pageTransitionConfig}
+                  style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', flex: 1 }}
+                >
+                  <SectoralErrorBoundary moduleName="Messagerie & Hub Collaboratif">
+                    <Suspense fallback={null}>
+                      <ChatSection
+                        activeTab={activeTab}
+                        mockChats={chatsList}
+                        selectedChat={selectedChat}
+                        setSelectedChat={handleSelectChat}
+                        chatThreads={chatThreads}
+                        readChats={readChats}
+                        chatInputText={messageDraft}
+                        setChatInputText={setMessageDraft}
+                        onTypingChange={handleTypingChange}
+                        isThemTyping={isThemTyping}
+                        handleSendMessage={handleSendMessage}
+                        handleEditMessage={handleEditMessage}
+                        handleDeleteMessage={handleDeleteMessage}
+                        openCounterOffer={openCounterOffer}
+                        startCall={startCall}
+                        joinActiveCall={joinActiveCall}
+                        joinCall={joinActiveCall}
+                        answerCall={handleAcceptIncomingCall || acceptIncomingCall}
+                        callState={callState}
+                        isCallActive={Boolean(callState?.active && !isCallPip)}
+                        handleAcceptDeal={handleAcceptDeal}
+                        handleConfirmTrocCompletion={handleConfirmTrocCompletion}
+                        handleDeclineDeal={handleDeclineDeal}
+                        handleSendToken={handleSendToken}
+                        handleReleaseEscrow={handleReleaseEscrow}
+                        onCreateProjectGroup={handleCreateProjectGroup}
+                        onProposeReward={handleProposeReward}
+                        onAcceptReward={handleAcceptReward}
+                        onSendAudioMessage={handleSendAudioMessage}
+                        profile={profile}
+                        setProfile={setProfile}
+                        currentLang={currentLang}
+                        t={t}
+                        darkMode={darkMode}
+                        getChatMessageDisplayContent={getChatMessageDisplayContent}
+                        getListingTitleTranslation={getListingTitleTranslation}
+                        formatStatus={formatStatus}
+                        showingOriginalMessages={showingOriginalMessages}
+                        toggleOriginalMessage={toggleOriginalMessage}
+                        isMobile={isMobile}
+                        presenceMap={presenceMap}
+                        allListings={listings}
+                        onOpenListing={handleOpenListing}
+                      />
+                    </Suspense>
+                  </SectoralErrorBoundary>
+                </motion.div>
+              );
+            })()}
+
+            {/* ONGLET 3 : DÉPOSER UNE ANNONCE */}
+            {activeTab === 'post' && (
+              <motion.div
+                key="page-post"
+                variants={pageTransitionVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                transition={pageTransitionConfig}
+                style={{ width: '100%' }}
+              >
+                <SectoralErrorBoundary featureName="Dépôt d'annonce">
+                  <Suspense fallback={null}>
+                    <PostListingFeature
+                      profile={profile}
+                      setProfile={setProfile}
+                      listings={listings}
+                      setListings={setListings}
+                      postDraft={postDraft}
+                      setPostDraft={setPostDraft}
+                      postStep={postStep}
+                      setPostStep={setPostStep}
+                      isEditingListing={isEditingListing}
+                      setIsEditingListing={setIsEditingListing}
+                      editingOriginalListing={editingOriginalListing}
+                      setEditingOriginalListing={setEditingOriginalListing}
+                      publishMessage={publishMessage}
+                      setPublishMessage={setPublishMessage}
+                      userCoords={userCoords}
+                      customCategories={customCategories}
+                      setCustomCategories={setCustomCategories}
+                      setUserTransactions={setUserTransactions}
+                      openCheckout={openCheckout}
+                      setSelectedListing={setSelectedListing}
+                      setPublishedListing={setPublishedListing}
+                      setShowPublishedPopup={setShowPublishedPopup}
+                      darkMode={darkMode}
+                      t={t}
+                      currentLang={currentLang}
+                      formatCompensation={formatCompensation}
+                      getListingDetail={getListingDetail}
+                      getCoordinatesForLocation={getCoordinatesForLocation}
+                      generateTags={generateTags}
+                      getSuggestedMedia={getSuggestedMedia}
+                      getSuggestedImage={getSuggestedImage}
+                      setActiveTab={setActiveTab}
+                    />
+                  </Suspense>
+                </SectoralErrorBoundary>
+              </motion.div>
+            )}
+
+            {/* ONGLET 4 : PROFIL UTILISATEUR */}
+            {activeTab === 'profile' && (
+              <motion.div
+                key="page-profile"
+                variants={pageTransitionVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                transition={pageTransitionConfig}
+                style={{ width: '100%' }}
+              >
+                <Suspense fallback={null}>
+                  <ProfileFeature
+                    profile={profile}
+                    setProfile={setProfile}
+                    profileDraft={profileDraft}
+                    setProfileDraft={setProfileDraft}
+                    isEditingProfile={isEditingProfile}
+                    setIsEditingProfile={setIsEditingProfile}
+                    skills={skills}
+                    setSkills={setSkills}
+                    equipment={equipment}
+                    setEquipment={setEquipment}
+                    portfolioImages={portfolioImages}
+                    setPortfolioImages={setPortfolioImages}
+                    darkMode={darkMode}
+                    currentLang={currentLang}
+                    t={t}
+                    isMobile={isMobile}
+                    handleSignOut={handleSignOut}
+                    handleOpenPayment={handleOpenPayment}
+                    setIsKycModalOpen={setIsKycModalOpen}
+                    setIsAdminPanelOpen={setIsAdminPanelOpen}
+                    setIsTransactionsModalOpen={setIsTransactionsModalOpen}
+                    setIsPrivacyCenterOpen={setIsPrivacyCenterOpen}
+                    setIsCguViewerOpen={setIsCguViewerOpen}
+                    setActiveTab={setActiveTab}
+                    formatStatus={formatStatus}
+                    formatTokenCount={formatTokenCount}
+                    formatCompensation={formatCompensation}
+                  />
+                </Suspense>
+              </motion.div>
+            )}
+
+            {/* ONGLET LÉGAL : MENTIONS LÉGALES (CONFORMITÉ LCEN & DSA) */}
+            {activeTab === 'legal-notice' && (
+              <motion.div
+                key="page-legal-notice"
+                variants={pageTransitionVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                transition={pageTransitionConfig}
+                style={{ width: '100%' }}
+              >
+                <Suspense fallback={<div style={{ minHeight: '60vh' }} />}>
+                  <LegalNotice
+                    onBack={() => setActiveTab('feed')}
+                    onNavigate={(tab) => {
+                      if (typeof window !== 'undefined') window.location.hash = tab;
+                      setActiveTab(tab);
+                    }}
+                    darkMode={darkMode}
+                  />
+                </Suspense>
+              </motion.div>
+            )}
+
+            {/* ONGLET LÉGAL : POLITIQUE DE CONFIDENTIALITÉ (RGPD / CNIL) */}
+            {activeTab === 'privacy-policy' && (
+              <motion.div
+                key="page-privacy-policy"
+                variants={pageTransitionVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                transition={pageTransitionConfig}
+                style={{ width: '100%' }}
+              >
+                <Suspense fallback={<div style={{ minHeight: '60vh' }} />}>
+                  <PrivacyPolicy
+                    onBack={() => setActiveTab('feed')}
+                    onNavigate={(tab) => {
+                      if (typeof window !== 'undefined') window.location.hash = tab;
+                      setActiveTab(tab);
+                    }}
+                    onOpenPrivacyCenter={() => setIsPrivacyCenterOpen(true)}
+                    darkMode={darkMode}
+                  />
+                </Suspense>
+              </motion.div>
+            )}
+
+            {/* ONGLET LÉGAL : POLITIQUE DES COOKIES & TRACEURS */}
+            {activeTab === 'cookie-policy' && (
+              <motion.div
+                key="page-cookie-policy"
+                variants={pageTransitionVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                transition={pageTransitionConfig}
+                style={{ width: '100%' }}
+              >
+                <Suspense fallback={<div style={{ minHeight: '60vh' }} />}>
+                  <CookiePolicy
+                    onBack={() => setActiveTab('feed')}
+                    onNavigate={(tab) => {
+                      if (typeof window !== 'undefined') window.location.hash = tab;
+                      setActiveTab(tab);
+                    }}
+                    onOpenCookieSettings={() => {
+                      try {
+                        localStorage.removeItem('troco_cookie_consent');
+                        window.location.reload();
+                      } catch (e) {
+                        window.location.reload();
+                      }
+                    }}
+                    darkMode={darkMode}
+                  />
+                </Suspense>
+              </motion.div>
+            )}
+
+            {/* ONGLET LÉGAL : POLITIQUE DE REMBOURSEMENT & DEALS P2P */}
+            {activeTab === 'refund-policy' && (
+              <motion.div
+                key="page-refund-policy"
+                variants={pageTransitionVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                transition={pageTransitionConfig}
+                style={{ width: '100%' }}
+              >
+                <Suspense fallback={<div style={{ minHeight: '60vh' }} />}>
+                  <RefundPolicy
+                    onBack={() => setActiveTab('feed')}
+                    onNavigate={(tab) => {
+                      if (typeof window !== 'undefined') window.location.hash = tab;
+                      setActiveTab(tab);
+                    }}
+                    darkMode={darkMode}
+                  />
+                </Suspense>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* PIED DE PAGE GLOBAL & LIENS DE CONFORMITÉ LÉGALE */}
+          {!isMobile && ['feed', 'legal-notice', 'privacy-policy', 'cookie-policy', 'refund-policy'].includes(activeTab) && (
+            <Suspense fallback={null}>
+              <Footer
+                onNavigate={(tab) => {
+                  if (typeof window !== 'undefined') window.location.hash = tab;
+                  setActiveTab(tab);
+                }}
+                onOpenCgu={() => setIsCguViewerOpen(true)}
+                onOpenPrivacyCenter={() => setIsPrivacyCenterOpen(true)}
+                darkMode={darkMode}
+                currentLang={currentLang}
+              />
+            </Suspense>
+          )}
+        </main>
+
+        {/* BARRE DE NAVIGATION EN BAS (CLEAN, TRANSPARENTE, AVEC GESTES DE SWIPE iOS) */}
+        <AppBottomNav
+          isMobile={isMobile}
+          activeTab={activeTab}
+          selectedChat={selectedChat}
+          selectedListing={selectedListing}
+          darkMode={darkMode}
+          switchTab={switchTab}
+          t={t}
+          unreadCount={unreadCount}
+          currentLang={currentLang}
+          setSelectedChat={setSelectedChat}
+          setPostStep={setPostStep}
+          setPostDraft={setPostDraft}
+          defaultPostDraft={defaultPostDraft}
+          setPublishMessage={setPublishMessage}
+          setIsEditingListing={setIsEditingListing}
+        />
+
+        {/* POPUP CONFIRMATION PUBLICATION */}
+        {showPublishedPopup && publishedListing && (
+          <div
+            className="fixed inset-0 z-[999999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            style={{ position: 'fixed', inset: 0, zIndex: 999999 }}
+            onClick={() => {
+              setShowPublishedPopup(false);
+              setSelectedListing(publishedListing);
+              setActiveTab('feed');
+            }}
+          >
+            <div
+              onClick={e => e.stopPropagation()}
+              className="relative w-full max-w-md mx-auto bg-[var(--bg-card)] rounded-3xl shadow-2xl flex flex-col items-center text-center overflow-hidden p-6 md:p-8"
+              style={{ border: '1px solid var(--border-color)', animation: 'popupIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both' }}
+            >
+              {/* Icône checkmark animée */}
+              <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-success), var(--accent-success))', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', boxShadow: '0 12px 32px rgba(122,143,106,0.3)', animation: 'checkPop 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.15s both' }}>
+                <CheckCircle size={38} color="#FFF" />
+              </div>
+              <h2 className="font-editorial-heading" style={{ margin: '0 0 8px', fontSize: '24px', fontWeight: '600', color: 'var(--text-main)', lineHeight: 1.2 }}>
+                {currentLang === 'FR' ? '🎉 Annonce publiée !' :
+                  currentLang === 'EN' ? '🎉 Ad published!' :
+                    currentLang === 'ES' ? '🎉 ¡Anuncio publicado!' :
+                      currentLang === 'IT' ? '🎉 Annuncio pubblicato!' :
+                        currentLang === 'DE' ? '🎉 Anzeige veröffentlicht!' :
+                          currentLang === 'JA' ? '🎉 広告を公開しました！' :
+                            '🎉 广告已发布！'}
+              </h2>
+              <p style={{ margin: '0 0 6px', fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                {currentLang === 'FR' ? 'Votre annonce est maintenant visible dans le flux, sur la carte et dans les résultats de recherche.' :
+                  currentLang === 'EN' ? 'Your ad is now visible in the feed, on the map and in search results.' :
+                    currentLang === 'ES' ? 'Tu anuncio ahora es visible en el feed, en el mapa y en los resultados de búsqueda.' :
+                      currentLang === 'IT' ? 'Il tuo annuncio è ora visibile nel feed, sulla mappa e nei risultati di recherche.' :
+                        currentLang === 'DE' ? 'Ihre Anzeige ist jetzt im Feed, auf der Karte und in den Suchergebnissen sichtbar.' :
+                          currentLang === 'JA' ? '広告はフィード、マップ、検索結果に表示されるようになりました。' :
+                            '您的广告现在可以在动态、地图和搜索结果中看到。'}
+              </p>
+              <p style={{ margin: '0 0 24px', fontSize: '13px', fontWeight: '700', color: 'var(--accent-primary)' }}>« {publishedListing.title} »</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <button
+                  onClick={() => {
+                    setShowPublishedPopup(false);
+                    setSelectedListing(publishedListing);
+                    setActiveTab('feed');
+                  }}
+                  className="premium-button"
+                  style={{ width: '100%', border: 'none', borderRadius: '16px', padding: '14px', background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)', color: '#FFF', fontWeight: '800', fontSize: '15px', cursor: 'pointer', boxShadow: 'var(--shadow-accent)' }}
+                >
+                  {currentLang === 'FR' ? 'Voir mon annonce →' :
+                    currentLang === 'EN' ? 'View my listing →' :
+                      currentLang === 'ES' ? 'Ver mi anuncio →' :
+                        currentLang === 'IT' ? 'Vedi il mio annuncio →' :
+                          currentLang === 'DE' ? 'Meine Anzeige anzeigen →' :
+                            currentLang === 'JA' ? '広告を見る →' : '查看我的广告 →'}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowPublishedPopup(false);
+                    setActiveTab('post');
+                    setPostStep(1);
+                    setPostDraft(defaultPostDraft);
+                  }}
+                  style={{ width: '100%', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '13px', background: 'transparent', color: 'var(--text-secondary)', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}
+                >
+                  {currentLang === 'FR' ? '+ Déposer une autre annonce' :
+                    currentLang === 'EN' ? '+ Post another listing' :
+                      currentLang === 'ES' ? '+ Publicar otro anuncio' :
+                        currentLang === 'IT' ? '+ Pubblica un altro annuncio' :
+                          currentLang === 'DE' ? '+ Eine weitere Anzeige aufgeben' :
+                            currentLang === 'JA' ? '+ 別の広告を投稿' : '+ 发布另一条广告'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ---- MODALE D'ACTION TACTILE SUR ANNONCE MOBILE ---- */}
+        {mobileListingActionTarget && (
+          <div
+            onClick={() => setMobileListingActionTarget(null)}
+            className="fixed inset-0 z-[4000] bg-black/90 md:bg-[rgba(61,53,48,0.72)] md:backdrop-blur-md flex items-end justify-center p-0"
+            style={{
+              position: 'fixed', inset: 0,
+              zIndex: 4000,
+              animation: 'fadeSlideUp 0.25s ease both'
+            }}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
+                borderRadius: '24px 24px 0 0', width: '100%', maxWidth: '500px',
+                padding: '20px 20px 32px', boxShadow: '0 -10px 40px rgba(61,53,48,0.25)',
+                border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
+                position: 'relative', display: 'flex', flexDirection: 'column', gap: '14px'
+              }}
+            >
+              {/* Barre de drag */}
+              <div style={{ width: '40px', height: '4px', borderRadius: '999px', backgroundColor: darkMode ? 'rgba(232,221,211,0.2)' : '#D4C5B5', margin: '0 auto 6px' }} />
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+                  <img src={mobileListingActionTarget.image} alt={mobileListingActionTarget.title} style={{ width: '48px', height: '48px', borderRadius: '12px', objectFit: 'cover' }} />
+                  <div style={{ minWidth: 0 }}>
+                    <div className="font-editorial-heading" style={{ fontWeight: '600', fontSize: '16px', color: darkMode ? '#FAF7F2' : '#3D3530', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {mobileListingActionTarget.title}
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#C67D5B', fontWeight: '700' }}>
+                      {mobileListingActionTarget.compensation} • {mobileListingActionTarget.status === 'paused' ? 'En pause' : 'Active'}
+                    </div>
+                  </div>
                 </div>
                 <button
-                  type="button"
+                  onClick={() => setMobileListingActionTarget(null)}
+                  style={{ border: 'none', backgroundColor: darkMode ? 'rgba(232,221,211,0.1)' : '#F5EAE4', color: darkMode ? '#FAF7F2' : '#3D3530', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
+                {/* MODIFIER */}
+                <button
                   onClick={() => {
-                    const myListing = listings.find(l => l.author === profile?.name) || listings[0];
-                    if (myListing) {
-                      setBoostingListing(myListing);
-                      setIsBoostModalOpen(true);
-                    } else {
-                      setActiveTab('profile');
-                      alert("💡 Créez ou sélectionnez l'une de vos annonces depuis votre profil pour activer le Boost !");
-                    }
+                    const target = mobileListingActionTarget;
+                    setMobileListingActionTarget(null);
+                    handleStartEditListing(target);
                   }}
                   className="premium-button"
                   style={{
-                    width: '100%',
-                    padding: '8px 10px',
-                    borderRadius: '10px',
-                    backgroundColor: '#D97706',
+                    display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px',
+                    borderRadius: '16px', border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3',
+                    backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530',
+                    fontSize: '14px', fontWeight: '700', cursor: 'pointer'
+                  }}
+                >
+                  <span style={{ fontSize: '18px' }}>✏️</span>
+                  <span>Modifier l'annonce</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    const target = mobileListingActionTarget;
+                    setMobileListingActionTarget(null);
+                    handleBoostListing(target);
+                  }}
+                  className="premium-button"
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px',
+                    borderRadius: '16px', border: '1px solid #E8DDD3',
+                    backgroundColor: darkMode ? 'rgba(217,119,6,0.15)' : '#FEF3C7', color: '#D97706',
+                    fontSize: '14px', fontWeight: '800', cursor: 'pointer'
+                  }}
+                >
+                  <span style={{ fontSize: '18px' }}>🔥</span>
+                  <span>Booster l'annonce (Top visibilité)</span>
+                </button>
+
+                <button
+                  onClick={async () => {
+                    const targetId = mobileListingActionTarget.id;
+                    await handleTogglePauseListing(targetId);
+                    setMobileListingActionTarget(null);
+                  }}
+                  className="premium-button"
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px',
+                    borderRadius: '16px', border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3',
+                    backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530',
+                    fontSize: '14px', fontWeight: '700', cursor: 'pointer'
+                  }}
+                >
+                  <span style={{ fontSize: '18px' }}>{mobileListingActionTarget.status === 'paused' ? '▶️' : '⏸️'}</span>
+                  <span>{mobileListingActionTarget.status === 'paused' ? 'Réactiver l\'annonce' : 'Mettre en pause'}</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    const targetId = mobileListingActionTarget.id;
+                    handleDeleteListing(targetId);
+                  }}
+                  className="premium-button"
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px',
+                    borderRadius: '16px', border: '1px solid rgba(239,68,68,0.3)',
+                    backgroundColor: darkMode ? 'rgba(239,68,68,0.15)' : '#FEF2F2', color: '#EF4444',
+                    fontSize: '14px', fontWeight: '800', cursor: 'pointer'
+                  }}
+                >
+                  <span style={{ fontSize: '18px' }}>🗑️</span>
+                  <span>Supprimer définitivement l'annonce</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+
+        {/* ---- TÂCHE 2 : BANNIÈRE GLOBALE D'ALERTE APPEL ENTRANT (fixed top-10 left-1/2 -translate-x-1/2 z-[999999] shadow-2xl) ---- */}
+        {activeIncomingCall && !callState?.active && (
+          <Portal containerId="modal-root" lockScroll={false}>
+            <div
+              className="fixed top-10 left-1/2 -translate-x-1/2 z-[999999] shadow-2xl"
+              style={{
+                position: 'fixed',
+                top: 'max(16px, calc(env(safe-area-inset-top, 0px) + 16px))',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                zIndex: 999999,
+                width: 'calc(100% - 32px)',
+                maxWidth: '520px',
+                backgroundColor: darkMode ? 'rgba(30, 27, 24, 0.96)' : 'rgba(255, 255, 255, 0.96)',
+                backdropFilter: 'blur(24px) saturate(180%)',
+                WebkitBackdropFilter: 'blur(24px) saturate(180%)',
+                border: '1.5px solid var(--accent-primary, #C67D5B)',
+                borderRadius: '9999px',
+                padding: '10px 18px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '14px',
+                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.45), 0 0 25px rgba(198, 125, 91, 0.25)',
+                animation: 'slideDownIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+              }}
+            >
+              {/* Avatar & Infos Appelant */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
+                <div style={{ position: 'relative', flexShrink: 0 }}>
+                  <div
+                    style={{
+                      width: '46px',
+                      height: '46px',
+                      borderRadius: '50%',
+                      background: 'linear-gradient(135deg, var(--accent-primary, #C67D5B) 0%, #A85D3B 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#FFF',
+                      fontSize: '18px',
+                      fontWeight: '800',
+                      boxShadow: '0 4px 14px rgba(198, 125, 91, 0.35)',
+                    }}
+                  >
+                    {activeIncomingCall.from ? activeIncomingCall.from.charAt(0).toUpperCase() : 'T'}
+                  </div>
+                  <div
+                    style={{
+                      position: 'absolute',
+                      bottom: '0',
+                      right: '0',
+                      width: '12px',
+                      height: '12px',
+                      borderRadius: '50%',
+                      backgroundColor: '#10B981',
+                      border: '2px solid #FFF',
+                    }}
+                  />
+                </div>
+
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div
+                    style={{
+                      color: darkMode ? '#FAF7F2' : '#2D2825',
+                      fontWeight: '800',
+                      fontSize: '15px',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      lineHeight: 1.2,
+                    }}
+                  >
+                    {activeIncomingCall.from || 'Interlocuteur'}
+                  </div>
+                  <div
+                    style={{
+                      color: 'var(--accent-primary, #C67D5B)',
+                      fontSize: '12px',
+                      fontWeight: '700',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      marginTop: '2px',
+                    }}
+                  >
+                    {activeIncomingCall.type === 'video' ? <Video size={13} /> : <Phone size={13} />}
+                    <span>{activeIncomingCall.type === 'video' ? 'Appel visio FaceTime...' : 'Appel audio HD...'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Boutons d'action Décrocher / Raccrocher */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+                {/* Bouton Raccrocher / Décliner */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleDeclineIncomingCall(activeIncomingCall);
+                  }}
+                  style={{
+                    width: '44px',
+                    height: '44px',
+                    borderRadius: '50%',
+                    backgroundColor: '#EF4444',
                     color: '#FFF',
-                    fontSize: '11px',
-                    fontWeight: '800',
                     border: 'none',
                     cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    gap: '4px',
-                    boxShadow: '0 4px 12px rgba(217,119,6,0.25)'
+                    boxShadow: '0 4px 14px rgba(239, 68, 68, 0.4)',
+                    transition: 'transform 0.15s ease',
                   }}
+                  title="Refuser l'appel"
+                  aria-label="Refuser l'appel"
                 >
-                  <Flame size={13} /> Booster mon annonce
+                  <PhoneOff size={20} />
                 </button>
-              </div>
-              <div className="ad-card">
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '9px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#7E22CE', backgroundColor: '#F3E8FF', padding: '3px 7px', borderRadius: '6px' }}>
-                    🏢 Espace Pro
-                  </span>
-                  <span style={{ fontSize: '9px', color: darkMode ? '#94A3B8' : '#94A3B8' }}>Offre Pro</span>
-                </div>
-                <img
-                  src="https://images.unsplash.com/photo-1556761175-5973dc0f32e7?auto=format&fit=crop&w=400&q=80"
-                  alt="Troco Entreprise"
-                  style={{ width: '100%', height: '85px', objectFit: 'cover', borderRadius: '12px', marginBottom: '8px' }}
-                />
-                <div style={{ fontSize: '13px', fontWeight: '800', color: darkMode ? '#FFFFFF' : '#0F172A', marginBottom: '4px', lineHeight: 1.3 }}>
-                  Vous êtes une Entreprise ?
-                </div>
-                <div style={{ fontSize: '11px', color: darkMode ? '#94A3B8' : '#64748B', lineHeight: 1.4, marginBottom: '8px' }}>
-                  Abonnement Pro avec facturation TVA et échanges illimités.
-                </div>
+
+                {/* Bouton Décrocher / Répondre */}
                 <button
                   type="button"
-                  onClick={() => setIsCguViewerOpen(true)}
-                  className="premium-button"
-                  style={{
-                    width: '100%',
-                    padding: '8px 10px',
-                    borderRadius: '10px',
-                    backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : '#F1F5F9',
-                    color: darkMode ? '#FFF' : '#0F172A',
-                    fontSize: '11px',
-                    fontWeight: '700',
-                    border: 'none',
-                    cursor: 'pointer'
+                  onClick={async () => {
+                    await handleAcceptIncomingCall(activeIncomingCall);
                   }}
-                >
-                  En savoir plus
-                </button>
-              </div>
-            </aside>
-          </div>
-        </motion.div>
-      )}
-
-      {/* ONGLET COMMUNAUTÉ : TROCO LIVE & FIL D'ACTIVITÉ */}
-      {activeTab === 'community' && (
-        <motion.div
-          key="page-community"
-          variants={pageTransitionVariants}
-          initial="initial"
-          animate="animate"
-          exit="exit"
-          transition={pageTransitionConfig}
-          style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', flex: 1 }}
-        >
-          <SectoralErrorBoundary moduleName="Communauté & Troco Live">
-            <Suspense fallback={null}>
-              <CommunityHubSection
-                currentUser={profile}
-                onOpenProfile={(targetUser) => {
-                  const targetObj = {
-                    id: targetUser.id || targetUser.uid || `user-${Date.now()}`,
-                    user: targetUser.name || targetUser.author || 'Membre Troco',
-                    avatar: targetUser.avatar,
-                    verified: targetUser.verified || false,
-                    author: targetUser.name || targetUser.author || 'Membre Troco',
-                    authorUsername: targetUser.username || targetUser.authorUsername || '@membre',
-                    authorProfile: targetUser,
-                  };
-                  setCommunityProfileUser(targetObj);
-                  setIsCommunityProfileOpen(true);
-                }}
-                darkMode={darkMode}
-                isMobile={isMobile}
-              />
-            </Suspense>
-          </SectoralErrorBoundary>
-        </motion.div>
-      )}
-
-      {/* ONGLET 2 : MESSAGERIE & NÉGOCIATIONS */}
-      {activeTab === 'chat' && (() => {
-        const activeChatData = chatsList.find(c => String(c.id) === String(selectedChat?.id));
-        const otherUserName = safeName(activeChatData?.user || selectedChat?.user, 'Interlocuteur');
-        const isThemTyping = !!(activeChatData?.typing && otherUserName && activeChatData.typing[otherUserName]);
-
-        return (
-          <motion.div
-            key="page-chat"
-            variants={pageTransitionVariants}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-            transition={pageTransitionConfig}
-            style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', flex: 1 }}
-          >
-            <SectoralErrorBoundary moduleName="Messagerie & Hub Collaboratif">
-              <Suspense fallback={null}>
-                <ChatSection
-                  activeTab={activeTab}
-                  mockChats={chatsList}
-                  selectedChat={selectedChat}
-                  setSelectedChat={handleSelectChat}
-                  chatThreads={chatThreads}
-                  readChats={readChats}
-                  chatInputText={messageDraft}
-                  setChatInputText={setMessageDraft}
-                  onTypingChange={handleTypingChange}
-                  isThemTyping={isThemTyping}
-                  handleSendMessage={handleSendMessage}
-                  handleEditMessage={handleEditMessage}
-                  handleDeleteMessage={handleDeleteMessage}
-                  openCounterOffer={openCounterOffer}
-                  startCall={startCall}
-                  joinActiveCall={joinActiveCall}
-                  joinCall={joinActiveCall}
-                  answerCall={handleAcceptIncomingCall || acceptIncomingCall}
-                  callState={callState}
-                  isCallActive={Boolean(callState?.active && !isCallPip)}
-                  handleAcceptDeal={handleAcceptDeal}
-                  handleConfirmTrocCompletion={handleConfirmTrocCompletion}
-                  handleDeclineDeal={handleDeclineDeal}
-                  handleSendToken={handleSendToken}
-                  handleReleaseEscrow={handleReleaseEscrow}
-                  onCreateProjectGroup={handleCreateProjectGroup}
-                  onProposeReward={handleProposeReward}
-                  onAcceptReward={handleAcceptReward}
-                  onSendAudioMessage={handleSendAudioMessage}
-                  profile={profile}
-                  setProfile={setProfile}
-                  currentLang={currentLang}
-                  t={t}
-                  darkMode={darkMode}
-                  getChatMessageDisplayContent={getChatMessageDisplayContent}
-                  getListingTitleTranslation={getListingTitleTranslation}
-                  formatStatus={formatStatus}
-                  showingOriginalMessages={showingOriginalMessages}
-                  toggleOriginalMessage={toggleOriginalMessage}
-                  isMobile={isMobile}
-                  presenceMap={presenceMap}
-                  allListings={listings}
-                  onOpenListing={handleOpenListing}
-                />
-              </Suspense>
-            </SectoralErrorBoundary>
-          </motion.div>
-        );
-      })()}
-
-      {/* ONGLET 3 : DÉPOSER UNE ANNONCE */}
-      {activeTab === 'post' && (
-        <motion.div
-          key="page-post"
-          variants={pageTransitionVariants}
-          initial="initial"
-          animate="animate"
-          exit="exit"
-          transition={pageTransitionConfig}
-          style={{ width: '100%' }}
-        >
-          <SectoralErrorBoundary featureName="Dépôt d'annonce">
-            <Suspense fallback={null}>
-              <PostListingFeature
-                profile={profile}
-                setProfile={setProfile}
-                listings={listings}
-                setListings={setListings}
-                postDraft={postDraft}
-                setPostDraft={setPostDraft}
-                postStep={postStep}
-                setPostStep={setPostStep}
-                isEditingListing={isEditingListing}
-                setIsEditingListing={setIsEditingListing}
-                editingOriginalListing={editingOriginalListing}
-                setEditingOriginalListing={setEditingOriginalListing}
-                publishMessage={publishMessage}
-                setPublishMessage={setPublishMessage}
-                userCoords={userCoords}
-                customCategories={customCategories}
-                setCustomCategories={setCustomCategories}
-                setUserTransactions={setUserTransactions}
-                openCheckout={openCheckout}
-                setSelectedListing={setSelectedListing}
-                setPublishedListing={setPublishedListing}
-                setShowPublishedPopup={setShowPublishedPopup}
-                darkMode={darkMode}
-                t={t}
-                currentLang={currentLang}
-                formatCompensation={formatCompensation}
-                getListingDetail={getListingDetail}
-                getCoordinatesForLocation={getCoordinatesForLocation}
-                generateTags={generateTags}
-                getSuggestedMedia={getSuggestedMedia}
-                getSuggestedImage={getSuggestedImage}
-                setActiveTab={setActiveTab}
-              />
-            </Suspense>
-          </SectoralErrorBoundary>
-        </motion.div>
-      )}
-
-      {/* ONGLET 4 : PROFIL UTILISATEUR */}
-      {activeTab === 'profile' && (
-        <motion.div
-          key="page-profile"
-          variants={pageTransitionVariants}
-          initial="initial"
-          animate="animate"
-          exit="exit"
-          transition={pageTransitionConfig}
-          style={{ width: '100%' }}
-        >
-          <Suspense fallback={null}>
-            <ProfileFeature
-              profile={profile}
-              setProfile={setProfile}
-              profileDraft={profileDraft}
-              setProfileDraft={setProfileDraft}
-              isEditingProfile={isEditingProfile}
-              setIsEditingProfile={setIsEditingProfile}
-              skills={skills}
-              setSkills={setSkills}
-              equipment={equipment}
-              setEquipment={setEquipment}
-              portfolioImages={portfolioImages}
-              setPortfolioImages={setPortfolioImages}
-              darkMode={darkMode}
-              currentLang={currentLang}
-              t={t}
-              isMobile={isMobile}
-              handleSignOut={handleSignOut}
-              handleOpenPayment={handleOpenPayment}
-              setIsKycModalOpen={setIsKycModalOpen}
-              setIsAdminPanelOpen={setIsAdminPanelOpen}
-              setIsTransactionsModalOpen={setIsTransactionsModalOpen}
-              setIsPrivacyCenterOpen={setIsPrivacyCenterOpen}
-              setIsCguViewerOpen={setIsCguViewerOpen}
-              setActiveTab={setActiveTab}
-              formatStatus={formatStatus}
-              formatTokenCount={formatTokenCount}
-              formatCompensation={formatCompensation}
-            />
-          </Suspense>
-        </motion.div>
-      )}
-
-      {/* ONGLET LÉGAL : MENTIONS LÉGALES (CONFORMITÉ LCEN & DSA) */}
-      {activeTab === 'legal-notice' && (
-        <motion.div
-          key="page-legal-notice"
-          variants={pageTransitionVariants}
-          initial="initial"
-          animate="animate"
-          exit="exit"
-          transition={pageTransitionConfig}
-          style={{ width: '100%' }}
-        >
-          <Suspense fallback={<div style={{ minHeight: '60vh' }} />}>
-            <LegalNotice
-              onBack={() => setActiveTab('feed')}
-              onNavigate={(tab) => {
-                if (typeof window !== 'undefined') window.location.hash = tab;
-                setActiveTab(tab);
-              }}
-              darkMode={darkMode}
-            />
-          </Suspense>
-        </motion.div>
-      )}
-
-      {/* ONGLET LÉGAL : POLITIQUE DE CONFIDENTIALITÉ (RGPD / CNIL) */}
-      {activeTab === 'privacy-policy' && (
-        <motion.div
-          key="page-privacy-policy"
-          variants={pageTransitionVariants}
-          initial="initial"
-          animate="animate"
-          exit="exit"
-          transition={pageTransitionConfig}
-          style={{ width: '100%' }}
-        >
-          <Suspense fallback={<div style={{ minHeight: '60vh' }} />}>
-            <PrivacyPolicy
-              onBack={() => setActiveTab('feed')}
-              onNavigate={(tab) => {
-                if (typeof window !== 'undefined') window.location.hash = tab;
-                setActiveTab(tab);
-              }}
-              onOpenPrivacyCenter={() => setIsPrivacyCenterOpen(true)}
-              darkMode={darkMode}
-            />
-          </Suspense>
-        </motion.div>
-      )}
-
-      {/* ONGLET LÉGAL : POLITIQUE DES COOKIES & TRACEURS */}
-      {activeTab === 'cookie-policy' && (
-        <motion.div
-          key="page-cookie-policy"
-          variants={pageTransitionVariants}
-          initial="initial"
-          animate="animate"
-          exit="exit"
-          transition={pageTransitionConfig}
-          style={{ width: '100%' }}
-        >
-          <Suspense fallback={<div style={{ minHeight: '60vh' }} />}>
-            <CookiePolicy
-              onBack={() => setActiveTab('feed')}
-              onNavigate={(tab) => {
-                if (typeof window !== 'undefined') window.location.hash = tab;
-                setActiveTab(tab);
-              }}
-              onOpenCookieSettings={() => {
-                try {
-                  localStorage.removeItem('troco_cookie_consent');
-                  window.location.reload();
-                } catch (e) {
-                  window.location.reload();
-                }
-              }}
-              darkMode={darkMode}
-            />
-          </Suspense>
-        </motion.div>
-      )}
-
-      {/* ONGLET LÉGAL : POLITIQUE DE REMBOURSEMENT & DEALS P2P */}
-      {activeTab === 'refund-policy' && (
-        <motion.div
-          key="page-refund-policy"
-          variants={pageTransitionVariants}
-          initial="initial"
-          animate="animate"
-          exit="exit"
-          transition={pageTransitionConfig}
-          style={{ width: '100%' }}
-        >
-          <Suspense fallback={<div style={{ minHeight: '60vh' }} />}>
-            <RefundPolicy
-              onBack={() => setActiveTab('feed')}
-              onNavigate={(tab) => {
-                if (typeof window !== 'undefined') window.location.hash = tab;
-                setActiveTab(tab);
-              }}
-              darkMode={darkMode}
-            />
-          </Suspense>
-        </motion.div>
-      )}
-      </AnimatePresence>
-
-      {/* PIED DE PAGE GLOBAL & LIENS DE CONFORMITÉ LÉGALE */}
-      {!isMobile && ['feed', 'legal-notice', 'privacy-policy', 'cookie-policy', 'refund-policy'].includes(activeTab) && (
-        <Suspense fallback={null}>
-          <Footer
-            onNavigate={(tab) => {
-              if (typeof window !== 'undefined') window.location.hash = tab;
-              setActiveTab(tab);
-            }}
-            onOpenCgu={() => setIsCguViewerOpen(true)}
-            onOpenPrivacyCenter={() => setIsPrivacyCenterOpen(true)}
-            darkMode={darkMode}
-            currentLang={currentLang}
-          />
-        </Suspense>
-      )}
-    </main>
-
-      {/* BARRE DE NAVIGATION EN BAS (CLEAN, TRANSPARENTE, AVEC GESTES DE SWIPE iOS) */}
-      <AppBottomNav
-        isMobile={isMobile}
-        activeTab={activeTab}
-        selectedChat={selectedChat}
-        selectedListing={selectedListing}
-        darkMode={darkMode}
-        switchTab={switchTab}
-        t={t}
-        unreadCount={unreadCount}
-        currentLang={currentLang}
-        setSelectedChat={setSelectedChat}
-        setPostStep={setPostStep}
-        setPostDraft={setPostDraft}
-        defaultPostDraft={defaultPostDraft}
-        setPublishMessage={setPublishMessage}
-        setIsEditingListing={setIsEditingListing}
-      />
-
-      {/* POPUP CONFIRMATION PUBLICATION */}
-      {showPublishedPopup && publishedListing && (
-        <div
-          className="fixed inset-0 z-[999999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-          style={{ position: 'fixed', inset: 0, zIndex: 999999 }}
-          onClick={() => {
-            setShowPublishedPopup(false);
-            setSelectedListing(publishedListing);
-            setActiveTab('feed');
-          }}
-        >
-          <div
-            onClick={e => e.stopPropagation()}
-            className="relative w-full max-w-md mx-auto bg-[var(--bg-card)] rounded-3xl shadow-2xl flex flex-col items-center text-center overflow-hidden p-6 md:p-8"
-            style={{ border: '1px solid var(--border-color)', animation: 'popupIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both' }}
-          >
-            {/* Icône checkmark animée */}
-            <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-success), var(--accent-success))', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', boxShadow: '0 12px 32px rgba(122,143,106,0.3)', animation: 'checkPop 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.15s both' }}>
-              <CheckCircle size={38} color="#FFF" />
-            </div>
-            <h2 className="font-editorial-heading" style={{ margin: '0 0 8px', fontSize: '24px', fontWeight: '600', color: 'var(--text-main)', lineHeight: 1.2 }}>
-              {currentLang === 'FR' ? '🎉 Annonce publiée !' :
-                currentLang === 'EN' ? '🎉 Ad published!' :
-                  currentLang === 'ES' ? '🎉 ¡Anuncio publicado!' :
-                    currentLang === 'IT' ? '🎉 Annuncio pubblicato!' :
-                      currentLang === 'DE' ? '🎉 Anzeige veröffentlicht!' :
-                        currentLang === 'JA' ? '🎉 広告を公開しました！' :
-                          '🎉 广告已发布！'}
-            </h2>
-            <p style={{ margin: '0 0 6px', fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-              {currentLang === 'FR' ? 'Votre annonce est maintenant visible dans le flux, sur la carte et dans les résultats de recherche.' :
-                currentLang === 'EN' ? 'Your ad is now visible in the feed, on the map and in search results.' :
-                  currentLang === 'ES' ? 'Tu anuncio ahora es visible en el feed, en el mapa y en los resultados de búsqueda.' :
-                    currentLang === 'IT' ? 'Il tuo annuncio è ora visibile nel feed, sulla mappa e nei risultati di recherche.' :
-                      currentLang === 'DE' ? 'Ihre Anzeige ist jetzt im Feed, auf der Karte und in den Suchergebnissen sichtbar.' :
-                        currentLang === 'JA' ? '広告はフィード、マップ、検索結果に表示されるようになりました。' :
-                          '您的广告现在可以在动态、地图和搜索结果中看到。'}
-            </p>
-            <p style={{ margin: '0 0 24px', fontSize: '13px', fontWeight: '700', color: 'var(--accent-primary)' }}>« {publishedListing.title} »</p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <button
-                onClick={() => {
-                  setShowPublishedPopup(false);
-                  setSelectedListing(publishedListing);
-                  setActiveTab('feed');
-                }}
-                className="premium-button"
-                style={{ width: '100%', border: 'none', borderRadius: '16px', padding: '14px', background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)', color: '#FFF', fontWeight: '800', fontSize: '15px', cursor: 'pointer', boxShadow: 'var(--shadow-accent)' }}
-              >
-                {currentLang === 'FR' ? 'Voir mon annonce →' :
-                  currentLang === 'EN' ? 'View my listing →' :
-                    currentLang === 'ES' ? 'Ver mi anuncio →' :
-                      currentLang === 'IT' ? 'Vedi il mio annuncio →' :
-                        currentLang === 'DE' ? 'Meine Anzeige anzeigen →' :
-                          currentLang === 'JA' ? '広告を見る →' : '查看我的广告 →'}
-              </button>
-              <button
-                onClick={() => {
-                  setShowPublishedPopup(false);
-                  setActiveTab('post');
-                  setPostStep(1);
-                  setPostDraft(defaultPostDraft);
-                }}
-                style={{ width: '100%', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '13px', background: 'transparent', color: 'var(--text-secondary)', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}
-              >
-                {currentLang === 'FR' ? '+ Déposer une autre annonce' :
-                  currentLang === 'EN' ? '+ Post another listing' :
-                    currentLang === 'ES' ? '+ Publicar otro anuncio' :
-                      currentLang === 'IT' ? '+ Pubblica un altro annuncio' :
-                        currentLang === 'DE' ? '+ Eine weitere Anzeige aufgeben' :
-                          currentLang === 'JA' ? '+ 別の広告を投稿' : '+ 发布另一条广告'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ---- MODALE D'ACTION TACTILE SUR ANNONCE MOBILE ---- */}
-      {mobileListingActionTarget && (
-        <div
-          onClick={() => setMobileListingActionTarget(null)}
-          className="fixed inset-0 z-[4000] bg-black/90 md:bg-[rgba(61,53,48,0.72)] md:backdrop-blur-md flex items-end justify-center p-0"
-          style={{
-            position: 'fixed', inset: 0,
-            zIndex: 4000,
-            animation: 'fadeSlideUp 0.25s ease both'
-          }}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
-              borderRadius: '24px 24px 0 0', width: '100%', maxWidth: '500px',
-              padding: '20px 20px 32px', boxShadow: '0 -10px 40px rgba(61,53,48,0.25)',
-              border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
-              position: 'relative', display: 'flex', flexDirection: 'column', gap: '14px'
-            }}
-          >
-            {/* Barre de drag */}
-            <div style={{ width: '40px', height: '4px', borderRadius: '999px', backgroundColor: darkMode ? 'rgba(232,221,211,0.2)' : '#D4C5B5', margin: '0 auto 6px' }} />
-
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
-                <img src={mobileListingActionTarget.image} alt={mobileListingActionTarget.title} style={{ width: '48px', height: '48px', borderRadius: '12px', objectFit: 'cover' }} />
-                <div style={{ minWidth: 0 }}>
-                  <div className="font-editorial-heading" style={{ fontWeight: '600', fontSize: '16px', color: darkMode ? '#FAF7F2' : '#3D3530', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {mobileListingActionTarget.title}
-                  </div>
-                  <div style={{ fontSize: '12px', color: '#C67D5B', fontWeight: '700' }}>
-                    {mobileListingActionTarget.compensation} • {mobileListingActionTarget.status === 'paused' ? 'En pause' : 'Active'}
-                  </div>
-                </div>
-              </div>
-              <button
-                onClick={() => setMobileListingActionTarget(null)}
-                style={{ border: 'none', backgroundColor: darkMode ? 'rgba(232,221,211,0.1)' : '#F5EAE4', color: darkMode ? '#FAF7F2' : '#3D3530', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
-              {/* MODIFIER */}
-              <button
-                onClick={() => {
-                  const target = mobileListingActionTarget;
-                  setMobileListingActionTarget(null);
-                  handleStartEditListing(target);
-                }}
-                className="premium-button"
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px',
-                  borderRadius: '16px', border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3',
-                  backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530',
-                  fontSize: '14px', fontWeight: '700', cursor: 'pointer'
-                }}
-              >
-                <span style={{ fontSize: '18px' }}>✏️</span>
-                <span>Modifier l'annonce</span>
-              </button>
-
-              <button
-                onClick={() => {
-                  const target = mobileListingActionTarget;
-                  setMobileListingActionTarget(null);
-                  handleBoostListing(target);
-                }}
-                className="premium-button"
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px',
-                  borderRadius: '16px', border: '1px solid #E8DDD3',
-                  backgroundColor: darkMode ? 'rgba(217,119,6,0.15)' : '#FEF3C7', color: '#D97706',
-                  fontSize: '14px', fontWeight: '800', cursor: 'pointer'
-                }}
-              >
-                <span style={{ fontSize: '18px' }}>🔥</span>
-                <span>Booster l'annonce (Top visibilité)</span>
-              </button>
-
-              <button
-                onClick={async () => {
-                  const targetId = mobileListingActionTarget.id;
-                  await handleTogglePauseListing(targetId);
-                  setMobileListingActionTarget(null);
-                }}
-                className="premium-button"
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px',
-                  borderRadius: '16px', border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3',
-                  backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530',
-                  fontSize: '14px', fontWeight: '700', cursor: 'pointer'
-                }}
-              >
-                <span style={{ fontSize: '18px' }}>{mobileListingActionTarget.status === 'paused' ? '▶️' : '⏸️'}</span>
-                <span>{mobileListingActionTarget.status === 'paused' ? 'Réactiver l\'annonce' : 'Mettre en pause'}</span>
-              </button>
-
-              <button
-                onClick={() => {
-                  const targetId = mobileListingActionTarget.id;
-                  handleDeleteListing(targetId);
-                }}
-                className="premium-button"
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px',
-                  borderRadius: '16px', border: '1px solid rgba(239,68,68,0.3)',
-                  backgroundColor: darkMode ? 'rgba(239,68,68,0.15)' : '#FEF2F2', color: '#EF4444',
-                  fontSize: '14px', fontWeight: '800', cursor: 'pointer'
-                }}
-              >
-                <span style={{ fontSize: '18px' }}>🗑️</span>
-                <span>Supprimer définitivement l'annonce</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-
-      {/* ---- TÂCHE 2 : BANNIÈRE GLOBALE D'ALERTE APPEL ENTRANT (fixed top-10 left-1/2 -translate-x-1/2 z-[999999] shadow-2xl) ---- */}
-      {activeIncomingCall && !callState?.active && (
-        <Portal containerId="modal-root" lockScroll={false}>
-          <div
-            className="fixed top-10 left-1/2 -translate-x-1/2 z-[999999] shadow-2xl"
-            style={{
-              position: 'fixed',
-                top: 'max(16px, calc(env(safe-area-inset-top, 0px) + 16px))',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              zIndex: 999999,
-              width: 'calc(100% - 32px)',
-              maxWidth: '520px',
-              backgroundColor: darkMode ? 'rgba(30, 27, 24, 0.96)' : 'rgba(255, 255, 255, 0.96)',
-              backdropFilter: 'blur(24px) saturate(180%)',
-              WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-              border: '1.5px solid var(--accent-primary, #C67D5B)',
-              borderRadius: '9999px',
-              padding: '10px 18px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '14px',
-              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.45), 0 0 25px rgba(198, 125, 91, 0.25)',
-              animation: 'slideDownIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-            }}
-          >
-            {/* Avatar & Infos Appelant */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
-              <div style={{ position: 'relative', flexShrink: 0 }}>
-                <div
                   style={{
-                    width: '46px',
-                    height: '46px',
+                    width: '44px',
+                    height: '44px',
                     borderRadius: '50%',
-                    background: 'linear-gradient(135deg, var(--accent-primary, #C67D5B) 0%, #A85D3B 100%)',
+                    backgroundColor: '#10B981',
+                    color: '#FFF',
+                    border: 'none',
+                    cursor: 'pointer',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    color: '#FFF',
-                    fontSize: '18px',
-                    fontWeight: '800',
-                    boxShadow: '0 4px 14px rgba(198, 125, 91, 0.35)',
+                    boxShadow: '0 4px 14px rgba(16, 185, 129, 0.4)',
+                    transition: 'transform 0.15s ease',
                   }}
+                  title="Décrocher"
+                  aria-label="Décrocher"
                 >
-                  {activeIncomingCall.from ? activeIncomingCall.from.charAt(0).toUpperCase() : 'T'}
-                </div>
-                <div
-                  style={{
-                    position: 'absolute',
-                    bottom: '0',
-                    right: '0',
-                    width: '12px',
-                    height: '12px',
-                    borderRadius: '50%',
-                    backgroundColor: '#10B981',
-                    border: '2px solid #FFF',
-                  }}
-                />
-              </div>
-
-              <div style={{ minWidth: 0, flex: 1 }}>
-                <div
-                  style={{
-                    color: darkMode ? '#FAF7F2' : '#2D2825',
-                    fontWeight: '800',
-                    fontSize: '15px',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    lineHeight: 1.2,
-                  }}
-                >
-                  {activeIncomingCall.from || 'Interlocuteur'}
-                </div>
-                <div
-                  style={{
-                    color: 'var(--accent-primary, #C67D5B)',
-                    fontSize: '12px',
-                    fontWeight: '700',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '5px',
-                    marginTop: '2px',
-                  }}
-                >
-                  {activeIncomingCall.type === 'video' ? <Video size={13} /> : <Phone size={13} />}
-                  <span>{activeIncomingCall.type === 'video' ? 'Appel visio FaceTime...' : 'Appel audio HD...'}</span>
-                </div>
+                  <Phone size={20} />
+                </button>
               </div>
             </div>
+          </Portal>
+        )}
 
-            {/* Boutons d'action Décrocher / Raccrocher */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
-              {/* Bouton Raccrocher / Décliner */}
-              <button
-                type="button"
-                onClick={() => {
-                  handleDeclineIncomingCall(activeIncomingCall);
-                }}
-                style={{
-                  width: '44px',
-                  height: '44px',
-                  borderRadius: '50%',
-                  backgroundColor: '#EF4444',
-                  color: '#FFF',
-                  border: 'none',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: '0 4px 14px rgba(239, 68, 68, 0.4)',
-                  transition: 'transform 0.15s ease',
-                }}
-                title="Refuser l'appel"
-                aria-label="Refuser l'appel"
-              >
-                <PhoneOff size={20} />
-              </button>
-
-              {/* Bouton Décrocher / Répondre */}
-              <button
-                type="button"
-                onClick={async () => {
-                  await handleAcceptIncomingCall(activeIncomingCall);
-                }}
-                style={{
-                  width: '44px',
-                  height: '44px',
-                  borderRadius: '50%',
-                  backgroundColor: '#10B981',
-                  color: '#FFF',
-                  border: 'none',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: '0 4px 14px rgba(16, 185, 129, 0.4)',
-                  transition: 'transform 0.15s ease',
-                }}
-                title="Décrocher"
-                aria-label="Décrocher"
-              >
-                <Phone size={20} />
-              </button>
-            </div>
-          </div>
-        </Portal>
-      )}
-
-      {/* ---- OVERLAY WEBRTC APPELS (SONNERIE ENTRANTE & MODAL PLEIN ÉCRAN) ---- */}
-      <Suspense fallback={null}>
-        <WebRTCCallOverlay
-          incomingCall={null}
-          callState={callState}
-          isCallPip={isCallPip}
-          setIsCallPip={setIsCallPip}
-          darkMode={darkMode}
-          currentLang={currentLang}
-          t={t}
-          selectedChat={selectedChat}
-          selectedListing={selectedListing}
-          profile={profile}
-          localStream={localStream}
-          remoteStream={remoteStream}
-          facingMode={facingMode}
-          hasMultipleCameras={hasMultipleCameras}
-          switchCamera={switchCamera}
-          acceptIncomingCall={acceptIncomingCall}
-          declineIncomingCall={handleDeclineIncomingCall}
-          endCall={endCall}
-          toggleMic={toggleMic}
-          toggleCam={toggleCam}
-          toggleScreenShare={toggleScreenShare}
-          hostMuteParticipant={hostMuteParticipant}
-          hostStopParticipantScreenShare={hostStopParticipantScreenShare}
-          copyInviteLink={copyInviteLink}
-          attachLocalStream={attachLocalStream}
-          attachRemoteStream={attachRemoteStream}
-          handleAcceptIncomingCall={handleAcceptIncomingCall}
-          callDuration={callDuration}
-          formatCallTimer={formatCallTimer}
-          setSettlementCallDuration={setSettlementCallDuration}
-          setIsSettlementModalOpen={setIsSettlementModalOpen}
-          getAuthorAvatar={getAuthorAvatar}
-        />
-      </Suspense>
-
-      {/* ---- BULLE FLOTTANTE PIP (PICTURE-IN-PICTURE & DRAG-AND-DROP AVEC POINTER EVENTS) ---- */}
-      <Suspense fallback={null}>
-        <CallFeature
-          callState={callState}
-          isCallPip={isCallPip}
-          setIsCallPip={setIsCallPip}
-          pipPosition={pipPosition}
-          setPipPosition={setPipPosition}
-          handlePipPointerDown={handlePipPointerDown}
-          handlePipPointerMove={handlePipPointerMove}
-          handlePipPointerUp={handlePipPointerUp}
-          handlePipPointerCancel={handlePipPointerCancel}
-          handlePipContentClick={handlePipContentClick}
-          selectedChat={selectedChat}
-          callDuration={callDuration}
-          formatCallTimer={formatCallTimer}
-          remoteStream={remoteStream}
-          localStream={localStream}
-          facingMode={facingMode}
-          attachRemoteStream={attachRemoteStream}
-          attachLocalStream={attachLocalStream}
-          hasMultipleCameras={hasMultipleCameras}
-          switchCamera={switchCamera}
-          toggleMic={toggleMic}
-          endCall={endCall}
-          currentLang={currentLang}
-        />
-      </Suspense>
-
-      {/* PANEL ADMINISTRATEUR "GOD MODE" TEMPS RÉEL (/admin) */}
-      {isAdminPanelOpen && (
+        {/* ---- OVERLAY WEBRTC APPELS (SONNERIE ENTRANTE & MODAL PLEIN ÉCRAN) ---- */}
         <Suspense fallback={null}>
-          <AdminDashboard
-            isOpen={isAdminPanelOpen}
-            onClose={() => setIsAdminPanelOpen(false)}
+          <WebRTCCallOverlay
+            incomingCall={null}
+            callState={callState}
+            isCallPip={isCallPip}
+            setIsCallPip={setIsCallPip}
             darkMode={darkMode}
-            currentUser={profile}
-            onInspectUser={(u) => {
-              setIsAdminPanelOpen(false);
-              setSelectedPublicUser(u);
-            }}
-          />
-        </Suspense>
-      )}
-
-      {/* MODALE DU PROFIL PUBLIC COMPLET */}
-      {selectedPublicUser && (
-        <Suspense fallback={<SkeletonModalFallback title="Chargement du profil..." />}>
-          <PublicProfileModal
-            isOpen={Boolean(selectedPublicUser)}
-            onClose={() => setSelectedPublicUser(null)}
-            targetUser={selectedPublicUser}
-            allListings={listings}
-            onOpenListing={handleOpenListing}
-            onStartDiscussion={handleStartDiscussion}
             currentLang={currentLang}
-            darkMode={darkMode}
             t={t}
+            selectedChat={selectedChat}
+            selectedListing={selectedListing}
+            profile={profile}
+            localStream={localStream}
+            remoteStream={remoteStream}
+            facingMode={facingMode}
+            hasMultipleCameras={hasMultipleCameras}
+            switchCamera={switchCamera}
+            acceptIncomingCall={acceptIncomingCall}
+            declineIncomingCall={handleDeclineIncomingCall}
+            endCall={endCall}
+            toggleMic={toggleMic}
+            toggleCam={toggleCam}
+            toggleScreenShare={toggleScreenShare}
+            hostMuteParticipant={hostMuteParticipant}
+            hostStopParticipantScreenShare={hostStopParticipantScreenShare}
+            copyInviteLink={copyInviteLink}
+            attachLocalStream={attachLocalStream}
+            attachRemoteStream={attachRemoteStream}
+            handleAcceptIncomingCall={handleAcceptIncomingCall}
+            callDuration={callDuration}
+            formatCallTimer={formatCallTimer}
+            setSettlementCallDuration={setSettlementCallDuration}
+            setIsSettlementModalOpen={setIsSettlementModalOpen}
+            getAuthorAvatar={getAuthorAvatar}
           />
         </Suspense>
-      )}
 
-      {/* MODALE DE SIGNALEMENT COMMUNAUTAIRE */}
-      {isReportModalOpen && (
-        <Suspense fallback={<SkeletonModalFallback title="Chargement du formulaire de signalement..." />}>
-          <ReportModal
-            isOpen={isReportModalOpen}
-            onClose={() => {
-              setIsReportModalOpen(false);
-              setReportTarget({ listing: null, user: null });
-            }}
-            targetListing={reportTarget.listing}
-            targetUser={reportTarget.user}
-            currentUser={profile}
-            darkMode={darkMode}
+        {/* ---- BULLE FLOTTANTE PIP (PICTURE-IN-PICTURE & DRAG-AND-DROP AVEC POINTER EVENTS) ---- */}
+        <Suspense fallback={null}>
+          <CallFeature
+            callState={callState}
+            isCallPip={isCallPip}
+            setIsCallPip={setIsCallPip}
+            pipPosition={pipPosition}
+            setPipPosition={setPipPosition}
+            handlePipPointerDown={handlePipPointerDown}
+            handlePipPointerMove={handlePipPointerMove}
+            handlePipPointerUp={handlePipPointerUp}
+            handlePipPointerCancel={handlePipPointerCancel}
+            handlePipContentClick={handlePipContentClick}
+            selectedChat={selectedChat}
+            callDuration={callDuration}
+            formatCallTimer={formatCallTimer}
+            remoteStream={remoteStream}
+            localStream={localStream}
+            facingMode={facingMode}
+            attachRemoteStream={attachRemoteStream}
+            attachLocalStream={attachLocalStream}
+            hasMultipleCameras={hasMultipleCameras}
+            switchCamera={switchCamera}
+            toggleMic={toggleMic}
+            endCall={endCall}
+            currentLang={currentLang}
           />
         </Suspense>
-      )}
 
-      {/* MODALE DE PROPOSITION DE DEAL & CONTRE-OFFRE */}
-      {isCounterOfferOpen && (
-        <Suspense fallback={<SkeletonModalFallback title="Chargement de la négociation de deal..." />}>
-          <CounterOfferModal
-            isOpen={isCounterOfferOpen}
-            onClose={() => {
-              setIsCounterOfferOpen(false);
-              setEditingDealId(null);
-            }}
-            onSubmit={handleCounterOfferSubmit}
-            initialTerms={editingDealId ? (chatThreads[selectedChat?.id] || []).find(m => String(m.id) === String(editingDealId))?.terms : counterOfferDraft}
-            isEditing={Boolean(editingDealId)}
-            partnerName={selectedChat?.user || 'Interlocuteur'}
-            listingTitle={selectedChat?.listing || ''}
-            darkMode={darkMode}
-            t={t}
-          />
-        </Suspense>
-      )}
+        {/* PANEL ADMINISTRATEUR "GOD MODE" TEMPS RÉEL (/admin) */}
+        {isAdminPanelOpen && (
+          <Suspense fallback={null}>
+            <AdminDashboard
+              isOpen={isAdminPanelOpen}
+              onClose={() => setIsAdminPanelOpen(false)}
+              darkMode={darkMode}
+              currentUser={profile}
+              onInspectUser={(u) => {
+                setIsAdminPanelOpen(false);
+                setSelectedPublicUser(u);
+              }}
+            />
+          </Suspense>
+        )}
 
-      {/* PASSERELLE DE PAIEMENT & HISTORIQUE MODULAIRE (BLOC 5) */}
-      <Suspense fallback={null}>
-        <PaymentFeature
-          isPaymentModalOpen={isPaymentModalOpen}
-          setIsPaymentModalOpen={setIsPaymentModalOpen}
-          paymentModalConfig={paymentModalConfig}
-          handlePaymentSuccess={handlePaymentSuccess}
-          playBetclicBalanceSound={playBetclicBalanceSound}
-          playApplePaySound={playApplePaySound}
-          isTransactionsModalOpen={isTransactionsModalOpen}
-          setIsTransactionsModalOpen={setIsTransactionsModalOpen}
-          userTransactions={userTransactions}
-          handleOpenPayment={handleOpenPayment}
-          profile={profile}
-          darkMode={darkMode}
-        />
-      </Suspense>
+        {/* MODALE DU PROFIL PUBLIC COMPLET */}
+        {selectedPublicUser && (
+          <Suspense fallback={<SkeletonModalFallback title="Chargement du profil..." />}>
+            <PublicProfileModal
+              isOpen={Boolean(selectedPublicUser)}
+              onClose={() => setSelectedPublicUser(null)}
+              targetUser={selectedPublicUser}
+              allListings={listings}
+              onOpenListing={handleOpenListing}
+              onStartDiscussion={handleStartDiscussion}
+              currentLang={currentLang}
+              darkMode={darkMode}
+              t={t}
+            />
+          </Suspense>
+        )}
 
-      {/* NOUVELLE MODALE DE CHECKOUT DÉCOUPLÉE AVEC PROTECTION STRICTE ANTI-DÉBIT INVOLONTAIRE */}
-      <CheckoutModal
-        isOpen={Boolean(checkoutSession)}
-        session={checkoutSession}
-        onCancel={cancelCheckout}
-        onConfirm={applyCheckout}
-        isProcessing={isCheckoutProcessing}
-        paymentStatus={checkoutStatus}
-      />
+        {/* MODALE DE SIGNALEMENT COMMUNAUTAIRE */}
+        {isReportModalOpen && (
+          <Suspense fallback={<SkeletonModalFallback title="Chargement du formulaire de signalement..." />}>
+            <ReportModal
+              isOpen={isReportModalOpen}
+              onClose={() => {
+                setIsReportModalOpen(false);
+                setReportTarget({ listing: null, user: null });
+              }}
+              targetListing={reportTarget.listing}
+              targetUser={reportTarget.user}
+              currentUser={profile}
+              darkMode={darkMode}
+            />
+          </Suspense>
+        )}
 
-      {/* TOAST D'AVERTISSEMENT RATE LIMITING */}
-      <RateLimitToast
-        isRateLimited={isRateLimited}
-        retryAfterSeconds={retryAfterSeconds}
-        onClose={resetRateLimit}
-      />
+        {/* MODALE DE PROPOSITION DE DEAL & CONTRE-OFFRE */}
+        {isCounterOfferOpen && (
+          <Suspense fallback={<SkeletonModalFallback title="Chargement de la négociation de deal..." />}>
+            <CounterOfferModal
+              isOpen={isCounterOfferOpen}
+              onClose={() => {
+                setIsCounterOfferOpen(false);
+                setEditingDealId(null);
+              }}
+              onSubmit={handleCounterOfferSubmit}
+              initialTerms={editingDealId ? (chatThreads[selectedChat?.id] || []).find(m => String(m.id) === String(editingDealId))?.terms : counterOfferDraft}
+              isEditing={Boolean(editingDealId)}
+              partnerName={selectedChat?.user || 'Interlocuteur'}
+              listingTitle={selectedChat?.listing || ''}
+              darkMode={darkMode}
+              t={t}
+            />
+          </Suspense>
+        )}
 
-
-      {/* PARCOURS D'ONBOARDING INTERACTIF POUR NOUVEAUX COMPTES (CHANTIER 1) */}
-      {isOnboardingOpen && (
-        <Suspense fallback={<SkeletonModalFallback title="Bienvenue sur Troco..." />}>
-          <OnboardingWizardModal
-            isOpen={isOnboardingOpen}
-            darkMode={darkMode}
-            currentUser={profile}
-            onComplete={handleCompleteOnboarding}
-          />
-        </Suspense>
-      )}
-
-      {/* CÉLÉBRATION CADEAU DE BIENVENUE (+10 JETONS ET 0.00€ INITIALISÉ) */}
-      {isWelcomeGiftModalOpen && (
-        <Suspense fallback={<SkeletonModalFallback title="Cadeau de bienvenue..." />}>
-          <WelcomeGiftCelebrationModal
-            isOpen={isWelcomeGiftModalOpen}
-            onClose={() => setIsWelcomeGiftModalOpen(false)}
-            darkMode={darkMode}
-            trocoTokens={10}
-            euroBalance={0}
-          />
-        </Suspense>
-      )}
-
-      {/* BILAN DE SÉANCE VISIO & RÉTRIBUTION EN JETONS (CHANTIER 5) */}
-      {isSettlementModalOpen && (
-        <Suspense fallback={<SkeletonModalFallback title="Bilan d'appel..." />}>
-          <VisioSettlementModal
-            isOpen={isSettlementModalOpen}
-            onClose={() => setIsSettlementModalOpen(false)}
-            callDuration={settlementCallDuration || callDuration}
-            partnerName={selectedChat?.user || 'Interlocuteur'}
-            onTransferTokens={handleTransferCallTokens}
-            darkMode={darkMode}
-            currentUserTokens={profile?.trocoTokens ?? 10}
-          />
-        </Suspense>
-      )}
-
-      {/* MODULE DE VÉRIFICATION D'IDENTITÉ (KYC) */}
-      {isKycModalOpen && (
-        <Suspense fallback={<SkeletonModalFallback title="Vérification d'identité sécurisée..." />}>
-          <KycModal
-            isOpen={isKycModalOpen}
-            onClose={() => setIsKycModalOpen(false)}
-            onComplete={handleKycComplete}
+        {/* PASSERELLE DE PAIEMENT & HISTORIQUE MODULAIRE (BLOC 5) */}
+        <Suspense fallback={null}>
+          <PaymentFeature
+            isPaymentModalOpen={isPaymentModalOpen}
+            setIsPaymentModalOpen={setIsPaymentModalOpen}
+            paymentModalConfig={paymentModalConfig}
+            handlePaymentSuccess={handlePaymentSuccess}
+            playBetclicBalanceSound={playBetclicBalanceSound}
+            playApplePaySound={playApplePaySound}
+            isTransactionsModalOpen={isTransactionsModalOpen}
+            setIsTransactionsModalOpen={setIsTransactionsModalOpen}
+            userTransactions={userTransactions}
+            handleOpenPayment={handleOpenPayment}
             profile={profile}
             darkMode={darkMode}
           />
         </Suspense>
-      )}
 
-      {/* MODALE D'ACCEPTATION & CONSULTATION DES CGU (BLOC 6) */}
-      {(isCguViewerOpen || (Boolean(profile?.name) && !profile?.cguAcceptedAt && profile?.onboardingCompleted)) && (
-        <Suspense fallback={<SkeletonModalFallback title="Conditions Générales d'Utilisation..." />}>
-          <CguModal
-            isOpen={isCguViewerOpen || (Boolean(profile?.name) && !profile?.cguAcceptedAt && profile?.onboardingCompleted)}
-            isMandatory={Boolean(profile?.name) && !profile?.cguAcceptedAt && profile?.onboardingCompleted}
-            onClose={() => setIsCguViewerOpen(false)}
-            onAccept={handleAcceptCgu}
-            darkMode={darkMode}
-            currentUser={profile}
-          />
-        </Suspense>
-      )}
+        {/* NOUVELLE MODALE DE CHECKOUT DÉCOUPLÉE AVEC PROTECTION STRICTE ANTI-DÉBIT INVOLONTAIRE */}
+        <CheckoutModal
+          isOpen={Boolean(checkoutSession)}
+          session={checkoutSession}
+          onCancel={cancelCheckout}
+          onConfirm={applyCheckout}
+          isProcessing={isCheckoutProcessing}
+          paymentStatus={checkoutStatus}
+        />
 
-      {/* MODALE PROFIL PUBLIC POUR LA COMMUNAUTÉ ET LE CHAT */}
-      {isCommunityProfileOpen && communityProfileUser && (
-        <Suspense fallback={<SkeletonModalFallback title="Profil public..." />}>
-          <PublicProfileModal
-            isOpen={isCommunityProfileOpen}
-            onClose={() => setIsCommunityProfileOpen(false)}
-            targetUser={communityProfileUser}
-            allListings={listings}
-            onOpenListing={handleOpenListing}
-            currentLang={currentLang}
-            darkMode={darkMode}
-            t={t}
-          />
-        </Suspense>
-      )}
+        {/* TOAST D'AVERTISSEMENT RATE LIMITING */}
+        <RateLimitToast
+          isRateLimited={isRateLimited}
+          retryAfterSeconds={retryAfterSeconds}
+          onClose={resetRateLimit}
+        />
 
-      {/* CENTRE DE CONFIDENTIALITÉ & GESTION DES DROITS RGPD (BLOC 6) */}
-      {isPrivacyCenterOpen && (
-        <Suspense fallback={<SkeletonModalFallback title="Centre de confidentialité..." />}>
-          <PrivacyCenterModal
-            isOpen={isPrivacyCenterOpen}
-            onClose={() => setIsPrivacyCenterOpen(false)}
-            darkMode={darkMode}
-            currentUser={profile}
-            userListings={listings}
-            userTransactions={userTransactions}
-            onDeleteAccount={handleDeleteAccount}
-          />
-        </Suspense>
-      )}
 
-      {/* BANNIÈRE COOKIES & TRACEURS CONFORME CNIL / RGPD (BLOC 6) */}
-      <CookieBanner
-        darkMode={darkMode}
-        onOpenPrivacyCenter={() => setIsPrivacyCenterOpen(true)}
-        onNavigate={(tab) => {
-          if (typeof window !== 'undefined') window.location.hash = tab;
-          setActiveTab(tab);
-        }}
-      />
+        {/* PARCOURS D'ONBOARDING INTERACTIF POUR NOUVEAUX COMPTES (CHANTIER 1) */}
+        {isOnboardingOpen && (
+          <Suspense fallback={<SkeletonModalFallback title="Bienvenue sur Troco..." />}>
+            <OnboardingWizardModal
+              isOpen={isOnboardingOpen}
+              darkMode={darkMode}
+              currentUser={profile}
+              onComplete={handleCompleteOnboarding}
+            />
+          </Suspense>
+        )}
 
-      {/* BANNIÈRE D'INSTALLATION PWA MOBILE 1-CLIC */}
-      <PWAInstallBanner />
+        {/* CÉLÉBRATION CADEAU DE BIENVENUE (+10 JETONS ET 0.00€ INITIALISÉ) */}
+        {isWelcomeGiftModalOpen && (
+          <Suspense fallback={<SkeletonModalFallback title="Cadeau de bienvenue..." />}>
+            <WelcomeGiftCelebrationModal
+              isOpen={isWelcomeGiftModalOpen}
+              onClose={() => setIsWelcomeGiftModalOpen(false)}
+              darkMode={darkMode}
+              trocoTokens={10}
+              euroBalance={0}
+            />
+          </Suspense>
+        )}
 
-      {/* OVERLAY CÉLÉBRATION TOP-UP SOLDE & JETONS AU PREMIER PLAN */}
-      {topUpCelebration && (
-        <div
-          role="status"
-          aria-live="polite"
-          aria-atomic="true"
-          style={{
-            position: 'fixed',
-            top: 'calc(env(safe-area-inset-top, 0px) + 70px)',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            zIndex: 999999,
-            backgroundColor: 'var(--bg-card)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
-            border: '2px solid var(--accent-success)',
-            borderRadius: '999px',
-            padding: '12px 24px',
-            boxShadow: '0 12px 36px rgba(16, 185, 129, 0.4), 0 0 20px rgba(16, 185, 129, 0.2)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            animation: 'fadeSlideDown 0.4s cubic-bezier(0.22, 1, 0.36, 1) both',
-            color: 'var(--text-main)',
+        {/* BILAN DE SÉANCE VISIO & RÉTRIBUTION EN JETONS (CHANTIER 5) */}
+        {isSettlementModalOpen && (
+          <Suspense fallback={<SkeletonModalFallback title="Bilan d'appel..." />}>
+            <VisioSettlementModal
+              isOpen={isSettlementModalOpen}
+              onClose={() => setIsSettlementModalOpen(false)}
+              callDuration={settlementCallDuration || callDuration}
+              partnerName={selectedChat?.user || 'Interlocuteur'}
+              onTransferTokens={handleTransferCallTokens}
+              darkMode={darkMode}
+              currentUserTokens={profile?.trocoTokens ?? 10}
+            />
+          </Suspense>
+        )}
+
+        {/* MODULE DE VÉRIFICATION D'IDENTITÉ (KYC) */}
+        {isKycModalOpen && (
+          <Suspense fallback={<SkeletonModalFallback title="Vérification d'identité sécurisée..." />}>
+            <KycModal
+              isOpen={isKycModalOpen}
+              onClose={() => setIsKycModalOpen(false)}
+              onComplete={handleKycComplete}
+              profile={profile}
+              darkMode={darkMode}
+            />
+          </Suspense>
+        )}
+
+        {/* MODALE D'ACCEPTATION & CONSULTATION DES CGU (BLOC 6) */}
+        {(isCguViewerOpen || (Boolean(profile?.name) && !profile?.cguAcceptedAt && profile?.onboardingCompleted)) && (
+          <Suspense fallback={<SkeletonModalFallback title="Conditions Générales d'Utilisation..." />}>
+            <CguModal
+              isOpen={isCguViewerOpen || (Boolean(profile?.name) && !profile?.cguAcceptedAt && profile?.onboardingCompleted)}
+              isMandatory={Boolean(profile?.name) && !profile?.cguAcceptedAt && profile?.onboardingCompleted}
+              onClose={() => setIsCguViewerOpen(false)}
+              onAccept={handleAcceptCgu}
+              darkMode={darkMode}
+              currentUser={profile}
+            />
+          </Suspense>
+        )}
+
+        {/* MODALE PROFIL PUBLIC POUR LA COMMUNAUTÉ ET LE CHAT */}
+        {isCommunityProfileOpen && communityProfileUser && (
+          <Suspense fallback={<SkeletonModalFallback title="Profil public..." />}>
+            <PublicProfileModal
+              isOpen={isCommunityProfileOpen}
+              onClose={() => setIsCommunityProfileOpen(false)}
+              targetUser={communityProfileUser}
+              allListings={listings}
+              onOpenListing={handleOpenListing}
+              currentLang={currentLang}
+              darkMode={darkMode}
+              t={t}
+            />
+          </Suspense>
+        )}
+
+        {/* CENTRE DE CONFIDENTIALITÉ & GESTION DES DROITS RGPD (BLOC 6) */}
+        {isPrivacyCenterOpen && (
+          <Suspense fallback={<SkeletonModalFallback title="Centre de confidentialité..." />}>
+            <PrivacyCenterModal
+              isOpen={isPrivacyCenterOpen}
+              onClose={() => setIsPrivacyCenterOpen(false)}
+              darkMode={darkMode}
+              currentUser={profile}
+              userListings={listings}
+              userTransactions={userTransactions}
+              onDeleteAccount={handleDeleteAccount}
+            />
+          </Suspense>
+        )}
+
+        {/* BANNIÈRE COOKIES & TRACEURS CONFORME CNIL / RGPD (BLOC 6) */}
+        <CookieBanner
+          darkMode={darkMode}
+          onOpenPrivacyCenter={() => setIsPrivacyCenterOpen(true)}
+          onNavigate={(tab) => {
+            if (typeof window !== 'undefined') window.location.hash = tab;
+            setActiveTab(tab);
           }}
-        >
-          <div style={{
-            width: '38px',
-            height: '38px',
-            borderRadius: '50%',
-            backgroundColor: 'var(--accent-success)',
-            color: '#FFF',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.5)',
-            flexShrink: 0,
-          }}>
-            <Sparkles size={20} />
-          </div>
-          <div>
-            <div style={{ fontSize: '15px', fontWeight: '900', color: 'var(--accent-success)', letterSpacing: '-0.01em' }}>
-              {topUpCelebration.title}
-            </div>
-            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600' }}>
-              {topUpCelebration.subtitle}
-            </div>
-          </div>
-        </div>
-      )}
+        />
 
-      {/* MODALE DE CONFIRMATION DE TRANSACTION FINTECH IMMERSIVE (EXPÉDITEUR & DESTINATAIRE) */}
-      <TransactionSuccessModal
-        isOpen={Boolean(transactionSuccessModalConfig?.isOpen)}
-        type={transactionSuccessModalConfig?.type || 'sent'}
-        amount={transactionSuccessModalConfig?.amount || 1}
-        currency={transactionSuccessModalConfig?.currency || 'tokens'}
-        partnerName={transactionSuccessModalConfig?.partnerName || ''}
-        onClose={handleCloseTransactionSuccessModal}
-      />
+        {/* BANNIÈRE D'INSTALLATION PWA MOBILE 1-CLIC */}
+        <PWAInstallBanner />
 
-      {/* ÉCRAN D'EXCLUSION TOTAL EN CAS DE BANNISSEMENT TEMPS RÉEL */}
-      {isUserBanned && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            zIndex: 10000000,
-            backgroundColor: '#0F0D0B',
-            color: '#FAF7F2',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '24px',
-          }}
-        >
+        {/* OVERLAY CÉLÉBRATION TOP-UP SOLDE & JETONS AU PREMIER PLAN */}
+        {topUpCelebration && (
+          <div
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+            style={{
+              position: 'fixed',
+              top: 'calc(env(safe-area-inset-top, 0px) + 70px)',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: 999999,
+              backgroundColor: 'var(--bg-card)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              border: '2px solid var(--accent-success)',
+              borderRadius: '999px',
+              padding: '12px 24px',
+              boxShadow: '0 12px 36px rgba(16, 185, 129, 0.4), 0 0 20px rgba(16, 185, 129, 0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              animation: 'fadeSlideDown 0.4s cubic-bezier(0.22, 1, 0.36, 1) both',
+              color: 'var(--text-main)',
+            }}
+          >
+            <div style={{
+              width: '38px',
+              height: '38px',
+              borderRadius: '50%',
+              backgroundColor: 'var(--accent-success)',
+              color: '#FFF',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.5)',
+              flexShrink: 0,
+            }}>
+              <Sparkles size={20} />
+            </div>
+            <div>
+              <div style={{ fontSize: '15px', fontWeight: '900', color: 'var(--accent-success)', letterSpacing: '-0.01em' }}>
+                {topUpCelebration.title}
+              </div>
+              <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600' }}>
+                {topUpCelebration.subtitle}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* MODALE DE CONFIRMATION DE TRANSACTION FINTECH IMMERSIVE (EXPÉDITEUR & DESTINATAIRE) */}
+        <TransactionSuccessModal
+          isOpen={Boolean(transactionSuccessModalConfig?.isOpen)}
+          type={transactionSuccessModalConfig?.type || 'sent'}
+          amount={transactionSuccessModalConfig?.amount || 1}
+          currency={transactionSuccessModalConfig?.currency || 'tokens'}
+          partnerName={transactionSuccessModalConfig?.partnerName || ''}
+          onClose={handleCloseTransactionSuccessModal}
+        />
+
+        {/* ÉCRAN D'EXCLUSION TOTAL EN CAS DE BANNISSEMENT TEMPS RÉEL */}
+        {isUserBanned && (
           <div
             style={{
-              maxWidth: '480px',
-              width: '100%',
-              backgroundColor: '#1C1714',
-              border: '2px solid #EF4444',
-              borderRadius: '28px',
-              padding: '38px 32px',
-              textAlign: 'center',
-              boxShadow: '0 25px 60px rgba(239,68,68,0.25), 0 0 50px rgba(0,0,0,0.8)',
+              position: 'fixed',
+              inset: 0,
+              zIndex: 10000000,
+              backgroundColor: '#0F0D0B',
+              color: '#FAF7F2',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '24px',
             }}
           >
             <div
               style={{
-                width: '68px',
-                height: '68px',
-                borderRadius: '50%',
-                backgroundColor: 'rgba(239,68,68,0.15)',
-                color: '#EF4444',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto 20px',
-                boxShadow: '0 8px 24px rgba(239,68,68,0.3)',
-              }}
-            >
-              <ShieldAlert size={36} />
-            </div>
-            <h2 style={{ fontSize: '24px', fontWeight: '900', margin: '0 0 10px', color: '#EF4444', letterSpacing: '-0.02em' }}>
-              Compte Suspendu
-            </h2>
-            <p style={{ fontSize: '14px', color: '#D4C5B5', lineHeight: 1.55, margin: '0 0 20px' }}>
-              {bannedReason || "Votre compte a été suspendu par l'administration Troco suite à un non-respect des règles de la communauté."}
-            </p>
-            <div
-              style={{
-                fontSize: '12px',
-                color: '#A8998C',
-                backgroundColor: 'rgba(0,0,0,0.3)',
-                padding: '12px 16px',
-                borderRadius: '12px',
-                marginBottom: '24px',
-                lineHeight: 1.4,
-              }}
-            >
-              Pour toute réclamation, contactez la modération officielle à <strong>support@troco.fr</strong> avec votre identifiant.
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                window.localStorage.clear();
-                window.sessionStorage.clear();
-                window.location.reload();
-              }}
-              className="premium-button"
-              style={{
+                maxWidth: '480px',
                 width: '100%',
-                padding: '14px 24px',
-                borderRadius: '14px',
-                border: 'none',
-                backgroundColor: 'rgba(255,255,255,0.12)',
-                color: '#FFF',
-                fontSize: '13.5px',
-                fontWeight: '800',
-                cursor: 'pointer',
+                backgroundColor: '#1C1714',
+                border: '2px solid #EF4444',
+                borderRadius: '28px',
+                padding: '38px 32px',
+                textAlign: 'center',
+                boxShadow: '0 25px 60px rgba(239,68,68,0.25), 0 0 50px rgba(0,0,0,0.8)',
               }}
             >
-              Fermer la session & Revenir à l'accueil
-            </button>
+              <div
+                style={{
+                  width: '68px',
+                  height: '68px',
+                  borderRadius: '50%',
+                  backgroundColor: 'rgba(239,68,68,0.15)',
+                  color: '#EF4444',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 20px',
+                  boxShadow: '0 8px 24px rgba(239,68,68,0.3)',
+                }}
+              >
+                <ShieldAlert size={36} />
+              </div>
+              <h2 style={{ fontSize: '24px', fontWeight: '900', margin: '0 0 10px', color: '#EF4444', letterSpacing: '-0.02em' }}>
+                Compte Suspendu
+              </h2>
+              <p style={{ fontSize: '14px', color: '#D4C5B5', lineHeight: 1.55, margin: '0 0 20px' }}>
+                {bannedReason || "Votre compte a été suspendu par l'administration Troco suite à un non-respect des règles de la communauté."}
+              </p>
+              <div
+                style={{
+                  fontSize: '12px',
+                  color: '#A8998C',
+                  backgroundColor: 'rgba(0,0,0,0.3)',
+                  padding: '12px 16px',
+                  borderRadius: '12px',
+                  marginBottom: '24px',
+                  lineHeight: 1.4,
+                }}
+              >
+                Pour toute réclamation, contactez la modération officielle à <strong>support@troco.fr</strong> avec votre identifiant.
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  window.localStorage.clear();
+                  window.sessionStorage.clear();
+                  window.location.reload();
+                }}
+                className="premium-button"
+                style={{
+                  width: '100%',
+                  padding: '14px 24px',
+                  borderRadius: '14px',
+                  border: 'none',
+                  backgroundColor: 'rgba(255,255,255,0.12)',
+                  color: '#FFF',
+                  fontSize: '13.5px',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                }}
+              >
+                Fermer la session & Revenir à l'accueil
+              </button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
       </div>
     </LanguageContext.Provider>

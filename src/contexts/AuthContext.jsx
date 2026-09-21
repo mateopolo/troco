@@ -209,27 +209,8 @@ export const AuthProvider = ({ children }) => {
       const userDocRef = doc(db, 'users', uid);
       const userSnap = await getDoc(userDocRef);
 
-            const rawDisplayName = u.displayName || '';
-      const emailPrefix = (u.email || '').split('@')[0] || '';
-      const cleanEmailPrefix = emailPrefix
-        .replace(/[._-]+/g, ' ')
-        .trim()
-        .toLowerCase()
-        .split(' ')
-        .filter(Boolean)
-        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-        .join(' ') || '';
-
-      const realName = rawDisplayName
-        ? rawDisplayName.trim()
-        : (cleanEmailPrefix || `Utilisateur ${providerName}`);
-
-      const cleanUsernameBase = (rawDisplayName || emailPrefix)
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '')
-        .replace(/^_+|_+$/g, '')
-        .replace(/_+/g, '_') || `user_${uid.slice(0, 6)}`;
-      const realUsername = '@' + cleanUsernameBase.replace(/^_+|_+$/g, '');
+      const realName = u.displayName || u.email?.split('@')[0] || `Utilisateur ${providerName}`;
+      const realUsername = '@' + (u.reloadUserInfo?.screenName || realName).toLowerCase().replace(/[^a-z0-9_]/g, '');
       const realAvatar = u.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80';
 
       if (!userSnap.exists()) {
@@ -268,13 +249,11 @@ export const AuthProvider = ({ children }) => {
             email: u.email || '',
             phoneNumber: u.phoneNumber || '',
             avatar: realAvatar,
-            bio: '',
-            location: '',
+            bio: 'Bienvenue sur mon profil Troco ! Prêt à échanger des services et partager des compétences.',
+            location: 'Paris, France',
             languages: ['FR'],
             skills: [],
             equipment: [],
-            socialLinks: [],
-            portfolioImages: [],
             dealsCompleted: 0,
             dealsInProgress: 0,
             rating: null,

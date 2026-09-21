@@ -20,7 +20,6 @@ import PublicProfileModal from './PublicProfileModal';
 import WorkspaceMessageCard from '../features/workspace/WorkspaceMessageCard';
 import { hapticLight, hapticSuccess, hapticError } from '../utils/haptics';
 import { EmptyState } from './ui/EmptyState';
-import { safeName } from '../utils/displayName';
 import { playPop, playSwoosh, playSuccessChime } from '../services/audioService';
 import SwipeableChatItem from './SwipeableChatItem';
 import ChatInputBar from './chat/ChatInputBar';
@@ -238,12 +237,7 @@ function ChatView({
       if (partnerUid === myUid) partnerUid = null;
     }
 
-    // ANTI-FUITE (P3) : un UID technique brut dans participants ne doit jamais
-    // être affiché comme nom d'interlocuteur.
-    const partnerName = safeName(
-      activeChatObj?.user || selectedChat?.user || activeChatObj?.projectTitle,
-      'Interlocuteur'
-    );
+    const partnerName = activeChatObj?.user || selectedChat?.user || activeChatObj?.projectTitle || 'Interlocuteur';
 
     if (!partnerUid && partnerName && db) {
       try {

@@ -1,0 +1,37 @@
+Agis en tant que Principal Staff Engineer, Lead Software Archeologist et Code Reviewer impitoyable.
+
+🚨 MISSION  AUDIT HISTORIQUE GLOBAL & TRAQUE DES RÉGRESSIONS (GIT ARCHEOLOGY) 🚨
+Le projet Troco a subi de nombreuses mutations. Ton objectif est de scanner l'historique du dépôt Git pour comparer l'architecture actuelle avec TOUTES les solutions techniques implémentées dans le passé.
+
+Utilise tes capacités d'exécution de commandes terminal (`git log --stat`, `git show`, `git diff`) pour échantillonner l'évolution du code sur les fonctionnalités clés (WebRTC, GSAP, Firestore, Whiteboard, UI).
+
+Je veux une synthèse brutale, objective et chiffrée. Ne me flatte pas. Dis-moi si nous nous sommes égarés ou si nous sommes sur la voie de la domination mondiale.
+
+Structure ton rapport Markdown avec les sections suivantes 
+
+### 1. SYNTHÈSE DE L'ÉVOLUTION ARCHITECTURALE
+- Analyse la trajectoire globale du projet depuis le premier commit jusqu'à aujourd'hui.
+- Sommes-nous en train de construire un leader mondial, ou avons-nous accumulé de la dette technique en cours de route 
+- Donne une note globale sur 100 pour l'architecture passée (avant refactoring) et l'architecture actuelle.
+
+### 2. LE TRÉSOR PERDU (LOST GOLD ANALYSIS)
+Fouille l'historique pour trouver les meilleures versions de chaque fonctionnalité qui auraient été dégradées, écrasées ou mal refactorisées par la suite.
+Examine spécifiquement 
+- Les animations GSAP & UI.
+- La fluidité du Whiteboard & de la modération.
+- La logique de transaction et le moteur WebRTC.
+
+Pour CHAQUE fonction où le passé était meilleur que le présent, fournis un bloc ultra-précis 
+- Le Nom de la Fonction  Composant.
+- Le Hash du Commit exact et la Date.
+- Pourquoi cette ancienne approche était techniquement supérieure (performance, O(n), sécurité).
+
+### 3. LES ÉGAREMENTS (WRONG TURNS)
+- Identifie les moments où le projet a pris une mauvaise direction (ex ajout d'une logique lourde côté client au lieu de Firebase, sur-complexification d'un composant, etc.).
+- Liste les fonctions actuelles qui sont des usines à gaz par rapport à des versions antérieures plus élégantes.
+
+### 4. ROADMAP DE RESTAURATION
+Dresse un plan d'action strict listant les blocs de code exacts de l'historique Git qu'il faut réimporter dans l'architecture modulaire actuelle.
+Format attendu  Restaurer `nomDeLaFonction` depuis le commit `[Hash]` vers le fichier actuel `[Fichier]`.
+
+⚠️ RAPPEL  Produis uniquement ce rapport d'audit analytique. N'essaie pas de modifier le code de l'application pendant cet audit. Utilise les commandes Git pour enquêter en profondeur.

@@ -24,5 +24,3 @@ yarn-debug.log*
 yarn-error.log*
 *.mp4
 *.txt
-.trae
-.agents

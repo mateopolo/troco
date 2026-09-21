@@ -27,27 +27,30 @@ import { calculateHaversineDistance } from '../utils/geocodingNominatim';
  * ==============================================================================
  * FIRESTORE SERVICE — ENTERPRISE DATA ACCESS LAYER (DAL)
  * ==============================================================================
- * Centralise tous les appels Firestore avec validation de type, gestion d'erreurs
- * atomique et indexation spatiale Geohashing (startAt / endAt).
  */
 
 // ------------------------------------------------------------------------------
-// 1. GESTION DES ANNONCES (LISTINGS & REQUÊTES GÉOSPATIALES SERVEUR)
+// 1. GESTION DES ANNONCES (LISTINGS)
 // ------------------------------------------------------------------------------
 
-/**
- * Récupère une page d'annonces de manière paginée et optimisée (limit 20)
- * @param {Object} options
- * @param {number} options.pageSize Nombre d'annonces par page (défaut: 20)
- * @param {Object} options.lastDoc Dernier document Firestore (curseur startAfter)
- * @returns {Promise<{items: Array, lastVisible: Object|null, hasMore: boolean}>}
- */
 export const fetchListingsPaginated = async ({ pageSize = 20, lastDoc = null } = {}) => {
   if (!db) return { items: [], lastVisible: null, hasMore: false };
   try {
-    const q = lastDoc
-      ? query(collection(db, 'listings'), startAfter(lastDoc), limit(pageSize))
-      : query(collection(db, 'listings'), limit(pageSize));
+    let q;
+    if (lastDoc) {
+      q = query(
+        collection(db, 'listings'),
+        orderBy('createdAt', 'desc'),
+        startAfter(lastDoc),
+        limit(pageSize)
+      );
+    } else {
+      q = query(
+        collection(db, 'listings'),
+        orderBy('createdAt', 'desc'),
+        limit(pageSize)
+      );
+    }
 
     const snapshot = await getDocs(q);
     const items = snapshot.docs.map((docSnap) => ({
@@ -59,36 +62,40 @@ export const fetchListingsPaginated = async ({ pageSize = 20, lastDoc = null } =
       _doc: docSnap,
     }));
 
-    // Tri en mémoire par date décroissante (évite tout besoin d'index composite Firestore)
-    items.sort((a, b) => {
-      const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
-      const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt ? new Date(b.createdAt).getTime() : 0);
-      return timeB - timeA;
-    });
-
     const lastVisible = snapshot.docs[snapshot.docs.length - 1] || null;
     const hasMore = snapshot.docs.length === pageSize;
 
-    return {
-      items,
-      lastVisible,
-      hasMore,
-    };
+    return { items, lastVisible, hasMore };
   } catch (error) {
-    logger.error('[FirestoreService] fetchListingsPaginated error:', error);
-    return { items: [], lastVisible: null, hasMore: false, error };
+    logger.warn('[FirestoreService] fetchListingsPaginated with orderBy failed, falling back without orderBy:', error);
+    try {
+      let fallbackQuery;
+      if (lastDoc) {
+        fallbackQuery = query(collection(db, 'listings'), startAfter(lastDoc), limit(pageSize));
+      } else {
+        fallbackQuery = query(collection(db, 'listings'), limit(pageSize));
+      }
+      const snapshot = await getDocs(fallbackQuery);
+      const items = snapshot.docs.map((docSnap) => ({
+        id: docSnap.data().id || docSnap.id,
+        firestoreId: docSnap.id,
+        ...docSnap.data(),
+        status: docSnap.data().status || 'active',
+        isDemo: false,
+        _doc: docSnap,
+      }));
+      return {
+        items,
+        lastVisible: snapshot.docs[snapshot.docs.length - 1] || null,
+        hasMore: snapshot.docs.length === pageSize,
+      };
+    } catch (fallbackErr) {
+      logger.error('[FirestoreService] fetchListingsPaginated fallback error:', fallbackErr);
+      return { items: [], lastVisible: null, hasMore: false, error: fallbackErr };
+    }
   }
 };
 
-/**
- * Requête spatiale optimisée par Geohash (startAt / endAt)
- * Récupère uniquement les annonces dans le périmètre géographique sans surcharger la bande passante.
- * @param {Object} options
- * @param {[number, number]} options.center Coordonnées [latitude, longitude]
- * @param {number} options.radiusKm Rayon de recherche en km (défaut: 20)
- * @param {number} options.pageSize Limite par requête de plage (défaut: 25)
- * @returns {Promise<{items: Array, totalFound: number}>}
- */
 export const fetchListingsByGeohash = async ({ center, radiusKm = 20, pageSize = 25 } = {}) => {
   if (!db || !Array.isArray(center) || center.length < 2 || isNaN(center[0]) || isNaN(center[1])) {
     return fetchListingsPaginated({ pageSize });
@@ -166,19 +173,13 @@ export const fetchListingsByGeohash = async ({ center, radiusKm = 20, pageSize =
     const items = Array.from(docMap.values());
     items.sort((a, b) => (a.distanceKm || 0) - (b.distanceKm || 0));
 
-    return {
-      items,
-      totalFound: items.length,
-    };
+    return { items, totalFound: items.length };
   } catch (error) {
     logger.error('[FirestoreService] fetchListingsByGeohash error:', error);
     return fetchListingsPaginated({ pageSize });
   }
 };
 
-/**
- * Écoute en temps réel les annonces dans un rayon geohash donné
- */
 export const subscribeToListingsByGeohash = ({ center, radiusKm = 20, pageSize = 20, onUpdate, onError }) => {
   if (!db || !Array.isArray(center) || center.length < 2 || isNaN(center[0]) || isNaN(center[1])) {
     return subscribeToListings(onUpdate, onError, pageSize);
@@ -254,16 +255,9 @@ export const subscribeToListingsByGeohash = ({ center, radiusKm = 20, pageSize =
   };
 };
 
-/**
- * Écoute en temps réel les annonces Firestore avec limite pour éviter la surcharge mémoire
- * @param {Function} onUpdate Callback avec les annonces formatées
- * @param {Function} onError Callback en cas d'erreur
- * @param {number} pageSize Nombre maximum d'annonces à écouter en direct (défaut: 20)
- * @returns {Function} Fonction de désabonnement propre (unsubscribe)
- */
-export const subscribeToListings = (onUpdate, onError, pageSize = 20) => {
+export const subscribeToListings = (onUpdate, onError, pageSize = 50) => {
   try {
-    const q = query(collection(db, 'listings'), orderBy('createdAt', 'desc'), limit(pageSize));
+    const q = query(collection(db, 'listings'), where('status', '==', 'active'), limit(pageSize));
     return onSnapshot(q, (snapshot) => {
       const items = snapshot.docs.map(d => ({
         id: d.data().id || d.id,
@@ -275,33 +269,15 @@ export const subscribeToListings = (onUpdate, onError, pageSize = 20) => {
       }));
       onUpdate(items, snapshot.docs[snapshot.docs.length - 1] || null);
     }, (error) => {
-      logger.warn('[FirestoreService] subscribeToListings error, falling back without orderBy:', error);
-      try {
-        const fallbackQ = query(collection(db, 'listings'), limit(pageSize));
-        return onSnapshot(fallbackQ, (snapshot) => {
-          const items = snapshot.docs.map(d => ({
-            id: d.data().id || d.id,
-            firestoreId: d.id,
-            ...d.data(),
-            status: d.data().status || 'active',
-            isDemo: false,
-            _doc: d,
-          }));
-          onUpdate(items, snapshot.docs[snapshot.docs.length - 1] || null);
-        }, onError);
-      } catch (e) {
-        if (onError) onError(error);
-      }
+      logger.warn('[FirestoreService] subscribeToListings error:', error);
+      if (onError) onError(error);
     });
   } catch (err) {
     logger.warn('[FirestoreService] subscribeToListings setup failed:', err);
-    return () => {};
+    return () => { };
   }
 };
 
-/**
- * Crée une nouvelle annonce dans Firestore avec indexation spatiale Geohash
- */
 export const createListing = async (listingData) => {
   try {
     let lat = null;
@@ -339,9 +315,6 @@ export const createListing = async (listingData) => {
   }
 };
 
-/**
- * Supprime une annonce
- */
 export const deleteListing = async (listingId) => {
   try {
     await deleteDoc(doc(db, 'listings', String(listingId)));
@@ -353,12 +326,9 @@ export const deleteListing = async (listingId) => {
 };
 
 // ------------------------------------------------------------------------------
-// 2. GESTION DES DISCUSSIONS & MESSAGES (CHATS)
+// 2. GESTION DES DISCUSSIONS & MESSAGES (CHATS) — FIX MULTI-IDENTIFIANT
 // ------------------------------------------------------------------------------
 
-/**
- * Construit un identifiant de conversation 100% déterministe basé sur les UIDs
- */
 export const buildDeterministicConversationId = (listingId, userAId, userBId) => {
   const sortedUids = [String(userAId || '').trim(), String(userBId || '').trim()].sort().filter(Boolean);
   const uidsPart = sortedUids.join('_') || 'conversation';
@@ -367,44 +337,90 @@ export const buildDeterministicConversationId = (listingId, userAId, userBId) =>
 };
 
 /**
- * Écoute les discussions de l'utilisateur connecté (EXCLUSIVEMENT par UID Firebase) avec tri en mémoire sécurisé
+ * FIX CRITIQUE : Écoute les chats de l'utilisateur avec multi-identifiants
+ * Accepte : uid (28 chars), email, name, username, demo_xxx
+ * Souscrit à PLUSIEURS requêtes en parallèle et fusionne les résultats
  */
-export const subscribeToUserChats = (userUid, onUpdate, onError) => {
-  if (!userUid || typeof userUid !== 'string') return () => {};
-  try {
-    const target = userUid.trim();
-    const q = query(
-      collection(db, 'chats'),
-      where('participants', 'array-contains', target)
-    );
-    return onSnapshot(q, (snapshot) => {
-      const chats = snapshot.docs.map(d => ({
-        id: d.id,
-        ...d.data()
-      }));
-      // Tri mémoire par date de dernière activité (Zéro échec d'index)
-      chats.sort((a, b) => {
-        const timeA = a.updatedAt?.toMillis ? a.updatedAt.toMillis() : (a.updatedAt ? new Date(a.updatedAt).getTime() : (a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt ? new Date(a.createdAt).getTime() : 0)));
-        const timeB = b.updatedAt?.toMillis ? b.updatedAt.toMillis() : (b.updatedAt ? new Date(b.updatedAt).getTime() : (b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt ? new Date(b.createdAt).getTime() : 0)));
-        return timeB - timeA;
-      });
-      onUpdate(chats);
-    }, (error) => {
-      logger.error('🚨 [FirestoreService] subscribeToUserChats error:', error);
-      if (onError) onError(error);
-    });
-  } catch (err) {
-    logger.error('🚨 [FirestoreService] subscribeToUserChats setup failed:', err);
-    if (onError) onError(err);
-    return () => {};
+export const subscribeToUserChats = (identifiers, onUpdate, onError) => {
+  // Accepte soit un string unique (rétrocompat), soit un array d'identifiants
+  let targets = [];
+  if (typeof identifiers === 'string') {
+    targets = [identifiers.trim()];
+  } else if (Array.isArray(identifiers)) {
+    targets = identifiers.filter(id => typeof id === 'string' && id.trim()).map(id => id.trim());
   }
+
+  if (targets.length === 0) {
+    logger.warn('[FirestoreService] subscribeToUserChats: aucun identifiant fourni');
+    return () => { };
+  }
+
+  // Déduplique (au cas où uid === name)
+  targets = Array.from(new Set(targets));
+
+  logger.info('[FirestoreService] subscribeToUserChats sur identifiants:', targets);
+
+  const resultsByTarget = new Map();
+  const unsubscribes = [];
+
+  const emitMerged = () => {
+    const combined = new Map();
+    for (const targetChats of resultsByTarget.values()) {
+      for (const chat of targetChats) {
+        if (!combined.has(chat.id)) {
+          combined.set(chat.id, chat);
+        }
+      }
+    }
+    const chats = Array.from(combined.values());
+    // Tri par date de dernière activité
+    chats.sort((a, b) => {
+      const getTime = (c) => {
+        if (c.updatedAt?.toMillis) return c.updatedAt.toMillis();
+        if (c.updatedAt) return new Date(c.updatedAt).getTime() || 0;
+        if (c.createdAt?.toMillis) return c.createdAt.toMillis();
+        if (c.createdAt) return new Date(c.createdAt).getTime() || 0;
+        return 0;
+      };
+      return getTime(b) - getTime(a);
+    });
+    if (typeof onUpdate === 'function') onUpdate(chats);
+  };
+
+  targets.forEach((target) => {
+    try {
+      const q = query(
+        collection(db, 'chats'),
+        where('participants', 'array-contains', target)
+      );
+      const unsub = onSnapshot(
+        q,
+        (snapshot) => {
+          const chats = snapshot.docs.map(d => ({
+            id: d.id,
+            ...d.data(),
+          }));
+          resultsByTarget.set(target, chats);
+          emitMerged();
+        },
+        (error) => {
+          // On log en warn mais on n'appelle PAS onError car d'autres requêtes peuvent réussir
+          logger.warn(`[FirestoreService] subscribeToUserChats target="${target}" error:`, error?.message || error);
+        }
+      );
+      unsubscribes.push(unsub);
+    } catch (err) {
+      logger.warn(`[FirestoreService] subscribeToUserChats setup target="${target}" failed:`, err);
+    }
+  });
+
+  return () => {
+    unsubscribes.forEach(u => typeof u === 'function' && u());
+  };
 };
 
-/**
- * Écoute les messages d'une discussion spécifique avec tri client résilient
- */
 export const subscribeToChatMessages = (chatId, onUpdate, onError) => {
-  if (!chatId) return () => {};
+  if (!chatId) return () => { };
   try {
     const q = query(
       collection(db, 'chats', String(chatId), 'messages'),
@@ -443,13 +459,10 @@ export const subscribeToChatMessages = (chatId, onUpdate, onError) => {
     });
   } catch (err) {
     logger.warn('[FirestoreService] subscribeToChatMessages setup failed:', err);
-    return () => {};
+    return () => { };
   }
 };
 
-/**
- * Envoie un message dans un chat Firestore
- */
 export const sendChatMessage = async (chatId, messageData) => {
   if (!chatId || !messageData) return { success: false };
   try {
@@ -459,7 +472,6 @@ export const sendChatMessage = async (chatId, messageData) => {
       createdAt: serverTimestamp(),
     });
 
-    // Mise à jour de l'aperçu du chat
     const chatDocRef = doc(db, 'chats', String(chatId));
     await setDoc(chatDocRef, {
       lastMessage: messageData.text || 'Message',
@@ -478,10 +490,7 @@ export const sendChatMessage = async (chatId, messageData) => {
 // 3. NÉGOCIATION DE DEALS ET TRANSACTIONS ATOMIQUES
 // ------------------------------------------------------------------------------
 
-/**
- * Valide un deal et exécute le transfert de soldes de façon atomique
- */
-/** @locked @critical DO NOT MODIFY THIS TRANSACTION LOGIC. Atomic runTransaction with buyerUid and sellerUid is required for financial integrity. */
+/** @locked @critical DO NOT MODIFY THIS TRANSACTION LOGIC. */
 export const executeDealTransaction = async ({
   chatId,
   dealId,
@@ -492,16 +501,14 @@ export const executeDealTransaction = async ({
   trocoTokens = 0,
 }) => {
   try {
-    // 🚨 PHASE 95 : CIBLAGE STRICT DU DESTINATAIRE (RECEIVER UID)
     const receiverUid = sellerUid || partnerUid;
     if (!buyerUid || !receiverUid || receiverUid === 'partner' || receiverUid === 'undefined' || receiverUid === buyerUid) {
-      const errorMsg = '[FirestoreService] executeDealTransaction: buyerUid ou destinataire (sellerUid/partnerUid) introuvable ou invalide.';
+      const errorMsg = '[FirestoreService] executeDealTransaction: buyerUid ou destinataire invalide.';
       logger.error(errorMsg, { buyerUid, sellerUid, partnerUid });
       return { success: false, error: new Error(errorMsg) };
     }
 
     await runTransaction(db, async (transaction) => {
-      // 1. TOUTES LES LECTURES (transaction.get) EN PREMIER
       const msgRef = doc(db, 'chats', String(chatId), 'messages', String(dealId));
       const buyerRef = doc(db, 'users', String(buyerUid));
       const sellerRef = doc(db, 'users', String(receiverUid));
@@ -528,7 +535,6 @@ export const executeDealTransaction = async ({
         throw new Error(`Solde d'euros insuffisant (${curBuyerEuro}€ disponible(s), ${euroAmount}€ requis).`);
       }
 
-      // 2. TOUTES LES ÉCRITURES (transaction.update / set) APRÈS
       transaction.update(msgRef, {
         status: 'confirmed',
         updatedAt: serverTimestamp(),
@@ -539,7 +545,6 @@ export const executeDealTransaction = async ({
       const newSellerTokens = Number(sellerData.trocoTokens || 0) + trocoTokens;
       const newSellerEuro = Number(sellerData.euroBalance || 0) + euroAmount;
 
-      // 3. ÉCRITURES CROISÉES FIRESTORE (DOUBLE UPDATE ATOMIQUE)
       if (trocoTokens > 0) {
         transaction.update(buyerRef, {
           trocoTokens: increment(-trocoTokens),
@@ -570,7 +575,6 @@ export const executeDealTransaction = async ({
         }, { merge: true });
       }
 
-      // 4. NOTIFICATION EN TEMPS RÉEL POUR LE DESTINATAIRE
       const notifRef = doc(collection(db, 'users', String(receiverUid), 'notifications'));
       transaction.set(notifRef, {
         type: 'payment_received',
@@ -589,9 +593,6 @@ export const executeDealTransaction = async ({
   }
 };
 
-/**
- * Libère les fonds sous séquestre au profit du prestataire
- */
 export const releaseEscrowTransaction = async ({
   chatId,
   dealId,
@@ -602,7 +603,6 @@ export const releaseEscrowTransaction = async ({
 }) => {
   try {
     await runTransaction(db, async (transaction) => {
-      // 1. TOUTES LES LECTURES EN PREMIER
       const msgRef = doc(db, 'chats', String(chatId), 'messages', String(dealId));
       let sellerDoc = null;
       let buyerDoc = null;
@@ -619,7 +619,6 @@ export const releaseEscrowTransaction = async ({
         buyerDoc = await transaction.get(buyerRef);
       }
 
-      // 2. TOUTES LES ÉCRITURES APRÈS
       transaction.update(msgRef, {
         status: 'confirmed',
         'escrow.status': 'released',
@@ -656,9 +655,6 @@ export const releaseEscrowTransaction = async ({
 // 4. STATUT EN LIGNE (PRESENCE) & FRAPPE (TYPING)
 // ------------------------------------------------------------------------------
 
-/**
- * Met à jour l'indicateur de frappe dans un chat
- */
 export const setChatTypingStatus = async (chatId, userName, isTyping) => {
   if (!chatId || !userName) return;
   try {
@@ -673,11 +669,8 @@ export const setChatTypingStatus = async (chatId, userName, isTyping) => {
   }
 };
 
-/**
- * Écoute si l'interlocuteur est en train d'écrire
- */
 export const subscribeToTyping = (chatId, currentUserName, onTypingChange) => {
-  if (!chatId || !currentUserName) return () => {};
+  if (!chatId || !currentUserName) return () => { };
   try {
     const typingCollRef = collection(db, 'chats', String(chatId), 'typing');
     return onSnapshot(typingCollRef, (snapshot) => {
@@ -687,7 +680,7 @@ export const subscribeToTyping = (chatId, currentUserName, onTypingChange) => {
       onTypingChange(otherTyping);
     }, () => onTypingChange(false));
   } catch (e) {
-    return () => {};
+    return () => { };
   }
 };
 
@@ -695,17 +688,8 @@ export const subscribeToTyping = (chatId, currentUserName, onTypingChange) => {
 // 5. TRANSFERTS DIRECTS DE JETONS TROCO
 // ------------------------------------------------------------------------------
 
-/**
- * Exécute un transfert direct de jetons de façon atomique (débit expéditeur + crédit destinataire)
- * Supporte aussi bien l'appel par objet que par arguments positionnels executeDirectTokenTransfer(chatId, senderUid, amount, chatData)
- */
-/** @locked @critical DO NOT MODIFY THIS TRANSACTION LOGIC. Atomic runTransaction with buyerUid and sellerUid is required for financial integrity. */
-export const executeDirectTokenTransfer = async (
-  arg1,
-  arg2,
-  arg3,
-  arg4
-) => {
+/** @locked @critical DO NOT MODIFY THIS TRANSACTION LOGIC. */
+export const executeDirectTokenTransfer = async (arg1, arg2, arg3, arg4) => {
   let chatId, senderUid, senderName, recipientUid, recipientName, tokenAmount, comment, chatData;
 
   if (typeof arg1 === 'object' && arg1 !== null) {
@@ -731,7 +715,6 @@ export const executeDirectTokenTransfer = async (
 
   const amount = Number(tokenAmount || 0);
 
-  // 1. RÉSOLUTION DE L'UID DESTINATAIRE DE MANIÈRE INFAILLIBLE
   if (!recipientUid && chatData) {
     if (Array.isArray(chatData.participants)) {
       recipientUid = chatData.participants.find(uid => uid && uid !== senderUid);
@@ -745,7 +728,6 @@ export const executeDirectTokenTransfer = async (
     }
   }
 
-  // Si non trouvé et chatId fourni, recherche directe dans le document du chat Firestore
   if (!recipientUid && chatId && db) {
     try {
       const chatDocSnap = await getDoc(doc(db, 'chats', String(chatId)));
@@ -762,16 +744,12 @@ export const executeDirectTokenTransfer = async (
           if (recipientUid === senderUid) recipientUid = null;
         }
       }
-    } catch (_) {}
+    } catch (_) { }
   }
 
-  // Si !recipientUid, lance une erreur explicite et annule le débit
   if (!recipientUid) {
-    logger.error('🚨 [FirestoreService] executeDirectTokenTransfer ERROR: Destinataire introuvable pour ce transfert.', {
-      chatId,
-      senderUid,
-      amount,
-      chatData,
+    logger.error('🚨 [FirestoreService] executeDirectTokenTransfer ERROR: Destinataire introuvable.', {
+      chatId, senderUid, amount, chatData,
     });
     return {
       success: false,
@@ -780,20 +758,18 @@ export const executeDirectTokenTransfer = async (
   }
 
   if (!senderUid || amount <= 0) {
-    logger.error('[FirestoreService] executeDirectTokenTransfer: senderUid manquant ou tokenAmount invalide', { senderUid, amount });
+    logger.error('[FirestoreService] executeDirectTokenTransfer: paramètres invalides', { senderUid, amount });
     return { success: false, error: 'Paramètres invalides pour le transfert.' };
   }
 
   try {
     await runTransaction(db, async (transaction) => {
-      // 1. TOUTES LES LECTURES AU TOUT DÉBUT DE LA TRANSACTION (READS FIRST)
       const senderRef = doc(db, 'users', String(senderUid));
       const recipientRef = doc(db, 'users', String(recipientUid));
 
       const senderDoc = await transaction.get(senderRef);
       const recipientDoc = await transaction.get(recipientRef);
 
-      // 2. VÉRIFICATIONS DE L'EXPÉDITEUR
       if (!senderDoc.exists()) {
         throw new Error("Le compte expéditeur n'existe pas dans Firestore.");
       }
@@ -809,13 +785,11 @@ export const executeDirectTokenTransfer = async (
       const currentRecipientTokens = Number(recipientData.trocoTokens || 0);
       const newRecipientTokens = currentRecipientTokens + amount;
 
-      // 3. TOUTES LES ÉCRITURES APRÈS LES LECTURES (WRITES)
       transaction.update(senderRef, {
         trocoTokens: increment(-amount),
         updatedAt: serverTimestamp(),
       });
 
-      // 4. CRÉDIT ATOMIQUE DU SOLDE DESTINATAIRE
       if (recipientDoc.exists()) {
         transaction.update(recipientRef, {
           trocoTokens: increment(amount),
@@ -830,7 +804,6 @@ export const executeDirectTokenTransfer = async (
         }, { merge: true });
       }
 
-      // 5. NOTIFICATION EN TEMPS RÉEL DU DESTINATAIRE
       const notifRef = doc(collection(db, 'users', String(recipientUid), 'notifications'));
       transaction.set(notifRef, {
         type: 'payment_received',
@@ -842,7 +815,6 @@ export const executeDirectTokenTransfer = async (
       });
     });
 
-    // 6. Messages et enregistrement de transaction
     if (chatId && db) {
       const transferText = `🪙 ${senderName || 'Moi'} a envoyé ${amount} Jeton${amount > 1 ? 's' : ''} Troco à ${recipientName || 'Interlocuteur'}${comment ? ` (« ${comment} »)` : ''} !`;
       await addDoc(collection(db, 'chats', String(chatId), 'messages'), {
@@ -885,9 +857,6 @@ export const executeDirectTokenTransfer = async (
   }
 };
 
-/**
- * Envoi de pourboire ou rétribution atomique post-appel
- */
 export const sendPostCallTip = async ({
   targetUid,
   partnerUid: explicitPartnerUid,
@@ -929,4 +898,3 @@ export const sendPostCallTip = async ({
 
   return { success: true, partnerUid, amount: costTokens };
 };
-

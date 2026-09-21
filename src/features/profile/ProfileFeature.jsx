@@ -140,23 +140,7 @@ export default function ProfileFeature({
       const compressedDataUrl = await compressImage(file, 300, 300, 0.75);
       if (compressedDataUrl) {
         if (setProfileDraft) setProfileDraft((prev) => ({ ...prev, avatar: compressedDataUrl }));
-        if (setProfile) {
-          setProfile((prev) => {
-            const next = { ...prev, avatar: compressedDataUrl };
-            try {
-              window.localStorage.setItem('troco_user_profile', JSON.stringify(next));
-            } catch (_) {}
-            return next;
-          });
-        }
-        const uid = profile?.uid || auth.currentUser?.uid;
-        if (uid) {
-          try {
-            await setDoc(doc(db, 'users', String(uid)), { avatar: compressedDataUrl, updatedAt: serverTimestamp() }, { merge: true });
-          } catch (e) {
-            logger.warn('[Firestore] Avatar save failed:', e);
-          }
-        }
+        if (setProfile) setProfile((prev) => ({ ...prev, avatar: compressedDataUrl }));
       }
     }
   };
@@ -194,9 +178,7 @@ export default function ProfileFeature({
       updatedAt: serverTimestamp(),
     };
     if (setProfile) setProfile(updated);
-    try {
-      window.localStorage.setItem('troco_user_profile', JSON.stringify(updated));
-    } catch (_) {}
+    window.localStorage.setItem('troco_user_profile', JSON.stringify(updated));
     if (setIsEditingProfile) setIsEditingProfile(false);
     setSaveMessage('Profil mis à jour avec succès !');
     safeTimeout(() => setSaveMessage(''), 3000);
@@ -204,24 +186,7 @@ export default function ProfileFeature({
     const uid = profile.uid || auth.currentUser?.uid;
     if (uid) {
       try {
-        // Sanitize payload to exclude protected server-controlled fields (euroBalance, trocoTokens, etc.)
-        const firestorePayload = {
-          name: updated.name || '',
-          username: updated.username || '',
-          bio: updated.bio || '',
-          avatar: updated.avatar || '',
-          skills: updated.skills || [],
-          equipment: updated.equipment || [],
-          socialLinks: updated.socialLinks || [],
-          portfolioImages: updated.portfolioImages || [],
-          languages: updated.languages || [],
-          location: updated.location || '',
-          accountType: updated.accountType || 'particular',
-          customFont: updated.customFont || 'Inter',
-          customThemeColor: updated.customThemeColor || '#C67D5B',
-          updatedAt: serverTimestamp(),
-        };
-        await setDoc(doc(db, 'users', String(uid)), firestorePayload, { merge: true });
+        await setDoc(doc(db, 'users', String(uid)), updated, { merge: true });
       } catch (e) {
         logger.warn('[Firestore] Profile save failed:', e);
       }
