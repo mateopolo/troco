@@ -2588,6 +2588,7 @@ function ChatView({
                                 transition: 'all 0.15s ease',
                               }}
                               title="Basculer entre la traduction et le texte original"
+                            >
                               <Globe size={10} />
                               <span>{isMsgOriginal ? (t ? t('showTranslation') : '🌐 Voir la traduction') : (t ? t('showOriginal') : '🌐 Voir l\'original')}</span>
                             </button>

@@ -15,7 +15,7 @@ export default function CommunityActivityFeed({
   onOpenProfile = null,
   darkMode = false,
 }) {
-  const { currentLang = 'FR', t } = useLanguage ? useLanguage() : { currentLang: 'FR', t: (k, d) => d || k };
+  const { currentLang = 'FR', t } = useLanguage();
   const [activities, setActivities] = useState(INITIAL_ACTIVITIES);
   const [showingOriginalActivities, setShowingOriginalActivities] = useState({});
   const [, setTransTick] = useState(0);
@@ -322,7 +322,7 @@ export default function CommunityActivityFeed({
                   color: 'var(--text-main)',
                   fontWeight: isReview ? '500' : '600',
                   fontStyle: isReview ? 'italic' : 'normal',
-                }}
+                }}>
                 <div>
                   {act.detail
                     ? parseAndTranslateDynamicText(act.detail, currentLang, {

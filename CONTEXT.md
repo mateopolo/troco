@@ -754,3 +754,15 @@ Résoudre l'erreur bloquante `[paymentService] Error updating Firestore user doc
 4. **Déploiement direct en production :**
    - Règles déployées avec succès sur le projet Firebase `troco-8a6eb` via `npx -y firebase-tools@latest deploy --only firestore:rules`.
 
+### Patch Résolution des Erreurs de Build & Linting Vercel (commit `fix(build): resolve jsx syntax errors and hook linting issues for vercel deployment`)
+
+#### 3.17 Résolution des Erreurs de Compilation & Linting Bloquant le Build Vercel
+
+**Diagnostic & Corrections :**
+1. **`src/components/ChatView.jsx` (L2590) :** Fermeture manquante `>` sur la balise `<button ...>` du bouton de toggle de traduction instantanée.
+2. **`src/components/CommunityActivityFeed.jsx` (L325) :** Fermeture manquante `>` sur la balise `<div style={{...}}>`.
+3. **`src/components/GlobalLiveChat.jsx` (L23) & `src/components/UserProfile.jsx` (L616) & `src/components/CommunityActivityFeed.jsx` (L18) :** Remplacement de l'appel ternaire conditionnel `useLanguage ? useLanguage() : ...` par l'appel inconditionnel standard `useLanguage()` pour respecter strictement les `rules-of-hooks` de React.
+4. **`src/features/auth/AuthScreen.jsx` (L38, L99, L109) :** Définition explicite de `onAuthSuccess = null` dans les props et ajout à la liste de dépendances du hook `useEffect` pour éliminer l'erreur `no-undef`.
+5. **Validation :** Exécution locale complète de `npm run build` réussie avec le code 0 (`The build folder is ready to be deployed.`), et validation des tests unitaires et de règles (48/48 `test:rules`, 9/9 `Phase135UGCTranslation`).
+
+

@@ -613,7 +613,7 @@ export default function UserProfile({
   onEditToggle,
   darkMode = false,
 }) {
-  const { currentLang = 'FR', t } = useLanguage ? useLanguage() : { currentLang: 'FR', t: (k, d) => d || k };
+  const { currentLang = 'FR', t } = useLanguage();
   const [showingOriginalBio, setShowingOriginalBio] = useState(false);
   const [, setTransTick] = useState(0);
 

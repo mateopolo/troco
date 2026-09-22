@@ -20,7 +20,7 @@ export default function GlobalLiveChat({
   darkMode = false,
   isCompact = false,
 }) {
-  const { currentLang = 'FR', t } = useLanguage ? useLanguage() : { currentLang: 'FR', t: (k, d) => d || k };
+  const { currentLang = 'FR', t } = useLanguage();
   const [messages, setMessages] = useState([]);
   const [showingOriginalMsgs, setShowingOriginalMsgs] = useState({});
   const [, setTransTick] = useState(0);

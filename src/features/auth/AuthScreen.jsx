@@ -38,6 +38,7 @@ export default function AuthScreen({
   setSkills,
   darkMode,
   toggleDarkMode,
+  onAuthSuccess = null,
 }) {
   // États internes du flux d'authentification
   const [authTab, setAuthTab] = useState('login'); // 'login' | 'signup'
@@ -98,6 +99,8 @@ export default function AuthScreen({
         }
         if (typeof onAuthSuccess === 'function') {
           onAuthSuccess(user);
+        } else if (typeof setIsAuthenticated === 'function') {
+          setIsAuthenticated(true);
         }
       })
       .catch((err) => {
@@ -106,7 +109,7 @@ export default function AuthScreen({
         }
       });
     return () => { isMounted = false; };
-  }, [onAuthSuccess]);
+  }, [onAuthSuccess, setIsAuthenticated]);
 
   // ---- AUTHENTIFICATION PAR TÉLÉPHONE (SMS) ----
   const handleSendSms = async () => {
