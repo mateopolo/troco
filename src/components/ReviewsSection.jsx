@@ -13,17 +13,20 @@ import {
 import { auth, db } from '../firebase';
 import { useLanguage } from '../contexts/LanguageContext';
 
-function formatReviewDate(ts) {
+const langMap = { FR: 'fr-FR', EN: 'en-US', ES: 'es-ES', IT: 'it-IT', DE: 'de-DE', JA: 'ja-JP', ZH: 'zh-CN' };
+
+function formatReviewDate(ts, currentLang = 'FR') {
   if (!ts) return '';
   if (typeof ts === 'string') return ts;
+  const locale = langMap[currentLang] || 'fr-FR';
   if (ts.toDate && typeof ts.toDate === 'function') {
-    return ts.toDate().toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+    return ts.toDate().toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' });
   }
   if (ts.seconds) {
-    return new Date(ts.seconds * 1000).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+    return new Date(ts.seconds * 1000).toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' });
   }
   if (ts instanceof Date) {
-    return ts.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+    return ts.toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' });
   }
   return String(ts);
 }
@@ -33,20 +36,20 @@ export default function ReviewsSection({
   ownerName = 'Propriétaire',
   currentUser = null,
   darkMode = false,
-  t = (k, defaultVal) => defaultVal || k,
+  t: propT,
   initialReviews = [],
 }) {
   const langContext = useLanguage();
   const safeT = (k, defaultVal) => {
-    if (typeof t === 'function') {
-      const res = t(k, defaultVal);
-      if (res && res !== k) return res;
-    }
     if (langContext && typeof langContext.t === 'function') {
       const res = langContext.t(k);
       if (res && res !== k) return res;
     }
-    return defaultVal || k;
+    if (typeof propT === 'function') {
+      const res = propT(k);
+      if (res && res !== k) return res;
+    }
+    return defaultVal !== undefined ? defaultVal : k;
   };
 
   const [reviews, setReviews] = useState(initialReviews);
@@ -228,7 +231,8 @@ export default function ReviewsSection({
         {reviews.map((review) => {
           const authorName = review.author || review.authorName || review.userName || review.user || 'Membre Troco';
           const ratingVal = Number(review.rating) || 5;
-          const dateStr = formatReviewDate(review.timestamp || review.date || review.createdAt);
+          const currentLang = langContext?.currentLang || langContext?.language || 'FR';
+          const dateStr = formatReviewDate(review.timestamp || review.date || review.createdAt, currentLang);
           const reviewText = review.text || review.comment || review.review || '';
           const replyObj = typeof review.reply === 'object' && review.reply !== null
             ? review.reply
@@ -436,10 +440,10 @@ export default function ReviewsSection({
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11.5px', fontWeight: '800', color: 'var(--accent-primary)' }}>
                     <CornerDownRight size={13} />
-                    <span>Réponse de {ownerName}</span>
+                    <span>{safeT('replyFrom', 'Réponse de')} {ownerName}</span>
                     {replyObj.timestamp && (
                       <span style={{ color: 'var(--text-secondary)', fontWeight: '500', fontSize: '10.5px', marginLeft: 'auto' }}>
-                        {formatReviewDate(replyObj.timestamp)}
+                        {formatReviewDate(replyObj.timestamp, langContext?.currentLang || langContext?.language || 'FR')}
                       </span>
                     )}
                   </div>

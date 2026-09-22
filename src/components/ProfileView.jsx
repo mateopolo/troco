@@ -11,6 +11,7 @@ import DesignStudioModal from './DesignStudioModal';
 import ReviewsSection from './ReviewsSection';
 import { auth } from '../firebase';
 import { useUserRealStats } from '../services/userStatsService';
+import { useLanguage } from '../contexts/LanguageContext';
 
 import { getFlagEmoji } from '../utils/flagUtils';
 
@@ -47,7 +48,7 @@ export default function ProfileView({
   openCheckout,
   setIsCreditModalOpen,
   currentLang,
-  t = (k, defaultVal) => defaultVal || k,
+  t: propT,
   darkMode,
   AnimatedEuroBalance,
   AnimatedTokenBalance,
@@ -57,6 +58,20 @@ export default function ProfileView({
   onRemovePortfolioImage,
   user: userProp,
 }) {
+  const langContext = useLanguage();
+  const safeT = (k, defaultVal) => {
+    if (langContext && typeof langContext.t === 'function') {
+      const res = langContext.t(k);
+      if (res && res !== k) return res;
+    }
+    if (typeof propT === 'function') {
+      const res = propT(k);
+      if (res && res !== k) return res;
+    }
+    return defaultVal !== undefined ? defaultVal : k;
+  };
+  const t = safeT;
+
   const [isKycModalOpen, setIsKycModalOpen] = useState(false);
   const [isDesignStudioOpen, setIsDesignStudioOpen] = useState(false);
   const [portfolioUrlInput, setPortfolioUrlInput] = useState('');
@@ -401,7 +416,7 @@ export default function ProfileView({
             className="premium-button"
             style={{ border: '1px solid var(--accent-success)', borderRadius: '14px', padding: '10px 16px', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-success)', fontWeight: '800', fontSize: '13px', cursor: 'pointer' }}
           >
-            Recharger
+            {t('rechargeAction', 'Recharger')}
           </button>
         </div>
       </div>
@@ -414,7 +429,7 @@ export default function ProfileView({
         {/* COMPÉTENCES & SERVICES */}
         <div style={cardStyle}>
           <h3 className="font-editorial-heading" style={{ margin: '0 0 14px', fontSize: '20px', fontWeight: '600', color: 'var(--text-main)' }}>
-            🎯 Compétences & Services Proposés
+            🎯 {t('skillsServicesOffered', 'Compétences & Services Proposés')}
           </h3>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '14px' }}>
             {skills.map((skill, idx) => (
@@ -433,7 +448,7 @@ export default function ProfileView({
               value={skillInput}
               onChange={(e) => setSkillInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleAddSkill()}
-              placeholder="Ajouter une compétence..."
+              placeholder={t('addSkillPlaceholder', 'Ajouter une compétence...')}
               style={{ flex: 1, padding: '10px 12px', border: '1px solid var(--border-color)', borderRadius: '12px', fontSize: '13px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', outline: 'none' }}
             />
             <button onClick={handleAddSkill} style={{ border: 'none', borderRadius: '12px', padding: '10px 14px', background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)', color: '#FFF', fontWeight: '800', cursor: 'pointer', boxShadow: 'var(--shadow-accent)' }}>
@@ -445,7 +460,7 @@ export default function ProfileView({
         {/* OUTILS & MATÉRIEL AU PRÊT */}
         <div style={cardStyle}>
           <h3 className="font-editorial-heading" style={{ margin: '0 0 14px', fontSize: '20px', fontWeight: '600', color: 'var(--text-main)' }}>
-            🧰 Matériel & Équipement au Prêt
+            🧰 {t('equipmentForLoan', 'Matériel & Équipement au Prêt')}
           </h3>
           <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '14px' }}>
             {equipment.map((item, idx) => (
@@ -464,7 +479,7 @@ export default function ProfileView({
               value={equipmentInput}
               onChange={(e) => setEquipmentInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleAddEquipment()}
-              placeholder="Ajouter du matériel..."
+              placeholder={t('addEquipmentPlaceholder', 'Ajouter du matériel...')}
               style={{ flex: 1, padding: '10px 12px', border: '1px solid var(--border-color)', borderRadius: '12px', fontSize: '13px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', outline: 'none' }}
             />
             <button onClick={handleAddEquipment} style={{ border: 'none', borderRadius: '12px', padding: '10px 14px', backgroundColor: 'var(--accent-success)', color: '#FFF', fontWeight: '800', cursor: 'pointer', boxShadow: 'var(--shadow-accent)' }}>
@@ -478,7 +493,7 @@ export default function ProfileView({
       <div style={{ ...cardStyle, borderRadius: '24px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px', flexWrap: 'wrap', gap: '10px' }}>
           <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '22px', fontWeight: '600', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <ImageIcon size={20} color="var(--accent-primary)" /> Mon Portfolio
+            <ImageIcon size={20} color="var(--accent-primary)" /> {t('myPortfolio', 'Mon Portfolio')}
           </h3>
           <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)' }}>
             {portfolioImages.length} photo{portfolioImages.length !== 1 ? 's' : ''}
@@ -507,7 +522,7 @@ export default function ProfileView({
                     backdropFilter: 'blur(4px)', boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
                     zIndex: 10
                   }}
-                  title="Supprimer cette photo"
+                  title={t('deleteThisPhoto', 'Supprimer cette photo')}
                 >
                   <X size={13} />
                 </button>
@@ -519,8 +534,8 @@ export default function ProfileView({
             <EmptyState
               compact={true}
               icon={<ImageIcon size={24} strokeWidth={2.2} />}
-              title="Aucune photo dans ton portfolio"
-              description="Ajoute des photos authentiques pour mettre en valeur ton savoir-faire et tes compétences."
+              title={t('noPortfolioPhotos', 'Aucune photo dans ton portfolio')}
+              description={t('portfolioDesc', 'Ajoute des photos authentiques pour mettre en valeur ton savoir-faire et tes compétences.')}
             />
           </div>
         )}
@@ -532,7 +547,7 @@ export default function ProfileView({
             value={portfolioUrlInput}
             onChange={(e) => setPortfolioUrlInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleAddPortfolioUrl()}
-            placeholder="Colle une URL d'image..."
+            placeholder={t('pasteImageUrlPlaceholder', "Colle une URL d'image...")}
             style={{
               flex: 1, minWidth: '180px', padding: '10px 14px',
               border: '1px solid var(--border-color)',
@@ -554,7 +569,7 @@ export default function ProfileView({
               boxShadow: portfolioUrlInput.trim() ? 'var(--shadow-accent)' : 'none'
             }}
           >
-            <Plus size={16} /> Ajouter
+            <Plus size={16} /> {t('add', 'Ajouter')}
           </button>
           <button
             onClick={() => portfolioFileInputRef.current?.click()}
@@ -566,9 +581,9 @@ export default function ProfileView({
               fontWeight: '800', cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '13px'
             }}
-            title="Uploader une photo depuis ton appareil"
+            title={t('uploadPhotoFromDevice', 'Uploader une photo depuis ton appareil')}
           >
-            <Upload size={15} /> Photo
+            <Upload size={15} /> {t('photo', 'Photo')}
           </button>
           <input
             type="file"
@@ -597,10 +612,10 @@ export default function ProfileView({
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px', flexWrap: 'wrap', gap: '8px' }}>
           <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '22px', fontWeight: '600', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <History size={20} color="var(--accent-primary)" /> Historique des swaps et deals
+            <History size={20} color="var(--accent-primary)" /> {t('swapHistory', 'Historique des swaps et deals')}
           </h3>
           <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)' }}>
-            Deal clôturé: {user.dealsCompleted || 0} • En cours planifié: {user.activeDeals || 0}
+            {t('closedDeals', 'Deal clôturé')}: {user.dealsCompleted || 0} • {t('dealsInProgress', 'En cours planifié')}: {user.activeDeals || 0}
           </span>
         </div>
 
@@ -608,7 +623,7 @@ export default function ProfileView({
         <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' }}>
           {/* DEAL CLÔTURÉ */}
           <div style={{ flex: 1, minWidth: '130px', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '12px 14px', backgroundColor: 'var(--bg-subtle)' }}>
-            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Deal clôturé</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{t('closedDeals', 'Deal clôturé')}</div>
             <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-main)' }}>
               {user.dealsCompleted || 0}
             </div>
@@ -616,7 +631,7 @@ export default function ProfileView({
 
           {/* NOTE MOYENNE */}
           <div style={{ flex: 1, minWidth: '140px', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '12px 14px', backgroundColor: 'var(--bg-subtle)' }}>
-            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Note moyenne</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{t('averageRating', 'Note moyenne')}</div>
             <div style={{ fontSize: user.reviewsCount > 0 ? '20px' : '12.5px', fontWeight: user.reviewsCount > 0 ? '800' : '500', color: user.reviewsCount > 0 ? '#F59E0B' : 'var(--text-secondary)', fontStyle: user.reviewsCount > 0 ? 'normal' : 'italic', display: 'flex', alignItems: 'center', gap: '4px', minHeight: '28px' }}>
               {user.reviewsCount > 0 ? (Math.round(user.averageRating * 10) / 10).toFixed(1) + ' ⭐' : t('profile.no_reviews', 'Pas d\'évaluation pour l\'instant')}
             </div>
@@ -624,7 +639,7 @@ export default function ProfileView({
 
           {/* EN COURS PLANIFIÉ */}
           <div style={{ flex: 1, minWidth: '130px', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '12px 14px', backgroundColor: 'var(--bg-subtle)' }}>
-            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>En cours planifié</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{t('dealsInProgress', 'En cours planifié')}</div>
             <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--accent-primary)' }}>
               {user.activeDeals || 0}
             </div>
@@ -634,8 +649,8 @@ export default function ProfileView({
         {swapHistory.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '32px', color: 'var(--text-secondary)', fontSize: '14px', fontWeight: '600' }}>
             <div style={{ fontSize: '36px', marginBottom: '10px' }}>🤝</div>
-            <div>Pas encore d'échanges.</div>
-            <div style={{ fontSize: '12px', marginTop: '6px', opacity: 0.7 }}>Tes deals et avis apparaîtront ici une fois clôturés.</div>
+            <div>{t('noSwapsYet', "Pas encore d'échanges.")}</div>
+            <div style={{ fontSize: '12px', marginTop: '6px', opacity: 0.7 }}>{t('noSwapsDesc', 'Tes deals et avis apparaîtront ici une fois clôturés.')}</div>
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -647,11 +662,11 @@ export default function ProfileView({
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                       <span style={{ fontWeight: '800', fontSize: '14px', color: 'var(--text-main)' }}>{item.deal}</span>
                       <span style={{ fontSize: '11px', fontWeight: '800', padding: '2px 8px', borderRadius: '999px', backgroundColor: isClosed ? 'var(--bg-card)' : 'var(--bg-card)', color: isClosed ? 'var(--accent-success)' : 'var(--accent-primary)', border: '1px solid var(--border-color)' }}>
-                        {item.status}
+                        {item.status === 'Clôturé' ? t('closed', 'Clôturé') : item.status === 'En cours' ? t('inProgress', 'En cours') : (item.status || t('closed', 'Clôturé'))}
                       </span>
                     </div>
                     <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                      Avec <strong>{item.counterparty}</strong> • {item.date}
+                      {t('withUser', 'Avec')} <strong>{item.counterparty}</strong> • {item.date}
                     </div>
                     {/* Avis textuel : uniquement pour les deals CLÔTURÉS */}
                     {isClosed && item.review && (
@@ -661,7 +676,7 @@ export default function ProfileView({
                     )}
                     {!isClosed && (
                       <div style={{ fontSize: '11px', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
-                        {item.status === 'En cours' ? 'Échange en cours...' : 'Rendez-vous planifié'}
+                        {item.status === 'En cours' ? t('exchangeInProgress', 'Échange en cours...') : t('appointmentScheduled', 'Rendez-vous planifié')}
                       </div>
                     )}
                   </div>
@@ -680,7 +695,7 @@ export default function ProfileView({
                     )}
                     {!isClosed && (
                       <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--accent-primary)', backgroundColor: 'var(--bg-card)', border: '1px solid var(--border-color)', padding: '2px 8px', borderRadius: '999px' }}>
-                        {item.status === 'En cours' ? '🔄 En cours' : '📅 Planifié'}
+                        {item.status === 'En cours' ? `🔄 ${t('inProgress', 'En cours')}` : `📅 ${t('planned', 'Planifié')}`}
                       </span>
                     )}
                   </div>
@@ -705,10 +720,10 @@ export default function ProfileView({
             </div>
             <div>
               <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                Paramètres & Apparence
+                {t('settingsAppearance', 'Paramètres & Apparence')}
               </h3>
               <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>
-                Personnalisez votre expérience visuelle, votre typographie et vos couleurs d'accentuation
+                {t('settingsAppearanceSubtitle', "Personnalisez votre expérience visuelle, votre typographie et vos couleurs d'accentuation")}
               </p>
             </div>
           </div>
@@ -718,11 +733,11 @@ export default function ProfileView({
             type="button"
             onClick={() => setIsDesignStudioOpen(true)}
             className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-[var(--bg-card)] border border-[var(--border-color)] hover:bg-[var(--bg-subtle)] text-[var(--text-main)] transition-all duration-200 text-sm font-bold cursor-pointer shadow-sm hover:scale-[1.02] active:scale-[0.98]"
-            title="Ouvrir le Studio de Design"
-            aria-label="Studio de Design"
+            title={t('designStudio', 'Studio de Design')}
+            aria-label={t('designStudio', 'Studio de Design')}
           >
             <Palette size={16} className="text-[var(--accent-primary)]" />
-            <span>Studio de Design</span>
+            <span>{t('designStudio', 'Studio de Design')}</span>
             <Sparkles size={14} className="text-[var(--accent-warning)] ml-1" />
           </button>
         </div>

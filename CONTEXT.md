@@ -625,4 +625,37 @@ Des annonces de la plateforme (« Cours de violon », « Séance d'écoute Adam 
      - Ajout de `'mateo polo'` et `'MATEO POLO'` dans la table `authorAvatars` renvoyant directement l'avatar Google officiel.
      - Résolution de `authorProfile.avatar` dans `selectedListing` priorisant `listing.authorAvatar || listing.avatar || listing.authorPhotoURL` sur le helper mock.
 
+### Patch Traduction de l'Interface (i18n - Chaînes Hardcodées) (commit `fix(i18n): translate hardcoded UI elements and fix safeT fallbacks (PROMPT 8)`)
+
+#### 3.13 Traduction Exhaustive des Éléments d'Interface Hardcodés (7 Langues : FR, EN, ES, IT, DE, JA, ZH)
+
+**Problématique :**
+De nombreux boutons, statuts, titres, onglets et textes grisés d'état vide restaient figés en français lorsque l'utilisateur sélectionnait une autre langue (notamment l'anglais). Exemples ciblés : « Deal clôturé », « Note moyenne », « Avis et Évaluations », « Langues parlées », « Cet utilisateur n'a pas encore reçu d'avis », « Nouveau membre (0 avis) », « Paramètres & Apparence », « Sécurité, Juridique & RGPD », « Recharger (€) », etc.
+
+**Analyse & Causes Racines :**
+1. **Chaînes de caractères statiques non wrappées :**
+   - Dans `ListingDetailModal.jsx`, `ReviewsSection.jsx`, `PublicProfileModal.jsx`, `ProfileView.jsx`, et `ProfileFeature.jsx`, de multiples labels étaient insérés sous forme de chaînes JSX statiques (ex: `"Deal clôturé"`, `"Note moyenne"`, `<span>📄 Consulter le CV</span>`).
+2. **Priorité défaillante dans les helpers de fallback `safeT` :**
+   - Dans `ReviewsSection.jsx`, le helper initial `const safeT = (k, defaultVal) => { if (typeof t === 'function') { const res = t(k, defaultVal); ... } }` appelait d'abord la prop `t` avec `defaultVal`. Or, le fallback par défaut de la prop renvoyait toujours `defaultVal`, court-circuitant ainsi le contexte de langue `langContext.t(k)`.
+3. **Absence d'enregistrement de clés dans les dictionnaires secondaires :**
+   - Les nouvelles clés et certaines clés historiques n'étaient pas synchronisées de manière exhaustive dans les dictionnaires `src/data/translationsData.js` (`FR`), `src/data/translationsSecondary.js` (`EN`, `ES`, `IT`, `DE`, `JA`, `ZH`) et `src/locales/translations.js`.
+4. **Formatage de date non localisé dans les avis :**
+   - `ReviewsSection.jsx` utilisait un formateur statique `'fr-FR'` pour les dates de commentaires et de réponses au lieu de s'adapter à `currentLang`.
+
+**Actions & Corrections Réalisées :**
+1. **Composants d'interface assainis et wrappés :**
+   - `src/components/ListingDetailModal.jsx` : intégration de `useLanguage()`, correction d'un bug de variable `media` non déclarée, et wrapping complet (`newMemberZeroReviews`, `photos`, `demoVideo`, `recentReviews`, `newMemberNoReviewsYet`, `centerMapTooltip`, `viewOnMap`, `contactMember`, `boostVisibility`, `boost`, `editThisListing`, `edit`, `resumeListingPublication`, `pauseListingPublication`, `resume`, `pause`).
+   - `src/components/ReviewsSection.jsx` : refonte de `safeT` pour interroger `langContext.t(k)` en priorité, restauration de `ratingVal`, formatage multilingue des dates avec table de locale (`langMap`), et internationalisation de `replyFrom` (« Réponse de {ownerName} »).
+   - `src/components/PublicProfileModal.jsx` : wrapping de tous les onglets, titres, badges, états vides et compteurs (`onlineStatus`, `kycVerifiedBadge`, `viewResume`, `reviewsPlural`/`reviewSingular`, `allListingsBy`, `loadingListings`, `noActiveListing`, `noListingsDesc`, `trocoTokensPlural`/`trocoTokensSingular`, `view`, `aboutUser`, `verifiedSocialNetworks`, `skillsOfferedForTrade`, `noSkillsReported`, `equipmentAvailable`, `noEquipmentReported`, `spokenLanguages`, `portfolioGallery`, `emptyPortfolio`, `noPhotosInPortfolio`, `closedDeals`, `averageRating`, `dealsInProgress`, `verifiedTransactionsTrust`, `secureExchangeGuarantee`, `resumeDiscussion`).
+   - `src/components/ProfileView.jsx` : wrapping complet des sections compétences, équipement, portfolio, historique et paramètres (`rechargeAction`, `skillsServicesOffered`, `addSkillPlaceholder`, `equipmentForLoan`, `addEquipmentPlaceholder`, `myPortfolio`, `deleteThisPhoto`, `noPortfolioPhotos`, `portfolioDesc`, `pasteImageUrlPlaceholder`, `add`, `uploadPhotoFromDevice`, `photo`, `swapHistory`, `closedDeals`, `averageRating`, `dealsInProgress`, `noSwapsYet`, `noSwapsDesc`, `closed`, `inProgress`, `withUser`, `exchangeInProgress`, `appointmentScheduled`, `planned`, `settingsAppearance`, `settingsAppearanceSubtitle`, `designStudio`).
+   - `src/features/profile/ProfileFeature.jsx` : wrapping des actions de portefeuille, des boutons d'abonnement Troco Plus et de la liste d'avantages, des statistiques dynamiques, de l'état vide de profil (« Nouveau profil (0 deal clôturé) »), du studio de design (« Studio de Design & Apparence ») et du bloc RGPD (« Sécurité, Juridique & RGPD »).
+2. **Dictionnaires de traduction enrichis et synchronisés à 100% :**
+   - Ajout de l'intégralité des 45+ nouvelles clés de traduction dans `src/data/translationsData.js` (`translations.FR`), `src/data/translationsSecondary.js` (`secondaryTranslations.EN`, `ES`, `IT`, `DE`, `JA`, `ZH`) et `src/locales/translations.js`.
+3. **Validation et robustesse :**
+   - Validation automatisée réussie via Jest :
+     - `Phase119DynamicTranslationAndLanguageSync.test.js` (11/11 tests passés).
+     - `Phase133DynamicProfileStats.test.js` (4/4 tests passés).
+     - `Phase134ReviewsSection.test.js` (5/5 tests passés).
+
+
 

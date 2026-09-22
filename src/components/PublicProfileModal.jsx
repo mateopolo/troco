@@ -16,7 +16,7 @@ import { resolveUserProfile, getCachedUserProfile, isRawUid, isGenericName, sani
 import { useUserRealStats } from '../services/userStatsService';
 import { getFlagEmoji } from '../utils/flagUtils';
 import logger from '../utils/logger';
-
+import { useLanguage } from '../contexts/LanguageContext';
 
 export default function PublicProfileModal({
   isOpen,
@@ -28,8 +28,22 @@ export default function PublicProfileModal({
   onStartDiscussion,
   currentLang = 'FR',
   darkMode = false,
-  t = (k, defaultVal) => defaultVal || k,
+  t: propT,
 }) {
+  const langContext = useLanguage();
+  const safeT = (k, defaultVal) => {
+    if (langContext && typeof langContext.t === 'function') {
+      const res = langContext.t(k);
+      if (res && res !== k) return res;
+    }
+    if (typeof propT === 'function') {
+      const res = propT(k);
+      if (res && res !== k) return res;
+    }
+    return defaultVal !== undefined ? defaultVal : k;
+  };
+  const t = safeT;
+
   const [activeTab, setActiveTab] = useState('listings'); // 'listings' | 'history' | 'bio' | 'portfolio' | 'reviews'
 
   const isValidUserUid = (v) =>
@@ -360,8 +374,8 @@ export default function PublicProfileModal({
                 justifyContent: 'center',
                 cursor: 'pointer',
               }}
-              title="Fermer"
-              aria-label="Fermer"
+              title={t('close', 'Fermer')}
+              aria-label={t('close', 'Fermer')}
             >
               <X size={18} />
             </button>
@@ -424,7 +438,7 @@ export default function PublicProfileModal({
                   }}
                 />
                 <div
-                  title="En ligne"
+                  title={t('onlineStatus', 'En ligne')}
                   style={{
                     position: 'absolute',
                     bottom: '2px',
@@ -468,7 +482,7 @@ export default function PublicProfileModal({
                       border: '1px solid rgba(16, 185, 129, 0.25)',
                     }}
                   >
-                    <ShieldCheck size={13} /> Identité Vérifiée ✅
+                    <ShieldCheck size={13} /> {t('kycVerifiedBadge', 'Identité Vérifiée ✅')}
                   </span>
                 )}
               </div>
@@ -502,7 +516,7 @@ export default function PublicProfileModal({
                     }}
                   >
                     <FileText size={15} />
-                    <span>📄 Consulter le CV</span>
+                    <span>{t('viewResume', '📄 Consulter le CV')}</span>
                     <ExternalLink size={12} style={{ opacity: 0.7 }} />
                   </a>
                 </div>
@@ -524,7 +538,7 @@ export default function PublicProfileModal({
                     {user.reviewsCount > 0 ? (Math.round(user.averageRating * 10) / 10).toFixed(1) + ' ⭐' : t('profile.no_reviews', 'Pas d\'évaluation pour l\'instant')}
                   </span>
                   {user.reviewsCount > 0 && (
-                    <span style={{ color: 'var(--text-secondary)', fontWeight: '500' }}>({user.reviewsCount} avis)</span>
+                    <span style={{ color: 'var(--text-secondary)', fontWeight: '500' }}>({user.reviewsCount} {user.reviewsCount > 1 ? t('reviewsPlural', 'avis') : t('reviewSingular', 'avis')})</span>
                   )}
                 </div>
 
@@ -550,7 +564,7 @@ export default function PublicProfileModal({
                       <span
                         key={lang}
                         title={lang}
-                        aria-label={`Langue parlée: ${lang}`}
+                        aria-label={`${t('spokenLanguages', 'Langues parlées')}: ${lang}`}
                         style={{
                           fontSize: '14px',
                           backgroundColor: 'var(--bg-subtle)',
@@ -627,13 +641,13 @@ export default function PublicProfileModal({
           {activeTab === 'listings' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
               <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-main)' }}>
-                Toutes les offres et annonces publiées par {userName} :
+                {t('allListingsBy', 'Toutes les offres et annonces publiées par')} {userName} :
               </div>
 
               {loadingListings ? (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px 0', gap: '8px', color: 'var(--text-secondary)' }}>
                   <Loader2 size={20} className="animate-spin" />
-                  <span style={{ fontSize: '13px' }}>Chargement des annonces...</span>
+                  <span style={{ fontSize: '13px' }}>{t('loadingListings', 'Chargement des annonces...')}</span>
                 </div>
               ) : displayListings.length === 0 ? (
                 <div
@@ -648,10 +662,10 @@ export default function PublicProfileModal({
                 >
                   <PackageOpen size={40} style={{ opacity: 0.35, margin: '0 auto 12px', display: 'block' }} />
                   <div style={{ fontWeight: '800', fontSize: '14.5px', color: 'var(--text-main)', marginBottom: '4px' }}>
-                    Aucune annonce active
+                    {t('noActiveListing', 'Aucune annonce active')}
                   </div>
                   <div style={{ fontSize: '12.5px', maxWidth: '340px', margin: '0 auto', lineHeight: 1.5 }}>
-                    {userName} n'a pas encore publié d'offres ou toutes ses annonces ont été conclues.
+                    {userName} {t('noListingsDesc', "n'a pas encore publié d'offres ou toutes ses annonces ont été conclues.")}
                   </div>
                 </div>
               ) : (
@@ -723,10 +737,10 @@ export default function PublicProfileModal({
 
                         <div style={{ marginTop: 'auto', paddingTop: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--border-color)', fontSize: '11px', fontWeight: '800', color: 'var(--accent-primary)' }}>
                           <span>
-                            {item.euroAmount ? `${item.euroAmount}€` : ''} {item.tokensAmount ? `+ ${item.tokensAmount} Jeton(s)` : ''}
+                            {item.euroAmount ? `${item.euroAmount}€` : ''} {item.tokensAmount ? `+ ${item.tokensAmount} ${item.tokensAmount > 1 ? t('trocoTokensPlural', 'Jetons') : t('trocoTokensSingular', 'Jeton')}` : ''}
                           </span>
                           <span style={{ color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '3px' }}>
-                            <ExternalLink size={12} /> Voir
+                            <ExternalLink size={12} /> {t('view', 'Voir')}
                           </span>
                         </div>
                       </div>
@@ -752,7 +766,7 @@ export default function PublicProfileModal({
                 }}
               >
                 <div style={{ fontWeight: '800', marginBottom: '6px', color: 'var(--text-main)' }}>
-                  À propos de {userName}
+                  {t('aboutUser', 'À propos de')} {userName}
                 </div>
                 <p style={{ margin: 0, color: 'var(--text-secondary)' }}>
                   {bio}
@@ -764,7 +778,7 @@ export default function PublicProfileModal({
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   <div style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <LinkIcon size={15} color="var(--accent-primary)" />
-                    <span>Réseaux sociaux & Profils vérifiés :</span>
+                    <span>{t('verifiedSocialNetworks', 'Réseaux sociaux & Profils vérifiés :')}</span>
                   </div>
                   <SocialLinksDisplay links={socialLinks} size="medium" />
                 </div>
@@ -774,11 +788,11 @@ export default function PublicProfileModal({
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <div style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <Award size={15} color="var(--accent-primary)" />
-                  <span>Compétences proposées à l'échange :</span>
+                  <span>{t('skillsOfferedForTrade', "Compétences proposées à l'échange :")}</span>
                 </div>
                 {skills.length === 0 ? (
                   <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontStyle: 'italic', padding: '4px 0' }}>
-                    Aucune compétence renseignée pour le moment.
+                    {t('noSkillsReported', 'Aucune compétence renseignée pour le moment.')}
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
@@ -803,11 +817,11 @@ export default function PublicProfileModal({
 
                 <div style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px', marginTop: '6px' }}>
                   <Wrench size={15} color="var(--accent-primary)" />
-                  <span>Matériel & Espaces disponibles :</span>
+                  <span>{t('equipmentAvailable', 'Matériel & Espaces disponibles :')}</span>
                 </div>
                 {equipment.length === 0 ? (
                   <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontStyle: 'italic', padding: '4px 0' }}>
-                    Aucun matériel répertorié pour le moment.
+                    {t('noEquipmentReported', 'Aucun matériel répertorié pour le moment.')}
                   </div>
                 ) : (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
@@ -871,7 +885,7 @@ export default function PublicProfileModal({
           {activeTab === 'portfolio' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-main)' }}>
-                Galerie de réalisations et photos :
+                {t('portfolioGallery', 'Galerie de réalisations et photos :')}
               </div>
               {portfolio.length === 0 ? (
                 <div
@@ -886,10 +900,10 @@ export default function PublicProfileModal({
                 >
                   <Camera size={38} style={{ opacity: 0.35, margin: '0 auto 10px', display: 'block' }} />
                   <div style={{ fontWeight: '800', fontSize: '14px', color: 'var(--text-main)', marginBottom: '4px' }}>
-                    Portfolio vide
+                    {t('emptyPortfolio', 'Portfolio vide')}
                   </div>
                   <div style={{ fontSize: '12.5px' }}>
-                    Aucune photo dans le portfolio pour le moment.
+                    {t('noPhotosInPortfolio', 'Aucune photo dans le portfolio pour le moment.')}
                   </div>
                 </div>
               ) : (
@@ -1008,12 +1022,12 @@ export default function PublicProfileModal({
                           {entry.deal || entry.title || 'Deal Troco'}
                         </span>
                         <span style={{ fontSize: '10px', fontWeight: '800', padding: '3px 8px', borderRadius: '999px', backgroundColor: 'var(--bg-card)', color: 'var(--accent-primary)', border: '1px solid var(--border-color)' }}>
-                          {entry.status || 'Clôturé'}
+                          {entry.status === 'Clôturé' ? t('closed', 'Clôturé') : entry.status === 'En cours' ? t('inProgress', 'En cours') : (entry.status || t('closed', 'Clôturé'))}
                         </span>
                       </div>
                       {entry.counterparty && (
                         <div style={{ fontSize: '11.5px', color: 'var(--text-secondary)' }}>
-                          Avec {entry.counterparty} {entry.date ? `• ${entry.date}` : ''}
+                          {t('withUser', 'Avec')} {entry.counterparty} {entry.date ? `• ${entry.date}` : ''}
                         </div>
                       )}
                     </div>

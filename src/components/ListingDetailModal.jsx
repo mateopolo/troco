@@ -6,6 +6,7 @@ import {
   parseAndTranslateListing,
   cleanLanguageTag,
 } from '../utils/dynamicTranslation';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export default function ListingDetailModal({
   selectedListing,
@@ -25,6 +26,19 @@ export default function ListingDetailModal({
   showingOriginalListings = {},
   toggleOriginalListing = () => {}
 }) {
+  const langContext = useLanguage();
+  const safeT = (k, defaultVal) => {
+    if (langContext && typeof langContext.t === 'function') {
+      const res = langContext.t(k);
+      if (res && res !== k) return res;
+    }
+    if (typeof t === 'function') {
+      const res = t(k);
+      if (res && res !== k) return res;
+    }
+    return defaultVal !== undefined ? defaultVal : k;
+  };
+
   const [detailMediaTab, setDetailMediaTab] = useState('image');
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
@@ -41,7 +55,7 @@ export default function ListingDetailModal({
     ? selectedListing.gallery
     : ((selectedListing.images && selectedListing.images.length > 0)
         ? selectedListing.images
-        : (media.gallery && media.gallery.length > 0 ? media.gallery : (selectedListing.image ? [selectedListing.image] : [])));
+        : (selectedListing.image ? [selectedListing.image] : []));
   const currentImage = gallery[selectedImageIndex] || selectedListing.image;
 
   const isDetailShowingOriginal = !!showingOriginalListings[selectedListing.id];
@@ -218,7 +232,7 @@ export default function ListingDetailModal({
               </span>
             ) : (
               <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-secondary)', fontSize: '13px', fontWeight: '600' }}>
-                Nouveau membre (0 avis)
+                {safeT('newMemberZeroReviews', 'Nouveau membre (0 avis)')}
               </span>
             )}
           </div>
@@ -237,7 +251,7 @@ export default function ListingDetailModal({
                 boxShadow: detailMediaTab === 'image' ? 'var(--shadow-accent)' : 'none'
               }}
             >
-              🖼️ Photos ({gallery.length})
+              🖼️ {safeT('photos', 'Photos')} ({gallery.length})
             </button>
             {selectedListing.video && (
               <button
@@ -251,7 +265,7 @@ export default function ListingDetailModal({
                   boxShadow: detailMediaTab === 'video' ? 'var(--shadow-accent)' : 'none'
                 }}
               >
-                <Video size={14} /> Démo Vidéo
+                <Video size={14} /> {safeT('demoVideo', 'Démo Vidéo')}
               </button>
             )}
           </div>
@@ -262,10 +276,10 @@ export default function ListingDetailModal({
             onTouchEnd={handleTouchEnd}
             style={{ borderRadius: '20px', overflow: 'hidden', height: '340px', backgroundColor: 'var(--bg-subtle)', position: 'relative', touchAction: 'pan-y', border: '1px solid var(--border-color)' }}
           >
-            {detailMediaTab === 'video' && (selectedListing.video || selectedListing.videoUrl || media.video) ? (
+            {detailMediaTab === 'video' && (selectedListing.video || selectedListing.videoUrl) ? (
               <video
                 ref={detailVideoRef}
-                src={selectedListing.video || selectedListing.videoUrl || media.video}
+                src={selectedListing.video || selectedListing.videoUrl}
                 controls
                 autoPlay
                 onLoadedMetadata={() => {
@@ -445,7 +459,7 @@ export default function ListingDetailModal({
             {/* AVIS DÉTAILLÉS DE L'AUTEUR */}
             {selectedListing.authorProfile.reviews && selectedListing.authorProfile.reviews.length > 0 ? (
               <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '10px' }}>
-                <div style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '6px' }}>Avis récents :</div>
+                <div style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '6px' }}>{safeT('recentReviews', 'Avis récents')} :</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                   {selectedListing.authorProfile.reviews.map((rev, i) => (
                     <div key={i} style={{ fontSize: '12px', color: 'var(--text-secondary)', fontStyle: 'italic', padding: '8px 12px', backgroundColor: 'var(--bg-card)', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
@@ -457,7 +471,7 @@ export default function ListingDetailModal({
               </div>
             ) : (
               <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '8px', fontSize: '11.5px', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
-                🤝 Nouveau membre • Aucun avis pour le moment (0 transaction clôturée)
+                🤝 {safeT('newMemberNoReviewsYet', 'Nouveau membre • Aucun avis pour le moment (0 transaction clôturée)')}
               </div>
             )}
           </div>
@@ -488,10 +502,10 @@ export default function ListingDetailModal({
                 gap: '7px',
                 boxShadow: 'var(--shadow-card)',
               }}
-              title="Centrer la carte interactive sur cette annonce"
+              title={safeT('centerMapTooltip', 'Centrer la carte interactive sur cette annonce')}
             >
               <MapPin size={16} color="var(--accent-primary)" />
-              <span>{typeof t === 'function' ? (t('viewOnMap') || 'Voir sur la carte') : 'Voir sur la carte'}</span>
+              <span>{safeT('viewOnMap', 'Voir sur la carte')}</span>
             </button>
           )}
 
@@ -507,33 +521,33 @@ export default function ListingDetailModal({
                 boxShadow: 'var(--shadow-accent)'
               }}
             >
-              <MessageSquare size={18} /> {typeof t === 'function' ? (t('startDiscussion') || 'Contacter le membre') : 'Contacter le membre'}
+              <MessageSquare size={18} /> {safeT('contactMember', 'Contacter le membre')}
             </button>
           ) : (
             <div style={{ display: 'flex', gap: '8px', flex: 1, minWidth: '220px', flexWrap: 'wrap' }}>
               <button
                 onClick={() => { if (typeof handleBoostListing === 'function') handleBoostListing(selectedListing); }}
                 className="premium-button"
-                aria-label="Booster la visibilité de cette annonce"
+                aria-label={safeT('boostVisibility', 'Booster la visibilité de cette annonce')}
                 style={{ flex: 1, border: 'none', borderRadius: '999px', padding: '12px', backgroundColor: 'var(--accent-warning)', color: '#FFF', fontWeight: '800', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: 'var(--shadow-card)' }}
               >
-                <Flame size={16} /> Booster (2,99€)
+                <Flame size={16} /> {safeT('boost', 'Booster')} (2,99€)
               </button>
               <button
                 onClick={() => { if (typeof handleStartEditListing === 'function') handleStartEditListing(selectedListing); }}
                 className="premium-button"
-                aria-label="Modifier cette annonce"
+                aria-label={safeT('editThisListing', 'Modifier cette annonce')}
                 style={{ flex: 1, border: '1px solid var(--border-color)', borderRadius: '999px', padding: '12px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', fontWeight: '800', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
               >
-                <Pencil size={16} /> Éditer
+                <Pencil size={16} /> {safeT('edit', 'Éditer')}
               </button>
               <button
                 onClick={() => { if (typeof handleTogglePauseListing === 'function') handleTogglePauseListing(selectedListing.id); }}
                 className="premium-button"
-                aria-label={selectedListing.status === 'paused' ? 'Reprendre la publication de l\'annonce' : 'Mettre en pause la publication de l\'annonce'}
+                aria-label={selectedListing.status === 'paused' ? safeT('resumeListingPublication', "Reprendre la publication de l'annonce") : safeT('pauseListingPublication', "Mettre en pause la publication de l'annonce")}
                 style={{ border: '1px solid var(--border-color)', borderRadius: '999px', padding: '12px 16px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', fontWeight: '800', fontSize: '13px', cursor: 'pointer' }}
               >
-                {selectedListing.status === 'paused' ? 'Reprendre' : 'Pauser'}
+                {selectedListing.status === 'paused' ? safeT('resume', 'Reprendre') : safeT('pause', 'Pauser')}
               </button>
               <button
                 onClick={() => { if (typeof handleDeleteListing === 'function') handleDeleteListing(selectedListing.id); onClose?.(); }}

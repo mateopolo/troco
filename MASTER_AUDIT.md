@@ -13,7 +13,7 @@
 > - `STEP BY STEP URGENT.txt` & `LISTE DES PROCHAINES FONCTIONNALITES A CODER.txt` (Backlog immédiat)
 > - `PROJECT_CONTEXT.md` & `TROCO_PROJECT_HISTORY.md` (Historique des décisions et géoprivacy)
 >
-> **Score global :** 6.8/10 | **Progression :** 31 / 65 tâches validées avec preuves formelles (47.7%)
+> **Score global :** 6.9/10 | **Progression :** 32 / 65 tâches validées avec preuves formelles (49.2%)
 
 ---
 
@@ -21,12 +21,12 @@
 
 | Phase | Fait | Restant | Progression |
 |---|---|---|---|
-| 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 12 | 5 | 70.6% |
+| 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 13 | 4 | 76.5% |
 | 🟡 Facile (Niveau 2 — 1h à 3h) | 8 | 6 | 57.1% |
 | 🟠 Moyen (Niveau 3 — 3h à 1 jour) | 8 | 7 | 53.3% |
 | 🔴 Difficile (Niveau 4 — 1 à 3 jours) | 3 | 7 | 30.0% |
 | 🚨 Très difficile (Niveau 5 — 3j à 2 sem) | 0 | 9 | 0.0% |
-| **TOTAL** | **31** | **34** | **47.7%** |
+| **TOTAL** | **32** | **33** | **49.2%** |
 
 
 ### Score par axe vs cible Licorne
@@ -98,6 +98,10 @@
 ### [x] [QW-18] — Fusion des annonces orphelines vers le compte réel Google Auth et purge du compte factice
 **Preuve** : `scripts/migrate-orphan-listings.js:1-240`, `src/App.js:2121-2122,2656`, `src/components/ListingCard.jsx:450-462`, `src/components/FeedCardItem.jsx:528-531`
 **Statut** : ✅ FAIT — Migration Firestore exécutée avec succès : réassignation de toutes les annonces orphelines (« Séance d'écoute Adam Audio A8X », « Cours de violon », « pret de perceuse ») sous le compte Google Auth réel `mateopolo91@gmail.com` (UID `L7AzxIQoMaOzFzMRO9W1heyo8Y62`), purge complète des comptes factices `users/demo_mateopolo` et `users/MATEO POLO` ainsi que de leurs sous-collections, et fiabilisation du rendu frontend priorisant l'avatar Google officiel (`item.authorAvatar`) sur l'ensemble des cartes d'annonces.
+
+### [x] [QW-19] — Traduction exhaustive des éléments d'interface hardcodés (i18n 7 langues)
+**Preuve** : `src/components/ListingDetailModal.jsx:44-265`, `src/components/ReviewsSection.jsx:45-442`, `src/components/PublicProfileModal.jsx:250-930`, `src/components/ProfileView.jsx:130-670`, `src/features/profile/ProfileFeature.jsx:200-1180`, `src/data/translationsData.js:240-335`, `src/data/translationsSecondary.js:230-1400`, `src/locales/translations.js:230-1640`, `src/components/Phase119DynamicTranslationAndLanguageSync.test.js:1-120`, `src/components/Phase133DynamicProfileStats.test.js:1-90`, `src/components/Phase134ReviewsSection.test.js:1-210`
+**Statut** : ✅ FAIT — Traque et wrapping intégral de toutes les chaînes statiques résiduelles dans `t('...')` avec fallbacks sécurisés. Prise en charge complète des boutons, titres, statuts et placeholders grisés (« Deal clôturé », « Note moyenne », « Avis et Évaluations », « Langues parlées », « Cet utilisateur n'a pas encore reçu d'avis », « Studio de Design & Apparence », « Sécurité, Juridique & RGPD », « Recharger (€) », etc.). Synchronisation synchrone immédiate des dictionnaires dans les 7 langues de la plateforme (FR, EN, ES, IT, DE, JA, ZH) et formatage linguistique des dates d'avis.
 
 ---
 

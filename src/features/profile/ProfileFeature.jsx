@@ -39,6 +39,7 @@ import InclusiveAvatarBuilder from '../../components/profile/InclusiveAvatarBuil
 import ProfileAppearanceCustomizer from '../../components/profile/ProfileAppearanceCustomizer';
 import DesignStudioModal from '../../components/DesignStudioModal';
 import ReviewsSection from '../../components/ReviewsSection';
+import { useLanguage } from '../../contexts/LanguageContext';
 import {
   getBioTranslation as getBioTranslationUtil,
   getReviewTranslation as getReviewTranslationUtil,
@@ -63,7 +64,7 @@ export default function ProfileFeature({
   setPortfolioImages,
   darkMode = false,
   currentLang = 'FR',
-  t = (k) => k,
+  t: propT,
   isMobile = false,
   handleSignOut,
   handleOpenPayment,
@@ -77,6 +78,20 @@ export default function ProfileFeature({
   formatTokenCount,
   formatCompensation,
 }) {
+  const langContext = useLanguage();
+  const safeT = (k, defaultVal) => {
+    if (langContext && typeof langContext.t === 'function') {
+      const res = langContext.t(k);
+      if (res && res !== k) return res;
+    }
+    if (typeof propT === 'function') {
+      const res = propT(k);
+      if (res && res !== k) return res;
+    }
+    return defaultVal !== undefined ? defaultVal : k;
+  };
+  const t = safeT;
+
   // Hook pour gérer les timeouts en toute sécurité
   const { safeTimeout } = useSafeTimeout();
   
@@ -182,7 +197,7 @@ export default function ProfileFeature({
     if (setProfile) setProfile(updated);
     window.localStorage.setItem('troco_user_profile', JSON.stringify(updated));
     if (setIsEditingProfile) setIsEditingProfile(false);
-    setSaveMessage('Profil mis à jour avec succès !');
+    setSaveMessage(t('profileUpdatedSuccess', 'Profil mis à jour avec succès !'));
     safeTimeout(() => setSaveMessage(''), 3000);
 
     const uid = profile.uid || auth.currentUser?.uid;
@@ -338,7 +353,7 @@ export default function ProfileFeature({
           onClick={() => setIsDesignStudioOpen(true)}
           className="flex items-center gap-2 px-4 py-2 rounded-full bg-[var(--bg-card)] border border-white/10 hover:bg-white/5 transition-colors text-sm font-medium cursor-pointer"
         >
-          🎨 Personnaliser l'apparence
+          🎨 {t('customizeAppearance', "Personnaliser l'apparence")}
         </button>
 
         {!isEditingProfile && !profile.kycVerified && (
@@ -465,7 +480,7 @@ export default function ProfileFeature({
                 boxShadow: "var(--shadow-card)"
               }}
             >
-              <Upload size={15} /> Importer ma propre photo
+              <Upload size={15} /> {t('uploadCustomPhoto', 'Importer ma propre photo')}
             </button>
             <div style={{ flex: "2 1 240px" }}>
               <input
@@ -492,11 +507,11 @@ export default function ProfileFeature({
           <>
             <div style={{ display: 'flex', gap: '10px' }}>
               <div style={{ flex: 1 }}>
-                <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)' }}>Nom complet</label>
+                <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)' }}>{t('fullName', 'Nom complet')}</label>
                 <input value={profileDraft.name} onChange={(e) => setProfileDraft(prev => ({ ...prev, name: e.target.value }))} placeholder="Nom" style={{ width: '100%', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-subtle)', borderRadius: '12px', padding: '10px 12px', fontSize: '14px', fontWeight: '700', color: 'var(--text-main)' }} />
               </div>
               <div style={{ flex: 1 }}>
-                <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)' }}>Pseudo (@)</label>
+                <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)' }}>{t('username', 'Pseudo (@)')}</label>
                 <input value={profileDraft.username || ''} onChange={(e) => setProfileDraft(prev => ({ ...prev, username: e.target.value }))} placeholder="@pseudo" style={{ width: '100%', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-subtle)', borderRadius: '12px', padding: '10px 12px', fontSize: '14px', fontWeight: '700', color: 'var(--accent-primary)' }} />
               </div>
             </div>
@@ -506,7 +521,7 @@ export default function ProfileFeature({
             {/* Champ CV / Resume */}
             <div>
               <label style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px', textTransform: 'uppercase' }}>
-                <FileText size={13} color="var(--accent-primary)" /> Lien vers votre CV (PDF, Drive, Notion, Portfolio)
+                <FileText size={13} color="var(--accent-primary)" /> {t('cvLinkHelp', 'Lien vers votre CV (PDF, Drive, Notion, Portfolio)')}
               </label>
               <input
                 type="url"
@@ -584,7 +599,7 @@ export default function ProfileFeature({
                   }}
                 >
                   <FileText size={15} />
-                  <span>📄 Consulter le CV</span>
+                  <span>📄 {t('viewResume', 'Consulter le CV')}</span>
                   <ExternalLink size={12} style={{ opacity: 0.7 }} />
                 </a>
               </div>
@@ -653,10 +668,10 @@ export default function ProfileFeature({
           </div>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button onClick={() => handleOpenPayment('topup-cash')} className="premium-button" style={{ border: 'none', borderRadius: '999px', padding: '9px 16px', background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)', color: '#FFF', fontWeight: '800', fontSize: '12px', cursor: 'pointer', boxShadow: 'var(--shadow-accent)' }}>
-              + Recharger (€)
+              + {t('rechargeAction', 'Recharger')} (€)
             </button>
             <button onClick={() => setIsTransactionsModalOpen(true)} className="premium-button" style={{ border: '1px solid var(--border-color)', borderRadius: '999px', padding: '9px 14px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', fontWeight: '700', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}>
-              <FileText size={13} /> Factures
+              <FileText size={13} /> {t('invoices', 'Factures')}
             </button>
           </div>
         </div>
@@ -685,7 +700,7 @@ export default function ProfileFeature({
               gap: '6px'
             }}
           >
-            <Sparkles size={14} /> {profile.isTrocoPlus ? '⭐ Gérer Troco Plus' : '+ S\'abonner à Troco Plus'}
+            <Sparkles size={14} /> {profile.isTrocoPlus ? t('manageTrocoPlus', '⭐ Gérer Troco Plus') : t('subscribeTrocoPlus', "+ S'abonner à Troco Plus")}
           </button>
         </div>
       </div>
@@ -714,24 +729,24 @@ export default function ProfileFeature({
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                   <h4 className="font-editorial-heading" style={{ margin: 0, fontSize: '17px', fontWeight: '700', color: 'var(--text-main)' }}>
-                    Mon Abonnement : {profile.subscriptionPlan === 'pro' || profile.subscriptionPlan === 'premium' ? 'Troco Plus Illimité & Pro' : 'Troco Plus Essentiel'}
+                    {t('mySubscription', 'Mon Abonnement')} : {profile.subscriptionPlan === 'pro' || profile.subscriptionPlan === 'premium' ? t('trocoPlusPro', 'Troco Plus Illimité & Pro') : t('trocoPlusEssential', 'Troco Plus Essentiel')}
                   </h4>
                   <span style={{
                     backgroundColor: '#10B981', color: '#FFF', fontSize: '10.5px', fontWeight: '900',
                     padding: '2px 8px', borderRadius: '999px'
                   }}>
-                    ✓ ACTIF
+                    ✓ {t('activeStatus', 'ACTIF')}
                   </span>
                 </div>
                 <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px', fontWeight: '600' }}>
-                  📅 Renouvellement le {(() => {
+                  📅 {t('renewalOn', 'Renouvellement le')} {(() => {
                     try {
                       const d = profile.subscriptionRenewalDate ? new Date(profile.subscriptionRenewalDate) : new Date(Date.now() + 30 * 86400000);
                       return d.toLocaleDateString(currentLang === 'FR' ? 'fr-FR' : 'en-US', { day: 'numeric', month: 'long' });
                     } catch (_) {
                       return '26 Septembre';
                     }
-                  })()} • Sans engagement
+                  })()} • {t('noCommitment', 'Sans engagement')}
                 </div>
               </div>
             </div>
@@ -748,7 +763,7 @@ export default function ProfileFeature({
                     display: 'flex', alignItems: 'center', gap: '5px', boxShadow: 'var(--shadow-accent)'
                   }}
                 >
-                  <Sparkles size={13} /> ⚡ Upgrade vers Pro
+                  <Sparkles size={13} /> ⚡ {t('upgradeToPro', 'Upgrade vers Pro')}
                 </button>
               )}
             </div>
@@ -757,15 +772,15 @@ export default function ProfileFeature({
           {/* LISTE DES AVANTAGES INCLUS */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px', paddingTop: '12px', borderTop: '1px solid var(--border-color)' }}>
             {(profile.subscriptionPlan === 'pro' || profile.subscriptionPlan === 'premium' ? [
-              '15 Jetons crédités par mois',
-              '3 Boosts d\'annonces inclus',
-              'Badge 👑 Membre Pro vérifié',
-              'Support prioritaire VIP 7j/7'
+              t('subAdvantagePro1', '15 Jetons crédités par mois'),
+              t('subAdvantagePro2', '3 Boosts d\'annonces inclus'),
+              t('subAdvantagePro3', 'Badge 👑 Membre Pro vérifié'),
+              t('subAdvantagePro4', 'Support prioritaire VIP 7j/7')
             ] : [
-              '5 Jetons crédités par mois',
-              '1 Boost d\'annonce inclus',
-              'Badge ⭐ Membre Plus',
-              'Priorité de contact sur les deals'
+              t('subAdvantageEss1', '5 Jetons crédités par mois'),
+              t('subAdvantageEss2', '1 Boost d\'annonce inclus'),
+              t('subAdvantageEss3', 'Badge ⭐ Membre Plus'),
+              t('subAdvantageEss4', 'Priorité de contact sur les deals')
             ]).map((advantage, aIdx) => (
               <div key={aIdx} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-main)', fontWeight: '600' }}>
                 <CheckCircle size={14} color="#10B981" />
@@ -786,11 +801,11 @@ export default function ProfileFeature({
       <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '20px', marginTop: '4px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
           <ImageIcon size={17} color="var(--accent-primary)" />
-          <h4 className="font-editorial-heading" style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: 'var(--text-main)' }}>📸 Mon Portfolio</h4>
-          <span style={{ marginLeft: 'auto', fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '700' }}>{portfolioImages.length} photo{portfolioImages.length !== 1 ? 's' : ''}</span>
+          <h4 className="font-editorial-heading" style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: 'var(--text-main)' }}>📸 {t('myPortfolio', 'Mon Portfolio')}</h4>
+          <span style={{ marginLeft: 'auto', fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '700' }}>{portfolioImages.length} {portfolioImages.length !== 1 ? t('photosPlural', 'photos') : t('photoSingular', 'photo')}</span>
         </div>
         <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '0 0 14px' }}>
-          Ajoute des photos authentiques pour mettre en valeur ton savoir-faire.
+          {t('portfolioDesc', 'Ajoute des photos authentiques pour mettre en valeur ton savoir-faire.')}
         </p>
 
         {portfolioImages.length > 0 ? (
@@ -813,7 +828,7 @@ export default function ProfileFeature({
                     backdropFilter: 'blur(4px)', fontSize: '12px', fontWeight: '800',
                     zIndex: 10
                   }}
-                  title="Supprimer"
+                  title={t('deleteThisPhoto', 'Supprimer')}
                 >✕</button>
               </div>
             ))}
@@ -823,8 +838,8 @@ export default function ProfileFeature({
             <EmptyState
               compact={true}
               icon={<ImageIcon size={24} strokeWidth={2.2} />}
-              title="Aucune photo dans ton portfolio"
-              description="Ajoute des photos authentiques pour mettre en valeur ton savoir-faire et tes compétences."
+              title={t('noPortfolioPhotos', 'Aucune photo dans ton portfolio')}
+              description={t('portfolioDesc', 'Ajoute des photos authentiques pour mettre en valeur ton savoir-faire et tes compétences.')}
             />
           </div>
         )}
@@ -835,7 +850,7 @@ export default function ProfileFeature({
             type="text"
             value={portfolioUrlInput}
             onChange={(e) => setPortfolioUrlInput(e.target.value)}
-            placeholder="Colle une URL d'image..."
+            placeholder={t('pasteImageUrlPlaceholder', "Colle une URL d'image...")}
             style={{
               flex: 1, minWidth: '180px', padding: '10px 14px',
               border: '1px solid var(--border-color)',
@@ -866,7 +881,7 @@ export default function ProfileFeature({
               display: 'flex', alignItems: 'center', gap: '6px'
             }}
           >
-            <Plus size={16} /> Ajouter
+            <Plus size={16} /> {t('add', 'Ajouter')}
           </button>
           <button
             onClick={() => document.getElementById('portfolio-file-input')?.click()}
@@ -879,7 +894,7 @@ export default function ProfileFeature({
               display: 'flex', alignItems: 'center', gap: '6px'
             }}
           >
-            📷 Photo
+            📷 {t('photo', 'Photo')}
           </button>
           <input
             id="portfolio-file-input"
@@ -920,17 +935,17 @@ export default function ProfileFeature({
 
         <div style={{ display: 'flex', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' }}>
           <div style={{ flex: 1, minWidth: '130px', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '12px 14px', backgroundColor: 'var(--bg-subtle)' }}>
-            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Deal clôturé</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{t('closedDeals', 'Deal clôturé')}</div>
             <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-main)' }}>{user.dealsCompleted || 0}</div>
           </div>
           <div style={{ flex: 1, minWidth: '130px', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '12px 14px', backgroundColor: 'var(--bg-subtle)' }}>
-            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Note moyenne</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{t('averageRating', 'Note moyenne')}</div>
             <div style={{ fontSize: user.reviewsCount > 0 ? '20px' : '12px', fontWeight: user.reviewsCount > 0 ? '800' : '500', color: user.reviewsCount > 0 ? '#F59E0B' : 'var(--text-secondary)', fontStyle: user.reviewsCount > 0 ? 'normal' : 'italic', display: 'flex', alignItems: 'center', gap: '4px', minHeight: '30px' }}>
               {user.reviewsCount > 0 ? (Math.round(user.averageRating * 10) / 10).toFixed(1) + ' ⭐' : t('profile.no_reviews', 'Pas d\'évaluation pour l\'instant')}
             </div>
           </div>
           <div style={{ flex: 1, minWidth: '130px', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '12px 14px', backgroundColor: 'var(--bg-subtle)' }}>
-            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>En cours planifié</div>
+            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{t('dealsInProgress', 'En cours planifié')}</div>
             <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--accent-primary)' }}>{user.activeDeals || 0}</div>
           </div>
         </div>
@@ -942,10 +957,10 @@ export default function ProfileFeature({
                 <Sparkles size={22} />
               </div>
               <div className="font-editorial-heading" style={{ fontWeight: '600', fontSize: '16px', color: 'var(--text-main)', marginBottom: '6px' }}>
-                Nouveau profil (0 deal clôturé)
+                {t('newProfileZeroDeals', 'Nouveau profil (0 deal clôturé)')}
               </div>
               <p style={{ fontSize: '12px', color: 'var(--text-secondary)', maxWidth: '380px', margin: '0 auto 16px', lineHeight: 1.6 }}>
-                Vous n'avez pas encore d'échange clôturé. Parcourez l'explorateur ou proposez un deal sur une annonce pour démarrer !
+                {t('noDealsYetDescription', "Vous n'avez pas encore d'échange clôturé. Parcourez l'explorateur ou proposez un deal sur une annonce pour démarrer !")}
               </p>
               <button
                 onClick={() => setActiveTab('feed')}
@@ -962,7 +977,7 @@ export default function ProfileFeature({
                   boxShadow: 'var(--shadow-accent)'
                 }}
               >
-                Explorer les annonces
+                {t('exploreListings', 'Explorer les annonces')}
               </button>
             </div>
           ) : (
@@ -996,7 +1011,7 @@ export default function ProfileFeature({
                             <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6, fontStyle: 'italic' }}>« {revTxt} »</div>
                           )}
                           {!entry.rating && !revTxt && (
-                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontStyle: 'italic' }}>Deal clôturé — aucun avis laissé.</div>
+                            <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontStyle: 'italic' }}>{t('closedDealNoReview', 'Deal clôturé — aucun avis laissé.')}</div>
                           )}
                           {currentLang !== 'FR' && revTxt && (
                             <button
@@ -1012,7 +1027,7 @@ export default function ProfileFeature({
                       );
                     })() : (
                       <div style={{ fontSize: '12px', color: entry.status === 'En cours' ? 'var(--accent-primary)' : 'var(--accent-warning)', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        {entry.status === 'En cours' ? '🔄' : '📅'} {entry.status === 'En cours' ? 'Échange en cours...' : 'Rendez-vous planifié'}
+                        {entry.status === 'En cours' ? '🔄' : '📅'} {entry.status === 'En cours' ? t('exchangeInProgress', 'Échange en cours...') : t('appointmentScheduled', 'Rendez-vous planifié')}
                       </div>
                     )}
                   </div>
@@ -1041,11 +1056,11 @@ export default function ProfileFeature({
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
               <Sparkles size={18} color="var(--accent-primary)" />
               <h4 className="font-editorial-heading" style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: 'var(--text-main)' }}>
-                🎨 Studio de Design & Apparence
+                🎨 {t('designStudioTitle', 'Studio de Design & Apparence')}
               </h4>
             </div>
             <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>
-              Personnalisez les thèmes, le générateur magique HSL, les typographies, la forme des boutons et les contrastes WCAG.
+              {t('designStudioSubtitle', 'Personnalisez les thèmes, le générateur magique HSL, les typographies, la forme des boutons et les contrastes WCAG.')}
             </p>
           </div>
           <button
@@ -1063,7 +1078,7 @@ export default function ProfileFeature({
               boxShadow: 'var(--shadow-accent)',
             }}
           >
-            🎨 Personnaliser l'apparence
+            🎨 {t('customizeAppearance', "Personnaliser l'apparence")}
           </button>
         </div>
       </div>
@@ -1088,10 +1103,10 @@ export default function ProfileFeature({
       <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '20px', marginTop: '20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
           <ShieldCheck size={17} color="var(--accent-primary)" />
-          <h4 className="font-editorial-heading" style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: 'var(--text-main)' }}>Sécurité, Juridique & RGPD</h4>
+          <h4 className="font-editorial-heading" style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: 'var(--text-main)' }}>{t('securityLegalGdpr', 'Sécurité, Juridique & RGPD')}</h4>
         </div>
         <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '0 0 14px' }}>
-          Gérez vos données personnelles, exportez vos archives ou consultez les Conditions Générales de Troco.
+          {t('securityLegalGdprDesc', 'Gérez vos données personnelles, exportez vos archives ou consultez les Conditions Générales de Troco.')}
         </p>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -1114,7 +1129,7 @@ export default function ProfileFeature({
             }}
           >
             <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Lock size={16} color="var(--accent-primary)" /> Centre de Confidentialité & Export RGPD (JSON)
+              <Lock size={16} color="var(--accent-primary)" /> {t('privacyCenterButton', 'Centre de Confidentialité & Export RGPD (JSON)')}
             </span>
             <ChevronRight size={16} color="var(--accent-primary)" />
           </button>
@@ -1138,7 +1153,7 @@ export default function ProfileFeature({
             }}
           >
             <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <Scale size={16} color="var(--accent-primary)" /> Conditions Générales & Charte Communautaire (v2026.1)
+              <Scale size={16} color="var(--accent-primary)" /> {t('termsConditionsButton', 'Conditions Générales & Charte Communautaire (v2026.1)')}
             </span>
             <ChevronRight size={16} color="var(--accent-primary)" />
           </button>
@@ -1162,7 +1177,7 @@ export default function ProfileFeature({
             }}
           >
             <span style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <ShieldAlert size={16} color="var(--accent-success)" /> Panel Administrateur & Modération
+              <ShieldAlert size={16} color="var(--accent-success)" /> {t('adminModerationPanel', 'Panel Administrateur & Modération')}
             </span>
             <ChevronRight size={16} color="var(--accent-primary)" />
           </button>
