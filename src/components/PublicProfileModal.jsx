@@ -316,7 +316,7 @@ export default function PublicProfileModal({
           boxShadow: 'var(--shadow-card)',
           width: '100%',
           maxWidth: '680px',
-          maxHeight: 'min(780px, calc(100dvh - 100px))',
+          maxHeight: 'min(780px, calc(100dvh - 120px))',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden',
@@ -326,6 +326,8 @@ export default function PublicProfileModal({
           '--accent-primary': customThemeColor,
           '--accent-primary-hover': customThemeColor,
           '--shadow-accent': `0 4px 14px ${customThemeColor}33`,
+          position: 'relative',
+          zIndex: 10,
         }}
       >
         {/* EN-TÊTE FIXE AVEC RETOUR 44x44px (APPLE HIG) */}
@@ -872,15 +874,28 @@ export default function PublicProfileModal({
 
           {/* 5. HISTORIQUE DES SWAPS ET DEALS */}
           {activeTab === 'history' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div
+              className="swap-history-container"
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '16px',
+                width: '100%',
+                maxWidth: '100%',
+                minWidth: 0,
+                boxSizing: 'border-box',
+                position: 'relative',
+                zIndex: 1,
+              }}
+            >
               <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <History size={18} color="var(--accent-primary)" /> {t('swapHistory', 'Historique des swaps et deals')}
               </div>
 
               {/* STATISTIQUES DYNAMIQUES DEALS & NOTE MOYENNE */}
-              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', width: '100%', boxSizing: 'border-box' }}>
                 {/* DEAL CLÔTURÉ */}
-                <div style={{ flex: 1, minWidth: '130px', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '12px 14px', backgroundColor: 'var(--bg-subtle)' }}>
+                <div style={{ flex: '1 1 120px', minWidth: '120px', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '12px 14px', backgroundColor: 'var(--bg-subtle)', boxSizing: 'border-box' }}>
                   <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{t('closedDeals', 'Deal clôturé')}</div>
                   <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-main)' }}>
                     {user.dealsCompleted || 0}
@@ -888,7 +903,7 @@ export default function PublicProfileModal({
                 </div>
 
                 {/* NOTE MOYENNE */}
-                <div style={{ flex: 1, minWidth: '140px', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '12px 14px', backgroundColor: 'var(--bg-subtle)' }}>
+                <div style={{ flex: '1 1 130px', minWidth: '130px', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '12px 14px', backgroundColor: 'var(--bg-subtle)', boxSizing: 'border-box' }}>
                   <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{t('averageRating', 'Note moyenne')}</div>
                   <div style={{ fontSize: user.reviewsCount > 0 ? '20px' : '12.5px', fontWeight: user.reviewsCount > 0 ? '800' : '500', color: user.reviewsCount > 0 ? '#F59E0B' : 'var(--text-secondary)', fontStyle: user.reviewsCount > 0 ? 'normal' : 'italic', display: 'flex', alignItems: 'center', gap: '4px', minHeight: '28px' }}>
                     {user.reviewsCount > 0 ? (Math.round(user.averageRating * 10) / 10).toFixed(1) + ' ⭐' : t('profile.no_reviews', 'Pas d\'évaluation pour l\'instant')}
@@ -896,7 +911,7 @@ export default function PublicProfileModal({
                 </div>
 
                 {/* EN COURS PLANIFIÉ */}
-                <div style={{ flex: 1, minWidth: '130px', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '12px 14px', backgroundColor: 'var(--bg-subtle)' }}>
+                <div style={{ flex: '1 1 120px', minWidth: '120px', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '12px 14px', backgroundColor: 'var(--bg-subtle)', boxSizing: 'border-box' }}>
                   <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{t('dealsInProgress', 'En cours planifié')}</div>
                   <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--accent-primary)' }}>
                     {user.activeDeals || 0}
@@ -904,7 +919,44 @@ export default function PublicProfileModal({
                 </div>
               </div>
 
-              <div style={{ padding: '20px', textAlign: 'center', borderRadius: '18px', backgroundColor: 'var(--bg-subtle)', border: '1px dashed var(--border-color)', color: 'var(--text-secondary)', fontSize: '12.5px' }}>
+              {/* LISTE DES SWAPS HISTORIQUES SI DISPONIBLES */}
+              {Array.isArray(user?.swapHistory) && user.swapHistory.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', width: '100%', boxSizing: 'border-box' }}>
+                  {user.swapHistory.map((entry) => (
+                    <div
+                      key={entry.id || Math.random()}
+                      className="premium-card"
+                      style={{
+                        border: '1px solid var(--border-color)',
+                        borderRadius: '16px',
+                        padding: '12px 14px',
+                        backgroundColor: 'var(--bg-subtle)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '6px',
+                        width: '100%',
+                        boxSizing: 'border-box',
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontWeight: '700', fontSize: '13px', color: 'var(--text-main)' }}>
+                          {entry.deal || entry.title || 'Deal Troco'}
+                        </span>
+                        <span style={{ fontSize: '10px', fontWeight: '800', padding: '3px 8px', borderRadius: '999px', backgroundColor: 'var(--bg-card)', color: 'var(--accent-primary)', border: '1px solid var(--border-color)' }}>
+                          {entry.status || 'Clôturé'}
+                        </span>
+                      </div>
+                      {entry.counterparty && (
+                        <div style={{ fontSize: '11.5px', color: 'var(--text-secondary)' }}>
+                          Avec {entry.counterparty} {entry.date ? `• ${entry.date}` : ''}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div style={{ padding: '16px 20px', textAlign: 'center', borderRadius: '16px', backgroundColor: 'var(--bg-subtle)', border: '1px dashed var(--border-color)', color: 'var(--text-secondary)', fontSize: '12px', width: '100%', boxSizing: 'border-box' }}>
                 <span>{t('verifiedTransactionsTrust', 'Transactions réelles vérifiées par le tiers de confiance Troco.')}</span>
               </div>
 

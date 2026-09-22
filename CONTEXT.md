@@ -474,4 +474,24 @@ L'application dispose d'un composant unifié pour toutes les boîtes de dialogue
 4. **Déploiement des Règles Firestore (`firestore.rules`)**
    - Ajout et déploiement en production sur `troco-8a6eb` de la règle autorisant la lecture publique authentifiée des sous-collections d'avis (`match /users/{uid}/reviews/{reviewId}`) et des transactions de deals clôturés publics.
 
+### Patch Correction du Z-Index & Confinement de l'Historique des Swaps (commit `fix(z-index)`)
 
+1. **Hiérarchie Stricte des Z-Index & Cliquabilité Absolue (`AppBottomNav.jsx` & `index.css`)**
+   - Élévation du `zIndex` de `AppBottomNav` de `99999` à `100050` avec `pointerEvents: 'auto'`.
+   - Renforcement global dans `src/index.css` via `.app-bottom-nav, nav[aria-label="Navigation principale mobile"] { z-index: 100050 !important; pointer-events: auto !important; }`.
+   - Garantie que les icônes de navigation restent visibles et cliquables en permanence, même en présence de modales ou de transitions.
+
+2. **Dégagement Mobile & Bounding Box des Modales (`UniversalModal.jsx`)**
+   - Ajustement du `zIndex` de l'overlay de `UniversalModal` à `99990` (`z-[99990]`), évitant toute collision avec la barre de navigation inférieure.
+   - Ajout d'un dégagement inférieur mobile `pb-[calc(76px+env(safe-area-inset-bottom,12px))] md:pb-4`.
+   - Bounding box dialog fixée à `max-h-[calc(100dvh-95px)] md:max-h-[90dvh]` pour empêcher le contenu des modales de glisser ou de se faire écraser derrière la barre de navigation.
+
+3. **Confinement Strict de l'Onglet "Historique des swaps & deals" (`PublicProfileModal.jsx`)**
+   - Encapsulation de l'onglet `activeTab === 'history'` dans un conteneur dédié `.swap-history-container` avec `width: 100%`, `max-width: 100%`, `min-width: 0`, et `box-sizing: border-box`.
+   - Bounding `maxHeight` de la carte de profil ajusté à `min(780px, calc(100dvh - 120px))` avec scrollbar confiné `overflow-y: auto` et `overscroll-behavior: contain`.
+   - Rendu intégré des cartes de transactions historiques de swaps (`user.swapHistory`) si existantes, suivi des avis vérifiés sans déborder ni contracter les colonnes flex parentes.
+
+4. **Alignement et Isolation dans ProfileFeature & ProfileView (`ProfileFeature.jsx`, `ProfileView.jsx`, `ReviewsSection.jsx`)**
+   - Application de la classe `.swap-history-section` et styles d'isolation (`min-width: 0`, `width: 100%`, `box-sizing: border-box`) sur les sections d'historique de swaps.
+   - Ajout de `width: 100%`, `max-width: 100%`, `min-width: 0`, `box-sizing: border-box` sur `ReviewsSection.jsx` pour empêcher tout étirement horizontal.
+   - Réinitialisation propre des modales publiques dans `switchTab` (`App.js`) lors d'une transition initiée par la barre de navigation inférieure.

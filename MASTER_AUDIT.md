@@ -21,12 +21,12 @@
 
 | Phase | Fait | Restant | Progression |
 |---|---|---|---|
-| 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 9 | 6 | 60.0% |
+| 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 10 | 5 | 66.7% |
 | 🟡 Facile (Niveau 2 — 1h à 3h) | 6 | 8 | 42.9% |
 | 🟠 Moyen (Niveau 3 — 3h à 1 jour) | 8 | 7 | 53.3% |
 | 🔴 Difficile (Niveau 4 — 1 à 3 jours) | 3 | 7 | 30.0% |
 | 🚨 Très difficile (Niveau 5 — 3j à 2 sem) | 0 | 9 | 0.0% |
-| **TOTAL** | **26** | **37** | **41.3%** |
+| **TOTAL** | **27** | **36** | **42.9%** |
 
 ### Score par axe vs cible Licorne
 | Axe | Poids | Actuel | Cible Série A | Delta |
@@ -85,6 +85,10 @@
 ### [x] [QW-15] — Calcul dynamique et assainissement des statistiques réelles de profil
 **Preuve** : `src/services/userStatsService.js:25-170`, `src/components/PublicProfileModal.jsx:245-257`, `src/features/profile/ProfileFeature.jsx:240-244`, `src/components/ProfileView.jsx:100-112`, `src/stores/useAuthStore.js:29-33`
 **Statut** : ✅ FAIT — Éradication définitive des statistiques factices hardcodées (20 deals de Matmot, 6 avis de Mateopolo). Remplacement par un calcul dynamique basé sur les relations réelles de la base de données Firestore (`COUNT` des avis dans `users/{uid}/reviews` et des deals confirmés dans `transactions` et `chats`). Règle de sous-collection `reviews` déployée sur Firebase.
+
+### [x] [QW-16] — Correction du Z-Index, cliquabilité de AppBottomNav et confinement de l'historique des swaps et deals
+**Preuve** : `src/components/layout/AppBottomNav.jsx:227` (`zIndex: 100050`, `pointerEvents: 'auto'`), `src/components/ui/UniversalModal.jsx:129-146` (`z-[99990]`, `pb-[calc(76px+env(safe-area-inset-bottom,12px))]`, `max-h-[calc(100dvh-95px)]`), `src/components/PublicProfileModal.jsx:319,874` (`maxHeight: min(780px, calc(100dvh - 120px))`, `swap-history-container`), `src/features/profile/ProfileFeature.jsx:901`, `src/components/ProfileView.jsx:600`, `src/index.css:221-240`, `src/components/Phase135SwapHistoryZIndexLayout.test.js:1-45`
+**Statut** : ✅ FAIT — La barre de navigation mobile (`AppBottomNav`) est verrouillée au premier plan avec `z-index: 100050` et `pointer-events: auto`. L'overlay des modales est positionné à `z-index: 99990` avec un dégagement inférieur mobile pour ne jamais masquer ni bloquer les icônes de navigation. L'onglet et les sections "Historique des swaps & deals" sont strictement isolés dans leur conteneur parent (`swap-history-container` / `swap-history-section`) avec `box-sizing: border-box`, `min-width: 0`, et hauteur bornée, empêchant tout écrasement ou réduction de l'interface.
 
 ---
 

@@ -217,6 +217,29 @@ nav[data-bottom-nav],
   padding-bottom: calc(10px + var(--safe-area-bottom)) !important;
 }
 
+/* BARRE DE NAVIGATION MOBILE - Z-INDEX ABSOLU & PROTECTION TACTILE */
+.app-bottom-nav,
+nav[aria-label="Navigation principale mobile"] {
+  position: fixed !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 100050 !important;
+  pointer-events: auto !important;
+}
+
+/* CONTENEURS D'HISTORIQUE DE SWAPS & DEALS - STRICT CONFINEMENT ET NON-DÉBORDEMENT */
+.swap-history-container,
+.swap-history-section {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+  position: relative !important;
+  z-index: 1 !important;
+  overflow: visible;
+}
+
 /* TYPOGRAPHIE GLOBALE HAUTE-COUTURE (AWWWARDS / EDITORIAL) */
 h1,
 h2,

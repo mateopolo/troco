@@ -159,7 +159,7 @@ export default function ReviewsSection({
 
   return (
     <div
-      className="reviews-section-panel"
+      className="reviews-section-panel reviews-section-container"
       style={{
         backgroundColor: 'var(--bg-card)',
         borderRadius: '24px',
@@ -170,6 +170,10 @@ export default function ReviewsSection({
         flexDirection: 'column',
         gap: '16px',
         marginTop: '18px',
+        width: '100%',
+        maxWidth: '100%',
+        minWidth: 0,
+        boxSizing: 'border-box',
       }}
     >
       {/* EN-TÊTE DE SECTION */}

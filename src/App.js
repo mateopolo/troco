@@ -621,8 +621,14 @@ export default function App() {
       if (newTab !== 'chat') {
         setSelectedChat(null);
       }
+      if (typeof setSelectedPublicUser === 'function') {
+        setSelectedPublicUser(null);
+      }
+      if (typeof setSelectedListing === 'function') {
+        setSelectedListing(null);
+      }
     });
-  }, [setActiveTab, setSelectedChat, startTransition]);
+  }, [setActiveTab, setSelectedChat, setSelectedPublicUser, setSelectedListing, startTransition]);
 
   // Handler de succès de paiement (crédit solde, enregistrement transaction Firestore)
   // Handler de succès de paiement (crédit solde, abonnement Troco Plus, enregistrement transaction Firestore)

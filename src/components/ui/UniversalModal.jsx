@@ -126,14 +126,13 @@ export function UniversalModal({
   return createPortal(
     <div
       onClick={handleBackdropClick}
-      className={`fixed inset-0 z-[99999] flex items-center justify-center p-4 box-border ${overlayClassName}`.trim()}
+      className={`fixed inset-0 z-[99990] flex items-center justify-center p-3 md:p-4 pb-[calc(76px+env(safe-area-inset-bottom,12px))] md:pb-4 box-border ${overlayClassName}`.trim()}
       style={{
         backgroundColor: 'rgba(0, 0, 0, 0.7)',
         backdropFilter: 'blur(12px)',
         WebkitBackdropFilter: 'blur(12px)',
+        zIndex: 99990,
         ...overlayStyle,
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
       }}
     >
       <div
@@ -143,7 +142,7 @@ export function UniversalModal({
         aria-label={ariaLabelledBy ? undefined : ariaLabel}
         aria-labelledby={ariaLabelledBy}
         tabIndex={-1}
-        className={`relative w-full max-h-[90dvh] flex flex-col rounded-2xl shadow-2xl overflow-hidden bg-[var(--bg-card)] border border-[var(--border-color)] ${contentClassName}`.trim()}
+        className={`relative w-full max-h-[calc(100dvh-95px)] md:max-h-[90dvh] flex flex-col rounded-2xl shadow-2xl overflow-hidden bg-[var(--bg-card)] border border-[var(--border-color)] ${contentClassName}`.trim()}
         onClick={(event) => event.stopPropagation()}
         style={{
           maxWidth: resolvedMaxWidth,

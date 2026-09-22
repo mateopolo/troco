@@ -597,7 +597,20 @@ export default function ProfileView({
       </div>
 
       {/* HISTORIQUE DES DEALS */}
-      <div style={{ ...cardStyle, borderRadius: '24px', padding: '24px' }}>
+      <div
+        className="swap-history-section"
+        style={{
+          ...cardStyle,
+          borderRadius: '24px',
+          padding: '24px',
+          width: '100%',
+          maxWidth: '100%',
+          minWidth: 0,
+          boxSizing: 'border-box',
+          position: 'relative',
+          zIndex: 1,
+        }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px', flexWrap: 'wrap', gap: '8px' }}>
           <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '22px', fontWeight: '600', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
             <History size={20} color="var(--accent-primary)" /> Historique des swaps et deals

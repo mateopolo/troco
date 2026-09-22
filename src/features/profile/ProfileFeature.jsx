@@ -899,7 +899,19 @@ export default function ProfileFeature({
       </div>
 
       {/* ---- HISTORIQUE DES SWAPS & DEALS ---- */}
-      <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '20px' }}>
+      <div
+        className="swap-history-section"
+        style={{
+          borderTop: '1px solid var(--border-color)',
+          paddingTop: '20px',
+          width: '100%',
+          maxWidth: '100%',
+          minWidth: 0,
+          boxSizing: 'border-box',
+          position: 'relative',
+          zIndex: 1,
+        }}
+      >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
           <History size={17} color="var(--accent-primary)" />
           <h4 className="font-editorial-heading" style={{ margin: 0, fontSize: '16px', fontWeight: '600', color: 'var(--text-main)' }}>{t('swapHistory')}</h4>
