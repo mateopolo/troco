@@ -12,26 +12,10 @@ import ReviewsSection from './ReviewsSection';
 import { auth } from '../firebase';
 import { useUserRealStats } from '../services/userStatsService';
 
-// Map des codes langue vers emojis drapeaux
-const LANG_FLAG_EMOJI = {
-  FR: '🇫🇷',
-  EN: '🇬🇧',
-  ES: '🇪🇸',
-  IT: '🇮🇹',
-  DE: '🇩🇪',
-  PT: '🇵🇹',
-  AR: '🇸🇦',
-  ZH: '🇨🇳',
-  JA: '🇯🇵',
-  RU: '🇷🇺',
-  NL: '🇳🇱',
-  KO: '🇰🇷',
-  PL: '🇵🇱',
-  SV: '🇸🇪',
-  TR: '🇹🇷',
-};
+import { getFlagEmoji } from '../utils/flagUtils';
 
 export default function ProfileView({
+
   activeTab,
   profile,
   setProfile,
@@ -274,7 +258,7 @@ export default function ProfileView({
                   <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                     {profile?.languages?.map(lang => (
                       <span key={lang} style={{ fontSize: '14px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-main)', padding: '2px 8px', borderRadius: '6px', border: '1px solid var(--border-color)', display: 'inline-flex', alignItems: 'center' }} title={lang}>
-                        <span>{LANG_FLAG_EMOJI[lang.toUpperCase()] || '🌐'}</span>
+                        <span>{getFlagEmoji(lang)}</span>
                       </span>
                     ))}
                   </div>

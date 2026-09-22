@@ -8,16 +8,17 @@ import { liveTranscriptionService } from '../services/liveTranscriptionService';
 import { translateText } from '../utils/translator';
 import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase';
+import { getFlagEmoji } from '../utils/flagUtils';
 
 const AVAILABLE_LANGUAGES = [
-  { code: 'FR', label: 'Français', flag: '🇫🇷', bcp47: 'fr-FR' },
-  { code: 'EN', label: 'English', flag: '🇬🇧', bcp47: 'en-US' },
-  { code: 'ES', label: 'Español', flag: '🇪🇸', bcp47: 'es-ES' },
-  { code: 'IT', label: 'Italiano', flag: '🇮🇹', bcp47: 'it-IT' },
-  { code: 'DE', label: 'Deutsch', flag: '🇩🇪', bcp47: 'de-DE' },
-  { code: 'JA', label: '日本語', flag: '🇯🇵', bcp47: 'ja-JP' },
-  { code: 'ZH', label: '中文', flag: '🇨🇳', bcp47: 'zh-CN' },
-  { code: 'PT', label: 'Português', flag: '🇵🇹', bcp47: 'pt-PT' },
+  { code: 'FR', label: 'Français', flag: getFlagEmoji('FR'), bcp47: 'fr-FR' },
+  { code: 'EN', label: 'English', flag: getFlagEmoji('EN'), bcp47: 'en-US' },
+  { code: 'ES', label: 'Español', flag: getFlagEmoji('ES'), bcp47: 'es-ES' },
+  { code: 'IT', label: 'Italiano', flag: getFlagEmoji('IT'), bcp47: 'it-IT' },
+  { code: 'DE', label: 'Deutsch', flag: getFlagEmoji('DE'), bcp47: 'de-DE' },
+  { code: 'JA', label: '日本語', flag: getFlagEmoji('JA'), bcp47: 'ja-JP' },
+  { code: 'ZH', label: '中文', flag: getFlagEmoji('ZH'), bcp47: 'zh-CN' },
+  { code: 'PT', label: 'Português', flag: getFlagEmoji('PT'), bcp47: 'pt-PT' },
 ];
 
 const FONT_SIZES = [

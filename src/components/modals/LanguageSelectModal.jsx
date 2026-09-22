@@ -3,16 +3,18 @@ import { Globe, X, CheckCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getActiveAnimation } from '../../config/animations';
 import UniversalModal from '../ui/UniversalModal';
+import { getFlagEmoji } from '../../utils/flagUtils';
 
 const AVAILABLE_LANGUAGES = [
-  { code: 'FR', label: 'Français', flag: '🇫🇷' },
-  { code: 'EN', label: 'English', flag: '🇬🇧' },
-  { code: 'ES', label: 'Español', flag: '🇪🇸' },
-  { code: 'IT', label: 'Italiano', flag: '🇮🇹' },
-  { code: 'DE', label: 'Deutsch', flag: '🇩🇪' },
-  { code: 'JA', label: '日本語', flag: '🇯🇵' },
-  { code: 'ZH', label: '中文', flag: '🇨🇳' },
+  { code: 'FR', label: 'Français', flag: getFlagEmoji('FR') },
+  { code: 'EN', label: 'English', flag: getFlagEmoji('EN') },
+  { code: 'ES', label: 'Español', flag: getFlagEmoji('ES') },
+  { code: 'IT', label: 'Italiano', flag: getFlagEmoji('IT') },
+  { code: 'DE', label: 'Deutsch', flag: getFlagEmoji('DE') },
+  { code: 'JA', label: '日本語', flag: getFlagEmoji('JA') },
+  { code: 'ZH', label: '中文', flag: getFlagEmoji('ZH') },
 ];
+
 
 export default function LanguageSelectModal({
   isOpen,

@@ -44,6 +44,7 @@ import {
   getReviewTranslation as getReviewTranslationUtil,
   getListingTitleTranslation as getListingTitleTranslationUtil,
 } from '../../utils/translationHelpers';
+import { getFlagEmoji } from '../../utils/flagUtils';
 import { SocialLinksDisplay, SocialLinksEditor } from '../../components/UserProfile';
 import { useUserRealStats, sanitizeUserWithDynamicStats } from '../../services/userStatsService';
 
@@ -605,38 +606,37 @@ export default function ProfileFeature({
         <div style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '8px' }}>{t('spokenLanguages')}</div>
         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
           {[
-            { code: 'FR', label: '🇫🇷' },
-            { code: 'EN', label: '🇬🇧' },
-            { code: 'ES', label: '🇪🇸' },
-            { code: 'IT', label: '🇮🇹' },
-            { code: 'DE', label: '🇩🇪' },
-            { code: 'PT', label: '🇵🇹' },
-            { code: 'AR', label: '🇸🇦' },
-            { code: 'ZH', label: '🇨🇳' },
-            { code: 'JA', label: '🇯🇵' },
-            { code: 'RU', label: '🇷🇺' },
-            { code: 'NL', label: '🇳🇱' },
-            { code: 'KO', label: '🇰🇷' },
-          ].map(({ code, label }) => {
-            const active = (isEditingProfile ? (profileDraft.languages || []) : (profile.languages || [])).includes(code);
+            'FR', 'EN', 'ES', 'IT', 'DE', 'PT', 'AR', 'ZH', 'JA', 'RU', 'NL', 'KO'
+          ].map((code) => {
+            const active = (isEditingProfile ? (profileDraft.languages || []) : (profile.languages || [])).some(
+              (l) => (l || '').toUpperCase() === code || (code === 'EN' && (l || '').toUpperCase() === 'GB') || (code === 'GB' && (l || '').toUpperCase() === 'EN')
+            );
             return (
               <button
                 key={code}
+                type="button"
                 onClick={() => isEditingProfile ? toggleLanguage(code) : null}
+                title={code}
+                aria-label={`Langue ${code}`}
                 style={{
                   border: active ? '1.5px solid var(--accent-primary)' : '1px solid var(--border-color)',
                   backgroundColor: active ? 'var(--bg-subtle)' : 'var(--bg-card)',
                   color: active ? 'var(--accent-primary)' : 'var(--text-secondary)',
                   padding: '7px 12px',
                   borderRadius: '999px',
-                  fontSize: '12px',
+                  fontSize: '15px',
                   fontWeight: '800',
                   cursor: isEditingProfile ? 'pointer' : 'default',
                   transition: 'all 0.2s ease',
-                  boxShadow: active ? 'var(--shadow-card)' : 'none'
+                  boxShadow: active ? 'var(--shadow-card)' : 'none',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  minWidth: '42px',
+                  lineHeight: 1
                 }}
               >
-                {label}
+                {getFlagEmoji(code)}
               </button>
             );
           })}

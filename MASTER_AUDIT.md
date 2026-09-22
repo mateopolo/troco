@@ -21,12 +21,13 @@
 
 | Phase | Fait | Restant | Progression |
 |---|---|---|---|
-| 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 10 | 5 | 66.7% |
+| 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 11 | 5 | 68.8% |
 | 🟡 Facile (Niveau 2 — 1h à 3h) | 6 | 8 | 42.9% |
 | 🟠 Moyen (Niveau 3 — 3h à 1 jour) | 8 | 7 | 53.3% |
 | 🔴 Difficile (Niveau 4 — 1 à 3 jours) | 3 | 7 | 30.0% |
 | 🚨 Très difficile (Niveau 5 — 3j à 2 sem) | 0 | 9 | 0.0% |
-| **TOTAL** | **27** | **36** | **42.9%** |
+| **TOTAL** | **28** | **36** | **43.8%** |
+
 
 ### Score par axe vs cible Licorne
 | Axe | Poids | Actuel | Cible Série A | Delta |
@@ -90,7 +91,12 @@
 **Preuve** : `src/components/layout/AppBottomNav.jsx:227` (`zIndex: 100050`, `pointerEvents: 'auto'`), `src/components/ui/UniversalModal.jsx:129-146` (`z-[99990]`, `pb-[calc(76px+env(safe-area-inset-bottom,12px))]`, `max-h-[calc(100dvh-95px)]`), `src/components/PublicProfileModal.jsx:319,874` (`maxHeight: min(780px, calc(100dvh - 120px))`, `swap-history-container`), `src/features/profile/ProfileFeature.jsx:901`, `src/components/ProfileView.jsx:600`, `src/index.css:221-240`, `src/components/Phase135SwapHistoryZIndexLayout.test.js:1-45`
 **Statut** : ✅ FAIT — La barre de navigation mobile (`AppBottomNav`) est verrouillée au premier plan avec `z-index: 100050` et `pointer-events: auto`. L'overlay des modales est positionné à `z-index: 99990` avec un dégagement inférieur mobile pour ne jamais masquer ni bloquer les icônes de navigation. L'onglet et les sections "Historique des swaps & deals" sont strictement isolés dans leur conteneur parent (`swap-history-container` / `swap-history-section`) avec `box-sizing: border-box`, `min-width: 0`, et hauteur bornée, empêchant tout écrasement ou réduction de l'interface.
 
+### [x] [QW-17] — Affichage des drapeaux emojis natifs (Unicode Regional Indicator Symbols) pour les langues
+**Preuve** : `src/utils/flagUtils.js:1-167`, `src/utils/languageFlags.js:1-35`, `src/features/auth/AuthScreen.jsx:891-925`, `src/features/profile/ProfileFeature.jsx:606-644`, `src/components/ProfileView.jsx:258-265`, `src/components/PublicProfileModal.jsx:546-568,834-865`, `src/components/layout/AppHeader.jsx:368`, `src/components/modals/FilterDrawer.jsx:236-260`, `src/components/Phase136FlagEmojisDisplay.test.js:1-60`
+**Statut** : ✅ FAIT — Conversion dynamique complète des codes pays (ISO 3166-1 alpha-2) et langues (ISO 639-1) en symboles indicateurs régionaux Unicode natifs (U+1F1E6 - U+1F1FF). La section "Langues parlées" et tous les sélecteurs de langues affichent de vrais emojis drapeaux (🇫🇷, 🇬🇧, 🇪🇸, 🇮🇹, 🇩🇪, 🇯🇵, 🇨🇳, etc.) au lieu de chaînes de caractères brutes ("FR", "GB").
+
 ---
+
 
 ### [ ] [QW-01] — Harmonisation hauteur/largeur des badges de solde dans AppHeader
 **Statut** : ❌ À FAIRE  

@@ -1,3 +1,11 @@
+import {
+  getFlagEmoji,
+  countryCodeToFlagEmoji,
+  isoToRegionalIndicator,
+  getLanguageNativeName as getNativeNameUtil,
+  LANG_TO_COUNTRY_CODE,
+} from './flagUtils';
+
 /**
  * Utilitaires universels pour les emojis drapeaux natifs et les langues Troco
  */
@@ -22,29 +30,15 @@ export const LANGUAGE_FLAGS = {
   US: '🇺🇸',
 };
 
+export { getFlagEmoji, countryCodeToFlagEmoji, isoToRegionalIndicator, LANG_TO_COUNTRY_CODE };
+
 export const getLanguageFlag = (code) => {
-  if (!code || typeof code !== 'string') return '🌐';
-  const cleanCode = code.toUpperCase().trim();
-  return LANGUAGE_FLAGS[cleanCode] || '🌐';
+  return getFlagEmoji(code, '🌐');
 };
 
 export const getLanguageNativeName = (code) => {
-  const map = {
-    FR: 'Français',
-    EN: 'English',
-    ES: 'Español',
-    IT: 'Italiano',
-    DE: 'Deutsch',
-    PT: 'Português',
-    AR: 'العربية',
-    ZH: '中文',
-    JA: '日本語',
-    RU: 'Русский',
-    NL: 'Nederlands',
-    KO: '한국어',
-    PL: 'Polski',
-    SV: 'Svenska',
-    TR: 'Türkçe',
-  };
-  return map[code?.toUpperCase()?.trim()] || code;
+  return getNativeNameUtil(code);
 };
+
+export default getFlagEmoji;
+

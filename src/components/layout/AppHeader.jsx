@@ -5,6 +5,7 @@ import TrocoLogoNativeSvg from '../common/TrocoLogoNativeSvg';
 import { AnimatedEuroBalance, AnimatedTokenBalance } from '../AnimatedBalances';
 import { formatTokenCount as formatTokenCountUtil } from '../../utils/formatters';
 import { playBetclicBalanceSound } from '../../utils/audioService';
+import { getFlagEmoji } from '../../utils/flagUtils';
 
 export const AppHeader = React.memo(({
   isMobile = false,
@@ -365,21 +366,7 @@ export const AppHeader = React.memo(({
           >
             <Globe size={13} color="var(--accent-primary)" style={{ flexShrink: 0 }} />
             <span className="flex-shrink-0" style={{ fontSize: '13px' }}>
-              {currentLang === 'FR'
-                ? '🇫🇷'
-                : currentLang === 'EN'
-                ? '🇬🇧'
-                : currentLang === 'ES'
-                ? '🇪🇸'
-                : currentLang === 'IT'
-                ? '🇮🇹'
-                : currentLang === 'DE'
-                ? '🇩🇪'
-                : currentLang === 'JA'
-                ? '🇯🇵'
-                : currentLang === 'PT'
-                ? '🇵🇹'
-                : '🇨🇳'}
+              {getFlagEmoji(currentLang)}
             </span>
           </button>
         </div>

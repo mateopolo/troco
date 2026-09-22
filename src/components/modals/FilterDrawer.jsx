@@ -2,8 +2,10 @@ import React from 'react';
 import { X, Sparkles, MapPin } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import UniversalModal from '../ui/UniversalModal';
+import { getFlagEmoji } from '../../utils/flagUtils';
 
 export default function FilterDrawer({
+
   isOpen,
   onClose,
   filteredListingsCount = 0,
@@ -231,34 +233,30 @@ export default function FilterDrawer({
           {t('languages') || 'Langues'}
         </label>
         <div role="group" aria-label="Filtres de langue" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px', marginBottom: '12px' }}>
-          {[
-            { code: 'FR', label: '🇫🇷' },
-            { code: 'EN', label: '🇬🇧' },
-            { code: 'ES', label: '🇪🇸' },
-            { code: 'IT', label: '🇮🇹' },
-            { code: 'DE', label: '🇩🇪' },
-            { code: 'JA', label: '🇯🇵' },
-            { code: 'ZH', label: '🇨🇳' }
-          ].map(({ code, label }) => (
+          {['FR', 'EN', 'ES', 'IT', 'DE', 'JA', 'ZH'].map((code) => (
             <button
               key={code}
               onClick={() => toggleLanguageFilter(code)}
               aria-pressed={selectedLanguages.includes(code)}
+              title={code}
+              aria-label={`Filtrer par langue ${code}`}
               style={{
                 border: selectedLanguages.includes(code) ? '1px solid #C67D5B' : (darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3'),
                 backgroundColor: selectedLanguages.includes(code) ? (darkMode ? 'rgba(198,125,91,0.25)' : '#F5EAE4') : (darkMode ? '#1A1715' : '#FAF7F2'),
                 color: selectedLanguages.includes(code) ? (darkMode ? '#FAF7F2' : '#A8644A') : (darkMode ? '#D4C5B5' : '#6B5E54'),
                 borderRadius: '999px',
                 padding: '6px 12px',
-                fontSize: '12px',
+                fontSize: '14px',
                 fontWeight: '700',
                 cursor: 'pointer',
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '4px'
+                justifyContent: 'center',
+                gap: '4px',
+                lineHeight: 1
               }}
             >
-              {label}
+              {getFlagEmoji(code)}
             </button>
           ))}
         </div>

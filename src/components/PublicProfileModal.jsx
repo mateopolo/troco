@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   X, Star, ShieldCheck, MapPin, Sparkles, MessageSquare,
   CheckCircle, Briefcase, Award, Camera, Wrench, ExternalLink, FileText, Link as LinkIcon, History,
-  PackageOpen, Loader2
+  PackageOpen, Loader2, Globe
 } from 'lucide-react';
 import MobileHeader from './common/MobileHeader';
 import { SocialLinksDisplay } from './UserProfile';
@@ -14,7 +14,9 @@ import { db } from '../firebase';
 import { collection, query, where, getDocs, doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { resolveUserProfile, getCachedUserProfile, isRawUid, isGenericName, sanitizeProfileData, setCachedUserProfile } from '../services/userResolverService';
 import { useUserRealStats } from '../services/userStatsService';
+import { getFlagEmoji } from '../utils/flagUtils';
 import logger from '../utils/logger';
+
 
 export default function PublicProfileModal({
   isOpen,
@@ -278,6 +280,11 @@ export default function PublicProfileModal({
     ? resolved.portfolio
     : (Array.isArray(targetUser?.portfolio) && targetUser.portfolio.length > 0 ? targetUser.portfolio : []);
 
+  // Langues parlées
+  const languages = Array.isArray(resolved.languages) && resolved.languages.length > 0
+    ? resolved.languages
+    : (Array.isArray(targetUser?.languages) && targetUser.languages.length > 0 ? targetUser.languages : []);
+
   // Annonces affichées (Firestore pure, aucun mock)
   const displayListings = userListings;
 
@@ -536,6 +543,30 @@ export default function PublicProfileModal({
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: (user.activeDeals || 0) > 0 ? 'var(--accent-primary)' : 'var(--text-secondary)', fontWeight: (user.activeDeals || 0) > 0 ? '700' : '400' }}>
                   <span>{t('dealsInProgress', 'En cours')}: {user.activeDeals || 0}</span>
                 </div>
+
+                {languages.length > 0 && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+                    {languages.map((lang) => (
+                      <span
+                        key={lang}
+                        title={lang}
+                        aria-label={`Langue parlée: ${lang}`}
+                        style={{
+                          fontSize: '14px',
+                          backgroundColor: 'var(--bg-subtle)',
+                          border: '1px solid var(--border-color)',
+                          borderRadius: '6px',
+                          padding: '1px 6px',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          lineHeight: 1
+                        }}
+                      >
+                        {getFlagEmoji(lang)}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -799,6 +830,40 @@ export default function PublicProfileModal({
                   </div>
                 )}
               </div>
+
+              {/* LANGUES PARLÉES */}
+              {languages.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <Globe size={15} color="var(--accent-primary)" />
+                    <span>{t('spokenLanguages', 'Langues parlées')} :</span>
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                    {languages.map((lang) => (
+                      <span
+                        key={lang}
+                        title={lang}
+                        aria-label={`Langue ${lang}`}
+                        style={{
+                          padding: '6px 14px',
+                          borderRadius: '999px',
+                          backgroundColor: 'var(--bg-subtle)',
+                          color: 'var(--text-main)',
+                          fontSize: '15px',
+                          fontWeight: '800',
+                          border: '1px solid var(--border-color)',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          lineHeight: 1
+                        }}
+                      >
+                        {getFlagEmoji(lang)}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

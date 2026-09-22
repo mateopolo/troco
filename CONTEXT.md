@@ -230,7 +230,25 @@ L'envoi et la lecture des messages audio et vocaux reposent sur une architecture
   - **EmptyStates authentiques :** Si un membre ne possède aucune annonce, compétence, matériel ou photo de portfolio, l'interface affiche désormais un conteneur vide dédié (`PackageOpen`, `Camera`, "Aucune annonce active"), sans JAMAIS injecter de fausses données de test.
   - **Avis réels :** `ReviewsSection` est alimenté avec `initialReviews={[]}` et écoute uniquement la sous-collection Firestore `users/{targetUid}/reviews`.
 
+### 3.9 Affichage des Drapeaux Emojis (Unicode Regional Indicator Symbols)
+- **Problématique résolue :** La section "Langues parlées" et divers sélecteurs affichaient des codes textes bruts ("FR", "GB", "EN") au lieu de véritables emojis drapeaux natifs (🇫🇷, 🇬🇧, etc.).
+- **Architecture de conversion dynamique (`src/utils/flagUtils.js` & `src/utils/languageFlags.js`) :**
+  - **Algorithme mathématique Unicode :** Chaque lettre ASCII ('A'-'Z') est convertie en code point de symbole indicateur régional `0x1F1E6 + (char.charCodeAt(0) - 65)` (plage U+1F1E6 à U+1F1FF). La combinaison de deux symboles forme le drapeau emoji officiel selon la norme ISO 3166-1 alpha-2.
+  - **Résolution des langues vers territoires :** Table de correspondance `LANG_TO_COUNTRY_CODE` gérant les codes de langue ISO 639-1 (ex: `EN` -> `GB` -> 🇬🇧, `JA` -> `JP` -> 🇯🇵, `ZH` -> `CN` -> 🇨🇳, `KO` -> `KR` -> 🇰🇷, `AR` -> `SA` -> 🇸🇦) tout en acceptant directement les codes pays ISO (`FR`, `GB`, `US`, `ES`, `DE`, `IT`, etc.).
+  - **Protection des entrées :** Détection des emojis déjà formés, tolérance à la casse (`fr` -> 🇫🇷, `gb` -> 🇬🇧), suppression des espaces blancs et gestion de fallback propre (`'🌐'`).
+- **Composants mis à jour :**
+  - `src/features/auth/AuthScreen.jsx` : Remplacement du texte `{lang}` dans les boutons "Langues Parlées" par `{getFlagEmoji(lang)}`.
+  - `src/features/profile/ProfileFeature.jsx` : Dynamisation des drapeaux dans la section "Langues parlées" et harmonisation des équivalences `EN`/`GB`.
+  - `src/components/ProfileView.jsx` : Éradication de la map statique incomplète `LANG_FLAG_EMOJI` au profit de `getFlagEmoji`.
+  - `src/components/PublicProfileModal.jsx` : Affichage enrichi des langues parlées avec drapeaux emojis sous l'en-tête héroïque et dans l'onglet "Présentation & Infos".
+  - `src/components/layout/AppHeader.jsx` : Remplacement du switch ternaire hardcodé par `getFlagEmoji(currentLang)`.
+  - `src/components/modals/FilterDrawer.jsx` : Affichage dynamique des drapeaux dans le groupe de filtres multi-langues.
+  - `src/components/modals/LanguageSelectModal.jsx` et `src/components/LiveCallSubtitles.jsx` : Utilisation de `getFlagEmoji` pour la liste des langues disponibles.
+- **Validation automatisée :**
+  - Suite de tests dédiée `src/utils/flagUtils.test.js` (7 tests unitaires) et `src/components/Phase136FlagEmojisDisplay.test.js` (6 tests d'intégration).
+
 ---
+
 
 ## 🛡️ 4. RÈGLES DE SÉCURITÉ, BASE DE DONNÉES & CORS
 

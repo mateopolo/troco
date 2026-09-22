@@ -27,6 +27,7 @@ import {
 } from 'firebase/firestore';
 import { useWalletStore } from '../../stores';
 import { setSessionAuthenticated } from '../../utils/sessionFlags';
+import { getFlagEmoji } from '../../utils/flagUtils';
 
 export default function AuthScreen({
   setProfile,
@@ -888,19 +889,21 @@ export default function AuthScreen({
               <div>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: darkMode ? '#D4C5B5' : '#3D3530', marginBottom: '8px' }}>Langues Parlées</label>
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  {['FR', 'EN', 'ES', 'IT'].map((lang) => {
-                    const selected = signupLanguages.includes(lang);
+                  {['FR', 'GB', 'ES', 'IT'].map((lang) => {
+                    const selected = signupLanguages.includes(lang) || (lang === 'GB' && signupLanguages.includes('EN')) || (lang === 'EN' && signupLanguages.includes('GB'));
                     return (
                       <button
                         key={lang}
                         type="button"
                         onClick={() => {
                           if (selected) {
-                            setSignupLanguages(prev => prev.filter(l => l !== lang));
+                            setSignupLanguages(prev => prev.filter(l => l !== lang && !(lang === 'GB' && l === 'EN') && !(lang === 'EN' && l === 'GB')));
                           } else {
                             setSignupLanguages(prev => [...prev, lang]);
                           }
                         }}
+                        title={lang}
+                        aria-label={`Langue ${lang}`}
                         style={{
                           border: selected
                             ? '1px solid #C67D5B'
@@ -911,10 +914,20 @@ export default function AuthScreen({
                           color: selected
                             ? (darkMode ? '#FAF7F2' : '#A8644A')
                             : (darkMode ? '#D4C5B5' : '#6B5E54'),
-                          padding: '6px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '800', cursor: 'pointer', transition: 'all 0.2s ease'
+                          padding: '6px 12px',
+                          borderRadius: '20px',
+                          fontSize: '15px',
+                          fontWeight: '800',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          minWidth: '42px',
+                          lineHeight: 1
                         }}
                       >
-                        {lang}
+                        {getFlagEmoji(lang)}
                       </button>
                     );
                   })}
