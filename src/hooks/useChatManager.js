@@ -285,8 +285,11 @@ export const useChatManager = ({
             const peerUid = getChatPartnerUid(data, currentUid);
 
             // Résolution de l'identité du correspondant (nom & photo)
+            // IMPORTANT: on ne se base JAMAIS sur data.avatar (champ ambigu du doc chats — peut contenir
+            // l'avatar de l'utilisateur courant si c'est l'autre qui a initié la discussion).
+            // Seul le cache utilisateur (issu de users/{uid}) fait foi.
             let resolvedName = getChatPartnerName(data, currentUid, myName);
-            let resolvedAvatar = data.avatar || '';
+            let resolvedAvatar = '';
             let peerProfile = null;
 
             if (peerUid) {
@@ -586,7 +589,9 @@ export const useChatManager = ({
     const resolvedPartnerName = cachedPeer?.name && !isGenericName(cachedPeer.name)
       ? cachedPeer.name
       : getChatPartnerName(chat, currentMyUid, profile?.name);
-    const resolvedPartnerAvatar = cachedPeer?.avatar || chat.avatar || chat.peerProfile?.avatar || '';
+    // Ne PAS utiliser chat.avatar : ce champ stocke l'avatar du "partenaire" du point de vue de l'initiateur
+    // du chat, ce qui peut être l'avatar de l'utilisateur courant si c'est l'autre qui a ouvert la discussion.
+    const resolvedPartnerAvatar = cachedPeer?.avatar || chat.peerProfile?.avatar || '';
 
     const enrichedChat = {
       ...chat,
@@ -1033,6 +1038,7 @@ export const useChatManager = ({
             senderUid: myUid,
             sender: myUid,
             senderName: myName,
+            senderAvatar: profile?.avatar || auth?.currentUser?.photoURL || '',
             text,
             read: false,
             status: 'sent',
@@ -1109,6 +1115,7 @@ export const useChatManager = ({
             senderUid: myUid,
             sender: myUid,
             senderName: myName,
+            senderAvatar: profile?.avatar || auth?.currentUser?.photoURL || '',
             text: msg.text || (msg.type === 'audio' ? `🎵 ${msg.fileName || 'Fichier audio'}` : ''),
             read: false,
             status: 'sent',
@@ -1243,6 +1250,7 @@ export const useChatManager = ({
           senderUid: myUid,
           sender: myUid,
           senderName: myName,
+          senderAvatar: profile?.avatar || auth?.currentUser?.photoURL || '',
           kind: 'audio',
           type: 'audio',
           audioUrl,

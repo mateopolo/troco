@@ -22,11 +22,11 @@
 | Phase | Fait | Restant | Progression |
 |---|---|---|---|
 | 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 11 | 5 | 68.8% |
-| 🟡 Facile (Niveau 2 — 1h à 3h) | 6 | 8 | 42.9% |
+| 🟡 Facile (Niveau 2 — 1h à 3h) | 7 | 7 | 50.0% |
 | 🟠 Moyen (Niveau 3 — 3h à 1 jour) | 8 | 7 | 53.3% |
 | 🔴 Difficile (Niveau 4 — 1 à 3 jours) | 3 | 7 | 30.0% |
 | 🚨 Très difficile (Niveau 5 — 3j à 2 sem) | 0 | 9 | 0.0% |
-| **TOTAL** | **28** | **36** | **43.8%** |
+| **TOTAL** | **29** | **35** | **45.3%** |
 
 
 ### Score par axe vs cible Licorne
@@ -171,6 +171,12 @@
 ### [x] [P0-SEC-02] — Découplage RGPD des profils publics via la collection `users_public`
 **Preuve** : `src/hooks/useUsersPublic.js:20`, `src/services/usersPublicService.js:6`, `functions/src/index.ts:92`
 **Statut** : ✅ FAIT — Les données privées des utilisateurs ne sont plus exposées publiquement.
+
+---
+
+### [x] [FAC-09] — Correction du bug d'avatar inversé dans les DMs
+**Preuve** : `useChatManager.js:289` (`resolvedAvatar = ''` au lieu de `data.avatar`), `useChatManager.js:589` (suppression de `|| chat.avatar`), `ChatView.jsx:233` (suppression du fallback `activeChatObj.avatar`), `ChatView.jsx:3055` (suppression de `isOwnAvatar(chat.avatar)`)  
+**Statut** : ✅ FAIT — Le champ `chat.avatar` en Firestore est ambigu (avatar du partenaire vu par l'initiateur). La garde `isOwnAvatar()` par comparaison d'URL échouait quand l'avatar était mis à jour. Fix : suppression de tous les fallbacks `chat.avatar`/`activeChatObj.avatar` ; résolution exclusive via la jointure Firestore temps réel `onSnapshot(users/{uid})` et le cache `userResolverService`. Ajout de `senderAvatar` dans tous les payloads de messages Firestore et affichage d'un avatar circulaire 28px à gauche des bulles reçues.
 
 ---
 

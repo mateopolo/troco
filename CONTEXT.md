@@ -513,3 +513,31 @@ L'application dispose d'un composant unifié pour toutes les boîtes de dialogue
    - Application de la classe `.swap-history-section` et styles d'isolation (`min-width: 0`, `width: 100%`, `box-sizing: border-box`) sur les sections d'historique de swaps.
    - Ajout de `width: 100%`, `max-width: 100%`, `min-width: 0`, `box-sizing: border-box` sur `ReviewsSection.jsx` pour empêcher tout étirement horizontal.
    - Réinitialisation propre des modales publiques dans `switchTab` (`App.js`) lors d'une transition initiée par la barre de navigation inférieure.
+
+### Patch Correction de l'Avatar dans les DMs (commit `fix(chat/avatar)`)
+
+#### 3.10 Cause Racine du Bug d'Avatar Inversé dans les Messages Directs
+
+**Problématique :** Sur le compte `mateopolo91`, les messages reçus de `matmot` affichaient la photo de profil de `mateopolo91` (le récepteur) au lieu de celle de `matmot` (l'expéditeur).
+
+**Cause Racine Identifiée :** Le champ `chat.avatar` dans le document Firestore `chats/{chatId}` est ambigu : il stocke l'avatar du « partenaire » du point de vue de **l'initiateur** de la conversation. Ainsi, si `matmot` démarre une discussion avec `mateopolo91`, `chat.avatar` contient l'avatar de `mateopolo91`. Quand `mateopolo91` ouvre ce chat, la logique de résolution utilisait `chat.avatar` comme fallback et affichait son propre avatar comme « avatar du partenaire ». La garde `isOwnAvatar()` (comparaison URL) était censée filtrer ce cas, mais échouait si l'URL de l'avatar avait changé depuis (nouveau seed DiceBear, mise à jour de profil, etc.).
+
+**Corrections Apportées :**
+
+1. **`useChatManager.js` — `updateMergedChats` (ligne 289) :**
+   - `resolvedAvatar` n'est plus initialisé à `data.avatar || ''`. Il part désormais à `''` et ne prend de valeur **que** depuis le cache utilisateur (`getCachedUserProfile(peerUid)`) basé sur le vrai UID Firestore.
+
+2. **`useChatManager.js` — `handleSelectChat` (ligne 589) :**
+   - Suppression de `|| chat.avatar` dans le calcul de `resolvedPartnerAvatar`. Seules sources autorisées : `cachedPeer?.avatar` ou `chat.peerProfile?.avatar`.
+
+3. **`ChatView.jsx` — `rawPartnerAvatar` (ligne 233) :**
+   - Suppression totale du fallback `(isOwnAvatar(activeChatObj?.avatar) ? '' : activeChatObj?.avatar)`. La résolution repose **exclusivement** sur la jointure Firestore temps réel `onSnapshot(doc(db, 'users', activePartnerUid))` via `partnerProfileDoc`.
+
+4. **`ChatView.jsx` — `rawItemAvatar` dans la liste des chats (ligne 3055) :**
+   - Suppression du fallback `(isOwnAvatar(chat.avatar) ? '' : chat.avatar)`. Seules sources : `itemCachedPartner?.photoURL || itemCachedPartner?.avatar || chat.peerProfile?.avatar`.
+
+5. **`useChatManager.js` — Payloads de messages Firestore :**
+   - Ajout du champ `senderAvatar: profile?.avatar || auth?.currentUser?.photoURL || ''` dans tous les `addDoc` de messages (texte, audio, retry). Chaque message stocke désormais l'avatar de son expéditeur en base, permettant un rendu correct indépendamment du contexte.
+
+6. **`ChatView.jsx` — Rendu des messages reçus :**
+   - Ajout d'un avatar circulaire (28 × 28 px) à gauche de chaque bulle de message reçu (`!isMe`), utilisant `msg.senderAvatar || activePartnerAvatar` en priorité, ou une initiale colorée en fallback.

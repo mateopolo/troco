@@ -230,8 +230,12 @@ function ChatView({
 
   const cachedActivePartner = activePartnerUid ? getCachedUserProfile(activePartnerUid) : null;
   const partnerUserDoc = partnerProfileDoc || cachedActivePartner || activeChatObj?.peerProfile;
-  const rawPartnerAvatar = partnerUserDoc?.photoURL || partnerUserDoc?.avatar || (isOwnAvatar(activeChatObj?.avatar) ? '' : activeChatObj?.avatar) || '';
-  const activePartnerAvatar = isOwnAvatar(rawPartnerAvatar) ? '' : rawPartnerAvatar;
+  // Ne pas utiliser activeChatObj?.avatar comme fallback : ce champ stocke l’avatar du « partenaire »
+  // du point de vue de l’initiateur du chat, ce qui peut être l’avatar de l’utilisateur courant
+  // si c’est l’autre utilisateur qui a démarré la conversation. La comparaison URL (isOwnAvatar)
+  // échoue aussi si l’avatar a été mis à jour depuis. On se fie UNIQUEMENT à la jointure Firestore.
+  const rawPartnerAvatar = partnerUserDoc?.photoURL || partnerUserDoc?.avatar || '';
+  const activePartnerAvatar = rawPartnerAvatar;
   const activePartnerName = partnerUserDoc?.displayName || partnerUserDoc?.name || getChatPartnerName(activeChatObj, currentMyUid, currentMyName);
 
   const handleOpenPartnerProfile = useCallback(() => {
@@ -2372,6 +2376,46 @@ function ChatView({
                       position: 'relative'
                     }}
                   >
+                    {/* AVATAR DE L'EXPÉDITEUR (messages reçus uniquement) */}
+                    {!isMe && (
+                      <div
+                        style={{
+                          width: '28px',
+                          height: '28px',
+                          borderRadius: '50%',
+                          flexShrink: 0,
+                          overflow: 'hidden',
+                          alignSelf: 'flex-end',
+                          border: '1.5px solid var(--border-color)',
+                          boxShadow: 'var(--shadow-card)',
+                        }}
+                      >
+                        {(msg.senderAvatar || activePartnerAvatar) ? (
+                          <img
+                            src={msg.senderAvatar || activePartnerAvatar}
+                            alt={msg.senderName || activePartnerName || 'Avatar'}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                          />
+                        ) : (
+                          <div
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: '#fff',
+                              fontSize: '11px',
+                              fontWeight: '800',
+                            }}
+                          >
+                            {(activePartnerName?.[0] || 'T').toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+                    )}
                     <div
                       className="message-bubble"
                       style={{
@@ -3052,8 +3096,8 @@ function ChatView({
                     if (itemPartnerUid && (!itemCachedPartner || !itemCachedPartner.avatar) && db) {
                       resolveUserProfile(itemPartnerUid, db);
                     }
-                    const rawItemAvatar = itemCachedPartner?.photoURL || itemCachedPartner?.avatar || chat.peerProfile?.photoURL || chat.peerProfile?.avatar || (isOwnAvatar(chat.avatar) ? '' : chat.avatar) || '';
-                    const itemPartnerAvatar = isOwnAvatar(rawItemAvatar) ? '' : rawItemAvatar;
+                    const rawItemAvatar = itemCachedPartner?.photoURL || itemCachedPartner?.avatar || chat.peerProfile?.photoURL || chat.peerProfile?.avatar || '';
+                    const itemPartnerAvatar = rawItemAvatar;
                     const itemPartnerName = itemCachedPartner?.displayName || itemCachedPartner?.name || getChatPartnerName(chat, currentMyUid, currentMyName);
 
                     return (
