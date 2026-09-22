@@ -426,6 +426,17 @@ export default function PaymentModal({
       }
     } catch (_) {}
 
+    // Déclenchement IMMÉDIAT de la persistance Firestore et de l'historique de transaction
+    // Garantit que le solde est persisté en base même en cas de rechargement immédiat (F5) avant fermeture de la modale
+    if (typeof onSuccess === 'function' && !hasCalledSuccessRef.current) {
+      hasCalledSuccessRef.current = true;
+      try {
+        onSuccess(resultPayload);
+      } catch (err) {
+        logger.warn('[PaymentModal] onSuccess immediate trigger error:', err);
+      }
+    }
+
     setSuccessDetails(resultPayload);
     setIsSuccess(true);
   };

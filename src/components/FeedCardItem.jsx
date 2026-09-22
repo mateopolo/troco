@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight, Video, Globe, MapPin, Tag, ArrowRight, Spark
 import { motion } from 'framer-motion';
 import { TextEffect } from './core/text-effect';
 import { ProgressiveImage } from './ui/ProgressiveImage';
+import { translateText } from '../utils/translator';
 
 function FeedCardItem({
   item,

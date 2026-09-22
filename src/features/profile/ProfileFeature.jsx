@@ -359,7 +359,7 @@ export default function ProfileFeature({
               boxShadow: 'var(--shadow-accent)'
             }}
           >
-            <ShieldCheck size={14} color="var(--accent-primary)" /> Vérifier mon identité (+ Badge ✅)
+            <ShieldCheck size={14} color="var(--accent-primary)" /> {t('verifyIdentity', 'Vérifier mon identité (+ Badge ✅)')}
           </button>
         )}
 
@@ -382,7 +382,7 @@ export default function ProfileFeature({
             boxShadow: 'var(--shadow-card)'
           }}
         >
-          <ShieldAlert size={14} color="var(--accent-primary)" /> Panel Modération
+          <ShieldAlert size={14} color="var(--accent-primary)" /> {t('moderationPanel', 'Panel Modération')}
         </button>
 
         <button
@@ -426,7 +426,7 @@ export default function ProfileFeature({
               gap: '6px'
             }}
           >
-            <LogOut size={13} /> Se déconnecter
+            <LogOut size={13} /> {t('logout', 'Se déconnecter')}
           </button>
         )}
       </div>

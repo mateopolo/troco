@@ -88,6 +88,11 @@ service cloud.firestore {
         allow read, update, delete: if isOwner(uid) || isAdmin();
         allow create: if isAuthenticated();
       }
+
+      // Sous-collection interne : Transactions
+      match /transactions/{txId} {
+        allow read, write: if isOwner(uid) || isAdmin();
+      }
     }
 
     // ========================================================================

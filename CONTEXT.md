@@ -436,3 +436,20 @@ L'application dispose d'un composant unifié pour toutes les boîtes de dialogue
    - `CommunityActivityFeed.jsx` : Purge totale des tableaux mockés en dur (`INITIAL_ACTIVITIES = []`, suppression des faux "Lucas M", "Emma R", "Éco-troc", etc.). Ajout d'un état vide propre ("Aucune activité récente pour le moment") et publication en temps réel basée sur le profil réel `currentUser`.
    - `GlobalLiveChat.jsx` : État initial strictement fixé à `[]` (`useState([])`), élimination des faux avatars et pseudos Mateo Polo en dur.
 
+### Patch Persistance Réelle du Solde Utilisateur (Matmot / Non-Admin) (commit `fix(wallet)`)
+
+1. **Déploiement et alignement des Règles de Sécurité Firestore en Production (`troco-8a6eb`)**
+   - Les règles précédemment actives sur le cloud bloquaient la modification cliente de `euroBalance` pour tout compte non-administrateur via `affectedKeys().hasAny(['euroBalance', ...])`, alors que `mateopolo91@gmail.com` disposait du god mode.
+   - Les règles Firestore à jour autorisant la persistance directe du solde (`allow update: if (isOwner(uid) && isNotBanned()) || isAdmin();`) ainsi que l'accès complet à la sous-collection `users/{uid}/transactions` ont été déployées avec succès sur `troco-8a6eb` via le Firebase CLI.
+
+2. **Résolution prioritaire de l'UID Authentifié & Double persistance (`paymentService.js`)**
+   - Utilisation prioritaire de `auth.currentUser?.uid || userId` pour garantir que la transaction cible le document Firestore du propriétaire authentifié reconnu par les règles de sécurité.
+   - Ajout d'un fallback `updateDoc` si `setDoc(..., { merge: true })` rencontre une contrainte NoSQL.
+   - Enregistrement immédiat dans la collection racine `/transactions` (écoutée par `App.js`) et dans la sous-collection `users/{uid}/transactions`.
+
+3. **Déclenchement immédiat de la persistance (`PaymentModal.jsx`)**
+   - `onSuccess` est désormais exécuté immédiatement dès la validation du paiement dans `finalizePayment`, sans attendre que l'utilisateur clique sur le bouton de fermeture de la modale. Le solde est ainsi déjà écrit et répliqué sur Firestore même en cas de rafraîchissement (F5) immédiat sur l'écran de succès.
+
+4. **Garde Anti-Écrasement d'Onboarding (`OnboardingWizardModal.jsx`)**
+   - Préservation stricte des soldes existants (`currentUser?.euroBalance` et `currentUser?.trocoTokens`) si l'onboarding est rejoué, empêchant toute remise à zéro accidentelle.
+

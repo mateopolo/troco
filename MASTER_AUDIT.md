@@ -21,12 +21,12 @@
 
 | Phase | Fait | Restant | Progression |
 |---|---|---|---|
-| 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 7 | 8 | 46.7% |
+| 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 8 | 7 | 53.3% |
 | 🟡 Facile (Niveau 2 — 1h à 3h) | 6 | 8 | 42.9% |
 | 🟠 Moyen (Niveau 3 — 3h à 1 jour) | 8 | 7 | 53.3% |
 | 🔴 Difficile (Niveau 4 — 1 à 3 jours) | 3 | 7 | 30.0% |
 | 🚨 Très difficile (Niveau 5 — 3j à 2 sem) | 0 | 9 | 0.0% |
-| **TOTAL** | **24** | **39** | **38.1%** |
+| **TOTAL** | **25** | **38** | **39.7%** |
 
 ### Score par axe vs cible Licorne
 | Axe | Poids | Actuel | Cible Série A | Delta |
@@ -120,11 +120,9 @@
 **Estimation** : 45min  
 **Impact** : Élimine le risque d'usurpation de privilèges administrateur par falsification d'email client, en s'appuyant uniquement sur `useAdminGuard` et les Custom Claims Firebase signés.
 
-### [ ] [QW-07] — Garde anti-écrasement du solde lors de la finalisation d'onboarding
-**Statut** : ❌ À FAIRE  
-**Fichier** : `src/components/OnboardingWizardModal.jsx:286-287`  
-**Estimation** : 20min  
-**Impact** : Empêche la réinitialisation brutale à 10 jetons et 50€ si un membre existant rejoue son onboarding.
+### [x] [QW-07] — Garde anti-écrasement du solde lors de la finalisation d'onboarding
+**Preuve** : `src/components/OnboardingWizardModal.jsx:141-142` (`currentUser?.euroBalance` et `currentUser?.trocoTokens` conservés)
+**Statut** : ✅ FAIT — Empêche la réinitialisation du solde euros ou des jetons lors d'un rejeu d'onboarding.
 
 ### [ ] [QW-08] — Remplacement des `window.prompt` par des modales dédiées
 **Statut** : ❌ À FAIRE  
@@ -481,7 +479,7 @@
 
 ## ⚠️ À VÉRIFIER MANUELLEMENT (hors code)
 
-- [ ] Déploiement effectif des règles `firestore.rules` sur la console Firebase du projet `troco-8a6eb`
+- [x] Déploiement effectif des règles `firestore.rules` sur la console Firebase du projet `troco-8a6eb` (Déployé avec succès via `firebase-tools deploy --only firestore:rules` — persistance `euroBalance` débloquée pour tous les comptes non-admin y compris `matmot`)
 - [ ] Configuration des règles CORS sur le bucket Firebase Storage (`gsutil cors get gs://troco-8a6eb.firebasestorage.app`)
 - [ ] Activation du mode Enforced pour Firebase App Check dans la console Google Cloud
 - [ ] Configuration des variables d'environnement secrètes dans Google Secret Manager / Vercel

@@ -517,11 +517,11 @@ export default function PublicProfileModal({
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: dealsCompleted > 0 ? 'var(--accent-success)' : 'var(--text-secondary)', fontWeight: dealsCompleted > 0 ? '700' : '400' }}>
                   <CheckCircle size={13} style={{ opacity: dealsCompleted > 0 ? 1 : 0.35 }} />
-                  <span>Deal clôturé: {dealsCompleted}</span>
+                  <span>{t('closedDeals', 'Deal clôturé')}: {dealsCompleted}</span>
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: activeDeals > 0 ? 'var(--accent-primary)' : 'var(--text-secondary)', fontWeight: activeDeals > 0 ? '700' : '400' }}>
-                  <span>En cours: {activeDeals}</span>
+                  <span>{t('dealsInProgress', 'En cours')}: {activeDeals}</span>
                 </div>
               </div>
             </div>
@@ -539,11 +539,11 @@ export default function PublicProfileModal({
             }}
           >
             {[
-              { id: 'listings', label: `Annonces (${displayListings.length})`, icon: Sparkles },
-              { id: 'history', label: `Historique des swaps & deals`, icon: History },
-              { id: 'bio', label: 'Présentation & Infos', icon: Briefcase },
-              { id: 'portfolio', label: `Portfolio (${portfolio.length})`, icon: Camera },
-              { id: 'reviews', label: `Avis & Évaluations`, icon: Star },
+              { id: 'listings', label: `${t('listingsTab', 'Annonces')} (${displayListings.length})`, icon: Sparkles },
+              { id: 'history', label: t('swapHistory', 'Historique des swaps & deals'), icon: History },
+              { id: 'bio', label: t('presentationInfo', 'Présentation & Infos'), icon: Briefcase },
+              { id: 'portfolio', label: `${t('portfolioTab', 'Portfolio')} (${portfolio.length})`, icon: Camera },
+              { id: 'reviews', label: t('reviewsRatings', 'Avis & Évaluations'), icon: Star },
             ].map((tab) => {
               const isActive = activeTab === tab.id;
               const Icon = tab.icon;
@@ -863,14 +863,14 @@ export default function PublicProfileModal({
           {activeTab === 'history' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <History size={18} color="var(--accent-primary)" /> Historique des swaps et deals
+                <History size={18} color="var(--accent-primary)" /> {t('swapHistory', 'Historique des swaps et deals')}
               </div>
 
               {/* STATISTIQUES DYNAMIQUES DEALS & NOTE MOYENNE */}
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
                 {/* DEAL CLÔTURÉ */}
                 <div style={{ flex: 1, minWidth: '130px', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '12px 14px', backgroundColor: 'var(--bg-subtle)' }}>
-                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Deal clôturé</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{t('closedDeals', 'Deal clôturé')}</div>
                   <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-main)' }}>
                     {dealsCompleted}
                   </div>
@@ -878,7 +878,7 @@ export default function PublicProfileModal({
 
                 {/* NOTE MOYENNE */}
                 <div style={{ flex: 1, minWidth: '140px', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '12px 14px', backgroundColor: 'var(--bg-subtle)' }}>
-                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Note moyenne</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{t('averageRating', 'Note moyenne')}</div>
                   <div style={{ fontSize: reviewsCount > 0 ? '20px' : '12.5px', fontWeight: reviewsCount > 0 ? '800' : '500', color: reviewsCount > 0 ? '#F59E0B' : 'var(--text-secondary)', fontStyle: reviewsCount > 0 ? 'normal' : 'italic', display: 'flex', alignItems: 'center', gap: '4px', minHeight: '28px' }}>
                     {reviewsCount > 0 ? (Math.round(averageRating * 10) / 10).toFixed(1) + ' ⭐' : t('profile.no_reviews', 'Pas d\'évaluation pour l\'instant')}
                   </div>
@@ -886,7 +886,7 @@ export default function PublicProfileModal({
 
                 {/* EN COURS PLANIFIÉ */}
                 <div style={{ flex: 1, minWidth: '130px', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '12px 14px', backgroundColor: 'var(--bg-subtle)' }}>
-                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>En cours planifié</div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{t('dealsInProgress', 'En cours planifié')}</div>
                   <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--accent-primary)' }}>
                     {activeDeals}
                   </div>
@@ -894,7 +894,7 @@ export default function PublicProfileModal({
               </div>
 
               <div style={{ padding: '20px', textAlign: 'center', borderRadius: '18px', backgroundColor: 'var(--bg-subtle)', border: '1px dashed var(--border-color)', color: 'var(--text-secondary)', fontSize: '12.5px' }}>
-                <span>Transactions réelles vérifiées par le tiers de confiance Troco.</span>
+                <span>{t('verifiedTransactionsTrust', 'Transactions réelles vérifiées par le tiers de confiance Troco.')}</span>
               </div>
 
               {/* SECTION AVIS ET ÉVALUATIONS EN BAS DU PROFIL */}
@@ -925,7 +925,7 @@ export default function PublicProfileModal({
           }}
         >
           <div style={{ fontSize: '11.5px', color: 'var(--text-secondary)', fontWeight: '600' }}>
-            🔒 Échange sécurisé avec garantie Troco
+            {t('secureExchangeGuarantee', '🔒 Échange sécurisé avec garantie Troco')}
           </div>
 
           <button
@@ -948,7 +948,7 @@ export default function PublicProfileModal({
             }}
           >
             <MessageSquare size={14} />
-            <span>Reprendre la discussion</span>
+            <span>{t('resumeDiscussion', 'Reprendre la discussion')}</span>
           </button>
         </div>
       </div>

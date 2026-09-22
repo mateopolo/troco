@@ -223,7 +223,7 @@ export default function ProfileView({
                   <span style={{ fontSize: '13px', color: 'var(--accent-primary)', fontWeight: '700' }}>{profile?.username || '@membre'}</span>
                   {profile?.kycVerified ? (
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: '#DCFCE7', color: '#166534', fontSize: '11px', fontWeight: '800', padding: '3px 8px', borderRadius: '999px', border: '1px solid #86EFAC' }}>
-                      <ShieldCheck size={13} /> Identité Vérifiée ✅
+                      <ShieldCheck size={13} /> {t('identityVerified', 'Identité Vérifiée ✅')}
                     </span>
                   ) : (
                     <button
@@ -231,7 +231,7 @@ export default function ProfileView({
                       onClick={() => setIsKycModalOpen(true)}
                       style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-success)', border: '1px solid var(--accent-success)', fontSize: '11px', fontWeight: '800', padding: '4px 10px', borderRadius: '999px', cursor: 'pointer' }}
                     >
-                      <ShieldCheck size={13} /> Vérifier mon identité (+ Badge ✅)
+                      <ShieldCheck size={13} /> {t('verifyIdentity', 'Vérifier mon identité (+ Badge ✅)')}
                     </button>
                   )}
                 </div>
@@ -264,7 +264,7 @@ export default function ProfileView({
                     📍 {user?.location || 'France'}
                   </div>
                   <div style={{ fontSize: '12px', color: (user.dealsCompleted || 0) > 0 ? 'var(--accent-success)' : 'var(--text-secondary)', fontWeight: '700' }}>
-                    🤝 Deal clôturé: {user.dealsCompleted || 0}
+                    🤝 {t('closedDeals', 'Deal clôturé')}: {user.dealsCompleted || 0}
                   </div>
                   <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                     {profile?.languages?.map(lang => (
@@ -334,7 +334,7 @@ export default function ProfileView({
                     className="premium-button"
                     style={{ border: '1px solid var(--border-color)', borderRadius: '14px', padding: '10px 18px', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-main)', fontWeight: '800', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
                   >
-                    <Pencil size={15} /> Modifier le profil
+                    <Pencil size={15} /> {t('editProfile', 'Modifier le profil')}
                   </button>
                 </>
               ) : (
@@ -344,14 +344,14 @@ export default function ProfileView({
                     className="premium-button"
                     style={{ border: '1px solid var(--border-color)', borderRadius: '14px', padding: '10px 18px', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}
                   >
-                    Annuler
+                    {t('cancelBtn', 'Annuler')}
                   </button>
                   <button
                     onClick={handleSaveProfile}
                     className="premium-button"
                     style={{ border: 'none', borderRadius: '14px', padding: '10px 18px', background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)', color: '#FFF', fontWeight: '800', fontSize: '13px', cursor: 'pointer', boxShadow: 'var(--shadow-accent)' }}
                   >
-                    Enregistrer
+                    {t('saveProfile', 'Enregistrer')}
                   </button>
                 </>
               )}

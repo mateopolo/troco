@@ -627,7 +627,7 @@ export default function App() {
   // Handler de succès de paiement (crédit solde, enregistrement transaction Firestore)
   // Handler de succès de paiement (crédit solde, abonnement Troco Plus, enregistrement transaction Firestore)
   const handlePaymentSuccess = async (txData) => {
-    const uid = profile?.uid || auth.currentUser?.uid;
+    const uid = auth.currentUser?.uid || profile?.uid;
 
     // 1. Mise à jour du statut d'abonnement uniquement.
     // Les soldes sont persistés par applyPayment puis reçus via onSnapshot.

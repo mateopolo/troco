@@ -11,6 +11,7 @@ import {
   serverTimestamp
 } from 'firebase/firestore';
 import { auth, db } from '../firebase';
+import { useLanguage } from '../contexts/LanguageContext';
 
 function formatReviewDate(ts) {
   if (!ts) return '';
@@ -35,6 +36,19 @@ export default function ReviewsSection({
   t = (k, defaultVal) => defaultVal || k,
   initialReviews = [],
 }) {
+  const langContext = useLanguage();
+  const safeT = (k, defaultVal) => {
+    if (typeof t === 'function') {
+      const res = t(k, defaultVal);
+      if (res && res !== k) return res;
+    }
+    if (langContext && typeof langContext.t === 'function') {
+      const res = langContext.t(k);
+      if (res && res !== k) return res;
+    }
+    return defaultVal || k;
+  };
+
   const [reviews, setReviews] = useState(initialReviews);
   const [loading, setLoading] = useState(true);
   const [replyingToId, setReplyingToId] = useState(null);
@@ -172,11 +186,11 @@ export default function ReviewsSection({
             gap: '8px',
           }}
         >
-          <Star size={20} fill="#F59E0B" color="#F59E0B" /> Avis et Évaluations
+          <Star size={20} fill="#F59E0B" color="#F59E0B" /> {safeT('reviewsRatings', 'Avis et Évaluations')}
         </h3>
         {reviews.length > 0 && (
           <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-secondary)' }}>
-            {reviews.length} avis vérifié{reviews.length > 1 ? 's' : ''}
+            {reviews.length} {reviews.length > 1 ? safeT('verifiedReviewsPlural', 'avis vérifiés') : safeT('verifiedReviews', 'avis vérifié')}
           </span>
         )}
       </div>
@@ -201,7 +215,7 @@ export default function ReviewsSection({
           }}
         >
           <Star size={28} style={{ opacity: 0.3, margin: '0 auto 8px' }} />
-          <div>Cet utilisateur n'a pas encore reçu d'avis.</div>
+          <div>{safeT('noReviewsYet', "Cet utilisateur n'a pas encore reçu d'avis.")}</div>
         </div>
       )}
 
@@ -314,7 +328,7 @@ export default function ReviewsSection({
                     }}
                   >
                     <MessageSquare size={12} />
-                    <span>Répondre</span>
+                    <span>{safeT('reply', 'Répondre')}</span>
                   </button>
                 </div>
               )}
@@ -334,12 +348,12 @@ export default function ReviewsSection({
                   }}
                 >
                   <div style={{ fontSize: '11.5px', fontWeight: '700', color: 'var(--text-secondary)' }}>
-                    Votre réponse publique en tant que {ownerName} :
+                    {safeT('yourPublicReplyAs', 'Votre réponse publique en tant que')} {ownerName} :
                   </div>
                   <textarea
                     rows={3}
                     autoFocus
-                    placeholder="Écrivez votre réponse publique à cet avis..."
+                    placeholder={safeT('replyPlaceholder', 'Écrivez votre réponse publique à cet avis...')}
                     value={replyText}
                     onChange={(e) => setReplyText(e.target.value)}
                     style={{
@@ -370,7 +384,7 @@ export default function ReviewsSection({
                         padding: '6px 10px',
                       }}
                     >
-                      Annuler
+                      {safeT('cancelBtn', 'Annuler')}
                     </button>
                     <button
                       type="button"
@@ -394,7 +408,7 @@ export default function ReviewsSection({
                       }}
                     >
                       <Send size={12} />
-                      <span>{isSubmitting ? 'Envoi...' : 'Envoyer'}</span>
+                      <span>{isSubmitting ? safeT('sending', 'Envoi...') : safeT('send', 'Envoyer')}</span>
                     </button>
                   </div>
                 </div>

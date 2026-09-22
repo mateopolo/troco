@@ -1,4 +1,4 @@
-import { doc, setDoc, increment, serverTimestamp, collection, addDoc } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, increment, serverTimestamp, collection, addDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { generateUUID } from '../utils/uuid';
 import { useWalletStore } from '../stores';
@@ -30,7 +30,7 @@ export const paymentService = {
   }) {
     const numAmount = Number(amount) || 0;
     const numTokens = Number(tokens) || 0;
-    const targetUid = userId || auth.currentUser?.uid;
+    const targetUid = auth.currentUser?.uid || userId;
 
     const txKey = paymentIntentId || idempotencyKey;
     if (txKey && processedTransactions.has(txKey)) {
@@ -75,23 +75,52 @@ export const paymentService = {
         await setDoc(userRef, userUpdates, { merge: true });
         logger.info('[paymentService] Firestore user balance persisted successfully for uid:', targetUid);
       } catch (err) {
-        logger.error('[paymentService] Error updating Firestore user doc balance:', err);
+        logger.error('[paymentService] Error updating Firestore user doc balance via setDoc:', err);
+        try {
+          await updateDoc(userRef, userUpdates);
+          logger.info('[paymentService] Firestore user balance persisted via fallback updateDoc for uid:', targetUid);
+        } catch (updateErr) {
+          logger.error('[paymentService] Fallback updateDoc also failed:', updateErr);
+        }
       }
 
-      // Enregistrement de la transaction dans la sous-collection users/{uid}/transactions
+      // 1. Enregistrement dans la collection racine /transactions
+      try {
+        await addDoc(collection(db, 'transactions'), {
+          idempotencyKey,
+          paymentIntentId: paymentIntentId || `pi_${Date.now()}`,
+          userId: String(targetUid),
+          buyerUid: String(targetUid),
+          mode,
+          type: mode,
+          amountTtc: numAmount,
+          amount: numAmount,
+          tokens: numTokens,
+          currency,
+          provider,
+          status: 'completed',
+          createdAt: serverTimestamp(),
+        });
+      } catch (err) {
+        logger.warn('[paymentService] Error recording root transaction:', err);
+      }
+
+      // 2. Enregistrement dans la sous-collection users/{uid}/transactions
       try {
         await addDoc(collection(db, 'users', String(targetUid), 'transactions'), {
           idempotencyKey,
           paymentIntentId: paymentIntentId || `pi_${Date.now()}`,
           mode,
+          type: mode,
           amount: numAmount,
+          amountTtc: numAmount,
           tokens: numTokens,
           currency,
           provider,
           createdAt: serverTimestamp(),
         });
       } catch (_) {
-        // Optionnel : ne bloque pas la transaction principale
+        // Optionnel
       }
 
       // Synchronisation optimiste et réactive du store Zustand useWalletStore

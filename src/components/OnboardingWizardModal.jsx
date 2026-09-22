@@ -138,8 +138,8 @@ export default function OnboardingWizardModal({
       bio: bio.trim(),
       cguAcceptedAt: new Date().toISOString(),
       onboardingCompleted: true,
-      trocoTokens: 10,
-      euroBalance: 50.00,
+      trocoTokens: currentUser?.trocoTokens !== undefined && currentUser?.trocoTokens !== null ? currentUser.trocoTokens : 10,
+      euroBalance: currentUser?.euroBalance !== undefined && currentUser?.euroBalance !== null ? currentUser.euroBalance : 50.00,
     };
 
     setTimeout(() => {
