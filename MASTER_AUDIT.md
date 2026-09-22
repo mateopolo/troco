@@ -13,7 +13,7 @@
 > - `STEP BY STEP URGENT.txt` & `LISTE DES PROCHAINES FONCTIONNALITES A CODER.txt` (Backlog immédiat)
 > - `PROJECT_CONTEXT.md` & `TROCO_PROJECT_HISTORY.md` (Historique des décisions et géoprivacy)
 >
-> **Score global :** 7.0/10 | **Progression :** 33 / 65 tâches validées avec preuves formelles (50.8%)
+> **Score global :** 7.1/10 | **Progression :** 34 / 65 tâches validées avec preuves formelles (52.3%)
 
 ---
 
@@ -21,12 +21,12 @@
 
 | Phase | Fait | Restant | Progression |
 |---|---|---|---|
-| 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 14 | 3 | 82.4% |
+| 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 15 | 2 | 88.2% |
 | 🟡 Facile (Niveau 2 — 1h à 3h) | 8 | 6 | 57.1% |
 | 🟠 Moyen (Niveau 3 — 3h à 1 jour) | 8 | 7 | 53.3% |
 | 🔴 Difficile (Niveau 4 — 1 à 3 jours) | 3 | 7 | 30.0% |
 | 🚨 Très difficile (Niveau 5 — 3j à 2 sem) | 0 | 9 | 0.0% |
-| **TOTAL** | **33** | **32** | **50.8%** |
+| **TOTAL** | **34** | **31** | **52.3%** |
 
 
 ### Score par axe vs cible Licorne
@@ -106,6 +106,11 @@
 ### [x] [QW-20] — Traduction automatique du contenu utilisateur (UGC) : bios, messages communauté et DMs
 **Preuve** : `src/utils/dynamicTranslation.js:44-80`, `src/utils/translationHelpers.js:35-275`, `src/components/ChatView.jsx:2580-2595`, `src/components/UserProfile.jsx:610-750`, `src/components/PublicProfileModal.jsx:770-795`, `src/components/ProfileView.jsx:73-275`, `src/components/GlobalLiveChat.jsx:15-680`, `src/components/CommunityActivityFeed.jsx:11-355`, `src/components/ReviewsSection.jsx:1-340`, `src/components/Phase135UGCTranslation.test.js:1-75`
 **Statut** : ✅ FAIT — Traduction automatique et asynchrone de tout contenu généré par les utilisateurs (biographies, messages du chat communautaire, fil d'activité, messages privés / DMs et avis) dans la langue active de l'interface (FR, EN, ES, IT, DE, JA, ZH). Intégration systématique du bouton toggle "Voir l'original" / "Voir la traduction" avec icône Globe. Nettoyage automatique des balises préfixées `[XX]` et gestion du cache persistant en mémoire et localStorage (zéro requête superflue vers Google Translate / MyMemory). Fallback transparent sur le texte original en cas de coupure réseau.
+
+
+### [x] [QW-21] — Nettoyage des avertissements Console (AudioContext, Vibrate, PWA, COOP, Sentry)
+**Preuve** : `src/utils/audioUnlocker.js:1-63`, `src/services/audioService.js:1-202`, `src/utils/audioService.js:1-135`, `src/utils/haptics.js:1-92`, `src/utils/haptics.test.js:1-180`, `src/components/PWAInstallBanner.jsx:7-14`, `src/contexts/AuthContext.jsx:1-730`, `src/features/auth/AuthScreen.jsx:1-1090`, `src/utils/sentry.js:15-25`, `src/App.js:30,616,1637,1787`, `src/hooks/useWebRTC.js:17,550,872`, `src/hooks/useChatManager.js:25,43,363`, `src/components/FeedCardItem.jsx:6,131`, `src/components/common/MobileHeader.jsx:3,23`
+**Statut** : ✅ FAIT — Suppression complète des avertissements console navigateur : (1) Déverrouillage universel et proactif des AudioContext via écouteurs passifs au premier geste utilisateur (`audioUnlocker.js`). (2) Encapsulation sécurisée de l'API de vibration sous vérification conditionnelle `navigator.userActivation?.hasBeenActive` (`safeVibrate`). (3) Retrait du `preventDefault()` de l'événement `beforeinstallprompt` sans bloquer le déclencheur d'installation PWA. (4) Intégration de `signInWithRedirect` et `getRedirectResult` pour éliminer les restrictions Cross-Origin-Opener-Policy (`window.close`). (5) Suppression du log bruyant Sentry en dev local sans DSN.
 
 ---
 

@@ -1,5 +1,5 @@
 import logger from '../../utils/logger';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sparkles, Sun, Moon, Phone, Mail, X } from 'lucide-react';
 import TrocoLogo from '../../components/common/TrocoLogo';
 import { auth, db } from '../../firebase';
@@ -12,6 +12,8 @@ import {
   FacebookAuthProvider,
   GithubAuthProvider,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
 } from 'firebase/auth';
@@ -60,6 +62,51 @@ export default function AuthScreen({
   const [signupSkills, setSignupSkills] = useState([]);
   const [signupLanguages, setSignupLanguages] = useState(['FR']);
   const [signupSkillInput, setSignupSkillInput] = useState('');
+
+  // Traitement du retour de redirection OAuth
+  useEffect(() => {
+    let isMounted = true;
+    getRedirectResult(auth)
+      .then(async (result) => {
+        if (!isMounted || !result || !result.user) return;
+        const user = result.user;
+        const uid = user.uid;
+        const userDocRef = doc(db, 'users', uid);
+        const userSnap = await getDoc(userDocRef);
+        if (!userSnap.exists()) {
+          const providerName = result.providerId?.replace('.com', '') || 'OAuth';
+          const realName = user.displayName || user.email?.split('@')[0] || `Utilisateur ${providerName}`;
+          const realUsername = '@' + (user.reloadUserInfo?.screenName || realName).toLowerCase().replace(/[^a-z0-9_]/g, '');
+          const realAvatar = user.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80';
+          const newUserData = {
+            uid,
+            name: realName,
+            username: realUsername,
+            avatar: realAvatar,
+            email: user.email || '',
+            loginMethod: providerName,
+            role: 'user',
+            euroBalance: 128,
+            trocoTokens: 12,
+            onboardingCompleted: true,
+            cguAccepted: true,
+            cguAcceptedAt: serverTimestamp(),
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          };
+          await setDoc(userDocRef, newUserData);
+        }
+        if (typeof onAuthSuccess === 'function') {
+          onAuthSuccess(user);
+        }
+      })
+      .catch((err) => {
+        if (err.code !== 'auth/credential-already-in-use') {
+          logger.warn('[AuthScreen] getRedirectResult notice:', err);
+        }
+      });
+    return () => { isMounted = false; };
+  }, [onAuthSuccess]);
 
   // ---- AUTHENTIFICATION PAR TÉLÉPHONE (SMS) ----
   const handleSendSms = async () => {
@@ -165,7 +212,36 @@ export default function AuthScreen({
         provider.addScope('email');
       }
 
-      const result = await signInWithPopup(auth, provider);
+      let result = null;
+      const isMobileOrStandalone = typeof window !== 'undefined' && (
+        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+        window.matchMedia?.('(display-mode: standalone)')?.matches ||
+        window.navigator.standalone
+      );
+
+      // Sur mobile/standalone, privilégier signInWithRedirect pour éviter le blocage COOP et les fenêtres popups tronquées
+      if (isMobileOrStandalone) {
+        await signInWithRedirect(auth, provider);
+        return;
+      }
+
+      try {
+        result = await signInWithPopup(auth, provider);
+      } catch (popupErr) {
+        if (
+          popupErr.code === 'auth/popup-blocked' ||
+          popupErr.code === 'auth/cancelled-popup-request' ||
+          popupErr.message?.includes('Cross-Origin-Opener-Policy') ||
+          popupErr.message?.includes('window.close')
+        ) {
+          logger.info('[AuthScreen] Bascule vers signInWithRedirect suite à restriction popup/COOP');
+          await signInWithRedirect(auth, provider);
+          return;
+        }
+        throw popupErr;
+      }
+
+      if (!result || !result.user) return;
       const user = result.user;
       const uid = user.uid;
       const userDocRef = doc(db, 'users', uid);

@@ -1,4 +1,5 @@
 import logger from '../utils/logger';
+import { registerAudioContext } from '../utils/audioUnlocker';
 /**
  * audioService.js
  * Moteur de Sound Design & Micro-Audio UI à 0ms de latence basé sur l'API Web Audio
@@ -30,23 +31,6 @@ class AudioService {
           this.isEnabled = savedEnabled === 'true';
         }
       } catch (_) {}
-
-      // Déverrouillage proactif de l'AudioContext sur premier geste utilisateur (politique Autoplay navigateur)
-      const unlockAudio = () => {
-        try {
-          if (!this.ctx) {
-            this.initContext();
-          } else if (this.ctx.state === 'suspended') {
-            this.ctx.resume().catch(() => {});
-          }
-        } catch (_) {}
-        window.removeEventListener('click', unlockAudio);
-        window.removeEventListener('touchstart', unlockAudio);
-        window.removeEventListener('keydown', unlockAudio);
-      };
-      window.addEventListener('click', unlockAudio, { passive: true });
-      window.addEventListener('touchstart', unlockAudio, { passive: true });
-      window.addEventListener('keydown', unlockAudio, { passive: true });
     }
   }
 
@@ -55,10 +39,11 @@ class AudioService {
    */
   initContext() {
     if (typeof window === 'undefined') return null;
-    if (!this.ctx) {
+    if (!this.ctx || this.ctx.state === 'closed') {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
       if (!AudioCtx) return null;
       this.ctx = new AudioCtx();
+      registerAudioContext(this.ctx);
       this.masterGain = this.ctx.createGain();
       this.masterGain.gain.setValueAtTime(this.volume, this.ctx.currentTime);
       this.masterGain.connect(this.ctx.destination);

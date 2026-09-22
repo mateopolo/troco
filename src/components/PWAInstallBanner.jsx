@@ -6,7 +6,6 @@ const listeners = new Set();
 
 if (typeof window !== 'undefined') {
   window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
     globalDeferredPrompt = e;
     listeners.forEach((cb) => cb(e));
   });

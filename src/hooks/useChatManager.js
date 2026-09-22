@@ -22,8 +22,9 @@ import { validateChatMessage } from '../utils/moderationBlacklist';
 import { uploadVoiceNote } from '../services/voiceStorageService';
 import { playBetclicBalanceSound, playApplePaySound, playSwooshSound } from '../utils/audioService';
 import { useChatStore, useWalletStore } from '../stores';
-import { hapticLight, hapticSuccess, hapticError } from '../utils/haptics';
+import { hapticLight, hapticSuccess, hapticError, safeVibrate } from '../utils/haptics';
 import { playPop } from '../services/audioService';
+import { registerAudioContext } from '../utils/audioUnlocker';
 import { notificationService } from '../services/notificationService';
 import {
   resolveUserProfile,
@@ -44,6 +45,7 @@ export const getChatAudioContext = () => {
   if (!AudioCtx) return null;
   if (!sharedChatAudioCtx || sharedChatAudioCtx.state === 'closed') {
     sharedChatAudioCtx = new AudioCtx();
+    registerAudioContext(sharedChatAudioCtx);
   }
   return sharedChatAudioCtx;
 };
@@ -359,9 +361,7 @@ export const useChatManager = ({
                 return next;
               });
               playNotificationSound();
-              if (typeof navigator !== 'undefined' && navigator.vibrate) {
-                try { navigator.vibrate([120, 60, 120]); } catch (_) { }
-              }
+              safeVibrate([120, 60, 120]);
 
               const senderTitle = d.lastSenderName || d.lastSender || d.user || 'Nouveau message';
               const messageText = d.lastMessage || 'Nouveau message reçu';

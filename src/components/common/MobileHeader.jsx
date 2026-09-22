@@ -1,6 +1,7 @@
 import logger from '../../utils/logger';
 import React from 'react';
 import { ArrowLeft, Palette } from 'lucide-react';
+import { safeVibrate } from '../../utils/haptics';
 
 /**
  * MobileHeader.jsx — En-tête Mobile Natif (Standard Apple HIG / Material 3)
@@ -20,9 +21,7 @@ export default function MobileHeader({
   const handleBackClick = (e) => {
     e?.preventDefault?.();
     e?.stopPropagation?.();
-    if (typeof navigator !== 'undefined' && navigator.vibrate) {
-      try { navigator.vibrate(10); } catch (_) {}
-    }
+    safeVibrate(10);
     if (typeof onBack === 'function') {
       onBack();
     }

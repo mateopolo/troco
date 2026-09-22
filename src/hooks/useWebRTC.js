@@ -17,6 +17,7 @@ import {
 import { db, auth } from '../firebase';
 import { liveTranscriptionService } from '../services/liveTranscriptionService';
 import { startRingtone as audioStartRingtone, stopRingtone as audioStopRingtone } from '../services/audioService';
+import { safeVibrate } from '../utils/haptics';
 
 // Configuration STUN globale robuste (Google STUN pour traversée NAT, 4G, 5G et Wi-Fi)
 const ICE_CONFIG = {
@@ -547,7 +548,7 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
 
     // Déclenchement synchrone immédiat du ringtone dans le geste utilisateur (résout le blocage autoplay)
     playRingtone();
-    if (navigator.vibrate) navigator.vibrate([300, 100, 300]);
+    safeVibrate([300, 100, 300]);
 
     // Protection anti-double sonnerie : vérifier si un appel est déjà actif
     try {
@@ -869,9 +870,7 @@ export function useWebRTC({ profileName, profileUid, selectedChat }) {
             logger.warn('Autoplay bloqué', audioErr);
           }
 
-          if (navigator.vibrate) {
-            try { navigator.vibrate([400, 150, 400, 150, 400]); } catch (_) {}
-          }
+          safeVibrate([400, 150, 400, 150, 400]);
         }
         if (change.type === 'removed') {
           setIncomingCall(prev => (prev?.chatId === change.doc.id || prev?.callId === change.doc.id ? null : prev));

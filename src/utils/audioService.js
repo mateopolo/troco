@@ -1,4 +1,5 @@
 import logger from '../utils/logger';
+import { registerAudioContext } from './audioUnlocker';
 // Singleton AudioContext pour le Web Audio API (réutilisable sans saturer les contextes du navigateur)
 let sharedAudioCtx = null;
 
@@ -9,6 +10,7 @@ function getAudioContext() {
 
   if (!sharedAudioCtx) {
     sharedAudioCtx = new AudioCtx();
+    registerAudioContext(sharedAudioCtx);
   }
   if (sharedAudioCtx.state === 'suspended') {
     sharedAudioCtx.resume().catch(() => {});

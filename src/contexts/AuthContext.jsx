@@ -2,6 +2,8 @@ import logger from '../utils/logger';
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import {
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   GoogleAuthProvider,
   OAuthProvider,
   FacebookAuthProvider,
@@ -93,6 +95,48 @@ export const AuthProvider = ({ children }) => {
   // Détection Démo & Admin
   const isDemoProfile = Boolean(profile?.isDemo || (profile?.uid && String(profile.uid).startsWith('demo_')));
   const isAdmin = profile?.email === 'mateopolo91@gmail.com' || auth.currentUser?.email === 'mateopolo91@gmail.com' || profile?.role === 'admin';
+
+  // Traitement du résultat de redirection OAuth (signInWithRedirect)
+  useEffect(() => {
+    let isMounted = true;
+    getRedirectResult(auth)
+      .then(async (result) => {
+        if (!isMounted || !result || !result.user) return;
+        const u = result.user;
+        const uid = u.uid;
+        const userDocRef = doc(db, 'users', uid);
+        const userSnap = await getDoc(userDocRef);
+        if (!userSnap.exists()) {
+          const providerName = result.providerId?.replace('.com', '') || 'OAuth';
+          const realName = u.displayName || u.email?.split('@')[0] || `Utilisateur ${providerName}`;
+          const realUsername = '@' + (u.reloadUserInfo?.screenName || realName).toLowerCase().replace(/[^a-z0-9_]/g, '');
+          const realAvatar = u.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80';
+          const newUserData = {
+            uid,
+            name: realName,
+            username: realUsername,
+            avatar: realAvatar,
+            email: u.email || '',
+            loginMethod: providerName,
+            role: 'user',
+            euroBalance: 128,
+            trocoTokens: 12,
+            onboardingCompleted: true,
+            cguAccepted: true,
+            cguAcceptedAt: serverTimestamp(),
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+          };
+          await setDoc(userDocRef, newUserData);
+        }
+      })
+      .catch((err) => {
+        if (err.code !== 'auth/credential-already-in-use') {
+          logger.warn('[AuthContext] getRedirectResult notice:', err);
+        }
+      });
+    return () => { isMounted = false; };
+  }, []);
 
   // Synchronisation temps réel de la session Firebase Auth et du document utilisateur
   useEffect(() => {
@@ -223,7 +267,36 @@ export const AuthProvider = ({ children }) => {
         provider.addScope('email');
       }
 
-      const result = await signInWithPopup(auth, provider);
+      let result = null;
+      const isMobileOrStandalone = typeof window !== 'undefined' && (
+        /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+        window.matchMedia?.('(display-mode: standalone)')?.matches ||
+        window.navigator.standalone
+      );
+
+      // Sur mobile/standalone, privilégier signInWithRedirect pour éviter le blocage COOP et les popups tronquées
+      if (isMobileOrStandalone) {
+        await signInWithRedirect(auth, provider);
+        return;
+      }
+
+      try {
+        result = await signInWithPopup(auth, provider);
+      } catch (popupErr) {
+        if (
+          popupErr.code === 'auth/popup-blocked' ||
+          popupErr.code === 'auth/cancelled-popup-request' ||
+          popupErr.message?.includes('Cross-Origin-Opener-Policy') ||
+          popupErr.message?.includes('window.close')
+        ) {
+          logger.info('[AuthContext] Bascule vers signInWithRedirect suite à restriction popup/COOP');
+          await signInWithRedirect(auth, provider);
+          return;
+        }
+        throw popupErr;
+      }
+
+      if (!result || !result.user) return;
       const u = result.user;
       const uid = u.uid;
       const userDocRef = doc(db, 'users', uid);

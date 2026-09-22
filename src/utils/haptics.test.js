@@ -1,6 +1,8 @@
 import {
   HAPTIC_PATTERNS,
   isHapticSupported,
+  isUserActiveForHaptic,
+  safeVibrate,
   triggerHaptic,
   hapticLight,
   hapticSuccess,
@@ -54,6 +56,43 @@ describe('Phase 46 : Utilitaire Haptique & Vibration API', () => {
       });
 
       expect(isHapticSupported()).toBe(false);
+    });
+  });
+
+  describe('Vérification de l\'activation utilisateur (navigator.userActivation)', () => {
+    it('bloque la vibration si userActivation.hasBeenActive est false', () => {
+      const mockVibrate = jest.fn().mockReturnValue(true);
+      Object.defineProperty(window, 'navigator', {
+        value: {
+          ...originalNavigator,
+          vibrate: mockVibrate,
+          userActivation: { hasBeenActive: false },
+        },
+        writable: true,
+        configurable: true,
+      });
+
+      expect(isUserActiveForHaptic()).toBe(false);
+      expect(safeVibrate(50)).toBe(false);
+      expect(triggerHaptic('light')).toBe(false);
+      expect(mockVibrate).not.toHaveBeenCalled();
+    });
+
+    it('autorise la vibration si userActivation.hasBeenActive est true', () => {
+      const mockVibrate = jest.fn().mockReturnValue(true);
+      Object.defineProperty(window, 'navigator', {
+        value: {
+          ...originalNavigator,
+          vibrate: mockVibrate,
+          userActivation: { hasBeenActive: true },
+        },
+        writable: true,
+        configurable: true,
+      });
+
+      expect(isUserActiveForHaptic()).toBe(true);
+      expect(safeVibrate(50)).toBe(true);
+      expect(mockVibrate).toHaveBeenCalledWith(50);
     });
   });
 

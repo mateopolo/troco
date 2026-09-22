@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { TextEffect } from './core/text-effect';
 import { ProgressiveImage } from './ui/ProgressiveImage';
 import { translateText } from '../utils/translator';
+import { safeVibrate } from '../utils/haptics';
 
 function FeedCardItem({
   item,
@@ -128,7 +129,7 @@ function FeedCardItem({
     if (onOpenMobileActions) {
       longPressTimerRef.current = setTimeout(() => {
         if (!isSwipingRef.current) {
-          try { if (navigator.vibrate) navigator.vibrate(35); } catch (_) {}
+          safeVibrate(35);
           onOpenMobileActions(item);
         }
       }, 500);

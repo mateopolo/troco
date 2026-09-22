@@ -683,5 +683,31 @@ Traduire automatiquement tout texte saisi par les utilisateurs (biographies de p
 5. **Tests unitaires automatisés :**
    - `src/components/Phase135UGCTranslation.test.js` validant le nettoyage de balises, l'état `forceOriginal`, la traduction de bios, de messages de chat et d'avis (9/9 tests passés).
 
+### Patch Nettoyage des Avertissements Console (commit `fix(console): clean AudioContext, vibrate, PWA, COOP and Sentry warnings (PROMPT 11)`)
 
+#### 3.15 Nettoyage Intégral des Avertissements de la Console Navigateur
 
+**Objectif :**
+Éliminer les bruits et avertissements parasites dans la console développeur pour assurer une expérience mobile et desktop irréprochable et conforme aux standards Web modernes (Chrome, Safari, Edge, Firefox).
+
+**Problèmes Résolus & Solutions Déployées :**
+
+1. **AudioContext Autoplay Policy ("The AudioContext was not allowed to start. It must be resumed after a user gesture.") :**
+   - **Diagnostic :** Des instances d'AudioContext étaient initialisées avant toute interaction utilisateur ou lors du chargement de modules.
+   - **Solution :** Création du module central `src/utils/audioUnlocker.js`. Enregistrement (`registerAudioContext`) de tous les AudioContext créés (`src/services/audioService.js`, `src/utils/audioService.js`, `src/hooks/useChatManager.js`). Écouteurs globaux passifs en capture (`click`, `touchstart`, `pointerdown`, `keydown`) réveillant automatiquement tous les contextes suspendus au premier geste utilisateur.
+
+2. **Vibration API & Activation Utilisateur ("Blocked call to navigator.vibrate because user hasn't tapped...") :**
+   - **Diagnostic :** Des appels à `navigator.vibrate` étaient déclenchés sur des événements réseau ou asynchrones (réception de message Firestore, appel entrant WebRTC, chargement initial) avant tout tap utilisateur.
+   - **Solution :** Extension de `src/utils/haptics.js` avec `safeVibrate` et vérification conditionnelle `navigator.userActivation?.hasBeenActive`. Remplacement systématique de tous les appels bruts directs à `navigator.vibrate` dans `src/App.js`, `src/hooks/useWebRTC.js`, `src/hooks/useChatManager.js`, `src/components/FeedCardItem.jsx` et `src/components/common/MobileHeader.jsx`.
+
+3. **PWA Install Banner ("Banner not shown: beforeinstallpromptevent.preventDefault() called") :**
+   - **Diagnostic :** `e.preventDefault()` dans l'écouteur `beforeinstallprompt` provoquait l'avertissement Chrome.
+   - **Solution :** Suppression de `e.preventDefault()` dans `src/components/PWAInstallBanner.jsx` tout en conservant la référence `globalDeferredPrompt = e` pour déclencher l'invite via les boutons d'installation dédiés de l'application.
+
+4. **Cross-Origin-Opener-Policy & Window Close ("Cross-Origin-Opener-Policy policy would block the window.close call") :**
+   - **Diagnostic :** `signInWithPopup` dans Firebase Auth ouvrait des fenêtres popups bloquées ou signalées par les règles COOP (`same-origin`) lors de la fermeture automatique.
+   - **Solution :** Prise en charge de `signInWithRedirect` sur mobile et PWA standalone dans `src/contexts/AuthContext.jsx` et `src/features/auth/AuthScreen.jsx`, avec bascule automatique transparente en cas de restriction COOP ou de blocage de popup, et traitement systématique du résultat via `getRedirectResult(auth)` au montage des composants.
+
+5. **Sentry Unconfigured DSN Warning ("[Sentry] DSN non configuré, Sentry désactivé") :**
+   - **Diagnostic :** Un `console.log` informatif était émis systématiquement à chaque chargement en environnement de développement local.
+   - **Solution :** Retrait du log dans `src/utils/sentry.js`, retour immédiat et silencieux de `null` en l'absence de clé DSN.

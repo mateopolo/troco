@@ -18,7 +18,6 @@ export const initSentry = () => {
   
   // Ne pas initialiser si pas de DSN (dev local)
   if (!dsn) {
-    console.log('[Sentry] DSN non configuré, Sentry désactivé');
     return null;
   }
 

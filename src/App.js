@@ -27,7 +27,7 @@ import SectoralErrorBoundary from './components/SectoralErrorBoundary';
 import AuthScreen from './features/auth/AuthScreen';
 import TransactionSuccessModal from './components/TransactionSuccessModal';
 import { useWalletStore } from './stores';
-import haptics from './utils/haptics';
+import haptics, { safeVibrate } from './utils/haptics';
 import { useAppAuth } from './hooks/useAppAuth';
 import { useAppNavigation } from './hooks/useAppNavigation';
 import { useAppModals } from './hooks/useAppModals';
@@ -613,9 +613,7 @@ export default function App() {
   } = chatManager;
 
   const switchTab = useCallback((newTab) => {
-    if (typeof navigator !== 'undefined' && navigator.vibrate) {
-      try { navigator.vibrate(10); } catch (_) { }
-    }
+    safeVibrate(10);
     startTransition(() => {
       setActiveTab(newTab);
       if (newTab !== 'chat') {
@@ -1634,11 +1632,7 @@ export default function App() {
             logger.warn('Autoplay bloqué', audioErr);
           }
 
-          if (navigator.vibrate) {
-            try {
-              navigator.vibrate([400, 150, 400, 150, 400]);
-            } catch (_) { }
-          }
+          safeVibrate([400, 150, 400, 150, 400]);
         }
         if (change.type === 'removed') {
           setGlobalIncomingCall(prev => (prev?.chatId === change.doc.id || prev?.callId === change.doc.id ? null : prev));
@@ -1790,9 +1784,7 @@ export default function App() {
           });
 
           // Vibration haptique
-          if (typeof navigator !== 'undefined' && navigator.vibrate) {
-            try { navigator.vibrate([80, 40, 80]); } catch (_) { }
-          }
+          safeVibrate([80, 40, 80]);
         }
       }
     };
