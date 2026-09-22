@@ -578,3 +578,51 @@ Connecté avec le compte administrateur `matmot`, la suppression d'un message da
    - Extension de `RuleSimulator` pour prendre en compte `isDbAdmin()` et les collections `community_messages` / `global_chat`.
    - Ajout d'une suite de 4 tests unitaires dédiés validant la suppression admin par `matmot` (administrateur en base sans claim signé), le soft-delete, le rejet des utilisateurs tiers non-admin et l'autorisation de l'auteur. 48/48 tests validés avec succès.
 
+### Patch Fusion des Annonces Orphelines & Purge du Compte Factice (commit `fix(listings/merge-orphans)`)
+
+#### 3.12 Fusion des Annonces Orphelines vers le Compte Réel Google Auth & Suppression du Compte Factice
+
+**Problématique :**
+Des annonces de la plateforme (« Cours de violon », « Séance d'écoute Adam Audio A8X », « pret de perceuse ») étaient associées à un compte factice `MATEO POLO` / `demo_mateopolo` affichant un avatar généré par IA (DiceBear). Seule l'annonce « Cours de Production Musicale Ableton » était enregistrée sous le compte réel Google Auth (`mateopolo91@gmail.com` / UID `L7AzxIQoMaOzFzMRO9W1heyo8Y62`).
+
+**Analyse & Diagnostic en Base de Données Firestore :**
+1. **Compte Réel Google Auth identifié :**
+   - Document : `users/L7AzxIQoMaOzFzMRO9W1heyo8Y62`
+   - Email : `mateopolo91@gmail.com`
+   - Nom : `mateo polo`
+   - Photo officielle Google : `https://lh3.googleusercontent.com/a/ACg8ocIxtR4V0MC_bzMwDLpCRzELbs1U2srgbci0vXHXKoxwpo7inhpG4g=s96-c`
+2. **Comptes Factices identifiés :**
+   - `users/demo_mateopolo` : compte avec `isDemo: true` et avatar IA DiceBear `https://api.dicebear.com/7.x/avataaars/svg?seed=Tariq283...`
+   - `users/MATEO POLO` : document stub résiduel issu d'anciennes clés textuelles avec sous-collection `notifications`.
+3. **Annonces orphelines identifiées :**
+   - `LOZDqVYsKbUtRnOg2gWR` (« Séance d'écoute de vos projets musicaux sur enceinte Adam Audio A8X ») : `author: "MATEO POLO"`, `authorUid: "demo_mateopolo"`.
+   - `rmxlgL3oSq9ZiGLeaT0x` (« COURS VIOLON ») : `author: "MATEO POLO"`, sans `authorUid`.
+   - `muYUAxxkY8wJmhO7ug86` (« pret de perceuse ») : `author: "MATEO POLO"`, sans `authorUid`.
+   - `t8rc2rxHPisj0BmhU7pQ` (« Cours de Production Musicale Ableton (Les Bases) ») : déjà rattaché à l'UID réel mais sans champ `authorAvatar` explicite.
+
+**Actions & Corrections Réalisées :**
+
+1. **Script de Migration Autonome (`scripts/migrate-orphan-listings.js`) :**
+   - Connexion sécurisée à Firestore via l'API REST Google Cloud avec le jeton administrateur Firebase CLI (`mateopolo91@gmail.com`).
+   - Découverte automatique des UIDs du compte réel (`L7AzxIQoMaOzFzMRO9W1heyo8Y62`) et des comptes factices (`demo_mateopolo`, `MATEO POLO`).
+   - Réassignation atomique de toutes les annonces orphelines avec `updateMask` Firestore :
+     - `author`: `"mateo polo"`
+     - `authorUid`: `"L7AzxIQoMaOzFzMRO9W1heyo8Y62"`
+     - `authorId`: `"L7AzxIQoMaOzFzMRO9W1heyo8Y62"`
+     - `userId`: `"L7AzxIQoMaOzFzMRO9W1heyo8Y62"`
+     - `authorAvatar`: URL Google Photos réelle
+     - `authorPhotoURL`: URL Google Photos réelle
+     - `authorProfile`: objet profil synchronisé avec le compte Google réel
+     - `isDemo`: `false`
+   - Nettoyage et suppression en cascade de la sous-collection `notifications` de `users/MATEO POLO`.
+   - Suppression définitive des documents factices `users/demo_mateopolo` et `users/MATEO POLO` (et contrôle `users_public`).
+   - Vérification finale confirmant 4 annonces actives strictement rattachées à `L7AzxIQoMaOzFzMRO9W1heyo8Y62` avec la photo Google officielle, et 0 compte factice résiduel.
+
+2. **Rendu Frontend de la Photo Auteur (`ListingCard.jsx`, `FeedCardItem.jsx`, `App.js`) :**
+   - `ListingCard.jsx` : priorité accordée à `item.authorAvatar || item.avatar || item.authorPhotoURL` avant tout fallback de profil ou helper mock, garantissant l'affichage immédiat de la vraie photo Google pour tous les visiteurs (connectés ou non).
+   - `FeedCardItem.jsx` : chaînage de fallbacks `item.authorAvatar || item.avatar || item.authorPhotoURL` complété.
+   - `App.js` :
+     - Ajout de `'mateo polo'` et `'MATEO POLO'` dans la table `authorAvatars` renvoyant directement l'avatar Google officiel.
+     - Résolution de `authorProfile.avatar` dans `selectedListing` priorisant `listing.authorAvatar || listing.avatar || listing.authorPhotoURL` sur le helper mock.
+
+

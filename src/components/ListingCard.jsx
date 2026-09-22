@@ -447,7 +447,17 @@ export default function ListingCard({
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: '1px solid var(--border-color)', gap: '8px', flexWrap: 'wrap' }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: '7px', fontWeight: '800', fontSize: '13px', color: 'var(--text-main)' }}>
-            <img src={item.author === safeProfile.name ? safeProfile.avatar : safeGetAuthorAvatar(item.author)} alt={item.author} style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid var(--accent-primary)' }} />
+            <img
+              src={
+                item.authorAvatar ||
+                item.avatar ||
+                item.authorPhotoURL ||
+                (item.author?.toLowerCase() === safeProfile?.name?.toLowerCase() ? safeProfile.avatar : null) ||
+                safeGetAuthorAvatar(item.author)
+              }
+              alt={item.author}
+              style={{ width: '24px', height: '24px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid var(--accent-primary)' }}
+            />
             {item.author}
           </span>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>

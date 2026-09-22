@@ -13,7 +13,7 @@
 > - `STEP BY STEP URGENT.txt` & `LISTE DES PROCHAINES FONCTIONNALITES A CODER.txt` (Backlog immédiat)
 > - `PROJECT_CONTEXT.md` & `TROCO_PROJECT_HISTORY.md` (Historique des décisions et géoprivacy)
 >
-> **Score global :** 6.7/10 | **Progression :** 30 / 64 tâches validées avec preuves formelles (46.9%)
+> **Score global :** 6.8/10 | **Progression :** 31 / 65 tâches validées avec preuves formelles (47.7%)
 
 ---
 
@@ -21,12 +21,12 @@
 
 | Phase | Fait | Restant | Progression |
 |---|---|---|---|
-| 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 11 | 5 | 68.8% |
+| 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 12 | 5 | 70.6% |
 | 🟡 Facile (Niveau 2 — 1h à 3h) | 8 | 6 | 57.1% |
 | 🟠 Moyen (Niveau 3 — 3h à 1 jour) | 8 | 7 | 53.3% |
 | 🔴 Difficile (Niveau 4 — 1 à 3 jours) | 3 | 7 | 30.0% |
 | 🚨 Très difficile (Niveau 5 — 3j à 2 sem) | 0 | 9 | 0.0% |
-| **TOTAL** | **30** | **34** | **46.9%** |
+| **TOTAL** | **31** | **34** | **47.7%** |
 
 
 ### Score par axe vs cible Licorne
@@ -34,12 +34,12 @@
 |---|---|---|---|---|
 | **Sécurité financière** | 25% | 7.5/10 | 10/10 | 🟠 -2.5 |
 | **Conformité légale (PSD2, RGPD, DSA, DAC7, KYC/AML)** | 20% | 5.0/10 | 10/10 | 🔴 -5.0 |
-| **Architecture & scalabilité** | 15% | 6.5/10 | 9.0/10 | 🟠 -2.5 |
+| **Architecture & scalabilité** | 15% | 6.8/10 | 9.0/10 | 🟠 -2.2 |
 | **Performance mobile-first** | 10% | 7.5/10 | 9.0/10 | 🟡 -1.5 |
-| **UX Premium** | 10% | 8.0/10 | 10/10 | 🟡 -2.0 |
+| **UX Premium** | 10% | 8.2/10 | 10/10 | 🟡 -1.8 |
 | **Observabilité & DevOps** | 10% | 6.5/10 | 9.0/10 | 🟠 -2.5 |
 | **Différenciation produit** | 10% | 6.0/10 | 10/10 | 🟠 -4.0 |
-| **SCORE GLOBAL PONDÉRÉ** | **100%** | **6.6/10** | **9.6/10** | **-3.0** |
+| **SCORE GLOBAL PONDÉRÉ** | **100%** | **6.7/10** | **9.6/10** | **-2.9** |
 
 ---
 
@@ -94,6 +94,10 @@
 ### [x] [QW-17] — Affichage des drapeaux emojis natifs (Unicode Regional Indicator Symbols) pour les langues
 **Preuve** : `src/utils/flagUtils.js:1-167`, `src/utils/languageFlags.js:1-35`, `src/features/auth/AuthScreen.jsx:891-925`, `src/features/profile/ProfileFeature.jsx:606-644`, `src/components/ProfileView.jsx:258-265`, `src/components/PublicProfileModal.jsx:546-568,834-865`, `src/components/layout/AppHeader.jsx:368`, `src/components/modals/FilterDrawer.jsx:236-260`, `src/components/Phase136FlagEmojisDisplay.test.js:1-60`
 **Statut** : ✅ FAIT — Conversion dynamique complète des codes pays (ISO 3166-1 alpha-2) et langues (ISO 639-1) en symboles indicateurs régionaux Unicode natifs (U+1F1E6 - U+1F1FF). La section "Langues parlées" et tous les sélecteurs de langues affichent de vrais emojis drapeaux (🇫🇷, 🇬🇧, 🇪🇸, 🇮🇹, 🇩🇪, 🇯🇵, 🇨🇳, etc.) au lieu de chaînes de caractères brutes ("FR", "GB").
+
+### [x] [QW-18] — Fusion des annonces orphelines vers le compte réel Google Auth et purge du compte factice
+**Preuve** : `scripts/migrate-orphan-listings.js:1-240`, `src/App.js:2121-2122,2656`, `src/components/ListingCard.jsx:450-462`, `src/components/FeedCardItem.jsx:528-531`
+**Statut** : ✅ FAIT — Migration Firestore exécutée avec succès : réassignation de toutes les annonces orphelines (« Séance d'écoute Adam Audio A8X », « Cours de violon », « pret de perceuse ») sous le compte Google Auth réel `mateopolo91@gmail.com` (UID `L7AzxIQoMaOzFzMRO9W1heyo8Y62`), purge complète des comptes factices `users/demo_mateopolo` et `users/MATEO POLO` ainsi que de leurs sous-collections, et fiabilisation du rendu frontend priorisant l'avatar Google officiel (`item.authorAvatar`) sur l'ensemble des cartes d'annonces.
 
 ---
 

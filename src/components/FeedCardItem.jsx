@@ -526,6 +526,8 @@ function FeedCardItem({
                 // Priorité 3 : getAuthorAvatar helper
                 // Priorité 4 : avatar générique
                 item.authorAvatar ||
+                item.avatar ||
+                item.authorPhotoURL ||
                 ((profile?.name && item.author === profile.name) ? (profile?.avatar || '') : '') ||
                 (typeof getAuthorAvatar === 'function' ? getAuthorAvatar(item.author) : '') ||
                 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80'

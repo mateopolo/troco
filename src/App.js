@@ -2118,6 +2118,8 @@ export default function App() {
     'Hana T.': femaleAvatars[2],
     'Noa K.': maleAvatars[0],
     'Samir M.': maleAvatars[1],
+    'mateo polo': 'https://lh3.googleusercontent.com/a/ACg8ocIxtR4V0MC_bzMwDLpCRzELbs1U2srgbci0vXHXKoxwpo7inhpG4g=s96-c',
+    'MATEO POLO': 'https://lh3.googleusercontent.com/a/ACg8ocIxtR4V0MC_bzMwDLpCRzELbs1U2srgbci0vXHXKoxwpo7inhpG4g=s96-c',
   }), [femaleAvatars, maleAvatars]);
   const feminineFirstNames = useMemo(() => ['sofia', 'elisa', 'amélie', 'amelie', 'laura', 'clara', 'giulia', 'mina', 'inès', 'ines', 'pauline', 'claire', 'julie', 'noémie', 'noemie', 'sabrina', 'léa', 'lea', 'hana', 'emma', 'chloé', 'chloe', 'lina', 'anna', 'maria', 'eva', 'nina', 'lucie', 'camille', 'sara', 'julia'], []);
 
@@ -2653,7 +2655,7 @@ export default function App() {
       reviews: computedReviewsCount,
       authorProfile: {
         name: listing.author,
-        avatar: isCurrentUser ? profile.avatar : getAuthorAvatar(listing.author),
+        avatar: isCurrentUser ? profile.avatar : (listing.authorAvatar || listing.avatar || listing.authorPhotoURL || getAuthorAvatar(listing.author)),
         bio: isCurrentUser ? profile.bio : 'Créateur de contenus, expert en échange de services et passionné de communautés locales.',
         socials: isCurrentUser ? (profile.socials || []) : ['LinkedIn', 'Instagram'],
         portfolio: authorPortfolio,
