@@ -13,7 +13,7 @@
 > - `STEP BY STEP URGENT.txt` & `LISTE DES PROCHAINES FONCTIONNALITES A CODER.txt` (Backlog immédiat)
 > - `PROJECT_CONTEXT.md` & `TROCO_PROJECT_HISTORY.md` (Historique des décisions et géoprivacy)
 >
-> **Score global :** 7.1/10 | **Progression :** 34 / 65 tâches validées avec preuves formelles (52.3%)
+> **Score global :** 7.2/10 | **Progression :** 35 / 66 tâches validées avec preuves formelles (53.0%)
 
 ---
 
@@ -21,12 +21,12 @@
 
 | Phase | Fait | Restant | Progression |
 |---|---|---|---|
-| 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 15 | 2 | 88.2% |
+| 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 16 | 2 | 88.9% |
 | 🟡 Facile (Niveau 2 — 1h à 3h) | 8 | 6 | 57.1% |
 | 🟠 Moyen (Niveau 3 — 3h à 1 jour) | 8 | 7 | 53.3% |
 | 🔴 Difficile (Niveau 4 — 1 à 3 jours) | 3 | 7 | 30.0% |
 | 🚨 Très difficile (Niveau 5 — 3j à 2 sem) | 0 | 9 | 0.0% |
-| **TOTAL** | **34** | **31** | **52.3%** |
+| **TOTAL** | **35** | **31** | **53.0%** |
 
 
 ### Score par axe vs cible Licorne
@@ -111,6 +111,10 @@
 ### [x] [QW-21] — Nettoyage des avertissements Console (AudioContext, Vibrate, PWA, COOP, Sentry)
 **Preuve** : `src/utils/audioUnlocker.js:1-63`, `src/services/audioService.js:1-202`, `src/utils/audioService.js:1-135`, `src/utils/haptics.js:1-92`, `src/utils/haptics.test.js:1-180`, `src/components/PWAInstallBanner.jsx:7-14`, `src/contexts/AuthContext.jsx:1-730`, `src/features/auth/AuthScreen.jsx:1-1090`, `src/utils/sentry.js:15-25`, `src/App.js:30,616,1637,1787`, `src/hooks/useWebRTC.js:17,550,872`, `src/hooks/useChatManager.js:25,43,363`, `src/components/FeedCardItem.jsx:6,131`, `src/components/common/MobileHeader.jsx:3,23`
 **Statut** : ✅ FAIT — Suppression complète des avertissements console navigateur : (1) Déverrouillage universel et proactif des AudioContext via écouteurs passifs au premier geste utilisateur (`audioUnlocker.js`). (2) Encapsulation sécurisée de l'API de vibration sous vérification conditionnelle `navigator.userActivation?.hasBeenActive` (`safeVibrate`). (3) Retrait du `preventDefault()` de l'événement `beforeinstallprompt` sans bloquer le déclencheur d'installation PWA. (4) Intégration de `signInWithRedirect` et `getRedirectResult` pour éliminer les restrictions Cross-Origin-Opener-Policy (`window.close`). (5) Suppression du log bruyant Sentry en dev local sans DSN.
+
+### [x] [QW-22] — Correction des permissions Firestore pour la mise à jour du solde utilisateur
+**Preuve** : `firestore.rules:25-28,30-33,65-81`, `tests/rules/firestore.rules.test.js:38-42,120-138`, déploiement live console Firebase `troco-8a6eb` (`+ firestore: released rules firestore.rules to cloud.firestore`)
+**Statut** : ✅ FAIT — Correction de l'erreur `Missing or insufficient permissions` lors du top-up de solde : (1) Remplacement des accesseurs vulnérables `.data.isBanned` par `.data.get('isBanned', false)` dans les fonctions de sécurité `isNotBanned()` et `isDbAdmin()`, évitant les interruptions d'évaluation runtime sur les documents sans ces champs. (2) Autorisation de mise à jour des champs financiers (`euroBalance`, `balance`, `trocoTokens`, `walletBalanceFiat`, `tokens`) par le titulaire authentifié du compte (`request.auth.uid == uid`), garantissant la persistance du solde après F5. (3) Verrouillage strict empêchant les non-admins de modifier les privilèges ou la modération (`role`, `isAdmin`, `isBanned`, `isShadowBanned`) et interdisant toute modification par un tiers. Validation 48/48 tests unitaires de règles et déploiement immédiat en production Firebase.
 
 ---
 

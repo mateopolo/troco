@@ -47,8 +47,8 @@ service cloud.firestore {
       return isAuthenticated() &&
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
         (
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true ||
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('isAdmin', false) == true ||
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', '') == 'admin'
         );
     }
 
@@ -72,8 +72,10 @@ service cloud.firestore {
      */
     function isNotBanned() {
       return isAuthenticated() &&
-        !(exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isBanned == true);
+        !(
+          exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('isBanned', false) == true
+        );
     }
 
     // ========================================================================
@@ -93,9 +95,21 @@ service cloud.firestore {
       // Création : propriétaire uniquement
       allow create: if isOwner(uid);
 
-      // Mise à jour : propriétaire non banni ou administrateur
-      // Permet la persistance garantie du solde (euroBalance), des CGU (cguAcceptedAt), des jetons et du profil
-      allow update: if (isOwner(uid) && isNotBanned()) || isAdmin();
+      // Mise à jour : propriétaire authentifié ou administrateur
+      // Permet la persistance garantie du solde (euroBalance, balance, walletBalanceFiat), des jetons (trocoTokens, tokens) et du profil
+      // Protection des privilèges : empêche les non-admins de modifier les rôles ou statuts de modération
+      allow update: if isAuthenticated() && (
+        (
+          request.auth.uid == uid &&
+          resource.data.get('isBanned', false) != true &&
+          (
+            isAdmin() ||
+            !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+              'role', 'isAdmin', 'isBanned', 'isShadowBanned'
+            ])
+          )
+        ) || isAdmin()
+      );
 
       // Suppression directe interdite au client (traitée par Cloud Functions RGPD)
       allow delete: if false;

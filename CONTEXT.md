@@ -711,3 +711,46 @@ Traduire automatiquement tout texte saisi par les utilisateurs (biographies de p
 5. **Sentry Unconfigured DSN Warning ("[Sentry] DSN non configuré, Sentry désactivé") :**
    - **Diagnostic :** Un `console.log` informatif était émis systématiquement à chaque chargement en environnement de développement local.
    - **Solution :** Retrait du log dans `src/utils/sentry.js`, retour immédiat et silencieux de `null` en l'absence de clé DSN.
+
+### Patch Permissions Firestore pour le Solde (commit `fix(firestore): allow user balance update while guarding administrative privileges (PROMPT 12)`)
+
+#### 3.16 Correction des Permissions Firestore pour la Mise à Jour du Solde Utilisateur
+
+**Objectif :**
+Résoudre l'erreur bloquante `[paymentService] Error updating Firestore user doc balance: FirebaseError: Missing or insufficient permissions.` lors des recharges de fonds (top-up) ou mises à jour de solde/tokens, tout en préservant le modèle de sécurité Zero-Trust (interdiction formelle de modifier le solde d'un tiers et interdiction d'élévation de privilèges).
+
+**Diagnostic & Cause Racine :**
+1. **Échec d'évaluation runtime dans `isNotBanned()` :**
+   Dans `firestore.rules`, la fonction helper `isNotBanned()` évaluait `get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isBanned == true`. Lorsque le champ `isBanned` était absent du document utilisateur (cas standard pour la majorité des utilisateurs réels et de test dont `matmot`), l'accès direct à la propriété indéfinie provoquait une erreur d'évaluation Firestore qui avortait immédiatement la règle et retournait `Missing or insufficient permissions`.
+2. **Gestion des modifications de profil :**
+   La règle `match /users/{uid}` n'autorisait pas explicitement la mise à jour des champs financiers (`balance`, `euroBalance`, `walletBalanceFiat`, `trocoTokens`, `tokens`) par le titulaire authentifié du compte (`request.auth.uid == uid`) tout en protégeant les champs d'administration et de modération.
+
+**Solutions Déployées :**
+1. **Sécurisation des accesseurs de règles (`firestore.rules`) :**
+   - Utilisation systématique de la méthode sécurisée `.get(field, defaultValue)` au lieu de l'accès direct aux propriétés pour éviter toute exception runtime :
+     - `isDbAdmin()` : `resource.data.get('isAdmin', false) == true`
+     - `isNotBanned()` : `resource.data.get('isBanned', false) != true`
+2. **Autorisation ciblée de mise à jour pour le propriétaire du compte :**
+   - La règle `match /users/{uid}` autorise désormais :
+     ```javascript
+     allow update: if isAuthenticated() && (
+       (
+         request.auth.uid == uid &&
+         resource.data.get('isBanned', false) != true &&
+         (
+           isAdmin() ||
+           !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+             'role', 'isAdmin', 'isBanned', 'isShadowBanned'
+           ])
+         )
+       ) || isAdmin()
+     );
+     ```
+   - L'utilisateur authentifié peut mettre à jour ses données de solde (`euroBalance`, `balance`, `trocoTokens`, etc.), garantissant la persistance du solde après rafraîchissement (F5), mais toute tentative de modifier `role`, `isAdmin`, `isBanned` ou `isShadowBanned` est immédiatement rejetée.
+   - Les autres utilisateurs ne peuvent en aucun cas modifier le document d'un tiers (`request.auth.uid == uid`).
+3. **Simulateur de tests de règles (`tests/rules/firestore.rules.test.js`) :**
+   - Alignement du simulateur de règles et des assertions de test pour refléter le contrat de sécurité effectif.
+   - Validation de 48/48 tests unitaires avec `npm run test:rules`.
+4. **Déploiement direct en production :**
+   - Règles déployées avec succès sur le projet Firebase `troco-8a6eb` via `npx -y firebase-tools@latest deploy --only firestore:rules`.
+

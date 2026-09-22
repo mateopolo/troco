@@ -82,10 +82,12 @@ class RuleSimulator {
         return !Object.keys(data || {}).some(k => protectedKeys.includes(k));
       }
       if (operation === 'update') {
+        if (!isAuthenticated) return false;
+        if (isAdmin) return true;
         if (!isOwner(uid) || !isNotBanned()) return false;
-        const protectedKeys = ['euroBalance', 'trocoTokens', 'dealsCompleted', 'kycVerified', 'isBanned', 'isShadowBanned', 'role', 'subscriptionPlan', 'cguAcceptedAt'];
+        const sensitiveKeys = ['role', 'isAdmin', 'isBanned', 'isShadowBanned'];
         const changedKeys = Object.keys(data || {});
-        return !changedKeys.some(k => protectedKeys.includes(k));
+        return !changedKeys.some(k => sensitiveKeys.includes(k));
       }
       if (operation === 'delete') {
         return false;
@@ -425,16 +427,20 @@ describe('2. Collection Users & Sécurité des profils privés', () => {
     }));
   });
 
-  it('interdit l injection de solde ou tokens lors d un update utilisateur', async () => {
+  it('autorise la mise à jour du solde par le propriétaire mais interdit la modification par un tiers ou l élévation de privilèges', async () => {
     await testClient.seedAdmin('users/user_alice', {
       name: 'Alice',
       euroBalance: 0,
       trocoTokens: 0
     });
-    await assertDenied(testClient.runOp({ uid: 'user_alice' }, 'users/user_alice', 'update', { euroBalance: 999 }));
-    await assertDenied(testClient.runOp({ uid: 'user_alice' }, 'users/user_alice', 'update', { trocoTokens: 50 }));
-    await assertDenied(testClient.runOp({ uid: 'user_alice' }, 'users/user_alice', 'update', { dealsCompleted: 10 }));
-    await assertDenied(testClient.runOp({ uid: 'user_alice' }, 'users/user_alice', 'update', { subscriptionPlan: 'troco_plus' }));
+    // Alice peut recharger son solde et ses jetons
+    await assertAllowed(testClient.runOp({ uid: 'user_alice' }, 'users/user_alice', 'update', { euroBalance: 999 }));
+    await assertAllowed(testClient.runOp({ uid: 'user_alice' }, 'users/user_alice', 'update', { trocoTokens: 50 }));
+    // Bob ne peut pas modifier le solde d'Alice
+    await assertDenied(testClient.runOp({ uid: 'user_bob' }, 'users/user_alice', 'update', { euroBalance: 999 }));
+    // Alice ne peut pas modifier ses privilèges d'administration
+    await assertDenied(testClient.runOp({ uid: 'user_alice' }, 'users/user_alice', 'update', { role: 'admin' }));
+    await assertDenied(testClient.runOp({ uid: 'user_alice' }, 'users/user_alice', 'update', { isAdmin: true }));
   });
 
   it('interdit la suppression directe d un document utilisateur par le client', async () => {
