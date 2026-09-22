@@ -364,20 +364,22 @@ export const AppHeader = React.memo(({
             }}
           >
             <Globe size={13} color="var(--accent-primary)" style={{ flexShrink: 0 }} />
-            <span className="flex-shrink-0">
+            <span className="flex-shrink-0" style={{ fontSize: '13px' }}>
               {currentLang === 'FR'
-                ? '🇫🇷 FR'
+                ? '🇫🇷'
                 : currentLang === 'EN'
-                ? '🇬🇧 EN'
+                ? '🇬🇧'
                 : currentLang === 'ES'
-                ? '🇪🇸 ES'
+                ? '🇪🇸'
                 : currentLang === 'IT'
-                ? '🇮🇹 IT'
+                ? '🇮🇹'
                 : currentLang === 'DE'
-                ? '🇩🇪 DE'
+                ? '🇩🇪'
                 : currentLang === 'JA'
-                ? '🇯🇵 JA'
-                : '🇨🇳 ZH'}
+                ? '🇯🇵'
+                : currentLang === 'PT'
+                ? '🇵🇹'
+                : '🇨🇳'}
             </span>
           </button>
         </div>

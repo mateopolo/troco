@@ -232,13 +232,13 @@ export default function FilterDrawer({
         </label>
         <div role="group" aria-label="Filtres de langue" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px', marginBottom: '12px' }}>
           {[
-            { code: 'FR', label: '🇫🇷 FR' },
-            { code: 'EN', label: '🇬🇧 EN' },
-            { code: 'ES', label: '🇪🇸 ES' },
-            { code: 'IT', label: '🇮🇹 IT' },
-            { code: 'DE', label: '🇩🇪 DE' },
-            { code: 'JA', label: '🇯🇵 JA' },
-            { code: 'ZH', label: '🇨🇳 ZH' }
+            { code: 'FR', label: '🇫🇷' },
+            { code: 'EN', label: '🇬🇧' },
+            { code: 'ES', label: '🇪🇸' },
+            { code: 'IT', label: '🇮🇹' },
+            { code: 'DE', label: '🇩🇪' },
+            { code: 'JA', label: '🇯🇵' },
+            { code: 'ZH', label: '🇨🇳' }
           ].map(({ code, label }) => (
             <button
               key={code}

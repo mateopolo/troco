@@ -5318,7 +5318,7 @@ export default function App() {
           <Suspense fallback={<SkeletonModalFallback title="Conditions Générales d'Utilisation..." />}>
             <CguModal
               isOpen={isCguViewerOpen || (Boolean(profile?.name) && !profile?.cguAcceptedAt && !cguDismissed && window.sessionStorage?.getItem('troco_cgu_dismissed') !== 'true' && !isLoadingSession && profile?.onboardingCompleted)}
-              isMandatory={Boolean(profile?.name) && !profile?.cguAcceptedAt && !cguDismissed && window.sessionStorage?.getItem('troco_cgu_dismissed') !== 'true' && !isLoadingSession && profile?.onboardingCompleted}
+              isMandatory={!isCguViewerOpen && Boolean(profile?.name) && !profile?.cguAcceptedAt && !cguDismissed && window.sessionStorage?.getItem('troco_cgu_dismissed') !== 'true' && !isLoadingSession && profile?.onboardingCompleted}
               onClose={() => {
                 setIsCguViewerOpen(false);
                 setCguDismissed(true);

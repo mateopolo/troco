@@ -25,7 +25,8 @@ export default function CguModal({
     window.localStorage?.getItem('troco_cgu_dismissed') === 'true'
   );
 
-  if (!isOpen || isSessionDismissed) return null;
+  if (!isOpen) return null;
+  if (isMandatory && isSessionDismissed) return null;
 
   const handleConfirmAcceptance = async () => {
     if (!hasAgreedTerms || !hasAgreedPrivacy) return;
@@ -300,68 +301,96 @@ export default function CguModal({
           )}
 
           {/* CASES À COCHER OBLIGATOIRES */}
-          <div style={{
-            padding: '16px',
-            borderRadius: '16px',
-            backgroundColor: darkMode ? '#1A1715' : '#F5F0E8',
-            border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '12px',
-            marginBottom: '20px',
-          }}>
-            <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer', fontSize: '13px' }}>
-              <input
-                type="checkbox"
-                checked={hasAgreedTerms}
-                onChange={(e) => setHasAgreedTerms(e.target.checked)}
-                style={{ width: '18px', height: '18px', accentColor: '#C67D5B', marginTop: '2px', cursor: 'pointer' }}
-              />
-              <span style={{ color: darkMode ? '#FAF7F2' : '#3D3530', lineHeight: 1.5 }}>
-                J'ai lu et <strong>j'accepte sans réserve les Conditions Générales d'Utilisation</strong> de Troco (Version 2026.1).
-              </span>
-            </label>
+          {isMandatory ? (
+            <>
+              <div style={{
+                padding: '16px',
+                borderRadius: '16px',
+                backgroundColor: darkMode ? '#1A1715' : '#F5F0E8',
+                border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '12px',
+                marginBottom: '20px',
+              }}>
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer', fontSize: '13px' }}>
+                  <input
+                    type="checkbox"
+                    checked={hasAgreedTerms}
+                    onChange={(e) => setHasAgreedTerms(e.target.checked)}
+                    style={{ width: '18px', height: '18px', accentColor: '#C67D5B', marginTop: '2px', cursor: 'pointer' }}
+                  />
+                  <span style={{ color: darkMode ? '#FAF7F2' : '#3D3530', lineHeight: 1.5 }}>
+                    J'ai lu et <strong>j'accepte sans réserve les Conditions Générales d'Utilisation</strong> de Troco (Version 2026.1).
+                  </span>
+                </label>
 
-            <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer', fontSize: '13px' }}>
-              <input
-                type="checkbox"
-                checked={hasAgreedPrivacy}
-                onChange={(e) => setHasAgreedPrivacy(e.target.checked)}
-                style={{ width: '18px', height: '18px', accentColor: '#C67D5B', marginTop: '2px', cursor: 'pointer' }}
-              />
-              <span style={{ color: darkMode ? '#FAF7F2' : '#3D3530', lineHeight: 1.5 }}>
-                J'accepte la <strong>Politique de Confidentialité et le traitement de mes données</strong> dans le respect du RGPD.
-              </span>
-            </label>
-          </div>
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', cursor: 'pointer', fontSize: '13px' }}>
+                  <input
+                    type="checkbox"
+                    checked={hasAgreedPrivacy}
+                    onChange={(e) => setHasAgreedPrivacy(e.target.checked)}
+                    style={{ width: '18px', height: '18px', accentColor: '#C67D5B', marginTop: '2px', cursor: 'pointer' }}
+                  />
+                  <span style={{ color: darkMode ? '#FAF7F2' : '#3D3530', lineHeight: 1.5 }}>
+                    J'accepte la <strong>Politique de Confidentialité et le traitement de mes données</strong> dans le respect du RGPD.
+                  </span>
+                </label>
+              </div>
 
-          {/* BOUTON D'ACCEPTATION */}
-          <button
-            type="button"
-            onClick={handleConfirmAcceptance}
-            disabled={!hasAgreedTerms || !hasAgreedPrivacy || isSubmitting}
-            className="premium-button"
-            style={{
-              width: '100%',
-              padding: '16px',
-              borderRadius: '16px',
-              border: 'none',
-              background: (!hasAgreedTerms || !hasAgreedPrivacy) ? (darkMode ? '#3D3530' : '#E8DDD3') : 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)',
-              color: '#FFF',
-              fontWeight: '800',
-              fontSize: '15px',
-              cursor: (!hasAgreedTerms || !hasAgreedPrivacy || isSubmitting) ? 'not-allowed' : 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              boxShadow: (hasAgreedTerms && hasAgreedPrivacy) ? '0 10px 25px -5px rgba(198,125,91,0.35)' : 'none',
-              transition: 'all 0.2s ease',
-            }}
-          >
-            <Check size={18} strokeWidth={3} />
-            Accepter les CGU & Rejoindre Troco
-          </button>
+              {/* BOUTON D'ACCEPTATION */}
+              <button
+                type="button"
+                onClick={handleConfirmAcceptance}
+                disabled={!hasAgreedTerms || !hasAgreedPrivacy || isSubmitting}
+                className="premium-button"
+                style={{
+                  width: '100%',
+                  padding: '16px',
+                  borderRadius: '16px',
+                  border: 'none',
+                  background: (!hasAgreedTerms || !hasAgreedPrivacy) ? (darkMode ? '#3D3530' : '#E8DDD3') : 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)',
+                  color: '#FFF',
+                  fontWeight: '800',
+                  fontSize: '15px',
+                  cursor: (!hasAgreedTerms || !hasAgreedPrivacy || isSubmitting) ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  boxShadow: (hasAgreedTerms && hasAgreedPrivacy) ? '0 10px 25px -5px rgba(198,125,91,0.35)' : 'none',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                <Check size={18} strokeWidth={3} />
+                Accepter les CGU & Rejoindre Troco
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={onClose}
+              className="premium-button"
+              style={{
+                width: '100%',
+                padding: '16px',
+                borderRadius: '16px',
+                border: 'none',
+                background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)',
+                color: '#FFF',
+                fontWeight: '800',
+                fontSize: '15px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                boxShadow: '0 10px 25px -5px rgba(198,125,91,0.35)',
+              }}
+            >
+              Fermer la consultation des CGU
+            </button>
+          )}
 
         </div>
 

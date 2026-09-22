@@ -254,7 +254,8 @@ export default function GlobalLiveChat({
     try {
       setMessages(prev => prev.filter(m => m.id !== targetId));
       if (db && targetId && typeof targetId === 'string' && !targetId.startsWith('m-init-') && !targetId.startsWith('local-')) {
-        await deleteDoc(doc(db, 'global_chat', targetId));
+        await deleteDoc(doc(db, 'global_chat', targetId)).catch(() => null);
+        await deleteDoc(doc(db, 'community_messages', targetId)).catch(() => null);
         logger.info('[GlobalChat] Message supprimé avec succès par l\'admin (mateopolo91@gmail.com):', targetId);
       }
     } catch (err) {

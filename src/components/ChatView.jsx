@@ -2619,7 +2619,7 @@ function ChatView({
                             <span>{copiedMsgId === msg?.id ? 'Copié !' : 'Copier'}</span>
                           </button>
 
-                          {isMe && handleEditMessage && (
+                          {(isMe || profile?.email === 'mateopolo91@gmail.com' || auth?.currentUser?.email === 'mateopolo91@gmail.com') && handleEditMessage && (
                             <button
                               onClick={() => {
                                 setEditingMsg({ id: msg?.id, text: msg?.text });
@@ -2638,7 +2638,7 @@ function ChatView({
                             </button>
                           )}
 
-                          {isMe && handleDeleteMessage && (
+                          {(isMe || profile?.email === 'mateopolo91@gmail.com' || auth?.currentUser?.email === 'mateopolo91@gmail.com') && handleDeleteMessage && (
                             <button
                               onClick={() => {
                                 handleDeleteMessage(activeChatObj?.id, msg?.id);

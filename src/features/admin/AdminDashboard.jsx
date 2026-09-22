@@ -16,6 +16,7 @@ import { useFeedStore } from '../../stores/useFeedStore';
 import { useAllGlobalContent } from './useGlobalContent';
 import AdminCommunityTab from './AdminCommunityTab';
 import AdminChatsTab from './AdminChatsTab';
+import { isRawUid, isGenericName, getCachedUserProfile, setCachedUserProfile } from '../../services/userResolverService';
 
 export default function AdminDashboard({
   isOpen = true,
@@ -291,6 +292,90 @@ export default function AdminDashboard({
       if (typeof unsubscribe === 'function') unsubscribe();
     };
   }, [isUnlocked]);
+
+  // ---- RÉSOLUTION ET AFFICHAGE LISIBLE DES UIDS TRANSACTIONNELS ----
+  const [resolvedTxUserNames, setResolvedTxUserNames] = useState({});
+
+  useEffect(() => {
+    if (!db || !transactionsList || transactionsList.length === 0) return;
+
+    const uidsToResolve = new Set();
+    transactionsList.forEach(tx => {
+      const u1 = tx.userId || tx.initiatorUid || tx.initiatorId || tx.senderId || tx.buyerId;
+      const u2 = tx.partnerUid || tx.partnerId || tx.recipientId || tx.beneficiaryUid || tx.sellerId;
+      if (u1 && typeof u1 === 'string' && isRawUid(u1) && !resolvedTxUserNames[u1]) uidsToResolve.add(u1.trim());
+      if (u2 && typeof u2 === 'string' && isRawUid(u2) && !resolvedTxUserNames[u2]) uidsToResolve.add(u2.trim());
+    });
+
+    if (uidsToResolve.size === 0) return;
+
+    let isMounted = true;
+    const resolveAllUids = async () => {
+      const updates = {};
+      await Promise.all(
+        Array.from(uidsToResolve).map(async (uid) => {
+          // 1. Chercher dans usersList
+          const fromList = (usersList || []).find(u => u.id === uid || u.uid === uid);
+          if (fromList && (fromList.displayName || fromList.name)) {
+            updates[uid] = fromList.displayName || fromList.name;
+            return;
+          }
+
+          // 2. Chercher dans le cache
+          const cached = getCachedUserProfile(uid);
+          if (cached && (cached.displayName || cached.name)) {
+            updates[uid] = cached.displayName || cached.name;
+            return;
+          }
+
+          // 3. Fetch direct Firestore collection users
+          try {
+            const snap = await getDoc(doc(db, 'users', String(uid)));
+            if (snap.exists()) {
+              const udata = snap.data();
+              const foundName = udata.displayName || udata.name || udata.username || (udata.email ? udata.email.split('@')[0] : null);
+              if (foundName) {
+                updates[uid] = foundName;
+                setCachedUserProfile(uid, { displayName: foundName, name: foundName });
+                return;
+              }
+            }
+          } catch (e) {
+            logger.warn(`[AdminDashboard] Erreur fetch displayName transaction UID ${uid}:`, e);
+          }
+        })
+      );
+
+      if (isMounted && Object.keys(updates).length > 0) {
+        setResolvedTxUserNames(prev => ({ ...prev, ...updates }));
+      }
+    };
+
+    resolveAllUids();
+    return () => { isMounted = false; };
+  }, [transactionsList, usersList, resolvedTxUserNames]);
+
+  const getTxUserDisplayName = useCallback((explicitName, uid) => {
+    if (explicitName && !isRawUid(explicitName) && !isGenericName(explicitName)) {
+      return explicitName;
+    }
+    const cleanUid = uid && typeof uid === 'string' ? uid.trim() : null;
+    if (cleanUid && resolvedTxUserNames[cleanUid]) {
+      return resolvedTxUserNames[cleanUid];
+    }
+    if (cleanUid) {
+      const fromList = (usersList || []).find(u => u.id === cleanUid || u.uid === cleanUid);
+      if (fromList && (fromList.displayName || fromList.name)) {
+        return fromList.displayName || fromList.name;
+      }
+      const cached = getCachedUserProfile(cleanUid);
+      if (cached && (cached.displayName || cached.name)) {
+        return cached.displayName || cached.name;
+      }
+      return `Membre (#${cleanUid.slice(0, 6)})`;
+    }
+    return explicitName || 'Membre Troco';
+  }, [resolvedTxUserNames, usersList]);
 
   // ================= ACTIONS UTILISATEURS =================
   // 🚨 PHASE 112 : PASSERELLE D'INSPECTION MODÉRATEUR VERS LE PROFIL PUBLIC
@@ -800,9 +885,13 @@ export default function AdminDashboard({
   const filteredTransactions = useMemo(() => {
     return transactionsList.filter((tx) => {
       const q = (txSearch || '').toLowerCase();
+      const initiatorName = getTxUserDisplayName(tx.userName, tx.userId || tx.initiatorUid || tx.senderId || tx.buyerId).toLowerCase();
+      const partnerName = getTxUserDisplayName(tx.partnerName, tx.partnerUid || tx.partnerId || tx.recipientId || tx.beneficiaryUid || tx.sellerId).toLowerCase();
       const matchSearch =
         !q ||
         (tx.id && String(tx.id).toLowerCase().includes(q)) ||
+        initiatorName.includes(q) ||
+        partnerName.includes(q) ||
         (tx.userName && tx.userName.toLowerCase().includes(q)) ||
         (tx.userId && String(tx.userId).toLowerCase().includes(q)) ||
         (tx.partnerName && tx.partnerName.toLowerCase().includes(q)) ||
@@ -817,7 +906,7 @@ export default function AdminDashboard({
 
       return true;
     });
-  }, [transactionsList, txSearch, txFilter]);
+  }, [transactionsList, txSearch, txFilter, getTxUserDisplayName]);
 
   if (!isOpen) return null;
 
@@ -2003,12 +2092,16 @@ export default function AdminDashboard({
                               </div>
                             </td>
 
-                            {/* Utilisateur */}
+                            {/* Utilisateur (Initiateur & Bénéficiaire / Partenaire) */}
                             <td style={{ padding: '14px 18px' }}>
-                              <div style={{ fontWeight: '700' }}>{tx.userName || tx.userId || 'Utilisateur'}</div>
-                              {tx.partnerName && (
-                                <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                                  → {tx.partnerName}
+                              <div style={{ fontWeight: '700', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                <span>👤</span>
+                                <span>{getTxUserDisplayName(tx.userName, tx.userId || tx.initiatorUid || tx.initiatorId || tx.senderId || tx.buyerId)}</span>
+                              </div>
+                              {(tx.partnerName || tx.partnerUid || tx.partnerId || tx.recipientId || tx.beneficiaryUid || tx.sellerId) && (
+                                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                  <span>➔</span>
+                                  <span>{getTxUserDisplayName(tx.partnerName, tx.partnerUid || tx.partnerId || tx.recipientId || tx.beneficiaryUid || tx.sellerId)}</span>
                                 </div>
                               )}
                             </td>

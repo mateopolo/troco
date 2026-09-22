@@ -268,9 +268,8 @@ export default function ProfileView({
                   </div>
                   <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                     {profile?.languages?.map(lang => (
-                      <span key={lang} style={{ fontSize: '11px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-main)', padding: '2px 8px', borderRadius: '6px', border: '1px solid var(--border-color)', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                      <span key={lang} style={{ fontSize: '14px', fontWeight: '800', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-main)', padding: '2px 8px', borderRadius: '6px', border: '1px solid var(--border-color)', display: 'inline-flex', alignItems: 'center' }} title={lang}>
                         <span>{LANG_FLAG_EMOJI[lang.toUpperCase()] || '🌐'}</span>
-                        <span>{lang}</span>
                       </span>
                     ))}
                   </div>

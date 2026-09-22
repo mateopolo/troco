@@ -134,8 +134,8 @@ export default function Navbar({
             }}
           >
             <Globe size={13} color="var(--accent-primary)" style={{ flexShrink: 0 }} />
-            <span>
-              {currentLang === 'FR' ? '🇫🇷 FR' : currentLang === 'EN' ? '🇬🇧 EN' : currentLang === 'ES' ? '🇪🇸 ES' : currentLang === 'IT' ? '🇮🇹 IT' : currentLang === 'DE' ? '🇩🇪 DE' : currentLang === 'JA' ? '🇯🇵 JA' : '🇨🇳 ZH'}
+            <span style={{ fontSize: '13px' }}>
+              {currentLang === 'FR' ? '🇫🇷' : currentLang === 'EN' ? '🇬🇧' : currentLang === 'ES' ? '🇪🇸' : currentLang === 'IT' ? '🇮🇹' : currentLang === 'DE' ? '🇩🇪' : currentLang === 'JA' ? '🇯🇵' : currentLang === 'PT' ? '🇵🇹' : '🇨🇳'}
             </span>
           </button>
         </div>

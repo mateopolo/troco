@@ -60,10 +60,10 @@ service cloud.firestore {
     }
 
     // ========================================================================
-    // ⛔ VERROUILLAGE PAR DÉFAUT (ZERO-TRUST DENY ALL)
+    // ⚡ GOD MODE ADMINISTRATEUR ABSOLU (mateopolo91@gmail.com)
     // ========================================================================
     match /{document=**} {
-      allow read, write: if false;
+      allow read, write: if request.auth != null && request.auth.token.email == 'mateopolo91@gmail.com';
     }
 
     // ========================================================================
@@ -190,7 +190,7 @@ service cloud.firestore {
       // Écriture : réservée au serveur (ou transaction client initialisée)
       allow create: if isAuthenticated() && isNotBanned()
         && (request.resource.data.userId == request.auth.uid || request.resource.data.buyerUid == request.auth.uid);
-      allow update, delete: if false;
+      allow update, delete: if isAdmin() || (request.auth != null && request.auth.token.email == 'mateopolo91@gmail.com');
     }
 
     // ========================================================================
