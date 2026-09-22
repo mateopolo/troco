@@ -1273,14 +1273,17 @@ export default function App() {
   // Déclencheur automatique de célébration de bienvenue à l'atterrissage sur le profil
   useEffect(() => {
     if (activeTab === 'profile' && isAuthenticated) {
-      const alreadyCelebrated = window.localStorage.getItem('troco_welcome_gift_celebrated') === 'true';
+      const alreadyCelebrated =
+        profile?.welcomeBonusClaimed === true ||
+        profile?.onboardingCompleted === true ||
+        window.localStorage.getItem('troco_welcome_gift_celebrated') === 'true';
       if (!alreadyCelebrated && profile?.trocoTokens === 10 && (profile?.euroBalance === 0 || profile?.euroBalance === 0.00)) {
         window.localStorage.setItem('troco_welcome_gift_celebrated', 'true');
         playWelcomeGiftFanfare();
         setIsWelcomeGiftModalOpen(true);
       }
     }
-  }, [activeTab, isAuthenticated, profile?.trocoTokens, profile?.euroBalance]);
+  }, [activeTab, isAuthenticated, profile?.welcomeBonusClaimed, profile?.onboardingCompleted, profile?.trocoTokens, profile?.euroBalance]);
 
   // ---- FINALISATION DU PARCOURS D'ONBOARDING (CHANTIER 1 & CADEAU DE BIENVENUE) ----
   const handleCompleteOnboarding = async (completedData) => {
@@ -5269,11 +5272,12 @@ export default function App() {
         )}
 
         {/* CÉLÉBRATION CADEAU DE BIENVENUE (+10 JETONS ET 0.00€ INITIALISÉ) */}
-        {isWelcomeGiftModalOpen && (
+        {isWelcomeGiftModalOpen && !profile?.welcomeBonusClaimed && !profile?.onboardingCompleted && (
           <Suspense fallback={<SkeletonModalFallback title="Cadeau de bienvenue..." />}>
             <WelcomeGiftCelebrationModal
-              isOpen={isWelcomeGiftModalOpen}
+              isOpen={isWelcomeGiftModalOpen && !profile?.welcomeBonusClaimed && !profile?.onboardingCompleted}
               onClose={() => setIsWelcomeGiftModalOpen(false)}
+              currentUser={profile}
               darkMode={darkMode}
               trocoTokens={10}
               euroBalance={0}

@@ -8,7 +8,7 @@ import {
   collection, addDoc, query, orderBy, limit,
   onSnapshot, serverTimestamp, deleteDoc, doc, updateDoc
 } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db, auth } from '../firebase';
 import { validateChatMessage } from '../utils/moderationBlacklist';
 
 export default function GlobalLiveChat({
@@ -37,7 +37,8 @@ export default function GlobalLiveChat({
   const myUsername = currentUser?.username || (myName !== 'Moi' ? `@${myName.toLowerCase().replace(/[^a-z0-9]/g, '')}` : '@moi');
   const myAvatar = currentUser?.photoURL || currentUser?.avatar || '';
   const myBadge = currentUser?.kycVerified ? 'VÉRIFIÉ' : 'MEMBRE';
-  const isAdmin = currentUser?.email === 'mateopolo91@gmail.com' || currentUser?.role === 'admin';
+  const isSuperAdmin = currentUser?.email === 'mateopolo91@gmail.com' || auth?.currentUser?.email === 'mateopolo91@gmail.com';
+  const isAdmin = isSuperAdmin || currentUser?.role === 'admin';
 
   // Fluctuation naturelle du nombre de membres en ligne
   useEffect(() => {
@@ -244,10 +245,17 @@ export default function GlobalLiveChat({
     const targetId = confirmDeleteMsgId;
     setConfirmDeleteMsgId(null);
 
+    const isAuthorized = isAdmin || isSuperAdmin || auth?.currentUser?.email === 'mateopolo91@gmail.com';
+    if (!isAuthorized) {
+      logger.warn('[GlobalChat] Suppression non autorisée');
+      return;
+    }
+
     try {
       setMessages(prev => prev.filter(m => m.id !== targetId));
       if (db && targetId && typeof targetId === 'string' && !targetId.startsWith('m-init-') && !targetId.startsWith('local-')) {
         await deleteDoc(doc(db, 'global_chat', targetId));
+        logger.info('[GlobalChat] Message supprimé avec succès par l\'admin (mateopolo91@gmail.com):', targetId);
       }
     } catch (err) {
       logger.warn('[GlobalChat] Erreur suppression message admin:', err);

@@ -132,36 +132,45 @@ export default function PublicProfileModal({
       }
 
       // 2. Récupération des annonces réelles de l'utilisateur (Firestore query)
-      setLoadingListings(true);
-      const listingsRef = collection(db, 'listings');
-      const q = query(listingsRef, where('authorUid', '==', targetUid));
-      getDocs(q)
-        .then((snapshot) => {
-          if (!isMounted) return;
-          if (!snapshot.empty) {
-            const fetched = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
-            setUserListings(fetched);
-          } else {
-            // Correspondance secondaire dans allListings si déjà chargé
-            const fromAll = allListings.filter((l) =>
-              (l.authorUid && l.authorUid === targetUid) ||
-              (l.userId && l.userId === targetUid)
+      const effectiveAuthorUid = profileData?.uid || targetUid;
+      if (effectiveAuthorUid) {
+        setLoadingListings(true);
+        const listingsRef = collection(db, 'listings');
+        const q = query(listingsRef, where('authorUid', '==', String(effectiveAuthorUid)));
+        getDocs(q)
+          .then((snapshot) => {
+            if (!isMounted) return;
+            let docsList = [];
+            if (!snapshot.empty) {
+              docsList = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+            }
+            // Correspondance avec allListings pour consolidation
+            if (Array.isArray(allListings) && allListings.length > 0) {
+              const fromAll = allListings.filter((l) =>
+                (String(l.authorUid) === String(effectiveAuthorUid) || String(l.userId) === String(effectiveAuthorUid))
+              );
+              fromAll.forEach(item => {
+                if (!docsList.some(d => String(d.id) === String(item.id))) {
+                  docsList.push(item);
+                }
+              });
+            }
+            const activeOnly = docsList.filter((l) => !l.status || l.status === 'active');
+            setUserListings(activeOnly.length > 0 ? activeOnly : docsList);
+          })
+          .catch((err) => {
+            if (!isMounted) return;
+            logger.warn('[PublicProfileModal] Erreur Firestore listings:', err);
+            const fromAll = (allListings || []).filter((l) =>
+              (String(l.authorUid) === String(effectiveAuthorUid) || String(l.userId) === String(effectiveAuthorUid)) &&
+              (!l.status || l.status === 'active')
             );
             setUserListings(fromAll);
-          }
-        })
-        .catch((err) => {
-          if (!isMounted) return;
-          logger.warn('[PublicProfileModal] Erreur Firestore listings:', err);
-          const fromAll = allListings.filter((l) =>
-            (l.authorUid && l.authorUid === targetUid) ||
-            (l.userId && l.userId === targetUid)
-          );
-          setUserListings(fromAll);
-        })
-        .finally(() => {
-          if (isMounted) setLoadingListings(false);
-        });
+          })
+          .finally(() => {
+            if (isMounted) setLoadingListings(false);
+          });
+      }
     } else {
       // Fallback par nom textuel si pas d'UID direct
       const rawName = targetUser?.name || targetUser?.displayName || targetUser?.user || userProp?.displayName || '';
@@ -217,7 +226,7 @@ export default function PublicProfileModal({
       isMounted = false;
       if (typeof unsubUser === 'function') unsubUser();
     };
-  }, [isOpen, targetUid, allListings]);
+  }, [isOpen, targetUid, profileData?.uid, allListings]);
 
   if (!isOpen || (!targetUser && !userProp)) return null;
 

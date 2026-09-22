@@ -9,6 +9,9 @@ import logger from '../utils/logger';
  * Ensures zero Cloud Functions dependency, eliminating all preflight CORS errors
  * and guaranteeing atomic persistence of euro balances and Troco tokens on the free Spark plan.
  */
+// Set mémoire pour verrou anti-rejeu et protection absolue contre le double débit/crédit
+const processedTransactions = new Set();
+
 export const paymentService = {
   /**
    * Applies a verified payment directly to Firestore with atomic increment.
@@ -28,6 +31,22 @@ export const paymentService = {
     const numAmount = Number(amount) || 0;
     const numTokens = Number(tokens) || 0;
     const targetUid = userId || auth.currentUser?.uid;
+
+    const txKey = paymentIntentId || idempotencyKey;
+    if (txKey && processedTransactions.has(txKey)) {
+      logger.warn('[paymentService] Transaction déjà appliquée, verrou anti-double-crédit activé:', txKey);
+      return {
+        success: true,
+        alreadyProcessed: true,
+        paymentIntentId,
+        mode,
+        amount: numAmount,
+        tokens: numTokens,
+      };
+    }
+    if (txKey) {
+      processedTransactions.add(txKey);
+    }
 
     logger.info('[paymentService] Applying payment (Option A direct Firestore):', {
       mode,

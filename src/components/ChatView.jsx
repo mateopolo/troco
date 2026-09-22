@@ -9,7 +9,7 @@ import {
   Palette, Briefcase, Plus, FileText, Calendar, Table,
   MessageSquareDashed, RefreshCw, MessageSquare, Search, Pin
 } from 'lucide-react';
-import { doc, deleteDoc, addDoc, collection, updateDoc, serverTimestamp, query, where, getDocs, arrayUnion } from 'firebase/firestore';
+import { doc, deleteDoc, addDoc, collection, updateDoc, serverTimestamp, query, where, getDocs, arrayUnion, onSnapshot } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { executeDirectTokenTransfer } from '../services/firestoreService';
 import { subscribeTranslations } from '../utils/translator';
@@ -23,7 +23,7 @@ import { EmptyState } from './ui/EmptyState';
 import { playPop, playSwoosh, playSuccessChime } from '../services/audioService';
 import SwipeableChatItem from './SwipeableChatItem';
 import ChatInputBar from './chat/ChatInputBar';
-import { isRawUid, isGenericName, getChatPartnerUid, getChatPartnerName, getCachedUserProfile, resolveUserProfile } from '../services/userResolverService';
+import { isRawUid, isGenericName, getChatPartnerUid, getChatPartnerName, getCachedUserProfile, setCachedUserProfile, resolveUserProfile } from '../services/userResolverService';
 import { useUIStore } from '../stores/useUIStore';
 
 // Lazy loading des outils collaboratifs & suites vectorielles lourdes pour préserver les performances et la rapidité du build
@@ -184,30 +184,76 @@ function ChatView({
 
   const currentMyUid = profile?.uid || (auth?.currentUser && auth.currentUser.uid);
   const currentMyName = profile?.name || '';
+  const myAvatar = profile?.avatar || auth?.currentUser?.photoURL || '';
+  const isOwnAvatar = useCallback((url) => {
+    if (!url || typeof url !== 'string') return false;
+    return Boolean(myAvatar && (url === myAvatar || url === profile?.avatar || (auth?.currentUser?.photoURL && url === auth.currentUser.photoURL)));
+  }, [myAvatar, profile?.avatar]);
+
   const activePartnerUid = getChatPartnerUid(activeChatObj, currentMyUid);
-  const activePartnerName = getChatPartnerName(activeChatObj, currentMyUid, currentMyName);
+  const [partnerProfileDoc, setPartnerProfileDoc] = useState(null);
+
+  // Jointure Firestore en temps réel sur l'UID du participant actif pour récupérer STRICTEMENT sa photoURL et son displayName
+  useEffect(() => {
+    if (!activePartnerUid || !db) {
+      setPartnerProfileDoc(null);
+      return;
+    }
+
+    // Récupération immédiate depuis le cache si disponible
+    const cached = getCachedUserProfile(activePartnerUid);
+    if (cached && (cached.avatar || cached.name)) {
+      setPartnerProfileDoc(cached);
+    }
+
+    const unsub = onSnapshot(doc(db, 'users', String(activePartnerUid)), (snap) => {
+      if (snap.exists()) {
+        const udata = snap.data();
+        const resolved = {
+          uid: activePartnerUid,
+          name: udata.displayName || udata.name || 'Membre Troco',
+          displayName: udata.displayName || udata.name || 'Membre Troco',
+          avatar: udata.photoURL || udata.avatar || '',
+          photoURL: udata.photoURL || udata.avatar || '',
+          username: udata.username || '',
+          bio: udata.bio || '',
+        };
+        setPartnerProfileDoc(resolved);
+        setCachedUserProfile(activePartnerUid, resolved);
+      }
+    }, (err) => {
+      logger.warn('[ChatView] Firestore jointure users partnerUid error:', err);
+    });
+
+    return () => unsub();
+  }, [activePartnerUid]);
+
   const cachedActivePartner = activePartnerUid ? getCachedUserProfile(activePartnerUid) : null;
-  const activePartnerAvatar = cachedActivePartner?.avatar || activeChatObj?.peerProfile?.avatar || activeChatObj?.avatar || '';
+  const partnerUserDoc = partnerProfileDoc || cachedActivePartner || activeChatObj?.peerProfile;
+  const rawPartnerAvatar = partnerUserDoc?.photoURL || partnerUserDoc?.avatar || (isOwnAvatar(activeChatObj?.avatar) ? '' : activeChatObj?.avatar) || '';
+  const activePartnerAvatar = isOwnAvatar(rawPartnerAvatar) ? '' : rawPartnerAvatar;
+  const activePartnerName = partnerUserDoc?.displayName || partnerUserDoc?.name || getChatPartnerName(activeChatObj, currentMyUid, currentMyName);
 
   const handleOpenPartnerProfile = useCallback(() => {
     if (!activeChatObj || activeChatObj.isGroup) return;
     const partnerUid = getChatPartnerUid(activeChatObj, currentMyUid);
-    const partnerName = getChatPartnerName(activeChatObj, currentMyUid, currentMyName);
     const cached = partnerUid ? getCachedUserProfile(partnerUid) : null;
-    const partnerAvatar = cached?.avatar || activeChatObj?.peerProfile?.avatar || activeChatObj?.avatar || '';
+    const resolvedDoc = partnerProfileDoc || cached || activeChatObj?.peerProfile;
+    const pAvatar = activePartnerAvatar;
+    const pName = activePartnerName;
 
     const partnerUserObj = {
       ...(activeChatObj.peerProfile || {}),
-      ...(cached || {}),
-      id: partnerUid || activeChatObj.partnerUid || activeChatObj.authorUid || `user_${partnerName}`,
+      ...(resolvedDoc || {}),
+      id: partnerUid || activeChatObj.partnerUid || activeChatObj.authorUid || `user_${pName}`,
       uid: partnerUid || activeChatObj.partnerUid || activeChatObj.authorUid || null,
-      name: partnerName,
-      displayName: partnerName,
-      avatar: partnerAvatar,
-      photoURL: partnerAvatar,
-      username: cached?.username || activeChatObj.peerProfile?.username || (partnerName && !isGenericName(partnerName) ? `@${partnerName.toLowerCase().replace(/[^a-z0-9]/g, '')}` : '@membre'),
-      bio: cached?.bio || activeChatObj.peerProfile?.bio || '',
-      authorProfile: cached || activeChatObj.peerProfile || null,
+      name: pName,
+      displayName: pName,
+      avatar: pAvatar,
+      photoURL: pAvatar,
+      username: resolvedDoc?.username || (pName && !isGenericName(pName) ? `@${pName.toLowerCase().replace(/[^a-z0-9]/g, '')}` : '@membre'),
+      bio: resolvedDoc?.bio || '',
+      authorProfile: resolvedDoc || null,
     };
 
     try {
@@ -220,7 +266,7 @@ function ChatView({
 
     setLocalTargetUser(partnerUserObj);
     setIsPublicProfileOpen(true);
-  }, [activeChatObj, currentMyUid, currentMyName, onOpenProfile]);
+  }, [activeChatObj, currentMyUid, partnerProfileDoc, activePartnerAvatar, activePartnerName, onOpenProfile]);
 
   const openWhiteboard = useCallback((boardId = null, version = null, initialView = null) => {
     setActiveWhiteboardBoardId(boardId);
@@ -3002,9 +3048,13 @@ function ChatView({
                     const showWaitingBadge = !isUnread && lastSenderIsMe;
 
                     const itemPartnerUid = getChatPartnerUid(chat, currentMyUid);
-                    const itemPartnerName = getChatPartnerName(chat, currentMyUid, currentMyName);
                     const itemCachedPartner = itemPartnerUid ? getCachedUserProfile(itemPartnerUid) : null;
-                    const itemPartnerAvatar = itemCachedPartner?.avatar || chat.peerProfile?.avatar || chat.avatar || '';
+                    if (itemPartnerUid && (!itemCachedPartner || !itemCachedPartner.avatar) && db) {
+                      resolveUserProfile(itemPartnerUid, db);
+                    }
+                    const rawItemAvatar = itemCachedPartner?.photoURL || itemCachedPartner?.avatar || chat.peerProfile?.photoURL || chat.peerProfile?.avatar || (isOwnAvatar(chat.avatar) ? '' : chat.avatar) || '';
+                    const itemPartnerAvatar = isOwnAvatar(rawItemAvatar) ? '' : rawItemAvatar;
+                    const itemPartnerName = itemCachedPartner?.displayName || itemCachedPartner?.name || getChatPartnerName(chat, currentMyUid, currentMyName);
 
                     return (
                       <SwipeableChatItem

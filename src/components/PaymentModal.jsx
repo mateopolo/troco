@@ -1,5 +1,5 @@
 import logger from '../utils/logger';
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
   CreditCard, ShieldCheck, Lock, X,
@@ -61,6 +61,7 @@ export default function PaymentModal({
   const [otpError, setOtpError] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
   const [successDetails, setSuccessDetails] = useState(null);
+  const hasCalledSuccessRef = useRef(false);
 
   // Formulaire Carte Bancaire
   const [cardNumber, setCardNumber] = useState('');
@@ -115,6 +116,7 @@ export default function PaymentModal({
       setIsProcessing(false);
       setShow3DSecure(false);
       setIsSuccess(false);
+      hasCalledSuccessRef.current = false;
       setOtpCode('');
       setOtpError('');
       setFormErrors({});
@@ -414,45 +416,23 @@ export default function PaymentModal({
       });
     } catch (_) {}
 
-    // SYNC FIRESTORE : incrément atomique garanti du solde euros et jetons pour les rechargements (Apple Pay / Carte)
-    // L'onSnapshot de useWalletStore / App.js propage ensuite le nouveau solde en temps réel
-    const uid = auth.currentUser?.uid || currentUser?.uid || currentUser?.id;
-    if (uid && db) {
+    // Mise à jour optimiste immédiate du store Zustand pour fluidité UI totale
+    // L'incrémentation persistante Firestore est déléguée STRICTEMENT et UNE SEULE FOIS à onSuccess -> paymentService.applyPayment
+    try {
       if (mode === 'topup-cash' && amountToPay > 0) {
-        setDoc(doc(db, 'users', String(uid)), {
-          euroBalance: increment(amountToPay),
-          walletBalanceFiat: increment(amountToPay),
-          balance: increment(amountToPay),
-          updatedAt: serverTimestamp(),
-        }, { merge: true }).catch((err) => logger.warn('[PaymentModal] Firestore topup-cash increment failed:', err));
-
-        // Mise à jour immédiate et optimiste du store Portefeuille pour fluidité totale
-        try {
-          useWalletStore.getState().creditBalance(amountToPay, 0);
-        } catch (_) {}
+        useWalletStore.getState().creditBalance(amountToPay, 0);
       } else if (isSubscriptionMode && tokensCredited > 0) {
-        setDoc(doc(db, 'users', String(uid)), {
-          trocoTokens: increment(tokensCredited),
-          tokens: increment(tokensCredited),
-          isTrocoPlus: true,
-          subscriptionPlan: selectedTrocoPlusPlan?.planKey || 'essential',
-          subscriptionStartDate: subscriptionStartDate,
-          subscriptionRenewalDate: subscriptionRenewalDate,
-          updatedAt: serverTimestamp(),
-        }, { merge: true }).catch((err) => logger.warn('[PaymentModal] Firestore token/subscription increment failed:', err));
-
-        try {
-          useWalletStore.getState().creditBalance(0, tokensCredited);
-        } catch (_) {}
+        useWalletStore.getState().creditBalance(0, tokensCredited);
       }
-    }
+    } catch (_) {}
 
     setSuccessDetails(resultPayload);
     setIsSuccess(true);
   };
 
   const handleCloseModal = () => {
-    if (isSuccess && successDetails && typeof onSuccess === 'function') {
+    if (isSuccess && successDetails && typeof onSuccess === 'function' && !hasCalledSuccessRef.current) {
+      hasCalledSuccessRef.current = true;
       try {
         onSuccess(successDetails);
       } catch (err) {

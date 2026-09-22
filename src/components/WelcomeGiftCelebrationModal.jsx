@@ -3,11 +3,14 @@ import {
   Coins, Sparkles, Check, ArrowRight,
   ShieldCheck, Clock, X
 } from 'lucide-react';
+import { doc, updateDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { db, auth } from '../firebase';
 import UniversalModal from './ui/UniversalModal';
 
 export default function WelcomeGiftCelebrationModal({
   isOpen,
   onClose,
+  currentUser = null,
   trocoTokens = 10,
   euroBalance = 0,
   darkMode = false,
@@ -21,6 +24,36 @@ export default function WelcomeGiftCelebrationModal({
       return () => clearTimeout(timer);
     }
   }, [isOpen]);
+
+  const [isClaiming, setIsClaiming] = useState(false);
+
+  const handleClaimGift = async () => {
+    if (isClaiming) return;
+    setIsClaiming(true);
+    const uid = auth?.currentUser?.uid || currentUser?.uid;
+    if (uid && db) {
+      try {
+        await updateDoc(doc(db, 'users', String(uid)), {
+          welcomeBonusClaimed: true,
+          onboardingCompleted: true,
+          updatedAt: serverTimestamp(),
+        });
+      } catch (err) {
+        try {
+          await setDoc(doc(db, 'users', String(uid)), {
+            welcomeBonusClaimed: true,
+            onboardingCompleted: true,
+            updatedAt: serverTimestamp(),
+          }, { merge: true });
+        } catch (_) {}
+      }
+    }
+    try {
+      window.localStorage.setItem('troco_welcome_gift_celebrated', 'true');
+    } catch (_) {}
+    setIsClaiming(false);
+    onClose?.();
+  };
 
   if (!isOpen) return null;
 
@@ -230,7 +263,8 @@ export default function WelcomeGiftCelebrationModal({
 
         {/* BOUTON D'ACTION PRINCIPALE */}
         <button
-          onClick={onClose}
+          onClick={handleClaimGift}
+          disabled={isClaiming}
           className="premium-button"
           style={{
             width: '100%',
@@ -241,13 +275,14 @@ export default function WelcomeGiftCelebrationModal({
             padding: '14px 20px',
             fontSize: '15px',
             fontWeight: '800',
-            cursor: 'pointer',
+            cursor: isClaiming ? 'wait' : 'pointer',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             gap: '8px',
             boxShadow: 'var(--shadow-accent)',
             transition: 'all 0.2s ease',
+            opacity: isClaiming ? 0.7 : 1,
           }}
         >
           <span>Accéder à mes 10 Jetons</span>
