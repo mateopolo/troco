@@ -194,15 +194,35 @@ export default function AdminDashboard({
     try {
       const qComm = query(collection(db, 'community_messages'), orderBy('createdAt', 'desc'), limit(100));
       unsubCommunity = onSnapshot(qComm, (snap) => {
+        snap.docChanges().forEach(change => {
+          if (change.type === 'removed') {
+            messagesMap.delete('comm_' + change.doc.id);
+          }
+        });
         snap.forEach(docSnap => {
-          messagesMap.set('comm_' + docSnap.id, { id: docSnap.id, _collection: 'community_messages', ...docSnap.data() });
+          const d = docSnap.data();
+          if (d?.isDeleted === true || d?.deleted === true) {
+            messagesMap.delete('comm_' + docSnap.id);
+          } else {
+            messagesMap.set('comm_' + docSnap.id, { id: docSnap.id, _collection: 'community_messages', ...d });
+          }
         });
         updateCommunityList();
       }, () => {
         try {
           unsubCommunity = onSnapshot(query(collection(db, 'community_messages'), limit(100)), (snap) => {
+            snap.docChanges().forEach(change => {
+              if (change.type === 'removed') {
+                messagesMap.delete('comm_' + change.doc.id);
+              }
+            });
             snap.forEach(docSnap => {
-              messagesMap.set('comm_' + docSnap.id, { id: docSnap.id, _collection: 'community_messages', ...docSnap.data() });
+              const d = docSnap.data();
+              if (d?.isDeleted === true || d?.deleted === true) {
+                messagesMap.delete('comm_' + docSnap.id);
+              } else {
+                messagesMap.set('comm_' + docSnap.id, { id: docSnap.id, _collection: 'community_messages', ...d });
+              }
             });
             updateCommunityList();
           });
@@ -215,15 +235,35 @@ export default function AdminDashboard({
     try {
       const qGlob = query(collection(db, 'global_chat'), orderBy('createdAt', 'desc'), limit(100));
       unsubGlobal = onSnapshot(qGlob, (snap) => {
+        snap.docChanges().forEach(change => {
+          if (change.type === 'removed') {
+            messagesMap.delete('glob_' + change.doc.id);
+          }
+        });
         snap.forEach(docSnap => {
-          messagesMap.set('glob_' + docSnap.id, { id: docSnap.id, _collection: 'global_chat', ...docSnap.data() });
+          const d = docSnap.data();
+          if (d?.isDeleted === true || d?.deleted === true) {
+            messagesMap.delete('glob_' + docSnap.id);
+          } else {
+            messagesMap.set('glob_' + docSnap.id, { id: docSnap.id, _collection: 'global_chat', ...d });
+          }
         });
         updateCommunityList();
       }, () => {
         try {
           unsubGlobal = onSnapshot(query(collection(db, 'global_chat'), limit(100)), (snap) => {
+            snap.docChanges().forEach(change => {
+              if (change.type === 'removed') {
+                messagesMap.delete('glob_' + change.doc.id);
+              }
+            });
             snap.forEach(docSnap => {
-              messagesMap.set('glob_' + docSnap.id, { id: docSnap.id, _collection: 'global_chat', ...docSnap.data() });
+              const d = docSnap.data();
+              if (d?.isDeleted === true || d?.deleted === true) {
+                messagesMap.delete('glob_' + docSnap.id);
+              } else {
+                messagesMap.set('glob_' + docSnap.id, { id: docSnap.id, _collection: 'global_chat', ...d });
+              }
             });
             updateCommunityList();
           });

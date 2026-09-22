@@ -39,13 +39,30 @@ service cloud.firestore {
     }
 
     /**
-     * Vérifie si l'utilisateur possède le custom claim administrateur signé.
-     * Interdiction d'utiliser le token email qui peut être altéré ou non vérifié.
+     * Vérifie si l'utilisateur possède le rôle administrateur en base de données Firestore.
+     * Permet aux administrateurs promus (ex: matmot avec isAdmin == true ou role == 'admin')
+     * de bénéficier des droits de modération et d'administration.
+     */
+    function isDbAdmin() {
+      return isAuthenticated() &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        (
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true ||
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'
+        );
+    }
+
+    /**
+     * Vérifie si l'utilisateur possède les privilèges administrateur :
+     * 1. Custom Claim signé (request.auth.token.admin == true)
+     * 2. Email Super Admin (mateopolo91@gmail.com)
+     * 3. Rôle administrateur vérifié en base de données Firestore (users/{uid}.isAdmin == true ou role == 'admin')
      */
     function isAdmin() {
       return isAuthenticated() && (
         request.auth.token.admin == true ||
-        request.auth.token.email == 'mateopolo91@gmail.com'
+        request.auth.token.email == 'mateopolo91@gmail.com' ||
+        isDbAdmin()
       );
     }
 
@@ -150,8 +167,16 @@ service cloud.firestore {
       // Création : membre authentifié non banni
       allow create: if isAuthenticated() && isNotBanned();
 
-      // Modification / Suppression : auteur du message ou administrateur
-      allow update, delete: if isAdmin() || (request.auth != null && request.auth.token.email == 'mateopolo91@gmail.com') || (isAuthenticated() && resource.data.authorUid == request.auth.uid);
+      // Modification / Suppression : administrateur (token, email ou statut en base de données) ou auteur du message
+      allow update, delete: if isAdmin()
+        || (request.auth != null && request.auth.token.admin == true)
+        || (request.auth != null && request.auth.token.email == 'mateopolo91@gmail.com')
+        || isDbAdmin()
+        || (isAuthenticated() && (
+          resource.data.authorUid == request.auth.uid ||
+          resource.data.authorId == request.auth.uid ||
+          resource.data.userId == request.auth.uid
+        ));
     }
 
     // ========================================================================
@@ -160,7 +185,16 @@ service cloud.firestore {
     match /community_messages/{msgId} {
       allow read: if true;
       allow create: if isAuthenticated() && isNotBanned();
-      allow update, delete: if isAdmin() || (request.auth != null && request.auth.token.email == 'mateopolo91@gmail.com') || (isAuthenticated() && resource.data.authorUid == request.auth.uid);
+      // Modification / Suppression : administrateur (token, email ou statut en base de données) ou auteur du message
+      allow update, delete: if isAdmin()
+        || (request.auth != null && request.auth.token.admin == true)
+        || (request.auth != null && request.auth.token.email == 'mateopolo91@gmail.com')
+        || isDbAdmin()
+        || (isAuthenticated() && (
+          resource.data.authorUid == request.auth.uid ||
+          resource.data.authorId == request.auth.uid ||
+          resource.data.userId == request.auth.uid
+        ));
     }
 
     // ========================================================================

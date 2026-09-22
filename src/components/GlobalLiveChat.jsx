@@ -38,7 +38,7 @@ export default function GlobalLiveChat({
   const myAvatar = currentUser?.photoURL || currentUser?.avatar || '';
   const myBadge = currentUser?.kycVerified ? 'VÉRIFIÉ' : 'MEMBRE';
   const isSuperAdmin = currentUser?.email === 'mateopolo91@gmail.com' || auth?.currentUser?.email === 'mateopolo91@gmail.com';
-  const isAdmin = isSuperAdmin || currentUser?.role === 'admin';
+  const isAdmin = isSuperAdmin || currentUser?.role === 'admin' || currentUser?.isAdmin === true;
 
   // Fluctuation naturelle du nombre de membres en ligne
   useEffect(() => {
@@ -89,6 +89,10 @@ export default function GlobalLiveChat({
             snapshot.forEach((docSnap) => {
               const data = docSnap.data();
               if (data) {
+                // Filtre les messages supprimés (soft delete isDeleted = true ou deleted = true)
+                if (data.isDeleted === true || data.deleted === true) {
+                  return;
+                }
                 fetched.push({
                   id: docSnap.id,
                   temporaryId: data.temporaryId || null,
@@ -245,7 +249,7 @@ export default function GlobalLiveChat({
     const targetId = confirmDeleteMsgId;
     setConfirmDeleteMsgId(null);
 
-    const isAuthorized = isAdmin || isSuperAdmin || auth?.currentUser?.email === 'mateopolo91@gmail.com';
+    const isAuthorized = isAdmin || isSuperAdmin || auth?.currentUser?.email === 'mateopolo91@gmail.com' || currentUser?.isAdmin === true || currentUser?.role === 'admin';
     if (!isAuthorized) {
       logger.warn('[GlobalChat] Suppression non autorisée');
       return;
@@ -254,9 +258,20 @@ export default function GlobalLiveChat({
     try {
       setMessages(prev => prev.filter(m => m.id !== targetId));
       if (db && targetId && typeof targetId === 'string' && !targetId.startsWith('m-init-') && !targetId.startsWith('local-')) {
-        await deleteDoc(doc(db, 'global_chat', targetId)).catch(() => null);
-        await deleteDoc(doc(db, 'community_messages', targetId)).catch(() => null);
-        logger.info('[GlobalChat] Message supprimé avec succès par l\'admin (mateopolo91@gmail.com):', targetId);
+        const deletePayload = {
+          isDeleted: true,
+          deleted: true,
+          deletedAt: serverTimestamp(),
+          deletedBy: currentUser?.uid || auth?.currentUser?.uid || currentUser?.email || 'admin',
+        };
+        // Hard delete ET soft delete pour garantir qu'aucune réapparition n'a lieu
+        await Promise.allSettled([
+          deleteDoc(doc(db, 'global_chat', targetId)),
+          deleteDoc(doc(db, 'community_messages', targetId)),
+          updateDoc(doc(db, 'global_chat', targetId), deletePayload).catch(() => null),
+          updateDoc(doc(db, 'community_messages', targetId), deletePayload).catch(() => null),
+        ]);
+        logger.info('[GlobalChat] Message supprimé avec succès par l\'admin (hard delete + soft delete):', targetId);
       }
     } catch (err) {
       logger.warn('[GlobalChat] Erreur suppression message admin:', err);

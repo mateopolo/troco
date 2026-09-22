@@ -541,3 +541,40 @@ L'application dispose d'un composant unifié pour toutes les boîtes de dialogue
 
 6. **`ChatView.jsx` — Rendu des messages reçus :**
    - Ajout d'un avatar circulaire (28 × 28 px) à gauche de chaque bulle de message reçu (`!isMe`), utilisant `msg.senderAvatar || activePartnerAvatar` en priorité, ou une initiale colorée en fallback.
+
+### Patch Suppression Administrateur Community & Firestore Rules (commit `fix(admin/community-delete)`)
+
+#### 3.11 Rendre Effectives les Suppressions Administrateur dans Community
+
+**Problématique :**
+Connecté avec le compte administrateur `matmot`, la suppression d'un message dans la section « Communauté » (`GlobalLiveChat` / `AdminCommunityTab`) semblait fonctionner côté client (le message disparaissait de la vue), mais réapparaissait systématiquement après un rafraîchissement (F5).
+
+**Causes Racines Identifiées :**
+1. **Règles Firestore trop restrictives :** Les règles de sécurité (`firestore.rules`) pour `community_messages` et `global_chat` s'appuyaient sur la fonction `isAdmin()` qui ne vérifiait que le Custom Claim Auth cryptographique (`request.auth.token.admin == true`) ou l'email hardcodé `mateopolo91@gmail.com`. Les utilisateurs ayant le rôle administrateur défini dans leur document Firestore (`users/{uid}.isAdmin == true` ou `users/{uid}.role == 'admin'`), tel que `matmot`, se voyaient rejeter l'opération `deleteDoc` avec une erreur `permission-denied`.
+2. **Masquage d'erreur silencieux :** Dans `GlobalLiveChat.jsx`, l'appel `deleteDoc(...).catch(() => null)` masquait l'échec de suppression. L'état local React (`messages`) retirait le message de manière optimiste, mais le document demeurait intact dans Firestore.
+3. **Absence de filtrage `isDeleted` dans les requêtes de lecture :** Ni les listeners `onSnapshot` de `GlobalLiveChat` ni ceux d'`AdminDashboard` ne filtraient les documents marqués comme supprimés (`isDeleted == true` ou `deleted == true`).
+
+**Corrections Apportées :**
+
+1. **`firestore.rules` :**
+   - Ajout de la fonction helper `isDbAdmin()` vérifiant `exists(/databases/$(database)/documents/users/$(request.auth.uid))` et inspectant `.data.isAdmin == true || .data.role == 'admin'`.
+   - Intégration de `isDbAdmin()` dans la fonction principale `isAdmin()`.
+   - Mise à jour explicite des règles `allow update, delete` pour `match /community_messages/{msgId}` et `match /global_chat/{msgId}` afin d'autoriser tout administrateur (Custom Claim, email super admin ou statut en base Firestore `isDbAdmin()`).
+
+2. **`GlobalLiveChat.jsx` :**
+   - Alignement de la détection `isAdmin` avec `currentUser?.role === 'admin' || currentUser?.isAdmin === true`.
+   - `handleConfirmDeleteMessage` : vérification étendue des permissions administrateur et exécution combinée d'une suppression réelle (`deleteDoc`) et d'un marquage de soft-delete (`updateDoc` avec `{ isDeleted: true, deleted: true, deletedAt, deletedBy }`).
+   - `setupListener` : filtrage strict des documents ayant `data.isDeleted === true || data.deleted === true` dès la réception du snapshot Firestore.
+
+3. **`AdminDashboard.jsx` :**
+   - Traitement des suppressions dans les listeners `onSnapshot` de `community_messages` et `global_chat` via `snap.docChanges()` (`change.type === 'removed' => messagesMap.delete(...)`).
+   - Retrait immédiat de `messagesMap` des documents comportant `isDeleted: true` ou `deleted: true`.
+
+4. **`AdminCommunityTab.jsx` :**
+   - Filtrage réactif `isDeleted` dans `filteredMessages`.
+   - Double suppression (hard + soft delete) dans `handleDeleteMessage` et `handleBanAuthor`.
+
+5. **`tests/rules/firestore.rules.test.js` :**
+   - Extension de `RuleSimulator` pour prendre en compte `isDbAdmin()` et les collections `community_messages` / `global_chat`.
+   - Ajout d'une suite de 4 tests unitaires dédiés validant la suppression admin par `matmot` (administrateur en base sans claim signé), le soft-delete, le rejet des utilisateurs tiers non-admin et l'autorisation de l'auteur. 48/48 tests validés avec succès.
+

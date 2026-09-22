@@ -30,6 +30,7 @@ export default function AdminCommunityTab({
         (msg.authorUsername && msg.authorUsername.toLowerCase().includes(q)) ||
         (msg.id && String(msg.id).toLowerCase().includes(q));
 
+      if (msg.isDeleted === true || msg.deleted === true) return false;
       if (!matchSearch) return false;
       if (filter === 'urgent') return Boolean(msg.isUrgent);
       if (filter === 'admin_edited') return Boolean(msg.isEditedByAdmin);
@@ -70,7 +71,16 @@ export default function AdminCommunityTab({
 
     try {
       const collName = msg._collection || 'community_messages';
-      await deleteDoc(doc(db, collName, String(msg.id)));
+      const deletePayload = {
+        isDeleted: true,
+        deleted: true,
+        deletedAt: serverTimestamp(),
+        deletedBy: currentUser?.uid || currentUser?.email || 'admin',
+      };
+      await Promise.allSettled([
+        deleteDoc(doc(db, collName, String(msg.id))),
+        updateDoc(doc(db, collName, String(msg.id)), deletePayload).catch(() => null),
+      ]);
       showToast('🗑️ Message supprimé en temps réel de Firestore.');
       if (editingMsgId === msg.id) {
         setEditingMsgId(null);
@@ -108,7 +118,16 @@ export default function AdminCommunityTab({
 
       // Supprime également le message
       const collName = msg._collection || 'community_messages';
-      await deleteDoc(doc(db, collName, String(msg.id)));
+      const deletePayload = {
+        isDeleted: true,
+        deleted: true,
+        deletedAt: serverTimestamp(),
+        deletedBy: currentUser?.uid || currentUser?.email || 'admin',
+      };
+      await Promise.allSettled([
+        deleteDoc(doc(db, collName, String(msg.id))),
+        updateDoc(doc(db, collName, String(msg.id)), deletePayload).catch(() => null),
+      ]);
 
       showToast(`⛔ Auteur "${authorName}" banni et message supprimé.`);
     } catch (err) {

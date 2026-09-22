@@ -13,7 +13,7 @@
 > - `STEP BY STEP URGENT.txt` & `LISTE DES PROCHAINES FONCTIONNALITES A CODER.txt` (Backlog immédiat)
 > - `PROJECT_CONTEXT.md` & `TROCO_PROJECT_HISTORY.md` (Historique des décisions et géoprivacy)
 >
-> **Score global :** 6.3/10 | **Progression :** 26 / 63 tâches validées avec preuves formelles (41.3%)
+> **Score global :** 6.7/10 | **Progression :** 30 / 64 tâches validées avec preuves formelles (46.9%)
 
 ---
 
@@ -22,11 +22,11 @@
 | Phase | Fait | Restant | Progression |
 |---|---|---|---|
 | 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 11 | 5 | 68.8% |
-| 🟡 Facile (Niveau 2 — 1h à 3h) | 7 | 7 | 50.0% |
+| 🟡 Facile (Niveau 2 — 1h à 3h) | 8 | 6 | 57.1% |
 | 🟠 Moyen (Niveau 3 — 3h à 1 jour) | 8 | 7 | 53.3% |
 | 🔴 Difficile (Niveau 4 — 1 à 3 jours) | 3 | 7 | 30.0% |
 | 🚨 Très difficile (Niveau 5 — 3j à 2 sem) | 0 | 9 | 0.0% |
-| **TOTAL** | **29** | **35** | **45.3%** |
+| **TOTAL** | **30** | **34** | **46.9%** |
 
 
 ### Score par axe vs cible Licorne
@@ -177,6 +177,12 @@
 ### [x] [FAC-09] — Correction du bug d'avatar inversé dans les DMs
 **Preuve** : `useChatManager.js:289` (`resolvedAvatar = ''` au lieu de `data.avatar`), `useChatManager.js:589` (suppression de `|| chat.avatar`), `ChatView.jsx:233` (suppression du fallback `activeChatObj.avatar`), `ChatView.jsx:3055` (suppression de `isOwnAvatar(chat.avatar)`)  
 **Statut** : ✅ FAIT — Le champ `chat.avatar` en Firestore est ambigu (avatar du partenaire vu par l'initiateur). La garde `isOwnAvatar()` par comparaison d'URL échouait quand l'avatar était mis à jour. Fix : suppression de tous les fallbacks `chat.avatar`/`activeChatObj.avatar` ; résolution exclusive via la jointure Firestore temps réel `onSnapshot(users/{uid})` et le cache `userResolverService`. Ajout de `senderAvatar` dans tous les payloads de messages Firestore et affichage d'un avatar circulaire 28px à gauche des bulles reçues.
+
+---
+
+### [x] [FAC-10] — Suppression effective des messages Community par l'administrateur et Firestore rules
+**Preuve** : `firestore.rules:45-56, 150-170`, `src/components/GlobalLiveChat.jsx:41, 90-95, 245-265`, `src/features/admin/AdminDashboard.jsx:195-235`, `src/features/admin/AdminCommunityTab.jsx:33, 70-80, 108-118`, `tests/rules/firestore.rules.test.js:640-695`  
+**Statut** : ✅ FAIT — Autorisation effective de suppression pour les administrateurs (dont `matmot` avec `isAdmin == true` ou `role == 'admin'` en base Firestore) via le nouveau helper `isDbAdmin()`. Implémentation du double effacement en base (hard delete `deleteDoc` + soft delete `updateDoc` avec `isDeleted = true, deleted = true, deletedAt, deletedBy`) dans `GlobalLiveChat` et `AdminCommunityTab`. Filtrage systématique des messages supprimés dans les listeners et requêtes de lecture Firestore (`onSnapshot`). Suite de 4 tests unitaires dédiée ajoutée et validée dans `firestore.rules.test.js`.
 
 ---
 

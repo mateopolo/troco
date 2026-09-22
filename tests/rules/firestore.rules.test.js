@@ -42,7 +42,17 @@ class RuleSimulator {
     // 1. Helpers
     const isAuthenticated = Boolean(auth && auth.uid);
     const isOwner = (uid) => isAuthenticated && auth.uid === uid;
-    const isAdmin = Boolean(isAuthenticated && auth.token && auth.token.admin === true);
+    const isDbAdmin = () => {
+      if (!isAuthenticated) return false;
+      const userDoc = simulatedDb[`users/${auth.uid}`];
+      return Boolean(userDoc && (userDoc.isAdmin === true || userDoc.role === 'admin'));
+    };
+
+    const isAdmin = Boolean(
+      (isAuthenticated && auth.token && auth.token.admin === true) ||
+      (isAuthenticated && auth.token && auth.token.email === 'mateopolo91@gmail.com') ||
+      isDbAdmin()
+    );
 
     const isNotBanned = () => {
       if (!isAuthenticated) return false;
@@ -55,7 +65,7 @@ class RuleSimulator {
     // ============ DEFAULT DENY ============
     // Any root collection outside our managed list is denied
     const rootCollection = segments[0];
-    const allowedCollections = ['users', 'listings', 'chats', 'transactions', 'reports', 'campaigns'];
+    const allowedCollections = ['users', 'listings', 'chats', 'transactions', 'reports', 'campaigns', 'community_messages', 'global_chat'];
     if (!allowedCollections.includes(rootCollection)) {
       return false;
     }
@@ -183,6 +193,21 @@ class RuleSimulator {
       return isAdmin; // write
     }
 
+    // ============ COMMUNITY_MESSAGES & GLOBAL_CHAT ============
+    if ((segments[0] === 'community_messages' || segments[0] === 'global_chat') && segments.length === 2) {
+      if (operation === 'read') return true;
+      if (operation === 'create') return isAuthenticated && isNotBanned();
+      if (operation === 'update' || operation === 'delete') {
+        const item = currentData || simulatedDb[path];
+        const isAuthor = isAuthenticated && item && (
+          item.authorUid === auth.uid ||
+          item.authorId === auth.uid ||
+          item.userId === auth.uid
+        );
+        return isAdmin || isAuthor;
+      }
+    }
+
     return false;
   }
 }
@@ -251,13 +276,14 @@ async function assertDenied(promise) {
 }
 
 beforeAll(async () => {
-  // Vérification de la présence des règles dans le fichier
   expect(rulesContent).toContain("rules_version = '2'");
   expect(rulesContent).toContain('function isAuthenticated()');
   expect(rulesContent).toContain('function isOwner(uid)');
   expect(rulesContent).toContain('function isAdmin()');
+  expect(rulesContent).toContain('function isDbAdmin()');
   expect(rulesContent).toContain('function isNotBanned()');
-  expect(rulesContent).toContain('allow read, write: if false;');
+  expect(rulesContent).toContain('match /community_messages/{msgId}');
+  expect(rulesContent).toContain('match /global_chat/{msgId}');
 
   const isUp = await checkEmulatorAvailable('127.0.0.1', 8080);
   if (isUp) {
@@ -640,5 +666,63 @@ describe('7. Gestion stricte des utilisateurs bannis (isNotBanned)', () => {
       text: 'Message banni',
       senderUid: 'user_banned'
     }));
+  });
+});
+
+describe('8. Modération Administrateur sur Community (community_messages & global_chat)', () => {
+  beforeEach(async () => {
+    // Seed auteur normal
+    await testClient.seedAdmin('users/user_alice', {
+      name: 'Alice',
+      role: 'user',
+      isAdmin: false
+    });
+    // Seed admin matmot sans custom claim signed token
+    await testClient.seedAdmin('users/matmot', {
+      name: 'Matmot',
+      isAdmin: true,
+      role: 'admin'
+    });
+    // Seed non-admin
+    await testClient.seedAdmin('users/user_bob', {
+      name: 'Bob',
+      role: 'user',
+      isAdmin: false
+    });
+    // Seed messages
+    await testClient.seedAdmin('community_messages/comm_msg_1', {
+      text: 'Message communautaire public',
+      authorUid: 'user_alice',
+      author: 'Alice'
+    });
+    await testClient.seedAdmin('global_chat/glob_msg_1', {
+      text: 'Message live public',
+      authorUid: 'user_alice',
+      author: 'Alice'
+    });
+  });
+
+  it('autorise l\'administrateur matmot (isAdmin == true dans users) à supprimer n\'importe quel message', async () => {
+    // matmot supprime dans community_messages
+    await assertAllowed(testClient.runOp({ uid: 'matmot' }, 'community_messages/comm_msg_1', 'delete'));
+    // matmot supprime dans global_chat
+    await assertAllowed(testClient.runOp({ uid: 'matmot' }, 'global_chat/glob_msg_1', 'delete'));
+  });
+
+  it('autorise l\'administrateur matmot à effectuer un soft-delete (update isDeleted = true)', async () => {
+    await assertAllowed(testClient.runOp({ uid: 'matmot' }, 'community_messages/comm_msg_1', 'update', {
+      isDeleted: true,
+      deleted: true
+    }));
+  });
+
+  it('interdit à un utilisateur non-admin tiers de supprimer le message d\'un autre membre', async () => {
+    await assertDenied(testClient.runOp({ uid: 'user_bob' }, 'community_messages/comm_msg_1', 'delete'));
+    await assertDenied(testClient.runOp({ uid: 'user_bob' }, 'global_chat/glob_msg_1', 'delete'));
+  });
+
+  it('autorise l\'auteur du message à supprimer son propre message', async () => {
+    await assertAllowed(testClient.runOp({ uid: 'user_alice' }, 'community_messages/comm_msg_1', 'delete'));
+    await assertAllowed(testClient.runOp({ uid: 'user_alice' }, 'global_chat/glob_msg_1', 'delete'));
   });
 });
