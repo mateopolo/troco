@@ -15,6 +15,7 @@ import {
   increment,
   runTransaction
 } from 'firebase/firestore';
+import { onAuthStateChanged } from 'firebase/auth';
 import { useSafeTimeout } from './useSafeTimeout';
 import { Clock, Sparkles, ShieldCheck, CheckCircle, Check, RefreshCw, X } from 'lucide-react';
 import { validateChatMessage } from '../utils/moderationBlacklist';
@@ -245,203 +246,226 @@ export const useChatManager = ({
 
   // Synchronisation temps réel des discussions depuis Firestore (EXCLUSIVEMENT par UID Firebase Auth)
   useEffect(() => {
-    if (!db) return;
+    if (!db || !auth) return;
 
-    // Source de vérité unique et inviolable : UID Firebase Auth authentifié (chaîne alphanumérique stricte)
-    const firebaseUser = auth?.currentUser;
-    const rawUid = firebaseUser?.uid || profile?.uid || null;
-    const isGenuineUid = rawUid && typeof rawUid === 'string' && !rawUid.includes('@') && !rawUid.includes(' ');
-    const currentUid = firebaseUser?.uid || (isGenuineUid ? rawUid : null);
-    const myName = (profile?.name || '').trim();
-
-    // Si profile.uid dans le store/cache est corrompu (ex: email ou nom), on le purge immédiatement
-    if (firebaseUser?.uid && profile?.uid !== firebaseUser.uid) {
-      if (typeof setProfile === 'function') {
-        setProfile(prev => ({ ...prev, uid: firebaseUser.uid }));
-      }
-    }
-
-    // Attendre que l'utilisateur soit authentifié avec un UID Firebase valide
-    if (!currentUid) {
-      return;
-    }
-
-    // Mettre en cache immédiatement le profil de l'utilisateur authentifié
-    if (currentUid && profile) {
-      setCachedUserProfile(currentUid, profile);
-    }
-
-    const unsubs = [];
-    const allDocsMap = new Map();
+    let unsubs = [];
     let isInitialLoad = true;
+    let activeListeningUid = null;
+    const allDocsMap = new Map();
 
-    // Helper pour fusionner et mettre à jour la liste des chats avec tri client résilient
-    const updateMergedChats = () => {
-      const firestoreChats = Array.from(allDocsMap.entries())
-        .filter(([docId, data]) => {
-          if (!data) return false;
-          if (Array.isArray(data.deletedBy)) {
-            if (currentUid && data.deletedBy.includes(currentUid)) return false;
-          }
-          return true;
-        })
-        .map(([docId, data]) => {
-          // Extraction du véritable UID du correspondant (exclut rigoureusement currentUid)
-          const peerUid = getChatPartnerUid(data, currentUid);
+    const startListeningForUser = (targetUid) => {
+      if (!targetUid || targetUid === activeListeningUid) return;
+      activeListeningUid = targetUid;
 
-          // Résolution de l'identité du correspondant (nom & photo)
-          let resolvedName = getChatPartnerName(data, currentUid, myName);
-          let resolvedAvatar = data.avatar || '';
-          let peerProfile = null;
+      // Nettoyer les anciens écouteurs
+      unsubs.forEach(u => { try { if (typeof u === 'function') u(); } catch (_) { } });
+      unsubs = [];
+      allDocsMap.clear();
 
-          if (peerUid) {
-            const cached = getCachedUserProfile(peerUid);
-            if (cached && cached.name && !isGenericName(cached.name)) {
-              resolvedName = cached.name;
-              if (cached.avatar) resolvedAvatar = cached.avatar;
-              peerProfile = cached;
-            } else {
-              // Lancement asynchrone non-bloquant de la résolution Firestore
-              if (db) {
-                resolveUserProfile(peerUid, db);
+      const currentUid = String(targetUid).trim();
+      const myName = (profile?.name || '').trim();
+
+      // Mettre en cache immédiatement le profil de l'utilisateur authentifié
+      if (currentUid && profile) {
+        setCachedUserProfile(currentUid, profile);
+      }
+
+      // Helper pour fusionner et mettre à jour la liste des chats avec tri client résilient
+      const updateMergedChats = () => {
+        const firestoreChats = Array.from(allDocsMap.entries())
+          .filter(([docId, data]) => {
+            if (!data) return false;
+            if (Array.isArray(data.deletedBy)) {
+              if (currentUid && data.deletedBy.includes(currentUid)) return false;
+            }
+            return true;
+          })
+          .map(([docId, data]) => {
+            // Extraction du véritable UID du correspondant (exclut rigoureusement currentUid)
+            const peerUid = getChatPartnerUid(data, currentUid);
+
+            // Résolution de l'identité du correspondant (nom & photo)
+            let resolvedName = getChatPartnerName(data, currentUid, myName);
+            let resolvedAvatar = data.avatar || '';
+            let peerProfile = null;
+
+            if (peerUid) {
+              const cached = getCachedUserProfile(peerUid);
+              if (cached && cached.name && !isGenericName(cached.name)) {
+                resolvedName = cached.name;
+                if (cached.avatar) resolvedAvatar = cached.avatar;
+                peerProfile = cached;
+              } else {
+                // Lancement asynchrone non-bloquant de la résolution Firestore (users_public / users)
+                if (db) {
+                  resolveUserProfile(peerUid, db);
+                }
               }
             }
-          }
 
-          const fChatId = data.id || docId;
+            const fChatId = data.id || docId;
 
-          return {
-            id: fChatId,
-            firestoreId: docId,
-            ...data,
-            partnerUid: peerUid,
-            peerUid: peerUid,
-            user: resolvedName || 'Interlocuteur',
-            avatar: resolvedAvatar,
-            peerProfile: peerProfile,
-          };
+            return {
+              id: fChatId,
+              firestoreId: docId,
+              ...data,
+              partnerUid: peerUid,
+              peerUid: peerUid,
+              user: resolvedName || 'Interlocuteur',
+              avatar: resolvedAvatar,
+              peerProfile: peerProfile,
+            };
+          });
+
+        // Tri direct en mémoire par date de dernière activité (évite tout bug d'index manquant Firestore)
+        const merged = [...firestoreChats];
+        merged.sort((a, b) => {
+          const timeA = a.updatedAt?.toMillis ? a.updatedAt.toMillis() : (a.updatedAt ? new Date(a.updatedAt).getTime() : (a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt ? new Date(a.createdAt).getTime() : (a.timestamp || 0))));
+          const timeB = b.updatedAt?.toMillis ? b.updatedAt.toMillis() : (b.updatedAt ? new Date(b.updatedAt).getTime() : (b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt ? new Date(b.createdAt).getTime() : (b.timestamp || 0))));
+          return timeB - timeA;
         });
 
-      // Tri direct en mémoire par date de dernière activité (évite tout bug d'index manquant Firestore)
-      const merged = [...firestoreChats];
-      merged.sort((a, b) => {
-        const timeA = a.updatedAt?.toMillis ? a.updatedAt.toMillis() : (a.updatedAt ? new Date(a.updatedAt).getTime() : (a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt ? new Date(a.createdAt).getTime() : (a.timestamp || 0))));
-        const timeB = b.updatedAt?.toMillis ? b.updatedAt.toMillis() : (b.updatedAt ? new Date(b.updatedAt).getTime() : (b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt ? new Date(b.createdAt).getTime() : (b.timestamp || 0))));
-        return timeB - timeA;
-      });
+        setChatsList(merged);
+        try {
+          localStorage.setItem('troco_cached_chats', JSON.stringify(merged));
+          useChatStore.getState().setChatsList(merged);
+        } catch (_) { }
+      };
 
-      setChatsList(merged);
-      try {
-        localStorage.setItem('troco_cached_chats', JSON.stringify(merged));
-        useChatStore.getState().setChatsList(merged);
-      } catch (_) { }
-    };
+      const handleSnapshot = (snapshot) => {
+        snapshot.docChanges().forEach(change => {
+          const d = change.doc.data();
+          if (!d) return;
+          const fChatId = d.id || change.doc.id;
+          const lastSender = (d.lastSenderName || d.lastSender || '').trim().toLowerCase();
+          const isMe = (myName && lastSender === myName.toLowerCase()) ||
+            (d.lastSenderUid && currentUid && String(d.lastSenderUid) === String(currentUid));
+          const isFromThem = !isMe && (lastSender.length > 0 || (d.unreadCount && d.unreadCount > 0));
 
-    const handleSnapshot = (snapshot) => {
-      snapshot.docChanges().forEach(change => {
-        const d = change.doc.data();
-        if (!d) return;
-        const fChatId = d.id || change.doc.id;
-        const lastSender = (d.lastSenderName || d.lastSender || '').trim().toLowerCase();
-        const isMe = (myName && lastSender === myName.toLowerCase()) ||
-          (d.lastSenderUid && currentUid && String(d.lastSenderUid) === String(currentUid));
-        const isFromThem = !isMe && (lastSender.length > 0 || (d.unreadCount && d.unreadCount > 0));
+          // Détection en temps réel d'un nouveau message entrant non lu
+          if (isFromThem && (change.type === 'modified' || (change.type === 'added' && !isInitialLoad))) {
+            const currentSelectedChat = selectedChatRef.current;
+            const currentActiveTab = activeTabRef.current;
+            const isCurrentlyActive = currentSelectedChat && String(currentSelectedChat.id) === String(fChatId) && currentActiveTab === 'chat';
+            if (!isCurrentlyActive) {
+              setReadChats(prev => {
+                const next = new Set(prev);
+                next.delete(fChatId);
+                next.delete(String(fChatId));
+                next.delete(Number(fChatId));
+                return next;
+              });
+              playNotificationSound();
+              if (typeof navigator !== 'undefined' && navigator.vibrate) {
+                try { navigator.vibrate([120, 60, 120]); } catch (_) { }
+              }
 
-        // Détection en temps réel d'un nouveau message entrant non lu
-        if (isFromThem && (change.type === 'modified' || (change.type === 'added' && !isInitialLoad))) {
-          const currentSelectedChat = selectedChatRef.current;
-          const currentActiveTab = activeTabRef.current;
-          const isCurrentlyActive = currentSelectedChat && String(currentSelectedChat.id) === String(fChatId) && currentActiveTab === 'chat';
-          if (!isCurrentlyActive) {
-            setReadChats(prev => {
-              const next = new Set(prev);
-              next.delete(fChatId);
-              next.delete(String(fChatId));
-              next.delete(Number(fChatId));
-              return next;
-            });
-            playNotificationSound();
-            if (typeof navigator !== 'undefined' && navigator.vibrate) {
-              try { navigator.vibrate([120, 60, 120]); } catch (_) { }
+              const senderTitle = d.lastSenderName || d.lastSender || d.user || 'Nouveau message';
+              const messageText = d.lastMessage || 'Nouveau message reçu';
+              const senderAvatar = d.avatar || d.authorAvatar || null;
+              const rawTime = d.lastMessageTimestamp?.toMillis?.() ||
+                d.lastMessageTimestamp?.seconds ||
+                d.lastMessageTime?.seconds ||
+                d.lastMessageTime ||
+                d.updatedAt?.seconds ||
+                d.updatedAt ||
+                '';
+              const messageId = d.lastMessageId || d.lastMsgId || `${fChatId}_${d.lastSenderUid || lastSender}_${rawTime}_${d.lastMessage || ''}`;
+
+              notificationService.show({
+                id: messageId,
+                title: senderTitle,
+                message: messageText,
+                avatar: senderAvatar,
+                icon: 'chat',
+                duration: 3000,
+                onClick: () => {
+                  setSelectedChat(d);
+                  if (typeof setActiveTab === 'function') {
+                    setActiveTab('chat');
+                  }
+                },
+                data: { chatId: fChatId, messageId }
+              });
             }
-
-            const senderTitle = d.lastSenderName || d.lastSender || d.user || 'Nouveau message';
-            const messageText = d.lastMessage || 'Nouveau message reçu';
-            const senderAvatar = d.avatar || d.authorAvatar || null;
-            const rawTime = d.lastMessageTimestamp?.toMillis?.() ||
-              d.lastMessageTimestamp?.seconds ||
-              d.lastMessageTime?.seconds ||
-              d.lastMessageTime ||
-              d.updatedAt?.seconds ||
-              d.updatedAt ||
-              '';
-            const messageId = d.lastMessageId || d.lastMsgId || `${fChatId}_${d.lastSenderUid || lastSender}_${rawTime}_${d.lastMessage || ''}`;
-
-            notificationService.show({
-              id: messageId,
-              title: senderTitle,
-              message: messageText,
-              avatar: senderAvatar,
-              icon: 'chat',
-              duration: 3000,
-              onClick: () => {
-                setSelectedChat(d);
-                if (typeof setActiveTab === 'function') {
-                  setActiveTab('chat');
-                }
-              },
-              data: { chatId: fChatId, messageId }
-            });
           }
-        }
-      });
+        });
 
-      snapshot.docs.forEach(docSnap => {
-        allDocsMap.set(docSnap.id, docSnap.data());
-      });
-
-      updateMergedChats();
-      isInitialLoad = false;
-    };
-
-    // 1. Écoute principale sécurisée : array-contains strict sur l'UID Firebase Auth (SANS orderBy pour contourner tout blocage d'index)
-    try {
-      const qChats = query(
-        collection(db, 'chats'),
-        where('participants', 'array-contains', currentUid)
-      );
-
-      const unsubChats = onSnapshot(qChats, handleSnapshot, (err) => {
-        logger.warn('[Firestore] chats query error:', err?.message || err);
-        updateMergedChats();
-      });
-      unsubs.push(unsubChats);
-    } catch (err) {
-      logger.error('[Firestore] chats query setup error:', err);
-    }
-
-    // 2. Écoute complémentaire pour rétrocompatibilité avec les documents stockant l'UID dans participantUids
-    try {
-      const qUids = query(
-        collection(db, 'chats'),
-        where('participantUids', 'array-contains', currentUid)
-      );
-      const unsubUids = onSnapshot(qUids, (snapshot) => {
         snapshot.docs.forEach(docSnap => {
           allDocsMap.set(docSnap.id, docSnap.data());
         });
+
         updateMergedChats();
-      }, (err) => {
-        logger.warn('[Firestore] chats onSnapshot warning for participantUids:', err?.message || err);
+        isInitialLoad = false;
+      };
+
+      // 1. Écoute principale sécurisée : array-contains strict sur l'UID Firebase Auth (SANS orderBy pour contourner tout blocage d'index)
+      try {
+        const qChats = query(
+          collection(db, 'chats'),
+          where('participants', 'array-contains', currentUid)
+        );
+
+        const unsubChats = onSnapshot(qChats, handleSnapshot, (err) => {
+          logger.warn('[Firestore] chats query error:', err?.message || err);
+          updateMergedChats();
+        });
+        unsubs.push(unsubChats);
+      } catch (err) {
+        logger.error('[Firestore] chats query setup error:', err);
+      }
+
+      // 2. Écoute complémentaire pour rétrocompatibilité avec les documents stockant l'UID dans participantUids
+      try {
+        const qUids = query(
+          collection(db, 'chats'),
+          where('participantUids', 'array-contains', currentUid)
+        );
+        const unsubUids = onSnapshot(qUids, (snapshot) => {
+          snapshot.docs.forEach(docSnap => {
+            allDocsMap.set(docSnap.id, docSnap.data());
+          });
+          updateMergedChats();
+        }, (err) => {
+          logger.warn('[Firestore] chats onSnapshot warning for participantUids:', err?.message || err);
+        });
+        unsubs.push(unsubUids);
+      } catch (_) { }
+    };
+
+    // 1. Démarrer immédiatement si l'UID est déjà disponible
+    const rawUid = auth?.currentUser?.uid || profile?.uid || null;
+    const isGenuineUid = rawUid && typeof rawUid === 'string' && !rawUid.includes('@') && !rawUid.includes(' ');
+    if (isGenuineUid) {
+      startListeningForUser(rawUid);
+    }
+
+    // 2. Écouter les changements d'état Firebase Auth
+    let unsubAuth = null;
+    if (auth && typeof onAuthStateChanged === 'function') {
+      unsubAuth = onAuthStateChanged(auth, (firebaseUser) => {
+        if (firebaseUser?.uid) {
+          if (typeof setProfile === 'function' && profile?.uid !== firebaseUser.uid) {
+            setProfile(prev => ({ ...prev, uid: firebaseUser.uid }));
+          }
+          startListeningForUser(firebaseUser.uid);
+        } else if (!profile?.uid) {
+          activeListeningUid = null;
+          unsubs.forEach(u => { try { if (typeof u === 'function') u(); } catch (_) { } });
+          unsubs = [];
+          allDocsMap.clear();
+          setChatsList([]);
+        }
       });
-      unsubs.push(unsubUids);
-    } catch (_) { }
+    }
 
     return () => {
+      if (typeof unsubAuth === 'function') {
+        try { unsubAuth(); } catch (_) { }
+      }
       unsubs.forEach(u => { try { if (typeof u === 'function') u(); } catch (_) { } });
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [auth?.currentUser?.uid, profile?.uid]);
+  }, [auth, db, profile?.uid]);
 
   // Écoute de l'événement personnalisé pour forcer le rafraîchissement des conversations Firestore
   useEffect(() => {
@@ -449,7 +473,8 @@ export const useChatManager = ({
       if (!db) return;
       try {
         const firebaseUser = auth?.currentUser;
-        const myUid = firebaseUser?.uid || (profile?.uid && !profile.uid.includes('@') && !profile.uid.includes(' ') ? profile.uid : null);
+        const rawUid = firebaseUser?.uid || profile?.uid || null;
+        const myUid = rawUid && typeof rawUid === 'string' && !rawUid.includes('@') && !rawUid.includes(' ') ? rawUid : null;
         if (!myUid) return;
 
         const qList = [
@@ -461,9 +486,34 @@ export const useChatManager = ({
           try {
             const snap = await getDocs(qItem);
             if (snap && snap.docs.length > 0) {
+              const myName = (profile?.name || '').trim();
               const fetched = snap.docs
-                .map(d => ({ id: d.id, ...d.data() }))
-                .filter(d => !Array.isArray(d.deletedBy) || !d.deletedBy.includes(myUid));
+                .filter(d => !Array.isArray(d.data()?.deletedBy) || !d.data()?.deletedBy.includes(myUid))
+                .map(d => {
+                  const data = d.data() || {};
+                  const peerUid = getChatPartnerUid(data, myUid);
+                  let resolvedName = getChatPartnerName(data, myUid, myName);
+                  let resolvedAvatar = data.avatar || '';
+                  if (peerUid) {
+                    const cached = getCachedUserProfile(peerUid);
+                    if (cached && cached.name && !isGenericName(cached.name)) {
+                      resolvedName = cached.name;
+                      if (cached.avatar) resolvedAvatar = cached.avatar;
+                    } else if (db) {
+                      resolveUserProfile(peerUid, db);
+                    }
+                  }
+                  return {
+                    id: data.id || d.id,
+                    firestoreId: d.id,
+                    ...data,
+                    partnerUid: peerUid,
+                    peerUid: peerUid,
+                    user: resolvedName || 'Interlocuteur',
+                    avatar: resolvedAvatar,
+                  };
+                });
+
               setChatsList(prev => {
                 const map = new Map(prev.map(c => [c.id, c]));
                 fetched.forEach(f => map.set(f.id, f));
@@ -481,7 +531,7 @@ export const useChatManager = ({
 
     window.addEventListener('troco:refetch_chats', handleForceRefetch);
     return () => window.removeEventListener('troco:refetch_chats', handleForceRefetch);
-  }, [profile?.uid, auth?.currentUser?.uid]);
+  }, [profile?.uid, auth, db]);
 
   // Écoute des résolutions asynchrones des profils pour mettre à jour chatsList et selectedChat instantanément
   useEffect(() => {
@@ -616,7 +666,7 @@ export const useChatManager = ({
   // ---- SYNC MESSAGES EN TEMPS RÉEL (chat actif avec tri en mémoire résilient) ----
   useEffect(() => {
     if (!selectedChat?.id || !db) return;
-    const chatId = String(selectedChat.id);
+    const chatId = String(selectedChat.firestoreId || selectedChat.id);
     const myUid = profile?.uid || (auth?.currentUser && auth.currentUser.uid) || null;
 
     let primaryUnsub = null;
@@ -626,7 +676,8 @@ export const useChatManager = ({
       if (snapshot.empty) {
         setChatThreads(prev => ({
           ...prev,
-          [selectedChat.id]: []
+          [selectedChat.id]: [],
+          [chatId]: [],
         }));
         return;
       }
@@ -697,6 +748,7 @@ export const useChatManager = ({
         return {
           ...prev,
           [selectedChat.id]: unique,
+          [chatId]: unique,
         };
       });
 
