@@ -58,7 +58,7 @@ export function parseAndTranslateDynamicText(text, currentLang = 'FR', options =
       // Même langue que l'UI : afficher simplement le texte nettoyé sans la balise
       return cleanText;
     }
-    // Langue différente : déclencher l'API/mock de traduction pour le contenu
+    // Langue différente : déclencher la traduction pour le contenu
     const translated = getInstantOrQueueTranslation(cleanText, targetLang, tag);
     return translated ? cleanLanguageTag(translated) : cleanText;
   }
@@ -70,9 +70,18 @@ export function parseAndTranslateDynamicText(text, currentLang = 'FR', options =
       const translated = getInstantOrQueueTranslation(cleanText, targetLang, src);
       return translated ? cleanLanguageTag(translated) : cleanText;
     }
+    return cleanText;
   }
 
-  // 3. Sinon, renvoyer le texte nettoyé
+  // 3. Si aucune balise ni sourceLang explicite :
+  // Si l'interface est dans une autre langue que le français par défaut,
+  // ou si la détection automatique est demandée, déclencher la traduction automatique.
+  if (targetLang !== 'FR' && options.autoTranslate !== false) {
+    const translated = getInstantOrQueueTranslation(cleanText, targetLang, 'auto');
+    return translated ? cleanLanguageTag(translated) : cleanText;
+  }
+
+  // 4. Sinon (UI en FR et pas de balise étrangère), renvoyer le texte nettoyé
   return cleanText;
 }
 

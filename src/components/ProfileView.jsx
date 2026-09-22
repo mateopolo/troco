@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { Star, ShieldCheck, Camera, Pencil, Check, Plus, Trash2, History, Image as ImageIcon, X, Upload, Settings, Palette, Sparkles } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Star, ShieldCheck, Camera, Pencil, Check, Plus, Trash2, History, Image as ImageIcon, X, Upload, Settings, Palette, Sparkles, Globe } from 'lucide-react';
 import KycModal from './KycModal';
 import { PWAInstallProfileCard } from './PWAInstallBanner';
 import { SocialLinksDisplay, SocialLinksEditor } from './UserProfile';
@@ -12,6 +12,8 @@ import ReviewsSection from './ReviewsSection';
 import { auth } from '../firebase';
 import { useUserRealStats } from '../services/userStatsService';
 import { useLanguage } from '../contexts/LanguageContext';
+import { parseAndTranslateDynamicText } from '../utils/dynamicTranslation';
+import { subscribeTranslations } from '../utils/translator';
 
 import { getFlagEmoji } from '../utils/flagUtils';
 
@@ -71,6 +73,13 @@ export default function ProfileView({
     return defaultVal !== undefined ? defaultVal : k;
   };
   const t = safeT;
+  const currentLang = langContext?.currentLang || 'FR';
+  const [showingOriginalBio, setShowingOriginalBio] = useState(false);
+  const [, setTransTick] = useState(0);
+
+  useEffect(() => {
+    return subscribeTranslations(() => setTransTick(t => t + 1));
+  }, []);
 
   const [isKycModalOpen, setIsKycModalOpen] = useState(false);
   const [isDesignStudioOpen, setIsDesignStudioOpen] = useState(false);
@@ -240,9 +249,34 @@ export default function ProfileView({
                   )}
                 </div>
 
-                <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '14px' }}>
-                  {profile?.bio || ''}
+                <div style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: (currentLang !== 'FR' && profile?.bio) ? '6px' : '14px' }}>
+                  {profile?.bio
+                    ? parseAndTranslateDynamicText(profile.bio, currentLang, { forceOriginal: showingOriginalBio, sourceLang: 'auto' })
+                    : ''}
                 </div>
+                {currentLang !== 'FR' && profile?.bio && (
+                  <button
+                    type="button"
+                    onClick={() => setShowingOriginalBio(prev => !prev)}
+                    className="premium-button"
+                    style={{
+                      border: 'none',
+                      backgroundColor: 'transparent',
+                      color: 'var(--accent-primary)',
+                      fontSize: '11px',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: 0,
+                      marginBottom: '14px',
+                    }}
+                  >
+                    <Globe size={11} />
+                    <span>{showingOriginalBio ? t('showTranslation') : t('showOriginal')}</span>
+                  </button>
+                )}
 
                 {/* Liens Réseaux Sociaux & Portfolio Sécurisés */}
                 {profile?.socialLinks && profile.socialLinks.length > 0 && (

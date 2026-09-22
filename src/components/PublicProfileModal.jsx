@@ -17,6 +17,8 @@ import { useUserRealStats } from '../services/userStatsService';
 import { getFlagEmoji } from '../utils/flagUtils';
 import logger from '../utils/logger';
 import { useLanguage } from '../contexts/LanguageContext';
+import { parseAndTranslateDynamicText } from '../utils/dynamicTranslation';
+import { subscribeTranslations } from '../utils/translator';
 
 export default function PublicProfileModal({
   isOpen,
@@ -43,6 +45,13 @@ export default function PublicProfileModal({
     return defaultVal !== undefined ? defaultVal : k;
   };
   const t = safeT;
+  const activeLang = langContext?.currentLang || currentLang || 'FR';
+  const [showingOriginalBio, setShowingOriginalBio] = useState(false);
+  const [, setTransTick] = useState(0);
+
+  useEffect(() => {
+    return subscribeTranslations(() => setTransTick(t => t + 1));
+  }, []);
 
   const [activeTab, setActiveTab] = useState('listings'); // 'listings' | 'history' | 'bio' | 'portfolio' | 'reviews'
 
@@ -765,11 +774,33 @@ export default function PublicProfileModal({
                   fontSize: '13px',
                 }}
               >
-                <div style={{ fontWeight: '800', marginBottom: '6px', color: 'var(--text-main)' }}>
-                  {t('aboutUser', 'À propos de')} {userName}
+                <div style={{ fontWeight: '800', marginBottom: '6px', color: 'var(--text-main)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                  <span>{t('aboutUser', 'À propos de')} {userName}</span>
+                  {activeLang !== 'FR' && bio && (
+                    <button
+                      type="button"
+                      onClick={() => setShowingOriginalBio(prev => !prev)}
+                      className="premium-button"
+                      style={{
+                        border: 'none',
+                        background: 'transparent',
+                        color: 'var(--accent-primary)',
+                        fontSize: '11px',
+                        fontWeight: '800',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: 0,
+                      }}
+                    >
+                      <Globe size={11} />
+                      <span>{showingOriginalBio ? t('showTranslation', '🌐 Voir la traduction') : t('showOriginal', '🌐 Voir l\'original')}</span>
+                    </button>
+                  )}
                 </div>
                 <p style={{ margin: 0, color: 'var(--text-secondary)' }}>
-                  {bio}
+                  {parseAndTranslateDynamicText(bio, activeLang, { forceOriginal: showingOriginalBio, sourceLang: 'auto' })}
                 </p>
               </div>
 

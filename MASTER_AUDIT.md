@@ -13,7 +13,7 @@
 > - `STEP BY STEP URGENT.txt` & `LISTE DES PROCHAINES FONCTIONNALITES A CODER.txt` (Backlog immédiat)
 > - `PROJECT_CONTEXT.md` & `TROCO_PROJECT_HISTORY.md` (Historique des décisions et géoprivacy)
 >
-> **Score global :** 6.9/10 | **Progression :** 32 / 65 tâches validées avec preuves formelles (49.2%)
+> **Score global :** 7.0/10 | **Progression :** 33 / 65 tâches validées avec preuves formelles (50.8%)
 
 ---
 
@@ -21,12 +21,12 @@
 
 | Phase | Fait | Restant | Progression |
 |---|---|---|---|
-| 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 13 | 4 | 76.5% |
+| 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 14 | 3 | 82.4% |
 | 🟡 Facile (Niveau 2 — 1h à 3h) | 8 | 6 | 57.1% |
 | 🟠 Moyen (Niveau 3 — 3h à 1 jour) | 8 | 7 | 53.3% |
 | 🔴 Difficile (Niveau 4 — 1 à 3 jours) | 3 | 7 | 30.0% |
 | 🚨 Très difficile (Niveau 5 — 3j à 2 sem) | 0 | 9 | 0.0% |
-| **TOTAL** | **32** | **33** | **49.2%** |
+| **TOTAL** | **33** | **32** | **50.8%** |
 
 
 ### Score par axe vs cible Licorne
@@ -102,6 +102,10 @@
 ### [x] [QW-19] — Traduction exhaustive des éléments d'interface hardcodés (i18n 7 langues)
 **Preuve** : `src/components/ListingDetailModal.jsx:44-265`, `src/components/ReviewsSection.jsx:45-442`, `src/components/PublicProfileModal.jsx:250-930`, `src/components/ProfileView.jsx:130-670`, `src/features/profile/ProfileFeature.jsx:200-1180`, `src/data/translationsData.js:240-335`, `src/data/translationsSecondary.js:230-1400`, `src/locales/translations.js:230-1640`, `src/components/Phase119DynamicTranslationAndLanguageSync.test.js:1-120`, `src/components/Phase133DynamicProfileStats.test.js:1-90`, `src/components/Phase134ReviewsSection.test.js:1-210`
 **Statut** : ✅ FAIT — Traque et wrapping intégral de toutes les chaînes statiques résiduelles dans `t('...')` avec fallbacks sécurisés. Prise en charge complète des boutons, titres, statuts et placeholders grisés (« Deal clôturé », « Note moyenne », « Avis et Évaluations », « Langues parlées », « Cet utilisateur n'a pas encore reçu d'avis », « Studio de Design & Apparence », « Sécurité, Juridique & RGPD », « Recharger (€) », etc.). Synchronisation synchrone immédiate des dictionnaires dans les 7 langues de la plateforme (FR, EN, ES, IT, DE, JA, ZH) et formatage linguistique des dates d'avis.
+
+### [x] [QW-20] — Traduction automatique du contenu utilisateur (UGC) : bios, messages communauté et DMs
+**Preuve** : `src/utils/dynamicTranslation.js:44-80`, `src/utils/translationHelpers.js:35-275`, `src/components/ChatView.jsx:2580-2595`, `src/components/UserProfile.jsx:610-750`, `src/components/PublicProfileModal.jsx:770-795`, `src/components/ProfileView.jsx:73-275`, `src/components/GlobalLiveChat.jsx:15-680`, `src/components/CommunityActivityFeed.jsx:11-355`, `src/components/ReviewsSection.jsx:1-340`, `src/components/Phase135UGCTranslation.test.js:1-75`
+**Statut** : ✅ FAIT — Traduction automatique et asynchrone de tout contenu généré par les utilisateurs (biographies, messages du chat communautaire, fil d'activité, messages privés / DMs et avis) dans la langue active de l'interface (FR, EN, ES, IT, DE, JA, ZH). Intégration systématique du bouton toggle "Voir l'original" / "Voir la traduction" avec icône Globe. Nettoyage automatique des balises préfixées `[XX]` et gestion du cache persistant en mémoire et localStorage (zéro requête superflue vers Google Translate / MyMemory). Fallback transparent sur le texte original en cas de coupure réseau.
 
 ---
 

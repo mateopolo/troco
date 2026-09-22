@@ -2,7 +2,7 @@ import logger from '../utils/logger';
 import React, { useState, useEffect, useRef } from 'react';
 import {
   Send, Flame, Zap,
-  TrendingUp, ChevronDown, Trash2, Edit2, AlertTriangle
+  TrendingUp, ChevronDown, Trash2, Edit2, AlertTriangle, Globe
 } from 'lucide-react';
 import {
   collection, addDoc, query, orderBy, limit,
@@ -10,6 +10,9 @@ import {
 } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { validateChatMessage } from '../utils/moderationBlacklist';
+import { useLanguage } from '../contexts/LanguageContext';
+import { parseAndTranslateDynamicText } from '../utils/dynamicTranslation';
+import { subscribeTranslations } from '../utils/translator';
 
 export default function GlobalLiveChat({
   currentUser = null,
@@ -17,7 +20,15 @@ export default function GlobalLiveChat({
   darkMode = false,
   isCompact = false,
 }) {
+  const { currentLang = 'FR', t } = useLanguage ? useLanguage() : { currentLang: 'FR', t: (k, d) => d || k };
   const [messages, setMessages] = useState([]);
+  const [showingOriginalMsgs, setShowingOriginalMsgs] = useState({});
+  const [, setTransTick] = useState(0);
+
+  useEffect(() => {
+    return subscribeTranslations(() => setTransTick(t => t + 1));
+  }, []);
+
   const [inputText, setInputText] = useState('');
   const [isUrgentMode, setIsUrgentMode] = useState(false);
   const [onlineCount, setOnlineCount] = useState(1428);
@@ -642,17 +653,52 @@ export default function GlobalLiveChat({
                     </div>
                   </div>
                 ) : (
-                  <div style={{ color: 'var(--text-main)', fontSize: '12.5px', lineHeight: 1.4, wordBreak: 'break-word', fontWeight: isUrgent ? '600' : '400' }}>
-                    {msg.text.split(' ').map((word, i) => {
-                      if (word.startsWith('@')) {
-                        return (
-                          <span key={i} style={{ color: '#3B82F6', fontWeight: '800', backgroundColor: 'rgba(59, 130, 246, 0.12)', padding: '1px 4px', borderRadius: '4px', marginRight: '2px' }}>
-                            {word}{' '}
-                          </span>
-                        );
-                      }
-                      return word + ' ';
-                    })}
+                  <div>
+                    <div style={{ color: 'var(--text-main)', fontSize: '12.5px', lineHeight: 1.4, wordBreak: 'break-word', fontWeight: isUrgent ? '600' : '400' }}>
+                      {(() => {
+                        const isMsgOriginal = !!showingOriginalMsgs[msg.id];
+                        const textToDisplay = msg.text
+                          ? parseAndTranslateDynamicText(msg.text, currentLang, {
+                              forceOriginal: isMsgOriginal,
+                              sourceLang: 'auto',
+                            })
+                          : '';
+                        return textToDisplay.split(' ').map((word, i) => {
+                          if (word.startsWith('@')) {
+                            return (
+                              <span key={i} style={{ color: '#3B82F6', fontWeight: '800', backgroundColor: 'rgba(59, 130, 246, 0.12)', padding: '1px 4px', borderRadius: '4px', marginRight: '2px' }}>
+                                {word}{' '}
+                              </span>
+                            );
+                          }
+                          return word + ' ';
+                        });
+                      })()}
+                    </div>
+                    {currentLang !== 'FR' && msg.text && (
+                      <div style={{ marginTop: '4px' }}>
+                        <button
+                          type="button"
+                          onClick={() => setShowingOriginalMsgs(prev => ({ ...prev, [msg.id]: !prev[msg.id] }))}
+                          className="premium-button"
+                          style={{
+                            border: 'none',
+                            backgroundColor: 'transparent',
+                            color: 'var(--accent-primary)',
+                            fontSize: '10px',
+                            fontWeight: '800',
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '3px',
+                            padding: 0,
+                          }}
+                        >
+                          <Globe size={10} />
+                          <span>{showingOriginalMsgs[msg.id] ? (t ? t('showTranslation') : '🌐 Voir la traduction') : (t ? t('showOriginal') : '🌐 Voir l\'original')}</span>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

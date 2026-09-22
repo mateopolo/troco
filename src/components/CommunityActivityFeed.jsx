@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Heart, Flame, ThumbsUp, Star, Coins, Handshake,
   ShieldCheck, Rocket, Send,
-  Share2, Sparkles
+  Share2, Sparkles, Globe
 } from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext';
+import { parseAndTranslateDynamicText } from '../utils/dynamicTranslation';
+import { subscribeTranslations } from '../utils/translator';
 
 const INITIAL_ACTIVITIES = [];
 
@@ -12,7 +15,15 @@ export default function CommunityActivityFeed({
   onOpenProfile = null,
   darkMode = false,
 }) {
+  const { currentLang = 'FR', t } = useLanguage ? useLanguage() : { currentLang: 'FR', t: (k, d) => d || k };
   const [activities, setActivities] = useState(INITIAL_ACTIVITIES);
+  const [showingOriginalActivities, setShowingOriginalActivities] = useState({});
+  const [, setTransTick] = useState(0);
+
+  useEffect(() => {
+    return subscribeTranslations(() => setTransTick(t => t + 1));
+  }, []);
+
   const [filterType, setFilterType] = useState('all'); // 'all' | 'deal' | 'review' | 'tip' | 'project'
   const [statusText, setStatusText] = useState('');
 
@@ -312,8 +323,38 @@ export default function CommunityActivityFeed({
                   fontWeight: isReview ? '500' : '600',
                   fontStyle: isReview ? 'italic' : 'normal',
                 }}
-              >
-                {act.detail}
+                <div>
+                  {act.detail
+                    ? parseAndTranslateDynamicText(act.detail, currentLang, {
+                        forceOriginal: !!showingOriginalActivities[act.id],
+                        sourceLang: 'auto',
+                      })
+                    : ''}
+                </div>
+                {currentLang !== 'FR' && act.detail && (
+                  <div style={{ marginTop: '4px' }}>
+                    <button
+                      type="button"
+                      onClick={() => setShowingOriginalActivities(prev => ({ ...prev, [act.id]: !prev[act.id] }))}
+                      className="premium-button"
+                      style={{
+                        border: 'none',
+                        backgroundColor: 'transparent',
+                        color: 'var(--accent-primary)',
+                        fontSize: '10px',
+                        fontWeight: '800',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '3px',
+                        padding: 0,
+                      }}
+                    >
+                      <Globe size={10} />
+                      <span>{showingOriginalActivities[act.id] ? (t ? t('showTranslation') : '🌐 Voir la traduction') : (t ? t('showOriginal') : '🌐 Voir l\'original')}</span>
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* BARRE D'INTERACTIONS & RÉACTIONS */}

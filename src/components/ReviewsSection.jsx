@@ -1,6 +1,6 @@
 import logger from '../utils/logger';
 import React, { useState, useEffect } from 'react';
-import { Star, MessageSquare, Send, CornerDownRight, Clock } from 'lucide-react';
+import { Star, MessageSquare, Send, CornerDownRight, Clock, Globe } from 'lucide-react';
 import {
   collection,
   query,
@@ -12,6 +12,8 @@ import {
 } from 'firebase/firestore';
 import { auth, db } from '../firebase';
 import { useLanguage } from '../contexts/LanguageContext';
+import { parseAndTranslateDynamicText } from '../utils/dynamicTranslation';
+import { subscribeTranslations } from '../utils/translator';
 
 const langMap = { FR: 'fr-FR', EN: 'en-US', ES: 'es-ES', IT: 'it-IT', DE: 'de-DE', JA: 'ja-JP', ZH: 'zh-CN' };
 
@@ -53,6 +55,13 @@ export default function ReviewsSection({
   };
 
   const [reviews, setReviews] = useState(initialReviews);
+  const [showingOriginalReviews, setShowingOriginalReviews] = useState({});
+  const [, setTransTick] = useState(0);
+
+  useEffect(() => {
+    return subscribeTranslations(() => setTransTick(t => t + 1));
+  }, []);
+
   const [loading, setLoading] = useState(true);
   const [replyingToId, setReplyingToId] = useState(null);
   const [replyText, setReplyText] = useState('');
@@ -305,9 +314,34 @@ export default function ReviewsSection({
 
               {/* TEXTE DE L'AVIS */}
               {reviewText && (
-                <p style={{ margin: '4px 0 0 0', fontSize: '12.5px', color: 'var(--text-main)', lineHeight: 1.5 }}>
-                  "{reviewText}"
-                </p>
+                <div>
+                  <p style={{ margin: '4px 0 0 0', fontSize: '12.5px', color: 'var(--text-main)', lineHeight: 1.5 }}>
+                    "{parseAndTranslateDynamicText(reviewText, currentLang, { forceOriginal: !!showingOriginalReviews[review.id], sourceLang: 'auto' })}"
+                  </p>
+                  {currentLang !== 'FR' && (
+                    <button
+                      type="button"
+                      onClick={() => setShowingOriginalReviews(prev => ({ ...prev, [review.id]: !prev[review.id] }))}
+                      className="premium-button"
+                      style={{
+                        border: 'none',
+                        backgroundColor: 'transparent',
+                        color: 'var(--accent-primary)',
+                        fontSize: '10px',
+                        fontWeight: '800',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '3px',
+                        padding: 0,
+                        marginTop: '3px',
+                      }}
+                    >
+                      <Globe size={10} />
+                      <span>{showingOriginalReviews[review.id] ? safeT('showTranslation', '🌐 Voir la traduction') : safeT('showOriginal', '🌐 Voir l\'original')}</span>
+                    </button>
+                  )}
+                </div>
               )}
 
               {/* DROIT DE RÉPONSE (OWNER ONLY) */}

@@ -36,12 +36,18 @@ export const getChatMessageDisplayContent = (message, targetLang, forceOriginal 
   if (!message) return '';
   const rawText = (typeof message === 'string' ? message : (message.text || message.conditions || '')).trim();
 
-  if (forceOriginal || targetLang === 'FR' || !targetLang) {
-    return (typeof message === 'object' && message.originalText) ? message.originalText : rawText;
+  if (forceOriginal) {
+    const orig = (typeof message === 'object' && message.originalText) ? message.originalText : rawText;
+    return cleanLanguageTag(orig);
   }
 
   if (typeof message === 'object' && message.translations && message.translations[targetLang]) {
-    return message.translations[targetLang];
+    return cleanLanguageTag(message.translations[targetLang]);
+  }
+
+  const tag = extractLanguageTag(rawText);
+  if (tag && tag === targetLang) {
+    return cleanLanguageTag(rawText);
   }
 
   if (rawText.includes("Bonne contre-proposition")) {
@@ -151,35 +157,59 @@ export const getChatMessageDisplayContent = (message, targetLang, forceOriginal 
 
   const knownMatch = knownMessageTranslations[rawText];
   if (knownMatch && knownMatch[targetLang]) {
-    return knownMatch[targetLang];
+    return cleanLanguageTag(knownMatch[targetLang]);
   }
 
-  // Traduction automatique dynamique en temps réel
-  return getInstantOrQueueTranslation(rawText, targetLang, 'auto');
+  // Traduction automatique dynamique en temps réel via parseAndTranslateDynamicText
+  return parseAndTranslateDynamicText(rawText, targetLang, {
+    forceOriginal,
+    sourceLang: tag || 'auto',
+  });
 };
 
 /**
  * Traduction de la biographie d'un profil utilisateur.
  */
 export const getBioTranslation = (bioText, targetLang, forceOriginal = false) => {
-  if (!bioText || forceOriginal || targetLang === 'FR' || !targetLang) return bioText;
+  if (!bioText) return '';
+  if (forceOriginal) return cleanLanguageTag(bioText);
+
+  const tag = extractLanguageTag(bioText);
+  if (tag && tag === targetLang) {
+    return cleanLanguageTag(bioText);
+  }
+
   const bioMap = {
     FR: "Créateur de contenus, développeur Python et passionné de musique. Je propose des services flexibles et des échanges de qualité.",
     EN: "Content creator, Python developer, and music enthusiast. I offer flexible services and high-quality exchanges.",
-    ES: "Creador de contenido, desarrollador de Python y apasionado de la música. Ofrezco servicios flexibles e intercambios de calidad.",
-    IT: "Creatore di contenuti, sviluppatore Python e appassionato di musica. Offro servizi flessibili e scambi di qualità.",
+    ES: "Creador de contenido, desarrollador de Python y apasionado de la música. Ofrecemos servicios flexibles e intercambios de calidad.",
+    IT: "Creatore di contenuti, sviluppatore Python e appassionato di musica. Offro servizi flessibili e scambi di qualité.",
     DE: "Content Creator, Python-Entwickler und Musikliebhaber. Ich biete flexible Dienstleistungen und hochwertige Tausche.",
     JA: "コンテンツクリエイター、Pythonデベロッパー、音楽愛好家。柔軟なサービスと高品質な交換を提供しています。",
     ZH: "内容创作者、Python 开发者及音乐爱好者。我提供灵活的服务与高质量的互换。"
   };
-  return bioMap[targetLang] || getInstantOrQueueTranslation(bioText, targetLang, 'auto');
+
+  const clean = cleanLanguageTag(bioText).trim();
+  if (clean === bioMap.FR.trim() && bioMap[targetLang]) {
+    return bioMap[targetLang];
+  }
+
+  return parseAndTranslateDynamicText(bioText, targetLang, {
+    forceOriginal,
+    sourceLang: tag || 'auto',
+  });
 };
 
 /**
  * Traduction d'un avis reçu par un utilisateur.
  */
 export const getReviewTranslation = (reviewText, targetLang, forceOriginal = false) => {
-  if (!reviewText || forceOriginal || targetLang === 'FR' || !targetLang) return reviewText;
+  if (!reviewText) return '';
+  if (forceOriginal) return cleanLanguageTag(reviewText);
+
+  const clean = cleanLanguageTag(reviewText);
+  const tag = extractLanguageTag(reviewText);
+
   const reviewMap = {
     "Super session de cours ! Explications très claires et très sympa.": {
       FR: "Super session de cours ! Explications très claires et très sympa.",
@@ -236,7 +266,10 @@ export const getReviewTranslation = (reviewText, targetLang, forceOriginal = fal
       ZH: "已预约周五 18:00 视频课程。已确认条件：1个代币 + 10欧。"
     }
   };
-  return reviewMap[reviewText]?.[targetLang] || getInstantOrQueueTranslation(reviewText, targetLang, 'auto');
+  return reviewMap[clean]?.[targetLang] || parseAndTranslateDynamicText(reviewText, targetLang, {
+    forceOriginal,
+    sourceLang: tag || 'auto',
+  });
 };
 
 /**

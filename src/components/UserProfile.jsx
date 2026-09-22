@@ -1,4 +1,7 @@
-import React, { useState, useId } from 'react';
+import React, { useState, useEffect, useId } from 'react';
+import { useLanguage } from '../contexts/LanguageContext';
+import { parseAndTranslateDynamicText } from '../utils/dynamicTranslation';
+import { subscribeTranslations } from '../utils/translator';
 import {
   Globe,
   ExternalLink,
@@ -610,6 +613,14 @@ export default function UserProfile({
   onEditToggle,
   darkMode = false,
 }) {
+  const { currentLang = 'FR', t } = useLanguage ? useLanguage() : { currentLang: 'FR', t: (k, d) => d || k };
+  const [showingOriginalBio, setShowingOriginalBio] = useState(false);
+  const [, setTransTick] = useState(0);
+
+  useEffect(() => {
+    return subscribeTranslations(() => setTransTick(t => t + 1));
+  }, []);
+
   const [draft, setDraft] = useState({
     name: profile.name || '',
     username: profile.username || '',
@@ -706,9 +717,34 @@ export default function UserProfile({
                   )}
                 </div>
 
-                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, margin: '0 0 14px' }}>
-                  {profile.bio || 'Aucune biographie renseignée.'}
+                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, margin: '0 0 6px' }}>
+                  {profile.bio
+                    ? parseAndTranslateDynamicText(profile.bio, currentLang, { forceOriginal: showingOriginalBio, sourceLang: 'auto' })
+                    : (t ? t('profile.no_bio', 'Aucune biographie renseignée.') : 'Aucune biographie renseignée.')}
                 </p>
+                {currentLang !== 'FR' && profile.bio && (
+                  <button
+                    type="button"
+                    onClick={() => setShowingOriginalBio(prev => !prev)}
+                    className="premium-button"
+                    style={{
+                      border: 'none',
+                      background: 'transparent',
+                      color: 'var(--accent-primary)',
+                      fontSize: '11px',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: 0,
+                      marginBottom: '14px',
+                    }}
+                  >
+                    <Globe size={11} />
+                    <span>{showingOriginalBio ? (t ? t('showTranslation') : '🌐 Voir la traduction') : (t ? t('showOriginal') : '🌐 Voir l\'original')}</span>
+                  </button>
+                )}
 
                 {/* Bouton de consultation du CV */}
                 {profile.cvUrl && (

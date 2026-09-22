@@ -657,5 +657,31 @@ De nombreux boutons, statuts, titres, onglets et textes grisés d'état vide res
      - `Phase133DynamicProfileStats.test.js` (4/4 tests passés).
      - `Phase134ReviewsSection.test.js` (5/5 tests passés).
 
+### Patch Traduction du Contenu Utilisateur (UGC) (commit `feat(i18n): dynamic UGC translation for bios, community chat, and DMs (PROMPT 9)`)
+
+#### 3.14 Traduction Automatique et Bascule Dynamique du Contenu Généré par les Utilisateurs (UGC)
+
+**Objectif :**
+Traduire automatiquement tout texte saisi par les utilisateurs (biographies de profil, messages du chat communautaire en direct, publications du fil d'activité, messages privés / DMs et avis) dans la langue active de l'interface du spectateur (FR, EN, ES, IT, DE, JA, ZH), avec bouton toggle interactif "Voir l'original" / "Voir la traduction" pour chaque élément.
+
+**Architecture & Mécanismes :**
+1. **Moteur `translator.js` préservé & réutilisé :**
+   - Utilisation stricte de l'API publique Google Translate (avec fallback transparent MyMemory).
+   - Double cache `MEMORY_CACHE` (temps d'accès 0ms) et persistance localStorage (`saveCacheToStorage`) évitant toute saturation de quota d'API externe.
+   - Système de publication/abonnement `subscribeTranslations` permettant aux composants de se re-rendre de manière réactive dès la résolution asynchrone des traductions en arrière-plan.
+2. **Expansion du parseur `parseAndTranslateDynamicText` (`src/utils/dynamicTranslation.js`) :**
+   - Supporte la détection automatique de la langue pour les textes non préfixés (`sourceLang: 'auto'`).
+   - Nettoie systématiquement les balises de métadonnées `[XX]` (ex: `[EN]`, `[FR]`) à l'affichage et lors de l'activation du mode forcé `forceOriginal`.
+   - Rendu non-bloquant : fallback immédiat sur le texte original si la traduction est en cours ou en cas de défaillance réseau.
+3. **Composants UGC étendus :**
+   - **Biographies :** `UserProfile.jsx`, `PublicProfileModal.jsx`, `ProfileView.jsx`, `ProfileFeature.jsx` et `App.js`.
+   - **Chat communautaire & Fil d'activité :** `GlobalLiveChat.jsx` (messages en direct avec gestion des mentions `@pseudo`) et `CommunityActivityFeed.jsx` (détails d'activité et statuts).
+   - **Messages privés (DMs) :** `ChatView.jsx` (messages directs texte et cartes de contre-proposition avec badges de compensation).
+   - **Avis reçus (Reviews) :** `ReviewsSection.jsx` et `ProfileFeature.jsx`.
+4. **Boutons Toggle unifiés :**
+   - Bouton stylé discret avec icône `Globe` Lucide et clés `t('showTranslation')` (« 🌐 Voir la traduction ») et `t('showOriginal')` (« 🌐 Voir l'original ») localisées dans toutes les 7 langues.
+5. **Tests unitaires automatisés :**
+   - `src/components/Phase135UGCTranslation.test.js` validant le nettoyage de balises, l'état `forceOriginal`, la traduction de bios, de messages de chat et d'avis (9/9 tests passés).
+
 
 
