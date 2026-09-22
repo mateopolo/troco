@@ -93,6 +93,13 @@ service cloud.firestore {
       match /transactions/{txId} {
         allow read, write: if isOwner(uid) || isAdmin();
       }
+
+      // Sous-collection interne : Avis & Évaluations réelles
+      match /reviews/{reviewId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated() && isNotBanned();
+        allow update, delete: if isOwner(uid) || isAdmin();
+      }
     }
 
     // ========================================================================
@@ -183,12 +190,13 @@ service cloud.firestore {
     // 💳 COLLECTION TRANSACTIONS (REGISTRE FINANCIER & SÉQUESTRE ESCROW)
     // ========================================================================
     match /transactions/{txId} {
-      // Lecture : parties prenantes de la transaction ou administrateur
+      // Lecture : parties prenantes de la transaction, administrateur ou deals clôturés publics
       allow read: if isAuthenticated() && (
         resource.data.userId == request.auth.uid
         || resource.data.partnerUid == request.auth.uid
         || resource.data.buyerUid == request.auth.uid
         || resource.data.sellerUid == request.auth.uid
+        || resource.data.status == 'completed'
         || isAdmin()
       );
 

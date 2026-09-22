@@ -453,3 +453,25 @@ L'application dispose d'un composant unifié pour toutes les boîtes de dialogue
 4. **Garde Anti-Écrasement d'Onboarding (`OnboardingWizardModal.jsx`)**
    - Préservation stricte des soldes existants (`currentUser?.euroBalance` et `currentUser?.trocoTokens`) si l'onboarding est rejoué, empêchant toute remise à zéro accidentelle.
 
+### Patch Correction des Fausses Statistiques & Calcul Dynamique (commit `fix(stats)`)
+
+1. **Suppression des valeurs hardcodées par défaut (`useAuthStore.js`)**
+   - `DEFAULT_PROFILE` réinitialisé avec des compteurs neutres vérifiés : `dealsCompleted: 0` (au lieu de 6), `dealsInProgress: 0` (au lieu de 1), `rating: 0` (au lieu de 5.0), `reviews: 0` (au lieu de 6), et `reviewsCount: 0`.
+
+2. **Création du Service de Statistiques Réelles (`userStatsService.js`)**
+   - Implémentation de `fetchUserRealStats(uid)` effectuant un véritable calcul dynamique en base de données :
+     - **Avis réels :** `COUNT` exact des documents dans la sous-collection Firestore `users/{uid}/reviews` et calcul pondéré de la note moyenne réelle (0 avis = 0.0 ⭐ / "Pas d'évaluation pour l'instant").
+     - **Deals clôturés :** `COUNT` distinct des transactions finalisées (`status == 'completed'`) dans `/transactions` et des messages de deals confirmés dans `chats/{chatId}/messages`.
+     - **Deals en cours :** `COUNT` des deals en cours / planifiés dans les échanges réels.
+     - **Assainissement Firestore :** Mise à jour automatique du document `users/{uid}` avec les vrais chiffres pour écraser les anciennes valeurs statiques corrompues (notamment les 20 deals factices de Matmot).
+   - Hook React temps réel `useUserRealStats(uid, fallbackData)` avec écouteur `onSnapshot` sur `users/{uid}/reviews` pour actualisation instantanée dès la validation d'un avis.
+
+3. **Intégration du Calcul Dynamique dans les Vues de Profil**
+   - `PublicProfileModal.jsx` : Raccordement au hook `useUserRealStats` pour afficher les véritables statistiques dynamiques dans l'en-tête de confiance et l'onglet historique, sans jamais afficher de données inventées.
+   - `ProfileFeature.jsx` & `ProfileView.jsx` : Synchronisation des cartes "Deal clôturé", "Note moyenne", et "En cours planifié" avec les compteurs réels calculés.
+   - `userResolverService.js` : `resolveUserProfile` enrichit automatiquement les profils résolus avec leurs statistiques dynamiques réelles.
+
+4. **Déploiement des Règles Firestore (`firestore.rules`)**
+   - Ajout et déploiement en production sur `troco-8a6eb` de la règle autorisant la lecture publique authentifiée des sous-collections d'avis (`match /users/{uid}/reviews/{reviewId}`) et des transactions de deals clôturés publics.
+
+

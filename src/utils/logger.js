@@ -82,7 +82,8 @@ const logger = {
    * @param {...any} args - Arguments à logger
    */
   info: (...args) => {
-    if (import.meta.env.DEV) {
+    const isDev = typeof process !== 'undefined' ? process.env.NODE_ENV !== 'production' : true;
+    if (isDev) {
       console.log('[INFO]', ...args);
     }
     // En prod, info est silencieux
@@ -93,7 +94,8 @@ const logger = {
    * @param {...any} args - Arguments à logger
    */
   warn: (...args) => {
-    if (import.meta.env.DEV) {
+    const isDev = typeof process !== 'undefined' ? process.env.NODE_ENV !== 'production' : true;
+    if (isDev) {
       console.warn('[WARN]', ...args);
     }
     // En prod, warn est silencieux
@@ -108,8 +110,9 @@ const logger = {
   error: (...args) => {
     const error = args[0];
     const context = args.length > 1 ? args[1] : undefined;
+    const isDev = typeof process !== 'undefined' ? process.env.NODE_ENV !== 'production' : true;
 
-    if (import.meta.env.DEV) {
+    if (isDev) {
       console.error('[ERROR]', ...args);
     } else {
       // En prod, envoyer à Sentry

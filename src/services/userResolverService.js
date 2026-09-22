@@ -1,5 +1,6 @@
 import { doc, getDoc } from 'firebase/firestore';
 import logger from '../utils/logger';
+import { fetchUserRealStats } from './userStatsService';
 
 /**
  * Service singleton de résolution et de mise en cache des profils utilisateurs.
@@ -232,6 +233,17 @@ export const resolveUserProfile = async (uid, db) => {
       }
 
       const resolved = sanitizeProfileData(cleanUid, userData);
+      try {
+        const realStats = await fetchUserRealStats(cleanUid);
+        if (realStats) {
+          resolved.dealsCompleted = realStats.dealsCompleted;
+          resolved.activeDeals = realStats.activeDeals;
+          resolved.reviewsCount = realStats.reviewsCount;
+          resolved.averageRating = realStats.averageRating;
+          resolved.rating = realStats.averageRating;
+        }
+      } catch (_) {}
+
       if (resolved && resolved.name && !isGenericName(resolved.name)) {
         profileCache.set(cleanUid, resolved);
         persistCache();

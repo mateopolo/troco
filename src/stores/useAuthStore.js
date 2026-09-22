@@ -26,10 +26,11 @@ const DEFAULT_PROFILE = {
   socialLinks: ['https://github.com/mateopolo', 'https://linkedin.com/in/mateopolo'],
   portfolioImages: [],
   swapHistory: [],
-  dealsCompleted: 6,
-  dealsInProgress: 1,
-  rating: 5.0,
-  reviews: 6,
+  dealsCompleted: 0,
+  dealsInProgress: 0,
+  rating: 0,
+  reviews: 0,
+  reviewsCount: 0,
 };
 
 export const useAuthStore = create(

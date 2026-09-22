@@ -13,6 +13,7 @@ import Avatar from './common/Avatar';
 import { db } from '../firebase';
 import { collection, query, where, getDocs, doc, getDoc, onSnapshot } from 'firebase/firestore';
 import { resolveUserProfile, getCachedUserProfile, isRawUid, isGenericName, sanitizeProfileData, setCachedUserProfile } from '../services/userResolverService';
+import { useUserRealStats } from '../services/userStatsService';
 import logger from '../utils/logger';
 
 export default function PublicProfileModal({
@@ -59,6 +60,7 @@ export default function PublicProfileModal({
   const [userListings, setUserListings] = useState([]);
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [loadingListings, setLoadingListings] = useState(false);
+  const { stats: dynamicStats } = useUserRealStats(isOpen ? targetUid : null);
 
   // Synchronisation avec le cache et Firestore à l'ouverture de la modale
   useEffect(() => {
@@ -240,10 +242,19 @@ export default function PublicProfileModal({
   const isKycVerified = Boolean(resolved.kycVerified ?? targetUser?.kycVerified ?? false);
   const username = resolved.username || targetUser?.username || (userName ? `@${userName.toLowerCase().replace(/[^a-z0-9]/g, '')}` : '');
   const location = resolved.location || targetUser?.location || '';
-  const reviewsCount = resolved.reviewsCount || targetUser?.reviewsCount || 0;
-  const averageRating = resolved.rating !== undefined ? resolved.rating : (resolved.averageRating !== undefined ? resolved.averageRating : (targetUser?.averageRating || targetUser?.rating || 0));
-  const dealsCompleted = resolved.dealsCompleted || targetUser?.dealsCompleted || 0;
-  const activeDeals = resolved.activeDeals ?? targetUser?.activeDeals ?? targetUser?.dealsInProgress ?? 0;
+  const user = {
+    ...resolved,
+    dealsCompleted: dynamicStats?.dealsCompleted !== undefined ? dynamicStats.dealsCompleted : (resolved.dealsCompleted || targetUser?.dealsCompleted || 0),
+    activeDeals: dynamicStats?.activeDeals !== undefined ? dynamicStats.activeDeals : (resolved.activeDeals ?? targetUser?.activeDeals ?? targetUser?.dealsInProgress ?? 0),
+    reviewsCount: dynamicStats?.reviewsCount !== undefined ? dynamicStats.reviewsCount : (resolved.reviewsCount || targetUser?.reviewsCount || 0),
+    averageRating: dynamicStats?.averageRating !== undefined
+      ? dynamicStats.averageRating
+      : (resolved.rating !== undefined ? resolved.rating : (resolved.averageRating !== undefined ? resolved.averageRating : (targetUser?.averageRating || targetUser?.rating || 0))),
+  };
+  const reviewsCount = user.reviewsCount;
+  const averageRating = user.averageRating;
+  const dealsCompleted = user.dealsCompleted;
+  const activeDeals = user.activeDeals;
 
   // Bio réelle sans fallback fantaisiste
   const bio = resolved.bio || targetUser?.bio || `Membre de la communauté Troco.`;
@@ -498,13 +509,13 @@ export default function PublicProfileModal({
               {/* STATS DE CONFIANCE & LOCALISATION */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap', fontSize: '12px', color: 'var(--text-secondary)' }}>
                 {/* Note moyenne : affichée uniquement si l'utilisateur a des avis réels */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontWeight: reviewsCount > 0 ? '700' : '400', color: reviewsCount > 0 ? '#F59E0B' : 'var(--text-secondary)', fontStyle: reviewsCount > 0 ? 'normal' : 'italic' }}>
-                  {reviewsCount > 0 && <Star size={14} fill="#F59E0B" />}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontWeight: user.reviewsCount > 0 ? '700' : '400', color: user.reviewsCount > 0 ? '#F59E0B' : 'var(--text-secondary)', fontStyle: user.reviewsCount > 0 ? 'normal' : 'italic' }}>
+                  {user.reviewsCount > 0 && <Star size={14} fill="#F59E0B" />}
                   <span>
-                    {reviewsCount > 0 ? (Math.round(averageRating * 10) / 10).toFixed(1) + ' ⭐' : t('profile.no_reviews', 'Pas d\'évaluation pour l\'instant')}
+                    {user.reviewsCount > 0 ? (Math.round(user.averageRating * 10) / 10).toFixed(1) + ' ⭐' : t('profile.no_reviews', 'Pas d\'évaluation pour l\'instant')}
                   </span>
-                  {reviewsCount > 0 && (
-                    <span style={{ color: 'var(--text-secondary)', fontWeight: '500' }}>({reviewsCount} avis)</span>
+                  {user.reviewsCount > 0 && (
+                    <span style={{ color: 'var(--text-secondary)', fontWeight: '500' }}>({user.reviewsCount} avis)</span>
                   )}
                 </div>
 
@@ -515,13 +526,13 @@ export default function PublicProfileModal({
                   </div>
                 )}
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: dealsCompleted > 0 ? 'var(--accent-success)' : 'var(--text-secondary)', fontWeight: dealsCompleted > 0 ? '700' : '400' }}>
-                  <CheckCircle size={13} style={{ opacity: dealsCompleted > 0 ? 1 : 0.35 }} />
-                  <span>{t('closedDeals', 'Deal clôturé')}: {dealsCompleted}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: (user.dealsCompleted || 0) > 0 ? 'var(--accent-success)' : 'var(--text-secondary)', fontWeight: (user.dealsCompleted || 0) > 0 ? '700' : '400' }}>
+                  <CheckCircle size={13} style={{ opacity: (user.dealsCompleted || 0) > 0 ? 1 : 0.35 }} />
+                  <span>{t('closedDeals', 'Deal clôturé')}: {user.dealsCompleted || 0}</span>
                 </div>
 
-                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: activeDeals > 0 ? 'var(--accent-primary)' : 'var(--text-secondary)', fontWeight: activeDeals > 0 ? '700' : '400' }}>
-                  <span>{t('dealsInProgress', 'En cours')}: {activeDeals}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: (user.activeDeals || 0) > 0 ? 'var(--accent-primary)' : 'var(--text-secondary)', fontWeight: (user.activeDeals || 0) > 0 ? '700' : '400' }}>
+                  <span>{t('dealsInProgress', 'En cours')}: {user.activeDeals || 0}</span>
                 </div>
               </div>
             </div>
@@ -872,15 +883,15 @@ export default function PublicProfileModal({
                 <div style={{ flex: 1, minWidth: '130px', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '12px 14px', backgroundColor: 'var(--bg-subtle)' }}>
                   <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{t('closedDeals', 'Deal clôturé')}</div>
                   <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-main)' }}>
-                    {dealsCompleted}
+                    {user.dealsCompleted || 0}
                   </div>
                 </div>
 
                 {/* NOTE MOYENNE */}
                 <div style={{ flex: 1, minWidth: '140px', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '12px 14px', backgroundColor: 'var(--bg-subtle)' }}>
                   <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{t('averageRating', 'Note moyenne')}</div>
-                  <div style={{ fontSize: reviewsCount > 0 ? '20px' : '12.5px', fontWeight: reviewsCount > 0 ? '800' : '500', color: reviewsCount > 0 ? '#F59E0B' : 'var(--text-secondary)', fontStyle: reviewsCount > 0 ? 'normal' : 'italic', display: 'flex', alignItems: 'center', gap: '4px', minHeight: '28px' }}>
-                    {reviewsCount > 0 ? (Math.round(averageRating * 10) / 10).toFixed(1) + ' ⭐' : t('profile.no_reviews', 'Pas d\'évaluation pour l\'instant')}
+                  <div style={{ fontSize: user.reviewsCount > 0 ? '20px' : '12.5px', fontWeight: user.reviewsCount > 0 ? '800' : '500', color: user.reviewsCount > 0 ? '#F59E0B' : 'var(--text-secondary)', fontStyle: user.reviewsCount > 0 ? 'normal' : 'italic', display: 'flex', alignItems: 'center', gap: '4px', minHeight: '28px' }}>
+                    {user.reviewsCount > 0 ? (Math.round(user.averageRating * 10) / 10).toFixed(1) + ' ⭐' : t('profile.no_reviews', 'Pas d\'évaluation pour l\'instant')}
                   </div>
                 </div>
 
@@ -888,7 +899,7 @@ export default function PublicProfileModal({
                 <div style={{ flex: 1, minWidth: '130px', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '12px 14px', backgroundColor: 'var(--bg-subtle)' }}>
                   <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>{t('dealsInProgress', 'En cours planifié')}</div>
                   <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--accent-primary)' }}>
-                    {activeDeals}
+                    {user.activeDeals || 0}
                   </div>
                 </div>
               </div>

@@ -13,7 +13,7 @@
 > - `STEP BY STEP URGENT.txt` & `LISTE DES PROCHAINES FONCTIONNALITES A CODER.txt` (Backlog immédiat)
 > - `PROJECT_CONTEXT.md` & `TROCO_PROJECT_HISTORY.md` (Historique des décisions et géoprivacy)
 >
-> **Score global :** 6.2/10 | **Progression :** 24 / 63 tâches validées avec preuves formelles (38.1%)
+> **Score global :** 6.3/10 | **Progression :** 26 / 63 tâches validées avec preuves formelles (41.3%)
 
 ---
 
@@ -21,12 +21,12 @@
 
 | Phase | Fait | Restant | Progression |
 |---|---|---|---|
-| 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 8 | 7 | 53.3% |
+| 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 9 | 6 | 60.0% |
 | 🟡 Facile (Niveau 2 — 1h à 3h) | 6 | 8 | 42.9% |
 | 🟠 Moyen (Niveau 3 — 3h à 1 jour) | 8 | 7 | 53.3% |
 | 🔴 Difficile (Niveau 4 — 1 à 3 jours) | 3 | 7 | 30.0% |
 | 🚨 Très difficile (Niveau 5 — 3j à 2 sem) | 0 | 9 | 0.0% |
-| **TOTAL** | **25** | **38** | **39.7%** |
+| **TOTAL** | **26** | **37** | **41.3%** |
 
 ### Score par axe vs cible Licorne
 | Axe | Poids | Actuel | Cible Série A | Delta |
@@ -81,6 +81,10 @@
 ### [x] [P1-BUG-11] — Suppression de la persistance brute du feed dans localStorage
 **Preuve** : Absence de la clé `troco_user_listings` dans `src/` (vérifié par recherche globale)
 **Statut** : ✅ FAIT — Le feed provient exclusivement de Firestore sans saturer le quota de stockage local.
+
+### [x] [QW-15] — Calcul dynamique et assainissement des statistiques réelles de profil
+**Preuve** : `src/services/userStatsService.js:25-170`, `src/components/PublicProfileModal.jsx:245-257`, `src/features/profile/ProfileFeature.jsx:240-244`, `src/components/ProfileView.jsx:100-112`, `src/stores/useAuthStore.js:29-33`
+**Statut** : ✅ FAIT — Éradication définitive des statistiques factices hardcodées (20 deals de Matmot, 6 avis de Mateopolo). Remplacement par un calcul dynamique basé sur les relations réelles de la base de données Firestore (`COUNT` des avis dans `users/{uid}/reviews` et des deals confirmés dans `transactions` et `chats`). Règle de sous-collection `reviews` déployée sur Firebase.
 
 ---
 

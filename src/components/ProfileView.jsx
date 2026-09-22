@@ -10,6 +10,7 @@ import ProfileAppearanceCustomizer from './profile/ProfileAppearanceCustomizer';
 import DesignStudioModal from './DesignStudioModal';
 import ReviewsSection from './ReviewsSection';
 import { auth } from '../firebase';
+import { useUserRealStats } from '../services/userStatsService';
 
 // Map des codes langue vers emojis drapeaux
 const LANG_FLAG_EMOJI = {
@@ -96,14 +97,18 @@ export default function ProfileView({
   };
 
   const rawUser = userProp || profile || {};
+  const targetProfileUid = rawUser?.uid || rawUser?.id || auth?.currentUser?.uid;
+  const { stats: dynamicStats } = useUserRealStats(targetProfileUid, rawUser);
   const user = {
     ...rawUser,
-    dealsCompleted: rawUser.dealsCompleted ?? closedDealsCount ?? 0,
-    activeDeals: rawUser.activeDeals ?? rawUser.dealsInProgress ?? inProgressCount ?? 0,
-    reviewsCount: rawUser.reviewsCount ?? 0,
-    averageRating: rawUser.averageRating !== undefined
-      ? rawUser.averageRating
-      : (rawUser.rating ?? (averageRating && averageRating !== '—' ? Number(averageRating) : 0)),
+    dealsCompleted: dynamicStats?.dealsCompleted !== undefined ? dynamicStats.dealsCompleted : (rawUser.dealsCompleted ?? closedDealsCount ?? 0),
+    activeDeals: dynamicStats?.activeDeals !== undefined ? dynamicStats.activeDeals : (rawUser.activeDeals ?? rawUser.dealsInProgress ?? inProgressCount ?? 0),
+    reviewsCount: dynamicStats?.reviewsCount !== undefined ? dynamicStats.reviewsCount : (rawUser.reviewsCount ?? 0),
+    averageRating: dynamicStats?.averageRating !== undefined
+      ? dynamicStats.averageRating
+      : (rawUser.averageRating !== undefined
+        ? rawUser.averageRating
+        : (rawUser.rating ?? (averageRating && averageRating !== '—' ? Number(averageRating) : 0))),
   };
 
   if (activeTab !== 'profile') return null;
