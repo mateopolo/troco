@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Globe, MessageSquare, PlusCircle, User } from 'lucide-react';
 import { hapticLight } from '../../utils/haptics';
@@ -205,7 +206,7 @@ export const AppBottomNav = React.memo(({
     return activeIndex * tabWidth;
   }, [isDragging, dragX, tabWidth, tabs.length, activeIndex]);
 
-  return (
+  const navElement = (
     <nav
       ref={bottomNavRef}
       aria-label="Navigation principale mobile"
@@ -390,6 +391,8 @@ export const AppBottomNav = React.memo(({
       </div>
     </nav>
   );
+
+  return typeof document !== 'undefined' ? createPortal(navElement, document.body) : navElement;
 }, (prevProps, nextProps) => {
   return (
     prevProps.activeTab === nextProps.activeTab &&

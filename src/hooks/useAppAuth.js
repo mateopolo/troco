@@ -69,8 +69,14 @@ export const useAppAuth = () => {
         setSessionAuthenticated();
         setIsProfileLoading(true);
 
-        // Attribution dynamique et ultra-sécurisée du God Mode / Admin strictement basée sur l'email
-        const isGodAdmin = user.email === 'mateopolo91@gmail.com';
+        // Attribution dynamique et ultra-sécurisée du rôle Admin strictement basée sur Custom Claims
+        let isGodAdmin = false;
+        try {
+          const tokenResult = await user.getIdTokenResult();
+          isGodAdmin = tokenResult.claims?.admin === true;
+        } catch (_) {
+          isGodAdmin = false;
+        }
 
         // Abonnement temps réel explicite du solde et jetons dans le store Zustand
         try {

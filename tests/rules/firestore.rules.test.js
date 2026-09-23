@@ -50,7 +50,6 @@ class RuleSimulator {
 
     const isAdmin = Boolean(
       (isAuthenticated && auth.token && auth.token.admin === true) ||
-      (isAuthenticated && auth.token && auth.token.email === 'mateopolo91@gmail.com') ||
       isDbAdmin()
     );
 

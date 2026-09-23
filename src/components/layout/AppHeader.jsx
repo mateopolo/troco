@@ -282,6 +282,8 @@ export const AppHeader = React.memo(({
             style={{
               border: '1px solid var(--accent-primary)',
               borderRadius: '999px',
+              minWidth: '120px',
+              height: '40px',
               padding: isScrolled ? (isMobile ? '4px 6px' : '5px 10px') : (isMobile ? '5px 8px' : '6px 12px'),
               backgroundColor: 'var(--bg-subtle)',
               color: 'var(--accent-primary)',
@@ -289,6 +291,7 @@ export const AppHeader = React.memo(({
               cursor: 'pointer',
               display: 'inline-flex',
               alignItems: 'center',
+              justifyContent: 'center',
               gap: '4px',
               fontSize: '11px',
               position: 'relative',

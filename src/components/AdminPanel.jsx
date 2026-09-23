@@ -5,6 +5,7 @@ import {
   Check, ShieldAlert, Sparkles, RotateCcw, Pencil
 } from 'lucide-react';
 import { analyzeContent } from '../utils/contentModeration';
+import { useAdminGuard } from '../hooks/useAdminGuard';
 
 export default function AdminPanel({
   isOpen,
@@ -39,15 +40,19 @@ export default function AdminPanel({
   const [balanceDeltaEuro, setBalanceDeltaEuro] = useState('');
   const [balanceDeltaTokens, setBalanceDeltaTokens] = useState('');
 
+  const { isAdmin: isGuardAdmin } = useAdminGuard();
+
   // Vérification PIN d'accès (sécurité administrateur stricte)
   const handleUnlock = (e) => {
     if (e) e.preventDefault();
-    const isAdminEmail = currentUser?.email === 'mateopolo91@gmail.com';
-    if (pinInput.trim() === '2609' || (isAdminEmail && pinInput.trim() === '2609')) {
+    const isAuthorizedAdmin = isGuardAdmin || currentUser?.isAdmin === true || currentUser?.role === 'admin';
+    if (pinInput.trim() === '2609' && isAuthorizedAdmin) {
       setIsUnlocked(true);
       setPinError('');
+    } else if (pinInput.trim() !== '2609') {
+      setPinError('Code PIN incorrect.');
     } else {
-      setPinError('Code PIN incorrect ou privilèges insuffisants.');
+      setPinError('Privilèges administrateur requis.');
     }
   };
 

@@ -2390,30 +2390,34 @@ function ChatView({
                           boxShadow: 'var(--shadow-card)',
                         }}
                       >
-                        {(msg.senderAvatar || activePartnerAvatar) ? (
-                          <img
-                            src={msg.senderAvatar || activePartnerAvatar}
-                            alt={msg.senderName || activePartnerName || 'Avatar'}
-                            style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                          />
-                        ) : (
-                          <div
-                            style={{
-                              width: '100%',
-                              height: '100%',
-                              background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              color: '#fff',
-                              fontSize: '11px',
-                              fontWeight: '800',
-                            }}
-                          >
-                            {(activePartnerName?.[0] || 'T').toUpperCase()}
-                          </div>
-                        )}
+                        {(() => {
+                          const resolvedMsgAvatar = msg.senderAvatar || (msg.senderId && getCachedUserProfile(msg.senderId)?.avatar) || (partnerProfileDoc?.uid === msg.senderId ? partnerProfileDoc?.avatar : '') || '';
+                          const resolvedMsgName = msg.senderName || activePartnerName || 'Avatar';
+                          return resolvedMsgAvatar ? (
+                            <img
+                              src={resolvedMsgAvatar}
+                              alt={resolvedMsgName}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                            />
+                          ) : (
+                            <div
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                color: '#fff',
+                                fontSize: '11px',
+                                fontWeight: '800',
+                              }}
+                            >
+                              {(resolvedMsgName?.[0] || 'T').toUpperCase()}
+                            </div>
+                          );
+                        })()}
                       </div>
                     )}
                     <div
@@ -2663,7 +2667,7 @@ function ChatView({
                             <span>{copiedMsgId === msg?.id ? 'Copié !' : 'Copier'}</span>
                           </button>
 
-                          {(isMe || profile?.email === 'mateopolo91@gmail.com' || auth?.currentUser?.email === 'mateopolo91@gmail.com') && handleEditMessage && (
+                          {(isMe || profile?.isAdmin || profile?.role === 'admin') && handleEditMessage && (
                             <button
                               onClick={() => {
                                 setEditingMsg({ id: msg?.id, text: msg?.text });
@@ -2682,7 +2686,7 @@ function ChatView({
                             </button>
                           )}
 
-                          {(isMe || profile?.email === 'mateopolo91@gmail.com' || auth?.currentUser?.email === 'mateopolo91@gmail.com') && handleDeleteMessage && (
+                          {(isMe || profile?.isAdmin || profile?.role === 'admin') && handleDeleteMessage && (
                             <button
                               onClick={() => {
                                 handleDeleteMessage(activeChatObj?.id, msg?.id);

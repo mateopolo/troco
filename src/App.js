@@ -1095,17 +1095,19 @@ export default function App() {
               updatesToSync.onboardingCompleted = true;
             }
 
-            // AUTO-GUÉRISON : Si l'admin (mateopolo91@gmail.com) n'a pas de cguAcceptedAt,
-            // on le patch immédiatement côté Firestore ET on pose le verrou synchrone
+            // AUTO-GUÉRISON : Si l'admin n'a pas de cguAcceptedAt,
+            // on le patch une seule fois par session côté Firestore ET on pose le verrou synchrone
             // pour bloquer toute ouverture de modale CGU dans ce cycle de rendu.
-            const isGodAdminSnap = firebaseUser.email === 'mateopolo91@gmail.com';
-            if (isGodAdminSnap && !data.cguAcceptedAt) {
+            const alreadyHealed = typeof window !== 'undefined' && window.sessionStorage?.getItem('troco_admin_cgu_healed') === 'true';
+            const isGodAdminSnap = Boolean(data.isAdmin || data.role === 'admin');
+            if (isGodAdminSnap && !data.cguAcceptedAt && !alreadyHealed) {
               const healedAt = new Date().toISOString();
               updatesToSync.cguAcceptedAt = serverTimestamp();
               updatesToSync.cguVersion = '2026.1';
               // Verrou synchrone immédiat : bypasse React state pour ce cycle de rendu
               cguBypassRef.current = true;
               try {
+                window.sessionStorage?.setItem('troco_admin_cgu_healed', 'true');
                 window.sessionStorage?.setItem('troco_cgu_dismissed', 'true');
                 window.localStorage?.setItem('troco_cgu_dismissed', 'true');
               } catch (_) { }
@@ -1123,7 +1125,7 @@ export default function App() {
             }
 
             // Mise à jour de l'état profil local et persistence
-            const isGodAdmin = firebaseUser.email === 'mateopolo91@gmail.com';
+            const isGodAdmin = Boolean(data.isAdmin || data.role === 'admin');
             setProfile(prev => {
               const updated = {
                 ...prev,
@@ -1162,7 +1164,11 @@ export default function App() {
             }
 
             // Initialisation automatique du profil sur Firestore si nouveau provider
-            const isGodAdmin = firebaseUser.email === 'mateopolo91@gmail.com';
+            let isGodAdmin = false;
+            try {
+              const tokenRes = await firebaseUser.getIdTokenResult();
+              isGodAdmin = Boolean(tokenRes?.claims?.admin);
+            } catch (_) {}
             const defaultUserDoc = {
               uid: uid,
               name: firebaseUser.displayName || firebaseUser.email?.split('@')[0].toUpperCase() || 'Utilisateur Troco',

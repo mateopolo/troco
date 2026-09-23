@@ -776,7 +776,7 @@ export default function PublicProfileModal({
               >
                 <div style={{ fontWeight: '800', marginBottom: '6px', color: 'var(--text-main)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
                   <span>{t('aboutUser', 'À propos de')} {userName}</span>
-                  {activeLang !== 'FR' && bio && (
+                  {(activeLang !== 'FR' || (languages && languages.some(l => l !== 'FR'))) && bio && (
                     <button
                       type="button"
                       onClick={() => setShowingOriginalBio(prev => !prev)}

@@ -14,7 +14,8 @@ import {
   signOut,
   onAuthStateChanged,
   RecaptchaVerifier,
-  signInWithPhoneNumber
+  signInWithPhoneNumber,
+  getIdTokenResult
 } from 'firebase/auth';
 import {
   doc,
@@ -92,9 +93,10 @@ export const AuthProvider = ({ children }) => {
   const [signupLanguages, setSignupLanguages] = useState(['FR']);
   const [signupSkillInput, setSignupSkillInput] = useState('');
 
-  // Détection Démo & Admin
+  // Détection Démo & Admin (Custom Claims et profil DB, aucun email hardcodé)
+  const [hasAdminClaim, setHasAdminClaim] = useState(false);
   const isDemoProfile = Boolean(profile?.isDemo || (profile?.uid && String(profile.uid).startsWith('demo_')));
-  const isAdmin = profile?.email === 'mateopolo91@gmail.com' || auth.currentUser?.email === 'mateopolo91@gmail.com' || profile?.role === 'admin';
+  const isAdmin = hasAdminClaim || profile?.isAdmin === true || profile?.role === 'admin';
 
   // Traitement du résultat de redirection OAuth (signInWithRedirect)
   useEffect(() => {
@@ -152,6 +154,11 @@ export const AuthProvider = ({ children }) => {
       if (currentUser) {
         setIsAuthenticated(true);
         setSessionAuthenticated();
+        currentUser.getIdTokenResult().then((tokenResult) => {
+          setHasAdminClaim(tokenResult.claims?.admin === true);
+        }).catch(() => {
+          setHasAdminClaim(false);
+        });
         try {
           const userDocRef = doc(db, 'users', currentUser.uid);
           unsubscribeDoc = onSnapshot(userDocRef, (userSnap) => {
@@ -194,6 +201,7 @@ export const AuthProvider = ({ children }) => {
         clearSessionFlags();
         setIsAuthenticated(false);
         setProfile(null);
+        setHasAdminClaim(false);
       }
       setIsLoadingSession(false);
     });
@@ -215,6 +223,7 @@ export const AuthProvider = ({ children }) => {
     window.localStorage.removeItem('troco_user_profile');
     setIsAuthenticated(false);
     setUser(null);
+    setHasAdminClaim(false);
   };
 
   // Validation CGU

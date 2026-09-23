@@ -917,6 +917,7 @@ export const useChatManager = ({
               senderUid: myUid,
               sender: myUid,
               senderName: myName,
+              senderAvatar: profile?.avatar || auth?.currentUser?.photoURL || '',
               text: preview,
               read: false,
               status: 'sent',
@@ -1454,9 +1455,13 @@ export const useChatManager = ({
 
     if (db) {
       try {
+        const myUid = auth?.currentUser?.uid || profile?.uid || 'me';
         await addDoc(collection(db, 'chats', cid, 'messages'), {
+          senderId: myUid,
+          senderUid: myUid,
           sender: 'me',
           senderName: profile?.name || 'Initiateur',
+          senderAvatar: profile?.avatar || auth?.currentUser?.photoURL || '',
           kind: 'reward-proposal',
           type: 'reward',
           reward: rewardData,
@@ -1662,6 +1667,7 @@ export const useChatManager = ({
           senderUid: currentUserId,
           sender: 'me',
           senderName: profile?.name || auth?.currentUser?.displayName || 'Moi',
+          senderAvatar: profile?.avatar || auth?.currentUser?.photoURL || '',
           dealId: newDealMsgId,
           dealTerms,
           terms: fullTerms,

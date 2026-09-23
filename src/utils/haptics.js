@@ -31,10 +31,10 @@ export const isHapticSupported = () => {
  */
 export const isUserActiveForHaptic = () => {
   if (typeof window === 'undefined' || typeof window.navigator === 'undefined') return false;
-  if (typeof window.navigator.userActivation !== 'undefined' && window.navigator.userActivation !== null) {
-    return Boolean(window.navigator.userActivation.hasBeenActive);
+  if (window.navigator.userActivation) {
+    return Boolean(window.navigator.userActivation.isActive || window.navigator.userActivation.hasBeenActive);
   }
-  return true;
+  return false;
 };
 
 /**

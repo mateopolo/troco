@@ -254,7 +254,7 @@ export default function ProfileView({
                     ? parseAndTranslateDynamicText(profile.bio, currentLang, { forceOriginal: showingOriginalBio, sourceLang: 'auto' })
                     : ''}
                 </div>
-                {currentLang !== 'FR' && profile?.bio && (
+                {(currentLang !== 'FR' || (profile?.languages && profile.languages.some(l => l !== 'FR')) || profile?.sourceLang) && profile?.bio && (
                   <button
                     type="button"
                     onClick={() => setShowingOriginalBio(prev => !prev)}

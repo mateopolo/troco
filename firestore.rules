@@ -55,13 +55,11 @@ service cloud.firestore {
     /**
      * Vérifie si l'utilisateur possède les privilèges administrateur :
      * 1. Custom Claim signé (request.auth.token.admin == true)
-     * 2. Email Super Admin (mateopolo91@gmail.com)
-     * 3. Rôle administrateur vérifié en base de données Firestore (users/{uid}.isAdmin == true ou role == 'admin')
+     * 2. Rôle administrateur vérifié en base de données Firestore (users/{uid}.isAdmin == true ou role == 'admin')
      */
     function isAdmin() {
       return isAuthenticated() && (
         request.auth.token.admin == true ||
-        request.auth.token.email == 'mateopolo91@gmail.com' ||
         isDbAdmin()
       );
     }
@@ -79,25 +77,23 @@ service cloud.firestore {
     }
 
     // ========================================================================
-    // ⚡ GOD MODE ADMINISTRATEUR ABSOLU (mateopolo91@gmail.com)
+    // ⚡ PRIVILÈGES ADMINISTRATEUR (CUSTOM CLAIM & DB ADMIN)
     // ========================================================================
     match /{document=**} {
-      allow read, write: if request.auth != null && request.auth.token.email == 'mateopolo91@gmail.com';
+      allow read, write: if isAuthenticated() && (request.auth.token.admin == true || isDbAdmin());
     }
 
     // ========================================================================
-    // 👤 COLLECTION USERS (PROFILS PRIVÉS & NOTIFICATIONS)
+    // 👤 COLLECTION USERS (PROFILS PRIVÉS & SOUS-COLLECTIONS)
     // ========================================================================
     match /users/{uid} {
-      // Lecture : tout utilisateur authentifié peut consulter les profils des membres (résolution noms, photos, bio)
+      // Lecture : tout utilisateur authentifié peut consulter les profils des membres
       allow read: if isAuthenticated();
 
       // Création : propriétaire uniquement
       allow create: if isOwner(uid);
 
       // Mise à jour : propriétaire authentifié ou administrateur
-      // Permet la persistance garantie du solde (euroBalance, balance, walletBalanceFiat), des jetons (trocoTokens, tokens) et du profil
-      // Protection des privilèges : empêche les non-admins de modifier les rôles ou statuts de modération
       allow update: if isAuthenticated() && (
         (
           request.auth.uid == uid &&
@@ -116,7 +112,7 @@ service cloud.firestore {
 
       // Sous-collection interne : Notifications
       match /notifications/{notifId} {
-        allow read, update, delete: if isOwner(uid) || isAdmin();
+        allow read, update, delete: if isOwner(uid) || (isAuthenticated() && request.auth.uid == uid) || isAdmin();
         allow create: if isAuthenticated();
       }
 
@@ -134,10 +130,35 @@ service cloud.firestore {
     }
 
     // ========================================================================
+    // 🔔 NOTIFICATIONS RACINE & COLLECTIONGROUP
+    // ========================================================================
+    match /notifications/{notifId} {
+      allow read, update, delete: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        resource.data.recipientUid == request.auth.uid ||
+        resource.data.toUid == request.auth.uid ||
+        resource.data.partnerUid == request.auth.uid ||
+        isAdmin()
+      );
+      allow create: if isAuthenticated();
+    }
+
+    match /{path=**}/notifications/{notifId} {
+      allow read, update, delete: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid ||
+        resource.data.recipientUid == request.auth.uid ||
+        resource.data.toUid == request.auth.uid ||
+        resource.data.partnerUid == request.auth.uid ||
+        isAdmin()
+      );
+      allow create: if isAuthenticated();
+    }
+
+    // ========================================================================
     // 🌐 COLLECTION USERS_PUBLIC (PROFILS MINIMALISTES CONFORMES RGPD)
     // ========================================================================
     match /users_public/{uid} {
-      // Lecture : tout utilisateur authentifié (ou feed)
+      // Lecture : tout utilisateur authentifié (ou visiteur pour les profils publics)
       allow read: if isAuthenticated();
       // Écriture : interdite à tous les clients (géré exclusivement par Cloud Functions)
       allow write: if false;
@@ -147,7 +168,7 @@ service cloud.firestore {
     // 📢 COLLECTION LISTINGS (ANNONCES DE SERVICES & BIENS)
     // ========================================================================
     match /listings/{listingId} {
-      // Lecture : publique si annonce active, sans statut défini (annonces publiques), créateur ou admin
+      // Lecture : publique si annonce active, sans statut défini, créateur ou admin
       allow read: if (resource.data.status == 'active')
         || !('status' in resource.data)
         || (isAuthenticated() && request.auth.uid == resource.data.authorUid)
@@ -157,7 +178,7 @@ service cloud.firestore {
       allow create: if isAuthenticated() && isNotBanned()
         && request.resource.data.authorUid == request.auth.uid;
 
-      // Modification : auteur non banni sans toucher aux attributs protégés (boosts/modération), ou admin
+      // Modification : auteur non banni sans toucher aux attributs protégés, ou admin
       allow update: if (
         isAuthenticated()
         && request.auth.uid == resource.data.authorUid
@@ -181,11 +202,8 @@ service cloud.firestore {
       // Création : membre authentifié non banni
       allow create: if isAuthenticated() && isNotBanned();
 
-      // Modification / Suppression : administrateur (token, email ou statut en base de données) ou auteur du message
+      // Modification / Suppression : administrateur ou auteur du message
       allow update, delete: if isAdmin()
-        || (request.auth != null && request.auth.token.admin == true)
-        || (request.auth != null && request.auth.token.email == 'mateopolo91@gmail.com')
-        || isDbAdmin()
         || (isAuthenticated() && (
           resource.data.authorUid == request.auth.uid ||
           resource.data.authorId == request.auth.uid ||
@@ -199,11 +217,8 @@ service cloud.firestore {
     match /community_messages/{msgId} {
       allow read: if true;
       allow create: if isAuthenticated() && isNotBanned();
-      // Modification / Suppression : administrateur (token, email ou statut en base de données) ou auteur du message
+      // Modification / Suppression : administrateur ou auteur du message
       allow update, delete: if isAdmin()
-        || (request.auth != null && request.auth.token.admin == true)
-        || (request.auth != null && request.auth.token.email == 'mateopolo91@gmail.com')
-        || isDbAdmin()
         || (isAuthenticated() && (
           resource.data.authorUid == request.auth.uid ||
           resource.data.authorId == request.auth.uid ||
@@ -251,14 +266,14 @@ service cloud.firestore {
       // Écriture : réservée au serveur (ou transaction client initialisée)
       allow create: if isAuthenticated() && isNotBanned()
         && (request.resource.data.userId == request.auth.uid || request.resource.data.buyerUid == request.auth.uid);
-      allow update, delete: if isAdmin() || (request.auth != null && request.auth.token.email == 'mateopolo91@gmail.com');
+      allow update, delete: if isAdmin();
     }
 
     // ========================================================================
     // 🚨 COLLECTION REPORTS (SIGNALEMENTS DE SÉCURITÉ & MODÉRATION)
     // ========================================================================
     match /reports/{reportId} {
-      // Lecture : réservée strictement aux administrateurs (protection des lanceurs d'alerte)
+      // Lecture : réservée strictement aux administrateurs
       allow read: if isAdmin();
 
       // Création : tout membre authentifié et non banni peut signaler un abus

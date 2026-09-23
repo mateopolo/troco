@@ -765,4 +765,51 @@ Résoudre l'erreur bloquante `[paymentService] Error updating Firestore user doc
 4. **`src/features/auth/AuthScreen.jsx` (L38, L99, L109) :** Définition explicite de `onAuthSuccess = null` dans les props et ajout à la liste de dépendances du hook `useEffect` pour éliminer l'erreur `no-undef`.
 5. **Validation :** Exécution locale complète de `npm run build` réussie avec le code 0 (`The build folder is ready to be deployed.`), et validation des tests unitaires et de règles (48/48 `test:rules`, 9/9 `Phase135UGCTranslation`).
 
+### Patch PROMPT 13 — Résolution Intégrale des Bugs Critiques, Sécurité & Expérience Collaborative (commit `fix(core): prompt 13 critical bugs, firestore rules, admin guard, whiteboard send, ui and i18n`)
+
+#### 3.18 Résolution Complète des 9 Tâches Critiques (PROMPT 13)
+
+1. **Déploiement des Index Composites Firestore & Règles Zero-Trust (`firestore.indexes.json` & `firestore.rules`) :**
+   - Ajout et déploiement en production sur Firebase (`troco-8a6eb`) des index composites requis pour la collection `transactions` :
+     - `userId` (ASC) + `createdAt` (DESC)
+     - `partnerUid` (ASC) + `createdAt` (DESC)
+   - Éradication de l'email hardcodé dans `isAdmin()` au sein de `firestore.rules` au profit exclusif de la vérification Custom Claims signée par le serveur (`request.auth.token.admin == true`) et de `isDbAdmin()`.
+   - Validation stricte de 48/48 tests de règles Firestore (`npm run test:rules`).
+
+2. **Suppression Intégrale de l'Admin Hardcodé (`mateopolo91@gmail.com`) :**
+   - Éradication totale de l'adresse email dans tout le code client (`src/` : 0 occurrence).
+   - Remplacement par la vérification cryptographique des Custom Claims (`auth.currentUser.getIdTokenResult()`) et le hook `useAdminGuard()`.
+   - Sécurisation du store `useAuthStore.js`, du contexte `AuthContext.jsx`, des dashboards d'administration (`AdminPanel.jsx`, `AdminDashboard.jsx`), du chat (`GlobalLiveChat.jsx`, `ChatView.jsx`), de `userStatsService.js` et de `App.js`.
+
+3. **Harmonisation UI Layout, Emojis Drapeaux & Isolation Z-Index Mobile :**
+   - `AppHeader.jsx` : Égalisation stricte des dimensions des badges (`height: '40px'`, `minWidth: '120px'`, `justifyContent: 'center'`) entre le solde Euros et le bouton Troco Plus pour éliminer tout saut visuel.
+   - `AppBottomNav.jsx` : Enveloppement dans `createPortal(navElement, document.body)` avec `zIndex: 100050` pour s'extraire définitivement du stacking context `#root` et garantir que la barre de navigation reste cliquable et visible au-dessus des modales (`UniversalModal`).
+   - `index.css` : Ajout de la police `@font-face` `Twemoji Country Flags` (format woff2) avec la plage Unicode `unicode-range: U+1F1E6-1F1FF` dans `--font-sans` pour assurer le rendu natif et fidèle des drapeaux emojis sur tous les environnements (notamment Windows).
+
+4. **Résolution du Bug de l'Avatar Inversé dans les DMs (`useChatManager.js` & `ChatView.jsx`) :**
+   - `useChatManager.js` : Enregistrement systématique du champ `senderAvatar: profile?.avatar || auth?.currentUser?.photoURL || ''` lors de chaque création de message (`addDoc`).
+   - `ChatView.jsx` : L'avatar des messages reçus résout en priorité absolue `msg.senderAvatar`, puis le profil mis en cache `userResolverService` du sender, ou le profil partenaire, sans jamais retomber sur `activeChatObj.avatar` ou l'utilisateur courant.
+
+5. **Correction du Calcul des Statistiques Utilisateur (`userStatsService.js`) :**
+   - Élimination du comptage erroné des messages de chat comme "deals clôturés" pour le profil Matmot.
+   - Décompte strict basé sur les transactions effectives (`type === 'deal' || type === 'deal_payment' || dealId`) avec statut `completed` ou `closed` excluant les démos et recharges.
+   - Harmonisation du champ `dealsClosed` / `dealsCompleted` à travers l'application.
+
+6. **Couverture i18n & Traductions Dynamiques du Contenu Utilisateur (UGC) :**
+   - `translations.js` & `translationsSecondary.js` : Ajout des alias linguistiques `JP` (`JA`) et `CN` (`ZH`) et internationalisation complète des tags et reviews (`localizeTags`, `localizeReview`).
+   - `GlobalLiveChat.jsx`, `PublicProfileModal.jsx`, `ProfileView.jsx` : Conditionnement intelligent du bouton toggle de traduction lorsque le contenu comporte des tags linguistiques étrangers ou lorsque `currentLang !== 'FR'`.
+
+7. **Fusion et Réassignation des Annonces Orphelines :**
+   - Validation du script de migration `scripts/migrate-orphan-listings.js` rattachant les 4 annonces orphelines sous l'UID Google authentifié officiel `L7AzxIQoMaOzFzMRO9W1heyo8Y62`.
+
+8. **Partage du Tableau Blanc Collaboratif dans le Chat (`CollaborativeWhiteboardModal.jsx`) :**
+   - Remplacement des prompts natifs par une modale intégrée permettant de saisir le titre et la version du tableau blanc.
+   - Sauvegarde préalable dans Firestore (`project_whiteboards` et `workspaces`), puis envoi de l'objet complet et actualisé directement dans la conversation active.
+
+9. **Nettoyage des Avertissements Console & Résilience Runtime :**
+   - `App.js` : Protection du self-heal `cguAcceptedAt` avec garde `sessionStorage` (`troco_admin_cgu_healed`) évitant les cycles d'écriture répétés.
+   - `haptics.js` : Vérification de `window.navigator.userActivation.isActive || hasBeenActive` prévenant les avertissements liés aux vibrations sans geste utilisateur préalable.
+   - `logger.js` : Suppression des avertissements verbeux de repli Sentry en environnement de développement local.
+
+
 

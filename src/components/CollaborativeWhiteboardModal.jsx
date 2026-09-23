@@ -264,6 +264,9 @@ export default function CollaborativeWhiteboardModal({
   const [isSending, setIsSending] = useState(false);
   const [saveSuccessToast, setSaveSuccessToast] = useState(false);
   const [shareSuccessToast, setShareSuccessToast] = useState(false);
+  const [isSendPromptOpen, setIsSendPromptOpen] = useState(false);
+  const [sendTitle, setSendTitle] = useState('');
+  const [sendVersion, setSendVersion] = useState('');
 
   // Panneau Latéral des Versions (Historique)
   const [isVersionsSidebarOpen, setIsVersionsSidebarOpen] = useState(false);
@@ -2111,15 +2114,83 @@ export default function CollaborativeWhiteboardModal({
     }
   };
 
-  // 2. Bouton "Envoyer" (Publication dans le chat avec snapshot Bounding Box JPEG 0.5)
-  const handleSend = async () => {
+  // 2. Bouton "Envoyer" (Prompt Titre & Version, Sauvegarde Firestore puis Envoi dans le chat)
+  const openSendPrompt = () => {
+    setSendTitle(workspaceTitle || 'Tableau Blanc');
+    setSendVersion(`V${versionNumber || 1}`);
+    setIsSendPromptOpen(true);
+  };
+
+  const handleConfirmSend = async (customTitle, customVersion) => {
     if (isSending) return;
     setIsSending(true);
+    setIsSendPromptOpen(false);
 
     try {
+      const finalTitle = (customTitle || sendTitle || workspaceTitle || 'Tableau Blanc').trim();
+      const finalVersion = (customVersion || sendVersion || `V${versionNumber}`).trim();
+      setWorkspaceTitle(finalTitle);
+
       const thumbnailBase64 = generateBoundingBoxPreview();
       const previewUrl = thumbnailBase64;
+      const combinedPaths = [...remotePaths, ...localPaths].slice(-400);
 
+      // Sauvegarde dans Firestore project_whiteboards et workspaces avec ce titre et cette version
+      if (db) {
+        try {
+          const docRef = doc(db, 'project_whiteboards', String(effectiveId));
+          const versionEntry = {
+            version: finalVersion,
+            name: finalTitle,
+            changeSummary: `Export Chat ${finalVersion}`,
+            savedAt: new Date().toISOString(),
+            savedByUid: myUid,
+            savedByName: myName,
+            thumbnailBase64,
+            previewUrl,
+            backgroundColor,
+            data: {
+              paths: combinedPaths,
+              stickyNotes,
+              textElements,
+              backgroundColor,
+            },
+          };
+          const payload = {
+            boardId: effectiveId,
+            groupId,
+            title: finalTitle,
+            versionNumber: finalVersion,
+            paths: combinedPaths,
+            stickyNotes,
+            textElements,
+            backgroundColor,
+            thumbnailBase64,
+            previewUrl,
+            updatedAt: serverTimestamp(),
+            lastEditor: myName,
+            lastEditorUid: myUid,
+            versionHistory: arrayUnion(versionEntry),
+          };
+          await setDoc(docRef, payload, { merge: true });
+
+          await saveWorkspaceVersion({
+            workspaceId: effectiveId,
+            chatId: groupId,
+            type: WORKSPACE_TYPES.WHITEBOARD,
+            title: finalTitle,
+            data: { paths: combinedPaths, stickyNotes, textElements, backgroundColor },
+            thumbnailBase64,
+            previewUrl,
+            currentUser,
+            changeSummary: `Export Chat ${finalVersion}`,
+          });
+        } catch (saveErr) {
+          logger.warn('[CollaborativeWhiteboard] Auto-save before send error:', saveErr);
+        }
+      }
+
+      // Envoi dans le chat avec le titre et la version sauvegardés
       const invitePayload = {
         type: 'workspace_invite',
         kind: 'workspace_invite',
@@ -2128,14 +2199,12 @@ export default function CollaborativeWhiteboardModal({
         workspaceId: effectiveId,
         thumbnailBase64,
         previewUrl,
-        title: workspaceTitle,
-        workspaceTitle,
-        version: `V${versionNumber}`,
-        text: `🎨 ${myName} a partagé le Tableau Blanc : "${workspaceTitle}"`,
+        title: finalTitle,
+        workspaceTitle: finalTitle,
+        version: finalVersion,
+        text: `🎨 ${myName} a partagé le Tableau Blanc : "${finalTitle}" (${finalVersion})`,
         timestamp: Date.now(),
       };
-
-      console.log('Payload envoyé:', invitePayload);
 
       const sendFn = onSendMessage || handleSendMessage || onSendToChat;
       if (typeof sendFn === 'function') {
@@ -2148,15 +2217,6 @@ export default function CollaborativeWhiteboardModal({
         });
       }
 
-      if (db) {
-        try {
-          const docRef = doc(db, 'project_whiteboards', String(effectiveId));
-          await setDoc(docRef, { thumbnailBase64, previewUrl, updatedAt: serverTimestamp() }, { merge: true });
-          const wsRef = doc(db, 'workspaces', String(effectiveId));
-          await setDoc(wsRef, { thumbnailBase64, previewUrl, updatedAt: serverTimestamp() }, { merge: true });
-        } catch (_) {}
-      }
-
       setShareSuccessToast(true);
       setSaveStatus('Envoyé dans le chat 💬');
       setTimeout(() => setShareSuccessToast(false), 3500);
@@ -2166,6 +2226,8 @@ export default function CollaborativeWhiteboardModal({
       setIsSending(false);
     }
   };
+
+  const handleSend = openSendPrompt;
 
   if (!isOpen) return null;
   if (typeof document === 'undefined') return null;
@@ -2528,7 +2590,7 @@ export default function CollaborativeWhiteboardModal({
             <button
               type="button"
               disabled={isSending}
-              onClick={handleSend}
+              onClick={openSendPrompt}
               className="premium-button"
               aria-label="Partager et envoyer au chat"
               style={{
@@ -2638,6 +2700,145 @@ export default function CollaborativeWhiteboardModal({
         >
           <Send size={16} />
           Tableau blanc envoyé et publié dans le chat ! 💬
+        </div>
+      )}
+
+      {/* MODALE PROMPT TITRE & VERSION AVANT ENVOI AU CHAT */}
+      {isSendPromptOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 1000100,
+            backgroundColor: 'rgba(0, 0, 0, 0.65)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+          }}
+          onClick={() => setIsSendPromptOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: darkMode ? '#1E1B18' : '#FFFFFF',
+              borderRadius: '20px',
+              padding: '24px',
+              maxWidth: '420px',
+              width: '100%',
+              boxShadow: '0 20px 50px rgba(0,0,0,0.3)',
+              border: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.08)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Send size={18} color="var(--accent-primary, #C67D5B)" />
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: darkMode ? '#FAF7F2' : '#2D2825' }}>
+                  Envoyer dans le chat
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsSendPromptOpen(false)}
+                style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#888', padding: '4px' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <p style={{ margin: 0, fontSize: '13px', color: darkMode ? '#A8A29E' : '#6B7280', lineHeight: 1.5 }}>
+              Spécifiez le titre et la version de ce tableau blanc avant de le publier dans la discussion.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '12px', fontWeight: '700', color: darkMode ? '#E7E5E4' : '#374151' }}>
+                Titre du tableau
+              </label>
+              <input
+                type="text"
+                value={sendTitle}
+                onChange={(e) => setSendTitle(e.target.value)}
+                placeholder="Ex: Wireframe projet, Plan technique..."
+                style={{
+                  padding: '10px 14px',
+                  borderRadius: '10px',
+                  border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #D1D5DB',
+                  backgroundColor: darkMode ? '#2B2622' : '#F9FAFB',
+                  color: darkMode ? '#FFF' : '#111',
+                  fontSize: '13px',
+                  outline: 'none',
+                }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <label style={{ fontSize: '12px', fontWeight: '700', color: darkMode ? '#E7E5E4' : '#374151' }}>
+                Version
+              </label>
+              <input
+                type="text"
+                value={sendVersion}
+                onChange={(e) => setSendVersion(e.target.value)}
+                placeholder="Ex: V1, V2, Final..."
+                style={{
+                  padding: '10px 14px',
+                  borderRadius: '10px',
+                  border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #D1D5DB',
+                  backgroundColor: darkMode ? '#2B2622' : '#F9FAFB',
+                  color: darkMode ? '#FFF' : '#111',
+                  fontSize: '13px',
+                  outline: 'none',
+                }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
+              <button
+                type="button"
+                onClick={() => setIsSendPromptOpen(false)}
+                style={{
+                  flex: 1,
+                  padding: '10px',
+                  borderRadius: '12px',
+                  border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #E5E7EB',
+                  backgroundColor: 'transparent',
+                  color: darkMode ? '#D6D3D1' : '#4B5563',
+                  fontWeight: '700',
+                  fontSize: '13px',
+                  cursor: 'pointer',
+                }}
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                disabled={isSending}
+                onClick={() => handleConfirmSend()}
+                style={{
+                  flex: 2,
+                  padding: '10px',
+                  borderRadius: '12px',
+                  border: 'none',
+                  backgroundColor: 'var(--accent-primary, #C67D5B)',
+                  color: '#FFF',
+                  fontWeight: '800',
+                  fontSize: '13px',
+                  cursor: isSending ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                }}
+              >
+                <Send size={15} />
+                <span>{isSending ? 'Envoi...' : 'Envoyer dans le chat'}</span>
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

@@ -2529,3 +2529,8 @@ export const knownCompMap = {
   }
 };
 
+
+
+// Aliases JP -> JA et CN -> ZH
+secondaryTranslations.JP = secondaryTranslations.JA;
+secondaryTranslations.CN = secondaryTranslations.ZH;

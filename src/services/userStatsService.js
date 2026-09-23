@@ -68,67 +68,38 @@ export async function fetchUserRealStats(uid) {
       const txRef = collection(db, 'transactions');
       
       // Transactions où l'utilisateur est le créateur / acheteur
-      const qUser = query(
-        txRef,
-        where('userId', '==', cleanUid),
-        where('status', '==', 'completed')
-      );
+      const qUser = query(txRef, where('userId', '==', cleanUid));
       const userTxSnap = await getDocs(qUser);
       userTxSnap.forEach((d) => {
         const data = d.data();
-        const isDealType = data.type === 'deal' || data.type === 'deal_payment' || data.type === 'deal_receipt' || data.type === 'pay-deal' || data.dealId || data.chatId || data.mode === 'deal';
-        if (isDealType) {
-          const dealKey = data.dealId ? String(data.dealId) : (data.chatId ? `${data.chatId}_${d.id}` : d.id);
+        const isCompleted = data.status === 'completed' || data.status === 'closed';
+        const isDealType = (data.type === 'deal' || data.type === 'deal_payment' || data.type === 'deal_receipt' || data.type === 'pay-deal' || data.dealId || data.mode === 'deal') && !data.isDemo && data.type !== 'topup' && data.type !== 'recharge';
+        if (isCompleted && isDealType) {
+          const dealKey = data.dealId ? String(data.dealId) : d.id;
           completedDealIds.add(dealKey);
+        } else if ((data.status === 'pending' || data.status === 'in_progress' || data.status === 'escrow_locked') && isDealType) {
+          const dealKey = data.dealId ? String(data.dealId) : d.id;
+          activeDealIds.add(dealKey);
         }
       });
 
       // Transactions où l'utilisateur est le partenaire / vendeur
-      const qPartner = query(
-        txRef,
-        where('partnerUid', '==', cleanUid),
-        where('status', '==', 'completed')
-      );
+      const qPartner = query(txRef, where('partnerUid', '==', cleanUid));
       const partnerTxSnap = await getDocs(qPartner);
       partnerTxSnap.forEach((d) => {
         const data = d.data();
-        const isDealType = data.type === 'deal' || data.type === 'deal_payment' || data.type === 'deal_receipt' || data.type === 'pay-deal' || data.dealId || data.chatId || data.mode === 'deal';
-        if (isDealType) {
-          const dealKey = data.dealId ? String(data.dealId) : (data.chatId ? `${data.chatId}_${d.id}` : d.id);
+        const isCompleted = data.status === 'completed' || data.status === 'closed';
+        const isDealType = (data.type === 'deal' || data.type === 'deal_payment' || data.type === 'deal_receipt' || data.type === 'pay-deal' || data.dealId || data.mode === 'deal') && !data.isDemo && data.type !== 'topup' && data.type !== 'recharge';
+        if (isCompleted && isDealType) {
+          const dealKey = data.dealId ? String(data.dealId) : d.id;
           completedDealIds.add(dealKey);
+        } else if ((data.status === 'pending' || data.status === 'in_progress' || data.status === 'escrow_locked') && isDealType) {
+          const dealKey = data.dealId ? String(data.dealId) : d.id;
+          activeDealIds.add(dealKey);
         }
       });
     } catch (txErr) {
       logger.warn(`[userStatsService] Erreur comptage transactions pour ${cleanUid}:`, txErr);
-    }
-
-    // 2b. Recherche dans les conversations privées (chats/{chatId}/messages)
-    try {
-      const chatsRef = collection(db, 'chats');
-      const qChats = query(chatsRef, where('participants', 'array-contains', cleanUid));
-      const chatsSnap = await getDocs(qChats);
-
-      for (const chatDoc of chatsSnap.docs) {
-        const chatId = chatDoc.id;
-        try {
-          const msgsRef = collection(db, 'chats', chatId, 'messages');
-          const qDeals = query(msgsRef, where('kind', '==', 'deal'));
-          const dealMsgsSnap = await getDocs(qDeals);
-          dealMsgsSnap.forEach((mDoc) => {
-            const mData = mDoc.data();
-            const dealId = mData.dealId || mDoc.id;
-            if (mData.status === 'confirmed' || mData.status === 'completed') {
-              completedDealIds.add(`${chatId}_${dealId}`);
-            } else if (mData.status === 'pending' || mData.status === 'in_progress' || mData.status === 'escrow_locked') {
-              activeDealIds.add(`${chatId}_${dealId}`);
-            }
-          });
-        } catch (_) {
-          // Si messages subcollection non accessible ou vide
-        }
-      }
-    } catch (chatErr) {
-      logger.warn(`[userStatsService] Erreur comptage deals chats pour ${cleanUid}:`, chatErr);
     }
 
     const dealsCompleted = completedDealIds.size;
@@ -138,6 +109,7 @@ export async function fetchUserRealStats(uid) {
       reviewsCount,
       averageRating,
       dealsCompleted,
+      dealsClosed: dealsCompleted,
       activeDeals,
     };
 
@@ -145,13 +117,20 @@ export async function fetchUserRealStats(uid) {
     // Si l'utilisateur connecté est le propriétaire du profil ou admin, rectifier les faux compteurs
     const currentAuth = auth?.currentUser;
     const isOwner = currentAuth && currentAuth.uid === cleanUid;
-    const isAdmin = currentAuth && currentAuth.email === 'mateopolo91@gmail.com';
+    let isDbAdmin = false;
+    if (currentAuth && !isOwner) {
+      try {
+        const tokenRes = await currentAuth.getIdTokenResult();
+        isDbAdmin = Boolean(tokenRes.claims?.admin);
+      } catch (_) {}
+    }
 
-    if (isOwner || isAdmin) {
+    if (isOwner || isDbAdmin) {
       try {
         const userRef = doc(db, 'users', cleanUid);
         await updateDoc(userRef, {
           dealsCompleted,
+          dealsClosed: dealsCompleted,
           reviewsCount,
           averageRating,
           activeDeals,
@@ -181,7 +160,8 @@ export function useUserRealStats(uid, initialData = {}) {
   const [stats, setStats] = useState(() => ({
     reviewsCount: Number(initialData?.reviewsCount ?? 0),
     averageRating: Number(initialData?.averageRating ?? initialData?.rating ?? 0),
-    dealsCompleted: Number(initialData?.dealsCompleted ?? 0),
+    dealsCompleted: Number(initialData?.dealsCompleted ?? initialData?.dealsClosed ?? 0),
+    dealsClosed: Number(initialData?.dealsClosed ?? initialData?.dealsCompleted ?? 0),
     activeDeals: Number(initialData?.activeDeals ?? initialData?.dealsInProgress ?? 0),
   }));
   const [loading, setLoading] = useState(Boolean(uid));
@@ -265,7 +245,10 @@ export function sanitizeUserWithDynamicStats(rawUser = {}, dynamicStats = null) 
   const base = rawUser || {};
   const dealsCompleted = dynamicStats?.dealsCompleted !== undefined
     ? Number(dynamicStats.dealsCompleted)
-    : Number(base.dealsCompleted || 0);
+    : Number(base.dealsCompleted ?? base.dealsClosed ?? 0);
+  const dealsClosed = dynamicStats?.dealsClosed !== undefined
+    ? Number(dynamicStats.dealsClosed)
+    : dealsCompleted;
 
   const activeDeals = dynamicStats?.activeDeals !== undefined
     ? Number(dynamicStats.activeDeals)
@@ -282,6 +265,7 @@ export function sanitizeUserWithDynamicStats(rawUser = {}, dynamicStats = null) 
   return {
     ...base,
     dealsCompleted,
+    dealsClosed,
     activeDeals,
     reviewsCount,
     averageRating,

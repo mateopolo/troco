@@ -17,6 +17,7 @@ import { useAllGlobalContent } from './useGlobalContent';
 import AdminCommunityTab from './AdminCommunityTab';
 import AdminChatsTab from './AdminChatsTab';
 import { isRawUid, isGenericName, getCachedUserProfile, setCachedUserProfile } from '../../services/userResolverService';
+import { useAdminGuard } from '../../hooks/useAdminGuard';
 
 export default function AdminDashboard({
   isOpen = true,
@@ -29,10 +30,11 @@ export default function AdminDashboard({
   const [activeTab, setActiveTab] = useState('users'); // 'users' | 'listings' | 'community' | 'economy' | 'cms'
 
   // Vérification de sécurité / Code PIN d'urgence
+  const { isAdmin: isGuardAdmin } = useAdminGuard();
   const isDirectAdmin = Boolean(
+    isGuardAdmin ||
     currentUser?.isAdmin === true ||
-    currentUser?.role === 'admin' ||
-    currentUser?.email === 'mateopolo91@gmail.com'
+    currentUser?.role === 'admin'
   );
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [pinInput, setPinInput] = useState('');

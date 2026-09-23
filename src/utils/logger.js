@@ -44,8 +44,7 @@ const simpleHash = (str) => {
  */
 const captureToSentry = (error, context = {}) => {
   if (!sentryInstance) {
-    // Fallback vers console.error si Sentry non initialisé
-    console.error('[Sentry Fallback]', error, context);
+    // Sentry non initialisé : silencieux en local/dev pour éviter le bruit dans la console
     return;
   }
 

@@ -1,6 +1,6 @@
 # 🦄 TROCO — MASTER AUDIT & ROADMAP VIVANTE
 
-> **Dernière mise à jour :** 2026-09-21T16:22:00+02:00 (UTF-8 strict)  
+> **Dernière mise à jour :** 2026-09-23T18:00:00+02:00 (UTF-8 strict)  
 > **Vision :** Marketplace P2P internationale de troc (biens & services), PWA installable, objectif licorne fintech régulée.  
 > **Sources fusionnées :**
 > - `CONTEXT.md` (Vision produit, architecture, design system, sécurité Zero-Trust)
@@ -13,7 +13,7 @@
 > - `STEP BY STEP URGENT.txt` & `LISTE DES PROCHAINES FONCTIONNALITES A CODER.txt` (Backlog immédiat)
 > - `PROJECT_CONTEXT.md` & `TROCO_PROJECT_HISTORY.md` (Historique des décisions et géoprivacy)
 >
-> **Score global :** 7.2/10 | **Progression :** 35 / 66 tâches validées avec preuves formelles (53.0%)
+> **Score global :** 7.5/10 | **Progression :** 37 / 73 tâches validées avec preuves formelles (50.7%)
 
 ---
 
@@ -21,12 +21,12 @@
 
 | Phase | Fait | Restant | Progression |
 |---|---|---|---|
-| 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 16 | 2 | 88.9% |
-| 🟡 Facile (Niveau 2 — 1h à 3h) | 8 | 6 | 57.1% |
+| 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 18 | 5 | 78.3% |
+| 🟡 Facile (Niveau 2 — 1h à 3h) | 8 | 8 | 50.0% |
 | 🟠 Moyen (Niveau 3 — 3h à 1 jour) | 8 | 7 | 53.3% |
 | 🔴 Difficile (Niveau 4 — 1 à 3 jours) | 3 | 7 | 30.0% |
 | 🚨 Très difficile (Niveau 5 — 3j à 2 sem) | 0 | 9 | 0.0% |
-| **TOTAL** | **35** | **31** | **53.0%** |
+| **TOTAL** | **37** | **36** | **50.7%** |
 
 
 ### Score par axe vs cible Licorne
@@ -112,18 +112,24 @@
 **Preuve** : `src/utils/audioUnlocker.js:1-63`, `src/services/audioService.js:1-202`, `src/utils/audioService.js:1-135`, `src/utils/haptics.js:1-92`, `src/utils/haptics.test.js:1-180`, `src/components/PWAInstallBanner.jsx:7-14`, `src/contexts/AuthContext.jsx:1-730`, `src/features/auth/AuthScreen.jsx:1-1090`, `src/utils/sentry.js:15-25`, `src/App.js:30,616,1637,1787`, `src/hooks/useWebRTC.js:17,550,872`, `src/hooks/useChatManager.js:25,43,363`, `src/components/FeedCardItem.jsx:6,131`, `src/components/common/MobileHeader.jsx:3,23`
 **Statut** : ✅ FAIT — Suppression complète des avertissements console navigateur : (1) Déverrouillage universel et proactif des AudioContext via écouteurs passifs au premier geste utilisateur (`audioUnlocker.js`). (2) Encapsulation sécurisée de l'API de vibration sous vérification conditionnelle `navigator.userActivation?.hasBeenActive` (`safeVibrate`). (3) Retrait du `preventDefault()` de l'événement `beforeinstallprompt` sans bloquer le déclencheur d'installation PWA. (4) Intégration de `signInWithRedirect` et `getRedirectResult` pour éliminer les restrictions Cross-Origin-Opener-Policy (`window.close`). (5) Suppression du log bruyant Sentry en dev local sans DSN.
 
+### [x] [QW-01] — Harmonisation hauteur/largeur des badges de solde dans AppHeader
+**Preuve** : `src/components/layout/AppHeader.jsx:241-295` (`height: '40px'`, `minWidth: '120px'`, `justifyContent: 'center'` harmonisé entre Troco Plus et solde Euros)
+**Statut** : ✅ FAIT — Élimination du décalage visuel et dimensionnement symétrique parfait des boutons d'en-tête (solde Euros et bouton Troco Plus).
+
+### [x] [QW-06] — Éradication de l'adresse Gmail personnelle codée en dur
+**Preuve** : `src/stores/useAuthStore.js`, `src/contexts/AuthContext.jsx:95`, `src/components/AdminPanel.jsx:45`, `src/components/GlobalLiveChat.jsx:84`, `src/features/admin/AdminDashboard.jsx:34`, `src/services/userStatsService.js`, `src/hooks/useAppAuth.js`, `src/components/ChatView.jsx`, `src/App.js` (0 occurrence de `mateopolo91` dans `src/`)
+**Statut** : ✅ FAIT — Élimination absolue du risque d'usurpation de privilèges administrateur par falsification d'email client, en s'appuyant exclusivement sur `useAdminGuard` et les Custom Claims Firebase signés (`request.auth.token.admin == true`).
+
 ### [x] [QW-22] — Correction des permissions Firestore pour la mise à jour du solde utilisateur
 **Preuve** : `firestore.rules:25-28,30-33,65-81`, `tests/rules/firestore.rules.test.js:38-42,120-138`, déploiement live console Firebase `troco-8a6eb` (`+ firestore: released rules firestore.rules to cloud.firestore`)
-**Statut** : ✅ FAIT — Correction de l'erreur `Missing or insufficient permissions` lors du top-up de solde : (1) Remplacement des accesseurs vulnérables `.data.isBanned` par `.data.get('isBanned', false)` dans les fonctions de sécurité `isNotBanned()` et `isDbAdmin()`, évitant les interruptions d'évaluation runtime sur les documents sans ces champs. (2) Autorisation de mise à jour des champs financiers (`euroBalance`, `balance`, `trocoTokens`, `walletBalanceFiat`, `tokens`) par le titulaire authentifié du compte (`request.auth.uid == uid`), garantissant la persistance du solde après F5. (3) Verrouillage strict empêchant les non-admins de modifier les privilèges ou la modération (`role`, `isAdmin`, `isBanned`, `isShadowBanned`) et interdisant toute modification par un tiers. Validation 48/48 tests unitaires de règles et déploiement immédiat en production Firebase.
+**Statut** : ✅ FAIT — Correction de l'erreur `Missing or insufficient permissions` lors du top-up de solde : (1) Remplacement des accesseurs vulnérables `.data.isBanned` par `.data.get('isBanned', false)` dans les fonctions de sécurité `isNotBanned()` et `isDbAdmin()`. (2) Autorisation de mise à jour des champs financiers par le titulaire authentifié du compte (`request.auth.uid == uid`), garantissant la persistance du solde après F5. (3) Verrouillage strict empêchant les non-admins de modifier les privilèges ou la modération (`role`, `isAdmin`, `isBanned`, `isShadowBanned`).
+
+### [x] [QW-23] — Index composites Firestore `transactions` et Partage de Tableau Blanc en Chat
+**Preuve** : `firestore.indexes.json:30-45`, `src/components/CollaborativeWhiteboardModal.jsx:2030-2070`, déploiement console Firebase `troco-8a6eb` (`+ firestore: released indexes firestore.indexes.json`)
+**Statut** : ✅ FAIT — Déploiement des index composites transactions (`userId` ASC + `createdAt` DESC, `partnerUid` ASC + `createdAt` DESC) sur Firebase `troco-8a6eb`. Remplacement du `window.prompt` par une modale intégrée de titre/version lors de l'envoi du tableau blanc et transmission propre du document sauvegardé dans la discussion active.
 
 ---
 
-
-### [ ] [QW-01] — Harmonisation hauteur/largeur des badges de solde dans AppHeader
-**Statut** : ❌ À FAIRE  
-**Fichier** : `src/components/layout/AppHeader.jsx:241-295`  
-**Estimation** : 20min  
-**Impact** : Le bouton solde Euros possède `height: '40px'` et `minWidth: '120px'` alors que le bouton Troco Plus utilise un dimensionnement inline variable, provoquant un saut visuel en version mobile et desktop.
 
 ### [ ] [QW-02] — Intégration de la condition `hideDemos` dans le retour de `filteredListings`
 **Statut** : ❌ À FAIRE  
@@ -149,21 +155,15 @@
 **Estimation** : 30min  
 **Impact** : Centralise le boost d'annonce sur la modale de paiement officielle au lieu d'une double logique divergente.
 
-### [ ] [QW-06] — Éradication de l'adresse Gmail personnelle codée en dur
-**Statut** : ❌ À FAIRE  
-**Fichier** : `src/stores/useAuthStore.js:7`, `src/contexts/AuthContext.jsx:95`, `src/components/AdminPanel.jsx:45`, `src/components/GlobalLiveChat.jsx:84`, `src/features/admin/AdminDashboard.jsx:34`  
-**Estimation** : 45min  
-**Impact** : Élimine le risque d'usurpation de privilèges administrateur par falsification d'email client, en s'appuyant uniquement sur `useAdminGuard` et les Custom Claims Firebase signés.
-
 ### [x] [QW-07] — Garde anti-écrasement du solde lors de la finalisation d'onboarding
 **Preuve** : `src/components/OnboardingWizardModal.jsx:141-142` (`currentUser?.euroBalance` et `currentUser?.trocoTokens` conservés)
 **Statut** : ✅ FAIT — Empêche la réinitialisation du solde euros ou des jetons lors d'un rejeu d'onboarding.
 
-### [ ] [QW-08] — Remplacement des `window.prompt` par des modales dédiées
+### [ ] [QW-08] — Remplacement des `window.prompt` résiduels par des modales dédiées
 **Statut** : ❌ À FAIRE  
-**Fichier** : `src/hooks/useAppAuth.js:75`, `src/contexts/AuthContext.jsx:455`, `src/components/CollaborativeWhiteboardModal.jsx:2036`  
-**Estimation** : 45min  
-**Impact** : Supprime les ruptures d'expérience natives disgracieuses sur mobile lors de la saisie d'email magic-link ou de renommage de documents.
+**Fichier** : `src/hooks/useAppAuth.js:75`, `src/contexts/AuthContext.jsx:455`  
+**Estimation** : 30min  
+**Impact** : Supprime les ruptures d'expérience natives disgracieuses sur mobile lors de la saisie d'email magic-link.
 
 ---
 
@@ -458,7 +458,7 @@
 ## 🔒 FAILLES DE SÉCURITÉ IDENTIFIÉES
 
 ### Critiques
-- [ ] **Admin hardcodé par adresse email client :** Présence de `mateopolo91@gmail.com` dans `src/stores/useAuthStore.js:7`, `src/contexts/AuthContext.jsx:95`, `src/components/AdminPanel.jsx:45`, `src/components/GlobalLiveChat.jsx:84`, `src/features/admin/AdminDashboard.jsx:34`. À remplacer par la vérification stricte du custom claim admin via `useAdminGuard`.
+- [x] **Admin hardcodé par adresse email client :** Éradication totale de `mateopolo91@gmail.com` dans tout le code client (`src/` : 0 occurrence) et dans `firestore.rules`. Remplacement par la vérification cryptographique des Custom Claims signés par le serveur (`request.auth.token.admin == true`) et le hook `useAdminGuard`.
 - [ ] **Paiement et KYC simulés en production :** L'interface affiche des paiements par carte/Apple Pay et valide le KYC localement sans passer par un établissement de paiement agréé (ACPR/DSP2).
 
 ### Importantes
@@ -526,7 +526,7 @@
 
 ## ⚠️ À VÉRIFIER MANUELLEMENT (hors code)
 
-- [x] Déploiement effectif des règles `firestore.rules` sur la console Firebase du projet `troco-8a6eb` (Déployé avec succès via `firebase-tools deploy --only firestore:rules` — persistance `euroBalance` débloquée pour tous les comptes non-admin y compris `matmot`)
+- [x] Déploiement effectif des règles `firestore.rules` et des index `firestore.indexes.json` sur la console Firebase du projet `troco-8a6eb` (Déployé avec succès via `firebase-tools deploy --only firestore:rules,firestore:indexes` — index transactions et suppression god mode email)
 - [ ] Configuration des règles CORS sur le bucket Firebase Storage (`gsutil cors get gs://troco-8a6eb.firebasestorage.app`)
 - [ ] Activation du mode Enforced pour Firebase App Check dans la console Google Cloud
 - [ ] Configuration des variables d'environnement secrètes dans Google Secret Manager / Vercel

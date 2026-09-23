@@ -2307,6 +2307,8 @@ export const localizeTags = (tags, lang) => {
     JA: { 'Cours': 'レッスン', 'Musique': '音楽', 'Cuisine': '料理', 'Bricolage': 'DIY', 'Dépannage': '修理', 'Logement': '宿泊', 'Tech': '技術', 'Sport & Bien-être': 'スポーツ＆ウェルネス', 'Animaux': 'ペット', 'Photo & Vidéo': '写真＆動画', 'À distance': 'リモート', 'Urgent': '緊急', 'Échange': '交換' },
     ZH: { 'Cours': '课程', 'Musique': '音乐', 'Cuisine': '烹饪', 'Bricolage': 'DIY', 'Dépannage': '维修', 'Logement': '住宿', 'Tech': '技术', 'Sport & Bien-être': '运动与健康', 'Animaux': '宠物', 'Photo & Vidéo': '照片与视频', 'À distance': '远程', 'Urgent': '紧急', 'Échange': '交换' }
   };
+  map.JP = map.JA;
+  map.CN = map.ZH;
   if (!map[lang]) return tags;
   return tags.map(t => map[lang][t] || t);
 };
@@ -2336,3 +2338,8 @@ export const localizeReview = (text, lang) => {
          lang === 'JA' ? "迅速な貸付と修理に非常に信頼でき、透明性を高く評価しています。" :
          "对于快速贷款和维修非常可靠，我很欣赏这种透明度。";
 };
+
+
+// Aliases JP -> JA et CN -> ZH
+translations.JP = translations.JA;
+translations.CN = translations.ZH;

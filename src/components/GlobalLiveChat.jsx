@@ -13,6 +13,7 @@ import { validateChatMessage } from '../utils/moderationBlacklist';
 import { useLanguage } from '../contexts/LanguageContext';
 import { parseAndTranslateDynamicText } from '../utils/dynamicTranslation';
 import { subscribeTranslations } from '../utils/translator';
+import { useAdminGuard } from '../hooks/useAdminGuard';
 
 export default function GlobalLiveChat({
   currentUser = null,
@@ -48,8 +49,8 @@ export default function GlobalLiveChat({
   const myUsername = currentUser?.username || (myName !== 'Moi' ? `@${myName.toLowerCase().replace(/[^a-z0-9]/g, '')}` : '@moi');
   const myAvatar = currentUser?.photoURL || currentUser?.avatar || '';
   const myBadge = currentUser?.kycVerified ? 'VÉRIFIÉ' : 'MEMBRE';
-  const isSuperAdmin = currentUser?.email === 'mateopolo91@gmail.com' || auth?.currentUser?.email === 'mateopolo91@gmail.com';
-  const isAdmin = isSuperAdmin || currentUser?.role === 'admin' || currentUser?.isAdmin === true;
+  const { isAdmin: isGuardAdmin } = useAdminGuard();
+  const isAdmin = isGuardAdmin || currentUser?.role === 'admin' || currentUser?.isAdmin === true;
 
   // Fluctuation naturelle du nombre de membres en ligne
   useEffect(() => {
@@ -260,7 +261,7 @@ export default function GlobalLiveChat({
     const targetId = confirmDeleteMsgId;
     setConfirmDeleteMsgId(null);
 
-    const isAuthorized = isAdmin || isSuperAdmin || auth?.currentUser?.email === 'mateopolo91@gmail.com' || currentUser?.isAdmin === true || currentUser?.role === 'admin';
+    const isAuthorized = isAdmin || currentUser?.isAdmin === true || currentUser?.role === 'admin';
     if (!isAuthorized) {
       logger.warn('[GlobalChat] Suppression non autorisée');
       return;
@@ -675,7 +676,7 @@ export default function GlobalLiveChat({
                         });
                       })()}
                     </div>
-                    {currentLang !== 'FR' && msg.text && (
+                    {(currentLang !== 'FR' || (msg.sourceLang && msg.sourceLang !== currentLang) || msg.isForeign || msg.lang) && msg.text && (
                       <div style={{ marginTop: '4px' }}>
                         <button
                           type="button"
