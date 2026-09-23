@@ -1,11 +1,11 @@
 import logger from '../utils/logger';
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   ShieldCheck, Lock, X,
   Scale, Clock, ShieldAlert, Sparkles,
   Check
 } from 'lucide-react';
-import UniversalModal from './ui/UniversalModal';
 
 export default function CguModal({
   isOpen,
@@ -88,40 +88,54 @@ export default function CguModal({
     },
   ];
 
-  return (
-    <UniversalModal
-      isOpen={isOpen}
-      onClose={isMandatory ? undefined : onClose}
-      ariaLabel="Conditions générales et charte Troco"
-      showCloseButton={false}
-      overlayStyle={{
-        backgroundColor: 'rgba(61, 53, 48, 0.72)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
+  const modalContent = (
+    <div
+      onClick={isMandatory ? undefined : (e) => { if (e.target === e.currentTarget) onClose?.(); }}
+      className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 pb-[calc(76px+env(safe-area-inset-bottom,12px))] box-border"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 99999,
+        backgroundColor: 'rgba(0, 0, 0, 0.4)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '16px',
+        paddingBottom: 'calc(76px + env(safe-area-inset-bottom, 12px))',
+        boxSizing: 'border-box',
       }}
     >
-      <div style={{
-        backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
-        borderRadius: '24px',
-        width: '100%',
-        maxWidth: '680px',
-        maxHeight: '92vh',
-        overflowY: 'auto',
-        boxShadow: darkMode ? '0 25px 50px -12px rgba(0, 0, 0, 0.85), 0 0 35px rgba(198,125,91,0.2)' : '0 25px 50px -12px rgba(61, 53, 48, 0.25)',
-        border: darkMode ? '1px solid rgba(232, 221, 211, 0.15)' : '1px solid #E8DDD3',
-        color: darkMode ? '#FAF7F2' : '#3D3530',
-        position: 'relative',
-        display: 'flex',
-        flexDirection: 'column',
-      }}>
-
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Conditions générales et charte Troco"
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-2xl md:max-w-3xl max-h-[calc(100dvh-120px)] flex flex-col rounded-2xl md:rounded-3xl shadow-2xl overflow-hidden border border-[var(--border-color,#E8DDD3)] bg-[var(--bg-card,#FAF7F2)] text-[var(--text-main,#3D3530)]"
+        style={{
+          width: '100%',
+          maxWidth: '768px',
+          maxHeight: 'calc(100dvh - 120px)',
+          backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
+          borderRadius: '24px',
+          border: darkMode ? '1px solid rgba(232, 221, 211, 0.15)' : '1px solid #E8DDD3',
+          boxShadow: '0 24px 60px rgba(0, 0, 0, 0.3)',
+          color: darkMode ? '#FAF7F2' : '#3D3530',
+          position: 'relative',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+        }}
+      >
         {/* HEADER MODALE */}
         <div style={{
-          padding: '22px 24px',
+          padding: '20px 24px',
           borderBottom: darkMode ? '1px solid rgba(232,221,211,0.08)' : '1px solid #E8DDD3',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          flexShrink: 0,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
             <div style={{
@@ -133,6 +147,7 @@ export default function CguModal({
               alignItems: 'center',
               justifyContent: 'center',
               color: '#FFF',
+              flexShrink: 0,
               boxShadow: '0 4px 14px rgba(198,125,91,0.35)',
             }}>
               <Scale size={22} />
@@ -149,7 +164,9 @@ export default function CguModal({
 
           {!isMandatory && onClose && (
             <button
+              type="button"
               onClick={onClose}
+              aria-label="Fermer la fenêtre"
               style={{
                 border: 'none',
                 background: darkMode ? 'rgba(232,221,211,0.1)' : '#F5EAE4',
@@ -173,8 +190,10 @@ export default function CguModal({
           display: 'flex',
           borderBottom: darkMode ? '1px solid rgba(232,221,211,0.08)' : '1px solid #E8DDD3',
           padding: '0 24px',
+          flexShrink: 0,
         }}>
           <button
+            type="button"
             onClick={() => setActiveTab('summary')}
             style={{
               padding: '14px 18px',
@@ -190,6 +209,7 @@ export default function CguModal({
             📋 Les 6 Piliers Fondamentaux
           </button>
           <button
+            type="button"
             onClick={() => setActiveTab('full')}
             style={{
               padding: '14px 18px',
@@ -206,9 +226,8 @@ export default function CguModal({
           </button>
         </div>
 
-        {/* CONTENU */}
-        <div style={{ padding: '24px', overflowY: 'auto' }}>
-
+        {/* CONTENU SCROLLABLE */}
+        <div style={{ flex: 1, minHeight: 0, padding: '24px', overflowY: 'auto' }}>
           {activeTab === 'summary' ? (
             <div>
               <div style={{
@@ -272,13 +291,11 @@ export default function CguModal({
               fontSize: '12px',
               lineHeight: 1.7,
               color: darkMode ? '#D4C5B5' : '#6B5E54',
-              padding: '16px',
+              padding: '18px',
               borderRadius: '16px',
               backgroundColor: darkMode ? '#1A1715' : '#FFF',
               border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3',
               marginBottom: '20px',
-              maxHeight: '340px',
-              overflowY: 'auto',
             }}>
               <h4 className="font-editorial-heading" style={{ margin: '0 0 8px', fontSize: '15px', color: darkMode ? '#FAF7F2' : '#3D3530' }}>Article 1 — Objet & Définition de la Plateforme</h4>
               <p>Troco est une plateforme numérique d’intermédiation communautaire permettant l’échange de compétences, le prêt d’équipements entre particuliers et la réalisation d’échanges de services fondés sur l’unité de compte temporelle « Jeton Troco » ou sur des contreparties convenues d'un commun accord.</p>
@@ -391,10 +408,10 @@ export default function CguModal({
               Fermer la consultation des CGU
             </button>
           )}
-
         </div>
-
       </div>
-    </UniversalModal>
+    </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent;
 }

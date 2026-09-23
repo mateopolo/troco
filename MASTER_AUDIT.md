@@ -13,7 +13,7 @@
 > - `STEP BY STEP URGENT.txt` & `LISTE DES PROCHAINES FONCTIONNALITES A CODER.txt` (Backlog immédiat)
 > - `PROJECT_CONTEXT.md` & `TROCO_PROJECT_HISTORY.md` (Historique des décisions et géoprivacy)
 >
-> **Score global :** 7.5/10 | **Progression :** 37 / 73 tâches validées avec preuves formelles (50.7%)
+> **Score global :** 7.6/10 | **Progression :** 38 / 74 tâches validées avec preuves formelles (51.4%)
 
 ---
 
@@ -21,12 +21,12 @@
 
 | Phase | Fait | Restant | Progression |
 |---|---|---|---|
-| 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 18 | 5 | 78.3% |
+| 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 19 | 5 | 79.2% |
 | 🟡 Facile (Niveau 2 — 1h à 3h) | 8 | 8 | 50.0% |
 | 🟠 Moyen (Niveau 3 — 3h à 1 jour) | 8 | 7 | 53.3% |
 | 🔴 Difficile (Niveau 4 — 1 à 3 jours) | 3 | 7 | 30.0% |
 | 🚨 Très difficile (Niveau 5 — 3j à 2 sem) | 0 | 9 | 0.0% |
-| **TOTAL** | **37** | **36** | **50.7%** |
+| **TOTAL** | **38** | **36** | **51.4%** |
 
 
 ### Score par axe vs cible Licorne
@@ -112,9 +112,9 @@
 **Preuve** : `src/utils/audioUnlocker.js:1-63`, `src/services/audioService.js:1-202`, `src/utils/audioService.js:1-135`, `src/utils/haptics.js:1-92`, `src/utils/haptics.test.js:1-180`, `src/components/PWAInstallBanner.jsx:7-14`, `src/contexts/AuthContext.jsx:1-730`, `src/features/auth/AuthScreen.jsx:1-1090`, `src/utils/sentry.js:15-25`, `src/App.js:30,616,1637,1787`, `src/hooks/useWebRTC.js:17,550,872`, `src/hooks/useChatManager.js:25,43,363`, `src/components/FeedCardItem.jsx:6,131`, `src/components/common/MobileHeader.jsx:3,23`
 **Statut** : ✅ FAIT — Suppression complète des avertissements console navigateur : (1) Déverrouillage universel et proactif des AudioContext via écouteurs passifs au premier geste utilisateur (`audioUnlocker.js`). (2) Encapsulation sécurisée de l'API de vibration sous vérification conditionnelle `navigator.userActivation?.hasBeenActive` (`safeVibrate`). (3) Retrait du `preventDefault()` de l'événement `beforeinstallprompt` sans bloquer le déclencheur d'installation PWA. (4) Intégration de `signInWithRedirect` et `getRedirectResult` pour éliminer les restrictions Cross-Origin-Opener-Policy (`window.close`). (5) Suppression du log bruyant Sentry en dev local sans DSN.
 
-### [x] [QW-01] — Harmonisation hauteur/largeur des badges de solde dans AppHeader
-**Preuve** : `src/components/layout/AppHeader.jsx:241-295` (`height: '40px'`, `minWidth: '120px'`, `justifyContent: 'center'` harmonisé entre Troco Plus et solde Euros)
-**Statut** : ✅ FAIT — Élimination du décalage visuel et dimensionnement symétrique parfait des boutons d'en-tête (solde Euros et bouton Troco Plus).
+### [x] [QW-01] — Uniformisation et affinement des boutons de solde dans AppHeader (Portefeuille vs Jetons)
+**Preuve** : `src/components/layout/AppHeader.jsx:241-325` (suppression de `minWidth: 120px` et `height: 40px`, harmonisation compacte : hauteur 30-32px, padding 4-5px 8-12px, font-size 11px, flex shrink-0)
+**Statut** : ✅ FAIT — Élimination du déséquilibre visuel entre le bouton portefeuille (€) et le bouton jetons Troco Plus. Dimensions identiques, affinées et compactes sans dépassement.
 
 ### [x] [QW-06] — Éradication de l'adresse Gmail personnelle codée en dur
 **Preuve** : `src/stores/useAuthStore.js`, `src/contexts/AuthContext.jsx:95`, `src/components/AdminPanel.jsx:45`, `src/components/GlobalLiveChat.jsx:84`, `src/features/admin/AdminDashboard.jsx:34`, `src/services/userStatsService.js`, `src/hooks/useAppAuth.js`, `src/components/ChatView.jsx`, `src/App.js` (0 occurrence de `mateopolo91` dans `src/`)
@@ -127,6 +127,10 @@
 ### [x] [QW-23] — Index composites Firestore `transactions` et Partage de Tableau Blanc en Chat
 **Preuve** : `firestore.indexes.json:30-45`, `src/components/CollaborativeWhiteboardModal.jsx:2030-2070`, déploiement console Firebase `troco-8a6eb` (`+ firestore: released indexes firestore.indexes.json`)
 **Statut** : ✅ FAIT — Déploiement des index composites transactions (`userId` ASC + `createdAt` DESC, `partnerUid` ASC + `createdAt` DESC) sur Firebase `troco-8a6eb`. Remplacement du `window.prompt` par une modale intégrée de titre/version lors de l'envoi du tableau blanc et transmission propre du document sauvegardé dans la discussion active.
+
+### [x] [QW-24] — Refonte CSS des Modales Juridiques (CGU, Charte, RGPD) et Conteneur Standardisé
+**Preuve** : `src/components/ui/UniversalModal.jsx:130-155`, `src/components/modals/CguConsentModal.jsx:26-38`, `src/components/CguModal.jsx:155-170`, `src/components/PrivacyCenterModal.jsx:130-150`
+**Statut** : ✅ FAIT — Conteneur global standardisé avec fond flouté (`backdrop-blur-sm`, `bg-black/40`), `z-[99999]`, centrage parfait compensant la barre de navigation inférieure (`pb-[calc(76px+env(safe-area-inset-bottom,12px))]`), largeur max maîtrisée (`max-w-2xl` / `max-w-3xl`) et hauteur bornée (`max-h-[calc(100dvh-120px)]`) avec scrolling interne.
 
 ---
 

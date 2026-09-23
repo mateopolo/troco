@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Lock, Download, Trash2, X,
   AlertTriangle, Sliders
 } from 'lucide-react';
 import { getPrivacySettings, saveConsent, getConsentStatus } from '../services/consentManager';
-import UniversalModal from './ui/UniversalModal';
 
 export default function PrivacyCenterModal({
   isOpen,
@@ -101,33 +101,46 @@ export default function PrivacyCenterModal({
     }
   };
 
-  return (
-    <UniversalModal
-      isOpen={isOpen}
-      onClose={onClose}
-      ariaLabel="Centre de confidentialité et RGPD"
-      showCloseButton={false}
-      overlayStyle={{
-        backgroundColor: 'rgba(61,53,48,0.72)',
+  const modalContent = (
+    <div
+      onClick={(e) => { if (e.target === e.currentTarget) onClose?.(); }}
+      className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 pb-[calc(76px+env(safe-area-inset-bottom,12px))] box-border"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 99999,
+        backgroundColor: 'rgba(0, 0, 0, 0.4)',
         backdropFilter: 'blur(8px)',
         WebkitBackdropFilter: 'blur(8px)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '16px',
+        paddingBottom: 'calc(76px + env(safe-area-inset-bottom, 12px))',
+        boxSizing: 'border-box',
       }}
     >
-      <div style={{
-        backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
-        borderRadius: '24px',
-        width: '100%',
-        maxWidth: '680px',
-        maxHeight: '92vh',
-        overflowY: 'auto',
-        boxShadow: darkMode ? '0 25px 50px -12px rgba(0, 0, 0, 0.8), 0 0 30px rgba(198,125,91,0.15)' : '0 25px 50px -12px rgba(61, 53, 48, 0.25)',
-        border: darkMode ? '1px solid rgba(232, 221, 211, 0.15)' : '1px solid #E8DDD3',
-        color: darkMode ? '#FAF7F2' : '#3D3530',
-        position: 'relative',
-        display: 'flex',
-        flexDirection: 'column',
-      }}>
-
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Centre de confidentialité et RGPD"
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-2xl md:max-w-3xl max-h-[calc(100dvh-120px)] flex flex-col rounded-2xl md:rounded-3xl shadow-2xl overflow-hidden border border-[var(--border-color,#E8DDD3)] bg-[var(--bg-card,#FAF7F2)] text-[var(--text-main,#3D3530)]"
+        style={{
+          width: '100%',
+          maxWidth: '768px',
+          maxHeight: 'calc(100dvh - 120px)',
+          backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
+          borderRadius: '24px',
+          border: darkMode ? '1px solid rgba(232, 221, 211, 0.15)' : '1px solid #E8DDD3',
+          boxShadow: '0 24px 60px rgba(0, 0, 0, 0.3)',
+          color: darkMode ? '#FAF7F2' : '#3D3530',
+          position: 'relative',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+        }}
+      >
         {/* HEADER */}
         <div style={{
           padding: '20px 24px',
@@ -135,6 +148,7 @@ export default function PrivacyCenterModal({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
+          flexShrink: 0,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <div style={{
@@ -185,6 +199,7 @@ export default function PrivacyCenterModal({
           borderBottom: darkMode ? '1px solid rgba(232,221,211,0.08)' : '1px solid #E8DDD3',
           padding: '0 24px',
           gap: '8px',
+          flexShrink: 0,
         }}>
           {[
             { id: 'data', label: '📥 Mes Données & Portabilité', icon: Download },
@@ -215,7 +230,7 @@ export default function PrivacyCenterModal({
         </div>
 
         {/* CORPS */}
-        <div style={{ padding: '24px', overflowY: 'auto' }}>
+        <div style={{ flex: 1, minHeight: 0, padding: '24px', overflowY: 'auto' }}>
 
           {/* ONGLET 1 : PORTABILITÉ DES DONNÉES */}
           {activeTab === 'data' && (
@@ -488,6 +503,8 @@ export default function PrivacyCenterModal({
         </div>
 
       </div>
-    </UniversalModal>
+    </div>
   );
+
+  return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : modalContent;
 }

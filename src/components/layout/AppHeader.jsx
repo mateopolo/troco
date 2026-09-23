@@ -219,7 +219,7 @@ export const AppHeader = React.memo(({
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
-              height: '40px',
+              height: isScrolled ? '30px' : (isMobile ? '30px' : '32px'),
             }}
           >
             {(floatingEuroGain || gainAmount) && (
@@ -244,9 +244,8 @@ export const AppHeader = React.memo(({
               style={{
                 border: '1px solid var(--border-color)',
                 borderRadius: '999px',
-                minWidth: '120px',
-                height: '40px',
-                padding: isScrolled ? (isMobile ? '4px 6px' : '5px 10px') : (isMobile ? '5px 8px' : '6px 12px'),
+                height: isScrolled ? '30px' : (isMobile ? '30px' : '32px'),
+                padding: isScrolled ? (isMobile ? '4px 8px' : '4px 10px') : (isMobile ? '4px 8px' : '5px 12px'),
                 backgroundColor: 'var(--bg-subtle)',
                 color: 'var(--accent-primary)',
                 fontWeight: '700',
@@ -260,7 +259,7 @@ export const AppHeader = React.memo(({
                 overflow: 'visible',
                 whiteSpace: 'nowrap',
                 flexShrink: 0,
-                transition: 'padding 0.3s var(--ease-quiet)',
+                transition: 'all 0.3s var(--ease-quiet)',
               }}
             >
               <Coins size={13} style={{ flexShrink: 0 }} />
@@ -282,12 +281,11 @@ export const AppHeader = React.memo(({
             style={{
               border: '1px solid var(--accent-primary)',
               borderRadius: '999px',
-              minWidth: '120px',
-              height: '40px',
-              padding: isScrolled ? (isMobile ? '4px 6px' : '5px 10px') : (isMobile ? '5px 8px' : '6px 12px'),
+              height: isScrolled ? '30px' : (isMobile ? '30px' : '32px'),
+              padding: isScrolled ? (isMobile ? '4px 8px' : '4px 10px') : (isMobile ? '4px 8px' : '5px 12px'),
               backgroundColor: 'var(--bg-subtle)',
               color: 'var(--accent-primary)',
-              fontWeight: '800',
+              fontWeight: '700',
               cursor: 'pointer',
               display: 'inline-flex',
               alignItems: 'center',
@@ -298,7 +296,7 @@ export const AppHeader = React.memo(({
               overflow: 'visible',
               whiteSpace: 'nowrap',
               flexShrink: 0,
-              transition: 'padding 0.3s var(--ease-quiet)',
+              transition: 'all 0.3s var(--ease-quiet)',
             }}
           >
             {floatingGain && (
@@ -313,7 +311,7 @@ export const AppHeader = React.memo(({
             <AnimatedTokenBalance
               value={profile?.trocoTokens || 0}
               formatFn={(v) => (isMobile ? `${v}` : (formatTokenCount ? formatTokenCount(v, currentLang) : formatTokenCountUtil(v, currentLang)))}
-              style={{ fontSize: '11px', fontWeight: '800', whiteSpace: 'nowrap' }}
+              style={{ fontSize: '11px', fontWeight: '700', whiteSpace: 'nowrap' }}
             />
           </button>
 

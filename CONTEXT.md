@@ -811,5 +811,28 @@ Résoudre l'erreur bloquante `[paymentService] Error updating Firestore user doc
    - `haptics.js` : Vérification de `window.navigator.userActivation.isActive || hasBeenActive` prévenant les avertissements liés aux vibrations sans geste utilisateur préalable.
    - `logger.js` : Suppression des avertissements verbeux de repli Sentry en environnement de développement local.
 
+### Patch PROMPT 14 — Uniformisation Header & Refonte CSS Modales Juridiques (commit `fix: header balance buttons uniformity and legal modals standardized layout`)
+
+#### 3.19 Uniformisation des Boutons Header & Refonte Conteneur Modales Juridiques
+
+1. **Uniformisation Compacte des Boutons du Header (`src/components/layout/AppHeader.jsx`) :**
+   - Élimination de la largeur forcée disproportionnée (`minWidth: '120px'`) et de la hauteur de 40px sur le bouton du solde portefeuille Euros.
+   - Alignement parfait et symétrique des deux boutons (Solde Euros Portefeuille et Jetons Troco Plus) :
+     - Hauteur identique : `isScrolled ? '30px' : (isMobile ? '30px' : '32px')`
+     - Padding identique : `isScrolled ? (isMobile ? '4px 8px' : '4px 10px') : (isMobile ? '4px 8px' : '5px 12px')`
+     - Typographie identique : `fontSize: '11px'`, `fontWeight: '700'`, icônes vectorielles `size={13}`
+     - Rayon de bordure pill : `borderRadius: '999px'`
+   - Rendu visuel affiné, compact, sans déformation ni déséquilibre sur mobile et desktop.
+
+2. **Standardisation Globale du Conteneur des Modales Juridiques & CGU (`UniversalModal.jsx`, `CguConsentModal.jsx`, `CguModal.jsx`, `PrivacyCenterModal.jsx`) :**
+   - **Conteneur overlay unifié :** `fixed inset-0 z-[99999] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 pb-[calc(76px+env(safe-area-inset-bottom,12px))] box-border`.
+   - **Compensation de la barre de navigation inférieure :** Grâce au `pb-[calc(76px+env(safe-area-inset-bottom,12px))]`, l'espace visuel disponible au-dessus de `AppBottomNav` est calculé avec exactitude. Le centrage vertical flex place la modale avec un espacement équivalent entre le haut de l'écran et le haut de la modale d'une part, et entre le bas de la modale et la bottom nav d'autre part.
+   - **Dimensions de la modale :**
+     - Largeur max bornée : `max-w-2xl` (`672px`) ou `max-w-3xl` (`768px`)
+     - Hauteur max bornée : `max-h-[calc(100dvh-120px)]`
+     - En-têtes et onglets fixes (`flex-shrink: 0`) et défilement vertical fluide sur le corps interne (`overflow-y-auto`, `min-height: 0`).
+   - **Portail DOM :** Utilisation systématique de `createPortal(..., document.body)` avec `zIndex: 99999` pour s'extraire de tout stacking context `#root` et garantir que la modale reste au premier plan sans être masquée par la barre de navigation mobile.
+
+
 
 
