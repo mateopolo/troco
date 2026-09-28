@@ -6,6 +6,7 @@ import {
   Sparkles, ChevronRight, ArrowLeft
 } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { BACKDROP_CLASSNAME, BACKDROP_STYLE } from './ui/modalBackdrop';
 
 export default function TransactionsHistoryModal({
   isOpen,
@@ -73,8 +74,9 @@ export default function TransactionsHistoryModal({
           onClose?.();
         }
       }}
-      className="fixed inset-0 z-[100000] bg-black/80 md:bg-[var(--overlay-bg)] md:backdrop-blur-md pointer-events-auto"
+      className={`${BACKDROP_CLASSNAME} z-[100000] pointer-events-auto`}
       style={{
+        ...BACKDROP_STYLE,
         position: 'fixed',
         inset: 0,
         zIndex: 100000,

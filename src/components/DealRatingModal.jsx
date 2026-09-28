@@ -11,6 +11,7 @@ import { Star, X, CheckCircle, Sparkles, Send, Heart } from 'lucide-react';
 import { collection, addDoc, doc, updateDoc, increment, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { hapticSuccess, hapticLight } from '../utils/haptics';
+import { BACKDROP_CLASSNAME, BACKDROP_STYLE } from './ui/modalBackdrop';
 
 const COMPLIMENT_TAGS = [
   'Ponctuel ⏰',
@@ -113,6 +114,7 @@ export default function DealRatingModal({
       role="dialog"
       aria-modal="true"
       aria-labelledby="deal-rating-title"
+      className={BACKDROP_CLASSNAME}
       style={{
         position: 'fixed',
         inset: 0,
@@ -121,9 +123,9 @@ export default function DealRatingModal({
         alignItems: 'center',
         justifyContent: 'center',
         padding: '16px',
-        backgroundColor: 'rgba(0, 0, 0, 0.65)',
-        backdropFilter: 'blur(10px)',
-        WebkitBackdropFilter: 'blur(10px)',
+        ...BACKDROP_STYLE,
+
+
         animation: 'fadeIn 0.2s ease-out',
       }}
     >

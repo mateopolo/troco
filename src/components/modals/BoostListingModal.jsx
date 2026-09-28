@@ -19,11 +19,6 @@ export default function BoostListingModal({
       onClose={onClose}
       ariaLabel="Booster une annonce"
       showCloseButton={false}
-      overlayStyle={{
-        backgroundColor: 'rgba(61,53,48,0.72)',
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
-      }}
     >
       <div style={{
         width: '100%',

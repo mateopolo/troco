@@ -5,6 +5,7 @@ import {
   ExternalLink, Sparkles, Plus, Clock, ShieldCheck,
   HardDrive, Video, Users, Play, RefreshCw
 } from 'lucide-react';
+import { BACKDROP_CLASSNAME, BACKDROP_STYLE } from './ui/modalBackdrop';
 
 export default function ProjectWorkspaceToolsModal({
   isOpen,
@@ -66,8 +67,9 @@ export default function ProjectWorkspaceToolsModal({
 
   const modalElement = (
     <div
-      className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/90 md:bg-black/75 md:backdrop-blur-md touch-none"
+      className={`${BACKDROP_CLASSNAME} z-[999999] flex items-center justify-center touch-none`}
       style={{
+        ...BACKDROP_STYLE,
         position: 'fixed',
         inset: 0,
         zIndex: 999999,

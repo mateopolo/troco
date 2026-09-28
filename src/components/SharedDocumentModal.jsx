@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { doc, setDoc, onSnapshot, serverTimestamp, addDoc, collection } from 'firebase/firestore';
 import { db } from '../firebase';
+import { BACKDROP_CLASSNAME, BACKDROP_STYLE } from './ui/modalBackdrop';
 
 const DEFAULT_NOTE_CONTENT = `# 📝 Notes de Session & Objectifs Collaboratifs
 
@@ -323,8 +324,9 @@ function SharedDocumentModalContent({
 
   const modalContent = (
     <div
-      className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/90 md:bg-[rgba(15,12,11,0.82)] md:backdrop-blur-md p-3 sm:p-4 touch-none"
+      className={`${BACKDROP_CLASSNAME} z-[999999] flex items-center justify-center p-3 sm:p-4 touch-none`}
       style={{
+        ...BACKDROP_STYLE,
         position: 'fixed',
         inset: 0,
         zIndex: 999999,

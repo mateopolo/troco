@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useTheme, TYPOGRAPHY_OPTIONS } from '../contexts/ThemeContext';
 import { useLanguage } from '../contexts/LanguageContext';
+import { BACKDROP_CLASSNAME, BACKDROP_STYLE } from './ui/modalBackdrop';
 
 export default function DesignStudioModal({
   isOpen = false,
@@ -58,15 +59,13 @@ export default function DesignStudioModal({
 
   const modalContent = (
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center p-3 md:p-6 bg-black/60 backdrop-blur-md animate-in fade-in duration-200"
+      className={`${BACKDROP_CLASSNAME} z-[99999] flex items-center justify-center p-3 md:p-6 animate-in fade-in duration-200`}
       onClick={onClose}
       style={{
+        ...BACKDROP_STYLE,
         position: 'fixed',
         inset: 0,
-        zIndex: 9999,
-        backgroundColor: 'rgba(0, 0, 0, 0.65)',
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
+        zIndex: 99999,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',

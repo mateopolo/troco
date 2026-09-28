@@ -1,5 +1,6 @@
 import React from 'react';
 import { CheckCircle, ChevronRight, PlusCircle } from 'lucide-react';
+import { BACKDROP_CLASSNAME, BACKDROP_STYLE } from './ui/modalBackdrop';
 
 /**
  * PublishSuccessModal.jsx — Modale de Succès de Publication Annonce
@@ -19,8 +20,13 @@ export default function PublishSuccessModal({
 
   return (
     <div
-      className="fixed inset-0 z-[999999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-      style={{ position: 'fixed', inset: 0, zIndex: 999999 }}
+      className={`${BACKDROP_CLASSNAME} z-[999999] flex items-center justify-center p-4`}
+      style={{
+        ...BACKDROP_STYLE,
+        position: 'fixed',
+        inset: 0,
+        zIndex: 999999,
+      }}
       onClick={onClose}
     >
       <div

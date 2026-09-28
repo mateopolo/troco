@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { useUIStore } from '../../stores/useUIStore';
+import { BACKDROP_CLASSNAME, BACKDROP_STYLE } from './modalBackdrop';
 
 const FOCUSABLE_ELEMENTS = [
   'a[href]',
@@ -141,11 +142,9 @@ export function UniversalModal({
   return createPortal(
     <div
       onClick={handleBackdropClick}
-      className={`fixed inset-0 z-[99990] flex items-center justify-center p-4 box-border bg-black/50 backdrop-blur-md ${overlayClassName}`.trim()}
+      className={`${BACKDROP_CLASSNAME} z-[99990] flex items-center justify-center p-4 box-border ${overlayClassName}`.trim()}
       style={{
-        backgroundColor: 'rgba(0, 0, 0, 0.5)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
+        ...BACKDROP_STYLE,
         zIndex: 99990,
         ...overlayStyle,
       }}

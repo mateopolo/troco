@@ -99,11 +99,6 @@ export default function ReportModal({
       onClose={onClose}
       ariaLabel="Signaler un contenu"
       showCloseButton={false}
-      overlayStyle={{
-        backgroundColor: 'rgba(61,53,48,0.72)',
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
-      }}
     >
       <div
         style={{

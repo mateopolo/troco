@@ -32,6 +32,7 @@ import { useAppAuth } from './hooks/useAppAuth';
 import { useAppNavigation } from './hooks/useAppNavigation';
 import { useAppModals } from './hooks/useAppModals';
 import Portal from './components/ui/Portal';
+import { BACKDROP_CLASSNAME, BACKDROP_STYLE } from './components/ui/modalBackdrop';
 import { getCategoryLabel as getCategoryLabelUtil, formatStatus as formatStatusUtil, formatTokenCount as formatTokenCountUtil, formatCompensation as formatCompensationUtil } from './utils/formatters';
 import { generateTags } from './utils/tagGenerator';
 import {
@@ -3219,14 +3220,15 @@ export default function App() {
 
         {selectedListing && (
           <div
-            className="fixed inset-0 z-[100005] bg-black/90 md:bg-[rgba(28,24,22,0.72)] md:backdrop-blur-md overflow-y-auto"
+            className={`${BACKDROP_CLASSNAME} z-[100005] overflow-y-auto`}
             style={{
+              ...BACKDROP_STYLE,
               position: 'fixed',
               inset: 0,
               zIndex: 100005,
               overflowY: 'auto',
               WebkitOverflowScrolling: 'touch',
-              padding: isMobile ? '12px 8px 90px' : '24px 16px 60px'
+              padding: isMobile ? '12px 8px 90px' : '24px 16px 60px',
             }}
           >
             <div style={{

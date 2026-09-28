@@ -33,11 +33,6 @@ export default function LanguageSelectModal({
           ariaLabel={t('selectLanguage')}
           maxWidth={380}
           showCloseButton={false}
-          overlayStyle={{
-            backgroundColor: 'rgba(61,53,48,0.7)',
-            backdropFilter: 'blur(8px)',
-            WebkitBackdropFilter: 'blur(8px)',
-          }}
         >
           <motion.div
             {...getActiveAnimation('modal')}

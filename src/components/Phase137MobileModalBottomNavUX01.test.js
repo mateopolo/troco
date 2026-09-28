@@ -71,8 +71,8 @@ describe('UX-01: Masquage dynamique BottomNav & Unification Backdrop Modales', (
     expect(result.current.hasAnyModalOpen()).toBe(false);
   });
 
-  test('3. UniversalModal enforces dark backdrop-blur-md overlay and preserves z-index 99990', () => {
-    expect(universalModalContent).toContain('bg-black/50 backdrop-blur-md');
+  test('3. UniversalModal enforces central BACKDROP_CLASSNAME overlay and preserves z-index 99990', () => {
+    expect(universalModalContent).toContain('BACKDROP_CLASSNAME');
     expect(universalModalContent).toContain('z-[99990]');
     expect(universalModalContent).toContain('zIndex: 99990');
     // Ensure old padding hack is removed

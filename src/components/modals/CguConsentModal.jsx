@@ -1,6 +1,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { Scale, CheckCircle } from 'lucide-react';
+import { BACKDROP_CLASSNAME, BACKDROP_STYLE } from '../ui/modalBackdrop';
 
 export default function CguConsentModal({
   isOpen,
@@ -26,19 +27,16 @@ export default function CguConsentModal({
 
   const modalContent = (
     <div
-      className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 pb-[calc(76px+env(safe-area-inset-bottom,12px))] box-border /* bg-black/95 */"
+      className={`${BACKDROP_CLASSNAME} z-[99999] flex items-center justify-center p-4 box-border`}
       style={{
+        ...BACKDROP_STYLE,
         position: 'fixed',
         inset: 0,
         zIndex: 99999,
-        backgroundColor: 'rgba(0, 0, 0, 0.4)',
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         padding: '16px',
-        paddingBottom: 'calc(76px + env(safe-area-inset-bottom, 12px))',
         boxSizing: 'border-box',
         animation: 'fadeSlideUp 0.3s ease both',
       }}

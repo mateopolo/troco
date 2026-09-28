@@ -37,10 +37,6 @@ export default function CheckoutModal({
         ariaLabel="Paiement sécurisé"
         showCloseButton={false}
         contentStyle={{ maxWidth: 'none', maxHeight: 'none', overflow: 'visible' }}
-        overlayStyle={{
-          backgroundColor: 'rgba(0, 0, 0, 0.65)',
-          backdropFilter: 'blur(8px)',
-        }}
       >
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 15 }}

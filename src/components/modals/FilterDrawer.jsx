@@ -51,9 +51,6 @@ export default function FilterDrawer({
             borderRadius: 0,
           }}
           overlayStyle={{
-            backgroundColor: 'rgba(61,53,48,0.6)',
-            backdropFilter: 'blur(8px)',
-            WebkitBackdropFilter: 'blur(8px)',
             alignItems: 'stretch',
             justifyContent: 'flex-end',
             padding: 0,

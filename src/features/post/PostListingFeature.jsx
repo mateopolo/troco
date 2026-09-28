@@ -23,6 +23,7 @@ import {
   getSuggestedMedia as defaultGetSuggestedMedia,
   getFallbackImage as defaultGetFallbackImage,
 } from '../../utils/mediaUtils';
+import { BACKDROP_CLASSNAME, BACKDROP_STYLE } from '../../components/ui/modalBackdrop';
 import {
   searchNominatim,
   reverseGeocodeNominatim,
@@ -1399,8 +1400,9 @@ export default function PostListingFeature({
       {/* MODAL DE SUCCÈS / FÉLICITATIONS AVEC REDIRECTION FEED */}
       {publishedSuccessListing && (
         <div
-          className="fixed inset-0 z-[999999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          className={`${BACKDROP_CLASSNAME} z-[999999] flex items-center justify-center p-4`}
           style={{
+            ...BACKDROP_STYLE,
             position: 'fixed',
             inset: 0,
             zIndex: 999999,

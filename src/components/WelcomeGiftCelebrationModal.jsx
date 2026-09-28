@@ -63,11 +63,6 @@ export default function WelcomeGiftCelebrationModal({
       onClose={onClose}
       ariaLabel="Cadeau de bienvenue Troco"
       showCloseButton={false}
-      overlayStyle={{
-        backgroundColor: 'var(--overlay-bg)',
-        backdropFilter: 'blur(12px)',
-        WebkitBackdropFilter: 'blur(12px)',
-      }}
     >
       {/* EFFET VISUEL DE PARTICULES SOLAIRES / FESTIVES */}
       {showConfetti && (

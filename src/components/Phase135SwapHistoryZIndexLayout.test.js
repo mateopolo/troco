@@ -22,10 +22,10 @@ describe('Phase 135: Swap History Z-Index & Layout Confinement', () => {
     expect(bottomNavContent).toContain("isModalOpen ? 'none' : 'auto'");
   });
 
-  test('2. UniversalModal has z-index 99990 and backdrop-blur-md', () => {
+  test('2. UniversalModal has z-index 99990 and BACKDROP_CLASSNAME', () => {
     expect(universalModalContent).toContain('z-[99990]');
     expect(universalModalContent).toContain('zIndex: 99990');
-    expect(universalModalContent).toContain('backdrop-blur-md');
+    expect(universalModalContent).toContain('BACKDROP_CLASSNAME');
   });
 
   test('3. PublicProfileModal swap history tab is strictly contained with swap-history-container', () => {

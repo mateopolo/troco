@@ -13,7 +13,7 @@
 > - `STEP BY STEP URGENT.txt` & `LISTE DES PROCHAINES FONCTIONNALITES A CODER.txt` (Backlog immédiat)
 > - `PROJECT_CONTEXT.md` & `TROCO_PROJECT_HISTORY.md` (Historique des décisions et géoprivacy)
 >
-> **Score global :** 7.7/10 | **Progression :** 40 / 74 tâches validées avec preuves formelles (54.1%)
+> **Score global :** 7.8/10 | **Progression :** 42 / 74 tâches validées avec preuves formelles (56.8%)
 
 ---
 
@@ -21,12 +21,12 @@
 
 | Phase | Fait | Restant | Progression |
 |---|---|---|---|
-| 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 21 | 3 | 87.5% |
+| 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 23 | 1 | 95.8% |
 | 🟡 Facile (Niveau 2 — 1h à 3h) | 8 | 8 | 50.0% |
 | 🟠 Moyen (Niveau 3 — 3h à 1 jour) | 8 | 7 | 53.3% |
 | 🔴 Difficile (Niveau 4 — 1 à 3 jours) | 3 | 7 | 30.0% |
 | 🚨 Très difficile (Niveau 5 — 3j à 2 sem) | 0 | 9 | 0.0% |
-| **TOTAL** | **40** | **34** | **54.1%** |
+| **TOTAL** | **42** | **32** | **56.8%** |
 
 
 ### Score par axe vs cible Licorne
@@ -136,6 +136,10 @@
 ### [x] [UX-01] — Masquage automatique de la BottomNav à l'ouverture des modales & backdrop uniforme
 **Preuve** : `src/stores/useUIStore.js:50-52,122-162`, `src/components/ui/UniversalModal.jsx:4,60,114,131-139`, `src/components/layout/AppBottomNav.jsx:6,199,210-224,389`
 **Statut** : ✅ FAIT — Résolution définitive du conflit de z-index (`AppBottomNav` 100050 vs `UniversalModal` 99990) sans altérer les z-index existants. Ajout du compteur réactif `modalOpenCount` et des actions `openModal`/`closeModal` dans `useUIStore`. Enregistrement/désenregistrement automatique via `useEffect` au mount/unmount dans `UniversalModal` et synchronisation des modales de paiement, CGU et confidentialité. Masquage animé avec Framer Motion (`y: '100%'`, `opacity: 0`, transition `{ duration: 0.2, ease: 'easeOut' }`) et désactivation des clics (`pointerEvents: 'none'`). Uniformisation du backdrop en `bg-black/50 backdrop-blur-md` (`rgba(0,0,0,0.5)`, `blur(12px)`) et suppression du padding-bottom de compensation devenu superflu.
+
+### [x] [UX-02] — Backdrop sombre et flouté uniforme (bg-black/60 + blur 16px) sur TOUTES les modales
+**Preuve** : `src/components/ui/modalBackdrop.js:1-19`, `src/components/ui/UniversalModal.jsx:136-146`, `src/App.js:3220-3232`, `src/components/ListingDetailModal.jsx:139-147`, `src/components/CguModal.jsx:159-166`, `src/components/modals/CguConsentModal.jsx:26-38`, `src/components/PrivacyCenterModal.jsx:134-142`, `src/components/PaymentModal.jsx:144-152`, `src/components/TransactionsHistoryModal.jsx:45-53`, `src/components/DesignStudioModal.jsx:234-245`, `src/components/DealRatingModal.jsx:105-115`, `src/components/ProjectRewardsModal.jsx:54-62`, `src/components/ProjectWorkspaceToolsModal.jsx:42-50`, `src/components/PublishSuccessModal.jsx:42-50`, `src/features/post/PostListingFeature.jsx:315-325`, `src/components/SharedDocumentModal.jsx:152-160`, `src/components/ChatView.jsx:1678,2127,2493`, `src/components/Phase138ModalBackdropUniformityUX02.test.js:1-110`
+**Statut** : ✅ FAIT — Standardisation absolue de l'overlay de fond de toutes les modales, tiroirs et fenêtres flottantes de l'application via le module central `src/components/ui/modalBackdrop.js` (`BACKDROP_CLASSNAME = 'fixed inset-0 bg-black/60 backdrop-blur-lg'`, `BACKDROP_STYLE = { backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }`). Éradication totale de l'effet "superposition de cartes" : le flux d'annonces et l'arrière-plan deviennent 100% illisibles avec un contraste noir profond et un flou gaussien 16px renforcé. Harmonisation d'`UniversalModal` et migration systématique de tous les composants modaux hors-UniversalModal avec élévation des z-index inférieurs (`DesignStudioModal` 9999 → 99999, `confirmDeleteChat` 9999 → 999999).
 
 ---
 

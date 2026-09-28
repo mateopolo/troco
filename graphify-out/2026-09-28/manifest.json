@@ -1254,10 +1254,10 @@
     "semantic_hash": "603e05bdea636945a1cd0abbad5538a9"
   },
   "src/components/layout/AppBottomNav.jsx": {
-    "mtime": 1790178809.9821076,
-    "seen": 1790594464.2382722,
-    "ast_hash": "8c4b5c474514b2d2eb9278deda0b9f73",
-    "semantic_hash": "8c4b5c474514b2d2eb9278deda0b9f73"
+    "mtime": 1790601225.6519203,
+    "seen": 1790601460.348509,
+    "ast_hash": "e2aaf6f544bec5519af4c9c13ed1039c",
+    "semantic_hash": ""
   },
   "src/components/layout/AppHeader.jsx": {
     "mtime": 1790180093.7521222,
@@ -1392,10 +1392,10 @@
     "semantic_hash": "a3bb996d631db69a2928bcae9b69b59b"
   },
   "src/components/ui/UniversalModal.jsx": {
-    "mtime": 1790180154.5477853,
-    "seen": 1790594464.2383006,
-    "ast_hash": "3387f7260130e2dcbce5b51272941894",
-    "semantic_hash": "3387f7260130e2dcbce5b51272941894"
+    "mtime": 1790601157.2454727,
+    "seen": 1790601460.3485498,
+    "ast_hash": "fd5d25a759e498fbb9c98190ec0130e5",
+    "semantic_hash": ""
   },
   "src/components/ui/index.js": {
     "mtime": 1788354374.8806517,
@@ -1464,10 +1464,10 @@
     "semantic_hash": "1d6a43bc8ca90303759dffc31686fa9f"
   },
   "src/data/translationsSecondary.js": {
-    "mtime": 1790183088.4407053,
-    "seen": 1790594464.2383163,
-    "ast_hash": "48f685531393c7763035ee9ef44f66d5",
-    "semantic_hash": "48f685531393c7763035ee9ef44f66d5"
+    "mtime": 1790600982.8466969,
+    "seen": 1790601460.3485708,
+    "ast_hash": "5835db9d3579635720fb3ae49e086070",
+    "semantic_hash": ""
   },
   "src/features/admin/AdminChatsTab.jsx": {
     "mtime": 1789301676.137508,
@@ -1956,10 +1956,10 @@
     "semantic_hash": "7d47b7bbffdd070aaa45a9a77c521b8b"
   },
   "src/stores/useUIStore.js": {
-    "mtime": 1788530287.3325949,
-    "seen": 1790594464.2384229,
-    "ast_hash": "f327917e5f319f1ce42b7865a55a1f9a",
-    "semantic_hash": "f327917e5f319f1ce42b7865a55a1f9a"
+    "mtime": 1790601118.8444035,
+    "seen": 1790601460.3487172,
+    "ast_hash": "977cc1e525c6eb1d0896236c5e56de54",
+    "semantic_hash": ""
   },
   "src/stores/useWalletStore.js": {
     "mtime": 1790014779.4780152,
@@ -2304,9 +2304,9 @@
     "semantic_hash": ""
   },
   "CONTEXT.md": {
-    "mtime": 1790180438.3421266,
-    "seen": 1790597322.0826905,
-    "ast_hash": "77a6172fce9042cac83db97d53d53cef",
+    "mtime": 1790601396.1471736,
+    "seen": 1790601460.3488212,
+    "ast_hash": "901ff5302d192e9c978335447f2bea95",
     "semantic_hash": ""
   },
   "Description du projet.txt": {
@@ -2328,9 +2328,9 @@
     "semantic_hash": ""
   },
   "MASTER_AUDIT.md": {
-    "mtime": 1790180513.9424076,
-    "seen": 1790597322.0826952,
-    "ast_hash": "c6aef1e952b385df0cefdd3a6ddb691d",
+    "mtime": 1790601421.5932634,
+    "seen": 1790601460.3488283,
+    "ast_hash": "338c9602e261d667ff5ee3e0af3e3849",
     "semantic_hash": ""
   },
   "PERFORMANCE_AUDIT.md": {

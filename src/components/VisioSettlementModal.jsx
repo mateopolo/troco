@@ -71,11 +71,6 @@ export default function VisioSettlementModal({
       onClose={onClose}
       ariaLabel={`Règlement de la visio avec ${partnerName}`}
       showCloseButton={false}
-      overlayStyle={{
-        backgroundColor: 'var(--overlay-bg)',
-        backdropFilter: 'blur(10px)',
-        WebkitBackdropFilter: 'blur(10px)',
-      }}
     >
       <div
         style={{

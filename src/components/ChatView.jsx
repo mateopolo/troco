@@ -25,6 +25,7 @@ import SwipeableChatItem from './SwipeableChatItem';
 import ChatInputBar from './chat/ChatInputBar';
 import { isRawUid, isGenericName, getChatPartnerUid, getChatPartnerName, getCachedUserProfile, setCachedUserProfile, resolveUserProfile } from '../services/userResolverService';
 import { useUIStore } from '../stores/useUIStore';
+import { BACKDROP_CLASSNAME, BACKDROP_STYLE } from './ui/modalBackdrop';
 
 // Lazy loading des outils collaboratifs & suites vectorielles lourdes pour préserver les performances et la rapidité du build
 const CreateProjectGroupModal = lazy(() => import('./CreateProjectGroupModal'));
@@ -3373,16 +3374,15 @@ function ChatView({
       {/* POPOVER / DROPDOWN MULTI-BOARD PICKER (PHASE 23) */}
       {isWhiteboardPickerOpen && activeChatObj && (
         <div
+          className={BACKDROP_CLASSNAME}
           style={{
+            ...BACKDROP_STYLE,
             position: 'fixed',
             inset: 0,
             zIndex: 999999,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            backgroundColor: 'rgba(0,0,0,0.55)',
-            backdropFilter: 'blur(8px)',
-            WebkitBackdropFilter: 'blur(8px)',
             padding: '16px',
             animation: 'fadeIn 0.15s ease',
           }}
@@ -3751,19 +3751,15 @@ function ChatView({
       {confirmDeleteChat && (
         <div
           onClick={() => setConfirmDeleteChat(null)}
+          className={BACKDROP_CLASSNAME}
           style={{
+            ...BACKDROP_STYLE,
             position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'var(--overlay-bg)',
-            backdropFilter: 'blur(8px)',
-            WebkitBackdropFilter: 'blur(8px)',
+            inset: 0,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            zIndex: 9999,
+            zIndex: 999999,
             padding: '20px'
           }}
         >
@@ -3877,12 +3873,11 @@ function ChatView({
         <Portal>
           <div
             onClick={() => setIsDirectTransferOpen(false)}
+            className={BACKDROP_CLASSNAME}
             style={{
+              ...BACKDROP_STYLE,
               position: 'fixed',
               inset: 0,
-              backgroundColor: 'rgba(0,0,0,0.65)',
-              backdropFilter: 'blur(8px)',
-              WebkitBackdropFilter: 'blur(8px)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',

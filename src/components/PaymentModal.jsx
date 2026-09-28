@@ -15,6 +15,7 @@ import { hapticSuccess, hapticError } from '../utils/haptics';
 import { convertCurrency, formatCurrencyAmount } from '../services/pricingService';
 import { useWalletStore } from '../stores';
 import { useLanguage } from '../contexts/LanguageContext';
+import { BACKDROP_CLASSNAME, BACKDROP_STYLE } from './ui/modalBackdrop';
 
 // Algorithme de Luhn pour la validation des numéros de carte bancaire
 function isValidLuhn(numStr) {
@@ -465,8 +466,9 @@ export default function PaymentModal({
           handleCloseModal();
         }
       }}
-      className="fixed inset-0 z-[100000] bg-black/80 md:bg-[var(--overlay-bg)] md:backdrop-blur-md pointer-events-auto"
+      className={`${BACKDROP_CLASSNAME} z-[100000] pointer-events-auto`}
       style={{
+        ...BACKDROP_STYLE,
         position: 'fixed',
         inset: 0,
         zIndex: 100000,

@@ -331,11 +331,6 @@ export default function PublicProfileModal({
       onClose={onClose}
       ariaLabel={`Profil public de ${userName}`}
       showCloseButton={false}
-      overlayStyle={{
-        backgroundColor: 'rgba(0,0,0,0.65)',
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
-      }}
     >
       <div
         style={{

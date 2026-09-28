@@ -19,11 +19,6 @@ export default function CategoryPickerModal({
       onClose={onClose}
       ariaLabel={t('addCategory')}
       showCloseButton={false}
-      overlayStyle={{
-        backgroundColor: 'rgba(61,53,48,0.72)',
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
-      }}
     >
       <div style={{
         backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',

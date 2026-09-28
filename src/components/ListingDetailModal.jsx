@@ -7,6 +7,7 @@ import {
   cleanLanguageTag,
 } from '../utils/dynamicTranslation';
 import { useLanguage } from '../contexts/LanguageContext';
+import { BACKDROP_CLASSNAME, BACKDROP_STYLE } from './ui/modalBackdrop';
 
 export default function ListingDetailModal({
   selectedListing,
@@ -48,21 +49,21 @@ export default function ListingDetailModal({
   const isSwipingRef = useRef(false);
   const detailVideoRef = useRef(null);
 
-  if (!selectedListing) return null;
-
-  const isOwner = Boolean(profile?.name && selectedListing.author === profile.name);
-  const gallery = (selectedListing.gallery && selectedListing.gallery.length > 0)
+  const isOwner = Boolean(profile?.name && selectedListing?.author === profile.name);
+  const gallery = (selectedListing?.gallery && selectedListing.gallery.length > 0)
     ? selectedListing.gallery
-    : ((selectedListing.images && selectedListing.images.length > 0)
+    : ((selectedListing?.images && selectedListing.images.length > 0)
         ? selectedListing.images
-        : (selectedListing.image ? [selectedListing.image] : []));
-  const currentImage = gallery[selectedImageIndex] || selectedListing.image;
+        : (selectedListing?.image ? [selectedListing.image] : []));
+  const currentImage = gallery[selectedImageIndex] || selectedListing?.image;
 
-  const isDetailShowingOriginal = !!showingOriginalListings[selectedListing.id];
-  const displayContent = getListingDisplayContent
-    ? getListingDisplayContent(selectedListing, currentLang, isDetailShowingOriginal)
-    : parseAndTranslateListing(selectedListing, currentLang, isDetailShowingOriginal);
-  const nativeLang = selectedListing.nativeLang || 'FR';
+  const isDetailShowingOriginal = !!(selectedListing && showingOriginalListings[selectedListing.id]);
+  const displayContent = selectedListing
+    ? (getListingDisplayContent
+        ? getListingDisplayContent(selectedListing, currentLang, isDetailShowingOriginal)
+        : parseAndTranslateListing(selectedListing, currentLang, isDetailShowingOriginal))
+    : { title: '', description: '' };
+  const nativeLang = selectedListing?.nativeLang || 'FR';
 
   const handleTouchStart = (e) => {
     if (!e.touches || e.touches.length === 0) return;
@@ -130,12 +131,19 @@ export default function ListingDetailModal({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [gallery.length, onClose]);
 
+  if (!selectedListing) return null;
+
   return (
     <div
-      className="fixed inset-0 z-[1000] bg-black/90 md:bg-[var(--overlay-bg)] md:backdrop-blur-md overflow-y-auto flex items-center justify-center p-5"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose?.();
+      }}
+      className={`${BACKDROP_CLASSNAME} z-[99999] overflow-y-auto flex items-center justify-center p-5`}
       style={{
-        position: 'fixed', inset: 0,
-        zIndex: 1000,
+        ...BACKDROP_STYLE,
+        position: 'fixed',
+        inset: 0,
+        zIndex: 99999,
       }}
     >
       <div style={{

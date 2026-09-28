@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { getPrivacySettings, saveConsent, getConsentStatus } from '../services/consentManager';
 import { useLanguage } from '../contexts/LanguageContext';
+import { BACKDROP_CLASSNAME, BACKDROP_STYLE } from './ui/modalBackdrop';
 
 export default function PrivacyCenterModal({
   isOpen,
@@ -106,19 +107,16 @@ export default function PrivacyCenterModal({
   const modalContent = (
     <div
       onClick={(e) => { if (e.target === e.currentTarget) onClose?.(); }}
-      className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 pb-[calc(76px+env(safe-area-inset-bottom,12px))] box-border"
+      className={`${BACKDROP_CLASSNAME} z-[99999] flex items-center justify-center p-4 box-border`}
       style={{
+        ...BACKDROP_STYLE,
         position: 'fixed',
         inset: 0,
         zIndex: 99999,
-        backgroundColor: 'rgba(0, 0, 0, 0.4)',
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         padding: '16px',
-        paddingBottom: 'calc(76px + env(safe-area-inset-bottom, 12px))',
         boxSizing: 'border-box',
       }}
     >
