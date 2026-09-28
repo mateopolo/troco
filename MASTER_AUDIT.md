@@ -13,7 +13,7 @@
 > - `STEP BY STEP URGENT.txt` & `LISTE DES PROCHAINES FONCTIONNALITES A CODER.txt` (Backlog immédiat)
 > - `PROJECT_CONTEXT.md` & `TROCO_PROJECT_HISTORY.md` (Historique des décisions et géoprivacy)
 >
-> **Score global :** 7.9/10 | **Progression :** 43 / 74 tâches validées avec preuves formelles (58.1%)
+> **Score global :** 8.0/10 | **Progression :** 44 / 74 tâches validées avec preuves formelles (59.5%)
 
 ---
 
@@ -21,12 +21,12 @@
 
 | Phase | Fait | Restant | Progression |
 |---|---|---|---|
-| 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 24 | 0 | 100% |
+| 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 25 | 0 | 100% |
 | 🟡 Facile (Niveau 2 — 1h à 3h) | 8 | 8 | 50.0% |
 | 🟠 Moyen (Niveau 3 — 3h à 1 jour) | 8 | 7 | 53.3% |
 | 🔴 Difficile (Niveau 4 — 1 à 3 jours) | 3 | 7 | 30.0% |
 | 🚨 Très difficile (Niveau 5 — 3j à 2 sem) | 0 | 9 | 0.0% |
-| **TOTAL** | **43** | **31** | **58.1%** |
+| **TOTAL** | **44** | **30** | **59.5%** |
 
 
 ### Score par axe vs cible Licorne
@@ -102,6 +102,10 @@
 ### [x] [QW-19] — Traduction exhaustive des éléments d'interface hardcodés (i18n 7 langues)
 **Preuve** : `src/components/ListingDetailModal.jsx:44-265`, `src/components/ReviewsSection.jsx:45-442`, `src/components/PublicProfileModal.jsx:250-930`, `src/components/ProfileView.jsx:130-670`, `src/features/profile/ProfileFeature.jsx:200-1180`, `src/data/translationsData.js:240-335`, `src/data/translationsSecondary.js:230-1400`, `src/locales/translations.js:230-1640`, `src/components/Phase119DynamicTranslationAndLanguageSync.test.js:1-120`, `src/components/Phase133DynamicProfileStats.test.js:1-90`, `src/components/Phase134ReviewsSection.test.js:1-210`
 **Statut** : ✅ FAIT — Traque et wrapping intégral de toutes les chaînes statiques résiduelles dans `t('...')` avec fallbacks sécurisés. Prise en charge complète des boutons, titres, statuts et placeholders grisés (« Deal clôturé », « Note moyenne », « Avis et Évaluations », « Langues parlées », « Cet utilisateur n'a pas encore reçu d'avis », « Studio de Design & Apparence », « Sécurité, Juridique & RGPD », « Recharger (€) », etc.). Synchronisation synchrone immédiate des dictionnaires dans les 7 langues de la plateforme (FR, EN, ES, IT, DE, JA, ZH) et formatage linguistique des dates d'avis.
+
+### [x] [I18N-03] — Traduction exhaustive Activity Feed & Boutons de Paiement (7 langues)
+**Preuve** : `src/components/CommunityActivityFeed.jsx:52,127,158,167-174,222-228,254-282,421-424`, `src/components/PaymentModal.jsx:1124-1194,1409-1442`, `src/components/modals/CheckoutModal.jsx:17-40,68-74,128-170,207-230`, `src/components/TransactionSuccessModal.jsx:41-52,81-86,181-196,288-292`, `src/data/translationsData.js:468-529`, `src/data/translationsSecondary.js:318-366,858-906,1398-1446,1938-1986,2478-2526,3017-3065`
+**Statut** : ✅ FAIT — Traduction complète et dynamique dans les 7 langues (FR, EN, ES, IT, DE, JA, ZH) des 5 filtres thématiques du feed d'activité (`flux`, `deals_troc`, `reviews_5stars`, `tips`, `collective_projects`), du placeholder de statut, du bouton publier, de l'état vide (`empty_state_title`, `empty_state_subtitle`), des labels membres et actions dynamiques (`membre`, `published_listing`, `completed_deal`). Internationalisation intégrale des 3 modales de paiement : PaymentModal (`payment_method_title`, `card_label` ["Carte CB" en FR, "Carta" en ES/IT, "Card" en EN, "Karte" en DE, "カード" en JA, "银行卡" en ZH], `balance_label`, `apple_pay_button`, `google_pay_button`, `manage_subscription`, `upgrade_subscription`, `insufficient_balance`, `confirm_token_transfer`, `confirm_and_pay`), CheckoutModal (`secure_payment`, `finalize_transaction`, `order_details`, `payment_method`, `cancel`, `processing`, `confirm_and_pay`), et TransactionSuccessModal (`success_title`, `receipt_sent`, `close`). Interpolation dynamique préservée pour tous les montants et jetons `{amount}`, `{current}`, `{required}`, `{plan}`, `{detail}`, `{method}`. Zéro régression, 0 erreur build et lint.
 
 ### [x] [QW-20] — Traduction automatique du contenu utilisateur (UGC) : bios, messages communauté et DMs
 **Preuve** : `src/utils/dynamicTranslation.js:44-80`, `src/utils/translationHelpers.js:35-275`, `src/components/ChatView.jsx:2580-2595`, `src/components/UserProfile.jsx:610-750`, `src/components/PublicProfileModal.jsx:770-795`, `src/components/ProfileView.jsx:73-275`, `src/components/GlobalLiveChat.jsx:15-680`, `src/components/CommunityActivityFeed.jsx:11-355`, `src/components/ReviewsSection.jsx:1-340`, `src/components/Phase135UGCTranslation.test.js:1-75`

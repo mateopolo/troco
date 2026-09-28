@@ -1124,7 +1124,7 @@ export default function PaymentModal({
               {amountToPay > 0 && (
                 <div style={{ marginBottom: '22px' }}>
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: '800', marginBottom: '10px', color: 'var(--text-main)' }}>
-                    2. Moyen de Paiement Sécurisé
+                    {t('payment_method_title') || t('paymentMethodTitle') || '2. Moyen de Paiement Sécurisé'}
                   </label>
                   <div style={{ display: 'grid', gridTemplateColumns: (mode === 'troco-plus' || mode === 'pack-tokens' || mode === 'topup-cash') ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)', gap: '10px' }}>
                     {/* Option Apple Pay */}
@@ -1146,7 +1146,7 @@ export default function PaymentModal({
                         gap: '6px',
                       }}
                     >
-                      <Smartphone size={16} /> Apple Pay
+                      <Smartphone size={16} /> {t('apple_pay_button') || t('applePayButton') || 'Apple Pay'}
                     </button>
 
                     {/* Option Carte Bancaire */}
@@ -1169,7 +1169,7 @@ export default function PaymentModal({
                         boxShadow: paymentMethod === 'card' ? 'var(--shadow-card)' : 'none'
                       }}
                     >
-                      <CreditCard size={16} /> Carte CB
+                      <CreditCard size={16} /> {t('card_label') || t('cardLabel') || 'Carte CB'}
                     </button>
 
                     {/* Option Solde Portefeuille (uniquement pour deal, caution, boost) */}
@@ -1194,7 +1194,7 @@ export default function PaymentModal({
                           gap: '6px',
                         }}
                       >
-                        <Coins size={16} /> Solde ({currentUser?.euroBalance || 0}€)
+                        <Coins size={16} /> {(t('balance_label') || t('balanceLabel') || 'Solde ({amount}€)').replace('{amount}', currentUser?.euroBalance || 0)}
                       </button>
                     )}
                   </div>
@@ -1229,7 +1229,7 @@ export default function PaymentModal({
                         {cardBrand === 'visa' && 'VISA'}
                         {cardBrand === 'mastercard' && 'MASTERCARD'}
                         {cardBrand === 'amex' && 'AMEX'}
-                        {cardBrand === 'generic' && 'CARTE BANCAIRE'}
+                        {cardBrand === 'generic' && (t('cardMethod') || 'CARTE BANCAIRE').toUpperCase()}
                       </span>
                     </div>
                     <div style={{ fontFamily: 'monospace', fontSize: '17px', letterSpacing: '2px', fontWeight: '700', marginBottom: '14px' }}>
@@ -1413,40 +1413,43 @@ export default function PaymentModal({
                 {isProcessing ? (
                   <>
                     <Loader2 size={18} className="spin-animation" />
-                    Traitement sécurisé en cours...
+                    {t('processing') || t('secureProcessing') || 'Traitement sécurisé en cours...'}
                   </>
                 ) : isSubscriptionDisabled ? (
                   <>
                     <CheckCircle size={16} color="#10B981" />
-                    Abonnement Déjà Actif ({isSelectedPlanCurrent ? 'Votre Formule' : 'Inclus dans votre offre Pro'})
+                    {(t('subscription_already_active') || t('subscriptionAlreadyActive') || 'Abonnement Déjà Actif ({plan})').replace('{plan}', isSelectedPlanCurrent ? (t('yourPlan') || 'Votre Formule') : (t('includedInPro') || 'Inclus dans votre offre Pro'))}
                   </>
                 ) : isUpgradeAction ? (
                   <>
                     <Sparkles size={16} />
-                    ⚡ Mettre à niveau vers Troco Plus Pro ({amountToPay.toFixed(2)} € avec obligation de paiement)
+                    {(t('upgrade_subscription') || t('upgradeSubscription') || '⚡ Mettre à niveau vers Troco Plus Pro ({amount} € avec obligation de paiement)').replace('{amount}', amountToPay.toFixed(2))}
                   </>
                 ) : isDealMode ? (
                   dealTokensRequired > 0 && !hasEnoughTokens ? (
                     <>
                       <Coins size={16} />
-                      Solde Jetons Insuffisant ({userTokens}/{dealTokensRequired})
+                      {(t('insufficient_balance') || t('insufficientBalance') || 'Solde Jetons Insuffisant ({current}/{required})').replace('{current}', userTokens).replace('{required}', dealTokensRequired)}
                     </>
                   ) : amountToPay <= 0 ? (
                     <>
                       <Lock size={16} />
-                      Confirmer le transfert et sceller le deal ({dealTokensRequired > 0 ? `${dealTokensRequired} Jeton(s)` : 'Troc Direct'})
+                      {(t('confirm_token_transfer') || t('confirmTokenTransfer') || 'Confirmer le transfert et sceller le deal ({detail})').replace('{detail}', dealTokensRequired > 0 ? `${dealTokensRequired} Jeton(s)` : (t('directSwap') || 'Troc Direct'))}
                     </>
                   ) : (
                     <>
                       <Lock size={16} />
-                      Confirmer le paiement de {amountToPay.toFixed(2)} € et sceller le deal (obligation de paiement)
+                      {(t('confirmPaymentAndDeal') || 'Confirmer le paiement de {amount} € et sceller le deal (obligation de paiement)').replace('{amount}', amountToPay.toFixed(2))}
                     </>
                   )
                 ) : (
                   <>
                     <Lock size={16} />
-                    Confirmer et payer {amountToPay.toFixed(2)} € avec {paymentMethod === 'applePay' ? 'Apple Pay' : paymentMethod === 'card' ? 'Carte Bancaire' : 'Solde Portefeuille'} (avec obligation de paiement)
+                    {(t('confirm_and_pay') || t('confirmAndPay') || 'Confirmer et payer {amount} € avec {method} (avec obligation de paiement)')
+                      .replace('{amount}', amountToPay.toFixed(2))
+                      .replace('{method}', paymentMethod === 'applePay' ? (t('apple_pay_button') || t('applePayButton') || 'Apple Pay') : paymentMethod === 'card' ? (t('card_label') || t('cardLabel') || t('cardMethod') || 'Carte Bancaire') : (t('walletMethod') || 'Solde Portefeuille'))}
                   </>
+                )}
                 )}
               </button>
             </>

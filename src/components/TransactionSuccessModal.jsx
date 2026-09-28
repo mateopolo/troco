@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { CheckCircle2, X, Sparkles, Coins, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 import { playApplePaySound, playBetclicBalanceSound } from '../utils/audioService';
 import UniversalModal from './ui/UniversalModal';
+import { useLanguage } from '../contexts/LanguageContext';
 
 /**
  * Modale de confirmation de transaction plein écran (Paiement envoyé ou reçu).
@@ -27,24 +28,28 @@ export default function TransactionSuccessModal({
     }
   }, [isOpen, type]);
 
+  const { t } = useLanguage();
+
   if (!isOpen) return null;
 
   const isReceived = type === 'received';
   const isTokens = currency === 'tokens' || currency === 'token';
   const numAmount = Number(amount) || 0;
-  const tokenWord = numAmount > 1 ? 'jetons' : 'jeton';
+  const tokenWord = numAmount > 1 ? (t('tokens') || 'jetons') : (t('token') || 'jeton');
   const formattedAmount = isTokens
     ? `${numAmount} ${tokenWord}`
     : `${numAmount.toFixed(2)} €`;
 
-  const title = isReceived ? 'Paiement reçu !' : 'Transfert finalisé !';
+  const title = isReceived
+    ? (t('paymentReceived') || t('success_title') || t('successTitle') || 'Paiement reçu !')
+    : (t('transferCompleted') || t('success_title') || t('successTitle') || 'Transfert finalisé !');
   const subtitle = isReceived
     ? (partnerName
-        ? `Vous avez reçu ${formattedAmount} de ${partnerName}.`
-        : `Vous avez reçu ${formattedAmount}.`)
+        ? (t('youReceivedFrom') || 'Vous avez reçu {amount} de {partner}.').replace('{amount}', formattedAmount).replace('{partner}', partnerName)
+        : (t('youReceived') || 'Vous avez reçu {amount}.').replace('{amount}', formattedAmount))
     : (partnerName
-        ? `Vous avez envoyé ${formattedAmount} à ${partnerName}.`
-        : `Vous avez envoyé ${formattedAmount}.`);
+        ? (t('youSentTo') || 'Vous avez envoyé {amount} à {partner}.').replace('{amount}', formattedAmount).replace('{partner}', partnerName)
+        : (t('youSent') || 'Vous avez envoyé {amount}.').replace('{amount}', formattedAmount));
 
   const modalContent = (
     <UniversalModal
@@ -77,7 +82,7 @@ export default function TransactionSuccessModal({
         <button
           type="button"
           onClick={onClose}
-          aria-label="Fermer la confirmation"
+          aria-label={t('closeConfirmation') || t('close') || "Fermer la confirmation"}
           style={{
             position: 'absolute',
             top: '16px',
@@ -160,7 +165,7 @@ export default function TransactionSuccessModal({
               border: isReceived ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(14, 165, 233, 0.3)',
             }}
           >
-            {isReceived ? 'Crédit Solde' : 'Débit Confirmé'}
+            {isReceived ? (t('balanceCredit') || 'Crédit Solde') : (t('confirmedDebit') || 'Débit Confirmé')}
           </span>
         </div>
 
@@ -178,7 +183,7 @@ export default function TransactionSuccessModal({
 
         <p
           style={{
-            margin: '0 0 24px',
+            margin: '0 0 12px',
             fontSize: '14px',
             lineHeight: 1.5,
             color: 'var(--text-secondary, #A1A1AA)',
@@ -186,6 +191,11 @@ export default function TransactionSuccessModal({
         >
           {subtitle}
         </p>
+
+        <div style={{ fontSize: '12px', color: 'var(--text-secondary, #A1A1AA)', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+          <span>📧</span>
+          <span>{t('receipt_sent') || t('receiptSent') || 'Un reçu a été envoyé par email.'}</span>
+        </div>
 
         {/* CARTE RÉCAPITULATIVE */}
         <div
@@ -222,10 +232,10 @@ export default function TransactionSuccessModal({
 
             <div style={{ textAlign: 'left' }}>
               <div style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary, #A1A1AA)', textTransform: 'uppercase' }}>
-                {isTokens ? 'Monnaie Troco' : 'Euros Fiat'}
+                {isTokens ? (t('trocoCurrency') || 'Monnaie Troco') : (t('fiatEuros') || 'Euros Fiat')}
               </div>
               <div style={{ fontSize: '15px', fontWeight: '800', color: 'var(--text-main, #FFFFFF)' }}>
-                {isTokens ? 'Jetons de Temps' : 'Portefeuille'}
+                {isTokens ? (t('timeTokens') || 'Jetons de Temps') : (t('wallet') || 'Portefeuille')}
               </div>
             </div>
           </div>
@@ -254,7 +264,7 @@ export default function TransactionSuccessModal({
               {isTokens ? ' 🪙' : ' €'}
             </div>
             <div style={{ fontSize: '10px', color: '#10B981', fontWeight: '700' }}>
-              Statut : Validé ⚡
+              {t('statusValidated') || 'Statut : Validé ⚡'}
             </div>
           </div>
         </div>
@@ -283,7 +293,7 @@ export default function TransactionSuccessModal({
             transition: 'all 0.2s ease',
           }}
         >
-          Fermer
+          {t('close') || 'Fermer'}
         </button>
       </div>
     </UniversalModal>

@@ -52,7 +52,7 @@ export default function CommunityActivityFeed({
     e.preventDefault();
     if (!statusText.trim()) return;
 
-    const authorName = currentUser?.displayName || currentUser?.name || 'Membre';
+    const authorName = currentUser?.displayName || currentUser?.name || t('membre') || t('member') || 'Membre';
     const authorUsername = currentUser?.username || (authorName ? `@${authorName.toLowerCase().replace(/[^a-z0-9]/g, '')}` : '@membre');
     const authorAvatar = currentUser?.photoURL || currentUser?.avatar || '';
 
@@ -65,9 +65,9 @@ export default function CommunityActivityFeed({
         avatar: authorAvatar,
         verified: Boolean(currentUser?.kycVerified),
       },
-      actionText: 'a partagé une mise à jour avec la communauté :',
+      actionText: t('sharedUpdateCommunity') || 'a partagé une mise à jour avec la communauté :',
       detail: `« ${statusText.trim()} »`,
-      time: 'À l’instant',
+      time: t('justNow') || 'À l’instant',
       reactions: { love: 1, fire: 0, clap: 0 },
       userReacted: 'love',
     };
@@ -101,7 +101,7 @@ export default function CommunityActivityFeed({
           {currentUser?.photoURL || currentUser?.avatar ? (
             <img
               src={currentUser.photoURL || currentUser.avatar}
-              alt="Moi"
+              alt={currentUser?.displayName || currentUser?.name || (t('member') || 'Membre')}
               style={{ width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover', border: '1.5px solid var(--accent-primary)' }}
             />
           ) : (
@@ -128,7 +128,7 @@ export default function CommunityActivityFeed({
                 type="text"
                 value={statusText}
                 onChange={(e) => setStatusText(e.target.value)}
-                placeholder="Partager un remerciement, une réussite ou un besoin..."
+                placeholder={t('activity_feed_placeholder') || t('activityFeedPlaceholder') || "Partager un remerciement, une annonce ou une réussite..."}
                 style={{
                   flex: 1,
                   padding: '10px 16px',
@@ -160,7 +160,7 @@ export default function CommunityActivityFeed({
                 }}
               >
                 <Send size={13} />
-                <span>Publier</span>
+                <span>{t('publier') || t('publish') || 'Publier'}</span>
               </button>
             </form>
           </div>
@@ -170,11 +170,11 @@ export default function CommunityActivityFeed({
       {/* 2. FILTRES THÉMATIQUES */}
       <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>
         {[
-          { id: 'all', label: 'Tous les flux', icon: Sparkles },
-          { id: 'deal', label: 'Deals & Troc', icon: Handshake },
-          { id: 'review', label: 'Avis 5 Étoiles', icon: Star },
-          { id: 'tip', label: 'Pourboires', icon: Coins },
-          { id: 'project', label: 'Projets Collectifs', icon: Rocket },
+          { id: 'all', label: t('flux') || t('allFlows') || 'Tous les flux', icon: Sparkles },
+          { id: 'deal', label: t('deals_troc') || t('dealsAndTroc') || 'Deals & Troc', icon: Handshake },
+          { id: 'review', label: t('reviews_5stars') || t('fiveStarReviews') || 'Avis 5 Étoiles', icon: Star },
+          { id: 'tip', label: t('tips') || 'Pourboires', icon: Coins },
+          { id: 'project', label: t('collective_projects') || t('collectiveProjects') || 'Projets Collectifs', icon: Rocket },
         ].map((f) => {
           const Icon = f.icon;
           const isSelected = filterType === f.id;
@@ -226,10 +226,10 @@ export default function CommunityActivityFeed({
           >
             <Sparkles size={32} style={{ color: 'var(--accent-primary)', opacity: 0.8 }} />
             <div style={{ fontWeight: '700', fontSize: '15px', color: 'var(--text-main)' }}>
-              Aucune activité récente pour le moment
+              {t('empty_state_title') || t('noRecentActivityTitle') || 'Aucune activité récente pour le moment'}
             </div>
             <div style={{ fontSize: '12.5px', color: 'var(--text-secondary)', maxWidth: '380px' }}>
-              Soyez le premier à partager une actualité, valider un échange ou encourager la communauté Troco !
+              {t('empty_state_subtitle') || t('noRecentActivityDesc') || 'Soyez le premier à partager une actualité, valider un échange ou encourager la communauté Troco !'}
             </div>
           </div>
         ) : filteredActivities.map((act) => {
@@ -259,7 +259,7 @@ export default function CommunityActivityFeed({
                   {/* AVATAR ACTEUR */}
                   <img
                     src={act.actor?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'}
-                    alt={act.actor?.name || 'Membre'}
+                    alt={act.actor?.name || t('membre') || t('member') || 'Membre'}
                     onClick={() => act.actor && onOpenProfile?.(act.actor)}
                     style={{ width: '36px', height: '36px', borderRadius: '50%', objectFit: 'cover', cursor: 'pointer', border: '1px solid var(--border-color)' }}
                   />
@@ -271,10 +271,16 @@ export default function CommunityActivityFeed({
                         onClick={() => act.actor && onOpenProfile?.(act.actor)}
                         style={{ border: 'none', background: 'transparent', padding: 0, fontWeight: '800', color: 'var(--text-main)', cursor: 'pointer', fontSize: '13px' }}
                       >
-                        {act.actor?.name || 'Membre'}
+                        {act.actor?.name || t('membre') || t('member') || 'Membre'}
                       </button>
 
-                      <span style={{ color: 'var(--text-secondary)' }}>{act.actionText || ''}</span>
+                      <span style={{ color: 'var(--text-secondary)' }}>
+                        {isDeal
+                          ? (t('completed_deal') || t('completedDeal') || act.actionText)
+                          : act.type === 'listing'
+                            ? (t('published_listing') || t('publishedListing') || act.actionText)
+                            : (act.actionText || '')}
+                      </span>
 
                       {act.targetUser && (
                         <button
@@ -282,7 +288,7 @@ export default function CommunityActivityFeed({
                           onClick={() => onOpenProfile?.(act.targetUser)}
                           style={{ border: 'none', background: 'transparent', padding: 0, fontWeight: '800', color: 'var(--accent-primary)', cursor: 'pointer', fontSize: '13px' }}
                         >
-                          {act.targetUser?.name || 'Membre'}
+                          {act.targetUser?.name || t('membre') || t('member') || 'Membre'}
                         </button>
                       )}
                     </div>
@@ -429,7 +435,7 @@ export default function CommunityActivityFeed({
 
                 <div style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                   <Share2 size={12} />
-                  <span>Partager</span>
+                  <span>{t('share') || 'Partager'}</span>
                 </div>
               </div>
             </div>
