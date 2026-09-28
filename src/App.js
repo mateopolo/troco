@@ -3603,7 +3603,7 @@ export default function App() {
                       ))
                     ) : (
                       <div style={{ fontSize: '12.5px', color: darkMode ? '#D4C5B5' : '#6B5E54', fontStyle: 'italic', padding: '12px 14px', borderRadius: '14px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3' }}>
-                        🤝 Nouveau membre • Aucun avis pour le moment (0 transaction clôturée)
+                        🤝 {t('noReviewsZeroTransactions')}
                       </div>
                     )}
                   </div>

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
+import { useUIStore } from '../../stores/useUIStore';
 
 const FOCUSABLE_ELEMENTS = [
   'a[href]',
@@ -52,6 +53,17 @@ export function UniversalModal({
 }) {
   const dialogRef = useRef(null);
   const previousActiveElement = useRef(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
+  // Enregistrement et désenregistrement strict au cycle de vie de isOpen
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    useUIStore.getState().openModal();
+    return () => {
+      useUIStore.getState().closeModal();
+    };
+  }, [isOpen]);
 
   useEffect(() => {
     if (!isOpen || typeof document === 'undefined') return undefined;
@@ -73,7 +85,7 @@ export function UniversalModal({
     const handleKeyDown = (event) => {
       if (closeOnEscape && event.key === 'Escape') {
         event.preventDefault();
-        onClose?.();
+        onCloseRef.current?.();
         return;
       }
 
@@ -112,7 +124,7 @@ export function UniversalModal({
         previousActiveElement.current.focus();
       }
     };
-  }, [closeOnEscape, isOpen, onClose]);
+  }, [closeOnEscape, isOpen]);
 
   if (!isOpen || typeof document === 'undefined') return null;
 
@@ -129,12 +141,12 @@ export function UniversalModal({
   return createPortal(
     <div
       onClick={handleBackdropClick}
-      className={`fixed inset-0 z-[99999] flex items-center justify-center p-4 pb-[calc(76px+env(safe-area-inset-bottom,12px))] box-border bg-black/40 backdrop-blur-sm ${overlayClassName}`.trim()}
+      className={`fixed inset-0 z-[99990] flex items-center justify-center p-4 box-border bg-black/50 backdrop-blur-md ${overlayClassName}`.trim()}
       style={{
-        backgroundColor: 'rgba(0, 0, 0, 0.4)',
-        backdropFilter: 'blur(8px)',
-        WebkitBackdropFilter: 'blur(8px)',
-        zIndex: 99999,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        zIndex: 99990,
         ...overlayStyle,
       }}
     >
@@ -145,7 +157,7 @@ export function UniversalModal({
         aria-label={ariaLabelledBy ? undefined : ariaLabel}
         aria-labelledby={ariaLabelledBy}
         tabIndex={-1}
-        className={`relative w-full max-h-[calc(100dvh-120px)] flex flex-col rounded-2xl md:rounded-3xl shadow-2xl overflow-hidden bg-[var(--bg-card)] border border-[var(--border-color)] ${contentClassName}`.trim()}
+        className={`relative w-full max-h-[calc(100dvh-64px)] flex flex-col rounded-2xl md:rounded-3xl shadow-2xl overflow-hidden bg-[var(--bg-card)] border border-[var(--border-color)] ${contentClassName}`.trim()}
         onClick={(event) => event.stopPropagation()}
         style={{
           maxWidth: resolvedMaxWidth,

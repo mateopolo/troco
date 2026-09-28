@@ -17,16 +17,15 @@ describe('Phase 135: Swap History Z-Index & Layout Confinement', () => {
   const profileViewContent = fs.readFileSync(profileViewPath, 'utf-8');
   const indexCssContent = fs.readFileSync(indexCssPath, 'utf-8');
 
-  test('1. AppBottomNav has zIndex 100050 and pointerEvents auto', () => {
+  test('1. AppBottomNav has zIndex 100050 and dynamic pointerEvents', () => {
     expect(bottomNavContent).toContain('zIndex: 100050');
-    expect(bottomNavContent).toContain("pointerEvents: 'auto'");
+    expect(bottomNavContent).toContain("isModalOpen ? 'none' : 'auto'");
   });
 
-  test('2. UniversalModal has z-index 99990 and mobile clearance for AppBottomNav', () => {
+  test('2. UniversalModal has z-index 99990 and backdrop-blur-md', () => {
     expect(universalModalContent).toContain('z-[99990]');
     expect(universalModalContent).toContain('zIndex: 99990');
-    expect(universalModalContent).toContain('pb-[calc(76px+env(safe-area-inset-bottom,12px))]');
-    expect(universalModalContent).toContain('max-h-[calc(100dvh-95px)]');
+    expect(universalModalContent).toContain('backdrop-blur-md');
   });
 
   test('3. PublicProfileModal swap history tab is strictly contained with swap-history-container', () => {

@@ -35,4 +35,7 @@ functions/lib/
 
 # IDE files
 .vscode/
-.trae/
+.trae/
+
+# Graphify cache
+graphify-out/cache/

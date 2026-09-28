@@ -5,6 +5,7 @@ import {
   AlertTriangle, Sliders
 } from 'lucide-react';
 import { getPrivacySettings, saveConsent, getConsentStatus } from '../services/consentManager';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export default function PrivacyCenterModal({
   isOpen,
@@ -15,6 +16,7 @@ export default function PrivacyCenterModal({
   userTransactions = [],
   onDeleteAccount = null,
 }) {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState('data'); // 'data' | 'consents' | 'deletion'
   const [isExporting, setIsExporting] = useState(false);
   const [exportSuccess, setExportSuccess] = useState(false);
@@ -166,10 +168,10 @@ export default function PrivacyCenterModal({
             </div>
             <div>
               <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '20px', fontWeight: '600', letterSpacing: '-0.01em' }}>
-                Centre de Confidentialité & RGPD
+                {t('privacyCenterTitle') || 'Centre de Confidentialité RGPD'}
               </h3>
               <p style={{ margin: '2px 0 0', fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>
-                Contrôlez vos données personnelles et vos préférences de confidentialité
+                {t('privacyCenterSubtitle') || 'Contrôlez vos données personnelles et vos préférences de confidentialité'}
               </p>
             </div>
           </div>
@@ -202,9 +204,9 @@ export default function PrivacyCenterModal({
           flexShrink: 0,
         }}>
           {[
-            { id: 'data', label: '📥 Mes Données & Portabilité', icon: Download },
-            { id: 'consents', label: '⚙️ Consentements', icon: Sliders },
-            { id: 'deletion', label: '🗑️ Droit à l’Oubli', icon: Trash2 },
+            { id: 'data', label: t('privacyTabData') || '📥 Mes Données & Portabilité', icon: Download },
+            { id: 'consents', label: t('privacyTabConsents') || '⚙️ Consentements', icon: Sliders },
+            { id: 'deletion', label: t('privacyTabDeletion') || '🗑️ Droit à l’Oubli', icon: Trash2 },
           ].map(tab => (
             <button
               key={tab.id}

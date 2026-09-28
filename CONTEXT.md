@@ -833,6 +833,24 @@ Résoudre l'erreur bloquante `[paymentService] Error updating Firestore user doc
      - En-têtes et onglets fixes (`flex-shrink: 0`) et défilement vertical fluide sur le corps interne (`overflow-y-auto`, `min-height: 0`).
    - **Portail DOM :** Utilisation systématique de `createPortal(..., document.body)` avec `zIndex: 99999` pour s'extraire de tout stacking context `#root` et garantir que la modale reste au premier plan sans être masquée par la barre de navigation mobile.
 
+---
 
+## 🏛️ 5. DESIGN SYSTEM & ARCHITECTURE D'INTERFACE
 
-
+### 5.1 Architecture des Modales & Masquage Dynamique de la BottomNav (UX-01)
+- **Problème résolu :** Le padding-bottom compensatoire (pb-[calc(76px+...)]) était un pansement qui réduisait l'espace vertical disponible sur mobile et n'empêchait pas les boutons d'action (ex: Mise à niveau de Troco Plus) d'être poussés sous la nav ou la barre cliquable de flotter sous les modales.
+- **Nouveau pattern officiel (UX-01) :**
+  1. **Compteur d'état réactif (useUIStore.js) :**
+     - modalOpenCount: number (initialisé à 0).
+     - Actions atomiques : openModal() incrémente le compteur, closeModal() décrémente avec plancher Math.max(0, count - 1). closeAllModals() réinitialise le compteur à 0.
+     - Les setters des modales non-universelles (setIsPaymentModalOpen, setIsCguViewerOpen, setIsPrivacyCenterOpen, setIsTransactionsModalOpen) synchronisent de façon idempotente modalOpenCount.
+  2. **Enregistrement automatique au cycle de vie (UniversalModal.jsx) :**
+     - useEffect au mount/unmount déclenche openModal() à l'ouverture (isOpen === true) et closeModal() au démontage/fermeture.
+     - Support natif et sans fuite des modales empilées (ex: CGU -> Centre de confidentialité).
+  3. **Masquage animé de la BottomNav (AppBottomNav.jsx) :**
+     - Écoute conditionnelle réactive : isModalOpen = useUIStore(s => s.modalOpenCount > 0 || Boolean(s.isPaymentModalOpen || s.isCguViewerOpen || s.isPrivacyCenterOpen || s.isTransactionsModalOpen)).
+     - Composant racine motion.nav avec animation Framer Motion de sortie et d'entrée : animate={{ y: isModalOpen ? '100%' : 0, opacity: isModalOpen ? 0 : 1 }} avec transition={{ duration: 0.2, ease: 'easeOut' }}.
+     - Sécurité tactile : pointerEvents: isModalOpen ? 'none' : 'auto' pour neutraliser tout clic accidentel sous l'overlay.
+  4. **Backdrop et centrage uniformisés :**
+     - Fond uniforme : bg-black/50 backdrop-blur-md (rgba(0, 0, 0, 0.5) + blur(12px)).
+     - Suppression définitive du padding-bottom de compensation : la modale utilise désormais toute la hauteur utile de l'écran mobile (max-h-[calc(100dvh-64px)]) avec centrage parfait.

@@ -1,5 +1,6 @@
 import React from 'react';
 import { X, Grid, Check } from 'lucide-react';
+import { getCategoryLabel } from '../utils/formatters';
 
 export default function CategoryModal({
   isOpen,
@@ -33,6 +34,7 @@ export default function CategoryModal({
         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '360px', overflowY: 'auto' }}>
           {(categories || []).map(cat => {
             const isSelected = selectedCategory === cat;
+            const label = typeof t === 'function' ? getCategoryLabel(cat, t) : cat;
             return (
               <button
                 key={cat}
@@ -49,7 +51,7 @@ export default function CategoryModal({
                   color: darkMode ? '#FFF' : '#111827', fontWeight: '700', fontSize: '14px', cursor: 'pointer'
                 }}
               >
-                <span>{cat}</span>
+                <span>{label}</span>
                 {isSelected && <Check size={18} color={darkMode ? '#60A5FA' : '#04265A'} />}
               </button>
             );

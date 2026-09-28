@@ -82,10 +82,10 @@ export default function CguConsentModal({
             </div>
             <div>
               <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '20px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530' }}>
-                Conditions Générales & RGPD
+                {t('cguConsentTitle') || 'Conditions Générales & RGPD'}
               </h3>
               <p style={{ margin: '2px 0 0', fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>
-                Cadre juridique et engagement communautaire
+                {t('cguConsentSubtitle') || 'Cadre juridique et engagement communautaire'}
               </p>
             </div>
           </div>
@@ -104,23 +104,23 @@ export default function CguConsentModal({
             gap: '12px',
           }}>
             <div>
-              <strong style={{ color: darkMode ? '#FAF7F2' : '#3D3530' }}>1. Plateforme d'intermédiation technique</strong>
+              <strong style={{ color: darkMode ? '#FAF7F2' : '#3D3530' }}>{t('cguSection1Title') || "1. Plateforme d'intermédiation technique"}</strong>
               <p style={{ margin: '4px 0 0' }}>
-                Troco met à disposition une infrastructure logicielle permettant aux utilisateurs de publier des annonces, échanger des services et communiquer. Troco n'est pas partie prenante aux contrats conclus entre utilisateurs.
+                {t('cguSection1Desc') || "Troco met à disposition une infrastructure logicielle permettant aux utilisateurs de publier des annonces, échanger des services et communiquer. Troco n'est pas partie prenante aux contrats conclus entre utilisateurs."}
               </p>
             </div>
 
             <div>
-              <strong style={{ color: darkMode ? '#FAF7F2' : '#3D3530' }}>2. Clause de non-responsabilité (P2P)</strong>
+              <strong style={{ color: darkMode ? '#FAF7F2' : '#3D3530' }}>{t('cguSection2Title') || "2. Clause de non-responsabilité (P2P)"}</strong>
               <p style={{ margin: '4px 0 0' }}>
-                Les échanges, interventions physiques et prêts de matériel relèvent de la responsabilité exclusive des parties prenantes. Chaque membre s'engage à faire preuve de prudence et de diligence.
+                {t('cguSection2Desc') || "Les échanges, interventions physiques et prêts de matériel relèvent de la responsabilité exclusive des parties prenantes. Chaque membre s'engage à faire preuve de prudence et de diligence."}
               </p>
             </div>
 
             <div>
-              <strong style={{ color: darkMode ? '#FAF7F2' : '#3D3530' }}>3. Protection des données & RGPD</strong>
+              <strong style={{ color: darkMode ? '#FAF7F2' : '#3D3530' }}>{t('cguSection3Title') || "3. Protection des données & RGPD"}</strong>
               <p style={{ margin: '4px 0 0' }}>
-                Vos données personnelles (nom, email, ville, compétences) sont strictement isolées sur votre espace sécurisé <code>users/{profile?.uid || 'uid'}</code> et ne sont jamais revendues à des tiers.
+                {t('cguSection3Desc') || "Vos données personnelles (nom, email, ville, compétences) sont strictement isolées sur votre espace sécurisé et ne sont jamais revendues à des tiers."}
               </p>
             </div>
           </div>
@@ -147,7 +147,7 @@ export default function CguConsentModal({
               marginTop: 'auto',
             }}
           >
-            <CheckCircle size={18} /> J'accepte les CGU et la Politique RGPD
+            <CheckCircle size={18} /> {t('acceptCguAndPrivacy') || "J'accepte les CGU et la Politique RGPD"}
           </button>
         </div>
       </div>

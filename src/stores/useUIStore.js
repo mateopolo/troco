@@ -47,6 +47,12 @@ export const useUIStore = create((set, get) => ({
   reportTarget: { listing: null, user: null },
 
   // Payments, CGU & Transactions
+  modalOpenCount: 0,
+  openModal: () => set((state) => ({ modalOpenCount: state.modalOpenCount + 1 })),
+  closeModal: () => {
+    if (get().modalOpenCount <= 0) return;
+    set((state) => ({ modalOpenCount: Math.max(0, state.modalOpenCount - 1) }));
+  },
   isPaymentModalOpen: false,
   paymentModalConfig: { mode: 'pack-tokens', payload: null },
   isTransactionsModalOpen: false,
@@ -116,11 +122,47 @@ export const useUIStore = create((set, get) => ({
   setIsReportModalOpen: (isReportModalOpen) => set({ isReportModalOpen }),
   setReportTarget: (reportTarget) => set({ reportTarget }),
 
-  setIsPaymentModalOpen: (isPaymentModalOpen) => set({ isPaymentModalOpen }),
+  setIsPaymentModalOpen: (isPaymentModalOpen) => {
+    const willOpen = Boolean(isPaymentModalOpen);
+    if (Boolean(get().isPaymentModalOpen) === willOpen) return;
+    set((s) => ({
+      isPaymentModalOpen: willOpen,
+      modalOpenCount: willOpen
+        ? s.modalOpenCount + 1
+        : Math.max(0, s.modalOpenCount - 1),
+    }));
+  },
   setPaymentModalConfig: (paymentModalConfig) => set({ paymentModalConfig }),
-  setIsTransactionsModalOpen: (isTransactionsModalOpen) => set({ isTransactionsModalOpen }),
-  setIsPrivacyCenterOpen: (isPrivacyCenterOpen) => set({ isPrivacyCenterOpen }),
-  setIsCguViewerOpen: (isCguViewerOpen) => set({ isCguViewerOpen }),
+  setIsTransactionsModalOpen: (isTransactionsModalOpen) => {
+    const willOpen = Boolean(isTransactionsModalOpen);
+    if (Boolean(get().isTransactionsModalOpen) === willOpen) return;
+    set((s) => ({
+      isTransactionsModalOpen: willOpen,
+      modalOpenCount: willOpen
+        ? s.modalOpenCount + 1
+        : Math.max(0, s.modalOpenCount - 1),
+    }));
+  },
+  setIsPrivacyCenterOpen: (isPrivacyCenterOpen) => {
+    const willOpen = Boolean(isPrivacyCenterOpen);
+    if (Boolean(get().isPrivacyCenterOpen) === willOpen) return;
+    set((s) => ({
+      isPrivacyCenterOpen: willOpen,
+      modalOpenCount: willOpen
+        ? s.modalOpenCount + 1
+        : Math.max(0, s.modalOpenCount - 1),
+    }));
+  },
+  setIsCguViewerOpen: (isCguViewerOpen) => {
+    const willOpen = Boolean(isCguViewerOpen);
+    if (Boolean(get().isCguViewerOpen) === willOpen) return;
+    set((s) => ({
+      isCguViewerOpen: willOpen,
+      modalOpenCount: willOpen
+        ? s.modalOpenCount + 1
+        : Math.max(0, s.modalOpenCount - 1),
+    }));
+  },
   setIsBoostModalOpen: (isBoostModalOpen) => set({ isBoostModalOpen }),
 
   setIsWhiteboardOpen: (isWhiteboardOpen, activeWhiteboardId = null) =>
@@ -136,8 +178,10 @@ export const useUIStore = create((set, get) => ({
   setSaveMessage: (saveMessage) => set({ saveMessage }),
 
   // Helper to close any currently open modal
-  closeAllModals: () =>
+  closeAllModals: () => {
+    if (!get().hasAnyModalOpen()) return;
     set({
+      modalOpenCount: 0,
       selectedListing: null,
       selectedPublicUser: null,
       isEditingProfile: false,
@@ -159,11 +203,12 @@ export const useUIStore = create((set, get) => ({
       isCreateProjectGroupOpen: false,
       isProjectRewardsOpen: false,
       isVisioSettlementOpen: false,
-    }),
+    });
+  },
 
   hasAnyModalOpen: () => {
     const s = get();
-    return !!(
+    return s.modalOpenCount > 0 || !!(
       s.selectedListing ||
       s.selectedPublicUser ||
       s.isEditingProfile ||

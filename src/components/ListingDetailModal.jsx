@@ -471,7 +471,7 @@ export default function ListingDetailModal({
               </div>
             ) : (
               <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '8px', fontSize: '11.5px', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
-                🤝 {safeT('newMemberNoReviewsYet', 'Nouveau membre • Aucun avis pour le moment (0 transaction clôturée)')}
+                🤝 {safeT('noReviewsZeroTransactions', safeT('newMemberNoReviewsYet', 'Nouveau membre • Aucun avis pour le moment (0 transaction clôturée)'))}
               </div>
             )}
           </div>

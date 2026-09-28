@@ -8,10 +8,18 @@ const defaultT = (key, lang = 'FR') => (translations[lang] && translations[lang]
 export const getCategoryLabel = (categoryKey, t = (k) => defaultT(k, 'FR')) => {
   if (!categoryKey) return '';
   if (categoryKey === 'Tous' || categoryKey === 'all') return t('all');
-  if (categoryKey === 'Cours/Compétences' || categoryKey === 'Cours & Compétences') return t('catSkills');
-  if (categoryKey === 'Outillage' || categoryKey === 'Prêt de Matériel') return t('catTools');
-  if (categoryKey === 'Services/Dépannage' || categoryKey === 'Services & Dépannage') return t('catServices');
-  if (categoryKey === 'Logement/Swap' || categoryKey === 'Logement & Stay Swap') return t('catHousing');
+  if (categoryKey === 'Cours/Compétences' || categoryKey === 'Cours & Compétences' || categoryKey === 'catSkills') return t('catSkills');
+  if (categoryKey === 'Outillage' || categoryKey === 'Prêt de Matériel' || categoryKey === "Prêt d'Outillage & Équipements" || categoryKey === 'catTools') return t('catTools');
+  if (categoryKey === 'Services/Dépannage' || categoryKey === 'Services & Dépannage' || categoryKey === 'catServices') return t('catServices');
+  if (categoryKey === 'Logement/Swap' || categoryKey === 'Logement & Stay Swap' || categoryKey === 'catHousing') return t('catHousing');
+  if (categoryKey === 'Bricolage, Travaux & Jardin' || categoryKey === 'Bricolage' || categoryKey === 'catDiy') return t('catDiy');
+  if (categoryKey === 'Tech, Digital & Bureautique' || categoryKey === 'Tech' || categoryKey === 'catTech') return t('catTech');
+  if (categoryKey === 'Véhicules & Mobilité' || categoryKey === 'Véhicules' || categoryKey === 'catVehicles') return t('catVehicles');
+  if (categoryKey === 'Autre domaine (personnalisé)' || categoryKey === 'Autre' || categoryKey === 'catOther') return t('catOther');
+  if (categoryKey === 'Audiovisuel, Photo & Son' || categoryKey === 'catMedia') return t('catMedia');
+  if (categoryKey === 'Santé, Sport & Bien-être' || categoryKey === 'catWellness') return t('catWellness');
+  if (categoryKey === 'Événements & Matériel de fête' || categoryKey === 'catEvents') return t('catEvents');
+  if (categoryKey === 'Mode, Beauté & Accessoires' || categoryKey === 'catFashion') return t('catFashion');
   return categoryKey;
 };
 
@@ -25,8 +33,11 @@ export const formatStatus = (st, t = (k) => defaultT(k, 'FR')) => {
   if (st === 'À confirmer') return t('toConfirm');
   if (st === 'Nouvelle discussion') return t('newDiscussion');
   if (st === 'Clôturé' || st === 'Terminé' || st === 'Cloture' || st === 'Closed') return t('closed');
+  if (st === 'Deal clôturé') return t('closedDeals');
+  if (st === 'Deal passé complété') return t('pastCompletedDeal');
   if (st === 'En cours' || st === 'In progress') return t('inProgress');
   if (st === 'Planifié' || st === 'Planned') return t('planned');
+  if (st === 'En cours planifié') return t('dealsInProgress');
   return st;
 };
 

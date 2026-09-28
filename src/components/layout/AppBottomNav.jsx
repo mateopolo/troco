@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Globe, MessageSquare, PlusCircle, User } from 'lucide-react';
 import { hapticLight } from '../../utils/haptics';
+import { useUIStore } from '../../stores/useUIStore';
 
 export const AppBottomNav = React.memo(({
   isMobile = false,
@@ -195,6 +196,7 @@ export const AppBottomNav = React.memo(({
     }
   }, [activeTab]);
 
+  const isModalOpen = useUIStore((s) => s.modalOpenCount > 0 || Boolean(s.isPaymentModalOpen || s.isCguViewerOpen || s.isPrivacyCenterOpen || s.isTransactionsModalOpen));
   const isHidden = (isMobile && activeTab === 'chat' && Boolean(selectedChat)) || Boolean(selectedListing);
 
   // Position calculée de la loupe en mode libre ou snap
@@ -207,7 +209,7 @@ export const AppBottomNav = React.memo(({
   }, [isDragging, dragX, tabWidth, tabs.length, activeIndex]);
 
   const navElement = (
-    <nav
+    <motion.nav
       ref={bottomNavRef}
       aria-label="Navigation principale mobile"
       onPointerDown={handlePointerDown}
@@ -215,7 +217,13 @@ export const AppBottomNav = React.memo(({
       onPointerUp={handlePointerUp}
       onPointerCancel={handlePointerCancel}
       onPointerLeave={handlePointerCancel}
-      className="app-bottom-nav bg-[var(--bg-card)] md:bg-[var(--glass-bg)] md:backdrop-blur-xl border-t border-[var(--border-color)]"
+      className={`app-bottom-nav bg-[var(--bg-card)] md:bg-[var(--glass-bg)] md:backdrop-blur-xl border-t border-[var(--border-color)] ${isModalOpen ? 'pointer-events-none' : ''}`}
+      initial={false}
+      animate={{
+        y: isModalOpen ? '100%' : 0,
+        opacity: isModalOpen ? 0 : 1,
+      }}
+      transition={{ duration: 0.2, ease: 'easeOut' }}
       style={{
         display: isHidden ? 'none' : 'block',
         position: 'fixed',
@@ -229,7 +237,7 @@ export const AppBottomNav = React.memo(({
         boxShadow: darkMode ? '0 -10px 30px rgba(0, 0, 0, 0.45)' : '0 -10px 30px rgba(0, 0, 0, 0.05)',
         transition: 'background-color 0.3s ease, border-color 0.3s ease',
         touchAction: 'none',
-        pointerEvents: 'auto',
+        pointerEvents: isModalOpen ? 'none' : 'auto',
         userSelect: 'none',
         WebkitUserSelect: 'none',
         cursor: 'pointer',
@@ -389,7 +397,7 @@ export const AppBottomNav = React.memo(({
           );
         })}
       </div>
-    </nav>
+    </motion.nav>
   );
 
   return typeof document !== 'undefined' ? createPortal(navElement, document.body) : navElement;

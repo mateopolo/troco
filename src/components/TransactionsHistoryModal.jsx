@@ -5,6 +5,7 @@ import {
   X, Printer, ShieldCheck, Search,
   Sparkles, ChevronRight, ArrowLeft
 } from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export default function TransactionsHistoryModal({
   isOpen,
@@ -14,6 +15,7 @@ export default function TransactionsHistoryModal({
   transactions = [],
   onOpenPaymentModal = null,
 }) {
+  const { t } = useLanguage();
   const [filterType, setFilterType] = useState('all'); // 'all' | 'tokens' | 'cash' | 'boost' | 'deal' | 'caution'
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTransactionForInvoice, setSelectedTransactionForInvoice] = useState(null);
@@ -125,10 +127,10 @@ export default function TransactionsHistoryModal({
             </div>
             <div>
               <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '20px', fontWeight: '600', letterSpacing: '-0.01em' }}>
-                Historique & Factures
+                {t ? t('invoicesTitle') : 'Historique & Factures'}
               </h3>
               <p style={{ margin: '2px 0 0', fontSize: '12px', color: 'var(--text-secondary)' }}>
-                Reçus conformes, TVA 20% & traçabilité de vos paiements Troco
+                {t ? t('invoicesSubtitle') : 'Reçus conformes, TVA 20% & traçabilité de vos paiements Troco'}
               </p>
             </div>
           </div>

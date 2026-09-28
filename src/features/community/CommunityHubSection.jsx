@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Zap, Activity, Globe } from 'lucide-react';
 import GlobalLiveChat from '../../components/GlobalLiveChat';
 import CommunityActivityFeed from '../../components/CommunityActivityFeed';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 export default function CommunityHubSection({
   currentUser = null,
@@ -9,6 +10,7 @@ export default function CommunityHubSection({
   darkMode = false,
   isMobile = false,
 }) {
+  const { t } = useLanguage();
   const [subView, setSubView] = useState('chat'); // 'chat' | 'activity'
 
   return (
@@ -66,16 +68,16 @@ export default function CommunityHubSection({
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <h2 style={{ margin: 0, fontSize: isMobile ? '15px' : '18px', fontWeight: '800', color: 'var(--text-main)' }}>
-                Communauté & Troco Live
+                {t('communityAndLive')}
               </h2>
               <span style={{ fontSize: '9px', fontWeight: '800', backgroundColor: '#10B981', color: '#FFF', padding: '2px 8px', borderRadius: '9999px', display: 'inline-flex', alignItems: 'center', gap: '4px', boxShadow: '0 0 10px rgba(16, 185, 129, 0.35)' }}>
                 <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#FFFFFF', display: 'inline-block' }} />
-                1,428 EN LIGNE
+                {t('onlineUsersBadge')}
               </span>
             </div>
             {!isMobile && (
               <p style={{ margin: '2px 0 0', fontSize: '12.5px', color: 'var(--text-secondary)' }}>
-                Événements en direct, entraide instantanée et salle de discussion mondiale.
+                {t('communitySub')}
               </p>
             )}
           </div>
@@ -117,7 +119,7 @@ export default function CommunityHubSection({
             }}
           >
             <Zap size={13} />
-            <span>Chat Mondial</span>
+            <span>{t('globalChat')}</span>
           </button>
 
           <button
@@ -143,7 +145,7 @@ export default function CommunityHubSection({
             }}
           >
             <Activity size={13} />
-            <span>Fil d'Activité</span>
+            <span>{t('activityFeed')}</span>
           </button>
         </div>
       </div>

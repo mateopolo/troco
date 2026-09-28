@@ -792,7 +792,7 @@ export default function UserProfile({
                     </span>
                   ) : (
                     <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-secondary)', fontWeight: '600' }}>
-                      <Star size={14} /> Pas d'évaluation pour l'instant (0 avis)
+                      <Star size={14} /> {t ? t('noReviewsYet') : "Pas d'évaluation pour l'instant"} (0 avis)
                     </span>
                   )}
                 </div>

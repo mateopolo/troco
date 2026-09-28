@@ -12,12 +12,14 @@ import {
   X,
 } from 'lucide-react';
 import { useTheme, TYPOGRAPHY_OPTIONS } from '../contexts/ThemeContext';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export default function DesignStudioModal({
   isOpen = false,
   onClose = () => {},
   isMobile = false,
 }) {
+  const { t } = useLanguage();
   const {
     themeId,
     setThemeId,
@@ -131,10 +133,10 @@ export default function DesignStudioModal({
                   color: 'var(--text-main)',
                 }}
               >
-                Studio de Design & Accessibilité
+                {t('designStudioTitle') || 'Studio de Design & Accessibilité'}
               </h3>
               <p style={{ margin: 0, fontSize: '11.5px', color: 'var(--text-secondary)' }}>
-                Personnalisez les thèmes, ambiances HSL, typographies et formes
+                {t('designStudioSubtitle') || 'Personnalisez les thèmes, ambiances HSL, typographies et formes'}
               </p>
             </div>
           </div>

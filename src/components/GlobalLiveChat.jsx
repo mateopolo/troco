@@ -443,7 +443,7 @@ export default function GlobalLiveChat({
             lineHeight: 1.4,
           }}
         >
-          💡 <strong>Astuce :</strong> Cliquez sur un pseudo pour mentionner avec <code>@</code>. Activez <strong>⚡ Alerte</strong> pour les demandes urgentes.
+          💡 <strong>{t('chatTipMention')}</strong> • {t('chatTipAlert')}
         </div>
 
         {messages.map((msg) => {
@@ -840,10 +840,10 @@ export default function GlobalLiveChat({
               flexShrink: 0,
               transition: 'all 0.15s ease',
             }}
-            title="Activer l'alerte rouge pour les besoins critiques"
+            title={t('chatAlertTooltip')}
           >
             <Flame size={14} color={isUrgentMode ? '#EF4444' : 'currentColor'} />
-            <span style={{ display: isCompact ? 'none' : 'inline' }}>Alerte</span>
+            <span style={{ display: isCompact ? 'none' : 'inline' }}>{t('alert')}</span>
           </button>
 
           {/* CHAMP INPUT DE MESSAGE */}
@@ -853,7 +853,7 @@ export default function GlobalLiveChat({
               type="text"
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
-              placeholder={isUrgentMode ? "Décrivez votre besoin urgent (visio, dépannage)..." : "Envoyer un message au chat mondial..."}
+              placeholder={isUrgentMode ? t('urgentChatPlaceholder') : t('globalChatPlaceholder')}
               maxLength={280}
               style={{
                 width: '100%',

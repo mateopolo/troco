@@ -13,7 +13,7 @@
 > - `STEP BY STEP URGENT.txt` & `LISTE DES PROCHAINES FONCTIONNALITES A CODER.txt` (Backlog immédiat)
 > - `PROJECT_CONTEXT.md` & `TROCO_PROJECT_HISTORY.md` (Historique des décisions et géoprivacy)
 >
-> **Score global :** 7.6/10 | **Progression :** 38 / 74 tâches validées avec preuves formelles (51.4%)
+> **Score global :** 7.7/10 | **Progression :** 40 / 74 tâches validées avec preuves formelles (54.1%)
 
 ---
 
@@ -21,12 +21,12 @@
 
 | Phase | Fait | Restant | Progression |
 |---|---|---|---|
-| 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 19 | 5 | 79.2% |
+| 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 21 | 3 | 87.5% |
 | 🟡 Facile (Niveau 2 — 1h à 3h) | 8 | 8 | 50.0% |
 | 🟠 Moyen (Niveau 3 — 3h à 1 jour) | 8 | 7 | 53.3% |
 | 🔴 Difficile (Niveau 4 — 1 à 3 jours) | 3 | 7 | 30.0% |
 | 🚨 Très difficile (Niveau 5 — 3j à 2 sem) | 0 | 9 | 0.0% |
-| **TOTAL** | **38** | **36** | **51.4%** |
+| **TOTAL** | **40** | **34** | **54.1%** |
 
 
 ### Score par axe vs cible Licorne
@@ -131,6 +131,11 @@
 ### [x] [QW-24] — Refonte CSS des Modales Juridiques (CGU, Charte, RGPD) et Conteneur Standardisé
 **Preuve** : `src/components/ui/UniversalModal.jsx:130-155`, `src/components/modals/CguConsentModal.jsx:26-38`, `src/components/CguModal.jsx:155-170`, `src/components/PrivacyCenterModal.jsx:130-150`
 **Statut** : ✅ FAIT — Conteneur global standardisé avec fond flouté (`backdrop-blur-sm`, `bg-black/40`), `z-[99999]`, centrage parfait compensant la barre de navigation inférieure (`pb-[calc(76px+env(safe-area-inset-bottom,12px))]`), largeur max maîtrisée (`max-w-2xl` / `max-w-3xl`) et hauteur bornée (`max-h-[calc(100dvh-120px)]`) avec scrolling interne.
+
+
+### [x] [UX-01] — Masquage automatique de la BottomNav à l'ouverture des modales & backdrop uniforme
+**Preuve** : `src/stores/useUIStore.js:50-52,122-162`, `src/components/ui/UniversalModal.jsx:4,60,114,131-139`, `src/components/layout/AppBottomNav.jsx:6,199,210-224,389`
+**Statut** : ✅ FAIT — Résolution définitive du conflit de z-index (`AppBottomNav` 100050 vs `UniversalModal` 99990) sans altérer les z-index existants. Ajout du compteur réactif `modalOpenCount` et des actions `openModal`/`closeModal` dans `useUIStore`. Enregistrement/désenregistrement automatique via `useEffect` au mount/unmount dans `UniversalModal` et synchronisation des modales de paiement, CGU et confidentialité. Masquage animé avec Framer Motion (`y: '100%'`, `opacity: 0`, transition `{ duration: 0.2, ease: 'easeOut' }`) et désactivation des clics (`pointerEvents: 'none'`). Uniformisation du backdrop en `bg-black/50 backdrop-blur-md` (`rgba(0,0,0,0.5)`, `blur(12px)`) et suppression du padding-bottom de compensation devenu superflu.
 
 ---
 

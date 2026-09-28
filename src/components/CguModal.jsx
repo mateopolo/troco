@@ -6,6 +6,7 @@ import {
   Scale, Clock, ShieldAlert, Sparkles,
   Check
 } from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export default function CguModal({
   isOpen,
@@ -15,6 +16,7 @@ export default function CguModal({
   darkMode = false,
   currentUser = null,
 }) {
+  const { t } = useLanguage();
   const [hasAgreedTerms, setHasAgreedTerms] = useState(false);
   const [hasAgreedPrivacy, setHasAgreedPrivacy] = useState(false);
   const [activeTab, setActiveTab] = useState('summary'); // 'summary' | 'full'
@@ -53,38 +55,38 @@ export default function CguModal({
     {
       icon: Clock,
       color: '#C67D5B',
-      title: '1 Heure = 1 Jeton Troco',
-      desc: 'La règle fondamentale de Troco repose sur l’égalité du temps partagé. Une heure d’aide ou de formation équivaut toujours à 1 Jeton Troco, garantissant une économie collaborative juste et décentralisée.',
+      title: t('pillar1Title') || '1 Heure = 1 Jeton Troco',
+      desc: t('pillar1Desc') || 'La règle fondamentale de Troco repose sur l’égalité du temps partagé. Une heure d’aide ou de formation équivaut toujours à 1 Jeton Troco, garantissant une économie collaborative juste et décentralisée.',
     },
     {
       icon: ShieldCheck,
       color: '#9CAF88',
-      title: 'Sécurité des Prêts & Cautions',
-      desc: 'Pour tout prêt de matériel, une empreinte de caution par pré-autorisation bancaire peut être exigée sans débit immédiat, assurant la restitution des équipements en parfait état.',
+      title: t('pillar2Title') || 'Sécurité des Prêts & Cautions',
+      desc: t('pillar2Desc') || 'Pour tout prêt de matériel, une empreinte de caution par pré-autorisation bancaire peut être exigée sans débit immédiat, assurant la restitution des équipements en parfait état.',
     },
     {
       icon: ShieldAlert,
       color: '#C2574A',
-      title: 'Tolérance Zéro Fraude & Arnaques',
-      desc: 'Sont strictement interdits : coupons prépayés (Transcash, Neosurf), demandes de virements externes (Western Union), coordonnées bancaires en clair, contenus illicites et propos haineux.',
+      title: t('pillar3Title') || 'Tolérance Zéro Fraude & Arnaques',
+      desc: t('pillar3Desc') || 'Sont strictement interdits : coupons prépayés (Transcash, Neosurf), demandes de virements externes (Western Union), coordonnées bancaires en clair, contenus illicites et propos haineux.',
     },
     {
       icon: Scale,
       color: '#8A7A6D',
-      title: 'Modération & Sanctions',
-      desc: 'Tout manquement aux règles de la communauté peut entraîner une suspension temporaire, un Shadow-Ban (masquage automatique des annonces) ou un bannissement définitif du compte.',
+      title: t('pillar4Title') || 'Modération & Sanctions',
+      desc: t('pillar4Desc') || 'Tout manquement aux règles de la communauté peut entraîner une suspension temporaire, un Shadow-Ban (masquage automatique des annonces) ou un bannissement définitif du compte.',
     },
     {
       icon: Lock,
       color: '#D97706',
-      title: 'Protection RGPD & Données',
-      desc: 'Vos données personnelles sont chiffrées (SSL/TLS 256 bits), ne sont jamais revendues à des tiers et vous disposez d’un droit d’accès, de portabilité et de suppression totale à tout moment.',
+      title: t('pillar5Title') || 'Protection RGPD & Données',
+      desc: t('pillar5Desc') || 'Vos données personnelles sont chiffrées (SSL/TLS 256 bits), ne sont jamais revendues à des tiers et vous disposez d’un droit d’accès, de portabilité et de suppression totale à tout moment.',
     },
     {
       icon: Sparkles,
       color: '#A8644A',
-      title: 'Courtoisie & Respect Mutuel',
-      desc: 'Les échanges, visioconférences et discussions doivent se dérouler dans un cadre bienveillant, ponctuel et respectueux de la vie privée de chacun.',
+      title: t('pillar6Title') || 'Courtoisie & Respect Mutuel',
+      desc: t('pillar6Desc') || 'Les échanges, visioconférences et discussions doivent se dérouler dans un cadre bienveillant, ponctuel et respectueux de la vie privée de chacun.',
     },
   ];
 
@@ -154,10 +156,10 @@ export default function CguModal({
             </div>
             <div>
               <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '20px', fontWeight: '600', letterSpacing: '-0.01em' }}>
-                Conditions Générales & Charte Troco
+                {t('cguModalTitle') || 'Conditions Générales & Charte Troco'}
               </h3>
               <p style={{ margin: '2px 0 0', fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>
-                Version 2026.1 • Engagement communautaire & conformité légale
+                {t('cguModalSubtitle') || 'Version 2026.1 • Engagement communautaire & conformité légale'}
               </p>
             </div>
           </div>
@@ -206,7 +208,7 @@ export default function CguModal({
               cursor: 'pointer',
             }}
           >
-            📋 Les 6 Piliers Fondamentaux
+            {t('cguTabSummary') || '📋 Les 6 Piliers Fondamentaux'}
           </button>
           <button
             type="button"
@@ -222,7 +224,7 @@ export default function CguModal({
               cursor: 'pointer',
             }}
           >
-            📜 Texte Juridique Intégral
+            {t('cguTabFull') || '📜 Texte Juridique Intégral'}
           </button>
         </div>
 
@@ -240,7 +242,7 @@ export default function CguModal({
                 lineHeight: 1.6,
                 marginBottom: '18px',
               }}>
-                Bienvenue sur <strong>Troco</strong> ! Pour garantir une plateforme sûre, équitable et chaleureuse, nous vous demandons de prendre connaissance et d'approuver les règles de fonctionnement ci-dessous.
+                {t('cguWelcomeIntro') || "Bienvenue sur Troco ! Pour garantir une plateforme sûre, équitable et chaleureuse, nous vous demandons de prendre connaissance et d'approuver les règles de fonctionnement ci-dessous."}
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '24px' }}>
@@ -297,23 +299,23 @@ export default function CguModal({
               border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3',
               marginBottom: '20px',
             }}>
-              <h4 className="font-editorial-heading" style={{ margin: '0 0 8px', fontSize: '15px', color: darkMode ? '#FAF7F2' : '#3D3530' }}>Article 1 — Objet & Définition de la Plateforme</h4>
-              <p>Troco est une plateforme numérique d’intermédiation communautaire permettant l’échange de compétences, le prêt d’équipements entre particuliers et la réalisation d’échanges de services fondés sur l’unité de compte temporelle « Jeton Troco » ou sur des contreparties convenues d'un commun accord.</p>
+              <h4 className="font-editorial-heading" style={{ margin: '0 0 8px', fontSize: '15px', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{t('cguArt1Title') || 'Article 1 — Objet & Définition de la Plateforme'}</h4>
+              <p>{t('cguArt1Desc') || "Troco est une plateforme numérique d’intermédiation communautaire permettant l’échange de compétences, le prêt d’équipements entre particuliers et la réalisation d’échanges de services fondés sur l’unité de compte temporelle « Jeton Troco » ou sur des contreparties convenues d'un commun accord."}</p>
 
-              <h4 className="font-editorial-heading" style={{ margin: '14px 0 8px', fontSize: '15px', color: darkMode ? '#FAF7F2' : '#3D3530' }}>Article 2 — Compte & Exactitude des Informations</h4>
-              <p>L’utilisateur s’engage à fournir des informations exactes lors de son inscription, à maintenir son profil à jour et à ne créer qu’un seul compte par personne physique.</p>
+              <h4 className="font-editorial-heading" style={{ margin: '14px 0 8px', fontSize: '15px', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{t('cguArt2Title') || 'Article 2 — Compte & Exactitude des Informations'}</h4>
+              <p>{t('cguArt2Desc') || "L’utilisateur s’engage à fournir des informations exactes lors de son inscription, à maintenir son profil à jour et à ne créer qu’un seul compte par personne physique."}</p>
 
-              <h4 className="font-editorial-heading" style={{ margin: '14px 0 8px', fontSize: '15px', color: darkMode ? '#FAF7F2' : '#3D3530' }}>Article 3 — Règle du Troc Temporel & Monétisation</h4>
-              <p>Le Jeton Troco représente 1 heure de service ou de formation. Les achats de jetons ou d'options de visibilité (boosts) sont fermes et définitifs, exécutés conformément à l'article L.221-28 du Code de la Consommation.</p>
+              <h4 className="font-editorial-heading" style={{ margin: '14px 0 8px', fontSize: '15px', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{t('cguArt3Title') || 'Article 3 — Règle du Troc Temporel & Monétisation'}</h4>
+              <p>{t('cguArt3Desc') || "Le Jeton Troco représente 1 heure de service ou de formation. Les achats de jetons ou d'options de visibilité (boosts) sont fermes et définitifs, exécutés conformément à l'article L.221-28 du Code de la Consommation."}</p>
 
-              <h4 className="font-editorial-heading" style={{ margin: '14px 0 8px', fontSize: '15px', color: darkMode ? '#FAF7F2' : '#3D3530' }}>Article 4 — Cautions & Responsabilité des Prêts</h4>
-              <p>Les cautions demandées pour les prêts de biens matériels constituent une garantie financière pré-autorisée. En cas de non-restitution ou de détérioration constatée, le montant peut être débité après instruction contradictoire par l'équipe de médiation Troco.</p>
+              <h4 className="font-editorial-heading" style={{ margin: '14px 0 8px', fontSize: '15px', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{t('cguArt4Title') || 'Article 4 — Cautions & Responsabilité des Prêts'}</h4>
+              <p>{t('cguArt4Desc') || "Les cautions demandées pour les prêts de biens matériels constituent une garantie financière pré-autorisée. En cas de non-restitution ou de détérioration constatée, le montant peut être débité après instruction contradictoire par l'équipe de médiation Troco."}</p>
 
-              <h4 className="font-editorial-heading" style={{ margin: '14px 0 8px', fontSize: '15px', color: darkMode ? '#FAF7F2' : '#3D3530' }}>Article 5 — Modération, Détection et Sanctions</h4>
-              <p>Troco utilise des outils d'analyse automatisée pour détecter les tentatives de fraude, escroqueries et contenus répréhensibles. La société se réserve le droit de restreindre la visibilité (Shadow-Ban) ou de suspendre tout compte contrevenant sans préavis.</p>
+              <h4 className="font-editorial-heading" style={{ margin: '14px 0 8px', fontSize: '15px', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{t('cguArt5Title') || 'Article 5 — Modération, Détection et Sanctions'}</h4>
+              <p>{t('cguArt5Desc') || "Troco utilise des outils d'analyse automatisée pour détecter les tentatives de fraude, escroqueries et contenus répréhensibles. La société se réserve le droit de restreindre la visibilité (Shadow-Ban) ou de suspendre tout compte contrevenant sans préavis."}</p>
 
-              <h4 className="font-editorial-heading" style={{ margin: '14px 0 8px', fontSize: '15px', color: darkMode ? '#FAF7F2' : '#3D3530' }}>Article 6 — Données Personnelles (RGPD)</h4>
-              <p>Les données sont traitées conformément au Règlement Général sur la Protection des Données (UE 2016/679). Chaque utilisateur dispose d'un droit d'accès, de rectification, de portabilité et d'effacement de ses données via son Centre de Confidentialité.</p>
+              <h4 className="font-editorial-heading" style={{ margin: '14px 0 8px', fontSize: '15px', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{t('cguArt6Title') || 'Article 6 — Données Personnelles (RGPD)'}</h4>
+              <p>{t('cguArt6Desc') || "Les données sont traitées conformément au Règlement Général sur la Protection des Données (UE 2016/679). Chaque utilisateur dispose d'un droit d'accès, de rectification, de portabilité et d'effacement de ses données via son Centre de Confidentialité."}</p>
             </div>
           )}
 
@@ -338,7 +340,7 @@ export default function CguModal({
                     style={{ width: '18px', height: '18px', accentColor: '#C67D5B', marginTop: '2px', cursor: 'pointer' }}
                   />
                   <span style={{ color: darkMode ? '#FAF7F2' : '#3D3530', lineHeight: 1.5 }}>
-                    J'ai lu et <strong>j'accepte sans réserve les Conditions Générales d'Utilisation</strong> de Troco (Version 2026.1).
+                    {t('agreeTermsCheckbox') || "J'ai lu et j'accepte sans réserve les Conditions Générales d'Utilisation de Troco (Version 2026.1)."}
                   </span>
                 </label>
 
@@ -350,7 +352,7 @@ export default function CguModal({
                     style={{ width: '18px', height: '18px', accentColor: '#C67D5B', marginTop: '2px', cursor: 'pointer' }}
                   />
                   <span style={{ color: darkMode ? '#FAF7F2' : '#3D3530', lineHeight: 1.5 }}>
-                    J'accepte la <strong>Politique de Confidentialité et le traitement de mes données</strong> dans le respect du RGPD.
+                    {t('agreePrivacyCheckbox') || "J'accepte la Politique de Confidentialité et le traitement de mes données dans le respect du RGPD."}
                   </span>
                 </label>
               </div>
@@ -380,7 +382,7 @@ export default function CguModal({
                 }}
               >
                 <Check size={18} strokeWidth={3} />
-                Accepter les CGU & Rejoindre Troco
+                {t('acceptTermsButton') || 'Accepter les CGU et Rejoindre la Communauté'}
               </button>
             </>
           ) : (
@@ -405,7 +407,7 @@ export default function CguModal({
                 boxShadow: '0 10px 25px -5px rgba(198,125,91,0.35)',
               }}
             >
-              Fermer la consultation des CGU
+              {t('close') || 'Fermer'}
             </button>
           )}
         </div>

@@ -14,6 +14,7 @@ import { outboxService } from '../services/outboxService';
 import { hapticSuccess, hapticError } from '../utils/haptics';
 import { convertCurrency, formatCurrencyAmount } from '../services/pricingService';
 import { useWalletStore } from '../stores';
+import { useLanguage } from '../contexts/LanguageContext';
 
 // Algorithme de Luhn pour la validation des numéros de carte bancaire
 function isValidLuhn(numStr) {
@@ -53,6 +54,7 @@ export default function PaymentModal({
   playBetclicSound = null,
   playApplePaySound = null,
 }) {
+  const { t } = useLanguage();
   const [mode, setMode] = useState(initialMode === 'pack-tokens' ? 'troco-plus' : initialMode);
   const [paymentMethod, setPaymentMethod] = useState('applePay'); // 'applePay' | 'card' | 'wallet'
   const [isProcessing, setIsProcessing] = useState(false);
@@ -522,14 +524,14 @@ export default function PaymentModal({
             </div>
             <div>
               <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '20px', fontWeight: '600', letterSpacing: '-0.01em', color: 'var(--text-main)' }}>
-                {(mode === 'troco-plus' || mode === 'pack-tokens') && 'Abonnement Troco Plus'}
-                {mode === 'topup-cash' && 'Recharger mon Portefeuille'}
-                {mode === 'boost' && 'Booster une Annonce'}
-                {mode === 'caution' && 'Empreinte de Caution'}
-                {mode === 'deal' && 'Paiement Sécurisé du Deal'}
+                {(mode === 'troco-plus' || mode === 'pack-tokens') && (t('trocoPlusSubTitle') || 'Abonnement Troco Plus')}
+                {mode === 'topup-cash' && (t('topupEuroTitle') || 'Recharger mon Portefeuille')}
+                {mode === 'boost' && (t('boostListingTitle') || 'Booster une Annonce')}
+                {mode === 'caution' && (t('cautionTitle') || 'Empreinte de Caution')}
+                {mode === 'deal' && (t('secureDealPaymentTitle') || 'Paiement Sécurisé du Deal')}
               </h3>
               <p style={{ margin: '2px 0 0', fontSize: '12px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <ShieldCheck size={13} color="var(--accent-success)" /> Paiement 100% chiffré & sécurisé SSL 256 bits
+                <ShieldCheck size={13} color="var(--accent-success)" /> {t('encryptedPaymentSubtitle') || 'Paiement 100% chiffré & sécurisé SSL 256 bits'}
               </p>
             </div>
           </div>
@@ -591,7 +593,7 @@ export default function PaymentModal({
                   transition: 'all 0.2s ease'
                 }}
               >
-                <CreditCard size={15} /> Recharger mon solde (€)
+                <CreditCard size={15} /> {t('rechargeEuroTab') || 'Recharger mon solde (€)'}
               </button>
 
               <button
@@ -619,7 +621,7 @@ export default function PaymentModal({
                   transition: 'all 0.2s ease'
                 }}
               >
-                <Sparkles size={15} /> Abonnement Troco Plus
+                <Sparkles size={15} /> {t('trocoPlusTab') || 'Abonnement Troco Plus'}
               </button>
             </div>
           )}
