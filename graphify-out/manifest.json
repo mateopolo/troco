@@ -492,10 +492,10 @@
     "semantic_hash": "bab0946b0adb636b0458666752f40ed2"
   },
   "src/components/CommunityActivityFeed.jsx": {
-    "mtime": 1790113562.2477765,
-    "seen": 1790594464.2381022,
-    "ast_hash": "cb70c2ec630af067f45fd84249ec0361",
-    "semantic_hash": "cb70c2ec630af067f45fd84249ec0361"
+    "mtime": 1790627288.6099832,
+    "seen": 1790629357.950573,
+    "ast_hash": "56feb77daa6d2e40fa34c9ac7f4837f2",
+    "semantic_hash": ""
   },
   "src/components/CookieBanner.jsx": {
     "mtime": 1788974880.2007625,
@@ -588,10 +588,10 @@
     "semantic_hash": "6d326047f4b6c6e13ccf2557af3f10cb"
   },
   "src/components/LegalNotice.jsx": {
-    "mtime": 1788974821.0998294,
-    "seen": 1790594464.2381256,
-    "ast_hash": "5e2daf2089d2fe83264e907033d68520",
-    "semantic_hash": "5e2daf2089d2fe83264e907033d68520"
+    "mtime": 1790629256.837517,
+    "seen": 1790629357.950605,
+    "ast_hash": "306fe700f756ca403cdbcbdf6fe15e36",
+    "semantic_hash": ""
   },
   "src/components/ListingCard.jsx": {
     "mtime": 1790107939.275529,
@@ -654,9 +654,9 @@
     "semantic_hash": "165882904aa008ec7c911430c17caf58"
   },
   "src/components/PaymentModal.jsx": {
-    "mtime": 1790604159.4926374,
-    "seen": 1790606119.6185322,
-    "ast_hash": "f5f2d7026231b5621c014017aa25fb98",
+    "mtime": 1790627317.103718,
+    "seen": 1790629357.950625,
+    "ast_hash": "f0292b35dd0bdd8a05e3c4d057cbac45",
     "semantic_hash": ""
   },
   "src/components/Phase102ScrollAndLobby.test.js": {
@@ -984,9 +984,9 @@
     "semantic_hash": "a57ca1a7da46149469dbe43f98fb03e9"
   },
   "src/components/PrivacyCenterModal.jsx": {
-    "mtime": 1790604106.1624372,
-    "seen": 1790606119.618675,
-    "ast_hash": "66a1fc8c1dac41d3908cc97722572e12",
+    "mtime": 1790628233.186538,
+    "seen": 1790629357.9507399,
+    "ast_hash": "5960ffe36f549f0a9b2a5b9d378b8c54",
     "semantic_hash": ""
   },
   "src/components/PrivacyPolicy.jsx": {
@@ -1026,10 +1026,10 @@
     "semantic_hash": ""
   },
   "src/components/RefundPolicy.jsx": {
-    "mtime": 1788968700.0532794,
-    "seen": 1790594464.238223,
-    "ast_hash": "4f1b4c8c27146a3b6be1e50a43d03908",
-    "semantic_hash": "4f1b4c8c27146a3b6be1e50a43d03908"
+    "mtime": 1790628278.4551492,
+    "seen": 1790629357.9507532,
+    "ast_hash": "fcbaed695c403ad81d10b40b68a624b9",
+    "semantic_hash": ""
   },
   "src/components/ReportModal.jsx": {
     "mtime": 1790604588.325734,
@@ -1080,10 +1080,10 @@
     "semantic_hash": "dc1450061d5e586705f3b25dcd2e6784"
   },
   "src/components/TransactionSuccessModal.jsx": {
-    "mtime": 1789319685.4902675,
-    "seen": 1790594464.2382343,
-    "ast_hash": "f7b9f43f24147157439b1109245b7cda",
-    "semantic_hash": "f7b9f43f24147157439b1109245b7cda"
+    "mtime": 1790627360.7503514,
+    "seen": 1790629357.95077,
+    "ast_hash": "c9755b50edef8482f83fc73dd6ecc109",
+    "semantic_hash": ""
   },
   "src/components/TransactionsHistoryModal.jsx": {
     "mtime": 1790604176.2621527,
@@ -1296,9 +1296,9 @@
     "semantic_hash": ""
   },
   "src/components/modals/CheckoutModal.jsx": {
-    "mtime": 1790604631.994109,
-    "seen": 1790606119.618802,
-    "ast_hash": "08b67875e0116ad1264317e70196da7a",
+    "mtime": 1790627340.7425508,
+    "seen": 1790629357.9508352,
+    "ast_hash": "c3ac273d76554903e46863b2ef93adaa",
     "semantic_hash": ""
   },
   "src/components/modals/FilterDrawer.jsx": {
@@ -1458,15 +1458,15 @@
     "semantic_hash": "7be2e658837a6713e3eb3b702ab9af2f"
   },
   "src/data/translationsData.js": {
-    "mtime": 1790609247.0559812,
-    "seen": 1790609883.2044585,
-    "ast_hash": "52567bad19688adef115a719daab1b3e",
+    "mtime": 1790629144.451921,
+    "seen": 1790629357.9509087,
+    "ast_hash": "63c664340651aee15f6ed9b51e3fac07",
     "semantic_hash": ""
   },
   "src/data/translationsSecondary.js": {
-    "mtime": 1790609680.8530948,
-    "seen": 1790609883.2044601,
-    "ast_hash": "aa5ff11d42d62f6b4ac4ab0595a17838",
+    "mtime": 1790629144.471232,
+    "seen": 1790629357.9509106,
+    "ast_hash": "0e1a79eb22f612ed956dfaa0a2e136e7",
     "semantic_hash": ""
   },
   "src/features/admin/AdminChatsTab.jsx": {
@@ -2124,10 +2124,10 @@
     "semantic_hash": "fa8b93348a2c283f06876c9a97ce71e3"
   },
   "src/utils/pricingEngine.js": {
-    "mtime": 1787767887.903676,
-    "seen": 1790594464.238471,
-    "ast_hash": "c21c5b140a251db9e97b2320c8cb2b3a",
-    "semantic_hash": "c21c5b140a251db9e97b2320c8cb2b3a"
+    "mtime": 1790628840.1889672,
+    "seen": 1790629357.9511123,
+    "ast_hash": "9c5772224c67446fdb004057e21b442d",
+    "semantic_hash": ""
   },
   "src/utils/sentry.js": {
     "mtime": 1790112589.049268,
@@ -2328,9 +2328,9 @@
     "semantic_hash": ""
   },
   "MASTER_AUDIT.md": {
-    "mtime": 1790609834.415507,
-    "seen": 1790609883.2046945,
-    "ast_hash": "c6970c9905b996f990cc527779d09099",
+    "mtime": 1790627641.639117,
+    "seen": 1790629357.9511743,
+    "ast_hash": "2cf495240175f0ad6c05edbde1db00ba",
     "semantic_hash": ""
   },
   "PERFORMANCE_AUDIT.md": {
@@ -2703,6 +2703,96 @@
     "mtime": 1790604961.8807287,
     "seen": 1790606119.6188433,
     "ast_hash": "abef4b4b6664da71216a63998ee3c6c3",
+    "semantic_hash": ""
+  },
+  "src/data/legal/index.js": {
+    "mtime": 1790628814.0529726,
+    "seen": 1790629357.9508815,
+    "ast_hash": "b285b860b9d34fc8aa55a52d710d063a",
+    "semantic_hash": ""
+  },
+  "src/data/legal/legal-notice-de.js": {
+    "mtime": 1790628668.6137722,
+    "seen": 1790629357.9508836,
+    "ast_hash": "8716c262eb914a6586fd64fcec073113",
+    "semantic_hash": ""
+  },
+  "src/data/legal/legal-notice-en.js": {
+    "mtime": 1790628668.6224597,
+    "seen": 1790629357.9508853,
+    "ast_hash": "b8e3e70f17482b433562d853e68d4879",
+    "semantic_hash": ""
+  },
+  "src/data/legal/legal-notice-es.js": {
+    "mtime": 1790628668.6242003,
+    "seen": 1790629357.9508872,
+    "ast_hash": "2cf03d0a738cfdd160936a62e32ccc37",
+    "semantic_hash": ""
+  },
+  "src/data/legal/legal-notice-fr.js": {
+    "mtime": 1790628668.6259744,
+    "seen": 1790629357.9508886,
+    "ast_hash": "492c3419f35d9202b8703bfcd1416157",
+    "semantic_hash": ""
+  },
+  "src/data/legal/legal-notice-it.js": {
+    "mtime": 1790628668.6278696,
+    "seen": 1790629357.95089,
+    "ast_hash": "bbb2fe1fd64f67a624f04106a56b5e86",
+    "semantic_hash": ""
+  },
+  "src/data/legal/legal-notice-ja.js": {
+    "mtime": 1790628668.6305542,
+    "seen": 1790629357.9508913,
+    "ast_hash": "bc551519c5c9aae1e10be56651d6387a",
+    "semantic_hash": ""
+  },
+  "src/data/legal/legal-notice-zh.js": {
+    "mtime": 1790628668.6323562,
+    "seen": 1790629357.9508924,
+    "ast_hash": "47baf1ede13b34716eb53433c79da6b7",
+    "semantic_hash": ""
+  },
+  "src/data/legal/refund-policy-de.js": {
+    "mtime": 1790628668.634064,
+    "seen": 1790629357.9508944,
+    "ast_hash": "758dd492eb0b4e87ce7e1113036f2bd1",
+    "semantic_hash": ""
+  },
+  "src/data/legal/refund-policy-en.js": {
+    "mtime": 1790628668.6358347,
+    "seen": 1790629357.9508955,
+    "ast_hash": "2bae9eda013c701e212b42e021f02f2f",
+    "semantic_hash": ""
+  },
+  "src/data/legal/refund-policy-es.js": {
+    "mtime": 1790628668.638204,
+    "seen": 1790629357.9508972,
+    "ast_hash": "3e4564581120efc6cf8a51b7a895fa7d",
+    "semantic_hash": ""
+  },
+  "src/data/legal/refund-policy-fr.js": {
+    "mtime": 1790628668.640137,
+    "seen": 1790629357.950899,
+    "ast_hash": "0d0375d6e6ae5061bb9afc809a477f50",
+    "semantic_hash": ""
+  },
+  "src/data/legal/refund-policy-it.js": {
+    "mtime": 1790628668.6428034,
+    "seen": 1790629357.9509003,
+    "ast_hash": "117ccdf39258a2b4e8805b92957b0d48",
+    "semantic_hash": ""
+  },
+  "src/data/legal/refund-policy-ja.js": {
+    "mtime": 1790628668.644715,
+    "seen": 1790629357.9509017,
+    "ast_hash": "83e618d5689317e3ab1b0498e0c131d5",
+    "semantic_hash": ""
+  },
+  "src/data/legal/refund-policy-zh.js": {
+    "mtime": 1790628668.6466386,
+    "seen": 1790629357.950903,
+    "ast_hash": "9c90981bd5393654c88731f70852148e",
     "semantic_hash": ""
   }
 }

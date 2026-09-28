@@ -384,9 +384,9 @@
     "semantic_hash": "29788f2edfc62f638e05abc398125e63"
   },
   "src/App.js": {
-    "mtime": 1790604027.477143,
-    "seen": 1790606119.6184058,
-    "ast_hash": "5758bfb8c74f9ff46886eca887bd9280",
+    "mtime": 1790609516.2559736,
+    "seen": 1790609883.2041671,
+    "ast_hash": "b012599c35354efbbc696111f00f2fa8",
     "semantic_hash": ""
   },
   "src/App.test.js": {
@@ -1302,9 +1302,9 @@
     "semantic_hash": ""
   },
   "src/components/modals/FilterDrawer.jsx": {
-    "mtime": 1790604691.662064,
-    "seen": 1790606119.6188042,
-    "ast_hash": "14b5e1e725aa86b228e221db9fc3f72d",
+    "mtime": 1790609641.8701468,
+    "seen": 1790609883.204416,
+    "ast_hash": "28f1d319357cbdb543f526a7ac65c9c6",
     "semantic_hash": ""
   },
   "src/components/modals/LanguageSelectModal.jsx": {
@@ -1458,15 +1458,15 @@
     "semantic_hash": "7be2e658837a6713e3eb3b702ab9af2f"
   },
   "src/data/translationsData.js": {
-    "mtime": 1790182067.9817367,
-    "seen": 1790594464.238315,
-    "ast_hash": "1d6a43bc8ca90303759dffc31686fa9f",
-    "semantic_hash": "1d6a43bc8ca90303759dffc31686fa9f"
+    "mtime": 1790609247.0559812,
+    "seen": 1790609883.2044585,
+    "ast_hash": "52567bad19688adef115a719daab1b3e",
+    "semantic_hash": ""
   },
   "src/data/translationsSecondary.js": {
-    "mtime": 1790600982.8466969,
-    "seen": 1790601460.3485708,
-    "ast_hash": "5835db9d3579635720fb3ae49e086070",
+    "mtime": 1790609680.8530948,
+    "seen": 1790609883.2044601,
+    "ast_hash": "aa5ff11d42d62f6b4ac4ab0595a17838",
     "semantic_hash": ""
   },
   "src/features/admin/AdminChatsTab.jsx": {
@@ -2034,10 +2034,10 @@
     "semantic_hash": "51b58255f1b5b65b85fe8a12342a74c0"
   },
   "src/utils/formatters.js": {
-    "mtime": 1790182389.2174945,
-    "seen": 1790594464.2384398,
-    "ast_hash": "6d5b5b8dfdd404eae6f222a4bad5cc2f",
-    "semantic_hash": "6d5b5b8dfdd404eae6f222a4bad5cc2f"
+    "mtime": 1790609403.19974,
+    "seen": 1790609883.2046134,
+    "ast_hash": "dc5a3721106176bc3098a8a5caa8d781",
+    "semantic_hash": ""
   },
   "src/utils/geocodingNominatim.js": {
     "mtime": 1789319685.6477256,
@@ -2328,9 +2328,9 @@
     "semantic_hash": ""
   },
   "MASTER_AUDIT.md": {
-    "mtime": 1790605991.8544261,
-    "seen": 1790606119.6192522,
-    "ast_hash": "983236c7ef7fd480a8f08d527d97a1d7",
+    "mtime": 1790609834.415507,
+    "seen": 1790609883.2046945,
+    "ast_hash": "c6970c9905b996f990cc527779d09099",
     "semantic_hash": ""
   },
   "PERFORMANCE_AUDIT.md": {

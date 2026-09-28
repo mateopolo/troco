@@ -1,3 +1,5 @@
+import { translations } from '../data/translationsData.js';
+
 // =====================================================================
 // MOTEUR DE TARIFICATION DYNAMIQUE MONDIALE (PARITÉ DE POUVOIR D'ACHAT - PPP)
 // =====================================================================
@@ -146,63 +148,88 @@ export function formatPrice(amount, currency = 'EUR', locale = undefined) {
   }
 }
 
+export const TROCO_PLUS_BENEFIT_KEYS = {
+  essential: [
+    'plan.benefit.tokens_5',
+    'plan.benefit.boost_1',
+    'plan.benefit.badge_member',
+    'plan.benefit.contact_priority',
+    'plan.benefit.no_commitment'
+  ],
+  pro: [
+    'plan.benefit.tokens_15',
+    'plan.benefit.boosts_3',
+    'plan.benefit.badge_vip',
+    'plan.benefit.visibility_max',
+    'plan.benefit.support_priority',
+    'plan.benefit.no_commitment'
+  ]
+};
+
 /**
- * Génère les plans d'abonnement Troco Plus localisés selon le pays
+ * Génère les plans d'abonnement Troco Plus localisés selon le pays et la langue
  */
-export function getLocalizedTrocoPlusPlans(countryCode = null) {
+export function getLocalizedTrocoPlusPlans(countryCode = null, lang = null) {
   const code = countryCode || detectUserCountry();
   const essentialCalc = calculatePppPrice(BASE_PRICES_EUR.essential, code);
   const proCalc = calculatePppPrice(BASE_PRICES_EUR.pro, code);
+
+  let currentLanguage = lang;
+  if (!currentLanguage && typeof window !== 'undefined') {
+    try {
+      currentLanguage = localStorage.getItem('troco_language') || localStorage.getItem('troco_lang');
+    } catch (_) {}
+  }
+  const normalizedLang = (typeof currentLanguage === 'string' ? currentLanguage.toUpperCase() : 'FR');
+  const t = (k) => translations?.[normalizedLang]?.[k] || translations?.['FR']?.[k] || k;
 
   return [
     {
       id: 'plus-essential',
       planKey: 'essential',
-      title: 'Troco Plus Essentiel',
+      name_key: 'plan.essential.name',
+      title: t('plan.essential.name'),
       price: essentialCalc.raw,
       formattedPrice: essentialCalc.formatted,
       currency: essentialCalc.currency,
       countryName: essentialCalc.countryName,
       pppApplied: essentialCalc.coefficient < 1.0,
       pppDiscountPercent: essentialCalc.coefficient < 1.0 ? Math.round((1 - essentialCalc.coefficient) * 100) : 0,
-      period: '/ mois',
+      period_key: 'plan.period.monthly',
+      period: t('plan.period.monthly'),
       tokensMonthly: 5,
       boostsMonthly: 1,
-      badge: '⭐ Membre Plus',
+      badge_key: 'plan.essential.badge',
+      badge: t('plan.essential.badge'),
       popular: true,
-      features: [
-        '5 Jetons Troco crédités chaque mois',
-        '1 Boost d\'annonce offert par mois',
-        'Badge ⭐ Membre Plus sur le profil',
-        'Priorité de contact sur les deals',
-        'Sans engagement • Annulable en 1 clic'
-      ],
-      desc: 'Parfait pour échanger régulièrement et booster vos services'
+      benefit_keys: TROCO_PLUS_BENEFIT_KEYS.essential,
+      features: TROCO_PLUS_BENEFIT_KEYS.essential.map(k => t(k)),
+      desc_key: 'plan.essential.desc',
+      desc: t('plan.essential.desc')
     },
     {
       id: 'plus-pro',
       planKey: 'pro',
-      title: 'Troco Plus Illimité & Pro',
+      name_key: 'plan.pro.name',
+      title: t('plan.pro.name'),
       price: proCalc.raw,
       formattedPrice: proCalc.formatted,
       currency: proCalc.currency,
       countryName: proCalc.countryName,
       pppApplied: proCalc.coefficient < 1.0,
       pppDiscountPercent: proCalc.coefficient < 1.0 ? Math.round((1 - proCalc.coefficient) * 100) : 0,
-      period: '/ mois',
+      period_key: 'plan.period.monthly',
+      period: t('plan.period.monthly'),
       tokensMonthly: 15,
       boostsMonthly: 3,
-      badge: '👑 VIP Pro',
+      badge_key: 'plan.pro.badge',
+      badge: t('plan.pro.badge'),
       popular: false,
-      features: [
-        '15 Jetons Troco crédités chaque mois',
-        '3 Boosts d\'annonces offerts par mois',
-        'Badge exclusif 👑 VIP Pro',
-        'Visibilité maximale carte & feed',
-        'Support prioritaire 7j/7 & 0 commission',
-        'Sans engagement • Annulable en 1 clic'
-      ],
-      desc: 'Idéal pour les experts, artisans et utilisateurs intensifs'
+      benefit_keys: TROCO_PLUS_BENEFIT_KEYS.pro,
+      features: TROCO_PLUS_BENEFIT_KEYS.pro.map(k => t(k)),
+      desc_key: 'plan.pro.desc',
+      desc: t('plan.pro.desc')
     },
   ];
 }
+

@@ -85,10 +85,15 @@ export default function PrivacyCenterModal({
     }, 800);
   };
 
+  const requiredDeleteWord = (t('privacy.confirm_delete_word') || 'SUPPRIMER').toUpperCase();
+  const isDeleteConfirmed = deleteConfirmationText.trim().toUpperCase() === requiredDeleteWord
+    || deleteConfirmationText.trim().toUpperCase() === 'SUPPRIMER'
+    || deleteConfirmationText.trim().toUpperCase() === 'DELETE';
+
   // Confirmation de suppression de compte
   const handleConfirmDeleteAccount = async () => {
-    if (deleteConfirmationText.trim().toUpperCase() !== 'SUPPRIMER') {
-      setDeleteError('Veuillez taper "SUPPRIMER" pour confirmer la suppression.');
+    if (!isDeleteConfirmed) {
+      setDeleteError(t('privacy.delete_confirm_error') || 'Veuillez taper "SUPPRIMER" pour confirmer la suppression.');
       return;
     }
     setDeleteError('');
@@ -98,7 +103,7 @@ export default function PrivacyCenterModal({
         await onDeleteAccount({ immediate: immediateDelete });
       }
     } catch (err) {
-      setDeleteError(err?.message || 'Erreur lors de la suppression du compte.');
+      setDeleteError(err?.message || t('privacy.delete_error_fallback') || 'Erreur lors de la suppression du compte.');
     } finally {
       setIsDeleting(false);
     }
@@ -123,7 +128,7 @@ export default function PrivacyCenterModal({
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="Centre de confidentialité et RGPD"
+        aria-label={t('privacy.aria_modal') || "Centre de confidentialité et RGPD"}
         onClick={(e) => e.stopPropagation()}
         className="w-full max-w-2xl md:max-w-3xl max-h-[calc(100dvh-120px)] flex flex-col rounded-2xl md:rounded-3xl shadow-2xl overflow-hidden border border-[var(--border-color,#E8DDD3)] bg-[var(--bg-card,#FAF7F2)] text-[var(--text-main,#3D3530)]"
         style={{
@@ -166,10 +171,10 @@ export default function PrivacyCenterModal({
             </div>
             <div>
               <h3 className="font-editorial-heading" style={{ margin: 0, fontSize: '20px', fontWeight: '600', letterSpacing: '-0.01em' }}>
-                {t('privacyCenterTitle') || 'Centre de Confidentialité RGPD'}
+                {t('privacy.center_title') || t('privacyCenterTitle') || 'Centre de Confidentialité RGPD'}
               </h3>
               <p style={{ margin: '2px 0 0', fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>
-                {t('privacyCenterSubtitle') || 'Contrôlez vos données personnelles et vos préférences de confidentialité'}
+                {t('privacy.center_subtitle') || t('privacyCenterSubtitle') || 'Contrôlez vos données personnelles et vos préférences de confidentialité'}
               </p>
             </div>
           </div>
@@ -202,9 +207,9 @@ export default function PrivacyCenterModal({
           flexShrink: 0,
         }}>
           {[
-            { id: 'data', label: t('privacyTabData') || '📥 Mes Données & Portabilité', icon: Download },
-            { id: 'consents', label: t('privacyTabConsents') || '⚙️ Consentements', icon: Sliders },
-            { id: 'deletion', label: t('privacyTabDeletion') || '🗑️ Droit à l’Oubli', icon: Trash2 },
+            { id: 'data', label: t('privacy.tab_data') || t('privacyTabData') || '📥 Mes Données & Portabilité', icon: Download },
+            { id: 'consents', label: t('privacy.tab_consents') || t('privacyTabConsents') || '⚙️ Consentements', icon: Sliders },
+            { id: 'deletion', label: t('privacy.tab_deletion') || t('privacyTabDeletion') || '🗑️ Droit à l’Oubli', icon: Trash2 },
           ].map(tab => (
             <button
               key={tab.id}
@@ -243,10 +248,10 @@ export default function PrivacyCenterModal({
                 marginBottom: '20px',
               }}>
                 <div style={{ fontWeight: '800', fontSize: '14px', color: '#A8644A', marginBottom: '4px' }}>
-                  Droit à la portabilité des données (Art. 20 RGPD)
+                  {t('privacy.data_portability_title') || 'Droit à la portabilité des données (Art. 20 RGPD)'}
                 </div>
                 <div style={{ fontSize: '12px', color: darkMode ? '#FAF7F2' : '#6B5E54', lineHeight: 1.6 }}>
-                  Conformément à la réglementation européenne, vous pouvez exporter à tout moment l'intégralité des données rattachées à votre compte Troco dans un format structuré et lisible par machine (.json).
+                  {t('privacy.export_data_desc') || "Conformément à la réglementation européenne, vous pouvez exporter à tout moment l'intégralité des données rattachées à votre compte Troco dans un format structuré et lisible par machine (.json)."}
                 </div>
               </div>
 
@@ -258,14 +263,14 @@ export default function PrivacyCenterModal({
                 marginBottom: '24px',
               }}>
                 <div className="font-editorial-heading" style={{ fontSize: '15px', fontWeight: '600', marginBottom: '12px' }}>
-                  Éléments inclus dans votre archive :
+                  {t('privacy.included_items_title') || 'Éléments inclus dans votre archive :'}
                 </div>
                 <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', lineHeight: 1.8 }}>
-                  <li><strong>Informations de profil :</strong> Nom, nom d'utilisateur, bio, localisation, compétences, langues, date d'inscription.</li>
-                  <li><strong>Soldes & Jetons :</strong> Solde Euros (€), solde de Jetons Troco (🪙).</li>
-                  <li><strong>Annonces créées :</strong> Titres, descriptions, prix, caution et photos.</li>
-                  <li><strong>Historique de facturation :</strong> Toutes les transactions, factures, références #TRK- et moyens de paiement utilisés.</li>
-                  <li><strong>Historique des échanges & deals :</strong> Horodatages et évaluations reçues.</li>
+                  <li><strong>{t('privacy.archive_profile_label') || "Informations de profil :"}</strong> {t('privacy.archive_profile_text') || "Nom, nom d'utilisateur, bio, localisation, compétences, langues, date d'inscription."}</li>
+                  <li><strong>{t('privacy.archive_balances_label') || "Soldes & Jetons :"}</strong> {t('privacy.archive_balances_text') || "Solde Euros (€), solde de Jetons Troco (🪙)."}</li>
+                  <li><strong>{t('privacy.archive_listings_label') || "Annonces créées :"}</strong> {t('privacy.archive_listings_text') || "Titres, descriptions, prix, caution et photos."}</li>
+                  <li><strong>{t('privacy.archive_billing_label') || "Historique de facturation :"}</strong> {t('privacy.archive_billing_text') || "Toutes les transactions, factures, références #TRK- et moyens de paiement utilisés."}</li>
+                  <li><strong>{t('privacy.archive_trades_label') || "Historique des échanges & deals :"}</strong> {t('privacy.archive_trades_text') || "Horodatages et évaluations reçues."}</li>
                 </ul>
               </div>
 
@@ -291,7 +296,7 @@ export default function PrivacyCenterModal({
                 }}
               >
                 <Download size={18} />
-                {isExporting ? 'Génération de l’archive JSON...' : 'Télécharger l’intégralité de mes données (JSON)'}
+                {isExporting ? (t('privacy.exporting_json') || 'Génération de l’archive JSON...') : (t('privacy.download_json_btn') || 'Télécharger l’intégralité de mes données (JSON)')}
               </button>
 
               {exportSuccess && (
@@ -305,7 +310,7 @@ export default function PrivacyCenterModal({
                   fontWeight: '700',
                   textAlign: 'center',
                 }}>
-                  ✅ Fichier exporté avec succès dans votre dossier de téléchargements !
+                  {t('privacy.export_success') || '✅ Fichier exporté avec succès dans votre dossier de téléchargements !'}
                 </div>
               )}
             </div>
@@ -315,7 +320,7 @@ export default function PrivacyCenterModal({
           {activeTab === 'consents' && (
             <div>
               <div style={{ fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54', marginBottom: '18px', lineHeight: 1.6 }}>
-                Gérez vos consentements concernant l'utilisation des traceurs, cookies et communications de la plateforme Troco.
+                {t('privacy.consents_desc') || "Gérez vos consentements concernant l'utilisation des traceurs, cookies et communications de la plateforme Troco."}
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
@@ -330,13 +335,15 @@ export default function PrivacyCenterModal({
                   justifyContent: 'space-between',
                 }}>
                   <div>
-                    <div className="font-editorial-heading" style={{ fontWeight: '600', fontSize: '15px' }}>Cookies Techniques & Sécurité</div>
+                    <div className="font-editorial-heading" style={{ fontWeight: '600', fontSize: '15px' }}>
+                      {t('privacy.cookie_tech_title') || "Cookies Techniques & Sécurité"}
+                    </div>
                     <div style={{ fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', marginTop: '2px' }}>
-                      Indispensables à la session Firebase, au chiffrement et au bon fonctionnement de la plateforme.
+                      {t('privacy.cookie_tech_desc') || "Indispensables à la session Firebase, au chiffrement et au bon fonctionnement de la plateforme."}
                     </div>
                   </div>
                   <span style={{ fontSize: '11px', fontWeight: '800', color: '#3D4A35', backgroundColor: darkMode ? 'rgba(156,175,136,0.25)' : '#EBF0E6', padding: '4px 10px', borderRadius: '999px' }}>
-                    Toujours actif
+                    {t('privacy.always_active') || "Toujours actif"}
                   </span>
                 </div>
 
@@ -351,9 +358,11 @@ export default function PrivacyCenterModal({
                   justifyContent: 'space-between',
                 }}>
                   <div>
-                    <div className="font-editorial-heading" style={{ fontWeight: '600', fontSize: '15px' }}>Statistiques & Performance Anonymes</div>
+                    <div className="font-editorial-heading" style={{ fontWeight: '600', fontSize: '15px' }}>
+                      {t('privacy.cookie_analytics_title') || "Statistiques & Performance Anonymes"}
+                    </div>
                     <div style={{ fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', marginTop: '2px' }}>
-                      Permet d'améliorer la fluidité de l'application sans collecter de données identifiantes.
+                      {t('privacy.cookie_analytics_desc') || "Permet d'améliorer la fluidité de l'application sans collecter de données identifiantes."}
                     </div>
                   </div>
                   <label style={{ position: 'relative', display: 'inline-block', width: '44px', height: '24px', cursor: 'pointer' }}>
@@ -387,9 +396,11 @@ export default function PrivacyCenterModal({
                   justifyContent: 'space-between',
                 }}>
                   <div>
-                    <div className="font-editorial-heading" style={{ fontWeight: '600', fontSize: '15px' }}>Alertes d'échanges de Proximité</div>
+                    <div className="font-editorial-heading" style={{ fontWeight: '600', fontSize: '15px' }}>
+                      {t('privacy.cookie_proximity_title') || "Alertes d'échanges de Proximité"}
+                    </div>
                     <div style={{ fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', marginTop: '2px' }}>
-                      Notifications lorsque de nouveaux trocs sont publiés près de chez vous.
+                      {t('privacy.cookie_proximity_desc') || "Notifications lorsque de nouveaux trocs sont publiés près de chez vous."}
                     </div>
                   </div>
                   <label style={{ position: 'relative', display: 'inline-block', width: '44px', height: '24px', cursor: 'pointer' }}>
@@ -428,20 +439,20 @@ export default function PrivacyCenterModal({
                 marginBottom: '20px',
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '800', fontSize: '14px', marginBottom: '4px' }}>
-                  <AlertTriangle size={18} color="#DC2626" /> Droit à l'effacement définitif (Art. 17 RGPD)
+                  <AlertTriangle size={18} color="#DC2626" /> {t('privacy.deletion_right_title') || "Droit à l'effacement définitif (Art. 17 RGPD)"}
                 </div>
                 <div style={{ fontSize: '12px', lineHeight: 1.6 }}>
-                  La suppression de votre compte est <strong>irréversible</strong>. Elle entraîne l'effacement immédiat de votre profil, de vos annonces actives, de vos jetons restants et la rupture de vos négociations en cours.
+                  {t('privacy.delete_account_warning') || "La suppression de votre compte est irréversible. Elle entraîne l'effacement immédiat de votre profil, de vos annonces actives, de vos jetons restants et la rupture de vos négociations en cours."}
                 </div>
               </div>
 
               <div style={{ marginBottom: '18px' }}>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: '800', marginBottom: '8px' }}>
-                  Pour confirmer, tapez le mot « SUPPRIMER » ci-dessous :
+                  {t('privacy.confirm_delete_phrase') || "Pour confirmer, tapez le mot « SUPPRIMER » ci-dessous :"}
                 </label>
                 <input
                   type="text"
-                  placeholder="Tapez SUPPRIMER"
+                  placeholder={t('privacy.delete_input_placeholder') || "Tapez SUPPRIMER"}
                   value={deleteConfirmationText}
                   onChange={(e) => { setDeleteConfirmationText(e.target.value); setDeleteError(''); }}
                   style={{
@@ -468,34 +479,34 @@ export default function PrivacyCenterModal({
                   style={{ width: '16px', height: '16px', accentColor: '#EF4444', cursor: 'pointer' }}
                 />
                 <label htmlFor="immediate-delete-check" style={{ fontSize: '12px', color: darkMode ? '#D1D5DB' : '#4B5563', cursor: 'pointer' }}>
-                  Suppression <strong>immédiate sans délai</strong> de rétractation de 30 jours (effacement immédiat irréversible).
+                  {t('privacy.immediate_delete_label') || "Suppression immédiate sans délai de rétractation de 30 jours (effacement immédiat irréversible)."}
                 </label>
               </div>
 
               <button
                 type="button"
                 onClick={handleConfirmDeleteAccount}
-                disabled={isDeleting || deleteConfirmationText.trim().toUpperCase() !== 'SUPPRIMER'}
+                disabled={isDeleting || !isDeleteConfirmed}
                 className="premium-button"
                 style={{
                   width: '100%',
                   padding: '16px',
                   borderRadius: '16px',
                   border: 'none',
-                  backgroundColor: deleteConfirmationText.trim().toUpperCase() === 'SUPPRIMER' ? '#EF4444' : (darkMode ? '#3D3530' : '#E8DDD3'),
+                  backgroundColor: isDeleteConfirmed ? '#EF4444' : (darkMode ? '#3D3530' : '#E8DDD3'),
                   color: '#FFF',
                   fontWeight: '800',
                   fontSize: '14px',
-                  cursor: (isDeleting || deleteConfirmationText.trim().toUpperCase() !== 'SUPPRIMER') ? 'not-allowed' : 'pointer',
+                  cursor: (isDeleting || !isDeleteConfirmed) ? 'not-allowed' : 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   gap: '8px',
-                  boxShadow: deleteConfirmationText.trim().toUpperCase() === 'SUPPRIMER' ? '0 10px 25px -5px rgba(239,68,68,0.4)' : 'none',
+                  boxShadow: isDeleteConfirmed ? '0 10px 25px -5px rgba(239,68,68,0.4)' : 'none',
                 }}
               >
                 <Trash2 size={18} />
-                {isDeleting ? 'Suppression en cours...' : 'Supprimer définitivement mon compte et mes données'}
+                {isDeleting ? (t('privacy.deleting_in_progress') || 'Suppression en cours...') : (t('privacy.delete_account_btn') || 'Supprimer définitivement mon compte et mes données')}
               </button>
             </div>
           )}

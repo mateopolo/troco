@@ -13,7 +13,7 @@
 > - `STEP BY STEP URGENT.txt` & `LISTE DES PROCHAINES FONCTIONNALITES A CODER.txt` (Backlog immédiat)
 > - `PROJECT_CONTEXT.md` & `TROCO_PROJECT_HISTORY.md` (Historique des décisions et géoprivacy)
 >
-> **Score global :** 8.0/10 | **Progression :** 44 / 74 tâches validées avec preuves formelles (59.5%)
+> **Score global :** 8.1/10 | **Progression :** 45 / 74 tâches validées avec preuves formelles (60.8%)
 
 ---
 
@@ -21,12 +21,12 @@
 
 | Phase | Fait | Restant | Progression |
 |---|---|---|---|
-| 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 25 | 0 | 100% |
+| 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 26 | 0 | 100% |
 | 🟡 Facile (Niveau 2 — 1h à 3h) | 8 | 8 | 50.0% |
 | 🟠 Moyen (Niveau 3 — 3h à 1 jour) | 8 | 7 | 53.3% |
 | 🔴 Difficile (Niveau 4 — 1 à 3 jours) | 3 | 7 | 30.0% |
 | 🚨 Très difficile (Niveau 5 — 3j à 2 sem) | 0 | 9 | 0.0% |
-| **TOTAL** | **44** | **30** | **59.5%** |
+| **TOTAL** | **45** | **29** | **60.8%** |
 
 
 ### Score par axe vs cible Licorne
@@ -148,6 +148,10 @@
 ### [x] [I18N-02] — Traduction des Catégories Explorer & Libellés Filtres (7 langues)
 **Preuve** : `src/utils/formatters.js:8-78`, `src/App.js:212,2206,3913`, `src/components/modals/FilterDrawer.jsx:26-37,120-125,148-154,204-225,283,290,307`, `src/data/translationsData.js:338-375`, `src/data/translationsSecondary.js:325-365,745-785,1165-1205,1585-1625,2005-2045,2425-2465`
 **Statut** : ✅ FAIT — Traduction complète des 13 catégories Explorer et de l'ensemble des libellés du tiroir de filtres (`FilterDrawer`) sur les 7 langues supportées (FR, EN, ES, IT, DE, JA, ZH). Correction de deux bugs critiques : (1) Bug A dans `formatters.js:8-78` : le switch aligne désormais les labels exacts de `categoriesData.js` incluant l'apostrophe typographique `Prêt d’Outillage & Équipements` ainsi que les identifiants techniques et objets passés. (2) Bug B dans `App.js:3913` : transmission explicite de `t` dans `{getCategoryLabel(category, t)}` et adaptation de la signature avec fallback dynamique `tFn = t` et localisation des `paymentLabels`. Ajout synchronisé des 20 clés i18n (`catAll`, `catSkills`, `catDiy`, `catTech`, `catTools`, `catVehicles`, `catHousing`, `catMedia`, `catServices`, `catWellness`, `catEvents`, `catFashion`, `catOther`, `results`, `everywhere`, `hideDemos`, `retributionType`, `radius`, `reset`, `apply`) sans avertissement ni régression de build.
+
+### [x] [I18N-04] — Internationalisation des Pages Légales & Plans Troco Plus (7 langues)
+**Preuve** : `src/components/LegalNotice.jsx:1-546`, `src/components/RefundPolicy.jsx:1-266`, `src/components/PrivacyCenterModal.jsx:1-350`, `src/utils/pricingEngine.js:1-240`, `src/data/legal/index.js:1-35`, `src/data/legal/legal-notice-{fr,en,es,it,de,ja,zh}.js`, `src/data/legal/refund-policy-{fr,en,es,it,de,ja,zh}.js`, `src/data/translationsData.js`, `src/data/translationsSecondary.js`
+**Statut** : ✅ FAIT — Modularisation complète des pages volumineuses `LegalNotice` et `RefundPolicy` via le découpage en 14 fichiers de données par langue sous `src/data/legal/` et chargement dynamique selon `currentLang`. Traduction intégrale des 3 onglets de `PrivacyCenterModal` (cookies, portabilité RGPD, suppression sécurisée) et des offres d'abonnement Troco Plus dans `pricingEngine.js` avec clés i18n dédiées (`TROCO_PLUS_BENEFIT_KEYS`, `name_key`, `desc_key`, `badge_key`, `period_key`) préservant les identifiants Stripe (`plus-essential`, `plus-pro`). Conformité A11Y et DSA vérifiée avec succès par les suites de tests unitaires (`Phase4LegalAndA11y`, `Phase141LegalCompliance`, `Phase119DynamicTranslationAndLanguageSync`). 0 avertissement eslint, 0 erreur de build.
 
 ---
 
