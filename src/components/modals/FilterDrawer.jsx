@@ -23,16 +23,19 @@ export default function FilterDrawer({
   hideDemos = false,
   setHideDemos,
   paymentOptions = ['all', 'credits', 'cash', 'troc', 'hybrid'],
-  paymentLabels = {
-    all: 'Tous',
-    credits: 'Crédits temps',
-    cash: 'Rémunéré (€)',
-    troc: 'Troc direct',
-    hybrid: 'Hybride'
-  },
+  paymentLabels,
   darkMode = false,
   t = (k) => k,
 }) {
+  const getPaymentLabel = (option) => {
+    if (paymentLabels && paymentLabels[option]) return paymentLabels[option];
+    if (option === 'all') return t('paymentAll') || t('all') || 'Tous';
+    if (option === 'credits') return t('paymentCredits') || 'Crédits temps';
+    if (option === 'cash') return t('paymentCash') || 'Rémunéré (€)';
+    if (option === 'troc') return t('paymentTroc') || 'Troc direct';
+    if (option === 'hybrid') return t('paymentHybrid') || 'Hybride';
+    return option;
+  };
   return (
     <AnimatePresence>
       {isOpen && (
@@ -117,8 +120,8 @@ export default function FilterDrawer({
           <Sparkles size={16} />
           <span>
             {isInfiniteRadius || radiusKm >= 100
-              ? `🎉 ${filteredListingsCount} annonces au total (Mode Infini & Visio)`
-              : `📍 ${filteredListingsCount} annonce${filteredListingsCount > 1 ? 's' : ''} disponible${filteredListingsCount > 1 ? 's' : ''} dans ${radiusKm} km`}
+              ? `🎉 ${filteredListingsCount} ${t('listingsTotalInfinite') || 'annonces au total (Mode Infini & Visio)'}`
+              : `📍 ${filteredListingsCount} ${filteredListingsCount > 1 ? (t('results') || 'annonces') : (t('result') || 'annonce')} ${filteredListingsCount > 1 ? (t('availablePlural') || 'disponibles') : (t('availableSingular') || 'disponible')} ${t('withinRadius') || 'dans'} ${radiusKm} km`}
           </span>
         </div>
 
@@ -128,7 +131,7 @@ export default function FilterDrawer({
             onClick={handleRequestGeolocation}
             disabled={isGeolocating}
             aria-pressed={isGeolocated}
-            aria-label={isGeolocated ? 'Désactiver ma position sécurisée' : 'Utiliser ma position'}
+            aria-label={isGeolocated ? (t('disableSecureLocation') || 'Désactiver ma position sécurisée') : (t('useMyLocation') || 'Utiliser ma position')}
             className="premium-button"
             style={{
               width: '100%',
@@ -147,7 +150,7 @@ export default function FilterDrawer({
             }}
           >
             <MapPin size={15} color={isGeolocated ? '#9CAF88' : '#C67D5B'} />
-            {isGeolocating ? 'Localisation...' : isGeolocated ? '📍 Position sécurisée active' : t('useMyLocation')}
+            {isGeolocating ? (t('geolocating') || 'Localisation...') : isGeolocated ? (t('secureLocationActive') || '📍 Position sécurisée active') : t('useMyLocation')}
           </button>
         </div>
 
@@ -200,7 +203,7 @@ export default function FilterDrawer({
 
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
           <div style={{ fontSize: '12px', color: darkMode ? '#FAF7F2' : '#3D3530', fontWeight: '800' }}>
-            {isInfiniteRadius || radiusKm >= 2000 ? '♾️ Infini (Monde entier)' : `📍 Jusqu'à ${radiusKm} km`}
+            {isInfiniteRadius || radiusKm >= 2000 ? `♾️ ${t('infiniteWorld') || 'Infini (Monde entier)'}` : `📍 ${(t('upToKm') || "Jusqu'à {km} km").replace('{km}', radiusKm)}`}
           </div>
           <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
             {[5, 25, 100, 500, 2000].map(preset => (
@@ -219,7 +222,7 @@ export default function FilterDrawer({
                   cursor: 'pointer'
                 }}
               >
-                {preset >= 2000 ? 'Monde' : `${preset}km`}
+                {preset >= 2000 ? (t('world') || 'Monde') : `${preset}km`}
               </button>
             ))}
           </div>
@@ -280,12 +283,12 @@ export default function FilterDrawer({
             onChange={(e) => setHideDemos?.(e.target.checked)}
             style={{ accentColor: '#C67D5B', width: '16px', height: '16px' }}
           />
-          Masquer les démos
+          {t('hideDemos') || 'Masquer les démos'}
         </label>
 
         {/* FILTRE MODE DE RÉTRIBUTION */}
         <label style={{ fontSize: '12px', fontWeight: '700', color: darkMode ? '#D4C5B5' : '#3D3530' }}>
-          Rétribution
+          {t('retributionType') || t('retribution') || 'Rétribution'}
         </label>
         <div role="group" aria-label="Filtres de rétribution" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
           {paymentOptions.map(option => (
@@ -304,7 +307,7 @@ export default function FilterDrawer({
                 cursor: 'pointer'
               }}
             >
-              {paymentLabels[option] || option}
+              {getPaymentLabel(option)}
             </button>
           ))}
         </div>

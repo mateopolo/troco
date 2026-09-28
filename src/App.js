@@ -209,7 +209,7 @@ export default function App() {
     i18n
   }), [currentLang, setLang, t, i18n]);
 
-  const getCategoryLabel = useCallback((categoryKey) => getCategoryLabelUtil(categoryKey, t), [t]);
+  const getCategoryLabel = useCallback((categoryKey, tFn = t) => getCategoryLabelUtil(categoryKey, tFn || t), [t]);
   const formatStatus = useCallback((st) => formatStatusUtil(st, t), [t]);
   // Stable : ne dépend que de currentLang, jamais de l'objet profile
   const formatTokenCount = useCallback((count, lang = currentLang) => formatTokenCountUtil(count, lang), [currentLang]);
@@ -2203,7 +2203,7 @@ export default function App() {
   };
 
   const paymentOptions = ['all', 'credits', 'cash', 'troc', 'hybrid'];
-  const paymentLabels = { all: 'Tous', credits: 'Crédits', cash: 'Cash', troc: 'Troc', hybrid: 'Hybride' };
+  const paymentLabels = { all: t('paymentAll') || t('all') || 'Tous', credits: t('paymentCredits') || 'Crédits', cash: t('paymentCash') || 'Cash', troc: t('paymentTroc') || 'Troc', hybrid: t('paymentHybrid') || 'Hybride' };
 
   const [listings, setListings] = useState(() => {
     try {
@@ -3910,7 +3910,7 @@ export default function App() {
                                 cursor: 'pointer'
                               }}
                             >
-                              {getCategoryLabel(category)}
+                              {getCategoryLabel(category, t)}
                             </button>
                           );
                         })}

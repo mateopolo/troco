@@ -13,7 +13,7 @@
 > - `STEP BY STEP URGENT.txt` & `LISTE DES PROCHAINES FONCTIONNALITES A CODER.txt` (Backlog immédiat)
 > - `PROJECT_CONTEXT.md` & `TROCO_PROJECT_HISTORY.md` (Historique des décisions et géoprivacy)
 >
-> **Score global :** 7.8/10 | **Progression :** 42 / 74 tâches validées avec preuves formelles (56.8%)
+> **Score global :** 7.9/10 | **Progression :** 43 / 74 tâches validées avec preuves formelles (58.1%)
 
 ---
 
@@ -21,12 +21,12 @@
 
 | Phase | Fait | Restant | Progression |
 |---|---|---|---|
-| 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 23 | 1 | 95.8% |
+| 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 24 | 0 | 100% |
 | 🟡 Facile (Niveau 2 — 1h à 3h) | 8 | 8 | 50.0% |
 | 🟠 Moyen (Niveau 3 — 3h à 1 jour) | 8 | 7 | 53.3% |
 | 🔴 Difficile (Niveau 4 — 1 à 3 jours) | 3 | 7 | 30.0% |
 | 🚨 Très difficile (Niveau 5 — 3j à 2 sem) | 0 | 9 | 0.0% |
-| **TOTAL** | **42** | **32** | **56.8%** |
+| **TOTAL** | **43** | **31** | **58.1%** |
 
 
 ### Score par axe vs cible Licorne
@@ -140,6 +140,10 @@
 ### [x] [UX-02] — Backdrop sombre et flouté uniforme (bg-black/60 + blur 16px) sur TOUTES les modales
 **Preuve** : `src/components/ui/modalBackdrop.js:1-19`, `src/components/ui/UniversalModal.jsx:136-146`, `src/App.js:3220-3232`, `src/components/ListingDetailModal.jsx:139-147`, `src/components/CguModal.jsx:159-166`, `src/components/modals/CguConsentModal.jsx:26-38`, `src/components/PrivacyCenterModal.jsx:134-142`, `src/components/PaymentModal.jsx:144-152`, `src/components/TransactionsHistoryModal.jsx:45-53`, `src/components/DesignStudioModal.jsx:234-245`, `src/components/DealRatingModal.jsx:105-115`, `src/components/ProjectRewardsModal.jsx:54-62`, `src/components/ProjectWorkspaceToolsModal.jsx:42-50`, `src/components/PublishSuccessModal.jsx:42-50`, `src/features/post/PostListingFeature.jsx:315-325`, `src/components/SharedDocumentModal.jsx:152-160`, `src/components/ChatView.jsx:1678,2127,2493`, `src/components/Phase138ModalBackdropUniformityUX02.test.js:1-110`
 **Statut** : ✅ FAIT — Standardisation absolue de l'overlay de fond de toutes les modales, tiroirs et fenêtres flottantes de l'application via le module central `src/components/ui/modalBackdrop.js` (`BACKDROP_CLASSNAME = 'fixed inset-0 bg-black/60 backdrop-blur-lg'`, `BACKDROP_STYLE = { backgroundColor: 'rgba(0, 0, 0, 0.6)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }`). Éradication totale de l'effet "superposition de cartes" : le flux d'annonces et l'arrière-plan deviennent 100% illisibles avec un contraste noir profond et un flou gaussien 16px renforcé. Harmonisation d'`UniversalModal` et migration systématique de tous les composants modaux hors-UniversalModal avec élévation des z-index inférieurs (`DesignStudioModal` 9999 → 99999, `confirmDeleteChat` 9999 → 999999).
+
+### [x] [I18N-02] — Traduction des Catégories Explorer & Libellés Filtres (7 langues)
+**Preuve** : `src/utils/formatters.js:8-78`, `src/App.js:212,2206,3913`, `src/components/modals/FilterDrawer.jsx:26-37,120-125,148-154,204-225,283,290,307`, `src/data/translationsData.js:338-375`, `src/data/translationsSecondary.js:325-365,745-785,1165-1205,1585-1625,2005-2045,2425-2465`
+**Statut** : ✅ FAIT — Traduction complète des 13 catégories Explorer et de l'ensemble des libellés du tiroir de filtres (`FilterDrawer`) sur les 7 langues supportées (FR, EN, ES, IT, DE, JA, ZH). Correction de deux bugs critiques : (1) Bug A dans `formatters.js:8-78` : le switch aligne désormais les labels exacts de `categoriesData.js` incluant l'apostrophe typographique `Prêt d’Outillage & Équipements` ainsi que les identifiants techniques et objets passés. (2) Bug B dans `App.js:3913` : transmission explicite de `t` dans `{getCategoryLabel(category, t)}` et adaptation de la signature avec fallback dynamique `tFn = t` et localisation des `paymentLabels`. Ajout synchronisé des 20 clés i18n (`catAll`, `catSkills`, `catDiy`, `catTech`, `catTools`, `catVehicles`, `catHousing`, `catMedia`, `catServices`, `catWellness`, `catEvents`, `catFashion`, `catOther`, `results`, `everywhere`, `hideDemos`, `retributionType`, `radius`, `reset`, `apply`) sans avertissement ni régression de build.
 
 ---
 

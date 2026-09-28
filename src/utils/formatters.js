@@ -7,20 +7,76 @@ const defaultT = (key, lang = 'FR') => (translations[lang] && translations[lang]
  */
 export const getCategoryLabel = (categoryKey, t = (k) => defaultT(k, 'FR')) => {
   if (!categoryKey) return '';
-  if (categoryKey === 'Tous' || categoryKey === 'all') return t('all');
-  if (categoryKey === 'Cours/Compétences' || categoryKey === 'Cours & Compétences' || categoryKey === 'catSkills') return t('catSkills');
-  if (categoryKey === 'Outillage' || categoryKey === 'Prêt de Matériel' || categoryKey === "Prêt d'Outillage & Équipements" || categoryKey === 'catTools') return t('catTools');
-  if (categoryKey === 'Services/Dépannage' || categoryKey === 'Services & Dépannage' || categoryKey === 'catServices') return t('catServices');
-  if (categoryKey === 'Logement/Swap' || categoryKey === 'Logement & Stay Swap' || categoryKey === 'catHousing') return t('catHousing');
-  if (categoryKey === 'Bricolage, Travaux & Jardin' || categoryKey === 'Bricolage' || categoryKey === 'catDiy') return t('catDiy');
-  if (categoryKey === 'Tech, Digital & Bureautique' || categoryKey === 'Tech' || categoryKey === 'catTech') return t('catTech');
-  if (categoryKey === 'Véhicules & Mobilité' || categoryKey === 'Véhicules' || categoryKey === 'catVehicles') return t('catVehicles');
-  if (categoryKey === 'Autre domaine (personnalisé)' || categoryKey === 'Autre' || categoryKey === 'catOther') return t('catOther');
-  if (categoryKey === 'Audiovisuel, Photo & Son' || categoryKey === 'catMedia') return t('catMedia');
-  if (categoryKey === 'Santé, Sport & Bien-être' || categoryKey === 'catWellness') return t('catWellness');
-  if (categoryKey === 'Événements & Matériel de fête' || categoryKey === 'catEvents') return t('catEvents');
-  if (categoryKey === 'Mode, Beauté & Accessoires' || categoryKey === 'catFashion') return t('catFashion');
-  return categoryKey;
+  const key = typeof categoryKey === 'object' && categoryKey !== null
+    ? (categoryKey.id || categoryKey.label || '')
+    : categoryKey;
+
+  if (key === 'Tous' || key === 'all' || key === 'Toutes catégories' || key === 'catAll' || key === 'allCategories') {
+    return t('catAll') || t('allCategories') || t('all');
+  }
+  if (key === 'Cours/Compétences' || key === 'Cours & Compétences' || key === 'skills' || key === 'catSkills') {
+    return t('catSkills');
+  }
+  if (
+    key === 'Outillage' ||
+    key === 'Prêt de Matériel' ||
+    key === "Prêt d'Outillage & Équipements" ||
+    key === 'Prêt d’Outillage & Équipements' ||
+    key === "Prêt d'outillage & Matériel" ||
+    key === 'tools' ||
+    key === 'catTools'
+  ) {
+    return t('catTools');
+  }
+  if (
+    key === 'Services/Dépannage' ||
+    key === 'Services & Dépannage' ||
+    key === 'Services à la personne & Entraide' ||
+    key === 'services' ||
+    key === 'catServices'
+  ) {
+    return t('catServices');
+  }
+  if (
+    key === 'Logement/Swap' ||
+    key === 'Logement & Stay Swap' ||
+    key === 'Logement, Espaces & Stay Swap' ||
+    key === 'housing' ||
+    key === 'catHousing'
+  ) {
+    return t('catHousing');
+  }
+  if (key === 'Bricolage, Travaux & Jardin' || key === 'Bricolage' || key === 'diy' || key === 'catDiy') {
+    return t('catDiy');
+  }
+  if (key === 'Tech, Digital & Bureautique' || key === 'Tech' || key === 'tech' || key === 'catTech') {
+    return t('catTech');
+  }
+  if (key === 'Véhicules & Mobilité' || key === 'Véhicules' || key === 'vehicles' || key === 'catVehicles') {
+    return t('catVehicles');
+  }
+  if (
+    key === 'Autre domaine (personnalisé)' ||
+    key === 'Autre / Domaine personnalisé' ||
+    key === 'Autre' ||
+    key === 'other' ||
+    key === 'catOther'
+  ) {
+    return t('catOther');
+  }
+  if (key === 'Audiovisuel, Photo & Son' || key === 'media' || key === 'catMedia') {
+    return t('catMedia');
+  }
+  if (key === 'Santé, Sport & Bien-être' || key === 'wellness' || key === 'catWellness') {
+    return t('catWellness');
+  }
+  if (key === 'Événements & Matériel de fête' || key === 'events' || key === 'catEvents') {
+    return t('catEvents');
+  }
+  if (key === 'Mode, Beauté & Accessoires' || key === 'fashion' || key === 'catFashion') {
+    return t('catFashion');
+  }
+  return key;
 };
 
 /**
