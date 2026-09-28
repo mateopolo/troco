@@ -14,6 +14,7 @@ import {
 import { doc, setDoc, updateDoc, onSnapshot, serverTimestamp, collection, addDoc } from 'firebase/firestore';
 import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from '../firebase';
+import { useLanguage } from '../contexts/LanguageContext';
 
 // Squelette local sécurisé par défaut garantissant zéro crash
 const defaultDoc = {
@@ -232,6 +233,7 @@ function CloudOfficeSuiteModalContent({
   onSendToChat = null,
   handleSendMessage = null,
 }) {
+  const { t } = useLanguage();
   const effectiveDoc = propDoc || propDocAlias || note || documentData || defaultDoc;
   const effectiveGroupId = String(groupId?.id || groupId || 'demo_group_office');
   const effectiveDocId = String(documentId || docId || effectiveDoc?.id || effectiveDoc?.documentId || `doc_${effectiveGroupId}_office`);
@@ -1344,10 +1346,10 @@ function CloudOfficeSuiteModalContent({
                 cursor: 'pointer',
                 outline: 'none',
               }}
-              title="Fermer"
+              title={t('office.close') || "Fermer"}
             >
               <X size={15} />
-              <span>Fermer</span>
+              <span>{t('office.close') || "Fermer"}</span>
             </button>
 
             {/* SÉLECTEUR D'ONGLETS GLASSMORPHISM AU CENTRE (PILULE : Docs, Sheets, Slides, Notes) */}
@@ -1396,7 +1398,7 @@ function CloudOfficeSuiteModalContent({
                 }}
               >
                 <FileText size={15} />
-                <span>Troco Docs</span>
+                <span>{t('office.tab_docs') || "Troco Docs"}</span>
               </button>
 
               {/* 2. Troco Sheets */}
@@ -1427,7 +1429,7 @@ function CloudOfficeSuiteModalContent({
                 }}
               >
                 <Table size={15} />
-                <span>Troco Sheets</span>
+                <span>{t('office.tab_sheets') || "Troco Sheets"}</span>
               </button>
 
               {/* 3. Troco Slides */}
@@ -1458,7 +1460,7 @@ function CloudOfficeSuiteModalContent({
                 }}
               >
                 <Presentation size={15} />
-                <span>Troco Slides</span>
+                <span>{t('office.tab_slides') || "Troco Slides"}</span>
               </button>
 
               {/* 4. Troco Notes */}
@@ -1489,7 +1491,7 @@ function CloudOfficeSuiteModalContent({
                 }}
               >
                 <StickyNote size={15} />
-                <span>Troco Notes</span>
+                <span>{t('office.tab_notes') || "Troco Notes"}</span>
               </button>
 
               {/* 5. Versions / Historique */}
@@ -1518,10 +1520,10 @@ function CloudOfficeSuiteModalContent({
                   whiteSpace: 'nowrap',
                   outline: 'none',
                 }}
-                title="Historique des versions"
+                title={t('office.history_title') || "Historique des versions"}
               >
                 <History size={15} />
-                <span>Versions ({versionHistory.length})</span>
+                <span>{t('office.tab_history') || "Versions"} ({versionHistory.length})</span>
               </button>
             </div>
 
@@ -1579,7 +1581,11 @@ function CloudOfficeSuiteModalContent({
                         : '#10B981',
                     }}
                   />
-                  {saveStatus}
+                  {saveStatus.includes('Sauvegarde')
+                    ? (t('office.status_saving') || 'Sauvegarde en cours...')
+                    : saveStatus.includes('hors-ligne')
+                    ? (t('office.status_offline') || 'Mode hors-ligne')
+                    : (t('office.status_synced') || 'Synchronisé en direct 🟢')}
                 </span>
               </div>
 
@@ -1605,10 +1611,10 @@ function CloudOfficeSuiteModalContent({
                   outline: 'none',
                   flexShrink: 0,
                 }}
-                title="Partager au chat"
+                title={t('office.share_title') || "Partager au chat"}
               >
                 <Share2 size={15} />
-                <span>{isSendingToChat ? 'Envoi...' : 'Partager au Chat'}</span>
+                <span>{isSendingToChat ? (t('office.sharing') || 'Envoi...') : (t('office.share_to_chat') || 'Partager au Chat')}</span>
               </button>
             </div>
           </div>
@@ -1654,7 +1660,7 @@ function CloudOfficeSuiteModalContent({
                     setDocTitle(e.target.value);
                     saveDocToFirestore(docContent, e.target.value);
                   }}
-                  placeholder="Titre du document..."
+                  placeholder={t('office.doc_placeholder') || "Titre du document..."}
                   className="w-full bg-transparent border-0 outline-none font-bold text-sm sm:text-base min-w-0 text-slate-800 dark:text-slate-100"
                   style={{ color: 'var(--text-main)' }}
                 />
@@ -1668,7 +1674,7 @@ function CloudOfficeSuiteModalContent({
                     setSheetTitle(val);
                     saveSheetToFirestore(sheetData || {}, val);
                   }}
-                  placeholder="Titre de la feuille de calcul..."
+                  placeholder={t('office.sheet_placeholder') || "Titre de la feuille de calcul..."}
                   className="w-full bg-transparent border-0 outline-none font-bold text-sm sm:text-base min-w-0 text-slate-800 dark:text-slate-100"
                   style={{ color: 'var(--text-main)' }}
                 />
@@ -1682,7 +1688,7 @@ function CloudOfficeSuiteModalContent({
                     setSlidesTitle(val);
                     saveSlidesToFirestore(slides || DEFAULT_SLIDES, val);
                   }}
-                  placeholder="Titre de la présentation..."
+                  placeholder={t('office.slides_placeholder') || "Titre de la présentation..."}
                   className="w-full bg-transparent border-0 outline-none font-bold text-sm sm:text-base min-w-0 text-slate-800 dark:text-slate-100"
                   style={{ color: 'var(--text-main)' }}
                 />
@@ -1696,16 +1702,29 @@ function CloudOfficeSuiteModalContent({
                     setNotesTitle(val);
                     saveNotesToFirestore(notesContent || '', val);
                   }}
-                  placeholder="Titre de la note..."
+                  placeholder={t('office.notes_placeholder') || "Titre de la note..."}
                   className="w-full bg-transparent border-0 outline-none font-bold text-sm sm:text-base min-w-0 text-slate-800 dark:text-slate-100"
                   style={{ color: 'var(--text-main)' }}
                 />
               )}
               {activeTab === 'history' && (
                 <span className="font-bold text-sm sm:text-base text-slate-800 dark:text-slate-100 truncate" style={{ color: 'var(--text-main)' }}>
-                  Historique des versions
+                  {t('office.history_title') || "Historique des versions"}
                 </span>
               )}
+            </div>
+
+            {/* BARRE DE MENUS BUREAU (FILE, EDIT, VIEW, INSERT, FORMAT, TOOLS) */}
+            <div
+              className="hidden lg:flex items-center gap-3 text-xs font-semibold px-2 shrink-0 select-none"
+              style={{ color: darkMode ? '#A8998C' : '#6B705C' }}
+            >
+              <span className="cursor-pointer hover:underline transition-opacity hover:opacity-80">{t('office.menu_file') || 'Fichier'}</span>
+              <span className="cursor-pointer hover:underline transition-opacity hover:opacity-80">{t('office.menu_edit') || 'Édition'}</span>
+              <span className="cursor-pointer hover:underline transition-opacity hover:opacity-80">{t('office.menu_view') || 'Affichage'}</span>
+              <span className="cursor-pointer hover:underline transition-opacity hover:opacity-80">{t('office.menu_insert') || 'Insertion'}</span>
+              <span className="cursor-pointer hover:underline transition-opacity hover:opacity-80">{t('office.menu_format') || 'Format'}</span>
+              <span className="cursor-pointer hover:underline transition-opacity hover:opacity-80">{t('office.menu_tools') || 'Outils'}</span>
             </div>
 
             {/* Exports, Impression & Outils : CONTENEUR STRICTEMENT SÉCURISÉ NE DÉBORDANT PAS À DROITE */}
@@ -1717,7 +1736,7 @@ function CloudOfficeSuiteModalContent({
                     onClick={handleDownloadPDF}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-black/10 dark:border-white/10 transition-colors cursor-pointer whitespace-nowrap shrink-0"
                     style={{ color: 'var(--text-main)' }}
-                    title="Exporter en PDF imprimable"
+                    title={t('office.export_pdf') || "Exporter en PDF imprimable"}
                   >
                     <Download size={13} />
                     <span>PDF</span>
@@ -1727,7 +1746,7 @@ function CloudOfficeSuiteModalContent({
                     onClick={handleDownloadDOCX}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-black/10 dark:border-white/10 transition-colors cursor-pointer whitespace-nowrap shrink-0"
                     style={{ color: 'var(--text-main)' }}
-                    title="Exporter au format Word (.docx)"
+                    title={t('office.export_docx') || "Exporter au format Word (.docx)"}
                   >
                     <Download size={13} />
                     <span>DOCX</span>
@@ -1742,7 +1761,7 @@ function CloudOfficeSuiteModalContent({
                     onClick={handleDownloadXLSX}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-black/10 dark:border-white/10 transition-colors cursor-pointer whitespace-nowrap shrink-0"
                     style={{ color: 'var(--text-main)' }}
-                    title="Exporter au format Excel (.xlsx)"
+                    title={t('office.export_xlsx') || "Exporter au format Excel (.xlsx)"}
                   >
                     <Download size={13} />
                     <span>XLSX</span>
@@ -1752,7 +1771,7 @@ function CloudOfficeSuiteModalContent({
                     onClick={handleDownloadCSV}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-black/10 dark:border-white/10 transition-colors cursor-pointer whitespace-nowrap shrink-0"
                     style={{ color: 'var(--text-main)' }}
-                    title="Exporter en CSV"
+                    title={t('office.export_csv') || "Exporter en CSV"}
                   >
                     <Download size={13} />
                     <span>CSV</span>
@@ -1766,7 +1785,7 @@ function CloudOfficeSuiteModalContent({
                   onClick={handleDownloadPPTX}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-black/10 dark:border-white/10 transition-colors cursor-pointer whitespace-nowrap shrink-0"
                   style={{ color: 'var(--text-main)' }}
-                  title="Exporter au format PowerPoint (.pptx)"
+                  title={t('office.export_pptx') || "Exporter au format PowerPoint (.pptx)"}
                 >
                   <Download size={13} />
                   <span>PPTX</span>
@@ -1787,7 +1806,7 @@ function CloudOfficeSuiteModalContent({
                   }}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-black/10 dark:border-white/10 transition-colors cursor-pointer whitespace-nowrap shrink-0"
                   style={{ color: 'var(--text-main)' }}
-                  title="Exporter la note en Markdown (.md)"
+                  title={t('office.export_md') || "Exporter la note en Markdown (.md)"}
                 >
                   <Download size={13} />
                   <span>MD</span>
@@ -1799,7 +1818,7 @@ function CloudOfficeSuiteModalContent({
                 onClick={handleDownloadPDF}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-black/5 dark:bg-white/5 hover:bg-black/10 dark:hover:bg-white/10 border border-black/10 dark:border-white/10 transition-colors cursor-pointer whitespace-nowrap shrink-0"
                 style={{ color: 'var(--text-main)' }}
-                title="Imprimer le document"
+                title={t('office.print') || "Imprimer le document"}
               >
                 <Printer size={13} />
                 <span>Imprimer</span>
@@ -1843,7 +1862,7 @@ function CloudOfficeSuiteModalContent({
                   cursor: 'pointer',
                   outline: 'none',
                 }}
-                title="Style de paragraphe"
+                title={t('office.paragraph_style') || "Style de paragraphe"}
               >
                 <option value="<p>">Normal</option>
                 <option value="<h1>">Titre 1 (H1)</option>
@@ -1866,7 +1885,7 @@ function CloudOfficeSuiteModalContent({
                   cursor: 'pointer',
                   outline: 'none',
                 }}
-                title="Police de caractères"
+                title={t('office.font_family') || "Police de caractères"}
               >
                 <option value="Inter, sans-serif">Inter</option>
                 <option value="Arial, sans-serif">Arial</option>
@@ -1892,7 +1911,7 @@ function CloudOfficeSuiteModalContent({
                   cursor: 'pointer',
                   outline: 'none',
                 }}
-                title="Taille de police"
+                title={t('office.font_size') || "Taille de police"}
               >
                 <option value="1">10px - Très petit</option>
                 <option value="2">12px - Petit</option>
@@ -1912,7 +1931,7 @@ function CloudOfficeSuiteModalContent({
                 onClick={() => formatText('bold')}
                 className="hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
                 style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-main)' }}
-                title="Gras (Ctrl+B)"
+                title={t('office.bold') || "Gras (Ctrl+B)"}
               >
                 <Bold size={14} />
               </button>
@@ -1922,7 +1941,7 @@ function CloudOfficeSuiteModalContent({
                 onClick={() => formatText('italic')}
                 className="hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
                 style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-main)' }}
-                title="Italique (Ctrl+I)"
+                title={t('office.italic') || "Italique (Ctrl+I)"}
               >
                 <Italic size={14} />
               </button>
@@ -1932,7 +1951,7 @@ function CloudOfficeSuiteModalContent({
                 onClick={() => formatText('underline')}
                 className="hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
                 style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-main)' }}
-                title="Souligné (Ctrl+U)"
+                title={t('office.underline') || "Souligné (Ctrl+U)"}
               >
                 <Underline size={14} />
               </button>
@@ -1942,7 +1961,7 @@ function CloudOfficeSuiteModalContent({
                 onClick={() => formatText('strikeThrough')}
                 className="hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
                 style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-main)' }}
-                title="Barré"
+                title={t('office.strikethrough') || "Barré"}
               >
                 <Strikethrough size={14} />
               </button>
@@ -1953,7 +1972,7 @@ function CloudOfficeSuiteModalContent({
               <label
                 onMouseDown={(e) => e.preventDefault()}
                 style={{ display: 'flex', alignItems: 'center', gap: '2px', cursor: 'pointer', padding: '2px 4px', borderRadius: '4px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)' }}
-                title="Couleur du texte"
+                title={t('office.text_color') || "Couleur du texte"}
               >
                 <Baseline size={13} style={{ color: 'var(--text-main)' }} />
                 <input
@@ -1967,7 +1986,7 @@ function CloudOfficeSuiteModalContent({
               <label
                 onMouseDown={(e) => e.preventDefault()}
                 style={{ display: 'flex', alignItems: 'center', gap: '2px', cursor: 'pointer', padding: '2px 4px', borderRadius: '4px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)' }}
-                title="Couleur de surlignage"
+                title={t('office.highlight_color') || "Couleur de surlignage"}
               >
                 <Highlighter size={13} style={{ color: 'var(--text-main)' }} />
                 <input
@@ -1987,7 +2006,7 @@ function CloudOfficeSuiteModalContent({
                 onClick={() => formatText('justifyLeft')}
                 className="hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
                 style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-main)' }}
-                title="Aligner à gauche"
+                title={t('office.align_left') || "Aligner à gauche"}
               >
                 <AlignLeft size={14} />
               </button>
@@ -1997,7 +2016,7 @@ function CloudOfficeSuiteModalContent({
                 onClick={() => formatText('justifyCenter')}
                 className="hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
                 style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-main)' }}
-                title="Centrer"
+                title={t('office.align_center') || "Centrer"}
               >
                 <AlignCenter size={14} />
               </button>
@@ -2007,7 +2026,7 @@ function CloudOfficeSuiteModalContent({
                 onClick={() => formatText('justifyRight')}
                 className="hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
                 style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-main)' }}
-                title="Aligner à droite"
+                title={t('office.align_right') || "Aligner à droite"}
               >
                 <AlignRight size={14} />
               </button>
@@ -2017,7 +2036,7 @@ function CloudOfficeSuiteModalContent({
                 onClick={() => formatText('justifyFull')}
                 className="hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
                 style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-main)' }}
-                title="Justifier"
+                title={t('office.align_justify') || "Justifier"}
               >
                 <AlignJustify size={14} />
               </button>
@@ -2031,7 +2050,7 @@ function CloudOfficeSuiteModalContent({
                 onClick={() => formatText('insertUnorderedList')}
                 className="hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
                 style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-main)' }}
-                title="Liste à puces"
+                title={t('office.bullet_list') || "Liste à puces"}
               >
                 <List size={14} />
               </button>
@@ -2041,7 +2060,7 @@ function CloudOfficeSuiteModalContent({
                 onClick={() => formatText('insertOrderedList')}
                 className="hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
                 style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-main)' }}
-                title="Liste numérotée"
+                title={t('office.numbered_list') || "Liste numérotée"}
               >
                 <ListOrdered size={14} />
               </button>
@@ -2055,7 +2074,7 @@ function CloudOfficeSuiteModalContent({
                 onClick={() => formatText('undo')}
                 className="hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
                 style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-main)' }}
-                title="Annuler (Ctrl+Z)"
+                title={t('office.undo') || "Annuler (Ctrl+Z)"}
               >
                 <Undo size={14} />
               </button>
@@ -2065,7 +2084,7 @@ function CloudOfficeSuiteModalContent({
                 onClick={() => formatText('redo')}
                 className="hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
                 style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-main)' }}
-                title="Rétablir (Ctrl+Y)"
+                title={t('office.redo') || "Rétablir (Ctrl+Y)"}
               >
                 <Redo size={14} />
               </button>
@@ -2075,7 +2094,7 @@ function CloudOfficeSuiteModalContent({
                 onClick={() => formatText('removeFormat')}
                 className="hover:bg-gray-100 dark:hover:bg-white/10 transition-colors"
                 style={{ border: 'none', background: 'transparent', borderRadius: '4px', padding: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: 'var(--text-main)' }}
-                title="Effacer le formatage"
+                title={t('office.clear_formatting') || "Effacer le formatage"}
               >
                 <RemoveFormatting size={14} />
               </button>
@@ -2095,7 +2114,7 @@ function CloudOfficeSuiteModalContent({
                   cursor: 'pointer',
                   marginLeft: 'auto',
                 }}
-                title="Exporter en Markdown (.md)"
+                title={t('office.export_md') || "Exporter en Markdown (.md)"}
               >
                 Export .md
               </button>

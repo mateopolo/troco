@@ -5,6 +5,7 @@
 
 import React, { useRef } from 'react';
 import CloudOfficeSuiteModal from './CloudOfficeSuiteModal';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const defaultDoc = {
   title: 'Nouveau Document',
@@ -21,8 +22,10 @@ export function TrocoDocsEditor({
   content = '',
   onInput = () => {},
   onChange = () => {},
-  placeholder = "Rédigez ici vos comptes-rendus, spécifications et notes collaboratives...",
+  placeholder = null,
 }) {
+  const { t } = useLanguage();
+  const effectivePlaceholder = placeholder || t('office.docs_placeholder') || "Rédigez ici vos comptes-rendus, spécifications et notes collaboratives...";
   const localRef = useRef(null);
   const editorRef = externalEditorRef || localRef;
 
@@ -43,7 +46,7 @@ export function TrocoDocsEditor({
         ref={editorRef}
         contentEditable
         suppressContentEditableWarning
-        placeholder={placeholder}
+        placeholder={effectivePlaceholder}
         onInput={onInput}
         onChange={onChange}
         className="w-full max-w-[21cm] min-h-[29.7cm] mx-auto bg-white text-black p-[2cm] shadow-xl outline-none focus:ring-2 focus:ring-[var(--accent-primary)]/50 transition-shadow shrink-0"
@@ -53,10 +56,12 @@ export function TrocoDocsEditor({
 }
 
 export default function TrocoDocs(props) {
-  // 🚨 PHASE 103 : La première ligne du composant DOIT être if (!isOpen) return null;
+  const { t } = useLanguage();
+  const editorRef = useRef(null);
+
+  // 🚨 PHASE 103 : La première ligne effective après les hooks DOIT être if (!props?.isOpen) return null;
   if (!props?.isOpen) return null;
 
-  const editorRef = useRef(null);
   const safeProps = props || {};
   const documentData = safeProps.document || safeProps.documentData || defaultDoc;
   // 🚨 PHASE 103 : Initialisation avec fallback sécurisé
@@ -82,7 +87,7 @@ export default function TrocoDocs(props) {
       document={documentData}
       documentData={documentData}
       content={content}
-      projectTitle={safeProps.projectTitle || documentData?.title || defaultDoc.title}
+      projectTitle={safeProps.projectTitle || documentData?.title || t('office.default_doc_title') || defaultDoc.title}
       currentUser={safeProps.currentUser || { name: 'Moi', uid: 'me' }}
       darkMode={Boolean(safeProps.darkMode)}
       initialTab={safeProps.initialTab || 'docs'}

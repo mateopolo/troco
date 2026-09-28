@@ -13,7 +13,7 @@
 > - `STEP BY STEP URGENT.txt` & `LISTE DES PROCHAINES FONCTIONNALITES A CODER.txt` (Backlog immédiat)
 > - `PROJECT_CONTEXT.md` & `TROCO_PROJECT_HISTORY.md` (Historique des décisions et géoprivacy)
 >
-> **Score global :** 8.1/10 | **Progression :** 45 / 74 tâches validées avec preuves formelles (60.8%)
+> **Score global :** 8.2/10 | **Progression :** 46 / 74 tâches validées avec preuves formelles (62.2%)
 
 ---
 
@@ -21,12 +21,12 @@
 
 | Phase | Fait | Restant | Progression |
 |---|---|---|---|
-| 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 26 | 0 | 100% |
+| 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 27 | 0 | 100% |
 | 🟡 Facile (Niveau 2 — 1h à 3h) | 8 | 8 | 50.0% |
 | 🟠 Moyen (Niveau 3 — 3h à 1 jour) | 8 | 7 | 53.3% |
 | 🔴 Difficile (Niveau 4 — 1 à 3 jours) | 3 | 7 | 30.0% |
 | 🚨 Très difficile (Niveau 5 — 3j à 2 sem) | 0 | 9 | 0.0% |
-| **TOTAL** | **45** | **29** | **60.8%** |
+| **TOTAL** | **46** | **28** | **62.2%** |
 
 
 ### Score par axe vs cible Licorne
@@ -152,6 +152,10 @@
 ### [x] [I18N-04] — Internationalisation des Pages Légales & Plans Troco Plus (7 langues)
 **Preuve** : `src/components/LegalNotice.jsx:1-546`, `src/components/RefundPolicy.jsx:1-266`, `src/components/PrivacyCenterModal.jsx:1-350`, `src/utils/pricingEngine.js:1-240`, `src/data/legal/index.js:1-35`, `src/data/legal/legal-notice-{fr,en,es,it,de,ja,zh}.js`, `src/data/legal/refund-policy-{fr,en,es,it,de,ja,zh}.js`, `src/data/translationsData.js`, `src/data/translationsSecondary.js`
 **Statut** : ✅ FAIT — Modularisation complète des pages volumineuses `LegalNotice` et `RefundPolicy` via le découpage en 14 fichiers de données par langue sous `src/data/legal/` et chargement dynamique selon `currentLang`. Traduction intégrale des 3 onglets de `PrivacyCenterModal` (cookies, portabilité RGPD, suppression sécurisée) et des offres d'abonnement Troco Plus dans `pricingEngine.js` avec clés i18n dédiées (`TROCO_PLUS_BENEFIT_KEYS`, `name_key`, `desc_key`, `badge_key`, `period_key`) préservant les identifiants Stripe (`plus-essential`, `plus-pro`). Conformité A11Y et DSA vérifiée avec succès par les suites de tests unitaires (`Phase4LegalAndA11y`, `Phase141LegalCompliance`, `Phase119DynamicTranslationAndLanguageSync`). 0 avertissement eslint, 0 erreur de build.
+
+### [x] [I18N-05] — Réactivité UGC du Feed & Traduction CloudOfficeSuite (7 langues)
+**Preuve** : `src/components/FeedCardItem.jsx:13,67-68,580-605`, `src/components/CloudOfficeSuiteModal.jsx:234,1315-1325,1380-1415,1455-1470,1540-1560,1860-2120`, `src/components/TrocoDocs.jsx:8,27-28,59,90`, `src/components/TrocoSheets.jsx:8,57,85`, `src/components/TrocoSlides.jsx:8,57,85`, `src/data/translationsData.js`, `src/data/translationsSecondary.js`
+**Statut** : ✅ FAIT — Résolution du bug critique bloquant le re-render des cartes de l'Activity Feed lors d'un basculement de langue : (1) Connexion directe de `useLanguage()` dans `FeedCardItem.jsx` avec fallback synchronisé `propLang || contextLang || 'FR'`, et refonte du comparateur personnalisé `areFeedCardPropsEqual` (L580-605) pour comparer rigoureusement `previous.currentLang === next.currentLang`, `previous.langRevision === next.langRevision`, `previous.showingOriginalListings?.[previousItem?.id] === next.showingOriginalListings?.[nextItem?.id]`, `previous.hoverSlideIndex === next.hoverSlideIndex` et `previous.onViewUserProfile === next.onViewUserProfile`. Basculement instantané garanti lors des changements de langue (FR→EN→ES→JA). (2) Internationalisation complète de `CloudOfficeSuiteModal.jsx` et de sa suite bureautique (`TrocoDocs`, `TrocoSheets`, `TrocoSlides`) sur les 7 langues officielles : barre de menus bureautique Desktop (Fichier, Édition, Affichage, Insertion, Format, Outils), sélecteurs d'onglets (Docs, Sheets, Slides, Notes, Historique), statut de sauvegarde temps réel, bouton et notifications de partage au chat, placeholders et titres de documents, libellés de la toolbar de formatage riche (Styles H1-H3, polices, tailles, gras, italique, souligné, barré, couleurs, alignements, listes, annuler/rétablir, export Markdown) et boutons d'export (PDF, Word, Excel, CSV, PPTX, MD, Impression). Validation réussie : build sans erreur, 0 nouvelle erreur ESLint, suites de tests vertes.
 
 ---
 

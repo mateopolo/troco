@@ -5,6 +5,7 @@
 
 import React from 'react';
 import CloudOfficeSuiteModal from './CloudOfficeSuiteModal';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const defaultDoc = {
   title: 'Nouvelle Feuille de Calcul',
@@ -14,7 +15,9 @@ const defaultDoc = {
 };
 
 export default function TrocoSheets(props) {
-  // 🚨 PHASE 103 : La première ligne du composant DOIT être if (!isOpen) return null;
+  const { t } = useLanguage();
+
+  // 🚨 PHASE 103 : La première ligne effective après les hooks DOIT être if (!props?.isOpen) return null;
   if (!props?.isOpen) return null;
 
   const safeProps = props || {};
@@ -40,7 +43,7 @@ export default function TrocoSheets(props) {
       document={documentData}
       documentData={documentData}
       content={content}
-      projectTitle={safeProps.projectTitle || documentData?.title || defaultDoc.title}
+      projectTitle={safeProps.projectTitle || documentData?.title || t('office.default_sheet_title') || defaultDoc.title}
       currentUser={safeProps.currentUser || { name: 'Moi', uid: 'me' }}
       darkMode={Boolean(safeProps.darkMode)}
       initialTab="sheets"

@@ -3,8 +3,8 @@ import { ChevronLeft, ChevronRight, Video, Globe, MapPin, Tag, ArrowRight, Spark
 import { motion } from 'framer-motion';
 import { TextEffect } from './core/text-effect';
 import { ProgressiveImage } from './ui/ProgressiveImage';
-import { translateText } from '../utils/translator';
 import { safeVibrate } from '../utils/haptics';
+import { useLanguage } from '../contexts/LanguageContext';
 
 function FeedCardItem({
   item,
@@ -17,7 +17,8 @@ function FeedCardItem({
   getFallbackImage,
   formatCompensation,
   getListingDisplayContent,
-  currentLang,
+  currentLang: propLang,
+  langRevision,
   showingOriginalListings = {},
   toggleOriginalListing,
   localizeLocation,
@@ -36,8 +37,12 @@ function FeedCardItem({
   onOpenMobileActions = null,
   onMobileActionClick = null,
   onAuthorProfileClick = null,
-  t = (key) => key
+  onViewUserProfile = null,
+  t: propT = null
 }) {
+  const { currentLang: contextLang, t: contextT } = useLanguage();
+  const currentLang = propLang || contextLang || 'FR';
+  const t = typeof propT === 'function' ? propT : (contextT || ((k) => k));
   const safeOpenMobileActions = onOpenMobileActions || onMobileActionClick;
 
   const [localImageIndex, setLocalImageIndex] = useState(0);
@@ -585,8 +590,12 @@ const areFeedCardPropsEqual = (previous, next) => {
   return previousItem?.id === nextItem?.id &&
     previousItem?.isBoosted === nextItem?.isBoosted &&
     previousUpdatedAt === nextUpdatedAt &&
+    previous.currentLang === next.currentLang &&
+    previous.langRevision === next.langRevision &&
+    previous.showingOriginalListings?.[previousItem?.id] === next.showingOriginalListings?.[nextItem?.id] &&
     previous.darkMode === next.darkMode &&
     previous.hoveredCardId === next.hoveredCardId &&
+    previous.hoverSlideIndex === next.hoverSlideIndex &&
     previous.handleOpenListing === next.handleOpenListing &&
     previous.setHoveredCardId === next.setHoveredCardId &&
     previous.toggleOriginalListing === next.toggleOriginalListing &&
@@ -598,7 +607,8 @@ const areFeedCardPropsEqual = (previous, next) => {
     previous.onAdminEditListing === next.onAdminEditListing &&
     previous.onOpenMobileActions === next.onOpenMobileActions &&
     previous.onMobileActionClick === next.onMobileActionClick &&
-    previous.onAuthorProfileClick === next.onAuthorProfileClick;
+    previous.onAuthorProfileClick === next.onAuthorProfileClick &&
+    previous.onViewUserProfile === next.onViewUserProfile;
 };
 
 export default React.memo(FeedCardItem, areFeedCardPropsEqual);
