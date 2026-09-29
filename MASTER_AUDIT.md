@@ -13,7 +13,7 @@
 > - `STEP BY STEP URGENT.txt` & `LISTE DES PROCHAINES FONCTIONNALITES A CODER.txt` (Backlog immédiat)
 > - `PROJECT_CONTEXT.md` & `TROCO_PROJECT_HISTORY.md` (Historique des décisions et géoprivacy)
 >
-> **Score global :** 8.6/10 | **Progression :** 44 / 74 tâches validées avec preuves formelles (59.5%)
+> **Score global :** 8.6/10 | **Progression :** 45 / 74 tâches validées avec preuves formelles (60.8%)
 
 ---
 
@@ -21,12 +21,12 @@
 
 | Phase | Fait | Restant | Progression |
 |---|---|---|---|
-| 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 25 | 2 | 92.6% |
+| 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 26 | 1 | 96.3% |
 | 🟡 Facile (Niveau 2 — 1h à 3h) | 16 | 0 | 100% |
 | 🟠 Moyen (Niveau 3 — 3h à 1 jour) | 8 | 7 | 53.3% |
 | 🔴 Difficile (Niveau 4 — 1 à 3 jours) | 3 | 7 | 30.0% |
 | 🚨 Très difficile (Niveau 5 — 3j à 2 sem) | 0 | 9 | 0.0% |
-| **TOTAL** | **44** | **30** | **59.5%** |
+| **TOTAL** | **45** | **29** | **60.8%** |
 
 
 ### Score par axe vs cible Licorne
@@ -201,6 +201,10 @@
 **Fichier** : `src/App.js:5349, 5370, 5389`  
 **Estimation** : 15min  
 **Impact** : Supprime les injections de solde fictif `wallet: { euros: ..., tokens: ... }` dans `getListingDetail`.
+
+### [x] [CLEANUP-07] — Réparation de la corruption UTF-8 (mojibake) dans translationsSecondary.js
+**Preuve** : `src/data/translationsSecondary.js` restauré en UTF-8 strict sans BOM. Validation Node : 0 occurrence de double encodage `\u00C3[\u0080-\u00BF]` (965 résolues). Emojis (`👑`, `🪙`, `⭐`) et caractères japonais/chinois (`サブスク`, `订阅`) 100% fonctionnels et validés.
+**Statut** : ✅ FAIT — Élimination intégrale du mojibake sur les 6 langues secondaires (EN, ES, IT, DE, JA, ZH) et affichage parfait des accents et symboles dans la modale Troco Plus et l'UI.
 
 ---
 

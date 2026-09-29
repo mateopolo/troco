@@ -1440,9 +1440,9 @@
     "semantic_hash": ""
   },
   "src/data/translationsSecondary.js": {
-    "mtime": 1790714121.5859635,
-    "seen": 1790714309.1431036,
-    "ast_hash": "72980fd833ab1aba7fcc91c0ad8c7ca7",
+    "mtime": 1790716520.4967558,
+    "seen": 1790716697.321289,
+    "ast_hash": "b3118dd70b2bb2922e9284bdbdce7c47",
     "semantic_hash": ""
   },
   "src/features/admin/AdminChatsTab.jsx": {
@@ -2304,9 +2304,9 @@
     "semantic_hash": ""
   },
   "MASTER_AUDIT.md": {
-    "mtime": 1790714277.9458618,
-    "seen": 1790714309.1433492,
-    "ast_hash": "340f19355f4cf3be796d4877f55cdb60",
+    "mtime": 1790716662.5807562,
+    "seen": 1790716697.3220496,
+    "ast_hash": "37df047583d919692b18598e177c76a7",
     "semantic_hash": ""
   },
   "PERFORMANCE_AUDIT.md": {
