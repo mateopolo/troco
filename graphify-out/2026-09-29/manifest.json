@@ -384,9 +384,9 @@
     "semantic_hash": "29788f2edfc62f638e05abc398125e63"
   },
   "src/App.js": {
-    "mtime": 1790709298.456912,
-    "seen": 1790709729.8869476,
-    "ast_hash": "f680c9b421b43a47afed3438be2f8886",
+    "mtime": 1790712814.905725,
+    "seen": 1790713103.3391502,
+    "ast_hash": "0a515ab2d673957537fcbd2d16a61a2f",
     "semantic_hash": ""
   },
   "src/App.test.js": {
@@ -594,9 +594,9 @@
     "semantic_hash": ""
   },
   "src/components/ListingCard.jsx": {
-    "mtime": 1790689984.4130871,
-    "seen": 1790690929.0652618,
-    "ast_hash": "c864e38d9ba0aa5a15e74857973bcbd4",
+    "mtime": 1790712885.5521502,
+    "seen": 1790713103.339215,
+    "ast_hash": "c8262c284a2e668eaefc50f6f04f529f",
     "semantic_hash": ""
   },
   "src/components/ListingDetailModal.jsx": {
@@ -1062,10 +1062,10 @@
     "semantic_hash": "961ba9997d9c51e9102cd11e6b3ceb8e"
   },
   "src/components/SponsoredFeedCard.jsx": {
-    "mtime": 1789301676.1210856,
-    "seen": 1790594464.2382305,
-    "ast_hash": "010af44c5120445e9c61430f07f5a140",
-    "semantic_hash": "010af44c5120445e9c61430f07f5a140"
+    "mtime": 1790712863.6036963,
+    "seen": 1790713103.3393512,
+    "ast_hash": "37d0eee1aeca422ef2ba6cd6d4e93d9a",
+    "semantic_hash": ""
   },
   "src/components/SwipeableChatItem.jsx": {
     "mtime": 1790709529.5945494,
@@ -1186,12 +1186,6 @@
     "seen": 1790594464.2382567,
     "ast_hash": "1c9d4deac31b82a713752ad245e045c4",
     "semantic_hash": "1c9d4deac31b82a713752ad245e045c4"
-  },
-  "src/components/common/DemoModeBanner.jsx": {
-    "mtime": 1789036706.6916947,
-    "seen": 1790594464.238258,
-    "ast_hash": "7c12c106300f69a60e5f9dad6ca0a572",
-    "semantic_hash": "7c12c106300f69a60e5f9dad6ca0a572"
   },
   "src/components/common/MetaThemeColor.jsx": {
     "mtime": 1788353057.6946752,
@@ -1439,24 +1433,6 @@
     "ast_hash": "d6cbd99abea778cd447820a111d1b50c",
     "semantic_hash": "d6cbd99abea778cd447820a111d1b50c"
   },
-  "src/data/demoData.js": {
-    "mtime": 1789036605.9057288,
-    "seen": 1790594464.238311,
-    "ast_hash": "dddbe9812f0e02e310670f4f32c5626a",
-    "semantic_hash": "dddbe9812f0e02e310670f4f32c5626a"
-  },
-  "src/data/mockChatsData.js": {
-    "mtime": 1789995392.3529532,
-    "seen": 1790594464.2383125,
-    "ast_hash": "2392ad7a491ff0c9196eac27321f16be",
-    "semantic_hash": "2392ad7a491ff0c9196eac27321f16be"
-  },
-  "src/data/mockData.js": {
-    "mtime": 1787833336.4741328,
-    "seen": 1790594464.2383137,
-    "ast_hash": "7be2e658837a6713e3eb3b702ab9af2f",
-    "semantic_hash": "7be2e658837a6713e3eb3b702ab9af2f"
-  },
   "src/data/translationsData.js": {
     "mtime": 1790693643.7211866,
     "seen": 1790693780.4859982,
@@ -1464,9 +1440,9 @@
     "semantic_hash": ""
   },
   "src/data/translationsSecondary.js": {
-    "mtime": 1790693542.0753596,
-    "seen": 1790693780.4859996,
-    "ast_hash": "93aab306eee31cd74408a22a5a72e2ce",
+    "mtime": 1790712902.6333594,
+    "seen": 1790713103.3395267,
+    "ast_hash": "2165d8e032b5bf1c5b4cb7d0105c3fc6",
     "semantic_hash": ""
   },
   "src/features/admin/AdminChatsTab.jsx": {
@@ -1560,9 +1536,9 @@
     "semantic_hash": "bc1d7a76bd9976ba832f202c84e66bc4"
   },
   "src/features/feed/FeedSection.jsx": {
-    "mtime": 1790689217.8642063,
-    "seen": 1790690929.065603,
-    "ast_hash": "1bc7600b0b6b1e3774ad800ff8366c98",
+    "mtime": 1790712849.9324658,
+    "seen": 1790713103.339553,
+    "ast_hash": "7511f2e5382db74e238251288870e3ca",
     "semantic_hash": ""
   },
   "src/features/feed/index.js": {
@@ -2094,10 +2070,10 @@
     "semantic_hash": "ce097a926f5a0f4c280cd12e53a4063e"
   },
   "src/utils/migrateLocalStorage.js": {
-    "mtime": 1789306478.2405078,
-    "seen": 1790594464.2384646,
-    "ast_hash": "fed303540327947e1ea9fa2e32331322",
-    "semantic_hash": "fed303540327947e1ea9fa2e32331322"
+    "mtime": 1790712874.1351452,
+    "seen": 1790713103.339709,
+    "ast_hash": "49598a3a00f982c0338d880a305d6e4a",
+    "semantic_hash": ""
   },
   "src/utils/moderationBlacklist.js": {
     "mtime": 1788349484.8805108,
@@ -2328,9 +2304,9 @@
     "semantic_hash": ""
   },
   "MASTER_AUDIT.md": {
-    "mtime": 1790709650.3681476,
-    "seen": 1790709729.8875744,
-    "ast_hash": "f5a3bb8caa79fcb30b4ebdcb702738a7",
+    "mtime": 1790713074.1469502,
+    "seen": 1790713103.339793,
+    "ast_hash": "ca85e21040a12639d19b028a69957ce0",
     "semantic_hash": ""
   },
   "PERFORMANCE_AUDIT.md": {

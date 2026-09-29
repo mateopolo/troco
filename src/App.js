@@ -2156,26 +2156,8 @@ export default function App() {
   const paymentOptions = ['all', 'credits', 'cash', 'troc', 'hybrid'];
   const paymentLabels = { all: t('paymentAll') || t('all') || 'Tous', credits: t('paymentCredits') || 'Crédits', cash: t('paymentCash') || 'Cash', troc: t('paymentTroc') || 'Troc', hybrid: t('paymentHybrid') || 'Hybride' };
 
-  const [listings, setListings] = useState(() => {
-    try {
-      const saved = localStorage.getItem('troco_user_listings');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch (e) {
-      logger.warn('Erreur chargement localStorage des annonces', e);
-    }
-    return [];
-  });
+  const [listings, setListings] = useState([]);
 
-  useEffect(() => {
-    try {
-      localStorage.setItem('troco_user_listings', JSON.stringify(listings));
-    } catch (e) {
-      logger.warn('Erreur sauvegarde localStorage des annonces', e);
-    }
-  }, [listings]);
 
   // ---- ÉTATS PAGINATION FEED (PAGINATED INFINITE SCROLL) ----
   const [lastVisibleListingDoc, setLastVisibleListingDoc] = useState(null);

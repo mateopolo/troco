@@ -13,7 +13,7 @@
 > - `STEP BY STEP URGENT.txt` & `LISTE DES PROCHAINES FONCTIONNALITES A CODER.txt` (Backlog immédiat)
 > - `PROJECT_CONTEXT.md` & `TROCO_PROJECT_HISTORY.md` (Historique des décisions et géoprivacy)
 >
-> **Score global :** 8.6/10 | **Progression :** 42 / 74 tâches validées avec preuves formelles (56.8%)
+> **Score global :** 8.6/10 | **Progression :** 43 / 74 tâches validées avec preuves formelles (58.1%)
 
 ---
 
@@ -21,12 +21,12 @@
 
 | Phase | Fait | Restant | Progression |
 |---|---|---|---|
-| 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 23 | 4 | 85.2% |
+| 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 24 | 3 | 88.9% |
 | 🟡 Facile (Niveau 2 — 1h à 3h) | 16 | 0 | 100% |
 | 🟠 Moyen (Niveau 3 — 3h à 1 jour) | 8 | 7 | 53.3% |
 | 🔴 Difficile (Niveau 4 — 1 à 3 jours) | 3 | 7 | 30.0% |
 | 🚨 Très difficile (Niveau 5 — 3j à 2 sem) | 0 | 9 | 0.0% |
-| **TOTAL** | **42** | **32** | **56.8%** |
+| **TOTAL** | **43** | **31** | **58.1%** |
 
 
 ### Score par axe vs cible Licorne
@@ -79,9 +79,9 @@
 **Preuve** : `src/data/demoData.js:58` et `src/utils/migrateLocalStorage.js:19` (`parsed.filter(t => !t.id?.startsWith('tx-seed-') && !t.isDemo)`)
 **Statut** : ✅ FAIT — Les fausses transactions de seed sont purgées et ignorées.
 
-### [ ] [P1-BUG-11] — Suppression de la persistance brute du feed dans localStorage
-**Preuve** : `localStorage` `troco_user_listings` toujours actif dans `src/App.js:2219` (`getItem`) et `src/App.js:2232` (`setItem`).  
-**Statut** : ❌ À REFAIRE — Persistance synchrone du feed active dans `localStorage` via la clé `troco_user_listings` (`src/App.js:2219, 2232`), risquant de saturer le quota local.
+### [x] [P1-BUG-11] — Suppression de la persistance brute du feed dans localStorage
+**Preuve** : `src/App.js:2159` (`const [listings, setListings] = useState([]);`), 0 occurrence de `troco_user_listings` dans `src/App.js`.
+**Statut** : ✅ FAIT — Suppression intégrale du chargement synchrone au mount et du listener `useEffect` d'écriture sur `troco_user_listings`. Le feed est alimenté à 100% par Firestore et la mémoire client.
 
 ### [ ] [QW-15] — Calcul dynamique et assainissement des statistiques réelles de profil
 **Preuve** : 3 faux soldes hardcodés `wallet: { euros: ..., tokens: ... }` subsistent dans `getListingDetail` (`src/App.js:5349, 5370, 5389`).  
@@ -192,11 +192,9 @@
 **Preuve** : Fichiers `src/data/mockData.js`, `src/data/mockChatsData.js`, `src/components/common/DemoModeBanner.jsx`, `src/data/demoData.js` supprimés. `src/App.js:72-85` (imports purgés), `src/App.js:428` (`userTransactions` initialisé vide), `src/App.js:2075-2083` (suppression des avatars/personas Unsplash), `src/App.js:2185-2250` (requête pure Firestore active sans fallback mockData), `src/App.js:2595-2630` (portefeuilles et portfolios réels sans branches isDemoMode/fake wallets), suppression des 2 sidebars publicitaires avec TROCO15/Unsplash, `src/features/feed/FeedSection.jsx:600` (suppression de la fausse carte Espace Pro), `src/components/SponsoredFeedCard.jsx:16` (retrait perk TROCO15).
 **Statut** : ✅ FAIT — Éradication intégrale du mode démo, des personas IA, des images Unsplash hardcodées et des bannières publicitaires fictives. Flux 100% Firestore.
 
-### [ ] [CLEANUP-02] — Fix P1-BUG-11 réel (localStorage feed)
-**Statut** : ❌ À FAIRE  
-**Fichier** : `src/App.js:2219, 2232`  
-**Estimation** : 15min  
-**Impact** : Supprime définitivement la sérialisation synchrone du feed dans `troco_user_listings`.
+### [x] [CLEANUP-02] — Fix P1-BUG-11 réel (localStorage feed)
+**Preuve** : `src/App.js:2159` (`const [listings, setListings] = useState([]);`), suppression du `useEffect` de persistance (`localStorage.setItem('troco_user_listings', ...)`). 0 occurrence de `troco_user_listings` dans `src/App.js`.
+**Statut** : ✅ FAIT — Suppression complète de la sérialisation synchrone du feed dans `troco_user_listings`. Le feed provient à 100% de Firestore et de la mémoire vive client.
 
 ### [ ] [CLEANUP-03] — Fix QW-15 réel (wallet fake getListingDetail)
 **Statut** : ❌ À FAIRE  

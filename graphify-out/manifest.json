@@ -384,9 +384,9 @@
     "semantic_hash": "29788f2edfc62f638e05abc398125e63"
   },
   "src/App.js": {
-    "mtime": 1790712814.905725,
-    "seen": 1790713103.3391502,
-    "ast_hash": "0a515ab2d673957537fcbd2d16a61a2f",
+    "mtime": 1790713569.887773,
+    "seen": 1790713703.721824,
+    "ast_hash": "1f20bf7f5cc673d5381ac3e518323ea6",
     "semantic_hash": ""
   },
   "src/App.test.js": {
@@ -2304,9 +2304,9 @@
     "semantic_hash": ""
   },
   "MASTER_AUDIT.md": {
-    "mtime": 1790713074.1469502,
-    "seen": 1790713103.339793,
-    "ast_hash": "ca85e21040a12639d19b028a69957ce0",
+    "mtime": 1790713671.5233953,
+    "seen": 1790713703.7225502,
+    "ast_hash": "df367a9dbed5084e1f6981f04770c8d3",
     "semantic_hash": ""
   },
   "PERFORMANCE_AUDIT.md": {
@@ -2895,12 +2895,6 @@
     "mtime": 1790693578.1848452,
     "seen": 1790693780.486213,
     "ast_hash": "0e10d86595fdd5831e86822250c98bf4",
-    "semantic_hash": ""
-  },
-  "scratch/check_a11y.js": {
-    "mtime": 1790694034.1579778,
-    "seen": 1790694663.35045,
-    "ast_hash": "6162b62e3c97d90dd2c4fb9ed0c8c2b5",
     "semantic_hash": ""
   },
   "src/components/modals/EmailLinkPromptModal.jsx": {
