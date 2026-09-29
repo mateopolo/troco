@@ -13,7 +13,7 @@
 > - `STEP BY STEP URGENT.txt` & `LISTE DES PROCHAINES FONCTIONNALITES A CODER.txt` (Backlog immédiat)
 > - `PROJECT_CONTEXT.md` & `TROCO_PROJECT_HISTORY.md` (Historique des décisions et géoprivacy)
 >
-> **Score global :** 8.3/10 | **Progression :** 47 / 74 tâches validées avec preuves formelles (63.5%)
+> **Score global :** 8.3/10 | **Progression :** 48 / 74 tâches validées avec preuves formelles (64.9%)
 
 ---
 
@@ -22,11 +22,11 @@
 | Phase | Fait | Restant | Progression |
 |---|---|---|---|
 | 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 28 | 0 | 100% |
-| 🟡 Facile (Niveau 2 — 1h à 3h) | 8 | 8 | 50.0% |
+| 🟡 Facile (Niveau 2 — 1h à 3h) | 9 | 7 | 56.3% |
 | 🟠 Moyen (Niveau 3 — 3h à 1 jour) | 8 | 7 | 53.3% |
 | 🔴 Difficile (Niveau 4 — 1 à 3 jours) | 3 | 7 | 30.0% |
 | 🚨 Très difficile (Niveau 5 — 3j à 2 sem) | 0 | 9 | 0.0% |
-| **TOTAL** | **47** | **27** | **63.5%** |
+| **TOTAL** | **48** | **26** | **64.9%** |
 
 
 ### Score par axe vs cible Licorne
@@ -246,11 +246,9 @@ Validation formelle : ESLint 0 erreur, suites Jest 100% vertes (`Phase141LegalCo
 
 ---
 
-### [ ] [FAC-01] — Création du hook `useConfirm()` et de la modale `<ConfirmDialog />`
-**Statut** : ❌ À FAIRE  
-**Fichier** : `src/hooks/useConfirm.js`, `src/components/ui/ConfirmDialog.jsx`  
-**Estimation** : 2h  
-**Impact** : Remplacement des 6 `window.confirm()` résiduels dans `AdminPanel.jsx:509, 528, 733, 843`, `CollaborativeWhiteboardModal.jsx:3676`, `SwipeableChatItem.jsx:62`.
+### [x] [FAC-01] — Création du hook `useConfirm()` et de la modale `<ConfirmDialog />`
+**Preuve** : `src/hooks/useConfirm.js:1-75`, `src/components/ui/ConfirmDialog.jsx:1-155`, `src/App.js:46-48, 2963, 2977, 5535`, `src/components/AdminPanel.jsx:8, 24, 514, 533, 738, 848`, `src/components/CollaborativeWhiteboardModal.jsx:39, 113, 3877`, `src/components/SwipeableChatItem.jsx:6, 23, 62`, `tests/unit/ConfirmDialog.test.js:1-95`  
+**Statut** : ✅ FAIT — Hook `useConfirm()` asynchrone (`Promise<boolean>`) et `<ConfirmProvider>` déployés. Modale universelle `<ConfirmDialog />` basée sur `UniversalModal` et `modalBackdrop` (UX-01 et UX-02 respectés, masquage automatique de la `BottomNav` via `useUIStore.openModal()`). Gestion des 3 variantes esthétiques (`danger`, `warning`, `default`) avec micro-animations et icônes vectorielles. Remplacement complet des 6 `window.confirm()` natifs dans `AdminPanel.jsx`, `CollaborativeWhiteboardModal.jsx` et `SwipeableChatItem.jsx`. Traduction 7 langues intégrée et validation par tests unitaires Vitest et build production.
 
 ### [ ] [FAC-02] — Intégration du composant `PullToRefresh` sur la vue Feed
 **Statut** : ❌ À FAIRE  

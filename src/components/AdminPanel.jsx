@@ -6,6 +6,8 @@ import {
 } from 'lucide-react';
 import { analyzeContent } from '../utils/contentModeration';
 import { useAdminGuard } from '../hooks/useAdminGuard';
+import { useConfirm } from '../hooks/useConfirm';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export default function AdminPanel({
   isOpen,
@@ -22,6 +24,8 @@ export default function AdminPanel({
   onEditListing = null,
   onInspectUser = null,
 }) {
+  const confirm = useConfirm();
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState('reports'); // 'reports' | 'users' | 'listings' | 'moderator'
   const [pinInput, setPinInput] = useState('');
   const [isUnlocked, setIsUnlocked] = useState(false);
@@ -510,8 +514,15 @@ export default function AdminPanel({
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '180px' }}>
                             {report.listingId && onDeleteListing && (
                               <button
-                                onClick={() => {
-                                  if (window.confirm(`Supprimer l'annonce « ${report.listingTitle || 'signalée'} » ?`)) {
+                                onClick={async () => {
+                                  const ok = await confirm({
+                                    title: t('admin_confirm_delete_listing_title', "Supprimer l'annonce ?"),
+                                    message: `Supprimer l'annonce « ${report.listingTitle || 'signalée'} » ?`,
+                                    confirmLabel: t('confirm_dialog_delete', 'Supprimer'),
+                                    cancelLabel: t('cancelBtn', 'Annuler'),
+                                    variant: 'danger',
+                                  });
+                                  if (ok) {
                                     if (typeof onDeleteListing === 'function') onDeleteListing(report.listingId);
                                     if (typeof onResolveReport === 'function') onResolveReport(report.id, 'resolved');
                                   }
@@ -529,8 +540,15 @@ export default function AdminPanel({
 
                             {report.reportedUserId && onUpdateUser && (
                               <button
-                                onClick={() => {
-                                  if (window.confirm(`Shadow-bannir l'utilisateur ${report.reportedUserName} ?`)) {
+                                onClick={async () => {
+                                  const ok = await confirm({
+                                    title: t('admin_confirm_ban_user_title', "Shadow-bannir l'utilisateur ?"),
+                                    message: `Shadow-bannir l'utilisateur ${report.reportedUserName} ?`,
+                                    confirmLabel: t('admin_confirm_ban_user_btn', 'Bannir'),
+                                    cancelLabel: t('cancelBtn', 'Annuler'),
+                                    variant: 'warning',
+                                  });
+                                  if (ok) {
                                     if (typeof onUpdateUser === 'function') onUpdateUser(report.reportedUserId, { isShadowBanned: true });
                                     if (typeof onResolveReport === 'function') onResolveReport(report.id, 'resolved');
                                   }
@@ -733,9 +751,16 @@ export default function AdminPanel({
 
                         {onResetUser && (
                           <button
-                            onClick={() => {
+                            onClick={async () => {
                               const userName = u.name || u.username || 'cet utilisateur';
-                              if (window.confirm(`⚠️ CONFIRMATION DE RÉINITIALISATION DU COMPTE\n\nÊtes-vous absolument sûr de vouloir réinitialiser intégralement le profil de « ${userName} » ?\n\nCette action va :\n- Remettre son solde en euros à 0.00€\n- Réinitialiser ses jetons de bienvenue à 10\n- Purger ses compétences et son historique de deals\n- Supprimer toutes ses annonces publiées\n- Forcer son onboarding à se relancer à sa prochaine connexion comme un nouvel utilisateur.`)) {
+                              const ok = await confirm({
+                                title: t('admin_confirm_reset_user_title', "⚠️ Réinitialisation du compte"),
+                                message: `Êtes-vous absolument sûr de vouloir réinitialiser intégralement le profil de « ${userName} » ?\n\nCette action va :\n- Remettre son solde en euros à 0.00€\n- Réinitialiser ses jetons de bienvenue à 10\n- Purger ses compétences et son historique de deals\n- Supprimer toutes ses annonces publiées\n- Forcer son onboarding à se relancer à sa prochaine connexion comme un nouvel utilisateur.`,
+                                confirmLabel: t('confirm_dialog_delete', 'Réinitialiser'),
+                                cancelLabel: t('cancelBtn', 'Annuler'),
+                                variant: 'danger',
+                              });
+                              if (ok) {
                                 if (typeof onResetUser === 'function') onResetUser(uid, u);
                               }
                             }}
@@ -844,8 +869,15 @@ export default function AdminPanel({
                       )}
                       {onDeleteListing && (
                         <button
-                          onClick={() => {
-                            if (window.confirm(`Confirmer la suppression de l'annonce « ${listing.title} » ?`)) {
+                          onClick={async () => {
+                            const ok = await confirm({
+                              title: t('admin_confirm_delete_listing_title', "Supprimer l'annonce ?"),
+                              message: `Confirmer la suppression de l'annonce « ${listing.title} » ?`,
+                              confirmLabel: t('confirm_dialog_delete', 'Supprimer'),
+                              cancelLabel: t('cancelBtn', 'Annuler'),
+                              variant: 'danger',
+                            });
+                            if (ok) {
                               if (typeof onDeleteListing === 'function') onDeleteListing(listing.id);
                             }
                           }}

@@ -3,6 +3,8 @@ import { motion, useMotionValue, useTransform, AnimatePresence } from 'framer-mo
 import { Pin, Trash2, PinOff } from 'lucide-react';
 import { hapticLight, hapticError, hapticSuccess } from '../utils/haptics';
 import { playPop } from '../services/audioService';
+import { useConfirm } from '../hooks/useConfirm';
+import { useLanguage } from '../contexts/LanguageContext';
 
 /**
  * SwipeableChatItem.jsx
@@ -20,6 +22,8 @@ export function SwipeableChatItem({
 }) {
   const x = useMotionValue(0);
   const [isDeleting, setIsDeleting] = useState(false);
+  const confirm = useConfirm();
+  const { t } = useLanguage();
   const hasTriggeredSwipeHaptic = useRef(false);
   const hasTriggeredRevealHaptic = useRef(false);
 
@@ -57,11 +61,15 @@ export function SwipeableChatItem({
     }
   };
 
-  const triggerDelete = () => {
+  const triggerDelete = async () => {
     hapticError();
-    const confirmed = window.confirm(
-      "Êtes-vous sûr de vouloir supprimer définitivement cette discussion ? L'historique sera perdu pour vous."
-    );
+    const confirmed = await confirm({
+      title: t('delete_conversation_title', 'Supprimer la discussion ?'),
+      message: t('delete_conversation_message', "Êtes-vous sûr de vouloir supprimer définitivement cette discussion ? L'historique sera perdu pour vous."),
+      confirmLabel: t('confirm_dialog_delete', 'Supprimer'),
+      cancelLabel: t('cancelBtn', 'Annuler'),
+      variant: 'danger',
+    });
     if (confirmed) {
       setIsDeleting(true);
       if (typeof onDelete === 'function') {

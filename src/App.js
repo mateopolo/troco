@@ -44,6 +44,8 @@ import {
 import FilterDrawer from './components/modals/FilterDrawer';
 import LanguageSelectModal from './components/modals/LanguageSelectModal';
 import { LanguageContext } from './contexts/LanguageContext';
+import { ConfirmProvider } from './hooks/useConfirm';
+import ConfirmDialog from './components/ui/ConfirmDialog';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   translations,
@@ -2961,21 +2963,25 @@ export default function App() {
   if (!isAuthenticated) {
     return (
       <LanguageContext.Provider value={langContextValue}>
-        <AuthScreen
-          setProfile={setProfile}
-          setIsAuthenticated={setIsAuthenticated}
-          setProfileDraft={setProfileDraft}
-          setSkills={setSkills}
-          darkMode={darkMode}
-          toggleDarkMode={toggleDarkMode}
-        />
+        <ConfirmProvider>
+          <AuthScreen
+            setProfile={setProfile}
+            setIsAuthenticated={setIsAuthenticated}
+            setProfileDraft={setProfileDraft}
+            setSkills={setSkills}
+            darkMode={darkMode}
+            toggleDarkMode={toggleDarkMode}
+          />
+          <ConfirmDialog />
+        </ConfirmProvider>
       </LanguageContext.Provider>
     );
   }
 
   return (
     <LanguageContext.Provider value={langContextValue}>
-      <div style={{
+      <ConfirmProvider>
+        <div style={{
         backgroundColor: 'var(--bg-global)',
         color: 'var(--text-main)',
         minHeight: '100vh',
@@ -5535,7 +5541,9 @@ export default function App() {
           </div>
         )}
 
+        <ConfirmDialog />
       </div>
+      </ConfirmProvider>
     </LanguageContext.Provider>
   );
 }

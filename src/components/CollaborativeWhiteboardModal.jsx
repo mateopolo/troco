@@ -37,6 +37,8 @@ import {
 import { setThemeColorOverride, clearThemeColorOverride } from '../utils/themeColor';
 import { playSwoosh } from '../services/audioService';
 import WhiteboardLobby from './WhiteboardLobby';
+import { useConfirm } from '../hooks/useConfirm';
+import { useLanguage } from '../contexts/LanguageContext';
 
 const SHAPE_OPTIONS = [
   { id: 'rectangle', label: 'Rectangle', icon: Square },
@@ -111,6 +113,8 @@ export default function CollaborativeWhiteboardModal({
   onSendMessage = null,
   handleSendMessage = null,
 }) {
+  const confirm = useConfirm();
+  const { t } = useLanguage();
   const [currentBoardId, setCurrentBoardId] = useState(
     () => boardId || workspaceId || null
   );
@@ -3873,8 +3877,15 @@ export default function CollaborativeWhiteboardModal({
 
             <button
               type="button"
-              onClick={() => {
-                if (window.confirm('Effacer la totalité du tableau blanc ?')) {
+              onClick={async () => {
+                const ok = await confirm({
+                  title: t('whiteboard_clear_title', 'Effacer le tableau blanc ?'),
+                  message: t('whiteboard_clear_message', 'Effacer la totalité du tableau blanc ?'),
+                  confirmLabel: t('whiteboard_clear_confirm', 'Effacer tout'),
+                  cancelLabel: t('cancelBtn', 'Annuler'),
+                  variant: 'danger',
+                });
+                if (ok) {
                   setLocalPaths([]);
                   setRemotePaths([]);
                   setStickyNotes([]);
