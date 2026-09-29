@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { useUIStore } from '../../stores/useUIStore';
 import { BACKDROP_CLASSNAME, BACKDROP_STYLE } from './modalBackdrop';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 const FOCUSABLE_ELEMENTS = [
   'a[href]',
@@ -43,15 +44,18 @@ export function UniversalModal({
   maxWidth = 'max-w-2xl',
   closeOnBackdrop = true,
   closeOnEscape = true,
-  ariaLabel = 'Fenêtre modale',
+  ariaLabel = null,
   ariaLabelledBy,
   showCloseButton = true,
-  closeButtonLabel = 'Fermer',
+  closeButtonLabel = null,
   contentStyle,
   contentClassName = '',
   overlayStyle,
   overlayClassName = '',
 }) {
+  const { t } = useLanguage();
+  const resolvedAriaLabel = ariaLabel || t('universalModalAriaLabel', 'Fenêtre modale');
+  const resolvedCloseLabel = closeButtonLabel || t('cancelBtn', 'Fermer');
   const dialogRef = useRef(null);
   const previousActiveElement = useRef(null);
   const onCloseRef = useRef(onClose);
@@ -153,7 +157,7 @@ export function UniversalModal({
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
-        aria-label={ariaLabelledBy ? undefined : ariaLabel}
+        aria-label={ariaLabelledBy ? undefined : resolvedAriaLabel}
         aria-labelledby={ariaLabelledBy}
         tabIndex={-1}
         className={`relative w-full max-h-[calc(100dvh-64px)] flex flex-col rounded-2xl md:rounded-3xl shadow-2xl overflow-hidden bg-[var(--bg-card)] border border-[var(--border-color)] ${contentClassName}`.trim()}
@@ -167,7 +171,7 @@ export function UniversalModal({
           <button
             type="button"
             onClick={onClose}
-            aria-label={closeButtonLabel}
+            aria-label={resolvedCloseLabel}
             className="absolute top-4 right-4 z-10 w-9 h-9 flex items-center justify-center rounded-full hover:bg-[var(--bg-subtle)] transition"
           >
             <X size={18} aria-hidden="true" />

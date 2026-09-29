@@ -72,7 +72,6 @@ import { useAdminGuard } from './hooks/useAdminGuard';
 import adminService from './services/adminService';
 import { useUsersPublic } from './hooks/useUsersPublic';
 import { setSessionAuthenticated, clearSessionFlags } from './utils/sessionFlags';
-import { isDemoMode, getInitialTransactions } from './data/demoData';
 import { migrateLocalStorage } from './utils/migrateLocalStorage';
 import { clearTrocoLocalStorage } from './utils/clearTrocoLocalStorage';
 import { paymentService } from './services/paymentService';
@@ -83,7 +82,6 @@ import { useCheckout } from './hooks/useCheckout';
 import { useRateLimit } from './hooks/useRateLimit';
 import { useSafeTimeout } from './hooks/useSafeTimeout';
 import CheckoutModal from './components/modals/CheckoutModal';
-import DemoModeBanner from './components/common/DemoModeBanner';
 import { RateLimitToast } from './components/ui/RateLimitToast';
 import { useFirestoreHealth } from './hooks/useFirestoreHealth';
 import * as storage from './utils/storage';
@@ -103,6 +101,7 @@ const CounterOfferModal = React.lazy(() => import('./components/CounterOfferModa
 const PublicProfileModal = React.lazy(() => import('./components/PublicProfileModal'));
 const CategoryPickerModal = React.lazy(() => import('./components/modals/CategoryPickerModal'));
 const BoostListingModal = React.lazy(() => import('./components/modals/BoostListingModal'));
+const EmailLinkPromptModal = React.lazy(() => import('./components/modals/EmailLinkPromptModal'));
 const CguConsentModal = React.lazy(() => import('./components/modals/CguConsentModal'));
 const MapSection = React.lazy(() => import('./features/map/MapSection'));
 const ChatSection = React.lazy(() => import('./features/chat/ChatSection'));
@@ -287,6 +286,9 @@ export default function App() {
     removeEquipment,
     addPortfolioImage,
     removePortfolioImage,
+    pendingEmailLinkHref,
+    handleConfirmEmailLink,
+    handleCancelEmailLink,
   } = useAppAuth();
 
   const { isAdmin } = useAdminGuard();
@@ -423,9 +425,7 @@ export default function App() {
      window.localStorage?.getItem('troco_cgu_dismissed') === 'true')
   );
 
-  const [userTransactions, setUserTransactions] = useState(() => {
-    return getInitialTransactions();
-  });
+  const [userTransactions, setUserTransactions] = useState([]);
 
   // Nettoyage données démo au démarrage (RGPD / conformité)
   useEffect(() => {
@@ -689,9 +689,9 @@ export default function App() {
         safeTimeout(() => setSaveMessage(''), 5000);
       }
     } else if (txData.mode === 'boost') {
-      const boostedListingId = txData.boostDetails?.listingId || txData.listingId || txData.payload?.listingId;
+      const boostedListingId = txData.boostDetails?.listingId || txData.boostDetails?.id || txData.boostDetails?.firestoreId || txData.listingId || txData.payload?.listingId || txData.payload?.id;
       if (boostedListingId) {
-        setListings(prev => prev.map(item => item.id === boostedListingId ? { ...item, isBoosted: true } : item));
+        setListings(prev => prev.map(item => (item.id === boostedListingId || item.firestoreId === boostedListingId) ? { ...item, isBoosted: true } : item));
         setBoostMessage('Annonce boostée avec succès pendant 7 jours !');
       }
     } else if (txData.mode === 'edit-listing' || txData.mode === 'publish-options') {
@@ -829,8 +829,8 @@ export default function App() {
           mode: txData.mode,
           amount: txData.amountTtc || txData.amount || txData.cashTopUp || 0,
           tokens: txData.tokensPurchased || 0,
-          boostDays: txData.boostDays || 0,
-          listingId: txData.boostDetails?.listingId || null,
+          boostDays: txData.boostDays || 7,
+          listingId: txData.boostDetails?.listingId || txData.boostDetails?.id || txData.boostDetails?.firestoreId || txData.listingId || txData.payload?.listingId || txData.payload?.id || null,
           currency: txData.currency || 'EUR',
           provider: 'mock',
           userId: uid,
@@ -1181,7 +1181,7 @@ export default function App() {
               username: '@' + (firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'user').toLowerCase().replace(/\s+/g, ''),
               email: firebaseUser.email || '',
               phoneNumber: firebaseUser.phoneNumber || '',
-              avatar: firebaseUser.photoURL || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80',
+              avatar: firebaseUser.photoURL || '',
               bio: 'Nouvel utilisateur sur Troco ! Prêt à partager mes compétences et échanger des services.',
               location: 'Paris, France',
               languages: ['FR'],
@@ -1505,7 +1505,7 @@ export default function App() {
     type: 'offer',
     status: 'active',
     title: '',
-    category: 'Cours & Compétences',
+    category: '',
     customCategoryName: '',
     format: 'onsite',
     description: '',
@@ -1523,7 +1523,7 @@ export default function App() {
     isUrgent: false,
     locationPrivacy: 'exact',
     coordinates: null,
-    image: 'https://images.unsplash.com/photo-1524758631624-e2822e304c36?auto=format&fit=crop&w=800&q=80',
+    image: '',
     imageUrl: '',
     videoUrl: '',
   };
@@ -2071,68 +2071,14 @@ export default function App() {
     setIsCallPip(false);
   };
 
-  // eslint-disable-next-line no-unused-vars
-  const groupParticipants = [
-    { name: 'Sofia', role: 'Mentor', color: '#C67D5B' },
-    { name: 'Marc', role: 'Expert', color: '#D4C5B5' },
-    { name: 'Lina', role: 'Apprenante', color: '#FDBA74' },
-    { name: 'Kai', role: 'Coach', color: '#F9A8D4' },
-    { name: 'Noa', role: 'Modérateur', color: '#A7F3D0' },
-  ];
-
-  // ---- COHÉRENCE DES AVATARS & NOMS ----
-  const femaleAvatars = useMemo(() => [
-    'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80',
-    'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&w=200&q=80',
-    'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=200&q=80',
-  ], []);
-  const maleAvatars = useMemo(() => [
-    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=200&q=80',
-    'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&w=200&q=80',
-    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80',
-  ], []);
-  const authorAvatars = useMemo(() => ({
-    'Sofia M.': femaleAvatars[0],
-    'Marc L.': maleAvatars[0],
-    'Matteo R.': maleAvatars[1],
-    'Karim B.': maleAvatars[2],
-    'Elisa V.': femaleAvatars[1],
-    'Nico D.': maleAvatars[0],
-    'Amélie P.': femaleAvatars[2],
-    'Jules T.': maleAvatars[1],
-    'Laura B.': femaleAvatars[1],
-    'Rayan K.': maleAvatars[2],
-    'Hugo L.': maleAvatars[0],
-    'Clara N.': femaleAvatars[2],
-    'Giulia S.': femaleAvatars[0],
-    'Mina C.': femaleAvatars[1],
-    'Theo R.': maleAvatars[1],
-    'David H.': maleAvatars[2],
-    'Inès W.': femaleAvatars[0],
-    'Romain P.': maleAvatars[1],
-    'Pauline M.': femaleAvatars[2],
-    'Claire R.': femaleAvatars[1],
-    'Sacha B.': maleAvatars[0],
-    'Martin J.': maleAvatars[2],
-    'Julie C.': femaleAvatars[0],
-    'Baptiste F.': maleAvatars[1],
-    'Noémie A.': femaleAvatars[2],
-    'Sabrina M.': femaleAvatars[0],
-    'Léa D.': femaleAvatars[1],
-    'Hana T.': femaleAvatars[2],
-    'Noa K.': maleAvatars[0],
-    'Samir M.': maleAvatars[1],
-    'mateo polo': 'https://lh3.googleusercontent.com/a/ACg8ocIxtR4V0MC_bzMwDLpCRzELbs1U2srgbci0vXHXKoxwpo7inhpG4g=s96-c',
-    'MATEO POLO': 'https://lh3.googleusercontent.com/a/ACg8ocIxtR4V0MC_bzMwDLpCRzELbs1U2srgbci0vXHXKoxwpo7inhpG4g=s96-c',
-  }), [femaleAvatars, maleAvatars]);
-  const feminineFirstNames = useMemo(() => ['sofia', 'elisa', 'amélie', 'amelie', 'laura', 'clara', 'giulia', 'mina', 'inès', 'ines', 'pauline', 'claire', 'julie', 'noémie', 'noemie', 'sabrina', 'léa', 'lea', 'hana', 'emma', 'chloé', 'chloe', 'lina', 'anna', 'maria', 'eva', 'nina', 'lucie', 'camille', 'sara', 'julia'], []);
-
+  // ---- RÉSOLUTION DE L'AVATAR AUTEUR (RÉEL ET ZERO-TRUST SANS PERSONAS IA) ----
   const getAuthorAvatar = useCallback((name) => {
-    const firstName = String(name || '').split(' ')[0].toLowerCase();
-    if (authorAvatars[name]) return authorAvatars[name];
-    if (feminineFirstNames.includes(firstName)) return femaleAvatars[firstName.length % femaleAvatars.length];
-    return maleAvatars[firstName.length % maleAvatars.length];
-  }, [authorAvatars, feminineFirstNames, femaleAvatars, maleAvatars]);
+    if (!name) return '';
+    if (name === 'mateo polo' || name === 'MATEO POLO') {
+      return 'https://lh3.googleusercontent.com/a/ACg8ocIxtR4V0MC_bzMwDLpCRzELbs1U2srgbci0vXHXKoxwpo7inhpG4g=s96-c';
+    }
+    return '';
+  }, []);
 
   // ---- COORDONNÉES GPS RÉELLES ET RÉSOLUTION MONDIALE (GÉOLOCALISATION DYNAMIQUE OPENSTREETMAP) ----
   const locationCoordsCacheRef = useRef(new Map());
@@ -2236,86 +2182,70 @@ export default function App() {
   const [hasMoreListings, setHasMoreListings] = useState(true);
   const [isLoadingMoreListings, setIsLoadingMoreListings] = useState(false);
 
-  // ---- SYNC TEMPS RÉEL FIRESTORE & DÉMOS DIFFÉRÉES (LIMIT 50) ----
+  // ---- SYNC TEMPS RÉEL FIRESTORE (LIMIT 50) ----
   // Chargement des annonces réelles Firestore filtrées par status == 'active' pour se conformer aux règles de sécurité
   useEffect(() => {
     let unsubFirestore = () => { };
     let isCancelled = false;
 
-    import('./data/mockData').then(({ mockListings }) => {
-      if (isCancelled) return;
-      const demoBase = isDemoMode()
-        ? (mockListings || []).map(l => ({ ...l, status: 'active', isDemo: true }))
-        : [];
+    // Requête principale conforme aux règles Firestore (where status == 'active')
+    const initialQuery = query(
+      collection(db, 'listings'),
+      where('status', '==', 'active'),
+      limit(50)
+    );
 
-      if (isDemoMode()) {
+    unsubFirestore = onSnapshot(
+      initialQuery,
+      (snapshot) => {
+        if (isCancelled) return;
+        const firestoreListings = snapshot.docs.map((docSnap) => ({
+          id: docSnap.data().id || docSnap.id,
+          firestoreId: docSnap.id,
+          ...docSnap.data(),
+          status: docSnap.data().status || 'active',
+          isDemo: false,
+          _doc: docSnap,
+        }));
+
+        const lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
+        setLastVisibleListingDoc(lastDoc);
+        setHasMoreListings(snapshot.docs.length >= 50);
+
         setListings(prev => {
-          const hasDemos = prev.some(item => item.isDemo);
-          return hasDemos ? prev : [...prev, ...demoBase];
+          const customLocalListings = prev.filter(p => !p.isDemo && !firestoreListings.some(f => f.id === p.id));
+          return [...firestoreListings, ...customLocalListings];
         });
-      }
-
-      // Requête principale conforme aux règles Firestore (where status == 'active')
-      const initialQuery = query(
-        collection(db, 'listings'),
-        where('status', '==', 'active'),
-        limit(50)
-      );
-
-      unsubFirestore = onSnapshot(
-        initialQuery,
-        (snapshot) => {
-          if (isCancelled) return;
-          const firestoreListings = snapshot.docs.map((docSnap) => ({
-            id: docSnap.data().id || docSnap.id,
-            firestoreId: docSnap.id,
-            ...docSnap.data(),
-            status: docSnap.data().status || 'active',
-            isDemo: false,
-            _doc: docSnap,
-          }));
-
-          const lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
-          setLastVisibleListingDoc(lastDoc);
-          setHasMoreListings(snapshot.docs.length >= 50);
-
-          setListings(prev => {
-            const customLocalListings = prev.filter(p => !p.isDemo && !firestoreListings.some(f => f.id === p.id));
-            return [...firestoreListings, ...customLocalListings];
-          });
-        },
-        (error) => {
-          logger.warn('[Firestore] onSnapshot listings query error:', error);
-          if (!isCancelled) {
-            try {
-              const fallbackQuery = query(collection(db, 'listings'), limit(50));
-              unsubFirestore = onSnapshot(fallbackQuery, (snapshot) => {
-                if (isCancelled) return;
-                const firestoreListings = snapshot.docs.map((docSnap) => ({
-                  id: docSnap.data().id || docSnap.id,
-                  firestoreId: docSnap.id,
-                  ...docSnap.data(),
-                  status: docSnap.data().status || 'active',
-                  isDemo: false,
-                  _doc: docSnap,
-                }));
-                const lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
-                setLastVisibleListingDoc(lastDoc);
-                setHasMoreListings(snapshot.docs.length >= 50);
-                setListings(prev => {
-                  const customLocalListings = prev.filter(p => !p.isDemo && !firestoreListings.some(f => f.id === p.id));
-                  return [...firestoreListings, ...customLocalListings];
-                });
-              }, (fallbackErr) => {
-                logger.error('[Firestore] Fallback listings query failed:', fallbackErr);
+      },
+      (error) => {
+        logger.warn('[Firestore] onSnapshot listings query error:', error);
+        if (!isCancelled) {
+          try {
+            const fallbackQuery = query(collection(db, 'listings'), limit(50));
+            unsubFirestore = onSnapshot(fallbackQuery, (snapshot) => {
+              if (isCancelled) return;
+              const firestoreListings = snapshot.docs.map((docSnap) => ({
+                id: docSnap.data().id || docSnap.id,
+                firestoreId: docSnap.id,
+                ...docSnap.data(),
+                status: docSnap.data().status || 'active',
+                isDemo: false,
+                _doc: docSnap,
+              }));
+              const lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
+              setLastVisibleListingDoc(lastDoc);
+              setHasMoreListings(snapshot.docs.length >= 50);
+              setListings(prev => {
+                const customLocalListings = prev.filter(p => !p.isDemo && !firestoreListings.some(f => f.id === p.id));
+                return [...firestoreListings, ...customLocalListings];
               });
-            } catch (_) { }
-          }
+            }, (fallbackErr) => {
+              logger.error('[Firestore] Fallback listings query failed:', fallbackErr);
+            });
+          } catch (_) { }
         }
-      );
-    }).catch(err => {
-      logger.warn('[MockData] Erreur de chargement différé des annonces démo:', err);
-    });
+      }
+    );
 
     return () => {
       isCancelled = true;
@@ -2587,6 +2517,8 @@ export default function App() {
     radiusKm,
     isInfiniteRadius,
     hideDemos,
+    userCoords,
+    dynamicSearchAliases,
     profile.name,
     profile?.uid,
     auth.currentUser?.uid,
@@ -2654,13 +2586,7 @@ export default function App() {
 
     const authorPortfolio = isCurrentUser
       ? (portfolioImages && portfolioImages.length > 0 ? portfolioImages : (profile?.portfolioImages || profile?.portfolio || []))
-      : (listing.portfolio || listing.authorProfile?.portfolio || (listing.isDemo && listing.author === 'Sofia M.' ? [
-        'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=600&q=80',
-        'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=600&q=80',
-      ] : listing.isDemo && listing.author === 'Marc L.' ? [
-        'https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=600&q=80',
-        'https://images.unsplash.com/photo-1487958449943-2429e8be8625?auto=format&fit=crop&w=600&q=80',
-      ] : []));
+      : (listing.portfolio || listing.authorProfile?.portfolio || []);
 
     const generic = {
       id: listing.id,
@@ -2670,7 +2596,7 @@ export default function App() {
       image: media.image,
       video: media.video,
       gallery: media.gallery,
-      wallet: { euros: 20, tokens: 2 },
+      wallet: listing.wallet || { euros: 0, tokens: 0 },
       tags: generateTags(listing.title, listing.description || ''),
       compensation: listing.compensation,
       nativeLang: listing.nativeLang || 'FR',
@@ -2687,46 +2613,8 @@ export default function App() {
       },
     };
 
-    if (isDemoMode() && listing.author === 'Sofia M.' && (listing.isDemo || (typeof listing.id === 'number' && listing.id <= 20))) {
-      return {
-        ...generic,
-        description: listing.description || 'Cours de piano et accompagnement musical pensé pour les débutants et les profils en reconversion. Le cadre est très structuré, chaleureux et adapté à un usage flexible.',
-        wallet: { euros: 15, tokens: 1 },
-        authorProfile: {
-          ...generic.authorProfile,
-          avatar: femaleAvatars[0],
-          bio: 'Professeure de piano, coach de créativité et experte en échanges à distance.',
-          socials: ['LinkedIn', 'Instagram', 'TikTok'],
-          portfolio: [
-            'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=600&q=80',
-            'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=600&q=80',
-          ],
-          reviews: authorReviews,
-        },
-      };
-    }
-
-    if (isDemoMode() && listing.author === 'Marc L.' && (listing.isDemo || (typeof listing.id === 'number' && listing.id <= 20))) {
-      return {
-        ...generic,
-        description: listing.description || 'Prêt d’outillage et service de dépannage local. Tout est pensé pour qu’un échange soit rapide, concret et sécurisé.',
-        wallet: { euros: 12, tokens: 2 },
-        authorProfile: {
-          ...generic.authorProfile,
-          avatar: maleAvatars[0],
-          bio: 'Bricoleur local, passionné de matériel et de partage de services de proximité.',
-          socials: ['LinkedIn', 'Instagram'],
-          portfolio: [
-            'https://images.unsplash.com/photo-1517048676732-d65bc937f952?auto=format&fit=crop&w=600&q=80',
-            'https://images.unsplash.com/photo-1487958449943-2429e8be8625?auto=format&fit=crop&w=600&q=80',
-          ],
-          reviews: authorReviews,
-        },
-      };
-    }
-
     return generic;
-  }, [profile, portfolioImages, averageRating, getAuthorAvatar, femaleAvatars, maleAvatars]);
+  }, [profile, portfolioImages, averageRating, getAuthorAvatar]);
 
   const handleOpenListing = useCallback((listing) => {
     setSelectedListing(getListingDetail(listing));
@@ -2822,14 +2710,11 @@ export default function App() {
 
   const confirmBoostListing = () => {
     if (!boostingListing) return;
-    if (profile.euroBalance < 2.99) {
-      setBoostMessage('Solde insuffisant pour booster cette annonce.');
-      return;
-    }
-    setBoostMessage('');
+    const target = boostingListing;
     setIsBoostModalOpen(false);
-    openCheckout({ mode: 'boost', amount: 2.99, label: `Boost 7 jours — ${boostingListing.title}`, payload: { listingId: boostingListing.id } });
     setBoostingListing(null);
+    setBoostMessage('');
+    handleOpenPayment('boost', target);
   };
 
   const handleSignOut = async () => {
@@ -3161,9 +3046,6 @@ export default function App() {
           />
         </div>
 
-        {/* BANDEAU MODE DÉMONSTRATION (CONFORMITÉ FINANCIÈRE / AUDIT) */}
-        <DemoModeBanner />
-
         {/* HEADER FIXE GLASSMORPHISM FLUIDE AVEC CONDENSATION AU SCROLL */}
         <AppHeader
           isMobile={isMobile}
@@ -3194,6 +3076,17 @@ export default function App() {
               boostMessage={boostMessage}
               darkMode={darkMode}
               profile={profile}
+            />
+          </Suspense>
+        )}
+
+        {pendingEmailLinkHref && (
+          <Suspense fallback={null}>
+            <EmailLinkPromptModal
+              isOpen={Boolean(pendingEmailLinkHref)}
+              onConfirm={handleConfirmEmailLink}
+              onClose={handleCancelEmailLink}
+              darkMode={darkMode}
             />
           </Suspense>
         )}
@@ -3601,7 +3494,7 @@ export default function App() {
                   <div style={{ fontSize: '13px', color: '#C67D5B', fontWeight: '700' }}>{formatCompensation(selectedListing.compensation)}</div>
                 </div>
                 <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '14px', padding: '14px', borderRadius: '16px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3' }}>
-                  <img src={selectedListing.authorProfile?.avatar || selectedListing.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80'} alt={selectedListing.authorProfile?.name || selectedListing.author || 'Auteur'} style={{ width: '56px', height: '56px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #E8DDD3' }} />
+                  <img src={selectedListing.authorProfile?.avatar || selectedListing.avatar || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="%239CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>'} alt={selectedListing.authorProfile?.name || selectedListing.author || 'Auteur'} style={{ width: '56px', height: '56px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #E8DDD3' }} />
                   <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{selectedListing.authorProfile?.name || selectedListing.author || 'Membre Troco'}</div>
                     <div style={{ fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54', marginTop: '4px' }}>{getBioTranslation(selectedListing.authorProfile?.bio || selectedListing.bio || '', currentLang, !!showingOriginalListings[selectedListing.id])}</div>
@@ -3721,93 +3614,7 @@ export default function App() {
                 style={{ width: '100%' }}
               >
                 <div className="feed-layout-container">
-                  {/* BANNIÈRE LATÉRALE GAUCHE (DESKTOP) */}
-                  <aside className="desktop-ad-banner" aria-label="Espace Partenaires Troco">
-                    <div className="ad-card">
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                        <span style={{ fontSize: '9px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', color: darkMode ? '#FAF7F2' : '#A8644A', backgroundColor: darkMode ? 'rgba(198,125,91,0.25)' : '#F5EAE4', padding: '3px 7px', borderRadius: '6px' }}>
-                          🌟 Partenaire Pro
-                        </span>
-                        <span style={{ fontSize: '9px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>Sponsorisé</span>
-                      </div>
-                      <img
-                        src="https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=400&q=80"
-                        alt="Partenaire Outillage"
-                        style={{ width: '100%', height: '85px', objectFit: 'cover', borderRadius: '12px', marginBottom: '8px' }}
-                      />
-                      <div style={{ fontSize: '13px', fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530', marginBottom: '4px', lineHeight: 1.3 }}>
-                        Brico & Outillage Pro
-                      </div>
-                      <div style={{ fontSize: '11px', color: darkMode ? '#D4C5B5' : '#6B5E54', lineHeight: 1.4, marginBottom: '8px' }}>
-                        Matériel certifié disponible en prêt immédiat avec caution Troco.
-                      </div>
-                      <div style={{ display: 'inline-block', fontSize: '10px', fontWeight: '800', color: '#3D4A35', backgroundColor: '#EBF0E6', padding: '2px 8px', borderRadius: '999px', marginBottom: '8px', border: '1px solid #D4DFCE' }}>
-                        -15% membres Troco
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSelectedCategory('Outillage');
-                          alert("🏷️ Code promo partenaire 'TROCO15' appliqué sur la catégorie Outillage !");
-                        }}
-                        className="premium-button"
-                        style={{
-                          width: '100%',
-                          padding: '8px 10px',
-                          borderRadius: '10px',
-                          background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)',
-                          color: '#FFF',
-                          fontSize: '11px',
-                          fontWeight: '700',
-                          border: 'none',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        Voir les offres
-                      </button>
-                    </div>
 
-                    <div className="ad-card">
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                        <span style={{ fontSize: '9px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#D97706', backgroundColor: '#FEF3C7', padding: '3px 7px', borderRadius: '6px' }}>
-                          🎓 Mentorat
-                        </span>
-                        <span style={{ fontSize: '9px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>Publicité</span>
-                      </div>
-                      <img
-                        src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=400&q=80"
-                        alt="Academia Code"
-                        style={{ width: '100%', height: '85px', objectFit: 'cover', borderRadius: '12px', marginBottom: '8px' }}
-                      />
-                      <div style={{ fontSize: '13px', fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530', marginBottom: '4px', lineHeight: 1.3 }}>
-                        Academia Code & Langues
-                      </div>
-                      <div style={{ fontSize: '11px', color: darkMode ? '#D4C5B5' : '#6B5E54', lineHeight: 1.4, marginBottom: '8px' }}>
-                        Mentorat accéléré et cours en visioconférence HD.
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSelectedCategory('Cours/Compétences');
-                          setFormatFilter('remote');
-                        }}
-                        className="premium-button"
-                        style={{
-                          width: '100%',
-                          padding: '8px 10px',
-                          borderRadius: '10px',
-                          backgroundColor: darkMode ? '#1A1715' : '#FAF7F2',
-                          color: darkMode ? '#FAF7F2' : '#3D3530',
-                          fontSize: '11px',
-                          fontWeight: '700',
-                          border: '1px solid #E8DDD3',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        Trouver un mentor
-                      </button>
-                    </div>
-                  </aside>
 
                   {/* CONTENU CENTRAL DU FEED */}
                   <div className="feed-main-content">
@@ -4198,14 +4005,14 @@ export default function App() {
                           {(filteredListings || []).map((item, index) => {
                             const authorProfile = item?.authorProfile || {
                               name: item?.author || 'Membre Troco',
-                              avatar: item?.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+                              avatar: item?.authorAvatar || item?.avatar || item?.authorPhotoURL || '',
                               bio: item?.bio || '',
                               location: item?.location || 'Paris',
                               uid: item?.authorUid || null,
                             };
 
                             return (
-                              <React.Fragment key={item.id || index}>
+                              <React.Fragment key={item.id ?? `feed-item-${index}`}>
                                 <FeedCardItem
                                   item={item}
                                   darkMode={darkMode}
@@ -4333,100 +4140,6 @@ export default function App() {
                     )}
                   </div>
 
-                  {/* BANNIÈRE LATÉRALE DROITE (DESKTOP) */}
-                  <aside className="desktop-ad-banner" aria-label="Monétisation & Boost Troco">
-                    <div className="ad-card" style={{ border: darkMode ? '1px solid rgba(245,158,11,0.3)' : '1px solid #FDE68A' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                        <span style={{ fontSize: '9px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#B45309', backgroundColor: '#FEF3C7', padding: '3px 7px', borderRadius: '6px' }}>
-                          🔥 Troco Boost
-                        </span>
-                        <span style={{ fontSize: '9px', color: darkMode ? '#94A3B8' : '#94A3B8' }}>Visibilité</span>
-                      </div>
-                      <img
-                        src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=400&q=80"
-                        alt="Booster annonce"
-                        style={{ width: '100%', height: '85px', objectFit: 'cover', borderRadius: '12px', marginBottom: '8px' }}
-                      />
-                      <div style={{ fontSize: '13px', fontWeight: '800', color: darkMode ? '#FFFFFF' : '#0F172A', marginBottom: '4px', lineHeight: 1.3 }}>
-                        Passez en tête du Feed !
-                      </div>
-                      <div style={{ fontSize: '11px', color: darkMode ? '#94A3B8' : '#64748B', lineHeight: 1.4, marginBottom: '6px' }}>
-                        Multipliez par 5 vos contacts en plaçant vos annonces en tête d'affiche.
-                      </div>
-                      <div style={{ fontSize: '11px', fontWeight: '800', color: darkMode ? '#FBBF24' : '#D97706', marginBottom: '8px' }}>
-                        À partir de 2,99€ / 7 jours
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const myListing = listings.find(l => l.author === profile?.name) || listings[0];
-                          if (myListing) {
-                            setBoostingListing(myListing);
-                            setIsBoostModalOpen(true);
-                          } else {
-                            setActiveTab('profile');
-                            alert("💡 Créez ou sélectionnez l'une de vos annonces depuis votre profil pour activer le Boost !");
-                          }
-                        }}
-                        className="premium-button"
-                        style={{
-                          width: '100%',
-                          padding: '8px 10px',
-                          borderRadius: '10px',
-                          backgroundColor: '#D97706',
-                          color: '#FFF',
-                          fontSize: '11px',
-                          fontWeight: '800',
-                          border: 'none',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: '4px',
-                          boxShadow: '0 4px 12px rgba(217,119,6,0.25)'
-                        }}
-                      >
-                        <Flame size={13} /> Booster mon annonce
-                      </button>
-                    </div>
-                    <div className="ad-card">
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                        <span style={{ fontSize: '9px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#7E22CE', backgroundColor: '#F3E8FF', padding: '3px 7px', borderRadius: '6px' }}>
-                          🏢 Espace Pro
-                        </span>
-                        <span style={{ fontSize: '9px', color: darkMode ? '#94A3B8' : '#94A3B8' }}>Offre Pro</span>
-                      </div>
-                      <img
-                        src="https://images.unsplash.com/photo-1556761175-5973dc0f32e7?auto=format&fit=crop&w=400&q=80"
-                        alt="Troco Entreprise"
-                        style={{ width: '100%', height: '85px', objectFit: 'cover', borderRadius: '12px', marginBottom: '8px' }}
-                      />
-                      <div style={{ fontSize: '13px', fontWeight: '800', color: darkMode ? '#FFFFFF' : '#0F172A', marginBottom: '4px', lineHeight: 1.3 }}>
-                        Vous êtes une Entreprise ?
-                      </div>
-                      <div style={{ fontSize: '11px', color: darkMode ? '#94A3B8' : '#64748B', lineHeight: 1.4, marginBottom: '8px' }}>
-                        Abonnement Pro avec facturation TVA et échanges illimités.
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setIsCguViewerOpen(true)}
-                        className="premium-button"
-                        style={{
-                          width: '100%',
-                          padding: '8px 10px',
-                          borderRadius: '10px',
-                          backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : '#F1F5F9',
-                          color: darkMode ? '#FFF' : '#0F172A',
-                          fontSize: '11px',
-                          fontWeight: '700',
-                          border: 'none',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        En savoir plus
-                      </button>
-                    </div>
-                  </aside>
                 </div>
               </motion.div>
             )}

@@ -38,7 +38,7 @@ export default function CategoryPickerModal({
           </h3>
           <button
             onClick={onClose}
-            aria-label="Fermer la sélection de catégorie"
+            aria-label={t('closeCategorySelection', 'Fermer la sélection de catégorie')}
             style={{
               border: 'none',
               background: 'none',

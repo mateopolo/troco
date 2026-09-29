@@ -809,7 +809,7 @@ export default function PostListingFeature({
                     </span>
                   )}
                 </div>
-                <input value={postDraft.videoUrl} onChange={(e) => setPostDraft(prev => ({ ...prev, videoUrl: e.target.value }))} placeholder={t('videoUrlPlaceholder')} style={{ width: '100%', padding: '9px 12px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', borderRadius: '10px', fontSize: '12px', marginBottom: '8px' }} />
+                <input aria-label={t('miniVideoLabel') || 'URL de la vidéo'} value={postDraft.videoUrl} onChange={(e) => setPostDraft(prev => ({ ...prev, videoUrl: e.target.value }))} placeholder={t('videoUrlPlaceholder')} style={{ width: '100%', padding: '9px 12px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', borderRadius: '10px', fontSize: '12px', marginBottom: '8px' }} />
                 <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
                   <div style={{ width: '90px', height: '65px', borderRadius: '10px', overflow: 'hidden', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-card)', position: 'relative' }}>
                     <video src={getSuggestedMedia(postDraft.title, postDraft.description, postDraft.imageUrl, postDraft.videoUrl).video} autoPlay loop muted playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -848,11 +848,12 @@ export default function PostListingFeature({
                   {(postDraft.tags || []).map(tag => (
                     <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: 'var(--accent-primary)', color: '#FFF', borderRadius: '999px', padding: '4px 9px', fontSize: '10px', fontWeight: '800' }}>
                       <Tag size={10} /> {tag}
-                      <button type="button" onClick={() => setPostDraft(prev => ({ ...prev, tags: (prev.tags || []).filter(t => t !== tag) }))} style={{ background: 'none', border: 'none', color: '#FFF', cursor: 'pointer', padding: 0, marginLeft: '2px', display: 'flex' }}><X size={10} /></button>
+                      <button type="button" aria-label={currentLang === 'FR' ? `Supprimer le tag ${tag}` : `Remove tag ${tag}`} onClick={() => setPostDraft(prev => ({ ...prev, tags: (prev.tags || []).filter(t => t !== tag) }))} style={{ background: 'none', border: 'none', color: '#FFF', cursor: 'pointer', padding: 0, marginLeft: '2px', display: 'flex' }}><X size={10} /></button>
                     </span>
                   ))}
                   <input
                     type="text"
+                    aria-label={currentLang === 'FR' ? 'Ajouter un tag' : 'Add a tag'}
                     placeholder={currentLang === 'FR' ? 'Ajouter un tag...' : 'Add a tag...'}
                     value={tagInputValue}
                     onChange={e => setTagInputValue(e.target.value)}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { Copy, Check, Pipette, X } from 'lucide-react';
 
 export const DESIGN_SYSTEM_PALETTE = [
@@ -106,11 +107,12 @@ export default function ColorPicker({
   color = '#C67D5B',
   onChange,
   onClose,
-  title = 'Sélecteur de couleur',
+  title,
   showClose = false,
   className = '',
   style = {},
 }) {
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState('HEX'); // 'HEX' | 'RGB' | 'HSL'
   const [copied, setCopied] = useState(false);
   const copyTimeoutRef = useRef(null);
@@ -257,7 +259,7 @@ export default function ColorPicker({
       {/* Header avec Titre & Bouton Fermer */}
       <div className="flex items-center justify-between mb-3">
         <span className="text-xs font-bold uppercase tracking-wider text-[#A8998C]">
-          {title}
+          {title || t('colorPickerTitle', 'Sélecteur de couleur')}
         </span>
         <div className="flex items-center gap-1">
           {hasEyeDropper && (
@@ -265,8 +267,8 @@ export default function ColorPicker({
               type="button"
               onClick={handleEyeDropper}
               className="p-1.5 rounded-lg text-[#A8998C] hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-              title="Prélever une couleur à l'écran"
-              aria-label="Pipette pour prélever une couleur"
+              title={t('colorPickerEyedropper', "Prélever une couleur à l'écran")}
+              aria-label={t('colorPickerEyedropperAria', "Pipette pour prélever une couleur")}
             >
               <Pipette size={14} />
             </button>
@@ -276,7 +278,7 @@ export default function ColorPicker({
               type="button"
               onClick={onClose}
               className="p-1 rounded-lg text-[#A8998C] hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-              aria-label="Fermer le sélecteur de couleur"
+              aria-label={t('colorPickerClose', "Fermer le sélecteur de couleur")}
             >
               <X size={16} />
             </button>
@@ -309,7 +311,7 @@ export default function ColorPicker({
           aria-label="Copier la valeur HEX"
         >
           {copied ? <Check size={12} /> : <Copy size={12} />}
-          <span>{copied ? 'Copié' : 'Copier'}</span>
+          <span>{copied ? t('colorPickerCopied', 'Copié') : t('colorPickerCopy', 'Copier')}</span>
         </button>
       </div>
 
@@ -352,7 +354,7 @@ export default function ColorPicker({
                   placeholder="#C67D5B"
                   maxLength={7}
                   className="w-full bg-black/40 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs font-mono text-white focus:outline-none focus:border-[#C67D5B] focus:ring-1 focus:ring-[#C67D5B]"
-                  aria-label="Code couleur hexadécimal"
+                  aria-label={t('colorPickerHex', "Code couleur hexadécimal")}
                 />
               </div>
             </div>
@@ -513,7 +515,7 @@ export default function ColorPicker({
                 onMouseUp={() => commitToRecents(normalizedHex)}
                 onTouchEnd={() => commitToRecents(normalizedHex)}
                 className="flex-1 accent-[#C67D5B] h-1.5 bg-black/40 rounded-lg cursor-pointer"
-                aria-label="Curseur Luminosité"
+                aria-label={t('colorPickerLuminosity', "Curseur Luminosité")}
               />
               <input
                 type="number"
@@ -523,7 +525,7 @@ export default function ColorPicker({
                 onChange={(e) => handleHslChange('l', e.target.value)}
                 onBlur={() => commitToRecents(normalizedHex)}
                 className="w-12 bg-black/40 border border-white/10 rounded px-1.5 py-0.5 text-xs font-mono text-white text-center focus:outline-none focus:border-[#C67D5B]"
-                aria-label="Valeur Luminosité"
+                aria-label={t('colorPickerLuminosityVal', "Valeur Luminosité")}
               />
             </div>
           </div>
@@ -533,7 +535,7 @@ export default function ColorPicker({
       {/* 5 COULEURS RÉCENTES */}
       <div className="mb-3">
         <div className="text-[11px] font-bold text-[#A8998C] mb-1.5 flex items-center justify-between">
-          <span>Récents (5)</span>
+          <span>{t('colorPickerRecents', 'Récents (5)')}</span>
           <span className="text-[10px] opacity-60">Persistant</span>
         </div>
         <div className="flex items-center gap-2">
@@ -551,8 +553,8 @@ export default function ColorPicker({
                   backgroundColor: recentHex,
                   border: isSelected ? '2px solid #FFFFFF' : '1px solid rgba(255,255,255,0.2)',
                 }}
-                title={`Couleur récente ${recentHex}`}
-                aria-label={`Couleur récente ${recentHex}`}
+                title={`${t('colorRecentPrefix', 'Couleur récente')} ${recentHex}`}
+                aria-label={`${t('colorRecentPrefix', 'Couleur récente')} ${recentHex}`}
               />
             );
           })}
@@ -562,7 +564,7 @@ export default function ColorPicker({
       {/* PALETTE DESIGN SYSTEM (20 COULEURS) */}
       <div>
         <div className="text-[11px] font-bold text-[#A8998C] mb-1.5">
-          Palette Système (20)
+          {t('colorPickerPalette', 'Palette Système (20)')}
         </div>
         <div className="grid grid-cols-5 gap-1.5">
           {DESIGN_SYSTEM_PALETTE.map((swatch) => {

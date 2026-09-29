@@ -240,6 +240,7 @@ export const AppHeader = React.memo(({
               type="button"
               onClick={() => handleOpenPayment('topup-cash')}
               title={t('header.topup_cash_tooltip') || "Recharger mon solde"}
+              aria-label={t('header.topup_cash_tooltip') || "Recharger mon solde"}
               className="premium-button balance-badge flex-shrink-0"
               style={{
                 border: '1px solid var(--border-color)',
@@ -277,6 +278,7 @@ export const AppHeader = React.memo(({
             type="button"
             onClick={() => handleOpenPayment('troco-plus')}
             title={t('header.subscribe_troco_plus') || "S'abonner à Troco Plus"}
+            aria-label={t('header.subscribe_troco_plus') || "S'abonner à Troco Plus"}
             className="premium-button balance-badge flex-shrink-0"
             style={{
               border: '1px solid var(--accent-primary)',

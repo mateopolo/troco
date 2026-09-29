@@ -64,7 +64,7 @@ export function NotificationPill() {
         return (
           <img
             src={notification.avatar}
-            alt={notification.title || 'Expéditeur'}
+            alt={notification.title || notification.senderName || 'Sender'}
             style={{
               width: '32px',
               height: '32px',

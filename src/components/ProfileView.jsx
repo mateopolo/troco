@@ -49,7 +49,7 @@ export default function ProfileView({
   averageRating,
   openCheckout,
   setIsCreditModalOpen,
-  currentLang,
+  currentLang: propCurrentLang,
   t: propT,
   darkMode,
   AnimatedEuroBalance,
@@ -73,7 +73,7 @@ export default function ProfileView({
     return defaultVal !== undefined ? defaultVal : k;
   };
   const t = safeT;
-  const currentLang = langContext?.currentLang || 'FR';
+  const currentLang = langContext?.currentLang || propCurrentLang || 'FR';
   const [showingOriginalBio, setShowingOriginalBio] = useState(false);
   const [, setTransTick] = useState(0);
 
@@ -469,7 +469,12 @@ export default function ProfileView({
             {skills.map((skill, idx) => (
               <span key={idx} style={{ fontSize: '13px', fontWeight: '700', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', padding: '6px 12px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid var(--border-color)' }}>
                 {skill}
-                <button onClick={() => handleRemoveSkill(skill)} style={{ border: 'none', background: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: 0, display: 'flex' }}>
+                <button
+                  type="button"
+                  onClick={() => handleRemoveSkill(skill)}
+                  aria-label={t('deleteSkill', `Supprimer la compétence ${skill}`)}
+                  style={{ border: 'none', background: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: 0, display: 'flex' }}
+                >
                   <Trash2 size={13} />
                 </button>
               </span>
@@ -479,13 +484,19 @@ export default function ProfileView({
           <div style={{ display: 'flex', gap: '8px' }}>
             <input
               type="text"
+              aria-label={t('addSkillPlaceholder', 'Ajouter une compétence...')}
               value={skillInput}
               onChange={(e) => setSkillInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleAddSkill()}
               placeholder={t('addSkillPlaceholder', 'Ajouter une compétence...')}
               style={{ flex: 1, padding: '10px 12px', border: '1px solid var(--border-color)', borderRadius: '12px', fontSize: '13px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', outline: 'none' }}
             />
-            <button onClick={handleAddSkill} style={{ border: 'none', borderRadius: '12px', padding: '10px 14px', background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)', color: '#FFF', fontWeight: '800', cursor: 'pointer', boxShadow: 'var(--shadow-accent)' }}>
+            <button
+              type="button"
+              onClick={handleAddSkill}
+              aria-label={t('addSkill', 'Ajouter une compétence')}
+              style={{ border: 'none', borderRadius: '12px', padding: '10px 14px', background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)', color: '#FFF', fontWeight: '800', cursor: 'pointer', boxShadow: 'var(--shadow-accent)' }}
+            >
               <Plus size={16} />
             </button>
           </div>
@@ -500,7 +511,12 @@ export default function ProfileView({
             {equipment.map((item, idx) => (
               <span key={idx} style={{ fontSize: '13px', fontWeight: '700', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-success)', padding: '6px 12px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '6px', border: '1px solid var(--border-color)' }}>
                 {item}
-                <button onClick={() => handleRemoveEquipment(item)} style={{ border: 'none', background: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: 0, display: 'flex' }}>
+                <button
+                  type="button"
+                  onClick={() => handleRemoveEquipment(item)}
+                  aria-label={t('deleteEquipment', `Supprimer le matériel ${item}`)}
+                  style={{ border: 'none', background: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: 0, display: 'flex' }}
+                >
                   <Trash2 size={13} />
                 </button>
               </span>
@@ -510,13 +526,19 @@ export default function ProfileView({
           <div style={{ display: 'flex', gap: '8px' }}>
             <input
               type="text"
+              aria-label={t('addEquipmentPlaceholder', 'Ajouter du matériel...')}
               value={equipmentInput}
               onChange={(e) => setEquipmentInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleAddEquipment()}
               placeholder={t('addEquipmentPlaceholder', 'Ajouter du matériel...')}
               style={{ flex: 1, padding: '10px 12px', border: '1px solid var(--border-color)', borderRadius: '12px', fontSize: '13px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', outline: 'none' }}
             />
-            <button onClick={handleAddEquipment} style={{ border: 'none', borderRadius: '12px', padding: '10px 14px', backgroundColor: 'var(--accent-success)', color: '#FFF', fontWeight: '800', cursor: 'pointer', boxShadow: 'var(--shadow-accent)' }}>
+            <button
+              type="button"
+              onClick={handleAddEquipment}
+              aria-label={t('addEquipment', 'Ajouter du matériel')}
+              style={{ border: 'none', borderRadius: '12px', padding: '10px 14px', backgroundColor: 'var(--accent-success)', color: '#FFF', fontWeight: '800', cursor: 'pointer', boxShadow: 'var(--shadow-accent)' }}
+            >
               <Plus size={16} />
             </button>
           </div>
@@ -546,6 +568,7 @@ export default function ProfileView({
                   imgStyle={{ objectFit: 'cover' }}
                 />
                 <button
+                  type="button"
                   onClick={() => onRemovePortfolioImage && onRemovePortfolioImage(idx)}
                   style={{
                     position: 'absolute', top: '6px', right: '6px',
@@ -557,6 +580,7 @@ export default function ProfileView({
                     zIndex: 10
                   }}
                   title={t('deleteThisPhoto', 'Supprimer cette photo')}
+                  aria-label={t('deleteThisPhoto', 'Supprimer cette photo')}
                 >
                   <X size={13} />
                 </button>
@@ -578,6 +602,7 @@ export default function ProfileView({
         <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
           <input
             type="text"
+            aria-label={t('pasteImageUrlPlaceholder', "Colle une URL d'image...")}
             value={portfolioUrlInput}
             onChange={(e) => setPortfolioUrlInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleAddPortfolioUrl()}
@@ -591,8 +616,10 @@ export default function ProfileView({
             }}
           />
           <button
+            type="button"
             onClick={handleAddPortfolioUrl}
             disabled={!portfolioUrlInput.trim()}
+            aria-label={t('addPhoto', "Ajouter la photo")}
             style={{
               border: 'none', borderRadius: '12px', padding: '10px 14px',
               background: portfolioUrlInput.trim() ? 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)' : 'var(--bg-subtle)',

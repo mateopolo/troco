@@ -519,8 +519,8 @@ export default function ProfileFeature({
                 <input value={profileDraft.username || ''} onChange={(e) => setProfileDraft(prev => ({ ...prev, username: e.target.value }))} placeholder="@pseudo" style={{ width: '100%', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-subtle)', borderRadius: '12px', padding: '10px 12px', fontSize: '14px', fontWeight: '700', color: 'var(--accent-primary)' }} />
               </div>
             </div>
-            <textarea value={profileDraft.bio} onChange={(e) => setProfileDraft(prev => ({ ...prev, bio: e.target.value }))} rows={3} style={{ width: '100%', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-subtle)', borderRadius: '14px', padding: '12px 14px', resize: 'vertical', fontSize: '13px', color: 'var(--text-main)' }} />
-            <input value={profileDraft.location} onChange={(e) => setProfileDraft(prev => ({ ...prev, location: e.target.value }))} style={{ width: '100%', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-subtle)', borderRadius: '14px', padding: '12px 14px', fontSize: '13px', color: 'var(--text-main)' }} />
+            <textarea aria-label={t('bio', 'Biographie')} placeholder={t('bioPlaceholder', 'Biographie (quelques mots sur vous...)')} value={profileDraft.bio} onChange={(e) => setProfileDraft(prev => ({ ...prev, bio: e.target.value }))} rows={3} style={{ width: '100%', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-subtle)', borderRadius: '14px', padding: '12px 14px', resize: 'vertical', fontSize: '13px', color: 'var(--text-main)' }} />
+            <input aria-label={t('location', 'Localisation')} placeholder={t('locationPlaceholder', 'Localisation (ex: Paris, France)')} value={profileDraft.location} onChange={(e) => setProfileDraft(prev => ({ ...prev, location: e.target.value }))} style={{ width: '100%', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-subtle)', borderRadius: '14px', padding: '12px 14px', fontSize: '13px', color: 'var(--text-main)' }} />
             
             {/* Champ CV / Resume */}
             <div>

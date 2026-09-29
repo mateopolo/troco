@@ -17,7 +17,7 @@ export default function CheckoutModal({
 
   if (!isOpen || !session) return null;
 
-  const title = session.title || session.label || (t('finalize_transaction') || t('finalizeTransaction') || 'Finaliser la transaction');
+  const title = session.title || session.label || t('finalizeTransaction', 'Finaliser la transaction');
   const amountDisplay = session.amountTtc !== undefined
     ? `${session.amountTtc.toFixed(2)} €`
     : session.tokensPurchased
@@ -36,7 +36,7 @@ export default function CheckoutModal({
           if (!isProcessing) onCancel();
         }}
         closeOnBackdrop={!isProcessing}
-        ariaLabel={t('secure_payment') || t('securePayment') || "Paiement sécurisé"}
+        ariaLabel={t('securePayment', 'Paiement sécurisé')}
         showCloseButton={false}
         contentStyle={{ maxWidth: 'none', maxHeight: 'none', overflow: 'visible' }}
       >
@@ -70,7 +70,7 @@ export default function CheckoutModal({
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <ShieldCheck size={22} color="#10b981" />
-              <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 600 }}>{t('secure_payment') || t('securePayment') || 'Paiement Sécurisé'}</h3>
+              <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 600 }}>{t('securePayment', 'Paiement Sécurisé')}</h3>
             </div>
             {/* "X" CANCEL BUTTON — PURE UI DISMISSAL, ZERO FINANCIAL SIDE-EFFECT */}
             <button
@@ -91,7 +91,7 @@ export default function CheckoutModal({
                 justifyContent: 'center',
                 transition: 'background 0.2s ease',
               }}
-              aria-label={t('cancelPayment') || "Annuler le paiement"}
+              aria-label={t('cancelPayment', 'Annuler le paiement')}
             >
               <X size={18} />
             </button>
@@ -103,20 +103,20 @@ export default function CheckoutModal({
               <div style={{ textAlign: 'center', padding: '20px 0' }}>
                 <CheckCircle2 size={54} color="#10b981" style={{ margin: '0 auto 16px' }} />
                 <h4 style={{ margin: '0 0 8px 0', fontSize: '20px', fontWeight: 700 }}>
-                  {t('paymentConfirmed') || 'Paiement Confirmé !'}
+                  {t('paymentConfirmed', 'Paiement Confirmé !')}
                 </h4>
                 <p style={{ margin: 0, color: '#9ca3af', fontSize: '14px' }}>
-                  {t('transactionValidatedSuccess') || 'Votre transaction a été validée avec succès.'}
+                  {t('transactionValidatedSuccess', 'Votre transaction a été validée avec succès.')}
                 </p>
               </div>
             ) : paymentStatus === 'failed' ? (
               <div style={{ textAlign: 'center', padding: '20px 0' }}>
                 <AlertCircle size={54} color="#ef4444" style={{ margin: '0 auto 16px' }} />
                 <h4 style={{ margin: '0 0 8px 0', fontSize: '20px', fontWeight: 700 }}>
-                  {t('transactionFailed') || 'Échec de la transaction'}
+                  {t('transactionFailed', 'Échec de la transaction')}
                 </h4>
                 <p style={{ margin: 0, color: '#9ca3af', fontSize: '14px' }}>
-                  {t('transactionErrorOccurred') || "Une erreur est survenue lors de l'opération. Aucun débit n'a été effectué."}
+                  {t('transactionErrorOccurred', "Une erreur est survenue lors de l'opération. Aucun débit n'a été effectué.")}
                 </p>
               </div>
             ) : (
@@ -131,7 +131,7 @@ export default function CheckoutModal({
                   }}
                 >
                   <div style={{ fontSize: '13px', color: '#9ca3af', marginBottom: '4px' }}>
-                    {t('order_details') || t('orderDetails') || 'Détail de la commande'}
+                    {t('orderDetails', 'Détail de la commande')}
                   </div>
                   <div style={{ fontSize: '16px', fontWeight: 600, marginBottom: '8px' }}>
                     {title}
@@ -144,7 +144,7 @@ export default function CheckoutModal({
                 {/* Mode Selector */}
                 <div style={{ marginBottom: '20px' }}>
                   <label style={{ fontSize: '13px', color: '#9ca3af', display: 'block', marginBottom: '8px' }}>
-                    {t('payment_method') || t('paymentMethod') || 'Moyen de paiement'}
+                    {t('paymentMethod', 'Moyen de paiement')}
                   </label>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                     <button
@@ -165,7 +165,7 @@ export default function CheckoutModal({
                         fontSize: '13px',
                       }}
                     >
-                      <CreditCard size={16} /> {t('card_label') || t('cardLabel') || t('cardMethod') || 'Carte Bancaire'}
+                      <CreditCard size={16} /> {t('cardLabel', 'Carte Bancaire')}
                     </button>
                     <button
                       type="button"
@@ -208,7 +208,7 @@ export default function CheckoutModal({
                       fontSize: '14px',
                     }}
                   >
-                    {t('cancel') || 'Annuler'}
+                    {t('cancelBtn', 'Annuler')}
                   </button>
 
                   <button
@@ -233,7 +233,7 @@ export default function CheckoutModal({
                       gap: '8px',
                     }}
                   >
-                    {isProcessing ? (t('processing') || t('secureProcessing') || 'Traitement sécurisé...') : (t('confirm_and_pay_amount') || t('confirm_and_pay') || t('confirmAndPayWithAmount') || 'Confirmer & Payer ({amount})').replace('{amount}', amountDisplay)}
+                    {isProcessing ? t('processing', 'Traitement sécurisé...') : t('confirmAndPay', 'Confirmer & Payer ({amount})').replace('{amount}', amountDisplay)}
                   </button>
                 </div>
               </>

@@ -80,7 +80,7 @@ export default function LanguageSelectModal({
           </h3>
         </div>
         <p style={{ fontSize: '12px', color: darkMode ? '#D4C5B5' : '#6B5E54', margin: '0 0 16px', lineHeight: 1.5 }}>
-          L'interface et les annonces seront instantanément traduites dans la langue choisie.
+          {t('langModalDescription', "L'interface et les annonces seront instantanément traduites dans la langue choisie.")}
         </p>
 
         {/* LISTE DES LANGUES DISPONIBLES */}

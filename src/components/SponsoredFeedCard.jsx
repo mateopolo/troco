@@ -13,7 +13,7 @@ const SPONSORED_PARTNERS = [
     title: 'Location & Prêt d\'outillage électroportatif pro',
     description: 'Bénéficiez de 15% de réduction et de la caution offerte sur tout l\'outillage haut de gamme certifié pour les membres Troco.',
     image: 'https://images.unsplash.com/photo-1504148455328-c376907d081c?auto=format&fit=crop&w=600&q=80',
-    perk: '-15% Code TROCO15',
+    perk: '-15% Remise Partenaire',
     ctaText: 'Découvrir le matériel',
     author: 'Atelier Pro Partenaire'
   },

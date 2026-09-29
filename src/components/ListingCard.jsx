@@ -5,9 +5,10 @@ import { TextEffect } from './core/text-effect';
 import { getActiveAnimation } from '../config/animations';
 import { getSuggestedMedia as defaultGetSuggestedMedia, getFallbackImage as defaultGetFallbackImage } from '../utils/mediaUtils';
 import { localizeLocation as defaultLocalizeLocation, localizeTags as defaultLocalizeTags } from '../locales/translations';
-import { getAuthorAvatar as defaultGetAuthorAvatar } from '../data/mockData';
 import { parseAndTranslateListing } from '../utils/dynamicTranslation';
 import { subscribeTranslations } from '../utils/translator';
+
+const defaultGetAuthorAvatar = () => '';
 
 const defaultGenerateTags = (title = '', description = '') => ['Échange', 'Service'];
 const defaultFormatCompensation = (comp) => comp || '';

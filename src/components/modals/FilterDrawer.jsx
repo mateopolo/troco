@@ -57,8 +57,8 @@ export default function FilterDrawer({
   const getPaymentLabel = (option) => {
     if (paymentLabels && paymentLabels[option]) return paymentLabels[option];
     if (option === 'all') return t('paymentAll') || t('all') || 'Tous';
-    if (option === 'credits') return t('paymentCredits') || 'Crédits temps';
-    if (option === 'cash') return t('paymentCash') || 'Rémunéré (€)';
+    if (option === 'credits') return t('paymentCredits', 'Crédits temps');
+    if (option === 'cash') return t('paymentCash', 'Rémunéré (€)');
     if (option === 'troc') return t('paymentTroc') || 'Troc direct';
     if (option === 'hybrid') return t('paymentHybrid') || 'Hybride';
     return option;
@@ -220,7 +220,7 @@ export default function FilterDrawer({
                 onClick={handleRequestGeolocation}
                 disabled={isGeolocating}
                 aria-pressed={isGeolocated}
-                aria-label={isGeolocated ? (t('disableSecureLocation') || 'Désactiver ma position sécurisée') : (t('useMyLocation') || 'Utiliser ma position')}
+                aria-label={isGeolocated ? t('disableSecureLocation', 'Désactiver ma position sécurisée') : t('useMyLocation', 'Utiliser ma position')}
                 className="premium-button"
                 style={{
                   width: '100%',
@@ -239,7 +239,7 @@ export default function FilterDrawer({
                 }}
               >
                 <MapPin size={15} />
-                {isGeolocating ? (t('locating') || 'Localisation...') : isGeolocated ? (t('secureLocationActive') || '✓ Position sécurisée (Rayon flou)') : (t('useMyLocation') || 'Utiliser ma position')}
+                {isGeolocating ? t('locating', 'Localisation...') : isGeolocated ? t('secureLocationActive', '✓ Position sécurisée (Rayon flou)') : t('useMyLocation', 'Utiliser ma position')}
               </button>
             </div>
 
@@ -247,10 +247,10 @@ export default function FilterDrawer({
             <div style={{ marginBottom: '16px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                 <label htmlFor="filter-radius-slider" style={{ fontSize: '12px', fontWeight: '700', color: darkMode ? '#D4C5B5' : '#3D3530' }}>
-                  {t('searchRadius') || 'Rayon géographique'}
+                  {t('searchRadius', 'Rayon géographique')}
                 </label>
                 <span style={{ fontSize: '12px', fontWeight: '800', color: '#C67D5B' }}>
-                  {isInfiniteRadius ? (t('infinite') || '∞ Illimité') : `${radiusKm} km`}
+                  {isInfiniteRadius ? t('infinite', '∞ Illimité') : `${radiusKm} km`}
                 </span>
               </div>
               <input
@@ -296,7 +296,7 @@ export default function FilterDrawer({
             {/* FILTRE PAR LANGUE */}
             <div style={{ marginBottom: '16px' }}>
               <label style={{ fontSize: '12px', fontWeight: '700', color: darkMode ? '#D4C5B5' : '#3D3530', display: 'block', marginBottom: '8px' }}>
-                {t('languagesFilter') || 'Langues parlées'}
+                {t('languagesFilter', 'Langues parlées')}
               </label>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 {['FR', 'EN', 'ES', 'IT', 'DE', 'JA', 'ZH'].map((code) => (
@@ -349,14 +349,14 @@ export default function FilterDrawer({
                 onChange={(e) => setHideDemos?.(e.target.checked)}
                 style={{ accentColor: '#C67D5B', width: '16px', height: '16px' }}
               />
-              {t('hideDemos') || 'Masquer les démos'}
+              {t('hideDemos', 'Masquer les démos')}
             </label>
 
             {/* FILTRE MODE DE RÉTRIBUTION */}
             <label style={{ fontSize: '12px', fontWeight: '700', color: darkMode ? '#D4C5B5' : '#3D3530' }}>
-              {t('retributionType') || t('retribution') || 'Rétribution'}
+              {t('retributionType', t('retribution', 'Rétribution'))}
             </label>
-            <div role="group" aria-label="Filtres de rétribution" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+            <div role="group" aria-label={t('retributionFilters', 'Filtres de rétribution')} style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
               {paymentOptions.map(option => (
                 <button
                   key={option}

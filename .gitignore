@@ -38,4 +38,7 @@ functions/lib/
 .trae/
 
 # Graphify cache
-graphify-out/cache/
+graphify-out/cache/
+
+# Local scratch scripts
+scratch/

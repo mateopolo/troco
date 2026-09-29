@@ -245,6 +245,8 @@ export const AppBottomNav = React.memo(({
     >
       <div
         ref={containerRef}
+        role="tablist"
+        aria-label="Navigation principale"
         style={{
           maxWidth: '640px',
           margin: '0 auto',
@@ -304,6 +306,8 @@ export const AppBottomNav = React.memo(({
             <button
               type="button"
               key={tab.id}
+              role="tab"
+              aria-selected={isActive}
               data-tab={tab.id}
               aria-label={tab.label}
               onClick={(e) => {

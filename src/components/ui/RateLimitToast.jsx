@@ -1,6 +1,8 @@
 import React from 'react';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 export function RateLimitToast({ isRateLimited, retryAfterSeconds, onClose }) {
+  const { t } = useLanguage();
   if (!isRateLimited) return null;
 
   return (
@@ -41,9 +43,9 @@ export function RateLimitToast({ isRateLimited, retryAfterSeconds, onClose }) {
         ⏱️
       </div>
       <div style={{ flex: 1 }}>
-        <p style={{ margin: 0, fontSize: '14px', fontWeight: 600 }}>Action ralentie</p>
+        <p style={{ margin: 0, fontSize: '14px', fontWeight: 600 }}>{t('rateLimitTitle', 'Action ralentie')}</p>
         <p style={{ margin: 0, fontSize: '13px', color: '#9ca3af' }}>
-          Tu vas trop vite, réessaie dans {retryAfterSeconds}s.
+          {t('rateLimitMessage', 'Tu vas trop vite, réessaie dans {s}s.').replace('{s}', retryAfterSeconds)}
         </p>
       </div>
       {onClose && (
@@ -57,7 +59,7 @@ export function RateLimitToast({ isRateLimited, retryAfterSeconds, onClose }) {
             fontSize: '16px',
             padding: '4px',
           }}
-          aria-label="Fermer"
+          aria-label={t('closeBtn', 'Fermer')}
         >
           ✕
         </button>

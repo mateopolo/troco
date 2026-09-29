@@ -172,7 +172,7 @@ export function generateHarmonicDarkPalette(baseHex) {
 
     const text = hslToHex(h, Math.min(s, 15), 96);
     const textSecondary = hslToHex(h, Math.min(s, 25), 78);
-    const textMuted = hslToHex(h, Math.min(s, 20), 58);
+    const textMuted = hslToHex(h, Math.min(s, 20), 68);
 
     const primary = hslToHex(h, Math.max(s, 55), 65);
     const primaryHover = hslToHex(h, Math.max(s, 60), 72);
@@ -415,7 +415,7 @@ export const THEMES_CONFIG = {
       '--bg-glass': 'rgba(250, 247, 242, 0.72)',
       '--text-main': '#3F4238',
       '--text-secondary': '#6B705C',
-      '--text-muted': '#A5A58D',
+      '--text-muted': '#5C604E',
       '--border-color': '#D4C7B0',
       '--border-dark': '#A5A58D',
       '--accent-primary': '#B98B73',
@@ -445,7 +445,7 @@ export const THEMES_CONFIG = {
       '--bg-glass': 'rgba(40, 33, 28, 0.85)',
       '--text-main': '#FAF7F2',
       '--text-secondary': '#C5B8AB',
-      '--text-muted': '#8E8276',
+      '--text-muted': '#A3968A',
       '--border-color': 'rgba(212, 157, 126, 0.22)',
       '--border-dark': 'rgba(212, 157, 126, 0.45)',
       '--accent-primary': '#D49D7E',
@@ -481,7 +481,7 @@ export const THEMES_CONFIG = {
       '--bg-glass': 'rgba(255, 245, 248, 0.72)',
       '--text-main': '#3A1822',
       '--text-secondary': '#754352',
-      '--text-muted': '#A37382',
+      '--text-muted': '#6B3C4B',
       '--border-color': '#F2CAD6',
       '--border-dark': '#FFB7C5',
       '--accent-primary': '#FFB7C5',
@@ -511,7 +511,7 @@ export const THEMES_CONFIG = {
       '--bg-glass': 'rgba(43, 23, 32, 0.85)',
       '--text-main': '#FFF0F5',
       '--text-secondary': '#E0A8BA',
-      '--text-muted': '#9C6F7E',
+      '--text-muted': '#B88596',
       '--border-color': 'rgba(244, 114, 155, 0.25)',
       '--border-dark': 'rgba(244, 114, 155, 0.5)',
       '--accent-primary': '#F4729B',
@@ -547,7 +547,7 @@ export const THEMES_CONFIG = {
       '--bg-glass': 'rgba(244, 248, 245, 0.72)',
       '--text-main': '#1B4332',
       '--text-secondary': '#406A56',
-      '--text-muted': '#729884',
+      '--text-muted': '#4B735F',
       '--border-color': '#CDE0D4',
       '--border-dark': '#8B9A80',
       '--accent-primary': '#8B9A80',
@@ -577,7 +577,7 @@ export const THEMES_CONFIG = {
       '--bg-glass': 'rgba(23, 39, 30, 0.85)',
       '--text-main': '#EDF7F2',
       '--text-secondary': '#A3CBB6',
-      '--text-muted': '#6B9480',
+      '--text-muted': '#7FA894',
       '--border-color': 'rgba(82, 183, 136, 0.22)',
       '--border-dark': 'rgba(82, 183, 136, 0.45)',
       '--accent-primary': '#52B788',
@@ -613,7 +613,7 @@ export const THEMES_CONFIG = {
       '--bg-glass': 'rgba(248, 246, 253, 0.72)',
       '--text-main': '#2E1065',
       '--text-secondary': '#5B21B6',
-      '--text-muted': '#8B5CF6',
+      '--text-muted': '#6034A6',
       '--border-color': '#DDD6FE',
       '--border-dark': '#7C3AED',
       '--accent-primary': '#7C3AED',
@@ -643,7 +643,7 @@ export const THEMES_CONFIG = {
       '--bg-glass': 'rgba(32, 24, 51, 0.85)',
       '--text-main': '#F5F3FF',
       '--text-secondary': '#C4B5FD',
-      '--text-muted': '#8B5CF6',
+      '--text-muted': '#A78BFA',
       '--border-color': 'rgba(167, 139, 250, 0.22)',
       '--border-dark': 'rgba(167, 139, 250, 0.45)',
       '--accent-primary': '#A78BFA',
@@ -679,7 +679,7 @@ export const THEMES_CONFIG = {
       '--bg-glass': 'rgba(255, 255, 255, 0.75)',
       '--text-main': '#000000',
       '--text-secondary': '#404040',
-      '--text-muted': '#737373',
+      '--text-muted': '#616161',
       '--border-color': '#E0E0E0',
       '--border-dark': '#000000',
       '--accent-primary': '#000000',
@@ -709,7 +709,7 @@ export const THEMES_CONFIG = {
       '--bg-glass': 'rgba(28, 28, 31, 0.75)',
       '--text-main': '#F5F5F7',
       '--text-secondary': '#A1A1A6',
-      '--text-muted': '#636366',
+      '--text-muted': '#9E9EA3',
       '--border-color': 'rgba(245, 245, 247, 0.12)',
       '--border-dark': 'rgba(245, 245, 247, 0.25)',
       '--accent-primary': '#A89F91',

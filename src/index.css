@@ -31,7 +31,7 @@
   --bg-glass: rgba(250, 247, 242, 0.72);
   --text-main: #3F4238;
   --text-secondary: #565A4A;
-  --text-muted: #737563;
+  --text-muted: #5C604E;
   --border-color: #D4C7B0;
   --border-dark: #A5A58D;
   --accent-primary: #B98B73;
@@ -2287,10 +2287,14 @@ body.dark-mode .prose code,
 
 /* 1. ANNEAUX DE FOCUS VISIBLES HAUTE DÉFINITION (CLAVIER / TAB) */
 :focus-visible {
-  outline: 2.5px solid var(--accent-primary, #C67D5B) !important;
-  outline-offset: 2px !important;
-  box-shadow: 0 0 0 4px rgba(198, 125, 91, 0.3) !important;
-  transition: outline-offset 0.15s ease, box-shadow 0.15s ease !important;
+  outline: 2px solid var(--accent-primary, #C67D5B);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(198, 125, 91, 0.25);
+  transition: outline-offset 0.15s ease, box-shadow 0.15s ease;
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
 }
 
 button:focus-visible,
@@ -2303,17 +2307,16 @@ select:focus-visible,
 [role="checkbox"]:focus-visible,
 [role="tab"]:focus-visible,
 [tabindex="0"]:focus-visible {
-  outline: 2.5px solid var(--accent-primary, #C67D5B) !important;
-  outline-offset: 2px !important;
-  box-shadow: 0 0 0 4px rgba(198, 125, 91, 0.32) !important;
+  outline: 2px solid var(--accent-primary, #C67D5B);
+  outline-offset: 2px;
 }
 
 body.dark-mode :focus-visible,
 [data-theme="dark"] :focus-visible,
 .dark :focus-visible {
-  outline: 2.5px solid #D4A373 !important;
-  outline-offset: 2px !important;
-  box-shadow: 0 0 0 4px rgba(212, 163, 115, 0.4) !important;
+  outline: 2px solid var(--accent-primary, #D4A373);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(212, 163, 115, 0.3);
 }
 
 /* 2. ÉLÉMENTS INTERACTIFS DÉCLENCHABLES AU CLAVIER */

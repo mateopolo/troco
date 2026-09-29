@@ -13,7 +13,7 @@
 > - `STEP BY STEP URGENT.txt` & `LISTE DES PROCHAINES FONCTIONNALITES A CODER.txt` (Backlog immédiat)
 > - `PROJECT_CONTEXT.md` & `TROCO_PROJECT_HISTORY.md` (Historique des décisions et géoprivacy)
 >
-> **Score global :** 8.6/10 | **Progression :** 41 / 74 tâches validées avec preuves formelles (55.4%)
+> **Score global :** 8.6/10 | **Progression :** 42 / 74 tâches validées avec preuves formelles (56.8%)
 
 ---
 
@@ -21,12 +21,12 @@
 
 | Phase | Fait | Restant | Progression |
 |---|---|---|---|
-| 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 22 | 5 | 81.5% |
+| 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 23 | 4 | 85.2% |
 | 🟡 Facile (Niveau 2 — 1h à 3h) | 16 | 0 | 100% |
 | 🟠 Moyen (Niveau 3 — 3h à 1 jour) | 8 | 7 | 53.3% |
 | 🔴 Difficile (Niveau 4 — 1 à 3 jours) | 3 | 7 | 30.0% |
 | 🚨 Très difficile (Niveau 5 — 3j à 2 sem) | 0 | 9 | 0.0% |
-| **TOTAL** | **41** | **33** | **55.4%** |
+| **TOTAL** | **42** | **32** | **56.8%** |
 
 
 ### Score par axe vs cible Licorne
@@ -188,11 +188,9 @@
 **Preuve** : 0 prompt actif dans le code applicatif UI (`src/hooks/useAppAuth.js:56, 88-92, 308-316`, `src/components/modals/EmailLinkPromptModal.jsx:1-210`, `src/App.js:106, 289, 3198-3207`, `src/components/CollaborativeWhiteboardModal.jsx:328, 2090-2105, 2908-3035`). `EmailLinkPromptModal` en place.  
 **Statut** : ✅ FAIT (VRAI POSITIF) — 0 prompt actif, EmailLinkPromptModal en place pour l'auth par lien email et modal intégrée `isSavePromptOpen` dans le tableau blanc.
 
-### [ ] [CLEANUP-01] — Purge démo complète (mockData, personas, Unsplash, pubs, DemoModeBanner)
-**Statut** : ❌ À FAIRE  
-**Fichier** : `src/data/mockData.js`, `src/data/demoData.js`, `src/App.js`, `src/components/SponsoredFeedCard.jsx`  
-**Estimation** : 45min  
-**Impact** : Élimine les 132 fausses annonces, 126 URLs Unsplash, faux personas et encarts publicitaires factices (Brico Pro, Academia, TROCO15).
+### [x] [CLEANUP-01] — Purge démo complète (mockData, personas, Unsplash, pubs, DemoModeBanner)
+**Preuve** : Fichiers `src/data/mockData.js`, `src/data/mockChatsData.js`, `src/components/common/DemoModeBanner.jsx`, `src/data/demoData.js` supprimés. `src/App.js:72-85` (imports purgés), `src/App.js:428` (`userTransactions` initialisé vide), `src/App.js:2075-2083` (suppression des avatars/personas Unsplash), `src/App.js:2185-2250` (requête pure Firestore active sans fallback mockData), `src/App.js:2595-2630` (portefeuilles et portfolios réels sans branches isDemoMode/fake wallets), suppression des 2 sidebars publicitaires avec TROCO15/Unsplash, `src/features/feed/FeedSection.jsx:600` (suppression de la fausse carte Espace Pro), `src/components/SponsoredFeedCard.jsx:16` (retrait perk TROCO15).
+**Statut** : ✅ FAIT — Éradication intégrale du mode démo, des personas IA, des images Unsplash hardcodées et des bannières publicitaires fictives. Flux 100% Firestore.
 
 ### [ ] [CLEANUP-02] — Fix P1-BUG-11 réel (localStorage feed)
 **Statut** : ❌ À FAIRE  

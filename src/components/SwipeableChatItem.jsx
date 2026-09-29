@@ -61,24 +61,33 @@ export function SwipeableChatItem({
     }
   };
 
-  const triggerDelete = async () => {
+  const triggerDelete = () => {
     hapticError();
-    const confirmed = await confirm({
+    const proceed = (confirmed) => {
+      if (confirmed) {
+        setIsDeleting(true);
+        if (typeof onDelete === 'function') {
+          setTimeout(() => {
+            onDelete(chat);
+          }, 180);
+        }
+      } else {
+        x.set(0);
+      }
+    };
+
+    const confirmRes = confirm({
       title: t('delete_conversation_title', 'Supprimer la discussion ?'),
       message: t('delete_conversation_message', "Êtes-vous sûr de vouloir supprimer définitivement cette discussion ? L'historique sera perdu pour vous."),
       confirmLabel: t('confirm_dialog_delete', 'Supprimer'),
       cancelLabel: t('cancelBtn', 'Annuler'),
       variant: 'danger',
     });
-    if (confirmed) {
-      setIsDeleting(true);
-      if (typeof onDelete === 'function') {
-        setTimeout(() => {
-          onDelete(chat);
-        }, 180);
-      }
+
+    if (confirmRes && typeof confirmRes.then === 'function') {
+      confirmRes.then(proceed);
     } else {
-      x.set(0);
+      proceed(Boolean(confirmRes));
     }
   };
 

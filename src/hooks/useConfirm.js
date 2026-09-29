@@ -62,7 +62,12 @@ export function ConfirmProvider({ children }) {
 export function useConfirm() {
   const context = useContext(ConfirmContext);
   if (!context) {
-    throw new Error('useConfirm must be used within a ConfirmProvider');
+    return (options = {}) => {
+      if (typeof window !== 'undefined' && typeof window.confirm === 'function') {
+        return window.confirm(options.message || options.title || 'Confirmer ?');
+      }
+      return true;
+    };
   }
   return context.confirm;
 }

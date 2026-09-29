@@ -598,43 +598,6 @@ export function FeedSection({
           </button>
         </div>
 
-        <div className="ad-card">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-            <span style={{ fontSize: '9px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#7E22CE', backgroundColor: '#F3E8FF', padding: '3px 7px', borderRadius: '6px' }}>
-              🏢 Espace Pro
-            </span>
-            <span style={{ fontSize: '9px', color: darkMode ? '#94A3B8' : '#94A3B8' }}>Offre Pro</span>
-          </div>
-          <img
-            src="https://images.unsplash.com/photo-1556761175-5973dc0f32e7?auto=format&fit=crop&w=400&q=80"
-            alt="Troco Entreprise"
-            style={{ width: '100%', height: '85px', objectFit: 'cover', borderRadius: '12px', marginBottom: '8px' }}
-          />
-          <div style={{ fontSize: '13px', fontWeight: '800', color: darkMode ? '#FFFFFF' : '#0F172A', marginBottom: '4px', lineHeight: 1.3 }}>
-            Vous êtes une Entreprise ?
-          </div>
-          <div style={{ fontSize: '11px', color: darkMode ? '#94A3B8' : '#64748B', lineHeight: 1.4, marginBottom: '8px' }}>
-            Abonnement Pro avec facturation TVA et échanges illimités.
-          </div>
-          <button
-            type="button"
-            onClick={() => setIsCguViewerOpen(true)}
-            className="premium-button"
-            style={{
-              width: '100%',
-              padding: '8px 10px',
-              borderRadius: '10px',
-              backgroundColor: darkMode ? 'rgba(255,255,255,0.1)' : '#F1F5F9',
-              color: darkMode ? '#FFF' : '#0F172A',
-              fontSize: '11px',
-              fontWeight: '700',
-              border: 'none',
-              cursor: 'pointer'
-            }}
-          >
-            En savoir plus
-          </button>
-        </div>
       </aside>
       </div>
       </PullToRefresh>

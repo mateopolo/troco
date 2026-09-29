@@ -84,6 +84,22 @@ export const paymentService = {
         }
       }
 
+      // 0. Mise à jour de l'annonce boostée si mode === 'boost'
+      if (mode === 'boost' && listingId) {
+        try {
+          const listingRef = doc(db, 'listings', String(listingId));
+          await updateDoc(listingRef, {
+            isBoosted: true,
+            boostedAt: serverTimestamp(),
+            boostedUntil: new Date(Date.now() + (boostDays || 7) * 24 * 60 * 60 * 1000).toISOString(),
+            updatedAt: serverTimestamp(),
+          });
+          logger.info('[paymentService] Listing boosted in Firestore:', listingId);
+        } catch (err) {
+          logger.warn('[paymentService] Could not update boosted listing in Firestore:', err);
+        }
+      }
+
       // 1. Enregistrement dans la collection racine /transactions
       try {
         await addDoc(collection(db, 'transactions'), {

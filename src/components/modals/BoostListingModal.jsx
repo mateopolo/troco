@@ -1,6 +1,7 @@
 import React from 'react';
 import { X } from 'lucide-react';
 import UniversalModal from '../ui/UniversalModal';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 export default function BoostListingModal({
   isOpen,
@@ -11,13 +12,14 @@ export default function BoostListingModal({
   darkMode = false,
   profile,
 }) {
+  const { t } = useLanguage();
   if (!isOpen || !boostingListing) return null;
 
   return (
     <UniversalModal
       isOpen={isOpen}
       onClose={onClose}
-      ariaLabel="Booster une annonce"
+      ariaLabel={t('boostListingAriaLabel', 'Booster une annonce')}
       showCloseButton={false}
     >
       <div style={{
@@ -33,6 +35,7 @@ export default function BoostListingModal({
       }}>
         <button
           onClick={onClose}
+          aria-label={t('cancelBtn', 'Fermer')}
           style={{
             position: 'absolute',
             top: '14px',
@@ -52,10 +55,10 @@ export default function BoostListingModal({
           <X size={16} />
         </button>
         <div className="font-editorial-heading" style={{ fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530', marginBottom: '8px', fontSize: '20px' }}>
-          🔥 Booster cette annonce
+          {t('boostListingTitle2', '🔥 Booster cette annonce')}
         </div>
         <div style={{ fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54', lineHeight: 1.6, marginBottom: '16px' }}>
-          Mets en avant <strong>{boostingListing.title}</strong> pendant 7 jours pour <strong>2,99€</strong>.
+          {t('boostListingDesc', 'Mets en avant {title} pendant 7 jours pour 2,99€.').replace('{title}', boostingListing.title)}
         </div>
         <button
           onClick={confirmBoostListing}
@@ -72,7 +75,7 @@ export default function BoostListingModal({
             boxShadow: '0 10px 20px rgba(198,125,91,0.25)'
           }}
         >
-          Valider le boost — procéder au paiement
+          {t('boostListingCta', 'Valider le boost — procéder au paiement')}
         </button>
         {boostMessage && (
           <div style={{ marginTop: '10px', fontSize: '12px', color: '#C67D5B', fontWeight: '700' }}>

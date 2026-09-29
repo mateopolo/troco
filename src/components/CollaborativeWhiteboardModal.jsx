@@ -325,6 +325,8 @@ export default function CollaborativeWhiteboardModal({
   const [isSendPromptOpen, setIsSendPromptOpen] = useState(false);
   const [sendTitle, setSendTitle] = useState('');
   const [sendVersion, setSendVersion] = useState('');
+  const [isSavePromptOpen, setIsSavePromptOpen] = useState(false);
+  const [saveVersionName, setSaveVersionName] = useState('');
 
   // Panneau Latéral des Versions (Historique)
   const [isVersionsSidebarOpen, setIsVersionsSidebarOpen] = useState(false);
@@ -2087,19 +2089,22 @@ export default function CollaborativeWhiteboardModal({
     return tempCanvas.toDataURL('image/jpeg', 0.5);
   }, [remotePaths, localPaths, stickyNotes, textElements, backgroundColor, darkMode]);
 
-  // 1. Bouton "Sauvegarder" (Firestore avec prompt de nommage de version et archivage)
-  const handleSave = async () => {
+  // 1. Bouton "Sauvegarder" (Modale intégrée de nommage de version et archivage Firestore)
+  const openSavePrompt = () => {
     if (isSaving) return;
+    const nextVersion = versionNumber + 1;
+    setSaveVersionName(`Croquis V${nextVersion}`);
+    setIsSavePromptOpen(true);
+  };
 
-    // 2. NOMMAGE DES VERSIONS (Le Prompt)
+  const handleSave = async (customVersionName) => {
+    if (isSaving) return;
+    setIsSavePromptOpen(false);
+
+    // 2. NOMMAGE DES VERSIONS (Modale In-App sans window.prompt)
     const nextVersion = versionNumber + 1;
     const defaultName = `Croquis V${nextVersion}`;
-    const userVersionName = window.prompt("Nommez cette version (ex: Croquis V1) :", defaultName);
-    if (userVersionName === null) {
-      // Annulation utilisateur
-      return;
-    }
-    const versionName = userVersionName.trim() || defaultName;
+    const versionName = (customVersionName || saveVersionName || defaultName).trim() || defaultName;
 
     setIsSaving(true);
     setSaveStatus('Enregistrement Cloud...');
@@ -2620,7 +2625,7 @@ export default function CollaborativeWhiteboardModal({
             <button
               type="button"
               disabled={isSaving}
-              onClick={handleSave}
+              onClick={openSavePrompt}
               className="premium-button"
               aria-label="Sauvegarder le tableau blanc"
               style={{
@@ -2896,6 +2901,132 @@ export default function CollaborativeWhiteboardModal({
                 <span>{isSending ? 'Envoi...' : 'Envoyer dans le chat'}</span>
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 1.1 MODALE IN-APP : NOMMAGE DE VERSION LORS DE LA SAUVEGARDE (REMPLACE WINDOW.PROMPT) */}
+      {isSavePromptOpen && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 1000100,
+            backgroundColor: 'rgba(0, 0, 0, 0.65)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px',
+          }}
+          onClick={() => setIsSavePromptOpen(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: darkMode ? '#1E1B18' : '#FFFFFF',
+              borderRadius: '20px',
+              padding: '24px',
+              maxWidth: '420px',
+              width: '100%',
+              boxShadow: '0 20px 50px rgba(0,0,0,0.3)',
+              border: darkMode ? '1px solid rgba(255,255,255,0.1)' : '1px solid rgba(0,0,0,0.08)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Save size={18} color="var(--accent-primary, #C67D5B)" />
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '800', color: darkMode ? '#FAF7F2' : '#2D2825' }}>
+                  Sauvegarder une version
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsSavePromptOpen(false)}
+                style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#888', padding: '4px' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <p style={{ margin: 0, fontSize: '13px', color: darkMode ? '#A8A29E' : '#6B7280', lineHeight: 1.5 }}>
+              Nommez cette version pour la retrouver facilement dans l'historique des révisions du projet.
+            </p>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSave(saveVersionName);
+              }}
+              style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <label style={{ fontSize: '12px', fontWeight: '700', color: darkMode ? '#E7E5E4' : '#374151' }}>
+                  Nom de la version
+                </label>
+                <input
+                  type="text"
+                  autoFocus
+                  value={saveVersionName}
+                  onChange={(e) => setSaveVersionName(e.target.value)}
+                  placeholder={`Croquis V${versionNumber + 1}`}
+                  style={{
+                    padding: '10px 14px',
+                    borderRadius: '10px',
+                    border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #D1D5DB',
+                    backgroundColor: darkMode ? '#2B2622' : '#F9FAFB',
+                    color: darkMode ? '#FFF' : '#111',
+                    fontSize: '13px',
+                    outline: 'none',
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', marginTop: '6px' }}>
+                <button
+                  type="button"
+                  onClick={() => setIsSavePromptOpen(false)}
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    borderRadius: '12px',
+                    border: darkMode ? '1px solid rgba(255,255,255,0.15)' : '1px solid #E5E7EB',
+                    backgroundColor: 'transparent',
+                    color: darkMode ? '#D6D3D1' : '#4B5563',
+                    fontWeight: '700',
+                    fontSize: '13px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Annuler
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  style={{
+                    flex: 2,
+                    padding: '10px',
+                    borderRadius: '12px',
+                    border: 'none',
+                    backgroundColor: 'var(--accent-primary, #C67D5B)',
+                    color: '#FFF',
+                    fontWeight: '800',
+                    fontSize: '13px',
+                    cursor: isSaving ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <Save size={15} />
+                  <span>{isSaving ? 'Enregistrement...' : 'Sauvegarder'}</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -53,6 +53,7 @@ export const useAppAuth = () => {
   const [isProfileLoading, setIsProfileLoading] = useState(() => !isE2ESession);
   const [isUserBanned, setIsUserBanned] = useState(false);
   const [bannedReason, setBannedReason] = useState('');
+  const [pendingEmailLinkHref, setPendingEmailLinkHref] = useState(null);
   const setIsAuthenticated = useCallback((value) => {
     useAuthStore.setState({ isAuthenticated: value });
   }, []);
@@ -85,11 +86,10 @@ export const useAppAuth = () => {
 
         // Vérification de lien email de connexion si applicable
         if (isSignInWithEmailLink(auth, window.location.href)) {
-          let email = window.localStorage.getItem('emailForSignIn');
+          const email = window.localStorage.getItem('emailForSignIn');
           if (!email) {
-            email = window.prompt('Veuillez confirmer votre email pour finaliser la connexion :');
-          }
-          if (email) {
+            setPendingEmailLinkHref(window.location.href);
+          } else {
             try {
               await signInWithEmailLink(auth, email, window.location.href);
               window.localStorage.removeItem('emailForSignIn');
@@ -307,6 +307,16 @@ export const useAppAuth = () => {
     addSocialLink,
     removeSocialLink,
     setSocialLinks,
+    pendingEmailLinkHref,
+    handleConfirmEmailLink: async (email) => {
+      if (!email || !pendingEmailLinkHref) return;
+      await signInWithEmailLink(auth, email.trim(), pendingEmailLinkHref);
+      window.localStorage.removeItem('emailForSignIn');
+      setPendingEmailLinkHref(null);
+    },
+    handleCancelEmailLink: () => {
+      setPendingEmailLinkHref(null);
+    },
   };
 };
 
