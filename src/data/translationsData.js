@@ -72,6 +72,10 @@ export const translations = {
     addPhoto: "Ajouter une photo factice",
     confirmDeleteTitle: "Supprimer l'annonce ?",
     confirmDeleteText: "Es-tu sûr de vouloir supprimer cette annonce ?",
+    adminDeleteListingTitle: "Suppression administrateur",
+    adminDeleteListingMessage: "Confirmez la suppression définitive de",
+    delete: "Supprimer",
+    cancel: "Annuler",
     cancelBtn: "Annuler",
     confirmBtn: "Confirmer",
 

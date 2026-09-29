@@ -46,7 +46,7 @@ import {
 import FilterDrawer from './components/modals/FilterDrawer';
 import LanguageSelectModal from './components/modals/LanguageSelectModal';
 import { LanguageContext } from './contexts/LanguageContext';
-import { ConfirmProvider } from './hooks/useConfirm';
+import { ConfirmProvider, useConfirm } from './hooks/useConfirm';
 import ConfirmDialog from './components/ui/ConfirmDialog';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -130,6 +130,7 @@ export const pageTransitionVariants = {
 export const pageTransitionConfig = { duration: 0.2, ease: "easeOut" };
 
 export default function App() {
+  const confirm = useConfirm();
   // Purge d'urgence pour réparer les écrans noirs sur mobile
   // (Bloc de purge supprimé — cassait la persistance localStorage)
   useFirestoreHealth();
@@ -2617,7 +2618,14 @@ export default function App() {
   };
 
   const handleDeleteListing = async (id) => {
-    if (window.confirm(t('confirmDeleteText') || 'Voulez-vous vraiment supprimer cette annonce ?')) {
+    const ok = await confirm({
+      title: t('confirmDeleteTitle') || 'Supprimer cette annonce ?',
+      message: t('confirmDeleteText') || 'Cette action est irréversible.',
+      confirmLabel: t('delete') || 'Supprimer',
+      cancelLabel: t('cancel') || 'Annuler',
+      variant: 'danger',
+    });
+    if (ok) {
       const targetListing = listings.find(item => item.id === id);
       setListings(prev => prev.filter(item => item.id !== id));
       if (targetListing?.firestoreId) {
@@ -3520,8 +3528,15 @@ export default function App() {
                   <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: darkMode ? '1px solid rgba(239,68,68,0.3)' : '1px solid #FEE2E2' }}>
                     <button
                       type="button"
-                      onClick={() => {
-                        if (window.confirm(`[ADMINISTRATEUR]\nConfirmez-vous la suppression définitive de l'annonce "${selectedListing.title}" ?`)) {
+                      onClick={async () => {
+                        const ok = await confirm({
+                          title: t('adminDeleteListingTitle') || 'Suppression administrateur',
+                          message: `${t('adminDeleteListingMessage') || 'Confirmez la suppression définitive de'} « ${selectedListing.title} » ?`,
+                          confirmLabel: t('delete') || 'Supprimer',
+                          cancelLabel: t('cancel') || 'Annuler',
+                          variant: 'danger',
+                        });
+                        if (ok) {
                           handleAdminDeleteListing(selectedListing);
                           setSelectedListing(null);
                         }

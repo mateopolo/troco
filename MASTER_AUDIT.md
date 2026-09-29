@@ -13,7 +13,7 @@
 > - `STEP BY STEP URGENT.txt` & `LISTE DES PROCHAINES FONCTIONNALITES A CODER.txt` (Backlog immédiat)
 > - `PROJECT_CONTEXT.md` & `TROCO_PROJECT_HISTORY.md` (Historique des décisions et géoprivacy)
 >
-> **Score global :** 8.6/10 | **Progression :** 43 / 74 tâches validées avec preuves formelles (58.1%)
+> **Score global :** 8.6/10 | **Progression :** 44 / 74 tâches validées avec preuves formelles (59.5%)
 
 ---
 
@@ -21,12 +21,12 @@
 
 | Phase | Fait | Restant | Progression |
 |---|---|---|---|
-| 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 24 | 3 | 88.9% |
+| 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 25 | 2 | 92.6% |
 | 🟡 Facile (Niveau 2 — 1h à 3h) | 16 | 0 | 100% |
 | 🟠 Moyen (Niveau 3 — 3h à 1 jour) | 8 | 7 | 53.3% |
 | 🔴 Difficile (Niveau 4 — 1 à 3 jours) | 3 | 7 | 30.0% |
 | 🚨 Très difficile (Niveau 5 — 3j à 2 sem) | 0 | 9 | 0.0% |
-| **TOTAL** | **43** | **31** | **58.1%** |
+| **TOTAL** | **44** | **30** | **59.5%** |
 
 
 ### Score par axe vs cible Licorne
@@ -244,9 +244,9 @@
 
 ---
 
-### [ ] [FAC-01] — Création du hook `useConfirm()` et de la modale `<ConfirmDialog />`
-**Preuve** : Reste 2 `window.confirm` résiduels dans `src/App.js:2756` (handleDeleteListing) et `src/App.js:3663` (suppression admin). Hook `useConfirm.js` et `<ConfirmDialog />` en place.  
-**Statut** : ⚠️ PARTIEL — Hook `useConfirm()` et composant `<ConfirmDialog />` déployés, mais il reste 2 `window.confirm` natifs dans `src/App.js:2756` et `src/App.js:3663` à migrer.
+### [x] [FAC-01] — Création du hook `useConfirm()` et de la modale `<ConfirmDialog />`
+**Preuve** : `src/hooks/useConfirm.js:1-95`, `src/components/ui/ConfirmDialog.jsx:1-120`, `src/App.js:49, 133, 2621-2628, 3531-3538` (remplacement intégral des 2 `window.confirm` résiduels par `await confirm(...)`), `tests/unit/ConfirmDialog.test.js:1-60` (2/2 tests passés). 0 `window.confirm` résiduel dans `src/App.js`.  
+**Statut** : ✅ FAIT — Remplacement effectif de tous les `window.confirm` natifs par le hook in-app `useConfirm` et la modale accessible standardisée `<ConfirmDialog />`.
 
 ### [x] [FAC-02] — Intégration du composant `PullToRefresh` sur la vue Feed
 **Preuve** : `src/components/ui/PullToRefresh.jsx:1-120`, `src/App.js:37, 2697-2708, 4172-4328`  

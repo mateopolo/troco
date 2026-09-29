@@ -1,6 +1,8 @@
-import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
+import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
 
 export const ConfirmContext = createContext(null);
+
+let globalConfirmHandler = null;
 
 export function ConfirmProvider({ children }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -27,6 +29,15 @@ export function ConfirmProvider({ children }) {
       setIsOpen(true);
     });
   }, []);
+
+  useEffect(() => {
+    globalConfirmHandler = confirm;
+    return () => {
+      if (globalConfirmHandler === confirm) {
+        globalConfirmHandler = null;
+      }
+    };
+  }, [confirm]);
 
   const handleConfirm = useCallback(() => {
     setIsOpen(false);
@@ -62,6 +73,9 @@ export function ConfirmProvider({ children }) {
 export function useConfirm() {
   const context = useContext(ConfirmContext);
   if (!context) {
+    if (globalConfirmHandler) {
+      return globalConfirmHandler;
+    }
     return (options = {}) => {
       if (typeof window !== 'undefined' && typeof window.confirm === 'function') {
         return window.confirm(options.message || options.title || 'Confirmer ?');

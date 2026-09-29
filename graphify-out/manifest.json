@@ -384,9 +384,9 @@
     "semantic_hash": "29788f2edfc62f638e05abc398125e63"
   },
   "src/App.js": {
-    "mtime": 1790713569.887773,
-    "seen": 1790713703.721824,
-    "ast_hash": "1f20bf7f5cc673d5381ac3e518323ea6",
+    "mtime": 1790714159.3974206,
+    "seen": 1790714309.1427643,
+    "ast_hash": "2f07e04aa1816e84b054ec207b42da65",
     "semantic_hash": ""
   },
   "src/App.test.js": {
@@ -1434,15 +1434,15 @@
     "semantic_hash": "d6cbd99abea778cd447820a111d1b50c"
   },
   "src/data/translationsData.js": {
-    "mtime": 1790693643.7211866,
-    "seen": 1790693780.4859982,
-    "ast_hash": "ef5b31c97f93e22b574c560088e274d6",
+    "mtime": 1790714033.9048066,
+    "seen": 1790714309.143102,
+    "ast_hash": "53a7b67c7cbd603f9a06d59aa20cc100",
     "semantic_hash": ""
   },
   "src/data/translationsSecondary.js": {
-    "mtime": 1790712902.6333594,
-    "seen": 1790713103.3395267,
-    "ast_hash": "2165d8e032b5bf1c5b4cb7d0105c3fc6",
+    "mtime": 1790714121.5859635,
+    "seen": 1790714309.1431036,
+    "ast_hash": "72980fd833ab1aba7fcc91c0ad8c7ca7",
     "semantic_hash": ""
   },
   "src/features/admin/AdminChatsTab.jsx": {
@@ -1740,10 +1740,10 @@
     "semantic_hash": "f7258c03464fe32198bd8b84737d2570"
   },
   "src/index.js": {
-    "mtime": 1789306478.0063026,
-    "seen": 1790594464.2383816,
-    "ast_hash": "f2ca6e36194bc0ac4037f6eb57c3f7b4",
-    "semantic_hash": "f2ca6e36194bc0ac4037f6eb57c3f7b4"
+    "mtime": 1790714017.9149053,
+    "seen": 1790714309.1431854,
+    "ast_hash": "7492340efaf76ac518bc50b1283bd18c",
+    "semantic_hash": ""
   },
   "src/lib/utils.js": {
     "mtime": 1788562217.8572688,
@@ -1752,9 +1752,9 @@
     "semantic_hash": "2c8beff856537a1e2618e9407b2e7927"
   },
   "src/locales/translations.js": {
-    "mtime": 1790701697.1281025,
-    "seen": 1790701801.2559283,
-    "ast_hash": "1676322720850ee99fa5505b4407640b",
+    "mtime": 1790714056.915719,
+    "seen": 1790714309.1431885,
+    "ast_hash": "8f0f579355e5bba34520e2b2390746a4",
     "semantic_hash": ""
   },
   "src/reportWebVitals.js": {
@@ -2304,9 +2304,9 @@
     "semantic_hash": ""
   },
   "MASTER_AUDIT.md": {
-    "mtime": 1790713671.5233953,
-    "seen": 1790713703.7225502,
-    "ast_hash": "df367a9dbed5084e1f6981f04770c8d3",
+    "mtime": 1790714277.9458618,
+    "seen": 1790714309.1433492,
+    "ast_hash": "340f19355f4cf3be796d4877f55cdb60",
     "semantic_hash": ""
   },
   "PERFORMANCE_AUDIT.md": {
@@ -2862,9 +2862,9 @@
     "semantic_hash": ""
   },
   "src/hooks/useConfirm.js": {
-    "mtime": 1790709515.7988179,
-    "seen": 1790709729.8873887,
-    "ast_hash": "ed5e97acdf60e55990f7d07c5b228315",
+    "mtime": 1790714008.2438264,
+    "seen": 1790714309.1431673,
+    "ast_hash": "41e84e8a8f9db96ce09f93c8dd04b77b",
     "semantic_hash": ""
   },
   "tests/unit/ConfirmDialog.test.js": {
