@@ -6,6 +6,7 @@ import { ProgressiveImage } from './ui/ProgressiveImage';
 import { safeVibrate } from '../utils/haptics';
 import { useLanguage } from '../contexts/LanguageContext';
 import { subscribeTranslations } from '../utils/translator';
+import { useUserPresence } from '../hooks/useUserPresence';
 
 function FeedCardItem({
   item,
@@ -45,6 +46,9 @@ function FeedCardItem({
   const currentLang = propLang || contextLang || 'FR';
   const t = typeof propT === 'function' ? propT : (contextT || ((k) => k));
   const safeOpenMobileActions = onOpenMobileActions || onMobileActionClick;
+
+  const authorUid = item?.authorUid || item?.userId || item?.authorProfile?.uid || null;
+  const { isOnline } = useUserPresence(authorUid);
 
   const [localImageIndex, setLocalImageIndex] = useState(0);
   const [typedText, setTypedText] = useState('');
@@ -534,23 +538,43 @@ function FeedCardItem({
             title={item.authorUid ? `Voir le profil de ${item.author}` : item.author}
             style={{ display: 'flex', alignItems: 'center', gap: '7px', fontWeight: '700', fontSize: '13px', color: 'var(--text-main)', cursor: (item.authorUid || onAuthorProfileClick) ? 'pointer' : 'default', textDecoration: 'none' }}
           >
-            <ProgressiveImage
-              src={
-                // Priorité 1 : avatar stocké dans l'annonce Firestore (authorAvatar)
-                // Priorité 2 : avatar du profil si c'est notre propre annonce
-                // Priorité 3 : getAuthorAvatar helper
-                // Priorité 4 : avatar générique
-                item.authorAvatar ||
-                item.avatar ||
-                item.authorPhotoURL ||
-                ((profile?.name && item.author === profile.name) ? (profile?.avatar || '') : '') ||
-                (typeof getAuthorAvatar === 'function' ? getAuthorAvatar(item.author) : '') ||
-                'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80'
-              }
-              alt={item.author || 'Auteur'}
-              style={{ width: '24px', height: '24px', borderRadius: '50%', flexShrink: 0, border: '1px solid var(--border-color)', overflow: 'hidden' }}
-              imgStyle={{ borderRadius: '50%', objectFit: 'cover' }}
-            />
+            <div style={{ position: 'relative', width: '24px', height: '24px', flexShrink: 0 }}>
+              <ProgressiveImage
+                src={
+                  // Priorité 1 : avatar stocké dans l'annonce Firestore (authorAvatar)
+                  // Priorité 2 : avatar du profil si c'est notre propre annonce
+                  // Priorité 3 : getAuthorAvatar helper
+                  // Priorité 4 : avatar générique
+                  item.authorAvatar ||
+                  item.avatar ||
+                  item.authorPhotoURL ||
+                  ((profile?.name && item.author === profile.name) ? (profile?.avatar || '') : '') ||
+                  (typeof getAuthorAvatar === 'function' ? getAuthorAvatar(item.author) : '') ||
+                  'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80'
+                }
+                alt={item.author || 'Auteur'}
+                style={{ width: '24px', height: '24px', borderRadius: '50%', flexShrink: 0, border: '1px solid var(--border-color)', overflow: 'hidden' }}
+                imgStyle={{ borderRadius: '50%', objectFit: 'cover' }}
+              />
+              <span
+                data-testid="online-badge-dot"
+                title={isOnline ? (typeof t === 'function' ? t('online_status') : 'En ligne') : (typeof t === 'function' ? t('offline_status') : 'Hors ligne')}
+                aria-label={isOnline ? 'En ligne' : 'Hors ligne'}
+                style={{
+                  position: 'absolute',
+                  bottom: '-1px',
+                  right: '-1px',
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  backgroundColor: isOnline ? '#10B981' : '#9CA3AF',
+                  border: '1.5px solid var(--bg-card, #FFFFFF)',
+                  boxShadow: isOnline ? '0 0 6px rgba(16, 185, 129, 0.6)' : 'none',
+                  pointerEvents: 'none',
+                  transition: 'background-color 0.2s ease',
+                }}
+              />
+            </div>
             {item.author || 'Membre Troco'}
           </span>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>

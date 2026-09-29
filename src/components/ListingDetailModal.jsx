@@ -4,6 +4,7 @@ import { parseAndTranslateListing } from '../utils/dynamicTranslation';
 import { subscribeTranslations } from '../utils/translator';
 import { useLanguage } from '../contexts/LanguageContext';
 import { BACKDROP_CLASSNAME, BACKDROP_STYLE } from './ui/modalBackdrop';
+import { useUserPresence } from '../hooks/useUserPresence';
 
 export default function ListingDetailModal({
   selectedListing,
@@ -23,6 +24,8 @@ export default function ListingDetailModal({
   showingOriginalListings = {},
   toggleOriginalListing = () => {}
 }) {
+  const authorUid = selectedListing?.authorUid || selectedListing?.userId || selectedListing?.authorProfile?.uid || null;
+  const { isOnline } = useUserPresence(authorUid);
   const langContext = useLanguage();
   const safeT = (k, defaultVal) => {
     if (langContext && typeof langContext.t === 'function') {
@@ -473,6 +476,21 @@ export default function ListingDetailModal({
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '800', fontSize: '15px', color: 'var(--text-main)' }}>
                   {selectedListing.author}
+                  <span
+                    data-testid="detail-online-badge-dot"
+                    title={isOnline ? safeT('online_status', 'En ligne') : safeT('offline_status', 'Hors ligne')}
+                    aria-label={isOnline ? 'En ligne' : 'Hors ligne'}
+                    style={{
+                      display: 'inline-block',
+                      width: '8px',
+                      height: '8px',
+                      borderRadius: '50%',
+                      backgroundColor: isOnline ? '#10B981' : '#9CA3AF',
+                      boxShadow: isOnline ? '0 0 6px rgba(16, 185, 129, 0.6)' : 'none',
+                      flexShrink: 0,
+                      transition: 'background-color 0.2s ease',
+                    }}
+                  />
                   <ShieldCheck size={16} color="var(--accent-primary)" />
                 </div>
                 <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>

@@ -772,6 +772,17 @@ export const translations = {
     "admin_confirm_ban_user_title": "Shadow-bannir l'utilisateur ?",
     "admin_confirm_ban_user_btn": "Bannir",
     "admin_confirm_reset_user_title": "⚠️ Réinitialisation du compte",
+    "online_status": "En ligne",
+    "offline_status": "Hors ligne",
+    "saved_filters_title": "Filtres sauvegardés",
+    "save_current_filters": "Sauvegarder ces filtres",
+    "filter_name_placeholder": "Nom du filtre (ex: Proche de moi, Troc...)",
+    "apply_filter": "Appliquer",
+    "rename_filter": "Renommer",
+    "delete_filter": "Supprimer",
+    "no_saved_filters": "Aucun filtre enregistré",
+    "delete_filter_confirm_title": "Supprimer le filtre ?",
+    "delete_filter_confirm_message": "Êtes-vous sûr de vouloir supprimer ce filtre sauvegardé ?",
   },
 };
 

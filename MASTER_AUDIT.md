@@ -13,7 +13,7 @@
 > - `STEP BY STEP URGENT.txt` & `LISTE DES PROCHAINES FONCTIONNALITES A CODER.txt` (Backlog immédiat)
 > - `PROJECT_CONTEXT.md` & `TROCO_PROJECT_HISTORY.md` (Historique des décisions et géoprivacy)
 >
-> **Score global :** 8.3/10 | **Progression :** 48 / 74 tâches validées avec preuves formelles (64.9%)
+> **Score global :** 8.3/10 | **Progression :** 51 / 74 tâches validées avec preuves formelles (69.1%)
 
 ---
 
@@ -22,11 +22,11 @@
 | Phase | Fait | Restant | Progression |
 |---|---|---|---|
 | 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 28 | 0 | 100% |
-| 🟡 Facile (Niveau 2 — 1h à 3h) | 9 | 7 | 56.3% |
+| 🟡 Facile (Niveau 2 — 1h à 3h) | 12 | 4 | 75.0% |
 | 🟠 Moyen (Niveau 3 — 3h à 1 jour) | 8 | 7 | 53.3% |
 | 🔴 Difficile (Niveau 4 — 1 à 3 jours) | 3 | 7 | 30.0% |
 | 🚨 Très difficile (Niveau 5 — 3j à 2 sem) | 0 | 9 | 0.0% |
-| **TOTAL** | **48** | **26** | **64.9%** |
+| **TOTAL** | **51** | **23** | **69.1%** |
 
 
 ### Score par axe vs cible Licorne
@@ -250,17 +250,13 @@ Validation formelle : ESLint 0 erreur, suites Jest 100% vertes (`Phase141LegalCo
 **Preuve** : `src/hooks/useConfirm.js:1-75`, `src/components/ui/ConfirmDialog.jsx:1-155`, `src/App.js:46-48, 2963, 2977, 5535`, `src/components/AdminPanel.jsx:8, 24, 514, 533, 738, 848`, `src/components/CollaborativeWhiteboardModal.jsx:39, 113, 3877`, `src/components/SwipeableChatItem.jsx:6, 23, 62`, `tests/unit/ConfirmDialog.test.js:1-95`  
 **Statut** : ✅ FAIT — Hook `useConfirm()` asynchrone (`Promise<boolean>`) et `<ConfirmProvider>` déployés. Modale universelle `<ConfirmDialog />` basée sur `UniversalModal` et `modalBackdrop` (UX-01 et UX-02 respectés, masquage automatique de la `BottomNav` via `useUIStore.openModal()`). Gestion des 3 variantes esthétiques (`danger`, `warning`, `default`) avec micro-animations et icônes vectorielles. Remplacement complet des 6 `window.confirm()` natifs dans `AdminPanel.jsx`, `CollaborativeWhiteboardModal.jsx` et `SwipeableChatItem.jsx`. Traduction 7 langues intégrée et validation par tests unitaires Vitest et build production.
 
-### [ ] [FAC-02] — Intégration du composant `PullToRefresh` sur la vue Feed
-**Statut** : ❌ À FAIRE  
-**Fichier** : `src/components/ui/PullToRefresh.jsx`, `src/features/feed/FeedSection.jsx`  
-**Estimation** : 2h  
-**Impact** : Offre une gestuelle mobile native fluide pour rafraîchir les annonces sans recharger la page.
+### [x] [FAC-02] — Intégration du composant `PullToRefresh` sur la vue Feed
+**Preuve** : `src/components/ui/PullToRefresh.jsx:1-120`, `src/App.js:37, 2697-2708, 4172-4328`  
+**Statut** : ✅ FAIT — Enrobage complet de la liste des annonces du feed avec `<PullToRefresh onRefresh={handleRefreshFeed} disabled={viewMode === 'map'}>`. `handleRefreshFeed` réinitialise le curseur de pagination (`lastVisibleListingDoc = null`, `hasMoreListings = true`) et réexécute `fetchListingsPaginated(0)`. Réservé au tactile mobile (écouteurs touch avec passif non-bloquant), animation d'indicateur rotatif fluide sans casser l'infinite scroll du sentinel IntersectionObserver.
 
-### [ ] [FAC-03] — Badge de présence "En ligne" temps réel
-**Statut** : ❌ À FAIRE  
-**Fichier** : `src/components/FeedCardItem.jsx`, `src/components/ListingDetailModal.jsx`  
-**Estimation** : 2h  
-**Impact** : Exploite la `presenceMap` existante pour rassurer les acheteurs et booster les prises de contact directes.
+### [x] [FAC-03] — Badge de présence "En ligne" temps réel
+**Preuve** : `src/hooks/useUserPresence.js:1-92`, `src/components/FeedCardItem.jsx:16, 73, 273-288`, `src/components/ListingDetailModal.jsx:16, 68, 172-185`, `tests/unit/FeedFeatures.test.js:1-110`  
+**Statut** : ✅ FAIT — Création du hook singleton `useUserPresence(uid)` écoutant en temps réel `doc(db, 'presence', uid)` avec registre centralisé évitant strictement les requêtes N+1 (1 seul listener Firestore par UID distinct avec compteur de souscriptions). Pastille de présence 8px (`#10B981` vert en ligne / `#9CA3AF` gris hors ligne avec contour blanc/sombre) intégrée en bas à droite de l'avatar auteur sur `FeedCardItem` et à côté du nom de l'auteur dans `ListingDetailModal`. Infobulles localisées en 7 langues avec statut ("En ligne" / "Hors ligne") et calcul d'expiration automatique du battement de cœur (>60s).
 
 ### [ ] [FAC-04] — Color picker complet (HEX/RGB/HSL) dans le tableau blanc
 **Statut** : ❌ À FAIRE  
@@ -268,11 +264,9 @@ Validation formelle : ESLint 0 erreur, suites Jest 100% vertes (`Phase141LegalCo
 **Estimation** : 1h30  
 **Impact** : Enrichit les outils créatifs pour les séances de travail partagé.
 
-### [ ] [FAC-05] — Persistance des filtres de recherche préférés
-**Statut** : ❌ À FAIRE  
-**Fichier** : `src/components/modals/FilterDrawer.jsx`, `src/stores/useFeedStore.js`  
-**Estimation** : 2h  
-**Impact** : Permet aux membres de sauvegarder leurs requêtes récurrentes ("Bricolage à Paris 11e").
+### [x] [FAC-05] — Persistance des filtres de recherche préférés
+**Preuve** : `firestore.rules:45-51`, `tests/rules/firestore.rules.test.js:31-33, 98-107`, `src/stores/useFeedStore.js:15-18, 59-158`, `src/components/modals/FilterDrawer.jsx:10, 48-180, 240-340`, `src/App.js:1062, 5374`, `tests/unit/FeedFeatures.test.js:112-160`  
+**Statut** : ✅ FAIT — Stockage Firestore persistant sous `users/{uid}/savedFilters/{id}` (`name`, `filters`, `createdAt`, `updatedAt`) avec règles de sécurité strictes `isOwner(uid) || isAdmin()`. Actions Zustand complètes dans `useFeedStore` (`loadSavedFilters`, `addSavedFilter`, `renameSavedFilter`, `deleteSavedFilter`, `applySavedFilter`). Interface dédiée dans `FilterDrawer` avec bouton « Sauvegarder », modale/formulaire de nommage, liste réactive avec boutons « Appliquer », « Renommer » et « Supprimer » (sécurisé par `useConfirm`), préchargement automatique au login utilisateur et prise en charge intégrale des 7 langues.
 
 ### [ ] [FAC-06] — Mode sombre automatique système + horaire
 **Statut** : ❌ À FAIRE  

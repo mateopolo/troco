@@ -102,6 +102,12 @@ class RuleSimulator {
       return false; // write always false
     }
 
+    // ============ SAVED FILTERS (FAC-05) ============
+    if (segments[0] === 'users' && segments[2] === 'savedFilters' && segments.length === 4) {
+      const uid = segments[1];
+      return isOwner(uid) || isAdmin;
+    }
+
     // ============ LISTINGS ============
     if (segments[0] === 'listings' && segments.length === 2) {
       if (operation === 'read') {
@@ -731,3 +737,33 @@ describe('8. Modération Administrateur sur Community (community_messages & glob
     await assertAllowed(testClient.runOp({ uid: 'user_alice' }, 'global_chat/glob_msg_1', 'delete'));
   });
 });
+
+describe('9. Filtres sauvegardés (users/{uid}/savedFilters/{filterId}) - FAC-05', () => {
+  it('autorise le propriétaire à lire et écrire ses filtres sauvegardés', async () => {
+    await assertAllowed(testClient.runOp({ uid: 'user_alice' }, 'users/user_alice/savedFilters/filt_1', 'create', {
+      name: 'Mes filtres favoris',
+      filters: { radiusKm: 30, isInfiniteRadius: false },
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    }));
+
+    await assertAllowed(testClient.runOp({ uid: 'user_alice' }, 'users/user_alice/savedFilters/filt_1', 'get'));
+  });
+
+  it('interdit à un tiers de lire ou modifier les filtres d\'un autre utilisateur', async () => {
+    await testClient.seedAdmin('users/user_alice/savedFilters/filt_1', {
+      name: 'Filtre secret',
+      filters: { radiusKm: 10 }
+    });
+
+    await assertDenied(testClient.runOp({ uid: 'user_bob' }, 'users/user_alice/savedFilters/filt_1', 'get'));
+    await assertDenied(testClient.runOp({ uid: 'user_bob' }, 'users/user_alice/savedFilters/filt_1', 'update', {
+      name: 'Hacked'
+    }));
+  });
+
+  it('interdit à un utilisateur non authentifié d\'accéder aux filtres sauvegardés', async () => {
+    await assertDenied(testClient.runOp(null, 'users/user_alice/savedFilters/filt_1', 'get'));
+  });
+});
+

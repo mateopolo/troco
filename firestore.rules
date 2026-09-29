@@ -127,6 +127,11 @@ service cloud.firestore {
         allow create: if isAuthenticated() && isNotBanned();
         allow update, delete: if isOwner(uid) || isAdmin();
       }
+
+      // Sous-collection interne : Filtres de recherche sauvegardés (FAC-05)
+      match /savedFilters/{filterId} {
+        allow read, write: if isOwner(uid) || isAdmin();
+      }
     }
 
     // ========================================================================

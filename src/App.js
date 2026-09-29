@@ -18,6 +18,8 @@ import { AppHeader, AppBottomNav } from './components/layout';
 import MobileHeader from './components/common/MobileHeader';
 import { getSuggestedMedia, getSuggestedImage, getFallbackImage } from './utils/mediaHelpers';
 import FeedCardItem from './components/FeedCardItem';
+import PullToRefresh from './components/ui/PullToRefresh';
+import { useFeedStore } from './stores/useFeedStore';
 import { generateInvoiceRef } from './components/InvoiceCalculator';
 import TrocoLogoNativeSvg from './components/common/TrocoLogoNativeSvg';
 import OfflineScreen from './components/common/OfflineScreen';
@@ -460,6 +462,7 @@ export default function App() {
   useEffect(() => {
     const uid = profile?.uid || auth.currentUser?.uid;
     if (!uid) return;
+    useFeedStore.getState().loadSavedFilters(uid);
     try {
       const qTx = query(
         collection(db, 'transactions'),
@@ -2349,6 +2352,26 @@ export default function App() {
     }
   };
 
+  const handleRefreshFeed = async () => {
+    try {
+      setLastVisibleListingDoc(null);
+      setHasMoreListings(true);
+      let result;
+      if (userCoords && Array.isArray(userCoords) && userCoords.length >= 2 && !isInfiniteRadius && radiusKm < 2000) {
+        result = await fetchListingsByGeohash({ center: userCoords, radiusKm, pageSize: 25 });
+      } else {
+        result = await fetchListingsPaginated({ pageSize: 50, lastDoc: null });
+      }
+      if (result && result.items) {
+        setListings(result.items);
+        setLastVisibleListingDoc(result.lastVisible || null);
+        setHasMoreListings(result.hasMore || false);
+      }
+    } catch (err) {
+      logger.error('[App] handleRefreshFeed error:', err);
+    }
+  };
+
   const getListingDistance = (item) => {
     if (typeof item.distanceKm === 'number') return item.distanceKm;
     if (item.coordinates && userCoords) {
@@ -3207,6 +3230,7 @@ export default function App() {
           paymentOptions={paymentOptions}
           paymentLabels={paymentLabels}
           darkMode={darkMode}
+          profile={profile}
           t={t}
         />
 
@@ -4147,7 +4171,7 @@ export default function App() {
                         </Suspense>
                       </div>
                     ) : (
-                      <>
+                      <PullToRefresh onRefresh={handleRefreshFeed} disabled={viewMode === 'map'}>
                         <motion.div
                           ref={listingsGridRef}
                           variants={{
@@ -4305,7 +4329,7 @@ export default function App() {
                             </button>
                           </div>
                         )}
-                      </>
+                      </PullToRefresh>
                     )}
                   </div>
 

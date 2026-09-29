@@ -384,9 +384,9 @@
     "semantic_hash": "29788f2edfc62f638e05abc398125e63"
   },
   "src/App.js": {
-    "mtime": 1790688776.3592484,
-    "seen": 1790690929.065197,
-    "ast_hash": "2efff825573630da379dc544d8e4ef16",
+    "mtime": 1790691495.9764698,
+    "seen": 1790692041.9585028,
+    "ast_hash": "73b70e1a14baca7600e2c8cceab3d667",
     "semantic_hash": ""
   },
   "src/App.test.js": {
@@ -414,10 +414,10 @@
     "semantic_hash": "85564af780a6a97f33237992586cc30f"
   },
   "src/components/AdminPanel.jsx": {
-    "mtime": 1790178563.6657846,
-    "seen": 1790594464.2380848,
-    "ast_hash": "80d73ef756bd7edbb62e40eebe5eb787",
-    "semantic_hash": "80d73ef756bd7edbb62e40eebe5eb787"
+    "mtime": 1790691653.2339766,
+    "seen": 1790692041.9585133,
+    "ast_hash": "6a55f328a8f788793f1e1b4f0163f36d",
+    "semantic_hash": ""
   },
   "src/components/AnimatedBalances.jsx": {
     "mtime": 1790687907.4580028,
@@ -486,10 +486,10 @@
     "semantic_hash": ""
   },
   "src/components/CollaborativeWhiteboardModal.jsx": {
-    "mtime": 1790179520.9324505,
-    "seen": 1790594464.2381005,
-    "ast_hash": "bab0946b0adb636b0458666752f40ed2",
-    "semantic_hash": "bab0946b0adb636b0458666752f40ed2"
+    "mtime": 1790691669.7633092,
+    "seen": 1790692041.9585357,
+    "ast_hash": "3b8f19ec1fcaca6b3cf89a021d51e3cd",
+    "semantic_hash": ""
   },
   "src/components/CommunityActivityFeed.jsx": {
     "mtime": 1790627288.6099832,
@@ -1068,10 +1068,10 @@
     "semantic_hash": "010af44c5120445e9c61430f07f5a140"
   },
   "src/components/SwipeableChatItem.jsx": {
-    "mtime": 1788367465.9763932,
-    "seen": 1790594464.238232,
-    "ast_hash": "730d6d40d414f2daedbba0681082424f",
-    "semantic_hash": "730d6d40d414f2daedbba0681082424f"
+    "mtime": 1790691589.4149468,
+    "seen": 1790692041.9587245,
+    "ast_hash": "dc661b131d8fb0d918b12e41c09b059c",
+    "semantic_hash": ""
   },
   "src/components/SwipeableChatItem.test.js": {
     "mtime": 1788367475.0687044,
@@ -1458,15 +1458,15 @@
     "semantic_hash": "7be2e658837a6713e3eb3b702ab9af2f"
   },
   "src/data/translationsData.js": {
-    "mtime": 1790690694.4161007,
-    "seen": 1790690929.0655756,
-    "ast_hash": "21d6435a23797bdf29afbecb24518b8e",
+    "mtime": 1790691573.8984945,
+    "seen": 1790692041.95891,
+    "ast_hash": "d7215b313b31b64dff85c22fedc5f170",
     "semantic_hash": ""
   },
   "src/data/translationsSecondary.js": {
-    "mtime": 1790690731.0276375,
-    "seen": 1790690929.0655773,
-    "ast_hash": "a5b980c660e78bf0c4f3701cbefc09c2",
+    "mtime": 1790691573.9103575,
+    "seen": 1790692041.9589126,
+    "ast_hash": "9abf94eeb87d194a893e9911cfca4a88",
     "semantic_hash": ""
   },
   "src/features/admin/AdminChatsTab.jsx": {
@@ -2328,9 +2328,9 @@
     "semantic_hash": ""
   },
   "MASTER_AUDIT.md": {
-    "mtime": 1790630412.6324618,
-    "seen": 1790690929.0658138,
-    "ast_hash": "e61141fe257fb364375d883f9d0e7ce9",
+    "mtime": 1790692009.6340797,
+    "seen": 1790692041.9594333,
+    "ast_hash": "8edc258f6520ef209de2791c731ee515",
     "semantic_hash": ""
   },
   "PERFORMANCE_AUDIT.md": {
@@ -2877,6 +2877,24 @@
     "mtime": 1790688308.060567,
     "seen": 1790690929.0655584,
     "ast_hash": "7b7600e4123efc3ec201210fff5d978a",
+    "semantic_hash": ""
+  },
+  "src/components/ui/ConfirmDialog.jsx": {
+    "mtime": 1790691462.597645,
+    "seen": 1790692041.958807,
+    "ast_hash": "d195cc75933750b63daae2e89be7a981",
+    "semantic_hash": ""
+  },
+  "src/hooks/useConfirm.js": {
+    "mtime": 1790691452.0013058,
+    "seen": 1790692041.9591703,
+    "ast_hash": "816b5f39f12df26976fdb1fc5e6925b2",
+    "semantic_hash": ""
+  },
+  "tests/unit/ConfirmDialog.test.js": {
+    "mtime": 1790691932.393855,
+    "seen": 1790692041.9593987,
+    "ast_hash": "220974a69bcfb1fad7e3381742cc5b35",
     "semantic_hash": ""
   }
 }
