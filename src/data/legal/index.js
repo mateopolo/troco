@@ -14,6 +14,30 @@ import refundPolicyDe from './refund-policy-de.js';
 import refundPolicyJa from './refund-policy-ja.js';
 import refundPolicyZh from './refund-policy-zh.js';
 
+import privacyPolicyFr from './privacy-policy-fr.js';
+import privacyPolicyEn from './privacy-policy-en.js';
+import privacyPolicyEs from './privacy-policy-es.js';
+import privacyPolicyIt from './privacy-policy-it.js';
+import privacyPolicyDe from './privacy-policy-de.js';
+import privacyPolicyJa from './privacy-policy-ja.js';
+import privacyPolicyZh from './privacy-policy-zh.js';
+
+import cookiesPolicyFr from './cookies-policy-fr.js';
+import cookiesPolicyEn from './cookies-policy-en.js';
+import cookiesPolicyEs from './cookies-policy-es.js';
+import cookiesPolicyIt from './cookies-policy-it.js';
+import cookiesPolicyDe from './cookies-policy-de.js';
+import cookiesPolicyJa from './cookies-policy-ja.js';
+import cookiesPolicyZh from './cookies-policy-zh.js';
+
+function normalizeLang(lang) {
+  if (typeof lang !== 'string') return 'FR';
+  const upper = lang.toUpperCase();
+  if (upper === 'JP') return 'JA';
+  if (upper === 'CN') return 'ZH';
+  return upper;
+}
+
 export const legalNoticeMap = {
   FR: legalNoticeFr,
   EN: legalNoticeEn,
@@ -34,12 +58,42 @@ export const refundPolicyMap = {
   ZH: refundPolicyZh,
 };
 
+export const privacyPolicyMap = {
+  FR: privacyPolicyFr,
+  EN: privacyPolicyEn,
+  ES: privacyPolicyEs,
+  IT: privacyPolicyIt,
+  DE: privacyPolicyDe,
+  JA: privacyPolicyJa,
+  ZH: privacyPolicyZh,
+};
+
+export const cookiesPolicyMap = {
+  FR: cookiesPolicyFr,
+  EN: cookiesPolicyEn,
+  ES: cookiesPolicyEs,
+  IT: cookiesPolicyIt,
+  DE: cookiesPolicyDe,
+  JA: cookiesPolicyJa,
+  ZH: cookiesPolicyZh,
+};
+
 export function getLegalNoticeData(lang = 'FR') {
-  const normalized = typeof lang === 'string' ? lang.toUpperCase() : 'FR';
-  return legalNoticeMap[normalized] || legalNoticeMap.FR;
+  const norm = normalizeLang(lang);
+  return legalNoticeMap[norm] || legalNoticeMap.FR;
 }
 
 export function getRefundPolicyData(lang = 'FR') {
-  const normalized = typeof lang === 'string' ? lang.toUpperCase() : 'FR';
-  return refundPolicyMap[normalized] || refundPolicyMap.FR;
+  const norm = normalizeLang(lang);
+  return refundPolicyMap[norm] || refundPolicyMap.FR;
+}
+
+export function getPrivacyPolicyData(lang = 'FR') {
+  const norm = normalizeLang(lang);
+  return privacyPolicyMap[norm] || privacyPolicyMap.FR;
+}
+
+export function getCookiesPolicyData(lang = 'FR') {
+  const norm = normalizeLang(lang);
+  return cookiesPolicyMap[norm] || cookiesPolicyMap.FR;
 }

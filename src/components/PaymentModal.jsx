@@ -15,6 +15,7 @@ import { hapticSuccess, hapticError } from '../utils/haptics';
 import { convertCurrency, formatCurrencyAmount } from '../services/pricingService';
 import { useWalletStore } from '../stores';
 import { useLanguage } from '../contexts/LanguageContext';
+import { formatCurrencyByLang } from '../utils/formatters';
 import { BACKDROP_CLASSNAME, BACKDROP_STYLE } from './ui/modalBackdrop';
 
 // Algorithme de Luhn pour la validation des numéros de carte bancaire
@@ -55,7 +56,7 @@ export default function PaymentModal({
   playBetclicSound = null,
   playApplePaySound = null,
 }) {
-  const { t } = useLanguage();
+  const { t, currentLang } = useLanguage();
   const [mode, setMode] = useState(initialMode === 'pack-tokens' ? 'troco-plus' : initialMode);
   const [paymentMethod, setPaymentMethod] = useState('applePay'); // 'applePay' | 'card' | 'wallet'
   const [isProcessing, setIsProcessing] = useState(false);
@@ -85,8 +86,8 @@ export default function PaymentModal({
     return detectUserCountry();
   }, [storeCountryCode, currency]);
 
-  const trocoPlusPlans = useMemo(() => getLocalizedTrocoPlusPlans(selectedCountry), [selectedCountry]);
-  const [selectedTrocoPlusPlan, setSelectedTrocoPlusPlan] = useState(() => getLocalizedTrocoPlusPlans(selectedCountry)[0]);
+  const trocoPlusPlans = useMemo(() => getLocalizedTrocoPlusPlans(selectedCountry, currentLang), [selectedCountry, currentLang]);
+  const [selectedTrocoPlusPlan, setSelectedTrocoPlusPlan] = useState(() => getLocalizedTrocoPlusPlans(selectedCountry, currentLang)[0]);
 
   // Synchronisation si le plan sélectionné change lors de la mise à jour de la devise
   useEffect(() => {
@@ -705,7 +706,7 @@ export default function PaymentModal({
                 <div style={{ marginBottom: '22px' }}>
                   <div style={{ marginBottom: '14px' }}>
                     <label style={{ display: 'block', fontSize: '13.5px', fontWeight: '800', color: 'var(--text-main)', margin: 0 }}>
-                      1. Choisissez votre abonnement mensuel Troco Plus
+                      1. {t('payment.choose_subscription') || 'Choisissez votre abonnement mensuel Troco Plus'}
                     </label>
                   </div>
 
@@ -725,11 +726,11 @@ export default function PaymentModal({
                     }}>
                       <CheckCircle size={16} color={isUserPro ? '#10B981' : 'var(--accent-primary)'} />
                       <div>
-                        <strong>{isUserPro ? '👑 Offre Troco Plus Pro Active' : '⭐ Offre Troco Plus Essentielle Active'}</strong>
+                        <strong>{isUserPro ? (t('payment.plan_pro_active') || '👑 Offre Troco Plus Pro Active') : (t('payment.plan_essential_active') || '⭐ Offre Troco Plus Essentielle Active')}</strong>
                         <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
                           {isUserPro
-                            ? 'Vous bénéficiez déjà du palier maximal (15 jetons/mois, 3 boosts). Le réachat en boucle est verrouillé.'
-                            : 'Passez à l\'offre Pro pour débloquer +10 jetons supplémentaires et des boosts exclusifs.'}
+                            ? (t('payment.plan_pro_active_desc') || 'Vous bénéficiez déjà du palier maximal (15 jetons/mois, 3 boosts). Le réachat en boucle est verrouillé.')
+                            : (t('payment.plan_essential_active_desc') || 'Passez à l\'offre Pro pour débloquer +10 jetons supplémentaires et des boosts exclusifs.')}
                         </div>
                       </div>
                     </div>
@@ -771,7 +772,7 @@ export default function PaymentModal({
                               borderRadius: '999px',
                               boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)'
                             }}>
-                              ✓ Abonnement Actif
+                              ✓ {t('payment.badge_active') || 'Abonnement Actif'}
                             </span>
                           )}
 
@@ -788,7 +789,7 @@ export default function PaymentModal({
                               borderRadius: '999px',
                               boxShadow: 'var(--shadow-accent)'
                             }}>
-                              ⚡ Mise à niveau (Upgrade)
+                              ⚡ {t('payment.badge_upgrade') || 'Mise à niveau (Upgrade)'}
                             </span>
                           )}
 
@@ -804,7 +805,7 @@ export default function PaymentModal({
                               padding: '2px 8px',
                               borderRadius: '999px',
                             }}>
-                              Inclus dans votre offre
+                              {t('payment.badge_included') || 'Inclus dans votre offre'}
                             </span>
                           )}
 
@@ -821,7 +822,7 @@ export default function PaymentModal({
                               borderRadius: '999px',
                               boxShadow: 'var(--shadow-accent)'
                             }}>
-                              ⭐ Le plus populaire
+                              ⭐ {t('payment.badge_popular') || 'Le plus populaire'}
                             </span>
                           )}
 
@@ -834,7 +835,7 @@ export default function PaymentModal({
                                   backgroundColor: isThisPlanCurrent ? '#EBF0E6' : 'var(--bg-subtle)',
                                   color: isThisPlanCurrent ? '#3D4A35' : 'var(--accent-primary)'
                                 }}>
-                                  {isThisPlanCurrent ? 'Actuel' : plan.badge}
+                                  {isThisPlanCurrent ? (t('payment.badge_current') || 'Actuel') : plan.badge}
                                 </span>
                               </div>
                               <p style={{ margin: '4px 0 10px', fontSize: '12px', color: 'var(--text-secondary)' }}>
@@ -844,11 +845,11 @@ export default function PaymentModal({
                             <div style={{ textAlign: 'right' }}>
                               <div style={{ fontSize: '20px', fontWeight: '900', color: isSelected ? 'var(--accent-primary)' : 'var(--text-main)' }}>
                                 {isThisPlanUpgrade && upgradePrice > 0
-                                  ? `${upgradePrice.toFixed(2)} €`
-                                  : (plan.formattedPrice || `${plan.price.toFixed(2)} €`)}
+                                  ? formatCurrencyByLang(upgradePrice, currentLang)
+                                  : (formatCurrencyByLang(plan.price, currentLang))}
                               </div>
                               <div style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '600' }}>
-                                {isThisPlanUpgrade ? 'différence/mois' : plan.period}
+                                {isThisPlanUpgrade ? (t('payment.upgrade_diff_per_month') || 'différence/mois') : plan.period}
                               </div>
                             </div>
                           </div>
@@ -866,7 +867,7 @@ export default function PaymentModal({
                     })}
                   </div>
                   <div style={{ marginTop: '10px', padding: '8px 12px', borderRadius: '10px', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', fontSize: '11px', fontWeight: '700', textAlign: 'center' }}>
-                    💡 Les abonnements Troco Plus sont renouvelés automatiquement chaque mois et résiliables à tout instant en un clic.
+                    💡 {t('payment.auto_renewal_disclaimer') || 'Les abonnements Troco Plus sont renouvelés automatiquement chaque mois et résiliables à tout instant en un clic.'}
                   </div>
                 </div>
               )}
@@ -874,7 +875,7 @@ export default function PaymentModal({
               {mode === 'topup-cash' && (
                 <div style={{ marginBottom: '22px' }}>
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: '800', marginBottom: '10px', color: 'var(--text-main)' }}>
-                    1. Choisissez le montant de votre recharge réelle (€)
+                    1. {t('payment.choose_topup_amount') || 'Choisissez le montant de votre recharge réelle'}
                   </label>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px', marginBottom: '12px' }}>
                     {cashAmounts.map(amt => {
@@ -1360,21 +1361,21 @@ export default function PaymentModal({
               }}>
                 <div>
                   <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                    {isDealMode ? 'Total du deal' : 'Montant total TTC'}
+                    {isDealMode ? (t('payment.deal_total') || 'Total du deal') : (t('payment.total_ttc') || 'Montant total TTC')}
                   </div>
                   <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span>{amountToPay.toFixed(2)} €</span>
+                    <span>{formatCurrencyByLang(amountToPay, currentLang)}</span>
                     {isDealMode && dealTokensRequired > 0 && (
                       <span style={{ fontSize: '14px', color: 'var(--accent-warning)', fontWeight: '800' }}>
-                        + {dealTokensRequired} Jeton(s)
+                        + {dealTokensRequired} {t('dealTokensCount') || 'Jeton(s)'}
                       </span>
                     )}
                   </div>
                 </div>
                 <div style={{ fontSize: '11px', color: 'var(--text-secondary)', textAlign: 'right' }}>
                   {isDealMode
-                    ? (dealTokensRequired > 0 ? `${dealTokensRequired} Jeton(s) débité(s)` : 'Troc direct')
-                    : `Dont TVA 20% : ${(amountToPay * 0.20 / 1.20).toFixed(2)} €`}
+                    ? (dealTokensRequired > 0 ? `${dealTokensRequired} ${t('dealTokensDebited') || 'Jeton(s) débité(s)'}` : (t('dealDirectSwap') || 'Troc direct'))
+                    : `${t('payment.vat_included_prefix') || 'Dont TVA 20% :'} ${formatCurrencyByLang(amountToPay * 0.20 / 1.20, currentLang)}`}
                 </div>
               </div>
 
@@ -1445,11 +1446,10 @@ export default function PaymentModal({
                 ) : (
                   <>
                     <Lock size={16} />
-                    {(t('confirm_and_pay') || t('confirmAndPay') || 'Confirmer et payer {amount} € avec {method} (avec obligation de paiement)')
-                      .replace('{amount}', amountToPay.toFixed(2))
+                    {(t('confirm_and_pay') || t('confirmAndPay') || 'Confirmer et payer {amount} avec {method} (avec obligation de paiement)')
+                      .replace('{amount}', formatCurrencyByLang(amountToPay, currentLang))
                       .replace('{method}', paymentMethod === 'applePay' ? (t('apple_pay_button') || t('applePayButton') || 'Apple Pay') : paymentMethod === 'card' ? (t('card_label') || t('cardLabel') || t('cardMethod') || 'Carte Bancaire') : (t('walletMethod') || 'Solde Portefeuille'))}
                   </>
-                )}
                 )}
               </button>
             </>

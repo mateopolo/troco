@@ -1,4 +1,5 @@
 import { translations } from '../data/translationsData.js';
+import { secondaryTranslations } from '../data/translationsSecondary.js';
 
 // =====================================================================
 // MOTEUR DE TARIFICATION DYNAMIQUE MONDIALE (PARITÉ DE POUVOIR D'ACHAT - PPP)
@@ -177,11 +178,17 @@ export function getLocalizedTrocoPlusPlans(countryCode = null, lang = null) {
   let currentLanguage = lang;
   if (!currentLanguage && typeof window !== 'undefined') {
     try {
-      currentLanguage = localStorage.getItem('troco_language') || localStorage.getItem('troco_lang');
+      currentLanguage = localStorage.getItem('troco_app_lang') || localStorage.getItem('troco_language') || localStorage.getItem('troco_lang');
     } catch (_) {}
   }
-  const normalizedLang = (typeof currentLanguage === 'string' ? currentLanguage.toUpperCase() : 'FR');
-  const t = (k) => translations?.[normalizedLang]?.[k] || translations?.['FR']?.[k] || k;
+  let normalizedLang = (typeof currentLanguage === 'string' ? currentLanguage.toUpperCase() : 'FR');
+  if (normalizedLang === 'JP') normalizedLang = 'JA';
+  if (normalizedLang === 'CN') normalizedLang = 'ZH';
+  const t = (k) => translations?.[normalizedLang]?.[k]
+    || secondaryTranslations?.[normalizedLang]?.[k]
+    || translations?.['FR']?.[k]
+    || secondaryTranslations?.['FR']?.[k]
+    || k;
 
   return [
     {

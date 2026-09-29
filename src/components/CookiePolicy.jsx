@@ -1,10 +1,19 @@
-import React, { useEffect } from 'react';
-import { ArrowLeft, Cookie, Shield, Check, X, Settings, RefreshCw, AlertCircle, Info } from 'lucide-react';
+import React, { useEffect, useMemo } from 'react';
+import { ArrowLeft, Cookie, Shield, Settings, Info } from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext';
+import { getCookiesPolicyData } from '../data/legal';
+
+const SECTION_ICONS = {
+  'section-definition': Info,
+  'section-table': Cookie,
+  'section-manage': Settings,
+};
 
 /**
  * CookiePolicy.jsx — Politique de Gestion des Cookies & Traceurs
  * Conforme à la directive européenne ePrivacy 2002/58/CE révisée,
- * au Règlement (UE) 2016/679 (RGPD) et aux lignes directrices et recommandations de la CNIL (septembre 2020).
+ * au Règlement (UE) 2016/679 (RGPD) et aux lignes directrices de la CNIL.
+ * Contenu entièrement modularisé et traduit en 7 langues (FR, EN, ES, IT, DE, JA, ZH).
  */
 export default function CookiePolicy({
   onBack,
@@ -12,12 +21,15 @@ export default function CookiePolicy({
   onOpenCookieSettings,
   darkMode = false,
 }) {
+  const { currentLang, t } = useLanguage();
+  const cookieData = useMemo(() => getCookiesPolicyData(currentLang), [currentLang]);
+
   useEffect(() => {
     if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
       try { window.scrollTo({ top: 0, left: 0, behavior: 'instant' }); } catch (e) {}
     }
-    document.title = 'Politique des Cookies — Troco';
-  }, []);
+    document.title = `${cookieData.title || 'Politique des Cookies'} — Troco`;
+  }, [cookieData.title]);
 
   const cardStyle = {
     backgroundColor: darkMode ? '#1C1815' : '#FFFFFF',
@@ -26,6 +38,7 @@ export default function CookiePolicy({
     boxShadow: darkMode ? '0 10px 30px rgba(0,0,0,0.45)' : '0 10px 30px rgba(61, 53, 48, 0.05)',
     padding: '32px',
     marginBottom: '24px',
+    transition: 'transform 0.2s ease, box-shadow 0.2s ease',
   };
 
   const sectionHeaderStyle = {
@@ -87,7 +100,7 @@ export default function CookiePolicy({
         <button
           type="button"
           onClick={onBack}
-          className="focus:ring-2"
+          className="focus:ring-2 focus:ring-[#C67D5B] focus:ring-offset-2 focus:outline-none transition-all rounded-full"
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -102,15 +115,15 @@ export default function CookiePolicy({
             cursor: 'pointer',
             transition: 'background-color 0.2s ease',
           }}
-          aria-label="Retour à l'accueil Troco"
+          aria-label={t('legal.back_to_home') || "Retour à l'accueil"}
         >
           <ArrowLeft size={16} aria-hidden="true" />
-          <span>Retour à l'accueil</span>
+          <span>{t('legal.back_to_home') || "Retour à l'accueil"}</span>
         </button>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: darkMode ? '#B9A89B' : '#7D6E63' }}>
-          <Cookie size={16} color="#C67D5B" aria-hidden="true" />
-          <span>Directive ePrivacy & Recommandations CNIL</span>
+          <Shield size={16} color="#C67D5B" aria-hidden="true" />
+          <span>{t('legal.eprivacy_compliance') || "Directive ePrivacy & Recommandations CNIL"}</span>
         </div>
       </nav>
 
@@ -144,7 +157,7 @@ export default function CookiePolicy({
           }}
         >
           <Cookie size={14} aria-hidden="true" />
-          <span>Traceurs & Stockage Local</span>
+          <span>{cookieData.badge}</span>
         </div>
 
         <h1
@@ -156,7 +169,7 @@ export default function CookiePolicy({
             color: darkMode ? '#FFFFFF' : '#231E1B',
           }}
         >
-          Politique des Cookies & Traceurs
+          {cookieData.title}
         </h1>
         <p
           style={{
@@ -167,181 +180,85 @@ export default function CookiePolicy({
             lineHeight: 1.6,
           }}
         >
-          Comprenez comment Troco utilise les technologies de stockage local et les cookies pour maintenir votre session en toute sécurité, sans pistage intrusif.
+          {cookieData.subtitle}
         </p>
         <div style={{ marginTop: '14px', fontSize: '12px', color: darkMode ? '#9A8A7D' : '#8A7A6D' }}>
-          Dernière mise à jour réglementaire : <strong>9 septembre 2026</strong>
+          {t('legal.last_updated_label') || "Dernière mise à jour réglementaire :"} <strong>{cookieData.lastUpdated}</strong>
         </div>
       </header>
 
-      {/* SECTION 1 : QU'EST-CE QU'UN COOKIE ? */}
-      <section style={cardStyle} aria-labelledby="section-definition">
-        <div style={sectionHeaderStyle}>
-          <div style={iconContainerStyle} aria-hidden="true">
-            <Info size={22} />
-          </div>
-          <div>
-            <h2 id="section-definition" style={{ fontSize: '20px', fontWeight: '700', margin: 0, color: darkMode ? '#FFFFFF' : '#231E1B' }}>
-              1. Qu'est-ce qu'un Cookie ou Traceur ?
-            </h2>
-            <p style={{ fontSize: '13px', margin: '2px 0 0', color: darkMode ? '#B9A89B' : '#7D6E63' }}>
-              Définition légale au sens de l'article 5-3 de la directive ePrivacy
-            </p>
-          </div>
-        </div>
+      {/* SECTIONS MODULARISÉES */}
+      {cookieData.sections.map((section) => {
+        const IconComponent = SECTION_ICONS[section.id] || Cookie;
 
-        <div className="prose" style={{ fontSize: '14.5px', lineHeight: '1.7' }}>
-          <p>
-            Un traceur ou cookie est une information déposée ou lue sur le terminal de l'utilisateur (ordinateur, smartphone, tablette) lors de la consultation d'un service en ligne. Dans les applications web modernes de type Single Page Application (SPA), ces données peuvent être stockées sous forme de cookies HTTP, d'entrées dans le <code>localStorage</code> ou le <code>sessionStorage</code> du navigateur.
+        return (
+          <section key={section.id} style={cardStyle} aria-labelledby={section.id}>
+            <div style={sectionHeaderStyle}>
+              <div style={iconContainerStyle} aria-hidden="true">
+                <IconComponent size={22} />
+              </div>
+              <div>
+                <h2 id={section.id} style={{ fontSize: '20px', fontWeight: '700', margin: 0, color: darkMode ? '#FFFFFF' : '#231E1B' }}>
+                  {section.title}
+                </h2>
+                {section.subtitle && (
+                  <p style={{ fontSize: '13px', margin: '2px 0 0', color: darkMode ? '#B9A89B' : '#7D6E63' }}>
+                    {section.subtitle}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div
+              className="prose"
+              style={{ fontSize: '14.5px', lineHeight: '1.7' }}
+              dangerouslySetInnerHTML={{ __html: section.body }}
+            />
+          </section>
+        );
+      })}
+
+      {/* BOUTON D'ACTION MODIFICATION DES CONSENTEMENTS */}
+      <section style={cardStyle} aria-labelledby="section-action-consent">
+        <div
+          style={{
+            padding: '24px',
+            borderRadius: '18px',
+            backgroundColor: darkMode ? 'rgba(198,125,91,0.08)' : '#F5EAE4',
+            border: '1px solid rgba(198,125,91,0.25)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '14px',
+          }}
+        >
+          <div style={{ fontWeight: '700', fontSize: '16px', color: '#C67D5B' }}>
+            {t('legal.manage_preferences_heading') || "Gérer ou modifier vos préférences"}
+          </div>
+          <p style={{ margin: 0, fontSize: '13.5px' }}>
+            {t('legal.manage_preferences_desc') || "Vous pouvez rouvrir le panneau de consentement à tout instant pour modifier vos choix :"}
           </p>
-          <p>
-            Troco applique une politique stricte de <strong>minimisation technique</strong> : nous n'employons aucun cookie publicitaire tiers ni dispositif de ciblage comportemental ou de revente de profil de navigation.
-          </p>
-        </div>
-      </section>
-
-      {/* SECTION 2 : TABLEAU DÉTAILLÉ DES TRACEURS */}
-      <section style={cardStyle} aria-labelledby="section-table">
-        <div style={sectionHeaderStyle}>
-          <div style={iconContainerStyle} aria-hidden="true">
-            <Shield size={22} />
-          </div>
           <div>
-            <h2 id="section-table" style={{ fontSize: '20px', fontWeight: '700', margin: 0, color: darkMode ? '#FFFFFF' : '#231E1B' }}>
-              2. Inventaire Exhaustif des Traceurs & Stockages Locaux
-            </h2>
-            <p style={{ fontSize: '13px', margin: '2px 0 0', color: darkMode ? '#B9A89B' : '#7D6E63' }}>
-              Transparence sur les clés locales et leur finalité précise
-            </p>
-          </div>
-        </div>
-
-        <div className="prose" style={{ fontSize: '14.5px', lineHeight: '1.7' }}>
-          <div style={{ overflowX: 'auto', margin: '18px 0' }}>
-            <table
+            <button
+              type="button"
+              onClick={handleOpenSettings}
               style={{
-                width: '100%',
-                borderCollapse: 'collapse',
-                fontSize: '13px',
-                textAlign: 'left',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '12px 22px',
+                borderRadius: '9999px',
+                backgroundColor: '#C67D5B',
+                color: '#FFFFFF',
+                border: 'none',
+                fontSize: '14px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                boxShadow: '0 4px 14px rgba(198,125,91,0.3)',
               }}
             >
-              <thead>
-                <tr style={{ borderBottom: darkMode ? '2px solid rgba(255,255,255,0.1)' : '2px solid #E8DDD3' }}>
-                  <th style={{ padding: '10px 12px', color: '#C67D5B' }}>Clé / Nom</th>
-                  <th style={{ padding: '10px 12px', color: '#C67D5B' }}>Type</th>
-                  <th style={{ padding: '10px 12px', color: '#C67D5B' }}>Finalité</th>
-                  <th style={{ padding: '10px 12px', color: '#C67D5B' }}>Durée</th>
-                  <th style={{ padding: '10px 12px', color: '#C67D5B' }}>Statut</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr style={{ borderBottom: darkMode ? '1px solid rgba(255,255,255,0.06)' : '1px solid #E8DDD3' }}>
-                  <td style={{ padding: '10px 12px' }}><code>firebase:authUser:...</code></td>
-                  <td style={{ padding: '10px 12px' }}>LocalStorage / IndexedDB</td>
-                  <td style={{ padding: '10px 12px' }}>Maintien sécurisé de la session d'authentification utilisateur</td>
-                  <td style={{ padding: '10px 12px' }}>Session / Persistant</td>
-                  <td style={{ padding: '10px 12px' }}><span style={{ color: '#10B981', fontWeight: '700' }}>Strictement Nécessaire</span></td>
-                </tr>
-                <tr style={{ borderBottom: darkMode ? '1px solid rgba(255,255,255,0.06)' : '1px solid #E8DDD3' }}>
-                  <td style={{ padding: '10px 12px' }}><code>troco_cookie_consent</code></td>
-                  <td style={{ padding: '10px 12px' }}>LocalStorage</td>
-                  <td style={{ padding: '10px 12px' }}>Mémorisation de vos choix de consentement pour les traceurs</td>
-                  <td style={{ padding: '10px 12px' }}>6 mois (Norme CNIL)</td>
-                  <td style={{ padding: '10px 12px' }}><span style={{ color: '#10B981', fontWeight: '700' }}>Strictement Nécessaire</span></td>
-                </tr>
-                <tr style={{ borderBottom: darkMode ? '1px solid rgba(255,255,255,0.06)' : '1px solid #E8DDD3' }}>
-                  <td style={{ padding: '10px 12px' }}><code>troco_theme</code></td>
-                  <td style={{ padding: '10px 12px' }}>LocalStorage</td>
-                  <td style={{ padding: '10px 12px' }}>Conservation du choix du thème d'affichage (Clair ou Sombre)</td>
-                  <td style={{ padding: '10px 12px' }}>12 mois</td>
-                  <td style={{ padding: '10px 12px' }}><span style={{ color: '#C67D5B', fontWeight: '700' }}>Fonctionnel / Confort</span></td>
-                </tr>
-                <tr style={{ borderBottom: darkMode ? '1px solid rgba(255,255,255,0.06)' : '1px solid #E8DDD3' }}>
-                  <td style={{ padding: '10px 12px' }}><code>troco_language</code></td>
-                  <td style={{ padding: '10px 12px' }}>LocalStorage</td>
-                  <td style={{ padding: '10px 12px' }}>Mémorisation de la langue sélectionnée pour l'interface</td>
-                  <td style={{ padding: '10px 12px' }}>12 mois</td>
-                  <td style={{ padding: '10px 12px' }}><span style={{ color: '#C67D5B', fontWeight: '700' }}>Fonctionnel / Confort</span></td>
-                </tr>
-                <tr>
-                  <td style={{ padding: '10px 12px' }}><code>troco_analytics_optin</code></td>
-                  <td style={{ padding: '10px 12px' }}>LocalStorage</td>
-                  <td style={{ padding: '10px 12px' }}>Mesure anonymisée de l'utilisation et détection d'erreurs (bloqué par défaut)</td>
-                  <td style={{ padding: '10px 12px' }}>6 mois</td>
-                  <td style={{ padding: '10px 12px' }}><span style={{ color: '#3B82F6', fontWeight: '700' }}>Soumis à Consentement</span></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
-
-      {/* SECTION 3 : CONSENTEMENT ET GESTION */}
-      <section style={cardStyle} aria-labelledby="section-manage">
-        <div style={sectionHeaderStyle}>
-          <div style={iconContainerStyle} aria-hidden="true">
-            <Settings size={22} />
-          </div>
-          <div>
-            <h2 id="section-manage" style={{ fontSize: '20px', fontWeight: '700', margin: 0, color: darkMode ? '#FFFFFF' : '#231E1B' }}>
-              3. Comment Gérer ou Révoquer votre Consentement ?
-            </h2>
-            <p style={{ fontSize: '13px', margin: '2px 0 0', color: darkMode ? '#B9A89B' : '#7D6E63' }}>
-              Liberté de choix garantie à tout instant sans dégradation du service principal
-            </p>
-          </div>
-        </div>
-
-        <div className="prose" style={{ fontSize: '14.5px', lineHeight: '1.7' }}>
-          <p>
-            Conformément aux directives de la CNIL, <strong>le refus des traceurs non nécessaires est aussi simple que leur acceptation</strong>.
-          </p>
-          <p>
-            Vous pouvez à tout moment modifier vos choix, réinitialiser vos préférences ou réafficher la bannière de consentement :
-          </p>
-
-          <div
-            style={{
-              marginTop: '20px',
-              padding: '22px',
-              borderRadius: '18px',
-              backgroundColor: darkMode ? 'rgba(198,125,91,0.12)' : 'rgba(198,125,91,0.08)',
-              border: '1px solid rgba(198,125,91,0.25)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '14px',
-            }}
-          >
-            <div style={{ fontWeight: '700', fontSize: '15px', color: '#C67D5B' }}>
-              Action instantanée sur vos préférences :
-            </div>
-            <div>
-              <button
-                type="button"
-                onClick={handleOpenSettings}
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '12px 22px',
-                  borderRadius: '9999px',
-                  backgroundColor: '#C67D5B',
-                  color: '#FFFFFF',
-                  border: 'none',
-                  fontSize: '14px',
-                  fontWeight: '700',
-                  cursor: 'pointer',
-                  boxShadow: '0 4px 14px rgba(198,125,91,0.3)',
-                }}
-              >
-                <RefreshCw size={16} />
-                <span>Réinitialiser & Configurer mes préférences de traceurs</span>
-              </button>
-            </div>
-            <div style={{ fontSize: '12.5px', color: darkMode ? '#B9A89B' : '#7D6E63' }}>
-              Ce bouton efface le choix de cookie précédemment enregistré et fait réapparaître la modale de consentement pour vous permettre de reconfigurer vos choix.
-            </div>
+              <Settings size={16} />
+              <span>{cookieData.manageButton || t('legal.manage_cookies') || "Gérer mes préférences cookies"}</span>
+            </button>
           </div>
         </div>
       </section>

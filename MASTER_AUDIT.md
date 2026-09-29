@@ -13,7 +13,7 @@
 > - `STEP BY STEP URGENT.txt` & `LISTE DES PROCHAINES FONCTIONNALITES A CODER.txt` (Backlog immédiat)
 > - `PROJECT_CONTEXT.md` & `TROCO_PROJECT_HISTORY.md` (Historique des décisions et géoprivacy)
 >
-> **Score global :** 8.2/10 | **Progression :** 46 / 74 tâches validées avec preuves formelles (62.2%)
+> **Score global :** 8.3/10 | **Progression :** 47 / 74 tâches validées avec preuves formelles (63.5%)
 
 ---
 
@@ -21,12 +21,12 @@
 
 | Phase | Fait | Restant | Progression |
 |---|---|---|---|
-| 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 27 | 0 | 100% |
+| 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 28 | 0 | 100% |
 | 🟡 Facile (Niveau 2 — 1h à 3h) | 8 | 8 | 50.0% |
 | 🟠 Moyen (Niveau 3 — 3h à 1 jour) | 8 | 7 | 53.3% |
 | 🔴 Difficile (Niveau 4 — 1 à 3 jours) | 3 | 7 | 30.0% |
 | 🚨 Très difficile (Niveau 5 — 3j à 2 sem) | 0 | 9 | 0.0% |
-| **TOTAL** | **46** | **28** | **62.2%** |
+| **TOTAL** | **47** | **27** | **63.5%** |
 
 
 ### Score par axe vs cible Licorne
@@ -156,6 +156,16 @@
 ### [x] [I18N-05] — Réactivité UGC du Feed & Traduction CloudOfficeSuite (7 langues)
 **Preuve** : `src/components/FeedCardItem.jsx:13,67-68,580-605`, `src/components/CloudOfficeSuiteModal.jsx:234,1315-1325,1380-1415,1455-1470,1540-1560,1860-2120`, `src/components/TrocoDocs.jsx:8,27-28,59,90`, `src/components/TrocoSheets.jsx:8,57,85`, `src/components/TrocoSlides.jsx:8,57,85`, `src/data/translationsData.js`, `src/data/translationsSecondary.js`
 **Statut** : ✅ FAIT — Résolution du bug critique bloquant le re-render des cartes de l'Activity Feed lors d'un basculement de langue : (1) Connexion directe de `useLanguage()` dans `FeedCardItem.jsx` avec fallback synchronisé `propLang || contextLang || 'FR'`, et refonte du comparateur personnalisé `areFeedCardPropsEqual` (L580-605) pour comparer rigoureusement `previous.currentLang === next.currentLang`, `previous.langRevision === next.langRevision`, `previous.showingOriginalListings?.[previousItem?.id] === next.showingOriginalListings?.[nextItem?.id]`, `previous.hoverSlideIndex === next.hoverSlideIndex` et `previous.onViewUserProfile === next.onViewUserProfile`. Basculement instantané garanti lors des changements de langue (FR→EN→ES→JA). (2) Internationalisation complète de `CloudOfficeSuiteModal.jsx` et de sa suite bureautique (`TrocoDocs`, `TrocoSheets`, `TrocoSlides`) sur les 7 langues officielles : barre de menus bureautique Desktop (Fichier, Édition, Affichage, Insertion, Format, Outils), sélecteurs d'onglets (Docs, Sheets, Slides, Notes, Historique), statut de sauvegarde temps réel, bouton et notifications de partage au chat, placeholders et titres de documents, libellés de la toolbar de formatage riche (Styles H1-H3, polices, tailles, gras, italique, souligné, barré, couleurs, alignements, listes, annuler/rétablir, export Markdown) et boutons d'export (PDF, Word, Excel, CSV, PPTX, MD, Impression). Validation réussie : build sans erreur, 0 nouvelle erreur ESLint, suites de tests vertes.
+
+### [x] [I18N-06] — Ratissage final i18n + Modularisation Légale & Conformité Multilingue (7 langues)
+**Preuve** : `src/components/PrivacyPolicy.jsx:1-240`, `src/components/CookiePolicy.jsx:1-270`, `src/components/Footer.jsx:1-360`, `src/components/PaymentModal.jsx:1440-1460`, `src/components/ListingCard.jsx:45-90,385-442`, `src/components/ListingDetailModal.jsx:45-75,385-445`, `src/components/FeedCardItem.jsx:8,35-65`, `src/features/feed/FeedSection.jsx:490-505`, `src/App.js:3150-3160,4715-4725`, `src/utils/formatters.js:300-334`, `src/utils/pricingEngine.js:180-230`, `src/components/AnimatedBalances.jsx:15-30`, `src/components/layout/AppHeader.jsx:215-235`, `src/data/legal/index.js`, `src/data/legal/privacy-policy-{fr,en,es,it,de,ja,zh}.js`, `src/data/legal/cookies-policy-{fr,en,es,it,de,ja,zh}.js`, `src/data/translationsData.js`, `src/data/translationsSecondary.js`
+**Statut** : ✅ FAIT — Ratissage exhaustif et élimination totale des résidus de langue française dans les 7 langues cibles (FR, EN, ES, IT, DE, JA, ZH) :
+1. **Zone A (Pages Légales modulaires)** : Découpage et internationalisation de `PrivacyPolicy.jsx` et `CookiePolicy.jsx` via 14 fichiers modulaires sous `src/data/legal/` (`privacy-policy-*.js` et `cookies-policy-*.js`). Rendu dynamique conforme RGPD et directive ePrivacy (tableaux de rétention LCEN 12 mois, clés localStorage `troco_cookie_consent`, `firebase:authUser`, `troco_theme`, durées de purge 10 ans et bouton de réinitialisation des préférences de traceurs).
+2. **Zone B (Footer institutionnel)** : Refactorisation complète de `src/components/Footer.jsx` avec `useLanguage()` et injection de 25+ clés de traduction `footer.*`. Traduction intégrale des 4 colonnes (Présentation, Conformité & Légal, Données personnelles RGPD, Garanties & Hébergement UE souverain), des badges de réassurance, des liens de navigation, de la mention d'éditeur Mateo et du copyright légal.
+3. **Zone C (PaymentModal & pricingEngine)** : Localisation complète des libellés d'abonnement Troco Plus (`monthly_plan_title`, `badge_popular`, `badge_pro`, `vat_prefix`), de l'avertissement de tacite reconduction (`auto_renewal_disclaimer`), et du bouton de confirmation de paiement (`confirm_and_pay`) avec devises adaptées (`¥` en JPY/CNY, `$` en USD/EN, `€` en EUR) sans résidu `€` hardcodé ni parenthèse parasite.
+4. **Zone D (Traductions dynamiques UGC & "Voir original")** : Abonnement temps réel `subscribeTranslations` intégré dans `FeedCardItem.jsx`, `ListingCard.jsx`, `ListingDetailModal.jsx` et `FeedSection.jsx`. Connexion de l'état `translationRevision` dans `src/App.js` invalidant instantanément le cache lors d'une nouvelle traduction asynchrone. Réparation du bouton "Voir original" (`showOriginal` / `showTranslation`) avec toggle résilient en cas de basculement multilingue et suppression de la double traduction de titre/description.
+5. **Zone E (Localisation monétaire & Devises)** : Implémentation de `formatCurrencyByLang` et `getCurrencySymbol` dans `src/utils/formatters.js` mappant automatiquement EUR, USD, JPY et CNY selon la langue active avec `Intl.NumberFormat`. Intégration dans `AnimatedBalances.jsx` (`AnimatedEuroBalance`), les badges de devises et les tooltips de rechargement d'`AppHeader.jsx`.
+Validation formelle : ESLint 0 erreur, suites Jest 100% vertes (`Phase141LegalCompliance.test.js`, `Phase135UGCTranslation.test.js`, `Phase119DynamicTranslationAndLanguageSync.test.js`), compilation de production `npm run build` réussie, vérification MCP Chrome DevTools (captures viewport JA et ZH confirmant 0 texte latin résiduel), mise à jour du graphe AST `graphify update .` validée.
 
 ---
 

@@ -1247,7 +1247,7 @@ export default function App() {
   }, [safeTimeout, setBannedReason, setIsAuthResolved, setIsAuthenticated, setIsLoadingSession, setIsUserBanned, setProfile, setSelectedChat, setSelectedListing, setTopUpCelebration]);
 
   // ---- ÉCOUTE ET RÉACTUALISATION EN TEMPS RÉEL DES TRADUCTIONS DYNAMIQUES ----
-  const [, setTranslationRevision] = useState(0);
+  const [translationRevision, setTranslationRevision] = useState(0);
   useEffect(() => {
     const unsub = subscribeTranslations(() => {
       setTranslationRevision(r => r + 1);
@@ -4188,6 +4188,7 @@ export default function App() {
                                   formatCompensation={formatCompensation}
                                   getListingDisplayContent={getListingDisplayContent}
                                   currentLang={currentLang}
+                                  langRevision={translationRevision}
                                   showingOriginalListings={showingOriginalListings}
                                   toggleOriginalListing={toggleOriginalListing}
                                   localizeLocation={localizeLocation}

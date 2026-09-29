@@ -1,11 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, Star, MapPin, Video, Globe, ShieldCheck, MessageSquare, Flame, Pencil, Trash2, Tag, ChevronLeft, ChevronRight } from 'lucide-react';
-import { getSuggestedMedia } from '../utils/mediaUtils';
-import {
-  parseAndTranslateDynamicText,
-  parseAndTranslateListing,
-  cleanLanguageTag,
-} from '../utils/dynamicTranslation';
+import { parseAndTranslateListing } from '../utils/dynamicTranslation';
+import { subscribeTranslations } from '../utils/translator';
 import { useLanguage } from '../contexts/LanguageContext';
 import { BACKDROP_CLASSNAME, BACKDROP_STYLE } from './ui/modalBackdrop';
 
@@ -55,9 +51,29 @@ export default function ListingDetailModal({
     : ((selectedListing?.images && selectedListing.images.length > 0)
         ? selectedListing.images
         : (selectedListing?.image ? [selectedListing.image] : []));
-  const currentImage = gallery[selectedImageIndex] || selectedListing?.image;
+  const [localShowingOriginal, setLocalShowingOriginal] = useState(false);
+  const [, setTransRevision] = useState(0);
 
-  const isDetailShowingOriginal = !!(selectedListing && showingOriginalListings[selectedListing.id]);
+  useEffect(() => {
+    return subscribeTranslations(() => {
+      setTransRevision(r => r + 1);
+    });
+  }, []);
+
+  const isDetailShowingOriginal = selectedListing
+    ? (showingOriginalListings[selectedListing.id] !== undefined
+        ? !!showingOriginalListings[selectedListing.id]
+        : localShowingOriginal)
+    : false;
+
+  const handleToggleOriginal = (e) => {
+    if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+    if (selectedListing?.id && typeof toggleOriginalListing === 'function') {
+      toggleOriginalListing(selectedListing.id, e);
+    }
+    setLocalShowingOriginal(prev => !prev);
+  };
+
   const displayContent = selectedListing
     ? (getListingDisplayContent
         ? getListingDisplayContent(selectedListing, currentLang, isDetailShowingOriginal)
@@ -204,11 +220,12 @@ export default function ListingDetailModal({
           </div>
 
           <h2 className="font-editorial-heading" style={{ margin: '0 0 6px', fontSize: '28px', fontWeight: '600', color: 'var(--text-main)', lineHeight: 1.25 }}>
-            {parseAndTranslateDynamicText(displayContent.title, currentLang, { forceOriginal: isDetailShowingOriginal })}
+            {displayContent.title}
           </h2>
-          {currentLang !== nativeLang && (
+          {(currentLang || 'FR').toUpperCase() !== (nativeLang || 'FR').toUpperCase() && (
             <button
-              onClick={(e) => toggleOriginalListing(selectedListing.id, e)}
+              type="button"
+              onClick={handleToggleOriginal}
               style={{
                 border: 'none',
                 background: 'none',
@@ -226,7 +243,7 @@ export default function ListingDetailModal({
               }}
             >
               <Globe size={13} color="var(--accent-primary)" style={{ flexShrink: 0 }} />
-              <span>{isDetailShowingOriginal ? t('showTranslation') : t('showOriginal')}</span>
+              <span>{isDetailShowingOriginal ? safeT('showTranslation', 'Voir la traduction') : safeT('showOriginal', "Voir l'original")}</span>
             </button>
           )}
 
@@ -429,7 +446,7 @@ export default function ListingDetailModal({
             {t('description') || 'Description'}
           </h4>
           <p style={{ margin: '0 0 16px', fontSize: '14.5px', lineHeight: 1.7, color: 'var(--text-secondary)' }}>
-            {parseAndTranslateDynamicText(displayContent.description, currentLang, { forceOriginal: isDetailShowingOriginal })}
+            {displayContent.description}
           </p>
 
           {selectedListing.tags && selectedListing.tags.length > 0 && (

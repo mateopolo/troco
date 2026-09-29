@@ -1,9 +1,10 @@
-import React, { useRef, useEffect, Profiler } from 'react';
+import React, { useRef, useEffect, useState, Profiler } from 'react';
 import { Search, ChevronLeft, ChevronRight, MapPin, Video, Flame } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useSafeTimeout } from '../../hooks/useSafeTimeout';
 import FeedCardItem from '../../components/FeedCardItem';
 import SponsoredFeedCard from '../../components/SponsoredFeedCard';
+import { subscribeTranslations } from '../../utils/translator';
 import { EmptyState } from '../../components/ui/EmptyState';
 import { PullToRefresh } from '../../components/ui/PullToRefresh';
 import { onRenderProfilerCallback } from '../../utils/performanceProfiler';
@@ -62,6 +63,13 @@ export function FeedSection({
   onLoadMore = null,
   mapContainerRef = null,
 }) {
+  const [transRev, setTransRev] = useState(0);
+  useEffect(() => {
+    return subscribeTranslations(() => {
+      setTransRev(r => r + 1);
+    });
+  }, []);
+
   // Hook pour gérer les timeouts en toute sécurité
   const { safeTimeout } = useSafeTimeout();
   
@@ -412,7 +420,8 @@ export function FeedSection({
             />
           </div>
         ) : (
-          <motion.div
+          <>
+            <motion.div
             ref={listingsGridRef}
             variants={{
               hidden: { opacity: 0 },
@@ -451,6 +460,7 @@ export function FeedSection({
                     formatCompensation={formatCompensation}
                     getListingDisplayContent={getListingDisplayContent}
                     currentLang={currentLang}
+                    langRevision={transRev}
                     showingOriginalListings={showingOriginalListings}
                     toggleOriginalListing={toggleOriginalListing}
                     localizeLocation={localizeLocation}
@@ -527,8 +537,9 @@ export function FeedSection({
               </button>
             </div>
           )}
-        )}
-      </div>
+        </>
+      )}
+    </div>
 
       {/* BANNIÈRE LATÉRALE DROITE (DESKTOP) */}
       <aside className="desktop-ad-banner" aria-label="Monétisation & Boost Troco">

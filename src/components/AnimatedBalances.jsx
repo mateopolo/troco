@@ -1,8 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { playBetclicBalanceSound } from '../utils/audioService';
+import { useLanguage } from '../contexts/LanguageContext';
+import { getCurrencySymbol } from '../utils/formatters';
 
 // ---- COMPOSANT SOLDE ANIMÉ (ANIMATION ROULEAU STYLE BETCLIC & BADGE VOLANT) ----
-export const AnimatedEuroBalance = ({ value, style, prefix = '', suffix = ' €', showBadge = true }) => {
+export const AnimatedEuroBalance = ({ value, style, prefix, suffix, showBadge = true, currentLang: propLang = null }) => {
+  const { currentLang: contextLang } = useLanguage();
+  const lang = (propLang || contextLang || 'FR').toUpperCase();
+  const symbol = getCurrencySymbol(lang);
+  const effectivePrefix = prefix !== undefined ? prefix.replace('€', symbol) : `${symbol} `;
+  const effectiveSuffix = suffix !== undefined ? suffix.replace('€', symbol) : '';
   const [displayValue, setDisplayValue] = useState(value);
   const [badgeInfo, setBadgeInfo] = useState(null); // { delta, id }
   const prevValueRef = useRef(value);

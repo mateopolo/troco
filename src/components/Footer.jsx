@@ -1,20 +1,24 @@
 import React from 'react';
-import { Shield, Lock, Scale, FileText, Heart, Sparkles, Globe, Coins, ExternalLink, HelpCircle } from 'lucide-react';
-import TrocoLogoNativeSvg from './common/TrocoLogoNativeSvg';
+import { Shield, Lock, Scale, FileText, Sparkles, Coins, HelpCircle } from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext';
 
 /**
  * Footer.jsx — Pied de page global institutionnel & conformité légale
  * Fournit les points d'accès obligatoires aux mentions légales, politiques de confidentialité,
  * politique de remboursement et gestion des cookies, dans le respect des directives européennes.
+ * Traduit dans les 7 langues supportées (FR, EN, ES, IT, DE, JA, ZH).
  */
 export default function Footer({
   onNavigate = () => {},
   onOpenCgu = () => {},
   onOpenPrivacyCenter = () => {},
   darkMode = false,
-  currentLang = 'FR',
+  currentLang: propLang = null,
 }) {
+  const { currentLang: ctxLang, t } = useLanguage();
+  const currentLang = propLang || ctxLang || 'FR';
   const currentYear = new Date().getFullYear();
+
   const linkStyle = {
     color: darkMode ? '#D4C5B5' : '#6B5E54',
     fontSize: '13.5px',
@@ -42,7 +46,8 @@ export default function Footer({
     <footer
       className="troco-footer"
       role="contentinfo"
-      aria-label="Informations légales et navigation secondaire"
+      lang={currentLang.toLowerCase()}
+      aria-label={t('footer.aria_label') || "Informations légales et navigation secondaire"}
       style={{
         width: '100%',
         marginTop: '60px',
@@ -111,7 +116,7 @@ export default function Footer({
                 margin: '0 0 16px',
               }}
             >
-              L'économie collaborative fondée sur le partage de temps, de savoir-faire et l'entraide de proximité. <strong>1 heure partagée = 1 Jeton Troco</strong>.
+              {t('footer.tagline') || "L'économie collaborative fondée sur le partage de temps, de savoir-faire et l'entraide de proximité. 1 heure partagée = 1 Jeton Troco."}
             </p>
 
             <div
@@ -127,9 +132,9 @@ export default function Footer({
                 fontWeight: '700',
               }}
             >
-              <span>Édité par Mateo</span>
+              <span>{t('footer.edited_by') || "Édité par Mateo"}</span>
               <span aria-hidden="true">•</span>
-              <span>Plateforme P2P Éthique</span>
+              <span>{t('footer.ethical_platform') || "Plateforme P2P Éthique"}</span>
             </div>
           </div>
 
@@ -145,7 +150,7 @@ export default function Footer({
                 color: '#C67D5B',
               }}
             >
-              Conformité & Légal
+              {t('footer.section_compliance') || "Conformité & Légal"}
             </h3>
 
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -155,10 +160,10 @@ export default function Footer({
                   onClick={(e) => handleLinkClick(e, 'legal-notice')}
                   style={linkStyle}
                   className="focus:ring-2 hover:text-[#C67D5B]"
-                  aria-label="Consulter les Mentions Légales"
+                  aria-label={t('footer.link_legal_notice') || "Mentions Légales (LCEN / DSA)"}
                 >
                   <FileText size={15} color="#C67D5B" aria-hidden="true" />
-                  <span>Mentions Légales (LCEN / DSA)</span>
+                  <span>{t('footer.link_legal_notice') || "Mentions Légales (LCEN / DSA)"}</span>
                 </a>
               </li>
               <li>
@@ -167,10 +172,10 @@ export default function Footer({
                   onClick={(e) => handleLinkClick(e, 'privacy-policy')}
                   style={linkStyle}
                   className="focus:ring-2 hover:text-[#C67D5B]"
-                  aria-label="Consulter la Politique de Confidentialité"
+                  aria-label={t('footer.link_privacy_policy') || "Politique de Confidentialité (RGPD)"}
                 >
                   <Lock size={15} color="#C67D5B" aria-hidden="true" />
-                  <span>Politique de Confidentialité (RGPD)</span>
+                  <span>{t('footer.link_privacy_policy') || "Politique de Confidentialité (RGPD)"}</span>
                 </a>
               </li>
               <li>
@@ -179,10 +184,10 @@ export default function Footer({
                   onClick={(e) => handleLinkClick(e, 'cookie-policy')}
                   style={linkStyle}
                   className="focus:ring-2 hover:text-[#C67D5B]"
-                  aria-label="Consulter la Politique des Cookies"
+                  aria-label={t('footer.link_cookie_policy') || "Politique des Cookies & Traceurs"}
                 >
                   <Shield size={15} color="#C67D5B" aria-hidden="true" />
-                  <span>Politique des Cookies & Traceurs</span>
+                  <span>{t('footer.link_cookie_policy') || "Politique des Cookies & Traceurs"}</span>
                 </a>
               </li>
               <li>
@@ -191,10 +196,10 @@ export default function Footer({
                   onClick={(e) => handleLinkClick(e, 'refund-policy')}
                   style={linkStyle}
                   className="focus:ring-2 hover:text-[#C67D5B]"
-                  aria-label="Consulter la Politique de Remboursement et litiges"
+                  aria-label={t('footer.link_refund_policy') || "Politique de Remboursement & Litiges"}
                 >
                   <Scale size={15} color="#C67D5B" aria-hidden="true" />
-                  <span>Politique de Remboursement & Litiges</span>
+                  <span>{t('footer.link_refund_policy') || "Politique de Remboursement & Litiges"}</span>
                 </a>
               </li>
               <li>
@@ -203,10 +208,10 @@ export default function Footer({
                   onClick={onOpenCgu}
                   style={linkStyle}
                   className="focus:ring-2 hover:text-[#C67D5B]"
-                  aria-label="Ouvrir les Conditions Générales d'Utilisation"
+                  aria-label={t('footer.link_cgu') || "Conditions Générales (CGU 2026.1)"}
                 >
                   <Sparkles size={15} color="#C67D5B" aria-hidden="true" />
-                  <span>Conditions Générales (CGU 2026.1)</span>
+                  <span>{t('footer.link_cgu') || "Conditions Générales (CGU 2026.1)"}</span>
                 </button>
               </li>
             </ul>
@@ -224,11 +229,11 @@ export default function Footer({
                 color: '#C67D5B',
               }}
             >
-              Vos Données Personnelles
+              {t('footer.section_personal_data') || "Vos Données Personnelles"}
             </h3>
 
             <p style={{ fontSize: '13px', color: darkMode ? '#B9A89B' : '#7D6E63', lineHeight: 1.55, margin: '0 0 14px' }}>
-              Exercez vos droits RGPD directement depuis la plateforme : exportez vos données en 1 clic ou gérez vos préférences.
+              {t('footer.personal_data_desc') || "Exercez vos droits RGPD directement depuis la plateforme : exportez vos données en 1 clic ou gérez vos préférences."}
             </p>
 
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -238,10 +243,10 @@ export default function Footer({
                   onClick={onOpenPrivacyCenter}
                   style={linkStyle}
                   className="focus:ring-2 hover:text-[#C67D5B]"
-                  aria-label="Ouvrir le Centre de Confidentialité et export de données"
+                  aria-label={t('footer.link_privacy_center') || "Centre de Confidentialité & Export JSON"}
                 >
                   <Lock size={15} color="#C67D5B" aria-hidden="true" />
-                  <span>Centre de Confidentialité & Export JSON</span>
+                  <span>{t('footer.link_privacy_center') || "Centre de Confidentialité & Export JSON"}</span>
                 </button>
               </li>
               <li>
@@ -250,10 +255,10 @@ export default function Footer({
                   onClick={(e) => handleLinkClick(e, 'cookie-policy')}
                   style={linkStyle}
                   className="focus:ring-2 hover:text-[#C67D5B]"
-                  aria-label="Gérer mes préférences de cookies"
+                  aria-label={t('footer.link_manage_cookies') || "Gérer mes préférences de cookies"}
                 >
                   <Shield size={15} color="#C67D5B" aria-hidden="true" />
-                  <span>Gérer mes préférences de cookies</span>
+                  <span>{t('footer.link_manage_cookies') || "Gérer mes préférences de cookies"}</span>
                 </a>
               </li>
               <li>
@@ -261,10 +266,10 @@ export default function Footer({
                   href="mailto:support@troco.fr"
                   style={linkStyle}
                   className="focus:ring-2 hover:text-[#C67D5B]"
-                  aria-label="Contacter le support d'assistance Troco"
+                  aria-label={t('footer.link_support') || "Assistance & Médiation : support@troco.fr"}
                 >
                   <HelpCircle size={15} color="#C67D5B" aria-hidden="true" />
-                  <span>Assistance & Médiation : support@troco.fr</span>
+                  <span>{t('footer.link_support') || "Assistance & Médiation : support@troco.fr"}</span>
                 </a>
               </li>
             </ul>
@@ -282,7 +287,7 @@ export default function Footer({
                 color: '#C67D5B',
               }}
             >
-              Garanties & Hébergement
+              {t('footer.section_guarantees') || "Garanties & Hébergement"}
             </h3>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -297,9 +302,9 @@ export default function Footer({
                 }}
               >
                 <div style={{ fontWeight: '700', color: '#7A8F6A', marginBottom: '2px' }}>
-                  ✓ Hébergement Souverain UE
+                  {t('footer.card_eu_hosting_title') || "✓ Hébergement Souverain UE"}
                 </div>
-                Données chiffrées au repos et en transit. Serveurs cloud Google Firebase situés en Union Européenne.
+                {t('footer.card_eu_hosting_desc') || "Données chiffrées au repos et en transit. Serveurs cloud Google Firebase situés en Union Européenne."}
               </div>
 
               <div
@@ -313,9 +318,9 @@ export default function Footer({
                 }}
               >
                 <div style={{ fontWeight: '700', color: '#C67D5B', marginBottom: '2px' }}>
-                  ✓ Zéro Revente de Données
+                  {t('footer.card_zero_resale_title') || "✓ Zéro Revente de Données"}
                 </div>
-                Vos coordonnées et contenus restent privés et protégés.
+                {t('footer.card_zero_resale_desc') || "Vos coordonnées et contenus restent privés et protégés."}
               </div>
             </div>
           </div>
@@ -336,13 +341,13 @@ export default function Footer({
           }}
         >
           <div>
-            © {currentYear} <strong>Troco</strong>. Fondé et édité par <strong>Mateo</strong>. Tous droits réservés.
+            © {currentYear} <strong>Troco</strong>. {t('footer.founded_by') || "Fondé et administré par Mateo. Tous droits réservés."}
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
-            <span>Conformité Loi LCEN & RGPD</span>
+            <span>{t('footer.lcen_rgpd') || "Conformité Loi LCEN & RGPD"}</span>
             <span aria-hidden="true">•</span>
-            <span>Version 2026.1</span>
+            <span>{t('footer.version') || "Version 2026.1"}</span>
           </div>
         </div>
       </div>

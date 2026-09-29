@@ -6,11 +6,8 @@ import { getActiveAnimation } from '../config/animations';
 import { getSuggestedMedia as defaultGetSuggestedMedia, getFallbackImage as defaultGetFallbackImage } from '../utils/mediaUtils';
 import { localizeLocation as defaultLocalizeLocation, localizeTags as defaultLocalizeTags } from '../locales/translations';
 import { getAuthorAvatar as defaultGetAuthorAvatar } from '../data/mockData';
-import {
-  parseAndTranslateDynamicText,
-  parseAndTranslateListing,
-  cleanLanguageTag,
-} from '../utils/dynamicTranslation';
+import { parseAndTranslateListing } from '../utils/dynamicTranslation';
+import { subscribeTranslations } from '../utils/translator';
 
 const defaultGenerateTags = (title = '', description = '') => ['Échange', 'Service'];
 const defaultFormatCompensation = (comp) => comp || '';
@@ -43,12 +40,18 @@ export default function ListingCard({
 }) {
   const cardRef = useRef(null);
   const [localImageIndex, setLocalImageIndex] = useState(0);
+  const [, setTransRevision] = useState(0);
+
+  useEffect(() => {
+    return subscribeTranslations(() => {
+      setTransRevision(r => r + 1);
+    });
+  }, []);
+
   const touchStartRef = useRef(null);
   const touchDeltaXRef = useRef(0);
   const touchDeltaYRef = useRef(0);
   const isSwipingRef = useRef(false);
-
-  if (!item) return null;
 
   const safeGetSuggestedMedia = getSuggestedMedia || defaultGetSuggestedMedia;
   const safeGetFallbackImage = getFallbackImage || defaultGetFallbackImage;
@@ -62,9 +65,9 @@ export default function ListingCard({
     : (typeof defaultGetAuthorAvatar === 'function' ? defaultGetAuthorAvatar : () => 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80');
   const safeProfile = profile || { name: 'MATEO POLO', avatar: '' };
 
-  const media = safeGetSuggestedMedia(item.title, item.description || '', item.image, item.video);
-  const effectiveGallery = (item.gallery && item.gallery.length > 0) ? item.gallery : (media.gallery || [media.image || safeGetFallbackImage(item.category, item.title)]);
-  const isHovered = hoveredCardId === item.id;
+  const media = item ? safeGetSuggestedMedia(item.title, item.description || '', item.image, item.video) : null;
+  const effectiveGallery = (item?.gallery && item.gallery.length > 0) ? item.gallery : (media?.gallery || [media?.image || safeGetFallbackImage(item?.category, item?.title)]);
+  const isHovered = Boolean(item?.id && hoveredCardId === item.id);
   const galleryLength = effectiveGallery.length || 1;
 
   // Défilement automatique au survol desktop toutes les 1 500 ms
@@ -75,6 +78,8 @@ export default function ListingCard({
     }, 1500);
     return () => clearInterval(interval);
   }, [isHovered, galleryLength]);
+
+  if (!item) return null;
 
   const currentSlideIndex = localImageIndex % galleryLength;
   const displayContent = safeGetListingDisplayContent(item, currentLang, !!showingOriginalListings[item.id]);
@@ -382,7 +387,7 @@ export default function ListingCard({
           <div>
             <h3 className="font-sans" style={{ fontSize: '15.5px', fontWeight: '800', color: 'var(--text-main)', margin: '0 0 4px 0', lineHeight: 1.35, letterSpacing: '-0.02em' }}>
               <TextEffect preset="fade-in-blur" speedReveal={1.1} speedSegment={0.3} once>
-                {parseAndTranslateDynamicText(displayContent.title, currentLang, { forceOriginal: !!showingOriginalListings[item.id] })}
+                {displayContent.title}
               </TextEffect>
             </h3>
             {currentLang !== (item.nativeLang || 'FR') && (
@@ -432,7 +437,7 @@ export default function ListingCard({
                 transition: 'max-height 0.3s var(--ease-quiet), color 0.3s ease'
               }}
             >
-              {parseAndTranslateDynamicText(displayContent.description, currentLang, { forceOriginal: !!showingOriginalListings[item.id] })}
+              {displayContent.description}
             </div>
           )}
 

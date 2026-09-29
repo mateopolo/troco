@@ -283,3 +283,51 @@ export const formatCompensation = (comp, currentLang = 'FR', t = (k) => defaultT
   else if (currentLang === 'ZH') res = res.replace(/\btemps\b/gi, '时间');
   return res;
 };
+
+/**
+ * Table de configuration de la devise locale par code langue :
+ * FR -> EUR (€), EN -> USD ($), ES -> EUR (€), IT -> EUR (€), DE -> EUR (€), JA -> JPY (¥), ZH -> CNY (¥)
+ */
+export const CURRENCY_CONFIG_BY_LANG = {
+  FR: { currency: 'EUR', locale: 'fr-FR', symbol: '€' },
+  EN: { currency: 'USD', locale: 'en-US', symbol: '$' },
+  ES: { currency: 'EUR', locale: 'es-ES', symbol: '€' },
+  IT: { currency: 'EUR', locale: 'it-IT', symbol: '€' },
+  DE: { currency: 'EUR', locale: 'de-DE', symbol: '€' },
+  JA: { currency: 'JPY', locale: 'ja-JP', symbol: '¥' },
+  ZH: { currency: 'CNY', locale: 'zh-CN', symbol: '¥' },
+};
+
+/**
+ * Retourne le symbole monétaire adapté à la langue active.
+ * @param {string} [lang='FR']
+ * @returns {string} Le symbole monétaire (€, $, ¥)
+ */
+export const getCurrencySymbol = (lang = 'FR') => {
+  const norm = (lang || 'FR').toUpperCase();
+  return (CURRENCY_CONFIG_BY_LANG[norm] || CURRENCY_CONFIG_BY_LANG.FR).symbol;
+};
+
+/**
+ * Formate un montant financier selon la devise locale et la convention de la langue sélectionnée.
+ * Utilise Intl.NumberFormat standardisé.
+ * @param {number|string} amount - Montant numérique
+ * @param {string} [lang='FR'] - Code de langue utilisateur
+ * @returns {string} Montant formaté (ex: "120,00 €", "$120.00", "￥120")
+ */
+export const formatCurrencyByLang = (amount, lang = 'FR') => {
+  const num = Number(amount) || 0;
+  const norm = (lang || 'FR').toUpperCase();
+  const config = CURRENCY_CONFIG_BY_LANG[norm] || CURRENCY_CONFIG_BY_LANG.FR;
+
+  try {
+    return new Intl.NumberFormat(config.locale, {
+      style: 'currency',
+      currency: config.currency,
+      maximumFractionDigits: config.currency === 'JPY' ? 0 : 2,
+      minimumFractionDigits: config.currency === 'JPY' ? 0 : 2,
+    }).format(num);
+  } catch (_) {
+    return `${num.toFixed(2)} ${config.symbol}`;
+  }
+};

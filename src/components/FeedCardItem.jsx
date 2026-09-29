@@ -5,6 +5,7 @@ import { TextEffect } from './core/text-effect';
 import { ProgressiveImage } from './ui/ProgressiveImage';
 import { safeVibrate } from '../utils/haptics';
 import { useLanguage } from '../contexts/LanguageContext';
+import { subscribeTranslations } from '../utils/translator';
 
 function FeedCardItem({
   item,
@@ -47,6 +48,14 @@ function FeedCardItem({
 
   const [localImageIndex, setLocalImageIndex] = useState(0);
   const [typedText, setTypedText] = useState('');
+  const [, setTransRevision] = useState(0);
+
+  useEffect(() => {
+    return subscribeTranslations(() => {
+      setTransRevision(r => r + 1);
+    });
+  }, []);
+
   const cardElementRef = useRef(null);
   const videoRef = useRef(null);
   const touchStartRef = useRef(null);
