@@ -13,7 +13,7 @@
 > - `STEP BY STEP URGENT.txt` & `LISTE DES PROCHAINES FONCTIONNALITES A CODER.txt` (Backlog immédiat)
 > - `PROJECT_CONTEXT.md` & `TROCO_PROJECT_HISTORY.md` (Historique des décisions et géoprivacy)
 >
-> **Score global :** 8.3/10 | **Progression :** 51 / 74 tâches validées avec preuves formelles (69.1%)
+> **Score global :** 8.3/10 | **Progression :** 53 / 74 tâches validées avec preuves formelles (71.6%)
 
 ---
 
@@ -22,11 +22,11 @@
 | Phase | Fait | Restant | Progression |
 |---|---|---|---|
 | 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 28 | 0 | 100% |
-| 🟡 Facile (Niveau 2 — 1h à 3h) | 12 | 4 | 75.0% |
+| 🟡 Facile (Niveau 2 — 1h à 3h) | 14 | 2 | 87.5% |
 | 🟠 Moyen (Niveau 3 — 3h à 1 jour) | 8 | 7 | 53.3% |
 | 🔴 Difficile (Niveau 4 — 1 à 3 jours) | 3 | 7 | 30.0% |
 | 🚨 Très difficile (Niveau 5 — 3j à 2 sem) | 0 | 9 | 0.0% |
-| **TOTAL** | **51** | **23** | **69.1%** |
+| **TOTAL** | **53** | **21** | **71.6%** |
 
 
 ### Score par axe vs cible Licorne
@@ -258,21 +258,17 @@ Validation formelle : ESLint 0 erreur, suites Jest 100% vertes (`Phase141LegalCo
 **Preuve** : `src/hooks/useUserPresence.js:1-92`, `src/components/FeedCardItem.jsx:16, 73, 273-288`, `src/components/ListingDetailModal.jsx:16, 68, 172-185`, `tests/unit/FeedFeatures.test.js:1-110`  
 **Statut** : ✅ FAIT — Création du hook singleton `useUserPresence(uid)` écoutant en temps réel `doc(db, 'presence', uid)` avec registre centralisé évitant strictement les requêtes N+1 (1 seul listener Firestore par UID distinct avec compteur de souscriptions). Pastille de présence 8px (`#10B981` vert en ligne / `#9CA3AF` gris hors ligne avec contour blanc/sombre) intégrée en bas à droite de l'avatar auteur sur `FeedCardItem` et à côté du nom de l'auteur dans `ListingDetailModal`. Infobulles localisées en 7 langues avec statut ("En ligne" / "Hors ligne") et calcul d'expiration automatique du battement de cœur (>60s).
 
-### [ ] [FAC-04] — Color picker complet (HEX/RGB/HSL) dans le tableau blanc
-**Statut** : ❌ À FAIRE  
-**Fichier** : `src/components/CollaborativeWhiteboardModal.jsx:2500`  
-**Estimation** : 1h30  
-**Impact** : Enrichit les outils créatifs pour les séances de travail partagé.
+### [x] [FAC-04] — Color picker complet (HEX/RGB/HSL) dans le tableau blanc
+**Preuve** : `src/components/ui/ColorPicker.jsx:1-395`, `src/components/CollaborativeWhiteboardModal.jsx:42, 205-265, 3720-3775`, `tests/unit/ColorPickerAndTheme.test.js:15-88`  
+**Statut** : ✅ FAIT — Composant de sélecteur de couleurs haut de gamme `<ColorPicker />` implémenté avec trois modes (`HEX`, `RGB`, `HSL`), curseurs de spectre et inputs numériques précis, palette système de 20 couleurs officielles Troco (`DESIGN_SYSTEM_PALETTE`), historique persistant de 5 couleurs récentes (`troco_recent_colors`), grand swatch preview avec contraste dynamique et copie en un clic, et support EyeDropper / Pipette. Intégration dans la barre d'outils du tableau blanc via un popover portal (`document.body`) animé et réactif au tactile et à la souris, remplaçant l'ancien `<input type="color">`.
 
 ### [x] [FAC-05] — Persistance des filtres de recherche préférés
 **Preuve** : `firestore.rules:45-51`, `tests/rules/firestore.rules.test.js:31-33, 98-107`, `src/stores/useFeedStore.js:15-18, 59-158`, `src/components/modals/FilterDrawer.jsx:10, 48-180, 240-340`, `src/App.js:1062, 5374`, `tests/unit/FeedFeatures.test.js:112-160`  
 **Statut** : ✅ FAIT — Stockage Firestore persistant sous `users/{uid}/savedFilters/{id}` (`name`, `filters`, `createdAt`, `updatedAt`) avec règles de sécurité strictes `isOwner(uid) || isAdmin()`. Actions Zustand complètes dans `useFeedStore` (`loadSavedFilters`, `addSavedFilter`, `renameSavedFilter`, `deleteSavedFilter`, `applySavedFilter`). Interface dédiée dans `FilterDrawer` avec bouton « Sauvegarder », modale/formulaire de nommage, liste réactive avec boutons « Appliquer », « Renommer » et « Supprimer » (sécurisé par `useConfirm`), préchargement automatique au login utilisateur et prise en charge intégrale des 7 langues.
 
-### [ ] [FAC-06] — Mode sombre automatique système + horaire
-**Statut** : ❌ À FAIRE  
-**Fichier** : `src/contexts/ThemeContext.jsx`  
-**Estimation** : 1h30  
-**Impact** : Bascule dynamique jour/nuit sans intervention manuelle de l'utilisateur.
+### [x] [FAC-06] — Mode sombre automatique système + horaire
+**Preuve** : `src/contexts/ThemeContext.jsx:770-875, 1100-1120`, `src/features/profile/ProfileFeature.jsx:32, 97, 1040-1150`, `public/index.html:7-40`, `tests/unit/ColorPickerAndTheme.test.js:90-180`  
+**Statut** : ✅ FAIT — Gestion complète des 3 modes de thème (`'light' | 'dark' | 'auto'`) dans `ThemeContext`. En mode `'auto'`, détection réactive combinant la préférence système OS (`matchMedia('(prefers-color-scheme: dark)')`) et la plage horaire nocturne paramétrable (par défaut 20h → 7h) avec vérification automatique par timer 60s. Carte de contrôle élégante intégrée dans `ProfileFeature` avec toggle radiogroup (Clair / Sombre / Auto), activation de plage et sélecteurs déroulants d'heures de début et fin. Persistance synchrone dans `troco_theme_schedule` et script anti-flash immédiat dans `<head>` de `index.html` éliminant tout clignotement blanc au rechargement.
 
 ### [ ] [FAC-07] — Extraction des libellés français résiduels dans les fichiers JSX
 **Statut** : ❌ À FAIRE  

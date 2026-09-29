@@ -28,6 +28,9 @@ import {
   Coins,
   Scale,
   Lock,
+  Sun,
+  Moon,
+  Clock,
 } from 'lucide-react';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../../firebase';
@@ -94,6 +97,7 @@ export default function ProfileFeature({
 
   // Hook pour gérer les timeouts en toute sécurité
   const { safeTimeout } = useSafeTimeout();
+  const { themeMode, setThemeMode, themeSchedule, setThemeSchedule, isDark } = useTheme();
   
   const [isDesignStudioOpen, setIsDesignStudioOpen] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
@@ -1034,6 +1038,208 @@ export default function ProfileFeature({
                 </div>
               );
             })
+          )}
+        </div>
+      </div>
+
+      {/* ---- GESTION DU THÈME & DARK MODE AUTOMATIQUE (FAC-06) ---- */}
+      <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '20px', marginTop: '20px' }}>
+        <div style={{
+          padding: '18px 20px',
+          backgroundColor: 'var(--bg-card)',
+          borderRadius: 'var(--border-radius-main, 18px)',
+          border: '1px solid var(--border-color)',
+          boxShadow: 'var(--shadow-card)',
+        }}>
+          {/* Header */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '14px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '10px',
+                backgroundColor: isDark ? 'rgba(139, 92, 246, 0.15)' : 'rgba(245, 158, 11, 0.15)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: isDark ? '#A78BFA' : '#F59E0B',
+              }}>
+                {isDark ? <Moon size={18} /> : <Sun size={18} />}
+              </div>
+              <div>
+                <h4 className="font-editorial-heading" style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: 'var(--text-main)' }}>
+                  {t('theme_mode_title', 'Mode d’affichage & Thème')}
+                </h4>
+                <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>
+                  {t('theme_auto_desc', 'Active le mode sombre la nuit ou selon votre système')}
+                </p>
+              </div>
+            </div>
+
+            {/* Pastille statut actif effectif */}
+            <span style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '4px 10px',
+              borderRadius: '999px',
+              fontSize: '11px',
+              fontWeight: '700',
+              backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+              color: 'var(--text-main)',
+              border: '1px solid var(--border-color)',
+            }}>
+              <span style={{
+                width: '6px',
+                height: '6px',
+                borderRadius: '50%',
+                backgroundColor: isDark ? '#A78BFA' : '#F59E0B',
+              }} />
+              {isDark ? t('theme_mode_dark', 'Sombre') : t('theme_mode_light', 'Clair')}
+              {themeMode === 'auto' && ' (Auto)'}
+            </span>
+          </div>
+
+          {/* 3 Modes : Clair | Sombre | Auto */}
+          <div
+            role="radiogroup"
+            aria-label={t('theme_mode_title', 'Mode d’affichage')}
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(3, 1fr)',
+              gap: '8px',
+              marginBottom: themeMode === 'auto' ? '16px' : '0px',
+            }}
+          >
+            {[
+              { id: 'light', label: t('theme_mode_light', 'Clair'), icon: Sun },
+              { id: 'dark', label: t('theme_mode_dark', 'Sombre'), icon: Moon },
+              { id: 'auto', label: t('theme_mode_auto', 'Auto'), icon: Clock },
+            ].map(({ id, label, icon: ModeIcon }) => {
+              const isSelected = themeMode === id;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  role="radio"
+                  aria-checked={isSelected}
+                  onClick={() => setThemeMode(id)}
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    padding: '10px 8px',
+                    borderRadius: '12px',
+                    border: isSelected
+                      ? '2px solid var(--accent-primary, #C67D5B)'
+                      : '1px solid var(--border-color)',
+                    backgroundColor: isSelected
+                      ? 'var(--accent-primary, #C67D5B)'
+                      : 'var(--bg-global)',
+                    color: isSelected ? '#FFFFFF' : 'var(--text-main)',
+                    fontWeight: isSelected ? '700' : '600',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                    boxShadow: isSelected ? 'var(--shadow-accent)' : 'none',
+                  }}
+                >
+                  <ModeIcon size={16} />
+                  <span>{label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Configuration Plage Horaire si mode Auto */}
+          {themeMode === 'auto' && (
+            <div style={{
+              padding: '12px 14px',
+              backgroundColor: 'var(--bg-global)',
+              borderRadius: '12px',
+              border: '1px solid var(--border-color)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+                <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-main)' }}>
+                  🕒 {t('theme_schedule_title', 'Plage horaire nocturne automatique')}
+                </span>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '11px', color: 'var(--text-secondary)' }}>
+                  <input
+                    type="checkbox"
+                    checked={themeSchedule.enabled !== false}
+                    onChange={(e) => setThemeSchedule({ enabled: e.target.checked })}
+                    style={{ accentColor: 'var(--accent-primary)' }}
+                  />
+                  <span>{t('theme_schedule_enabled', 'Activer')}</span>
+                </label>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label
+                    htmlFor="theme-start-hour-select"
+                    style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px' }}
+                  >
+                    {t('theme_schedule_start', 'Heure de début (nuit)')}
+                  </label>
+                  <select
+                    id="theme-start-hour-select"
+                    value={themeSchedule.startHour ?? 20}
+                    disabled={themeSchedule.enabled === false}
+                    onChange={(e) => setThemeSchedule({ startHour: Number(e.target.value) })}
+                    style={{
+                      width: '100%',
+                      padding: '8px 10px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: 'var(--bg-card)',
+                      color: 'var(--text-main)',
+                      fontSize: '12px',
+                      fontWeight: '600',
+                    }}
+                  >
+                    {Array.from({ length: 24 }).map((_, h) => (
+                      <option key={`start-${h}`} value={h}>
+                        {String(h).padStart(2, '0')}:00
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="theme-end-hour-select"
+                    style={{ display: 'block', fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px' }}
+                  >
+                    {t('theme_schedule_end', 'Heure de fin (matin)')}
+                  </label>
+                  <select
+                    id="theme-end-hour-select"
+                    value={themeSchedule.endHour ?? 7}
+                    disabled={themeSchedule.enabled === false}
+                    onChange={(e) => setThemeSchedule({ endHour: Number(e.target.value) })}
+                    style={{
+                      width: '100%',
+                      padding: '8px 10px',
+                      borderRadius: '8px',
+                      border: '1px solid var(--border-color)',
+                      backgroundColor: 'var(--bg-card)',
+                      color: 'var(--text-main)',
+                      fontSize: '12px',
+                      fontWeight: '600',
+                    }}
+                  >
+                    {Array.from({ length: 24 }).map((_, h) => (
+                      <option key={`end-${h}`} value={h}>
+                        {String(h).padStart(2, '0')}:00
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </div>

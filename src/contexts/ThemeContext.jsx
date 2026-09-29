@@ -771,7 +771,38 @@ const DEFAULT_STUDIO_SETTINGS = {
   brandColor: '#B98B73',
 };
 
+export function isHourInSchedule(currentHour, startHour = 20, endHour = 7) {
+  if (startHour === endHour) return true;
+  if (startHour > endHour) {
+    return currentHour >= startHour || currentHour < endHour;
+  }
+  return currentHour >= startHour && currentHour < endHour;
+}
+
+export function determineIsDark(mode = 'auto', schedule = null) {
+  if (mode === 'dark') return true;
+  if (mode === 'light') return false;
+
+  const currentHour = new Date().getHours();
+  const start = schedule?.startHour != null ? schedule.startHour : 20;
+  const end = schedule?.endHour != null ? schedule.endHour : 7;
+  const inSchedule = schedule?.enabled !== false && isHourInSchedule(currentHour, start, end);
+
+  let systemPrefersDark = false;
+  if (typeof window !== 'undefined' && window.matchMedia) {
+    systemPrefersDark = Boolean(window.matchMedia('(prefers-color-scheme: dark)').matches);
+  }
+
+  return Boolean(inSchedule || systemPrefersDark);
+}
+
+const DEFAULT_SCHEDULE = { enabled: true, startHour: 20, endHour: 7 };
+
 const ThemeContext = createContext({
+  themeMode: 'auto',
+  setThemeMode: () => { },
+  themeSchedule: DEFAULT_SCHEDULE,
+  setThemeSchedule: () => { },
   themeId: 'earthy',
   theme: THEMES_CONFIG.earthy,
   isDark: false,
@@ -808,16 +839,124 @@ export function ThemeProvider({ children }) {
     return 'earthy';
   });
 
-  // État Mode Sombre indépendant et persistant
+  // Mode de thème : 'light' | 'dark' | 'auto'
+  const [themeMode, setThemeModeState] = useState(() => {
+    try {
+      const savedMode = localStorage.getItem('troco_theme_mode');
+      if (savedMode === 'light' || savedMode === 'dark' || savedMode === 'auto') {
+        return savedMode;
+      }
+      const savedIsDark = localStorage.getItem('troco_is_dark');
+      if (savedIsDark !== null) {
+        return savedIsDark === 'true' ? 'dark' : 'light';
+      }
+    } catch (e) { }
+    return 'auto';
+  });
+
+  const [themeSchedule, setThemeScheduleState] = useState(() => {
+    try {
+      const savedSchedule = localStorage.getItem('troco_theme_schedule');
+      if (savedSchedule) {
+        const parsed = JSON.parse(savedSchedule);
+        if (parsed && typeof parsed === 'object') {
+          return {
+            enabled: parsed.enabled !== false,
+            startHour: typeof parsed.startHour === 'number' ? parsed.startHour : 20,
+            endHour: typeof parsed.endHour === 'number' ? parsed.endHour : 7,
+          };
+        }
+      }
+    } catch (e) { }
+    return DEFAULT_SCHEDULE;
+  });
+
+  // État Mode Sombre calculé selon le mode ('light' | 'dark' | 'auto') et la plage horaire
   const [isDark, setIsDarkState] = useState(() => {
     try {
-      const saved = localStorage.getItem('troco_is_dark');
-      if (saved !== null) return saved === 'true';
-      const legacyTheme = localStorage.getItem('troco_theme');
-      if (legacyTheme === 'dark') return true;
-    } catch (e) { }
-    return false;
+      const savedMode = localStorage.getItem('troco_theme_mode') || 'auto';
+      let schedule = DEFAULT_SCHEDULE;
+      const savedSchedule = localStorage.getItem('troco_theme_schedule');
+      if (savedSchedule) {
+        try { schedule = { ...DEFAULT_SCHEDULE, ...JSON.parse(savedSchedule) }; } catch (e) { }
+      }
+      return determineIsDark(savedMode, schedule);
+    } catch (e) {
+      return false;
+    }
   });
+
+  const setThemeMode = useCallback((mode) => {
+    if (mode !== 'light' && mode !== 'dark' && mode !== 'auto') return;
+    setThemeModeState(mode);
+    try {
+      localStorage.setItem('troco_theme_mode', mode);
+    } catch (e) { }
+    const nextIsDark = determineIsDark(mode, themeSchedule);
+    setIsDarkState(nextIsDark);
+    try {
+      localStorage.setItem('troco_is_dark', String(nextIsDark));
+    } catch (e) { }
+  }, [themeSchedule]);
+
+  const setThemeSchedule = useCallback((updater) => {
+    setThemeScheduleState((prev) => {
+      const next = typeof updater === 'function' ? updater(prev) : { ...prev, ...updater };
+      try {
+        localStorage.setItem('troco_theme_schedule', JSON.stringify(next));
+      } catch (e) { }
+      if (themeMode === 'auto') {
+        const nextIsDark = determineIsDark('auto', next);
+        setIsDarkState(nextIsDark);
+        try {
+          localStorage.setItem('troco_is_dark', String(nextIsDark));
+        } catch (e) { }
+      }
+      return next;
+    });
+  }, [themeMode]);
+
+  // Surveillance active pour le mode auto : Timer 60s + matchMedia(prefers-color-scheme)
+  useEffect(() => {
+    if (themeMode !== 'auto') return;
+
+    const checkAuto = () => {
+      const calculated = determineIsDark('auto', themeSchedule);
+      setIsDarkState((prev) => {
+        if (prev !== calculated) {
+          try {
+            localStorage.setItem('troco_is_dark', String(calculated));
+          } catch (e) { }
+          return calculated;
+        }
+        return prev;
+      });
+    };
+
+    checkAuto();
+    const intervalId = setInterval(checkAuto, 60000);
+
+    let mql = null;
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      mql = window.matchMedia('(prefers-color-scheme: dark)');
+      if (mql.addEventListener) {
+        mql.addEventListener('change', checkAuto);
+      } else if (mql.addListener) {
+        mql.addListener(checkAuto);
+      }
+    }
+
+    return () => {
+      clearInterval(intervalId);
+      if (mql) {
+        if (mql.removeEventListener) {
+          mql.removeEventListener('change', checkAuto);
+        } else if (mql.removeListener) {
+          mql.removeListener(checkAuto);
+        }
+      }
+    };
+  }, [themeMode, themeSchedule]);
 
   const [customColors, setCustomColorsState] = useState(() => {
     try {
@@ -1064,14 +1203,14 @@ export function ThemeProvider({ children }) {
 
   // BASCULE DU MODE SOMBRE SANS MODIFIER LE THEME CHOISI
   const toggleTheme = useCallback(() => {
-    setIsDarkState((prev) => {
-      const next = !prev;
-      try {
-        localStorage.setItem('troco_is_dark', String(next));
-      } catch (e) { }
-      return next;
-    });
-  }, []);
+    if (themeMode === 'auto') {
+      const next = !isDark;
+      setThemeMode(next ? 'dark' : 'light');
+    } else {
+      const next = themeMode === 'dark' ? 'light' : 'dark';
+      setThemeMode(next);
+    }
+  }, [themeMode, isDark, setThemeMode]);
 
   // INJECTION DYNAMIQUE DES VARIABLES CSS SUR DOCUMENT ET BODY
   useEffect(() => {
@@ -1179,6 +1318,10 @@ export function ThemeProvider({ children }) {
     themeId,
     theme,
     isDark,
+    themeMode,
+    setThemeMode,
+    themeSchedule,
+    setThemeSchedule,
     setThemeId,
     applyPresetTheme,
     toggleTheme,
@@ -1206,6 +1349,10 @@ export function ThemeProvider({ children }) {
     themeId,
     theme,
     isDark,
+    themeMode,
+    setThemeMode,
+    themeSchedule,
+    setThemeSchedule,
     setThemeId,
     applyPresetTheme,
     toggleTheme,

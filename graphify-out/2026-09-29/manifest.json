@@ -384,9 +384,9 @@
     "semantic_hash": "29788f2edfc62f638e05abc398125e63"
   },
   "src/App.js": {
-    "mtime": 1790691495.9764698,
-    "seen": 1790692041.9585028,
-    "ast_hash": "73b70e1a14baca7600e2c8cceab3d667",
+    "mtime": 1790692717.1027784,
+    "seen": 1790692953.4763362,
+    "ast_hash": "9810ede391d7b4edcdc2a0f150d2f300",
     "semantic_hash": ""
   },
   "src/App.test.js": {
@@ -540,9 +540,9 @@
     "semantic_hash": ""
   },
   "src/components/FeedCardItem.jsx": {
-    "mtime": 1790688685.985823,
-    "seen": 1790690929.0652456,
-    "ast_hash": "45ad2d2e13e13e529b4e59d9c118b33e",
+    "mtime": 1790692565.9570992,
+    "seen": 1790692953.4763894,
+    "ast_hash": "dc1f2fece641d0fa43b3a1e06ca821f0",
     "semantic_hash": ""
   },
   "src/components/FeedView.jsx": {
@@ -600,9 +600,9 @@
     "semantic_hash": ""
   },
   "src/components/ListingDetailModal.jsx": {
-    "mtime": 1790689969.8248513,
-    "seen": 1790690929.065263,
-    "ast_hash": "3e9f9b510524dbd8c6efbb2c812b3e0e",
+    "mtime": 1790692591.884633,
+    "seen": 1790692953.4764102,
+    "ast_hash": "a805068c9c19943ccb3d9d44e3852690",
     "semantic_hash": ""
   },
   "src/components/ListingDetails.jsx": {
@@ -1302,9 +1302,9 @@
     "semantic_hash": ""
   },
   "src/components/modals/FilterDrawer.jsx": {
-    "mtime": 1790609641.8701468,
-    "seen": 1790609883.204416,
-    "ast_hash": "28f1d319357cbdb543f526a7ac65c9c6",
+    "mtime": 1790692753.2046802,
+    "seen": 1790692953.476643,
+    "ast_hash": "712ccb00ddce4b11bc4544461bac1e4d",
     "semantic_hash": ""
   },
   "src/components/modals/LanguageSelectModal.jsx": {
@@ -1458,15 +1458,15 @@
     "semantic_hash": "7be2e658837a6713e3eb3b702ab9af2f"
   },
   "src/data/translationsData.js": {
-    "mtime": 1790691573.8984945,
-    "seen": 1790692041.95891,
-    "ast_hash": "d7215b313b31b64dff85c22fedc5f170",
+    "mtime": 1790692537.0226014,
+    "seen": 1790692953.4767578,
+    "ast_hash": "69902b0ddada859a02843a0ab1115ec0",
     "semantic_hash": ""
   },
   "src/data/translationsSecondary.js": {
-    "mtime": 1790691573.9103575,
-    "seen": 1790692041.9589126,
-    "ast_hash": "9abf94eeb87d194a893e9911cfca4a88",
+    "mtime": 1790692537.0331929,
+    "seen": 1790692953.4767592,
+    "ast_hash": "92cc3851378e3998843f28bec7c31156",
     "semantic_hash": ""
   },
   "src/features/admin/AdminChatsTab.jsx": {
@@ -1950,10 +1950,10 @@
     "semantic_hash": "f2d7736a33989aed888c63f7b7e372cc"
   },
   "src/stores/useFeedStore.js": {
-    "mtime": 1787770183.680287,
-    "seen": 1790594464.2384214,
-    "ast_hash": "7d47b7bbffdd070aaa45a9a77c521b8b",
-    "semantic_hash": "7d47b7bbffdd070aaa45a9a77c521b8b"
+    "mtime": 1790692488.4908643,
+    "seen": 1790692953.4769208,
+    "ast_hash": "211fca412eef3cc2f3e72924b3a8ef17",
+    "semantic_hash": ""
   },
   "src/stores/useUIStore.js": {
     "mtime": 1790602157.5066564,
@@ -2226,10 +2226,10 @@
     "semantic_hash": "dfdecc3f8d30a5c23e94b28f84608c5b"
   },
   "tests/rules/firestore.rules.test.js": {
-    "mtime": 1790178400.812126,
-    "seen": 1790594464.2384925,
-    "ast_hash": "23d4af96b1955786a56c6ac099e952a2",
-    "semantic_hash": "23d4af96b1955786a56c6ac099e952a2"
+    "mtime": 1790692458.4740233,
+    "seen": 1790692953.4770107,
+    "ast_hash": "d963ebbf28770302c4b8e5044ebf919a",
+    "semantic_hash": ""
   },
   "tests/rules/users_public.test.js": {
     "mtime": 1789034100.9599137,
@@ -2328,9 +2328,9 @@
     "semantic_hash": ""
   },
   "MASTER_AUDIT.md": {
-    "mtime": 1790692009.6340797,
-    "seen": 1790692041.9594333,
-    "ast_hash": "8edc258f6520ef209de2791c731ee515",
+    "mtime": 1790692925.04653,
+    "seen": 1790692953.4770498,
+    "ast_hash": "3c46941df574e780ab40d89249d55235",
     "semantic_hash": ""
   },
   "PERFORMANCE_AUDIT.md": {
@@ -2895,6 +2895,18 @@
     "mtime": 1790691932.393855,
     "seen": 1790692041.9593987,
     "ast_hash": "220974a69bcfb1fad7e3381742cc5b35",
+    "semantic_hash": ""
+  },
+  "src/hooks/useUserPresence.js": {
+    "mtime": 1790692340.5972965,
+    "seen": 1790692953.4768543,
+    "ast_hash": "0f5a99b5933ca57413845dd7162801aa",
+    "semantic_hash": ""
+  },
+  "tests/unit/FeedFeatures.test.js": {
+    "mtime": 1790692762.7369,
+    "seen": 1790692953.4770174,
+    "ast_hash": "60ee28c468a233cb179ee27eb59f6be7",
     "semantic_hash": ""
   }
 }

@@ -783,6 +783,18 @@ export const translations = {
     "no_saved_filters": "Aucun filtre enregistré",
     "delete_filter_confirm_title": "Supprimer le filtre ?",
     "delete_filter_confirm_message": "Êtes-vous sûr de vouloir supprimer ce filtre sauvegardé ?",
+    "theme_mode_title": "Mode d’affichage & Thème",
+    "theme_auto_desc": "Active le mode sombre la nuit ou selon votre système",
+    "theme_mode_light": "Clair",
+    "theme_mode_dark": "Sombre",
+    "theme_mode_auto": "Auto",
+    "theme_schedule_title": "Plage horaire nocturne automatique",
+    "theme_schedule_enabled": "Activer",
+    "theme_schedule_start": "Heure de début (nuit)",
+    "theme_schedule_end": "Heure de fin (matin)",
+    "color_picker_title": "Nuancier & Sélecteur de couleur",
+    "recent_colors": "Couleurs récentes",
+    "palette_tokens": "Palette Troco",
   },
 };
 
@@ -882,6 +894,7 @@ export const formatTokenCount = (count, lang) => {
   if (lang === 'JA') return `${c} トークン`;
   if (lang === 'ZH') return `${c} 个代币`;
   return c <= 1 ? `${c} Token` : `${c} Tokens`;
+
 };
 
 

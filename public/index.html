@@ -4,6 +4,40 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content" />
     <meta name="theme-color" content="#1C1816" />
+    <!-- Anti-flash Dark/Light Theme Script (Runs synchronously before first render) -->
+    <script>
+      (function() {
+        try {
+          var mode = localStorage.getItem('troco_theme_mode') || 'auto';
+          var isDark = false;
+          if (mode === 'dark') {
+            isDark = true;
+          } else if (mode === 'light') {
+            isDark = false;
+          } else {
+            var schedule = { enabled: true, startHour: 20, endHour: 7 };
+            try {
+              var s = localStorage.getItem('troco_theme_schedule');
+              if (s) schedule = Object.assign(schedule, JSON.parse(s));
+            } catch(e) {}
+            var h = new Date().getHours();
+            var start = schedule.startHour != null ? schedule.startHour : 20;
+            var end = schedule.endHour != null ? schedule.endHour : 7;
+            var inSchedule = (start === end) ? true : (start > end ? (h >= start || h < end) : (h >= start && h < end));
+            var sysDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+            isDark = (schedule.enabled !== false && inSchedule) || Boolean(sysDark);
+          }
+          var root = document.documentElement;
+          if (isDark) {
+            root.classList.add('dark-theme', 'dark-mode');
+            root.classList.remove('light-theme');
+          } else {
+            root.classList.add('light-theme');
+            root.classList.remove('dark-theme', 'dark-mode');
+          }
+        } catch(e) {}
+      })();
+    </script>
     <meta
       name="description"
       content="Troco — La première plateforme d'échange de compétences, troc de services, matériel et mise en relation collaborative sans intermédiaire financier obligatoire avec séquestre sécurisé."

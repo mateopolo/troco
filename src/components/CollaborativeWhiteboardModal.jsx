@@ -39,6 +39,7 @@ import { playSwoosh } from '../services/audioService';
 import WhiteboardLobby from './WhiteboardLobby';
 import { useConfirm } from '../hooks/useConfirm';
 import { useLanguage } from '../contexts/LanguageContext';
+import ColorPicker from './ui/ColorPicker';
 
 const SHAPE_OPTIONS = [
   { id: 'rectangle', label: 'Rectangle', icon: Square },
@@ -143,7 +144,6 @@ export default function CollaborativeWhiteboardModal({
 
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
-  const colorInputRef = useRef(null);
 
   // 1. Outils Whiteboard & Arrière-plan indépendant
   const [tool, setTool] = useState('pencil');
@@ -205,6 +205,60 @@ export default function CollaborativeWhiteboardModal({
     document.addEventListener('pointerdown', handleClickOutside);
     return () => document.removeEventListener('pointerdown', handleClickOutside);
   }, [isShapesMenuOpen]);
+
+  const colorButtonRef = useRef(null);
+  const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
+  const [colorPickerCoords, setColorPickerCoords] = useState({ bottom: 80, left: 100 });
+
+  const updateColorPickerPosition = useCallback(() => {
+    if (colorButtonRef.current) {
+      const rect = colorButtonRef.current.getBoundingClientRect();
+      const menuWidth = 320;
+      const calculatedLeft = Math.max(12, Math.min(window.innerWidth - menuWidth - 12, rect.left + rect.width / 2 - menuWidth / 2));
+      setColorPickerCoords({
+        left: calculatedLeft,
+        bottom: Math.max(16, window.innerHeight - rect.top + 12),
+      });
+    }
+  }, []);
+
+  const toggleColorPicker = useCallback(() => {
+    setIsColorPickerOpen((prev) => {
+      const next = !prev;
+      if (next) {
+        requestAnimationFrame(() => updateColorPickerPosition());
+      }
+      return next;
+    });
+  }, [updateColorPickerPosition]);
+
+  useEffect(() => {
+    if (isColorPickerOpen) {
+      updateColorPickerPosition();
+      const handleScrollOrResize = () => updateColorPickerPosition();
+      window.addEventListener('resize', handleScrollOrResize);
+      window.addEventListener('scroll', handleScrollOrResize, true);
+      return () => {
+        window.removeEventListener('resize', handleScrollOrResize);
+        window.removeEventListener('scroll', handleScrollOrResize, true);
+      };
+    }
+  }, [isColorPickerOpen, updateColorPickerPosition]);
+
+  useEffect(() => {
+    if (!isColorPickerOpen) return;
+    const handleClickOutside = (e) => {
+      if (
+        colorButtonRef.current &&
+        !colorButtonRef.current.contains(e.target) &&
+        !e.target.closest?.('#color-picker-popover-portal')
+      ) {
+        setIsColorPickerOpen(false);
+      }
+    };
+    document.addEventListener('pointerdown', handleClickOutside);
+    return () => document.removeEventListener('pointerdown', handleClickOutside);
+  }, [isColorPickerOpen]);
 
   const bgColorInputRef = useRef(null);
 
@@ -3670,10 +3724,14 @@ export default function CollaborativeWhiteboardModal({
               />
             ))}
 
-            {/* Sélecteur de Couleur Spectre Complet */}
-            <label
+            {/* Bouton d'ouverture du ColorPicker complet */}
+            <button
+              ref={colorButtonRef}
+              type="button"
+              onClick={toggleColorPicker}
               className="premium-button"
-              aria-label="Ouvrir le spectre de couleurs complet"
+              aria-label="Ouvrir le nuancier et sélecteur de couleurs"
+              aria-expanded={isColorPickerOpen}
               style={{
                 position: 'relative',
                 display: 'flex',
@@ -3681,12 +3739,17 @@ export default function CollaborativeWhiteboardModal({
                 gap: '6px',
                 padding: '4px 10px',
                 borderRadius: '999px',
-                border: darkMode ? '1.5px solid rgba(255,255,255,0.15)' : '1.5px solid rgba(0,0,0,0.15)',
-                backgroundColor: darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                border: isColorPickerOpen
+                  ? '1.5px solid var(--accent-primary, #C67D5B)'
+                  : darkMode ? '1.5px solid rgba(255,255,255,0.15)' : '1.5px solid rgba(0,0,0,0.15)',
+                backgroundColor: isColorPickerOpen
+                  ? 'rgba(198,125,91,0.15)'
+                  : darkMode ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
                 cursor: 'pointer',
                 flexShrink: 0,
+                boxShadow: isColorPickerOpen ? '0 0 10px rgba(198,125,91,0.3)' : 'none',
               }}
-              title="Ouvrir le spectre de couleurs complet"
+              title="Ouvrir le nuancier et sélecteur de couleurs complet"
             >
               <Brush size={14} color="#C67D5B" />
               <div
@@ -3702,21 +3765,37 @@ export default function CollaborativeWhiteboardModal({
               <span style={{ fontSize: '11px', fontWeight: '800', fontFamily: 'monospace', color: 'inherit' }}>
                 {color.toUpperCase()}
               </span>
-              <input
-                ref={colorInputRef}
-                type="color"
-                value={color}
-                onChange={(e) => setColor(e.target.value)}
-                className="opacity-0 absolute w-0 h-0 pointer-events-none"
-                style={{
-                  position: 'absolute',
-                  opacity: 0,
-                  width: 0,
-                  height: 0,
-                  pointerEvents: 'none',
-                }}
-              />
-            </label>
+            </button>
+
+            {/* Portal pour la popover du ColorPicker complet */}
+            {typeof document !== 'undefined' && createPortal(
+              <AnimatePresence>
+                {isColorPickerOpen && (
+                  <motion.div
+                    id="color-picker-popover-portal"
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    transition={{ duration: 0.15, ease: 'easeOut' }}
+                    style={{
+                      position: 'fixed',
+                      bottom: `${colorPickerCoords.bottom}px`,
+                      left: `${colorPickerCoords.left}px`,
+                      zIndex: 999999,
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <ColorPicker
+                      color={color}
+                      onChange={(newColor) => setColor(newColor)}
+                      onClose={() => setIsColorPickerOpen(false)}
+                      showClose
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>,
+              document.body
+            )}
           </div>
 
           <div style={{ width: '1px', height: '24px', backgroundColor: 'var(--border-color, rgba(0,0,0,0.1))', margin: '0 4px', flexShrink: 0 }} />
