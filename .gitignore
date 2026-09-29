@@ -41,4 +41,5 @@ functions/lib/
 graphify-out/cache/
 
 # Local scratch scripts
-scratch/
+scratch/
+graphify-out/.rebuild.lock
