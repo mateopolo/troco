@@ -1,605 +1,536 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { X, Star, MapPin, Video, Globe, ShieldCheck, MessageSquare, Flame, Pencil, Trash2, Tag, ChevronLeft, ChevronRight } from 'lucide-react';
-import { parseAndTranslateListing } from '../utils/dynamicTranslation';
-import { subscribeTranslations } from '../utils/translator';
-import { useLanguage } from '../contexts/LanguageContext';
+import React, { useState, useRef } from 'react';
+import {
+  X,
+  ChevronLeft,
+  ChevronRight,
+  Video,
+  Camera,
+  Sparkles,
+  Globe,
+  MapPin,
+  ShieldAlert,
+  Tag,
+  Trash2
+} from 'lucide-react';
+import { auth } from '../firebase';
 import { BACKDROP_CLASSNAME, BACKDROP_STYLE } from './ui/modalBackdrop';
-import { useUserPresence } from '../hooks/useUserPresence';
+import MobileHeader from './common/MobileHeader';
+import { getFallbackImage } from '../utils/mediaHelpers';
+import {
+  getListingDisplayContent,
+  getBioTranslation,
+} from '../utils/translationHelpers';
+import {
+  localizeTags,
+  localizeReview,
+} from '../data/translationsData';
 
+/**
+ * ListingDetailModal - Modale détaillée d'inspection d'une annonce du feed.
+ * Gère le carrousel média (photos/vidéos), les swipes tactiles iOS/Android,
+ * la traduction dynamique, et les actions (discuter, carte, signaler, supprimer admin).
+ */
 export default function ListingDetailModal({
+  listing: propListing,
   selectedListing,
   onClose,
-  handleStartDiscussion,
-  handleBoostListing,
-  handleStartEditListing,
-  handleDeleteListing,
-  handleTogglePauseListing,
-  handleViewOnMap,
-  profile,
-  currentLang,
-  t,
+  isMobile,
   darkMode,
-  formatCompensation,
-  getListingDisplayContent,
+  currentLang = 'FR',
+  t = (k) => k,
+  profile,
   showingOriginalListings = {},
-  toggleOriginalListing = () => {}
+  toggleOriginalListing,
+  handleViewOnMap,
+  handleStartDiscussion,
+  setReportTarget,
+  setIsReportModalOpen,
+  formatCompensation,
+  isAdmin = false,
+  handleAdminDeleteListing,
+  confirm,
 }) {
-  const authorUid = selectedListing?.authorUid || selectedListing?.userId || selectedListing?.authorProfile?.uid || null;
-  const { isOnline } = useUserPresence(authorUid);
-  const langContext = useLanguage();
-  const safeT = (k, defaultVal) => {
-    if (langContext && typeof langContext.t === 'function') {
-      const res = langContext.t(k);
-      if (res && res !== k) return res;
-    }
-    if (typeof t === 'function') {
-      const res = t(k);
-      if (res && res !== k) return res;
-    }
-    return defaultVal !== undefined ? defaultVal : k;
-  };
+  const listing = propListing || selectedListing;
+  const [detailMediaTab, setDetailMediaTab] = useState('video');
+  const [selectedDetailImageIndex, setSelectedDetailImageIndex] = useState(0);
+  const modalTouchStartRef = useRef(null);
 
-  const [detailMediaTab, setDetailMediaTab] = useState('image');
-  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  if (!listing) return null;
 
-  const touchStartRef = useRef(null);
-  const touchDeltaXRef = useRef(0);
-  const touchDeltaYRef = useRef(0);
-  const isSwipingRef = useRef(false);
-  const detailVideoRef = useRef(null);
-
-  const isOwner = Boolean(profile?.name && selectedListing?.author === profile.name);
-  const gallery = (selectedListing?.gallery && selectedListing.gallery.length > 0)
-    ? selectedListing.gallery
-    : ((selectedListing?.images && selectedListing.images.length > 0)
-        ? selectedListing.images
-        : (selectedListing?.image ? [selectedListing.image] : []));
-  const [localShowingOriginal, setLocalShowingOriginal] = useState(false);
-  const [, setTransRevision] = useState(0);
-
-  useEffect(() => {
-    return subscribeTranslations(() => {
-      setTransRevision(r => r + 1);
-    });
-  }, []);
-
-  const isDetailShowingOriginal = selectedListing
-    ? (showingOriginalListings[selectedListing.id] !== undefined
-        ? !!showingOriginalListings[selectedListing.id]
-        : localShowingOriginal)
-    : false;
-
-  const handleToggleOriginal = (e) => {
-    if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
-    if (selectedListing?.id && typeof toggleOriginalListing === 'function') {
-      toggleOriginalListing(selectedListing.id, e);
-    }
-    setLocalShowingOriginal(prev => !prev);
-  };
-
-  const displayContent = selectedListing
-    ? (getListingDisplayContent
-        ? getListingDisplayContent(selectedListing, currentLang, isDetailShowingOriginal)
-        : parseAndTranslateListing(selectedListing, currentLang, isDetailShowingOriginal))
-    : { title: '', description: '' };
-  const nativeLang = selectedListing?.nativeLang || 'FR';
-
-  const handleTouchStart = (e) => {
+  const handleModalTouchStart = (e) => {
     if (!e.touches || e.touches.length === 0) return;
-    touchStartRef.current = {
+    modalTouchStartRef.current = {
       x: e.touches[0].clientX,
       y: e.touches[0].clientY,
     };
-    touchDeltaXRef.current = 0;
-    touchDeltaYRef.current = 0;
-    isSwipingRef.current = false;
   };
 
-  const handleTouchMove = (e) => {
-    if (!touchStartRef.current || !e.touches || e.touches.length === 0) return;
-    const currentX = e.touches[0].clientX;
-    const currentY = e.touches[0].clientY;
-    const deltaX = touchStartRef.current.x - currentX;
-    const deltaY = touchStartRef.current.y - currentY;
-
-    touchDeltaXRef.current = deltaX;
-    touchDeltaYRef.current = currentY - touchStartRef.current.y;
-    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 12) {
-      isSwipingRef.current = true;
-    }
+  const handleModalTouchMove = () => {
+    // Passive touch tracker
   };
 
-  const handleTouchEnd = () => {
-    const deltaX = touchDeltaXRef.current;
-    const deltaY = touchDeltaYRef.current;
-    if (deltaY > 80 && Math.abs(deltaY) > Math.abs(deltaX)) {
-      onClose?.();
-      setSelectedImageIndex(0);
-      touchStartRef.current = null;
-      touchDeltaXRef.current = 0;
-      touchDeltaYRef.current = 0;
-      return;
-    }
+  const handleModalTouchEnd = (e) => {
+    if (!modalTouchStartRef.current) return;
+    const touch = e.changedTouches && e.changedTouches.length > 0 ? e.changedTouches[0] : null;
 
-    if (isSwipingRef.current && Math.abs(deltaX) > 20 && gallery.length > 1) {
-      if (deltaX > 0) {
-        // Swiped left -> next photo
-        setSelectedImageIndex(prev => (prev + 1) % gallery.length);
-      } else {
-        // Swiped right -> prev photo
-        setSelectedImageIndex(prev => (prev - 1 + gallery.length) % gallery.length);
+    if (touch && listing) {
+      const deltaX = touch.clientX - modalTouchStartRef.current.x;
+      const deltaY = touch.clientY - modalTouchStartRef.current.y;
+      const gallery = listing.gallery && listing.gallery.length > 0 ? listing.gallery : [listing.image];
+
+      if (deltaY > 80 && Math.abs(deltaY) > Math.abs(deltaX)) {
+        if (typeof onClose === 'function') onClose();
+        setSelectedDetailImageIndex(0);
+        modalTouchStartRef.current = null;
+        return;
+      }
+
+      if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 20 && gallery.length > 1) {
+        if (deltaX < 0) {
+          setSelectedDetailImageIndex(prev => (prev < gallery.length - 1 ? prev + 1 : 0));
+        } else {
+          setSelectedDetailImageIndex(prev => (prev > 0 ? prev - 1 : gallery.length - 1));
+        }
       }
     }
-    touchStartRef.current = null;
-    touchDeltaXRef.current = 0;
-    touchDeltaYRef.current = 0;
+    modalTouchStartRef.current = null;
   };
 
-  // Accessibilité Clavier : Échap pour fermer, Flèches Gauche/Droite pour naviguer dans la galerie
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.key === 'Escape') {
-        onClose?.();
-      } else if (e.key === 'ArrowLeft' && gallery.length > 1) {
-        setSelectedImageIndex(prev => (prev - 1 + gallery.length) % gallery.length);
-      } else if (e.key === 'ArrowRight' && gallery.length > 1) {
-        setSelectedImageIndex(prev => (prev + 1) % gallery.length);
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [gallery.length, onClose]);
+  const handleClose = () => {
+    if (typeof onClose === 'function') onClose();
+    setSelectedDetailImageIndex(0);
+    setDetailMediaTab('image');
+  };
 
-  if (!selectedListing) return null;
+  const isDetailShowingOriginal = !!showingOriginalListings[listing.id];
+  const detailDisplayContent = getListingDisplayContent(listing, currentLang, isDetailShowingOriginal);
+  const authorName = listing.authorProfile?.name || listing.author || 'Membre Troco';
+  const authorUid = listing.authorProfile?.uid || listing.authorUid || null;
+  const isOwnListing = Boolean(
+    (profile?.name && authorName === profile.name) ||
+    (authorUid && (authorUid === profile?.uid || authorUid === auth.currentUser?.uid))
+  );
 
   return (
     <div
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose?.();
-      }}
-      className={`${BACKDROP_CLASSNAME} z-[99999] overflow-y-auto flex items-center justify-center p-5`}
+      className={`${BACKDROP_CLASSNAME} z-[99999] z-[100005] overflow-y-auto`}
       style={{
         ...BACKDROP_STYLE,
         position: 'fixed',
         inset: 0,
-        zIndex: 99999,
+        zIndex: 100005,
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
+        padding: isMobile ? '12px 8px 90px' : '24px 16px 60px',
       }}
     >
       <div style={{
-        backgroundColor: 'var(--bg-card)',
-        borderRadius: '28px', width: '100%', maxWidth: '780px',
-        maxHeight: '90vh', overflowY: 'auto',
-        boxShadow: 'var(--shadow-modal)',
-        border: '1px solid var(--border-color)',
-        position: 'relative', padding: '28px'
+        maxWidth: '760px',
+        margin: '0 auto',
+        backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
+        borderRadius: '28px',
+        overflow: 'hidden',
+        boxShadow: darkMode ? '0 30px 90px rgba(0,0,0,0.75)' : '0 30px 90px rgba(61,53,48,0.25)',
+        border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
+        color: darkMode ? '#FAF7F2' : '#3D3530',
+        animation: 'modalSlideIn 0.55s var(--ease-monopo) both'
       }}>
-        {/* BOUTON FERMER */}
-        <button
-          onClick={onClose}
-          className="premium-button"
-          aria-label="Fermer les détails de l'annonce"
-          title="Fermer les détails de l'annonce (Échap)"
-          style={{
-            position: 'absolute', top: '18px', right: '18px',
-            border: '1px solid var(--border-color)',
-            backgroundColor: 'var(--bg-subtle)',
-            color: 'var(--text-main)', width: '36px', height: '36px',
-            borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            cursor: 'pointer', zIndex: 10
-          }}
+
+        {/* EN-TÊTE MOBILE RETOUR TACTILE 44x44px (APPLE HIG) */}
+        {isMobile && (
+          <MobileHeader
+            title={listing.title || "Détail de l'annonce"}
+            subtitle={listing.category || "Troco"}
+            onBack={handleClose}
+            darkMode={darkMode}
+          />
+        )}
+
+        {/* CARROUSEL HÉRO INTERACTIF */}
+        <div
+          onTouchStart={handleModalTouchStart}
+          onTouchMove={handleModalTouchMove}
+          onTouchEnd={handleModalTouchEnd}
+          style={{ position: 'relative', width: '100%', height: '340px', backgroundColor: '#1A1715', touchAction: 'pan-y', userSelect: 'none', WebkitUserSelect: 'none', overflow: 'hidden' }}
         >
-          <X size={18} />
-        </button>
-
-        {/* HEADER ANNONCE */}
-        <div style={{ marginBottom: '20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
-            <span style={{
-              backgroundColor: 'var(--bg-subtle)',
-              color: 'var(--accent-primary)', fontSize: '12px', fontWeight: '800',
-              padding: '4px 12px', borderRadius: '999px', border: '1px solid var(--border-color)'
-            }}>
-              {selectedListing.category}
-            </span>
-            {selectedListing.type === 'remote' ? (
-              <span style={{ backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)', fontSize: '12px', fontWeight: '800', padding: '4px 12px', borderRadius: '999px', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Globe size={13} color="var(--accent-primary)" /> {t('remoteFormat') || 'À distance'}
-              </span>
-            ) : (
-              <span style={{ backgroundColor: 'var(--bg-subtle)', color: 'var(--text-secondary)', fontSize: '12px', fontWeight: '800', padding: '4px 12px', borderRadius: '999px', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <MapPin size={13} color="var(--accent-primary)" /> {selectedListing.location}
-              </span>
-            )}
-            {selectedListing.urgent && (
-              <span style={{ backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', fontSize: '12px', fontWeight: '900', padding: '4px 12px', borderRadius: '999px', border: '1.5px solid var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                🚨 {t('urgentOption') || 'URGENT'}
-              </span>
-            )}
-            {selectedListing.isBoosted && (
-              <span className="sponsored-badge" style={{ backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-warning)', fontSize: '12px', fontWeight: '800', padding: '4px 12px', borderRadius: '999px', border: '1px solid var(--accent-warning)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Flame size={13} /> Sponsoring Premium
-              </span>
-            )}
-          </div>
-
-          <h2 className="font-editorial-heading" style={{ margin: '0 0 6px', fontSize: '28px', fontWeight: '600', color: 'var(--text-main)', lineHeight: 1.25 }}>
-            {displayContent.title}
-          </h2>
-          {(currentLang || 'FR').toUpperCase() !== (nativeLang || 'FR').toUpperCase() && (
-            <button
-              type="button"
-              onClick={handleToggleOriginal}
-              style={{
-                border: 'none',
-                background: 'none',
-                backgroundColor: 'transparent',
-                boxShadow: 'none',
-                outline: 'none',
-                color: 'var(--accent-primary)',
-                fontSize: '12px',
-                fontWeight: '800',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                padding: '2px 0 10px 0'
-              }}
-            >
-              <Globe size={13} color="var(--accent-primary)" style={{ flexShrink: 0 }} />
-              <span>{isDetailShowingOriginal ? safeT('showTranslation', 'Voir la traduction') : safeT('showOriginal', "Voir l'original")}</span>
-            </button>
+          {detailMediaTab === 'video' && listing.video ? (
+            <video
+              src={listing.video}
+              poster={listing.image}
+              autoPlay
+              loop
+              muted
+              playsInline
+              onError={() => setDetailMediaTab('image')}
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            />
+          ) : (
+            (() => {
+              const gallery = listing.gallery && listing.gallery.length > 0 ? listing.gallery : [listing.image];
+              return (
+                <div style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
+                  {gallery.map((imgSrc, idx) => {
+                    const isActive = idx === selectedDetailImageIndex;
+                    return (
+                      <img
+                        key={idx}
+                        src={imgSrc}
+                        alt={listing.title}
+                        draggable={false}
+                        onError={(e) => { e.target.src = getFallbackImage(listing.category, listing.title); }}
+                        style={{
+                          position: 'absolute',
+                          inset: 0,
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'cover',
+                          opacity: isActive ? 1 : 0,
+                          transition: 'opacity 0.4s ease-in-out, transform 0.4s ease-in-out',
+                          transform: isActive ? 'scale(1)' : 'scale(1.03)',
+                          pointerEvents: 'none',
+                          WebkitUserDrag: 'none',
+                          userSelect: 'none',
+                          WebkitUserSelect: 'none',
+                          zIndex: isActive ? 2 : 1
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+              );
+            })()
           )}
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '14px', color: 'var(--text-secondary)' }}>
-            <span style={{ fontWeight: '800', color: 'var(--accent-primary)', fontSize: '18px' }}>
-              {formatCompensation ? formatCompensation(selectedListing.compensation) : selectedListing.compensation}
-            </span>
-            {selectedListing.rating && selectedListing.reviews > 0 ? (
-              <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--accent-warning)', fontWeight: '800' }}>
-                <Star size={16} fill="var(--accent-warning)" color="var(--accent-warning)" /> {selectedListing.rating} ({selectedListing.reviews} avis)
-              </span>
-            ) : (
-              <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: 'var(--text-secondary)', fontSize: '13px', fontWeight: '600' }}>
-                {safeT('newMemberZeroReviews', 'Nouveau membre (0 avis)')}
-              </span>
+          {/* BOUTON FERMER */}
+          <button
+            onClick={handleClose}
+            aria-label="Fermer les détails de l'annonce"
+            style={{ position: 'absolute', top: '14px', right: '14px', border: 'none', width: '38px', height: '38px', borderRadius: '50%', backgroundColor: 'rgba(250,247,242,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10, boxShadow: '0 4px 12px rgba(61,53,48,0.15)', color: '#3D3530' }}
+          >
+            <X size={18} />
+          </button>
+
+          {listing.isBoosted && <span className="sponsored-badge" style={{ position: 'absolute', top: '14px', left: '14px', backgroundColor: '#F59E0B', color: '#FFF', fontSize: '11px', fontWeight: '800', padding: '6px 10px', borderRadius: '10px', boxShadow: '0 6px 16px rgba(245,158,11,0.45)', zIndex: 10 }}>🔥 Sponsorisé</span>}
+
+          {/* FLÈCHES DE NAVIGATION LATÉRALE */}
+          {detailMediaTab === 'image' && (listing.gallery?.length || 0) > 1 && (
+            <>
+              <button
+                onClick={() => setSelectedDetailImageIndex(prev => (prev > 0 ? prev - 1 : (listing.gallery.length - 1)))}
+                aria-label="Photo précédente"
+                style={{
+                  position: 'absolute', top: '50%', left: '12px',
+                  transform: 'translateY(-50%)',
+                  border: 'none',
+                  width: '38px', height: '38px',
+                  borderRadius: '50%',
+                  backgroundColor: 'rgba(61,53,48,0.4)',
+                  backdropFilter: 'blur(8px)',
+                  WebkitBackdropFilter: 'blur(8px)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', zIndex: 10,
+                  transition: 'all 0.2s ease',
+                  outline: 'none',
+                  boxShadow: 'none'
+                }}
+              >
+                <ChevronLeft size={20} color="#FFFFFF" strokeWidth={2.5} />
+              </button>
+              <button
+                onClick={() => setSelectedDetailImageIndex(prev => (prev < (listing.gallery.length - 1) ? prev + 1 : 0))}
+                aria-label="Photo suivante"
+                style={{
+                  position: 'absolute', top: '50%', right: '12px',
+                  transform: 'translateY(-50%)',
+                  border: 'none',
+                  width: '38px', height: '38px',
+                  borderRadius: '50%',
+                  backgroundColor: 'rgba(61,53,48,0.4)',
+                  backdropFilter: 'blur(8px)',
+                  WebkitBackdropFilter: 'blur(8px)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  cursor: 'pointer', zIndex: 10,
+                  transition: 'all 0.2s ease',
+                  outline: 'none',
+                  boxShadow: 'none'
+                }}
+              >
+                <ChevronRight size={20} color="#FFFFFF" strokeWidth={2.5} />
+              </button>
+            </>
+          )}
+
+          {/* PUCES INDICATRICES */}
+          {detailMediaTab === 'image' && (listing.gallery?.length || 0) > 1 && (
+            <div style={{ position: 'absolute', bottom: '14px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '6px', zIndex: 10, backgroundColor: 'rgba(61,53,48,0.6)', padding: '6px 12px', borderRadius: '999px', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
+              {listing.gallery.map((_, idx) => (
+                <div
+                  key={idx}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`Photo numéro ${idx + 1}`}
+                  onClick={() => setSelectedDetailImageIndex(idx)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setSelectedDetailImageIndex(idx);
+                    }
+                  }}
+                  style={{
+                    width: selectedDetailImageIndex === idx ? '20px' : '8px',
+                    height: '8px',
+                    borderRadius: '999px',
+                    backgroundColor: selectedDetailImageIndex === idx ? '#C67D5B' : 'rgba(255,255,255,0.5)',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease'
+                  }}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* COMMUTATEUR MÉDIA BASCULE VIDÉO / GALERIE */}
+          <div style={{ position: 'absolute', bottom: '14px', left: '14px', display: 'flex', gap: '8px', zIndex: 10 }}>
+            {listing.video && (
+              <button onClick={() => setDetailMediaTab('video')} style={{ border: 'none', borderRadius: '999px', padding: '7px 14px', backgroundColor: detailMediaTab === 'video' ? '#C67D5B' : 'rgba(61,53,48,0.75)', color: '#FFF', fontSize: '12px', fontWeight: '800', cursor: 'pointer', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                <Video size={13} /> {t('demoVideo')}
+              </button>
             )}
+            <button onClick={() => setDetailMediaTab('image')} style={{ border: 'none', borderRadius: '999px', padding: '7px 14px', backgroundColor: detailMediaTab === 'image' ? '#C67D5B' : 'rgba(61,53,48,0.75)', color: '#FFF', fontSize: '12px', fontWeight: '800', cursor: 'pointer', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <Camera size={13} /> Photos ({listing.gallery?.length || 1})
+            </button>
           </div>
         </div>
 
-        {/* MÉDIAS (IMAGE / GALERIE / VIDÉO) */}
-        <div style={{ marginBottom: '24px' }}>
-          <div style={{ display: 'flex', gap: '10px', marginBottom: '12px' }}>
-            <button
-              onClick={() => setDetailMediaTab('image')}
-              className="premium-button"
-              style={{
-                border: 'none', borderRadius: '12px', padding: '8px 16px', fontSize: '12px', fontWeight: '800', cursor: 'pointer',
-                backgroundColor: detailMediaTab === 'image' ? 'var(--accent-primary)' : 'var(--bg-subtle)',
-                color: detailMediaTab === 'image' ? '#FFF' : 'var(--text-secondary)',
-                boxShadow: detailMediaTab === 'image' ? 'var(--shadow-accent)' : 'none'
-              }}
-            >
-              🖼️ {safeT('photos', 'Photos')} ({gallery.length})
-            </button>
-            {selectedListing.video && (
-              <button
-                onClick={() => setDetailMediaTab('video')}
-                className="premium-button"
-                style={{
-                  border: 'none', borderRadius: '12px', padding: '8px 16px', fontSize: '12px', fontWeight: '800', cursor: 'pointer',
-                  backgroundColor: detailMediaTab === 'video' ? 'var(--accent-primary)' : 'var(--bg-subtle)',
-                  color: detailMediaTab === 'video' ? '#FFF' : 'var(--text-secondary)',
-                  display: 'flex', alignItems: 'center', gap: '4px',
-                  boxShadow: detailMediaTab === 'video' ? 'var(--shadow-accent)' : 'none'
-                }}
-              >
-                <Video size={14} /> {safeT('demoVideo', 'Démo Vidéo')}
-              </button>
+        <div style={{ padding: '20px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', gap: '10px', flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 10px', borderRadius: '999px', backgroundColor: darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4', color: darkMode ? '#FAF7F2' : '#A8644A', fontSize: '11px', fontWeight: '800' }}>
+                  <Sparkles size={12} /> {t('verifiedOffer')}
+                </div>
+                {(listing.isDemo || (typeof listing.id === 'number' && listing.id <= 20)) && (
+                  <span style={{
+                    fontSize: '10.5px',
+                    fontWeight: '750',
+                    letterSpacing: '0.04em',
+                    padding: '5px 11px',
+                    borderRadius: '999px',
+                    backgroundColor: 'var(--bg-subtle)',
+                    color: 'var(--accent-primary)',
+                    border: '1px solid var(--border-color)',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    textTransform: 'uppercase'
+                  }}>
+                    <Sparkles size={12} color="var(--accent-primary)" />
+                    Exemple Démo
+                  </span>
+                )}
+              </div>
+              <h3 className="font-editorial-heading" style={{ margin: '0 0 4px 0', fontSize: '24px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{detailDisplayContent.title}</h3>
+              {currentLang !== (listing.nativeLang || 'FR') && (
+                <button
+                  onClick={(e) => typeof toggleOriginalListing === 'function' && toggleOriginalListing(listing.id, e)}
+                  className="premium-button"
+                  style={{
+                    border: 'none',
+                    backgroundColor: 'transparent',
+                    color: '#C67D5B',
+                    fontSize: '12px',
+                    fontWeight: '800',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                    padding: '2px 0 6px 0'
+                  }}
+                >
+                  <Globe size={13} color="#C67D5B" />
+                  {isDetailShowingOriginal ? t('showTranslation') : t('showOriginal')}
+                </button>
+              )}
+            </div>
+            {!isOwnListing ? (
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={() => typeof handleViewOnMap === 'function' && handleViewOnMap(listing)}
+                  className="premium-button"
+                  title="Centrer la carte interactive sur cette annonce"
+                  style={{
+                    border: darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #E8DDD3',
+                    borderRadius: '999px',
+                    padding: '11px 14px',
+                    backgroundColor: darkMode ? '#1A1715' : '#FFF',
+                    color: darkMode ? '#FAF7F2' : '#3D3530',
+                    fontWeight: '700',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <MapPin size={14} color="#C67D5B" /> {t('viewOnMap') || 'Voir sur la carte'}
+                </button>
+                <button
+                  onClick={() => {
+                    if (typeof setReportTarget === 'function') {
+                      setReportTarget({
+                        listing: listing,
+                        user: { name: authorName, uid: authorUid }
+                      });
+                    }
+                    if (typeof setIsReportModalOpen === 'function') setIsReportModalOpen(true);
+                  }}
+                  className="premium-button"
+                  title="Signaler un contenu abusif ou suspect"
+                  style={{
+                    border: 'none',
+                    borderRadius: '999px',
+                    padding: '11px 14px',
+                    backgroundColor: darkMode ? 'rgba(239,68,68,0.2)' : '#FEF2F2',
+                    color: '#EF4444',
+                    fontWeight: '700',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                  }}
+                >
+                  <ShieldAlert size={14} /> Signaler
+                </button>
+                <button
+                  onClick={() => typeof handleStartDiscussion === 'function' && handleStartDiscussion({ id: listing.id, title: listing.title, author: authorName, compensation: listing.compensation })}
+                  className="premium-button"
+                  style={{ border: 'none', borderRadius: '999px', padding: '11px 16px', background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)', color: '#FFF', fontWeight: '800', cursor: 'pointer', boxShadow: '0 8px 20px rgba(198,125,91,0.35)' }}
+                >
+                  {t('startDiscussion')}
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <button
+                  type="button"
+                  onClick={() => typeof handleViewOnMap === 'function' && handleViewOnMap(listing)}
+                  className="premium-button"
+                  title="Centrer la carte interactive sur cette annonce"
+                  style={{
+                    border: darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #E8DDD3',
+                    borderRadius: '999px',
+                    padding: '10px 14px',
+                    backgroundColor: darkMode ? '#1A1715' : '#FFF',
+                    color: darkMode ? '#FAF7F2' : '#3D3530',
+                    fontWeight: '700',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <MapPin size={14} color="#C67D5B" /> {t('viewOnMap') || 'Voir sur la carte'}
+                </button>
+                <div style={{ backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', color: darkMode ? '#D4C5B5' : '#6B5E54', padding: '10px 16px', borderRadius: '999px', fontSize: '13px', fontWeight: '700', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3' }}>{t('authorAnnc')}</div>
+              </div>
             )}
           </div>
+          <p style={{ margin: '0 0 14px', lineHeight: 1.7, color: darkMode ? '#D4C5B5' : '#6B5E54', fontSize: '14px' }}>{detailDisplayContent.description}</p>
 
-          <div
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
-            style={{ borderRadius: '20px', overflow: 'hidden', height: '340px', backgroundColor: 'var(--bg-subtle)', position: 'relative', touchAction: 'pan-y', border: '1px solid var(--border-color)' }}
-          >
-            {detailMediaTab === 'video' && (selectedListing.video || selectedListing.videoUrl) ? (
-              <video
-                ref={detailVideoRef}
-                src={selectedListing.video || selectedListing.videoUrl}
-                controls
-                autoPlay
-                onLoadedMetadata={() => {
-                  const start = Number(selectedListing.videoTrimStart || selectedListing.videoMetadata?.trimStart || 0);
-                  if (detailVideoRef.current && start > 0) {
-                    detailVideoRef.current.currentTime = start;
-                  }
-                }}
-                onTimeUpdate={() => {
-                  const end = Number(selectedListing.videoTrimEnd || selectedListing.videoMetadata?.trimEnd || 0);
-                  const start = Number(selectedListing.videoTrimStart || selectedListing.videoMetadata?.trimStart || 0);
-                  if (detailVideoRef.current && end > 0 && detailVideoRef.current.currentTime >= end) {
-                    detailVideoRef.current.currentTime = start;
-                    detailVideoRef.current.play().catch(() => {});
+          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '14px' }}>
+            {localizeTags(listing.tags, currentLang).map(tag => (
+              <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4', color: darkMode ? '#FAF7F2' : '#A8644A', borderRadius: '999px', padding: '5px 10px', fontSize: '11px', fontWeight: '800' }}><Tag size={11} /> {tag}</span>
+            ))}
+          </div>
+
+          <div style={{ border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3', borderRadius: '16px', padding: '14px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', marginBottom: '14px' }}>
+            <div style={{ fontWeight: '800', fontSize: '13px', color: darkMode ? '#FAF7F2' : '#3D3530', marginBottom: '6px' }}>{t('compensation')}</div>
+            <div style={{ fontSize: '13px', color: '#C67D5B', fontWeight: '700' }}>{typeof formatCompensation === 'function' ? formatCompensation(listing.compensation) : listing.compensation}</div>
+          </div>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '14px', padding: '14px', borderRadius: '16px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3' }}>
+            <img src={listing.authorProfile?.avatar || listing.avatar || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="%239CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>'} alt={listing.authorProfile?.name || listing.author || 'Auteur'} style={{ width: '56px', height: '56px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #E8DDD3' }} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{listing.authorProfile?.name || listing.author || 'Membre Troco'}</div>
+              <div style={{ fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54', marginTop: '4px' }}>{getBioTranslation(listing.authorProfile?.bio || listing.bio || '', currentLang, !!showingOriginalListings[listing.id])}</div>
+            </div>
+          </div>
+          <div style={{ marginBottom: '14px' }}>
+            <div style={{ fontWeight: '800', fontSize: '13px', color: darkMode ? '#FAF7F2' : '#3D3530', marginBottom: '8px' }}>{t('socialNetworks')}</div>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {(listing.authorProfile?.socials || listing.socials || []).map(link => <span key={link} style={{ border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', borderRadius: '999px', padding: '6px 10px', fontSize: '12px', color: '#C67D5B', fontWeight: '700', backgroundColor: darkMode ? '#1A1715' : '#FAF7F2' }}>{link}</span>)}
+            </div>
+          </div>
+          {(listing.authorProfile?.portfolio || listing.portfolio) && (listing.authorProfile?.portfolio || listing.portfolio).length > 0 && (
+            <div style={{ marginBottom: '14px' }}>
+              <div style={{ fontWeight: '800', fontSize: '13px', color: darkMode ? '#FAF7F2' : '#3D3530', marginBottom: '8px' }}>{t('portfolio')}</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '8px' }}>
+                {(listing.authorProfile?.portfolio || listing.portfolio).map((image, index) => (
+                  <img key={image + index} src={image} alt={`Réalisation du portfolio numéro ${index + 1}`} style={{ width: '100%', height: '80px', objectFit: 'cover', borderRadius: '14px' }} />
+                ))}
+              </div>
+            </div>
+          )}
+          <div>
+            <div style={{ fontWeight: '800', fontSize: '13px', color: darkMode ? '#FAF7F2' : '#3D3530', marginBottom: '8px' }}>{t('reviews')}</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {(listing.authorProfile?.reviews || listing.authorReviews) && (listing.authorProfile?.reviews || listing.authorReviews).length > 0 ? (
+                (listing.authorProfile?.reviews || listing.authorReviews).map((review, index) => (
+                  <div key={review.text + index} style={{ border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3', borderRadius: '14px', padding: '12px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8' }}>
+                    <div style={{ color: '#F59E0B', marginBottom: '4px' }}>{'⭐'.repeat(review.rating)}{'☆'.repeat(Math.max(0, 5 - review.rating))}</div>
+                    <div style={{ fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>{localizeReview(review.text, currentLang)}</div>
+                  </div>
+                ))
+              ) : (
+                <div style={{ fontSize: '12.5px', color: darkMode ? '#D4C5B5' : '#6B5E54', fontStyle: 'italic', padding: '12px 14px', borderRadius: '14px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3' }}>
+                  🤝 {t('noReviewsZeroTransactions')}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {isAdmin && (
+            <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: darkMode ? '1px solid rgba(239,68,68,0.3)' : '1px solid #FEE2E2' }}>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (typeof confirm === 'function') {
+                    const ok = await confirm({
+                      title: t('adminDeleteListingTitle') || 'Suppression administrateur',
+                      message: `${t('adminDeleteListingMessage') || 'Confirmez la suppression définitive de'} « ${listing.title} » ?`,
+                      confirmLabel: t('delete') || 'Supprimer',
+                      cancelLabel: t('cancel') || 'Annuler',
+                      variant: 'danger',
+                    });
+                    if (ok) {
+                      if (typeof handleAdminDeleteListing === 'function') handleAdminDeleteListing(listing);
+                      handleClose();
+                    }
+                  } else {
+                    if (typeof handleAdminDeleteListing === 'function') handleAdminDeleteListing(listing);
+                    handleClose();
                   }
                 }}
                 style={{
                   width: '100%',
-                  height: '100%',
-                  objectFit: (selectedListing.cropRatio === '9:16' || selectedListing.cropRatio === '1:1') ? 'cover' : 'contain'
+                  padding: '12px',
+                  borderRadius: '14px',
+                  backgroundColor: '#EF4444',
+                  color: '#FFFFFF',
+                  fontWeight: '800',
+                  fontSize: '13px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  boxShadow: '0 6px 16px rgba(239,68,68,0.25)'
                 }}
-              />
-            ) : (
-              <div style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
-                {gallery.map((imgSrc, idx) => {
-                  const isActive = idx === selectedImageIndex;
-                  return (
-                    <div
-                      key={idx}
-                      style={{
-                        position: 'absolute', inset: 0, width: '100%', height: '100%',
-                        opacity: isActive ? 1 : 0,
-                        transform: isActive ? 'scale(1)' : 'scale(1.04)',
-                        transition: 'opacity 0.4s var(--ease-quiet), transform 0.4s var(--ease-quiet)',
-                        pointerEvents: isActive ? 'auto' : 'none'
-                      }}
-                    >
-                      <img
-                        src={imgSrc}
-                        alt={`${displayContent.title || selectedListing.title || 'Annonce'} - Photo ${idx + 1}`}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      />
-                    </div>
-                  );
-                })}
-
-                {gallery.length > 1 && (
-                  <>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setSelectedImageIndex(prev => (prev - 1 + gallery.length) % gallery.length); }}
-                      aria-label="Photo précédente"
-                      title="Photo précédente (Flèche gauche)"
-                      style={{
-                        position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)',
-                        width: '36px', height: '36px', borderRadius: '50%', border: 'none',
-                        backgroundColor: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)',
-                        color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        cursor: 'pointer', zIndex: 10
-                      }}
-                    >
-                      <ChevronLeft size={20} />
-                    </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setSelectedImageIndex(prev => (prev + 1) % gallery.length); }}
-                      aria-label="Photo suivante"
-                      title="Photo suivante (Flèche droite)"
-                      style={{
-                        position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)',
-                        width: '36px', height: '36px', borderRadius: '50%', border: 'none',
-                        backgroundColor: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(8px)',
-                        color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        cursor: 'pointer', zIndex: 10
-                      }}
-                    >
-                      <ChevronRight size={20} />
-                    </button>
-                  </>
-                )}
-
-                <div
-                  style={{
-                    position: 'absolute', bottom: '12px', left: '50%', transform: 'translateX(-50%)',
-                    display: 'flex', alignItems: 'center', gap: '6px', zIndex: 10,
-                    backgroundColor: 'rgba(0,0,0,0.6)', padding: '4px 10px', borderRadius: '999px',
-                    backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', pointerEvents: 'auto'
-                  }}
-                >
-                  {gallery.map((_, idx) => (
-                    <div
-                      key={idx}
-                      role="button"
-                      tabIndex={0}
-                      aria-label={`Afficher la photo ${idx + 1}`}
-                      onClick={(e) => { e.stopPropagation(); setSelectedImageIndex(idx); }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setSelectedImageIndex(idx);
-                        }
-                      }}
-                      style={{
-                        width: selectedImageIndex === idx ? '18px' : '6px',
-                        height: '6px',
-                        borderRadius: '999px',
-                        backgroundColor: selectedImageIndex === idx ? 'var(--accent-primary)' : 'rgba(255,255,255,0.6)',
-                        cursor: 'pointer',
-                        transition: 'all 0.25s var(--ease-quiet)'
-                      }}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {detailMediaTab === 'image' && gallery.length > 1 && (
-            <div style={{ display: 'flex', gap: '8px', marginTop: '10px', overflowX: 'auto', paddingBottom: '4px' }}>
-              {gallery.map((img, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setSelectedImageIndex(idx)}
-                  aria-label={`Sélectionner la vignette photo ${idx + 1}`}
-                  style={{
-                    border: selectedImageIndex === idx ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
-                    borderRadius: '12px', overflow: 'hidden', width: '64px', height: '64px', padding: 0, cursor: 'pointer', flexShrink: 0
-                  }}
-                >
-                  <img src={img} alt={`Vignette ${idx + 1} de l'annonce : ${displayContent.title || selectedListing.title || 'Annonce'}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* DESCRIPTION ET TAGS */}
-        <div style={{ marginBottom: '24px' }}>
-          <h4 style={{ margin: '0 0 8px', fontSize: '16px', fontWeight: '800', color: 'var(--text-main)' }}>
-            {t('description') || 'Description'}
-          </h4>
-          <p style={{ margin: '0 0 16px', fontSize: '14.5px', lineHeight: 1.7, color: 'var(--text-secondary)' }}>
-            {displayContent.description}
-          </p>
-
-          {selectedListing.tags && selectedListing.tags.length > 0 && (
-            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-              {selectedListing.tags.map((tag, i) => (
-                <span key={i} style={{ fontSize: '12px', fontWeight: '700', backgroundColor: 'var(--bg-subtle)', color: 'var(--accent-primary)', padding: '4px 12px', borderRadius: '999px', border: '1px solid var(--border-color)', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                  <Tag size={12} color="var(--accent-primary)" /> {tag}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* PROFIL DE L'AUTEUR */}
-        {selectedListing.authorProfile && (
-          <div style={{
-            padding: '16px', borderRadius: '18px',
-            backgroundColor: 'var(--bg-subtle)',
-            border: '1px solid var(--border-color)',
-            marginBottom: '24px', display: 'flex', flexDirection: 'column', gap: '12px'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-              <img src={selectedListing.authorProfile.avatar} alt={selectedListing.author} style={{ width: '50px', height: '50px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--accent-primary)' }} />
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '800', fontSize: '15px', color: 'var(--text-main)' }}>
-                  {selectedListing.author}
-                  <span
-                    data-testid="detail-online-badge-dot"
-                    title={isOnline ? safeT('online_status', 'En ligne') : safeT('offline_status', 'Hors ligne')}
-                    aria-label={isOnline ? 'En ligne' : 'Hors ligne'}
-                    style={{
-                      display: 'inline-block',
-                      width: '8px',
-                      height: '8px',
-                      borderRadius: '50%',
-                      backgroundColor: isOnline ? '#10B981' : '#9CA3AF',
-                      boxShadow: isOnline ? '0 0 6px rgba(16, 185, 129, 0.6)' : 'none',
-                      flexShrink: 0,
-                      transition: 'background-color 0.2s ease',
-                    }}
-                  />
-                  <ShieldCheck size={16} color="var(--accent-primary)" />
-                </div>
-                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                  {selectedListing.authorProfile.bio}
-                </div>
-              </div>
-            </div>
-
-            {/* AVIS DÉTAILLÉS DE L'AUTEUR */}
-            {selectedListing.authorProfile.reviews && selectedListing.authorProfile.reviews.length > 0 ? (
-              <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '10px' }}>
-                <div style={{ fontSize: '12px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '6px' }}>{safeT('recentReviews', 'Avis récents')} :</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  {selectedListing.authorProfile.reviews.map((rev, i) => (
-                    <div key={i} style={{ fontSize: '12px', color: 'var(--text-secondary)', fontStyle: 'italic', padding: '8px 12px', backgroundColor: 'var(--bg-card)', borderRadius: '10px', border: '1px solid var(--border-color)' }}>
-                      <span style={{ color: 'var(--accent-warning)', marginRight: '6px' }}>{'⭐'.repeat(rev.rating)}</span>
-                      « {rev.text} »
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '8px', fontSize: '11.5px', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
-                🤝 {safeT('noReviewsZeroTransactions', safeT('newMemberNoReviewsYet', 'Nouveau membre • Aucun avis pour le moment (0 transaction clôturée)'))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ACTIONS */}
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
-          {handleViewOnMap && (
-            <button
-              type="button"
-              onClick={() => {
-                if (typeof handleViewOnMap === 'function') handleViewOnMap(selectedListing);
-                onClose?.();
-              }}
-              className="premium-button"
-              style={{
-                border: '1.5px solid var(--border-color)',
-                borderRadius: '999px',
-                padding: '13px 18px',
-                backgroundColor: 'var(--bg-card)',
-                color: 'var(--text-main)',
-                fontWeight: '800',
-                fontSize: '13px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '7px',
-                boxShadow: 'var(--shadow-card)',
-              }}
-              title={safeT('centerMapTooltip', 'Centrer la carte interactive sur cette annonce')}
-            >
-              <MapPin size={16} color="var(--accent-primary)" />
-              <span>{safeT('viewOnMap', 'Voir sur la carte')}</span>
-            </button>
-          )}
-
-          {!isOwner ? (
-            <button
-              onClick={() => { if (typeof handleStartDiscussion === 'function') handleStartDiscussion(selectedListing); }}
-              className="premium-button"
-              style={{
-                flex: 1, minWidth: '180px', border: 'none', borderRadius: '999px', padding: '14px 24px',
-                background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)', color: '#FFF',
-                fontWeight: '800', fontSize: '14px', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                boxShadow: 'var(--shadow-accent)'
-              }}
-            >
-              <MessageSquare size={18} /> {safeT('contactMember', 'Contacter le membre')}
-            </button>
-          ) : (
-            <div style={{ display: 'flex', gap: '8px', flex: 1, minWidth: '220px', flexWrap: 'wrap' }}>
-              <button
-                onClick={() => { if (typeof handleBoostListing === 'function') handleBoostListing(selectedListing); }}
-                className="premium-button"
-                aria-label={safeT('boostVisibility', 'Booster la visibilité de cette annonce')}
-                style={{ flex: 1, border: 'none', borderRadius: '999px', padding: '12px', backgroundColor: 'var(--accent-warning)', color: '#FFF', fontWeight: '800', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: 'var(--shadow-card)' }}
               >
-                <Flame size={16} /> {safeT('boost', 'Booster')} (2,99€)
-              </button>
-              <button
-                onClick={() => { if (typeof handleStartEditListing === 'function') handleStartEditListing(selectedListing); }}
-                className="premium-button"
-                aria-label={safeT('editThisListing', 'Modifier cette annonce')}
-                style={{ flex: 1, border: '1px solid var(--border-color)', borderRadius: '999px', padding: '12px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', fontWeight: '800', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-              >
-                <Pencil size={16} /> {safeT('edit', 'Éditer')}
-              </button>
-              <button
-                onClick={() => { if (typeof handleTogglePauseListing === 'function') handleTogglePauseListing(selectedListing.id); }}
-                className="premium-button"
-                aria-label={selectedListing.status === 'paused' ? safeT('resumeListingPublication', "Reprendre la publication de l'annonce") : safeT('pauseListingPublication', "Mettre en pause la publication de l'annonce")}
-                style={{ border: '1px solid var(--border-color)', borderRadius: '999px', padding: '12px 16px', backgroundColor: 'var(--bg-card)', color: 'var(--text-main)', fontWeight: '800', fontSize: '13px', cursor: 'pointer' }}
-              >
-                {selectedListing.status === 'paused' ? safeT('resume', 'Reprendre') : safeT('pause', 'Pauser')}
-              </button>
-              <button
-                onClick={() => { if (typeof handleDeleteListing === 'function') handleDeleteListing(selectedListing.id); onClose?.(); }}
-                className="premium-button"
-                aria-label="Supprimer définitivement cette annonce"
-                title="Supprimer définitivement cette annonce"
-                style={{ border: '1px solid var(--accent-danger)', borderRadius: '999px', padding: '12px 16px', backgroundColor: 'var(--accent-danger)', color: '#FFF', fontWeight: '800', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              >
-                <Trash2 size={16} />
+                <Trash2 size={16} /> Supprimer cette annonce (Action Administrateur)
               </button>
             </div>
           )}

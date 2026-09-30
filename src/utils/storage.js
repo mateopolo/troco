@@ -71,3 +71,15 @@ export const remove = (key) => {
 
 export const flush = flushAll;
 
+const storage = {
+  setDebounced,
+  setSync,
+  get,
+  remove,
+  flush: flushAll,
+};
+
+export { storage };
+export default storage;
+
+

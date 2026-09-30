@@ -384,9 +384,9 @@
     "semantic_hash": "29788f2edfc62f638e05abc398125e63"
   },
   "src/App.js": {
-    "mtime": 1790764910.8530362,
-    "seen": 1790765019.0376449,
-    "ast_hash": "7b3c0ec64f923a5e246996484dc2a1d5",
+    "mtime": 1790769050.4667573,
+    "seen": 1790769332.4705217,
+    "ast_hash": "7fc2e20b6d45633b6ee79ba09bc49028",
     "semantic_hash": ""
   },
   "src/App.test.js": {
@@ -600,9 +600,9 @@
     "semantic_hash": ""
   },
   "src/components/ListingDetailModal.jsx": {
-    "mtime": 1790692591.884633,
-    "seen": 1790692953.4764102,
-    "ast_hash": "a805068c9c19943ccb3d9d44e3852690",
+    "mtime": 1790769152.2153559,
+    "seen": 1790769332.470593,
+    "ast_hash": "759d3d26b78050a013ad3d8943c3140c",
     "semantic_hash": ""
   },
   "src/components/ListingDetails.jsx": {
@@ -1836,9 +1836,9 @@
     "semantic_hash": "20e4a46148f46f714a10754b87cf06b3"
   },
   "src/services/paymentService.js": {
-    "mtime": 1790709092.308239,
-    "seen": 1790709729.887435,
-    "ast_hash": "cdce1362cacc695f594a152bcb809ccd",
+    "mtime": 1790768793.839711,
+    "seen": 1790769332.4710915,
+    "ast_hash": "b77d48af096e254b90a910ed0f79dc2b",
     "semantic_hash": ""
   },
   "src/services/pricingService.js": {
@@ -2136,10 +2136,10 @@
     "semantic_hash": "8127473290ee1d2fa6985e3e503eaca4"
   },
   "src/utils/storage.js": {
-    "mtime": 1789319685.6507418,
-    "seen": 1790594464.2384784,
-    "ast_hash": "ad23a5b686a3dff39d3dfa9a946fa154",
-    "semantic_hash": "ad23a5b686a3dff39d3dfa9a946fa154"
+    "mtime": 1790768684.9070086,
+    "seen": 1790769332.47119,
+    "ast_hash": "4aaa35cd1d3816bdb8a9bf5139ebb752",
+    "semantic_hash": ""
   },
   "src/utils/tagGenerator.js": {
     "mtime": 1787772030.4488175,
@@ -2304,9 +2304,9 @@
     "semantic_hash": ""
   },
   "MASTER_AUDIT.md": {
-    "mtime": 1790764161.452632,
-    "seen": 1790765019.0385017,
-    "ast_hash": "fdb5ba3380808b53e8085ac5fb618c88",
+    "mtime": 1790769293.7762828,
+    "seen": 1790769332.4712553,
+    "ast_hash": "84f65f194b02182b7d7bad5a32d0f6d7",
     "semantic_hash": ""
   },
   "PERFORMANCE_AUDIT.md": {
@@ -2961,6 +2961,54 @@
     "mtime": 1790764615.098569,
     "seen": 1790765019.0377176,
     "ast_hash": "a02e83373bfce89cd06e0217de145b63",
+    "semantic_hash": ""
+  },
+  "src/components/AppLoadingScreen.jsx": {
+    "mtime": 1790768298.9030807,
+    "seen": 1790769332.4705353,
+    "ast_hash": "4e26e419b522d5d0c3ad80ada9175b90",
+    "semantic_hash": ""
+  },
+  "src/hooks/useAccountActions.js": {
+    "mtime": 1790768716.982419,
+    "seen": 1790769332.471004,
+    "ast_hash": "4e289cb75b0523e8879aee9d7ce832ed",
+    "semantic_hash": ""
+  },
+  "src/hooks/useAuthSession.js": {
+    "mtime": 1790768709.8913674,
+    "seen": 1790769332.4710124,
+    "ast_hash": "927c3b3264c527b93759178cdc56c13a",
+    "semantic_hash": ""
+  },
+  "src/hooks/useFeedListings.js": {
+    "mtime": 1790768493.2869503,
+    "seen": 1790769332.4710195,
+    "ast_hash": "f6b228ba93ac1572463418685cd588ab",
+    "semantic_hash": ""
+  },
+  "src/hooks/useGlobalCalls.js": {
+    "mtime": 1790768282.6355217,
+    "seen": 1790769332.4710228,
+    "ast_hash": "7017d30f1d1f2a6ed5dac01f97f028ba",
+    "semantic_hash": ""
+  },
+  "src/hooks/useGlobalMessages.js": {
+    "mtime": 1790765882.1206868,
+    "seen": 1790769332.4710264,
+    "ast_hash": "2e7c5ed684904c20a6fc72ffb6ab2cfb",
+    "semantic_hash": ""
+  },
+  "src/hooks/useNotifications.js": {
+    "mtime": 1790768703.03858,
+    "seen": 1790769332.4710348,
+    "ast_hash": "7a5d1194a576ca13999fd5249029ca38",
+    "semantic_hash": ""
+  },
+  "src/hooks/usePayments.js": {
+    "mtime": 1790768692.113008,
+    "seen": 1790769332.471037,
+    "ast_hash": "bb430eb6dde6b97efebab43763563cf6",
     "semantic_hash": ""
   }
 }
