@@ -13,7 +13,7 @@
 > - `STEP BY STEP URGENT.txt` & `LISTE DES PROCHAINES FONCTIONNALITES A CODER.txt` (Backlog immédiat)
 > - `PROJECT_CONTEXT.md` & `TROCO_PROJECT_HISTORY.md` (Historique des décisions et géoprivacy)
 >
-> **Score global :** 8.7/10 | **Progression :** 47 / 74 tâches validées avec preuves formelles (63.5%)
+> **Score global :** 8.8/10 | **Progression :** 48 / 74 tâches validées avec preuves formelles (64.9%)
 
 ---
 
@@ -24,9 +24,9 @@
 | 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 28 | 1 | 96.6% |
 | 🟡 Facile (Niveau 2 — 1h à 3h) | 16 | 0 | 100% |
 | 🟠 Moyen (Niveau 3 — 3h à 1 jour) | 8 | 7 | 53.3% |
-| 🔴 Difficile (Niveau 4 — 1 à 3 jours) | 3 | 7 | 30.0% |
+| 🔴 Difficile (Niveau 4 — 1 à 3 jours) | 4 | 6 | 40.0% |
 | 🚨 Très difficile (Niveau 5 — 3j à 2 sem) | 0 | 9 | 0.0% |
-| **TOTAL** | **47** | **27** | **63.5%** |
+| **TOTAL** | **48** | **26** | **64.9%** |
 
 
 ### Score par axe vs cible Licorne
@@ -433,10 +433,17 @@
 ## 🚨 NIVEAU 5 — TRÈS DIFFICILE (3 jours - 2 semaines)
 
 ### [ ] [TDIF-01] — Refonte architecturale modulaire complète : Découpage de `src/App.js` en routes
-**Statut** : ❌ À FAIRE  
-**Fichier** : `src/App.jsx` (cible < 400 lignes), `src/routes/FeedRoute.jsx`, `ChatRoute.jsx`, `ProfileRoute.jsx`, `PostRoute.jsx`, `LegalRoute.jsx`  
+**Statut** : 🟡 EN COURS (Lot 1/5 réalisé)  
+**Preuve TDIF-01A** : `src/routes/FeedRoute.jsx` créé (composant dédié autonome), rendu du feed extrait d'`App.js` (-544 lignes JSX / ~470 lignes nettes). `App.js` allégé, imports inutilisés purgés (`SponsoredFeedCard`, `FeedCardItem`, `EmptyState`, `MapSection`, `PullToRefresh`, `Search`, `Filter`). Build 0 erreur, ESLint 0 erreur sur `App.js` et `FeedRoute.jsx`.  
+**Sous-lots :**
+- [x] **[TDIF-01A]** — Extraction du bloc Feed vers `src/routes/FeedRoute.jsx` avec props étanches.
+- [ ] **[TDIF-01B]** — Extraction de `ChatRoute` (`src/routes/ChatRoute.jsx`)
+- [ ] **[TDIF-01C]** — Extraction de `CommunityRoute` (`src/routes/CommunityRoute.jsx`)
+- [ ] **[TDIF-01D]** — Extraction de `ProfileRoute` (`src/routes/ProfileRoute.jsx`)
+- [ ] **[TDIF-01E]** — Extraction de `PostRoute` & harmonisation du router  
+**Fichier** : `src/App.js` (cible < 400 lignes), `src/routes/FeedRoute.jsx`, `ChatRoute.jsx`, `ProfileRoute.jsx`, `PostRoute.jsx`, `LegalRoute.jsx`  
 **Estimation** : 5 jours  
-**Impact** : `src/App.js` compte actuellement 5 295 lignes. Ce découpage est impératif pour permettre à une équipe de développeurs de collaborer sans conflits Git massifs et réduire la complexité cyclomatique.
+**Impact** : `src/App.js` comptait initialement 5 295 lignes. Le découpage progressif en routes modulaires permet à une équipe de collaborer sans conflits Git massifs et réduit la complexité cyclomatique.
 
 ### [ ] [TDIF-02] — IA de Matching Prédictif & Recherche Vectorielle (Vector Search)
 **Statut** : ❌ À FAIRE  
