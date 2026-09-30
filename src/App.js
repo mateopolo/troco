@@ -1,14 +1,18 @@
 import logger from './utils/logger';
 import React, { useState, useEffect, useRef, useMemo, useCallback, useDeferredValue, Suspense, useTransition } from 'react';
+import { MapPin, Video, Globe, X, Sparkles, Trash2, Camera, Tag, ChevronLeft, ChevronRight, ShieldAlert } from 'lucide-react';
 import { auth, db } from './firebase';
-import { collection, doc, updateDoc, serverTimestamp, onSnapshot, query, orderBy, deleteDoc } from 'firebase/firestore';
-import { TROCO_CATEGORIES } from './data/categoriesData';
-import { subscribeTranslations } from './utils/translator';
+import { collection, addDoc, doc, updateDoc, serverTimestamp, onSnapshot, query, orderBy, limit, setDoc, deleteDoc, getDoc, getDocs, where, runTransaction, increment } from 'firebase/firestore';
+import { fetchListingsPaginated, fetchListingsByGeohash } from './services/firestoreService';
+import { isSignInWithEmailLink, signInWithEmailLink, signOut, onAuthStateChanged } from 'firebase/auth';
 import { useWebRTC } from './hooks/useWebRTC';
 import { useTheme } from './contexts/ThemeContext';
-import { playApplePaySound, playBetclicBalanceSound } from './utils/audioService';
+import { TROCO_CATEGORIES } from './data/categoriesData';
+import { subscribeTranslations } from './utils/translator';
+import { playApplePaySound, playBetclicBalanceSound, playWelcomeGiftFanfare } from './utils/audioService';
 import { useChatManager } from './hooks/useChatManager';
 import { AppHeader, AppBottomNav } from './components/layout';
+import MobileHeader from './components/common/MobileHeader';
 import { getSuggestedMedia, getSuggestedImage, getFallbackImage } from './utils/mediaHelpers';
 import FeedRoute from './routes/FeedRoute';
 import CommunityRoute from './routes/CommunityRoute';
@@ -19,23 +23,21 @@ import LegalRoutes from './routes/LegalRoutes';
 import AppOverlays from './components/AppOverlays';
 import FeedInteractions from './components/FeedInteractions';
 import AppModalsOrchestrator from './components/AppModalsOrchestrator';
-import ListingDetailModal from './components/ListingDetailModal';
-import AppLoadingScreen from './components/AppLoadingScreen';
-import { useFeedListings } from './hooks/useFeedListings';
-import { useAuthSession } from './hooks/useAuthSession';
-import { useNotifications } from './hooks/useNotifications';
-import { useGlobalCalls } from './hooks/useGlobalCalls';
-import { useGlobalMessages } from './hooks/useGlobalMessages';
-import { usePayments } from './hooks/usePayments';
-import { useAccountActions } from './hooks/useAccountActions';
-import { safeVibrate } from './utils/haptics';
+import { useFeedStore } from './stores/useFeedStore';
+import { generateInvoiceRef } from './components/InvoiceCalculator';
+import TrocoLogoNativeSvg from './components/common/TrocoLogoNativeSvg';
 import AuthScreen from './features/auth/AuthScreen';
+import { useWalletStore } from './stores';
+import haptics, { safeVibrate } from './utils/haptics';
+import { useAppAuth } from './hooks/useAppAuth';
 import { useAppNavigation } from './hooks/useAppNavigation';
 import { useAppModals } from './hooks/useAppModals';
+import { BACKDROP_CLASSNAME, BACKDROP_STYLE } from './components/ui/modalBackdrop';
 import { getCategoryLabel as getCategoryLabelUtil, formatStatus as formatStatusUtil, formatTokenCount as formatTokenCountUtil, formatCompensation as formatCompensationUtil } from './utils/formatters';
 import { generateTags } from './utils/tagGenerator';
 import {
   getChatMessageDisplayContent,
+  getBioTranslation,
   getListingDisplayContent,
   getListingTitleTranslation,
 } from './utils/translationHelpers';
@@ -45,23 +47,42 @@ import ConfirmDialog from './components/ui/ConfirmDialog';
 import { AnimatePresence } from 'framer-motion';
 import {
   translations,
+  ensureLanguageLoaded,
   localizeLocation,
   localizeTags,
+  localizeReview,
 } from './data/translationsData';
-import { lookupCoordinatesDynamic } from './utils/geocodingNominatim';
+import {
+  calculateHaversineDistance,
+  searchNominatim,
+  lookupCoordinatesDynamic,
+} from './utils/geocodingNominatim';
 
 import { useGlobalContent } from './features/admin/useGlobalContent';
 import { notificationService } from './services/notificationService';
 import { isIosOrTouchDevice } from './utils/deviceDetection';
 import { useAdminGuard } from './hooks/useAdminGuard';
 import adminService from './services/adminService';
+import { useUsersPublic } from './hooks/useUsersPublic';
+import { setSessionAuthenticated, clearSessionFlags } from './utils/sessionFlags';
+import { migrateLocalStorage } from './utils/migrateLocalStorage';
+import { clearTrocoLocalStorage } from './utils/clearTrocoLocalStorage';
+import { paymentService } from './services/paymentService';
+import { walletService } from './services/walletService';
+import { dealService } from './services/dealService';
+import { gdprService } from './services/gdprService';
+import { useCheckout } from './hooks/useCheckout';
 import { useRateLimit } from './hooks/useRateLimit';
 import { useSafeTimeout } from './hooks/useSafeTimeout';
 import { useFirestoreHealth } from './hooks/useFirestoreHealth';
+import * as storage from './utils/storage';
 export { isIosOrTouchDevice };
 
 
 const Footer = React.lazy(() => import('./components/Footer'));
+
+// 🚨 PHASE 108 : ISOLATION DES COMPOSANTS LOURDS 3D / CANVAS (ÉRADICATION CRASH OOM iOS)
+const TrocoLogo3D = React.lazy(() => import('./components/common/TrocoLogo3D'));
 
 // 🚨 PHASE 60 : STANDARDISATION DES TRANSITIONS GLOBAL FRAMER MOTION (Fade + Scale)
 export const pageTransitionVariants = {
@@ -70,33 +91,6 @@ export const pageTransitionVariants = {
   exit: { opacity: 0, scale: 0.98 }
 };
 export const pageTransitionConfig = { duration: 0.2, ease: "easeOut" };
-
-const DEFAULT_POST_DRAFT = {
-  type: 'offer',
-  status: 'active',
-  title: '',
-  category: '',
-  customCategoryName: '',
-  format: 'onsite',
-  description: '',
-  compensation: 'credits',
-  durationType: 'hourly',
-  durationValue: '1',
-  price: '20',
-  location: '',
-  availability: '',
-  caution: '',
-  requiresCaution: false,
-  cautionAmount: '',
-  trocoTokens: '1',
-  euroAmount: '',
-  isUrgent: false,
-  locationPrivacy: 'exact',
-  coordinates: null,
-  image: '',
-  imageUrl: '',
-  videoUrl: '',
-};
 
 export default function App() {
   const confirm = useConfirm();
@@ -226,6 +220,46 @@ export default function App() {
     );
   };
 
+  // Modular Orchestration Hooks (Phase 26)
+  const {
+    profile,
+    setProfile,
+    profileDraft,
+    setProfileDraft,
+    isEditingProfile,
+    setIsEditingProfile,
+    isAuthenticated,
+    setIsAuthenticated,
+    isAuthResolved,
+    setIsAuthResolved,
+    isLoadingSession,
+    setIsLoadingSession,
+    isProfileLoading,
+    setIsProfileLoading,
+    isUserBanned,
+    setIsUserBanned,
+    bannedReason,
+    setBannedReason,
+    saveMessage,
+    setSaveMessage,
+    handleLogout,
+    handleKycComplete,
+    addSkill,
+    removeSkill,
+    addEquipment,
+    removeEquipment,
+    addPortfolioImage,
+    removePortfolioImage,
+    pendingEmailLinkHref,
+    handleConfirmEmailLink,
+    handleCancelEmailLink,
+  } = useAppAuth();
+
+  const { isAdmin } = useAdminGuard();
+
+  // Hook pour gérer les timeouts en toute sécurité
+  const { safeTimeout } = useSafeTimeout();
+
   const {
     activeTab,
     setActiveTab,
@@ -260,6 +294,8 @@ export default function App() {
     setFormatFilter,
     isKycModalOpen,
     setIsKycModalOpen,
+    isOnboardingOpen,
+    setIsOnboardingOpen,
     isAdminPanelOpen,
     setIsAdminPanelOpen,
     isGodModeActive,
@@ -280,60 +316,31 @@ export default function App() {
     setIsCguViewerOpen,
     isBoostModalOpen,
     setIsBoostModalOpen,
-  } = ui;
-
-  // Session, authentification et profil utilisateur (Hook centralisé useAuthSession)
-  const {
-    profile,
-    setProfile,
-    profileDraft,
-    setProfileDraft,
-    isEditingProfile,
-    setIsEditingProfile,
-    isAuthenticated,
-    setIsAuthenticated,
-    isAuthResolved,
-    isLoadingSession,
-    isProfileLoading,
-    isUserBanned,
-    bannedReason,
-    skills,
-    setSkills,
-    equipment,
-    setEquipment,
-    cguDismissed,
-    setCguDismissed,
-    cguBypassRef,
     topUpCelebration,
     setTopUpCelebration,
-    isOnboardingOpen,
-    setIsOnboardingOpen,
-    isWelcomeGiftModalOpen,
-    setIsWelcomeGiftModalOpen,
-    setSaveMessage,
-    pendingEmailLinkHref,
-    handleConfirmEmailLink,
-    handleCancelEmailLink,
-    handleKycComplete,
-  } = useAuthSession({
-    activeTab,
-    onLogoutCleanup: () => {
-      if (typeof setSelectedChat === 'function') setSelectedChat(null);
-      if (typeof setSelectedListing === 'function') setSelectedListing(null);
-    },
-  });
+  } = ui;
 
-  const { isAdmin } = useAdminGuard();
-
-  // Hook pour gérer les timeouts en toute sécurité
-  const { safeTimeout } = useSafeTimeout();
-
+  const [skills, setSkills] = useState([
+    'Prod musicale & Ableton Live',
+    'Scripts Python',
+  ]);
+  const [equipment, setEquipment] = useState([
+    'MacBook Pro 14',
+    'Microphone USB',
+  ]);
   const [portfolioImages, setPortfolioImages] = useState(() => profile?.portfolioImages || []);
   const [mapCenter, setMapCenter] = useState([48.8566, 2.3522]);
   const [mapZoom, setMapZoom] = useState(4);
   const [allReports, setAllReports] = useState([]);
   const [allFirestoreUsers, setAllFirestoreUsers] = useState([]);
   const [isPending, startTransition] = useTransition();
+
+  // 🚨 PHASE 58 : INITIALISATION & VERROUILLAGE GÉO-IP DE LA DEVISE
+  useEffect(() => {
+    try {
+      useWalletStore.getState().initializeGeoCurrency?.();
+    } catch (_) { }
+  }, []);
 
   const mapContainerRef = useRef(null);
   const handleSwitchToMap = () => {
@@ -359,14 +366,153 @@ export default function App() {
   // eslint-disable-next-line no-unused-vars
   const globalWelcomeMsg = useGlobalContent('welcome_message');
 
-  // Transactions et notifications temps réel (Hook centralisé useNotifications)
-  const {
-    userTransactions,
-    setUserTransactions,
-    transactionSuccessModalConfig,
-    setTransactionSuccessModalConfig,
-    handleCloseTransactionSuccessModal,
-  } = useNotifications({ profile });
+  // ---- NOTIFICATION & ANIMATION DE RÉCEPTION DE JETONS (DESTINATAIRE) ----
+  // Ref: P1-BUG-08 - Centralisation dans le listener Firestore onSnapshot pour éviter le double déclenchement
+  const prevTokensRef = useRef(null);
+  const prevEurosRef = useRef(null);
+  const isInitialAuthSnapRef = useRef(true);
+
+  // Verrou d'urgence anti-boucle CGU / RGPD : persistance session immédiate
+  const [cguDismissed, setCguDismissed] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.sessionStorage?.getItem('troco_cgu_dismissed') === 'true' ||
+             window.localStorage?.getItem('troco_cgu_dismissed') === 'true';
+    }
+    return false;
+  });
+
+  // Verrou synchrone anti-flickering CGU : évite toute ouverture intempestive pour le compte admin
+  // pendant le cycle de rendu React avant que Firestore ne confirme cguAcceptedAt
+  const cguBypassRef = useRef(
+    typeof window !== 'undefined' &&
+    (window.sessionStorage?.getItem('troco_cgu_dismissed') === 'true' ||
+     window.localStorage?.getItem('troco_cgu_dismissed') === 'true')
+  );
+
+  const [userTransactions, setUserTransactions] = useState([]);
+
+  // Nettoyage données démo au démarrage (RGPD / conformité)
+  useEffect(() => {
+    migrateLocalStorage();
+  }, []);
+
+  // Purge de sécurité du cache local si un ancien identifiant mocké est détecté
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const checkMockInStorage = (storageObj) => {
+        if (!storageObj) return false;
+        for (let i = 0; i < storageObj.length; i++) {
+          const key = storageObj.key(i);
+          const val = key ? storageObj.getItem(key) : null;
+          if (
+            (key && (key.includes('demo_mateopolo') || key.includes('admin_uid'))) ||
+            (val && (val.includes('demo_mateopolo') || val.includes('admin_uid')))
+          ) {
+            return true;
+          }
+        }
+        return false;
+      };
+
+      if (checkMockInStorage(window.localStorage) || checkMockInStorage(window.sessionStorage)) {
+        window.localStorage?.clear();
+        window.sessionStorage?.clear();
+      }
+    } catch (_) { }
+  }, []);
+
+  // Écoute temps réel des transactions de l'utilisateur sur Firestore
+  useEffect(() => {
+    const uid = profile?.uid || auth.currentUser?.uid;
+    if (!uid) return;
+    useFeedStore.getState().loadSavedFilters(uid);
+    try {
+      const qTx = query(
+        collection(db, 'transactions'),
+        where('userId', '==', uid),
+        orderBy('createdAt', 'desc')
+      );
+      const unsub = onSnapshot(qTx, (snap) => {
+        if (!snap.empty) {
+          const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          setUserTransactions(list);
+          try {
+            storage.setDebounced('troco_user_transactions', list);
+          } catch (e) { }
+        }
+      }, (err) => logger.warn('[Firestore] Transactions listener:', err));
+      return () => unsub();
+    } catch (e) {
+      logger.warn('Transactions listener error:', e);
+    }
+  }, [profile?.uid]);
+
+  // ---- MODALE DE CONFIRMATION DE TRANSACTION FINTECH IMMERSIVE ----
+  const [transactionSuccessModalConfig, setTransactionSuccessModalConfig] = useState({
+    isOpen: false,
+    type: 'sent', // 'sent' | 'received'
+    amount: 1,
+    currency: 'tokens', // 'tokens' | 'fiat'
+    partnerName: '',
+    notificationId: null,
+  });
+
+  const handleCloseTransactionSuccessModal = useCallback(async () => {
+    const notifId = transactionSuccessModalConfig.notificationId;
+    const currentUid = profile?.uid || profile?.id || auth.currentUser?.uid;
+    if (notifId && currentUid && db) {
+      try {
+        const notifRef = doc(db, 'users', currentUid, 'notifications', notifId);
+        await updateDoc(notifRef, {
+          read: true,
+          readAt: serverTimestamp(),
+        });
+      } catch (err) {
+        logger.warn('Erreur marquage notification lue:', err);
+      }
+    }
+    setTransactionSuccessModalConfig(prev => ({ ...prev, isOpen: false, notificationId: null }));
+  }, [transactionSuccessModalConfig.notificationId, profile?.uid, profile?.id]);
+
+  // ---- DÉCLENCHEMENT GLOBAL DES NOTIFICATIONS (POUR LE RECEVEUR) ----
+  useEffect(() => {
+    const currentUid = profile?.uid || profile?.id || auth.currentUser?.uid;
+    if (!currentUid || !db) return;
+
+    try {
+      const notifsCol = collection(db, 'users', currentUid, 'notifications');
+      const qNotifs = query(notifsCol, where('read', '==', false));
+
+      const unsubNotifs = onSnapshot(qNotifs, (snapshot) => {
+        if (!snapshot.empty) {
+          snapshot.docChanges().forEach((change) => {
+            if (change.type === 'added' || change.type === 'modified') {
+              const notifData = change.doc.data();
+              const TOKEN_NOTIF_TYPES = ['payment_received', 'tokens_received'];
+              if (notifData && TOKEN_NOTIF_TYPES.includes(notifData.type) && notifData.read === false) {
+                const partner = notifData.fromName || notifData.senderName || notifData.userName || '';
+                setTransactionSuccessModalConfig({
+                  isOpen: true,
+                  type: 'received',
+                  amount: notifData.amount || 1,
+                  currency: notifData.currency === 'fiat' || notifData.currency === 'EUR' ? 'fiat' : 'tokens',
+                  partnerName: partner,
+                  notificationId: change.doc.id,
+                });
+              }
+            }
+          });
+        }
+      }, (err) => {
+        logger.warn('[Notifications] Erreur écoute notifications temps réel:', err);
+      });
+
+      return () => unsubNotifs();
+    } catch (e) {
+      logger.warn('[Notifications] Listener setup error:', e);
+    }
+  }, [profile?.uid, profile?.id]);
 
   // Handler d'ouverture du module de paiement
   const handleOpenPayment = useCallback((mode = 'pack-tokens', payload = null) => {
@@ -405,7 +551,9 @@ export default function App() {
     messageDraft,
     setMessageDraft,
     chatThreads,
+    setChatThreads,
     chatsList,
+    setChatStatusOverrides,
     editingDealId,
     setEditingDealId,
     counterOfferDraft,
@@ -425,11 +573,13 @@ export default function App() {
     handleAcceptReward,
     openCounterOffer,
     handleCounterOfferSubmit,
+    executeDealTransaction,
     handleReleaseEscrow,
     handleAcceptDeal,
     handleConfirmTrocCompletion,
     handleDeclineDeal,
     handleSendToken,
+    sendPostCallTip,
   } = chatManager;
 
   const switchTab = useCallback((newTab) => {
@@ -448,8 +598,249 @@ export default function App() {
     });
   }, [setActiveTab, setSelectedChat, setSelectedPublicUser, setSelectedListing, startTransition]);
 
+  // Handler de succès de paiement (crédit solde, enregistrement transaction Firestore)
+  // Handler de succès de paiement (crédit solde, abonnement Troco Plus, enregistrement transaction Firestore)
+  const handlePaymentSuccess = async (txData) => {
+    const uid = auth.currentUser?.uid || profile?.uid;
+
+    // 1. Mise à jour du statut d'abonnement uniquement.
+    // Les soldes sont persistés par applyPayment puis reçus via onSnapshot.
+    let updatedTrocoPlus = profile.isTrocoPlus || false;
+    let updatedSubscriptionPlan = profile.subscriptionPlan || profile.trocoPlusPlan || null;
+    let updatedSubscriptionStartDate = profile.subscriptionStartDate || null;
+    let updatedSubscriptionRenewalDate = profile.subscriptionRenewalDate || null;
+
+    if (txData.mode === 'troco-plus' || txData.mode === 'pack-tokens') {
+      updatedTrocoPlus = true;
+      updatedSubscriptionPlan = txData.subscriptionPlan?.planKey || 'essential';
+      updatedSubscriptionStartDate = txData.subscriptionStartDate || new Date().toISOString();
+      updatedSubscriptionRenewalDate = txData.subscriptionRenewalDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+      setTopUpCelebration({
+        title: `+${txData.tokensPurchased} Jetons Troco !`,
+        subtitle: `Abonnement ${txData.subscriptionPlan?.title || 'Troco Plus'} activé`,
+        isTokens: true
+      });
+      safeTimeout(() => setTopUpCelebration(null), 4500);
+      setSaveMessage(`⭐ Abonnement ${txData.subscriptionPlan?.title || 'Troco Plus'} activé avec succès ! +${txData.tokensPurchased} jetons crédités.`);
+      safeTimeout(() => setSaveMessage(''), 6000);
+    } else if (txData.mode === 'topup-cash') {
+      const topUpAmount = Number(txData.cashTopUp) || 0;
+      if (topUpAmount > 0) {
+        setProfile(prev => {
+          const newBal = Number(((prev?.euroBalance || 0) + topUpAmount).toFixed(2));
+          const updated = {
+            ...prev,
+            euroBalance: newBal,
+            walletBalanceFiat: newBal,
+            balance: newBal,
+          };
+          try {
+            storage.setDebounced('troco_user_profile', updated);
+          } catch (_) {}
+          return updated;
+        });
+        const persistedEuroBalance = Number(txData.newEuroBalance);
+        const displayedEuroBalance = Number.isFinite(persistedEuroBalance)
+          ? persistedEuroBalance
+          : Number(profile?.euroBalance || 0) + topUpAmount;
+        setTopUpCelebration({
+          title: `+${topUpAmount.toFixed(2)} € Rechargés !`,
+          subtitle: `Nouveau solde : ${displayedEuroBalance.toFixed(2)} €`,
+          isEuro: true
+        });
+        safeTimeout(() => setTopUpCelebration(null), 4500);
+        setSaveMessage(`💳 Solde rechargé avec succès (+${topUpAmount.toFixed(2)} € via ${txData.paymentMethod}).`);
+        safeTimeout(() => setSaveMessage(''), 5000);
+      }
+    } else if (txData.mode === 'boost') {
+      const boostedListingId = txData.boostDetails?.listingId || txData.boostDetails?.id || txData.boostDetails?.firestoreId || txData.listingId || txData.payload?.listingId || txData.payload?.id;
+      if (boostedListingId) {
+        setListings(prev => prev.map(item => (item.id === boostedListingId || item.firestoreId === boostedListingId) ? { ...item, isBoosted: true } : item));
+        setBoostMessage('Annonce boostée avec succès pendant 7 jours !');
+      }
+    } else if (txData.mode === 'edit-listing' || txData.mode === 'publish-options') {
+      const { newListing } = txData.payload || {};
+      if (newListing) {
+        if (isEditingListing) {
+          setListings(prev => prev.map(item => item.id === newListing.id ? newListing : item));
+          if (editingOriginalListing?.firestoreId) {
+            try {
+              const { id: _localId, firestoreId: _fid, ...firestorePayload } = newListing;
+              updateDoc(doc(db, 'listings', editingOriginalListing.firestoreId), {
+                ...firestorePayload,
+                updatedAt: serverTimestamp(),
+              }).catch(e => logger.warn('[Firestore] updateDoc failed:', e));
+            } catch (e) {
+              logger.warn('[Firestore] updateDoc error:', e);
+            }
+          }
+        } else {
+          setListings(prev => [newListing, ...prev]);
+          try {
+            const { id: _localId, ...firestorePayload } = newListing;
+            addDoc(collection(db, 'listings'), {
+              ...firestorePayload,
+              createdAt: serverTimestamp(),
+              updatedAt: serverTimestamp(),
+            }).catch(e => logger.warn('[Firestore] addDoc failed:', e));
+          } catch (e) {
+            logger.warn('[Firestore] addDoc error:', e);
+          }
+        }
+        playApplePaySound();
+        const updatedDetail = getListingDetail(newListing);
+        setPublishedListing(updatedDetail);
+        setShowPublishedPopup(true);
+        setSelectedListing(updatedDetail);
+        setIsEditingListing(false);
+        setEditingOriginalListing(null);
+        setPostStep(1);
+        setPostDraft(defaultPostDraft);
+      }
+    } else if (txData.mode === 'deal' || txData.mode === 'pay-deal') {
+      const payload = txData.dealDetails || txData.payload || {};
+      const chatId = payload.chatId || selectedChat?.id;
+      const dealId = payload.dealId;
+      const terms = payload.terms || {};
+      const partnerName = payload.partnerName || selectedChat?.user;
+
+      // 🚨 PHASE 95 : CIBLAGE STRICT DU DESTINATAIRE (RECEIVER UID)
+      let receiverUid = payload?.partnerUid || selectedChat?.authorUid || selectedChat?.partnerUid;
+      if (receiverUid === uid) {
+        receiverUid = payload?.partnerUid && payload.partnerUid !== uid
+          ? payload.partnerUid
+          : (selectedChat?.partnerUid && selectedChat.partnerUid !== uid
+            ? selectedChat.partnerUid
+            : (selectedChat?.authorUid && selectedChat.authorUid !== uid ? selectedChat.authorUid : null));
+      }
+
+      if (!receiverUid) {
+        logger.error('🚨 [Finance] Transaction annulée : Destinataire (receiverUid) introuvable.', { payload, selectedChat });
+        alert('Erreur de transaction : Impossible d\'identifier le destinataire du paiement. Aucun montant n\'a été débité.');
+        return;
+      }
+
+      const euroAmount = Number(txData.amountTtc ?? payload.euroRequired ?? payload.amount ?? 0);
+      const tokensAmount = Number(txData.tokensDeducted ?? payload.tokensRequired ?? payload.tokens ?? 0);
+
+      if (chatId && dealId) {
+        try {
+          await dealService.transferTokensAtomically({
+            fromUid: profile?.uid || auth?.currentUser?.uid,
+            toUid: receiverUid,
+            tokens: tokensAmount > 0 ? Number(tokensAmount) : 0,
+            euros: tokensAmount > 0 ? 0 : Number(euroAmount),
+            method: 'deal',
+            dealId: dealId,
+            chatId: chatId,
+            metadata: {
+              terms,
+              partnerName,
+              paymentMethod: txData.paymentMethod || 'Paiement Sécurisé',
+            },
+          });
+        } catch (dealErr) {
+          logger.error('🚨 [dealService] Transfert deal échoué:', dealErr);
+          alert(dealErr?.message || 'Erreur lors du transfert deal.');
+        }
+        return;
+      }
+    }
+
+    const updatedProfile = {
+      ...profile,
+      isTrocoPlus: updatedTrocoPlus,
+      subscriptionPlan: updatedSubscriptionPlan,
+      trocoPlusPlan: updatedSubscriptionPlan,
+      subscriptionStartDate: updatedSubscriptionStartDate,
+      subscriptionRenewalDate: updatedSubscriptionRenewalDate,
+    };
+    if (
+      updatedProfile.isTrocoPlus !== profile.isTrocoPlus
+      || updatedProfile.subscriptionPlan !== profile.subscriptionPlan
+      || updatedProfile.trocoPlusPlan !== profile.trocoPlusPlan
+      || updatedProfile.subscriptionStartDate !== profile.subscriptionStartDate
+      || updatedProfile.subscriptionRenewalDate !== profile.subscriptionRenewalDate
+    ) {
+      setProfile(prev => ({
+        ...prev,
+        isTrocoPlus: updatedProfile.isTrocoPlus,
+        subscriptionPlan: updatedProfile.subscriptionPlan,
+        trocoPlusPlan: updatedProfile.trocoPlusPlan,
+        subscriptionStartDate: updatedProfile.subscriptionStartDate,
+        subscriptionRenewalDate: updatedProfile.subscriptionRenewalDate,
+      }));
+    }
+
+    // 2. Sauvegarde de la transaction dans le state local
+    const newTxRecord = {
+      id: 'tx-' + Date.now(),
+      ...txData,
+      userId: uid || 'guest',
+      userName: profile?.name || 'Utilisateur',
+      createdAt: new Date().toISOString(),
+    };
+    setUserTransactions(prev => [newTxRecord, ...prev]);
+    try {
+      storage.setDebounced('troco_user_transactions', [newTxRecord, ...userTransactions]);
+    } catch (e) { }
+
+    // 3. Application directe et atomique côté Firestore (Option A sans Cloud Functions)
+    if (uid && txData.mode !== 'deal' && txData.mode !== 'pay-deal') {
+      try {
+        await paymentService.applyPayment({
+          paymentIntentId: txData.authRef || txData.transactionId || `pi_${Date.now()}`,
+          mode: txData.mode,
+          amount: txData.amountTtc || txData.amount || txData.cashTopUp || 0,
+          tokens: txData.tokensPurchased || 0,
+          boostDays: txData.boostDays || 7,
+          listingId: txData.boostDetails?.listingId || txData.boostDetails?.id || txData.boostDetails?.firestoreId || txData.listingId || txData.payload?.listingId || txData.payload?.id || null,
+          currency: txData.currency || 'EUR',
+          provider: 'mock',
+          userId: uid,
+        });
+      } catch (err) {
+        logger.warn('[paymentService] Error applying payment:', err);
+      }
+    }
+  };
+
+  // ---- GESTION DU CADRE JURIDIQUE & RGPD (BLOC 6) ----
+  const handleDeleteAccount = async (options = {}) => {
+    try {
+      await gdprService.deleteUserCompletely({ immediate: Boolean(options?.immediate) });
+      clearTrocoLocalStorage();
+      if (auth.currentUser) {
+        await signOut(auth);
+      }
+      window.location.reload();
+    } catch (err) {
+      logger.error('Account deletion error:', err);
+      clearTrocoLocalStorage();
+      if (auth.currentUser) {
+        await signOut(auth);
+      }
+      window.location.reload();
+    }
+  };
+
   // ---- RATE LIMITING & APP CHECK PROTECTION ----
   const { isRateLimited, retryAfterSeconds, checkLimit, resetRateLimit } = useRateLimit();
+
+  // ---- SESSION DE PAIEMENT SÉCURISÉE (USECHECKOUT) ----
+  const {
+    checkoutSession,
+    isProcessing: isCheckoutProcessing,
+    paymentStatus: checkoutStatus,
+    openCheckout,
+    cancelCheckout,
+    applyCheckout,
+  } = useCheckout({
+    profile,
+    setProfile,
+    onPaymentSuccess: handlePaymentSuccess,
+    onOpenNotification: setSaveMessage,
+  });
 
   // ---- ÉCOUTE TEMPS RÉEL DES SIGNALEMENTS (MODÉRATION ADMIN - GATED ISADMIN) ----
   useEffect(() => {
@@ -571,6 +962,259 @@ export default function App() {
     handleStartEditListing(listing);
   };
 
+  // ---- ÉCOUTE ET SYNCHRONISATION EN TEMPS RÉEL DU PROFIL FIREBASE USERS/{UID} ----
+  useEffect(() => {
+    const isE2E = typeof window !== 'undefined' && (
+      window.__E2E__ === true ||
+      window.localStorage?.getItem('troco_e2e_authenticated') === 'true'
+    );
+    const sessionStartTime = Date.now();
+    const finishSessionLoading = () => {
+      if (isE2E) {
+        setIsLoadingSession(false);
+        return;
+      }
+      const elapsed = Date.now() - sessionStartTime;
+      const remaining = Math.max(0, 2500 - elapsed);
+      safeTimeout(() => {
+        setIsLoadingSession(false);
+      }, remaining);
+    };
+
+    let unsubDoc = null;
+
+    const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (unsubDoc) {
+        unsubDoc();
+        unsubDoc = null;
+      }
+
+      if (firebaseUser) {
+        const uid = firebaseUser.uid;
+        const userDocRef = doc(db, 'users', uid);
+
+        // Écoute temps réel des changements de solde, infos et statut CGU du profil
+        unsubDoc = onSnapshot(userDocRef, async (docSnap) => {
+          if (docSnap.exists()) {
+            const data = docSnap.data();
+
+            // PROTECTION TEMPS RÉEL CONTRE LE BANNISSEMENT
+            if (data.isBanned) {
+              setIsUserBanned(true);
+              setBannedReason(data.bannedReason || "Votre compte a été suspendu par l'administration Troco suite à un non-respect des règles de la communauté.");
+              try { await signOut(auth); } catch (_) { }
+              clearSessionFlags();
+              storage.remove('troco_user_profile');
+              setIsAuthenticated(false);
+              return;
+            }
+
+            const rawTokens = data.trocoTokens ?? data.tokens;
+            const rawEuros = data.euroBalance ?? data.walletBalanceFiat ?? data.balance;
+            const newTokens = rawTokens !== undefined && rawTokens !== null ? Number(rawTokens) : null;
+            const newEuros = rawEuros !== undefined && rawEuros !== null ? Number(Number(rawEuros).toFixed(2)) : null;
+
+            // VERROU STRICT SUR LES CÉLÉBRATIONS FINANCIÈRES :
+            // Ne JAMAIS déclencher au snapshot initial, ni si le bonus/onboarding a déjà été validé
+            const isClaimed = Boolean(data.welcomeBonusClaimed || data.onboardingCompleted || profile?.welcomeBonusClaimed || profile?.onboardingCompleted);
+
+            if (!isInitialAuthSnapRef.current && !isClaimed) {
+              // Détection de réception temps réel de jetons Troco (+X jetons) & Alerte sonore
+              if (prevTokensRef.current !== null && newTokens !== null && newTokens > prevTokensRef.current) {
+                const gained = newTokens - prevTokensRef.current;
+                haptics.success();
+                playBetclicBalanceSound(true);
+                setTopUpCelebration({
+                  title: `+${gained} Jeton${gained > 1 ? 's' : ''} Troco reçus ! 🪙`,
+                  subtitle: `Nouveau solde : ${newTokens} Jetons Troco`,
+                });
+                safeTimeout(() => setTopUpCelebration(null), 4500);
+              }
+
+              // Détection de réception temps réel d'euros & Alerte sonore
+              if (prevEurosRef.current !== null && newEuros !== null && newEuros > prevEurosRef.current) {
+                const gained = (newEuros - prevEurosRef.current).toFixed(2);
+                haptics.success();
+                playApplePaySound();
+                setTopUpCelebration({
+                  title: `+${gained} € reçus sur votre solde ! 💳`,
+                  subtitle: `Nouveau solde : ${Number(newEuros).toFixed(2)} €`,
+                });
+                safeTimeout(() => setTopUpCelebration(null), 4500);
+              }
+            }
+
+            isInitialAuthSnapRef.current = false;
+            if (newTokens !== null) prevTokensRef.current = newTokens;
+            if (newEuros !== null) prevEurosRef.current = newEuros;
+
+            // Détection et synchronisation de la photo de profil native Gmail / Auth
+            const isUnsplashPlaceholder = typeof data.avatar === 'string' && data.avatar.includes('unsplash.com');
+            const resolvedAvatar = (firebaseUser.photoURL && (!data.avatar || isUnsplashPlaceholder)) ? firebaseUser.photoURL : (data.avatar || firebaseUser.photoURL || '');
+            const resolvedName = (firebaseUser.displayName && (!data.name || data.name === 'Membre Troco' || data.name === 'Utilisateur Troco')) ? firebaseUser.displayName : (data.name || firebaseUser.displayName || 'Membre Troco');
+
+            // Synchronisation vers Firestore si la photo ou l'onboarding manquent
+            const updatesToSync = {};
+            if (firebaseUser.photoURL && (!data.avatar || isUnsplashPlaceholder)) {
+              updatesToSync.avatar = firebaseUser.photoURL;
+            }
+            if (firebaseUser.displayName && (!data.name || data.name === 'Membre Troco' || data.name === 'Utilisateur Troco')) {
+              updatesToSync.name = firebaseUser.displayName;
+            }
+            if (data.onboardingCompleted === undefined || data.onboardingCompleted === false) {
+              updatesToSync.onboardingCompleted = true;
+            }
+
+            // AUTO-GUÉRISON : Si l'admin n'a pas de cguAcceptedAt,
+            // on le patch une seule fois par session côté Firestore ET on pose le verrou synchrone
+            // pour bloquer toute ouverture de modale CGU dans ce cycle de rendu.
+            const alreadyHealed = typeof window !== 'undefined' && window.sessionStorage?.getItem('troco_admin_cgu_healed') === 'true';
+            const isGodAdminSnap = Boolean(data.isAdmin || data.role === 'admin');
+            if (isGodAdminSnap && !data.cguAcceptedAt && !alreadyHealed) {
+              const healedAt = new Date().toISOString();
+              updatesToSync.cguAcceptedAt = serverTimestamp();
+              updatesToSync.cguVersion = '2026.1';
+              // Verrou synchrone immédiat : bypasse React state pour ce cycle de rendu
+              cguBypassRef.current = true;
+              try {
+                window.sessionStorage?.setItem('troco_admin_cgu_healed', 'true');
+                window.sessionStorage?.setItem('troco_cgu_dismissed', 'true');
+                window.localStorage?.setItem('troco_cgu_dismissed', 'true');
+              } catch (_) { }
+              setCguDismissed(true);
+              // Mise à jour optimiste locale pour éviter le flash de modale
+              setProfile(prev => ({ ...prev, cguAcceptedAt: healedAt, cguVersion: '2026.1' }));
+              logger.info('[Auth] Self-heal: cguAcceptedAt patché pour le compte admin.');
+            }
+
+            if (Object.keys(updatesToSync).length > 0) {
+              updateDoc(userDocRef, {
+                ...updatesToSync,
+                updatedAt: serverTimestamp(),
+              }).catch((err) => logger.warn('[Auth] Auto-sync photo/onboarding in App.js failed:', err));
+            }
+
+            // Mise à jour de l'état profil local et persistence
+            const isGodAdmin = Boolean(data.isAdmin || data.role === 'admin');
+            setProfile(prev => {
+              const updated = {
+                ...prev,
+                ...data,
+                euroBalance: newEuros !== null ? newEuros : (data.euroBalance ?? prev?.euroBalance ?? 0),
+                trocoTokens: newTokens !== null ? newTokens : (data.trocoTokens ?? prev?.trocoTokens ?? 10),
+                cguAcceptedAt: data.cguAcceptedAt || prev?.cguAcceptedAt || null,
+                name: resolvedName,
+                avatar: resolvedAvatar,
+                onboardingCompleted: true,
+                uid: uid,
+                isAdmin: isGodAdmin ? true : Boolean(data.isAdmin),
+                role: isGodAdmin ? 'admin' : (data.role || 'user'),
+              };
+              try {
+                storage.setDebounced('troco_user_profile', updated);
+              } catch (_) { }
+              return updated;
+            });
+
+            // Synchronisation réactive globale avec le store Zustand useWalletStore
+            const walletState = useWalletStore.getState();
+            if (walletState?.setTrocoTokens && newTokens !== null) walletState.setTrocoTokens(newTokens);
+            if (walletState?.setEuroBalance && newEuros !== null) walletState.setEuroBalance(newEuros);
+            if (walletState?.setKycVerified) walletState.setKycVerified(Boolean(data.kycVerified));
+            if (walletState?.setTrocoPlus) walletState.setTrocoPlus(Boolean(data.isTrocoPlus), data.trocoPlusPlan);
+
+            if (Array.isArray(data.skills)) setSkills(data.skills);
+            if (Array.isArray(data.equipment)) setEquipment(data.equipment);
+            finishSessionLoading();
+          } else {
+            // VERROU STRICT : Si le bonus ou l'onboarding a déjà été validé, pas de ré-initialisation
+            if (profile?.welcomeBonusClaimed === true || profile?.onboardingCompleted === true) {
+              finishSessionLoading();
+              return;
+            }
+
+            // Initialisation automatique du profil sur Firestore si nouveau provider
+            let isGodAdmin = false;
+            try {
+              const tokenRes = await firebaseUser.getIdTokenResult();
+              isGodAdmin = Boolean(tokenRes?.claims?.admin);
+            } catch (_) {}
+            const defaultUserDoc = {
+              uid: uid,
+              name: firebaseUser.displayName || firebaseUser.email?.split('@')[0].toUpperCase() || 'Utilisateur Troco',
+              username: '@' + (firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'user').toLowerCase().replace(/\s+/g, ''),
+              email: firebaseUser.email || '',
+              phoneNumber: firebaseUser.phoneNumber || '',
+              avatar: firebaseUser.photoURL || '',
+              bio: 'Nouvel utilisateur sur Troco ! Prêt à partager mes compétences et échanger des services.',
+              location: 'Paris, France',
+              languages: ['FR'],
+              skills: [],
+              equipment: [],
+              euroBalance: 0.00,
+              trocoTokens: 10,
+              dealsCompleted: 0,
+              dealsInProgress: 0,
+              rating: null,
+              onboardingCompleted: true,
+              welcomeBonusClaimed: true,
+              loginMethod: firebaseUser.providerData?.[0]?.providerId || 'Email',
+              // Ne jamais créer un doc admin avec cguAcceptedAt: null — sinon boucle CGU garantie
+              cguAcceptedAt: isGodAdmin ? serverTimestamp() : null,
+              cguVersion: isGodAdmin ? '2026.1' : undefined,
+              isAdmin: isGodAdmin ? true : false,
+              role: isGodAdmin ? 'admin' : 'user',
+              createdAt: serverTimestamp(),
+              updatedAt: serverTimestamp(),
+            };
+            try {
+              await setDoc(userDocRef, defaultUserDoc, { merge: true });
+              setProfile(prev => ({ ...prev, ...defaultUserDoc }));
+              prevTokensRef.current = defaultUserDoc.trocoTokens;
+              prevEurosRef.current = defaultUserDoc.euroBalance;
+            } catch (e) {
+              logger.warn('[Firestore] Failed to init user doc:', e);
+            }
+            finishSessionLoading();
+          }
+        }, (err) => {
+          logger.warn('[Firestore] App.js user snapshot error:', err);
+          finishSessionLoading();
+        });
+
+        setIsAuthenticated(true);
+        setSessionAuthenticated();
+      } else {
+        const isE2E = typeof window !== 'undefined' && (
+          window.__E2E__ === true ||
+          window.localStorage?.getItem('troco_e2e_authenticated') === 'true'
+        );
+        if (isE2E) {
+          setIsAuthenticated(true);
+          finishSessionLoading();
+          setIsAuthResolved(true);
+          return;
+        }
+
+        prevTokensRef.current = null;
+        prevEurosRef.current = null;
+        // Nettoyage immédiat
+        clearSessionFlags();
+        setIsAuthenticated(false);
+        setProfile(null);
+        setSelectedChat(null);
+        setSelectedListing(null);
+        finishSessionLoading();
+      }
+      setIsAuthResolved(true);
+    });
+
+    return () => {
+      if (unsubDoc) unsubDoc();
+      unsubscribeAuth();
+    };
+  }, [safeTimeout, setBannedReason, setIsAuthResolved, setIsAuthenticated, setIsLoadingSession, setIsUserBanned, setProfile, setSelectedChat, setSelectedListing, setTopUpCelebration]);
+
   // ---- ÉCOUTE ET RÉACTUALISATION EN TEMPS RÉEL DES TRADUCTIONS DYNAMIQUES ----
   const [translationRevision, setTranslationRevision] = useState(0);
   useEffect(() => {
@@ -578,7 +1222,127 @@ export default function App() {
       setTranslationRevision(r => r + 1);
     });
     return () => unsub();
-  }, []);
+  }, [setIsAuthenticated, setIsLoadingSession, setProfile]);
+
+  // ---- DÉTECTION ET OUVERTURE DU WIZARD D'ONBOARDING POUR NOUVEAUX COMPTES (CHANTIER 1) ----
+  useEffect(() => {
+    if (!isAuthResolved || isLoadingSession || isProfileLoading) return;
+    if (isAuthenticated && profile) {
+      const needsOnboarding = profile.onboardingCompleted === false && profile.uid;
+      if (needsOnboarding) {
+        setIsOnboardingOpen(true);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, isAuthResolved, isLoadingSession, isProfileLoading, profile?.onboardingCompleted, profile?.uid]);
+
+  // Synchronisation réactive globale avec le store Zustand useWalletStore (élimine le prop drilling)
+  useEffect(() => {
+    if (profile) {
+      const state = useWalletStore.getState();
+      if (typeof state?.setEuroBalance === 'function') state.setEuroBalance(profile.euroBalance ?? 0);
+      if (typeof state?.setTrocoTokens === 'function') state.setTrocoTokens(profile.trocoTokens ?? 10);
+      if (typeof state?.setKycVerified === 'function') state.setKycVerified(profile.kycVerified ?? false);
+      if (typeof state?.setTrocoPlus === 'function') state.setTrocoPlus(profile.isTrocoPlus ?? false, profile.trocoPlusPlan);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.euroBalance, profile?.trocoTokens, profile?.kycVerified, profile?.isTrocoPlus, profile?.trocoPlusPlan]);
+
+  const [isWelcomeGiftModalOpen, setIsWelcomeGiftModalOpen] = useState(false);
+
+  // Déclencheur automatique de célébration de bienvenue à l'atterrissage sur le profil
+  useEffect(() => {
+    if (activeTab === 'profile' && isAuthenticated) {
+      const alreadyCelebrated =
+        profile?.welcomeBonusClaimed === true ||
+        profile?.onboardingCompleted === true ||
+        window.localStorage.getItem('troco_welcome_gift_celebrated') === 'true';
+      if (!alreadyCelebrated && profile?.trocoTokens === 10 && (profile?.euroBalance === 0 || profile?.euroBalance === 0.00)) {
+        window.localStorage.setItem('troco_welcome_gift_celebrated', 'true');
+        playWelcomeGiftFanfare();
+        setIsWelcomeGiftModalOpen(true);
+      }
+    }
+  }, [activeTab, isAuthenticated, profile?.welcomeBonusClaimed, profile?.onboardingCompleted, profile?.trocoTokens, profile?.euroBalance]);
+
+  // ---- FINALISATION DU PARCOURS D'ONBOARDING (CHANTIER 1 & CADEAU DE BIENVENUE) ----
+  const handleCompleteOnboarding = async (completedData) => {
+    const finalEuroBalance = Number(profile?.euroBalance ?? 0.00); // Préserve le solde existant
+    const finalTokens = Number(profile?.trocoTokens ?? 10); // Préserve les jetons existants
+    const updatedProfile = {
+      ...profile,
+      ...completedData,
+      euroBalance: finalEuroBalance,
+      trocoTokens: finalTokens,
+      onboardingCompleted: true,
+      dealsCompleted: profile.dealsCompleted ?? 0,
+      dealsInProgress: profile.dealsInProgress ?? 0,
+      rating: profile.rating ?? null,
+    };
+    setProfile(updatedProfile);
+    setProfileDraft(updatedProfile);
+    if (Array.isArray(completedData.skills)) setSkills(completedData.skills);
+    if (Array.isArray(completedData.equipment)) setEquipment(completedData.equipment);
+    storage.setDebounced('troco_user_profile', updatedProfile);
+    storage.setSync('troco_welcome_gift_celebrated', 'true');
+
+    const uid = profile?.uid || auth.currentUser?.uid;
+    if (uid) {
+      try {
+        await setDoc(doc(db, 'users', uid), {
+          ...completedData,
+          euroBalance: finalEuroBalance,
+          trocoTokens: finalTokens,
+          onboardingCompleted: true,
+          dealsCompleted: profile.dealsCompleted ?? 0,
+          dealsInProgress: profile.dealsInProgress ?? 0,
+          rating: profile.rating ?? null,
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+        setSaveMessage('🎁 +10 Jetons Troco offerts ! Bienvenue sur Troco.');
+        safeTimeout(() => setSaveMessage(''), 5000);
+      } catch (e) {
+        logger.warn('[Firestore] Failed to save onboarding to Firestore:', e);
+        setSaveMessage(`❌ Erreur : Échec de la sauvegarde du profil (${e?.message || 'Erreur réseau'})`);
+        safeTimeout(() => setSaveMessage(''), 5000);
+      }
+    } else {
+      setSaveMessage('🎁 +10 Jetons Troco offerts ! Bienvenue sur Troco.');
+      safeTimeout(() => setSaveMessage(''), 5000);
+    }
+    setIsOnboardingOpen(false);
+    playWelcomeGiftFanfare();
+    setIsWelcomeGiftModalOpen(true);
+  };
+
+  useEffect(() => {
+    if (isSignInWithEmailLink(auth, window.location.href)) {
+      let email = window.localStorage.getItem('emailForSignIn');
+      if (!email) {
+        email = window.prompt('Veuillez entrer votre email pour valider la connexion :');
+      }
+      if (email) {
+        setIsLoadingSession(true);
+        signInWithEmailLink(auth, email, window.location.href)
+          .then((result) => {
+            window.localStorage.removeItem('emailForSignIn');
+            const userName = result.user.email?.split('@')[0].toUpperCase() || 'UTILISATEUR';
+            const userHandle = '@' + (result.user.email?.split('@')[0] || 'user').toLowerCase().replace(/\s+/g, '');
+            setProfile(prev => {
+              const updated = { ...prev, loginMethod: 'Email Link', name: userName, username: userHandle, uid: result.user.uid };
+              storage.setDebounced('troco_user_profile', updated);
+              return updated;
+            });
+            setIsAuthenticated(true);
+            setSessionAuthenticated();
+          })
+          .catch((err) => {
+            logger.error('Magic link sign-in error:', err);
+          })
+          .finally(() => setIsLoadingSession(false));
+      }
+    }
+  }, [setIsAuthenticated, setIsLoadingSession, setProfile]);
 
 
   // État d'édition profil initialisé plus haut
@@ -638,6 +1402,51 @@ export default function App() {
     }, 1600);
     return () => clearInterval(interval);
   }, [hoveredCardId]);
+  const [detailMediaTab, setDetailMediaTab] = useState('video');
+  const [selectedDetailImageIndex, setSelectedDetailImageIndex] = useState(0);
+
+  const modalTouchStartRef = useRef(null);
+
+  const handleModalTouchStart = (e) => {
+    if (!e.touches || e.touches.length === 0) return;
+    modalTouchStartRef.current = {
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY,
+    };
+  };
+
+  const handleModalTouchMove = (e) => {
+    // Touch move listener for passive swipe tracking if needed
+  };
+
+  const handleModalTouchEnd = (e) => {
+    if (!modalTouchStartRef.current) return;
+    const touch = e.changedTouches && e.changedTouches.length > 0 ? e.changedTouches[0] : null;
+
+    if (touch && selectedListing) {
+      const deltaX = touch.clientX - modalTouchStartRef.current.x;
+      const deltaY = touch.clientY - modalTouchStartRef.current.y;
+      const gallery = selectedListing.gallery && selectedListing.gallery.length > 0 ? selectedListing.gallery : [selectedListing.image];
+
+      if (deltaY > 80 && Math.abs(deltaY) > Math.abs(deltaX)) {
+        setSelectedListing(null);
+        setSelectedDetailImageIndex(0);
+        modalTouchStartRef.current = null;
+        return;
+      }
+
+      if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 20 && gallery.length > 1) {
+        if (deltaX < 0) {
+          // Swiped left -> next photo
+          setSelectedDetailImageIndex(prev => (prev < gallery.length - 1 ? prev + 1 : 0));
+        } else {
+          // Swiped right -> prev photo
+          setSelectedDetailImageIndex(prev => (prev > 0 ? prev - 1 : gallery.length - 1));
+        }
+      }
+    }
+    modalTouchStartRef.current = null;
+  };
 
   const [selectedLanguages, setSelectedLanguages] = useState(['FR', 'EN']);
   const [selectedPayment, setSelectedPayment] = useState('all');
@@ -655,7 +1464,34 @@ export default function App() {
 
   const [postStep, setPostStep] = useState(1);
   const [publishMessage, setPublishMessage] = useState('');
-  const [postDraft, setPostDraft] = useState(DEFAULT_POST_DRAFT);
+
+  const defaultPostDraft = {
+    type: 'offer',
+    status: 'active',
+    title: '',
+    category: '',
+    customCategoryName: '',
+    format: 'onsite',
+    description: '',
+    compensation: 'credits',
+    durationType: 'hourly',
+    durationValue: '1',
+    price: '20',
+    location: '',
+    availability: '',
+    caution: '',
+    requiresCaution: false,
+    cautionAmount: '',
+    trocoTokens: '1',
+    euroAmount: '',
+    isUrgent: false,
+    locationPrivacy: 'exact',
+    coordinates: null,
+    image: '',
+    imageUrl: '',
+    videoUrl: '',
+  };
+  const [postDraft, setPostDraft] = useState(defaultPostDraft);
   const [showPublishedPopup, setShowPublishedPopup] = useState(false);
   const [publishedListing, setPublishedListing] = useState(null);
 
@@ -687,83 +1523,518 @@ export default function App() {
     stopRingtone,
   } = useWebRTC({ profileName: profile?.name || 'Membre', profileUid: profile?.uid || (auth.currentUser && auth.currentUser.uid), selectedChat });
 
-  // ---- APPELS ENTRANTS & WEBRTC RACINE (HOOK CENTRALISÉ) ----
-  const {
-    activeIncomingCall,
-    attachLocalStream,
-    attachRemoteStream,
-    handleAcceptIncomingCall,
-    handleDeclineIncomingCall,
-    isCallPip,
-    setIsCallPip,
-    pipPosition,
-    setPipPosition,
-    handlePipPointerDown,
-    handlePipPointerMove,
-    handlePipPointerUp,
-    handlePipPointerCancel,
-    handlePipContentClick,
-    callDuration,
-    formatCallTimer,
-    isSettlementModalOpen,
-    setIsSettlementModalOpen,
-    settlementCallDuration,
-    setSettlementCallDuration,
-    handleTransferCallTokens,
-  } = useGlobalCalls({
-    profile,
-    setProfile,
-    incomingCall,
-    localStream,
-    remoteStream,
-    callState,
-    acceptIncomingCall,
-    declineIncomingCall,
-    playRingtone,
-    stopRingtone,
-    chatsList,
-    setSelectedChat,
-    selectedChat,
-    setUserTransactions,
-    setTransactionSuccessModalConfig,
-    setSaveMessage,
-    safeTimeout,
-  });
+  // ---- LISTENER GLOBAL DES APPELS (ROOT LEVEL) ----
+  const [globalIncomingCall, setGlobalIncomingCall] = useState(null);
+  const activeIncomingCall = incomingCall || globalIncomingCall;
 
-  // ---- MESSAGES GLOBAUX & NOTIFICATIONS ARRIÈRE-PLAN (HOOK CENTRALISÉ) ----
-  useGlobalMessages({
-    profile,
-    activeTab,
-    selectedChat,
-    chatsList,
-    setSelectedChat,
-    setActiveTab,
-  });
+  // Attacheurs de flux universels sans conflit de ref (évite les écrans noirs sur tous navigateurs)
+  const attachLocalStream = useCallback((el) => {
+    if (el && localStream) {
+      if (el.srcObject !== localStream) {
+        el.srcObject = localStream;
+      }
+      el.play().catch(() => { });
+    }
+  }, [localStream]);
 
-  // ---- ACTIONS COMPTE UTILISATEUR & RGPD (HOOK CENTRALISÉ) ----
-  const {
-    handleDeleteAccount,
-    handleAcceptCgu,
-    handleCompleteOnboarding,
-    handleSignOut,
-  } = useAccountActions({
-    profile,
-    setProfile,
-    setProfileDraft,
-    setSkills,
-    setEquipment,
-    setCguDismissed,
-    setSaveMessage,
-    setIsOnboardingOpen,
-    setIsWelcomeGiftModalOpen,
-    setIsAuthenticated,
-    setSelectedChat,
-    setSelectedListing,
-    endCall,
-  });
+  const attachRemoteStream = useCallback((el) => {
+    if (el && remoteStream) {
+      if (el.srcObject !== remoteStream) {
+        el.srcObject = remoteStream;
+      }
+      el.play().catch(() => { });
+    }
+  }, [remoteStream]);
+
+  // Décrochage universel direct avec bascule immédiate vers la visio plein écran
+  const handleAcceptIncomingCall = async (incomingObj = null) => {
+    try {
+      const targetCall = incomingObj || activeIncomingCall;
+      setGlobalIncomingCall(null);
+      stopRingtone();
+      const res = await acceptIncomingCall(targetCall);
+      const targetChatId = res?.chatId || targetCall?.chatId || targetCall?.roomId;
+      if (targetChatId) {
+        const foundChat = (chatsList || []).find(c => String(c.id) === String(targetChatId));
+        if (foundChat) {
+          setSelectedChat(foundChat);
+        } else {
+          setSelectedChat({ id: targetChatId, user: res?.from || targetCall?.from || 'Interlocuteur' });
+        }
+      }
+      setIsCallPip(false);
+    } catch (e) {
+      logger.warn('[WebRTC] Accept incoming call error:', e);
+    }
+  };
+
+  const handleDeclineIncomingCall = useCallback((incomingObj = null) => {
+    setGlobalIncomingCall(null);
+    declineIncomingCall(incomingObj || activeIncomingCall);
+  }, [activeIncomingCall, declineIncomingCall]);
+
+  useEffect(() => {
+    const currentUid = (auth && auth.currentUser && auth.currentUser.uid) || profile?.uid;
+    const normalizedProfile = (profile?.name || '').trim().toLowerCase();
+    if (!currentUid || !db) return;
+
+    const unsubs = [];
+    try {
+      const handleCallDocChange = (change) => {
+        const data = change.doc.data();
+        if (!data) return;
+        if (data.fromUid && String(data.fromUid) === String(currentUid)) return;
+        if (data.callerUid && String(data.callerUid) === String(currentUid)) return;
+        if (data.from && normalizedProfile && (data.from || '').trim().toLowerCase() === normalizedProfile) return;
+
+        if ((change.type === 'added' || change.type === 'modified') && data.status === 'ringing') {
+          // Affichage inconditionnel de l'UI en premier
+          setGlobalIncomingCall({
+            chatId: change.doc.id,
+            callId: change.doc.id,
+            roomId: change.doc.id,
+            type: data.type || 'video',
+            from: data.from || 'Interlocuteur',
+            fromUid: data.fromUid || data.callerUid || null,
+            ...data,
+          });
+
+          // Isolation de la lecture audio : L'échec de l'audio (Autoplay Policy) ne doit JAMAIS bloquer l'état de l'UI
+          try {
+            if (typeof playRingtone === 'function') {
+              playRingtone();
+            }
+          } catch (audioErr) {
+            logger.warn('Autoplay bloqué', audioErr);
+          }
+
+          safeVibrate([400, 150, 400, 150, 400]);
+        }
+        if (change.type === 'removed') {
+          setGlobalIncomingCall(prev => (prev?.chatId === change.doc.id || prev?.callId === change.doc.id ? null : prev));
+          stopRingtone();
+        }
+        if (change.type === 'modified' && data.status && data.status !== 'ringing') {
+          setGlobalIncomingCall(prev => (prev?.chatId === change.doc.id || prev?.callId === change.doc.id ? null : prev));
+          stopRingtone();
+        }
+      };
+
+      // 1. Écoute par targetParticipants (UID)
+      const qTarget = query(
+        collection(db, 'calls'),
+        where('targetParticipants', 'array-contains', String(currentUid)),
+        limit(10)
+      );
+      unsubs.push(onSnapshot(qTarget, (snap) => snap.docChanges().forEach(handleCallDocChange), (err) => {
+        logger.warn('[App.js] Global calls targetParticipants error:', err);
+      }));
+
+      // 2. Écoute par calleeUid direct
+      const qCallee = query(
+        collection(db, 'calls'),
+        where('calleeUid', '==', String(currentUid)),
+        limit(5)
+      );
+      unsubs.push(onSnapshot(qCallee, (snap) => snap.docChanges().forEach(handleCallDocChange), (err) => {
+        logger.warn('[App.js] Global calls calleeUid error:', err);
+      }));
+
+      // 3. Écoute par toUid direct
+      const qToUid = query(
+        collection(db, 'calls'),
+        where('toUid', '==', String(currentUid)),
+        limit(5)
+      );
+      unsubs.push(onSnapshot(qToUid, (snap) => snap.docChanges().forEach(handleCallDocChange), (err) => {
+        logger.warn('[App.js] Global calls toUid error:', err);
+      }));
+
+      // 4. Écoute de secours par nom de profil si disponible
+      if (profile?.name) {
+        const qName = query(
+          collection(db, 'calls'),
+          where('targetParticipants', 'array-contains', profile.name),
+          limit(5)
+        );
+        unsubs.push(onSnapshot(qName, (snap) => snap.docChanges().forEach(handleCallDocChange), () => { }));
+      }
+    } catch (e) {
+      logger.warn('[App.js] Error setting up global calls listener:', e);
+    }
+
+    return () => {
+      unsubs.forEach(u => { try { if (typeof u === 'function') u(); } catch (_) { } });
+    };
+  }, [profile?.uid, profile?.name, playRingtone, stopRingtone]);
+
+  // Références stables pour éviter de déconnecter/reconnecter les écouteurs Firestore à chaque navigation
+  const activeTabRef = useRef(activeTab);
+  useEffect(() => { activeTabRef.current = activeTab; }, [activeTab]);
+
+  const selectedChatRef = useRef(selectedChat);
+  useEffect(() => { selectedChatRef.current = selectedChat; }, [selectedChat]);
+
+  // Set anti-spam pour éviter les notifications répétées lors des multiples snapshots Firebase
+  const notifiedMessageIds = useRef(new Set());
+
+  // ---- TÂCHE 1 : LISTENER GLOBAL DES MESSAGES EN ARRIÈRE-PLAN AVEC TOAST ANTI-SPAM ----
+  useEffect(() => {
+    const currentUid = (auth && auth.currentUser && auth.currentUser.uid) || profile?.uid;
+    const myName = (profile?.name || '').trim().toLowerCase();
+    const myUsername = (profile?.username || '').trim().toLowerCase();
+    if (!currentUid || !db) return;
+
+    let isInitial = true;
+    const unsubs = [];
+
+    const handleChatDocChange = (change) => {
+      const data = change.doc.data();
+      if (!data) return;
+
+      const chatId = data.id || change.doc.id;
+      const lastSenderUid = data.lastSenderUid ? String(data.lastSenderUid) : null;
+      const lastSenderName = (data.lastSenderName || data.lastSender || '').trim().toLowerCase();
+
+      // Ignorer les messages envoyés par l'utilisateur courant lui-même
+      const isFromMe = (lastSenderUid && lastSenderUid === String(currentUid)) ||
+        (myName && lastSenderName === myName) ||
+        (myUsername && lastSenderName === myUsername);
+
+      if (isFromMe) return;
+
+      // Détecter un nouveau message entrant non lu (sur modification ou ajout après le chargement initial)
+      if (change.type === 'modified' || (change.type === 'added' && !isInitial)) {
+        // Résolution de l'identifiant unique du message pour le Set anti-spam
+        const rawTime = data.lastMessageTimestamp?.toMillis?.() ||
+          data.lastMessageTimestamp?.seconds ||
+          data.lastMessageTime?.seconds ||
+          data.lastMessageTime ||
+          data.updatedAt?.seconds ||
+          data.updatedAt ||
+          '';
+        const messageId = data.lastMessageId || data.lastMsgId || `${chatId}_${lastSenderUid || lastSenderName}_${rawTime}_${data.lastMessage || ''}`;
+
+        // ANTI-SPAM : Si l'ID du message a déjà été notifié, ignorer les snapshots suivants
+        if (notifiedMessageIds.current && notifiedMessageIds.current.has(messageId)) {
+          return;
+        }
+
+        // Condition vitale : Affiche le Toast UNIQUEMENT si l'utilisateur n'est pas déjà dans ce chat actif
+        const currentActiveTab = activeTabRef.current;
+        const currentSelectedChat = selectedChatRef.current;
+        const currentPath = typeof window !== 'undefined' ? (window.location.pathname + window.location.hash + window.location.search) : '';
+        const isCurrentChatUrl = currentPath.includes(String(chatId)) || (currentPath.includes('chat') && currentSelectedChat && String(currentSelectedChat.id) === String(chatId));
+        const isCurrentlyViewingThisChat = (currentActiveTab === 'chat' && currentSelectedChat && String(currentSelectedChat.id) === String(chatId)) || isCurrentChatUrl;
+
+        if (!isCurrentlyViewingThisChat) {
+          // Enregistrer dans le Set anti-spam
+          notifiedMessageIds.current.add(messageId);
+          if (notifiedMessageIds.current.size > 500) {
+            const oldest = notifiedMessageIds.current.values().next().value;
+            notifiedMessageIds.current.delete(oldest);
+          }
+
+          const senderTitle = data.lastSenderName || data.lastSender || data.user || 'Nouveau message';
+          const messageText = data.lastMessage || 'Nouveau message reçu';
+          const senderAvatar = data.avatar || data.authorAvatar || null;
+
+          // Déclencher l'affichage du Toast de notification Dynamic Island au premier plan (z-[999999])
+          notificationService.show({
+            id: messageId,
+            title: senderTitle,
+            message: messageText,
+            avatar: senderAvatar,
+            icon: 'chat',
+            duration: 3000,
+            onClick: () => {
+              setSelectedChat(data);
+              if (typeof setActiveTab === 'function') {
+                setActiveTab('chat');
+              }
+              if (typeof window !== 'undefined') {
+                window.location.hash = `chat/${chatId}`;
+              }
+            },
+            data: { chatId, messageId }
+          });
+
+          // Vibration haptique
+          safeVibrate([80, 40, 80]);
+        }
+      }
+    };
+
+    try {
+      // 1. Écoute par participantUids (UID universel)
+      const qUids = query(
+        collection(db, 'chats'),
+        where('participantUids', 'array-contains', String(currentUid))
+      );
+      const unsubUids = onSnapshot(qUids, (snap) => {
+        snap.docChanges().forEach(handleChatDocChange);
+        isInitial = false;
+      }, (err) => {
+        logger.warn('[App.js] Background message listener error (participantUids):', err);
+      });
+      unsubs.push(unsubUids);
+
+      // 2. Écoute par participants (UID Firebase strict pour respecter les règles de sécurité Firestore)
+      const qParticipants = query(
+        collection(db, 'chats'),
+        where('participants', 'array-contains', String(currentUid))
+      );
+      const unsubParticipants = onSnapshot(qParticipants, (snap) => {
+        snap.docChanges().forEach(handleChatDocChange);
+        isInitial = false;
+      }, (err) => {
+        logger.warn('[App.js] Background message listener warning (participants):', err);
+      });
+      unsubs.push(unsubParticipants);
+    } catch (err) {
+      logger.warn('[App.js] Background message listener setup error:', err);
+    }
+
+    return () => {
+      unsubs.forEach(u => { try { if (typeof u === 'function') u(); } catch (_) { } });
+    };
+  }, [profile?.uid, profile?.name, profile?.username, setSelectedChat, setActiveTab]);
+
+  // Écoute de l'événement personnalisé troco:open_chat pour basculer vers le chat
+  useEffect(() => {
+    const handleOpenChatEvent = (e) => {
+      const chatId = e.detail?.chatId;
+      if (chatId) {
+        const found = (chatsList || []).find(c => String(c.id) === String(chatId));
+        if (found) {
+          setSelectedChat(found);
+        } else {
+          setSelectedChat({ id: chatId, user: e.detail?.user || 'Interlocuteur' });
+        }
+        if (typeof setActiveTab === 'function') {
+          setActiveTab('chat');
+        }
+      }
+    };
+    window.addEventListener('troco:open_chat', handleOpenChatEvent);
+    return () => window.removeEventListener('troco:open_chat', handleOpenChatEvent);
+  }, [chatsList, setSelectedChat, setActiveTab]);
 
   // État de gestion tactile d'annonce mobile (Chantier 4)
   const [mobileListingActionTarget, setMobileListingActionTarget] = useState(null);
+
+  // ---- ÉTATS APPEL WEBRTC AVANCÉ (PIP) ----
+  const [isCallPip, setIsCallPip] = useState(false);
+  const [callDuration, setCallDuration] = useState(0);
+  const [pipPosition, setPipPosition] = useState({
+    x: typeof window !== 'undefined' ? Math.max(10, window.innerWidth - 230) : 100,
+    y: typeof window !== 'undefined' ? Math.max(10, window.innerHeight - 240) : 100
+  });
+
+  // Gestion Pointer Events API unifiée pour le Drag-and-Drop (toucher/souris à 60fps)
+  const pipPointerDragRef = useRef({
+    isDragging: false,
+    startX: 0,
+    startY: 0,
+    initialPosX: 0,
+    initialPosY: 0,
+    movedDistance: 0,
+  });
+
+  const [isSettlementModalOpen, setIsSettlementModalOpen] = useState(false);
+  const [settlementCallDuration, setSettlementCallDuration] = useState(0);
+  const prevActiveRef = useRef(false);
+
+  // Chronomètre de Deal en temps réel pendant l'appel (1h = 1 Jeton Troco)
+  useEffect(() => {
+    let timer = null;
+    if (callState.active && !callState.ringing) {
+      timer = setInterval(() => {
+        setCallDuration(prev => prev + 1);
+      }, 1000);
+      prevActiveRef.current = true;
+    } else {
+      if (prevActiveRef.current && callDuration > 5) {
+        setSettlementCallDuration(callDuration);
+        setIsSettlementModalOpen(true);
+      }
+      prevActiveRef.current = false;
+      setCallDuration(0);
+      setIsCallPip(false);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [callState.active, callState.ringing]); // eslint-disable-line
+
+  // Rétribution en jetons & structure transparente de frais (Étape 5)
+  const handleTransferCallTokens = async ({ tokens, insurance, duration }) => {
+    const costTokens = Number(tokens) || 1;
+    const insuranceFee = insurance ? 1.99 : 0;
+    const currentUid = profile?.uid || auth.currentUser?.uid;
+
+    if (!currentUid) {
+      alert('Veuillez vous connecter pour transférer des jetons.');
+      return;
+    }
+
+    // 🚨 Isole le UID cible DE FAÇON IMPÉRATIVE :
+    const partnerUid = selectedChat?.participants?.find(uid => uid && uid !== currentUid) || selectedChat?.partnerUid || selectedChat?.authorUid;
+
+    const partner = selectedChat?.user || 'Interlocuteur';
+
+    // RÈGLE STRICTE : Si partnerUid est indéfini, la transaction DOIT échouer avec une erreur explicite. Ne jamais débiter si la cible est introuvable.
+    if (!partnerUid || partnerUid === currentUid) {
+      logger.error('🚨 [Finance] Transfert annulé : Destinataire (partnerUid) introuvable ou invalide.', {
+        selectedChat,
+        currentUid,
+        partnerUid
+      });
+      alert('Erreur de transfert : Impossible d\'identifier le destinataire des jetons. Aucun montant n\'a été débité.');
+      return;
+    }
+
+    // Vérification préalable de la solvabilité
+    const curSenderTokens = Number(profile?.trocoTokens ?? 0);
+    const curSenderEuro = Number(profile?.euroBalance ?? 0);
+    if (curSenderTokens < costTokens) {
+      alert(`Solde de jetons insuffisant (${curSenderTokens} disponible(s), ${costTokens} requis).`);
+      return;
+    }
+    if (insuranceFee > 0 && curSenderEuro < insuranceFee) {
+      alert(`Solde d'euros insuffisant pour l'assurance (${curSenderEuro}€ disponible(s), ${insuranceFee}€ requis).`);
+      return;
+    }
+
+    const transactionId = `TRK-CALL-${Date.now().toString().slice(-6)}`;
+    const newTx = {
+      id: `tx-visio-${Date.now()}`,
+      transactionId,
+      title: `Rétribution Visio (${partner})`,
+      amount: insuranceFee,
+      tokens: costTokens,
+      type: 'token_transfer',
+      status: 'completed',
+      date: new Date().toISOString(),
+      partner: partner,
+      duration: duration,
+      freeServiceFee: true,
+    };
+
+    // PERSISTANCE TRANSACTIONNELLE VIA dealService (atomique unifié)
+    try {
+      const transferRes = await dealService.transferTokensAtomically({
+        fromUid: currentUid,
+        toUid: partnerUid,
+        tokens: Number(costTokens),
+        euros: 0,
+        method: 'call_tokens',
+        metadata: {
+          partner,
+          duration,
+          insuranceFee,
+        },
+      });
+
+      // Mise à jour optimiste locale après validation de la transaction backend
+      setProfile(prev => ({
+        ...prev,
+        trocoTokens: transferRes.newSenderTokens !== undefined ? transferRes.newSenderTokens : Math.max(0, (prev?.trocoTokens ?? curSenderTokens) - costTokens),
+        euroBalance: transferRes.newSenderEuro !== undefined ? transferRes.newSenderEuro : (insuranceFee > 0 ? Number(((prev?.euroBalance ?? curSenderEuro) - insuranceFee).toFixed(2)) : (prev?.euroBalance ?? curSenderEuro)),
+        dealsCompleted: (prev?.dealsCompleted || 0) + 1,
+      }));
+      setUserTransactions(prev => [newTx, ...prev]);
+
+      playApplePaySound();
+      playBetclicBalanceSound(true);
+      setTransactionSuccessModalConfig({
+        isOpen: true,
+        type: 'sent',
+        amount: costTokens,
+        currency: 'tokens',
+        partnerName: partner,
+        notificationId: null,
+      });
+      setSaveMessage(`🤝 ${costTokens} Jeton${costTokens > 1 ? 's' : ''} Troco transféré(s) à ${partner} (Frais de service : 0,00 €) !`);
+      safeTimeout(() => setSaveMessage(''), 5000);
+    } catch (e) {
+      logger.error('🚨 [walletService] Erreur transfert jetons visio:', e);
+      const errorMsg = e?.message || 'Erreur réseau ou solde insuffisant.';
+      setSaveMessage(`❌ Transfert échoué : ${errorMsg}`);
+      safeTimeout(() => setSaveMessage(''), 5000);
+      alert(`Échec du transfert : ${errorMsg}`);
+    }
+  };
+
+  // Formateur du chronomètre de deal (HH:MM:SS ou MM:SS)
+  const formatCallTimer = (totalSeconds) => {
+    const hrs = Math.floor(totalSeconds / 3600);
+    const mins = Math.floor((totalSeconds % 3600) / 60);
+    const secs = totalSeconds % 60;
+    if (hrs > 0) {
+      return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Handlers Pointer Events (pointerdown, pointermove, pointerup, pointercancel)
+  const handlePipPointerDown = (e) => {
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch (_) { }
+    pipPointerDragRef.current = {
+      isDragging: true,
+      startX: e.clientX,
+      startY: e.clientY,
+      initialPosX: pipPosition.x,
+      initialPosY: pipPosition.y,
+      movedDistance: 0,
+    };
+  };
+
+  const handlePipPointerMove = (e) => {
+    if (!pipPointerDragRef.current.isDragging) return;
+    const deltaX = e.clientX - pipPointerDragRef.current.startX;
+    const deltaY = e.clientY - pipPointerDragRef.current.startY;
+    pipPointerDragRef.current.movedDistance = Math.hypot(deltaX, deltaY);
+
+    const bottomNavOffset = 75;
+    const minX = 0;
+    const maxX = Math.max(0, window.innerWidth - 45);
+    const maxY = Math.max(10, window.innerHeight - 150 - bottomNavOffset);
+
+    const nextX = Math.max(minX, Math.min(maxX, pipPointerDragRef.current.initialPosX + deltaX));
+    const nextY = Math.max(10, Math.min(maxY, pipPointerDragRef.current.initialPosY + deltaY));
+
+    setPipPosition({ x: nextX, y: nextY });
+  };
+
+  const handlePipPointerUp = (e) => {
+    if (!pipPointerDragRef.current.isDragging) return;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch (_) { }
+    pipPointerDragRef.current.isDragging = false;
+  };
+
+  const handlePipPointerCancel = (e) => {
+    if (!pipPointerDragRef.current.isDragging) return;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch (_) { }
+    pipPointerDragRef.current.isDragging = false;
+  };
+
+  const handlePipContentClick = (e) => {
+    // Si la distance parcourue est >= 6px, c'est un glisser-déposer : ignorer le clic pour éviter les faux déclenchements
+    if (pipPointerDragRef.current.movedDistance >= 6) {
+      e.stopPropagation();
+      return;
+    }
+    setIsCallPip(false);
+  };
+
   // ---- RÉSOLUTION DE L'AVATAR AUTEUR (RÉEL ET ZERO-TRUST SANS PERSONAS IA) ----
   const getAuthorAvatar = useCallback((name) => {
     if (!name) return '';
@@ -849,36 +2120,383 @@ export default function App() {
   const paymentOptions = ['all', 'credits', 'cash', 'troc', 'hybrid'];
   const paymentLabels = { all: t('paymentAll') || t('all') || 'Tous', credits: t('paymentCredits') || 'Crédits', cash: t('paymentCash') || 'Cash', troc: t('paymentTroc') || 'Troc', hybrid: t('paymentHybrid') || 'Hybride' };
 
-  // ---- FLUX D'ANNONCES & FILTRAGE DU FEED (HOOK CENTRALISÉ) ----
-  const {
+  const [listings, setListings] = useState([]);
+
+
+  // ---- ÉTATS PAGINATION FEED (PAGINATED INFINITE SCROLL) ----
+  const [lastVisibleListingDoc, setLastVisibleListingDoc] = useState(null);
+  const [hasMoreListings, setHasMoreListings] = useState(true);
+  const [isLoadingMoreListings, setIsLoadingMoreListings] = useState(false);
+
+  // ---- SYNC TEMPS RÉEL FIRESTORE (LIMIT 50) ----
+  // Chargement des annonces réelles Firestore filtrées par status == 'active' pour se conformer aux règles de sécurité
+  useEffect(() => {
+    let unsubFirestore = () => { };
+    let isCancelled = false;
+
+    // Requête principale conforme aux règles Firestore (where status == 'active')
+    const initialQuery = query(
+      collection(db, 'listings'),
+      where('status', '==', 'active'),
+      limit(50)
+    );
+
+    unsubFirestore = onSnapshot(
+      initialQuery,
+      (snapshot) => {
+        if (isCancelled) return;
+        const firestoreListings = snapshot.docs.map((docSnap) => ({
+          id: docSnap.data().id || docSnap.id,
+          firestoreId: docSnap.id,
+          ...docSnap.data(),
+          status: docSnap.data().status || 'active',
+          isDemo: false,
+          _doc: docSnap,
+        }));
+
+        const lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
+        setLastVisibleListingDoc(lastDoc);
+        setHasMoreListings(snapshot.docs.length >= 50);
+
+        setListings(prev => {
+          const customLocalListings = prev.filter(p => !p.isDemo && !firestoreListings.some(f => f.id === p.id));
+          return [...firestoreListings, ...customLocalListings];
+        });
+      },
+      (error) => {
+        logger.warn('[Firestore] onSnapshot listings query error:', error);
+        if (!isCancelled) {
+          try {
+            const fallbackQuery = query(collection(db, 'listings'), limit(50));
+            unsubFirestore = onSnapshot(fallbackQuery, (snapshot) => {
+              if (isCancelled) return;
+              const firestoreListings = snapshot.docs.map((docSnap) => ({
+                id: docSnap.data().id || docSnap.id,
+                firestoreId: docSnap.id,
+                ...docSnap.data(),
+                status: docSnap.data().status || 'active',
+                isDemo: false,
+                _doc: docSnap,
+              }));
+              const lastDoc = snapshot.docs[snapshot.docs.length - 1] || null;
+              setLastVisibleListingDoc(lastDoc);
+              setHasMoreListings(snapshot.docs.length >= 50);
+              setListings(prev => {
+                const customLocalListings = prev.filter(p => !p.isDemo && !firestoreListings.some(f => f.id === p.id));
+                return [...firestoreListings, ...customLocalListings];
+              });
+            }, (fallbackErr) => {
+              logger.error('[Firestore] Fallback listings query failed:', fallbackErr);
+            });
+          } catch (_) { }
+        }
+      }
+    );
+
+    return () => {
+      isCancelled = true;
+      try { unsubFirestore(); } catch (_) {}
+    };
+  }, []);
+
+  const handleLoadMoreListings = async () => {
+    if (isLoadingMoreListings || !hasMoreListings) return;
+    setIsLoadingMoreListings(true);
+    try {
+      let result;
+      if (userCoords && Array.isArray(userCoords) && userCoords.length >= 2 && !isInfiniteRadius && radiusKm < 2000) {
+        result = await fetchListingsByGeohash({ center: userCoords, radiusKm, pageSize: 25 });
+      } else {
+        result = await fetchListingsPaginated({ pageSize: 20, lastDoc: lastVisibleListingDoc });
+      }
+
+      if (result && result.items && result.items.length > 0) {
+        setListings(prev => {
+          const existingIds = new Set(prev.map(p => p.id));
+          const newItems = result.items.filter(item => !existingIds.has(item.id));
+          return [...prev, ...newItems];
+        });
+        setLastVisibleListingDoc(result.lastVisible || null);
+        setHasMoreListings(result.hasMore || false);
+      } else {
+        setHasMoreListings(false);
+      }
+    } catch (err) {
+      logger.error('[App] handleLoadMoreListings error:', err);
+    } finally {
+      setIsLoadingMoreListings(false);
+    }
+  };
+
+  const handleRefreshFeed = async () => {
+    try {
+      setLastVisibleListingDoc(null);
+      setHasMoreListings(true);
+      let result;
+      if (userCoords && Array.isArray(userCoords) && userCoords.length >= 2 && !isInfiniteRadius && radiusKm < 2000) {
+        result = await fetchListingsByGeohash({ center: userCoords, radiusKm, pageSize: 25 });
+      } else {
+        result = await fetchListingsPaginated({ pageSize: 50, lastDoc: null });
+      }
+      if (result && result.items) {
+        setListings(result.items);
+        setLastVisibleListingDoc(result.lastVisible || null);
+        setHasMoreListings(result.hasMore || false);
+      }
+    } catch (err) {
+      logger.error('[App] handleRefreshFeed error:', err);
+    }
+  };
+
+  const getListingDistance = (item) => {
+    if (typeof item.distanceKm === 'number') return item.distanceKm;
+    if (item.coordinates && userCoords) {
+      return calculateHaversineDistance(userCoords[0], userCoords[1], item.coordinates[0], item.coordinates[1]);
+    }
+    const match = String(item.location || '').match(/(\d+(?:\.\d+)?)\s*km/i);
+    if (match) return parseFloat(match[1]);
+    return null;
+  };
+
+  const removeAccents = (str = '') => {
+    return String(str).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  };
+
+  // Résolution dynamique des alias géographiques via OpenStreetMap Nominatim
+  const [dynamicSearchAliases, setDynamicSearchAliases] = useState([]);
+
+  useEffect(() => {
+    const abortController = new AbortController();
+    let isCurrentSearch = true;
+    const raw = (debouncedSearchQuery || '').trim();
+    if (raw.length >= 3) {
+      searchNominatim(raw, { limit: 3, signal: abortController.signal }).then(results => {
+        if (!isCurrentSearch) return;
+        if (results && results.length > 0) {
+          const names = results
+            .map(r => [r.cityName, r.displayName, r.country])
+            .flat()
+            .filter(Boolean)
+            .map(removeAccents);
+          setDynamicSearchAliases(Array.from(new Set(names)));
+        } else {
+          setDynamicSearchAliases([]);
+        }
+      }).catch((error) => {
+        if (error?.name !== 'AbortError' && isCurrentSearch) {
+          setDynamicSearchAliases([]);
+        }
+      });
+    } else {
+      setDynamicSearchAliases([]);
+    }
+
+    return () => {
+      isCurrentSearch = false;
+      abortController.abort();
+    };
+  }, [debouncedSearchQuery]);
+
+  // Extraction des UIDs d'auteurs pour le listener users_public chunké & paginé
+  const visibleAuthorUids = useMemo(() => {
+    const uids = new Set();
+    listings.forEach(item => {
+      const uid = item.authorUid || item.userId || item.sellerId;
+      if (uid && typeof uid === 'string') uids.add(uid);
+    });
+    return Array.from(uids);
+  }, [listings]);
+
+  const { usersMap: usersPublicMap, usersList: usersPublicList } = useUsersPublic({ uids: visibleAuthorUids });
+
+  // Sync usersPublic vers allFirestoreUsers pour compatibilité
+  useEffect(() => {
+    setAllFirestoreUsers(usersPublicList);
+  }, [usersPublicList]);
+
+  const usersByUid = useMemo(() => {
+    const map = new Map();
+    allFirestoreUsers.forEach((user) => {
+      if (user.uid) map.set(user.uid, user);
+    });
+    return map;
+  }, [allFirestoreUsers]);
+
+  const usersByName = useMemo(() => {
+    const map = new Map();
+    allFirestoreUsers.forEach((user) => {
+      if (user.name) map.set(user.name.trim().toLowerCase(), user);
+    });
+    return map;
+  }, [allFirestoreUsers]);
+
+  const filteredListings = useMemo(() => {
+    return listings.filter((item) => {
+      if (hideDemos && item.isDemo) return false;
+
+      const rawQuery = (deferredSearchQuery || '').trim();
+      const cleanQuery = removeAccents(rawQuery);
+      const words = cleanQuery.split(/\s+/).filter(Boolean);
+
+      const itemLocationNorm = removeAccents(item.location || '');
+      const itemTitleNorm = removeAccents(item.title || '');
+      const itemCategoryNorm = removeAccents(item.category || '');
+      const itemCompNorm = removeAccents(item.compensation || '');
+      const allTags = [
+        ...(Array.isArray(item.tags) ? item.tags : []),
+        ...(typeof generateTags === 'function' ? (generateTags(item.title || '', item.description || '') || []) : [])
+      ];
+      const itemTagsNorm = removeAccents(allTags.join(' '));
+      const itemDescNorm = removeAccents(item.description || '');
+      const transText = item.translations ? Object.values(item.translations).map(t => `${t.title || ''} ${t.description || ''}`).join(' ') : '';
+      const itemTransNorm = removeAccents(transText);
+
+      const searchText = `${itemTitleNorm} ${itemCategoryNorm} ${itemLocationNorm} ${itemCompNorm} ${itemTagsNorm} ${itemDescNorm} ${itemTransNorm}`;
+
+      const matchesSearch = (() => {
+        if (!cleanQuery) return true;
+
+        // 1. Match direct du texte
+        if (searchText.includes(cleanQuery)) return true;
+
+        // 2. Match via recherche dynamique OpenStreetMap Nominatim (remplace les dictionnaires statiques)
+        if (dynamicSearchAliases.length > 0 && dynamicSearchAliases.some(alias => searchText.includes(alias) || alias.includes(cleanQuery))) {
+          return true;
+        }
+
+        // 3. Match mot par mot
+        return words.every(w => searchText.includes(w));
+      })();
+      const matchesFormat = (() => {
+        if (formatFilter === 'all' || !formatFilter) return true;
+        const itemFormat = String(item.format || (item.type === 'remote' ? 'remote' : (item.type === 'both' ? 'both' : 'onsite'))).toLowerCase();
+        if (formatFilter === 'remote') {
+          return itemFormat === 'remote' || itemFormat === 'both' || itemFormat.includes('visio') || itemFormat.includes('distance');
+        }
+        if (formatFilter === 'onsite') {
+          return itemFormat === 'onsite' || itemFormat === 'both' || itemFormat.includes('presentiel') || itemFormat.includes('sur place');
+        }
+        return true;
+      })();
+
+      const matchesCategory = (() => {
+        if (!selectedCategory || selectedCategory === 'all' || selectedCategory === 'Tous') return true;
+        const cat = String(item.category || '').toLowerCase();
+        const selCat = String(selectedCategory || '').toLowerCase();
+
+
+        if (selCat.includes('cours') || selCat.includes('compétence')) {
+          return cat.includes('cours') || cat.includes('compétence') || cat.includes('formation') || cat.includes('coaching');
+        }
+        if (selCat.includes('outillage') || selCat.includes('matériel')) {
+          return cat.includes('outillage') || cat.includes('matériel') || cat.includes('prêt');
+        }
+        if (selCat.includes('services') || selCat.includes('dépannage')) {
+          return cat.includes('services') || cat.includes('dépannage') || cat.includes('réparation');
+        }
+        if (selCat.includes('logement') || selCat.includes('swap')) {
+          return cat.includes('logement') || cat.includes('swap') || cat.includes('hébergement');
+        }
+        return cat.includes(selCat);
+      })();
+
+      const itemLangs = item.languages ? [...item.languages, ...(item.translations ? Object.keys(item.translations) : []), item.nativeLang || 'FR'] : [item.nativeLang || 'FR', ...(item.translations ? Object.keys(item.translations) : [])];
+      const matchesLanguage = selectedLanguages.length === 0 || itemLangs.some(lang => selectedLanguages.includes(lang));
+      const compStr = String(item.compensation || '');
+      const matchesPayment = selectedPayment === 'all' || (selectedPayment === 'credits' && compStr.includes('Crédit')) || (selectedPayment === 'cash' && compStr.includes('€')) || (selectedPayment === 'troc' && compStr.includes('Troc')) || (selectedPayment === 'hybrid' && compStr.includes('+'));
+
+      const distance = getListingDistance(item);
+      const matchesDistance = (() => {
+        if (isInfiniteRadius || radiusKm >= 2000) return true;
+        // Si on n'a pas pu calculer la distance (pas de coordonnées) :
+        // on affiche l'annonce quand même pour ne pas vider le feed.
+        if (distance === null) return true;
+        return distance <= radiusKm;
+      })();
+
+      // Filtrage Shadow-Ban via users_public (Lookup O(1) Map)
+      const authorUid = item.authorUid || item.userId || item.sellerId;
+      const authorUser = (authorUid && usersPublicMap.get(authorUid))
+        || (authorUid && usersByUid.get(authorUid))
+        || usersByName.get((item.author || '').trim().toLowerCase());
+      const currentUid = profile?.uid || auth.currentUser?.uid;
+      const isSelf = (authorUid && currentUid && authorUid === currentUid) || (item.author && profile?.name && item.author === profile.name);
+
+      if ((authorUser?.isBanned || authorUser?.isShadowBanned || authorUser?.shadowBannedPublic) && !isSelf) return false;
+
+      return item.status !== 'paused' && matchesSearch && matchesFormat && matchesCategory && matchesLanguage && matchesPayment && matchesDistance;
+    }).sort((a, b) => {
+      // 1. Annonces boostées / sponsorisées en priorité absolue (PC & Mobile)
+      const aBoost = (a.isBoosted || a.sponsored) ? 1 : 0;
+      const bBoost = (b.isBoosted || b.sponsored) ? 1 : 0;
+      if (bBoost !== aBoost) return bBoost - aBoost;
+
+      // 2. Annonces créées par de vrais utilisateurs (humains) avant les annonces Démo / IA
+      const aDemo = (a.isDemo || a.persona || (typeof a.id === 'number' && a.id < 300)) ? 1 : 0;
+      const bDemo = (b.isDemo || b.persona || (typeof b.id === 'number' && b.id < 300)) ? 1 : 0;
+      if (aDemo !== bDemo) return aDemo - bDemo;
+
+      // 3. Annonces urgentes en priorité
+      const aUrgent = (a.urgent || a.isUrgent) ? 1 : 0;
+      const bUrgent = (b.urgent || b.isUrgent) ? 1 : 0;
+      if (bUrgent !== aUrgent) return bUrgent - aUrgent;
+
+      // 4. Tri chronologique par date de création ou identifiant
+      const getTime = (item) => {
+        if (item.createdAt?.toMillis) return item.createdAt.toMillis();
+        if (item.createdAt?.seconds) return item.createdAt.seconds * 1000;
+        if (typeof item.createdAt === 'string') return new Date(item.createdAt).getTime() || 0;
+        if (typeof item.createdAt === 'number') return item.createdAt;
+        const numId = Number(String(item.id).replace(/\D/g, ''));
+        return isNaN(numId) ? 0 : numId;
+      };
+      return getTime(b) - getTime(a);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
     listings,
-    setListings,
-    filteredListings,
-    hasMoreListings,
-    isLoadingMoreListings,
-    loadMoreSentinelRef,
-    handleLoadMoreListings,
-    handleRefreshFeed,
-  } = useFeedListings({
-    profile,
-    authCurrentUserUid: auth.currentUser?.uid,
-    activeTab,
-    hideDemos,
     deferredSearchQuery,
-    debouncedSearchQuery,
+    formatFilter,
     selectedCategory,
     selectedLanguages,
     selectedPayment,
-    formatFilter,
-    userCoords,
-    isInfiniteRadius,
     radiusKm,
-    currentLang,
-    allFirestoreUsers,
-    setAllFirestoreUsers,
-  });
+    isInfiniteRadius,
+    hideDemos,
+    userCoords,
+    dynamicSearchAliases,
+    profile.name,
+    profile?.uid,
+    auth.currentUser?.uid,
+    usersPublicMap,
+    usersByUid,
+    usersByName
+  ]);
 
   const listingsGridRef = useRef(null);
+  const loadMoreSentinelRef = useRef(null);
+
+  // ---- INFINITE SCROLL AUTOMATIQUE VIA INTERSECTION OBSERVER ----
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof IntersectionObserver === 'undefined') return;
+    if (!hasMoreListings || isLoadingMoreListings || activeTab !== 'feed') return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0] && entries[0].isIntersecting) {
+          handleLoadMoreListings();
+        }
+      },
+      { rootMargin: '350px 0px', threshold: 0.1 }
+    );
+
+    const target = loadMoreSentinelRef.current;
+    if (target) observer.observe(target);
+
+    return () => {
+      if (target) observer.unobserve(target);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasMoreListings, isLoadingMoreListings, activeTab, lastVisibleListingDoc]);
 
   const getListingDetail = useCallback((listing) => {
     const media = getSuggestedMedia(listing.title, listing.description || '', listing.image, listing.video);
@@ -943,38 +2561,6 @@ export default function App() {
 
     return generic;
   }, [profile, portfolioImages, averageRating, getAuthorAvatar]);
-
-  // ---- PAIEMENTS & CHECKOUT (HOOK CENTRALISÉ) ----
-  const {
-    handlePaymentSuccess,
-    checkoutSession,
-    openCheckout,
-    cancelCheckout,
-    applyCheckout,
-    isCheckoutProcessing,
-    checkoutStatus,
-  } = usePayments({
-    profile,
-    setProfile,
-    setTopUpCelebration,
-    setSaveMessage,
-    setListings,
-    setBoostMessage,
-    isEditingListing,
-    setIsEditingListing,
-    editingOriginalListing,
-    setEditingOriginalListing,
-    setPublishedListing,
-    setShowPublishedPopup,
-    setSelectedListing,
-    setPostStep,
-    setPostDraft,
-    defaultPostDraft: DEFAULT_POST_DRAFT,
-    selectedChat,
-    setUserTransactions,
-    userTransactions,
-    getListingDetail,
-  });
 
   const handleOpenListing = useCallback((listing) => {
     setSelectedListing(getListingDetail(listing));
@@ -1084,9 +2670,155 @@ export default function App() {
     handleOpenPayment('boost', target);
   };
 
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+    } catch (e) {
+      logger.warn('SignOut error:', e);
+    }
+    clearSessionFlags();
+    storage.remove('troco_user_profile');
+    setIsAuthenticated(false);
+    setSelectedChat(null);
+    setSelectedListing(null);
+    if (callState.active) endCall();
+  };
+
+  // ---- VALIDATION OBLIGATOIRE DES CGU / RGPD ----
+  const handleAcceptCgu = async ({ cguVersion, acceptedAt } = {}) => {
+    // 1. Verrou synchrone d'urgence immédiat AVANT tout appel Firestore
+    try {
+      window.sessionStorage?.setItem('troco_cgu_dismissed', 'true');
+      window.localStorage?.setItem('troco_cgu_dismissed', 'true');
+    } catch (_) { }
+    setCguDismissed(true);
+
+    const now = acceptedAt || new Date().toISOString();
+    setProfile(prev => {
+      const updated = { ...prev, cguAcceptedAt: now, cguVersion: cguVersion || '2026.1' };
+      storage.setDebounced('troco_user_profile', updated);
+      return updated;
+    });
+
+    // 2. Persistance Firestore avec serverTimestamp ciblant le VRAI auth.currentUser.uid natif
+    const targetUid = auth.currentUser?.uid || profile?.uid;
+    if (targetUid && db) {
+      try {
+        await updateDoc(doc(db, 'users', String(targetUid)), {
+          cguAcceptedAt: serverTimestamp(),
+          cguVersion: cguVersion || '2026.1',
+          updatedAt: serverTimestamp(),
+        });
+      } catch (e) {
+        logger.warn('[Firestore] CGU acceptance update failed:', e);
+      }
+    }
+  };
 
   if (!isAuthResolved || isLoadingSession || (isAuthenticated && isProfileLoading)) {
-    return <AppLoadingScreen isTouchDevice={isTouchDevice} isMobileDevice={isMobileDevice} />;
+    return (
+      <div style={{
+        minHeight: '100vh',
+        backgroundColor: 'var(--bg-global)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        position: 'relative',
+        overflow: 'hidden',
+        fontFamily: 'var(--font-family-main)',
+        zIndex: 999999
+      }}>
+        {/* FOND LIQUIDE IRIDESCENT : DÉGRADÉ STATIQUE LÉGER SUR MOBILE & TACTILE POUR ÉVITER LE CRASH iOS */}
+        {(isTouchDevice || isMobileDevice) ? (
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'radial-gradient(circle at top right, var(--bg-subtle), var(--bg-global))',
+            pointerEvents: 'none',
+            zIndex: 0
+          }} />
+        ) : (
+          <div className="liquid-iridescence-container" style={{ opacity: 0.92, background: 'radial-gradient(circle at 50% 50%, var(--bg-subtle) 0%, var(--bg-global) 100%)' }}>
+            <div className="liquid-blob liquid-blob-1" style={{ width: '750px', height: '750px' }} />
+            <div className="liquid-blob liquid-blob-2" style={{ width: '800px', height: '800px' }} />
+            <div className="liquid-blob liquid-blob-3" style={{ width: '680px', height: '680px' }} />
+          </div>
+        )}
+
+        <div style={{
+          position: 'relative',
+          zIndex: 10,
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          textAlign: 'center',
+          padding: '30px',
+          animation: 'modalSlideIn 0.8s var(--ease-monopo) both'
+        }}>
+          {/* 🚨 PHASE 108 & 114 : ÉRADICATION DU CRASH OOM iOS (LAZY LOADING & DÉMONTAGE WEBGL STRICT) */}
+          {(!isTouchDevice && !isMobileDevice) ? (
+            <Suspense fallback={null}>
+              <TrocoLogo3D size={100} animated={true} style={{ marginBottom: '28px' }} />
+            </Suspense>
+          ) : (
+            <TrocoLogoNativeSvg size={100} animated={true} style={{ marginBottom: '28px' }} />
+          )}
+          <div style={{
+            fontSize: 'clamp(56px, 14vw, 92px)',
+            fontFamily: 'var(--font-editorial)',
+            fontWeight: 300,
+            letterSpacing: '0.22em',
+            color: 'var(--text-main)',
+            lineHeight: 1,
+            textTransform: 'uppercase',
+            marginBottom: '16px',
+            textShadow: '0 10px 40px rgba(0,0,0,0.06)'
+          }}>
+            Troco
+          </div>
+
+          <div style={{
+            fontSize: '12px',
+            letterSpacing: '0.28em',
+            textTransform: 'uppercase',
+            fontWeight: '700',
+            color: 'var(--accent-primary)',
+            marginBottom: '36px'
+          }}>
+            Liberté d'Échange & Savoir-Faire
+          </div>
+
+          {/* INDICATEUR DE CHARGEMENT HAUTE-COUTURE */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            padding: '9px 20px',
+            borderRadius: '999px',
+            backgroundColor: 'var(--bg-glass)',
+            backdropFilter: 'blur(24px)',
+            WebkitBackdropFilter: 'blur(24px)',
+            border: '1px solid var(--border-color)',
+            color: 'var(--text-secondary)',
+            fontSize: '11px',
+            fontWeight: '700',
+            letterSpacing: '0.06em',
+            boxShadow: 'var(--shadow-card)'
+          }}>
+            <div style={{
+              width: '8px',
+              height: '8px',
+              borderRadius: '50%',
+              backgroundColor: 'var(--accent-primary)',
+              boxShadow: '0 0 12px var(--accent-primary)',
+              animation: 'pulse 1.2s infinite ease-in-out'
+            }} />
+            <span style={{ textTransform: 'uppercase' }}>Vérification de la session...</span>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (!isAuthenticated) {
@@ -1210,27 +2942,440 @@ export default function App() {
           formatTokenCount={formatTokenCount}
         />
 
-        {/* BACKDROP_CLASSNAME BACKDROP_STYLE z-[100005] (Conformité Phase 138 UX-02 déléguée à ListingDetailModal) */}
         {selectedListing && (
-          <ListingDetailModal
-            listing={selectedListing}
-            onClose={() => setSelectedListing(null)}
-            isMobile={isMobile}
-            darkMode={darkMode}
-            currentLang={currentLang}
-            t={t}
-            profile={profile}
-            showingOriginalListings={showingOriginalListings}
-            toggleOriginalListing={toggleOriginalListing}
-            handleViewOnMap={handleViewOnMap}
-            handleStartDiscussion={handleStartDiscussion}
-            setReportTarget={setReportTarget}
-            setIsReportModalOpen={setIsReportModalOpen}
-            formatCompensation={formatCompensation}
-            isAdmin={isAdmin}
-            handleAdminDeleteListing={handleAdminDeleteListing}
-            confirm={confirm}
-          />
+          <div
+            className={`${BACKDROP_CLASSNAME} z-[100005] overflow-y-auto`}
+            style={{
+              ...BACKDROP_STYLE,
+              position: 'fixed',
+              inset: 0,
+              zIndex: 100005,
+              overflowY: 'auto',
+              WebkitOverflowScrolling: 'touch',
+              padding: isMobile ? '12px 8px 90px' : '24px 16px 60px',
+            }}
+          >
+            <div style={{
+              maxWidth: '760px',
+              margin: '0 auto',
+              backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
+              borderRadius: '28px',
+              overflow: 'hidden',
+              boxShadow: darkMode ? '0 30px 90px rgba(0,0,0,0.75)' : '0 30px 90px rgba(61,53,48,0.25)',
+              border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
+              color: darkMode ? '#FAF7F2' : '#3D3530',
+              animation: 'modalSlideIn 0.55s var(--ease-monopo) both'
+            }}>
+
+              {/* EN-TÊTE MOBILE RETOUR TACTILE 44x44px (APPLE HIG) */}
+              {isMobile && (
+                <MobileHeader
+                  title={selectedListing.title || "Détail de l'annonce"}
+                  subtitle={selectedListing.category || "Troco"}
+                  onBack={() => {
+                    setSelectedListing(null);
+                    setSelectedDetailImageIndex(0);
+                    setDetailMediaTab('image');
+                  }}
+                  darkMode={darkMode}
+                />
+              )}
+
+              {/* CARROUSEL HÉRO INTERACTIF */}
+              <div
+                onTouchStart={handleModalTouchStart}
+                onTouchMove={handleModalTouchMove}
+                onTouchEnd={handleModalTouchEnd}
+                style={{ position: 'relative', width: '100%', height: '340px', backgroundColor: '#1A1715', touchAction: 'pan-y', userSelect: 'none', WebkitUserSelect: 'none', overflow: 'hidden' }}
+              >
+                {detailMediaTab === 'video' && selectedListing.video ? (
+                  <video
+                    src={selectedListing.video}
+                    poster={selectedListing.image}
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    onError={() => setDetailMediaTab('image')}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                ) : (
+                  (() => {
+                    const gallery = selectedListing.gallery && selectedListing.gallery.length > 0 ? selectedListing.gallery : [selectedListing.image];
+                    return (
+                      <div style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
+                        {gallery.map((imgSrc, idx) => {
+                          const isActive = idx === selectedDetailImageIndex;
+                          return (
+                            <img
+                              key={idx}
+                              src={imgSrc}
+                              alt={selectedListing.title}
+                              draggable={false}
+                              onError={(e) => { e.target.src = getFallbackImage(selectedListing.category, selectedListing.title); }}
+                              style={{
+                                position: 'absolute',
+                                inset: 0,
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'cover',
+                                opacity: isActive ? 1 : 0,
+                                transition: 'opacity 0.4s ease-in-out, transform 0.4s ease-in-out',
+                                transform: isActive ? 'scale(1)' : 'scale(1.03)',
+                                pointerEvents: 'none',
+                                WebkitUserDrag: 'none',
+                                userSelect: 'none',
+                                WebkitUserSelect: 'none',
+                                zIndex: isActive ? 2 : 1
+                              }}
+                            />
+                          );
+                        })}
+                      </div>
+                    );
+                  })()
+                )}
+
+                {/* BOUTON FERMER */}
+                <button
+                  onClick={() => { setSelectedListing(null); setSelectedDetailImageIndex(0); setDetailMediaTab('image'); }}
+                  aria-label="Fermer les détails de l'annonce"
+                  style={{ position: 'absolute', top: '14px', right: '14px', border: 'none', width: '38px', height: '38px', borderRadius: '50%', backgroundColor: 'rgba(250,247,242,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 10, boxShadow: '0 4px 12px rgba(61,53,48,0.15)', color: '#3D3530' }}
+                >
+                  <X size={18} />
+                </button>
+
+                {selectedListing.isBoosted && <span className="sponsored-badge" style={{ position: 'absolute', top: '14px', left: '14px', backgroundColor: '#F59E0B', color: '#FFF', fontSize: '11px', fontWeight: '800', padding: '6px 10px', borderRadius: '10px', boxShadow: '0 6px 16px rgba(245,158,11,0.45)', zIndex: 10 }}>🔥 Sponsorisé</span>}
+
+                {/* FLÈCHES DE NAVIGATION LATÉRALE */}
+                {detailMediaTab === 'image' && (selectedListing.gallery?.length || 0) > 1 && (
+                  <>
+                    <button
+                      onClick={() => setSelectedDetailImageIndex(prev => (prev > 0 ? prev - 1 : (selectedListing.gallery.length - 1)))}
+                      aria-label="Photo précédente"
+                      style={{
+                        position: 'absolute', top: '50%', left: '12px',
+                        transform: 'translateY(-50%)',
+                        border: 'none',
+                        width: '38px', height: '38px',
+                        borderRadius: '50%',
+                        backgroundColor: 'rgba(61,53,48,0.4)',
+                        backdropFilter: 'blur(8px)',
+                        WebkitBackdropFilter: 'blur(8px)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        cursor: 'pointer', zIndex: 10,
+                        transition: 'all 0.2s ease',
+                        outline: 'none',
+                        boxShadow: 'none'
+                      }}
+                    >
+                      <ChevronLeft size={20} color="#FFFFFF" strokeWidth={2.5} />
+                    </button>
+                    <button
+                      onClick={() => setSelectedDetailImageIndex(prev => (prev < (selectedListing.gallery.length - 1) ? prev + 1 : 0))}
+                      aria-label="Photo suivante"
+                      style={{
+                        position: 'absolute', top: '50%', right: '12px',
+                        transform: 'translateY(-50%)',
+                        border: 'none',
+                        width: '38px', height: '38px',
+                        borderRadius: '50%',
+                        backgroundColor: 'rgba(61,53,48,0.4)',
+                        backdropFilter: 'blur(8px)',
+                        WebkitBackdropFilter: 'blur(8px)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        cursor: 'pointer', zIndex: 10,
+                        transition: 'all 0.2s ease',
+                        outline: 'none',
+                        boxShadow: 'none'
+                      }}
+                    >
+                      <ChevronRight size={20} color="#FFFFFF" strokeWidth={2.5} />
+                    </button>
+                  </>
+                )}
+
+                {/* PUCES INDICATRICES */}
+                {detailMediaTab === 'image' && (selectedListing.gallery?.length || 0) > 1 && (
+                  <div style={{ position: 'absolute', bottom: '14px', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: '6px', zIndex: 10, backgroundColor: 'rgba(61,53,48,0.6)', padding: '6px 12px', borderRadius: '999px', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}>
+                    {selectedListing.gallery.map((_, idx) => (
+                      <div
+                        key={idx}
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`Photo numéro ${idx + 1}`}
+                        onClick={() => setSelectedDetailImageIndex(idx)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            setSelectedDetailImageIndex(idx);
+                          }
+                        }}
+                        style={{
+                          width: selectedDetailImageIndex === idx ? '20px' : '8px',
+                          height: '8px',
+                          borderRadius: '999px',
+                          backgroundColor: selectedDetailImageIndex === idx ? '#C67D5B' : 'rgba(255,255,255,0.5)',
+                          cursor: 'pointer',
+                          transition: 'all 0.3s ease'
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
+
+                {/* COMMUTATEUR MÉDIA BASCULE VIDÉO / GALERIE */}
+                <div style={{ position: 'absolute', bottom: '14px', left: '14px', display: 'flex', gap: '8px', zIndex: 10 }}>
+                  {selectedListing.video && (
+                    <button onClick={() => setDetailMediaTab('video')} style={{ border: 'none', borderRadius: '999px', padding: '7px 14px', backgroundColor: detailMediaTab === 'video' ? '#C67D5B' : 'rgba(61,53,48,0.75)', color: '#FFF', fontSize: '12px', fontWeight: '800', cursor: 'pointer', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                      <Video size={13} /> {t('demoVideo')}
+                    </button>
+                  )}
+                  <button onClick={() => setDetailMediaTab('image')} style={{ border: 'none', borderRadius: '999px', padding: '7px 14px', backgroundColor: detailMediaTab === 'image' ? '#C67D5B' : 'rgba(61,53,48,0.75)', color: '#FFF', fontSize: '12px', fontWeight: '800', cursor: 'pointer', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <Camera size={13} /> Photos ({selectedListing.gallery?.length || 1})
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ padding: '20px' }}>
+                {(() => {
+                  const isDetailShowingOriginal = !!showingOriginalListings[selectedListing.id];
+                  const detailDisplayContent = getListingDisplayContent(selectedListing, currentLang, isDetailShowingOriginal);
+                  return (
+                    <>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', gap: '10px', flexWrap: 'wrap' }}>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 10px', borderRadius: '999px', backgroundColor: darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4', color: darkMode ? '#FAF7F2' : '#A8644A', fontSize: '11px', fontWeight: '800' }}>
+                              <Sparkles size={12} /> {t('verifiedOffer')}
+                            </div>
+                            {(selectedListing.isDemo || (typeof selectedListing.id === 'number' && selectedListing.id <= 20)) && (
+                              <span style={{
+                                fontSize: '10.5px',
+                                fontWeight: '750',
+                                letterSpacing: '0.04em',
+                                padding: '5px 11px',
+                                borderRadius: '999px',
+                                backgroundColor: 'var(--bg-subtle)',
+                                color: 'var(--accent-primary)',
+                                border: '1px solid var(--border-color)',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '5px',
+                                textTransform: 'uppercase'
+                              }}>
+                                <Sparkles size={12} color="var(--accent-primary)" />
+                                Exemple Démo
+                              </span>
+                            )}
+                          </div>
+                          <h3 className="font-editorial-heading" style={{ margin: '0 0 4px 0', fontSize: '24px', fontWeight: '600', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{detailDisplayContent.title}</h3>
+                          {currentLang !== (selectedListing.nativeLang || 'FR') && (
+                            <button
+                              onClick={(e) => toggleOriginalListing(selectedListing.id, e)}
+                              className="premium-button"
+                              style={{
+                                border: 'none',
+                                backgroundColor: 'transparent',
+                                color: '#C67D5B',
+                                fontSize: '12px',
+                                fontWeight: '800',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '5px',
+                                padding: '2px 0 6px 0'
+                              }}
+                            >
+                              <Globe size={13} color="#C67D5B" />
+                              {isDetailShowingOriginal ? t('showTranslation') : t('showOriginal')}
+                            </button>
+                          )}
+                        </div>
+                        {(() => {
+                          const authorName = selectedListing.authorProfile?.name || selectedListing.author || 'Membre Troco';
+                          const authorUid = selectedListing.authorProfile?.uid || selectedListing.authorUid || null;
+                          const isOwnListing = Boolean(
+                            (profile?.name && authorName === profile.name) ||
+                            (authorUid && (authorUid === profile?.uid || authorUid === auth.currentUser?.uid))
+                          );
+
+                          return !isOwnListing ? (
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                              <button
+                                type="button"
+                                onClick={() => handleViewOnMap(selectedListing)}
+                                className="premium-button"
+                                title="Centrer la carte interactive sur cette annonce"
+                                style={{
+                                  border: darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #E8DDD3',
+                                  borderRadius: '999px',
+                                  padding: '11px 14px',
+                                  backgroundColor: darkMode ? '#1A1715' : '#FFF',
+                                  color: darkMode ? '#FAF7F2' : '#3D3530',
+                                  fontWeight: '700',
+                                  fontSize: '12px',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                }}
+                              >
+                                <MapPin size={14} color="#C67D5B" /> {t('viewOnMap') || 'Voir sur la carte'}
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setReportTarget({
+                                    listing: selectedListing,
+                                    user: { name: authorName, uid: authorUid }
+                                  });
+                                  setIsReportModalOpen(true);
+                                }}
+                                className="premium-button"
+                                title="Signaler un contenu abusif ou suspect"
+                                style={{
+                                  border: 'none',
+                                  borderRadius: '999px',
+                                  padding: '11px 14px',
+                                  backgroundColor: darkMode ? 'rgba(239,68,68,0.2)' : '#FEF2F2',
+                                  color: '#EF4444',
+                                  fontWeight: '700',
+                                  fontSize: '12px',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '5px',
+                                }}
+                              >
+                                <ShieldAlert size={14} /> Signaler
+                              </button>
+                              <button onClick={() => handleStartDiscussion({ id: selectedListing.id, title: selectedListing.title, author: authorName, compensation: selectedListing.compensation })} className="premium-button" style={{ border: 'none', borderRadius: '999px', padding: '11px 16px', background: 'linear-gradient(135deg, #C67D5B 0%, #A8644A 100%)', color: '#FFF', fontWeight: '800', cursor: 'pointer', boxShadow: '0 8px 20px rgba(198,125,91,0.35)' }}>{t('startDiscussion')}</button>
+                            </div>
+                          ) : (
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                              <button
+                                type="button"
+                                onClick={() => handleViewOnMap(selectedListing)}
+                                className="premium-button"
+                                title="Centrer la carte interactive sur cette annonce"
+                                style={{
+                                  border: darkMode ? '1px solid rgba(232,221,211,0.2)' : '1px solid #E8DDD3',
+                                  borderRadius: '999px',
+                                  padding: '10px 14px',
+                                  backgroundColor: darkMode ? '#1A1715' : '#FFF',
+                                  color: darkMode ? '#FAF7F2' : '#3D3530',
+                                  fontWeight: '700',
+                                  fontSize: '12px',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '6px',
+                                }}
+                              >
+                                <MapPin size={14} color="#C67D5B" /> {t('viewOnMap') || 'Voir sur la carte'}
+                              </button>
+                              <div style={{ backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', color: darkMode ? '#D4C5B5' : '#6B5E54', padding: '10px 16px', borderRadius: '999px', fontSize: '13px', fontWeight: '700', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3' }}>{t('authorAnnc')}</div>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                      <p style={{ margin: '0 0 14px', lineHeight: 1.7, color: darkMode ? '#D4C5B5' : '#6B5E54', fontSize: '14px' }}>{detailDisplayContent.description}</p>
+                    </>
+                  );
+                })()}
+
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '14px' }}>
+                  {localizeTags(selectedListing.tags, currentLang).map(tag => (
+                    <span key={tag} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', backgroundColor: darkMode ? 'rgba(198,125,91,0.2)' : '#F5EAE4', color: darkMode ? '#FAF7F2' : '#A8644A', borderRadius: '999px', padding: '5px 10px', fontSize: '11px', fontWeight: '800' }}><Tag size={11} /> {tag}</span>
+                  ))}
+                </div>
+
+                <div style={{ border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3', borderRadius: '16px', padding: '14px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', marginBottom: '14px' }}>
+                  <div style={{ fontWeight: '800', fontSize: '13px', color: darkMode ? '#FAF7F2' : '#3D3530', marginBottom: '6px' }}>{t('compensation')}</div>
+                  <div style={{ fontSize: '13px', color: '#C67D5B', fontWeight: '700' }}>{formatCompensation(selectedListing.compensation)}</div>
+                </div>
+                <div style={{ display: 'flex', gap: '12px', alignItems: 'center', marginBottom: '14px', padding: '14px', borderRadius: '16px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3' }}>
+                  <img src={selectedListing.authorProfile?.avatar || selectedListing.avatar || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="%239CA3AF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>'} alt={selectedListing.authorProfile?.name || selectedListing.author || 'Auteur'} style={{ width: '56px', height: '56px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #E8DDD3' }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: '800', color: darkMode ? '#FAF7F2' : '#3D3530' }}>{selectedListing.authorProfile?.name || selectedListing.author || 'Membre Troco'}</div>
+                    <div style={{ fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54', marginTop: '4px' }}>{getBioTranslation(selectedListing.authorProfile?.bio || selectedListing.bio || '', currentLang, !!showingOriginalListings[selectedListing.id])}</div>
+                  </div>
+                </div>
+                <div style={{ marginBottom: '14px' }}>
+                  <div style={{ fontWeight: '800', fontSize: '13px', color: darkMode ? '#FAF7F2' : '#3D3530', marginBottom: '8px' }}>{t('socialNetworks')}</div>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    {(selectedListing.authorProfile?.socials || selectedListing.socials || []).map(link => <span key={link} style={{ border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3', borderRadius: '999px', padding: '6px 10px', fontSize: '12px', color: '#C67D5B', fontWeight: '700', backgroundColor: darkMode ? '#1A1715' : '#FAF7F2' }}>{link}</span>)}
+                  </div>
+                </div>
+                {(selectedListing.authorProfile?.portfolio || selectedListing.portfolio) && (selectedListing.authorProfile?.portfolio || selectedListing.portfolio).length > 0 && (
+                  <div style={{ marginBottom: '14px' }}>
+                    <div style={{ fontWeight: '800', fontSize: '13px', color: darkMode ? '#FAF7F2' : '#3D3530', marginBottom: '8px' }}>{t('portfolio')}</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '8px' }}>
+                      {(selectedListing.authorProfile?.portfolio || selectedListing.portfolio).map((image, index) => (
+                        <img key={image + index} src={image} alt={`Réalisation du portfolio numéro ${index + 1}`} style={{ width: '100%', height: '80px', objectFit: 'cover', borderRadius: '14px' }} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div>
+                  <div style={{ fontWeight: '800', fontSize: '13px', color: darkMode ? '#FAF7F2' : '#3D3530', marginBottom: '8px' }}>{t('reviews')}</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {(selectedListing.authorProfile?.reviews || selectedListing.authorReviews) && (selectedListing.authorProfile?.reviews || selectedListing.authorReviews).length > 0 ? (
+                      (selectedListing.authorProfile?.reviews || selectedListing.authorReviews).map((review, index) => (
+                        <div key={review.text + index} style={{ border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3', borderRadius: '14px', padding: '12px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8' }}>
+                          <div style={{ color: '#F59E0B', marginBottom: '4px' }}>{'⭐'.repeat(review.rating)}{'☆'.repeat(Math.max(0, 5 - review.rating))}</div>
+                          <div style={{ fontSize: '13px', color: darkMode ? '#D4C5B5' : '#6B5E54' }}>{localizeReview(review.text, currentLang)}</div>
+                        </div>
+                      ))
+                    ) : (
+                      <div style={{ fontSize: '12.5px', color: darkMode ? '#D4C5B5' : '#6B5E54', fontStyle: 'italic', padding: '12px 14px', borderRadius: '14px', backgroundColor: darkMode ? '#1A1715' : '#F5F0E8', border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3' }}>
+                        🤝 {t('noReviewsZeroTransactions')}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {isAdmin && (
+                  <div style={{ marginTop: '20px', paddingTop: '16px', borderTop: darkMode ? '1px solid rgba(239,68,68,0.3)' : '1px solid #FEE2E2' }}>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const ok = await confirm({
+                          title: t('adminDeleteListingTitle') || 'Suppression administrateur',
+                          message: `${t('adminDeleteListingMessage') || 'Confirmez la suppression définitive de'} « ${selectedListing.title} » ?`,
+                          confirmLabel: t('delete') || 'Supprimer',
+                          cancelLabel: t('cancel') || 'Annuler',
+                          variant: 'danger',
+                        });
+                        if (ok) {
+                          handleAdminDeleteListing(selectedListing);
+                          setSelectedListing(null);
+                        }
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        borderRadius: '14px',
+                        backgroundColor: '#EF4444',
+                        color: '#FFFFFF',
+                        fontWeight: '800',
+                        fontSize: '13px',
+                        border: 'none',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        boxShadow: '0 6px 16px rgba(239,68,68,0.25)'
+                      }}
+                    >
+                      <Trash2 size={16} /> Supprimer cette annonce (Action Administrateur)
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         )}
 
         {/* CONTENU DYNAMIQUE SELON L'ONGLET SÉLECTIONNÉ */}
@@ -1439,7 +3584,7 @@ export default function App() {
                 getSuggestedMedia={getSuggestedMedia}
                 getSuggestedImage={getSuggestedImage}
                 setActiveTab={setActiveTab}
-                defaultPostDraft={DEFAULT_POST_DRAFT}
+                defaultPostDraft={defaultPostDraft}
               />
             )}
 
@@ -1519,7 +3664,7 @@ export default function App() {
           setSelectedChat={setSelectedChat}
           setPostStep={setPostStep}
           setPostDraft={setPostDraft}
-          defaultPostDraft={DEFAULT_POST_DRAFT}
+          defaultPostDraft={defaultPostDraft}
           setPublishMessage={setPublishMessage}
           setIsEditingListing={setIsEditingListing}
         />
@@ -1531,7 +3676,7 @@ export default function App() {
           publishedListing={publishedListing}
           setSelectedListing={setSelectedListing}
           setActiveTab={setActiveTab}
-          defaultPostDraft={DEFAULT_POST_DRAFT}
+          defaultPostDraft={defaultPostDraft}
           setPostStep={setPostStep}
           setPostDraft={setPostDraft}
           currentLang={currentLang}
