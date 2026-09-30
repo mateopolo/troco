@@ -451,6 +451,13 @@
 **Estimation** : 5 jours  
 **Impact** : `src/App.js` comptait initialement 5 295 lignes. Le découpage complet en routes modulaires, composants orchestrateurs et hooks spécialisés a permis de réduire `App.js` à 1 694 lignes (-68% de réduction de surface). L'architecture est désormais conforme aux standards d'une codebase React 19 scalable et maintenable.
 
+### [x] [HOTFIX-01] — Résolution du crash TDZ (Cannot access 'ho' before initialization)
+**Statut** : ✅ FAIT  
+**Preuve** : Hissage de `DEFAULT_POST_DRAFT` au scope module et repositionnement de l'appel `usePayments` après `getListingDetail` dans `src/App.js:976`. `npx eslint src/App.js --rule '{"no-use-before-define": "error"}'` passe de 7 erreurs TDZ à 0 erreur. Le build de production est validé sans erreur (`main.79878c49.js`), `src/App.test.js` monte l'application sans crash (1003 ms) et le serveur de prévisualisation répond 200 OK.  
+**Fichier** : `src/App.js`  
+**Estimation** : 30 minutes  
+**Impact** : Élimine le crash fatal au démarrage de l'application causé par l'accès prématuré aux setters et variables de listings avant leur déclaration.
+
 ### [ ] [TDIF-02] — IA de Matching Prédictif & Recherche Vectorielle (Vector Search)
 **Statut** : ❌ À FAIRE  
 **Fichier** : `functions/src/ai/vectorSearch.ts`, Cloud Firestore Vector Embeddings  

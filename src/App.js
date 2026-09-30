@@ -71,6 +71,33 @@ export const pageTransitionVariants = {
 };
 export const pageTransitionConfig = { duration: 0.2, ease: "easeOut" };
 
+const DEFAULT_POST_DRAFT = {
+  type: 'offer',
+  status: 'active',
+  title: '',
+  category: '',
+  customCategoryName: '',
+  format: 'onsite',
+  description: '',
+  compensation: 'credits',
+  durationType: 'hourly',
+  durationValue: '1',
+  price: '20',
+  location: '',
+  availability: '',
+  caution: '',
+  requiresCaution: false,
+  cautionAmount: '',
+  trocoTokens: '1',
+  euroAmount: '',
+  isUrgent: false,
+  locationPrivacy: 'exact',
+  coordinates: null,
+  image: '',
+  imageUrl: '',
+  videoUrl: '',
+};
+
 export default function App() {
   const confirm = useConfirm();
   // Purge d'urgence pour réparer les écrans noirs sur mobile
@@ -421,38 +448,6 @@ export default function App() {
     });
   }, [setActiveTab, setSelectedChat, setSelectedPublicUser, setSelectedListing, startTransition]);
 
-  // ---- PAIEMENTS & CHECKOUT (HOOK CENTRALISÉ) ----
-  const {
-    handlePaymentSuccess,
-    checkoutSession,
-    openCheckout,
-    cancelCheckout,
-    applyCheckout,
-    isCheckoutProcessing,
-    checkoutStatus,
-  } = usePayments({
-    profile,
-    setProfile,
-    setTopUpCelebration,
-    setSaveMessage,
-    setListings,
-    setBoostMessage,
-    isEditingListing,
-    setIsEditingListing,
-    editingOriginalListing,
-    setEditingOriginalListing,
-    setPublishedListing,
-    setShowPublishedPopup,
-    setSelectedListing,
-    setPostStep,
-    setPostDraft,
-    defaultPostDraft,
-    selectedChat,
-    setUserTransactions,
-    userTransactions,
-    getListingDetail,
-  });
-
   // ---- RATE LIMITING & APP CHECK PROTECTION ----
   const { isRateLimited, retryAfterSeconds, checkLimit, resetRateLimit } = useRateLimit();
 
@@ -660,34 +655,7 @@ export default function App() {
 
   const [postStep, setPostStep] = useState(1);
   const [publishMessage, setPublishMessage] = useState('');
-
-  const defaultPostDraft = {
-    type: 'offer',
-    status: 'active',
-    title: '',
-    category: '',
-    customCategoryName: '',
-    format: 'onsite',
-    description: '',
-    compensation: 'credits',
-    durationType: 'hourly',
-    durationValue: '1',
-    price: '20',
-    location: '',
-    availability: '',
-    caution: '',
-    requiresCaution: false,
-    cautionAmount: '',
-    trocoTokens: '1',
-    euroAmount: '',
-    isUrgent: false,
-    locationPrivacy: 'exact',
-    coordinates: null,
-    image: '',
-    imageUrl: '',
-    videoUrl: '',
-  };
-  const [postDraft, setPostDraft] = useState(defaultPostDraft);
+  const [postDraft, setPostDraft] = useState(DEFAULT_POST_DRAFT);
   const [showPublishedPopup, setShowPublishedPopup] = useState(false);
   const [publishedListing, setPublishedListing] = useState(null);
 
@@ -975,6 +943,38 @@ export default function App() {
 
     return generic;
   }, [profile, portfolioImages, averageRating, getAuthorAvatar]);
+
+  // ---- PAIEMENTS & CHECKOUT (HOOK CENTRALISÉ) ----
+  const {
+    handlePaymentSuccess,
+    checkoutSession,
+    openCheckout,
+    cancelCheckout,
+    applyCheckout,
+    isCheckoutProcessing,
+    checkoutStatus,
+  } = usePayments({
+    profile,
+    setProfile,
+    setTopUpCelebration,
+    setSaveMessage,
+    setListings,
+    setBoostMessage,
+    isEditingListing,
+    setIsEditingListing,
+    editingOriginalListing,
+    setEditingOriginalListing,
+    setPublishedListing,
+    setShowPublishedPopup,
+    setSelectedListing,
+    setPostStep,
+    setPostDraft,
+    defaultPostDraft: DEFAULT_POST_DRAFT,
+    selectedChat,
+    setUserTransactions,
+    userTransactions,
+    getListingDetail,
+  });
 
   const handleOpenListing = useCallback((listing) => {
     setSelectedListing(getListingDetail(listing));
@@ -1439,7 +1439,7 @@ export default function App() {
                 getSuggestedMedia={getSuggestedMedia}
                 getSuggestedImage={getSuggestedImage}
                 setActiveTab={setActiveTab}
-                defaultPostDraft={defaultPostDraft}
+                defaultPostDraft={DEFAULT_POST_DRAFT}
               />
             )}
 
@@ -1519,7 +1519,7 @@ export default function App() {
           setSelectedChat={setSelectedChat}
           setPostStep={setPostStep}
           setPostDraft={setPostDraft}
-          defaultPostDraft={defaultPostDraft}
+          defaultPostDraft={DEFAULT_POST_DRAFT}
           setPublishMessage={setPublishMessage}
           setIsEditingListing={setIsEditingListing}
         />
@@ -1531,7 +1531,7 @@ export default function App() {
           publishedListing={publishedListing}
           setSelectedListing={setSelectedListing}
           setActiveTab={setActiveTab}
-          defaultPostDraft={defaultPostDraft}
+          defaultPostDraft={DEFAULT_POST_DRAFT}
           setPostStep={setPostStep}
           setPostDraft={setPostDraft}
           currentLang={currentLang}
