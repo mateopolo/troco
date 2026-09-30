@@ -384,9 +384,9 @@
     "semantic_hash": "29788f2edfc62f638e05abc398125e63"
   },
   "src/App.js": {
-    "mtime": 1790737562.7046545,
-    "seen": 1790737672.0014021,
-    "ast_hash": "87f72980fc555b778e7c1ccad0c456c4",
+    "mtime": 1790763990.7565613,
+    "seen": 1790764088.758927,
+    "ast_hash": "252bd7b4c4ddc2149361691ef67cc884",
     "semantic_hash": ""
   },
   "src/App.test.js": {
@@ -2304,9 +2304,9 @@
     "semantic_hash": ""
   },
   "MASTER_AUDIT.md": {
-    "mtime": 1790737427.785221,
-    "seen": 1790737672.0022302,
-    "ast_hash": "7361dbe1b06af2add4ffe3e98880910c",
+    "mtime": 1790737699.1628232,
+    "seen": 1790764088.7598119,
+    "ast_hash": "bed71a1c868d0fc0ab701226c1cb72d7",
     "semantic_hash": ""
   },
   "PERFORMANCE_AUDIT.md": {
@@ -2937,6 +2937,12 @@
     "mtime": 1790737528.4513526,
     "seen": 1790737672.002021,
     "ast_hash": "ce699b97f361f5b1376184c26cfe3bb7",
+    "semantic_hash": ""
+  },
+  "src/routes/LegalRoutes.jsx": {
+    "mtime": 1790763923.112817,
+    "seen": 1790764088.759589,
+    "ast_hash": "75916406a37b2d6ff2b31b8e8d1de40f",
     "semantic_hash": ""
   }
 }

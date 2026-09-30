@@ -22,6 +22,7 @@ import CommunityRoute from './routes/CommunityRoute';
 import ChatRoute from './routes/ChatRoute';
 import PostRoute from './routes/PostRoute';
 import ProfileRoute from './routes/ProfileRoute';
+import LegalRoutes from './routes/LegalRoutes';
 import { useFeedStore } from './stores/useFeedStore';
 import { generateInvoiceRef } from './components/InvoiceCalculator';
 import TrocoLogoNativeSvg from './components/common/TrocoLogoNativeSvg';
@@ -49,7 +50,7 @@ import LanguageSelectModal from './components/modals/LanguageSelectModal';
 import { LanguageContext } from './contexts/LanguageContext';
 import { ConfirmProvider, useConfirm } from './hooks/useConfirm';
 import ConfirmDialog from './components/ui/ConfirmDialog';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence } from 'framer-motion';
 import {
   translations,
   ensureLanguageLoaded,
@@ -106,10 +107,6 @@ const CguConsentModal = React.lazy(() => import('./components/modals/CguConsentM
 const PaymentFeature = React.lazy(() => import('./features/payment'));
 const CallFeature = React.lazy(() => import('./features/call'));
 const WebRTCCallOverlay = React.lazy(() => import('./features/call/WebRTCCallOverlay'));
-const LegalNotice = React.lazy(() => import('./components/LegalNotice'));
-const PrivacyPolicy = React.lazy(() => import('./components/PrivacyPolicy'));
-const CookiePolicy = React.lazy(() => import('./components/CookiePolicy'));
-const RefundPolicy = React.lazy(() => import('./components/RefundPolicy'));
 const Footer = React.lazy(() => import('./components/Footer'));
 
 // 🚨 PHASE 108 : ISOLATION DES COMPOSANTS LOURDS 3D / CANVAS (ÉRADICATION CRASH OOM iOS)
@@ -3805,109 +3802,15 @@ export default function App() {
               />
             )}
 
-            {/* ONGLET LÉGAL : MENTIONS LÉGALES (CONFORMITÉ LCEN & DSA) */}
-            {activeTab === 'legal-notice' && (
-              <motion.div
-                key="page-legal-notice"
-                variants={pageTransitionVariants}
-                initial="initial"
-                animate="animate"
-                exit="exit"
-                transition={pageTransitionConfig}
-                style={{ width: '100%' }}
-              >
-                <Suspense fallback={<div style={{ minHeight: '60vh' }} />}>
-                  <LegalNotice
-                    onBack={() => setActiveTab('feed')}
-                    onNavigate={(tab) => {
-                      if (typeof window !== 'undefined') window.location.hash = tab;
-                      setActiveTab(tab);
-                    }}
-                    darkMode={darkMode}
-                  />
-                </Suspense>
-              </motion.div>
-            )}
-
-            {/* ONGLET LÉGAL : POLITIQUE DE CONFIDENTIALITÉ (RGPD / CNIL) */}
-            {activeTab === 'privacy-policy' && (
-              <motion.div
-                key="page-privacy-policy"
-                variants={pageTransitionVariants}
-                initial="initial"
-                animate="animate"
-                exit="exit"
-                transition={pageTransitionConfig}
-                style={{ width: '100%' }}
-              >
-                <Suspense fallback={<div style={{ minHeight: '60vh' }} />}>
-                  <PrivacyPolicy
-                    onBack={() => setActiveTab('feed')}
-                    onNavigate={(tab) => {
-                      if (typeof window !== 'undefined') window.location.hash = tab;
-                      setActiveTab(tab);
-                    }}
-                    onOpenPrivacyCenter={() => setIsPrivacyCenterOpen(true)}
-                    darkMode={darkMode}
-                  />
-                </Suspense>
-              </motion.div>
-            )}
-
-            {/* ONGLET LÉGAL : POLITIQUE DES COOKIES & TRACEURS */}
-            {activeTab === 'cookie-policy' && (
-              <motion.div
-                key="page-cookie-policy"
-                variants={pageTransitionVariants}
-                initial="initial"
-                animate="animate"
-                exit="exit"
-                transition={pageTransitionConfig}
-                style={{ width: '100%' }}
-              >
-                <Suspense fallback={<div style={{ minHeight: '60vh' }} />}>
-                  <CookiePolicy
-                    onBack={() => setActiveTab('feed')}
-                    onNavigate={(tab) => {
-                      if (typeof window !== 'undefined') window.location.hash = tab;
-                      setActiveTab(tab);
-                    }}
-                    onOpenCookieSettings={() => {
-                      try {
-                        localStorage.removeItem('troco_cookie_consent');
-                        window.location.reload();
-                      } catch (e) {
-                        window.location.reload();
-                      }
-                    }}
-                    darkMode={darkMode}
-                  />
-                </Suspense>
-              </motion.div>
-            )}
-
-            {/* ONGLET LÉGAL : POLITIQUE DE REMBOURSEMENT & DEALS P2P */}
-            {activeTab === 'refund-policy' && (
-              <motion.div
-                key="page-refund-policy"
-                variants={pageTransitionVariants}
-                initial="initial"
-                animate="animate"
-                exit="exit"
-                transition={pageTransitionConfig}
-                style={{ width: '100%' }}
-              >
-                <Suspense fallback={<div style={{ minHeight: '60vh' }} />}>
-                  <RefundPolicy
-                    onBack={() => setActiveTab('feed')}
-                    onNavigate={(tab) => {
-                      if (typeof window !== 'undefined') window.location.hash = tab;
-                      setActiveTab(tab);
-                    }}
-                    darkMode={darkMode}
-                  />
-                </Suspense>
-              </motion.div>
+            {/* ONGLETS LÉGAUX : MENTIONS LÉGALES, PRIVACY, COOKIES, REFUND (TDIF-01D) */}
+            {['legal-notice', 'privacy-policy', 'cookie-policy', 'refund-policy'].includes(activeTab) && (
+              <LegalRoutes
+                activeTab={activeTab}
+                darkMode={darkMode}
+                currentLang={currentLang}
+                setActiveTab={setActiveTab}
+                onOpenPrivacyCenter={() => setIsPrivacyCenterOpen(true)}
+              />
             )}
           </AnimatePresence>
 
