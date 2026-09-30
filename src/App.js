@@ -20,12 +20,13 @@ import { getSuggestedMedia, getSuggestedImage, getFallbackImage } from './utils/
 import FeedRoute from './routes/FeedRoute';
 import CommunityRoute from './routes/CommunityRoute';
 import ChatRoute from './routes/ChatRoute';
+import PostRoute from './routes/PostRoute';
+import ProfileRoute from './routes/ProfileRoute';
 import { useFeedStore } from './stores/useFeedStore';
 import { generateInvoiceRef } from './components/InvoiceCalculator';
 import TrocoLogoNativeSvg from './components/common/TrocoLogoNativeSvg';
 import OfflineScreen from './components/common/OfflineScreen';
 import PWAInstallBanner from './components/PWAInstallBanner';
-import SectoralErrorBoundary from './components/SectoralErrorBoundary';
 import AuthScreen from './features/auth/AuthScreen';
 import TransactionSuccessModal from './components/TransactionSuccessModal';
 import { useWalletStore } from './stores';
@@ -105,8 +106,6 @@ const CguConsentModal = React.lazy(() => import('./components/modals/CguConsentM
 const PaymentFeature = React.lazy(() => import('./features/payment'));
 const CallFeature = React.lazy(() => import('./features/call'));
 const WebRTCCallOverlay = React.lazy(() => import('./features/call/WebRTCCallOverlay'));
-const PostListingFeature = React.lazy(() => import('./features/post/PostListingFeature'));
-const ProfileFeature = React.lazy(() => import('./features/profile/ProfileFeature'));
 const LegalNotice = React.lazy(() => import('./components/LegalNotice'));
 const PrivacyPolicy = React.lazy(() => import('./components/PrivacyPolicy'));
 const CookiePolicy = React.lazy(() => import('./components/CookiePolicy'));
@@ -3736,99 +3735,74 @@ export default function App() {
 
             {/* ONGLET 3 : DÉPOSER UNE ANNONCE */}
             {activeTab === 'post' && (
-              <motion.div
-                key="page-post"
-                variants={pageTransitionVariants}
-                initial="initial"
-                animate="animate"
-                exit="exit"
-                transition={pageTransitionConfig}
-                style={{ width: '100%' }}
-              >
-                <SectoralErrorBoundary featureName="Dépôt d'annonce">
-                  <Suspense fallback={null}>
-                    <PostListingFeature
-                      profile={profile}
-                      setProfile={setProfile}
-                      listings={listings}
-                      setListings={setListings}
-                      postDraft={postDraft}
-                      setPostDraft={setPostDraft}
-                      postStep={postStep}
-                      setPostStep={setPostStep}
-                      isEditingListing={isEditingListing}
-                      setIsEditingListing={setIsEditingListing}
-                      editingOriginalListing={editingOriginalListing}
-                      setEditingOriginalListing={setEditingOriginalListing}
-                      publishMessage={publishMessage}
-                      setPublishMessage={setPublishMessage}
-                      userCoords={userCoords}
-                      customCategories={customCategories}
-                      setCustomCategories={setCustomCategories}
-                      setUserTransactions={setUserTransactions}
-                      openCheckout={openCheckout}
-                      setSelectedListing={setSelectedListing}
-                      setPublishedListing={setPublishedListing}
-                      setShowPublishedPopup={setShowPublishedPopup}
-                      darkMode={darkMode}
-                      t={t}
-                      currentLang={currentLang}
-                      formatCompensation={formatCompensation}
-                      getListingDetail={getListingDetail}
-                      getCoordinatesForLocation={getCoordinatesForLocation}
-                      generateTags={generateTags}
-                      getSuggestedMedia={getSuggestedMedia}
-                      getSuggestedImage={getSuggestedImage}
-                      setActiveTab={setActiveTab}
-                    />
-                  </Suspense>
-                </SectoralErrorBoundary>
-              </motion.div>
+              <PostRoute
+                profile={profile}
+                setProfile={setProfile}
+                listings={listings}
+                setListings={setListings}
+                postDraft={postDraft}
+                setPostDraft={setPostDraft}
+                postStep={postStep}
+                setPostStep={setPostStep}
+                isEditingListing={isEditingListing}
+                setIsEditingListing={setIsEditingListing}
+                editingOriginalListing={editingOriginalListing}
+                setEditingOriginalListing={setEditingOriginalListing}
+                publishMessage={publishMessage}
+                setPublishMessage={setPublishMessage}
+                userCoords={userCoords}
+                customCategories={customCategories}
+                setCustomCategories={setCustomCategories}
+                setUserTransactions={setUserTransactions}
+                openCheckout={openCheckout}
+                setSelectedListing={setSelectedListing}
+                setPublishedListing={setPublishedListing}
+                setShowPublishedPopup={setShowPublishedPopup}
+                darkMode={darkMode}
+                t={t}
+                currentLang={currentLang}
+                formatCompensation={formatCompensation}
+                getListingDetail={getListingDetail}
+                getCoordinatesForLocation={getCoordinatesForLocation}
+                generateTags={generateTags}
+                getSuggestedMedia={getSuggestedMedia}
+                getSuggestedImage={getSuggestedImage}
+                setActiveTab={setActiveTab}
+                defaultPostDraft={defaultPostDraft}
+              />
             )}
 
             {/* ONGLET 4 : PROFIL UTILISATEUR */}
             {activeTab === 'profile' && (
-              <motion.div
-                key="page-profile"
-                variants={pageTransitionVariants}
-                initial="initial"
-                animate="animate"
-                exit="exit"
-                transition={pageTransitionConfig}
-                style={{ width: '100%' }}
-              >
-                <Suspense fallback={null}>
-                  <ProfileFeature
-                    profile={profile}
-                    setProfile={setProfile}
-                    profileDraft={profileDraft}
-                    setProfileDraft={setProfileDraft}
-                    isEditingProfile={isEditingProfile}
-                    setIsEditingProfile={setIsEditingProfile}
-                    skills={skills}
-                    setSkills={setSkills}
-                    equipment={equipment}
-                    setEquipment={setEquipment}
-                    portfolioImages={portfolioImages}
-                    setPortfolioImages={setPortfolioImages}
-                    darkMode={darkMode}
-                    currentLang={currentLang}
-                    t={t}
-                    isMobile={isMobile}
-                    handleSignOut={handleSignOut}
-                    handleOpenPayment={handleOpenPayment}
-                    setIsKycModalOpen={setIsKycModalOpen}
-                    setIsAdminPanelOpen={setIsAdminPanelOpen}
-                    setIsTransactionsModalOpen={setIsTransactionsModalOpen}
-                    setIsPrivacyCenterOpen={setIsPrivacyCenterOpen}
-                    setIsCguViewerOpen={setIsCguViewerOpen}
-                    setActiveTab={setActiveTab}
-                    formatStatus={formatStatus}
-                    formatTokenCount={formatTokenCount}
-                    formatCompensation={formatCompensation}
-                  />
-                </Suspense>
-              </motion.div>
+              <ProfileRoute
+                profile={profile}
+                setProfile={setProfile}
+                profileDraft={profileDraft}
+                setProfileDraft={setProfileDraft}
+                isEditingProfile={isEditingProfile}
+                setIsEditingProfile={setIsEditingProfile}
+                skills={skills}
+                setSkills={setSkills}
+                equipment={equipment}
+                setEquipment={setEquipment}
+                portfolioImages={portfolioImages}
+                setPortfolioImages={setPortfolioImages}
+                darkMode={darkMode}
+                currentLang={currentLang}
+                t={t}
+                isMobile={isMobile}
+                handleSignOut={handleSignOut}
+                handleOpenPayment={handleOpenPayment}
+                setIsKycModalOpen={setIsKycModalOpen}
+                setIsAdminPanelOpen={setIsAdminPanelOpen}
+                setIsTransactionsModalOpen={setIsTransactionsModalOpen}
+                setIsPrivacyCenterOpen={setIsPrivacyCenterOpen}
+                setIsCguViewerOpen={setIsCguViewerOpen}
+                setActiveTab={setActiveTab}
+                formatStatus={formatStatus}
+                formatTokenCount={formatTokenCount}
+                formatCompensation={formatCompensation}
+              />
             )}
 
             {/* ONGLET LÉGAL : MENTIONS LÉGALES (CONFORMITÉ LCEN & DSA) */}
