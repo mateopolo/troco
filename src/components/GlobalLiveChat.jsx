@@ -371,20 +371,20 @@ export default function GlobalLiveChat({
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
               <span style={{ fontWeight: '800', fontSize: '13px', color: 'var(--text-main)' }}>
-                Troco Live Chat
+                {t('live.chat_title') || 'Troco Live Chat'}
               </span>
               <span style={{ fontSize: '8.5px', fontWeight: '900', backgroundColor: '#EF4444', color: '#FFF', padding: '1px 5px', borderRadius: '4px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
-                DIRECT
+                {t('live.live_badge') || 'DIRECT'}
               </span>
               {isAdmin && (
                 <span style={{ fontSize: '8px', fontWeight: '900', backgroundColor: '#F59E0B', color: '#FFF', padding: '1px 4px', borderRadius: '4px' }}>
-                  ADMIN
+                  {t('live.admin_badge') || 'ADMIN'}
                 </span>
               )}
             </div>
             <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '1px' }}>
               <span style={{ width: '5px', height: '5px', borderRadius: '50%', backgroundColor: '#10B981', display: 'inline-block' }} />
-              <span>{onlineCount.toLocaleString()} connectés</span>
+              <span>{t('live.connected_count')?.replace('{n}', onlineCount.toLocaleString()) || `${onlineCount.toLocaleString()} connectés`}</span>
             </div>
           </div>
         </div>
@@ -405,7 +405,7 @@ export default function GlobalLiveChat({
             }}
           >
             <TrendingUp size={12} />
-            <span>Flux 50 ms</span>
+            <span>{t('live.stream_50ms') || 'Flux 50 ms'}</span>
           </div>
         </div>
       </div>
@@ -527,7 +527,7 @@ export default function GlobalLiveChat({
                         letterSpacing: '0.3px',
                       }}
                     >
-                      {msg.badge}
+                      {msg.badge === 'FONDATEUR' ? (t('live.role_founder') || 'FONDATEUR') : msg.badge === 'VIP' ? (t('live.role_vip') || 'VIP') : msg.badge === 'PRO' ? (t('live.role_pro') || 'PRO') : (t('live.role_member') || 'MEMBRE')}
                     </span>
                   )}
 
@@ -544,13 +544,13 @@ export default function GlobalLiveChat({
                         animation: 'pulse 1.8s infinite',
                       }}
                     >
-                      ⚡ URGENT
+                      ⚡ {t('urgent') || 'URGENT'}
                     </span>
                   )}
 
                   {msg.isEditedByAdmin && (
                     <span style={{ fontSize: '9px', fontStyle: 'italic', color: 'var(--text-secondary)' }}>
-                      (modifié par admin)
+                      {t('live.edited_by_admin') || '(modifié par admin)'}
                     </span>
                   )}
 
@@ -581,7 +581,7 @@ export default function GlobalLiveChat({
                             fontSize: '10px',
                             fontWeight: '700',
                           }}
-                          title="Éditer ce message (Modération Admin)"
+                          title={t('live.edit_title') || "Éditer ce message (Modération Admin)"}
                         >
                           <Edit2 size={11} />
                         </button>
@@ -605,7 +605,7 @@ export default function GlobalLiveChat({
                             fontSize: '10px',
                             fontWeight: '700',
                           }}
-                          title="Supprimer ce message (Modération Admin)"
+                          title={t('live.delete_title') || "Supprimer ce message (Modération Admin)"}
                         >
                           <Trash2 size={11} />
                         </button>
@@ -642,14 +642,14 @@ export default function GlobalLiveChat({
                         onClick={() => setEditingAdminMsg(null)}
                         style={{ border: '1px solid var(--border-color)', backgroundColor: 'transparent', color: 'var(--text-secondary)', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}
                       >
-                        Annuler
+                        {t('cancel') || 'Annuler'}
                       </button>
                       <button
                         type="button"
                         onClick={handleSaveAdminEdit}
                         style={{ border: 'none', backgroundColor: '#3B82F6', color: '#FFF', padding: '3px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: '800', cursor: 'pointer' }}
                       >
-                        Enregistrer
+                        {t('save') || 'Enregistrer'}
                       </button>
                     </div>
                   </div>
@@ -746,9 +746,9 @@ export default function GlobalLiveChat({
               <AlertTriangle size={22} />
             </div>
             <div>
-              <h4 style={{ margin: '0 0 4px', fontSize: '15px', fontWeight: '800' }}>Supprimer ce message public ?</h4>
+              <h4 style={{ margin: '0 0 4px', fontSize: '15px', fontWeight: '800' }}>{t('deleteMessage') || 'Supprimer ce message public ?'}</h4>
               <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-                Action de modération administrateur. Le message sera définitivement effacé de la communauté.
+                {t('live.delete_confirm_desc') || 'Action de modération administrateur. Le message sera définitivement effacé de la communauté.'}
               </p>
             </div>
             <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
@@ -757,14 +757,14 @@ export default function GlobalLiveChat({
                 onClick={() => setConfirmDeleteMsgId(null)}
                 style={{ flex: 1, padding: '9px 12px', borderRadius: '10px', border: '1px solid var(--border-color)', backgroundColor: 'var(--bg-subtle)', color: 'var(--text-main)', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
               >
-                Annuler
+                {t('cancel') || 'Annuler'}
               </button>
               <button
                 type="button"
                 onClick={handleConfirmDeleteMessage}
                 style={{ flex: 1, padding: '9px 12px', borderRadius: '10px', border: 'none', backgroundColor: '#EF4444', color: '#FFFFFF', fontSize: '12px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)' }}
               >
-                Supprimer
+                {t('delete') || 'Supprimer'}
               </button>
             </div>
           </div>

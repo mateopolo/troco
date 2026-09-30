@@ -321,8 +321,8 @@ export const AppHeader = React.memo(({
           <button
             type="button"
             onClick={toggleDarkMode}
-            title={darkMode ? 'Activer le mode clair' : 'Activer le mode sombre'}
-            aria-label={darkMode ? 'Activer le mode clair' : 'Activer le mode sombre'}
+            title={darkMode ? (t('theme.light_mode') || 'Activer le mode clair') : (t('theme.dark_mode') || 'Activer le mode sombre')}
+            aria-label={darkMode ? (t('theme.light_mode') || 'Activer le mode clair') : (t('theme.dark_mode') || 'Activer le mode sombre')}
             aria-pressed={darkMode}
             className="premium-button darkmode-btn flex-shrink-0"
             style={{
@@ -348,7 +348,7 @@ export const AppHeader = React.memo(({
             type="button"
             onClick={() => setIsLangModalOpen(true)}
             className="premium-button lang-btn flex-shrink-0"
-            aria-label="Changer de langue"
+            aria-label={t('select_language') || "Changer de langue"}
             data-testid="language-selector"
             style={{
               border: '1px solid var(--border-color)',

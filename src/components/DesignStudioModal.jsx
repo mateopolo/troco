@@ -158,15 +158,15 @@ export default function DesignStudioModal({
                 alignItems: 'center',
                 gap: '5px',
               }}
-              title="Réinitialiser toutes les personnalisations"
+              title={t('design.reset_btn') || "Réinitialiser toutes les personnalisations"}
             >
-              <Repeat size={12} /> Réinitialiser
+              <Repeat size={12} /> {t('design.reset_btn') || 'Réinitialiser'}
             </button>
 
             <button
               type="button"
               onClick={onClose}
-              aria-label="Fermer le studio de design"
+              aria-label={t('close') || "Fermer le studio de design"}
               style={{
                 width: '34px',
                 height: '34px',
@@ -215,7 +215,7 @@ export default function DesignStudioModal({
                   gap: '5px',
                 }}
               >
-                <Sparkles size={12} /> Aperçu Live
+                <Sparkles size={12} /> {t('design.live_preview') || 'Aperçu Live'}
               </span>
               <span
                 style={{
@@ -227,7 +227,7 @@ export default function DesignStudioModal({
                   gap: '4px',
                 }}
               >
-                <ShieldCheck size={13} /> Contraste Garanti (WCAG AA)
+                <ShieldCheck size={13} /> {t('design.wcag_contrast') || 'Contraste Garanti (WCAG AA)'}
               </span>
             </div>
 
@@ -261,10 +261,10 @@ export default function DesignStudioModal({
                     fontFamily: 'var(--font-family-main)',
                   }}
                 >
-                  Cours Particulier de Guitare & MAO
+                  {t('design.demo_course_title') || 'Cours Particulier de Guitare & MAO'}
                 </h5>
                 <div style={{ fontSize: '11.5px', color: 'var(--text-secondary)', marginTop: '2px' }}>
-                  Par Mateo Polo • Paris 11e • 1 Jeton Troco
+                  {t('design.demo_author') || 'Par Mateo Polo • Paris 11e • 1 Jeton Troco'}
                 </div>
               </div>
             </div>
@@ -278,7 +278,7 @@ export default function DesignStudioModal({
                 fontFamily: 'var(--font-family-main)',
               }}
             >
-              Session d'apprentissage et de mixage studio. Échange contre dépannage informatique ou bricolage.
+              {t('design.demo_course_desc') || "Session d'apprentissage et de mixage studio. Échange contre dépannage informatique ou bricolage."}
             </p>
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
@@ -295,7 +295,7 @@ export default function DesignStudioModal({
                   fontWeight: '800',
                 }}
               >
-                <Coins size={13} color="var(--accent-primary)" /> 1 Jeton Troco
+                <Coins size={13} color="var(--accent-primary)" /> {t('design.demo_tokens') || '1 Jeton Troco'}
               </div>
 
               <button
@@ -317,7 +317,7 @@ export default function DesignStudioModal({
                   transition: 'all 0.2s ease',
                 }}
               >
-                Proposer un Troco <ChevronRight size={13} />
+                {t('design.demo_propose_btn') || 'Proposer un Troco'} <ChevronRight size={13} />
               </button>
             </div>
           </div>
@@ -325,7 +325,7 @@ export default function DesignStudioModal({
           {/* 2. SÉLECTION RAPIDE DES AMBIANCES */}
           <div>
             <label style={{ display: 'block', fontSize: '12px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '8px' }}>
-              Thèmes & Ambiances Prédéfinies
+              {t('design.preset_themes_title') || 'Thèmes & Ambiances Prédéfinies'}
             </label>
             <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)', gap: '10px' }}>
               {(allThemes || []).map((tItem) => {
@@ -414,10 +414,10 @@ export default function DesignStudioModal({
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
               <Sparkles size={16} color="var(--accent-primary)" />
-              <strong style={{ fontSize: '13px', color: 'var(--text-main)' }}>Générateur Magique (1 Clic)</strong>
+              <strong style={{ fontSize: '13px', color: 'var(--text-main)' }}>{t('design.magic_generator_title') || 'Générateur Magique (1 Clic)'}</strong>
             </div>
             <p style={{ fontSize: '11.5px', color: 'var(--text-secondary)', margin: '0 0 12px' }}>
-              Choisissez une couleur primaire : le moteur HSL calcule automatiquement l'ensemble des teintes harmoniques, contrastes et ombres.
+              {t('design.magic_generator_desc') || "Choisissez une couleur primaire : le moteur HSL calcule automatiquement l'ensemble des teintes harmoniques, contrastes et ombres."}
             </p>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
@@ -447,7 +447,7 @@ export default function DesignStudioModal({
                   }}
                 />
                 <div>
-                  <div style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-main)' }}>Couleur de Marque</div>
+                  <div style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-main)' }}>{t('design.brand_color_label') || 'Couleur de Marque'}</div>
                   <div style={{ fontSize: '10px', fontFamily: 'monospace', color: 'var(--text-secondary)' }}>{brandColor || '#B98B73'}</div>
                 </div>
               </div>
@@ -502,7 +502,7 @@ export default function DesignStudioModal({
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Sliders size={18} color="var(--accent-primary)" />
                 <strong style={{ fontSize: '14px', color: 'var(--text-main)', fontWeight: '800' }}>
-                  Studio Design, Ambiances & Typographie
+                  {t('design.studio_controls_title') || 'Studio Design, Ambiances & Typographie'}
                 </strong>
               </div>
             </div>
@@ -512,7 +512,7 @@ export default function DesignStudioModal({
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
                 <Palette size={14} color="var(--accent-primary)" />
                 <label style={{ fontSize: '11.5px', fontWeight: '800', color: 'var(--text-main)', textTransform: 'uppercase' }}>
-                  Ambiance & Couleur d'Accentuation Globale
+                  {t('design.ambiance_accent_title') || "Ambiance & Couleur d'Accentuation Globale"}
                 </label>
               </div>
               <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
@@ -551,10 +551,10 @@ export default function DesignStudioModal({
             <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '14px' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                 <label style={{ fontSize: '11.5px', fontWeight: '800', color: 'var(--text-main)', textTransform: 'uppercase' }}>
-                  Typographie Globale (12+ Polices Google Fonts)
+                  {t('design.typography_title') || 'Typographie Globale (12+ Polices Google Fonts)'}
                 </label>
                 <span style={{ fontSize: '11px', color: 'var(--accent-primary)', fontWeight: '800', fontFamily: typographyOptions?.[typography]?.fontFamily }}>
-                  Actif : {typographyOptions?.[typography]?.name || typography}
+                  {t('design.typography_active') || 'Actif'} : {typographyOptions?.[typography]?.name || typography}
                 </span>
               </div>
 
@@ -609,7 +609,7 @@ export default function DesignStudioModal({
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                   <label style={{ fontSize: '11.5px', fontWeight: '800', color: 'var(--text-main)' }}>
-                    Échelle & Zoom d'Affichage
+                    {t('design.zoom_title') || "Échelle & Zoom d'Affichage"}
                   </label>
                   <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--accent-primary)', fontFamily: 'monospace' }}>
                     {Math.round((baseZoom || 1.0) * 100)}%
@@ -625,9 +625,9 @@ export default function DesignStudioModal({
                   style={{ width: '100%' }}
                 />
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9.5px', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                  <span>Compact (90%)</span>
-                  <span>Standard (100%)</span>
-                  <span>Grand (110%)</span>
+                  <span>{t('design.zoom_compact') || 'Compact (90%)'}</span>
+                  <span>{t('design.zoom_standard') || 'Standard (100%)'}</span>
+                  <span>{t('design.zoom_large') || 'Grand (110%)'}</span>
                 </div>
               </div>
 
@@ -635,10 +635,10 @@ export default function DesignStudioModal({
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                   <label style={{ fontSize: '11.5px', fontWeight: '800', color: 'var(--text-main)' }}>
-                    Forme des Boutons & Cartes
+                    {t('design.shape_title') || 'Forme des Boutons & Cartes'}
                   </label>
                   <span style={{ fontSize: '11px', fontWeight: '800', color: 'var(--accent-primary)', fontFamily: 'monospace' }}>
-                    {borderRadius >= 900 ? 'Pilule (999px • Cartes max 32px)' : `${borderRadius || 14}px`}
+                    {borderRadius >= 900 ? (t('design.shape_pill') || 'Pilule (999px • Cartes max 32px)') : `${borderRadius || 14}px`}
                   </span>
                 </div>
                 <input
@@ -666,7 +666,7 @@ export default function DesignStudioModal({
                       cursor: 'pointer',
                     }}
                   >
-                    Carré (0px)
+                    {t('design.shape_square') || 'Carré (0px)'}
                   </button>
                   <button
                     type="button"
@@ -683,7 +683,7 @@ export default function DesignStudioModal({
                       cursor: 'pointer',
                     }}
                   >
-                    Doux (14px)
+                    {t('design.shape_soft') || 'Doux (14px)'}
                   </button>
                   <button
                     type="button"
@@ -700,7 +700,7 @@ export default function DesignStudioModal({
                       cursor: 'pointer',
                     }}
                   >
-                    Pilule (999px)
+                    {t('design.shape_pill') || 'Pilule (999px)'}
                   </button>
                 </div>
               </div>
@@ -709,7 +709,7 @@ export default function DesignStudioModal({
             {/* AJUSTEMENT PRÉCIS DES COULEURS */}
             <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '14px' }}>
               <label style={{ display: 'block', fontSize: '11.5px', fontWeight: '800', color: 'var(--text-main)', marginBottom: '8px' }}>
-                Ajustement Précis des Couleurs
+                {t('design.color_tuning_title') || 'Ajustement Précis des Couleurs'}
               </label>
 
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, 1fr)', gap: '10px' }}>
@@ -735,7 +735,7 @@ export default function DesignStudioModal({
                     style={{ width: '32px', height: '32px', borderRadius: '6px', border: '1.5px solid var(--border-color)', cursor: 'pointer', padding: 0, backgroundColor: 'transparent' }}
                   />
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-main)' }}>Fond</div>
+                    <div style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-main)' }}>{t('design.color_bg') || 'Fond'}</div>
                     <div style={{ fontSize: '9.5px', fontFamily: 'monospace', color: 'var(--text-secondary)' }}>{customColors?.bg || '#FAF7F2'}</div>
                   </div>
                 </div>
@@ -762,7 +762,7 @@ export default function DesignStudioModal({
                     style={{ width: '32px', height: '32px', borderRadius: '6px', border: '1.5px solid var(--border-color)', cursor: 'pointer', padding: 0, backgroundColor: 'transparent' }}
                   />
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-main)' }}>Cartes</div>
+                    <div style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-main)' }}>{t('design.color_card') || 'Cartes'}</div>
                     <div style={{ fontSize: '9.5px', fontFamily: 'monospace', color: 'var(--text-secondary)' }}>{customColors?.card || '#FFFFFF'}</div>
                   </div>
                 </div>
@@ -789,7 +789,7 @@ export default function DesignStudioModal({
                     style={{ width: '32px', height: '32px', borderRadius: '6px', border: '1.5px solid var(--border-color)', cursor: 'pointer', padding: 0, backgroundColor: 'transparent' }}
                   />
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-main)' }}>Texte</div>
+                    <div style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-main)' }}>{t('design.color_text') || 'Texte'}</div>
                     <div style={{ fontSize: '9.5px', fontFamily: 'monospace', color: 'var(--text-secondary)' }}>{customColors?.text || '#3F4238'}</div>
                   </div>
                 </div>
@@ -816,7 +816,7 @@ export default function DesignStudioModal({
                     style={{ width: '32px', height: '32px', borderRadius: '6px', border: '1.5px solid var(--border-color)', cursor: 'pointer', padding: 0, backgroundColor: 'transparent' }}
                   />
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-main)' }}>Boutons</div>
+                    <div style={{ fontSize: '11px', fontWeight: '800', color: 'var(--text-main)' }}>{t('design.color_btn') || 'Boutons'}</div>
                     <div style={{ fontSize: '9.5px', fontFamily: 'monospace', color: 'var(--text-secondary)' }}>{customColors?.primary || '#B98B73'}</div>
                   </div>
                 </div>

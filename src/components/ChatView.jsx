@@ -99,6 +99,16 @@ function ChatView({
   const [activeWhiteboardVersion, setActiveWhiteboardVersion] = useState(null);
   const [whiteboardInitialView, setWhiteboardInitialView] = useState('lobby');
   const [firestoreRecentBoards, setFirestoreRecentBoards] = useState([]);
+  const [localShowingOriginal, setLocalShowingOriginal] = useState({});
+  const handleToggleOriginal = useCallback((msgId) => {
+    if (!msgId) return;
+    setLocalShowingOriginal(prev => ({ ...prev, [msgId]: !prev[msgId] }));
+    if (typeof toggleOriginalMessage === 'function') {
+      try {
+        toggleOriginalMessage(msgId);
+      } catch (_) {}
+    }
+  }, [toggleOriginalMessage]);
   const [isWorkspaceToolsOpen, setIsWorkspaceToolsOpen] = useState(false);
   const [isCloudOfficeOpen, setIsCloudOfficeOpen] = useState(false);
   const [activeOfficeDocId, setActiveOfficeDocId] = useState(null);
@@ -1690,7 +1700,7 @@ function ChatView({
             {messages.map((msg, msgIdx) => {
               try {
                 if (!msg || typeof msg !== 'object') return null;
-                const isMsgOriginal = !!showingOriginalMessages[msg?.id];
+                const isMsgOriginal = Boolean(showingOriginalMessages?.[msg?.id] || localShowingOriginal?.[msg?.id]);
                 const translatedText = getChatMessageDisplayContent
                   ? getChatMessageDisplayContent(msg, currentLang, isMsgOriginal)
                   : (msg?.text || '');
@@ -1891,7 +1901,7 @@ function ChatView({
                         )}
                         {currentLang !== 'FR' && dealConditionsText && (
                           <button
-                            onClick={() => toggleOriginalMessage(msg?.id)}
+                            onClick={() => handleToggleOriginal(msg?.id)}
                             className="premium-button"
                             style={{
                               border: 'none', background: 'none', cursor: 'pointer',
@@ -1900,7 +1910,7 @@ function ChatView({
                               gap: '4px', marginBottom: '10px', padding: 0
                             }}
                           >
-                            <Globe size={11} style={{ flexShrink: 0 }} /> <span>{isMsgOriginal ? t('showTranslation') : t('showOriginal')}</span>
+                            <Globe size={11} style={{ flexShrink: 0 }} /> <span>{isMsgOriginal ? (t ? t('showTranslation') : '🌐 Voir la traduction') : (t ? t('showOriginal') : '🌐 Voir l\'original')}</span>
                           </button>
                         )}
 
@@ -2567,7 +2577,7 @@ function ChatView({
                             />
                           ) : (
                             <div style={{ fontSize: '13.5px', lineHeight: 1.45, fontWeight: '500' }}>
-                              {translatedText || msg?.text || ''}
+                              {isMsgOriginal ? (msg?.originalText || msg?.text || translatedText || '') : (translatedText || msg?.text || '')}
                             </div>
                           )}
 
@@ -2575,7 +2585,7 @@ function ChatView({
                           {currentLang !== 'FR' && (
                             <button
                               type="button"
-                              onClick={() => toggleOriginalMessage(msg?.id)}
+                              onClick={() => handleToggleOriginal(msg?.id)}
                               style={{
                                 alignSelf: isMe ? 'flex-end' : 'flex-start',
                                 border: 'none',
@@ -2592,7 +2602,7 @@ function ChatView({
                                 marginTop: '3px',
                                 transition: 'all 0.15s ease',
                               }}
-                              title="Basculer entre la traduction et le texte original"
+                              title={t('chat.toggle_translation_title') || "Basculer entre la traduction et le texte original"}
                             >
                               <Globe size={10} />
                               <span>{isMsgOriginal ? (t ? t('showTranslation') : '🌐 Voir la traduction') : (t ? t('showOriginal') : '🌐 Voir l\'original')}</span>

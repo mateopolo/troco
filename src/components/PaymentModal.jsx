@@ -907,7 +907,7 @@ export default function PaymentModal({
                       type="number"
                       min="5"
                       max="1000"
-                      placeholder="Ou montant libre en € (ex: 75)"
+                      placeholder={t('payment.custom_amount_placeholder') || "Ou montant libre en € (ex: 75)"}
                       value={customCashAmount}
                       onChange={(e) => setCustomCashAmount(e.target.value)}
                       style={{
@@ -928,7 +928,7 @@ export default function PaymentModal({
               {mode === 'boost' && (
                 <div style={{ marginBottom: '22px' }}>
                   <label style={{ display: 'block', fontSize: '13px', fontWeight: '800', marginBottom: '10px', color: 'var(--text-main)' }}>
-                    1. Choisissez votre formule de visibilité
+                    1. {t('payment.boost_section_title') || 'Choisissez votre formule de visibilité'}
                   </label>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     {boostOptions.map(b => {

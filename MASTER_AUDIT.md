@@ -13,7 +13,7 @@
 > - `STEP BY STEP URGENT.txt` & `LISTE DES PROCHAINES FONCTIONNALITES A CODER.txt` (Backlog immédiat)
 > - `PROJECT_CONTEXT.md` & `TROCO_PROJECT_HISTORY.md` (Historique des décisions et géoprivacy)
 >
-> **Score global :** 8.6/10 | **Progression :** 45 / 74 tâches validées avec preuves formelles (60.8%)
+> **Score global :** 8.7/10 | **Progression :** 47 / 74 tâches validées avec preuves formelles (63.5%)
 
 ---
 
@@ -21,12 +21,12 @@
 
 | Phase | Fait | Restant | Progression |
 |---|---|---|---|
-| 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 26 | 1 | 96.3% |
+| 🟢 Quick Wins (Niveau 1 — 15min à 1h) | 28 | 1 | 96.6% |
 | 🟡 Facile (Niveau 2 — 1h à 3h) | 16 | 0 | 100% |
 | 🟠 Moyen (Niveau 3 — 3h à 1 jour) | 8 | 7 | 53.3% |
 | 🔴 Difficile (Niveau 4 — 1 à 3 jours) | 3 | 7 | 30.0% |
 | 🚨 Très difficile (Niveau 5 — 3j à 2 sem) | 0 | 9 | 0.0% |
-| **TOTAL** | **45** | **29** | **60.8%** |
+| **TOTAL** | **47** | **27** | **63.5%** |
 
 
 ### Score par axe vs cible Licorne
@@ -205,6 +205,14 @@
 ### [x] [CLEANUP-07] — Réparation de la corruption UTF-8 (mojibake) dans translationsSecondary.js
 **Preuve** : `src/data/translationsSecondary.js` restauré en UTF-8 strict sans BOM. Validation Node : 0 occurrence de double encodage `\u00C3[\u0080-\u00BF]` (965 résolues). Emojis (`👑`, `🪙`, `⭐`) et caractères japonais/chinois (`サブスク`, `订阅`) 100% fonctionnels et validés.
 **Statut** : ✅ FAIT — Élimination intégrale du mojibake sur les 6 langues secondaires (EN, ES, IT, DE, JA, ZH) et affichage parfait des accents et symboles dans la modale Troco Plus et l'UI.
+
+### [x] [CLEANUP-09] — Réparation du bouton "Show original" (Voir l'original) dans ChatView
+**Preuve** : `src/components/ChatView.jsx:102-111, 1703-1707, 1904-1913, 2580-2610`
+**Statut** : ✅ FAIT — Câblage complet de l'état réactif local `[localShowingOriginal, setLocalShowingOriginal]` et de la fonction mémorisée `handleToggleOriginal(msgId)` dans `ChatView.jsx`. Consultation combinée de `Boolean(showingOriginalMessages?.[msg?.id] || localShowingOriginal?.[msg?.id])` et rendu direct du texte source original (`msg.originalText || msg.text`) lors du clic sur "Voir l'original" / "Voir la traduction" pour tous les messages texte simples, conditions de deal et transcriptions vocales.
+
+### [x] [I18N-COMPLETE] — Ratissage total des chaînes FR résiduelles dans les 7 langues (FR, EN, ES, IT, DE, JA, ZH)
+**Preuve** : `src/components/chat/ChatInputBar.jsx`, `src/components/ChatView.jsx`, `src/features/workspace/WorkspaceMessageCard.jsx`, `src/components/DesignStudioModal.jsx`, `src/components/GlobalLiveChat.jsx`, `src/components/PaymentModal.jsx`, `src/components/layout/AppHeader.jsx`, `src/components/layout/AppBottomNav.jsx`, `src/data/translationsData.js`, `src/data/translationsSecondary.js`, `src/locales/translations.js`
+**Statut** : ✅ FAIT — Internationalisation complète de l'ensemble des chaînes d'interface utilisateur en suspens dans les 7 langues : (1) Menu Outils Collaboratifs Workspace Premium (titres, descriptions, boutons Ouvrir/Rejoindre, snippets de cartes). (2) Design Studio & Accessibilité (Aperçu Live, WCAG AA, démo guitare, générateur magique, ambiances HSL, 12+ typographies Google Fonts, zoom, formes carré/doux/pilule, réglage fin des couleurs). (3) Troco Live Chat (Direct, Admin, compteurs en ligne dynamiques, badges de rôles, actions de modération, modale de confirmation de suppression). (4) Modalités de paiement (placeholders de montants libres, formules de boost, TVA). (5) Toolbars de messagerie, Dark Mode et boutons d'en-tête (attributs title, aria-label, placeholders). 174 nouvelles clés i18n ajoutées sans doublon ni régression.
 
 ---
 

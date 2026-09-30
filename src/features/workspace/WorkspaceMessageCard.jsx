@@ -5,10 +5,12 @@
 
 import React from 'react';
 import { FileText, Table, Paintbrush } from 'lucide-react';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 export default function WorkspaceMessageCard(props) {
+  const { t } = useLanguage?.() || { t: (k) => k };
   const message = props?.message || props?.msg;
-  if (!message) return <div className="p-4 bg-red-50 text-red-500 rounded-xl">Document indisponible</div>;
+  if (!message) return <div className="p-4 bg-red-50 text-red-500 rounded-xl">{t('workspace.doc_unavailable') || 'Document indisponible'}</div>;
 
   const isMine = Boolean(props?.isMine);
   const isMobile = Boolean(props?.isMobile);
@@ -42,14 +44,21 @@ export default function WorkspaceMessageCard(props) {
   );
 
   const documentId = message?.documentId || message?.docId || message?.workspaceId || message?.boardId || message?.document?.id || '';
-  const buttonLabel = isMine ? 'Ouvrir' : 'Rejoindre';
+  const buttonLabel = isMine ? (t('workspace.card_open') || 'Ouvrir') : (t('workspace.card_join') || 'Rejoindre');
 
   // 🚨 PHASE 103 : FALLBACKS DE TITRE ET SNIPPET SÉCURISÉS
-  const safeTitle = message?.title || message?.dealTerms?.title || 'Document partagé';
-  const safeSnippet = message?.snippet || 'Cliquez pour ouvrir le document...';
+  const safeTitle = message?.title || message?.dealTerms?.title || (t('workspace.collab_doc') || 'Document partagé');
+  const safeSnippet = message?.snippet || (t('workspace.card_default_snippet') || 'Cliquez pour ouvrir le document...');
 
-  const displayTitle = message?.workspaceTitle || safeTitle || message?.document?.title || (isWhiteboard ? 'Tableau Blanc collaboratif' : isNotes ? 'Notes Partagées' : isDocs ? 'Troco Doc' : 'Troco Sheet');
-  const rawSnippet = String(message?.snippet || safeSnippet || message?.summary || message?.text || message?.content || message?.document?.content || "Document collaboratif partagé dans l'espace de travail.");
+  const defaultTitle = isWhiteboard
+    ? (t('workspace.whiteboard_card_title') || 'Tableau Blanc collaboratif')
+    : isNotes
+      ? (t('workspace.notes_card_title') || 'Notes Partagées')
+      : isDocs
+        ? (t('workspace.docs_card_title') || 'Troco Doc')
+        : (t('workspace.sheets_card_title') || 'Troco Sheet');
+  const displayTitle = message?.workspaceTitle || safeTitle || message?.document?.title || defaultTitle;
+  const rawSnippet = String(message?.snippet || safeSnippet || message?.summary || message?.text || message?.content || message?.document?.content || (t('workspace.collab_snippet_fallback') || "Document collaboratif partagé dans l'espace de travail."));
   const truncatedSnippet = rawSnippet.slice(0, 100) + (rawSnippet.length > 100 ? '...' : '');
 
   const thumbnail = message?.thumbnailBase64 || message?.previewUrl || null;
@@ -293,7 +302,7 @@ export default function WorkspaceMessageCard(props) {
                 marginTop: '1px',
               }}
             >
-              {message?.senderName ? `Par ${message.senderName}` : isMine ? 'Par Vous' : 'Document partagé'}
+              {message?.senderName ? `${t('workspace.by_author') || 'Par'} ${message.senderName}` : isMine ? (t('workspace.by_you') || 'Par Vous') : (t('workspace.collab_doc') || 'Document partagé')}
             </div>
           </div>
 

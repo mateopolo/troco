@@ -337,8 +337,8 @@ function ChatInputBar({
                 flexShrink: 0,
                 transition: 'all 0.15s ease',
               }}
-              title="Outils Collaboratifs Workspace (Tableau blanc, Documents, Feuilles, Notes)"
-              aria-label="Ouvrir le menu des outils collaboratifs Workspace"
+              title={t('workspace.tools_title') || "Outils Collaboratifs Workspace (Tableau blanc, Documents, Feuilles, Notes)"}
+              aria-label={t('workspace.tools_aria') || "Ouvrir le menu des outils collaboratifs Workspace"}
             >
               <LayoutGrid size={isMobile ? 16 : 18} />
             </button>
@@ -367,10 +367,10 @@ function ChatInputBar({
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '4px 8px', borderBottom: '1px solid var(--border-color)', marginBottom: '4px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: '800', color: 'var(--accent-primary)' }}>
                     <Sparkles size={13} />
-                    <span>WORKSPACE PREMIUM</span>
+                    <span>{t('workspace.workspace_premium') || "WORKSPACE PREMIUM"}</span>
                   </div>
                   <span style={{ fontSize: '9px', fontWeight: '800', backgroundColor: 'rgba(198, 125, 91, 0.15)', color: 'var(--accent-primary)', padding: '2px 6px', borderRadius: '999px' }}>
-                    PRO
+                    {t('workspace.pro_badge') || "PRO"}
                   </span>
                 </div>
 
@@ -406,10 +406,10 @@ function ChatInputBar({
                   </div>
                   <div style={{ minWidth: 0, flex: 1 }}>
                     <div style={{ fontSize: '12.5px', fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <span>Tableau Blanc</span>
+                      <span>{t('workspace.whiteboard_title') || "Tableau Blanc"}</span>
                       <span style={{ fontSize: '9px', fontWeight: '800', color: '#10B981', backgroundColor: 'rgba(16, 185, 129, 0.15)', padding: '1px 5px', borderRadius: '4px' }}>0ms</span>
                     </div>
-                    <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>Créer un nouveau projet ou reprendre un board</div>
+                    <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>{t('workspace.whiteboard_desc') || "Créer un nouveau projet ou reprendre un board"}</div>
                   </div>
                 </button>
 
@@ -441,10 +441,10 @@ function ChatInputBar({
                   </div>
                   <div style={{ minWidth: 0, flex: 1 }}>
                     <div style={{ fontSize: '12.5px', fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <span>Notes Partagées</span>
-                      <span style={{ fontSize: '9px', fontWeight: '800', color: '#F59E0B', backgroundColor: 'rgba(245, 158, 11, 0.15)', padding: '1px 5px', borderRadius: '4px' }}>NOTES</span>
+                      <span>{t('workspace.notes_title') || "Notes Partagées"}</span>
+                      <span style={{ fontSize: '9px', fontWeight: '800', color: '#F59E0B', backgroundColor: 'rgba(245, 158, 11, 0.15)', padding: '1px 5px', borderRadius: '4px' }}>{t('workspace.notes_badge') || "NOTES"}</span>
                     </div>
-                    <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>Notes de session & checklist Apple-Style</div>
+                    <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>{t('workspace.notes_desc') || "Notes de session & checklist Apple-Style"}</div>
                   </div>
                 </button>
 
@@ -476,10 +476,10 @@ function ChatInputBar({
                   </div>
                   <div style={{ minWidth: 0, flex: 1 }}>
                     <div style={{ fontSize: '12.5px', fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <span>Troco Docs</span>
-                      <span style={{ fontSize: '9px', fontWeight: '800', color: '#3B82F6', backgroundColor: 'rgba(59, 130, 246, 0.15)', padding: '1px 5px', borderRadius: '4px' }}>DOCS</span>
+                      <span>{t('workspace.docs_title') || "Troco Docs"}</span>
+                      <span style={{ fontSize: '9px', fontWeight: '800', color: '#3B82F6', backgroundColor: 'rgba(59, 130, 246, 0.15)', padding: '1px 5px', borderRadius: '4px' }}>{t('workspace.docs_badge') || "DOCS"}</span>
                     </div>
-                    <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>Éditeur texte Markdown collaboratif</div>
+                    <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>{t('workspace.docs_desc') || "Éditeur texte Markdown collaboratif"}</div>
                   </div>
                 </button>
 
@@ -511,10 +511,10 @@ function ChatInputBar({
                   </div>
                   <div style={{ minWidth: 0, flex: 1 }}>
                     <div style={{ fontSize: '12.5px', fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <span>Troco Sheets</span>
-                      <span style={{ fontSize: '9px', fontWeight: '800', color: '#10B981', backgroundColor: 'rgba(16, 185, 129, 0.15)', padding: '1px 5px', borderRadius: '4px' }}>SHEETS</span>
+                      <span>{t('workspace.sheets_title') || "Troco Sheets"}</span>
+                      <span style={{ fontSize: '9px', fontWeight: '800', color: '#10B981', backgroundColor: 'rgba(16, 185, 129, 0.15)', padding: '1px 5px', borderRadius: '4px' }}>{t('workspace.sheets_badge') || "SHEETS"}</span>
                     </div>
-                    <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>Tableur & formules en temps réel</div>
+                    <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>{t('workspace.sheets_desc') || "Tableur & formules en temps réel"}</div>
                   </div>
                 </button>
 
@@ -545,8 +545,8 @@ function ChatInputBar({
                     <Calendar size={16} />
                   </div>
                   <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ fontSize: '12.5px', fontWeight: '700', color: 'var(--text-main)' }}>Planning & Visios HD</div>
-                    <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>Calendrier de projet & réunions</div>
+                    <div style={{ fontSize: '12.5px', fontWeight: '700', color: 'var(--text-main)' }}>{t('workspace.planning_title') || "Planning & Visios HD"}</div>
+                    <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>{t('workspace.planning_desc') || "Calendrier de projet & réunions"}</div>
                   </div>
                 </button>
 
@@ -578,8 +578,8 @@ function ChatInputBar({
                       <Coins size={16} />
                     </div>
                     <div style={{ minWidth: 0, flex: 1 }}>
-                      <div style={{ fontSize: '12.5px', fontWeight: '700', color: 'var(--text-main)' }}>Transférer des Jetons</div>
-                      <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>Envoi direct de Jetons Troco</div>
+                      <div style={{ fontSize: '12.5px', fontWeight: '700', color: 'var(--text-main)' }}>{t('workspace.transfer_tokens_title') || "Transférer des Jetons"}</div>
+                      <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>{t('workspace.transfer_tokens_desc') || "Envoi direct de Jetons Troco"}</div>
                     </div>
                   </button>
                 )}
@@ -612,8 +612,8 @@ function ChatInputBar({
                       <Coins size={16} />
                     </div>
                     <div style={{ minWidth: 0, flex: 1 }}>
-                      <div style={{ fontSize: '12.5px', fontWeight: '700', color: 'var(--text-main)' }}>Rétribution en Jetons</div>
-                      <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>Attribuer les gains du projet</div>
+                      <div style={{ fontSize: '12.5px', fontWeight: '700', color: 'var(--text-main)' }}>{t('workspace.project_rewards_title') || "Rétribution en Jetons"}</div>
+                      <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>{t('workspace.project_rewards_desc') || "Attribuer les gains du projet"}</div>
                     </div>
                   </button>
                 )}
@@ -670,8 +670,8 @@ function ChatInputBar({
               boxShadow: 'var(--shadow-card)',
               flexShrink: 0,
             }}
-            title="Joindre un fichier audio (.mp3, .wav)"
-            aria-label="Joindre un fichier audio (.mp3, .wav)"
+            title={t('chat.attach_audio') || "Joindre un fichier audio (.mp3, .wav)"}
+            aria-label={t('chat.attach_audio') || "Joindre un fichier audio (.mp3, .wav)"}
           >
             <Paperclip size={isMobile ? 16 : 18} />
           </button>
@@ -707,8 +707,8 @@ function ChatInputBar({
               boxShadow: 'var(--shadow-card)',
               flexShrink: 0,
             }}
-            title="Envoyer une photo / image"
-            aria-label="Envoyer une photo ou une image"
+            title={t('chat.attach_image') || "Envoyer une photo / image"}
+            aria-label={t('chat.attach_image') || "Envoyer une photo ou une image"}
           >
             <ImageIcon size={isMobile ? 16 : 18} />
           </button>
@@ -745,8 +745,8 @@ function ChatInputBar({
               flexShrink: 0,
               transition: 'transform 0.15s ease',
             }}
-            title="Transférer des Jetons Troco instantanément"
-            aria-label="Transférer des Jetons Troco instantanément"
+            title={t('chat.transfer_tokens_desktop') || "Transférer des Jetons Troco instantanément"}
+            aria-label={t('chat.transfer_tokens_desktop') || "Transférer des Jetons Troco instantanément"}
           >
             <Coins size={18} />
           </button>
@@ -782,8 +782,8 @@ function ChatInputBar({
               boxShadow: 'var(--shadow-card)',
               flexShrink: 0,
             }}
-            title="Enregistrer une note vocale"
-            aria-label="Enregistrer une note vocale"
+            title={t('chat.record_voice_note') || "Enregistrer une note vocale"}
+            aria-label={t('chat.record_voice_note') || "Enregistrer une note vocale"}
           >
             <Mic size={isMobile ? 16 : 18} />
           </button>
@@ -840,8 +840,8 @@ function ChatInputBar({
             flexShrink: 0,
             transition: 'all 0.15s ease',
           }}
-          title={editingMsg ? 'Valider la modification' : (isSending ? 'Envoi en cours...' : 'Envoyer')}
-          aria-label={editingMsg ? 'Valider la modification' : 'Envoyer le message'}
+          title={editingMsg ? (t('chat.edit_validate_btn') || 'Valider la modification') : (isSending ? (t('chat.sending_btn') || 'Envoi en cours...') : (t('chat.send_btn') || 'Envoyer'))}
+          aria-label={editingMsg ? (t('chat.edit_validate_btn') || 'Valider la modification') : (t('chat.send_btn') || 'Envoyer le message')}
         >
           {isSending ? (
             <div
