@@ -2202,9 +2202,9 @@
     "semantic_hash": "dfdecc3f8d30a5c23e94b28f84608c5b"
   },
   "tests/rules/firestore.rules.test.js": {
-    "mtime": 1790692458.4740233,
-    "seen": 1790692953.4770107,
-    "ast_hash": "d963ebbf28770302c4b8e5044ebf919a",
+    "mtime": 1790788205.053001,
+    "seen": 1790788452.6640186,
+    "ast_hash": "6a49a939f0a05700f32bf640150e235b",
     "semantic_hash": ""
   },
   "tests/rules/users_public.test.js": {
@@ -2304,9 +2304,9 @@
     "semantic_hash": ""
   },
   "MASTER_AUDIT.md": {
-    "mtime": 1790787289.3459349,
-    "seen": 1790787338.1066794,
-    "ast_hash": "7f221742d464632476cca1aad4a37e47",
+    "mtime": 1790788328.6128669,
+    "seen": 1790788452.664083,
+    "ast_hash": "6971753a550b41670d939d56facaf105",
     "semantic_hash": ""
   },
   "PERFORMANCE_AUDIT.md": {

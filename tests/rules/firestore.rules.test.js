@@ -83,10 +83,27 @@ class RuleSimulator {
       if (operation === 'update') {
         if (!isAuthenticated) return false;
         if (isAdmin) return true;
-        if (!isOwner(uid) || !isNotBanned()) return false;
-        const sensitiveKeys = ['role', 'isAdmin', 'isBanned', 'isShadowBanned'];
-        const changedKeys = Object.keys(data || {});
-        return !changedKeys.some(k => sensitiveKeys.includes(k));
+        // Clause 1 : modification de son propre doc
+        if (isOwner(uid)) {
+          if (!isNotBanned()) return false;
+          const sensitiveKeys = ['role', 'isAdmin', 'isBanned', 'isShadowBanned'];
+          const changedKeys = Object.keys(data || {});
+          return !changedKeys.some(k => sensitiveKeys.includes(k));
+        }
+        // Clause 2 : incrément de solde par un tiers (transfert entrant)
+        if (auth.uid !== uid) {
+          const allowedKeys = ['euroBalance', 'walletBalanceFiat', 'balance', 'trocoTokens', 'updatedAt'];
+          const changedKeys = Object.keys(data || {});
+          const onlyAllowed = changedKeys.every(k => allowedKeys.includes(k));
+          if (!onlyAllowed) return false;
+          const currentDoc = currentData || simulatedDb[path] || {};
+          const prevEuros = currentDoc.euroBalance !== undefined ? currentDoc.euroBalance : 0;
+          const newEuros = data.euroBalance !== undefined ? data.euroBalance : prevEuros;
+          const prevTokens = currentDoc.trocoTokens !== undefined ? currentDoc.trocoTokens : 0;
+          const newTokens = data.trocoTokens !== undefined ? data.trocoTokens : prevTokens;
+          return newEuros >= prevEuros && newTokens >= prevTokens;
+        }
+        return false;
       }
       if (operation === 'delete') {
         return false;
@@ -432,7 +449,7 @@ describe('2. Collection Users & Sécurité des profils privés', () => {
     }));
   });
 
-  it('autorise la mise à jour du solde par le propriétaire mais interdit la modification par un tiers ou l élévation de privilèges', async () => {
+  it('autorise la mise à jour du solde par le propriétaire et interdit l élévation de privilèges', async () => {
     await testClient.seedAdmin('users/user_alice', {
       name: 'Alice',
       euroBalance: 0,
@@ -441,11 +458,65 @@ describe('2. Collection Users & Sécurité des profils privés', () => {
     // Alice peut recharger son solde et ses jetons
     await assertAllowed(testClient.runOp({ uid: 'user_alice' }, 'users/user_alice', 'update', { euroBalance: 999 }));
     await assertAllowed(testClient.runOp({ uid: 'user_alice' }, 'users/user_alice', 'update', { trocoTokens: 50 }));
-    // Bob ne peut pas modifier le solde d'Alice
-    await assertDenied(testClient.runOp({ uid: 'user_bob' }, 'users/user_alice', 'update', { euroBalance: 999 }));
     // Alice ne peut pas modifier ses privilèges d'administration
     await assertDenied(testClient.runOp({ uid: 'user_alice' }, 'users/user_alice', 'update', { role: 'admin' }));
     await assertDenied(testClient.runOp({ uid: 'user_alice' }, 'users/user_alice', 'update', { isAdmin: true }));
+  });
+
+  describe('2.1 Transferts entrants entre utilisateurs (Clause 2 FIX-FIRESTORE-TRANSFER)', () => {
+    beforeEach(async () => {
+      await testClient.seedAdmin('users/user_mateo', {
+        name: 'Mateo Polo',
+        euroBalance: 100,
+        trocoTokens: 50,
+        isAdmin: true
+      });
+      await testClient.seedAdmin('users/user_matmot', {
+        name: 'MATMOT',
+        euroBalance: 50,
+        trocoTokens: 30,
+        isAdmin: false
+      });
+    });
+
+    it('Scénario 1 : MATMOT envoie 10 jetons à Mateo Polo (incrément du solde) → SUCCÈS', async () => {
+      // Transfert entrant : incrément de trocoTokens (+10) et mise à jour de updatedAt
+      await assertAllowed(testClient.runOp({ uid: 'user_matmot' }, 'users/user_mateo', 'update', {
+        trocoTokens: 60,
+        updatedAt: '2026-09-30T19:00:00Z'
+      }));
+    });
+
+    it('Scénario 2 : MATMOT tente de décrémenter le solde de Mateo Polo → ÉCHEC', async () => {
+      // Tentative de débit frauduleux : trocoTokens passe de 50 à 40
+      await assertDenied(testClient.runOp({ uid: 'user_matmot' }, 'users/user_mateo', 'update', {
+        trocoTokens: 40
+      }));
+      // Tentative de débit frauduleux : euroBalance passe de 100 à 0
+      await assertDenied(testClient.runOp({ uid: 'user_matmot' }, 'users/user_mateo', 'update', {
+        euroBalance: 0
+      }));
+    });
+
+    it('Scénario 3 : MATMOT tente de modifier isAdmin ou role de Mateo Polo → ÉCHEC', async () => {
+      // Tentative de rétrogradation de statut
+      await assertDenied(testClient.runOp({ uid: 'user_matmot' }, 'users/user_mateo', 'update', {
+        isAdmin: false
+      }));
+      await assertDenied(testClient.runOp({ uid: 'user_matmot' }, 'users/user_mateo', 'update', {
+        role: 'user'
+      }));
+    });
+
+    it('Scénario 4 : MATMOT tente de modifier des champs arbitraires (name, bio) sur Mateo Polo → ÉCHEC', async () => {
+      await assertDenied(testClient.runOp({ uid: 'user_matmot' }, 'users/user_mateo', 'update', {
+        name: 'Hacked Name'
+      }));
+      await assertDenied(testClient.runOp({ uid: 'user_matmot' }, 'users/user_mateo', 'update', {
+        bio: 'Hacked Bio',
+        trocoTokens: 60
+      }));
+    });
   });
 
   it('interdit la suppression directe d un document utilisateur par le client', async () => {

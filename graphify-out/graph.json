@@ -8017,7 +8017,7 @@
       "file_type": "code",
       "norm_label": "assertallowed()",
       "source_file": "tests/rules/firestore.rules.test.js",
-      "source_location": "L268"
+      "source_location": "L285"
     },
     {
       "id": "tests_rules_firestore_rules_test_assertdenied",
@@ -8029,7 +8029,7 @@
       "file_type": "code",
       "norm_label": "assertdenied()",
       "source_file": "tests/rules/firestore.rules.test.js",
-      "source_location": "L276"
+      "source_location": "L293"
     },
     {
       "id": "tests_rules_firestore_rules_test_checkemulatoravailable",
@@ -12069,7 +12069,7 @@
       "node_kind": "heading",
       "norm_label": "\ud83d\udd04 regle de mise a jour",
       "source_file": "MASTER_AUDIT.md",
-      "source_location": "L599"
+      "source_location": "L600"
     },
     {
       "id": "master_audit_r\u00e9sum\u00e9_d\u00e9cideur",
@@ -12081,7 +12081,7 @@
       "node_kind": "heading",
       "norm_label": "\ud83d\udccc resume decideur",
       "source_file": "MASTER_AUDIT.md",
-      "source_location": "L612"
+      "source_location": "L613"
     },
     {
       "id": "master_audit_score_par_axe_vs_cible_licorne",
@@ -27831,7 +27831,7 @@
       "file_type": "code",
       "norm_label": "testclient",
       "source_file": "tests/rules/firestore.rules.test.js",
-      "source_location": "L223"
+      "source_location": "L240"
     },
     {
       "id": "src_utils_audioutils",
@@ -40761,6 +40761,18 @@
     },
     {
       "source": "tests_rules_firestore_rules_test",
+      "target": "tests_rules_firestore_rules_test_checkemulatoravailable",
+      "relation": "contains",
+      "_origin": "ast",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "context": "call",
+      "source_file": "tests/rules/firestore.rules.test.js",
+      "source_location": "L28",
+      "weight": 1.0
+    },
+    {
+      "source": "tests_rules_firestore_rules_test",
       "target": "tests_rules_firestore_rules_test_assertallowed",
       "relation": "contains",
       "_origin": "ast",
@@ -40768,7 +40780,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "tests/rules/firestore.rules.test.js",
-      "source_location": "L268",
+      "source_location": "L285",
       "weight": 1.0
     },
     {
@@ -40780,19 +40792,7 @@
       "confidence_score": 1.0,
       "context": "call",
       "source_file": "tests/rules/firestore.rules.test.js",
-      "source_location": "L276",
-      "weight": 1.0
-    },
-    {
-      "source": "tests_rules_firestore_rules_test",
-      "target": "tests_rules_firestore_rules_test_checkemulatoravailable",
-      "relation": "contains",
-      "_origin": "ast",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "context": "call",
-      "source_file": "tests/rules/firestore.rules.test.js",
-      "source_location": "L28",
+      "source_location": "L293",
       "weight": 1.0
     },
     {
@@ -84077,7 +84077,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "MASTER_AUDIT.md",
-      "source_location": "L599",
+      "source_location": "L600",
       "weight": 1.0
     },
     {
@@ -84088,7 +84088,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "MASTER_AUDIT.md",
-      "source_location": "L612",
+      "source_location": "L613",
       "weight": 1.0
     },
     {
@@ -94450,7 +94450,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "tests/rules/firestore.rules.test.js",
-      "source_location": "L223",
+      "source_location": "L240",
       "weight": 1.0
     },
     {
@@ -100461,5 +100461,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "3cfb968be9a49d8c170b721698595d9a9338271d"
+  "built_at_commit": "8412f648d997c2a95603b83f2e98988f310c8b7c"
 }

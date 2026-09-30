@@ -480,9 +480,9 @@
     "semantic_hash": ""
   },
   "src/components/CloudOfficeSuiteModal.jsx": {
-    "mtime": 1790785014.9595256,
-    "seen": 1790785319.5682378,
-    "ast_hash": "1621cd060ffe6fe742608980a8d256f5",
+    "mtime": 1790787152.4573781,
+    "seen": 1790787338.1053839,
+    "ast_hash": "81a7369193de4457141ee6d55da37d8a",
     "semantic_hash": ""
   },
   "src/components/CollaborativeWhiteboardModal.jsx": {
@@ -636,10 +636,10 @@
     "semantic_hash": "99131d74cc324a6a4c7500395704ab41"
   },
   "src/components/NotesModal.jsx": {
-    "mtime": 1789770924.9669528,
-    "seen": 1790594464.2381363,
-    "ast_hash": "e93fc5c2b41523a878874c2d8c751f6b",
-    "semantic_hash": "e93fc5c2b41523a878874c2d8c751f6b"
+    "mtime": 1790787147.9822545,
+    "seen": 1790787338.1054382,
+    "ast_hash": "e1518bf819737dc02b532fde54d26c20",
+    "semantic_hash": ""
   },
   "src/components/OnboardingWizardModal.jsx": {
     "mtime": 1790084292.1498048,
@@ -2304,9 +2304,9 @@
     "semantic_hash": ""
   },
   "MASTER_AUDIT.md": {
-    "mtime": 1790784441.4046004,
-    "seen": 1790784511.7325685,
-    "ast_hash": "cd733b490302498f3e09c36a7d7266be",
+    "mtime": 1790787289.3459349,
+    "seen": 1790787338.1066794,
+    "ast_hash": "7f221742d464632476cca1aad4a37e47",
     "semantic_hash": ""
   },
   "PERFORMANCE_AUDIT.md": {
@@ -3039,6 +3039,12 @@
     "mtime": 1790785695.4842718,
     "seen": 1790785975.6449668,
     "ast_hash": "beee0fab6abca3da329cab861be286fe",
+    "semantic_hash": ""
+  },
+  "src/components/Phase143TrocoSlidesOverhaul.test.js": {
+    "mtime": 1790786859.2250452,
+    "seen": 1790787338.1055954,
+    "ast_hash": "08387e7b7f9a1e43b8ca39d5ffaeb554",
     "semantic_hash": ""
   }
 }

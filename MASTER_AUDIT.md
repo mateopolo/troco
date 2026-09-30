@@ -589,6 +589,7 @@
 ## ⚠️ À VÉRIFIER MANUELLEMENT (hors code)
 
 - [x] Déploiement effectif des règles `firestore.rules` et des index `firestore.indexes.json` sur la console Firebase du projet `troco-8a6eb` (Déployé avec succès via `firebase-tools deploy --only firestore:rules,firestore:indexes` — index transactions et suppression god mode email)
+- [x] [FIX-RULES-TRANSFER] Autorisation de l'incrément unilatéral de solde pour les transferts entrants entre tiers (`firestore.rules:107-119`, tests: `tests/rules/firestore.rules.test.js`)
 - [ ] Configuration des règles CORS sur le bucket Firebase Storage (`gsutil cors get gs://troco-8a6eb.firebasestorage.app`)
 - [ ] Activation du mode Enforced pour Firebase App Check dans la console Google Cloud
 - [ ] Configuration des variables d'environnement secrètes dans Google Secret Manager / Vercel

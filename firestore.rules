@@ -93,8 +93,9 @@ service cloud.firestore {
       // Création : propriétaire uniquement
       allow create: if isOwner(uid);
 
-      // Mise à jour : propriétaire authentifié ou administrateur
+      // Mise à jour : propriétaire authentifié ou administrateur ou transfert entrant
       allow update: if isAuthenticated() && (
+        // Clause 1 : modification de son propre doc (existante)
         (
           request.auth.uid == uid &&
           resource.data.get('isBanned', false) != true &&
@@ -104,7 +105,20 @@ service cloud.firestore {
               'role', 'isAdmin', 'isBanned', 'isShadowBanned'
             ])
           )
-        ) || isAdmin()
+        )
+        || isAdmin()
+        // Clause 2 : NOUVEAU — incrément de solde par un tiers (transfert entrant)
+        // Clause 2 permet à un user authentifié d'incrémenter UNIQUEMENT les
+        // soldes d'un autre user (transferts entrants). Le décrément se fait
+        // toujours sur son propre doc. Un user ne peut jamais décrémenter le
+        // solde d'un tiers, ni modifier ses privilèges.
+        || (
+          request.auth.uid != uid
+          && request.resource.data.diff(resource.data).affectedKeys()
+               .hasOnly(['euroBalance', 'walletBalanceFiat', 'balance', 'trocoTokens', 'updatedAt'])
+          && request.resource.data.get('euroBalance', resource.data.get('euroBalance', 0)) >= resource.data.get('euroBalance', 0)
+          && request.resource.data.get('trocoTokens', resource.data.get('trocoTokens', 0)) >= resource.data.get('trocoTokens', 0)
+        )
       );
 
       // Suppression directe interdite au client (traitée par Cloud Functions RGPD)

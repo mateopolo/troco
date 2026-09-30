@@ -1,7 +1,7 @@
 # Graph Report - TROCO  (2026-09-30)
 
 ## Corpus Check
-- 481 files · ~586,084 words
+- 481 files · ~586,437 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 15 file(s) not represented in the graph (top: .diff 7, (none) 3, .css 2)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `3cfb968b`
+- Built from commit: `8412f648`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
