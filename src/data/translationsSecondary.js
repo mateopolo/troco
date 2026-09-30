@@ -3,6 +3,11 @@
 
 export const secondaryTranslations = {
   EN: {
+    "workspace.slides_title": "Troco Slides",
+    "workspace.badge_slides": "SLIDES",
+    "workspace.slides_badge": "SLIDES",
+    "workspace.slides_desc": "Presentations & collaborative slides",
+    "workspace.slides_card_title": "Troco Slides",
     // ---- OFFICE MENU KEYS (EN) ----
     "office.menu_file": "File",
     "office.menu_edit": "Edit",
@@ -940,6 +945,11 @@ export const secondaryTranslations = {
     "admin.delete_transaction_firestore": "Delete transaction from Firestore",
   },
   ES: {
+    "workspace.slides_title": "Troco Slides",
+    "workspace.badge_slides": "SLIDES",
+    "workspace.slides_badge": "SLIDES",
+    "workspace.slides_desc": "Presentaciones y diapositivas colaborativas",
+    "workspace.slides_card_title": "Troco Slides",
     // ---- OFFICE MENU KEYS (ES) ----
     "office.menu_file": "Archivo",
     "office.menu_edit": "Edición",
@@ -1877,6 +1887,11 @@ export const secondaryTranslations = {
     "admin.delete_transaction_firestore": "Eliminar la transacción de Firestore",
   },
   IT: {
+    "workspace.slides_title": "Troco Slides",
+    "workspace.badge_slides": "SLIDES",
+    "workspace.slides_badge": "SLIDES",
+    "workspace.slides_desc": "Presentazioni e diapositive collaborative",
+    "workspace.slides_card_title": "Troco Slides",
     // ---- OFFICE MENU KEYS (IT) ----
     "office.menu_file": "File",
     "office.menu_edit": "Modifica",
@@ -2814,6 +2829,11 @@ export const secondaryTranslations = {
     "admin.delete_transaction_firestore": "Elimina transazione da Firestore",
   },
   DE: {
+    "workspace.slides_title": "Troco Slides",
+    "workspace.badge_slides": "SLIDES",
+    "workspace.slides_badge": "SLIDES",
+    "workspace.slides_desc": "Präsentationen & kollaborative Folien",
+    "workspace.slides_card_title": "Troco Slides",
     // ---- OFFICE MENU KEYS (DE) ----
     "office.menu_file": "Datei",
     "office.menu_edit": "Bearbeiten",
@@ -3751,6 +3771,11 @@ export const secondaryTranslations = {
     "admin.delete_transaction_firestore": "Transaktion aus Firestore löschen",
   },
   JA: {
+    "workspace.slides_title": "Troco Slides",
+    "workspace.badge_slides": "SLIDES",
+    "workspace.slides_badge": "SLIDES",
+    "workspace.slides_desc": "プレゼンテーション＆共同編集スライド",
+    "workspace.slides_card_title": "Troco Slides",
     // ---- OFFICE MENU KEYS (JA) ----
     "office.menu_file": "ファイル",
     "office.menu_edit": "編集",
@@ -4688,6 +4713,11 @@ export const secondaryTranslations = {
     "admin.delete_transaction_firestore": "Firestoreから取引を削除",
   },
   ZH: {
+    "workspace.slides_title": "Troco 演示文稿",
+    "workspace.badge_slides": "SLIDES",
+    "workspace.slides_badge": "SLIDES",
+    "workspace.slides_desc": "实时协同幻灯片与演示文稿",
+    "workspace.slides_card_title": "Troco 演示文稿",
     // ---- OFFICE MENU KEYS (ZH) ----
     "office.menu_file": "文件",
     "office.menu_edit": "编辑",

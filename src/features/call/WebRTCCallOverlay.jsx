@@ -91,6 +91,9 @@ export default function WebRTCCallOverlay({
     (selectedChat?.listing && profile?.skills?.some(s => selectedChat.listing.toLowerCase().includes(s.toLowerCase())))
   );
 
+  const partnerName = selectedChat?.user || incomingCall?.from || selectedListing?.authorProfile?.name || 'Interlocuteur';
+  const partnerAvatar = selectedChat?.avatar || getAuthorAvatar(partnerName);
+
   // ---- DÉPLACEMENT TACTILE & DRAG-AND-DROP DE LA VIGNETTE VIDÉO FLOTTANTE ----
   const [localVideoPosition, setLocalVideoPosition] = useState({
     x: typeof window !== 'undefined' ? Math.max(16, window.innerWidth - 130) : 250,
@@ -425,7 +428,7 @@ export default function WebRTCCallOverlay({
             zIndex: 3,
           }} />
 
-          {/* PILULE SUPÉRIEURE FACETIME DISCRÈTE ET ÉPURÉE (NOM, STATUT, CHRONO) */}
+          {/* 1. BARRE D'INFO COMPACTE SUPÉRIEURE (AVATAR + NOM + STATUS "En appel • durée" + BOUTON MUTE) */}
           <div style={{
             position: 'fixed',
             top: 'max(16px, env(safe-area-inset-top, 16px))',
@@ -434,65 +437,107 @@ export default function WebRTCCallOverlay({
             zIndex: 50,
             display: 'flex',
             alignItems: 'center',
-            gap: '10px',
-            backgroundColor: 'rgba(20, 20, 24, 0.45)',
+            justifyContent: 'space-between',
+            gap: '12px',
+            backgroundColor: 'rgba(20, 20, 24, 0.65)',
             backdropFilter: 'blur(24px) saturate(180%)',
             WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-            border: '1px solid rgba(255, 255, 255, 0.12)',
+            border: '1px solid rgba(255, 255, 255, 0.14)',
             borderRadius: '999px',
-            padding: '6px 16px',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.35)',
+            padding: '6px 14px 6px 8px',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.45)',
+            maxWidth: '92vw',
+            minWidth: '240px',
             transition: 'opacity 0.4s ease',
-            opacity: isCallInactive ? 0.35 : 1,
+            opacity: isCallInactive ? 0.4 : 1,
           }}>
-            <div style={{ position: 'relative', width: '26px', height: '26px', flexShrink: 0 }}>
-              <img
-                src={getAuthorAvatar(selectedChat?.user || 'Thomas G.')}
-                alt={selectedChat?.user || 'Thomas G.'}
-                style={{ width: '26px', height: '26px', borderRadius: '50%', objectFit: 'cover' }}
-              />
-              <div style={{
-                position: 'absolute',
-                bottom: '-1px',
-                right: '-1px',
-                width: '7px',
-                height: '7px',
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
+              <div style={{ position: 'relative', width: '32px', height: '32px', flexShrink: 0 }}>
+                <img
+                  src={partnerAvatar}
+                  alt={partnerName}
+                  style={{ width: '32px', height: '32px', borderRadius: '50%', objectFit: 'cover', backgroundColor: 'rgba(255, 255, 255, 0.1)' }}
+                />
+                <div style={{
+                  position: 'absolute',
+                  bottom: '0px',
+                  right: '0px',
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  backgroundColor: '#10B981',
+                  border: '1.5px solid #141418',
+                }} />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{
+                    color: '#FFFFFF',
+                    fontSize: '13px',
+                    fontWeight: '700',
+                    lineHeight: 1.2,
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                  }}>
+                    {partnerName}
+                  </span>
+                  {isTeacher && (
+                    <span style={{
+                      padding: '1px 5px',
+                      backgroundColor: 'rgba(245, 158, 11, 0.25)',
+                      border: '1px solid #F59E0B',
+                      color: '#FDE68A',
+                      borderRadius: '999px',
+                      fontSize: '9px',
+                      fontWeight: '800',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '2px',
+                      flexShrink: 0,
+                    }}>
+                      <Crown size={9} color="#F59E0B" /> Hôte
+                    </span>
+                  )}
+                </div>
+                <span style={{ color: 'rgba(255,255,255,0.72)', fontSize: '11px', fontWeight: '500', lineHeight: 1.2, whiteSpace: 'nowrap' }}>
+                  {callState.ringing
+                    ? 'Sonnerie...'
+                    : `En appel • ${formatCallTimer(callDuration)}`}
+                </span>
+              </div>
+            </div>
+
+            {/* BOUTON MUTE RAPIDE À DROITE */}
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (typeof toggleMic === 'function') toggleMic();
+              }}
+              title={callState.micOn ? 'Couper le micro' : 'Activer le micro'}
+              style={{
+                width: '32px',
+                height: '32px',
                 borderRadius: '50%',
-                backgroundColor: '#10B981',
-                border: '1.5px solid #000',
-              }} />
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0px' }}>
-              <span style={{ color: '#FFFFFF', fontSize: '12.5px', fontWeight: '800', lineHeight: 1.2 }}>
-                {selectedChat?.user || 'Interlocuteur'}
-              </span>
-              <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: '10.5px', fontWeight: '600', lineHeight: 1 }}>
-                {callState.ringing ? 'Sonnerie...' : formatCallTimer(callDuration)}
-              </span>
-            </div>
-
-            {isTeacher && (
-              <span style={{
-                marginLeft: '4px',
-                padding: '2px 6px',
-                backgroundColor: 'rgba(245, 158, 11, 0.25)',
-                border: '1px solid #F59E0B',
-                color: '#FDE68A',
-                borderRadius: '999px',
-                fontSize: '9px',
-                fontWeight: '800',
+                border: 'none',
+                backgroundColor: callState.micOn ? 'rgba(255, 255, 255, 0.12)' : 'rgba(239, 68, 68, 0.35)',
+                color: callState.micOn ? '#FFFFFF' : '#EF4444',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '3px',
-              }}>
-                <Crown size={9} color="#F59E0B" /> Hôte
-              </span>
-            )}
+                justifyContent: 'center',
+                cursor: 'pointer',
+                flexShrink: 0,
+                transition: 'all 0.18s ease',
+              }}
+            >
+              {callState.micOn ? <Mic size={15} /> : <MicOff size={15} color="#EF4444" />}
+            </button>
           </div>
 
-          {/* INFORMATIONS DE L'APPELANT : CENTRAGE ABSOLU ET TRANSPARENCE TOTALE (SANS AUCUN CADRE OPAQUE) */}
-          {(callState.ringing || (callState.type === 'audio') || (callState.type === 'video' && !remoteStream && !isSwapVideo && !callState.camOn)) && (
+          {/* 2. AVATAR CENTRAL AGRANDI SANS BORDURE BLANCHE (UNIQUEMENT SI PAS DE FLUX VIDÉO REÇU) */}
+          {(callState.ringing || (callState.type === 'audio') || (!remoteStream && !isSwapVideo && !callState.camOn)) && (
             <div style={{
               position: 'absolute',
               top: '50%',
@@ -502,63 +547,39 @@ export default function WebRTCCallOverlay({
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '18px',
-              zIndex: 30,
+              gap: '14px',
+              zIndex: 20,
               pointerEvents: 'none',
               width: '100%',
               maxWidth: '92vw',
               textAlign: 'center',
             }}>
-              <div style={{ position: 'relative', width: '110px', height: '110px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {[1, 2].map(i => (
-                  <div key={i} style={{
-                    position: 'absolute',
-                    width: `${110 + i * 32}px`,
-                    height: `${110 + i * 32}px`,
-                    borderRadius: '50%',
-                    border: '1.5px solid rgba(255,255,255,0.3)',
-                    opacity: 0.35,
-                    animation: `notifPulse ${1.5 + i * 0.4}s ease-in-out infinite`,
-                    animationDelay: `${i * 0.25}s`,
-                  }} />
-                ))}
+              <div style={{ position: 'relative', width: '128px', height: '128px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <img
-                  src={getAuthorAvatar(selectedChat?.user || 'Thomas G.')}
-                  alt={selectedChat?.user || 'Thomas G.'}
+                  src={partnerAvatar}
+                  alt=""
                   style={{
-                    width: '100px',
-                    height: '100px',
+                    width: '128px',
+                    height: '128px',
                     borderRadius: '50%',
                     objectFit: 'cover',
-                    border: '3px solid rgba(255,255,255,0.7)',
-                    boxShadow: '0 16px 40px rgba(0,0,0,0.6)',
-                    filter: 'drop-shadow(0 10px 20px rgba(0,0,0,0.5))',
-                    position: 'relative',
-                    zIndex: 2,
+                    border: 'none',
+                    boxShadow: '0 20px 48px rgba(0,0,0,0.65)',
+                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
                   }}
                 />
               </div>
 
-              <div style={{ textAlign: 'center' }}>
-                <h2 style={{
-                  color: '#FFFFFF',
-                  fontSize: '26px',
-                  fontWeight: '800',
-                  margin: '0 0 6px 0',
-                  textShadow: '0 2px 14px rgba(0,0,0,0.95), 0 0 4px rgba(0,0,0,0.8)',
-                  letterSpacing: '-0.3px',
-                }}>
-                  {selectedChat?.user || 'Thomas G.'}
-                </h2>
+              {callState.ringing && (
                 <div style={{
-                  color: 'rgba(255,255,255,0.9)',
-                  fontSize: '14px',
+                  color: 'rgba(255,255,255,0.85)',
+                  fontSize: '13.5px',
                   fontWeight: '600',
-                  textShadow: '0 1px 8px rgba(0,0,0,0.85)',
+                  textShadow: '0 2px 10px rgba(0,0,0,0.8)',
                 }}>
-                  {callState.ringing ? 'Appel vidéo en cours...' : (callState.type === 'video' ? 'Connexion vidéo chiffrée' : 'Appel audio haute fidélité')}
+                  {callState.type === 'video' ? 'Appel vidéo en cours...' : 'Appel audio en cours...'}
                 </div>
-              </div>
+              )}
             </div>
           )}
 

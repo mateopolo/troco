@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { FileText, Table, Paintbrush } from 'lucide-react';
+import { FileText, Table, Paintbrush, Presentation } from 'lucide-react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { formatDocumentName, isAlphanumericId } from '../../utils/workspaceHelpers';
 
@@ -24,7 +24,8 @@ export default function WorkspaceMessageCard(props) {
   const isNotes = wType === 'notes';
   const isDocs = wType === 'docs';
   const isSheets = wType === 'sheets';
-  const isWhiteboard = !isNotes && !isDocs && !isSheets;
+  const isSlides = wType === 'slides';
+  const isWhiteboard = !isNotes && !isDocs && !isSheets && !isSlides;
 
   const accentColor = isNotes
     ? '#F59E0B'
@@ -32,7 +33,9 @@ export default function WorkspaceMessageCard(props) {
       ? '#3B82F6'
       : isSheets
         ? '#10B981'
-        : 'var(--accent-primary, #C67D5B)';
+        : isSlides
+          ? '#8B5CF6'
+          : 'var(--accent-primary, #C67D5B)';
 
   const typeIcon = isNotes ? (
     <FileText size={16} />
@@ -40,6 +43,8 @@ export default function WorkspaceMessageCard(props) {
     <FileText size={16} />
   ) : isSheets ? (
     <Table size={16} />
+  ) : isSlides ? (
+    <Presentation size={16} />
   ) : (
     <Paintbrush size={16} />
   );
@@ -57,7 +62,9 @@ export default function WorkspaceMessageCard(props) {
       ? (t('workspace.notes_card_title') || 'Notes Partagées')
       : isDocs
         ? (t('workspace.docs_card_title') || 'Troco Doc')
-        : (t('workspace.sheets_card_title') || 'Troco Sheet');
+        : isSheets
+          ? (t('workspace.sheets_card_title') || 'Troco Sheet')
+          : (t('workspace.slides_card_title') || 'Troco Slides');
   const rawTitle = message?.workspaceTitle || safeTitle || message?.document?.title || defaultTitle;
   const displayTitle = formatDocumentName(rawTitle || documentId, wType);
   const rawSnippet = String(message?.snippet || safeSnippet || message?.summary || message?.text || message?.content || message?.document?.content || (t('workspace.collab_snippet_fallback') || "Document collaboratif partagé dans l'espace de travail."));
@@ -211,7 +218,7 @@ export default function WorkspaceMessageCard(props) {
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: accentColor, fontSize: '11px', fontWeight: '800', textTransform: 'uppercase' }}>
                 {typeIcon}
-                <span>{isNotes ? 'Note Partagée' : isDocs ? 'Troco Doc' : isSheets ? 'Troco Sheet' : 'Document'}</span>
+                <span>{isNotes ? 'Note Partagée' : isDocs ? 'Troco Doc' : isSheets ? 'Troco Sheet' : isSlides ? 'Troco Slides' : 'Document'}</span>
               </div>
               <div style={{ fontSize: '13px', fontWeight: '800', color: '#111827', lineHeight: 1.25 }}>
                 {displayTitle}

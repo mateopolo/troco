@@ -17,6 +17,7 @@ import {
   X,
   CornerDownRight,
   Image as ImageIcon,
+  Presentation,
 } from 'lucide-react';
 import { collection, addDoc, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../firebase';
@@ -518,7 +519,42 @@ function ChatInputBar({
                   </div>
                 </button>
 
-                {/* 5. CALENDRIER */}
+                {/* 5. TROCO SLIDES */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsWorkspaceMenuOpen(false);
+                    if (onOpenWorkspaceTool) onOpenWorkspaceTool('slides');
+                  }}
+                  className="hover-subtle"
+                  style={{
+                    border: 'none',
+                    backgroundColor: 'transparent',
+                    borderRadius: '12px',
+                    padding: '8px 10px',
+                    minHeight: '44px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    width: '100%',
+                  }}
+                >
+                  <div style={{ width: '34px', height: '34px', borderRadius: '10px', backgroundColor: 'rgba(139, 92, 246, 0.15)', color: '#8B5CF6', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <Presentation size={16} />
+                  </div>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ fontSize: '12.5px', fontWeight: '700', color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <span>{t('workspace.slides_title') || "Troco Slides"}</span>
+                      <span style={{ fontSize: '9px', fontWeight: '800', color: '#8B5CF6', backgroundColor: 'rgba(139, 92, 246, 0.15)', padding: '1px 5px', borderRadius: '4px' }}>{t('workspace.slides_badge') || "SLIDES"}</span>
+                    </div>
+                    <div style={{ fontSize: '10.5px', color: 'var(--text-secondary)' }}>{t('workspace.slides_desc') || "Présentations & diapositives collaboratives"}</div>
+                  </div>
+                </button>
+
+                {/* 6. CALENDRIER */}
                 <button
                   type="button"
                   onClick={(e) => {

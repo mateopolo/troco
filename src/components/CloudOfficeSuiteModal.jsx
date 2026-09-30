@@ -108,7 +108,7 @@ const getColLetter = (index) => {
   return letter;
 };
 
-// Helper pour déterminer le style de fond et la couleur de texte d'une diapositive
+// Helper pour déterminer le style de fond et la couleur de texte d'une diapositive (12 thèmes)
 const getSlideBackgroundStyle = (theme) => {
   switch (theme) {
     case 'dark':
@@ -129,6 +129,54 @@ const getSlideBackgroundStyle = (theme) => {
         color: '#FFFFFF',
         borderColor: 'transparent',
       };
+    case 'modern-blue':
+      return {
+        background: 'linear-gradient(135deg, #1E3A8A 0%, #2563EB 50%, #3B82F6 100%)',
+        color: '#FFFFFF',
+        borderColor: 'transparent',
+      };
+    case 'sunset-orange':
+      return {
+        background: 'linear-gradient(135deg, #9A3412 0%, #EA580C 50%, #F59E0B 100%)',
+        color: '#FFFFFF',
+        borderColor: 'transparent',
+      };
+    case 'mint-green':
+      return {
+        background: 'linear-gradient(135deg, #064E3B 0%, #059669 50%, #10B981 100%)',
+        color: '#FFFFFF',
+        borderColor: 'transparent',
+      };
+    case 'dark-luxury':
+      return {
+        background: 'linear-gradient(135deg, #09090B 0%, #18181B 50%, #27272A 100%)',
+        color: '#F4E8C1',
+        borderColor: 'rgba(212, 175, 55, 0.35)',
+      };
+    case 'pastel-pink':
+      return {
+        background: 'linear-gradient(135deg, #FFF1F2 0%, #FCE7F3 50%, #FBCFE8 100%)',
+        color: '#831843',
+        borderColor: '#F472B6',
+      };
+    case 'corporate-grey':
+      return {
+        background: 'linear-gradient(135deg, #1E293B 0%, #334155 50%, #475569 100%)',
+        color: '#F8FAFC',
+        borderColor: 'rgba(255,255,255,0.15)',
+      };
+    case 'forest':
+      return {
+        background: 'linear-gradient(135deg, #052E16 0%, #14532D 50%, #166534 100%)',
+        color: '#ECFDF5',
+        borderColor: 'transparent',
+      };
+    case 'ocean-deep':
+      return {
+        background: 'linear-gradient(135deg, #030712 0%, #0B2447 50%, #19376D 100%)',
+        color: '#E0F2FE',
+        borderColor: 'transparent',
+      };
     case 'light':
     default:
       return {
@@ -136,6 +184,34 @@ const getSlideBackgroundStyle = (theme) => {
         color: '#1F2937',
         borderColor: 'var(--border-color)',
       };
+  }
+};
+
+const SLIDE_THEMES = [
+  { id: 'terracotta', label: 'Terracotta' },
+  { id: 'dark', label: 'Sombre' },
+  { id: 'light', label: 'Clair' },
+  { id: 'gradient', label: 'Dégradé' },
+  { id: 'modern-blue', label: 'Modern Blue' },
+  { id: 'sunset-orange', label: 'Sunset Orange' },
+  { id: 'mint-green', label: 'Mint Green' },
+  { id: 'dark-luxury', label: 'Dark Luxury' },
+  { id: 'pastel-pink', label: 'Pastel Pink' },
+  { id: 'corporate-grey', label: 'Corporate Grey' },
+  { id: 'forest', label: 'Forest' },
+  { id: 'ocean-deep', label: 'Ocean Deep' },
+];
+
+// Helper pour appliquer les transitions de diapositive (fade, slide-in, zoom)
+const getSlideTransitionStyle = (transition) => {
+  switch (transition) {
+    case 'slide':
+      return { animation: 'slideSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1)' };
+    case 'zoom':
+      return { animation: 'slideZoomIn 0.35s cubic-bezier(0.16, 1, 0.3, 1)' };
+    case 'fade':
+    default:
+      return { animation: 'slideFadeIn 0.3s ease' };
   }
 };
 
@@ -244,6 +320,12 @@ function CloudOfficeSuiteModalContent({
   const content = documentData?.content ?? defaultContent ?? (typeof effectiveDoc?.content === 'string' ? effectiveDoc.content : (typeof effectiveDoc?.text === 'string' ? effectiveDoc.text : defaultDoc.content)) ?? '';
 
   const [activeTab, setActiveTab] = useState(initialTab || 'docs'); // 'docs' | 'sheets' | 'slides' | 'notes' | 'history'
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
   const [docTitle, setDocTitle] = useState(() => {
     const raw = effectiveDoc?.title || effectiveDoc?.name || (projectTitle && !isAlphanumericId(projectTitle) ? `Spécifications & Notes - ${projectTitle}` : null);
     return formatDocumentName(raw || effectiveDocId, 'docs');
@@ -1198,16 +1280,17 @@ function CloudOfficeSuiteModalContent({
         {/* DIAPORAMA PLEIN ÉCRAN */}
         {isPresenting && (
           <div
+            key={currentSlideIndex}
             style={{
               position: 'fixed',
               inset: 0,
               ...getSlideBackgroundStyle(slides[currentSlideIndex]?.theme),
+              ...getSlideTransitionStyle(slides[currentSlideIndex]?.transition || 'fade'),
               zIndex: 1000099,
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'space-between',
               padding: '48px',
-              animation: 'fadeIn 0.25s ease',
             }}
           >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -2474,42 +2557,113 @@ function CloudOfficeSuiteModalContent({
                   </button>
                 </div>
 
-                {slides.map((s, idx) => (
-                  <div
-                    key={s.id || idx}
-                    onClick={() => setCurrentSlideIndex(idx)}
-                    style={{
-                      border: currentSlideIndex === idx ? '2px solid #3B82F6' : '1px solid var(--border-color)',
-                      borderRadius: '12px',
-                      padding: '8px 10px',
-                      backgroundColor: 'var(--bg-card)',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      transition: 'all 0.15s ease',
-                    }}
-                  >
-                    <div style={{ minWidth: 0, flex: 1 }}>
-                      <div style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: '700' }}>#{idx + 1}</div>
-                      <div style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {s.title || 'Diapo sans titre'}
+                {slides.map((s, idx) => {
+                  const isSelected = currentSlideIndex === idx;
+                  const slideBg = getSlideBackgroundStyle(s.theme);
+                  return (
+                    <div
+                      key={s.id || idx}
+                      onClick={() => setCurrentSlideIndex(idx)}
+                      data-testid={`slide-thumbnail-${idx}`}
+                      style={{
+                        border: isSelected ? '2px solid #3B82F6' : '1px solid var(--border-color)',
+                        borderRadius: '12px',
+                        padding: '8px',
+                        backgroundColor: 'var(--bg-card)',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '6px',
+                        boxShadow: isSelected ? '0 0 0 3px rgba(59, 130, 246, 0.25), 0 4px 12px rgba(0,0,0,0.08)' : '0 1px 3px rgba(0,0,0,0.05)',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: '11px', fontWeight: '800', color: isSelected ? '#3B82F6' : 'var(--text-secondary)' }}>
+                          #{idx + 1}
+                        </span>
+                        {slides.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteSlide(idx);
+                            }}
+                            title="Supprimer la diapositive"
+                            style={{ border: 'none', background: 'transparent', color: '#EF4444', cursor: 'pointer', padding: '2px' }}
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* APERÇU MINIATURE DE LA DIAPOSITIVE (FOND + TEXTE) */}
+                      <div
+                        className="slide-miniature"
+                        style={{
+                          ...slideBg,
+                          aspectRatio: '16/9',
+                          borderRadius: '8px',
+                          padding: '8px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: 'center',
+                          overflow: 'hidden',
+                          boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.1)',
+                          pointerEvents: 'none',
+                        }}
+                      >
+                        <div
+                          style={{
+                            fontSize: '11px',
+                            fontWeight: '800',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            color: slideBg.color,
+                            marginBottom: '2px',
+                          }}
+                        >
+                          {s.title || 'Diapo sans titre'}
+                        </div>
+                        {s.subtitle && (
+                          <div
+                            style={{
+                              fontSize: '8.5px',
+                              opacity: 0.8,
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              color: slideBg.color,
+                              fontStyle: 'italic',
+                            }}
+                          >
+                            {s.subtitle}
+                          </div>
+                        )}
+                        {Array.isArray(s.bullets) && s.bullets.length > 0 && (
+                          <div style={{ marginTop: '3px', display: 'flex', flexDirection: 'column', gap: '1.5px' }}>
+                            {s.bullets.slice(0, 2).map((b, bI) => (
+                              <div
+                                key={bI}
+                                style={{
+                                  fontSize: '7.5px',
+                                  opacity: 0.75,
+                                  whiteSpace: 'nowrap',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  color: slideBg.color,
+                                }}
+                              >
+                                • {b}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
-                    {slides.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteSlide(idx);
-                        }}
-                        style={{ border: 'none', background: 'transparent', color: '#EF4444', cursor: 'pointer', padding: '2px' }}
-                      >
-                        <Trash2 size={12} />
-                      </button>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
 
                 <button
                   type="button"
@@ -2552,30 +2706,41 @@ function CloudOfficeSuiteModalContent({
                 }}
               >
                 <div className="w-full max-w-4xl mx-auto flex flex-col gap-4 items-stretch justify-start">
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
-                    <input
-                      type="text"
-                      value={slides[currentSlideIndex]?.title || ''}
-                      onChange={(e) => handleUpdateCurrentSlide('title', e.target.value)}
-                      placeholder="Titre de la diapositive..."
-                      style={{
-                        flex: 1,
-                        minWidth: '200px',
-                        fontSize: '22px',
-                        fontWeight: '700',
-                        border: 'none',
-                        outline: 'none',
-                        backgroundColor: 'transparent',
-                        color: 'var(--text-main)',
-                        borderBottom: '1.5px solid var(--border-color)',
-                        paddingBottom: '4px',
-                      }}
-                    />
-
+                  {/* BARRE D'OUTILS DE LA DIAPOSITIVE (SANS CHAMP DE TITRE REDONDANT) */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap', padding: '4px 0' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      {/* SÉLECTEUR DE THÈME VISUEL */}
+                      <span style={{ fontSize: '13px', fontWeight: '800', color: 'var(--text-secondary)' }}>
+                        Diapositive {currentSlideIndex + 1} / {slides.length}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                      {/* SÉLECTEUR DE TRANSITIONS */}
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>Thème de fond :</label>
+                        <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>Transition :</label>
+                        <select
+                          value={slides[currentSlideIndex]?.transition || 'fade'}
+                          onChange={(e) => handleUpdateCurrentSlide('transition', e.target.value)}
+                          aria-label="Transition de diapositive"
+                          style={{
+                            padding: '5px 8px',
+                            borderRadius: '8px',
+                            border: '1px solid var(--border-color)',
+                            backgroundColor: 'var(--bg-card)',
+                            color: 'var(--text-main)',
+                            fontSize: '12px',
+                            fontWeight: '700',
+                          }}
+                        >
+                          <option value="fade">Fondu (Fade)</option>
+                          <option value="slide">Glissement (Slide-in)</option>
+                          <option value="zoom">Zoom</option>
+                        </select>
+                      </div>
+
+                      {/* SÉLECTEUR DE THÈME VISUEL (12 THÈMES) */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <label style={{ fontSize: '11px', fontWeight: '700', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>Thème :</label>
                         <select
                           value={slides[currentSlideIndex]?.theme || 'terracotta'}
                           onChange={(e) => handleUpdateCurrentSlide('theme', e.target.value)}
@@ -2590,10 +2755,9 @@ function CloudOfficeSuiteModalContent({
                             fontWeight: '700',
                           }}
                         >
-                          <option value="light">Clair</option>
-                          <option value="dark">Sombre</option>
-                          <option value="gradient">Dégradé</option>
-                          <option value="terracotta">Terracotta</option>
+                          {SLIDE_THEMES.map(theme => (
+                            <option key={theme.id} value={theme.id}>{theme.label}</option>
+                          ))}
                         </select>
                       </div>
 
@@ -2632,10 +2796,12 @@ function CloudOfficeSuiteModalContent({
                     </div>
                   </div>
 
-                  {/* CARTE APERÇU DIAPOSITIVE EN COURS CENTRÉE AVEC THÈME DE FOND MODIFIÉ DYNAMIQUEMENT */}
+                  {/* CARTE DIAPOSITIVE EN COURS AVEC ÉDITION INLINE DIRECTE DU TITRE & SOUS-TITRE */}
                   <div
+                    key={currentSlideIndex}
                     style={{
                       ...getSlideBackgroundStyle(slides[currentSlideIndex]?.theme),
+                      ...getSlideTransitionStyle(slides[currentSlideIndex]?.transition || 'fade'),
                       borderRadius: '16px',
                       padding: '28px 26px',
                       boxShadow: '0 8px 30px rgba(0,0,0,0.14)',
@@ -2645,16 +2811,59 @@ function CloudOfficeSuiteModalContent({
                       display: 'flex',
                       flexDirection: 'column',
                       justifyContent: 'center',
-                      transition: 'all 0.25s ease',
+                      transition: 'background 0.25s ease, color 0.25s ease',
                       boxSizing: 'border-box',
                     }}
                   >
-                    <h2 style={{ fontSize: '24px', fontWeight: '800', margin: '0 0 6px 0', letterSpacing: '-0.01em' }}>
-                      {slides[currentSlideIndex]?.title || 'Titre de la diapositive'}
-                    </h2>
-                    <p style={{ fontSize: '14px', opacity: 0.9, margin: '0 0 14px 0', fontStyle: 'italic' }}>
-                      {slides[currentSlideIndex]?.subtitle || 'Sous-titre et contexte du projet'}
-                    </p>
+                    {/* ÉDITION INLINE DIRECTE DU TITRE DANS LE SLIDE */}
+                    <input
+                      type="text"
+                      value={slides[currentSlideIndex]?.title || ''}
+                      onChange={(e) => handleUpdateCurrentSlide('title', e.target.value)}
+                      placeholder="Titre de la diapositive..."
+                      aria-label="Titre de la diapositive"
+                      className="slide-inline-title"
+                      style={{
+                        width: '100%',
+                        fontSize: '28px',
+                        fontWeight: '800',
+                        margin: '0 0 6px 0',
+                        letterSpacing: '-0.01em',
+                        color: 'inherit',
+                        backgroundColor: 'transparent',
+                        border: 'none',
+                        outline: 'none',
+                        borderBottom: '1.5px dashed rgba(255,255,255,0.25)',
+                        padding: '4px 6px',
+                        borderRadius: '6px',
+                        boxSizing: 'border-box',
+                      }}
+                    />
+
+                    {/* ÉDITION INLINE DIRECTE DU SOUS-TITRE DANS LE SLIDE */}
+                    <input
+                      type="text"
+                      value={slides[currentSlideIndex]?.subtitle || ''}
+                      onChange={(e) => handleUpdateCurrentSlide('subtitle', e.target.value)}
+                      placeholder="Sous-titre et contexte du projet..."
+                      aria-label="Sous-titre de la diapositive"
+                      className="slide-inline-subtitle"
+                      style={{
+                        width: '100%',
+                        fontSize: '15px',
+                        fontStyle: 'italic',
+                        opacity: 0.9,
+                        margin: '0 0 14px 0',
+                        color: 'inherit',
+                        backgroundColor: 'transparent',
+                        border: 'none',
+                        outline: 'none',
+                        borderBottom: '1px dashed rgba(255,255,255,0.2)',
+                        padding: '2px 6px',
+                        borderRadius: '6px',
+                        boxSizing: 'border-box',
+                      }}
+                    />
 
                     {/* IMAGE REDIMENSIONNABLE EN SURIMPRESSION */}
                     {slides[currentSlideIndex]?.imageUrl && (
@@ -2725,22 +2934,6 @@ function CloudOfficeSuiteModalContent({
                       ))}
                     </ul>
                   </div>
-
-                  <input
-                    type="text"
-                    value={slides[currentSlideIndex]?.subtitle || ''}
-                    onChange={(e) => handleUpdateCurrentSlide('subtitle', e.target.value)}
-                    placeholder="Sous-titre / Message clé..."
-                    style={{
-                      fontSize: '14px',
-                      padding: '8px 12px',
-                      borderRadius: '10px',
-                      border: '1px solid var(--border-color)',
-                      backgroundColor: 'var(--bg-subtle)',
-                      color: 'var(--text-secondary)',
-                      outline: 'none',
-                    }}
-                  />
 
                   {/* PUCES DE CONTENU */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>

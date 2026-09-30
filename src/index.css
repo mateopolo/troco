@@ -2348,6 +2348,38 @@ body.dark-mode :focus-visible,
   white-space: normal !important;
 }
 
+/* TrocoSlides Transitions (fade, slide-in, zoom) */
+@keyframes slideFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideZoomIn {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 /* 4. REDUCTION DES ANIMATIONS POUR UTILISATEURS SENSIBLES (PREFERS-REDUCED-MOTION) */
 @media (prefers-reduced-motion: reduce) {
   *,

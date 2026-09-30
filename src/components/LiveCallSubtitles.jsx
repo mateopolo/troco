@@ -368,7 +368,7 @@ export default function LiveCallSubtitles({
         onPointerCancel={handlePointerUp}
         style={{
           position: 'absolute',
-          bottom: isCompact ? '70px' : 'max(106px, calc(env(safe-area-inset-bottom, 32px) + 74px))',
+          bottom: isCompact ? '70px' : '180px',
           left: '50%',
           transform: `translate(calc(-50% + ${posOffset.x}px), ${posOffset.y}px)`,
           maxWidth: isCompact ? '94%' : '900px',

@@ -1,6 +1,11 @@
 // ---- DICTIONNAIRE I18N COMPLET A 100% (7 LANGUES : FR, EN, ES, IT, DE, JA, ZH) ----
 export const translations = {
   FR: {
+    "workspace.slides_title": "Troco Slides",
+    "workspace.badge_slides": "SLIDES",
+    "workspace.slides_badge": "SLIDES",
+    "workspace.slides_desc": "Présentations & diapositives collaboratives",
+    "workspace.slides_card_title": "Troco Slides",
     // ---- OFFICE MENU KEYS (FR) ----
     "office.menu_file": "Fichier",
     "office.menu_edit": "Édition",
@@ -675,6 +680,11 @@ export const translations = {
 
   },
   EN: {
+    "workspace.slides_title": "Troco Slides",
+    "workspace.badge_slides": "SLIDES",
+    "workspace.slides_badge": "SLIDES",
+    "workspace.slides_desc": "Presentations & collaborative slides",
+    "workspace.slides_card_title": "Troco Slides",
     // ---- OFFICE MENU KEYS (EN) ----
     "office.menu_file": "File",
     "office.menu_edit": "Edit",
@@ -1353,6 +1363,11 @@ export const translations = {
 
   },
   ES: {
+    "workspace.slides_title": "Troco Slides",
+    "workspace.badge_slides": "SLIDES",
+    "workspace.slides_badge": "SLIDES",
+    "workspace.slides_desc": "Presentaciones y diapositivas colaborativas",
+    "workspace.slides_card_title": "Troco Slides",
     // ---- OFFICE MENU KEYS (ES) ----
     "office.menu_file": "Archivo",
     "office.menu_edit": "Edición",
@@ -2031,6 +2046,11 @@ export const translations = {
 
   },
   IT: {
+    "workspace.slides_title": "Troco Slides",
+    "workspace.badge_slides": "SLIDES",
+    "workspace.slides_badge": "SLIDES",
+    "workspace.slides_desc": "Presentazioni e diapositive collaborative",
+    "workspace.slides_card_title": "Troco Slides",
     // ---- OFFICE MENU KEYS (IT) ----
     "office.menu_file": "File",
     "office.menu_edit": "Modifica",
@@ -2709,6 +2729,11 @@ export const translations = {
 
   },
   DE: {
+    "workspace.slides_title": "Troco Slides",
+    "workspace.badge_slides": "SLIDES",
+    "workspace.slides_badge": "SLIDES",
+    "workspace.slides_desc": "Präsentationen & kollaborative Folien",
+    "workspace.slides_card_title": "Troco Slides",
     // ---- OFFICE MENU KEYS (DE) ----
     "office.menu_file": "Datei",
     "office.menu_edit": "Bearbeiten",
@@ -3387,6 +3412,11 @@ export const translations = {
 
   },
   JA: {
+    "workspace.slides_title": "Troco Slides",
+    "workspace.badge_slides": "SLIDES",
+    "workspace.slides_badge": "SLIDES",
+    "workspace.slides_desc": "プレゼンテーション＆共同編集スライド",
+    "workspace.slides_card_title": "Troco Slides",
     // ---- OFFICE MENU KEYS (JA) ----
     "office.menu_file": "ファイル",
     "office.menu_edit": "編集",
@@ -4065,6 +4095,11 @@ export const translations = {
 
   },
   ZH: {
+    "workspace.slides_title": "Troco 演示文稿",
+    "workspace.badge_slides": "SLIDES",
+    "workspace.slides_badge": "SLIDES",
+    "workspace.slides_desc": "实时协同幻灯片与演示文稿",
+    "workspace.slides_card_title": "Troco 演示文稿",
     // ---- OFFICE MENU KEYS (ZH) ----
     "office.menu_file": "文件",
     "office.menu_edit": "编辑",

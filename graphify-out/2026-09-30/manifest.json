@@ -480,9 +480,9 @@
     "semantic_hash": ""
   },
   "src/components/CloudOfficeSuiteModal.jsx": {
-    "mtime": 1790783721.950281,
-    "seen": 1790783857.2000675,
-    "ast_hash": "e56c4106be56e7c94e872a70b09a0f55",
+    "mtime": 1790785014.9595256,
+    "seen": 1790785319.5682378,
+    "ast_hash": "1621cd060ffe6fe742608980a8d256f5",
     "semantic_hash": ""
   },
   "src/components/CollaborativeWhiteboardModal.jsx": {
@@ -612,10 +612,10 @@
     "semantic_hash": "9b8ecc213d67b609c6d4c758caa9bb25"
   },
   "src/components/LiveCallSubtitles.jsx": {
-    "mtime": 1790087183.429847,
-    "seen": 1790594464.238131,
-    "ast_hash": "63e534056079ccca05412294470d7708",
-    "semantic_hash": "63e534056079ccca05412294470d7708"
+    "mtime": 1790785502.7741468,
+    "seen": 1790785975.643511,
+    "ast_hash": "e61da2a7de796b3f4b6c16a27898f0a0",
+    "semantic_hash": ""
   },
   "src/components/MapClusterTracker.jsx": {
     "mtime": 1787687494.3137882,
@@ -1164,9 +1164,9 @@
     "semantic_hash": "5978da176d4928d0232844ea8cf43658"
   },
   "src/components/chat/ChatInputBar.jsx": {
-    "mtime": 1790718760.6049418,
-    "seen": 1790737066.258414,
-    "ast_hash": "b8f169e6275520cf0ebc6c4b973cc49d",
+    "mtime": 1790784968.9004493,
+    "seen": 1790785319.569235,
+    "ast_hash": "d09f33ea885226c1de3ef4778e63c216",
     "semantic_hash": ""
   },
   "src/components/chat/DownloadButton.jsx": {
@@ -1434,15 +1434,15 @@
     "semantic_hash": "d6cbd99abea778cd447820a111d1b50c"
   },
   "src/data/translationsData.js": {
-    "mtime": 1790782331.442124,
-    "seen": 1790782652.8768864,
-    "ast_hash": "36368925fd36ea346e8cf607595e6b32",
+    "mtime": 1790784913.86369,
+    "seen": 1790785319.5703712,
+    "ast_hash": "28d539e5613ead80a6000c5fa559fe54",
     "semantic_hash": ""
   },
   "src/data/translationsSecondary.js": {
-    "mtime": 1790782331.5088596,
-    "seen": 1790782652.876888,
-    "ast_hash": "4084bd0fda85443c67509893e20b56b4",
+    "mtime": 1790784938.8522282,
+    "seen": 1790785319.5703812,
+    "ast_hash": "d2f5e75cf134f72cd1a7b64061b4cfa8",
     "semantic_hash": ""
   },
   "src/features/admin/AdminChatsTab.jsx": {
@@ -1494,10 +1494,10 @@
     "semantic_hash": "252d65e1316b50d9292b434fbc21b93c"
   },
   "src/features/call/WebRTCCallOverlay.jsx": {
-    "mtime": 1789071513.946142,
-    "seen": 1790594464.2383277,
-    "ast_hash": "a4a592e72647b60b7de7ef749f954c8a",
-    "semantic_hash": "a4a592e72647b60b7de7ef749f954c8a"
+    "mtime": 1790785532.84462,
+    "seen": 1790785975.644983,
+    "ast_hash": "876d7f489f226cff5e63459deaec5af5",
+    "semantic_hash": ""
   },
   "src/features/call/index.js": {
     "mtime": 1787773798.776006,
@@ -1626,9 +1626,9 @@
     "semantic_hash": "d8fffbee250695a5d8212fefb0e17b4f"
   },
   "src/features/workspace/WorkspaceMessageCard.jsx": {
-    "mtime": 1790782347.2295568,
-    "seen": 1790782652.8769467,
-    "ast_hash": "2f74b7eb0b2d2be0751ff6badc62a0be",
+    "mtime": 1790784988.2461934,
+    "seen": 1790785319.5706186,
+    "ast_hash": "c0e36a60680a6c5a32a13222f63d522e",
     "semantic_hash": ""
   },
   "src/features/workspace/index.js": {
@@ -1752,9 +1752,9 @@
     "semantic_hash": "2c8beff856537a1e2618e9407b2e7927"
   },
   "src/locales/translations.js": {
-    "mtime": 1790782331.5226407,
-    "seen": 1790782652.8770063,
-    "ast_hash": "683d40b2e8f7e69b1b16b077f23d89bc",
+    "mtime": 1790784938.867224,
+    "seen": 1790785319.5709403,
+    "ast_hash": "8bfa6755adf4853a5eda1cc94e8d0a3a",
     "semantic_hash": ""
   },
   "src/reportWebVitals.js": {
@@ -2304,9 +2304,9 @@
     "semantic_hash": ""
   },
   "MASTER_AUDIT.md": {
-    "mtime": 1790779467.5605228,
-    "seen": 1790780460.3491502,
-    "ast_hash": "e19c073d928d59787f05e9d4245c05c2",
+    "mtime": 1790784441.4046004,
+    "seen": 1790784511.7325685,
+    "ast_hash": "cd733b490302498f3e09c36a7d7266be",
     "semantic_hash": ""
   },
   "PERFORMANCE_AUDIT.md": {
@@ -3015,6 +3015,30 @@
     "mtime": 1790782009.4021778,
     "seen": 1790782652.8771594,
     "ast_hash": "58aed3adb7ae33ac191e697e1de8f30b",
+    "semantic_hash": ""
+  },
+  "src/components/office/EditorMenuBar.jsx": {
+    "mtime": 1790784030.312358,
+    "seen": 1790784511.732091,
+    "ast_hash": "f397fd2966e9fbf737a7769a075377c9",
+    "semantic_hash": ""
+  },
+  "src/components/office/EditorMenuBar.test.js": {
+    "mtime": 1790784270.85629,
+    "seen": 1790784511.732094,
+    "ast_hash": "fd1a7a615f5eed7fd8473757b7083438",
+    "semantic_hash": ""
+  },
+  "src/components/Phase141TrocoSlidesWorkspace.test.js": {
+    "mtime": 1790785138.657868,
+    "seen": 1790785319.568814,
+    "ast_hash": "db68cc1aeadf615477ce443a5e9e739e",
+    "semantic_hash": ""
+  },
+  "src/features/call/Phase142CallOverlayCleanliness.test.js": {
+    "mtime": 1790785695.4842718,
+    "seen": 1790785975.6449668,
+    "ast_hash": "beee0fab6abca3da329cab861be286fe",
     "semantic_hash": ""
   }
 }
