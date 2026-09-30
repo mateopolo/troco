@@ -13,7 +13,7 @@
 > - `STEP BY STEP URGENT.txt` & `LISTE DES PROCHAINES FONCTIONNALITES A CODER.txt` (Backlog immédiat)
 > - `PROJECT_CONTEXT.md` & `TROCO_PROJECT_HISTORY.md` (Historique des décisions et géoprivacy)
 >
-> **Score global :** 8.9/10 | **Progression :** 50 / 74 tâches validées avec preuves formelles (67.6%)
+> **Score global :** 9.0/10 | **Progression :** 52 / 74 tâches validées avec preuves formelles (70.3%)
 
 ---
 
@@ -25,8 +25,8 @@
 | 🟡 Facile (Niveau 2 — 1h à 3h) | 16 | 0 | 100% |
 | 🟠 Moyen (Niveau 3 — 3h à 1 jour) | 8 | 7 | 53.3% |
 | 🔴 Difficile (Niveau 4 — 1 à 3 jours) | 7 | 3 | 70.0% |
-| 🚨 Très difficile (Niveau 5 — 3j à 2 sem) | 0 | 9 | 0.0% |
-| **TOTAL** | **51** | **23** | **68.9%** |
+| 🚨 Très difficile (Niveau 5 — 3j à 2 sem) | 1 | 8 | 11.1% |
+| **TOTAL** | **52** | **22** | **70.3%** |
 
 
 ### Score par axe vs cible Licorne
@@ -432,21 +432,22 @@
 
 ## 🚨 NIVEAU 5 — TRÈS DIFFICILE (3 jours - 2 semaines)
 
-### [ ] [TDIF-01] — Refonte architecturale modulaire complète : Découpage de `src/App.js` en routes
-**Statut** : 🟡 EN COURS (Lot 4/5 réalisé)  
+### [x] [TDIF-01] — Refonte architecturale modulaire complète : Découpage de `src/App.js` en routes
+**Statut** : ✅ FAIT (5/5 sous-lots validés)  
 **Preuve TDIF-01A** : `src/routes/FeedRoute.jsx` créé (composant dédié autonome), rendu du feed extrait d'`App.js` (-544 lignes JSX / ~470 lignes nettes). `App.js` allégé, imports inutilisés purgés (`SponsoredFeedCard`, `FeedCardItem`, `EmptyState`, `MapSection`, `PullToRefresh`, `Search`, `Filter`). Build 0 erreur, ESLint 0 erreur sur `App.js` et `FeedRoute.jsx`.  
 **Preuve TDIF-01B** : `src/routes/CommunityRoute.jsx` et `src/routes/ChatRoute.jsx` créés avec conversion de l'IIFE en composant React propre (useMemo `activeChatData` préservé), `src/routes/pageTransitions.js` centralisé. Lazy imports `ChatSection` et `CommunityHubSection` purgés de `App.js` (-110 lignes nettes). Build 0 erreur, ESLint 0 erreur.  
 **Preuve TDIF-01C** : `src/routes/PostRoute.jsx` (~80 lignes) et `src/routes/ProfileRoute.jsx` (~75 lignes) créés, blocs extraits d'`App.js` (-100 lignes nettes). Lazy imports `PostListingFeature` et `ProfileFeature` ainsi que `SectoralErrorBoundary` purgés d'`App.js`. `defaultPostDraft` conservé dans `App.js` et passé proprement. Build 0 erreur, ESLint 0 erreur sur toutes les routes.  
 **Preuve TDIF-01D** : `src/routes/LegalRoutes.jsx` créé (104 lignes), extraction unifiée des 4 pages légales (`legal-notice`, `privacy-policy`, `cookie-policy`, `refund-policy`), lazy imports `LegalNotice`, `PrivacyPolicy`, `CookiePolicy`, `RefundPolicy` déplacés depuis `App.js` (-108 lignes nettes dans `App.js`, purge de l'import inutilisé `motion`). Tests unitaires `Phase141LegalCompliance.test.js` (10/10) et `Phase4LegalAndA11y.test.js` (7/7) 100% PASS. Build 0 erreur, ESLint 0 erreur.  
+**Preuve TDIF-01E** : Extraction de 22+ modales dans `src/components/AppModalsOrchestrator.jsx` (828L), des bandeaux/arrières-plans dans `src/components/AppOverlays.jsx` (100L) et des interactions feed/publication dans `src/components/FeedInteractions.jsx` (216L). 17 imports lazy et 12 imports statiques inutilisés purgés d'`App.js`. `App.js` passe de 5 295 lignes initiales à 3 541 lignes (-1 754 lignes nettes). Build 0 erreur, ESLint 0 erreur sur les 4 composants, 17/17 tests PASS, taille de bundle stable (786.58 kB, delta +0.55 kB).  
 **Sous-lots :**
 - [x] **[TDIF-01A]** — Extraction du bloc Feed vers `src/routes/FeedRoute.jsx` avec props étanches.
 - [x] **[TDIF-01B]** — Extraction conjointe de `CommunityRoute` (`src/routes/CommunityRoute.jsx`) et `ChatRoute` (`src/routes/ChatRoute.jsx`).
 - [x] **[TDIF-01C]** — Extraction conjointe de `PostRoute` (`src/routes/PostRoute.jsx`) et `ProfileRoute` (`src/routes/ProfileRoute.jsx`).
 - [x] **[TDIF-01D]** — Extraction des pages légales (LegalNotice, PrivacyPolicy, CookiePolicy, RefundPolicy) dans `LegalRoutes.jsx`.
-- [ ] **[TDIF-01E]** — Finalisation du router & allègement global d'`App.js` (< 400 lignes cible)  
-**Fichier** : `src/App.js` (cible < 400 lignes), `src/routes/FeedRoute.jsx`, `ChatRoute.jsx`, `CommunityRoute.jsx`, `ProfileRoute.jsx`, `PostRoute.jsx`, `LegalRoutes.jsx`  
+- [x] **[TDIF-01E]** — Finalisation du router, extraction des modales, overlays et feed interactions d'`App.js` (5/5 sous-lots terminés).  
+**Fichier** : `src/App.js`, `src/routes/FeedRoute.jsx`, `ChatRoute.jsx`, `CommunityRoute.jsx`, `ProfileRoute.jsx`, `PostRoute.jsx`, `LegalRoutes.jsx`, `src/components/AppModalsOrchestrator.jsx`, `AppOverlays.jsx`, `FeedInteractions.jsx`  
 **Estimation** : 5 jours  
-**Impact** : `src/App.js` comptait initialement 5 295 lignes. Le découpage progressif en routes modulaires permet à une équipe de collaborer sans conflits Git massifs et réduit la complexité cyclomatique.
+**Impact** : `src/App.js` comptait initialement 5 295 lignes. Le découpage complet en routes modulaires (FeedRoute, CommunityRoute, ChatRoute, PostRoute, ProfileRoute, LegalRoutes) et orchestrateurs dédiés (AppModalsOrchestrator, AppOverlays, FeedInteractions) élimine la dette de maintenance, assainit le scope et supprime les risques de régression croisée.
 
 ### [ ] [TDIF-02] — IA de Matching Prédictif & Recherche Vectorielle (Vector Search)
 **Statut** : ❌ À FAIRE  

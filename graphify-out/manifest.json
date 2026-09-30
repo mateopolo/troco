@@ -384,9 +384,9 @@
     "semantic_hash": "29788f2edfc62f638e05abc398125e63"
   },
   "src/App.js": {
-    "mtime": 1790763990.7565613,
-    "seen": 1790764088.758927,
-    "ast_hash": "252bd7b4c4ddc2149361691ef67cc884",
+    "mtime": 1790764910.8530362,
+    "seen": 1790765019.0376449,
+    "ast_hash": "7b3c0ec64f923a5e246996484dc2a1d5",
     "semantic_hash": ""
   },
   "src/App.test.js": {
@@ -2304,9 +2304,9 @@
     "semantic_hash": ""
   },
   "MASTER_AUDIT.md": {
-    "mtime": 1790737699.1628232,
-    "seen": 1790764088.7598119,
-    "ast_hash": "bed71a1c868d0fc0ab701226c1cb72d7",
+    "mtime": 1790764161.452632,
+    "seen": 1790765019.0385017,
+    "ast_hash": "fdb5ba3380808b53e8085ac5fb618c88",
     "semantic_hash": ""
   },
   "PERFORMANCE_AUDIT.md": {
@@ -2943,6 +2943,24 @@
     "mtime": 1790763923.112817,
     "seen": 1790764088.759589,
     "ast_hash": "75916406a37b2d6ff2b31b8e8d1de40f",
+    "semantic_hash": ""
+  },
+  "src/components/AppModalsOrchestrator.jsx": {
+    "mtime": 1790764638.147982,
+    "seen": 1790765019.0376647,
+    "ast_hash": "2476860d9bdbf208c86443b44f95dfc4",
+    "semantic_hash": ""
+  },
+  "src/components/AppOverlays.jsx": {
+    "mtime": 1790764585.5800161,
+    "seen": 1790765019.037667,
+    "ast_hash": "55c1d605186deaf1e2b80f847fcd7793",
+    "semantic_hash": ""
+  },
+  "src/components/FeedInteractions.jsx": {
+    "mtime": 1790764615.098569,
+    "seen": 1790765019.0377176,
+    "ast_hash": "a02e83373bfce89cd06e0217de145b63",
     "semantic_hash": ""
   }
 }

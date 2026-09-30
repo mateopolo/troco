@@ -1,15 +1,12 @@
 import logger from './utils/logger';
 import React, { useState, useEffect, useRef, useMemo, useCallback, useDeferredValue, Suspense, useTransition } from 'react';
-import { createPortal } from 'react-dom';
-import { MapPin, Video, Globe, ShieldCheck, CheckCircle, X, Sparkles, Coins, Trash2, Camera, Flame, Check, Lock, CreditCard, Tag, ChevronLeft, ChevronRight, ShieldAlert, Phone, PhoneOff } from 'lucide-react';
+import { MapPin, Video, Globe, X, Sparkles, Trash2, Camera, Tag, ChevronLeft, ChevronRight, ShieldAlert } from 'lucide-react';
 import { auth, db } from './firebase';
 import { collection, addDoc, doc, updateDoc, serverTimestamp, onSnapshot, query, orderBy, limit, setDoc, deleteDoc, getDoc, getDocs, where, runTransaction, increment } from 'firebase/firestore';
 import { fetchListingsPaginated, fetchListingsByGeohash } from './services/firestoreService';
 import { isSignInWithEmailLink, signInWithEmailLink, signOut, onAuthStateChanged } from 'firebase/auth';
 import { useWebRTC } from './hooks/useWebRTC';
 import { useTheme } from './contexts/ThemeContext';
-import { SkeletonModalFallback } from './components/SkeletonLoader';
-import CookieBanner from './components/CookieBanner';
 import { TROCO_CATEGORIES } from './data/categoriesData';
 import { subscribeTranslations } from './utils/translator';
 import { playApplePaySound, playBetclicBalanceSound, playWelcomeGiftFanfare } from './utils/audioService';
@@ -23,19 +20,18 @@ import ChatRoute from './routes/ChatRoute';
 import PostRoute from './routes/PostRoute';
 import ProfileRoute from './routes/ProfileRoute';
 import LegalRoutes from './routes/LegalRoutes';
+import AppOverlays from './components/AppOverlays';
+import FeedInteractions from './components/FeedInteractions';
+import AppModalsOrchestrator from './components/AppModalsOrchestrator';
 import { useFeedStore } from './stores/useFeedStore';
 import { generateInvoiceRef } from './components/InvoiceCalculator';
 import TrocoLogoNativeSvg from './components/common/TrocoLogoNativeSvg';
-import OfflineScreen from './components/common/OfflineScreen';
-import PWAInstallBanner from './components/PWAInstallBanner';
 import AuthScreen from './features/auth/AuthScreen';
-import TransactionSuccessModal from './components/TransactionSuccessModal';
 import { useWalletStore } from './stores';
 import haptics, { safeVibrate } from './utils/haptics';
 import { useAppAuth } from './hooks/useAppAuth';
 import { useAppNavigation } from './hooks/useAppNavigation';
 import { useAppModals } from './hooks/useAppModals';
-import Portal from './components/ui/Portal';
 import { BACKDROP_CLASSNAME, BACKDROP_STYLE } from './components/ui/modalBackdrop';
 import { getCategoryLabel as getCategoryLabelUtil, formatStatus as formatStatusUtil, formatTokenCount as formatTokenCountUtil, formatCompensation as formatCompensationUtil } from './utils/formatters';
 import { generateTags } from './utils/tagGenerator';
@@ -45,8 +41,6 @@ import {
   getListingDisplayContent,
   getListingTitleTranslation,
 } from './utils/translationHelpers';
-import FilterDrawer from './components/modals/FilterDrawer';
-import LanguageSelectModal from './components/modals/LanguageSelectModal';
 import { LanguageContext } from './contexts/LanguageContext';
 import { ConfirmProvider, useConfirm } from './hooks/useConfirm';
 import ConfirmDialog from './components/ui/ConfirmDialog';
@@ -65,8 +59,6 @@ import {
 } from './utils/geocodingNominatim';
 
 import { useGlobalContent } from './features/admin/useGlobalContent';
-import OfflineBanner from './components/common/OfflineBanner';
-import NotificationPill from './components/ui/NotificationPill';
 import { notificationService } from './services/notificationService';
 import { isIosOrTouchDevice } from './utils/deviceDetection';
 import { useAdminGuard } from './hooks/useAdminGuard';
@@ -82,36 +74,15 @@ import { gdprService } from './services/gdprService';
 import { useCheckout } from './hooks/useCheckout';
 import { useRateLimit } from './hooks/useRateLimit';
 import { useSafeTimeout } from './hooks/useSafeTimeout';
-import CheckoutModal from './components/modals/CheckoutModal';
-import { RateLimitToast } from './components/ui/RateLimitToast';
 import { useFirestoreHealth } from './hooks/useFirestoreHealth';
 import * as storage from './utils/storage';
 export { isIosOrTouchDevice };
 
 
-// Lazy-loaded heavy components & modals (Strict Code-Splitting)
-const AdminDashboard = React.lazy(() => import('./features/admin/AdminDashboard'));
-const ReportModal = React.lazy(() => import('./components/ReportModal'));
-const CguModal = React.lazy(() => import('./components/CguModal'));
-const PrivacyCenterModal = React.lazy(() => import('./components/PrivacyCenterModal'));
-const OnboardingWizardModal = React.lazy(() => import('./components/OnboardingWizardModal'));
-const WelcomeGiftCelebrationModal = React.lazy(() => import('./components/WelcomeGiftCelebrationModal'));
-const VisioSettlementModal = React.lazy(() => import('./components/VisioSettlementModal'));
-const KycModal = React.lazy(() => import('./components/KycModal'));
-const CounterOfferModal = React.lazy(() => import('./components/CounterOfferModal'));
-const PublicProfileModal = React.lazy(() => import('./components/PublicProfileModal'));
-const CategoryPickerModal = React.lazy(() => import('./components/modals/CategoryPickerModal'));
-const BoostListingModal = React.lazy(() => import('./components/modals/BoostListingModal'));
-const EmailLinkPromptModal = React.lazy(() => import('./components/modals/EmailLinkPromptModal'));
-const CguConsentModal = React.lazy(() => import('./components/modals/CguConsentModal'));
-const PaymentFeature = React.lazy(() => import('./features/payment'));
-const CallFeature = React.lazy(() => import('./features/call'));
-const WebRTCCallOverlay = React.lazy(() => import('./features/call/WebRTCCallOverlay'));
 const Footer = React.lazy(() => import('./components/Footer'));
 
 // 🚨 PHASE 108 : ISOLATION DES COMPOSANTS LOURDS 3D / CANVAS (ÉRADICATION CRASH OOM iOS)
 const TrocoLogo3D = React.lazy(() => import('./components/common/TrocoLogo3D'));
-const GeometricBackground = React.lazy(() => import('./components/layout/GeometricBackground'));
 
 // 🚨 PHASE 60 : STANDARDISATION DES TRANSITIONS GLOBAL FRAMER MOTION (Fade + Scale)
 export const pageTransitionVariants = {
@@ -2883,63 +2854,15 @@ export default function App() {
         position: 'relative',
         fontFamily: 'var(--font-family-main)'
       }}>
-        {/* 🚨 PHASE 49 & 82 : ÉCRAN & BANNIÈRE HORS-LIGNE INTERACTIFS */}
-        <OfflineBanner />
-        <OfflineScreen />
-
-        {/* 🚨 PHASE 55 : NOTIFICATIONS DYNAMIC ISLAND / TOASTS PREMIUM */}
-        <NotificationPill />
-
-        {/* 🚨 PHASE 114 : EXTINCTION DU CANVAS WEBRGL SUR IOS (VRAM FIX) */}
-        {!isIosOrTouchDevice() ? (
-          <Suspense fallback={null}>
-            <GeometricBackground darkMode={darkMode} />
-          </Suspense>
-        ) : (
-          /* FALLBACK CSS PREMIUM POUR LE BACKGROUND : DÉGRADÉ RADIAL RICHE SANS AUCUN CANVAS */
-          <div
-            data-testid="ios-touch-background-fallback"
-            style={{
-              position: 'fixed',
-              inset: 0,
-              background: darkMode
-                ? 'radial-gradient(circle at 50% 10%, rgba(198, 125, 91, 0.18) 0%, rgba(26, 22, 19, 0.95) 60%, #12100E 100%)'
-                : 'radial-gradient(circle at 50% 10%, rgba(198, 125, 91, 0.14) 0%, rgba(250, 247, 242, 0.95) 65%, #FAF7F2 100%)',
-              pointerEvents: 'none',
-              zIndex: -100,
-            }}
-          />
-        )}
-
-        {/* FOND LIQUIDE IRIDESCENT : DÉGRADÉ STATIQUE SUR MOBILE / TACTILE POUR ÉVITER LE DÉPASSEMENT VRAM iOS */}
-        {(isTouchDevice || isMobileDevice) ? (
-          <div style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'radial-gradient(circle at top right, var(--bg-subtle), var(--bg-global))',
-            pointerEvents: 'none',
-            zIndex: 0
-          }} />
-        ) : (
-          <div className="liquid-iridescence-container">
-            <div className="liquid-blob liquid-blob-1" />
-            <div className="liquid-blob liquid-blob-2" />
-            <div className="liquid-blob liquid-blob-3" />
-          </div>
-        )}
-
-        {/* MODALE BLOQUANTE CGU & RGPD OBLIGATOIRE */}
-        {isAuthenticated && !profile?.cguAcceptedAt && !cguDismissed && !cguBypassRef.current && window.sessionStorage?.getItem('troco_cgu_dismissed') !== 'true' && !isLoadingSession && (
-          <Suspense fallback={null}>
-            <CguConsentModal
-              isOpen={isAuthenticated && !profile?.cguAcceptedAt && !cguDismissed && !cguBypassRef.current && window.sessionStorage?.getItem('troco_cgu_dismissed') !== 'true' && !isLoadingSession}
-              onAccept={handleAcceptCgu}
-              profile={profile}
-              darkMode={darkMode}
-              t={t}
-            />
-          </Suspense>
-        )}
+        {/* OVERLAYS, BANNIÈRES & ARRIÈRE-PLANS (TDIF-01E) */}
+        <AppOverlays
+          darkMode={darkMode}
+          isTouchDevice={isTouchDevice}
+          isMobileDevice={isMobileDevice}
+          isPending={isPending}
+          setIsPrivacyCenterOpen={setIsPrivacyCenterOpen}
+          setActiveTab={setActiveTab}
+        />
         <style>{`
         * { box-sizing: border-box; }
         .premium-main { animation: fadeSlideUp 0.5s cubic-bezier(0.19, 1, 0.22, 1) both; }
@@ -2999,35 +2922,6 @@ export default function App() {
 
 
 
-        {/* MICRO-INDICATEUR DE PROGRESSION (React 18 useTransition — barre YouTube-style) */}
-        <div
-          aria-hidden="true"
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            height: '3px',
-            zIndex: 99999,
-            pointerEvents: 'none',
-            overflow: 'hidden',
-          }}
-        >
-          <div
-            style={{
-              height: '100%',
-              background: 'linear-gradient(90deg, var(--accent-primary, #C67D5B) 0%, #F59E0B 60%, #EC4899 100%)',
-              transformOrigin: 'left center',
-              transform: isPending ? 'scaleX(0.85)' : 'scaleX(0)',
-              opacity: isPending ? 1 : 0,
-              transition: isPending
-                ? 'transform 1.4s cubic-bezier(0.1, 0.4, 0.2, 1), opacity 0.1s ease'
-                : 'transform 0.15s ease, opacity 0.3s ease 0.1s',
-              boxShadow: isPending ? '0 0 10px rgba(198,125,91,0.6)' : 'none',
-            }}
-          />
-        </div>
-
         {/* HEADER FIXE GLASSMORPHISM FLUIDE AVEC CONDENSATION AU SCROLL */}
         <AppHeader
           isMobile={isMobile}
@@ -3047,81 +2941,6 @@ export default function App() {
           t={t}
           formatTokenCount={formatTokenCount}
         />
-
-        {isBoostModalOpen && boostingListing && (
-          <Suspense fallback={null}>
-            <BoostListingModal
-              isOpen={isBoostModalOpen}
-              onClose={() => setIsBoostModalOpen(false)}
-              boostingListing={boostingListing}
-              confirmBoostListing={confirmBoostListing}
-              boostMessage={boostMessage}
-              darkMode={darkMode}
-              profile={profile}
-            />
-          </Suspense>
-        )}
-
-        {pendingEmailLinkHref && (
-          <Suspense fallback={null}>
-            <EmailLinkPromptModal
-              isOpen={Boolean(pendingEmailLinkHref)}
-              onConfirm={handleConfirmEmailLink}
-              onClose={handleCancelEmailLink}
-              darkMode={darkMode}
-            />
-          </Suspense>
-        )}
-
-        <LanguageSelectModal
-          isOpen={isLangModalOpen}
-          onClose={() => setIsLangModalOpen(false)}
-          currentLang={currentLang}
-          onSelectLanguage={(code) => {
-            setLang(code);
-            setIsLangModalOpen(false);
-          }}
-          darkMode={darkMode}
-          t={t}
-        />
-
-        <FilterDrawer
-          isOpen={isFilterDrawerOpen}
-          onClose={() => setIsFilterDrawerOpen(false)}
-          filteredListingsCount={filteredListings.length}
-          isInfiniteRadius={isInfiniteRadius}
-          setIsInfiniteRadius={setIsInfiniteRadius}
-          radiusKm={radiusKm}
-          setRadiusKm={setRadiusKm}
-          handleRequestGeolocation={handleRequestGeolocation}
-          isGeolocating={isGeolocating}
-          isGeolocated={isGeolocated}
-          selectedLanguages={selectedLanguages}
-          toggleLanguageFilter={toggleLanguageFilter}
-          selectedPayment={selectedPayment}
-          setSelectedPayment={setSelectedPayment}
-          hideDemos={hideDemos}
-          setHideDemos={setHideDemos}
-          paymentOptions={paymentOptions}
-          paymentLabels={paymentLabels}
-          darkMode={darkMode}
-          profile={profile}
-          t={t}
-        />
-
-        {isCategoryModalOpen && (
-          <Suspense fallback={null}>
-            <CategoryPickerModal
-              isOpen={isCategoryModalOpen}
-              onClose={() => setIsCategoryModalOpen(false)}
-              categoryInput={categoryInput}
-              setCategoryInput={setCategoryInput}
-              handleAddCategory={handleAddCategory}
-              darkMode={darkMode}
-              t={t}
-            />
-          </Suspense>
-        )}
 
         {selectedListing && (
           <div
@@ -3850,794 +3669,167 @@ export default function App() {
           setIsEditingListing={setIsEditingListing}
         />
 
-        {/* POPUP CONFIRMATION PUBLICATION */}
-        {showPublishedPopup && publishedListing && (
-          <div
-            className="fixed inset-0 z-[999999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
-            style={{ position: 'fixed', inset: 0, zIndex: 999999 }}
-            onClick={() => {
-              setShowPublishedPopup(false);
-              setSelectedListing(publishedListing);
-              setActiveTab('feed');
-            }}
-          >
-            <div
-              onClick={e => e.stopPropagation()}
-              className="relative w-full max-w-md mx-auto bg-[var(--bg-card)] rounded-3xl shadow-2xl flex flex-col items-center text-center overflow-hidden p-6 md:p-8"
-              style={{ border: '1px solid var(--border-color)', animation: 'popupIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both' }}
-            >
-              {/* Icône checkmark animée */}
-              <div style={{ width: '72px', height: '72px', borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-success), var(--accent-success))', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', boxShadow: '0 12px 32px rgba(122,143,106,0.3)', animation: 'checkPop 0.5s cubic-bezier(0.34,1.56,0.64,1) 0.15s both' }}>
-                <CheckCircle size={38} color="#FFF" />
-              </div>
-              <h2 className="font-editorial-heading" style={{ margin: '0 0 8px', fontSize: '24px', fontWeight: '600', color: 'var(--text-main)', lineHeight: 1.2 }}>
-                {currentLang === 'FR' ? '🎉 Annonce publiée !' :
-                  currentLang === 'EN' ? '🎉 Ad published!' :
-                    currentLang === 'ES' ? '🎉 ¡Anuncio publicado!' :
-                      currentLang === 'IT' ? '🎉 Annuncio pubblicato!' :
-                        currentLang === 'DE' ? '🎉 Anzeige veröffentlicht!' :
-                          currentLang === 'JA' ? '🎉 広告を公開しました！' :
-                            '🎉 广告已发布！'}
-              </h2>
-              <p style={{ margin: '0 0 6px', fontSize: '14px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                {currentLang === 'FR' ? 'Votre annonce est maintenant visible dans le flux, sur la carte et dans les résultats de recherche.' :
-                  currentLang === 'EN' ? 'Your ad is now visible in the feed, on the map and in search results.' :
-                    currentLang === 'ES' ? 'Tu anuncio ahora es visible en el feed, en el mapa y en los resultados de búsqueda.' :
-                      currentLang === 'IT' ? 'Il tuo annuncio è ora visibile nel feed, sulla mappa e nei risultati di recherche.' :
-                        currentLang === 'DE' ? 'Ihre Anzeige ist jetzt im Feed, auf der Karte und in den Suchergebnissen sichtbar.' :
-                          currentLang === 'JA' ? '広告はフィード、マップ、検索結果に表示されるようになりました。' :
-                            '您的广告现在可以在动态、地图和搜索结果中看到。'}
-              </p>
-              <p style={{ margin: '0 0 24px', fontSize: '13px', fontWeight: '700', color: 'var(--accent-primary)' }}>« {publishedListing.title} »</p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <button
-                  onClick={() => {
-                    setShowPublishedPopup(false);
-                    setSelectedListing(publishedListing);
-                    setActiveTab('feed');
-                  }}
-                  className="premium-button"
-                  style={{ width: '100%', border: 'none', borderRadius: '16px', padding: '14px', background: 'linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%)', color: '#FFF', fontWeight: '800', fontSize: '15px', cursor: 'pointer', boxShadow: 'var(--shadow-accent)' }}
-                >
-                  {currentLang === 'FR' ? 'Voir mon annonce →' :
-                    currentLang === 'EN' ? 'View my listing →' :
-                      currentLang === 'ES' ? 'Ver mi anuncio →' :
-                        currentLang === 'IT' ? 'Vedi il mio annuncio →' :
-                          currentLang === 'DE' ? 'Meine Anzeige anzeigen →' :
-                            currentLang === 'JA' ? '広告を見る →' : '查看我的广告 →'}
-                </button>
-                <button
-                  onClick={() => {
-                    setShowPublishedPopup(false);
-                    setActiveTab('post');
-                    setPostStep(1);
-                    setPostDraft(defaultPostDraft);
-                  }}
-                  style={{ width: '100%', border: '1px solid var(--border-color)', borderRadius: '16px', padding: '13px', background: 'transparent', color: 'var(--text-secondary)', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}
-                >
-                  {currentLang === 'FR' ? '+ Déposer une autre annonce' :
-                    currentLang === 'EN' ? '+ Post another listing' :
-                      currentLang === 'ES' ? '+ Publicar otro anuncio' :
-                        currentLang === 'IT' ? '+ Pubblica un altro annuncio' :
-                          currentLang === 'DE' ? '+ Eine weitere Anzeige aufgeben' :
-                            currentLang === 'JA' ? '+ 別の広告を投稿' : '+ 发布另一条广告'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ---- MODALE D'ACTION TACTILE SUR ANNONCE MOBILE ---- */}
-        {mobileListingActionTarget && (
-          <div
-            onClick={() => setMobileListingActionTarget(null)}
-            className="fixed inset-0 z-[4000] bg-black/90 md:bg-[rgba(61,53,48,0.72)] md:backdrop-blur-md flex items-end justify-center p-0"
-            style={{
-              position: 'fixed', inset: 0,
-              zIndex: 4000,
-              animation: 'fadeSlideUp 0.25s ease both'
-            }}
-          >
-            <div
-              onClick={(e) => e.stopPropagation()}
-              style={{
-                backgroundColor: darkMode ? '#231E1B' : '#FAF7F2',
-                borderRadius: '24px 24px 0 0', width: '100%', maxWidth: '500px',
-                padding: '20px 20px 32px', boxShadow: '0 -10px 40px rgba(61,53,48,0.25)',
-                border: darkMode ? '1px solid rgba(232,221,211,0.15)' : '1px solid #E8DDD3',
-                position: 'relative', display: 'flex', flexDirection: 'column', gap: '14px'
-              }}
-            >
-              {/* Barre de drag */}
-              <div style={{ width: '40px', height: '4px', borderRadius: '999px', backgroundColor: darkMode ? 'rgba(232,221,211,0.2)' : '#D4C5B5', margin: '0 auto 6px' }} />
-
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
-                  <img src={mobileListingActionTarget.image} alt={mobileListingActionTarget.title} style={{ width: '48px', height: '48px', borderRadius: '12px', objectFit: 'cover' }} />
-                  <div style={{ minWidth: 0 }}>
-                    <div className="font-editorial-heading" style={{ fontWeight: '600', fontSize: '16px', color: darkMode ? '#FAF7F2' : '#3D3530', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {mobileListingActionTarget.title}
-                    </div>
-                    <div style={{ fontSize: '12px', color: '#C67D5B', fontWeight: '700' }}>
-                      {mobileListingActionTarget.compensation} • {mobileListingActionTarget.status === 'paused' ? 'En pause' : 'Active'}
-                    </div>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setMobileListingActionTarget(null)}
-                  style={{ border: 'none', backgroundColor: darkMode ? 'rgba(232,221,211,0.1)' : '#F5EAE4', color: darkMode ? '#FAF7F2' : '#3D3530', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-                >
-                  <X size={16} />
-                </button>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '6px' }}>
-                {/* MODIFIER */}
-                <button
-                  onClick={() => {
-                    const target = mobileListingActionTarget;
-                    setMobileListingActionTarget(null);
-                    handleStartEditListing(target);
-                  }}
-                  className="premium-button"
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px',
-                    borderRadius: '16px', border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3',
-                    backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530',
-                    fontSize: '14px', fontWeight: '700', cursor: 'pointer'
-                  }}
-                >
-                  <span style={{ fontSize: '18px' }}>✏️</span>
-                  <span>Modifier l'annonce</span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    const target = mobileListingActionTarget;
-                    setMobileListingActionTarget(null);
-                    handleBoostListing(target);
-                  }}
-                  className="premium-button"
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px',
-                    borderRadius: '16px', border: '1px solid #E8DDD3',
-                    backgroundColor: darkMode ? 'rgba(217,119,6,0.15)' : '#FEF3C7', color: '#D97706',
-                    fontSize: '14px', fontWeight: '800', cursor: 'pointer'
-                  }}
-                >
-                  <span style={{ fontSize: '18px' }}>🔥</span>
-                  <span>Booster l'annonce (Top visibilité)</span>
-                </button>
-
-                <button
-                  onClick={async () => {
-                    const targetId = mobileListingActionTarget.id;
-                    await handleTogglePauseListing(targetId);
-                    setMobileListingActionTarget(null);
-                  }}
-                  className="premium-button"
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px',
-                    borderRadius: '16px', border: darkMode ? '1px solid rgba(232,221,211,0.12)' : '1px solid #E8DDD3',
-                    backgroundColor: darkMode ? '#1A1715' : '#FFF', color: darkMode ? '#FAF7F2' : '#3D3530',
-                    fontSize: '14px', fontWeight: '700', cursor: 'pointer'
-                  }}
-                >
-                  <span style={{ fontSize: '18px' }}>{mobileListingActionTarget.status === 'paused' ? '▶️' : '⏸️'}</span>
-                  <span>{mobileListingActionTarget.status === 'paused' ? 'Réactiver l\'annonce' : 'Mettre en pause'}</span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    const targetId = mobileListingActionTarget.id;
-                    handleDeleteListing(targetId);
-                  }}
-                  className="premium-button"
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '12px', padding: '14px 16px',
-                    borderRadius: '16px', border: '1px solid rgba(239,68,68,0.3)',
-                    backgroundColor: darkMode ? 'rgba(239,68,68,0.15)' : '#FEF2F2', color: '#EF4444',
-                    fontSize: '14px', fontWeight: '800', cursor: 'pointer'
-                  }}
-                >
-                  <span style={{ fontSize: '18px' }}>🗑️</span>
-                  <span>Supprimer définitivement l'annonce</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-
-        {/* ---- TÂCHE 2 : BANNIÈRE GLOBALE D'ALERTE APPEL ENTRANT (fixed top-10 left-1/2 -translate-x-1/2 z-[999999] shadow-2xl) ---- */}
-        {activeIncomingCall && !callState?.active && (
-          <Portal containerId="modal-root" lockScroll={false}>
-            <div
-              className="fixed top-10 left-1/2 -translate-x-1/2 z-[999999] shadow-2xl"
-              style={{
-                position: 'fixed',
-                top: 'max(16px, calc(env(safe-area-inset-top, 0px) + 16px))',
-                left: '50%',
-                transform: 'translateX(-50%)',
-                zIndex: 999999,
-                width: 'calc(100% - 32px)',
-                maxWidth: '520px',
-                backgroundColor: darkMode ? 'rgba(30, 27, 24, 0.96)' : 'rgba(255, 255, 255, 0.96)',
-                backdropFilter: 'blur(24px) saturate(180%)',
-                WebkitBackdropFilter: 'blur(24px) saturate(180%)',
-                border: '1.5px solid var(--accent-primary, #C67D5B)',
-                borderRadius: '9999px',
-                padding: '10px 18px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '14px',
-                boxShadow: '0 20px 60px rgba(0, 0, 0, 0.45), 0 0 25px rgba(198, 125, 91, 0.25)',
-                animation: 'slideDownIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards',
-              }}
-            >
-              {/* Avatar & Infos Appelant */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, flex: 1 }}>
-                <div style={{ position: 'relative', flexShrink: 0 }}>
-                  <div
-                    style={{
-                      width: '46px',
-                      height: '46px',
-                      borderRadius: '50%',
-                      background: 'linear-gradient(135deg, var(--accent-primary, #C67D5B) 0%, #A85D3B 100%)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: '#FFF',
-                      fontSize: '18px',
-                      fontWeight: '800',
-                      boxShadow: '0 4px 14px rgba(198, 125, 91, 0.35)',
-                    }}
-                  >
-                    {activeIncomingCall.from ? activeIncomingCall.from.charAt(0).toUpperCase() : 'T'}
-                  </div>
-                  <div
-                    style={{
-                      position: 'absolute',
-                      bottom: '0',
-                      right: '0',
-                      width: '12px',
-                      height: '12px',
-                      borderRadius: '50%',
-                      backgroundColor: '#10B981',
-                      border: '2px solid #FFF',
-                    }}
-                  />
-                </div>
-
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <div
-                    style={{
-                      color: darkMode ? '#FAF7F2' : '#2D2825',
-                      fontWeight: '800',
-                      fontSize: '15px',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      lineHeight: 1.2,
-                    }}
-                  >
-                    {activeIncomingCall.from || 'Interlocuteur'}
-                  </div>
-                  <div
-                    style={{
-                      color: 'var(--accent-primary, #C67D5B)',
-                      fontSize: '12px',
-                      fontWeight: '700',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '5px',
-                      marginTop: '2px',
-                    }}
-                  >
-                    {activeIncomingCall.type === 'video' ? <Video size={13} /> : <Phone size={13} />}
-                    <span>{activeIncomingCall.type === 'video' ? 'Appel visio FaceTime...' : 'Appel audio HD...'}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Boutons d'action Décrocher / Raccrocher */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
-                {/* Bouton Raccrocher / Décliner */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleDeclineIncomingCall(activeIncomingCall);
-                  }}
-                  style={{
-                    width: '44px',
-                    height: '44px',
-                    borderRadius: '50%',
-                    backgroundColor: '#EF4444',
-                    color: '#FFF',
-                    border: 'none',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: '0 4px 14px rgba(239, 68, 68, 0.4)',
-                    transition: 'transform 0.15s ease',
-                  }}
-                  title="Refuser l'appel"
-                  aria-label="Refuser l'appel"
-                >
-                  <PhoneOff size={20} />
-                </button>
-
-                {/* Bouton Décrocher / Répondre */}
-                <button
-                  type="button"
-                  onClick={async () => {
-                    await handleAcceptIncomingCall(activeIncomingCall);
-                  }}
-                  style={{
-                    width: '44px',
-                    height: '44px',
-                    borderRadius: '50%',
-                    backgroundColor: '#10B981',
-                    color: '#FFF',
-                    border: 'none',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: '0 4px 14px rgba(16, 185, 129, 0.4)',
-                    transition: 'transform 0.15s ease',
-                  }}
-                  title="Décrocher"
-                  aria-label="Décrocher"
-                >
-                  <Phone size={20} />
-                </button>
-              </div>
-            </div>
-          </Portal>
-        )}
-
-        {/* ---- OVERLAY WEBRTC APPELS (SONNERIE ENTRANTE & MODAL PLEIN ÉCRAN) ---- */}
-        <Suspense fallback={null}>
-          <WebRTCCallOverlay
-            incomingCall={null}
-            callState={callState}
-            isCallPip={isCallPip}
-            setIsCallPip={setIsCallPip}
-            darkMode={darkMode}
-            currentLang={currentLang}
-            t={t}
-            selectedChat={selectedChat}
-            selectedListing={selectedListing}
-            profile={profile}
-            localStream={localStream}
-            remoteStream={remoteStream}
-            facingMode={facingMode}
-            hasMultipleCameras={hasMultipleCameras}
-            switchCamera={switchCamera}
-            acceptIncomingCall={acceptIncomingCall}
-            declineIncomingCall={handleDeclineIncomingCall}
-            endCall={endCall}
-            toggleMic={toggleMic}
-            toggleCam={toggleCam}
-            toggleScreenShare={toggleScreenShare}
-            hostMuteParticipant={hostMuteParticipant}
-            hostStopParticipantScreenShare={hostStopParticipantScreenShare}
-            copyInviteLink={copyInviteLink}
-            attachLocalStream={attachLocalStream}
-            attachRemoteStream={attachRemoteStream}
-            handleAcceptIncomingCall={handleAcceptIncomingCall}
-            callDuration={callDuration}
-            formatCallTimer={formatCallTimer}
-            setSettlementCallDuration={setSettlementCallDuration}
-            setIsSettlementModalOpen={setIsSettlementModalOpen}
-            getAuthorAvatar={getAuthorAvatar}
-          />
-        </Suspense>
-
-        {/* ---- BULLE FLOTTANTE PIP (PICTURE-IN-PICTURE & DRAG-AND-DROP AVEC POINTER EVENTS) ---- */}
-        <Suspense fallback={null}>
-          <CallFeature
-            callState={callState}
-            isCallPip={isCallPip}
-            setIsCallPip={setIsCallPip}
-            pipPosition={pipPosition}
-            setPipPosition={setPipPosition}
-            handlePipPointerDown={handlePipPointerDown}
-            handlePipPointerMove={handlePipPointerMove}
-            handlePipPointerUp={handlePipPointerUp}
-            handlePipPointerCancel={handlePipPointerCancel}
-            handlePipContentClick={handlePipContentClick}
-            selectedChat={selectedChat}
-            callDuration={callDuration}
-            formatCallTimer={formatCallTimer}
-            remoteStream={remoteStream}
-            localStream={localStream}
-            facingMode={facingMode}
-            attachRemoteStream={attachRemoteStream}
-            attachLocalStream={attachLocalStream}
-            hasMultipleCameras={hasMultipleCameras}
-            switchCamera={switchCamera}
-            toggleMic={toggleMic}
-            endCall={endCall}
-            currentLang={currentLang}
-          />
-        </Suspense>
-
-        {/* PANEL ADMINISTRATEUR "GOD MODE" TEMPS RÉEL (/admin) */}
-        {isAdminPanelOpen && (
-          <Suspense fallback={null}>
-            <AdminDashboard
-              isOpen={isAdminPanelOpen}
-              onClose={() => setIsAdminPanelOpen(false)}
-              darkMode={darkMode}
-              currentUser={profile}
-              onInspectUser={(u) => {
-                setIsAdminPanelOpen(false);
-                setSelectedPublicUser(u);
-              }}
-            />
-          </Suspense>
-        )}
-
-        {/* MODALE DU PROFIL PUBLIC COMPLET */}
-        {selectedPublicUser && (
-          <Suspense fallback={<SkeletonModalFallback title="Chargement du profil..." />}>
-            <PublicProfileModal
-              isOpen={Boolean(selectedPublicUser)}
-              onClose={() => setSelectedPublicUser(null)}
-              targetUser={selectedPublicUser}
-              allListings={listings}
-              onOpenListing={handleOpenListing}
-              onStartDiscussion={handleStartDiscussion}
-              currentLang={currentLang}
-              darkMode={darkMode}
-              t={t}
-            />
-          </Suspense>
-        )}
-
-        {/* MODALE DE SIGNALEMENT COMMUNAUTAIRE */}
-        {isReportModalOpen && (
-          <Suspense fallback={<SkeletonModalFallback title="Chargement du formulaire de signalement..." />}>
-            <ReportModal
-              isOpen={isReportModalOpen}
-              onClose={() => {
-                setIsReportModalOpen(false);
-                setReportTarget({ listing: null, user: null });
-              }}
-              targetListing={reportTarget.listing}
-              targetUser={reportTarget.user}
-              currentUser={profile}
-              darkMode={darkMode}
-            />
-          </Suspense>
-        )}
-
-        {/* MODALE DE PROPOSITION DE DEAL & CONTRE-OFFRE */}
-        {isCounterOfferOpen && (
-          <Suspense fallback={<SkeletonModalFallback title="Chargement de la négociation de deal..." />}>
-            <CounterOfferModal
-              isOpen={isCounterOfferOpen}
-              onClose={() => {
-                setIsCounterOfferOpen(false);
-                setEditingDealId(null);
-              }}
-              onSubmit={handleCounterOfferSubmit}
-              initialTerms={editingDealId ? (chatThreads[selectedChat?.id] || []).find(m => String(m.id) === String(editingDealId))?.terms : counterOfferDraft}
-              isEditing={Boolean(editingDealId)}
-              partnerName={selectedChat?.user || 'Interlocuteur'}
-              listingTitle={selectedChat?.listing || ''}
-              darkMode={darkMode}
-              t={t}
-            />
-          </Suspense>
-        )}
-
-        {/* PASSERELLE DE PAIEMENT & HISTORIQUE MODULAIRE (BLOC 5) */}
-        <Suspense fallback={null}>
-          <PaymentFeature
-            isPaymentModalOpen={isPaymentModalOpen}
-            setIsPaymentModalOpen={setIsPaymentModalOpen}
-            paymentModalConfig={paymentModalConfig}
-            handlePaymentSuccess={handlePaymentSuccess}
-            playBetclicBalanceSound={playBetclicBalanceSound}
-            playApplePaySound={playApplePaySound}
-            isTransactionsModalOpen={isTransactionsModalOpen}
-            setIsTransactionsModalOpen={setIsTransactionsModalOpen}
-            userTransactions={userTransactions}
-            handleOpenPayment={handleOpenPayment}
-            profile={profile}
-            darkMode={darkMode}
-          />
-        </Suspense>
-
-        {/* NOUVELLE MODALE DE CHECKOUT DÉCOUPLÉE AVEC PROTECTION STRICTE ANTI-DÉBIT INVOLONTAIRE */}
-        <CheckoutModal
-          isOpen={Boolean(checkoutSession)}
-          session={checkoutSession}
-          onCancel={cancelCheckout}
-          onConfirm={applyCheckout}
-          isProcessing={isCheckoutProcessing}
-          paymentStatus={checkoutStatus}
+        {/* INTERACTIONS DU FEED : POPUP PUBLICATION & ACTIONS MOBILES (TDIF-01E) */}
+        <FeedInteractions
+          showPublishedPopup={showPublishedPopup}
+          setShowPublishedPopup={setShowPublishedPopup}
+          publishedListing={publishedListing}
+          setSelectedListing={setSelectedListing}
+          setActiveTab={setActiveTab}
+          defaultPostDraft={defaultPostDraft}
+          setPostStep={setPostStep}
+          setPostDraft={setPostDraft}
+          currentLang={currentLang}
+          darkMode={darkMode}
+          mobileListingActionTarget={mobileListingActionTarget}
+          setMobileListingActionTarget={setMobileListingActionTarget}
+          handleStartEditListing={handleStartEditListing}
+          handleBoostListing={handleBoostListing}
+          handleTogglePauseListing={handleTogglePauseListing}
+          handleDeleteListing={handleDeleteListing}
         />
 
-        {/* TOAST D'AVERTISSEMENT RATE LIMITING */}
-        <RateLimitToast
+        {/* ORCHESTRATEUR GLOBAL DE TOUTES LES MODALES & OVERLAYS APPLICATIFS (TDIF-01E) */}
+        <AppModalsOrchestrator
+          isAuthenticated={isAuthenticated}
+          profile={profile}
+          isLoadingSession={isLoadingSession}
+          cguDismissed={cguDismissed}
+          setCguDismissed={setCguDismissed}
+          cguBypassRef={cguBypassRef}
+          handleAcceptCgu={handleAcceptCgu}
+          darkMode={darkMode}
+          currentLang={currentLang}
+          t={t}
+          isBoostModalOpen={isBoostModalOpen}
+          setIsBoostModalOpen={setIsBoostModalOpen}
+          boostingListing={boostingListing}
+          confirmBoostListing={confirmBoostListing}
+          boostMessage={boostMessage}
+          pendingEmailLinkHref={pendingEmailLinkHref}
+          handleConfirmEmailLink={handleConfirmEmailLink}
+          handleCancelEmailLink={handleCancelEmailLink}
+          isLangModalOpen={isLangModalOpen}
+          setIsLangModalOpen={setIsLangModalOpen}
+          setLang={setLang}
+          isFilterDrawerOpen={isFilterDrawerOpen}
+          setIsFilterDrawerOpen={setIsFilterDrawerOpen}
+          filteredListings={filteredListings}
+          isInfiniteRadius={isInfiniteRadius}
+          setIsInfiniteRadius={setIsInfiniteRadius}
+          radiusKm={radiusKm}
+          setRadiusKm={setRadiusKm}
+          handleRequestGeolocation={handleRequestGeolocation}
+          isGeolocating={isGeolocating}
+          isGeolocated={isGeolocated}
+          selectedLanguages={selectedLanguages}
+          toggleLanguageFilter={toggleLanguageFilter}
+          selectedPayment={selectedPayment}
+          setSelectedPayment={setSelectedPayment}
+          hideDemos={hideDemos}
+          setHideDemos={setHideDemos}
+          paymentOptions={paymentOptions}
+          paymentLabels={paymentLabels}
+          isCategoryModalOpen={isCategoryModalOpen}
+          setIsCategoryModalOpen={setIsCategoryModalOpen}
+          categoryInput={categoryInput}
+          setCategoryInput={setCategoryInput}
+          handleAddCategory={handleAddCategory}
+          activeIncomingCall={activeIncomingCall}
+          callState={callState}
+          isCallPip={isCallPip}
+          setIsCallPip={setIsCallPip}
+          pipPosition={pipPosition}
+          setPipPosition={setPipPosition}
+          handlePipPointerDown={handlePipPointerDown}
+          handlePipPointerMove={handlePipPointerMove}
+          handlePipPointerUp={handlePipPointerUp}
+          handlePipPointerCancel={handlePipPointerCancel}
+          handlePipContentClick={handlePipContentClick}
+          handleAcceptIncomingCall={handleAcceptIncomingCall}
+          handleDeclineIncomingCall={handleDeclineIncomingCall}
+          selectedChat={selectedChat}
+          selectedListing={selectedListing}
+          localStream={localStream}
+          remoteStream={remoteStream}
+          facingMode={facingMode}
+          hasMultipleCameras={hasMultipleCameras}
+          switchCamera={switchCamera}
+          acceptIncomingCall={acceptIncomingCall}
+          endCall={endCall}
+          toggleMic={toggleMic}
+          toggleCam={toggleCam}
+          toggleScreenShare={toggleScreenShare}
+          hostMuteParticipant={hostMuteParticipant}
+          hostStopParticipantScreenShare={hostStopParticipantScreenShare}
+          copyInviteLink={copyInviteLink}
+          attachLocalStream={attachLocalStream}
+          attachRemoteStream={attachRemoteStream}
+          callDuration={callDuration}
+          formatCallTimer={formatCallTimer}
+          settlementCallDuration={settlementCallDuration}
+          setSettlementCallDuration={setSettlementCallDuration}
+          setIsSettlementModalOpen={setIsSettlementModalOpen}
+          isSettlementModalOpen={isSettlementModalOpen}
+          handleTransferCallTokens={handleTransferCallTokens}
+          getAuthorAvatar={getAuthorAvatar}
+          isAdminPanelOpen={isAdminPanelOpen}
+          setIsAdminPanelOpen={setIsAdminPanelOpen}
+          selectedPublicUser={selectedPublicUser}
+          setSelectedPublicUser={setSelectedPublicUser}
+          isCommunityProfileOpen={isCommunityProfileOpen}
+          setIsCommunityProfileOpen={setIsCommunityProfileOpen}
+          communityProfileUser={communityProfileUser}
+          listings={listings}
+          handleOpenListing={handleOpenListing}
+          handleStartDiscussion={handleStartDiscussion}
+          isReportModalOpen={isReportModalOpen}
+          setIsReportModalOpen={setIsReportModalOpen}
+          reportTarget={reportTarget}
+          setReportTarget={setReportTarget}
+          isCounterOfferOpen={isCounterOfferOpen}
+          setIsCounterOfferOpen={setIsCounterOfferOpen}
+          editingDealId={editingDealId}
+          setEditingDealId={setEditingDealId}
+          handleCounterOfferSubmit={handleCounterOfferSubmit}
+          chatThreads={chatThreads}
+          counterOfferDraft={counterOfferDraft}
+          isPaymentModalOpen={isPaymentModalOpen}
+          setIsPaymentModalOpen={setIsPaymentModalOpen}
+          paymentModalConfig={paymentModalConfig}
+          handlePaymentSuccess={handlePaymentSuccess}
+          playBetclicBalanceSound={playBetclicBalanceSound}
+          playApplePaySound={playApplePaySound}
+          isTransactionsModalOpen={isTransactionsModalOpen}
+          setIsTransactionsModalOpen={setIsTransactionsModalOpen}
+          userTransactions={userTransactions}
+          handleOpenPayment={handleOpenPayment}
+          checkoutSession={checkoutSession}
+          cancelCheckout={cancelCheckout}
+          applyCheckout={applyCheckout}
+          isCheckoutProcessing={isCheckoutProcessing}
+          checkoutStatus={checkoutStatus}
           isRateLimited={isRateLimited}
           retryAfterSeconds={retryAfterSeconds}
-          onClose={resetRateLimit}
+          resetRateLimit={resetRateLimit}
+          isOnboardingOpen={isOnboardingOpen}
+          handleCompleteOnboarding={handleCompleteOnboarding}
+          isWelcomeGiftModalOpen={isWelcomeGiftModalOpen}
+          setIsWelcomeGiftModalOpen={setIsWelcomeGiftModalOpen}
+          isKycModalOpen={isKycModalOpen}
+          setIsKycModalOpen={setIsKycModalOpen}
+          handleKycComplete={handleKycComplete}
+          isCguViewerOpen={isCguViewerOpen}
+          setIsCguViewerOpen={setIsCguViewerOpen}
+          isPrivacyCenterOpen={isPrivacyCenterOpen}
+          setIsPrivacyCenterOpen={setIsPrivacyCenterOpen}
+          handleDeleteAccount={handleDeleteAccount}
+          topUpCelebration={topUpCelebration}
+          transactionSuccessModalConfig={transactionSuccessModalConfig}
+          handleCloseTransactionSuccessModal={handleCloseTransactionSuccessModal}
+          isUserBanned={isUserBanned}
+          bannedReason={bannedReason}
         />
-
-
-        {/* PARCOURS D'ONBOARDING INTERACTIF POUR NOUVEAUX COMPTES (CHANTIER 1) */}
-        {isOnboardingOpen && (
-          <Suspense fallback={<SkeletonModalFallback title="Bienvenue sur Troco..." />}>
-            <OnboardingWizardModal
-              isOpen={isOnboardingOpen}
-              darkMode={darkMode}
-              currentUser={profile}
-              onComplete={handleCompleteOnboarding}
-            />
-          </Suspense>
-        )}
-
-        {/* CÉLÉBRATION CADEAU DE BIENVENUE (+10 JETONS ET 0.00€ INITIALISÉ) */}
-        {isWelcomeGiftModalOpen && !profile?.welcomeBonusClaimed && !profile?.onboardingCompleted && (
-          <Suspense fallback={<SkeletonModalFallback title="Cadeau de bienvenue..." />}>
-            <WelcomeGiftCelebrationModal
-              isOpen={isWelcomeGiftModalOpen && !profile?.welcomeBonusClaimed && !profile?.onboardingCompleted}
-              onClose={() => setIsWelcomeGiftModalOpen(false)}
-              currentUser={profile}
-              darkMode={darkMode}
-              trocoTokens={10}
-              euroBalance={0}
-            />
-          </Suspense>
-        )}
-
-        {/* BILAN DE SÉANCE VISIO & RÉTRIBUTION EN JETONS (CHANTIER 5) */}
-        {isSettlementModalOpen && (
-          <Suspense fallback={<SkeletonModalFallback title="Bilan d'appel..." />}>
-            <VisioSettlementModal
-              isOpen={isSettlementModalOpen}
-              onClose={() => setIsSettlementModalOpen(false)}
-              callDuration={settlementCallDuration || callDuration}
-              partnerName={selectedChat?.user || 'Interlocuteur'}
-              onTransferTokens={handleTransferCallTokens}
-              darkMode={darkMode}
-              currentUserTokens={profile?.trocoTokens ?? 10}
-            />
-          </Suspense>
-        )}
-
-        {/* MODULE DE VÉRIFICATION D'IDENTITÉ (KYC) */}
-        {isKycModalOpen && (
-          <Suspense fallback={<SkeletonModalFallback title="Vérification d'identité sécurisée..." />}>
-            <KycModal
-              isOpen={isKycModalOpen}
-              onClose={() => setIsKycModalOpen(false)}
-              onComplete={handleKycComplete}
-              profile={profile}
-              darkMode={darkMode}
-            />
-          </Suspense>
-        )}
-
-        {/* MODALE D'ACCEPTATION & CONSULTATION DES CGU (BLOC 6) */}
-        {(isCguViewerOpen || (Boolean(profile?.name) && !profile?.cguAcceptedAt && !cguDismissed && window.sessionStorage?.getItem('troco_cgu_dismissed') !== 'true' && !isLoadingSession && profile?.onboardingCompleted)) && (
-          <Suspense fallback={<SkeletonModalFallback title="Conditions Générales d'Utilisation..." />}>
-            <CguModal
-              isOpen={isCguViewerOpen || (Boolean(profile?.name) && !profile?.cguAcceptedAt && !cguDismissed && window.sessionStorage?.getItem('troco_cgu_dismissed') !== 'true' && !isLoadingSession && profile?.onboardingCompleted)}
-              isMandatory={!isCguViewerOpen && Boolean(profile?.name) && !profile?.cguAcceptedAt && !cguDismissed && window.sessionStorage?.getItem('troco_cgu_dismissed') !== 'true' && !isLoadingSession && profile?.onboardingCompleted}
-              onClose={() => {
-                setIsCguViewerOpen(false);
-                setCguDismissed(true);
-                try {
-                  window.sessionStorage?.setItem('troco_cgu_dismissed', 'true');
-                } catch (_) { }
-              }}
-              onAccept={handleAcceptCgu}
-              darkMode={darkMode}
-              currentUser={profile}
-            />
-          </Suspense>
-        )}
-
-        {/* MODALE PROFIL PUBLIC POUR LA COMMUNAUTÉ ET LE CHAT */}
-        {isCommunityProfileOpen && communityProfileUser && (
-          <Suspense fallback={<SkeletonModalFallback title="Profil public..." />}>
-            <PublicProfileModal
-              isOpen={isCommunityProfileOpen}
-              onClose={() => setIsCommunityProfileOpen(false)}
-              targetUser={communityProfileUser}
-              allListings={listings}
-              onOpenListing={handleOpenListing}
-              currentLang={currentLang}
-              darkMode={darkMode}
-              t={t}
-            />
-          </Suspense>
-        )}
-
-        {/* CENTRE DE CONFIDENTIALITÉ & GESTION DES DROITS RGPD (BLOC 6) */}
-        {isPrivacyCenterOpen && (
-          <Suspense fallback={<SkeletonModalFallback title="Centre de confidentialité..." />}>
-            <PrivacyCenterModal
-              isOpen={isPrivacyCenterOpen}
-              onClose={() => setIsPrivacyCenterOpen(false)}
-              darkMode={darkMode}
-              currentUser={profile}
-              userListings={listings}
-              userTransactions={userTransactions}
-              onDeleteAccount={handleDeleteAccount}
-            />
-          </Suspense>
-        )}
-
-        {/* BANNIÈRE COOKIES & TRACEURS CONFORME CNIL / RGPD (BLOC 6) */}
-        <CookieBanner
-          darkMode={darkMode}
-          onOpenPrivacyCenter={() => setIsPrivacyCenterOpen(true)}
-          onNavigate={(tab) => {
-            if (typeof window !== 'undefined') window.location.hash = tab;
-            setActiveTab(tab);
-          }}
-        />
-
-        {/* BANNIÈRE D'INSTALLATION PWA MOBILE 1-CLIC */}
-        <PWAInstallBanner />
-
-        {/* OVERLAY CÉLÉBRATION TOP-UP SOLDE & JETONS AU PREMIER PLAN */}
-        {topUpCelebration && (
-          <div
-            role="status"
-            aria-live="polite"
-            aria-atomic="true"
-            style={{
-              position: 'fixed',
-              top: 'calc(env(safe-area-inset-top, 0px) + 70px)',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              zIndex: 999999,
-              backgroundColor: 'var(--bg-card)',
-              backdropFilter: 'blur(20px)',
-              WebkitBackdropFilter: 'blur(20px)',
-              border: '2px solid var(--accent-success)',
-              borderRadius: '999px',
-              padding: '12px 24px',
-              boxShadow: '0 12px 36px rgba(16, 185, 129, 0.4), 0 0 20px rgba(16, 185, 129, 0.2)',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-              animation: 'fadeSlideDown 0.4s cubic-bezier(0.22, 1, 0.36, 1) both',
-              color: 'var(--text-main)',
-            }}
-          >
-            <div style={{
-              width: '38px',
-              height: '38px',
-              borderRadius: '50%',
-              backgroundColor: 'var(--accent-success)',
-              color: '#FFF',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 4px 12px rgba(16, 185, 129, 0.5)',
-              flexShrink: 0,
-            }}>
-              <Sparkles size={20} />
-            </div>
-            <div>
-              <div style={{ fontSize: '15px', fontWeight: '900', color: 'var(--accent-success)', letterSpacing: '-0.01em' }}>
-                {topUpCelebration.title}
-              </div>
-              <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600' }}>
-                {topUpCelebration.subtitle}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* MODALE DE CONFIRMATION DE TRANSACTION FINTECH IMMERSIVE (EXPÉDITEUR & DESTINATAIRE) */}
-        <TransactionSuccessModal
-          isOpen={Boolean(transactionSuccessModalConfig?.isOpen)}
-          type={transactionSuccessModalConfig?.type || 'sent'}
-          amount={transactionSuccessModalConfig?.amount || 1}
-          currency={transactionSuccessModalConfig?.currency || 'tokens'}
-          partnerName={transactionSuccessModalConfig?.partnerName || ''}
-          onClose={handleCloseTransactionSuccessModal}
-        />
-
-        {/* ÉCRAN D'EXCLUSION TOTAL EN CAS DE BANNISSEMENT TEMPS RÉEL */}
-        {isUserBanned && (
-          <div
-            style={{
-              position: 'fixed',
-              inset: 0,
-              zIndex: 10000000,
-              backgroundColor: '#0F0D0B',
-              color: '#FAF7F2',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              padding: '24px',
-            }}
-          >
-            <div
-              style={{
-                maxWidth: '480px',
-                width: '100%',
-                backgroundColor: '#1C1714',
-                border: '2px solid #EF4444',
-                borderRadius: '28px',
-                padding: '38px 32px',
-                textAlign: 'center',
-                boxShadow: '0 25px 60px rgba(239,68,68,0.25), 0 0 50px rgba(0,0,0,0.8)',
-              }}
-            >
-              <div
-                style={{
-                  width: '68px',
-                  height: '68px',
-                  borderRadius: '50%',
-                  backgroundColor: 'rgba(239,68,68,0.15)',
-                  color: '#EF4444',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  margin: '0 auto 20px',
-                  boxShadow: '0 8px 24px rgba(239,68,68,0.3)',
-                }}
-              >
-                <ShieldAlert size={36} />
-              </div>
-              <h2 style={{ fontSize: '24px', fontWeight: '900', margin: '0 0 10px', color: '#EF4444', letterSpacing: '-0.02em' }}>
-                Compte Suspendu
-              </h2>
-              <p style={{ fontSize: '14px', color: '#D4C5B5', lineHeight: 1.55, margin: '0 0 20px' }}>
-                {bannedReason || "Votre compte a été suspendu par l'administration Troco suite à un non-respect des règles de la communauté."}
-              </p>
-              <div
-                style={{
-                  fontSize: '12px',
-                  color: '#A8998C',
-                  backgroundColor: 'rgba(0,0,0,0.3)',
-                  padding: '12px 16px',
-                  borderRadius: '12px',
-                  marginBottom: '24px',
-                  lineHeight: 1.4,
-                }}
-              >
-                Pour toute réclamation, contactez la modération officielle à <strong>support@troco.fr</strong> avec votre identifiant.
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  window.localStorage.clear();
-                  window.sessionStorage.clear();
-                  window.location.reload();
-                }}
-                className="premium-button"
-                style={{
-                  width: '100%',
-                  padding: '14px 24px',
-                  borderRadius: '14px',
-                  border: 'none',
-                  backgroundColor: 'rgba(255,255,255,0.12)',
-                  color: '#FFF',
-                  fontSize: '13.5px',
-                  fontWeight: '800',
-                  cursor: 'pointer',
-                }}
-              >
-                Fermer la session & Revenir à l'accueil
-              </button>
-            </div>
-          </div>
-        )}
 
         <ConfirmDialog />
       </div>
