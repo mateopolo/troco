@@ -14,15 +14,11 @@ import FeedCardItem from '../components/FeedCardItem';
 import SponsoredFeedCard from '../components/SponsoredFeedCard';
 import PullToRefresh from '../components/ui/PullToRefresh';
 import { EmptyState } from '../components/ui/EmptyState';
+import { pageTransitionVariants, pageTransitionConfig } from './pageTransitions';
 
 const MapSection = React.lazy(() => import('../features/map/MapSection'));
 
-export const pageTransitionVariants = {
-  initial: { opacity: 0, scale: 0.98 },
-  animate: { opacity: 1, scale: 1 },
-  exit: { opacity: 0, scale: 0.98 }
-};
-export const pageTransitionConfig = { duration: 0.2, ease: "easeOut" };
+export { pageTransitionVariants, pageTransitionConfig };
 
 export default function FeedRoute({
   // Global & Layout

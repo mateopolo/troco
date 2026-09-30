@@ -18,6 +18,8 @@ import { AppHeader, AppBottomNav } from './components/layout';
 import MobileHeader from './components/common/MobileHeader';
 import { getSuggestedMedia, getSuggestedImage, getFallbackImage } from './utils/mediaHelpers';
 import FeedRoute from './routes/FeedRoute';
+import CommunityRoute from './routes/CommunityRoute';
+import ChatRoute from './routes/ChatRoute';
 import { useFeedStore } from './stores/useFeedStore';
 import { generateInvoiceRef } from './components/InvoiceCalculator';
 import TrocoLogoNativeSvg from './components/common/TrocoLogoNativeSvg';
@@ -100,8 +102,6 @@ const CategoryPickerModal = React.lazy(() => import('./components/modals/Categor
 const BoostListingModal = React.lazy(() => import('./components/modals/BoostListingModal'));
 const EmailLinkPromptModal = React.lazy(() => import('./components/modals/EmailLinkPromptModal'));
 const CguConsentModal = React.lazy(() => import('./components/modals/CguConsentModal'));
-const ChatSection = React.lazy(() => import('./features/chat/ChatSection'));
-const CommunityHubSection = React.lazy(() => import('./features/community/CommunityHubSection'));
 const PaymentFeature = React.lazy(() => import('./features/payment'));
 const CallFeature = React.lazy(() => import('./features/call'));
 const WebRTCCallOverlay = React.lazy(() => import('./features/call/WebRTCCallOverlay'));
@@ -3674,109 +3674,65 @@ export default function App() {
 
             {/* ONGLET COMMUNAUTÉ : TROCO LIVE & FIL D'ACTIVITÉ */}
             {activeTab === 'community' && (
-              <motion.div
-                key="page-community"
-                variants={pageTransitionVariants}
-                initial="initial"
-                animate="animate"
-                exit="exit"
-                transition={pageTransitionConfig}
-                style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', flex: 1 }}
-              >
-                <SectoralErrorBoundary moduleName="Communauté & Troco Live">
-                  <Suspense fallback={null}>
-                    <CommunityHubSection
-                      currentUser={profile}
-                      onOpenProfile={(targetUser) => {
-                        const targetObj = {
-                          id: targetUser.id || targetUser.uid || `user-${Date.now()}`,
-                          user: targetUser.name || targetUser.author || 'Membre Troco',
-                          avatar: targetUser.avatar,
-                          verified: targetUser.verified || false,
-                          author: targetUser.name || targetUser.author || 'Membre Troco',
-                          authorUsername: targetUser.username || targetUser.authorUsername || '@membre',
-                          authorProfile: targetUser,
-                        };
-                        setCommunityProfileUser(targetObj);
-                        setIsCommunityProfileOpen(true);
-                      }}
-                      darkMode={darkMode}
-                      isMobile={isMobile}
-                    />
-                  </Suspense>
-                </SectoralErrorBoundary>
-              </motion.div>
+              <CommunityRoute
+                profile={profile}
+                setCommunityProfileUser={setCommunityProfileUser}
+                setIsCommunityProfileOpen={setIsCommunityProfileOpen}
+                darkMode={darkMode}
+                isMobile={isMobile}
+                currentLang={currentLang}
+                t={t}
+              />
             )}
 
             {/* ONGLET 2 : MESSAGERIE & NÉGOCIATIONS */}
-            {activeTab === 'chat' && (() => {
-              const activeChatData = chatsList.find(c => String(c.id) === String(selectedChat?.id));
-              const otherUserName = activeChatData?.user || selectedChat?.user;
-              const isThemTyping = !!(activeChatData?.typing && otherUserName && activeChatData.typing[otherUserName]);
-
-              return (
-                <motion.div
-                  key="page-chat"
-                  variants={pageTransitionVariants}
-                  initial="initial"
-                  animate="animate"
-                  exit="exit"
-                  transition={pageTransitionConfig}
-                  style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', flex: 1 }}
-                >
-                  <SectoralErrorBoundary moduleName="Messagerie & Hub Collaboratif">
-                    <Suspense fallback={null}>
-                      <ChatSection
-                        activeTab={activeTab}
-                        mockChats={chatsList}
-                        selectedChat={selectedChat}
-                        setSelectedChat={handleSelectChat}
-                        chatThreads={chatThreads}
-                        readChats={readChats}
-                        chatInputText={messageDraft}
-                        setChatInputText={setMessageDraft}
-                        onTypingChange={handleTypingChange}
-                        isThemTyping={isThemTyping}
-                        handleSendMessage={handleSendMessage}
-                        handleEditMessage={handleEditMessage}
-                        handleDeleteMessage={handleDeleteMessage}
-                        openCounterOffer={openCounterOffer}
-                        startCall={startCall}
-                        joinActiveCall={joinActiveCall}
-                        joinCall={joinActiveCall}
-                        answerCall={handleAcceptIncomingCall || acceptIncomingCall}
-                        callState={callState}
-                        isCallActive={Boolean(callState?.active && !isCallPip)}
-                        handleAcceptDeal={handleAcceptDeal}
-                        handleConfirmTrocCompletion={handleConfirmTrocCompletion}
-                        handleDeclineDeal={handleDeclineDeal}
-                        handleSendToken={handleSendToken}
-                        handleReleaseEscrow={handleReleaseEscrow}
-                        onCreateProjectGroup={handleCreateProjectGroup}
-                        onProposeReward={handleProposeReward}
-                        onAcceptReward={handleAcceptReward}
-                        onSendAudioMessage={handleSendAudioMessage}
-                        profile={profile}
-                        setProfile={setProfile}
-                        currentLang={currentLang}
-                        t={t}
-                        darkMode={darkMode}
-                        getChatMessageDisplayContent={getChatMessageDisplayContent}
-                        getListingTitleTranslation={getListingTitleTranslation}
-                        formatStatus={formatStatus}
-                        showingOriginalMessages={showingOriginalMessages}
-                        toggleOriginalMessage={toggleOriginalMessage}
-                        isMobile={isMobile}
-                        presenceMap={presenceMap}
-                        allListings={listings}
-                        onOpenListing={handleOpenListing}
-                        onOpenProfile={(u) => setSelectedPublicUser(u)}
-                      />
-                    </Suspense>
-                  </SectoralErrorBoundary>
-                </motion.div>
-              );
-            })()}
+            {activeTab === 'chat' && (
+              <ChatRoute
+                activeTab={activeTab}
+                chatsList={chatsList}
+                selectedChat={selectedChat}
+                handleSelectChat={handleSelectChat}
+                chatThreads={chatThreads}
+                readChats={readChats}
+                messageDraft={messageDraft}
+                setMessageDraft={setMessageDraft}
+                handleTypingChange={handleTypingChange}
+                handleSendMessage={handleSendMessage}
+                handleEditMessage={handleEditMessage}
+                handleDeleteMessage={handleDeleteMessage}
+                openCounterOffer={openCounterOffer}
+                startCall={startCall}
+                joinActiveCall={joinActiveCall}
+                handleAcceptIncomingCall={handleAcceptIncomingCall}
+                acceptIncomingCall={acceptIncomingCall}
+                callState={callState}
+                isCallPip={isCallPip}
+                handleAcceptDeal={handleAcceptDeal}
+                handleConfirmTrocCompletion={handleConfirmTrocCompletion}
+                handleDeclineDeal={handleDeclineDeal}
+                handleSendToken={handleSendToken}
+                handleReleaseEscrow={handleReleaseEscrow}
+                onCreateProjectGroup={handleCreateProjectGroup}
+                onProposeReward={handleProposeReward}
+                onAcceptReward={handleAcceptReward}
+                onSendAudioMessage={handleSendAudioMessage}
+                profile={profile}
+                setProfile={setProfile}
+                currentLang={currentLang}
+                t={t}
+                darkMode={darkMode}
+                getChatMessageDisplayContent={getChatMessageDisplayContent}
+                getListingTitleTranslation={getListingTitleTranslation}
+                formatStatus={formatStatus}
+                showingOriginalMessages={showingOriginalMessages}
+                toggleOriginalMessage={toggleOriginalMessage}
+                isMobile={isMobile}
+                presenceMap={presenceMap}
+                listings={listings}
+                handleOpenListing={handleOpenListing}
+                setSelectedPublicUser={setSelectedPublicUser}
+              />
+            )}
 
             {/* ONGLET 3 : DÉPOSER UNE ANNONCE */}
             {activeTab === 'post' && (
